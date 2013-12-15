@@ -21,7 +21,7 @@ Decentralised financial instruments in a protocol build on top of the Bitcoin bl
 
 ## To do
 * API
-* Dividends: `sendall`(amount, assetid)
+* Dividends: `sendall(amount, asset_id)`
 * Price feeds, bets (e.g. CFDs)
 	* Price feeds must be in XCP only (and dividends).
 	* Feed identifier is derived from `tx_hash`.
@@ -47,7 +47,7 @@ Decentralised financial instruments in a protocol build on top of the Bitcoin bl
 * Price feeds for gambling, major fiat currencies, precious metals.
 * Proof of burn: send Bitcoins to address `Counterparty0000000<hash>` between two block indexs (inclusive).
 	* 100x multiplier (for divisibility)?
-	* Alternatives: a new message type with exorbitant fees, throw away the money on OP_RETURN. (These are harder to understand, suggest false positives.)
+	* Alternatives: a new message type with exorbitant fees, throw away the money on `OP_RETURN`. (These are harder to understand, suggest false positives.)
 	* [Proof of burn](https://en.bitcoin.it/wiki/Proof_of_burn#Coin-burning_as_a_tool_for_transition_between_cryptocurrencies)
 	* Recommend no more than 1 BTC. (Cap per address as disincentive.)
 	* Bonus proportional to block number.
