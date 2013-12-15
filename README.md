@@ -46,7 +46,6 @@ Decentralised financial instruments in a protocol build on top of the Bitcoin bl
 * Release testnet a couple of weeks before 0.9 is supposed to come out (e.g. with Bitcoin 0.9 RC 1).
 * Release 1.0 and start proof of burn as soon after Bitcoin 0.9 as possible.
 * Price feeds for gambling, major fiat currencies, precious metals.
-
 * Proof of burn: send Bitcoins to address `Counterparty0000000<hash>` between two block indexs (inclusive).
 	* 100x multiplier (for divisibility)?
 	* Alternatives: a new message type with exorbitant fees, throw away the money on OP_RETURN. (These are harder to understand, suggest false positives.)

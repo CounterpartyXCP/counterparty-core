@@ -3,23 +3,22 @@
 import struct
 import sqlite3
 
-from . import util
+from . import (config, util, bitcoin)
 
 FORMAT = '>QQ?'         # asset_id, amount, divisible
 ID = 20
-TXTYPE_FORMAT = '>I'    # TEMP
 
 def issuance (source, asset_id, amount, divisible):
-    db = sqlite3.connect(LEDGER)
+    db = sqlite3.connect(config.LEDGER)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
     # Avoid duplicates.
     cursor.execute('''SELECT * FROM issuances WHERE (asset_id=? AND validity=?)''', (asset_id, 'Valid'))
     if cursor.fetchone():
         raise IssuanceError('Asset ID already claimed.')
-    data = PREFIX + struct.pack(TXTYPE_FORMAT, ID) + struct.pack(FORMAT, asset_id, amount, divisible)
+    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID) + struct.pack(FORMAT, asset_id, amount, divisible)
     db.close()
-    return transaction(source, None, DUST_SIZE, MIN_FEE, data)
+    return bitcoin.transaction(source, None, config.DUST_SIZE, config.MIN_FEE, data)
 
 def parse_issuance (db, cursor, tx, message):
     # Ask for forgiveness…
@@ -40,7 +39,7 @@ def parse_issuance (db, cursor, tx, message):
     # Credit.
     if validity == 'Valid':
         db, cursor = util.credit(db, cursor, tx['source'], asset_id, amount)
-        if divisible: unit = UNIT
+        if divisible: unit = config.UNIT
         else: unit = 1
         print('\tIssuance:', tx['source'], 'created', amount/unit, 'of asset', asset_id, '(' + tx['tx_hash'] + ')')
 

@@ -4,16 +4,15 @@ import binascii
 import struct
 import sqlite3
 
+from . import (util, bitcoin)
+
 FORMAT = '>32s32s'   # tx0_hash, tx1_hash
 ID = 11
-TXTYPE_FORMAT = '>I'    # TEMP
-
-from . import util
 
 def btcpayment (deal_id):
     tx0_hash, tx1_hash = deal_id[:64], deal_id[64:] # UTF‐8 encoding means that the indices are doubled.
     tx0_hash_bytes, tx1_hash_bytes = binascii.unhexlify(tx0_hash), binascii.unhexlify(tx1_hash)
-    data = PREFIX + struct.pack(TXTYPE_FORMAT, ID) + struct.pack(FORMAT, tx0_hash_bytes, tx1_hash_bytes)
+    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID) + struct.pack(FORMAT, tx0_hash_bytes, tx1_hash_bytes)
 
     db = sqlite3.connect(LEDGER)
     db.row_factory = sqlite3.Row
@@ -38,7 +37,7 @@ def btcpayment (deal_id):
     except TypeError:
         raise InvalidDealError('Invalid Deal ID:', deal_id)
 
-    return transaction(source, destination, btc_amount, MIN_FEE, data)
+    return bitcoin.transaction(source, destination, btc_amount, config.MIN_FEE, data)
 
 def parse_btcpayment (db, cursor, tx, message):
     # Ask for forgiveness…

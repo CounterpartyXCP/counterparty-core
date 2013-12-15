@@ -7,7 +7,8 @@ import decimal
 D = decimal.Decimal
 decimal.getcontext().prec = 8
 
-from lib import (exceptions, bitcoin, blocks, api)
+from lib import (config, exceptions, bitcoin, blocks, api)
+from lib import (send, order, btcpayment, issuance)
 
 # Obsolete in Python 3.4.
 ASSET_NAME = {0: 'BTC', 1: 'XCP'}
@@ -75,7 +76,7 @@ if __name__ == '__main__':
         except Exception:
             asset_id = int(args.asset_name)
 
-        if '.' in args.amount: amount = int(float(args.amount) * UNIT)
+        if '.' in args.amount: amount = int(float(args.amount) * config.UNIT)
         else: amount = int(args.amount)
 
         json_print(send.send(args.source, args.destination, amount,
@@ -83,12 +84,12 @@ if __name__ == '__main__':
 
     elif args.action == 'order':
         source = args.source
-        give_amount = int(D(args.give_amount) * UNIT)
-        get_amount = int(D(args.get_amount) * UNIT)
+        give_amount = int(D(args.give_amount) * config.UNIT)
+        get_amount = int(D(args.get_amount) * config.UNIT)
         give_name = args.give_name
         get_name = args.get_name
         expiration = args.expiration
-        fee = int(D(args.fee) * UNIT)
+        fee = int(D(args.fee) * config.UNIT)
         price = args.price
 
         assert give_name != get_name            # TODO
@@ -106,22 +107,22 @@ if __name__ == '__main__':
         # fee argument is either fee_required or fee_provided, as necessary.
         if not give_id:
             fee_provided = fee
-            assert fee_provided >= MIN_FEE
+            assert fee_provided >= config.MIN_FEE
             fee_required = 0
         elif not get_id:
             fee_required = fee
-            assert fee_required >= MIN_FEE
-            fee_provided = MIN_FEE
+            assert fee_required >= config.MIN_FEE
+            fee_provided = config.MIN_FEE
 
         if '.' in args.give_amount:
             give_divisible = True
-            give_amount = int(float(args.give_amount) * UNIT)
+            give_amount = int(float(args.give_amount) * config.UNIT)
         else:
             give_divisible = False
             give_amount = int(args.give_amount)
         if '.' in args.get_amount:
             get_divisible = True
-            get_amount = int(float(args.get_amount) * UNIT)
+            get_amount = int(float(args.get_amount) * config.UNIT)
         else:
             get_divisible = False
             get_amount = int(args.get_amount)
@@ -140,11 +141,11 @@ if __name__ == '__main__':
         bitcoin.bitcoind_check()
         if '.' in args.amount:
             divisible = True
-            amount = int(float(args.amount) * UNIT)
+            amount = int(float(args.amount) * config.UNIT)
         else:
             divisible = False
             amount = int(args.amount)
-        json_print(issuance(args.source, args.asset_id, amount, divisible))
+        json_print(issuance.issuance(args.source, args.asset_id, amount, divisible))
 
     elif args.action == 'follow':
         bitcoin.bitcoind_check()

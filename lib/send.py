@@ -4,17 +4,16 @@
 
 import struct
 import sqlite3
-from . import util
+from . import (util, config, bitcoin)
 
 FORMAT = '>QQ'             # asset_id, amount
 ID = 0
-TXTYPE_FORMAT = '>I'    # TEMP
 
 def send (source, destination, amount, asset_id):
-    if balance(source, asset_id) < amount:
+    if util.balance(source, asset_id) < amount:
         raise BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
-    data = PREFIX + struct.pack(TXTYPE_FORMAT, ID) + struct.pack(FORMAT, asset_id, amount)
-    return transaction(source, destination, DUST_SIZE, MIN_FEE, data)
+    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID) + struct.pack(FORMAT, asset_id, amount)
+    return bitcoin.transaction(source, destination, config.DUST_SIZE, config.MIN_FEE, data)
 
 def parse_send (db, cursor, tx, message):
     # Ask for forgiveness…
@@ -58,7 +57,7 @@ def parse_send (db, cursor, tx, message):
     if validity == 'Valid':
         cursor, divisible = util.is_divisible(cursor, asset_id)
         if divisible:
-            unit = UNIT
+            unit = config.UNIT
         else:
             unit = 1
         try:    # TEMP

@@ -1,5 +1,3 @@
-#! /usr/bin/python3
-
 import sys
 import os
 import hashlib
@@ -37,5 +35,16 @@ if not os.path.isdir(data_dir):
     os.mkdir(data_dir)
 DB_VERSION = 1
 LEDGER = data_dir + '/ledger.' + str(DB_VERSION) + '.db'
+
+# Bitcoin protocol
+DUST_SIZE = 5430
+MIN_FEE = 30000
+
+# Counterparty protocol
+# BLOCK_FIRST = 273648          # mainnet
+BLOCK_FIRST = 153560            # testnet
+# PREFIX = b'CPCOINXXXX'        # 10 bytes
+PREFIX = b'TEST'                # 4 bytes (possibly accidentally created)
+TXTYPE_FORMAT = '>I'
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

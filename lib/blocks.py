@@ -1,5 +1,3 @@
-#! /usr/bin/python3
-
 """
 Initialise database.
 
@@ -15,13 +13,6 @@ import sqlite3
 from . import (config, util, bitcoin)
 from . import (send, order, btcpayment, issuance)
 
-# Counterparty protocol
-# BLOCK_FIRST = 273648          # mainnet
-BLOCK_FIRST = 153560            # testnet
-# PREFIX = b'CPCOINXXXX'        # 10 bytes
-PREFIX = b'TEST'                # 4 bytes (possibly accidentally created)
-TXTYPE_FORMAT = '>I'
-
 def parse_block (db, cursor, block_index):
     """This is a separate function from follow() so that changing the parsing
     rules doesn’t require a full database rebuild. If parsing rules are changed
@@ -36,11 +27,11 @@ def parse_block (db, cursor, block_index):
                    (block_index,))
         
     for tx in cursor.fetchall():
-        if tx['data'][:len(PREFIX)] == PREFIX:
-            post_prefix = tx['data'][len(PREFIX):]
+        if tx['data'][:len(config.PREFIX)] == config.PREFIX:
+            post_prefix = tx['data'][len(config.PREFIX):]
         else:
             continue
-        message_type_id = struct.unpack(TXTYPE_FORMAT, post_prefix[:4])[0]
+        message_type_id = struct.unpack(config.TXTYPE_FORMAT, post_prefix[:4])[0]
         message = post_prefix[4:]
         # TODO: Make sure that message lengths are correct. (struct.unpack is fragile.)
         if message_type_id == send.ID:
@@ -84,8 +75,8 @@ def initialise(db, cursor):
                     ''')
 
     # Purge database of blocks, transactions from before BLOCK_FIRST.
-    cursor.execute('''DELETE FROM blocks WHERE block_index<?''', (BLOCK_FIRST,))
-    cursor.execute('''DELETE FROM transactions WHERE block_index<?''', (BLOCK_FIRST,))
+    cursor.execute('''DELETE FROM blocks WHERE block_index<?''', (config.BLOCK_FIRST,))
+    cursor.execute('''DELETE FROM transactions WHERE block_index<?''', (config.BLOCK_FIRST,))
 
     cursor.execute('''DROP TABLE IF EXISTS balances''')
     cursor.execute('''CREATE TABLE balances(

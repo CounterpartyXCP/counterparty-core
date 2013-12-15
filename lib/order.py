@@ -6,17 +6,16 @@ import decimal
 D = decimal.Decimal
 decimal.getcontext().prec = 8
 
-from lib import (util, config)
+from . import (util, config, bitcoin)
 
 FORMAT = '>QQQQHQ'        # give_id, give_amount, get_id, get_amount, expiration, fee_required
 ID = 10
-TXTYPE_FORMAT = '>I'    # TEMP
 
 def order (source, give_id, give_amount, get_id, get_amount, expiration, fee_required, fee_provided):
-    if balance(source, give_id) < give_amount:
+    if util.balance(source, give_id) < give_amount:
         raise BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
-    data = PREFIX + struct.pack(TXTYPE_FORMAT, ID) + struct.pack(FORMAT, give_id, give_amount, get_id, get_amount, expiration, fee_required)
-    return transaction(source, None, DUST_SIZE, fee_provided, data)
+    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID) + struct.pack(FORMAT, give_id, give_amount, get_id, get_amount, expiration, fee_required)
+    return bitcoin.transaction(source, None, config.DUST_SIZE, fee_provided, data)
 
 def parse_order (db, cursor, tx1, message):
     # Ask for forgiveness…

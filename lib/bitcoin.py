@@ -1,5 +1,3 @@
-#! /usr/bin/python3
-
 """
 Craft, sign and broadcast Bitcoin transactions.
 Interface with Bitcoind.
@@ -14,17 +12,13 @@ import requests
 
 from . import config
 
-# Bitcoin protocol
-DUST_SIZE = 5430
-MIN_FEE = 30000
-
+# Constants
 OP_RETURN = b'\x6a'
 OP_PUSHDATA1 = b'\x4c'
 OP_DUP = b'\x76'
 OP_HASH160 = b'\xa9'
 OP_EQUALVERIFY = b'\x88'
 OP_CHECKSIG = b'\xac'
-
 b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 # ADDRESSVERSION = b'\x00'      # mainnet
 ADDRESSVERSION = b'\x6F'        # testnet
@@ -169,7 +163,7 @@ def get_inputs (source, amount, fee):
         if not coin['confirmations']:
             continue    # Blocks or it didn’t happen.
         inputs.append(coin)
-        total += int(coin['amount'] * UNIT)
+        total += int(coin['amount'] * config.UNIT)
         if total >= amount + fee:
             return inputs, total
     return None, None
@@ -188,6 +182,7 @@ def transaction (source, destination, btc_amount, fee, data):
 
     # Construct inputs.
     inputs, total = get_inputs(source, btc_amount, fee)
+    print(source, btc_amount, fee)
     if not inputs:
         raise BalanceError('Insufficient bitcoins.')
 
@@ -205,7 +200,7 @@ def transaction (source, destination, btc_amount, fee, data):
     transaction_hex = binascii.hexlify(transaction).decode('utf-8')
 
     # Confirm transaction.
-    if PREFIX == b'TEST': print('Attention: COUNTERPARTY TEST!') 
+    if config.PREFIX == b'TEST': print('Attention: COUNTERPARTY TEST!') 
     if ADDRESSVERSION == b'0x6F': print('\nAttention: BITCOIN TESTNET!\n') 
     if input('Confirm? (y/N) ') != 'y':
         print('Transaction aborted.', file=sys.stderr)
