@@ -4,12 +4,14 @@ import json
 import sqlite3
 import decimal
 
+from . import (config, bitcoin)
+
 def orderbook ():
-    db = sqlite3.connect(LEDGER)
+    db = sqlite3.connect(config.LEDGER)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
 
-    block_count = rpc('getblockcount', [])['result']
+    block_count = bitcoin.rpc('getblockcount', [])['result']
 
     # Open orders.
     orderbook = []
@@ -23,14 +25,14 @@ def orderbook ():
 
 def pending():
     """Deals awaiting Bitcoin payment from you."""
-    db = sqlite3.connect(LEDGER)
+    db = sqlite3.connect(config.LEDGER)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
 
-    block_count = rpc('getblockcount', [])['result']
+    block_count = bitcoin.rpc('getblockcount', [])['result']
 
     pending = []
-    address_list = [ element['address'] for element in rpc('listreceivedbyaddress', [0,True])['result'] ]
+    address_list = [ element['address'] for element in bitcoin.rpc('listreceivedbyaddress', [0,True])['result'] ]
     cursor.execute('''SELECT * FROM deals ORDER BY tx1_index''')
     for deal in cursor.fetchall():
 
@@ -49,13 +51,12 @@ def pending():
 
     return pending
 
-
 def history (address):
-    db = sqlite3.connect(LEDGER)
+    db = sqlite3.connect(config.LEDGER)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
 
-    if not rpc('validateaddress', [address])['result']['isvalid']:
+    if not bitcoin.rpc('validateaddress', [address])['result']['isvalid']:
         raise InvalidAddressError('Not a valid Bitcoin address:', address)
 
     history = {}

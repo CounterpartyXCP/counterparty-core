@@ -182,7 +182,6 @@ def transaction (source, destination, btc_amount, fee, data):
 
     # Construct inputs.
     inputs, total = get_inputs(source, btc_amount, fee)
-    print(source, btc_amount, fee)
     if not inputs:
         raise BalanceError('Insufficient bitcoins.')
 

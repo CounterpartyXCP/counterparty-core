@@ -57,11 +57,15 @@ def credit (db, cursor, address, asset_id, amount):
     db.commit()
     return db, cursor
 
-def is_divisible(cursor, asset_id):
+def is_divisible(asset_id):
+    db = sqlite3.connect(config.LEDGER)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
     cursor.execute('''SELECT * FROM issuances \
                       WHERE asset_id=?''', (asset_id,))
     asset = cursor.fetchone()
     assert not cursor.fetchone()
-    return cursor, asset['divisible']
+    cursor.close()
+    return asset['divisible']
         
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

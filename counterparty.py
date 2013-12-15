@@ -7,7 +7,7 @@ import decimal
 D = decimal.Decimal
 decimal.getcontext().prec = 8
 
-from lib import (config, exceptions, bitcoin, blocks, api)
+from lib import (config, util, exceptions, bitcoin, blocks, api)
 from lib import (send, order, btcpayment, issuance)
 
 # Obsolete in Python 3.4.
@@ -25,31 +25,28 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers(dest='action', 
                                        help='the action to be taken')
 
-    # TODO
     parser_send = subparsers.add_parser('send', help='requires bitcoind')
-    parser_send.add_argument('source', metavar='SOURCE', type=str, help='')
-    parser_send.add_argument('destination', metavar='DESTINATION', type=str, help='')
-    parser_send.add_argument('amount', metavar='AMOUNT', type=str, help='')
-    parser_send.add_argument('asset_name', metavar='ASSET_NAME', type=str, help='')
+    parser_send.add_argument('--from', metavar='SOURCE', dest='source', type=str, required=True, help='')
+    parser_send.add_argument('--to', metavar='DESTINATION', dest='destination', type=str, required=True, help='')
+    parser_send.add_argument('amount', metavar='AMOUNT', type=D, help='')
+    parser_send.add_argument('--asset', metavar='ASSET', dest='asset', type=str, required=True, help='')
 
-    # TODO
     parser_order = subparsers.add_parser('order', help='requires bitcoind')
-    parser_order.add_argument('source', metavar='SOURCE', type=str, help='')
-    parser_order.add_argument('get_amount', metavar='GET_AMOUNT', type=str, help='')
-    parser_order.add_argument('get_name', metavar='GET_NAME', type=str, help='')
-    parser_order.add_argument('give_amount', metavar='GIVE_AMOUNT', type=str, help='')
-    parser_order.add_argument('give_name', metavar='GIVE_NAME', type=str, help='')
-    parser_order.add_argument('price', metavar='PRICE', type=float, help='equal to GIVE/GET')
-    parser_order.add_argument('expiration', metavar='EXPIRATION', type=int, help='')
-    parser_order.add_argument('fee', metavar='FEE_REQUIRED or FEE_PROVIDED, as appropriate', type=float, help='')
+    parser_order.add_argument('--from', metavar='SOURCE', dest='source', type=str, required=True, help='')
+    parser_order.add_argument('--get_amount', metavar='GET_AMOUNT', type=D, required=True, help='')
+    parser_order.add_argument('--get_asset', metavar='GET_ASSET', type=str, required=True, help='')
+    parser_order.add_argument('--give_amount', metavar='GIVE_AMOUNT', type=D, required=True, help='')
+    parser_order.add_argument('--give_asset', metavar='GIVE_ASSET', type=str, required=True, help='')
+    parser_order.add_argument('--expiration', metavar='EXPIRATION', type=int, required=True, help='')
+    parser_order.add_argument('--fee', metavar='FEE', type=D, required=True, help='either the required fee, or the provided fee, as appropriate')
 
     parser_btcpayment = subparsers.add_parser('btcpayment', help='requires bitcoind')
     parser_btcpayment.add_argument('deal_id', metavar='DEAL_ID', type=str, help='')
 
     parser_issuee = subparsers.add_parser('issue', help='requires bitcoind')
-    parser_issuee.add_argument('source', metavar='SOURCE', type=str, help='')
+    parser_issuee.add_argument('--from', metavar='SOURCE', type=str, required=True, help='')
     parser_issuee.add_argument('amount', metavar='AMOUNT', type=str, help='')
-    parser_issuee.add_argument('asset_id', metavar='ASSET_ID', type=int, help='')
+    parser_issuee.add_argument('--asset', metavar='ASSET', dest='asset', type=str, help='')
 
     parser_follow = subparsers.add_parser('follow', help='requires bitcoind')
 
@@ -71,77 +68,68 @@ if __name__ == '__main__':
 
     elif args.action == 'send':
         bitcoin.bitcoind_check()
-        try:    # TEMP
-            asset_id = ASSET_ID[args.asset_name]
-        except Exception:
-            asset_id = int(args.asset_name)
-
-        if '.' in args.amount: amount = int(float(args.amount) * config.UNIT)
-        else: amount = int(args.amount)
-
-        json_print(send.send(args.source, args.destination, amount,
-                   asset_id))
+        # Get asset_id from what may have been given as an asset name.
+        try:
+            asset_id = ASSET_ID[args.asset]
+        except KeyError:
+            asset_id = int(args.asset)
+        # Find out whether the asset to be sent is divisible or not.
+        if util.is_divisible(asset_id):
+            amount = int(args.amount * config.UNIT)
+        else:
+            amount = int(args.amount)
+        json_print(send.send(args.source, args.destination, amount, asset_id))
 
     elif args.action == 'order':
-        source = args.source
-        give_amount = int(D(args.give_amount) * config.UNIT)
-        get_amount = int(D(args.get_amount) * config.UNIT)
-        give_name = args.give_name
-        get_name = args.get_name
-        expiration = args.expiration
-        fee = int(D(args.fee) * config.UNIT)
-        price = args.price
 
-        assert give_name != get_name            # TODO
-        assert price == give_amount/get_amount  # TODO
+        if args.give_asset == args.get_asset:
+            raise exceptions.UselessError('You can’t trade an asset for itself.')
 
+        # Get Asset IDs from Asset Names.
         try:    # TEMP
-            give_id = ASSET_ID[args.give_name]
+            give_id = ASSET_ID[args.give_asset]
         except Exception:
-            give_id = int(args.give_name)
+            give_id = int(args.give_asset)
         try:    # TEMP
-            get_id = ASSET_ID[args.get_name]
+            get_id = ASSET_ID[args.get_asset]
         except Exception:
-            get_id = int(args.get_name)
+            get_id = int(args.get_asset)
 
-        # fee argument is either fee_required or fee_provided, as necessary.
+        # Fee argument is either fee_required or fee_provided, as necessary.
+        # TODO: Make this more comprehensive.
         if not give_id:
-            fee_provided = fee
+            fee_provided = int(args.fee * config.UNIT)
             assert fee_provided >= config.MIN_FEE
             fee_required = 0
         elif not get_id:
-            fee_required = fee
+            fee_required = int(args.fee * config.UNIT)
             assert fee_required >= config.MIN_FEE
             fee_provided = config.MIN_FEE
 
-        if '.' in args.give_amount:
-            give_divisible = True
-            give_amount = int(float(args.give_amount) * config.UNIT)
+        # If give_id is divisible, multiply get_amount by UNIT.
+        if util.is_divisible(give_id):
+            give_amount = int(args.give_amount * config.UNIT)
         else:
-            give_divisible = False
             give_amount = int(args.give_amount)
-        if '.' in args.get_amount:
-            get_divisible = True
-            get_amount = int(float(args.get_amount) * config.UNIT)
+
+        # If get_id is divisible, multiply get_amount by UNIT.
+        if util.is_divisible(get_id):
+            get_amount = int(args.get_amount * config.UNIT)
         else:
-            get_divisible = False
             get_amount = int(args.get_amount)
 
-        # The order of the order is reversed when it is written as a ‘buy’.
-        print('Order:', source, 'wants to buy', get_amount, get_name,
-              'for', give_amount, give_name, 'in', expiration, 'blocks')   # TODO (and fee_required, fee_provided)
-
-        json_print(order.order(source, give_id, give_amount,
-                    get_id, get_amount, expiration, fee_required, fee_provided))
+        json_print(order.order(args.source, give_id, give_amount, get_id,
+                               get_amount, args.expiration, fee_required,
+                               fee_provided))
 
     elif args.action == 'btcpayment':
         json_print(btcpayment.btcpayment(args.deal_id))
 
     elif args.action == 'issue':
         bitcoin.bitcoind_check()
-        if '.' in args.amount:
+        if util.is_divisible(args.asset_id):
             divisible = True
-            amount = int(float(args.amount) * config.UNIT)
+            amount = int(args.amount * config.UNIT)
         else:
             divisible = False
             amount = int(args.amount)
@@ -156,7 +144,18 @@ if __name__ == '__main__':
         json_print(api.history(address))
 
     elif args.action == 'orderbook':
-        json_print(api.orderbook())
+        orderbook = api.orderbook()
+        json_print(orderbook)
+        '''
+        width = 8
+        fields = ['give_amount', 'give_id', 'get_amount', 'get_id', 'ask_price', 'expiration']
+        for field in fields: print(field.ljust(width), end='\t')
+        print()
+        for order in orderbook:
+            for field in fields:
+                print(str(order[field]).ljust(width), end='\t')
+        print()
+        '''
             
     elif args.action == 'pending':
         json_print(api.pending())

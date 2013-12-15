@@ -10,7 +10,8 @@ FORMAT = '>QQ'             # asset_id, amount
 ID = 0
 
 def send (source, destination, amount, asset_id):
-    if util.balance(source, asset_id) < amount:
+    balance = util.balance(source, asset_id)
+    if balance and balance < amount:
         raise BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID) + struct.pack(FORMAT, asset_id, amount)
     return bitcoin.transaction(source, destination, config.DUST_SIZE, config.MIN_FEE, data)
