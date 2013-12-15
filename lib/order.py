@@ -13,7 +13,7 @@ ID = 10
 
 def order (source, give_id, give_amount, get_id, get_amount, expiration, fee_required, fee_provided):
     if util.balance(source, give_id) < give_amount:
-        raise BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
+        raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID) + struct.pack(FORMAT, give_id, give_amount, get_id, get_amount, expiration, fee_required)
     return bitcoin.transaction(source, None, config.DUST_SIZE, fee_provided, data)
 
@@ -77,11 +77,9 @@ def parse_order (db, cursor, tx1, message):
 
     if validity == 'Valid':
         # give_name, get_name = ASSET_NAME[give_id], ASSET_NAME[get_id]
-        cursor, give_divisible = util.is_divisible(cursor, give_id)
-        if give_divisible: give_unit = config.UNIT
+        if util.is_divisible(give_id): give_unit = config.UNIT
         else: give_unit = 1
-        cursor, get_divisible = util.is_divisible(cursor, get_id)
-        if get_divisible: get_unit = config.UNIT
+        if util.is_divisible(get_id): get_unit = config.UNIT
         else: get_unit = 1
         print('\tOrder: sell', give_amount/give_unit, give_id, 'for', get_amount/get_unit, get_id, 'at', ask_price, str(get_id) + '/' + str(give_id), 'in', expiration, 'blocks', '(' + tx1['tx_hash'] + ')') # TODO (and fee_required, fee_provided)
 
@@ -118,11 +116,9 @@ def make_deal (db, cursor, give_id, give_amount, get_id, get_amount,
             # forward_name, backward_name = ASSET_NAME[forward_id], ASSET_NAME[backward_id]
             deal_id = tx0['tx_hash'] + tx1['tx_hash']
 
-            cursor, forward_divisible = util.is_divisible(cursor, forward_id)
-            if forward_divisible: forward_unit = config.UNIT
+            if util.is_divisible(forward_id): forward_unit = config.UNIT
             else: forward_unit = 1
-            cursor, backward_divisible = util.is_divisible(cursor, forward_id)
-            if backward_divisible: backward_unit = config.UNIT
+            if util.is_divisible(backward_id): backward_unit = config.UNIT
             else: backward_unit = 1
             print('\t\tDeal:', forward_amount/forward_unit, forward_id, 'for', backward_amount/backward_unit, backward_id, 'at', price, str(backward_id) + '/' + str(forward_id), '(' + deal_id + ')') # TODO
 

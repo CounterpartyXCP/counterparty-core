@@ -24,8 +24,8 @@ try:
             elif key == 'rpcconnect': RPCCONNECT = value
             elif key == 'rpcport': RPCCONNECT = value
 except Exception:
-    raise BitcoinConfError('Put a (valid) copy of your bitcoin.conf in\
-        ~/.bitcoin/bitcoin.conf')
+    raise exceptions.BitcoinConfError('Put a (valid) copy of your \
+        bitcoin.conf in ~/.bitcoin/bitcoin.conf')
     sys.exit(1)
 RPC = 'http://'+RPCUSER+':'+RPCPASSWORD+'@'+RPCCONNECT+':'+RPCPORT
 

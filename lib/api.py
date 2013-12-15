@@ -57,7 +57,7 @@ def history (address):
     cursor = db.cursor()
 
     if not bitcoin.rpc('validateaddress', [address])['result']['isvalid']:
-        raise InvalidAddressError('Not a valid Bitcoin address:', address)
+        raise exceptions.InvalidAddressError('Not a valid Bitcoin address:', address)
 
     history = {}
 
@@ -96,11 +96,9 @@ def history (address):
         history['balances'][balance['asset_id']] = balance['amount']
 
     # List issuances.
-    cursor.execute('''SELECT * FROM issuances \
-                      WHERE (source=?)\
-                      ORDER BY tx_index''',
-                   (address,))
-    history['issuances'] = [dict(issuance) for issuance in cursor.fetchall()]
+    cursor.execute('''SELECT * FROM assets \
+                      ORDER BY tx_index''')
+    history['issuances'] = [dict(asset) for asset in cursor.fetchall() if asset['issuer'] == address]
 
 
     return history 

@@ -20,8 +20,7 @@ Decentralised financial instruments in a protocol build on top of the Bitcoin bl
 * Entities selling an asset for BTC should require a fee be paid (to miners) by the buyer. (But all orders allow this.) Otherwise someone can seem to accept every sell offer.
 
 ## To do
-* API, CLI
-	* Max. `argparse` inputs (floats and ints).
+* API
 * Dividends: `sendall`(amount, assetid)
 * Price feeds, bets (e.g. CFDs)
 	* Price feeds must be in XCP only (and dividends).

@@ -33,9 +33,9 @@ def btcpayment (deal_id):
             destination = deal['tx1_address']
             btc_amount = deal['forward_amount']
         if source == destination:
-            raise UselessError('You’re trying to buy from yourself!')
+            raise exceptions.UselessError('You’re trying to buy from yourself!')
     except TypeError:
-        raise InvalidDealError('Invalid Deal ID:', deal_id)
+        raise exceptions.InvalidDealError('Invalid Deal ID:', deal_id)
 
     return bitcoin.transaction(source, destination, btc_amount, config.MIN_FEE, data)
 

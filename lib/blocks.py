@@ -64,7 +64,7 @@ def initialise(db, cursor):
     cursor.execute('''CREATE TABLE IF NOT EXISTS transactions(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
-                        block_index INTEGER,
+                        block_index INTEGER UNIQUE,
                         block_time INTEGER,
                         source TEXT,
                         destination TEXT,
@@ -77,13 +77,6 @@ def initialise(db, cursor):
     # Purge database of blocks, transactions from before BLOCK_FIRST.
     cursor.execute('''DELETE FROM blocks WHERE block_index<?''', (config.BLOCK_FIRST,))
     cursor.execute('''DELETE FROM transactions WHERE block_index<?''', (config.BLOCK_FIRST,))
-
-    cursor.execute('''DROP TABLE IF EXISTS balances''')
-    cursor.execute('''CREATE TABLE balances(
-                        address TEXT,
-                        asset_id INTEGER,
-                        amount INTEGER)
-                   ''')
 
     cursor.execute('''DROP TABLE IF EXISTS sends''')
     cursor.execute('''CREATE TABLE sends(
@@ -134,28 +127,28 @@ def initialise(db, cursor):
                         validity TEXT)
                    ''')
 
-    cursor.execute('''DROP TABLE IF EXISTS issuances''')
-    cursor.execute('''CREATE TABLE issuances(
+    cursor.execute('''DROP TABLE IF EXISTS assets''')
+    cursor.execute('''CREATE TABLE assets(
                         asset_id INTEGER PRIMARY KEY,
                         amount INTEGER,
                         divisible BOOL,
                         tx_index INTEGER UNIQUE,
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
-                        source TEXT,
-                        validity TEXT)
+                        issuer TEXT,
+                        validity TEXT
+                        )
                    ''')
 
-    # TEMP
     for asset_id in (0,1):
-        cursor.execute('''INSERT INTO issuances(
+        cursor.execute('''INSERT INTO assets(
                             asset_id,
                             amount,
                             divisible,
                             tx_index,
                             tx_hash,
                             block_index,
-                            source,
+                            issuer,
                             validity) VALUES(?,?,?,?,?,?,?,?)''',
                             (asset_id,
                             0,
@@ -166,6 +159,13 @@ def initialise(db, cursor):
                             None,
                             'Valid')
                       )
+
+    cursor.execute('''DROP TABLE IF EXISTS balances''')
+    cursor.execute('''CREATE TABLE balances(
+                        address TEXT,
+                        asset_id INTEGER,
+                        amount INTEGER)
+                   ''')
 
 
     # Initialize XCP balances. TEMP
@@ -229,6 +229,7 @@ def follow ():
 
     db = sqlite3.connect(config.LEDGER)
     db.row_factory = sqlite3.Row
+    # TODO: db.execute('pragma foreign_keys=ON')
     cursor = db.cursor()
 
     # Always re‐parse from beginning on start‐up.

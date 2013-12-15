@@ -10,7 +10,7 @@ import json
 import hashlib
 import requests
 
-from . import config
+from . import (config, exceptions)
 
 # Constants
 OP_RETURN = b'\x6a'
@@ -51,7 +51,7 @@ def base58_decode (s, version):
     for c in s:
         n *= 58
         if c not in b58_digits:
-            raise InvalidBase58Error('Not a valid base58 character:', c)
+            raise exceptions.InvalidBase58Error('Not a valid base58 character:', c)
         digit = b58_digits.index(c)
         n += digit
 
@@ -71,7 +71,7 @@ def base58_decode (s, version):
     addrbyte, data, chk0 = k[0:1], k[1:-4], k[-4:]
     chk1 = dhash(addrbyte + data)[:4]
     if chk0 != chk1:
-        raise Base58ChecksumError('Checksum mismatch: %r ≠ %r' % (chk0, ch1))
+        raise exceptions.Base58ChecksumError('Checksum mismatch: %r ≠ %r' % (chk0, ch1))
     return data
 
 def var_int (i):
@@ -173,17 +173,17 @@ def transaction (source, destination, btc_amount, fee, data):
     for address in (source, destination):
         if address:
             if not rpc('validateaddress', [address])['result']['isvalid']:
-                raise InvalidAddressError('Not a valid Bitcoin address:',
+                raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
                                           address)
 
     # Check that the source is in wallet.
     if not rpc('validateaddress', [source])['result']['ismine']:
-        raise InvalidAddressError('Not one of your Bitcoin addresses:', source)
+        raise exceptions.InvalidAddressError('Not one of your Bitcoin addresses:', source)
 
     # Construct inputs.
     inputs, total = get_inputs(source, btc_amount, fee)
     if not inputs:
-        raise BalanceError('Insufficient bitcoins.')
+        raise exceptions.BalanceError('Insufficient bitcoins.')
 
     # Construct outputs.
     change_amount = total - fee
