@@ -23,8 +23,7 @@ def parse_send (db, cursor, tx, message):
     # Unpack message.
     try:
         asset_id, amount = struct.unpack(FORMAT, message)
-    except Exception as e:
-        raise e
+    except Exception:
         asset_id, amount = None, None
         validity = 'Invalid: could not unpack'
 
@@ -61,7 +60,7 @@ def parse_send (db, cursor, tx, message):
         else:
             unit = 1
         try:    # TEMP
-            asset_name = ASSET_NAME[asset_id]
+            asset_name = config.ASSET_NAME[asset_id]
         except Exception:
             asset_name = asset_id
         print('\tSend:', amount/unit, asset_name, 'from', tx['source'], 'to', tx['destination'], '(' + tx['tx_hash'] + ')')

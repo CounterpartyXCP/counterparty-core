@@ -3,16 +3,13 @@
 import sys
 import argparse
 import json
+import time
 import decimal
 D = decimal.Decimal
 decimal.getcontext().prec = 8
 
 from lib import (config, util, exceptions, bitcoin, blocks, api)
-from lib import (send, order, btcpayment, issuance)
-
-# Obsolete in Python 3.4.
-ASSET_NAME = {0: 'BTC', 1: 'XCP'}
-ASSET_ID = {'BTC': 0, 'XCP': 1}
+from lib import (send, order, btcpayment, issuance, broadcast)
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
@@ -43,10 +40,17 @@ if __name__ == '__main__':
     parser_btcpayment = subparsers.add_parser('btcpayment', help='requires bitcoind')
     parser_btcpayment.add_argument('deal_id', metavar='DEAL_ID', type=str, help='')
 
-    parser_issuee = subparsers.add_parser('issue', help='requires bitcoind')
-    parser_issuee.add_argument('--from', metavar='SOURCE', type=str, required=True, help='')
-    parser_issuee.add_argument('amount', metavar='AMOUNT', type=str, help='')
-    parser_issuee.add_argument('--asset', metavar='ASSET', dest='asset', type=str, help='')
+    parser_issue = subparsers.add_parser('issue', help='requires bitcoind')
+    parser_issue.add_argument('--from', metavar='SOURCE', type=str, required=True, help='')
+    parser_issue.add_argument('amount', metavar='AMOUNT', type=str, help='')
+    parser_issue.add_argument('--asset_id', metavar='ASSET_ID', type=int, help='')
+
+    parser_broadcast = subparsers.add_parser('broadcast', help='requires bitcoind')
+    parser_broadcast.add_argument('--from', metavar='SOURCE', type=str, dest='source', required=True, help='')
+    parser_broadcast.add_argument('--text', metavar='TEXT', type=str, required=True, help='')
+    parser_broadcast.add_argument('--price_id', metavar='PRICE_ASSET', type=str, help='')
+    parser_broadcast.add_argument('--price_amount', metavar='PRICE_AMOUNT', type=D, default=0, help='') # TODO: should this be D()?
+    parser_broadcast.add_argument('--fee_required', metavar='FEE_REQUIRED', type=D, default=0, help='in XCP')
 
     parser_follow = subparsers.add_parser('follow', help='requires bitcoind')
 
@@ -61,6 +65,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    # TODO: Re‐name send.send, e.g., to send.create, etc.
 
     # Do something.
     if args.version:
@@ -70,7 +75,7 @@ if __name__ == '__main__':
         bitcoin.bitcoind_check()
         # Get asset_id from what may have been given as an asset name.
         try:
-            asset_id = ASSET_ID[args.asset]
+            asset_id = config.ASSET_ID[args.asset]
         except KeyError:
             asset_id = int(args.asset)
         # Find out whether the asset to be sent is divisible or not.
@@ -87,11 +92,11 @@ if __name__ == '__main__':
 
         # Get Asset IDs from Asset Names.
         try:    # TEMP
-            give_id = ASSET_ID[args.give_asset]
+            give_id = config.ASSET_ID[args.give_asset]
         except Exception:
             give_id = int(args.give_asset)
         try:    # TEMP
-            get_id = ASSET_ID[args.get_asset]
+            get_id = config.ASSET_ID[args.get_asset]
         except Exception:
             get_id = int(args.get_asset)
 
@@ -134,6 +139,20 @@ if __name__ == '__main__':
             divisible = False
             amount = int(args.amount)
         json_print(issuance.issuance(args.source, args.asset_id, amount, divisible))
+
+    elif args.action == 'broadcast':
+        bitcoin.bitcoind_check()
+        if args.price_id:   # Ugly
+            if util.is_divisible(args.price_id):
+                price_amount = int(args.price_amount * config.UNIT)
+            else:
+                price_amount = int(args.price_amount)
+            price_id = int(args.price_id)
+        else:
+            price_id = 0
+            price_amount = int(args.price_amount * config.UNIT)
+        json_print(broadcast.create(args.source, int(time.time()), 
+                   price_id, price_amount, args.fee_required * config.UNIT, args.text))
 
     elif args.action == 'follow':
         bitcoin.bitcoind_check()

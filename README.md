@@ -22,18 +22,12 @@ Decentralised financial instruments in a protocol build on top of the Bitcoin bl
 ## To do
 * API
 * Dividends: `sendall(amount, asset_id)`
-* Price feeds, bets (e.g. CFDs)
-	* Price feeds must be in XCP only (and dividends).
-	* Feed identifier is derived from `tx_hash`.
-	* No display muliplier.
-	* Pascal strings.
-	* Currencies with price feeds and unautomated pegs?
-	* Reannounces? Renounces?
-	* Bets may have to be able to use `block_time`.
+* Bets, and CFDs
 * Asset ID strings
 	* Hand‐picked Base58‐encoded 8‐byte Pascal strings (length?, checksum? version byte? leading zeros?)
 	* Full‐length, except for XBT, XCP, which are hard‐coded in?
 		* Just require full‐length for the *issuance* of all other currencies (XBT, XCP are created otherwise).
+* Adjust `MIN_FEE`?
 * testnet practice funding period
 
 ## Limitations

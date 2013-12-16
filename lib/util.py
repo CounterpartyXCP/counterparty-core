@@ -68,4 +68,19 @@ def is_divisible(asset_id):
     cursor.close()
     return asset['divisible']
         
+def is_locked(address):
+    # TODO: disallow bets on broadcasts from locked addresses
+    # NOTE: [necessarily] locks based on tx_index and not timestamp
+    db = sqlite3.connect(config.LEDGER)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM broadcasts \
+                      WHERE (source=? AND text=?) \
+                      ORDER BY tx_index''', ('', address))
+    broadcast = cursor.fetchone()
+    assert not cursor.fetchone()
+    cursor.close()
+    if broadcast: return True
+    else: return False
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

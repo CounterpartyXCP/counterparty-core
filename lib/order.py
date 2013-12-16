@@ -76,7 +76,7 @@ def parse_order (db, cursor, tx1, message):
     db.commit()
 
     if validity == 'Valid':
-        # give_name, get_name = ASSET_NAME[give_id], ASSET_NAME[get_id]
+        # give_name, get_name = config.ASSET_NAME[give_id], config.ASSET_NAME[get_id]
         if util.is_divisible(give_id): give_unit = config.UNIT
         else: give_unit = 1
         if util.is_divisible(get_id): get_unit = config.UNIT
@@ -113,7 +113,7 @@ def make_deal (db, cursor, give_id, give_amount, get_id, get_amount,
             backward_amount = give_amount * forward_amount/D(tx0['give_amount'])
 
             forward_id, backward_id = get_id, give_id
-            # forward_name, backward_name = ASSET_NAME[forward_id], ASSET_NAME[backward_id]
+            # forward_name, backward_name = config.ASSET_NAME[forward_id], config.ASSET_NAME[backward_id]
             deal_id = tx0['tx_hash'] + tx1['tx_hash']
 
             if util.is_divisible(forward_id): forward_unit = config.UNIT

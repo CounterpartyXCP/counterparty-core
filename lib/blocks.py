@@ -11,7 +11,7 @@ import struct
 import sqlite3
 
 from . import (config, util, bitcoin)
-from . import (send, order, btcpayment, issuance)
+from . import (send, order, btcpayment, issuance, broadcast)
 
 def parse_block (db, cursor, block_index):
     """This is a separate function from follow() so that changing the parsing
@@ -34,6 +34,7 @@ def parse_block (db, cursor, block_index):
         message_type_id = struct.unpack(config.TXTYPE_FORMAT, post_prefix[:4])[0]
         message = post_prefix[4:]
         # TODO: Make sure that message lengths are correct. (struct.unpack is fragile.)
+        # TODO: Re‐name parse_send, e.g., to parse, etc.
         if message_type_id == send.ID:
             db, cursor = send.parse_send(db, cursor, tx, message)
         elif message_type_id == order.ID:
@@ -42,6 +43,8 @@ def parse_block (db, cursor, block_index):
             db, cursor = btcpayment.parse_btcpayment(db, cursor, tx, message)
         elif message_type_id == issuance.ID:
             db, cursor = issuance.parse_issuance(db, cursor, tx, message)
+        elif message_type_id == broadcast.ID:
+            db, cursor = broadcast.parse(db, cursor, tx, message)
         else:
             # Mark transaction as of unsupported type.
             cursor.execute('''UPDATE transactions \
@@ -159,6 +162,20 @@ def initialise(db, cursor):
                             None,
                             'Valid')
                       )
+
+    cursor.execute('''DROP TABLE IF EXISTS broadcasts''')
+    cursor.execute('''CREATE TABLE broadcasts(
+                        tx_index INTEGER,
+                        tx_hash TEXT,
+                        block_index INTEGER,
+                        source TEXT,
+                        timestamp INTEGER,
+                        price_id INTEGER,
+                        price_amount INTEGER,
+                        fee_required INTEGER,
+                        text TEXT,
+                        validity TEXT)
+                  ''')
 
     cursor.execute('''DROP TABLE IF EXISTS balances''')
     cursor.execute('''CREATE TABLE balances(
