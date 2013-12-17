@@ -242,7 +242,9 @@ def follow ():
         if 'ledger' == filename_array[0] and 'db' == filename_array[2]:
             if filename_array[1] != str(config.DB_VERSION):
                 os.remove(filename)
-                raise DBVersionWarning('Hard‐fork! Deleting old databases. Re‐run Counterparty.')
+                raise DBVersionWarning('New version of transaction table!
+                                        Deleting old databases. Please re‐run 
+                                        Counterparty.')
 
     db = sqlite3.connect(config.LEDGER)
     db.row_factory = sqlite3.Row

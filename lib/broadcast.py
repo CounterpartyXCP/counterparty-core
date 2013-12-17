@@ -1,17 +1,20 @@
 #! /usr/bin/python3
 
 """
-Broadcast a message, with or without a price. (Broadcasts without a price
-cannot be used for betting.)
+Broadcast a message, with or without a price.
 
-Multiple messages per block are allowed. (Bets may be made on the ‘timestamp’
-field.)
+Multiple messages per block are allowed. Bets are be made on the ‘timestamp’
+field, and not the block index.
 
 An address is a feed of broadcasts. Feeds (addresses) may be locked with a
-broadcast containing a blank ‘text’ field.
+broadcast containing a blank ‘text’ field. Bets on a feed reference the address
+that is the source of the feed in an output which includes the (latest)
+required fee.
 
-Bets on a feed reference the address that is the source of the feed in an
-output which includes the (latest) required fee.
+Broadcasts without a price may not be used for betting. Broadcasts about events
+with a small number of possible outcomes (e.g. sports games), should be
+written, for example, such that a price of 1 XCP means one outcome, 2 XCP means
+another, etc., which schema should be described in the ‘text’ field.
 """
 
 import struct
