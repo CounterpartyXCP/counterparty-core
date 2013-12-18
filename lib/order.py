@@ -8,13 +8,15 @@ decimal.getcontext().prec = 8
 
 from . import (util, config, bitcoin)
 
-FORMAT = '>QQQQHQ'        # give_id, give_amount, get_id, get_amount, expiration, fee_required
+FORMAT = '>QQQQHQ'
 ID = 10
 
 def order (source, give_id, give_amount, get_id, get_amount, expiration, fee_required, fee_provided):
     if util.balance(source, give_id) < give_amount:
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
-    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID) + struct.pack(FORMAT, give_id, give_amount, get_id, get_amount, expiration, fee_required)
+    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
+    data += struct.pack(FORMAT, give_id, give_amount, get_id, get_amount,
+                        expiration, fee_required)
     return bitcoin.transaction(source, None, config.DUST_SIZE, fee_provided, data)
 
 def parse_order (db, cursor, tx1, message):
@@ -76,12 +78,9 @@ def parse_order (db, cursor, tx1, message):
     db.commit()
 
     if validity == 'Valid':
-        # give_name, get_name = config.ASSET_NAME[give_id], config.ASSET_NAME[get_id]
-        if util.is_divisible(give_id): give_unit = config.UNIT
-        else: give_unit = 1
-        if util.is_divisible(get_id): get_unit = config.UNIT
-        else: get_unit = 1
-        print('\tOrder: sell', give_amount/give_unit, give_id, 'for', get_amount/get_unit, get_id, 'at', ask_price, str(get_id) + '/' + str(give_id), 'in', expiration, 'blocks', '(' + tx1['tx_hash'] + ')') # TODO (and fee_required, fee_provided)
+        if util.is_divisible(give_id): give_amount /= config.UNIT
+        if util.is_divisible(get_id): get_amount /= config.UNIT
+        print('\tOrder: sell', give_amount, util.get_asset_name(give_id), 'for', get_amount, util.get_asset_name(get_id), 'at', ask_price, util.get_asset_name(get_id) + '/' + util.get_asset_name(give_id), 'in', expiration, 'blocks', '(' + tx1['tx_hash'] + ')') # TODO (and fee_required, fee_provided)
 
         db, cursor = make_deal(db, cursor, give_id, give_amount, get_id, get_amount, ask_price, expiration, fee_required, tx1)
 
@@ -108,19 +107,15 @@ def make_deal (db, cursor, give_id, give_amount, get_id, get_amount,
         # and they trade as much as they can.
         price = D(tx0['get_amount']) / D(tx0['give_amount'])
         if price <= 1/ask_price:  # Ugly
-            forward_amount = min(D(tx0['give_remaining']),
-                                     get_amount / price)
+            forward_amount = min(D(tx0['give_remaining']), get_amount / price)
             backward_amount = give_amount * forward_amount/D(tx0['give_amount'])
 
             forward_id, backward_id = get_id, give_id
-            # forward_name, backward_name = config.ASSET_NAME[forward_id], config.ASSET_NAME[backward_id]
             deal_id = tx0['tx_hash'] + tx1['tx_hash']
 
-            if util.is_divisible(forward_id): forward_unit = config.UNIT
-            else: forward_unit = 1
-            if util.is_divisible(backward_id): backward_unit = config.UNIT
-            else: backward_unit = 1
-            print('\t\tDeal:', forward_amount/forward_unit, forward_id, 'for', backward_amount/backward_unit, backward_id, 'at', price, str(backward_id) + '/' + str(forward_id), '(' + deal_id + ')') # TODO
+            if util.is_divisible(forward_id): forward_amount *= config.UNIT
+            if util.is_divisible(backward_id): backward_amount *= config.UNIT
+            print('\t\tDeal:', forward_amount, util.get_asset_name(forward_id), 'for', backward_amount, util.get_asset_name(backward_id), 'at', price, util.get_asset_name(backward_id) + '/' + util.get_asset_name(forward_id), '(' + deal_id + ')') # TODO
 
             if 0 in (give_id, get_id):
                 validity = 'Valid: waiting for bitcoins'
@@ -185,13 +180,13 @@ def make_deal (db, cursor, give_id, give_amount, get_id, get_amount,
     return db, cursor
 
 def expire (db, cursor, block_index):
-    # Expire orders and give refunds.
+    # Expire orders and give refunds for the amount give_remaining.
     cursor.execute('''SELECT * FROM orders''')
     for order in cursor.fetchall():
         time_left = order['block_index'] + order['expiration'] - block_index # Inclusive/exclusive expiration? DUPE
         if time_left <= 0 and order['validity'] == 'Valid':
             cursor.execute('''UPDATE orders SET validity=? WHERE tx_hash=?''', ('Invalid: expired', order['tx_hash']))
-            db, cursor = util.credit(db, cursor, order['source'], order['give_id'], order['give_amount'])
+            db, cursor = util.credit(db, cursor, order['source'], order['give_id'], order['give_remaining'])
             print('\tExpired order:', order['tx_hash'])
         db.commit()
 

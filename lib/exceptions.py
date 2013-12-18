@@ -1,7 +1,9 @@
 #! /usr/bin/python3
 
 # Exceptions
-class BitcoinConfError(Exception):
+class FeedLockedError (Exception):
+    pass
+class BitcoinConfError (Exception):
     pass
 class UselessError (Exception):
     pass

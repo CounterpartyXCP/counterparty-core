@@ -6,14 +6,15 @@ import struct
 import sqlite3
 from . import (util, config, bitcoin)
 
-FORMAT = '>QQ'             # asset_id, amount
+FORMAT = '>QQ'
 ID = 0
 
 def send (source, destination, amount, asset_id):
     balance = util.balance(source, asset_id)
     if balance and balance < amount:
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
-    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID) + struct.pack(FORMAT, asset_id, amount)
+    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
+    data += struct.pack(FORMAT, asset_id, amount)
     return bitcoin.transaction(source, destination, config.DUST_SIZE, config.MIN_FEE, data)
 
 def parse_send (db, cursor, tx, message):
@@ -55,15 +56,8 @@ def parse_send (db, cursor, tx, message):
                         validity)
                   )
     if validity == 'Valid':
-        if util.is_divisible(asset_id):
-            unit = config.UNIT
-        else:
-            unit = 1
-        try:    # TEMP
-            asset_name = config.ASSET_NAME[asset_id]
-        except Exception:
-            asset_name = asset_id
-        print('\tSend:', amount/unit, asset_name, 'from', tx['source'], 'to', tx['destination'], '(' + tx['tx_hash'] + ')')
+        if util.is_divisible(asset_id): amount /= config.UNIT
+        print('\tSend:', amount, util.get_asset_name(asset_id), 'from', tx['source'], 'to', tx['destination'], '(' + tx['tx_hash'] + ')')
 
     return db, cursor
 

@@ -6,13 +6,14 @@ import sqlite3
 
 from . import (util, bitcoin)
 
-FORMAT = '>32s32s'   # tx0_hash, tx1_hash
+FORMAT = '>32s32s'
 ID = 11
 
 def btcpayment (deal_id):
     tx0_hash, tx1_hash = deal_id[:64], deal_id[64:] # UTF‐8 encoding means that the indices are doubled.
     tx0_hash_bytes, tx1_hash_bytes = binascii.unhexlify(tx0_hash), binascii.unhexlify(tx1_hash)
-    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID) + struct.pack(FORMAT, tx0_hash_bytes, tx1_hash_bytes)
+    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
+    data += struct.pack(FORMAT, tx0_hash_bytes, tx1_hash_bytes)
 
     db = sqlite3.connect(LEDGER)
     db.row_factory = sqlite3.Row

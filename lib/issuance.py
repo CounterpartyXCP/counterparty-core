@@ -5,7 +5,7 @@ import sqlite3
 
 from . import (config, util, bitcoin)
 
-FORMAT = '>QQ?'         # asset_id, amount, divisible
+FORMAT = '>QQ?'
 ID = 20
 
 def issuance (source, asset_id, amount, divisible):
@@ -16,7 +16,8 @@ def issuance (source, asset_id, amount, divisible):
     cursor.execute('''SELECT * FROM assets WHERE (asset_id=? AND validity=?)''', (asset_id, 'Valid'))
     if cursor.fetchone():
         raise exceptions.IssuanceError('Asset ID already claimed.')
-    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID) + struct.pack(FORMAT, asset_id, amount, divisible)
+    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
+    data += struct.pack(FORMAT, asset_id, amount, divisible)
     db.close()
     return bitcoin.transaction(source, None, config.DUST_SIZE, config.MIN_FEE, data)
 

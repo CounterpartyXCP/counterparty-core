@@ -41,7 +41,7 @@ def bitcoind_check ():
     block_hash = rpc('getblockhash', [block_count])['result']
     block = rpc('getblock', [block_hash])['result']
     if block['time'] < (time.time() - 60 * 60 * 2):
-        raise BitcoindBehindWarning('bitcoind is running behind.')  # This kills everything.
+        raise exceptions.BitcoindBehindWarning('bitcoind is running behind.')  # This kills everything.
 
     # TODO: Make sure that follow() is running here?
 
@@ -179,6 +179,8 @@ def transaction (source, destination, btc_amount, fee, data):
     # Check that the source is in wallet.
     if not rpc('validateaddress', [source])['result']['ismine']:
         raise exceptions.InvalidAddressError('Not one of your Bitcoin addresses:', source)
+
+    # TODO: check that btc_amount >= config.DUST_SIZE
 
     # Construct inputs.
     inputs, total = get_inputs(source, btc_amount, fee)

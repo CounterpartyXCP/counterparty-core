@@ -11,7 +11,7 @@ import struct
 import sqlite3
 
 from . import (config, util, bitcoin)
-from . import (send, order, btcpayment, issuance, broadcast)
+from . import (send, order, btcpayment, issuance, broadcast, bet)
 
 def parse_block (db, cursor, block_index):
     """This is a separate function from follow() so that changing the parsing
@@ -45,12 +45,16 @@ def parse_block (db, cursor, block_index):
             db, cursor = issuance.parse_issuance(db, cursor, tx, message)
         elif message_type_id == broadcast.ID:
             db, cursor = broadcast.parse(db, cursor, tx, message)
+        elif message_type_id == bet.ID:
+            db, cursor = bet.parse(db, cursor, tx, message)
         else:
             # Mark transaction as of unsupported type.
             cursor.execute('''UPDATE transactions \
                               SET supported=? \
                               WHERE tx_hash=?''',
-                           (tx['tx_hash'], 'False'))
+                           ('False', tx['tx_hash']))
+            print('Unsupported transaction:', message_type_id)
+            print('Unsupported transaction:', tx['tx_hash'])
         db.commit()
 
     db, cursor = order.expire(db, cursor, block_index)
@@ -67,7 +71,7 @@ def initialise(db, cursor):
     cursor.execute('''CREATE TABLE IF NOT EXISTS transactions(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
-                        block_index INTEGER UNIQUE,
+                        block_index INTEGER,
                         block_time INTEGER,
                         source TEXT,
                         destination TEXT,
@@ -172,10 +176,53 @@ def initialise(db, cursor):
                         timestamp INTEGER,
                         price_id INTEGER,
                         price_amount INTEGER,
-                        fee_required INTEGER,
+                        fee_multiplier INTEGER,
                         text TEXT,
                         validity TEXT)
-                  ''')
+                   ''')
+
+    cursor.execute('''DROP TABLE IF EXISTS bets''')
+    cursor.execute('''CREATE TABLE bets(
+                        tx_index INTEGER,
+                        tx_hash TEXT,
+                        block_index INTEGER,
+                        source TEXT,
+                        feed_address TEXT,
+                        bet_type INTEGER,
+                        time_start INTEGER,
+                        time_end INTEGER,
+                        wager_id INTEGER,
+                        wager_amount INTEGER,
+                        counterwager_amount INTEGER,
+                        wager_remaining INTEGER,
+                        odds REAL,
+                        threshhold_leverage INTEGER,
+                        expiration INTEGER,
+                        validity TEXT)
+                   ''')
+
+    cursor.execute('''DROP TABLE IF EXISTS contracts''')
+    cursor.execute('''CREATE TABLE contracts(
+                        tx0_index INTEGER,
+                        tx0_hash TEXT,
+                        tx0_address TEXT,
+                        tx1_index INTEGER,
+                        tx1_hash TEXT,
+                        tx1_address TEXT,
+                        feed_address TEXT,
+                        bet_type INTEGER,
+                        time_start INTEGER,
+                        time_end INTEGER,
+                        threshold_leverage INTEGER,
+                        wager_id INTEGER,
+                        forward_amount INTEGER,
+                        backward_amount INTEGER,
+                        tx0_block_index INTEGER,
+                        tx1_block_index INTEGER,
+                        tx0_expiration INTEGER,
+                        tx1_expiration INTEGER,
+                        validity TEXT)
+                   ''')
 
     cursor.execute('''DROP TABLE IF EXISTS balances''')
     cursor.execute('''CREATE TABLE balances(
@@ -242,9 +289,10 @@ def follow ():
         if 'ledger' == filename_array[0] and 'db' == filename_array[2]:
             if filename_array[1] != str(config.DB_VERSION):
                 os.remove(filename)
-                raise DBVersionWarning('New version of transaction table!
-                                        Deleting old databases. Please re‐run 
-                                        Counterparty.')
+                raise exceptions.DBVersionWarning('New version of transaction \
+                                                   table! Deleting old \
+                                                   databases. Please re‐run \
+                                                   Counterparty.')
 
     db = sqlite3.connect(config.LEDGER)
     db.row_factory = sqlite3.Row
@@ -257,7 +305,6 @@ def follow ():
     for block in cursor.fetchall():
         db, cursor = parse_block(db, cursor, block['block_index'])
 
-    # NOTE: tx_index may be skipping some numbers.
     tx_index = 0
     while True:
 
@@ -267,7 +314,7 @@ def follow ():
             block_index = cursor.fetchone()['block_index'] + 1
             assert not cursor.fetchone()
         except Exception:
-            block_index = BLOCK_FIRST
+            block_index = config.BLOCK_FIRST
 
         # Get index of last transaction.
         try:    # Ugly

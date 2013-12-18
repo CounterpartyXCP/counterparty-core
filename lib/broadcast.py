@@ -15,6 +15,10 @@ Broadcasts without a price may not be used for betting. Broadcasts about events
 with a small number of possible outcomes (e.g. sports games), should be
 written, for example, such that a price of 1 XCP means one outcome, 2 XCP means
 another, etc., which schema should be described in the ‘text’ field.
+
+fee_multipilier: .05 XCP means 5%. It may be greater than 1, however; but
+because it is stored as a four‐byte integer, it may not be greater than about
+42.
 """
 
 import struct
@@ -23,11 +27,13 @@ import datetime
 
 from . import (util, config, bitcoin)
 
-FORMAT = '>IQQQ48p' # timestamp, price_id, price_amount, fee (XCP), text
+FORMAT = '>IQQI32p' # How many characters *can* the text be?! (That is, how long is PREFIX?!)
 ID = 30
 
-def create (source, timestamp, price_id, price_amount, fee_required, text):
-    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID) + struct.pack(FORMAT, timestamp, price_id, price_amount, fee_required, text.encode('utf-8'))
+def create (source, timestamp, price_id, price_amount, fee_multiplier, text):
+    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
+    data += struct.pack(FORMAT, timestamp, price_id, price_amount,
+                        fee_multiplier, text.encode('utf-8'))
     return bitcoin.transaction(source, None, config.DUST_SIZE, config.MIN_FEE, data)
 
 def parse (db, cursor, tx, message):
@@ -36,10 +42,10 @@ def parse (db, cursor, tx, message):
 
     # Unpack message.
     try:
-        timestamp, price_id, price_amount, fee_required, text = struct.unpack(FORMAT, message)
+        timestamp, price_id, price_amount, fee_multiplier, text = struct.unpack(FORMAT, message)
         text = text.decode('utf-8')
     except Exception:
-        asset_id, amount = None, None
+        timestamp, price_id, price_amount, fee_multiplier, text = None, None, None, None, None
         validity = 'Invalid: could not unpack'
 
     # Check that the publishing address is not locked.
@@ -55,7 +61,7 @@ def parse (db, cursor, tx, message):
                         timestamp,
                         price_id,
                         price_amount,
-                        fee_required,
+                        fee_multiplier,
                         text,
                         validity) VALUES(?,?,?,?,?,?,?,?,?,?)''',
                         (tx['tx_index'],
@@ -65,7 +71,7 @@ def parse (db, cursor, tx, message):
                         timestamp,
                         price_id,
                         price_amount,
-                        fee_required,
+                        fee_multiplier,
                         text,
                         validity)
                   )
@@ -73,20 +79,16 @@ def parse (db, cursor, tx, message):
         if util.is_divisible(price_id):
             price_amount /= config.UNIT
 
-        try:    # TEMP
-            price_name = config.ASSET_NAME[price_id]
-        except Exception as e:
-            raise e
-            price_name = price_id
-
         suffix = 'from ' + tx['source'] + ' at ' + datetime.datetime.fromtimestamp(timestamp).isoformat() + ' (' + tx['tx_hash'] + ') '
 
         if not price_amount:
             price_amount, price_name = '', ''
             print('\tBroadcast:', '‘' + text + '’', suffix)
         else:
-            print('\tBroadcast:', '‘' + text + ' =', price_amount, price_name + '’', suffix)
+            print('\tBroadcast:', '‘' + text + ' =', price_amount, util.get_asset_name(price_id) + '’', suffix)
 
+    # TODO: Settle bets (and CFDs)!
+        # CFDs cannot be incremetally settled.
               
     return db, cursor
 

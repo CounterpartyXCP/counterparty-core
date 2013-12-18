@@ -1,6 +1,22 @@
 import sqlite3
 from . import config
 
+# TEMP
+def get_asset_id (asset_name):
+    """Make take id, too."""
+    try:
+        return config.ASSET_ID[asset_name]
+    except Exception:   #
+        return int(asset_name)
+
+# TEMP
+def get_asset_name (asset_id):
+    """Make take name, too."""
+    try:
+        return config.ASSET_NAME[asset_id]
+    except Exception:   #
+        return str(asset_id)
+
 def balance (source, asset_id):
     db = sqlite3.connect(config.LEDGER)
     db.row_factory = sqlite3.Row
@@ -69,7 +85,7 @@ def is_divisible(asset_id):
     return asset['divisible']
         
 def is_locked(address):
-    # TODO: disallow bets on broadcasts from locked addresses
+    """ Returns None if no broadcast from address can be found. """
     # NOTE: [necessarily] locks based on tx_index and not timestamp
     db = sqlite3.connect(config.LEDGER)
     db.row_factory = sqlite3.Row
