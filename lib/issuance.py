@@ -14,8 +14,12 @@ def issuance (source, asset_id, amount, divisible):
     cursor = db.cursor()
     # Avoid duplicates.
     cursor.execute('''SELECT * FROM issuances WHERE (asset_id=? AND validity=?)''', (asset_id, 'Valid'))
-    if cursor.fetchone():
-        raise exceptions.IssuanceError('Asset ID already claimed.')
+    issuance = cursor.fetchone()
+    if issuance:
+        if issuance['issuer'] != source:
+            raise exceptions.IssuanceError('Asset exists and was issued by another address.')
+        if divisible != util.is_divisible(asset_id):
+            raise exceptions.IssuanceError('That asset exists with a different divisibility.')
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount, divisible)
     db.close()
@@ -36,7 +40,7 @@ def parse_issuance (db, cursor, tx, message):
     cursor.execute('''SELECT * FROM issuances WHERE (asset_id=? AND validity=?)''', (asset_id, 'Valid'))
     issuance = cursor.fetchone()
     if issuance:
-        if not issuance['issuer'] == tx['source']:
+        if issuance['issuer'] != tx['source']:
             validity = 'Invalid: that asset already exists and was issued by another address'
         if validity == 'Valid' and divisible != util.is_divisible(asset_id):
             validity = 'Invalid: asset exists with a different divisibility'
