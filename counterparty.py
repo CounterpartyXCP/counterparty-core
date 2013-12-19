@@ -27,7 +27,7 @@ if __name__ == '__main__':
     parser_send = subparsers.add_parser('send', help='requires bitcoind')
     parser_send.add_argument('--from', metavar='SOURCE', dest='source', type=str, required=True, help='')
     parser_send.add_argument('--to', metavar='DESTINATION', dest='destination', type=str, required=True, help='')
-    parser_send.add_argument('amount', metavar='AMOUNT', type=D, help='')
+    parser_send.add_argument('--amount', metavar='AMOUNT', type=D, help='')
     parser_send.add_argument('--asset', metavar='ASSET', dest='asset', type=str, required=True, help='')
 
     parser_order = subparsers.add_parser('order', help='requires bitcoind')
@@ -44,7 +44,7 @@ if __name__ == '__main__':
 
     parser_issue = subparsers.add_parser('issue', help='requires bitcoind')
     parser_issue.add_argument('--from', metavar='SOURCE', type=str, required=True, help='')
-    parser_issue.add_argument('amount', metavar='AMOUNT', type=str, help='')
+    parser_issue.add_argument('--amount', metavar='AMOUNT', type=str, help='')
     parser_issue.add_argument('--asset_id', metavar='ASSET_ID', type=int, help='')
 
     parser_broadcast = subparsers.add_parser('broadcast', help='requires bitcoind')

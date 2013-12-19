@@ -156,12 +156,11 @@ def serialize (inputs, outputs, data):
 
 def get_inputs (source, amount, fee):
     """List unspent inputs for source."""
-    listunspent = rpc('listunspent', [])['result']
+    listunspent = rpc('listunspent', [-1])['result']  # TODO: Reconsider this. (Will this only allow sending unconfirmed *change*?!)
     unspent = [coin for coin in listunspent if coin['address'] == source]
     inputs, total = [], 0
     for coin in unspent:                                                      
-        # if not coin['confirmations']:
-            # continue    # Blocks or it didn’t happen. TODO: Reconsider this.
+        print(coin['txid'])
         inputs.append(coin)
         total += int(coin['amount'] * config.UNIT)
         if total >= amount + fee:

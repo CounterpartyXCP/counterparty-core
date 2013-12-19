@@ -24,19 +24,18 @@ def btcpayment (deal_id):
                    (tx0_hash, tx1_hash))
     deal = cursor.fetchone()
     assert not cursor.fetchone()
-    try:
-        if not deal['backward_id']:
-            source = deal['tx1_address']
-            destination = deal['tx0_address']
-            btc_amount = deal['backward_amount']
-        else:
-            source = deal['tx0_address']
-            destination = deal['tx1_address']
-            btc_amount = deal['forward_amount']
-        if source == destination:
-            raise exceptions.UselessError('You’re trying to buy from yourself!')
-    except TypeError:
-        raise exceptions.InvalidDealError('Invalid Deal ID:', deal_id)
+    if not deal: raise exceptions.InvalidDealError('Invalid Deal ID:', deal_id)
+
+    if not deal['backward_id']:
+        source = deal['tx1_address']
+        destination = deal['tx0_address']
+        btc_amount = deal['backward_amount']
+    else:
+        source = deal['tx0_address']
+        destination = deal['tx1_address']
+        btc_amount = deal['forward_amount']
+    if source == destination:
+        raise exceptions.UselessError('You’re trying to buy from yourself!')
 
     return bitcoin.transaction(source, destination, btc_amount, config.MIN_FEE, data)
 
