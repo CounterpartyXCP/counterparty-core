@@ -62,7 +62,7 @@ def parse_btcpayment (db, cursor, tx, message):
         cursor.execute('''UPDATE deals SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Valid', tx0_hash, tx1_hash))
         db.commit()
         if deal['backward_id']:    # Gratuitous
-            db, cursor = credit(db, cursor, tx['source'], deal['backward_id'], deal['backward_amount'])
+            db, cursor = util.credit(db, cursor, tx['source'], deal['backward_id'], deal['backward_amount'])
     if deal['tx1_address'] == tx['source'] and tx['btc_amount'] >= deal['backward_amount']:
         cursor.execute('''UPDATE deals SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Valid', tx0_hash, tx1_hash))
         if deal['forward_id']:     # Gratuitous

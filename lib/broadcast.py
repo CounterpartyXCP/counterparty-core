@@ -75,16 +75,12 @@ def parse (db, cursor, tx, message):
                         validity)
                   )
     if validity == 'Valid':
+        if not value: infix = '‘' + text + '’'
+        else: infix = '‘' + text + ' =', str(value) + '’'
         suffix = 'from ' + tx['source'] + ' at ' + datetime.datetime.fromtimestamp(timestamp).isoformat() + ' (' + tx['tx_hash'] + ') '
-
-        if not value:
-            value, price_name = '', ''
-            print('\tBroadcast:', '‘' + text + '’', suffix)
-        else:
-            print('\tBroadcast:', '‘' + text + ' =', str(value) + '’', suffix)
+        print('\tBroadcast:', infix, suffix)
 
     # TODO: Settle bets (and CFDs)!
-        # CFDs cannot be incremetally settled.
               
     return db, cursor
 

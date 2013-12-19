@@ -166,21 +166,19 @@ if __name__ == '__main__':
             orderbook = api.orderbook()
             orderbook_table = [('Source', 'Give', 'Get', 'Price', 'Fee', 'Time Left', 'Tx Hash')]
             for order in orderbook:
+                price = D(order['get_amount']) / D(order['give_amount'])
 
-                if util.is_divisible(order['give_id']):
-                    give_amount = order['give_amount'] / config.UNIT
-                else:
-                    give_amount = order['give_amount']
-                if util.is_divisible(order['get_id']):
-                    get_amount = order['get_amount'] / config.UNIT
-                else:
-                    get_amount = order['get_amount']
+                give_remaining = order['give_remaining']
+                get_remaining = D(order['give_remaining']) * price
+
+                if util.is_divisible(order['give_id']): give_remaining /= config.UNIT
+                if util.is_divisible(order['get_id']): get_remaining /= config.UNIT
                 give_name = util.get_asset_name(order['give_id'])
                 get_name = util.get_asset_name(order['get_id'])
-                give = str(give_amount) + ' ' + give_name
-                get = str(get_amount) + ' ' + get_name
+                give = str(give_remaining) + ' ' + give_name
+                get = str(round(get_remaining, 8)) + ' ' + get_name
 
-                price = str(get_amount/give_amount) + ' ' + get_name + '/' + give_name
+                price_string = str(round(price, 8)) + ' ' + get_name + '/' + give_name
 
                 if order['fee_required']:
                     fee = str(order['fee_required'] / config.UNIT) + ' BTC (required)'
@@ -192,19 +190,20 @@ if __name__ == '__main__':
                 
                 hash_ = order['tx_hash'][:8] + '…' + order['tx_hash'][-8:]
 
-                orderbook_table.append((order['source'], give, get, price, fee, str(time_left), hash_))
+                orderbook_table.append((order['source'], give, get, price_string, fee, str(time_left), hash_))
 
             # Print out orderorderbook_table.
+            print('OPEN ORDERS')
             width = []
             for i in range(len(orderbook_table[0])):
-                width.append(max(len(row[i]) for row in orderbook_table) + 5)
+                width.append(max(len(row[i]) for row in orderbook_table) + 2)
             for row in orderbook_table:
                 for i in range(len(row)):
                     print(row[i].ljust(width[i]), end='')
                 print()
 
-            # Print blank line between orderbook and pending.
-            print()
+            # Print two blank lines between orderbook and pending.
+            print('\n')
 
             # Get table of pending BTC payments.
             pending = api.pending()
@@ -243,9 +242,10 @@ if __name__ == '__main__':
                 pending_table.append((deal_id, time_left))
 
             # Print out pending_table.
+            print('PENDING BTC PAYMENTS')
             width = []
             for i in range(len(pending_table[0])):
-                width.append(max(len(row[i]) for row in pending_table) + 5)
+                width.append(max(len(row[i]) for row in pending_table) + 2)
             for row in pending_table:
                 for i in range(len(row)):
                     print(row[i].ljust(width[i]), end='')

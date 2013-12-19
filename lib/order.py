@@ -12,7 +12,8 @@ FORMAT = '>QQQQHQ'
 ID = 10
 
 def order (source, give_id, give_amount, get_id, get_amount, expiration, fee_required, fee_provided):
-    if util.balance(source, give_id) < give_amount:
+    balance = util.balance(source, give_id) 
+    if balance and balance < give_amount:
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, give_id, give_amount, get_id, get_amount,
@@ -93,7 +94,7 @@ def parse_order (db, cursor, tx1, message):
             fee_text = 'with a provided fee of ' + str(tx1['fee'] / config.UNIT) + ' BTC'
         elif not get_id:
             fee_text = 'with a required fee of ' + str(fee_required / config.UNIT) + ' BTC'
-        print('\tOrder: sell', give_amount/give_unit, util.get_asset_name(give_id), 'for', get_amount/get_unit, util.get_asset_name(get_id), 'at', ask_price, util.get_asset_name(get_id) + '/' + util.get_asset_name(give_id), 'in', expiration, 'blocks', fee_text, '(' + tx1['tx_hash'] + ')') # TODO (and fee_required, fee_provided)
+        print('\tOrder: sell', give_amount/give_unit, util.get_asset_name(give_id), 'for', get_amount/get_unit, util.get_asset_name(get_id), 'at', ask_price.quantize(config.FOUR).normalize(), util.get_asset_name(get_id) + '/' + util.get_asset_name(give_id), 'in', expiration, 'blocks', fee_text, '(' + tx1['tx_hash'] + ')') # TODO (and fee_required, fee_provided)
 
         db, cursor = make_deal(db, cursor, give_id, give_amount, get_id, get_amount, ask_price, expiration, fee_required, tx1)
 
@@ -137,7 +138,7 @@ def make_deal (db, cursor, give_id, give_amount, get_id, get_amount,
                 backward_unit = config.UNIT
             else:
                 backward_unit = 1
-            print('\t\tDeal:', forward_amount/forward_unit, util.get_asset_name(forward_id), 'for', backward_amount/backward_unit, util.get_asset_name(backward_id), 'at', price, util.get_asset_name(backward_id) + '/' + util.get_asset_name(forward_id), '(' + deal_id + ')') # TODO
+            print('\t\tDeal:', forward_amount/forward_unit, util.get_asset_name(forward_id), 'for', backward_amount/backward_unit, util.get_asset_name(backward_id), 'at', price.quantize(config.FOUR).normalize(), util.get_asset_name(backward_id) + '/' + util.get_asset_name(forward_id), '(' + deal_id + ')') # TODO
 
             if 0 in (give_id, get_id):
                 validity = 'Valid: waiting for bitcoins'

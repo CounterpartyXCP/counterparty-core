@@ -2,12 +2,16 @@ import sys
 import os
 import hashlib
 import appdirs
+import decimal
+D = decimal.Decimal
 
 # Obsolete in Python 3.4.
 ASSET_NAME = {0: 'BTC', 1: 'XCP'}
 ASSET_ID = {'BTC': 0, 'XCP': 1}
 
 UNIT = 100000000    # The same across currencies.
+FOUR = D(10) ** -4
+EIGHT = D(10) ** -8
 
 # JSON‐RPC Options
 CONFIGFILE = os.path.expanduser('~') + '/.bitcoin/bitcoin.conf'
