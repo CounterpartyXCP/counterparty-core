@@ -80,7 +80,11 @@ def parse_order (db, cursor, tx1, message):
     if validity == 'Valid':
         if util.is_divisible(give_id): give_amount /= config.UNIT
         if util.is_divisible(get_id): get_amount /= config.UNIT
-        print('\tOrder: sell', give_amount, util.get_asset_name(give_id), 'for', get_amount, util.get_asset_name(get_id), 'at', ask_price, util.get_asset_name(get_id) + '/' + util.get_asset_name(give_id), 'in', expiration, 'blocks', '(' + tx1['tx_hash'] + ')') # TODO (and fee_required, fee_provided)
+        if not give_id:
+            fee_text = 'with a provided fee of ' + str(tx1['fee'] / config.UNIT) + ' BTC'
+        elif not get_id:
+            fee_text = 'with a required fee of ' + str(fee_required / config.UNIT) + ' BTC'
+        print('\tOrder: sell', give_amount, util.get_asset_name(give_id), 'for', get_amount, util.get_asset_name(get_id), 'at', ask_price, util.get_asset_name(get_id) + '/' + util.get_asset_name(give_id), 'in', expiration, 'blocks', fee_text, '(' + tx1['tx_hash'] + ')') # TODO (and fee_required, fee_provided)
 
         db, cursor = make_deal(db, cursor, give_id, give_amount, get_id, get_amount, ask_price, expiration, fee_required, tx1)
 
