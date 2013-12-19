@@ -66,14 +66,7 @@ if __name__ == '__main__':
 
     parser_follow = subparsers.add_parser('follow', help='requires bitcoind')
 
-    parser_history = subparsers.add_parser('history', help='')
-    parser_history.add_argument('address', metavar='ADDRESS', type=str,
-                                help='''get the history, balance of an
-                                        address''')
-
-    parser_orderbook = subparsers.add_parser('orderbook', help='')
-
-    parser_pending = subparsers.add_parser('pending', help='')
+    parser_watch = subparsers.add_parser('watch', help='open orders and pending BTC payments')
 
     args = parser.parse_args()
 
@@ -164,11 +157,7 @@ if __name__ == '__main__':
         bitcoin.bitcoind_check()
         blocks.follow()
 
-    elif args.action == 'history':
-        address = args.address
-        json_print(api.history(address))
-
-    elif args.action == 'orderbook':
+    elif args.action == 'watch':
         orderbook = api.orderbook()
 
         while True:
@@ -213,10 +202,10 @@ if __name__ == '__main__':
                     print(row[i].ljust(width[i]), end='')
                 print()
 
-            time.sleep(30)
+            print()
+            json_print(api.pending())   # TODO: not yet human‐readable
 
-    elif args.action == 'pending':
-        json_print(api.pending())
+            time.sleep(30)
             
     elif args.action == 'help':
         parser.print_help()
