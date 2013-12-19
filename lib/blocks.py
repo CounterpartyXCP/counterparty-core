@@ -134,35 +134,35 @@ def initialise(db, cursor):
                         validity TEXT)
                    ''')
 
-    cursor.execute('''DROP TABLE IF EXISTS assets''')
-    cursor.execute('''CREATE TABLE assets(
-                        asset_id INTEGER PRIMARY KEY,
-                        amount INTEGER,
-                        divisible BOOL,
-                        tx_index INTEGER UNIQUE,
+    cursor.execute('''DROP TABLE IF EXISTS issuances''')
+    cursor.execute('''CREATE TABLE issuances(
+                        tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
+                        asset_id INTEGER,
+                        amount INTEGER,
+                        divisible BOOL,
                         issuer TEXT,
                         validity TEXT
                         )
                    ''')
 
     for asset_id in (0,1):
-        cursor.execute('''INSERT INTO assets(
-                            asset_id,
-                            amount,
-                            divisible,
+        cursor.execute('''INSERT INTO issuances(
                             tx_index,
                             tx_hash,
                             block_index,
+                            asset_id,
+                            amount,
+                            divisible,
                             issuer,
                             validity) VALUES(?,?,?,?,?,?,?,?)''',
-                            (asset_id,
+                            (None,
+                            None,
+                            None,
+                            asset_id,
                             0,
                             True,
-                            None,
-                            None,
-                            None,
                             None,
                             'Valid')
                       )
@@ -174,8 +174,7 @@ def initialise(db, cursor):
                         block_index INTEGER,
                         source TEXT,
                         timestamp INTEGER,
-                        price_id INTEGER,
-                        price_amount INTEGER,
+                        value REAL,
                         fee_multiplier INTEGER,
                         text TEXT,
                         validity TEXT)
@@ -191,12 +190,11 @@ def initialise(db, cursor):
                         bet_type INTEGER,
                         time_start INTEGER,
                         time_end INTEGER,
-                        wager_id INTEGER,
                         wager_amount INTEGER,
                         counterwager_amount INTEGER,
                         wager_remaining INTEGER,
                         odds REAL,
-                        threshhold_leverage INTEGER,
+                        threshhold_leverage REAL,
                         expiration INTEGER,
                         validity TEXT)
                    ''')
@@ -213,8 +211,7 @@ def initialise(db, cursor):
                         bet_type INTEGER,
                         time_start INTEGER,
                         time_end INTEGER,
-                        threshold_leverage INTEGER,
-                        wager_id INTEGER,
+                        threshold_leverage REAL,
                         forward_amount INTEGER,
                         backward_amount INTEGER,
                         tx0_block_index INTEGER,

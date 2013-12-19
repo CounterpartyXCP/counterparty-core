@@ -77,10 +77,9 @@ def is_divisible(asset_id):
     db = sqlite3.connect(config.LEDGER)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM assets \
+    cursor.execute('''SELECT * FROM issuances \
                       WHERE asset_id=?''', (asset_id,))
     asset = cursor.fetchone()
-    assert not cursor.fetchone()
     cursor.close()
     return asset['divisible']
         

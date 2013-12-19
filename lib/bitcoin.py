@@ -161,7 +161,7 @@ def get_inputs (source, amount, fee):
     inputs, total = [], 0
     for coin in unspent:                                                      
         if not coin['confirmations']:
-            continue    # Blocks or it didn’t happen.
+            continue    # Blocks or it didn’t happen. TODO: Reconsider this.
         inputs.append(coin)
         total += int(coin['amount'] * config.UNIT)
         if total >= amount + fee:

@@ -11,8 +11,9 @@ timestamp].
 
 For CFD leverage, 1x = 5040, 2x = 10080, etc.: 5040 is a superior highly
 composite number and a colossally abundant number, and has 1-10, 12 as factors.
+
+All wagers are in XCP.
 """
-# TODO: How do I get the timestamps to agree?!?!
 
 import struct
 import sqlite3
@@ -23,7 +24,7 @@ import datetime
 
 from . import (util, config, bitcoin, exceptions)
 
-FORMAT = '>HIIQQQQI'
+FORMAT = '>HIIQQdI'
 ID = 40
 
 def get_fee_multiplier (feed_address):
@@ -39,30 +40,19 @@ def get_fee_multiplier (feed_address):
     db.close()
     return D(broadcast['fee_multiplier'] / 1e8)
 
-def create (source, feed_address, bet_type, time_start, time_end, wager_id,
-            wager_amount, counterwager_amount, threshold_leverage, expiration):
-
-    if util.balance(source, wager_id) < wager_amount:
-        raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
+def create (source, feed_address, bet_type, time_start, time_end, wager_amount,
+            counterwager_amount, threshold_leverage, expiration):
 
     if util.is_locked(feed_address):
         raise exceptions.FeedLockedError('That feed is locked or doesn’t exist.')
 
-    # Wager_id must be divisible (for the calculation of fees).
-    if not util.is_divisible(wager_id):
-        raise BaseException # TODO
-
-    # Can’t bet bitcoins.
-    if not wager_id:
-        raise BaseException # TODO
-
     fee_multiplier = get_fee_multiplier(feed_address)
-    if util.balance(source, wager_id) < wager_amount * (1 + fee_multiplier):
-        raise exceptions.BalanceError('Insufficient funds to both make wager and pay feed fee. (Check that the database is up‐to‐date.)')
+    if util.balance(source, 1) < wager_amount * (1 + fee_multiplier):
+        raise exceptions.BalanceError('Insufficient funds to both make wager and pay feed fee (in XCP). (Check that the database is up‐to‐date.)')
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
-    data += struct.pack(FORMAT, bet_type, time_start, time_end, wager_id,
-                        int(wager_amount), int(counterwager_amount), int(threshold_leverage),
+    data += struct.pack(FORMAT, bet_type, time_start, time_end, 
+                        int(wager_amount), int(counterwager_amount), threshold_leverage,
                         expiration)
 
     return bitcoin.transaction(source, feed_address, config.DUST_SIZE,
@@ -74,30 +64,27 @@ def parse (db, cursor, tx1, message):
 
     # Unpack message.
     try:
-        (bet_type, time_start, time_end, wager_id, wager_amount,
+        (bet_type, time_start, time_end, wager_amount,
          counterwager_amount, threshold_leverage,
          expiration) = struct.unpack(FORMAT, message)
-    except Exception:
-        (bet_type, time_start, time_end, wager_id, wager_amount,
+    except Exception:   #
+        (bet_type, time_start, time_end, wager_amount,
          counterwager_amount, threshold_leverage,
-         expiration) = None, None, None, None, None, None, None, None
+         expiration) = None, None, None, None, None, None, None
         validity = 'Invalid: could not unpack'
 
     feed_address = tx1['destination']
 
     if validity == 'Valid':
-        # Can’t bet bitcoins.
-        if not wager_id:
-            validity = 'Invalid: bet denominated in bitcoins'
-
-    if validity == 'Valid':
         # Debit amount wagered and fee.
         fee_multiplier = get_fee_multiplier(feed_address)
-        db, cursor, validity = util.debit(db, cursor, tx1['source'], wager_id, wager_amount * (1 + fee_multiplier))
+        db, cursor, validity = util.debit(db, cursor, tx1['source'], 1, wager_amount * (1 + fee_multiplier))
 
-    wager_amount = D(wager_amount)
-    counterwager_amount = D(counterwager_amount)
-    odds = wager_amount / counterwager_amount
+        wager_amount = int(wager_amount)
+        counterwager_amount = int(counterwager_amount)
+        odds = wager_amount / counterwager_amount
+    else:
+        odds = 0
 
     # Add parsed transaction to message‐type–specific table.
     cursor.execute('''INSERT INTO bets(
@@ -109,14 +96,13 @@ def parse (db, cursor, tx1, message):
                         bet_type,
                         time_start,
                         time_end,
-                        wager_id,
                         wager_amount,
                         counterwager_amount,
                         wager_remaining,
                         odds,
                         threshhold_leverage,
                         expiration,
-                        validity) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                        validity) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                         (tx1['tx_index'],
                         tx1['tx_hash'],
                         tx1['block_index'],
@@ -125,68 +111,70 @@ def parse (db, cursor, tx1, message):
                         bet_type,
                         time_start,
                         time_end,
-                        wager_id,
-                        int(wager_amount),
-                        int(counterwager_amount),
-                        int(wager_amount),
-                        float(odds),
-                        int(threshold_leverage),
+                        wager_amount,
+                        counterwager_amount,
+                        wager_amount,
+                        odds,
+                        threshold_leverage,
                         expiration,
                         validity)
                   )
     db.commit()
 
     if validity == 'Valid':
-        print('\tBet:', 'type', bet_type, 'on', feed_address, 'between', datetime.datetime.fromtimestamp(time_start), 'and', datetime.datetime.fromtimestamp(time_end), 'in', util.get_asset_name(wager_id), 'for', wager_amount / config.UNIT, 'against', counterwager_amount / config.UNIT, 'in', expiration, 'blocks', '(' + tx1['tx_hash'] + ')')
+        print('\tBet:', 'type', bet_type, 'on', feed_address, 'between', datetime.datetime.fromtimestamp(time_start), 'and', datetime.datetime.fromtimestamp(time_end), 'for', wager_amount / config.UNIT, 'XCP', 'against', counterwager_amount / config.UNIT, 'XCP', 'in', expiration, 'blocks', '(' + tx1['tx_hash'] + ')')
 
         db, cursor = make_contract(db, cursor, bet_type,
-                                   time_start, time_end, wager_id,
+                                   time_start, time_end, 
                                    wager_amount, counterwager_amount,
                                    threshold_leverage, expiration, tx1)
 
     return db, cursor
 
-def make_contract (db, cursor, bet_type, time_start, time_end, wager_id,
+def make_contract (db, cursor, bet_type, time_start, time_end, 
                wager_amount, counterwager_amount, threshold_leverage,
                expiration, tx1):
-    feed_address = tx1['destination']
-    cursor.execute('''SELECT * FROM bets\
-                      WHERE (feed_address=? AND block_index>=? AND wager_id=?) \
-                      ORDER BY odds DESC, tx_index''',
-                   (feed_address, wager_id, tx1['block_index'] - expiration))
 
     # Get counterbet_type.
     if bet_type % 2: counterbet_type = bet_type - 1
     else: counterbet_type = bet_type + 1
+
+    feed_address = tx1['destination']
+    cursor.execute('''SELECT * FROM bets\
+                      WHERE (feed_address=? AND block_index>=? AND validity=? AND bet_type=?) \
+                      ORDER BY odds DESC, tx_index''',
+                   (feed_address, tx1['block_index'] - expiration, 'Valid', counterbet_type))
 
     ask_odds = wager_amount / counterwager_amount
 
     wager_remaining = wager_amount
     for tx0 in cursor.fetchall():
         # NOTE: tx0 is a bet; tx1 is a transaction.
+        # TODO: How do I get the timestamps to agree?!?!
 
         # Make sure that that both bets still have funds remaining [to be wagered].
         if tx0['wager_remaining'] <= 0 or wager_remaining <= 0: continue
 
         # If the odds agree, make the trade. The found order sets the odds,
-        # and they trade as much as they can.
+        # and they trade as much as they can. # TODO: Make odds match exactly?!
         odds = D(tx0['counterwager_amount']) / D(tx0['wager_amount'])
         if odds <= 1/ask_odds:  # Ugly
 
             validity = 'Valid'
 
+            forward_amount = min(D(tx0['wager_remaining']), counterwager_amount / odds)
+            backward_amount = wager_amount * forward_amount/D(tx0['wager_amount'])
+
             # When a match is made, pay XCP fee.
             fee = get_fee_multiplier(feed_address) * backward_amount
-            db, cursor, validity = debit(db, cursor, tx1['source'], wager_id, fee)
+            db, cursor, validity = util.debit(db, cursor, tx1['source'], 1, fee)
             if validity != 'Valid': continue
-            db, cursor = credit(db, cursor, feed_address, fee)
-
-            forward_amount = min(D(tx0['wager_remaining']), counterwager_amount / price)
-            backward_amount = wager_amount * forward_amount/D(tx0['wager_amount'])
+            db, cursor = util.credit(db, cursor, feed_address, 1, int(fee))
 
             contract_id = tx0['tx_hash'] + tx1['tx_hash']   #
 
-            print('\t\tContract:', wager_amount, wager_id, 'against', counterwager_amount, wager_id, 'at', odds, '(' + contract_id + ')')   # TODO: !!!!
+            print(odds, tx0['odds'], ask_odds)
+            print('\t\tContract:', tx0['wager_amount']/config.UNIT, 'XCP', 'against', tx0['counterwager_amount']/config.UNIT, 'XCP', '(' + contract_id + ')')   # TODO
 
             # Debit the order.
             wager_remaining -= backward_amount
@@ -215,7 +203,6 @@ def make_contract (db, cursor, bet_type, time_start, time_end, wager_id,
                                 bet_type,
                                 time_start,
                                 time_end,
-                                wager_id,
                                 threshold_leverage,
                                 forward_amount,
                                 backward_amount,
@@ -223,7 +210,7 @@ def make_contract (db, cursor, bet_type, time_start, time_end, wager_id,
                                 tx1_block_index,
                                 tx0_expiration,
                                 tx1_expiration,
-                                validity) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                                validity) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                                 (tx0['tx_index'],
                                 tx0['tx_hash'],
                                 tx0['source'],
@@ -235,7 +222,6 @@ def make_contract (db, cursor, bet_type, time_start, time_end, wager_id,
                                 time_start,
                                 time_end,
                                 threshold_leverage,
-                                wager_id,
                                 int(forward_amount),
                                 int(backward_amount),
                                 tx0['block_index'],
@@ -256,7 +242,7 @@ def expire (db, cursor, block_index):
         time_left = bet['block_index'] + bet['expiration'] - block_index # Inclusive/exclusive expiration? DUPE
         if time_left <= 0 and bet['validity'] == 'Valid':
             cursor.execute('''UPDATE bets SET validity=? WHERE tx_hash=?''', ('Invalid: expired', bet['tx_hash']))
-            db, cursor = util.credit(db, cursor, bet['source'], bet['wager_id'], bet['wager_remaining'])
+            db, cursor = util.credit(db, cursor, bet['source'], 1, bet['wager_remaining'])
             print('\tExpired bet:', bet['tx_hash'])
         db.commit()
 

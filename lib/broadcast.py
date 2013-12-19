@@ -27,14 +27,15 @@ import datetime
 
 from . import (util, config, bitcoin)
 
-FORMAT = '>IQQI32p' # How many characters *can* the text be?! (That is, how long is PREFIX?!)
+FORMAT = '>IdI40p' # How many characters *can* the text be?! (That is, how long is PREFIX?!)
 ID = 30
 
-def create (source, timestamp, price_id, price_amount, fee_multiplier, text):
+def create (source, timestamp, value, fee_multiplier, text):
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
-    data += struct.pack(FORMAT, timestamp, price_id, price_amount,
-                        fee_multiplier, text.encode('utf-8'))
-    return bitcoin.transaction(source, None, config.DUST_SIZE, config.MIN_FEE, data)
+    data += struct.pack(FORMAT, timestamp, value, fee_multiplier,
+                        text.encode('utf-8'))
+    return bitcoin.transaction(source, None, config.DUST_SIZE, config.MIN_FEE,
+                               data)
 
 def parse (db, cursor, tx, message):
     # Ask for forgiveness…
@@ -42,10 +43,10 @@ def parse (db, cursor, tx, message):
 
     # Unpack message.
     try:
-        timestamp, price_id, price_amount, fee_multiplier, text = struct.unpack(FORMAT, message)
+        timestamp, value, fee_multiplier, text = struct.unpack(FORMAT, message)
         text = text.decode('utf-8')
     except Exception:
-        timestamp, price_id, price_amount, fee_multiplier, text = None, None, None, None, None
+        timestamp, value, fee_multiplier, text = None, None, None, None
         validity = 'Invalid: could not unpack'
 
     # Check that the publishing address is not locked.
@@ -59,33 +60,28 @@ def parse (db, cursor, tx, message):
                         block_index,
                         source,
                         timestamp,
-                        price_id,
-                        price_amount,
+                        value,
                         fee_multiplier,
                         text,
-                        validity) VALUES(?,?,?,?,?,?,?,?,?,?)''',
+                        validity) VALUES(?,?,?,?,?,?,?,?,?)''',
                         (tx['tx_index'],
                         tx['tx_hash'],
                         tx['block_index'],
                         tx['source'],
                         timestamp,
-                        price_id,
-                        price_amount,
+                        value,
                         fee_multiplier,
                         text,
                         validity)
                   )
     if validity == 'Valid':
-        if util.is_divisible(price_id):
-            price_amount /= config.UNIT
-
         suffix = 'from ' + tx['source'] + ' at ' + datetime.datetime.fromtimestamp(timestamp).isoformat() + ' (' + tx['tx_hash'] + ') '
 
-        if not price_amount:
-            price_amount, price_name = '', ''
+        if not value:
+            value, price_name = '', ''
             print('\tBroadcast:', '‘' + text + '’', suffix)
         else:
-            print('\tBroadcast:', '‘' + text + ' =', price_amount, util.get_asset_name(price_id) + '’', suffix)
+            print('\tBroadcast:', '‘' + text + ' =', str(value) + '’', suffix)
 
     # TODO: Settle bets (and CFDs)!
         # CFDs cannot be incremetally settled.

@@ -27,14 +27,14 @@ def parse_order (db, cursor, tx1, message):
     try:
         give_id, give_amount, get_id, get_amount, expiration, fee_required = struct.unpack(FORMAT, message)
         assert give_id != get_id    # TODO
-    except Exception:
+    except Exception:   #
         give_id, give_amount, get_id, get_amount, expiration, fee_required = None, None, None, None, None, None
         validity = 'Invalid: could not unpack'
 
-
-    give_amount = D(give_amount)
-    get_amount = D(get_amount)
-    ask_price = get_amount / give_amount
+    if validity == 'Valid':
+        give_amount = D(give_amount)
+        get_amount = D(get_amount)
+        ask_price = get_amount / give_amount
 
     # Debit the address that makes the order. Check for sufficient funds.
     if validity == 'Valid':
@@ -89,9 +89,9 @@ def parse_order (db, cursor, tx1, message):
 def make_deal (db, cursor, give_id, give_amount, get_id, get_amount,
         ask_price, expiration, fee_required, tx1):
     cursor.execute('''SELECT * FROM orders \
-                      WHERE (give_id=? AND get_id=? AND block_index>=?) \
+                      WHERE (give_id=? AND get_id=? AND block_index>=? AND validity=?) \
                       ORDER BY ask_price ASC, tx_index''',
-                   (get_id, give_id, tx1['block_index'] - expiration))
+                   (get_id, give_id, tx1['block_index'] - expiration, 'Valid'))
     give_remaining = give_amount
     for tx0 in cursor.fetchall():
         # NOTE: tx0 is an order; tx1 is a transaction.
@@ -104,7 +104,7 @@ def make_deal (db, cursor, give_id, give_amount, get_id, get_amount,
         if tx0['give_remaining'] <= 0 or give_remaining <= 0: continue
 
         # If the prices agree, make the trade. The found order sets the price,
-        # and they trade as much as they can.
+        # and they trade as much as they can.   # TODO: Make prices match exactly?!
         price = D(tx0['get_amount']) / D(tx0['give_amount'])
         if price <= 1/ask_price:  # Ugly
             forward_amount = min(D(tx0['give_remaining']), get_amount / price)
@@ -122,9 +122,9 @@ def make_deal (db, cursor, give_id, give_amount, get_id, get_amount,
             else:
                 validity = 'Valid'
                 # Credit.
-                db, cursor = credit(db, cursor, tx1['source'], get_id,
+                db, cursor = util.credit(db, cursor, tx1['source'], get_id,
                                     forward_amount)
-                db, cursor = credit(db, cursor, tx0['source'], tx0['get_id'],
+                db, cursor = util.credit(db, cursor, tx0['source'], tx0['get_id'],
                                     backward_amount)
 
             # Debit the order, even if it involves giving bitcoins, and so one

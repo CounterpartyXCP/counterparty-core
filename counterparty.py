@@ -36,7 +36,7 @@ if __name__ == '__main__':
     parser_order.add_argument('--give_amount', metavar='GIVE_AMOUNT', type=D, required=True, help='')
     parser_order.add_argument('--give_asset', metavar='GIVE_ASSET', type=str, required=True, help='')
     parser_order.add_argument('--expiration', metavar='EXPIRATION', type=int, required=True, help='')
-    parser_order.add_argument('--fee', metavar='FEE', type=D, required=True, help='either the required fee, or the provided fee, as appropriate')
+    parser_order.add_argument('--fee', metavar='FEE', type=D, required=True, help='either the required fee, or the provided fee, as appropriate; in BTC, to be paid to miners')
 
     parser_btcpayment = subparsers.add_parser('btcpayment', help='requires bitcoind')
     parser_btcpayment.add_argument('deal_id', metavar='DEAL_ID', type=str, help='')
@@ -49,9 +49,8 @@ if __name__ == '__main__':
     parser_broadcast = subparsers.add_parser('broadcast', help='requires bitcoind')
     parser_broadcast.add_argument('--from', metavar='SOURCE', type=str, dest='source', required=True, help='')
     parser_broadcast.add_argument('--text', metavar='TEXT', type=str, required=True, help='')
-    parser_broadcast.add_argument('--price_id', metavar='PRICE_ASSET', type=str, help='')
-    parser_broadcast.add_argument('--price_amount', metavar='PRICE_AMOUNT', type=D, default=0, help='') # TODO: should this be D()?
-    parser_broadcast.add_argument('--fee_multiplier', metavar='FEE_MULTIPLIER', type=D, help='a fraction of 1 (i.e. .05 is 5%)')
+    parser_broadcast.add_argument('--value', metavar='VALUE', type=float, default=0, help='numerical value of the broadcast')
+    parser_broadcast.add_argument('--fee_multiplier', metavar='FEE_MULTIPLIER', type=D, help='how much of every bet on this feed should go to its operator; a fraction of 1 (i.e. .05 is 5%)')
 
     parser_order = subparsers.add_parser('bet', help='requires bitcoind')
     parser_order.add_argument('--from', metavar='SOURCE', dest='source', type=str, required=True, help='')
@@ -59,7 +58,6 @@ if __name__ == '__main__':
     parser_order.add_argument('--bet_type', metavar='BET_TYPE', type=int, required=True, help='')
     parser_order.add_argument('--time_start', metavar='TIME_START', type=int, required=True, help='')
     parser_order.add_argument('--time_end', metavar='TIME_END', type=int, required=True, help='')
-    parser_order.add_argument('--wager_asset', metavar='WAGER_ASSET', type=str, required=True, help='')
     parser_order.add_argument('--wager_amount', metavar='WAGER_AMOUNT', type=D, required=True, help='')
     parser_order.add_argument('--counterwager_amount', metavar='COUNTERWAGER_AMOUNT', type=D, required=True, help='')
     parser_order.add_argument('--threshold_leverage', metavar='THRESHOLD_LEVERAGE', type=D, required=True, help='over‐under (?) (bet), leverage, as a fraction of 5040 (CFD)')
@@ -144,30 +142,19 @@ if __name__ == '__main__':
 
     elif args.action == 'broadcast':
         bitcoin.bitcoind_check()
-        if args.price_id:   # Ugly
-            if util.is_divisible(args.price_id):
-                price_amount = int(args.price_amount * config.UNIT)
-            else:
-                price_amount = int(args.price_amount)
-            price_id = int(args.price_id)
-        else:
-            price_id = 0
-            price_amount = int(args.price_amount * config.UNIT)
         fee_multiplier = int(args.fee_multiplier * D(1e8))   # Magic number: to store multplier as integer.
-        json_print(broadcast.create(args.source, int(time.time()), price_id,
-                   price_amount, fee_multiplier, args.text))
+        json_print(broadcast.create(args.source, int(time.time()), args.value,
+                                    fee_multiplier, args.text))
 
     elif args.action == 'bet':
-        wager_id = util.get_asset_id(args.wager_asset)
-
         # TODO: Not real
         if args.bet_type == 'CFD':
             threshold_leverage = int(args.threshold_leverage)
         else:
-            threshold_leverage = args.threshold_leverage * config.UNIT
+            threshold_leverage = args.threshold_leverage
 
         json_print(bet.create(args.source, args.feed_address, args.bet_type,
-                              args.time_start, args.time_end, wager_id,
+                              args.time_start, args.time_end,
                               args.wager_amount * config.UNIT,
                               args.counterwager_amount * config.UNIT,
                               threshold_leverage, args.expiration))

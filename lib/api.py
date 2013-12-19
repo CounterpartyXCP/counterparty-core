@@ -96,7 +96,7 @@ def history (address):
         history['balances'][balance['asset_id']] = balance['amount']
 
     # List issuances.
-    cursor.execute('''SELECT * FROM assets \
+    cursor.execute('''SELECT * FROM issuances \
                       ORDER BY tx_index''')
     history['issuances'] = [dict(asset) for asset in cursor.fetchall() if asset['issuer'] == address]
 
