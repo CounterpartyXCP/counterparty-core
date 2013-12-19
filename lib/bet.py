@@ -162,8 +162,8 @@ def make_contract (db, cursor, bet_type, time_start, time_end,
 
             validity = 'Valid'
 
-            forward_amount = min(D(tx0['wager_remaining']), counterwager_amount / odds)
-            backward_amount = wager_amount * forward_amount/D(tx0['wager_amount'])
+            forward_amount = round(min(D(tx0['wager_remaining']), wager_remaining / odds))
+            backward_amount = round(forward_amount * odds)
 
             # When a match is made, pay XCP fee.
             fee = get_fee_multiplier(feed_address) * backward_amount

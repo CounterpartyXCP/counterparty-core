@@ -120,9 +120,8 @@ def make_deal (db, cursor, give_id, give_amount, get_id, get_amount,
         # and they trade as much as they can.   # TODO: Make prices match exactly?!
         price = D(tx0['get_amount']) / D(tx0['give_amount'])
         if price <= 1/ask_price:  # Ugly
-            forward_amount = min(D(tx0['give_remaining']), give_remaining / price)
-            backward_amount = forward_amount * price
-            print('give_remaining', give_remaining)
+            forward_amount = round(min(D(tx0['give_remaining']), give_remaining / price))
+            backward_amount = round(forward_amount * price)
 
             forward_id, backward_id = get_id, give_id
             deal_id = tx0['tx_hash'] + tx1['tx_hash']

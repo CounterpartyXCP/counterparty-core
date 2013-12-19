@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import sys
+import os
 import argparse
 import json
 import time
@@ -169,18 +170,51 @@ if __name__ == '__main__':
 
     elif args.action == 'orderbook':
         orderbook = api.orderbook()
-        json_print(orderbook)
-        '''
-        width = 8
-        fields = ['give_amount', 'give_id', 'get_amount', 'get_id', 'ask_price', 'expiration']
-        for field in fields: print(field.ljust(width), end='\t')
-        print()
-        for order in orderbook:
-            for field in fields:
-                print(str(order[field]).ljust(width), end='\t')
-        print()
-        '''
-            
+
+        while True:
+            os.system('cls' if os.name=='nt' else 'clear')
+
+            book = [('Source', 'Give', 'Get', 'Price', 'Fee', 'Time Left', 'Tx Hash')]
+            for order in orderbook:
+
+                if util.is_divisible(order['give_id']):
+                    give_amount = order['give_amount'] / config.UNIT
+                else:
+                    give_amount = order['give_amount']
+                if util.is_divisible(order['get_id']):
+                    get_amount = order['get_amount'] / config.UNIT
+                else:
+                    get_amount = order['get_amount']
+                give_name = util.get_asset_name(order['give_id'])
+                get_name = util.get_asset_name(order['get_id'])
+                give = str(give_amount) + ' ' + give_name
+                get = str(get_amount) + ' ' + get_name
+
+                price = str(get_amount/give_amount) + ' ' + get_name + '/' + give_name
+
+                if order['fee_required']:
+                    fee = str(order['fee_required'] / config.UNIT) + ' BTC (required)'
+                else:
+                    fee = str(order['fee_provided'] / config.UNIT) + ' BTC (provided)'
+
+                block_count = bitcoin.rpc('getblockcount', [])['result']
+                time_left = order['block_index'] + order['expiration'] - block_count # Inclusive/exclusive expiration? DUPE
+                
+                hash_ = order['tx_hash'][:8] + '…' + order['tx_hash'][-8:]
+
+                book.append((order['source'], give, get, price, fee, str(time_left), hash_))
+
+            width = []
+            for i in range(len(book[0])):
+                width.append(max(len(row[i]) for row in book) + 5)
+
+            for row in book:
+                for i in range(len(row)):
+                    print(row[i].ljust(width[i]), end='')
+                print()
+
+            time.sleep(30)
+
     elif args.action == 'pending':
         json_print(api.pending())
             
