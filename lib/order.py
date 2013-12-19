@@ -109,6 +109,9 @@ def make_deal (db, cursor, give_id, give_amount, get_id, get_amount,
     for tx0 in cursor.fetchall():
         # NOTE: tx0 is an order; tx1 is a transaction.
 
+        # One should not buy from himself.
+        if tx0['source'] == tx1['source']: continue
+
         # Check whether fee conditions are satisfied.
         if not get_id and tx0['fee_provided'] < fee_required: continue
         elif not give_id and tx1['fee'] < tx0['fee_required']: continue

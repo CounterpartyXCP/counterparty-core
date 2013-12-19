@@ -4,7 +4,7 @@ import binascii
 import struct
 import sqlite3
 
-from . import (util, bitcoin)
+from . import (util, config, exceptions, bitcoin)
 
 FORMAT = '>32s32s'
 ID = 11
@@ -15,7 +15,7 @@ def btcpayment (deal_id):
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, tx0_hash_bytes, tx1_hash_bytes)
 
-    db = sqlite3.connect(LEDGER)
+    db = sqlite3.connect(config.LEDGER)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
 

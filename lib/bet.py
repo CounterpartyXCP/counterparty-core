@@ -160,6 +160,9 @@ def make_contract (db, cursor, bet_type, time_start, time_end,
         odds = D(tx0['counterwager_amount']) / D(tx0['wager_amount'])
         if odds <= 1/ask_odds:  # Ugly
 
+            # One should not bet himself.
+            if tx0['source'] == tx1['source']: continue
+
             validity = 'Valid'
 
             forward_amount = round(min(D(tx0['wager_remaining']), wager_remaining / odds))

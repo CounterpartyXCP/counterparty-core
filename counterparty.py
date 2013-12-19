@@ -158,12 +158,13 @@ if __name__ == '__main__':
         blocks.follow()
 
     elif args.action == 'watch':
-        orderbook = api.orderbook()
-
         while True:
+
             os.system('cls' if os.name=='nt' else 'clear')
 
-            book = [('Source', 'Give', 'Get', 'Price', 'Fee', 'Time Left', 'Tx Hash')]
+            # Get table of open orders.
+            orderbook = api.orderbook()
+            orderbook_table = [('Source', 'Give', 'Get', 'Price', 'Fee', 'Time Left', 'Tx Hash')]
             for order in orderbook:
 
                 if util.is_divisible(order['give_id']):
@@ -191,19 +192,64 @@ if __name__ == '__main__':
                 
                 hash_ = order['tx_hash'][:8] + '…' + order['tx_hash'][-8:]
 
-                book.append((order['source'], give, get, price, fee, str(time_left), hash_))
+                orderbook_table.append((order['source'], give, get, price, fee, str(time_left), hash_))
 
+            # Print out orderorderbook_table.
             width = []
-            for i in range(len(book[0])):
-                width.append(max(len(row[i]) for row in book) + 5)
-
-            for row in book:
+            for i in range(len(orderbook_table[0])):
+                width.append(max(len(row[i]) for row in orderbook_table) + 5)
+            for row in orderbook_table:
                 for i in range(len(row)):
                     print(row[i].ljust(width[i]), end='')
                 print()
 
+            # Print blank line between orderbook and pending.
             print()
-            json_print(api.pending())   # TODO: not yet human‐readable
+
+            # Get table of pending BTC payments.
+            pending = api.pending()
+            # pending_table = [('To Give', 'To Get', 'Price', 'Time Left', 'Deal ID')]
+            pending_table = [('Deal ID', 'Time Left')]
+            for deal in pending:
+                if not deal['backward_id']:
+                    to_give = deal['backward_amount']
+                    to_get = deal['forward_amount']
+                    to_get_id = deal['forward_id']
+                    # source = deal['tx1_address']
+                    # destination = deal['tx0_address']
+                if not deal['forward_id']:
+                    to_give = deal['forward_amount']
+                    to_get = deal['backward_amount']
+                    to_get_id = deal['backward_id']
+                    # source = deal['tx0_address']
+                    # destination = deal['tx1_address']
+
+                to_give_amount = to_give / config.UNIT
+                to_get_amount = to_get / config.UNIT    # TODO: Wrong
+                to_give_name = ' BTC'
+                to_get_name = ' ' + util.get_asset_name(to_get_id)
+                to_give = str(to_give_amount) + to_give_name
+                to_get = str(to_get_amount) + to_get_name
+
+                time_left_0 = deal['tx0_block_index'] + deal['tx0_expiration'] - block_count
+                time_left_1 = deal['tx1_block_index'] + deal['tx1_expiration'] - block_count
+                time_left = str(min(time_left_0, time_left_1))
+
+                price = str(to_get_amount / to_give_amount) + to_get_name + '/' + to_give_name
+
+                deal_id = deal['tx0_hash'] + deal['tx1_hash']
+
+                # pending_table.append((to_give, to_get, price, time_left, deal_id))
+                pending_table.append((deal_id, time_left))
+
+            # Print out pending_table.
+            width = []
+            for i in range(len(pending_table[0])):
+                width.append(max(len(row[i]) for row in pending_table) + 5)
+            for row in pending_table:
+                for i in range(len(row)):
+                    print(row[i].ljust(width[i]), end='')
+                print()
 
             time.sleep(30)
             
