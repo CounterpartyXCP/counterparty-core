@@ -28,6 +28,7 @@ Decentralised financial instruments in a protocol build on top of the Bitcoin bl
 	* Full‐length, except for XBT, XCP, which are hard‐coded in?
 		* Just require full‐length for the *issuance* of all other currencies (XBT, XCP are created otherwise).
 * Adjust `MIN_FEE`?
+* Non‐fatal warnings.
 * testnet practice funding period
 
 ## Limitations

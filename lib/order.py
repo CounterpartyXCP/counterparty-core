@@ -4,7 +4,7 @@ import struct
 import sqlite3
 import decimal
 D = decimal.Decimal
-decimal.getcontext().prec = 8
+# decimal.getcontext().prec = 8
 
 from . import (util, config, bitcoin)
 
@@ -78,13 +78,22 @@ def parse_order (db, cursor, tx1, message):
     db.commit()
 
     if validity == 'Valid':
-        if util.is_divisible(give_id): give_amount /= config.UNIT
-        if util.is_divisible(get_id): get_amount /= config.UNIT
+
+        # Ugly
+        if util.is_divisible(give_id):
+            give_unit = config.UNIT
+        else:
+            give_unit = 1
+        if util.is_divisible(get_id):
+            get_unit = config.UNIT
+        else:
+            get_unit = 1
+
         if not give_id:
             fee_text = 'with a provided fee of ' + str(tx1['fee'] / config.UNIT) + ' BTC'
         elif not get_id:
             fee_text = 'with a required fee of ' + str(fee_required / config.UNIT) + ' BTC'
-        print('\tOrder: sell', give_amount, util.get_asset_name(give_id), 'for', get_amount, util.get_asset_name(get_id), 'at', ask_price, util.get_asset_name(get_id) + '/' + util.get_asset_name(give_id), 'in', expiration, 'blocks', fee_text, '(' + tx1['tx_hash'] + ')') # TODO (and fee_required, fee_provided)
+        print('\tOrder: sell', give_amount/give_unit, util.get_asset_name(give_id), 'for', get_amount/get_unit, util.get_asset_name(get_id), 'at', ask_price, util.get_asset_name(get_id) + '/' + util.get_asset_name(give_id), 'in', expiration, 'blocks', fee_text, '(' + tx1['tx_hash'] + ')') # TODO (and fee_required, fee_provided)
 
         db, cursor = make_deal(db, cursor, give_id, give_amount, get_id, get_amount, ask_price, expiration, fee_required, tx1)
 
@@ -111,15 +120,22 @@ def make_deal (db, cursor, give_id, give_amount, get_id, get_amount,
         # and they trade as much as they can.   # TODO: Make prices match exactly?!
         price = D(tx0['get_amount']) / D(tx0['give_amount'])
         if price <= 1/ask_price:  # Ugly
-            forward_amount = min(D(tx0['give_remaining']), get_amount / price)
-            backward_amount = give_amount * forward_amount/D(tx0['give_amount'])
+            forward_amount = min(D(tx0['give_remaining']), give_remaining / price)
+            backward_amount = forward_amount * price
+            print('give_remaining', give_remaining)
 
             forward_id, backward_id = get_id, give_id
             deal_id = tx0['tx_hash'] + tx1['tx_hash']
 
-            if util.is_divisible(forward_id): forward_amount *= config.UNIT
-            if util.is_divisible(backward_id): backward_amount *= config.UNIT
-            print('\t\tDeal:', forward_amount, util.get_asset_name(forward_id), 'for', backward_amount, util.get_asset_name(backward_id), 'at', price, util.get_asset_name(backward_id) + '/' + util.get_asset_name(forward_id), '(' + deal_id + ')') # TODO
+            if util.is_divisible(forward_id):
+                forward_unit = config.UNIT
+            else:
+                forward_unit = 1
+            if util.is_divisible(backward_id):
+                backward_unit = config.UNIT
+            else:
+                backward_unit = 1
+            print('\t\tDeal:', forward_amount/forward_unit, util.get_asset_name(forward_id), 'for', backward_amount/backward_unit, util.get_asset_name(backward_id), 'at', price, util.get_asset_name(backward_id) + '/' + util.get_asset_name(forward_id), '(' + deal_id + ')') # TODO
 
             if 0 in (give_id, get_id):
                 validity = 'Valid: waiting for bitcoins'

@@ -6,7 +6,7 @@ import json
 import time
 import decimal
 D = decimal.Decimal
-decimal.getcontext().prec = 8
+# decimal.getcontext().prec = 8
 
 from lib import (config, util, exceptions, bitcoin, blocks, api)
 from lib import (send, order, btcpayment, issuance, broadcast, bet)

@@ -55,6 +55,7 @@ def parse_btcpayment (db, cursor, tx, message):
     cursor.execute('''SELECT * FROM deals WHERE (tx0_hash=? AND tx1_hash=?)''', (tx0_hash, tx1_hash))
     deal = cursor.fetchone()
     assert not cursor.fetchone()
+    if not deal: return db, cursor
     # Credit source address for the currency that he bought with the bitcoins.
     # BTC must be paid all at once and come from the ‘correct’ address.
     if deal['tx0_address'] == tx['source'] and tx['btc_amount'] >= deal['forward_amount']:

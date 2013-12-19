@@ -19,7 +19,7 @@ import struct
 import sqlite3
 import decimal
 D = decimal.Decimal
-decimal.getcontext().prec = 8
+# decimal.getcontext().prec = 8
 import datetime
 
 from . import (util, config, bitcoin, exceptions)
@@ -173,7 +173,6 @@ def make_contract (db, cursor, bet_type, time_start, time_end,
 
             contract_id = tx0['tx_hash'] + tx1['tx_hash']   #
 
-            print(odds, tx0['odds'], ask_odds)
             print('\t\tContract:', tx0['wager_amount']/config.UNIT, 'XCP', 'against', tx0['counterwager_amount']/config.UNIT, 'XCP', '(' + contract_id + ')')   # TODO
 
             # Debit the order.

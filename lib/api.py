@@ -2,7 +2,6 @@
 
 import json
 import sqlite3
-import decimal
 
 from . import (config, bitcoin)
 
