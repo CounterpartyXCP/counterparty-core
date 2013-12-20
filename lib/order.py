@@ -103,9 +103,9 @@ def parse_order (db, cursor, tx1, message):
 def make_deal (db, cursor, give_id, give_amount, get_id, get_amount,
         ask_price, expiration, fee_required, tx1):
     cursor.execute('''SELECT * FROM orders \
-                      WHERE (give_id=? AND get_id=? AND block_index>=? AND validity=?) \
+                      WHERE (give_id=? AND get_id=? AND validity=?) \
                       ORDER BY ask_price ASC, tx_index''',
-                   (get_id, give_id, tx1['block_index'] - expiration, 'Valid'))
+                   (get_id, give_id, 'Valid'))
     give_remaining = give_amount
     for tx0 in cursor.fetchall():
         # NOTE: tx0 is an order; tx1 is a transaction.
