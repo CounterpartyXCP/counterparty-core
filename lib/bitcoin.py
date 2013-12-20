@@ -9,6 +9,7 @@ import binascii
 import json
 import hashlib
 import requests
+import warnings
 
 from . import (config, exceptions)
 
@@ -41,7 +42,7 @@ def bitcoind_check ():
     block_hash = rpc('getblockhash', [block_count])['result']
     block = rpc('getblock', [block_hash])['result']
     if block['time'] < (time.time() - 60 * 60 * 2):
-        raise exceptions.BitcoindBehindWarning('bitcoind is running behind.')  # This kills everything.
+        warnings.warn('bitcoind is running behind.')
 
     # TODO: Make sure that follow() is running here?
 

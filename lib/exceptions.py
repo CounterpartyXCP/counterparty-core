@@ -24,10 +24,4 @@ class InvalidBase58Error (Base58Error):
 class Base58ChecksumError (Base58Error):
     pass
 
-# Warnings
-class DBVersionWarning (Exception):
-    pass
-class BitcoindBehindWarning (Exception):
-    pass
-
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

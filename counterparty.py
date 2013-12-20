@@ -9,10 +9,10 @@ import decimal
 D = decimal.Decimal
 # decimal.getcontext().prec = 8
 import colorama
-colorama.init()
+colorama.init(autoreset=True)
 
 from lib import (config, util, exceptions, bitcoin, blocks, api)
-from lib import (send, order, btcpayment, issuance, broadcast, bet, dividend)
+from lib import (send, order, btcpayment, issuance, broadcast, bet, dividend, burn)
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
     parser_issue = subparsers.add_parser('issue', help='requires bitcoind')
     parser_issue.add_argument('--from', metavar='SOURCE', type=str, dest='source', required=True, help='')
-    parser_issue.add_argument('--amount', metavar='AMOUNT', type=float, required=True, help='')
+    parser_issue.add_argument('--amount', metavar='AMOUNT', type=D, required=True, help='')
     parser_issue.add_argument('--asset-id', metavar='ASSET_ID', type=int, required=True, help='')
     parser_issue.add_argument('--divisible', metavar='DIVISIBLE', type=bool, required=True, help='whether or not the asset is divisible (must agree with previous issuances, if this is a re‐issuance)')
 
@@ -55,7 +55,7 @@ if __name__ == '__main__':
     parser_broadcast.add_argument('--from', metavar='SOURCE', type=str, dest='source', required=True, help='')
     parser_broadcast.add_argument('--text', metavar='TEXT', type=str, required=True, help='')
     parser_broadcast.add_argument('--value', metavar='VALUE', type=float, default=0, help='numerical value of the broadcast')
-    parser_broadcast.add_argument('--fee-multiplier', metavar='FEE_MULTIPLIER', type=D, help='how much of every bet on this feed should go to its operator; a fraction of 1 (i.e. .05 is 5%)')
+    parser_broadcast.add_argument('--fee-multiplier', metavar='FEE_MULTIPLIER', type=D, required=True, help='how much of every bet on this feed should go to its operator; a fraction of 1 (i.e. .05 is 5%)')
 
     parser_order = subparsers.add_parser('bet', help='requires bitcoind')
     parser_order.add_argument('--from', metavar='SOURCE', dest='source', type=str, required=True, help='')
@@ -72,6 +72,10 @@ if __name__ == '__main__':
     parser_dividend.add_argument('--from', metavar='SOURCE', dest='source', type=str, required=True, help='')
     parser_dividend.add_argument('--amount-per-share', metavar='AMOUNT_PER_SHARE', type=D, required=True, help='in XCP')
     parser_dividend.add_argument('--share', metavar='SHARE_NAME', dest='share', type=str, required=True, help='')   # TODO: Awkward naming
+
+    parser_burn = subparsers.add_parser('burn', help='requires bitcoind')
+    parser_burn.add_argument('--from', metavar='SOURCE', dest='source', type=str, required=True, help='')
+    parser_burn.add_argument('--quantity', metavar='QUANTITY', type=D, required=True, help='quantity of BTC to be destroyed in miners’ fees')
 
     parser_follow = subparsers.add_parser('follow', help='requires bitcoind')
 
@@ -160,11 +164,16 @@ if __name__ == '__main__':
 
     elif args.action == 'dividend':
         bitcoin.bitcoind_check()
+        # TODO: Check to see that share_id exists!
         share_id = util.get_asset_id(args.share)
         # Find out whether the asset to be sent is divisible or not.
         if util.is_divisible(share_id) != True:
             raise exceptions.DividendError('Dividend‐yielding assets must be indivisible.')
         json_print(dividend.create(args.source, int(args.amount_per_share * config.UNIT), share_id))
+
+    elif args.action == 'burn':
+        bitcoin.bitcoind_check()
+        json_print(burn.make(args.source, args.quantity * config.UNIT))
 
     elif args.action == 'follow':
         bitcoin.bitcoind_check()
@@ -206,7 +215,7 @@ if __name__ == '__main__':
                 orderbook_table.append((order['source'], give, get, price_string, fee, str(time_left), hash_))
 
             # Print out orderorderbook_table.
-            print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Open Orders' + colorama.Style.RESET_ALL)
+            print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Open Orders')
             width = []
             for i in range(len(orderbook_table[0])):
                 width.append(max(len(row[i]) for row in orderbook_table) + 2)
@@ -255,7 +264,7 @@ if __name__ == '__main__':
                 pending_table.append((deal_id, time_left))
 
             # Print out pending_table.
-            print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Pending Bitcoin Payments' + colorama.Style.RESET_ALL)
+            print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Pending Bitcoin Payments')
             width = []
             for i in range(len(pending_table[0])):
                 width.append(max(len(row[i]) for row in pending_table) + 2)

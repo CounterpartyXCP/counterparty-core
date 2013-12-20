@@ -97,7 +97,7 @@ def credit (db, cursor, address, asset_id, amount):
     db.commit()
     return db, cursor
 
-def is_divisible(asset_id):
+def is_divisible (asset_id):
     db = sqlite3.connect(config.LEDGER)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
@@ -107,19 +107,28 @@ def is_divisible(asset_id):
     cursor.close()
     return asset['divisible']
         
-def is_locked(address):
+def is_locked (address):
     """ Returns None if no broadcast from address can be found. """
     # NOTE: [necessarily] locks based on tx_index and not timestamp
     db = sqlite3.connect(config.LEDGER)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM broadcasts \
-                      WHERE (source=? AND text=?) \
-                      ORDER BY tx_index''', ('', address))
+                      WHERE (source=? AND text=? AND validity=?) \
+                      ORDER BY tx_index''', ('', address, 'Valid'))
     broadcast = cursor.fetchone()
     assert not cursor.fetchone()
     cursor.close()
     if broadcast: return True
     else: return False
+
+def total_burned (address):
+    db = sqlite3.connect(config.LEDGER)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
+
+    cursor.execute('''SELECT * FROM burns WHERE (address=? AND validity=?)''', (address, 'Valid'))
+    return sum([burn['quantity'] for burn in cursor.fetchall()])
+        
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

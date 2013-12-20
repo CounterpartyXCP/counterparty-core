@@ -9,9 +9,10 @@ import time
 import binascii
 import struct
 import sqlite3
+import warnings
 
 from . import (config, util, bitcoin)
-from . import (send, order, btcpayment, issuance, broadcast, bet, dividend)
+from . import (send, order, btcpayment, issuance, broadcast, bet, dividend, burn)
 
 def parse_block (db, cursor, block_index):
     """This is a separate function from follow() so that changing the parsing
@@ -49,6 +50,8 @@ def parse_block (db, cursor, block_index):
             db, cursor = bet.parse(db, cursor, tx, message)
         elif message_type_id == dividend.ID:
             db, cursor = dividend.parse(db, cursor, tx, message)
+        elif message_type_id == burn.ID:
+            db, cursor = burn.parse(db, cursor, tx, message)
         else:
             # Mark transaction as of unsupported type.
             cursor.execute('''UPDATE transactions \
@@ -234,6 +237,18 @@ def initialise(db, cursor):
                         amount_per_share INTEGER,
                         validity TEXT)
                    ''')
+
+    cursor.execute('''DROP TABLE IF EXISTS burns''')
+    cursor.execute('''CREATE TABLE burns(
+                        tx_index INTEGER PRIMARY KEY,
+                        tx_hash TEXT UNIQUE,
+                        block_index INTEGER,
+                        address TEXT,
+                        burned INTEGER,
+                        earned INTEGER,
+                        validity TEXT)
+                   ''')
+
     cursor.execute('''DROP TABLE IF EXISTS balances''')
     cursor.execute('''CREATE TABLE balances(
                         address TEXT,
@@ -300,10 +315,8 @@ def follow ():
         if 'ledger' == filename_array[0] and 'db' == filename_array[2]:
             if filename_array[1] != str(config.DB_VERSION):
                 os.remove(filename)
-                raise exceptions.DBVersionWarning('New version of transaction \
-                                                   table! Deleting old \
-                                                   databases. Please re‐run \
-                                                   Counterparty.')
+                warnings.warn('New version of transaction table! Deleting old \
+                               databases.')
 
     db = sqlite3.connect(config.LEDGER)
     db.row_factory = sqlite3.Row

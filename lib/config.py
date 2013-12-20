@@ -46,11 +46,13 @@ LEDGER = data_dir + '/ledger.' + str(DB_VERSION) + '.db'
 
 # Bitcoin protocol
 DUST_SIZE = 5430
-MIN_FEE = 30000
+MIN_FEE = 10000 # Counterparty transactions are all under 1KB in size.
 
 # Counterparty protocol
 # BLOCK_FIRST = 273648          # mainnet
 BLOCK_FIRST = 153560            # testnet
+BURN_START = 153000             # testnet
+BURN_END = 156000               # testnet
 # PREFIX = b'CPCOINXXXX'        # 10 bytes
 PREFIX = b'TEST'                # 4 bytes (possibly accidentally created)
 TXTYPE_FORMAT = '>I'
