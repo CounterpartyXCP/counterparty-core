@@ -6,7 +6,7 @@ import decimal
 D = decimal.Decimal
 # decimal.getcontext().prec = 8
 
-from . import (util, config, bitcoin)
+from . import (util, config, exceptions, bitcoin)
 
 FORMAT = '>QQQQHQ'
 ID = 10

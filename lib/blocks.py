@@ -231,7 +231,8 @@ def initialise(db, cursor):
 
     # Initialize XCP balances. TEMP
     for address in ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'mnkzHBHRkBWoP9aFtocDe5atxmRfSRHnjR'):
+                    'mnkzHBHRkBWoP9aFtocDe5atxmRfSRHnjR',
+                    'mz8qzVaH8RaVp2Rq6m8D2dTiSFirhFf4th'):
         db, cursor = util.credit(db, cursor, address, 1, 10000 * int(config.UNIT))
     db.commit()
 
