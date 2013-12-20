@@ -11,7 +11,7 @@ import struct
 import sqlite3
 
 from . import (config, util, bitcoin)
-from . import (send, order, btcpayment, issuance, broadcast, bet)
+from . import (send, order, btcpayment, issuance, broadcast, bet, dividend)
 
 def parse_block (db, cursor, block_index):
     """This is a separate function from follow() so that changing the parsing
@@ -47,6 +47,8 @@ def parse_block (db, cursor, block_index):
             db, cursor = broadcast.parse(db, cursor, tx, message)
         elif message_type_id == bet.ID:
             db, cursor = bet.parse(db, cursor, tx, message)
+        elif message_type_id == dividend.ID:
+            db, cursor = dividend.parse(db, cursor, tx, message)
         else:
             # Mark transaction as of unsupported type.
             cursor.execute('''UPDATE transactions \
@@ -57,6 +59,7 @@ def parse_block (db, cursor, block_index):
             print('Unsupported transaction:', tx['tx_hash'])
         db.commit()
 
+    # TODO: Is it a problem that this comes after the parsing?! (inclusive vs. exclusive)
     db, cursor = order.expire(db, cursor, block_index)
 
     return db, cursor
@@ -169,8 +172,8 @@ def initialise(db, cursor):
 
     cursor.execute('''DROP TABLE IF EXISTS broadcasts''')
     cursor.execute('''CREATE TABLE broadcasts(
-                        tx_index INTEGER,
-                        tx_hash TEXT,
+                        tx_index INTEGER PRIMARY KEY,
+                        tx_hash TEXT UNIQUE,
                         block_index INTEGER,
                         source TEXT,
                         timestamp INTEGER,
@@ -182,8 +185,8 @@ def initialise(db, cursor):
 
     cursor.execute('''DROP TABLE IF EXISTS bets''')
     cursor.execute('''CREATE TABLE bets(
-                        tx_index INTEGER,
-                        tx_hash TEXT,
+                        tx_index INTEGER PRIMARY KEY,
+                        tx_hash TEXT UNIQUE,
                         block_index INTEGER,
                         source TEXT,
                         feed_address TEXT,
@@ -221,6 +224,16 @@ def initialise(db, cursor):
                         validity TEXT)
                    ''')
 
+    cursor.execute('''DROP TABLE IF EXISTS dividend_payments''')
+    cursor.execute('''CREATE TABLE dividend_payments(
+                        tx_index INTEGER PRIMARY KEY,
+                        tx_hash TEXT UNIQUE,
+                        block_index INTEGER,
+                        source TEXT,
+                        share_id INTEGER,
+                        amount_per_share INTEGER,
+                        validity TEXT)
+                   ''')
     cursor.execute('''DROP TABLE IF EXISTS balances''')
     cursor.execute('''CREATE TABLE balances(
                         address TEXT,

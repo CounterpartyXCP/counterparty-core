@@ -13,7 +13,7 @@ ID = 10
 
 def order (source, give_id, give_amount, get_id, get_amount, expiration, fee_required, fee_provided):
     balance = util.balance(source, give_id) 
-    if balance and balance < give_amount:
+    if not balance or balance < give_amount:
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, give_id, give_amount, get_id, get_amount,

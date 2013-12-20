@@ -4,14 +4,14 @@
 
 import struct
 import sqlite3
-from . import (util, config, bitcoin)
+from . import (util, config, exceptions, bitcoin)
 
 FORMAT = '>QQ'
 ID = 0
 
 def send (source, destination, amount, asset_id):
     balance = util.balance(source, asset_id)
-    if balance and balance < amount:
+    if not balance or balance < amount:
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount)

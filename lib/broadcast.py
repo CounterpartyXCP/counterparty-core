@@ -76,7 +76,7 @@ def parse (db, cursor, tx, message):
                   )
     if validity == 'Valid':
         if not value: infix = '‘' + text + '’'
-        else: infix = '‘' + text + ' =', str(value) + '’'
+        else: infix = '‘' + text + ' = ' + str(value) + '’'
         suffix = 'from ' + tx['source'] + ' at ' + datetime.datetime.fromtimestamp(timestamp).isoformat() + ' (' + tx['tx_hash'] + ') '
         print('\tBroadcast:', infix, suffix)
 

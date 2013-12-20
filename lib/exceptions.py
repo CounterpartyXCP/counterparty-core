@@ -1,6 +1,8 @@
 #! /usr/bin/python3
 
 # Exceptions
+class DividendError (Exception):
+    pass
 class FeedLockedError (Exception):
     pass
 class BitcoinConfError (Exception):

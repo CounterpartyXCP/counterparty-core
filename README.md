@@ -20,8 +20,7 @@ Decentralised financial instruments in a protocol build on top of the Bitcoin bl
 * Entities selling an asset for BTC should require a fee be paid (to miners) by the buyer. (But all orders allow this.) Otherwise someone can seem to accept every sell offer.
 
 ## To do
-* Bets, and CFDs
-* Dividends: `sendall(amount, asset_id)` (XCP only)
+* Bets and CFDs
 * API
 * Asset ID strings
 	* Hand‐picked Base58‐encoded 8‐byte Pascal strings (length?, checksum? version byte? leading zeros?)

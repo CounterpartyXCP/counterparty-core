@@ -1,6 +1,19 @@
 import sqlite3
 from . import config
 
+def find_all (share_id):
+    """
+    Find every address that holds some of ASSET_ID, and return that address,
+    with the amount of it that held.
+    """
+    db = sqlite3.connect(config.LEDGER)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM balances WHERE (asset_id=?)''', (share_id,))
+    for balance in cursor.fetchall():
+        yield (balance['address'], balance['amount'])
+    
+
 # TEMP
 def get_asset_id (asset_name):
     """Make take id, too."""
@@ -16,6 +29,17 @@ def get_asset_name (asset_id):
         return config.ASSET_NAME[asset_id]
     except Exception:   #
         return str(asset_id)
+
+def total_shares (share_id):
+    """Get total number of shares."""
+    db = sqlite3.connect(config.LEDGER)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM issuances WHERE (asset_id=? AND validity=?)''', (share_id, 'Valid'))
+    total_shares = 0
+    for issuance in cursor.fetchall():
+        total_shares += issuance['amount']
+    return total_shares
 
 def balance (source, asset_id):
     db = sqlite3.connect(config.LEDGER)

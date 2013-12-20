@@ -48,7 +48,7 @@ def create (source, feed_address, bet_type, time_start, time_end, wager_amount,
 
     fee_multiplier = get_fee_multiplier(feed_address)
     balance = util.balance(source, 1) 
-    if balance and balance < wager_amount * (1 + fee_multiplier):
+    if not balance or balance < wager_amount * (1 + fee_multiplier):
         raise exceptions.BalanceError('Insufficient funds to both make wager and pay feed fee (in XCP). (Check that the database is up‐to‐date.)')
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)

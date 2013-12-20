@@ -8,9 +8,11 @@ import time
 import decimal
 D = decimal.Decimal
 # decimal.getcontext().prec = 8
+import colorama
+colorama.init()
 
 from lib import (config, util, exceptions, bitcoin, blocks, api)
-from lib import (send, order, btcpayment, issuance, broadcast, bet)
+from lib import (send, order, btcpayment, issuance, broadcast, bet, dividend)
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
@@ -24,6 +26,7 @@ if __name__ == '__main__':
                                        help='the action to be taken')
 
     # TODO: Replace underscores with hyphen‐minuses in command‐line options?
+    # TODO: Conversion to Decimals is fragile (and the error message unclear).
     parser_send = subparsers.add_parser('send', help='requires bitcoind')
     parser_send.add_argument('--from', metavar='SOURCE', dest='source', type=str, required=True, help='')
     parser_send.add_argument('--to', metavar='DESTINATION', dest='destination', type=str, required=True, help='')
@@ -32,38 +35,43 @@ if __name__ == '__main__':
 
     parser_order = subparsers.add_parser('order', help='requires bitcoind')
     parser_order.add_argument('--from', metavar='SOURCE', dest='source', type=str, required=True, help='')
-    parser_order.add_argument('--get_amount', metavar='GET_AMOUNT', type=D, required=True, help='')
-    parser_order.add_argument('--get_asset', metavar='GET_ASSET', type=str, required=True, help='')
-    parser_order.add_argument('--give_amount', metavar='GIVE_AMOUNT', type=D, required=True, help='')
-    parser_order.add_argument('--give_asset', metavar='GIVE_ASSET', type=str, required=True, help='')
+    parser_order.add_argument('--get-amount', metavar='GET_AMOUNT', type=D, required=True, help='')
+    parser_order.add_argument('--get-asset', metavar='GET_ASSET', type=str, required=True, help='')
+    parser_order.add_argument('--give-amount', metavar='GIVE_AMOUNT', type=D, required=True, help='')
+    parser_order.add_argument('--give-asset', metavar='GIVE_ASSET', type=str, required=True, help='')
     parser_order.add_argument('--expiration', metavar='EXPIRATION', type=int, required=True, help='')
     parser_order.add_argument('--fee', metavar='FEE', type=D, required=True, help='either the required fee, or the provided fee, as appropriate; in BTC, to be paid to miners')
 
     parser_btcpayment = subparsers.add_parser('btcpayment', help='requires bitcoind')
-    parser_btcpayment.add_argument('deal_id', metavar='DEAL_ID', type=str, help='')
+    parser_btcpayment.add_argument('deal-id', metavar='DEAL_ID', type=str, help='')
 
     parser_issue = subparsers.add_parser('issue', help='requires bitcoind')
     parser_issue.add_argument('--from', metavar='SOURCE', type=str, dest='source', required=True, help='')
     parser_issue.add_argument('--amount', metavar='AMOUNT', type=float, required=True, help='')
-    parser_issue.add_argument('--asset_id', metavar='ASSET_ID', type=int, required=True, help='')
+    parser_issue.add_argument('--asset-id', metavar='ASSET_ID', type=int, required=True, help='')
     parser_issue.add_argument('--divisible', metavar='DIVISIBLE', type=bool, required=True, help='whether or not the asset is divisible (must agree with previous issuances, if this is a re‐issuance)')
 
     parser_broadcast = subparsers.add_parser('broadcast', help='requires bitcoind')
     parser_broadcast.add_argument('--from', metavar='SOURCE', type=str, dest='source', required=True, help='')
     parser_broadcast.add_argument('--text', metavar='TEXT', type=str, required=True, help='')
     parser_broadcast.add_argument('--value', metavar='VALUE', type=float, default=0, help='numerical value of the broadcast')
-    parser_broadcast.add_argument('--fee_multiplier', metavar='FEE_MULTIPLIER', type=D, help='how much of every bet on this feed should go to its operator; a fraction of 1 (i.e. .05 is 5%)')
+    parser_broadcast.add_argument('--fee-multiplier', metavar='FEE_MULTIPLIER', type=D, help='how much of every bet on this feed should go to its operator; a fraction of 1 (i.e. .05 is 5%)')
 
     parser_order = subparsers.add_parser('bet', help='requires bitcoind')
     parser_order.add_argument('--from', metavar='SOURCE', dest='source', type=str, required=True, help='')
-    parser_order.add_argument('--feed_address', metavar='FEED_ADDRESS', type=str, required=True, help='')
-    parser_order.add_argument('--bet_type', metavar='BET_TYPE', type=int, required=True, help='')
-    parser_order.add_argument('--time_start', metavar='TIME_START', type=int, required=True, help='')
-    parser_order.add_argument('--time_end', metavar='TIME_END', type=int, required=True, help='')
-    parser_order.add_argument('--wager_amount', metavar='WAGER_AMOUNT', type=D, required=True, help='')
-    parser_order.add_argument('--counterwager_amount', metavar='COUNTERWAGER_AMOUNT', type=D, required=True, help='')
-    parser_order.add_argument('--threshold_leverage', metavar='THRESHOLD_LEVERAGE', type=D, required=True, help='over‐under (?) (bet), leverage, as a fraction of 5040 (CFD)')
+    parser_order.add_argument('--feed-address', metavar='FEED_ADDRESS', type=str, required=True, help='')
+    parser_order.add_argument('--bet-type', metavar='BET_TYPE', type=int, required=True, help='')
+    parser_order.add_argument('--time-start', metavar='TIME_START', type=int, required=True, help='')
+    parser_order.add_argument('--time-end', metavar='TIME_END', type=int, required=True, help='')
+    parser_order.add_argument('--wager-amount', metavar='WAGER_AMOUNT', type=D, required=True, help='')
+    parser_order.add_argument('--counterwager-amount', metavar='COUNTERWAGER_AMOUNT', type=D, required=True, help='')
+    parser_order.add_argument('--threshold-leverage', metavar='THRESHOLD_LEVERAGE', type=D, required=True, help='over‐under (?) (bet), leverage, as a fraction of 5040 (CFD)')
     parser_order.add_argument('--expiration', metavar='EXPIRATION', type=int, required=True, help='')
+
+    parser_dividend = subparsers.add_parser('dividend', help='requires bitcoind')
+    parser_dividend.add_argument('--from', metavar='SOURCE', dest='source', type=str, required=True, help='')
+    parser_dividend.add_argument('--amount-per-share', metavar='AMOUNT_PER_SHARE', type=D, required=True, help='in XCP')
+    parser_dividend.add_argument('--share', metavar='SHARE_NAME', dest='share', type=str, required=True, help='')   # TODO: Awkward naming
 
     parser_follow = subparsers.add_parser('follow', help='requires bitcoind')
 
@@ -150,6 +158,14 @@ if __name__ == '__main__':
                               args.counterwager_amount * config.UNIT,
                               threshold_leverage, args.expiration))
 
+    elif args.action == 'dividend':
+        bitcoin.bitcoind_check()
+        share_id = util.get_asset_id(args.share)
+        # Find out whether the asset to be sent is divisible or not.
+        if util.is_divisible(share_id) != True:
+            raise exceptions.DividendError('Dividend‐yielding assets must be indivisible.')
+        json_print(dividend.create(args.source, int(args.amount_per_share * config.UNIT), share_id))
+
     elif args.action == 'follow':
         bitcoin.bitcoind_check()
         blocks.follow()
@@ -190,7 +206,7 @@ if __name__ == '__main__':
                 orderbook_table.append((order['source'], give, get, price_string, fee, str(time_left), hash_))
 
             # Print out orderorderbook_table.
-            print('OPEN ORDERS')
+            print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Open Orders' + colorama.Style.RESET_ALL)
             width = []
             for i in range(len(orderbook_table[0])):
                 width.append(max(len(row[i]) for row in orderbook_table) + 2)
@@ -239,7 +255,7 @@ if __name__ == '__main__':
                 pending_table.append((deal_id, time_left))
 
             # Print out pending_table.
-            print('PENDING BTC PAYMENTS')
+            print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Pending Bitcoin Payments' + colorama.Style.RESET_ALL)
             width = []
             for i in range(len(pending_table[0])):
                 width.append(max(len(row[i]) for row in pending_table) + 2)
