@@ -78,7 +78,7 @@ def is_divisible(asset_id):
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM issuances \
-                      WHERE asset_id=?''', (asset_id,))
+                      WHERE (asset_id=? AND validity=?)''', (asset_id, 'Valid'))
     asset = cursor.fetchone()
     cursor.close()
     return asset['divisible']

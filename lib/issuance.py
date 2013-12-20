@@ -3,7 +3,7 @@
 import struct
 import sqlite3
 
-from . import (config, util, bitcoin)
+from . import (config, util, exceptions, bitcoin)
 
 FORMAT = '>QQ?'
 ID = 20
@@ -12,14 +12,16 @@ def issuance (source, asset_id, amount, divisible):
     db = sqlite3.connect(config.LEDGER)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
-    # Avoid duplicates.
+
+    # Handle potential re‐issuances. (TODO: Inelegant)
     cursor.execute('''SELECT * FROM issuances WHERE (asset_id=? AND validity=?)''', (asset_id, 'Valid'))
     issuance = cursor.fetchone()
     if issuance:
         if issuance['issuer'] != source:
-            raise exceptions.IssuanceError('Asset exists and was issued by another address.')
+            raise exceptions.IssuanceError('Asset exists and was not issued by this address.')
         if divisible != util.is_divisible(asset_id):
             raise exceptions.IssuanceError('That asset exists with a different divisibility.')
+
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount, divisible)
     db.close()
@@ -36,12 +38,12 @@ def parse_issuance (db, cursor, tx, message):
         asset_id, amount, divisible = None, None, None
         validity = 'Invalid: could not unpack'
 
-    # If re‐issuance, check for compatability in divisibility, issuer.
+    # If re‐issuance, check for compatability in divisibility, issuer. (TODO: Inelegant)
     cursor.execute('''SELECT * FROM issuances WHERE (asset_id=? AND validity=?)''', (asset_id, 'Valid'))
     issuance = cursor.fetchone()
     if issuance:
         if issuance['issuer'] != tx['source']:
-            validity = 'Invalid: that asset already exists and was issued by another address'
+            validity = 'Invalid: that asset already exists and was not issued by this address'
         if validity == 'Valid' and divisible != util.is_divisible(asset_id):
             validity = 'Invalid: asset exists with a different divisibility'
 

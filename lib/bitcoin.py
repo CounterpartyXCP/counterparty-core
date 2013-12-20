@@ -160,7 +160,6 @@ def get_inputs (source, amount, fee):
     unspent = [coin for coin in listunspent if coin['address'] == source]
     inputs, total = [], 0
     for coin in unspent:                                                      
-        print(coin['txid'])
         inputs.append(coin)
         total += int(coin['amount'] * config.UNIT)
         if total >= amount + fee:

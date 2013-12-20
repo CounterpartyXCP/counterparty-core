@@ -43,9 +43,10 @@ if __name__ == '__main__':
     parser_btcpayment.add_argument('deal_id', metavar='DEAL_ID', type=str, help='')
 
     parser_issue = subparsers.add_parser('issue', help='requires bitcoind')
-    parser_issue.add_argument('--from', metavar='SOURCE', type=str, required=True, help='')
-    parser_issue.add_argument('--amount', metavar='AMOUNT', type=str, help='')
-    parser_issue.add_argument('--asset_id', metavar='ASSET_ID', type=int, help='')
+    parser_issue.add_argument('--from', metavar='SOURCE', type=str, dest='source', required=True, help='')
+    parser_issue.add_argument('--amount', metavar='AMOUNT', type=float, required=True, help='')
+    parser_issue.add_argument('--asset_id', metavar='ASSET_ID', type=int, required=True, help='')
+    parser_issue.add_argument('--divisible', metavar='DIVISIBLE', type=bool, required=True, help='whether or not the asset is divisible (must agree with previous issuances, if this is a re‐issuance)')
 
     parser_broadcast = subparsers.add_parser('broadcast', help='requires bitcoind')
     parser_broadcast.add_argument('--from', metavar='SOURCE', type=str, dest='source', required=True, help='')
@@ -126,13 +127,9 @@ if __name__ == '__main__':
 
     elif args.action == 'issue':
         bitcoin.bitcoind_check()
-        if util.is_divisible(args.asset_id):
-            divisible = True
-            amount = int(args.amount * config.UNIT)
-        else:
-            divisible = False
-            amount = int(args.amount)
-        json_print(issuance.issuance(args.source, args.asset_id, amount, divisible))
+        if args.divisible: amount = int(args.amount * config.UNIT)
+        else: amount = int(args.amount)
+        json_print(issuance.issuance(args.source, args.asset_id, amount, args.divisible))
 
     elif args.action == 'broadcast':
         bitcoin.bitcoind_check()
