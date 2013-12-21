@@ -23,7 +23,6 @@ because it is stored as a four‐byte integer, it may not be greater than about
 
 import struct
 import sqlite3
-import datetime
 import decimal
 D = decimal.Decimal
 
@@ -80,7 +79,7 @@ def parse (db, cursor, tx, message):
     if validity == 'Valid':
         if not value: infix = '‘' + text + '’'
         else: infix = '‘' + text + ' = ' + str(value) + '’'
-        suffix = 'from ' + tx['source'] + ' at ' + datetime.datetime.fromtimestamp(timestamp).isoformat() + ' (' + tx['tx_hash'] + ') '
+        suffix = 'from ' + tx['source'] + ' at ' + util.isodt(timestamp) + ' (' + tx['tx_hash'] + ') '
         print('\tBroadcast:', infix, suffix)
 
 
@@ -91,7 +90,8 @@ def parse (db, cursor, tx, message):
         contract_id = contract['tx0_hash'] + contract['tx1_hash']
 
         # Contract for difference, with determinate settlement date.
-        if contract['tx0_bet_type'] + contract['tx1_bet_type'] == 1:
+        cfd_id_sum = util.BET_TYPE_ID['BullCFD'] + util.BET_TYPE_ID['BearCFD']
+        if contract['tx0_bet_type'] + contract['tx1_bet_type'] == cfd_id_sum:
             leverage = D(contract['leverage']) / 5040
             initial_value = contract['initial_value']
 
@@ -107,7 +107,7 @@ def parse (db, cursor, tx, message):
                 bear_escrow = contract['forward_amount']
                 
             total_escrow = bull_escrow + bear_escrow
-            bear_credit = bear_escrow - D(value - initial_value) * leverage * config.UNIT   # TODO: (UNIT!?)
+            bear_credit = bear_escrow - D(value - initial_value) * leverage * config.UNIT
             bull_credit = total_escrow - bear_credit
 
             # Liquidate, as necessary.

@@ -17,7 +17,6 @@ import sqlite3
 import decimal
 D = decimal.Decimal
 # decimal.getcontext().prec = 8
-import datetime
 
 from . import (util, config, bitcoin, exceptions)
 
@@ -42,9 +41,9 @@ def create (source, feed_address, bet_type, deadline, wager_amount,
 
     good_feed = util.good_feed(feed_address)
     if good_feed == None:
-        exceptions.FeedError('That feed doesn’t exist.')
+        raise exceptions.FeedError('That feed doesn’t exist.')
     elif not good_feed:
-        exceptions.FeedError('That feed is locked.')
+        raise exceptions.FeedError('That feed is locked.')
 
     fee_multiplier = get_fee_multiplier(feed_address)
     balance = util.balance(source, 1) 
@@ -61,7 +60,7 @@ def create (source, feed_address, bet_type, deadline, wager_amount,
     return bitcoin.transaction(source, feed_address, config.DUST_SIZE,
                                config.MIN_FEE, data)
 
-def parse (db, cursor, tx1, message):
+def parse (db, cursor, tx, message):
     # Ask for forgiveness…
     validity = 'Valid'
 
@@ -76,7 +75,7 @@ def parse (db, cursor, tx1, message):
          expiration) = None, None, None, None, None, None, None
         validity = 'Invalid: could not unpack'
 
-    feed_address = tx1['destination']
+    feed_address = tx['destination']
     if validity == 'Valid':
         good_feed = util.good_feed(feed_address)
         if good_feed == None:
@@ -87,7 +86,7 @@ def parse (db, cursor, tx1, message):
     if validity == 'Valid':
         # Debit amount wagered and fee.
         fee_multiplier = get_fee_multiplier(feed_address)
-        db, cursor, validity = util.debit(db, cursor, tx1['source'], 1, wager_amount * (1 + fee_multiplier))
+        db, cursor, validity = util.debit(db, cursor, tx['source'], 1, wager_amount * (1 + fee_multiplier))
 
         wager_amount = int(wager_amount)
         counterwager_amount = int(counterwager_amount)
@@ -112,10 +111,10 @@ def parse (db, cursor, tx1, message):
                         leverage,
                         expiration,
                         validity) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-                        (tx1['tx_index'],
-                        tx1['tx_hash'],
-                        tx1['block_index'],
-                        tx1['source'],
+                        (tx['tx_index'],
+                        tx['tx_hash'],
+                        tx['block_index'],
+                        tx['source'],
                         feed_address,
                         bet_type,
                         deadline,
@@ -131,11 +130,11 @@ def parse (db, cursor, tx1, message):
     db.commit()
 
     if validity == 'Valid':
-        print('\tBet:', 'type', bet_type, 'on', feed_address, 'at', datetime.datetime.fromtimestamp(deadline), 'for', wager_amount / config.UNIT, 'XCP', 'against', counterwager_amount / config.UNIT, 'XCP', 'in', expiration, 'blocks', '(' + tx1['tx_hash'] + ')')
+        print('\tBet:', util.BET_TYPE_NAME[bet_type], 'by', tx['source'], 'on', feed_address, 'at', util.isodt(deadline), 'for', wager_amount / config.UNIT, 'XCP', 'against (at least)', counterwager_amount / config.UNIT, 'XCP', 'in', expiration, 'blocks', '(' + tx['tx_hash'] + ')')
 
         db, cursor = make_contract(db, cursor, bet_type, deadline,
                                    wager_amount, counterwager_amount,
-                                   threshold, leverage, expiration, tx1)
+                                   threshold, leverage, expiration, tx)
 
     return db, cursor
 
@@ -187,7 +186,7 @@ def make_contract (db, cursor, bet_type, deadline,
 
             contract_id = tx0['tx_hash'] + tx1['tx_hash']   #
 
-            print('\t\tContract:', tx0['wager_amount']/config.UNIT, 'XCP', 'against', tx0['counterwager_amount']/config.UNIT, 'XCP', '(' + contract_id + ')')   # TODO
+            print('\t\tContract:', util.BET_TYPE_NAME[tx0['bet_type']], 'by', tx0['source'], 'for', tx0['wager_amount']/config.UNIT, 'XCP', 'against', util.BET_TYPE_NAME[tx1['bet_type']], 'by', tx1['source'], 'for', tx0['counterwager_amount']/config.UNIT, 'XCP', 'on', feed_address, 'at', util.isodt(deadline), '(' + contract_id + ')')   # TODO
 
             # Debit the order.
             wager_remaining -= backward_amount

@@ -1,5 +1,18 @@
 import sqlite3
+from datetime import datetime
+from dateutil.tz import tzlocal
+
 from . import config
+
+
+def isodt (epoch_time):
+    return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
+
+# Obsolete in Python 3.4.
+ASSET_NAME = {0: 'BTC', 1: 'XCP'}
+ASSET_ID = {'BTC': 0, 'XCP': 1}
+BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD'}
+BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1}
 
 def find_all (share_id):
     """
@@ -18,7 +31,7 @@ def find_all (share_id):
 def get_asset_id (asset_name):
     """Make take id, too."""
     try:
-        return config.ASSET_ID[asset_name]
+        return ASSET_ID[asset_name]
     except Exception:   #
         return int(asset_name)
 
@@ -26,7 +39,7 @@ def get_asset_id (asset_name):
 def get_asset_name (asset_id):
     """Make take name, too."""
     try:
-        return config.ASSET_NAME[asset_id]
+        return ASSET_NAME[asset_id]
     except Exception:   #
         return str(asset_id)
 

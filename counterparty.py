@@ -60,7 +60,7 @@ if __name__ == '__main__':
     parser_order = subparsers.add_parser('bet', help='requires bitcoind')
     parser_order.add_argument('--from', metavar='SOURCE', dest='source', type=str, required=True, help='')
     parser_order.add_argument('--feed-address', metavar='FEED_ADDRESS', type=str, required=True, help='')
-    parser_order.add_argument('--bet-type', metavar='BET_TYPE', type=int, required=True, help='')
+    parser_order.add_argument('--bet-type', metavar='BET_TYPE', type=str, choices=['BullCFD', 'BearCFD'], required=True, help='')
     parser_order.add_argument('--deadline', metavar='DEADLINE', type=int, required=True, help='')
     parser_order.add_argument('--wager-amount', metavar='WAGER_AMOUNT', type=D, required=True, help='')
     parser_order.add_argument('--counterwager-amount', metavar='COUNTERWAGER_AMOUNT', type=D, required=True, help='')
@@ -150,9 +150,8 @@ if __name__ == '__main__':
                                     fee_multiplier, args.text))
 
     elif args.action == 'bet':
-        # TODO: Not real
-        json_print(bet.create(args.source, args.feed_address, args.bet_type,
-                              args.deadline,
+        json_print(bet.create(args.source, args.feed_address,
+                              util.BET_TYPE_ID[args.bet_type], args.deadline,
                               args.wager_amount * config.UNIT,
                               args.counterwager_amount * config.UNIT,
                               args.threshold, args.leverage, args.expiration))
