@@ -53,7 +53,7 @@ def parse (db, cursor, tx, message):
         validity = 'Invalid: could not unpack'
 
     # Check that the publishing address is not locked.
-    good_feed = util.good_feed(tx['source'])
+    cursor, good_feed = util.good_feed(cursor, tx['source'])
     if good_feed != None and not good_feed:
         validity = 'Invalid: locked feed'
 

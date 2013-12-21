@@ -11,7 +11,7 @@ from . import (util, config, exceptions, bitcoin)
 FORMAT = '>32s32s'
 ID = 11
 
-def btcpayment (deal_id):
+def create (deal_id):
     tx0_hash, tx1_hash = deal_id[:64], deal_id[64:] # UTF‐8 encoding means that the indices are doubled.
     tx0_hash_bytes, tx1_hash_bytes = binascii.unhexlify(tx0_hash), binascii.unhexlify(tx1_hash)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
@@ -39,7 +39,7 @@ def btcpayment (deal_id):
 
     return bitcoin.transaction(source, destination, btc_amount, config.MIN_FEE, data)
 
-def parse_btcpayment (db, cursor, tx, message):
+def parse (db, cursor, tx, message):
     # Ask for forgiveness…
     validity = 'Valid'
 

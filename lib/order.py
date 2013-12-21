@@ -13,8 +13,8 @@ from . import (util, config, exceptions, bitcoin)
 FORMAT = '>QQQQHQ'
 ID = 10
 
-def order (source, give_id, give_amount, get_id, get_amount, expiration, fee_required, fee_provided):
-    balance = util.balance(source, give_id) 
+def create (source, give_id, give_amount, get_id, get_amount, expiration, fee_required, fee_provided):
+    cursor, balance = util.balance(cursor, source, give_id) 
     if not balance or balance < give_amount:
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
@@ -22,7 +22,7 @@ def order (source, give_id, give_amount, get_id, get_amount, expiration, fee_req
                         expiration, fee_required)
     return bitcoin.transaction(source, None, config.DUST_SIZE, fee_provided, data)
 
-def parse_order (db, cursor, tx, message):
+def parse (db, cursor, tx, message):
     # Ask for forgiveness…
     validity = 'Valid'
 
@@ -41,7 +41,8 @@ def parse_order (db, cursor, tx, message):
 
     # Debit the address that makes the order. Check for sufficient funds.
     if validity == 'Valid':
-        if util.balance(tx['source'], give_id) >= give_amount:
+        cursor, balance = util.balance(cursor, tx['source'], give_id)
+        if balance >= give_amount:
             if give_id:  # No need (or way) to debit BTC.
                 db, cursor, validity = util.debit(db, cursor, tx['source'], give_id, give_amount)
         else:
@@ -82,15 +83,12 @@ def parse_order (db, cursor, tx, message):
 
     if validity == 'Valid':
 
-        # Ugly
-        if util.is_divisible(give_id):
-            give_unit = config.UNIT
-        else:
-            give_unit = 1
-        if util.is_divisible(get_id):
-            get_unit = config.UNIT
-        else:
-            get_unit = 1
+        cursor, divisible = util.is_divisible(cursor, give_id)
+        if divisible: give_unit = config.UNIT
+        else: give_unit = 1
+        cursor, divisible = util.is_divisible(cursor, get_id)
+        if divisible: get_unit = config.UNIT
+        else: get_unit = 1
 
         if not give_id:
             fee_text = 'with a provided fee of ' + str(tx['fee'] / config.UNIT) + ' BTC'
@@ -98,11 +96,11 @@ def parse_order (db, cursor, tx, message):
             fee_text = 'with a required fee of ' + str(fee_required / config.UNIT) + ' BTC'
         print(colorama.Fore.CYAN + '\tOrder: sell', give_amount/give_unit, util.get_asset_name(give_id), 'for', get_amount/get_unit, util.get_asset_name(get_id), 'at', ask_price.quantize(config.FOUR).normalize(), util.get_asset_name(get_id) + '/' + util.get_asset_name(give_id), 'in', expiration, 'blocks', fee_text, util.short(tx['tx_hash']) + colorama.Style.RESET_ALL) # TODO (and fee_required, fee_provided)
 
-        db, cursor = make_deal(db, cursor, give_id, give_amount, get_id, get_amount, ask_price, expiration, fee_required, tx)
+        db, cursor = deal(db, cursor, give_id, give_amount, get_id, get_amount, ask_price, expiration, fee_required, tx)
 
     return db, cursor
 
-def make_deal (db, cursor, give_id, give_amount, get_id, get_amount,
+def deal (db, cursor, give_id, give_amount, get_id, get_amount,
         ask_price, expiration, fee_required, tx):
 
     # Get order in question.
@@ -135,14 +133,13 @@ def make_deal (db, cursor, give_id, give_amount, get_id, get_amount,
             forward_id, backward_id = get_id, give_id
             deal_id = tx0['tx_hash'] + tx1['tx_hash']
 
-            if util.is_divisible(forward_id):
-                forward_unit = config.UNIT
-            else:
-                forward_unit = 1
-            if util.is_divisible(backward_id):
-                backward_unit = config.UNIT
-            else:
-                backward_unit = 1
+            cursor, divisible = util.is_divisible(cursor, forward_id)
+            if divisible: forward_unit = config.UNIT
+            else: forward_unit = 1
+            cursor, divisible = util.is_divisible(cursor, backward_id)
+            if divisible: backward_unit = config.UNIT
+            else: backward_unit = 1
+
             print(colorama.Fore.MAGENTA + '\t\tDeal:', forward_amount/forward_unit, util.get_asset_name(forward_id), 'for', backward_amount/backward_unit, util.get_asset_name(backward_id), 'at', price.quantize(config.FOUR).normalize(), util.get_asset_name(backward_id) + '/' + util.get_asset_name(forward_id), util.short(deal_id))
 
             if 0 in (give_id, get_id):

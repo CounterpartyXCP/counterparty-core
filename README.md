@@ -7,7 +7,7 @@ Decentralised financial instruments in a protocol build on top of the Bitcoin bl
 
 ## Dependencies
 * Python 3
-* SQLite3, Requests, AppDirs, Colorama
+* SQLite3, Requests, AppDirs, Colorama, prettytable
 * Bitcoind
 
 ## Instructions

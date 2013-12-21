@@ -41,14 +41,14 @@ def get_fee_multiplier (feed_address):
 def create (source, feed_address, bet_type, deadline, wager_amount,
             counterwager_amount, threshold, leverage, expiration):
 
-    good_feed = util.good_feed(feed_address)
+    cursor, good_feed = util.good_feed(rb, cursor, feed_address)
     if good_feed == None:
         raise exceptions.FeedError('That feed doesn’t exist.')
     elif not good_feed:
         raise exceptions.FeedError('That feed is locked.')
 
     fee_multiplier = get_fee_multiplier(feed_address)
-    balance = util.balance(source, 1) 
+    cursor, balance = util.balance(cursor, source, 1) 
     if not balance or balance < wager_amount * (1 + fee_multiplier):
         raise exceptions.BalanceError('Insufficient funds to both make wager and pay feed fee (in XCP). (Check that the database is up‐to‐date.)')
 
@@ -79,7 +79,7 @@ def parse (db, cursor, tx, message):
 
     feed_address = tx['destination']
     if validity == 'Valid':
-        good_feed = util.good_feed(feed_address)
+        cursor, good_feed = util.good_feed(cursor, feed_address)
         if good_feed == None:
             validity = 'Invalid: no such feed'
         elif not good_feed:
@@ -132,15 +132,15 @@ def parse (db, cursor, tx, message):
     db.commit()
 
     if validity == 'Valid':
-        print(colorama.Fore.BLUE + '\tBet:', util.BET_TYPE_NAME[bet_type], 'by', tx['source'], 'on', feed_address, 'at', util.isodt(deadline), 'for', wager_amount / config.UNIT, 'XCP', 'against (at least)', counterwager_amount / config.UNIT, 'XCP', 'in', expiration, 'blocks', util.short(tx['tx_hash']) + colorama.Style.RESET_ALL)
+        print(colorama.Fore.BLUE + '\tBet:', util.BET_TYPE_NAME[bet_type], 'on', feed_address, 'at', util.isodt(deadline), 'for', wager_amount / config.UNIT, 'XCP', 'against', counterwager_amount / config.UNIT, 'XCP', 'in', expiration, 'blocks', util.short(tx['tx_hash']) + colorama.Style.RESET_ALL)
 
-        db, cursor = make_contract(db, cursor, bet_type, deadline,
+        db, cursor = contract(db, cursor, bet_type, deadline,
                                    wager_amount, counterwager_amount,
                                    threshold, leverage, expiration, tx)
 
     return db, cursor
 
-def make_contract (db, cursor, bet_type, deadline, 
+def contract (db, cursor, bet_type, deadline, 
                wager_amount, counterwager_amount, threshold, leverage,
                expiration, tx):
 
@@ -188,7 +188,7 @@ def make_contract (db, cursor, bet_type, deadline,
 
             contract_id = tx0['tx_hash'] + tx1['tx_hash']   #
 
-            print(colorama.Fore.RED + '\t\tContract:', util.BET_TYPE_NAME[tx0['bet_type']], 'by', tx0['source'], 'for', tx0['wager_amount']/config.UNIT, 'XCP', 'against', util.BET_TYPE_NAME[tx1['bet_type']], 'by', tx1['source'], 'for', tx0['counterwager_amount']/config.UNIT, 'XCP', 'on', feed_address, 'at', util.isodt(deadline), util.short(contract_id))
+            print(colorama.Fore.RED + '\t\tContract:', util.BET_TYPE_NAME[tx0['bet_type']], 'for', tx0['wager_amount']/config.UNIT, 'XCP', 'against', util.BET_TYPE_NAME[tx1['bet_type']], 'for', tx0['counterwager_amount']/config.UNIT, 'XCP', 'on', feed_address, 'at', util.isodt(deadline), util.short(contract_id))
             print(colorama.Style.RESET_ALL)
 
             # Debit the order.
@@ -207,7 +207,7 @@ def make_contract (db, cursor, bet_type, deadline,
                            tx1['tx_hash']))
 
             # Get last value of feed.
-            initial_value = util.last_value(feed_address)
+            cursor, initial_value = util.last_value_of_feed(cursor, feed_address)
 
             # Record order fulfillment.
             cursor.execute('''INSERT into contracts(

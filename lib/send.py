@@ -12,15 +12,15 @@ from . import (util, config, exceptions, bitcoin)
 FORMAT = '>QQ'
 ID = 0
 
-def send (source, destination, amount, asset_id):
-    balance = util.balance(source, asset_id)
+def create (source, destination, amount, asset_id):
+    cursor, balance = util.balance(cursor, source, asset_id)
     if not balance or balance < amount:
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount)
     return bitcoin.transaction(source, destination, config.DUST_SIZE, config.MIN_FEE, data)
 
-def parse_send (db, cursor, tx, message):
+def parse (db, cursor, tx, message):
     # Ask for forgiveness…
     validity = 'Valid'
 
@@ -59,7 +59,8 @@ def parse_send (db, cursor, tx, message):
                         validity)
                   )
     if validity == 'Valid':
-        if util.is_divisible(asset_id): amount /= config.UNIT
+        cursor, divisible = util.is_divisible(cursor, asset_id)
+        if divisible: amount /= config.UNIT
         print(colorama.Fore.GREEN + '\tSend:', amount, util.get_asset_name(asset_id), 'from', tx['source'], 'to', tx['destination'], util.short(tx['tx_hash']))
 
     return db, cursor

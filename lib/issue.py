@@ -8,7 +8,7 @@ from . import (config, util, exceptions, bitcoin)
 FORMAT = '>QQ?'
 ID = 20
 
-def issuance (source, asset_id, amount, divisible):
+def create (source, asset_id, amount, divisible):
     db = sqlite3.connect(config.LEDGER)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
@@ -19,7 +19,8 @@ def issuance (source, asset_id, amount, divisible):
     if issuance:
         if issuance['issuer'] != source:
             raise exceptions.IssuanceError('Asset exists and was not issued by this address.')
-        if divisible != util.is_divisible(asset_id):
+        cursor, old_divisible = util.is_divisible(cursor, asset_id)
+        if divisible != old_divisible:
             raise exceptions.IssuanceError('That asset exists with a different divisibility.')
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
@@ -27,7 +28,7 @@ def issuance (source, asset_id, amount, divisible):
     db.close()
     return bitcoin.transaction(source, None, config.DUST_SIZE, config.MIN_FEE, data)
 
-def parse_issuance (db, cursor, tx, message):
+def parse (db, cursor, tx, message):
     # Ask for forgiveness…
     validity = 'Valid'
 
@@ -44,7 +45,8 @@ def parse_issuance (db, cursor, tx, message):
     if issuance:
         if issuance['issuer'] != tx['source']:
             validity = 'Invalid: that asset already exists and was not issued by this address'
-        if validity == 'Valid' and divisible != util.is_divisible(asset_id):
+        cursor, old_divisible = util.is_divisible(cursor, asset_id)
+        if validity == 'Valid' and divisible != old_divisible:
             validity = 'Invalid: asset exists with a different divisibility'
 
     # Credit.

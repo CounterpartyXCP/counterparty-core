@@ -14,7 +14,7 @@ import colorama
 colorama.init()
 
 from . import (config, util, bitcoin)
-from . import (send, order, btcpayment, issuance, broadcast, bet, dividend, burn)
+from . import (send, order, btcpay, issue, broadcast, bet, dividend, burn)
 
 def parse_block (db, cursor, block_index):
     """This is a separate function from follow() so that changing the parsing
@@ -28,8 +28,8 @@ def parse_block (db, cursor, block_index):
     cursor.execute('''SELECT * FROM transactions \
                       WHERE block_index=? ORDER BY tx_index''',
                    (block_index,))
-        
-    for tx in cursor.fetchall():
+    transactions = cursor.fetchall()   
+    for tx in transactions:
         if tx['data'][:len(config.PREFIX)] == config.PREFIX:
             post_prefix = tx['data'][len(config.PREFIX):]
         else:
@@ -37,15 +37,14 @@ def parse_block (db, cursor, block_index):
         message_type_id = struct.unpack(config.TXTYPE_FORMAT, post_prefix[:4])[0]
         message = post_prefix[4:]
         # TODO: Make sure that message lengths are correct. (struct.unpack is fragile.)
-        # TODO: Re‐name parse_send, e.g., to parse, etc.
         if message_type_id == send.ID:
-            db, cursor = send.parse_send(db, cursor, tx, message)
+            db, cursor = send.parse(db, cursor, tx, message)
         elif message_type_id == order.ID:
-            db, cursor = order.parse_order(db, cursor, tx, message)
-        elif message_type_id == btcpayment.ID:
-            db, cursor = btcpayment.parse_btcpayment(db, cursor, tx, message)
-        elif message_type_id == issuance.ID:
-            db, cursor = issuance.parse_issuance(db, cursor, tx, message)
+            db, cursor = order.parse(db, cursor, tx, message)
+        elif message_type_id == btcpay.ID:
+            db, cursor = btcpay.parse(db, cursor, tx, message)
+        elif message_type_id == issue.ID:
+            db, cursor = issue.parse(db, cursor, tx, message)
         elif message_type_id == broadcast.ID:
             db, cursor = broadcast.parse(db, cursor, tx, message)
         elif message_type_id == bet.ID:

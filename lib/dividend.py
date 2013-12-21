@@ -14,8 +14,15 @@ ID = 50
 
 def create (source, amount_per_share, share_id):
     # Check balance. Dividends are paid in XCP.
-    amount = amount_per_share * util.total_shares(share_id)
-    balance = util.balance(source, 1)
+    db = sqlite3.connect(config.LEDGER)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
+
+    # TODO: Check to see that share_id exists!
+
+    cursor, total_shares = util.total_shares(cursor, share_id)
+    amount = amount_per_share * total_shares
+    cursor, balance = util.balance(cursor, source, 1)
     if not balance or balance < amount:
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
 
@@ -35,13 +42,15 @@ def parse (db, cursor, tx, message):
         validity = 'Invalid: could not unpack'
 
     # Debit.
-    amount = amount_per_share * util.total_shares(share_id)
+    cursor, total_shares = util.total_shares(cursor, share_id)
+    amount = amount_per_share * total_shares
     if validity == 'Valid':
         db, cursor, validity = util.debit(db, cursor, tx['source'], 1, amount)
 
     # Credit.
     if validity == 'Valid':
-        for address, address_amount in util.find_all(share_id):
+        cursor, holdings = util.find_all(cursor, share_id)
+        for address, address_amount in holdings:
             db, cursor = util.credit(db, cursor, address, 1, address_amount * amount_per_share)
 
     # Add parsed transaction to message‐type–specific table.

@@ -14,7 +14,7 @@ from . import (util, config, exceptions, bitcoin)
 FORMAT = '>11s'
 ID = 60
 
-def make (source, quantity):
+def create (source, quantity):
 
     # Make sure that the burned funds won’t go to waste.
     block_count = bitcoin.rpc('getblockcount', [])['result']
@@ -24,7 +24,7 @@ def make (source, quantity):
         raise exceptions.UselessError('The proof‐of‐burn period has already ended.')
 
     # Check that a maximum of 1 BTC total is burned per address.
-    total_burned = util.total_burned(source)
+    cursor, total_burned = util.total_burned(cursor, source)
     if quantity > (1 * config.UNIT - total_burned):
         raise exceptions.UselessError('A maximum of 1 BTC may be burned per address.')
         
@@ -45,9 +45,11 @@ def parse (db, cursor, tx, message):
     if not hidden_message[0].decode('utf-8') == 'ProofOfBurn':
         validity = 'Invalid: secret message not found'
 
+    burned = int(tx['fee'])
+
     # Check that a maximum of 1 BTC total is burned per address.
-    total_burned = util.total_burned(tx['source'])
-    if tx['fee'] > (1 * config.UNIT - total_burned):
+    cursor, total_burned = util.total_burned(cursor, tx['source'])
+    if burned > (1 * config.UNIT - total_burned):
         validity = 'Invalid: exceeded maximum burn'
 
     # Check that the burn was done at the right time.
@@ -60,10 +62,9 @@ def parse (db, cursor, tx, message):
     total_time = D(config.BURN_END - config.BURN_START)
     partial_time = D(config.BURN_END - tx['block_index'])
     multiplier = 100 * (1 + (partial_time / total_time))
-    earned = tx['fee'] * int(multiplier)
+    earned = burned * int(multiplier)
  
     # Credit source address with earned XCP.
-    burned = tx['fee']
     if validity == 'Valid':
         db, cursor = util.credit(db, cursor, tx['source'], 1, earned)
 
@@ -85,7 +86,7 @@ def parse (db, cursor, tx, message):
                         validity)
                   )
     if validity == 'Valid':
-        print(colorama.Style.BRIGHT + '\tBurn:', burned / config.UNIT, 'BTC burned;', earned / config.UNIT, 'XCP earned.', util.short(tx['tx_hash']) + colorama.Style.RESET_ALL)
+        print(colorama.Style.BRIGHT + '\tBurn:', burned / config.UNIT, 'BTC burned;', earned / config.UNIT, 'XCP earned', util.short(tx['tx_hash']) + colorama.Style.RESET_ALL)
 
     return db, cursor
 

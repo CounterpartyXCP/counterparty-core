@@ -1,54 +1,26 @@
 #! /usr/bin/python3
 
-import json
 import sqlite3
+import json
 
-from . import (config, bitcoin)
+from lib import (config, util)
 
-def orderbook ():
+def book ():
     db = sqlite3.connect(config.LEDGER)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
 
-    block_count = bitcoin.rpc('getblockcount', [])['result']
+    cursor, orders = util.get_orders(cursor, show_invalid=False, show_expired=False, show_empty=False)
+    cursor, bets = util.get_bets(cursor, show_invalid=False, show_expired=False, show_empty=False)
+    cursor, btcpays = util.get_btcpays(cursor, show_not_mine=False, show_expired=False)
 
-    # Open orders.
-    orderbook = []
-    cursor.execute('''SELECT * FROM orders ORDER BY ask_price ASC, tx_index''')
-    for order in cursor.fetchall():
-        time_left = order['block_index'] + order['expiration'] - block_count # Inclusive/exclusive expiration? DUPE
-        if order['validity'] == 'Valid' and order['give_remaining'] and ((time_left > 0 and order['give_id'] and order['get_id']) or time_left > 1): # Ignore BTC orders one block early.
-            orderbook.append(dict(order))
+    book = {}
+    book['orders'] = orders
+    book['bets'] = bets
+    book['btcpays'] = btcpays
 
-    return orderbook
+    return book
 
-def pending():
-    """Deals awaiting Bitcoin payment from you."""
-    db = sqlite3.connect(config.LEDGER)
-    db.row_factory = sqlite3.Row
-    cursor = db.cursor()
-
-    block_count = bitcoin.rpc('getblockcount', [])['result']
-
-    pending = []
-    address_list = [ element['address'] for element in bitcoin.rpc('listreceivedbyaddress', [0,True])['result'] ]
-    cursor.execute('''SELECT * FROM deals ORDER BY tx1_index''')
-    for deal in cursor.fetchall():
-
-        # Check that neither order has expired.
-        expired = False
-        cursor.execute('''SELECT * FROM orders WHERE (tx_hash=? OR tx_hash=?)''', (deal['tx0_hash'], deal['tx1_hash']))
-        for order in cursor.fetchall():
-            time_left = order['block_index'] + order['expiration'] - block_count # Inclusive/exclusive expiration?
-            if time_left <= 0: expired = True
-
-        if deal['validity'] == 'Valid: waiting for bitcoins' and not expired:
-            deal_id = deal['tx0_hash'] + deal['tx1_hash']
-            if (deal['tx0_address'] in address_list and not deal['forward_id'] or
-                    deal['tx1_address'] in address_list and not deal['backward_id']):
-                pending.append(dict(deal))
-
-    return pending
 
 def history (address):
     db = sqlite3.connect(config.LEDGER)
