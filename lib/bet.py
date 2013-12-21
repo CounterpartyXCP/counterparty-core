@@ -132,8 +132,7 @@ def parse (db, cursor, tx, message):
     db.commit()
 
     if validity == 'Valid':
-        print(colorama.Fore.BLUE + '\tBet:', util.BET_TYPE_NAME[bet_type], 'by', tx['source'], 'on', feed_address, 'at', util.isodt(deadline), 'for', wager_amount / config.UNIT, 'XCP', 'against (at least)', counterwager_amount / config.UNIT, 'XCP', 'in', expiration, 'blocks', '(' + tx['tx_hash'] + ')')
-        print(colorama.Style.RESET_ALL)
+        print(colorama.Fore.BLUE + '\tBet:', util.BET_TYPE_NAME[bet_type], 'by', tx['source'], 'on', feed_address, 'at', util.isodt(deadline), 'for', wager_amount / config.UNIT, 'XCP', 'against (at least)', counterwager_amount / config.UNIT, 'XCP', 'in', expiration, 'blocks', util.short(tx['tx_hash']) + colorama.Style.RESET_ALL)
 
         db, cursor = make_contract(db, cursor, bet_type, deadline,
                                    wager_amount, counterwager_amount,
@@ -189,7 +188,7 @@ def make_contract (db, cursor, bet_type, deadline,
 
             contract_id = tx0['tx_hash'] + tx1['tx_hash']   #
 
-            print(colorama.Fore.RED + '\t\tContract:', util.BET_TYPE_NAME[tx0['bet_type']], 'by', tx0['source'], 'for', tx0['wager_amount']/config.UNIT, 'XCP', 'against', util.BET_TYPE_NAME[tx1['bet_type']], 'by', tx1['source'], 'for', tx0['counterwager_amount']/config.UNIT, 'XCP', 'on', feed_address, 'at', util.isodt(deadline), '(' + contract_id + ')')   # TODO
+            print(colorama.Fore.RED + '\t\tContract:', util.BET_TYPE_NAME[tx0['bet_type']], 'by', tx0['source'], 'for', tx0['wager_amount']/config.UNIT, 'XCP', 'against', util.BET_TYPE_NAME[tx1['bet_type']], 'by', tx1['source'], 'for', tx0['counterwager_amount']/config.UNIT, 'XCP', 'on', feed_address, 'at', util.isodt(deadline), util.short(contract_id))
             print(colorama.Style.RESET_ALL)
 
             # Debit the order.

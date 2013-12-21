@@ -60,7 +60,7 @@ def parse_send (db, cursor, tx, message):
                   )
     if validity == 'Valid':
         if util.is_divisible(asset_id): amount /= config.UNIT
-        print(colorama.Fore.GREEN + '\tSend:', amount, util.get_asset_name(asset_id), 'from', tx['source'], 'to', tx['destination'], '(' + tx['tx_hash'] + ')')
+        print(colorama.Fore.GREEN + '\tSend:', amount, util.get_asset_name(asset_id), 'from', tx['source'], 'to', tx['destination'], util.short(tx['tx_hash']))
 
     return db, cursor
 

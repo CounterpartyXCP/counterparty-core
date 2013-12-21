@@ -52,7 +52,7 @@ def parse_issuance (db, cursor, tx, message):
         db, cursor = util.credit(db, cursor, tx['source'], asset_id, amount)
         if divisible: unit = config.UNIT
         else: unit = 1
-        print('\t(Re‐)Issuance:', tx['source'], 'created', amount/unit, 'of asset', asset_id, '(' + tx['tx_hash'] + ')')
+        print('\t(Re‐)Issuance:', tx['source'], 'created', amount/unit, 'of asset', asset_id, util.short(tx['tx_hash']))
 
     # Add parsed transaction to message‐type–specific table.
     cursor.execute('''INSERT INTO issuances(

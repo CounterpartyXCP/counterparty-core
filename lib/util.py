@@ -5,6 +5,17 @@ from dateutil.tz import tzlocal
 from . import config
 
 
+def short (string, strip=False):
+    if len(string) == 64:
+        length = 8
+    elif len(string) == 128:
+        length = 16
+    short = string[:length] + '…' + string[-length:]
+    if strip:
+        return short
+    else:
+        return '(' + short + ')'
+
 def isodt (epoch_time):
     return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
 

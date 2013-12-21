@@ -81,7 +81,7 @@ def parse (db, cursor, tx, message):
     if validity == 'Valid':
         if not value: infix = '‘' + text + '’'
         else: infix = '‘' + text + ' = ' + str(value) + '’'
-        suffix = 'from ' + tx['source'] + ' at ' + util.isodt(timestamp) + ' (' + tx['tx_hash'] + ') '
+        suffix = 'from ' + tx['source'] + ' at ' + util.isodt(timestamp) + ' ' + util.short(tx['tx_hash'])
         print(colorama.Fore.YELLOW + '\tBroadcast:', infix, suffix + colorama.Style.RESET_ALL)
 
 

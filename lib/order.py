@@ -22,7 +22,7 @@ def order (source, give_id, give_amount, get_id, get_amount, expiration, fee_req
                         expiration, fee_required)
     return bitcoin.transaction(source, None, config.DUST_SIZE, fee_provided, data)
 
-def parse_order (db, cursor, tx1, message):
+def parse_order (db, cursor, tx, message):
     # Ask for forgiveness…
     validity = 'Valid'
 
@@ -41,9 +41,9 @@ def parse_order (db, cursor, tx1, message):
 
     # Debit the address that makes the order. Check for sufficient funds.
     if validity == 'Valid':
-        if util.balance(tx1['source'], give_id) >= give_amount:
+        if util.balance(tx['source'], give_id) >= give_amount:
             if give_id:  # No need (or way) to debit BTC.
-                db, cursor, validity = util.debit(db, cursor, tx1['source'], give_id, give_amount)
+                db, cursor, validity = util.debit(db, cursor, tx['source'], give_id, give_amount)
         else:
             validity = 'Invalid: insufficient funds.'
 
@@ -63,10 +63,10 @@ def parse_order (db, cursor, tx1, message):
                         fee_required,
                         fee_provided,
                         validity) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-                        (tx1['tx_index'],
-                        tx1['tx_hash'],
-                        tx1['block_index'],
-                        tx1['source'],
+                        (tx['tx_index'],
+                        tx['tx_hash'],
+                        tx['block_index'],
+                        tx['source'],
                         give_id,
                         int(give_amount),
                         int(give_amount),
@@ -75,7 +75,7 @@ def parse_order (db, cursor, tx1, message):
                         float(ask_price),
                         expiration,
                         fee_required,
-                        tx1['fee'],
+                        tx['fee'],
                         validity)
                   )
     db.commit()
@@ -93,12 +93,12 @@ def parse_order (db, cursor, tx1, message):
             get_unit = 1
 
         if not give_id:
-            fee_text = 'with a provided fee of ' + str(tx1['fee'] / config.UNIT) + ' BTC'
+            fee_text = 'with a provided fee of ' + str(tx['fee'] / config.UNIT) + ' BTC'
         elif not get_id:
             fee_text = 'with a required fee of ' + str(fee_required / config.UNIT) + ' BTC'
-        print(colorama.Fore.CYAN + '\tOrder: sell', give_amount/give_unit, util.get_asset_name(give_id), 'for', get_amount/get_unit, util.get_asset_name(get_id), 'at', ask_price.quantize(config.FOUR).normalize(), util.get_asset_name(get_id) + '/' + util.get_asset_name(give_id), 'in', expiration, 'blocks', fee_text, '(' + tx1['tx_hash'] + ')' + colorama.Style.RESET_ALL) # TODO (and fee_required, fee_provided)
+        print(colorama.Fore.CYAN + '\tOrder: sell', give_amount/give_unit, util.get_asset_name(give_id), 'for', get_amount/get_unit, util.get_asset_name(get_id), 'at', ask_price.quantize(config.FOUR).normalize(), util.get_asset_name(get_id) + '/' + util.get_asset_name(give_id), 'in', expiration, 'blocks', fee_text, util.short(tx['tx_hash']) + colorama.Style.RESET_ALL) # TODO (and fee_required, fee_provided)
 
-        db, cursor = make_deal(db, cursor, give_id, give_amount, get_id, get_amount, ask_price, expiration, fee_required, tx1)
+        db, cursor = make_deal(db, cursor, give_id, give_amount, get_id, get_amount, ask_price, expiration, fee_required, tx)
 
     return db, cursor
 
@@ -143,7 +143,7 @@ def make_deal (db, cursor, give_id, give_amount, get_id, get_amount,
                 backward_unit = config.UNIT
             else:
                 backward_unit = 1
-            print(colorama.Fore.MAGENTA + '\t\tDeal:', forward_amount/forward_unit, util.get_asset_name(forward_id), 'for', backward_amount/backward_unit, util.get_asset_name(backward_id), 'at', price.quantize(config.FOUR).normalize(), util.get_asset_name(backward_id) + '/' + util.get_asset_name(forward_id), '(' + deal_id + ')') # TODO
+            print(colorama.Fore.MAGENTA + '\t\tDeal:', forward_amount/forward_unit, util.get_asset_name(forward_id), 'for', backward_amount/backward_unit, util.get_asset_name(backward_id), 'at', price.quantize(config.FOUR).normalize(), util.get_asset_name(backward_id) + '/' + util.get_asset_name(forward_id), util.short(deal_id))
 
             if 0 in (give_id, get_id):
                 validity = 'Valid: waiting for bitcoins'
@@ -215,7 +215,7 @@ def expire (db, cursor, block_index):
         if time_left <= 0 and order['validity'] == 'Valid':
             cursor.execute('''UPDATE orders SET validity=? WHERE tx_hash=?''', ('Invalid: expired', order['tx_hash']))
             db, cursor = util.credit(db, cursor, order['source'], order['give_id'], order['give_remaining'])
-            print('\tExpired order:', order['tx_hash'])
+            print(colorama.Fore.YELLOW + colorama.Style.DIM + '\tExpired order:', util.short(order['tx_hash'], strip=True) + colorama.Style.RESET_ALL)
         db.commit()
 
     # Expire deals for BTC with no BTC.
@@ -233,8 +233,8 @@ def expire (db, cursor, block_index):
                 db, cursor = util.credit(db, cursor, deal['tx0_address'],
                                     deal['forward_id'],
                                     deal['forward_amount'])
-            print('\tExpired deal waiting for bitcoins:',
-                  deal['tx0_hash'] + deal['tx1_hash'])    # TODO
+            print(colorama.Fore.GREEN + colorama.Style.DIM + '\tExpired deal waiting for bitcoins:',
+                  util.short(deal['tx0_hash'] + deal['tx1_hash'], strip=True) + colorama.Style.RESET_ALL)
     db.commit()
 
     return db, cursor

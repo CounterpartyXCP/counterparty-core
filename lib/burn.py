@@ -85,7 +85,7 @@ def parse (db, cursor, tx, message):
                         validity)
                   )
     if validity == 'Valid':
-        print(colorama.Style.BRIGHT + '\tBurn:', burned / config.UNIT, 'BTC burned;', earned / config.UNIT, 'XCP earned.', '(' + tx['tx_hash'] + ')' + colorama.Style.RESET_ALL)
+        print(colorama.Style.BRIGHT + '\tBurn:', burned / config.UNIT, 'BTC burned;', earned / config.UNIT, 'XCP earned.', util.short(tx['tx_hash']) + colorama.Style.RESET_ALL)
 
     return db, cursor
 

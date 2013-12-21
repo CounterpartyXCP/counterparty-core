@@ -4,6 +4,9 @@
 
 import struct
 import sqlite3
+import colorama
+colorama.init()
+
 from . import (util, config, exceptions, bitcoin)
 
 FORMAT = '>QQ'
@@ -59,7 +62,7 @@ def parse (db, cursor, tx, message):
                         validity)
                   )
     if validity == 'Valid':
-        print('\tDividend Payment:', tx['source'], 'paid', amount_per_share / config.UNIT, 'per share of asset', util.get_asset_name(share_id), '(' + tx['tx_hash'] + ')')
+        print(colorama.Fore.RED + colorama.Style.DIM + '\tDividend Payment:', tx['source'], 'paid', amount_per_share / config.UNIT, 'per share of asset', util.get_asset_name(share_id), util.short(tx['tx_hash']))
 
     return db, cursor
 

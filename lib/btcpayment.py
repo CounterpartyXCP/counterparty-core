@@ -3,6 +3,8 @@
 import binascii
 import struct
 import sqlite3
+import colorama
+colorama.init()
 
 from . import (util, config, exceptions, bitcoin)
 
@@ -66,7 +68,7 @@ def parse_btcpayment (db, cursor, tx, message):
             db, cursor = util.credit(db, cursor, tx['source'], deal['forward_id'], deal['forward_amount'])
 
     deal_id = tx0_hash + tx1_hash
-    print('\tBTC payment for deal:', deal_id, '(' + tx['tx_hash'] + ')')
+    print('\tBitcoin payment for deal:', util.short(deal_id, strip=True), util.short(tx['tx_hash']))
 
     return db, cursor
 
