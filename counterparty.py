@@ -61,11 +61,11 @@ if __name__ == '__main__':
     parser_order.add_argument('--from', metavar='SOURCE', dest='source', type=str, required=True, help='')
     parser_order.add_argument('--feed-address', metavar='FEED_ADDRESS', type=str, required=True, help='')
     parser_order.add_argument('--bet-type', metavar='BET_TYPE', type=int, required=True, help='')
-    parser_order.add_argument('--time-start', metavar='TIME_START', type=int, required=True, help='')
-    parser_order.add_argument('--time-end', metavar='TIME_END', type=int, required=True, help='')
+    parser_order.add_argument('--deadline', metavar='DEADLINE', type=int, required=True, help='')
     parser_order.add_argument('--wager-amount', metavar='WAGER_AMOUNT', type=D, required=True, help='')
     parser_order.add_argument('--counterwager-amount', metavar='COUNTERWAGER_AMOUNT', type=D, required=True, help='')
-    parser_order.add_argument('--threshold-leverage', metavar='THRESHOLD_LEVERAGE', type=D, required=True, help='over‐under (?) (bet), leverage, as a fraction of 5040 (CFD)')
+    parser_order.add_argument('--threshold', metavar='THRESHOLD', type=D, help='over‐under (?) (bet)')
+    parser_order.add_argument('--leverage', metavar='LEVERAGE', type=D, default=5040, help='leverage, as a fraction of 5040')
     parser_order.add_argument('--expiration', metavar='EXPIRATION', type=int, required=True, help='')
 
     parser_dividend = subparsers.add_parser('dividend', help='requires bitcoind')
@@ -151,16 +151,11 @@ if __name__ == '__main__':
 
     elif args.action == 'bet':
         # TODO: Not real
-        if args.bet_type == 'CFD':
-            threshold_leverage = int(args.threshold_leverage)
-        else:
-            threshold_leverage = args.threshold_leverage
-
         json_print(bet.create(args.source, args.feed_address, args.bet_type,
-                              args.time_start, args.time_end,
+                              args.deadline,
                               args.wager_amount * config.UNIT,
                               args.counterwager_amount * config.UNIT,
-                              threshold_leverage, args.expiration))
+                              args.threshold, args.leverage, args.expiration))
 
     elif args.action == 'dividend':
         bitcoin.bitcoind_check()

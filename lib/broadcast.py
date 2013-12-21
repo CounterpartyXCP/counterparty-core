@@ -24,6 +24,8 @@ because it is stored as a four‐byte integer, it may not be greater than about
 import struct
 import sqlite3
 import datetime
+import decimal
+D = decimal.Decimal
 
 from . import (util, config, bitcoin)
 
@@ -50,8 +52,9 @@ def parse (db, cursor, tx, message):
         validity = 'Invalid: could not unpack'
 
     # Check that the publishing address is not locked.
-    if util.is_locked(tx['source']):
-        validity = 'Invalid: address is locked'
+    good_feed = util.good_feed(tx['source'])
+    if good_feed != None and not good_feed:
+        validity = 'Invalid: locked feed'
 
     # Add parsed transaction to message‐type–specific table.
     cursor.execute('''INSERT INTO broadcasts(
@@ -80,8 +83,58 @@ def parse (db, cursor, tx, message):
         suffix = 'from ' + tx['source'] + ' at ' + datetime.datetime.fromtimestamp(timestamp).isoformat() + ' (' + tx['tx_hash'] + ') '
         print('\tBroadcast:', infix, suffix)
 
-    # TODO: Settle bets (and CFDs)!
-              
+
+    # Handle contracts that use this feed.
+    cursor.execute('''SELECT * FROM contracts \
+                      WHERE (validity=? AND feed_address=?)''', ('Valid', tx['source']))
+    for contract in cursor.fetchall():
+        contract_id = contract['tx0_hash'] + contract['tx1_hash']
+
+        # Contract for difference, with determinate settlement date.
+        if contract['tx0_bet_type'] + contract['tx1_bet_type'] == 1:
+            leverage = D(contract['leverage']) / 5040
+            initial_value = contract['initial_value']
+
+            if contract['tx0_bet_type'] == 0 and contract['tx1_bet_type'] == 1:
+                bull_address = contract['tx0_address']
+                bear_address = contract['tx1_address']
+                bull_escrow = contract['forward_amount']
+                bear_escrow = contract['backward_amount']
+            else:
+                bull_address = contract['tx1_address']
+                bear_address = contract['tx0_address']
+                bull_escrow = contract['backward_amount']
+                bear_escrow = contract['forward_amount']
+                
+            total_escrow = bull_escrow + bear_escrow
+            bear_credit = bear_escrow - D(value - initial_value) * leverage * config.UNIT   # TODO: (UNIT!?)
+            bull_credit = total_escrow - bear_credit
+
+            # Liquidate, as necessary.
+            print(value, initial_value, leverage, bull_credit / config.UNIT, total_escrow / config.UNIT)
+            if bull_credit >= total_escrow:
+                db, cursor = util.credit(db, cursor, bull_address, 1, total_escrow)
+                validity = 'Force‐Liquidated'
+                print('\tContract Force‐Liquidated:', total_escrow / config.UNIT, 'XCP credited to the bull, and 0 XCP credited to the bear', '(' + contract_id + ')')
+            elif bull_credit <= 0:
+                db, cursor = util.credit(db, cursor, bear_address, 1, total_escrow)
+                validity = 'Force‐Liquidated'
+                print('\tContract Force‐Liquidated:', '0 XCP credited to the bull, and', total_escrow / config.UNIT, 'XCP credited to the bear', '(' + contract_id + ')')
+
+            # Settle.
+            if timestamp > contract['deadline'] and validity != 'Liquidated':
+                db, cursor = util.credit(db, cursor, bull_address, 1, bull_credit)
+                db, cursor = util.credit(db, cursor, bear_address, 1, bear_credit)
+                validity = 'Settled'
+                print('\tContract Settled:', bull_credit / config.UNIT, 'XCP credited to the bull, and', bear_credit / config.UNIT, 'XCP credited to the bear', '(' + contract_id + ')')
+
+            cursor.execute('''UPDATE contracts \
+                              SET validity=? \
+                              WHERE (tx0_hash=? and tx1_hash=?)''',
+                          (validity, contract['tx0_hash'], contract['tx1_hash']))
+
+    db.commit()
+
     return db, cursor
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

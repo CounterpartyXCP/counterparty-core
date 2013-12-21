@@ -107,20 +107,30 @@ def is_divisible (asset_id):
     cursor.close()
     return asset['divisible']
         
-def is_locked (address):
-    """ Returns None if no broadcast from address can be found. """
-    # NOTE: [necessarily] locks based on tx_index and not timestamp
+def good_feed (address):
+    """
+    Feed is locked if *any* of its broadcasts lacks a textual message.
+
+    Returns None if no broadcast from address can be found.
+
+    Locks are [necessarily] based on tx_index and not timestamp.
+    """
     db = sqlite3.connect(config.LEDGER)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM broadcasts \
-                      WHERE (source=? AND text=? AND validity=?) \
-                      ORDER BY tx_index''', ('', address, 'Valid'))
-    broadcast = cursor.fetchone()
-    assert not cursor.fetchone()
+                      WHERE (source=? AND validity=?) \
+                      ORDER BY tx_index''', (address, 'Valid'))
+    broadcasts = cursor.fetchall()
+    if not len(broadcasts):
+        cursor.close()
+        return None                     # Non‐existant
+    for broadcast in broadcasts:
+        if broadcast['text'] == '':
+            cursor.close()
+            return False                # Locked
     cursor.close()
-    if broadcast: return True
-    else: return False
+    return True                         # Good feed
 
 def total_burned (address):
     db = sqlite3.connect(config.LEDGER)
@@ -130,5 +140,15 @@ def total_burned (address):
     cursor.execute('''SELECT * FROM burns WHERE (address=? AND validity=?)''', (address, 'Valid'))
     return sum([burn['quantity'] for burn in cursor.fetchall()])
         
+def last_value (feed_address):
+    db = sqlite3.connect(config.LEDGER)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM broadcasts \
+                      WHERE (source=? AND validity=?) \
+                      ORDER BY tx_index DESC''', (feed_address, 'Valid'))
+    broadcast = cursor.fetchone()
+    cursor.close()
+    return broadcast['value']
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

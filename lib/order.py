@@ -101,27 +101,30 @@ def parse_order (db, cursor, tx1, message):
     return db, cursor
 
 def make_deal (db, cursor, give_id, give_amount, get_id, get_amount,
-        ask_price, expiration, fee_required, tx1):
+        ask_price, expiration, fee_required, tx):
+
+    # Get order in question.
+    cursor.execute('''SELECT * FROM orders\
+                      WHERE tx_index=?''', (tx['tx_index'],))
+    tx1 = cursor.fetchone()
+    assert not cursor.fetchone()
+
     cursor.execute('''SELECT * FROM orders \
                       WHERE (give_id=? AND get_id=? AND validity=?) \
                       ORDER BY ask_price ASC, tx_index''',
                    (get_id, give_id, 'Valid'))
     give_remaining = give_amount
     for tx0 in cursor.fetchall():
-        # NOTE: tx0 is an order; tx1 is a transaction.
-
-        # One should not buy from himself.
-        if tx0['source'] == tx1['source']: continue
 
         # Check whether fee conditions are satisfied.
-        if not get_id and tx0['fee_provided'] < fee_required: continue
-        elif not give_id and tx1['fee'] < tx0['fee_required']: continue
+        if not get_id and tx0['fee_provided'] < tx0['fee_required']: continue
+        elif not give_id and tx1['fee_provided'] < tx0['fee_required']: continue
 
         # Make sure that that both orders still have funds remaining [to be sold].
         if tx0['give_remaining'] <= 0 or give_remaining <= 0: continue
 
         # If the prices agree, make the trade. The found order sets the price,
-        # and they trade as much as they can.   # TODO: Make prices match exactly?!
+        # and they trade as much as they can.
         price = D(tx0['get_amount']) / D(tx0['give_amount'])
         if price <= 1/ask_price:  # Ugly
             forward_amount = round(min(D(tx0['give_remaining']), give_remaining / price))

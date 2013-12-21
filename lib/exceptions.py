@@ -3,7 +3,7 @@
 # Exceptions
 class DividendError (Exception):
     pass
-class FeedLockedError (Exception):
+class FeedError (Exception):
     pass
 class BitcoinConfError (Exception):
     pass
