@@ -14,6 +14,9 @@ FORMAT = '>QQQQHQ'
 ID = 10
 
 def create (source, give_id, give_amount, get_id, get_amount, expiration, fee_required, fee_provided):
+    db = sqlite3.connect(config.LEDGER)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
     cursor, balance = util.balance(cursor, source, give_id) 
     if not balance or balance < give_amount:
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')

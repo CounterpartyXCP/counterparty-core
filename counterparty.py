@@ -141,10 +141,17 @@ if __name__ == '__main__':
     elif args.action == 'send':
         bitcoin.bitcoind_check()
         asset_id = util.get_asset_id(args.asset)
-        if util.is_divisible(asset_id):
+
+        db = sqlite3.connect(config.LEDGER)
+        db.row_factory = sqlite3.Row
+        cursor = db.cursor()
+        cursor, divisible = util.is_divisible(cursor, asset_id)
+        if divisible:
             quantity = int(args.quantity * config.UNIT)
         else:
             quantity = int(args.quantity)
+        cursor.close()
+
         json_print(send.create(args.source, args.destination, quantity, asset_id))
 
     elif args.action == 'order':
@@ -166,17 +173,16 @@ if __name__ == '__main__':
             assert fee_required >= config.MIN_FEE
             fee_provided = config.MIN_FEE
 
-        # If give_id is divisible, multiply get_quantity by UNIT.
-        if util.is_divisible(give_id):
-            give_quantity = int(args.give_quantity * config.UNIT)
-        else:
-            give_quantity = int(args.give_quantity)
-
-        # If get_id is divisible, multiply get_quantity by UNIT.
-        if util.is_divisible(get_id):
-            get_quantity = int(args.get_quantity * config.UNIT)
-        else:
-            get_quantity = int(args.get_quantity)
+        db = sqlite3.connect(config.LEDGER)
+        db.row_factory = sqlite3.Row
+        cursor = db.cursor()
+        cursor, divisible = util.is_divisible(cursor, give_id)
+        if divisible: give_quantity = int(args.give_quantity * config.UNIT)
+        else: give_quantity = int(args.give_quantity)
+        cursor, divisible = util.is_divisible(cursor, get_id)
+        if divisible: get_quantity = int(args.get_quantity * config.UNIT)
+        else: get_quantity = int(args.get_quantity)
+        cursor.close()
 
         json_print(order.create(args.source, give_id, give_quantity, get_id,
                                get_quantity, args.expiration, fee_required,
@@ -207,7 +213,8 @@ if __name__ == '__main__':
     elif args.action == 'dividend':
         bitcoin.bitcoind_check()
         share_id = util.get_asset_id(args.share)
-        if util.is_divisible(share_id) != True:
+        cursor, divisible = util.is_divisible(cursor, share_id)
+        if divisible != True:
             raise exceptions.DividendError('Dividend‐yielding assets must be indivisible.')
         json_print(dividend.create(args.source, int(args.quantity_per_share * config.UNIT), share_id))
 

@@ -15,6 +15,9 @@ FORMAT = '>11s'
 ID = 60
 
 def create (source, quantity):
+    db = sqlite3.connect(config.LEDGER)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
 
     # Make sure that the burned funds won’t go to waste.
     block_count = bitcoin.rpc('getblockcount', [])['result']

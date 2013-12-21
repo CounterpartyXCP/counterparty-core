@@ -160,7 +160,7 @@ def get_orders (cursor, show_invalid=True, show_expired=True, show_empty=True): 
                                     order['get_id']) or time_left > 1):
             continue
 
-        if not show_empty and order['give_remaining']:
+        if not show_empty and not order['give_remaining']:
             continue
 
         orders.append(dict(order))
@@ -180,7 +180,7 @@ def get_bets (cursor, show_invalid=True, show_expired=True, show_empty=True):
         if not show_expired and time_left < 0:
             continue
 
-        if not show_empty and bet['wager_remaining']:
+        if not show_empty and not bet['wager_remaining']:
             continue
 
         bets.append(dict(bet))

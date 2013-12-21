@@ -13,6 +13,9 @@ FORMAT = '>QQ'
 ID = 0
 
 def create (source, destination, amount, asset_id):
+    db = sqlite3.connect(config.LEDGER)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
     cursor, balance = util.balance(cursor, source, asset_id)
     if not balance or balance < amount:
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
