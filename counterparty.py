@@ -241,7 +241,9 @@ if __name__ == '__main__':
                 cursor, order = format_order(cursor, order)
                 orders_table.add_row(order)
             print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Open Orders' + colorama.Style.RESET_ALL)
+            print(colorama.Fore.BLUE)
             print(orders_table)
+            print(colorama.Style.RESET_ALL)
 
             print('\n')
 
@@ -254,7 +256,9 @@ if __name__ == '__main__':
 
             # Print out pending_table.
             print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Pending Bitcoin Payments' + colorama.Style.RESET_ALL)
+            print(colorama.Fore.CYAN)
             print(btcpays_table)
+            print(colorama.Style.RESET_ALL)
 
             time.sleep(30)
             

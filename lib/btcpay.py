@@ -68,7 +68,8 @@ def parse (db, cursor, tx, message):
             db, cursor = util.credit(db, cursor, tx['source'], deal['forward_id'], deal['forward_amount'])
 
     deal_id = tx0_hash + tx1_hash
-    print('\tBitcoin payment for deal:', util.short(deal_id, strip=True), util.short(tx['tx_hash']))
+    print(colorama.Fore.CYAN + colorama.Style.DIM + '\tBitcoin payment for deal:', util.short(deal_id, strip=True), util.short(tx['tx_hash']) + colorama.Style
+    .RESET_ALL)
 
     return db, cursor
 
