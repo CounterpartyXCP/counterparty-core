@@ -25,7 +25,7 @@ from . import (util, config, bitcoin, exceptions)
 FORMAT = '>HIQQdII'
 ID = 40
 
-def get_fee_multiplier (cursor, feed_address):
+def get_fee_multiplier (feed_address):
     db = sqlite3.connect(config.LEDGER)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
@@ -35,7 +35,7 @@ def get_fee_multiplier (cursor, feed_address):
                       ORDER BY tx_index desc''', (feed_address,)
                   )
     broadcast = cursor.fetchone()
-    return cursor, D(broadcast['fee_multiplier'] / 1e8)
+    return D(broadcast['fee_multiplier'] / 1e8)
 
 def create (source, feed_address, bet_type, deadline, wager_amount,
             counterwager_amount, threshold, leverage, expiration):
@@ -46,7 +46,7 @@ def create (source, feed_address, bet_type, deadline, wager_amount,
     elif not good_feed:
         raise exceptions.FeedError('That feed is locked.')
 
-    cursor, fee_multiplier = get_fee_multiplier(cursor, feed_address)
+    fee_multiplier = get_fee_multiplier(feed_address)
     cursor, balance = util.balance(cursor, source, 1) 
     if not balance or balance < wager_amount * (1 + fee_multiplier):
         raise exceptions.BalanceError('Insufficient funds to both make wager and pay feed fee (in XCP). (Check that the database is up‐to‐date.)')
@@ -86,7 +86,7 @@ def parse (db, cursor, tx, message):
 
     if validity == 'Valid':
         # Debit amount wagered and fee.
-        cursor, fee_multiplier = get_fee_multiplier(cursor, feed_address)
+        fee_multiplier = get_fee_multiplier(feed_address)
         db, cursor, validity = util.debit(db, cursor, tx['source'], 1, wager_amount * (1 + fee_multiplier))
 
         wager_amount = int(wager_amount)
@@ -180,7 +180,7 @@ def contract (db, cursor, bet_type, deadline,
             backward_amount = round(forward_amount * odds)
 
             # When a match is made, pay XCP fee.
-            cursor, fee = get_fee_multiplier(cursor, feed_address) * backward_amount
+            fee = get_fee_multiplier(feed_address) * backward_amount
             db, cursor, validity = util.debit(db, cursor, tx1['source'], 1, fee)
             if validity != 'Valid': continue
             db, cursor = util.credit(db, cursor, feed_address, 1, int(fee))
