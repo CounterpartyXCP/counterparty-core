@@ -293,7 +293,7 @@ def get_tx_info (tx):
         if 'addresses' in vout['scriptPubKey']:
             address = vout['scriptPubKey']['addresses'][0]
             if bitcoin.rpc('validateaddress', [address])['result']['isvalid']:
-                destination, btc_amount = address, int(D(vout['value']) * config.UNIT)
+                destination, btc_amount = address, round(D(vout['value']) * config.UNIT)
                 break
 
     for vout in tx['vout']:
@@ -307,7 +307,7 @@ def get_tx_info (tx):
         if asm[0] == 'OP_RETURN' and len(asm) == 2:
             data = binascii.unhexlify(asm[1])
 
-    return source, destination, btc_amount, int(fee), data
+    return source, destination, btc_amount, round(fee), data
 
 def follow ():
 
@@ -320,8 +320,7 @@ def follow ():
         if 'ledger' == filename_array[0] and 'db' == filename_array[2]:
             if filename_array[1] != str(config.DB_VERSION):
                 os.remove(filename)
-                warnings.warn('New version of transaction table! Deleting old \
-                               databases.')
+                warnings.warn('New version of transaction table! Deleting old databases.')
 
     db = sqlite3.connect(config.LEDGER)
     db.row_factory = sqlite3.Row
@@ -356,8 +355,6 @@ def follow ():
         # Get block.
         block_count = bitcoin.rpc('getblockcount', [])['result']
         while block_index <= block_count:
-            # print('Fetching block:', block_index)
-
             block_hash = bitcoin.rpc('getblockhash', [block_index])['result']
             block = bitcoin.rpc('getblock', [block_hash])['result']
             block_time = block['time']
