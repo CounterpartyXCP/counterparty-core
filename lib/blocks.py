@@ -10,6 +10,8 @@ import binascii
 import struct
 import sqlite3
 import warnings
+import decimal
+D = decimal.Decimal
 import colorama
 colorama.init()
 
@@ -270,7 +272,7 @@ def initialise(db, cursor):
     return db, cursor
 
 def get_tx_info (tx):
-    fee = 0
+    fee = D(0)
 
     # Collect all possible source addresses; ignore coinbase transactions.
     source_list = []
@@ -278,7 +280,7 @@ def get_tx_info (tx):
         if 'coinbase' in vin: return None, None, None, None, None
         vin_tx = bitcoin.rpc('getrawtransaction', [vin['txid'], 1])['result']   # Get the full transaction data for this input transaction.
         vout = vin_tx['vout'][vin['vout']]
-        fee += vout['value'] * config.UNIT
+        fee += D(vout['value']) * config.UNIT
         source_list.append(vout['scriptPubKey']['addresses'][0])        # Assume that the output was not not multi‐sig.
 
     # Require that all possible source addresses be the same.
@@ -291,11 +293,11 @@ def get_tx_info (tx):
         if 'addresses' in vout['scriptPubKey']:
             address = vout['scriptPubKey']['addresses'][0]
             if bitcoin.rpc('validateaddress', [address])['result']['isvalid']:
-                destination, btc_amount = address, vout['value'] * config.UNIT
+                destination, btc_amount = address, int(D(vout['value']) * config.UNIT)
                 break
 
     for vout in tx['vout']:
-        fee -= vout['value'] * config.UNIT
+        fee -= D(vout['value']) * config.UNIT
 
     # Loop through outputs until you come upon OP_RETURN, then get the data.
     # NOTE: This assumes only one OP_RETURN output.
@@ -305,7 +307,7 @@ def get_tx_info (tx):
         if asm[0] == 'OP_RETURN' and len(asm) == 2:
             data = binascii.unhexlify(asm[1])
 
-    return source, destination, btc_amount, fee, data
+    return source, destination, btc_amount, int(fee), data
 
 def follow ():
 

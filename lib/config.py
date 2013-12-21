@@ -38,7 +38,7 @@ RPC = 'http://'+RPCUSER+':'+RPCPASSWORD+'@'+RPCCONNECT+':'+RPCPORT
 data_dir = appdirs.user_data_dir('Counterparty', 'Counterparty')
 if not os.path.isdir(data_dir):
     os.mkdir(data_dir)
-DB_VERSION = 1
+DB_VERSION = 2
 LEDGER = data_dir + '/ledger.' + str(DB_VERSION) + '.db'
 
 # Bitcoin protocol

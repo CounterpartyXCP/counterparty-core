@@ -29,8 +29,6 @@ def parse (db, cursor, tx, message):
     # Ask for forgiveness…
     validity = 'Valid'
 
-    fee_provided = int(tx['fee'])
-
     # Unpack message.
     try:
         give_id, give_amount, get_id, get_amount, expiration, fee_required = struct.unpack(FORMAT, message)
@@ -81,7 +79,7 @@ def parse (db, cursor, tx, message):
                         float(ask_price),
                         expiration,
                         fee_required,
-                        fee_provided,
+                        tx['fee'],
                         validity)
                   )
     db.commit()
@@ -96,7 +94,7 @@ def parse (db, cursor, tx, message):
         else: get_unit = 1
 
         if not give_id:
-            fee_text = 'with a provided fee of ' + str(fee_provided / config.UNIT) + ' BTC'
+            fee_text = 'with a provided fee of ' + str(tx['fee'] / config.UNIT) + ' BTC'
         elif not get_id:
             fee_text = 'with a required fee of ' + str(fee_required / config.UNIT) + ' BTC'
         print(colorama.Fore.CYAN + '\tOrder: sell', give_amount/give_unit, util.get_asset_name(give_id), 'for', get_amount/get_unit, util.get_asset_name(get_id), 'at', ask_price.quantize(config.FOUR).normalize(), util.get_asset_name(get_id) + '/' + util.get_asset_name(give_id), 'in', expiration, 'blocks', fee_text, util.short(tx['tx_hash']) + colorama.Style.RESET_ALL) # TODO (and fee_required, fee_provided)
