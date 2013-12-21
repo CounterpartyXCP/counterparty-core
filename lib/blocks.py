@@ -10,6 +10,8 @@ import binascii
 import struct
 import sqlite3
 import warnings
+import colorama
+colorama.init()
 
 from . import (config, util, bitcoin)
 from . import (send, order, btcpayment, issuance, broadcast, bet, dividend, burn)
@@ -20,7 +22,7 @@ def parse_block (db, cursor, block_index):
     (but not data identification), then just restart `counterparty.py follow`.
 
     """
-    print('Block:', block_index) #
+    print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Block:', str(block_index) + colorama.Style.RESET_ALL)
 
     # Parse transactions, sorting them by type.
     cursor.execute('''SELECT * FROM transactions \

@@ -5,6 +5,8 @@ import sqlite3
 import decimal
 D = decimal.Decimal
 # decimal.getcontext().prec = 8
+import colorama
+colorama.init()
 
 from . import (util, config, exceptions, bitcoin)
 
@@ -94,7 +96,7 @@ def parse_order (db, cursor, tx1, message):
             fee_text = 'with a provided fee of ' + str(tx1['fee'] / config.UNIT) + ' BTC'
         elif not get_id:
             fee_text = 'with a required fee of ' + str(fee_required / config.UNIT) + ' BTC'
-        print('\tOrder: sell', give_amount/give_unit, util.get_asset_name(give_id), 'for', get_amount/get_unit, util.get_asset_name(get_id), 'at', ask_price.quantize(config.FOUR).normalize(), util.get_asset_name(get_id) + '/' + util.get_asset_name(give_id), 'in', expiration, 'blocks', fee_text, '(' + tx1['tx_hash'] + ')') # TODO (and fee_required, fee_provided)
+        print(colorama.Fore.CYAN + '\tOrder: sell', give_amount/give_unit, util.get_asset_name(give_id), 'for', get_amount/get_unit, util.get_asset_name(get_id), 'at', ask_price.quantize(config.FOUR).normalize(), util.get_asset_name(get_id) + '/' + util.get_asset_name(give_id), 'in', expiration, 'blocks', fee_text, '(' + tx1['tx_hash'] + ')' + colorama.Style.RESET_ALL) # TODO (and fee_required, fee_provided)
 
         db, cursor = make_deal(db, cursor, give_id, give_amount, get_id, get_amount, ask_price, expiration, fee_required, tx1)
 
@@ -141,7 +143,7 @@ def make_deal (db, cursor, give_id, give_amount, get_id, get_amount,
                 backward_unit = config.UNIT
             else:
                 backward_unit = 1
-            print('\t\tDeal:', forward_amount/forward_unit, util.get_asset_name(forward_id), 'for', backward_amount/backward_unit, util.get_asset_name(backward_id), 'at', price.quantize(config.FOUR).normalize(), util.get_asset_name(backward_id) + '/' + util.get_asset_name(forward_id), '(' + deal_id + ')') # TODO
+            print(colorama.Fore.MAGENTA + '\t\tDeal:', forward_amount/forward_unit, util.get_asset_name(forward_id), 'for', backward_amount/backward_unit, util.get_asset_name(backward_id), 'at', price.quantize(config.FOUR).normalize(), util.get_asset_name(backward_id) + '/' + util.get_asset_name(forward_id), '(' + deal_id + ')') # TODO
 
             if 0 in (give_id, get_id):
                 validity = 'Valid: waiting for bitcoins'

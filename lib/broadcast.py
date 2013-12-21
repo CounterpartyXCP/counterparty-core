@@ -25,6 +25,8 @@ import struct
 import sqlite3
 import decimal
 D = decimal.Decimal
+import colorama
+colorama.init()
 
 from . import (util, config, bitcoin)
 
@@ -80,7 +82,7 @@ def parse (db, cursor, tx, message):
         if not value: infix = '‘' + text + '’'
         else: infix = '‘' + text + ' = ' + str(value) + '’'
         suffix = 'from ' + tx['source'] + ' at ' + util.isodt(timestamp) + ' (' + tx['tx_hash'] + ') '
-        print('\tBroadcast:', infix, suffix)
+        print(colorama.Fore.YELLOW + '\tBroadcast:', infix, suffix + colorama.Style.RESET_ALL)
 
 
     # Handle contracts that use this feed.
