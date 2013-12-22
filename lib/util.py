@@ -44,7 +44,10 @@ def get_deal_time_left (cursor, deal):
                    (deal['tx0_hash'], deal['tx1_hash']))
     return (cursor, min(get_time_left(order) for order in cursor.fetchall()))
 
-def get_asset_id (asset_name): return ASSET_ID[asset_name]
+def get_asset_id (asset):
+    """Always returns ID"""
+    try: return ASSET_ID[asset]
+    except: return int(asset)
 def get_asset_name (asset_id):
     """Returns ID if no name was found"""
     try: return ASSET_NAME[asset_id]
@@ -74,7 +77,9 @@ def balance (cursor, source, asset_id):
     return cursor, balance
 
 def debit (db, cursor, address, asset_id, amount):
-    """This will never even try to debit bitcoins."""
+    if not asset_id:
+        raise exceptions.BalanceError('Cannot debit bitcoins from a Counterparty address!')
+
     cursor.execute('''SELECT * FROM balances WHERE (address=? and asset_id=?)''',
                    (address, asset_id))
     try:
@@ -139,7 +144,7 @@ def good_feed (cursor, address):
 
 def total_burned (cursor, address):
     cursor.execute('''SELECT * FROM burns WHERE (address=? AND validity=?)''', (address, 'Valid'))
-    return cursor, sum([burn['quantity'] for burn in cursor.fetchall()])
+    return cursor, sum([burn['burned'] for burn in cursor.fetchall()])
 
 def last_value_of_feed (cursor, feed_address):
     cursor.execute('''SELECT * FROM broadcasts \
@@ -189,12 +194,13 @@ def get_bets (cursor, show_invalid=True, show_expired=True, show_empty=True):
 
     return cursor, bets
 
-def get_btcpays (cursor, show_not_mine=True, show_expired=True):
+def get_deals (cursor, show_completed=True, show_not_mine=True, show_expired=True):
     """Deals awaiting Bitcoin payment."""
     cursor.execute('''SELECT * FROM deals ORDER BY tx1_index''')
     btcpays = []
     for deal in cursor.fetchall():
-        if deal['validity'] == 'Valid: waiting for bitcoins': continue
+        if not show_completed and not deal['validity'] == 'Valid: waiting for bitcoins':
+            continue
 
         if not show_expired:
             cursor, deal_time_left = get_deal_time_left(cursor, deal)

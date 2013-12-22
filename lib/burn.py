@@ -88,7 +88,7 @@ def parse (db, cursor, tx, message):
                         validity)
                   )
     if validity == 'Valid':
-        logging.info('Burn: {} BTC burned; {} XCP earned {}'.format(burned / config.UNIT, earned / config.UNIT, util.short(tx['tx_hash'])))
+        logging.info('Burn: {} BTC burned; {} XCP earned ({})'.format(burned / config.UNIT, earned / config.UNIT, util.short(tx['tx_hash'])))
 
     return db, cursor
 

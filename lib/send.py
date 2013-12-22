@@ -12,12 +12,16 @@ FORMAT = '>QQ'
 ID = 0
 
 def create (source, destination, amount, asset_id):
+    # Check that it is not BTC that someone was trying to send.
+    if not asset_id: raise exceptions.BalanceError('Cannot send bitcoins.')
+
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
     cursor, balance = util.balance(cursor, source, asset_id)
     if not balance or balance < amount:
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
+
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount)
     return bitcoin.transaction(source, destination, config.DUST_SIZE, config.MIN_FEE, data)
@@ -32,6 +36,10 @@ def parse (db, cursor, tx, message):
     except Exception:
         asset_id, amount = None, None
         validity = 'Invalid: could not unpack'
+
+    # Check that it is not BTC that someone was trying to send.
+    if not asset_id:
+        validity = 'Invalid: cannot send bitcoins'
 
     # Debit.
     if validity == 'Valid':

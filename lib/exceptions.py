@@ -1,6 +1,8 @@
 #! /usr/bin/python3
 
 # Exceptions
+class OverflowError(Exception):
+    pass
 class BitcoindRPCError (Exception):
     pass
 class DividendError (Exception):

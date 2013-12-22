@@ -39,7 +39,10 @@ def get_fee_multiplier (feed_address):
 def create (source, feed_address, bet_type, deadline, wager_amount,
             counterwager_amount, threshold, leverage, expiration):
 
-    cursor, good_feed = util.good_feed(rb, cursor, feed_address)
+    db = sqlite3.connect(config.DATABASE)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
+    cursor, good_feed = util.good_feed(cursor, feed_address)
     if good_feed == None:
         raise exceptions.FeedError('That feed doesn’t exist.')
     elif not good_feed:
@@ -47,6 +50,7 @@ def create (source, feed_address, bet_type, deadline, wager_amount,
 
     fee_multiplier = get_fee_multiplier(feed_address)
     cursor, balance = util.balance(cursor, source, 1) 
+    cursor.close()
     if not balance or balance < wager_amount * (1 + fee_multiplier):
         raise exceptions.BalanceError('Insufficient funds to both make wager and pay feed fee (in XCP). (Check that the database is up‐to‐date.)')
 

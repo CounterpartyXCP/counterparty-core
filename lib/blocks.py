@@ -325,7 +325,7 @@ def follow ():
     cursor = db.cursor()
 
     # Always re‐parse from beginning on start‐up.
-    logging.info('START')
+    logging.info('RESTART')
     db, cursor = initialise(db, cursor)
     cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
     for block in cursor.fetchall():

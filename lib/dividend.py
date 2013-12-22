@@ -23,9 +23,10 @@ def create (source, amount_per_share, asset_id):
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
     cursor, issuance = util.get_issuance(cursor, asset_id)
     if issuance == None:
-        raise exceptions.DividendError('Share ID doesn’t exist.')
+        raise exceptions.DividendError('No such asset: {}.'.format(asset_id))
     elif issuance['divisible'] == True:
         raise exceptions.DividendError('Dividend‐yielding assets must be indivisible.')
+    print('Total amount to be distributed in dividends:', amount / config.UNIT)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, amount_per_share, asset_id)
     return bitcoin.transaction(source, None, config.DUST_SIZE, config.MIN_FEE, data)

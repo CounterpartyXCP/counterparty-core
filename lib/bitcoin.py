@@ -189,7 +189,7 @@ def transaction (source, destination, btc_amount, fee, data):
     # Construct inputs.
     inputs, total = get_inputs(source, btc_amount, fee)
     if not inputs:
-        raise exceptions.BalanceError('Insufficient bitcoins.')
+        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need {} BTC.)'.format(source, btc_amount / config.UNIT))
 
     # Construct outputs.
     change_amount = total - fee
