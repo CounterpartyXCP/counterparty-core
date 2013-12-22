@@ -14,14 +14,12 @@ def create (source, asset_id, amount, divisible):
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
 
-    # Handle potential re‐issuances. (TODO: Inelegant)
-    cursor.execute('''SELECT * FROM issuances WHERE (asset_id=? AND validity=?)''', (asset_id, 'Valid'))
-    issuance = cursor.fetchone()
+    # Handle potential re‐issuances.
+    cursor, issuance = util.get_issuance(cursor, asset_id)
     if issuance:
         if issuance['issuer'] != source:
             raise exceptions.IssuanceError('Asset exists and was not issued by this address.')
-        cursor, old_divisible = util.is_divisible(cursor, asset_id)
-        if divisible != old_divisible:
+        if issuance['divisible'] != divisible:
             raise exceptions.IssuanceError('That asset exists with a different divisibility.')
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
@@ -41,13 +39,11 @@ def parse (db, cursor, tx, message):
         validity = 'Invalid: could not unpack'
 
     # If re‐issuance, check for compatability in divisibility, issuer. (TODO: Inelegant)
-    cursor.execute('''SELECT * FROM issuances WHERE (asset_id=? AND validity=?)''', (asset_id, 'Valid'))
-    issuance = cursor.fetchone()
+    cursor, issuance = util.get_issuance(cursor, asset_id)
     if issuance:
         if issuance['issuer'] != tx['source']:
             validity = 'Invalid: that asset already exists and was not issued by this address'
-        cursor, old_divisible = util.is_divisible(cursor, asset_id)
-        if validity == 'Valid' and divisible != old_divisible:
+        if validity == 'Valid' and issuance['divisible'] != divisible:
             validity = 'Invalid: asset exists with a different divisibility'
 
     # Credit.

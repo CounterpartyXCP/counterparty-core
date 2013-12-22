@@ -23,13 +23,13 @@ json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 def format_order (cursor, order):
     price = D(order['get_amount']) / D(order['give_amount'])
 
-    give_remaining = order['give_remaining']
-    get_remaining = D(order['give_remaining']) * price
+    give_remaining = D(order['give_remaining'])
+    get_remaining = give_remaining * price
 
-    cursor, divisible = util.is_divisible(cursor, order['give_id'])
-    if divisible: give_remaining /= config.UNIT
-    cursor, divisible = util.is_divisible(cursor, order['get_id'])
-    if divisible: get_remaining /= config.UNIT
+    cursor, issuance = util.get_issuance(cursor, order['give_id'])
+    if issuance['divisible']: give_remaining /= config.UNIT
+    cursor, issuance = util.get_issuance(cursor, order['give_id'])
+    if issuance['divisible']: get_remaining /= config.UNIT
     give_name = util.get_asset_name(order['give_id'])
     get_name = util.get_asset_name(order['get_id'])
     give = str(give_remaining) + ' ' + give_name
@@ -44,25 +44,20 @@ def format_order (cursor, order):
 
     return cursor, [give, get, price_string, fee, util.get_time_left(order), util.short(order['tx_hash'])]
 
+def format_bet (cursor, bet):
+    odds = D(bet['counterwager_amount']) / D(bet['wager_amount'])
+
+    give_remaining = D(bet['wager_remaining'])
+    get_remaining = give_remaining * odds
+
+    if bet['threshold']: threshold = None
+    else: threshold = bet['threshold'] / 5040
+    if bet['leverage']: leverage = None
+    else: leverage = bet['leverage'] / 5040
+
+    return cursor, [bet['feed_address'], threshold, leverage, str(bet['wager_amount'] / config.UNIT) + ' XCP', str(bet['counterwager_amount'] / config.UNIT) + ' XCP', odds.quantize(config.FOUR).normalize(), util.get_time_left(bet), util.short(bet['tx_hash'])]
+
 def format_deal (cursor, deal):
-    if not deal['backward_id']:
-        to_give = deal['backward_amount']
-        to_get = deal['forward_amount']
-        to_get_id = deal['forward_id']
-    if not deal['forward_id']:
-        to_give = deal['forward_amount']
-        to_get = deal['backward_amount']
-        to_get_id = deal['backward_id']
-
-    to_give_amount = to_give / config.UNIT
-    to_get_amount = to_get / config.UNIT    # TODO: Wrong
-    to_give_name = ' BTC'
-    to_get_name = ' ' + util.get_asset_name(to_get_id)
-    to_give = str(to_give_amount) + to_give_name
-    to_get = str(to_get_amount) + to_get_name
-
-
-    price = str(to_get_amount / to_give_amount) + to_get_name + '/' + to_give_name
     deal_id = deal['tx0_hash'] + deal['tx1_hash']
     cursor, deal_time_left = util.get_deal_time_left(cursor, deal)
     return cursor, [deal_id, deal_time_left]
@@ -131,7 +126,7 @@ if __name__ == '__main__':
     parser_dividend = subparsers.add_parser('dividend', help='requires bitcoind')
     parser_dividend.add_argument('--from', metavar='SOURCE', dest='source', type=str, required=True, help='')
     parser_dividend.add_argument('--quantity-per-share', metavar='QUANTITY_PER_SHARE', type=D, required=True, help='in XCP')
-    parser_dividend.add_argument('--share', metavar='SHARE_NAME', dest='share', type=str, required=True, help='')   # TODO: Awkward naming
+    parser_dividend.add_argument('--share-asset', metavar='SHARE_ASSET', type=str, required=True, help='')
 
     parser_burn = subparsers.add_parser('burn', help='requires bitcoind')
     parser_burn.add_argument('--from', metavar='SOURCE', dest='source', type=str, required=True, help='')
@@ -170,8 +165,8 @@ if __name__ == '__main__':
         db = sqlite3.connect(config.DATABASE)
         db.row_factory = sqlite3.Row
         cursor = db.cursor()
-        cursor, divisible = util.is_divisible(cursor, asset_id)
-        if divisible:
+        cursor, issuance = util.get_issuance(cursor, asset_id)
+        if issuance['divisible']:
             quantity = int(args.quantity * config.UNIT)
         else:
             quantity = int(args.quantity)
@@ -181,31 +176,28 @@ if __name__ == '__main__':
 
     elif args.action == 'order':
         bitcoin.bitcoind_check()
-        if args.give_asset == args.get_asset:
-            raise exceptions.UselessError('You can’t trade an asset for itself.')
-
         give_id = util.get_asset_id(args.give_asset)
         get_id = util.get_asset_id(args.get_asset)
 
         # Fee argument is either fee_required or fee_provided, as necessary.
-        # TODO: Make this more comprehensive.
+        fee = round(args.fee * config.UNIT)
         if not give_id:
-            fee_provided = int(args.fee * config.UNIT)
+            fee_provided = fee
             assert fee_provided >= config.MIN_FEE
             fee_required = 0
         elif not get_id:
-            fee_required = int(args.fee * config.UNIT)
+            fee_required = fee
             assert fee_required >= config.MIN_FEE
             fee_provided = config.MIN_FEE
 
         db = sqlite3.connect(config.DATABASE)
         db.row_factory = sqlite3.Row
         cursor = db.cursor()
-        cursor, divisible = util.is_divisible(cursor, give_id)
-        if divisible: give_quantity = int(args.give_quantity * config.UNIT)
+        cursor, issuance = util.get_issuance(cursor, give_id)
+        if issuance['divisible']: give_quantity = int(args.give_quantity * config.UNIT)
         else: give_quantity = int(args.give_quantity)
-        cursor, divisible = util.is_divisible(cursor, get_id)
-        if divisible: get_quantity = int(args.get_quantity * config.UNIT)
+        cursor, issuance = util.get_issuance(cursor, get_id)
+        if issuance['divisible']: get_quantity = int(args.get_quantity * config.UNIT)
         else: get_quantity = int(args.get_quantity)
         cursor.close()
 
@@ -237,11 +229,8 @@ if __name__ == '__main__':
 
     elif args.action == 'dividend':
         bitcoin.bitcoind_check()
-        share_id = util.get_asset_id(args.share)
-        cursor, divisible = util.is_divisible(cursor, share_id)
-        if divisible != True:
-            raise exceptions.DividendError('Dividend‐yielding assets must be indivisible.')
-        json_print(dividend.create(args.source, int(args.quantity_per_share * config.UNIT), share_id))
+        asset_id = util.get_asset_id(args.share_asset)
+        json_print(dividend.create(args.source, int(args.quantity_per_share * config.UNIT), asset_id))
 
     elif args.action == 'burn':
         bitcoin.bitcoind_check()
@@ -262,9 +251,19 @@ if __name__ == '__main__':
                 cursor, order = format_order(cursor, order)
                 orders_table.add_row(order)
             print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Open Orders' + colorama.Style.RESET_ALL)
-            print(colorama.Fore.BLUE)
-            print(orders_table)
-            print(colorama.Style.RESET_ALL)
+            print(colorama.Fore.BLUE + str(orders_table) + colorama.Style.RESET_ALL)
+
+            print('\n')
+
+            # Open bets.
+            cursor, bets = util.get_bets(cursor, show_invalid=False, show_expired=False, show_empty=False)
+            bets_table = PrettyTable(['Feed address', 'Threshold', 'Leverage', 'Wager', 'Counterwager', 'Odds', 'Time Left', 'Tx Hash'])
+            for bet in bets:
+                cursor, bet = format_bet(cursor, bet)
+                bets_table.add_row(bet)
+            print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Open Bets' + colorama.Style.RESET_ALL)
+            print(colorama.Fore.GREEN + str(bets_table) + colorama.Style.RESET_ALL)
+
 
             print('\n')
 
@@ -277,9 +276,7 @@ if __name__ == '__main__':
 
             # Print out pending_table.
             print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Pending Bitcoin Payments' + colorama.Style.RESET_ALL)
-            print(colorama.Fore.CYAN)
-            print(btcpays_table)
-            print(colorama.Style.RESET_ALL)
+            print(colorama.Fore.CYAN + str(btcpays_table) + colorama.Style.RESET_ALL)
 
             time.sleep(30)
             

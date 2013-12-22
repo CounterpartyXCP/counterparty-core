@@ -107,7 +107,7 @@ def parse (db, cursor, tx, message):
                         counterwager_amount,
                         wager_remaining,
                         odds,
-                        threshhold,
+                        threshold,
                         leverage,
                         expiration,
                         validity) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',

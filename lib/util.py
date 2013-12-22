@@ -34,6 +34,7 @@ def find_all (cursor, share_id):
     return cursor, holdings
     
 def get_time_left (order):
+    """order or bet"""
     # TODO: Inclusive/exclusive expiration?
     block_count = bitcoin.rpc('getblockcount', [])['result']
     return order['block_index'] + order['expiration'] - block_count
@@ -112,10 +113,12 @@ def credit (db, cursor, address, asset_id, amount):
     return db, cursor
 
 
-def is_divisible (cursor, asset_id):
+def get_issuance (cursor, asset_id):
+    """Returns the last valid issuance of an asset with a particular asset_id"""
     cursor.execute('''SELECT * FROM issuances \
-                      WHERE (asset_id=? AND validity=?)''', (asset_id, 'Valid'))
-    return cursor, cursor.fetchone()['divisible']
+                      WHERE (asset_id=? AND validity=?) \
+                      ORDER BY tx_index DESC''', (asset_id, 'Valid'))
+    return cursor, cursor.fetchone()
 
 def good_feed (cursor, address):
     """
@@ -132,7 +135,7 @@ def good_feed (cursor, address):
     if not len(broadcasts): return cursor, None             # Non‐existant
     for broadcast in broadcasts:
         if broadcast['text'] == '': return cursor, False    # Locked
-    return cursor, True                         # Exists and is unlocked
+    return cursor, True                                     # Exists and is unlocked
 
 def total_burned (cursor, address):
     cursor.execute('''SELECT * FROM burns WHERE (address=? AND validity=?)''', (address, 'Valid'))

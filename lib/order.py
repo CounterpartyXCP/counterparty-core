@@ -18,6 +18,8 @@ def create (source, give_id, give_amount, get_id, get_amount, expiration, fee_re
     cursor, balance = util.balance(cursor, source, give_id) 
     if not balance or balance < give_amount:
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
+    if give_id == get_id:
+        raise exceptions.UselessError('You can’t trade an asset for itself.')
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, give_id, give_amount, get_id, get_amount,
                         expiration, fee_required)
@@ -84,11 +86,11 @@ def parse (db, cursor, tx, message):
 
     if validity == 'Valid':
 
-        cursor, divisible = util.is_divisible(cursor, give_id)
-        if divisible: give_unit = config.UNIT
+        cursor, issuance = util.get_issuance(cursor, give_id)
+        if issuance['divisible']: give_unit = config.UNIT
         else: give_unit = 1
-        cursor, divisible = util.is_divisible(cursor, get_id)
-        if divisible: get_unit = config.UNIT
+        cursor, issuance = util.get_issuance(cursor, get_id)
+        if issuance['divisible']: get_unit = config.UNIT
         else: get_unit = 1
 
         if not give_id:
@@ -134,11 +136,11 @@ def deal (db, cursor, give_id, give_amount, get_id, get_amount,
             forward_id, backward_id = get_id, give_id
             deal_id = tx0['tx_hash'] + tx1['tx_hash']
 
-            cursor, divisible = util.is_divisible(cursor, forward_id)
-            if divisible: forward_unit = config.UNIT
+            cursor, issuance = util.get_issuance(cursor, forward_id)
+            if issuance['divisible']: forward_unit = config.UNIT
             else: forward_unit = 1
-            cursor, divisible = util.is_divisible(cursor, backward_id)
-            if divisible: backward_unit = config.UNIT
+            cursor, issuance = util.get_issuance(cursor, backward_id)
+            if issuance['divisible']: backward_unit = config.UNIT
             else: backward_unit = 1
 
             logging.info('Deal: {} {} for {} {} at {} {}/{} ({})'.format(forward_amount/forward_unit, util.get_asset_name(forward_id), backward_amount/backward_unit, util.get_asset_name(backward_id), price.quantize(config.FOUR).normalize(), util.get_asset_name(backward_id), util.get_asset_name(forward_id), util.short(deal_id)))

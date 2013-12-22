@@ -199,7 +199,7 @@ def initialise(db, cursor):
                         counterwager_amount INTEGER,
                         wager_remaining INTEGER,
                         odds REAL,
-                        threshhold REAL,
+                        threshold REAL,
                         leverage INTEGER,
                         expiration INTEGER,
                         validity TEXT)
@@ -235,7 +235,7 @@ def initialise(db, cursor):
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
                         source TEXT,
-                        share_id INTEGER,
+                        asset_id INTEGER,
                         amount_per_share INTEGER,
                         validity TEXT)
                    ''')
@@ -409,7 +409,6 @@ def follow ():
             block_count = bitcoin.rpc('getblockcount', [])['result'] # Get block count.
             block_index +=1
 
-        logging.info('CAUGHT UP WITH BITCOIND')
         while block_index > block_count: # DUPE
             block_count = bitcoin.rpc('getblockcount', [])['result']
             time.sleep(20)

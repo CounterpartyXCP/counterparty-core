@@ -61,8 +61,8 @@ def parse (db, cursor, tx, message):
                         validity)
                   )
     if validity == 'Valid':
-        cursor, divisible = util.is_divisible(cursor, asset_id)
-        if divisible: amount /= config.UNIT
+        cursor, issuance = util.get_issuance(cursor, asset_id)
+        if issuance['divisible']: amount /= config.UNIT
         logging.info('Send: {} of asset {} from {} to {} ({})'.format(amount, util.get_asset_name(asset_id), tx['source'], tx['destination'], util.short(tx['tx_hash'])))
 
     return db, cursor
