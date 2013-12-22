@@ -8,6 +8,7 @@ from . import (config, util, exceptions, bitcoin)
 
 FORMAT = '>QQ?'
 ID = 20
+LENGTH = 8 + 8
 
 def create (source, asset_id, amount, divisible):
     db = sqlite3.connect(config.DATABASE)
@@ -38,7 +39,7 @@ def parse (db, cursor, tx, message):
         asset_id, amount, divisible = None, None, None
         validity = 'Invalid: could not unpack'
 
-    # If re‐issuance, check for compatability in divisibility, issuer. (TODO: Inelegant)
+    # If re‐issuance, check for compatability in divisibility, issuer.
     cursor, issuance = util.get_issuance(cursor, asset_id)
     if issuance:
         if issuance['issuer'] != tx['source']:

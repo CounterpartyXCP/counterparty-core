@@ -12,6 +12,7 @@ from . import (util, config, exceptions, bitcoin)
 
 FORMAT = '>11s'
 ID = 60
+LENGTH = 11
 
 def create (source, quantity):
     db = sqlite3.connect(config.DATABASE)

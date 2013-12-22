@@ -10,6 +10,7 @@ from . import (util, config, exceptions, bitcoin)
 
 FORMAT = '>QQ'
 ID = 50
+LENGTH = 8 + 8
 
 def create (source, amount_per_share, asset_id):
     db = sqlite3.connect(config.DATABASE)

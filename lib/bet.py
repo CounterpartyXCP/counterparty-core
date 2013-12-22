@@ -23,6 +23,7 @@ from . import (util, config, bitcoin, exceptions)
 
 FORMAT = '>HIQQdII'
 ID = 40
+LENGTH = 2 + 4 + 8 + 8 + 8 + 4 + 4
 
 def get_fee_multiplier (feed_address):
     db = sqlite3.connect(config.DATABASE)
@@ -262,13 +263,12 @@ def expire (db, cursor, block_index):
     # Expire bets  and give refunds for the amount wager_remaining.
     cursor.execute('''SELECT * FROM bets''')
     for bet in cursor.fetchall():
-        time_left = bet['block_index'] + bet['expiration'] - block_index # Inclusive/exclusive expiration? DUPE
+        time_left = bet['block_index'] + bet['expiration'] - block_index # TODO: Inclusive/exclusive expiration? DUPE
         if time_left <= 0 and bet['validity'] == 'Valid':
             cursor.execute('''UPDATE bets SET validity=? WHERE tx_hash=?''', ('Invalid: expired', bet['tx_hash']))
             db, cursor = util.credit(db, cursor, bet['source'], 1, bet['wager_remaining'])
             logging.info('Expired bet: {}'.format(bet['tx_hash']))
         db.commit()
-
 
     return db, cursor
 

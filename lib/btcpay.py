@@ -9,6 +9,7 @@ from . import (util, config, exceptions, bitcoin)
 
 FORMAT = '>32s32s'
 ID = 11
+LENGTH = 32 + 32
 
 def create (deal_id):
     db = sqlite3.connect(config.DATABASE)

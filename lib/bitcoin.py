@@ -49,8 +49,6 @@ def bitcoind_check ():
     if block['time'] < (time.time() - 60 * 60 * 2):
         logger.warning('bitcoind is running behind.')
 
-    # TODO: Make sure that follow() is running here?
-
 def base58_decode (s, version):
     # Convert the string to an integer
     n = 0

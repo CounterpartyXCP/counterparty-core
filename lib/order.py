@@ -10,6 +10,7 @@ from . import (util, config, exceptions, bitcoin)
 
 FORMAT = '>QQQQHQ'
 ID = 10
+LENGTH = 8 + 8 + 8 + 8 + 2 + 8
 
 def create (source, give_id, give_amount, get_id, get_amount, expiration, fee_required, fee_provided):
     db = sqlite3.connect(config.DATABASE)
@@ -32,10 +33,12 @@ def parse (db, cursor, tx, message):
     # Unpack message.
     try:
         give_id, give_amount, get_id, get_amount, expiration, fee_required = struct.unpack(FORMAT, message)
-        assert give_id != get_id    # TODO
     except Exception:   #
         give_id, give_amount, get_id, get_amount, expiration, fee_required = None, None, None, None, None, None
         validity = 'Invalid: could not unpack'
+
+    if give_id == get_id:
+        validity = 'Invalid: cannot trade an asset for itself.'
 
     if validity == 'Valid':
         give_amount = D(give_amount)
@@ -97,7 +100,7 @@ def parse (db, cursor, tx, message):
             fee_text = 'with a provided fee of ' + str(tx['fee'] / config.UNIT) + ' BTC'
         elif not get_id:
             fee_text = 'with a required fee of ' + str(fee_required / config.UNIT) + ' BTC'
-        logging.info('Order: sell {} {} for {} {} at {} {}/{} in {} blocks {} ({})'.format(give_amount/give_unit, util.get_asset_name(give_id), get_amount/get_unit, util.get_asset_name(get_id), ask_price.quantize(config.FOUR).normalize(), util.get_asset_name(get_id), util.get_asset_name(give_id), expiration, fee_text, util.short(tx['tx_hash']))) # TODO (and fee_required, fee_provided)
+        logging.info('Order: sell {} {} for {} {} at {} {}/{} in {} blocks {} ({})'.format(give_amount/give_unit, util.get_asset_name(give_id), get_amount/get_unit, util.get_asset_name(get_id), ask_price.quantize(config.FOUR).normalize(), util.get_asset_name(get_id), util.get_asset_name(give_id), expiration, fee_text, util.short(tx['tx_hash'])))
 
         db, cursor = deal(db, cursor, give_id, give_amount, get_id, get_amount, ask_price, expiration, fee_required, tx)
 

@@ -10,6 +10,7 @@ from . import (util, config, exceptions, bitcoin)
 
 FORMAT = '>QQ'
 ID = 0
+LENGTH = 8 + 8
 
 def create (source, destination, amount, asset_id):
     # Check that it is not BTC that someone was trying to send.

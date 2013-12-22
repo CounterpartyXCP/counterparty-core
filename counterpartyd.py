@@ -60,7 +60,7 @@ def format_bet (cursor, bet):
     if not bet['leverage']: leverage = None
     else: leverage = bet['leverage'] / 5040
 
-    return cursor, [bet['feed_address'], threshold, leverage, str(bet['wager_amount'] / config.UNIT) + ' XCP', str(bet['counterwager_amount'] / config.UNIT) + ' XCP', odds.quantize(config.FOUR).normalize(), util.get_time_left(bet), util.short(bet['tx_hash'])]
+    return cursor, [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], threshold, leverage, str(bet['wager_amount'] / config.UNIT) + ' XCP', str(bet['counterwager_amount'] / config.UNIT) + ' XCP', odds.quantize(config.FOUR).normalize(), util.get_time_left(bet), util.short(bet['tx_hash'])]
 
 def format_deal (cursor, deal):
     deal_id = deal['tx0_hash'] + deal['tx1_hash']
@@ -284,7 +284,7 @@ if __name__ == '__main__':
 
             # Open bets.
             cursor, bets = util.get_bets(cursor, show_invalid=False, show_expired=False, show_empty=False)
-            bets_table = PrettyTable(['Feed address', 'Threshold', 'Leverage', 'Wager', 'Counterwager', 'Odds', 'Time Left', 'Tx Hash'])
+            bets_table = PrettyTable(['Bet Type', 'Feed address', 'Threshold', 'Leverage', 'Wager', 'Counterwager', 'Odds', 'Time Left', 'Tx Hash'])
             for bet in bets:
                 cursor, bet = format_bet(cursor, bet)
                 bets_table.add_row(bet)

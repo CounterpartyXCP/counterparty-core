@@ -31,6 +31,7 @@ from . import (util, config, bitcoin)
 
 FORMAT = '>IdI40p' # How many characters *can* the text be?! (That is, how long is PREFIX?!)
 ID = 30
+LENGTH = 4 + 8 + 4 + 40
 
 def create (source, timestamp, value, fee_multiplier, text):
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)

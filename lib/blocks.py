@@ -36,22 +36,21 @@ def parse_block (db, cursor, block_index):
             continue
         message_type_id = struct.unpack(config.TXTYPE_FORMAT, post_prefix[:4])[0]
         message = post_prefix[4:]
-        # TODO: Make sure that message lengths are correct. (struct.unpack is fragile.)
-        if message_type_id == send.ID:
+        if message_type_id == send.ID and len(message) == send.LENGTH:
             db, cursor = send.parse(db, cursor, tx, message)
-        elif message_type_id == order.ID:
+        elif message_type_id == order.ID and len(message) == order.LENGTH:
             db, cursor = order.parse(db, cursor, tx, message)
-        elif message_type_id == btcpay.ID:
+        elif message_type_id == btcpay.ID and len(message) == btcpay.LENGTH:
             db, cursor = btcpay.parse(db, cursor, tx, message)
-        elif message_type_id == issue.ID:
+        elif message_type_id == issue.ID and len(message) == issue.LENGTH:
             db, cursor = issue.parse(db, cursor, tx, message)
-        elif message_type_id == broadcast.ID:
+        elif message_type_id == broadcast.ID and len(message) == broadcast.LENGTH:
             db, cursor = broadcast.parse(db, cursor, tx, message)
-        elif message_type_id == bet.ID:
+        elif message_type_id == bet.ID and len(message) == bet.LENGTH:
             db, cursor = bet.parse(db, cursor, tx, message)
-        elif message_type_id == dividend.ID:
+        elif message_type_id == dividend.ID and len(message) == dividend.LENGTH:
             db, cursor = dividend.parse(db, cursor, tx, message)
-        elif message_type_id == burn.ID:
+        elif message_type_id == burn.ID and len(message) == burn.LENGTH:
             db, cursor = burn.parse(db, cursor, tx, message)
         else:
             # Mark transaction as of unsupported type.
@@ -321,7 +320,7 @@ def follow ():
 
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
-    # TODO: db.execute('pragma foreign_keys=ON')
+    # db.execute('pragma foreign_keys=ON')
     cursor = db.cursor()
 
     # Always re‐parse from beginning on start‐up.

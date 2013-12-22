@@ -62,14 +62,15 @@ def total_shares (cursor, share_id):
 
 def balance (cursor, source, asset_id):
     if not asset_id == 0: # If not BTC…
-        try:
-            cursor.execute('''SELECT * FROM balances \
-                              WHERE (address=? and asset_id=?)''',
-                           (source, asset_id))
-            balance = cursor.fetchone()['amount']
-            assert not cursor.fetchone()
-        except Exception: # TODO: Be specific.
+        cursor.execute('''SELECT * FROM balances \
+                          WHERE (address=? and asset_id=?)''',
+                       (source, asset_id))
+        row = cursor.fetchone()
+        assert not cursor.fetchone()
+        if not row:
             balance = None
+        else:
+            balance = row['amount']
     else:   # HACK (fragile)
         import subprocess
         # balance = int(subprocess.check_output(['curl','-s', 'http://blockchain.info/q/addressbalance/' + source]))    # mainnet
@@ -152,7 +153,7 @@ def last_value_of_feed (cursor, feed_address):
                       ORDER BY tx_index DESC''', (feed_address, 'Valid'))
     return cursor, cursor.fetchone()['value']
 
-def get_orders (cursor, show_invalid=True, show_expired=True, show_empty=True): # TODO: which assets, sell/buy
+def get_orders (cursor, show_invalid=True, show_expired=True, show_empty=True):
     cursor.execute('''SELECT * FROM orders ORDER BY ask_price ASC, tx_index''')
     all_orders = cursor.fetchall()
     block_count = bitcoin.rpc('getblockcount', [])['result']
