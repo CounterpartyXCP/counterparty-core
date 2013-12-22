@@ -17,8 +17,7 @@ import sqlite3
 import decimal
 D = decimal.Decimal
 # decimal.getcontext().prec = 8
-import colorama
-colorama.init()
+import logging
 
 from . import (util, config, bitcoin, exceptions)
 
@@ -131,7 +130,7 @@ def parse (db, cursor, tx, message):
     db.commit()
 
     if validity == 'Valid':
-        print(colorama.Fore.BLUE + '\tBet:', util.BET_TYPE_NAME[bet_type], 'on', feed_address, 'at', util.isodt(deadline), 'for', wager_amount / config.UNIT, 'XCP', 'against', counterwager_amount / config.UNIT, 'XCP', 'in', expiration, 'blocks', util.short(tx['tx_hash']) + colorama.Style.RESET_ALL)
+        logging.info('Bet: {} on {} at {} for {} XCP against {} XCP in {} blocks ({})'.format(util.BET_TYPE_NAME[bet_type], feed_address, util.isodt(deadline), wager_amount / config.UNIT, counterwager_amount / config.UNIT, expiration, util.short(tx['tx_hash'])))
 
         db, cursor = contract(db, cursor, bet_type, deadline,
                                    wager_amount, counterwager_amount,
@@ -187,8 +186,7 @@ def contract (db, cursor, bet_type, deadline,
 
             contract_id = tx0['tx_hash'] + tx1['tx_hash']   #
 
-            print(colorama.Fore.RED + '\t\tContract:', util.BET_TYPE_NAME[tx0['bet_type']], 'for', tx0['wager_amount']/config.UNIT, 'XCP', 'against', util.BET_TYPE_NAME[tx1['bet_type']], 'for', tx0['counterwager_amount']/config.UNIT, 'XCP', 'on', feed_address, 'at', util.isodt(deadline), util.short(contract_id))
-            print(colorama.Style.RESET_ALL)
+            logging.info('Contract: {} for {} XCP against {} for {} XCP on {} at {} ({})'.format(util.BET_TYPE_NAME[tx0['bet_type']], tx0['wager_amount'] / config.UNIT, util.BET_TYPE_NAME[tx1['bet_type']], tx0['counterwager_amount'] / config.UNIT, feed_address, util.isodt(deadline), util.short(contract_id)))
 
             # Debit the order.
             wager_remaining -= backward_amount
@@ -264,7 +262,7 @@ def expire (db, cursor, block_index):
         if time_left <= 0 and bet['validity'] == 'Valid':
             cursor.execute('''UPDATE bets SET validity=? WHERE tx_hash=?''', ('Invalid: expired', bet['tx_hash']))
             db, cursor = util.credit(db, cursor, bet['source'], 1, bet['wager_remaining'])
-            print('\tExpired bet:', bet['tx_hash'])
+            logging.info('Expired bet: {}'.format(bet['tx_hash']))
         db.commit()
 
 

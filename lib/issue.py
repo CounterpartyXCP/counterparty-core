@@ -2,6 +2,7 @@
 
 import struct
 import sqlite3
+import logging
 
 from . import (config, util, exceptions, bitcoin)
 
@@ -54,7 +55,7 @@ def parse (db, cursor, tx, message):
         db, cursor = util.credit(db, cursor, tx['source'], asset_id, amount)
         if divisible: unit = config.UNIT
         else: unit = 1
-        print('\t(Re‐)Issuance:', tx['source'], 'created', amount/unit, 'of asset', asset_id, util.short(tx['tx_hash']))
+        logging.info('(Re‐)Issuance: {} created {} of asset {} ({})'.format(tx['source'], amount / unit, asset_id, util.short(tx['tx_hash'])))
 
     # Add parsed transaction to message‐type–specific table.
     cursor.execute('''INSERT INTO issuances(

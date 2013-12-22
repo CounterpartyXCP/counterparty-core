@@ -25,8 +25,7 @@ import struct
 import sqlite3
 import decimal
 D = decimal.Decimal
-import colorama
-colorama.init()
+import logging
 
 from . import (util, config, bitcoin)
 
@@ -81,8 +80,8 @@ def parse (db, cursor, tx, message):
     if validity == 'Valid':
         if not value: infix = '‘' + text + '’'
         else: infix = '‘' + text + ' = ' + str(value) + '’'
-        suffix = 'from ' + tx['source'] + ' at ' + util.isodt(timestamp) + ' ' + util.short(tx['tx_hash'])
-        print(colorama.Fore.YELLOW + '\tBroadcast:', infix, suffix + colorama.Style.RESET_ALL)
+        suffix = ' from ' + tx['source'] + ' at ' + util.isodt(timestamp) + ' ' + util.short(tx['tx_hash'])
+        logging.info('Broadcast: {}'.format(infix + suffix))
 
 
     # Handle contracts that use this feed.
@@ -113,22 +112,21 @@ def parse (db, cursor, tx, message):
             bull_credit = total_escrow - bear_credit
 
             # Liquidate, as necessary.
-            print(value, initial_value, leverage, bull_credit / config.UNIT, total_escrow / config.UNIT)
             if bull_credit >= total_escrow:
                 db, cursor = util.credit(db, cursor, bull_address, 1, total_escrow)
                 validity = 'Force‐Liquidated'
-                print('\tContract Force‐Liquidated:', total_escrow / config.UNIT, 'XCP credited to the bull, and 0 XCP credited to the bear', '(' + contract_id + ')')
+                logging.info('Contract Force‐Liquidated: {} XCP credited to the bull, and 0 XCP credited to the bear ({})'.format(total_escrow / config.UNIT, util.short(contract_id)))
             elif bull_credit <= 0:
                 db, cursor = util.credit(db, cursor, bear_address, 1, total_escrow)
                 validity = 'Force‐Liquidated'
-                print('\tContract Force‐Liquidated:', '0 XCP credited to the bull, and', total_escrow / config.UNIT, 'XCP credited to the bear', '(' + contract_id + ')')
+                logging.info('Contract Force‐Liquidated: 0 XCP credited to the bull, and {} XCP credited to the bear ({})'.format(total_escrow / config.UNIT, util.short(contract_id)))
 
             # Settle.
             if timestamp > contract['deadline'] and validity != 'Liquidated':
                 db, cursor = util.credit(db, cursor, bull_address, 1, bull_credit)
                 db, cursor = util.credit(db, cursor, bear_address, 1, bear_credit)
                 validity = 'Settled'
-                print('\tContract Settled:', bull_credit / config.UNIT, 'XCP credited to the bull, and', bear_credit / config.UNIT, 'XCP credited to the bear', '(' + contract_id + ')')
+                logging.info('Contract Settled: {} XCP credited to the bull, and {} XCP credited to the bear ({})'.format(bull_credit / config.UNIT, bear_credit / config.UNIT, util.short(contract_id)))
 
             cursor.execute('''UPDATE contracts \
                               SET validity=? \

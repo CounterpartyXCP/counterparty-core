@@ -6,11 +6,12 @@ import argparse
 import json
 import time
 import sqlite3
-import decimal
-D = decimal.Decimal
 import colorama
 colorama.init()
+import decimal
+D = decimal.Decimal
 from prettytable import PrettyTable
+import logging
 
 from lib import (config, util, exceptions, bitcoin, blocks, api)
 from lib import (send, order, btcpay, issue, broadcast, bet, dividend, burn)
@@ -40,7 +41,7 @@ def format_order (cursor, order):
     else:
         fee = str(order['fee_provided'] / config.UNIT) + ' BTC (provided)'
 
-    return cursor, [give, get, price_string, fee, util.get_time_left(order), util.short(order['tx_hash'], strip=True)]
+    return cursor, [give, get, price_string, fee, util.get_time_left(order), util.short(order['tx_hash'])]
 
 def format_deal (cursor, deal):
     if not deal['backward_id']:
@@ -126,13 +127,15 @@ if __name__ == '__main__':
     parser_burn.add_argument('--from', metavar='SOURCE', dest='source', type=str, required=True, help='')
     parser_burn.add_argument('--quantity', metavar='QUANTITY', type=D, required=True, help='quantity of BTC to be destroyed in miners’ fees')
 
-    parser_follow = subparsers.add_parser('follow', help='requires bitcoind')
-
     parser_watch = subparsers.add_parser('watch', help='open orders and pending BTC payments')
 
     args = parser.parse_args()
 
-    # TODO: Re‐name send.send, e.g., to send.create, etc.
+
+    logging.basicConfig(filename=config.LOG, level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%m-%d-%YT%I:%M:%S%z')
+    requests_log = logging.getLogger("requests")
+    requests_log.setLevel(logging.WARNING)
+
 
     # Do something.
     if args.version:
@@ -222,10 +225,6 @@ if __name__ == '__main__':
         bitcoin.bitcoind_check()
         json_print(burn.create(args.source, args.quantity * config.UNIT))
 
-    elif args.action == 'follow':
-        bitcoin.bitcoind_check()
-        blocks.follow()
-
     elif args.action == 'watch':
         db = sqlite3.connect(config.LEDGER)
         db.row_factory = sqlite3.Row
@@ -266,7 +265,7 @@ if __name__ == '__main__':
         parser.print_help()
 
     else:
-        parser.print_help()
-        sys.exit(1)
+        bitcoin.bitcoind_check()
+        blocks.follow()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

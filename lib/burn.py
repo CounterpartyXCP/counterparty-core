@@ -6,8 +6,7 @@ import struct
 import sqlite3
 import decimal
 D = decimal.Decimal
-import colorama
-colorama.init()
+import logging
 
 from . import (util, config, exceptions, bitcoin)
 
@@ -89,7 +88,7 @@ def parse (db, cursor, tx, message):
                         validity)
                   )
     if validity == 'Valid':
-        print(colorama.Style.BRIGHT + '\tBurn:', burned / config.UNIT, 'BTC burned;', earned / config.UNIT, 'XCP earned', util.short(tx['tx_hash']) + colorama.Style.RESET_ALL)
+        logging.info('Burn: {} BTC burned; {} XCP earned {}'.format(burned / config.UNIT, earned / config.UNIT, util.short(tx['tx_hash'])))
 
     return db, cursor
 

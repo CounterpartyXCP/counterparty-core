@@ -4,8 +4,7 @@
 
 import struct
 import sqlite3
-import colorama
-colorama.init()
+import logging
 
 from . import (util, config, exceptions, bitcoin)
 
@@ -64,7 +63,7 @@ def parse (db, cursor, tx, message):
     if validity == 'Valid':
         cursor, divisible = util.is_divisible(cursor, asset_id)
         if divisible: amount /= config.UNIT
-        print(colorama.Fore.GREEN + '\tSend:', amount, util.get_asset_name(asset_id), 'from', tx['source'], 'to', tx['destination'], util.short(tx['tx_hash']))
+        logging.info('Send: {} of asset {} from {} to {} ({})'.format(amount, util.get_asset_name(asset_id), tx['source'], tx['destination'], util.short(tx['tx_hash'])))
 
     return db, cursor
 

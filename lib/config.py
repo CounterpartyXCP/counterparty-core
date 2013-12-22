@@ -39,7 +39,8 @@ data_dir = appdirs.user_data_dir('Counterparty', 'Counterparty')
 if not os.path.isdir(data_dir):
     os.mkdir(data_dir)
 DB_VERSION = 2
-LEDGER = data_dir + '/ledger.' + str(DB_VERSION) + '.db'
+LEDGER = data_dir + '/counterparty.' + str(DB_VERSION) + '.db'
+LOG = data_dir + '/counterparty.log'
 
 # Bitcoin protocol
 DUST_SIZE = 5430

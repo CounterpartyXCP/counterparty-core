@@ -3,8 +3,7 @@
 import binascii
 import struct
 import sqlite3
-import colorama
-colorama.init()
+import logging
 
 from . import (util, config, exceptions, bitcoin)
 
@@ -68,8 +67,7 @@ def parse (db, cursor, tx, message):
             db, cursor = util.credit(db, cursor, tx['source'], deal['forward_id'], deal['forward_amount'])
 
     deal_id = tx0_hash + tx1_hash
-    print(colorama.Fore.CYAN + colorama.Style.DIM + '\tBitcoin payment for deal:', util.short(deal_id, strip=True), util.short(tx['tx_hash']) + colorama.Style
-    .RESET_ALL)
+    logging.info('Bitcoin payment for deal: {} ({})'.format(util.short(deal_id), util.short(tx['tx_hash'])))
 
     return db, cursor
 

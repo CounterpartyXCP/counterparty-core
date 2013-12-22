@@ -9,11 +9,9 @@ import time
 import binascii
 import struct
 import sqlite3
-import warnings
 import decimal
 D = decimal.Decimal
-import colorama
-colorama.init()
+import logging
 
 from . import (config, util, bitcoin)
 from . import (send, order, btcpay, issue, broadcast, bet, dividend, burn)
@@ -24,7 +22,7 @@ def parse_block (db, cursor, block_index):
     (but not data identification), then just restart `counterparty.py follow`.
 
     """
-    print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Block:', str(block_index) + colorama.Style.RESET_ALL)
+    logging.info('Block: {}'.format(str(block_index)))
 
     # Parse transactions, sorting them by type.
     cursor.execute('''SELECT * FROM transactions \
@@ -61,8 +59,7 @@ def parse_block (db, cursor, block_index):
                               SET supported=? \
                               WHERE tx_hash=?''',
                            ('False', tx['tx_hash']))
-            print('Unsupported transaction:', message_type_id)
-            print('Unsupported transaction:', tx['tx_hash'])
+            logging.warning('Unsupported transaction. Message type: {}. Transaction hash: {}'.format(message_type_id, tx['tx_hash']))
         db.commit()
 
     # TODO: Is it a problem that this comes after the parsing?! (inclusive vs. exclusive)
@@ -320,7 +317,7 @@ def follow ():
         if 'ledger' == filename_array[0] and 'db' == filename_array[2]:
             if filename_array[1] != str(config.DB_VERSION):
                 os.remove(filename)
-                warnings.warn('New version of transaction table! Deleting old databases.')
+                logger.warning('New version of transaction table! Deleting old databases.')
 
     db = sqlite3.connect(config.LEDGER)
     db.row_factory = sqlite3.Row
@@ -328,6 +325,7 @@ def follow ():
     cursor = db.cursor()
 
     # Always re‐parse from beginning on start‐up.
+    logging.info('START')
     db, cursor = initialise(db, cursor)
     cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
     for block in cursor.fetchall():

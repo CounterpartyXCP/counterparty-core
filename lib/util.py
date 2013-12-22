@@ -12,12 +12,11 @@ BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD'}
 BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1}
 
 
-def short (string, strip=False):
+def short (string):
     if len(string) == 64: length = 8
     elif len(string) == 128: length = 16
     short = string[:length] + '…' + string[-length:]
-    if strip: return short
-    else: return '(' + short + ')'
+    return short
 
 def isodt (epoch_time):
     return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
