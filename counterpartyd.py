@@ -90,7 +90,7 @@ if __name__ == '__main__':
     parser_send = subparsers.add_parser('send', help='requires bitcoind')
     parser_send.add_argument('--from', metavar='SOURCE', dest='source', type=str, required=True, help='')
     parser_send.add_argument('--to', metavar='DESTINATION', dest='destination', type=str, required=True, help='')
-    parser_send.add_argument('--quantity', metavar='QUANTITY', type=D, help='')
+    parser_send.add_argument('--quantity', metavar='QUANTITY', required=True, type=D, help='')
     parser_send.add_argument('--asset', metavar='ASSET', dest='asset', type=str, required=True, help='')
 
     parser_order = subparsers.add_parser('order', help='requires bitcoind')
@@ -103,7 +103,7 @@ if __name__ == '__main__':
     parser_order.add_argument('--fee', metavar='FEE', type=D, required=True, help='either the required fee, or the provided fee, as appropriate; in BTC, to be paid to miners')
 
     parser_btcpay= subparsers.add_parser('btcpay', help='requires bitcoind')
-    parser_btcpay.add_argument('deal-id', metavar='DEAL_ID', type=str, help='')
+    parser_btcpay.add_argument('--deal-id', metavar='DEAL_ID', type=str, required=True, help='')
 
     parser_issue = subparsers.add_parser('issue', help='requires bitcoind')
     parser_issue.add_argument('--from', metavar='SOURCE', type=str, dest='source', required=True, help='')
@@ -115,7 +115,7 @@ if __name__ == '__main__':
     parser_broadcast.add_argument('--from', metavar='SOURCE', type=str, dest='source', required=True, help='')
     parser_broadcast.add_argument('--text', metavar='TEXT', type=str, required=True, help='')
     parser_broadcast.add_argument('--value', metavar='VALUE', type=float, default=0, help='numerical value of the broadcast')
-    parser_broadcast.add_argument('--fee-multiplier', metavar='FEE_MULTIPLIER', type=D, required=True, help='how much of every bet on this feed should go to its operator; a fraction of 1 (i.e. .05 is 5%)')
+    parser_broadcast.add_argument('--fee-multiplier', metavar='FEE_MULTIPLIER', type=D, required=True, help='how much of every bet on this feed should go to its operator; a fraction of 1, (i.e. .05 is five percent)')
 
     parser_order = subparsers.add_parser('bet', help='requires bitcoind')
     parser_order.add_argument('--from', metavar='SOURCE', dest='source', type=str, required=True, help='')

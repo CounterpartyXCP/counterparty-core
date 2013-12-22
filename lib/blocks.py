@@ -409,6 +409,7 @@ def follow ():
             block_count = bitcoin.rpc('getblockcount', [])['result'] # Get block count.
             block_index +=1
 
+        logging.info('CAUGHT UP WITH BITCOIND')
         while block_index > block_count: # DUPE
             block_count = bitcoin.rpc('getblockcount', [])['result']
             time.sleep(20)

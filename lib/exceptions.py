@@ -1,11 +1,11 @@
 #! /usr/bin/python3
 
 # Exceptions
+class BitcoindRPCError (Exception):
+    pass
 class DividendError (Exception):
     pass
 class FeedError (Exception):
-    pass
-class BitcoinConfError (Exception):
     pass
 class UselessError (Exception):
     pass

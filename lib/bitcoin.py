@@ -33,7 +33,13 @@ def rpc (method, params):
         "jsonrpc": "2.0",
         "id": 0,
     }
-    return requests.post(config.RPC, data=json.dumps(payload), headers=headers).json()
+    try:
+        response = requests.post(config.RPC, data=json.dumps(payload), headers=headers)
+    except requests.exceptions.ConnectionError:
+        raise exceptions.BitcoindRPCError('Cannot communicate with bitcoind.')
+    if response.status_code == 401:
+        raise exceptions.BitcoindRPCError('Bitcoind RPC: unauthorized')
+    return response.json()
 
 def bitcoind_check ():
     """Check blocktime of last block to see if `bitcoind` is running behind."""
