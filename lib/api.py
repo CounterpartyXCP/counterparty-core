@@ -6,7 +6,7 @@ import json
 from lib import (config, util)
 
 def book ():
-    db = sqlite3.connect(config.LEDGER)
+    db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
 
@@ -23,7 +23,7 @@ def book ():
 
 
 def history (address):
-    db = sqlite3.connect(config.LEDGER)
+    db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
 

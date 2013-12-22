@@ -12,7 +12,7 @@ FORMAT = '>QQ'
 ID = 0
 
 def create (source, destination, amount, asset_id):
-    db = sqlite3.connect(config.LEDGER)
+    db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
     cursor, balance = util.balance(cursor, source, asset_id)

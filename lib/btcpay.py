@@ -11,7 +11,7 @@ FORMAT = '>32s32s'
 ID = 11
 
 def create (deal_id):
-    db = sqlite3.connect(config.LEDGER)
+    db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
 

@@ -14,7 +14,7 @@ FORMAT = '>11s'
 ID = 60
 
 def create (source, quantity):
-    db = sqlite3.connect(config.LEDGER)
+    db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
 

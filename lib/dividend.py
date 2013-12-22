@@ -13,7 +13,7 @@ ID = 50
 
 def create (source, amount_per_share, share_id):
     # Check balance. Dividends are paid in XCP.
-    db = sqlite3.connect(config.LEDGER)
+    db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
 

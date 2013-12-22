@@ -12,6 +12,7 @@ import decimal
 D = decimal.Decimal
 from prettytable import PrettyTable
 import logging
+import appdirs
 
 from lib import (config, util, exceptions, bitcoin, blocks, api)
 from lib import (send, order, btcpay, issue, broadcast, bet, dividend, burn)
@@ -68,11 +69,20 @@ def format_deal (cursor, deal):
 
 
 if __name__ == '__main__':
+    data_dir_default = appdirs.user_data_dir('Counterparty', 'Counterparty')
 
     # Parse command‐line arguments.
     parser = argparse.ArgumentParser(prog='counterparty', description='')
     parser.add_argument('--version', action='store_true', 
                         help='print version information')
+    parser.add_argument('--rpc-connect', type=str, default='localhost', help='')
+    parser.add_argument('--rpc-port', type=int, default=18332, help='')    # testnet
+    parser.add_argument('--rpc-user', type=str, default='bitcoinrpc', help='')
+    parser.add_argument('--rpc-password', type=str, required=True, help='')
+    parser.add_argument('--data-dir', type=str, default=data_dir_default, help='')
+    parser.add_argument('--database-file', type=str, help='')
+    parser.add_argument('--log-file', type=str, help='')
+
     subparsers = parser.add_subparsers(dest='action', 
                                        help='the action to be taken')
 
@@ -132,6 +142,18 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
 
+    # Configuration
+    config.RPC = 'http://' + args.rpc_user + ':' + args.rpc_password + '@' + args.rpc_connect + ':' + str(args.rpc_port)
+
+    if not args.data_dir: config.data_dir = data_dir_default
+    else: config.data_dir = args.data_dir
+    if not os.path.isdir(config.data_dir): os.mkdir(config.data_dir)
+
+    if not args.database_file: config.DATABASE = data_dir_default + '/counterparty.' + str(config.DB_VERSION) + '.db'
+    else: config.DATABASE = args.database_file
+
+    if not args.log_file: config.LOG = config.data_dir + '/counterparty.log'
+
     logging.basicConfig(filename=config.LOG, level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%m-%d-%YT%I:%M:%S%z')
     requests_log = logging.getLogger("requests")
     requests_log.setLevel(logging.WARNING)
@@ -145,7 +167,7 @@ if __name__ == '__main__':
         bitcoin.bitcoind_check()
         asset_id = util.get_asset_id(args.asset)
 
-        db = sqlite3.connect(config.LEDGER)
+        db = sqlite3.connect(config.DATABASE)
         db.row_factory = sqlite3.Row
         cursor = db.cursor()
         cursor, divisible = util.is_divisible(cursor, asset_id)
@@ -176,7 +198,7 @@ if __name__ == '__main__':
             assert fee_required >= config.MIN_FEE
             fee_provided = config.MIN_FEE
 
-        db = sqlite3.connect(config.LEDGER)
+        db = sqlite3.connect(config.DATABASE)
         db.row_factory = sqlite3.Row
         cursor = db.cursor()
         cursor, divisible = util.is_divisible(cursor, give_id)
@@ -226,7 +248,7 @@ if __name__ == '__main__':
         json_print(burn.create(args.source, args.quantity * config.UNIT))
 
     elif args.action == 'watch':
-        db = sqlite3.connect(config.LEDGER)
+        db = sqlite3.connect(config.DATABASE)
         db.row_factory = sqlite3.Row
         cursor = db.cursor()
 

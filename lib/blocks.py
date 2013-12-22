@@ -319,7 +319,7 @@ def follow ():
                 os.remove(filename)
                 logger.warning('New version of transaction table! Deleting old databases.')
 
-    db = sqlite3.connect(config.LEDGER)
+    db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     # TODO: db.execute('pragma foreign_keys=ON')
     cursor = db.cursor()

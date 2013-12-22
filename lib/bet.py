@@ -25,7 +25,7 @@ FORMAT = '>HIQQdII'
 ID = 40
 
 def get_fee_multiplier (feed_address):
-    db = sqlite3.connect(config.LEDGER)
+    db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
     # Get fee_multiplier from the last broadcast from the feed_address address.

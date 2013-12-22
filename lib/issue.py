@@ -10,7 +10,7 @@ FORMAT = '>QQ?'
 ID = 20
 
 def create (source, asset_id, amount, divisible):
-    db = sqlite3.connect(config.LEDGER)
+    db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
 
