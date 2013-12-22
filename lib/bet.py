@@ -135,7 +135,7 @@ def parse (db, cursor, tx, message):
     db.commit()
 
     if validity == 'Valid':
-        logging.info('Bet: {} on {} at {} for {} XCP against {} XCP in {} blocks ({})'.format(util.BET_TYPE_NAME[bet_type], feed_address, util.isodt(deadline), wager_amount / config.UNIT, counterwager_amount / config.UNIT, expiration, util.short(tx['tx_hash'])))
+        logging.info('Bet: {} on {} at {} for {} XCP against {} XCP in {} blocks, leveraged {}x  ({})'.format(util.BET_TYPE_NAME[bet_type], feed_address, util.isodt(deadline), wager_amount / config.UNIT, counterwager_amount / config.UNIT, expiration, D(leverage / 5040).quantize(config.FOUR).normalize(), util.short(tx['tx_hash'])))
 
         db, cursor = contract(db, cursor, bet_type, deadline,
                                    wager_amount, counterwager_amount,
@@ -189,9 +189,8 @@ def contract (db, cursor, bet_type, deadline,
             if validity != 'Valid': continue
             db, cursor = util.credit(db, cursor, feed_address, 1, int(fee))
 
-            contract_id = tx0['tx_hash'] + tx1['tx_hash']   #
-
-            logging.info('Contract: {} for {} XCP against {} for {} XCP on {} at {} ({})'.format(util.BET_TYPE_NAME[tx0['bet_type']], tx0['wager_amount'] / config.UNIT, util.BET_TYPE_NAME[tx1['bet_type']], tx0['counterwager_amount'] / config.UNIT, feed_address, util.isodt(deadline), util.short(contract_id)))
+            contract_id = tx0['tx_hash'] + tx1['tx_hash']
+            logging.info('Contract: {} for {} XCP against {} for {} XCP on {} at {}, leveraged {}x ({})'.format(util.BET_TYPE_NAME[tx0['bet_type']], forward_amount / config.UNIT, util.BET_TYPE_NAME[tx1['bet_type']], backward_amount / config.UNIT, feed_address, util.isodt(deadline), D(leverage / 5040).quantize(config.FOUR).normalize(), util.short(contract_id)))
 
             # Debit the order.
             wager_remaining -= backward_amount

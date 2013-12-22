@@ -52,15 +52,15 @@ def format_order (cursor, order):
 def format_bet (cursor, bet):
     odds = D(bet['counterwager_amount']) / D(bet['wager_amount'])
 
-    give_remaining = D(bet['wager_remaining'])
-    get_remaining = give_remaining * odds
+    wager_remaining = D(bet['wager_remaining'])
+    counterwager_remaining = round(wager_remaining * odds)
 
     if not bet['threshold']: threshold = None
     else: threshold = bet['threshold']
     if not bet['leverage']: leverage = None
-    else: leverage = bet['leverage'] / 5040
+    else: leverage = D(D(bet['leverage']) / 5040).quantize(config.FOUR).normalize()
 
-    return cursor, [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], threshold, leverage, str(bet['wager_amount'] / config.UNIT) + ' XCP', str(bet['counterwager_amount'] / config.UNIT) + ' XCP', odds.quantize(config.FOUR).normalize(), util.get_time_left(bet), util.short(bet['tx_hash'])]
+    return cursor, [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], threshold, leverage, str(wager_remaining / config.UNIT) + ' XCP', str(counterwager_remaining / config.UNIT) + ' XCP', odds.quantize(config.FOUR).normalize(), util.get_time_left(bet), util.short(bet['tx_hash'])]
 
 def format_deal (cursor, deal):
     deal_id = deal['tx0_hash'] + deal['tx1_hash']
@@ -136,6 +136,9 @@ if __name__ == '__main__':
     parser_burn.add_argument('--quantity', metavar='QUANTITY', required=True, help='quantity of BTC to be destroyed in miners’ fees')
 
     parser_watch = subparsers.add_parser('watch', help='')
+
+    parser_history = subparsers.add_parser('history', help='')
+    parser_history.add_argument('--address', metavar='ADDRESS', required=True, help='')
 
     args = parser.parse_args()
 
@@ -273,7 +276,7 @@ if __name__ == '__main__':
 
             # Open orders.
             cursor, orders = util.get_orders(cursor, show_invalid=False, show_expired=False, show_empty=False)
-            orders_table = PrettyTable(['Give', 'Get', 'Price', 'Fee', 'Time Left', 'Tx Hash'])
+            orders_table = PrettyTable(['Give Remaining', 'Get Remaining', 'Price', 'Fee', 'Time Left', 'Tx Hash'])
             for order in orders:
                 cursor, order = format_order(cursor, order)
                 orders_table.add_row(order)
@@ -284,7 +287,7 @@ if __name__ == '__main__':
 
             # Open bets.
             cursor, bets = util.get_bets(cursor, show_invalid=False, show_expired=False, show_empty=False)
-            bets_table = PrettyTable(['Bet Type', 'Feed address', 'Threshold', 'Leverage', 'Wager', 'Counterwager', 'Odds', 'Time Left', 'Tx Hash'])
+            bets_table = PrettyTable(['Bet Type', 'Feed Address', 'Threshold', 'Leverage', 'Wager Remaining', 'Counterwager Remaining', 'Odds', 'Time Left', 'Tx Hash'])
             for bet in bets:
                 cursor, bet = format_bet(cursor, bet)
                 bets_table.add_row(bet)
@@ -305,6 +308,9 @@ if __name__ == '__main__':
 
             time.sleep(30)
             
+    elif args.action == 'history':
+        json_print(api.history(args.address))
+
     elif args.action == 'help':
         parser.print_help()
 

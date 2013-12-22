@@ -22,10 +22,10 @@ def create (source, amount_per_share, asset_id):
     cursor, balance = util.balance(cursor, source, 1)
     if not balance or balance < amount:
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
-    cursor, issuance = util.get_issuance(cursor, asset_id)
-    if issuance == None:
+    cursor, issuances = util.get_issuances(cursor, asset_id)
+    if not issuances:
         raise exceptions.DividendError('No such asset: {}.'.format(asset_id))
-    elif issuance['divisible'] == True:
+    elif issuance[0]['divisible'] == True:
         raise exceptions.DividendError('Dividend‐yielding assets must be indivisible.')
     print('Total amount to be distributed in dividends:', amount / config.UNIT)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
@@ -51,8 +51,9 @@ def parse (db, cursor, tx, message):
 
     # Credit.
     if validity == 'Valid':
-        cursor, holdings = util.find_all(cursor, asset_id)
-        for address, address_amount in holdings:
+        cursor, balances = util.get_balances(cursor, asset_id=asset_id)
+        for balance in balances:
+            address, address_amount = balance['address'], balance['amount']
             db, cursor = util.credit(db, cursor, address, 1, address_amount * amount_per_share)
 
     # Add parsed transaction to message‐type–specific table.

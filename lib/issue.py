@@ -16,11 +16,11 @@ def create (source, asset_id, amount, divisible):
     cursor = db.cursor()
 
     # Handle potential re‐issuances.
-    cursor, issuance = util.get_issuance(cursor, asset_id)
-    if issuance:
-        if issuance['issuer'] != source:
+    cursor, issuances = util.get_issuances(cursor, asset_id)
+    if issuances:
+        if issuances[0]['issuer'] != source:
             raise exceptions.IssuanceError('Asset exists and was not issued by this address.')
-        if issuance['divisible'] != divisible:
+        if issuances[0]['divisible'] != divisible:
             raise exceptions.IssuanceError('That asset exists with a different divisibility.')
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
@@ -40,9 +40,9 @@ def parse (db, cursor, tx, message):
         validity = 'Invalid: could not unpack'
 
     # If re‐issuance, check for compatability in divisibility, issuer.
-    cursor, issuance = util.get_issuance(cursor, asset_id)
-    if issuance:
-        if issuance['issuer'] != tx['source']:
+    cursor, issuances = util.get_issuance(cursor, asset_id)
+    if issuances:
+        if issuances[0]['issuer'] != tx['source']:
             validity = 'Invalid: that asset already exists and was not issued by this address'
         if validity == 'Valid' and issuance['divisible'] != divisible:
             validity = 'Invalid: asset exists with a different divisibility'

@@ -21,18 +21,6 @@ def short (string):
 def isodt (epoch_time):
     return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
 
-def find_all (cursor, share_id):
-    """
-    Find every address that holds some of ASSET_ID, and return that address,
-    with the amount of it that held.
-    """
-    cursor.execute('''SELECT * FROM balances WHERE (asset_id=?)''', (share_id,))
-    holdings = []
-    for balance in cursor.fetchall():
-        holdings.append((balance['address'], balance['amount']))
-
-    return cursor, holdings
-    
 def get_time_left (order):
     """order or bet"""
     # TODO: Inclusive/exclusive expiration?
@@ -117,14 +105,6 @@ def credit (db, cursor, address, asset_id, amount):
                        (old_balance + amount, address, asset_id)) 
     db.commit()
     return db, cursor
-
-
-def get_issuance (cursor, asset_id):
-    """Returns the last valid issuance of an asset with a particular asset_id"""
-    cursor.execute('''SELECT * FROM issuances \
-                      WHERE (asset_id=? AND validity=?) \
-                      ORDER BY tx_index DESC''', (asset_id, 'Valid'))
-    return cursor, cursor.fetchone()
 
 def good_feed (cursor, address):
     """
@@ -216,5 +196,25 @@ def get_deals (cursor, show_completed=True, show_not_mine=True, show_expired=Tru
         btcpays.append(dict(deal))
 
     return cursor, btcpays
+
+def get_balances (cursor, address=None, asset_id=None):
+    cursor.execute('''SELECT * FROM balances''')
+    balances = []
+    for balance in cursor.fetchall():
+        if balance['address'] != address: continue
+        if balance['asset_id'] != asset_id: continue
+        balances.append(balance)
+    return cursor, balances
+
+def get_issuances (cursor, show_invalid=True, asset_id=None, issuer=None):
+    cursor.execute('''SELECT * FROM issuances \
+                      ORDER BY tx_index ASC''')
+    issuances = []
+    for issuance in cursor.fetchall():
+        if not show_invalid and issuance['Validity'] != 'Valid': continue
+        if issuance['asset_id'] != asset_id: continue
+        if issuance['issuer'] != issuer: continue
+        issuances.append(issuance)
+    return cursor, issuances
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

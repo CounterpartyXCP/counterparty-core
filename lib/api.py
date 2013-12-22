@@ -3,7 +3,7 @@
 import sqlite3
 import json
 
-from lib import (config, util)
+from lib import (config, util, bitcoin)
 
 def book ():
     db = sqlite3.connect(config.DATABASE)
@@ -32,7 +32,15 @@ def history (address):
 
     history = {}
 
-    # TODO: Get initial balance. (List of deposits to the unspendable address.)
+    # List burns.
+
+    # List dividends.
+
+    # List bets.
+
+    # List contracts.
+
+    # List btcpays.
 
     # List sends.
     cursor.execute('''SELECT * FROM sends \
@@ -60,17 +68,15 @@ def history (address):
                    (address, address))
     history['deals'] = [dict(deal) for deal in cursor.fetchall()]
 
-    # List balances in every asset with an initialised balance.
-    history['balances'] = {}
-    cursor.execute('''SELECT * FROM balances WHERE address=?''', (address,))
-    for balance in cursor.fetchall():
-        history['balances'][balance['asset_id']] = balance['amount']
+
+
+    # List balances (in every asset with an initialised balance).
+    cursor, balances = util.get_balance(cursor, address=address)
+    history['balances'] = [dict(balance) for balance in balances]
 
     # List issuances.
-    cursor.execute('''SELECT * FROM issuances \
-                      ORDER BY tx_index''')
-    history['issuances'] = [dict(asset) for asset in cursor.fetchall() if asset['issuer'] == address]
-
+    cursor, issuances = util.get_issuances(cursor, issuer=address)
+    history['issuances'] = [dict(issuance) for issuance in issuances]
 
     return history 
 
