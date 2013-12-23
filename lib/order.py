@@ -85,7 +85,6 @@ def parse (db, cursor, tx, message):
                         tx['fee'],
                         validity)
                   )
-    db.commit()
 
     if validity == 'Valid':
 
@@ -197,7 +196,6 @@ def order_match (db, cursor, tx):
                                 tx1['expiration'],
                                 validity)
                           )
-            db.commit()
     return db, cursor
 
 def expire (db, cursor, block_index):
@@ -209,7 +207,6 @@ def expire (db, cursor, block_index):
             cursor.execute('''UPDATE orders SET validity=? WHERE tx_hash=?''', ('Invalid: expired', order['tx_hash']))
             db, cursor = util.credit(db, cursor, order['source'], order['give_id'], order['give_remaining'])
             logging.info('Expired order: {}'.format(util.short(order['tx_hash'])))
-        db.commit()
 
     # Expire order_matches for BTC with no BTC.
     cursor.execute('''SELECT * FROM order_matches''')
@@ -227,7 +224,6 @@ def expire (db, cursor, block_index):
                                     order_match['forward_id'],
                                     order_match['forward_amount'])
             logging.info('Expired order_match waiting for bitcoins: {}'.format(util.short(order_match['tx0_hash'] + order_match['tx1_hash'])))
-    db.commit()
 
     return db, cursor
 
