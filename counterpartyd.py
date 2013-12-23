@@ -20,7 +20,7 @@ import dateutil.parser
 from datetime import datetime
 
 from lib import (config, util, exceptions, bitcoin, blocks)
-from lib import (send, order, btcpay, issue, broadcast, bet, dividend, burn, api)
+from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, api)
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
@@ -30,10 +30,10 @@ def format_order (cursor, order):
     give_remaining = D(order['give_remaining'])
     get_remaining = give_remaining * price
 
-    issuance = api.get_issuance(order['give_id'])[0]
-    if issuance['divisible']: give_remaining /= config.UNIT
-    issuance = api.get_issuance(order['give_id'])[0]
-    if issuance['divisible']: get_remaining /= config.UNIT
+    issuances = api.get_issuances(validity='Valid', asset_id=order['give_id'])
+    if issuances and issuances[0]['divisible']: give_remaining /= config.UNIT
+    issuance = api.get_issuances(validity='Valid', asset_id=order['give_id'])
+    if issuances and issuances[0]['divisible']: get_remaining /= config.UNIT
     give_name = util.get_asset_name(order['give_id'])
     get_name = util.get_asset_name(order['get_id'])
     give = str(give_remaining) + ' ' + give_name
@@ -60,7 +60,7 @@ def format_bet (cursor, bet):
     if not bet['leverage']: leverage = None
     else: leverage = D(D(bet['leverage']) / 5040).quantize(config.FOUR).normalize()
 
-    return cursor, [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], threshold, leverage, str(wager_remaining / config.UNIT) + ' XCP', str(counterwager_remaining / config.UNIT) + ' XCP', odds.quantize(config.FOUR).normalize(), util.get_time_left(bet), util.short(bet['tx_hash'])]
+    return cursor, [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], bet['deadline'], threshold, leverage, str(wager_remaining / config.UNIT) + ' XCP', str(counterwager_remaining / config.UNIT) + ' XCP', odds.quantize(config.FOUR).normalize(), util.get_time_left(bet), util.short(bet['tx_hash'])]
 
 def format_order_match (order_match):
     order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']
@@ -103,11 +103,11 @@ if __name__ == '__main__':
     parser_btcpay= subparsers.add_parser('btcpay', help='requires bitcoind')
     parser_btcpay.add_argument('--order_match-id', metavar='order_match_ID', required=True, help='')
 
-    parser_issue = subparsers.add_parser('issue', help='requires bitcoind')
-    parser_issue.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='')
-    parser_issue.add_argument('--quantity', metavar='QUANTITY', required=True, help='')
-    parser_issue.add_argument('--asset-id', metavar='ASSET_ID', type=int, required=True, help='')
-    parser_issue.add_argument('--divisible', metavar='DIVISIBLE', type=bool, required=True, help='whether or not the asset is divisible (must agree with previous issuances, if this is a re‐issuance)')
+    parser_issuance = subparsers.add_parser('issuance', help='requires bitcoind')
+    parser_issuance.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='')
+    parser_issuance.add_argument('--quantity', metavar='QUANTITY', required=True, help='')
+    parser_issuance.add_argument('--asset-id', metavar='ASSET_ID', type=int, required=True, help='')
+    parser_issuance.add_argument('--divisible', metavar='DIVISIBLE', type=bool, required=True, help='whether or not the asset is divisible (must agree with previous issuances, if this is a re‐issuance)')
 
     parser_broadcast = subparsers.add_parser('broadcast', help='requires bitcoind')
     parser_broadcast.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='')
@@ -172,10 +172,10 @@ if __name__ == '__main__':
         db = sqlite3.connect(config.DATABASE)
         db.row_factory = sqlite3.Row
         cursor = db.cursor()
-        issuance = api.get_issuances(asset_id)[0]
+        issuances = api.get_issuances(validity='Valid', asset_id=asset_id)
         cursor.close()
-        if issuances['divisible']: quantity = D(args.quantity) * config.UNIT
-        else: quantity = args.quantity
+        if issuances and issuances[0]['divisible']: quantity = D(args.quantity) * config.UNIT
+        else: quantity = D(args.quantity)
 
         json_print(send.create(args.source, args.destination, round(quantity), 
                                asset_id))
@@ -200,16 +200,16 @@ if __name__ == '__main__':
         db = sqlite3.connect(config.DATABASE)
         db.row_factory = sqlite3.Row
         cursor = db.cursor()
-        issuance = api.get_issuances(give_id)[0]
-        if issuance['divisible']:
+        issuances = api.get_issuances(validity='Valid', asset_id=give_id)
+        if issuances and issuances[0]['divisible']:
             give_quantity = D(args.give_quantity) * config.UNIT
         else:
-            give_quantity = args.give_quantity
-        issuance = api.get_issuances(get_id)[0]
-        if issuance['divisible']:
+            give_quantity = D(args.give_quantity)
+        issuances = api.get_issuances(validity='Valid', asset_id=get_id)
+        if issuances and issuances[0]['divisible']:
             get_quantity = D(args.get_quantity) * config.UNIT
         else:
-            get_quantity = args.get_quantity
+            get_quantity = D(args.get_quantity)
         cursor.close()
 
         json_print(order.create(args.source, give_id, round(give_quantity),
@@ -219,13 +219,13 @@ if __name__ == '__main__':
     elif args.action == 'btcpay':
         json_print(btcpay.create(args.order_match_id))
 
-    elif args.action == 'issue':
+    elif args.action == 'issuance':
         bitcoin.bitcoind_check()
 
         if args.divisible: quantity = D(args.quantity) * config.UNIT
         else: quantity = args.quantity
 
-        json_print(issue.create(args.source, args.asset_id, round(quantity),
+        json_print(issuance.create(args.source, args.asset_id, round(quantity),
                                 args.divisible))
 
     elif args.action == 'broadcast':
@@ -275,7 +275,7 @@ if __name__ == '__main__':
 
             # Open orders.
             orders = api.get_orders(validity='Valid', show_expired=False, show_empty=False)
-            orders_table = PrettyTable(['Give Remaining', 'Get Remaining', 'Price', 'Fee', 'Time Left', 'Tx Hash'])
+            orders_table = PrettyTable(['Give', 'Get', 'Price', 'Fee', 'Time Left', 'Tx Hash'])
             for order in orders:
                 cursor, order = format_order(cursor, order)
                 orders_table.add_row(order)
@@ -285,7 +285,7 @@ if __name__ == '__main__':
 
             # Open bets.
             bets = api.get_bets(validity='Valid', show_expired=False, show_empty=False)
-            bets_table = PrettyTable(['Bet Type', 'Feed Address', 'Threshold', 'Leverage', 'Wager Remaining', 'Counterwager Remaining', 'Odds', 'Time Left', 'Tx Hash'])
+            bets_table = PrettyTable(['Bet Type', 'Feed Address', 'Deadline', 'Threshold', 'Leverage', 'Wager', 'Counterwager', 'Odds', 'Time Left', 'Tx Hash'])
             for bet in bets:
                 cursor, bet = format_bet(cursor, bet)
                 bets_table.add_row(bet)

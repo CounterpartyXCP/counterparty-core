@@ -17,7 +17,7 @@ D = decimal.Decimal
 # decimal.getcontext().prec = 8
 import logging
 
-from . import (util, config, bitcoin, exceptions)
+from . import (util, config, bitcoin, exceptions, api)
 
 FORMAT = '>HIQQdII'
 ID = 40
@@ -48,9 +48,9 @@ def create (source, feed_address, bet_type, deadline, wager_amount,
         raise exceptions.FeedError('That feed is locked.')
 
     fee_multiplier = get_fee_multiplier(feed_address)
-    cursor, balance = util.balance(cursor, source, 1) 
+    balances = api.get_balances(address=source, asset_id=1)
     cursor.close()
-    if not balance or balance < wager_amount * (1 + fee_multiplier):
+    if not balances or balances[0]['amount'] < wager_amount * (1 + fee_multiplier):
         raise exceptions.BalanceError('Insufficient funds to both make wager and pay feed fee (in XCP). (Check that the database is up‐to‐date.)')
 
     if not threshold: threshold = 0.0
@@ -198,7 +198,7 @@ def bet_match (db, cursor, tx):
                            tx1['tx_hash']))
 
             # Get last value of feed.
-            cursor, initial_value = util.last_value_of_feed(cursor, tx1['feed_address'])
+            initial_value = api.get_broadcasts(validity='Valid', source=tx1['feed_address'])[-1]['value']
 
             # Record order fulfillment.
             cursor.execute('''INSERT into bet_matches(

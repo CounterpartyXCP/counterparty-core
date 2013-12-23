@@ -27,7 +27,7 @@ def create (source, quantity):
         raise exceptions.UselessError('The proof‐of‐burn period has already ended.')
 
     # Check that a maximum of 1 BTC total is burned per address.
-    cursor, burns = util.get_burns(cursor, address=source, validity='Valid')
+    burns = api.get_burns(address=source, validity='Valid')
     total_burned = sum([burn['burned'] for burn in burns])
     if quantity > (1 * config.UNIT - total_burned):
         raise exceptions.UselessError('A maximum of 1 BTC may be burned per address.')

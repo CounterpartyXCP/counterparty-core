@@ -3,8 +3,6 @@ The functions herein defined are meant to be used internally, and so are passed
 all necessary database connexions.
 
 """
-# TODO: move debit, credit and balance into api.py?!
-    # TODO: combine get_balances() and balance()?!
 
 from datetime import datetime
 from dateutil.tz import tzlocal
@@ -48,32 +46,13 @@ def get_asset_name (asset_id):
     try: return ASSET_NAME[asset_id]
     except Exception: return str(asset_id)
 
-def balance (cursor, source, asset_id):
-    if not asset_id == 0: # If not BTC…
-        cursor.execute('''SELECT * FROM balances \
-                          WHERE (address=? and asset_id=?)''',
-                       (source, asset_id))
-        row = cursor.fetchone()
-        assert not cursor.fetchone()
-        if not row:
-            balance = None
-        else:
-            balance = row['amount']
-    else:   # HACK (fragile)
-        import subprocess
-        # balance = int(subprocess.check_output(['curl','-s', 'http://blockchain.info/q/addressbalance/' + source]))    # mainnet
-        balance = 100 * config.UNIT    # *** testnet DOUBLE HACK! ***
-    return cursor, balance
-
 def debit (db, cursor, address, asset_id, amount):
+    from lib import api #
     if not asset_id:
         raise exceptions.BalanceError('Cannot debit bitcoins from a Counterparty address!')
-
-    cursor.execute('''SELECT * FROM balances WHERE (address=? and asset_id=?)''',
-                   (address, asset_id))
     try:
-        old_balance = cursor.fetchone()['amount']
-    except TypeError:
+        old_balance = api.get_balances(address=address, asset_id=asset_id)[0]['amount']
+    except IndexError:
         old_balance = 0
     finally:
         assert not cursor.fetchone()
@@ -89,8 +68,10 @@ def debit (db, cursor, address, asset_id, amount):
     return db, cursor, validity
 
 def credit (db, cursor, address, asset_id, amount):
-    cursor, old_balance = balance(cursor, address, asset_id)
-    if old_balance == None:
+    from lib import api #
+    try:
+        old_balance = api.get_balances(address=address, asset_id=asset_id)[0]['amount']
+    except IndexError:
         cursor.execute('''INSERT INTO balances(
                             address,
                             asset_id,
@@ -106,7 +87,7 @@ def credit (db, cursor, address, asset_id, amount):
     db.commit()
     return db, cursor
 
-def good_feed (cursor, address):
+def good_feed (cursor, feed_address):
     """
     Feed is locked if *any* of its broadcasts lacks a textual message.
 
@@ -114,19 +95,11 @@ def good_feed (cursor, address):
 
     Locks are [necessarily] based on tx_index and not timestamp.
     """
-    cursor.execute('''SELECT * FROM broadcasts \
-                      WHERE (source=? AND validity=?) \
-                      ORDER BY tx_index''', (address, 'Valid'))
-    broadcasts = cursor.fetchall()
+    from lib import api #
+    broadcasts = api.get_broadcasts(validity='Valid', source=feed_address)
     if not len(broadcasts): return cursor, None             # Non‐existant
     for broadcast in broadcasts:
         if broadcast['text'] == '': return cursor, False    # Locked
     return cursor, True                                     # Exists and is unlocked
-
-def last_value_of_feed (cursor, feed_address):
-    cursor.execute('''SELECT * FROM broadcasts \
-                      WHERE (source=? AND validity=?) \
-                      ORDER BY tx_index DESC''', (feed_address, 'Valid'))
-    return cursor, cursor.fetchone()['value']
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

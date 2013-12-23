@@ -16,7 +16,7 @@ def create (source, give_id, give_amount, get_id, get_amount, expiration, fee_re
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
-    cursor, balance = util.balance(cursor, source, give_id) 
+    balance = api.get_balances(address=source, asset_id=give_id)[0]['amount']
     if not balance or balance < give_amount:
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
     if give_id == get_id:
@@ -47,9 +47,9 @@ def parse (db, cursor, tx, message):
 
     # Debit the address that makes the order. Check for sufficient funds.
     if validity == 'Valid':
-        cursor, balance = util.balance(cursor, tx['source'], give_id)
-        if balance >= give_amount:
-            if give_id:  # No need (or way) to debit BTC.
+        if give_id:  # No need (or way) to debit BTC.
+            balance = api.get_balances(address=tx['source'], asset_id=give_id)[0]['amount']
+            if balance >= give_amount:
                 db, cursor, validity = util.debit(db, cursor, tx['source'], give_id, give_amount)
         else:
             validity = 'Invalid: insufficient funds.'

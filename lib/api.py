@@ -6,6 +6,7 @@ import json
 from lib import (config, util, bitcoin)
 
 def get_balances (address=None, asset_id=None):
+    """This should never be used to check Bitcoin balances."""
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
@@ -110,6 +111,21 @@ def get_issuances (validity=None, asset_id=None, issuer=None):
     cursor.close()
     return issuances
 
+def get_broadcasts (validity=None, source=None):
+    db = sqlite3.connect(config.DATABASE)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
+
+    cursor.execute('''SELECT * FROM broadcasts \
+                      ORDER BY tx_index ASC''')
+    broadcasts = []
+    for broadcast in cursor.fetchall():
+        if validity and broadcast['Validity'] != validity: continue
+        if source and broadcast['source'] != source: continue
+        broadcasts.append(dict(broadcast))
+    cursor.close()
+    return broadcasts
+
 def get_bets (validity=None, address=None, show_empty=True, show_expired=True):
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
@@ -188,6 +204,7 @@ def history (address):
     history['order_matches'] = get_order_matches(validity='Valid', addresses=[address])
     history['btcpays'] = get_btcpays(validity='Valid')
     history['issuances'] = get_issuances(validity='Valid', issuer=address)
+    history['broadcasts'] = get_broadcasts(validity='Valid', source=address)
     history['bets'] = get_bets(validity='Valid', address=address)
     history['bet_matches'] = get_bet_matches(validity='Valid', addresses=[address])
     history['dividends'] = get_dividends(validity='Valid', address=address)

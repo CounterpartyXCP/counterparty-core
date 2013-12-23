@@ -20,12 +20,13 @@ def create (source, amount_per_share, asset_id):
     issuances = api.get_issuances(validity='Valid', asset_id=asset_id)
     total_shares = sum([issuance['amount'] for issuance in issuances])
     amount = amount_per_share * total_shares
-    cursor, balance = util.balance(cursor, source, 1)
-    if not balance or balance < amount:
+    balances = api.get_balances(address=source, asset_id=1)
+    print(balances[0]['amount'], amount)
+    if not balances or balances[0]['amount'] < amount:
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
     if not issuances:
         raise exceptions.DividendError('No such asset: {}.'.format(asset_id))
-    elif issuance[0]['divisible'] == True:
+    elif issuances[0]['divisible'] == True:
         raise exceptions.DividendError('Dividend‐yielding assets must be indivisible.')
     print('Total amount to be distributed in dividends:', amount / config.UNIT)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)

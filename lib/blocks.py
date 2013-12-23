@@ -14,7 +14,7 @@ D = decimal.Decimal
 import logging
 
 from . import (config, util, bitcoin)
-from . import (send, order, btcpay, issue, broadcast, bet, dividend, burn)
+from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn)
 
 def parse_block (db, cursor, block_index):
     """This is a separate function from follow() so that changing the parsing
@@ -42,8 +42,8 @@ def parse_block (db, cursor, block_index):
             db, cursor = order.parse(db, cursor, tx, message)
         elif message_type_id == btcpay.ID and len(message) == btcpay.LENGTH:
             db, cursor = btcpay.parse(db, cursor, tx, message)
-        elif message_type_id == issue.ID and len(message) == issue.LENGTH:
-            db, cursor = issue.parse(db, cursor, tx, message)
+        elif message_type_id == issuance.ID and len(message) == issuance.LENGTH:
+            db, cursor = issuance.parse(db, cursor, tx, message)
         elif message_type_id == broadcast.ID and len(message) == broadcast.LENGTH:
             db, cursor = broadcast.parse(db, cursor, tx, message)
         elif message_type_id == bet.ID and len(message) == bet.LENGTH:

@@ -8,7 +8,7 @@ from . import (config, util, exceptions, bitcoin, api)
 
 FORMAT = '>QQ?'
 ID = 20
-LENGTH = 8 + 8
+LENGTH = 8 + 8 + 1
 
 def create (source, asset_id, amount, divisible):
     db = sqlite3.connect(config.DATABASE)
@@ -19,7 +19,7 @@ def create (source, asset_id, amount, divisible):
     issuances = api.get_issuances(validity='Valid', asset_id=asset_id)
     if issuances:
         if issuances[0]['issuer'] != source:
-            raise exceptions.IssuanceError('Asset exists and was not issued by this address.')
+            raise exceptions.IssuanceError('Asset exists and was not issuanced by this address.')
         if issuances[0]['divisible'] != divisible:
             raise exceptions.IssuanceError('That asset exists with a different divisibility.')
 
@@ -40,19 +40,21 @@ def parse (db, cursor, tx, message):
         validity = 'Invalid: could not unpack'
 
     # If re‐issuance, check for compatability in divisibility, issuer.
-    issuances = api.get_issuance(validity='Valid', asset_id=asset_id)
+    issuances = api.get_issuances(validity='Valid', asset_id=asset_id)
     if issuances:
         if issuances[0]['issuer'] != tx['source']:
-            validity = 'Invalid: that asset already exists and was not issued by this address'
+            validity = 'Invalid: that asset already exists and was not issuanced by this address'
         if validity == 'Valid' and issuance['divisible'] != divisible:
             validity = 'Invalid: asset exists with a different divisibility'
 
     # Credit.
     if validity == 'Valid':
         db, cursor = util.credit(db, cursor, tx['source'], asset_id, amount)
-        if divisible: unit = config.UNIT
-        else: unit = 1
-        logging.info('(Re‐)Issuance: {} created {} of asset {} ({})'.format(tx['source'], amount / unit, asset_id, util.short(tx['tx_hash'])))
+        if divisible: amount /= config.UNIT
+        else: amount = int(amount)
+        if divisible: divisibility = 'divisible'
+        else: divisibility = 'indivisible'
+        logging.info('(Re‐)Issuance: {} created {} of {} asset {} ({})'.format(tx['source'], amount, divisibility, asset_id, util.short(tx['tx_hash'])))
 
     # Add parsed transaction to message‐type–specific table.
     cursor.execute('''INSERT INTO issuances(
