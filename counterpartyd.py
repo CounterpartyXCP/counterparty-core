@@ -19,7 +19,7 @@ import time
 import dateutil.parser
 from datetime import datetime
 
-from lib import (config, util, exceptions, bitcoin, blocks, api)
+from lib import (config, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issue, broadcast, bet, dividend, burn)
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
@@ -30,9 +30,9 @@ def format_order (cursor, order):
     give_remaining = D(order['give_remaining'])
     get_remaining = give_remaining * price
 
-    cursor, issuance = util.get_issuance(cursor, order['give_id'])
+    issuance = util.get_issuance(order['give_id'])
     if issuance['divisible']: give_remaining /= config.UNIT
-    cursor, issuance = util.get_issuance(cursor, order['give_id'])
+    issuance = util.get_issuance(order['give_id'])
     if issuance['divisible']: get_remaining /= config.UNIT
     give_name = util.get_asset_name(order['give_id'])
     get_name = util.get_asset_name(order['get_id'])
@@ -62,10 +62,10 @@ def format_bet (cursor, bet):
 
     return cursor, [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], threshold, leverage, str(wager_remaining / config.UNIT) + ' XCP', str(counterwager_remaining / config.UNIT) + ' XCP', odds.quantize(config.FOUR).normalize(), util.get_time_left(bet), util.short(bet['tx_hash'])]
 
-def format_deal (cursor, deal):
-    deal_id = deal['tx0_hash'] + deal['tx1_hash']
-    cursor, deal_time_left = util.get_deal_time_left(cursor, deal)
-    return cursor, [deal_id, deal_time_left]
+def format_matched_order (matched_order):
+    matched_order_id = matched_order['tx0_hash'] + matched_order['tx1_hash']
+    matched_order_time_left = util.get_matched_order_time_left(matched_order)
+    return [matched_order_id, matched_order_time_left]
 
 if __name__ == '__main__':
     data_dir_default = appdirs.user_data_dir('Counterparty', 'Counterparty')
@@ -101,7 +101,7 @@ if __name__ == '__main__':
     parser_order.add_argument('--fee', metavar='FEE', required=True, help='either the required fee, or the provided fee, as appropriate; in BTC, to be paid to miners')
 
     parser_btcpay= subparsers.add_parser('btcpay', help='requires bitcoind')
-    parser_btcpay.add_argument('--deal-id', metavar='DEAL_ID', required=True, help='')
+    parser_btcpay.add_argument('--matched_order-id', metavar='matched_order_ID', required=True, help='')
 
     parser_issue = subparsers.add_parser('issue', help='requires bitcoind')
     parser_issue.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='')
@@ -151,6 +151,7 @@ if __name__ == '__main__':
 
     if not args.database_file: config.DATABASE = data_dir_default + '/counterparty.' + str(config.DB_VERSION) + '.db'
     else: config.DATABASE = args.database_file
+    from lib import api # HACK
 
     if not args.log_file: config.LOG = config.data_dir + '/counterparty.log'
 
@@ -159,7 +160,6 @@ if __name__ == '__main__':
                         datefmt='%m-%d-%YT%I:%M:%S%z')
     requests_log = logging.getLogger("requests")
     requests_log.setLevel(logging.WARNING)
-
 
     # Do something.
     if args.version:
@@ -170,10 +170,10 @@ if __name__ == '__main__':
 
         asset_id = util.get_asset_id(args.asset)
 
-        db = sqlite3.connect(config.DATABASE)
+        db = sqlite3.connect(DATABASE)
         db.row_factory = sqlite3.Row
         cursor = db.cursor()
-        cursor, issuance = util.get_issuance(cursor, asset_id)
+        issuance = util.get_issuance(asset_id)
         cursor.close()
         if issuance['divisible']: quantity = D(args.quantity) * config.UNIT
         else: quantity = args.quantity
@@ -198,15 +198,15 @@ if __name__ == '__main__':
             assert fee_required >= config.MIN_FEE
             fee_provided = config.MIN_FEE
 
-        db = sqlite3.connect(config.DATABASE)
+        db = sqlite3.connect(DATABASE)
         db.row_factory = sqlite3.Row
         cursor = db.cursor()
-        cursor, issuance = util.get_issuance(cursor, give_id)
+        issuance = util.get_issuance(give_id)
         if issuance['divisible']:
             give_quantity = D(args.give_quantity) * config.UNIT
         else:
             give_quantity = args.give_quantity
-        cursor, issuance = util.get_issuance(cursor, get_id)
+        issuance = util.get_issuance(get_id)
         if issuance['divisible']:
             get_quantity = D(args.get_quantity) * config.UNIT
         else:
@@ -218,7 +218,7 @@ if __name__ == '__main__':
                                 args.expiration, fee_required, fee_provided))
 
     elif args.action == 'btcpay':
-        json_print(btcpay.create(args.deal_id))
+        json_print(btcpay.create(args.matched_order_id))
 
     elif args.action == 'issue':
         bitcoin.bitcoind_check()
@@ -267,7 +267,7 @@ if __name__ == '__main__':
         json_print(burn.create(args.source, round(D(args.quantity) * config.UNIT)))
 
     elif args.action == 'watch':
-        db = sqlite3.connect(config.DATABASE)
+        db = sqlite3.connect(DATABASE)
         db.row_factory = sqlite3.Row
         cursor = db.cursor()
 
@@ -275,41 +275,39 @@ if __name__ == '__main__':
             os.system('cls' if os.name=='nt' else 'clear')
 
             # Open orders.
-            cursor, orders = util.get_orders(cursor, validity='Valid', show_expired=False, show_empty=False)
+            orders = api.get_orders(validity='Valid', show_expired=False, show_empty=False)
             orders_table = PrettyTable(['Give Remaining', 'Get Remaining', 'Price', 'Fee', 'Time Left', 'Tx Hash'])
             for order in orders:
                 cursor, order = format_order(cursor, order)
                 orders_table.add_row(order)
             print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Open Orders' + colorama.Style.RESET_ALL)
             print(colorama.Fore.BLUE + str(orders_table) + colorama.Style.RESET_ALL)
-
             print('\n')
 
             # Open bets.
-            cursor, bets = util.get_bets(cursor, validity='Valid', show_expired=False, show_empty=False)
+            bets = api.get_bets(validity='Valid', show_expired=False, show_empty=False)
             bets_table = PrettyTable(['Bet Type', 'Feed Address', 'Threshold', 'Leverage', 'Wager Remaining', 'Counterwager Remaining', 'Odds', 'Time Left', 'Tx Hash'])
             for bet in bets:
                 cursor, bet = format_bet(cursor, bet)
                 bets_table.add_row(bet)
             print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Open Bets' + colorama.Style.RESET_ALL)
             print(colorama.Fore.GREEN + str(bets_table) + colorama.Style.RESET_ALL)
-
-
             print('\n')
 
-            # Deals waiting for BTC payments from you.
+            # Matched orders waiting for BTC payments from you.
             my_addresses  = [ element['address'] for element in bitcoin.rpc('listreceivedbyaddress', [0,True])['result'] ]
-            cursor, btcpays = util.get_deals(cursor, validity='Valid: awaiting BTC payment', addresses=my_addresses, show_expired=False)
-            btcpays_table = PrettyTable(['Deal ID', 'Time Left'])
-            for deal in btcpays:
-                cursor, deal = format_deal(cursor, deal)
-                btcpays_table.add_row(deal)
-            print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Deals awaiting BTC payment' + colorama.Style.RESET_ALL)
-            print(colorama.Fore.CYAN + str(btcpays_table) + colorama.Style.RESET_ALL)
+            awaiting_btcs = api.get_matched_orders(validity='Valid: awaiting BTC payment', addresses=my_addresses, show_expired=False)
+            awaiting_btc_table = PrettyTable(['Matched Order ID', 'Time Left'])
+            for matched_order in awaiting_btcs:
+                matched_order = format_matched_order(matched_order)
+                awaiting_btc_table.add_row(matched_order)
+            print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Matched Orders Awaiting BTC Payment' + colorama.Style.RESET_ALL)
+            print(colorama.Fore.CYAN + str(awaiting_btc_table) + colorama.Style.RESET_ALL)
 
             time.sleep(30)
             
     elif args.action == 'history':
+        # TODO: Make this human‐readable.
         json_print(api.history(args.address))
 
     elif args.action == 'help':

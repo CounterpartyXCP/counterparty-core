@@ -43,7 +43,7 @@ def parse (db, cursor, tx, message):
     if validity == 'Valid':
         give_amount = D(give_amount)
         get_amount = D(get_amount)
-        ask_price = get_amount / give_amount
+        price = get_amount / give_amount
 
     # Debit the address that makes the order. Check for sufficient funds.
     if validity == 'Valid':
@@ -65,7 +65,7 @@ def parse (db, cursor, tx, message):
                         give_remaining,
                         get_id,
                         get_amount,
-                        ask_price,
+                        price,
                         expiration,
                         fee_required,
                         fee_provided,
@@ -79,7 +79,7 @@ def parse (db, cursor, tx, message):
                         int(give_amount),
                         get_id,
                         int(get_amount),
-                        float(ask_price),
+                        float(price),
                         expiration,
                         fee_required,
                         tx['fee'],
@@ -100,14 +100,14 @@ def parse (db, cursor, tx, message):
             fee_text = 'with a provided fee of ' + str(tx['fee'] / config.UNIT) + ' BTC'
         elif not get_id:
             fee_text = 'with a required fee of ' + str(fee_required / config.UNIT) + ' BTC'
-        logging.info('Order: sell {} {} for {} {} at {} {}/{} in {} blocks {} ({})'.format(give_amount/give_unit, util.get_asset_name(give_id), get_amount/get_unit, util.get_asset_name(get_id), ask_price.quantize(config.FOUR).normalize(), util.get_asset_name(get_id), util.get_asset_name(give_id), expiration, fee_text, util.short(tx['tx_hash'])))
+        logging.info('Order: sell {} {} for {} {} at {} {}/{} in {} blocks {} ({})'.format(give_amount/give_unit, util.get_asset_name(give_id), get_amount/get_unit, util.get_asset_name(get_id), price.quantize(config.FOUR).normalize(), util.get_asset_name(get_id), util.get_asset_name(give_id), expiration, fee_text, util.short(tx['tx_hash'])))
 
-        db, cursor = deal(db, cursor, give_id, give_amount, get_id, get_amount, ask_price, expiration, fee_required, tx)
+        db, cursor = matched_order(db, cursor, tx)
 
     return db, cursor
 
-def deal (db, cursor, give_id, give_amount, get_id, get_amount,
-        ask_price, expiration, fee_required, tx):
+def matched_order (db, cursor, tx):  # TODO: Simplify bets in this way, too.
+    # TODO: ask_odds, only pass tx, expiration_date vs. expiration
 
     # Get order in question.
     cursor.execute('''SELECT * FROM orders\
@@ -117,27 +117,27 @@ def deal (db, cursor, give_id, give_amount, get_id, get_amount,
 
     cursor.execute('''SELECT * FROM orders \
                       WHERE (give_id=? AND get_id=? AND validity=?) \
-                      ORDER BY ask_price ASC, tx_index''',
-                   (get_id, give_id, 'Valid'))
-    give_remaining = give_amount
+                      ORDER BY price ASC, tx_index''',
+                   (tx1['get_id'], tx1['give_id'], 'Valid'))
+    give_remaining = tx1['give_amount']
     for tx0 in cursor.fetchall():
 
         # Check whether fee conditions are satisfied.
-        if not get_id and tx0['fee_provided'] < tx0['fee_required']: continue
-        elif not give_id and tx1['fee_provided'] < tx0['fee_required']: continue
+        if not tx1['get_id'] and tx0['fee_provided'] < tx0['fee_required']: continue
+        elif not tx1['give_id'] and tx1['fee_provided'] < tx0['fee_required']: continue
 
         # Make sure that that both orders still have funds remaining [to be sold].
-        if tx0['give_remaining'] <= 0 or give_remaining <= 0: continue
+        if tx0['give_remaining'] <= 0 or tx1['give_remaining'] <= 0: continue
 
         # If the prices agree, make the trade. The found order sets the price,
         # and they trade as much as they can.
         price = D(tx0['get_amount']) / D(tx0['give_amount'])
-        if price <= 1/ask_price:  # Ugly
+        if price <= 1 / tx1['price']:
             forward_amount = round(min(D(tx0['give_remaining']), give_remaining / price))
             backward_amount = round(forward_amount * price)
 
-            forward_id, backward_id = get_id, give_id
-            deal_id = tx0['tx_hash'] + tx1['tx_hash']
+            forward_id, backward_id = tx1['get_id'], tx1['give_id']
+            matched_order_id = tx0['tx_hash'] + tx1['tx_hash']
 
             cursor, issuances = util.get_issuances(cursor, forward_id)
             if issuances and issuances[0]['divisible']: forward_unit = config.UNIT
@@ -146,14 +146,14 @@ def deal (db, cursor, give_id, give_amount, get_id, get_amount,
             if issuances and issuances[0]['divisible']: backward_unit = config.UNIT
             else: backward_unit = 1
 
-            logging.info('Deal: {} {} for {} {} at {} {}/{} ({})'.format(forward_amount/forward_unit, util.get_asset_name(forward_id), backward_amount/backward_unit, util.get_asset_name(backward_id), price.quantize(config.FOUR).normalize(), util.get_asset_name(backward_id), util.get_asset_name(forward_id), util.short(deal_id)))
+            logging.info('matched_order: {} {} for {} {} at {} {}/{} ({})'.format(forward_amount/forward_unit, util.get_asset_name(forward_id), backward_amount/backward_unit, util.get_asset_name(backward_id), price.quantize(config.FOUR).normalize(), util.get_asset_name(backward_id), util.get_asset_name(forward_id), util.short(matched_order_id)))
 
-            if 0 in (give_id, get_id):
+            if 0 in (tx1['give_id'], tx1['get_id']):
                 validity = 'Valid: awaiting BTC payment'
             else:
                 validity = 'Valid'
                 # Credit.
-                db, cursor = util.credit(db, cursor, tx1['source'], get_id,
+                db, cursor = util.credit(db, cursor, tx1['source'], tx1['get_id'],
                                     forward_amount)
                 db, cursor = util.credit(db, cursor, tx0['source'], tx0['get_id'],
                                     backward_amount)
@@ -175,7 +175,7 @@ def deal (db, cursor, give_id, give_amount, get_id, get_amount,
                            tx1['tx_hash']))
 
             # Record order fulfillment.
-            cursor.execute('''INSERT into deals(
+            cursor.execute('''INSERT into matched_orders(
                                 tx0_index,
                                 tx0_hash,
                                 tx0_address,
@@ -190,7 +190,8 @@ def deal (db, cursor, give_id, give_amount, get_id, get_amount,
                                 tx1_block_index,
                                 tx0_expiration,
                                 tx1_expiration,
-                                validity) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                                expiration_date,
+                                validity) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                                 (tx0['tx_index'],
                                 tx0['tx_hash'],
                                 tx0['source'],
@@ -204,7 +205,8 @@ def deal (db, cursor, give_id, give_amount, get_id, get_amount,
                                 tx0['block_index'],
                                 tx1['block_index'],
                                 tx0['expiration'],
-                                expiration,
+                                tx1['expiration'],
+                                min(tx0['block_index'] + tx0['expiration'], tx1['block_index'] + tx1['expiration']),
                                 validity)
                           )
             db.commit()
@@ -221,22 +223,22 @@ def expire (db, cursor, block_index):
             logging.info('Expired order: {}'.format(util.short(order['tx_hash'])))
         db.commit()
 
-    # Expire deals for BTC with no BTC.
-    cursor.execute('''SELECT * FROM deals''')
-    for deal in cursor.fetchall():
-        tx0_time_left = deal['tx0_block_index'] + deal['tx0_expiration'] - block_index # Inclusive/exclusive expiration? DUPE
-        tx1_time_left = deal['tx1_block_index'] + deal['tx1_expiration'] - block_index # Inclusive/exclusive expiration? DUPE
-        if (tx0_time_left <= 0 or tx1_time_left <=0) and deal['validity'] == 'Valid: waiting for bitcoins':
-            cursor.execute('''UPDATE deals SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Invalid: expired while waiting for bitcoins', deal['tx0_hash'], deal['tx1_hash']))
-            if not deal['forward_id']:
-                db, cursor = util.credit(db, cursor, deal['tx1_address'],
-                                    deal['backward_id'],
-                                    deal['backward_amount'])
-            elif not deal['backward_id']:
-                db, cursor = util.credit(db, cursor, deal['tx0_address'],
-                                    deal['forward_id'],
-                                    deal['forward_amount'])
-            logging.info('Expired deal waiting for bitcoins: {}'.format(util.short(deal['tx0_hash'] + deal['tx1_hash'])))
+    # Expire matched_orders for BTC with no BTC.
+    cursor.execute('''SELECT * FROM matched_orders''')
+    for matched_order in cursor.fetchall():
+        tx0_time_left = matched_order['tx0_block_index'] + matched_order['tx0_expiration'] - block_index # Inclusive/exclusive expiration? DUPE
+        tx1_time_left = matched_order['tx1_block_index'] + matched_order['tx1_expiration'] - block_index # Inclusive/exclusive expiration? DUPE
+        if (tx0_time_left <= 0 or tx1_time_left <=0) and matched_order['validity'] == 'Valid: waiting for bitcoins':
+            cursor.execute('''UPDATE matched_orders SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Invalid: expired while waiting for bitcoins', matched_order['tx0_hash'], matched_order['tx1_hash']))
+            if not matched_order['forward_id']:
+                db, cursor = util.credit(db, cursor, matched_order['tx1_address'],
+                                    matched_order['backward_id'],
+                                    matched_order['backward_amount'])
+            elif not matched_order['backward_id']:
+                db, cursor = util.credit(db, cursor, matched_order['tx0_address'],
+                                    matched_order['forward_id'],
+                                    matched_order['forward_amount'])
+            logging.info('Expired matched_order waiting for bitcoins: {}'.format(util.short(matched_order['tx0_hash'] + matched_order['tx1_hash'])))
     db.commit()
 
     return db, cursor

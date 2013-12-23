@@ -58,7 +58,7 @@ def parse (db, cursor, tx, message):
             db, cursor = util.credit(db, cursor, address, 1, address_amount * amount_per_share)
 
     # Add parsed transaction to message‐type–specific table.
-    cursor.execute('''INSERT INTO dividend_payments(
+    cursor.execute('''INSERT INTO dividends(
                         tx_index,
                         tx_hash,
                         block_index,
@@ -75,7 +75,7 @@ def parse (db, cursor, tx, message):
                         validity)
                   )
     if validity == 'Valid':
-        logging.info('Dividend Payment: {} paid {} per share of asset {} ({})'.format(tx['source'], amount_per_share / config.UNIT, util.get_asset_name(asset_id), util.short(tx['tx_hash'])))
+        logging.info('Dividend: {} paid {} per share of asset {} ({})'.format(tx['source'], amount_per_share / config.UNIT, util.get_asset_name(asset_id), util.short(tx['tx_hash'])))
 
     return db, cursor
 

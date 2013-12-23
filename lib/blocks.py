@@ -120,15 +120,15 @@ def initialise(db, cursor):
                         give_remaining INTEGER,
                         get_id INTEGER,
                         get_amount INTEGER,
-                        ask_price REAL,
+                        price REAL,
                         expiration INTEGER,
                         fee_required INTEGER,
                         fee_provided INTEGER,
                         validity TEXT)
                    ''')
 
-    cursor.execute('''DROP TABLE IF EXISTS deals''')
-    cursor.execute('''CREATE TABLE deals(
+    cursor.execute('''DROP TABLE IF EXISTS matched_orders''')
+    cursor.execute('''CREATE TABLE matched_orders(
                         tx0_index INTEGER,
                         tx0_hash TEXT,
                         tx0_address TEXT,
@@ -143,6 +143,19 @@ def initialise(db, cursor):
                         tx1_block_index INTEGER,
                         tx0_expiration INTEGER,
                         tx1_expiration INTEGER,
+                        expiration_date INTEGER,
+                        validity TEXT)
+                   ''')
+    # TODO: Expiration date?!?!
+
+    cursor.execute('''DROP TABLE IF EXISTS btcpays''')
+    cursor.execute('''CREATE TABLE btcpays(
+                        tx_index INTEGER PRIMARY KEY,
+                        tx_hash TEXT UNIQUE,
+                        block_index INTEGER,
+                        source TEXT,
+                        amount INTEGER,
+                        deal_id TEXT,
                         validity TEXT)
                    ''')
 
@@ -211,8 +224,8 @@ def initialise(db, cursor):
                         validity TEXT)
                    ''')
 
-    cursor.execute('''DROP TABLE IF EXISTS contracts''')
-    cursor.execute('''CREATE TABLE contracts(
+    cursor.execute('''DROP TABLE IF EXISTS matched_bets''')
+    cursor.execute('''CREATE TABLE matched_bets(
                         tx0_index INTEGER,
                         tx0_hash TEXT,
                         tx0_address TEXT,
@@ -235,8 +248,8 @@ def initialise(db, cursor):
                         validity TEXT)
                    ''')
 
-    cursor.execute('''DROP TABLE IF EXISTS dividend_payments''')
-    cursor.execute('''CREATE TABLE dividend_payments(
+    cursor.execute('''DROP TABLE IF EXISTS dividends''')
+    cursor.execute('''CREATE TABLE dividends(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,

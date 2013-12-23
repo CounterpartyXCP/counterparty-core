@@ -68,8 +68,25 @@ def parse (db, cursor, tx, message):
             db, cursor = util.credit(db, cursor, tx['source'], deal['forward_id'], deal['forward_amount'])
 
     deal_id = tx0_hash + tx1_hash
-    logging.info('BTC payment for deal: {} ({})'.format(util.short(deal_id), util.short(tx['tx_hash'])))
 
+    # Add parsed transaction to message‐type–specific table.
+    cursor.execute('''INSERT INTO btcpays(
+                        tx_index,
+                        tx_hash,
+                        block_index,
+                        source,
+                        amount,
+                        deal_id,
+                        validity) VALUES(?,?,?,?,?,?,?)''',
+                        (tx['tx_index'],
+                        tx['tx_hash'],
+                        tx['block_index'],
+                        tx['source'],
+                        tx['btc_amount'],
+                        deal_id,
+                        validity)
+                  )
+    logging.info('BTC payment for deal: {} ({})'.format(util.short(deal_id), util.short(tx['tx_hash'])))
     return db, cursor
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
