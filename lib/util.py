@@ -113,7 +113,7 @@ def devise (quantity, asset_id, precision=8):
 
     issuances = api.get_issuances(validity='Valid', asset_id=asset_id)
     if issuances and issuances[0]['divisible']:
-        quantity = D(quantity) * config.UNIT
+        quantity = D(quantity) / config.UNIT
     else:
         quantity = D(quantity)
     return quantity.quantize(PRECISION).normalize()
