@@ -70,8 +70,7 @@ def parse (db, cursor, tx, message):
                         validity)
                   )
     if validity == 'Valid':
-        issuances = api.get_issuances(validity='Valid', asset_id=asset_id)
-        if issuances and issuances[0]['divisible']: amount /= config.UNIT
+        amount = util.devise(amount, asset_id)
         logging.info('Send: {} of asset {} from {} to {} ({})'.format(amount, util.get_asset_name(asset_id), tx['source'], tx['destination'], util.short(tx['tx_hash'])))
 
     return db, cursor

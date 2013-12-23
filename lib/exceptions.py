@@ -1,6 +1,8 @@
 #! /usr/bin/python3
 
 # Exceptions
+class TXConstructionError(Exception):
+    pass
 class OverflowError(Exception):
     pass
 class BitcoindRPCError (Exception):

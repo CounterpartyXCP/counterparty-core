@@ -24,16 +24,11 @@ from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, 
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
-def format_order (cursor, order):
+def format_order (order):
     price = D(order['get_amount']) / D(order['give_amount'])
 
-    give_remaining = D(order['give_remaining'])
-    get_remaining = give_remaining * price
-
-    issuances = api.get_issuances(validity='Valid', asset_id=order['give_id'])
-    if issuances and issuances[0]['divisible']: give_remaining /= config.UNIT
-    issuance = api.get_issuances(validity='Valid', asset_id=order['give_id'])
-    if issuances and issuances[0]['divisible']: get_remaining /= config.UNIT
+    give_remaining = util.devise(D(order['give_remaining']), order['give_id'])
+    get_remaining = util.devise(give_remaining * price, order['get_id'])
     give_name = util.get_asset_name(order['give_id'])
     get_name = util.get_asset_name(order['get_id'])
     give = str(give_remaining) + ' ' + give_name
@@ -47,9 +42,9 @@ def format_order (cursor, order):
     else:
         fee = str(order['fee_provided'] / config.UNIT) + ' BTC (provided)'
 
-    return cursor, [give, get, price_string, fee, util.get_time_left(order), util.short(order['tx_hash'])]
+    return [give, get, price_string, fee, util.get_time_left(order), util.short(order['tx_hash'])]
 
-def format_bet (cursor, bet):
+def format_bet (bet):
     odds = D(bet['counterwager_amount']) / D(bet['wager_amount'])
 
     wager_remaining = D(bet['wager_remaining'])
@@ -60,7 +55,7 @@ def format_bet (cursor, bet):
     if not bet['leverage']: leverage = None
     else: leverage = D(D(bet['leverage']) / 5040).quantize(config.FOUR).normalize()
 
-    return cursor, [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], bet['deadline'], threshold, leverage, str(wager_remaining / config.UNIT) + ' XCP', str(counterwager_remaining / config.UNIT) + ' XCP', odds.quantize(config.FOUR).normalize(), util.get_time_left(bet), util.short(bet['tx_hash'])]
+    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], bet['deadline'], threshold, leverage, str(wager_remaining / config.UNIT) + ' XCP', str(counterwager_remaining / config.UNIT) + ' XCP', odds.quantize(config.FOUR).normalize(), util.get_time_left(bet), util.short(bet['tx_hash'])]
 
 def format_order_match (order_match):
     order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']
@@ -151,6 +146,9 @@ if __name__ == '__main__':
 
     if not args.database_file: config.DATABASE = data_dir_default + '/counterparty.' + str(config.DB_VERSION) + '.db'
     else: config.DATABASE = args.database_file
+    db = sqlite3.connect(config.DATABASE)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
 
     if not args.log_file: config.LOG = config.data_dir + '/counterparty.log'
 
@@ -168,14 +166,7 @@ if __name__ == '__main__':
         bitcoin.bitcoind_check()
 
         asset_id = util.get_asset_id(args.asset)
-
-        db = sqlite3.connect(config.DATABASE)
-        db.row_factory = sqlite3.Row
-        cursor = db.cursor()
-        issuances = api.get_issuances(validity='Valid', asset_id=asset_id)
-        cursor.close()
-        if issuances and issuances[0]['divisible']: quantity = D(args.quantity) * config.UNIT
-        else: quantity = D(args.quantity)
+        quantity = util.devise(args.quantity, asset_id)
 
         json_print(send.create(args.source, args.destination, round(quantity), 
                                asset_id))
@@ -197,21 +188,8 @@ if __name__ == '__main__':
             assert fee_required >= config.MIN_FEE
             fee_provided = config.MIN_FEE
 
-        db = sqlite3.connect(config.DATABASE)
-        db.row_factory = sqlite3.Row
-        cursor = db.cursor()
-        issuances = api.get_issuances(validity='Valid', asset_id=give_id)
-        if issuances and issuances[0]['divisible']:
-            give_quantity = D(args.give_quantity) * config.UNIT
-        else:
-            give_quantity = D(args.give_quantity)
-        issuances = api.get_issuances(validity='Valid', asset_id=get_id)
-        if issuances and issuances[0]['divisible']:
-            get_quantity = D(args.get_quantity) * config.UNIT
-        else:
-            get_quantity = D(args.get_quantity)
-        cursor.close()
-
+        give_quantity = util.devise(args.give_quantity, give_id)
+        get_quantity = util.devise(args.get_quantity, get_id)
         json_print(order.create(args.source, give_id, round(give_quantity),
                                 get_id, round(get_quantity),
                                 args.expiration, fee_required, fee_provided))
@@ -222,9 +200,7 @@ if __name__ == '__main__':
     elif args.action == 'issuance':
         bitcoin.bitcoind_check()
 
-        if args.divisible: quantity = D(args.quantity) * config.UNIT
-        else: quantity = args.quantity
-
+        quantity = util.devise(args.quantity, asset_id)
         json_print(issuance.create(args.source, args.asset_id, round(quantity),
                                 args.divisible))
 
@@ -266,10 +242,6 @@ if __name__ == '__main__':
         json_print(burn.create(args.source, round(D(args.quantity) * config.UNIT)))
 
     elif args.action == 'watch':
-        db = sqlite3.connect(config.DATABASE)
-        db.row_factory = sqlite3.Row
-        cursor = db.cursor()
-
         while True:
             os.system('cls' if os.name=='nt' else 'clear')
 
@@ -277,7 +249,7 @@ if __name__ == '__main__':
             orders = api.get_orders(validity='Valid', show_expired=False, show_empty=False)
             orders_table = PrettyTable(['Give', 'Get', 'Price', 'Fee', 'Time Left', 'Tx Hash'])
             for order in orders:
-                cursor, order = format_order(cursor, order)
+                order = format_order(order)
                 orders_table.add_row(order)
             print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Open Orders' + colorama.Style.RESET_ALL)
             print(colorama.Fore.BLUE + str(orders_table) + colorama.Style.RESET_ALL)
@@ -287,7 +259,7 @@ if __name__ == '__main__':
             bets = api.get_bets(validity='Valid', show_expired=False, show_empty=False)
             bets_table = PrettyTable(['Bet Type', 'Feed Address', 'Deadline', 'Threshold', 'Leverage', 'Wager', 'Counterwager', 'Odds', 'Time Left', 'Tx Hash'])
             for bet in bets:
-                cursor, bet = format_bet(cursor, bet)
+                bet = format_bet(bet)
                 bets_table.add_row(bet)
             print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Open Bets' + colorama.Style.RESET_ALL)
             print(colorama.Fore.GREEN + str(bets_table) + colorama.Style.RESET_ALL)
@@ -306,8 +278,17 @@ if __name__ == '__main__':
             time.sleep(30)
             
     elif args.action == 'history':
-        # TODO: Make this human‐readable.
-        json_print(api.history(args.address))
+        history = api.get_history(args.address)
+
+        # Balances.
+        balances = history['balances']
+        table = PrettyTable(['Asset', 'Amount'])
+        for balance in balances:
+            asset = util.get_asset_name(balance['asset_id'])
+            amount = util.devise(balance['amount'], balance['asset_id'])
+            table.add_row([asset, amount])
+        print(table)
+            
 
     elif args.action == 'help':
         parser.print_help()

@@ -102,4 +102,20 @@ def good_feed (cursor, feed_address):
         if broadcast['text'] == '': return cursor, False    # Locked
     return cursor, True                                     # Exists and is unlocked
 
+def devise (quantity, asset_id, precision=8):
+    # TODO: Always use this.
+    from lib import api #
+    import decimal
+    D = decimal.Decimal
+
+    if precision == 4: PRECISION = config.FOUR
+    else: PRECISION = config.EIGHT
+
+    issuances = api.get_issuances(validity='Valid', asset_id=asset_id)
+    if issuances and issuances[0]['divisible']:
+        quantity = D(quantity) / config.UNIT
+    else:
+        quantity = D(quantity)
+    return quantity.quantize(PRECISION).normalize()
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

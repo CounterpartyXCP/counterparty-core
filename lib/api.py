@@ -15,7 +15,7 @@ def get_balances (address=None, asset_id=None):
     balances = []
     for balance in cursor.fetchall():
         if address and balance['address'] != address: continue
-        if asset_id and balance['asset_id'] != asset_id: continue
+        if asset_id != None and balance['asset_id'] != asset_id: continue
         balances.append(dict(balance))
     cursor.close()
     return balances
@@ -105,7 +105,7 @@ def get_issuances (validity=None, asset_id=None, issuer=None):
     issuances = []
     for issuance in cursor.fetchall():
         if validity and issuance['Validity'] != validity: continue
-        if asset_id and issuance['asset_id'] != asset_id: continue
+        if asset_id != None and issuance['asset_id'] != asset_id: continue
         if issuer and issuance['issuer'] != issuer: continue
         issuances.append(dict(issuance))
     cursor.close()
@@ -173,7 +173,7 @@ def get_dividends (validity=None, address=None, asset_id=None):
     for dividend in cursor.fetchall():
         if validity and dividend['Validity'] != validity: continue
         if address and dividend['source'] != address: continue
-        if asset_id and dividend['asset_id'] != asset_id: continue
+        if asset_id != None and dividend['asset_id'] != asset_id: continue
         dividends.append(dict(dividend))
     cursor.close()
     return dividends
@@ -193,7 +193,7 @@ def get_burns (validity=True, address=None):
     return burns
 
 
-def history (address):
+def get_history (address):
     if not bitcoin.rpc('validateaddress', [address])['result']['isvalid']:
         raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
                                              address)

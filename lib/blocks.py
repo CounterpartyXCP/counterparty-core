@@ -145,7 +145,6 @@ def initialise(db, cursor):
                         tx1_expiration INTEGER,
                         validity TEXT)
                    ''')
-    # TODO: Expiration date?!?!
 
     cursor.execute('''DROP TABLE IF EXISTS btcpays''')
     cursor.execute('''CREATE TABLE btcpays(

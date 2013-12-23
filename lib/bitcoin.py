@@ -182,7 +182,9 @@ def transaction (source, destination, btc_amount, fee, data):
     if not rpc('validateaddress', [source])['result']['ismine']:
         raise exceptions.InvalidAddressError('Not one of your Bitcoin addresses:', source)
 
-    # TODO: check that btc_amount >= config.DUST_SIZE
+    # Check that the destination output isn’t a dust output.
+    if not btc_amount >= config.DUST_SIZE:
+        raise exceptions.TXConstructionError('Destination output is below the dust threshold.')
 
     # Construct inputs.
     inputs, total = get_inputs(source, btc_amount, fee)

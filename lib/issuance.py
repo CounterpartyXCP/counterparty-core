@@ -50,11 +50,9 @@ def parse (db, cursor, tx, message):
     # Credit.
     if validity == 'Valid':
         db, cursor = util.credit(db, cursor, tx['source'], asset_id, amount)
-        if divisible: amount /= config.UNIT
-        else: amount = int(amount)
         if divisible: divisibility = 'divisible'
         else: divisibility = 'indivisible'
-        logging.info('(Re‐)Issuance: {} created {} of {} asset {} ({})'.format(tx['source'], amount, divisibility, asset_id, util.short(tx['tx_hash'])))
+        logging.info('(Re‐)Issuance: {} created {} of {} asset {} ({})'.format(tx['source'], util.devise(amount, asset_id), divisibility, asset_id, util.short(tx['tx_hash'])))
 
     # Add parsed transaction to message‐type–specific table.
     cursor.execute('''INSERT INTO issuances(

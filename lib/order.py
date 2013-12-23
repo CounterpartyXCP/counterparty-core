@@ -89,18 +89,14 @@ def parse (db, cursor, tx, message):
 
     if validity == 'Valid':
 
-        issuance = api.get_issuances(asset_id=give_id)[0]
-        if issuance and issuance['divisible']: give_unit = config.UNIT
-        else: give_unit = 1
-        issuances = api.get_issuances(asset_id=get_id)[0]
-        if issuance and issuance['divisible']: get_unit = config.UNIT
-        else: get_unit = 1
+        give_amount = util.devise(give_amount, give_id)
+        get_amount = util.devise(get_amount, get_id)
 
         if not give_id:
             fee_text = 'with a provided fee of ' + str(tx['fee'] / config.UNIT) + ' BTC'
         elif not get_id:
             fee_text = 'with a required fee of ' + str(fee_required / config.UNIT) + ' BTC'
-        logging.info('Order: sell {} {} for {} {} at {} {}/{} in {} blocks {} ({})'.format(give_amount/give_unit, util.get_asset_name(give_id), get_amount/get_unit, util.get_asset_name(get_id), price.quantize(config.FOUR).normalize(), util.get_asset_name(get_id), util.get_asset_name(give_id), expiration, fee_text, util.short(tx['tx_hash'])))
+        logging.info('Order: sell {} {} for {} {} at {} {}/{} in {} blocks {} ({})'.format(give_amount, util.get_asset_name(give_id), get_amount, util.get_asset_name(get_id), price.quantize(config.FOUR).normalize(), util.get_asset_name(get_id), util.get_asset_name(give_id), expiration, fee_text, util.short(tx['tx_hash'])))
         db, cursor = matched_order(db, cursor, tx)
 
     return db, cursor
@@ -137,12 +133,8 @@ def matched_order (db, cursor, tx):
             forward_id, backward_id = tx1['get_id'], tx1['give_id']
             matched_order_id = tx0['tx_hash'] + tx1['tx_hash']
 
-            issuance = api.get_issuances(asset_id=forward_id)[0]
-            if issuance and issuance['divisible']: forward_unit = config.UNIT
-            else: forward_unit = 1
-            issuance = api.get_issuances(asset_id=backward_id)[0]
-            if issuance and issuance['divisible']: backward_unit = config.UNIT
-            else: backward_unit = 1
+            forward_amount = util.devise(forward_amount, forward_id)
+            backward_amount = util.devise(backward_amount, backward_id)
 
             logging.info('matched_order: {} {} for {} {} at {} {}/{} ({})'.format(forward_amount/forward_unit, util.get_asset_name(forward_id), backward_amount/backward_unit, util.get_asset_name(backward_id), price.quantize(config.FOUR).normalize(), util.get_asset_name(backward_id), util.get_asset_name(forward_id), util.short(matched_order_id)))
 
