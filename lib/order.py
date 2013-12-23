@@ -149,7 +149,7 @@ def deal (db, cursor, give_id, give_amount, get_id, get_amount,
             logging.info('Deal: {} {} for {} {} at {} {}/{} ({})'.format(forward_amount/forward_unit, util.get_asset_name(forward_id), backward_amount/backward_unit, util.get_asset_name(backward_id), price.quantize(config.FOUR).normalize(), util.get_asset_name(backward_id), util.get_asset_name(forward_id), util.short(deal_id)))
 
             if 0 in (give_id, get_id):
-                validity = 'Valid: waiting for bitcoins'
+                validity = 'Valid: awaiting BTC payment'
             else:
                 validity = 'Valid'
                 # Credit.

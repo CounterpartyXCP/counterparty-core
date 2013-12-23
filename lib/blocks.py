@@ -58,7 +58,7 @@ def parse_block (db, cursor, block_index):
                               SET supported=? \
                               WHERE tx_hash=?''',
                            ('False', tx['tx_hash']))
-            logging.warning('Unsupported transaction. Message type: {}. Transaction hash: {}'.format(message_type_id, tx['tx_hash']))
+            logging.warning('Unsupported: message type {}; transaction hash {}'.format(message_type_id, tx['tx_hash']))
         db.commit()
 
     # TODO: Is it a problem that this comes after the parsing?! (inclusive vs. exclusive)
@@ -89,6 +89,13 @@ def initialise(db, cursor):
     # Purge database of blocks, transactions from before BLOCK_FIRST.
     cursor.execute('''DELETE FROM blocks WHERE block_index<?''', (config.BLOCK_FIRST,))
     cursor.execute('''DELETE FROM transactions WHERE block_index<?''', (config.BLOCK_FIRST,))
+
+    cursor.execute('''DROP TABLE IF EXISTS balances''')
+    cursor.execute('''CREATE TABLE balances(
+                        address TEXT,
+                        asset_id INTEGER,
+                        amount INTEGER)
+                   ''')
 
     cursor.execute('''DROP TABLE IF EXISTS sends''')
     cursor.execute('''CREATE TABLE sends(
@@ -248,13 +255,6 @@ def initialise(db, cursor):
                         burned INTEGER,
                         earned INTEGER,
                         validity TEXT)
-                   ''')
-
-    cursor.execute('''DROP TABLE IF EXISTS balances''')
-    cursor.execute('''CREATE TABLE balances(
-                        address TEXT,
-                        asset_id INTEGER,
-                        amount INTEGER)
                    ''')
 
 

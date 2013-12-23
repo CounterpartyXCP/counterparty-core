@@ -17,12 +17,12 @@ def create (source, amount_per_share, asset_id):
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
 
-    cursor, total_shares = util.total_shares(cursor, asset_id)
+    cursor, issuances = util.get_issuances(cursor, validity='Valid', asset_id=asset_id)
+    total_shares = sum([issuance['amount'] for issuance in issuances])
     amount = amount_per_share * total_shares
     cursor, balance = util.balance(cursor, source, 1)
     if not balance or balance < amount:
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
-    cursor, issuances = util.get_issuances(cursor, asset_id)
     if not issuances:
         raise exceptions.DividendError('No such asset: {}.'.format(asset_id))
     elif issuance[0]['divisible'] == True:
@@ -44,7 +44,8 @@ def parse (db, cursor, tx, message):
         validity = 'Invalid: could not unpack'
 
     # Debit.
-    cursor, total_shares = util.total_shares(cursor, asset_id)
+    cursor, issuances = util.get_issuances(cursor, validity='Valid', asset_id=asset_id)
+    total_shares = sum([issuance['amount'] for issuance in issuances])
     amount = amount_per_share * total_shares
     if validity == 'Valid':
         db, cursor, validity = util.debit(db, cursor, tx['source'], 1, amount)

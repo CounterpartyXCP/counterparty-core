@@ -275,7 +275,7 @@ if __name__ == '__main__':
             os.system('cls' if os.name=='nt' else 'clear')
 
             # Open orders.
-            cursor, orders = util.get_orders(cursor, show_invalid=False, show_expired=False, show_empty=False)
+            cursor, orders = util.get_orders(cursor, validity='Valid', show_expired=False, show_empty=False)
             orders_table = PrettyTable(['Give Remaining', 'Get Remaining', 'Price', 'Fee', 'Time Left', 'Tx Hash'])
             for order in orders:
                 cursor, order = format_order(cursor, order)
@@ -286,7 +286,7 @@ if __name__ == '__main__':
             print('\n')
 
             # Open bets.
-            cursor, bets = util.get_bets(cursor, show_invalid=False, show_expired=False, show_empty=False)
+            cursor, bets = util.get_bets(cursor, validity='Valid', show_expired=False, show_empty=False)
             bets_table = PrettyTable(['Bet Type', 'Feed Address', 'Threshold', 'Leverage', 'Wager Remaining', 'Counterwager Remaining', 'Odds', 'Time Left', 'Tx Hash'])
             for bet in bets:
                 cursor, bet = format_bet(cursor, bet)
@@ -298,7 +298,8 @@ if __name__ == '__main__':
             print('\n')
 
             # Deals waiting for BTC payments from you.
-            cursor, btcpays = util.get_deals(cursor, show_completed=False, show_not_mine=False, show_expired=False)
+            my_addresses  = [ element['address'] for element in bitcoin.rpc('listreceivedbyaddress', [0,True])['result'] ]
+            cursor, btcpays = util.get_deals(cursor, validity='Valid: awaiting BTC payment', addresses=my_addresses, show_expired=False)
             btcpays_table = PrettyTable(['Deal ID', 'Time Left'])
             for deal in btcpays:
                 cursor, deal = format_deal(cursor, deal)

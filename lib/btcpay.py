@@ -68,7 +68,7 @@ def parse (db, cursor, tx, message):
             db, cursor = util.credit(db, cursor, tx['source'], deal['forward_id'], deal['forward_amount'])
 
     deal_id = tx0_hash + tx1_hash
-    logging.info('Bitcoin payment for deal: {} ({})'.format(util.short(deal_id), util.short(tx['tx_hash'])))
+    logging.info('BTC payment for deal: {} ({})'.format(util.short(deal_id), util.short(tx['tx_hash'])))
 
     return db, cursor
 
