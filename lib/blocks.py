@@ -153,7 +153,7 @@ def initialise(db, cursor):
                         block_index INTEGER,
                         source TEXT,
                         amount INTEGER,
-                        deal_id TEXT,
+                        order_match_id TEXT,
                         validity TEXT)
                    ''')
 

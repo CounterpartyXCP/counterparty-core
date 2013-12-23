@@ -85,28 +85,28 @@ def parse (db, cursor, tx, message):
         logging.info('Broadcast: {}'.format(infix + suffix))
 
 
-    # Handle contracts that use this feed.
-    cursor.execute('''SELECT * FROM contracts \
+    # Handle bet_matches that use this feed.
+    cursor.execute('''SELECT * FROM bet_matches \
                       WHERE (validity=? AND feed_address=?)''', ('Valid', tx['source']))
-    for contract in cursor.fetchall():
-        contract_id = contract['tx0_hash'] + contract['tx1_hash']
+    for bet_match in cursor.fetchall():
+        bet_match_id = bet_match['tx0_hash'] + bet_match['tx1_hash']
 
         # Contract for difference, with determinate settlement date.
         cfd_id_sum = util.BET_TYPE_ID['BullCFD'] + util.BET_TYPE_ID['BearCFD']
-        if contract['tx0_bet_type'] + contract['tx1_bet_type'] == cfd_id_sum:
-            leverage = D(contract['leverage']) / 5040
-            initial_value = contract['initial_value']
+        if bet_match['tx0_bet_type'] + bet_match['tx1_bet_type'] == cfd_id_sum:
+            leverage = D(bet_match['leverage']) / 5040
+            initial_value = bet_match['initial_value']
 
-            if contract['tx0_bet_type'] == 0 and contract['tx1_bet_type'] == 1:
-                bull_address = contract['tx0_address']
-                bear_address = contract['tx1_address']
-                bull_escrow = contract['forward_amount']
-                bear_escrow = contract['backward_amount']
+            if bet_match['tx0_bet_type'] == 0 and bet_match['tx1_bet_type'] == 1:
+                bull_address = bet_match['tx0_address']
+                bear_address = bet_match['tx1_address']
+                bull_escrow = bet_match['forward_amount']
+                bear_escrow = bet_match['backward_amount']
             else:
-                bull_address = contract['tx1_address']
-                bear_address = contract['tx0_address']
-                bull_escrow = contract['backward_amount']
-                bear_escrow = contract['forward_amount']
+                bull_address = bet_match['tx1_address']
+                bear_address = bet_match['tx0_address']
+                bull_escrow = bet_match['backward_amount']
+                bear_escrow = bet_match['forward_amount']
                 
             total_escrow = bull_escrow + bear_escrow
             bear_credit = bear_escrow - D(value - initial_value) * leverage * config.UNIT
@@ -116,23 +116,23 @@ def parse (db, cursor, tx, message):
             if bull_credit >= total_escrow:
                 db, cursor = util.credit(db, cursor, bull_address, 1, total_escrow)
                 validity = 'Force‐Liquidated'
-                logging.info('Contract Force‐Liquidated: {} XCP credited to the bull, and 0 XCP credited to the bear ({})'.format(total_escrow / config.UNIT, util.short(contract_id)))
+                logging.info('Contract Force‐Liquidated: {} XCP credited to the bull, and 0 XCP credited to the bear ({})'.format(total_escrow / config.UNIT, util.short(bet_match_id)))
             elif bull_credit <= 0:
                 db, cursor = util.credit(db, cursor, bear_address, 1, total_escrow)
                 validity = 'Force‐Liquidated'
-                logging.info('Contract Force‐Liquidated: 0 XCP credited to the bull, and {} XCP credited to the bear ({})'.format(total_escrow / config.UNIT, util.short(contract_id)))
+                logging.info('Contract Force‐Liquidated: 0 XCP credited to the bull, and {} XCP credited to the bear ({})'.format(total_escrow / config.UNIT, util.short(bet_match_id)))
 
             # Settle.
-            if timestamp > contract['deadline'] and validity != 'Liquidated':
+            if timestamp > bet_match['deadline'] and validity != 'Liquidated':
                 db, cursor = util.credit(db, cursor, bull_address, 1, bull_credit)
                 db, cursor = util.credit(db, cursor, bear_address, 1, bear_credit)
                 validity = 'Settled'
-                logging.info('Contract Settled: {} XCP credited to the bull, and {} XCP credited to the bear ({})'.format(bull_credit / config.UNIT, bear_credit / config.UNIT, util.short(contract_id)))
+                logging.info('Contract Settled: {} XCP credited to the bull, and {} XCP credited to the bear ({})'.format(bull_credit / config.UNIT, bear_credit / config.UNIT, util.short(bet_match_id)))
 
-            cursor.execute('''UPDATE contracts \
+            cursor.execute('''UPDATE bet_matches \
                               SET validity=? \
                               WHERE (tx0_hash=? and tx1_hash=?)''',
-                          (validity, contract['tx0_hash'], contract['tx1_hash']))
+                          (validity, bet_match['tx0_hash'], bet_match['tx1_hash']))
 
     db.commit()
 
