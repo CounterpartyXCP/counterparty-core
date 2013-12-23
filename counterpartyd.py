@@ -247,33 +247,33 @@ if __name__ == '__main__':
 
             # Open orders.
             orders = api.get_orders(validity='Valid', show_expired=False, show_empty=False)
-            orders_table = PrettyTable(['Give', 'Get', 'Price', 'Fee', 'Time Left', 'Tx Hash'])
+            table = PrettyTable(['Give', 'Get', 'Price', 'Fee', 'Time Left', 'Tx Hash'])
             for order in orders:
                 order = format_order(order)
-                orders_table.add_row(order)
+                table.add_row(order)
             print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Open Orders' + colorama.Style.RESET_ALL)
-            print(colorama.Fore.BLUE + str(orders_table) + colorama.Style.RESET_ALL)
+            print(colorama.Fore.BLUE + str(table) + colorama.Style.RESET_ALL)
             print('\n')
 
             # Open bets.
             bets = api.get_bets(validity='Valid', show_expired=False, show_empty=False)
-            bets_table = PrettyTable(['Bet Type', 'Feed Address', 'Deadline', 'Threshold', 'Leverage', 'Wager', 'Counterwager', 'Odds', 'Time Left', 'Tx Hash'])
+            table = PrettyTable(['Bet Type', 'Feed Address', 'Deadline', 'Threshold', 'Leverage', 'Wager', 'Counterwager', 'Odds', 'Time Left', 'Tx Hash'])
             for bet in bets:
                 bet = format_bet(bet)
-                bets_table.add_row(bet)
+                table.add_row(bet)
             print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Open Bets' + colorama.Style.RESET_ALL)
-            print(colorama.Fore.GREEN + str(bets_table) + colorama.Style.RESET_ALL)
+            print(colorama.Fore.GREEN + str(table) + colorama.Style.RESET_ALL)
             print('\n')
 
             # Matched orders waiting for BTC payments from you.
             my_addresses  = [ element['address'] for element in bitcoin.rpc('listreceivedbyaddress', [0,True])['result'] ]
             awaiting_btcs = api.get_order_matches(validity='Valid: awaiting BTC payment', addresses=my_addresses, show_expired=False)
-            awaiting_btc_table = PrettyTable(['Matched Order ID', 'Time Left'])
+            table = PrettyTable(['Matched Order ID', 'Time Left'])
             for order_match in awaiting_btcs:
                 order_match = format_order_match(order_match)
-                awaiting_btc_table.add_row(order_match)
+                table.add_row(order_match)
             print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Order Matches Awaiting BTC Payment' + colorama.Style.RESET_ALL)
-            print(colorama.Fore.CYAN + str(awaiting_btc_table) + colorama.Style.RESET_ALL)
+            print(colorama.Fore.CYAN + str(table) + colorama.Style.RESET_ALL)
 
             time.sleep(30)
             
@@ -287,8 +287,20 @@ if __name__ == '__main__':
             asset = util.get_asset_name(balance['asset_id'])
             amount = util.devise(balance['amount'], balance['asset_id'])
             table.add_row([asset, amount])
-        print(table)
-            
+        print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Balances' + colorama.Style.RESET_ALL)
+        print(colorama.Fore.CYAN + str(table) + colorama.Style.RESET_ALL)
+        print('\n')
+ 
+        # Sends.
+        sends = history['sends']
+        table = PrettyTable(['Amount', 'Asset', 'Source', 'Destination', 'Tx Hash'])
+        for send in sends:
+            amount = util.devise(send['amount'], send['asset_id'])
+            asset = util.get_asset_name(send['asset_id'])
+            table.add_row([amount, asset, send['source'], send['destination'], util.short(send['tx_hash'])])
+        print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Sends' + colorama.Style.RESET_ALL)
+        print(colorama.Fore.YELLOW + str(table) + colorama.Style.RESET_ALL)
+        print('\n')
 
     elif args.action == 'help':
         parser.print_help()
