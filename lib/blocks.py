@@ -285,7 +285,8 @@ def get_tx_info (tx):
     source_list = []
     for vin in tx['vin']:                                               # Loop through input transactions.
         if 'coinbase' in vin: return None, None, None, None, None
-        vin_tx = bitcoin.rpc('getrawtransaction', [vin['txid'], 1])['result']   # Get the full transaction data for this input transaction.
+        vin_tx = bitcoin.config.session.rpc('getrawtransaction', [vin['txid'], 1])['result']   # Get the full transaction data for this input transaction.
+        # TODO: Get in input addresses by Base58 encoding outputs scriptsigs.
         vout = vin_tx['vout'][vin['vout']]
         fee += D(vout['value']) * config.UNIT
         source_list.append(vout['scriptPubKey']['addresses'][0])        # Assume that the output was not not multi‐sig.
@@ -299,7 +300,7 @@ def get_tx_info (tx):
     for vout in tx['vout']:
         if 'addresses' in vout['scriptPubKey']:
             address = vout['scriptPubKey']['addresses'][0]
-            if bitcoin.rpc('validateaddress', [address])['result']['isvalid']:
+            if bitcoin.config.session.rpc('validateaddress', [address])['result']['isvalid']:
                 destination, btc_amount = address, round(D(vout['value']) * config.UNIT)
                 break
 
@@ -361,10 +362,10 @@ def follow ():
             pass
 
         # Get block.
-        block_count = bitcoin.rpc('getblockcount', [])['result']
+        block_count = bitcoin.config.session.rpc('getblockcount', [])['result']
         while block_index <= block_count:
-            block_hash = bitcoin.rpc('getblockhash', [block_index])['result']
-            block = bitcoin.rpc('getblock', [block_hash])['result']
+            block_hash = bitcoin.config.session.rpc('getblockhash', [block_index])['result']
+            block = bitcoin.config.session.rpc('getblock', [block_hash])['result']
             block_time = block['time']
             tx_hash_list = block['tx']
 
@@ -376,7 +377,7 @@ def follow ():
                     tx_index += 1
                     continue
                 # Get the important details about each transaction.
-                tx = bitcoin.rpc('getrawtransaction', [tx_hash, 1])['result']
+                tx = bitcoin.config.session.rpc('getrawtransaction', [tx_hash, 1])['result']
                 source, destination, btc_amount, fee, data = get_tx_info(tx)
                 if data and source:
                     cursor.execute('''INSERT INTO transactions(
@@ -416,11 +417,11 @@ def follow ():
             db, cursor = parse_block(db, cursor, block_index)
 
             # Increment block index.
-            block_count = bitcoin.rpc('getblockcount', [])['result'] # Get block count.
+            block_count = bitcoin.config.session.rpc('getblockcount', [])['result'] # Get block count.
             block_index +=1
 
         while block_index > block_count: # DUPE
-            block_count = bitcoin.rpc('getblockcount', [])['result']
+            block_count = bitcoin.config.session.rpc('getblockcount', [])['result']
             time.sleep(20)
 
     cursor.close()
