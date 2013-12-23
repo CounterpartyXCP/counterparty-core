@@ -5,28 +5,43 @@ import json
 
 from lib import (config, util, bitcoin)
 
-db = sqlite3.connect(config.DATABASE)
-db.row_factory = sqlite3.Row
-cursor = db.cursor()
-
 def get_balances (address=None, asset_id=None):
+    db = sqlite3.connect(config.DATABASE)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
+
     cursor.execute('''SELECT * FROM balances''')
+    balances = []
     for balance in cursor.fetchall():
         if address and balance['address'] != address: continue
         if asset_id and balance['asset_id'] != asset_id: continue
-        yield dict(balance)
+        balances.append(dict(balance))
+    cursor.close()
+    return balances
 
 def get_sends (validity=None, source=None, destination=None):
+    db = sqlite3.connect(config.DATABASE)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
+
     cursor.execute('''SELECT * FROM sends''')
+    sends = []
     for send in cursor.fetchall():
         if validity and send['Validity'] != validity: continue
         if source and send['source'] != source: continue
         if destination and send['destination'] != destination: continue
-        yield dict(send)
+        sends.append(dict(send))
+    cursor.close()
+    return(sends)
 
 def get_orders (validity=None, address=None, show_empty=True, show_expired=True):
+    db = sqlite3.connect(config.DATABASE)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
+
     cursor.execute('''SELECT * FROM orders ORDER BY price ASC, tx_index''')
     block_count = bitcoin.rpc('getblockcount', [])['result']
+    orders = []
     for order in cursor.fetchall():
         if validity and order['Validity'] != validity: continue
         if not show_empty and not order['give_remaining']: continue
@@ -38,77 +53,128 @@ def get_orders (validity=None, address=None, show_empty=True, show_expired=True)
                                     order['get_id']) or time_left > 1):
             continue
 
-        yield dict(order)
+        orders.append(dict(order))
+    cursor.close()
+    return orders
 
-def get_matched_orders (validity=None, addresses=[], show_expired=True):
-    cursor.execute('''SELECT * FROM matched_orders ORDER BY tx1_index''')
-    for matched_order in cursor.fetchall():
-        if validity and matched_order['validity'] != validity: continue
+def get_order_matches (validity=None, addresses=[], show_expired=True):
+    db = sqlite3.connect(config.DATABASE)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
+
+    cursor.execute('''SELECT * FROM order_matches ORDER BY tx1_index''')
+    order_matches = []
+    for order_match in cursor.fetchall():
+        if validity and order_match['validity'] != validity: continue
 
         if not show_expired:
-            matched_order_time_left = util.get_matched_order_time_left(matched_order)
-            if matched_order_time_left <= 0: continue
+            order_match_time_left = util.get_order_match_time_left(order_match)
+            if order_match_time_left <= 0: continue
 
-        if addresses and not ((matched_order['tx0_address'] in addresses and
-                               not matched_order['forward_id']) or
-                              (matched_order['tx1_address'] in addresses and
-                               not matched_order['backward_id'])):
+        if addresses and not ((order_match['tx0_address'] in addresses and
+                               not order_match['forward_id']) or
+                              (order_match['tx1_address'] in addresses and
+                               not order_match['backward_id'])):
             continue
 
-        yield dict(matched_order)
+        order_matches.append(dict(order_match))
+    cursor.close()
+    return order_matches
 
 def get_btcpays (validity=None):
+    db = sqlite3.connect(config.DATABASE)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
+
     cursor.execute('''SELECT * FROM btcpays''')
+    btcpays = []
     for btcpay in cursor.fetchall():
         if validity and btcpay['Validity'] != validity: continue
-        yield dict(btcpay)
+        btcpays.append(dict(btcpay))
+    cursor.close()
+    return btcpays
 
 def get_issuances (validity=None, asset_id=None, issuer=None):
+    db = sqlite3.connect(config.DATABASE)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
+
     cursor.execute('''SELECT * FROM issuances \
                       ORDER BY tx_index ASC''')
+    issuances = []
     for issuance in cursor.fetchall():
         if validity and issuance['Validity'] != validity: continue
         if asset_id and issuance['asset_id'] != asset_id: continue
         if issuer and issuance['issuer'] != issuer: continue
-        yield dict(issuance)
+        issuances.append(dict(issuance))
+    cursor.close()
+    return issuances
 
 def get_bets (validity=None, address=None, show_empty=True, show_expired=True):
+    db = sqlite3.connect(config.DATABASE)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
+
     cursor.execute('''SELECT * FROM bets ORDER BY odds DESC, tx_index''')
     block_count = bitcoin.rpc('getblockcount', [])['result']
+    bets = []
     for bet in cursor.fetchall():
         if validity and bet['Validity'] != validity: continue
         if not show_empty and not bet['wager_remaining']: continue
         if address and bet['source'] != address: continue
         time_left = util.get_time_left(bet)
         if not show_expired and time_left < 0: continue
-        yield dict(bet)
+        bets.append(dict(bet))
+    cursor.close()
+    return bets
 
-def get_matched_bets (validity=None, addresses=None, show_expired=True):
-    cursor.execute('''SELECT * FROM matched_bets ORDER BY tx1_index''')
-    for matched_bet in cursor.fetchall():
-        if validity and matched_bet['validity'] != validity: continue
+def get_bet_matches (validity=None, addresses=None, show_expired=True):
+    db = sqlite3.connect(config.DATABASE)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
+
+    cursor.execute('''SELECT * FROM bet_matches ORDER BY tx1_index''')
+    bet_matches = []
+    for bet_match in cursor.fetchall():
+        if validity and bet_match['validity'] != validity: continue
         if not show_expired:
-            matched_bet_time_left = get_matched_bet_time_left(matched_bet)
-            if matched_bet_time_left <= 0: continue
-        if addresses and not (matched_bet['tx0_address'] in addresses or
-                              matched_bet['tx1_address'] in addresses):
+            bet_match_time_left = get_bet_match_time_left(bet_match)
+            if bet_match_time_left <= 0: continue
+        if addresses and not (bet_match['tx0_address'] in addresses or
+                              bet_match['tx1_address'] in addresses):
             continue
-        yield dict(matched_bet)
+        bet_matches.append(dict(bet_match))
+    cursor.close()
+    return bet_matches
 
 def get_dividends (validity=None, address=None, asset_id=None):
+    db = sqlite3.connect(config.DATABASE)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
+
     cursor.execute('''SELECT * FROM dividends''')
+    dividends = []
     for dividend in cursor.fetchall():
         if validity and dividend['Validity'] != validity: continue
         if address and dividend['source'] != address: continue
         if asset_id and dividend['asset_id'] != asset_id: continue
-        yield dict(dividend)
+        dividends.append(dict(dividend))
+    cursor.close()
+    return dividends
 
 def get_burns (validity=True, address=None):
+    db = sqlite3.connect(config.DATABASE)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
+
     cursor.execute('''SELECT * FROM burns''')
+    burns = []
     for burn in cursor.fetchall():
         if validity and burn['Validity'] != validity: continue
         if address and burn['address'] != address: continue
-        yield dict(burn)
+        burns.append(dict(burn))
+    cursor.close()
+    return burns
 
 
 def history (address):
@@ -116,16 +182,16 @@ def history (address):
         raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
                                              address)
     history = {}
-    history['balances'] = [balance for balance in get_balances(address=address)]
-    history['sends'] = [send for send in get_sends(validity='Valid', source=address)]
-    history['orders'] = [order for order in get_orders(validity='Valid', address=address)]
-    history['matched_orders'] = [matched_order for matched_order in get_matched_orders(validity='Valid', addresses=[address])]
-    history['btcpays'] = [btcpay for btcpay in get_btcpays(validity='Valid')]
-    history['issuances'] = [issuance for issuance in get_issuances(validity='Valid', issuer=address)]
-    history['bets'] = [bet for bet in get_bets(validity='Valid', address=address)]
-    history['matched_bets'] = [matched_bet for matched_bet in get_matched_bets(validity='Valid', addresses=[address])]
-    history['dividends'] = [dividend for dividend in get_dividends(validity='Valid', address=address)]
-    history['burns'] = [burn for burn in get_burns(validity='Valid', address=address)]
+    history['balances'] = get_balances(address=address)
+    history['sends'] = get_sends(validity='Valid', source=address)
+    history['orders'] = get_orders(validity='Valid', address=address)
+    history['order_matches'] = get_order_matches(validity='Valid', addresses=[address])
+    history['btcpays'] = get_btcpays(validity='Valid')
+    history['issuances'] = get_issuances(validity='Valid', issuer=address)
+    history['bets'] = get_bets(validity='Valid', address=address)
+    history['bet_matches'] = get_bet_matches(validity='Valid', addresses=[address])
+    history['dividends'] = get_dividends(validity='Valid', address=address)
+    history['burns'] = get_burns(validity='Valid', address=address)
     return history 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

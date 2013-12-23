@@ -6,7 +6,7 @@ import struct
 import sqlite3
 import logging
 
-from . import (util, config, exceptions, bitcoin)
+from . import (util, config, exceptions, bitcoin, api)
 
 FORMAT = '>QQ'
 ID = 50
@@ -17,7 +17,7 @@ def create (source, amount_per_share, asset_id):
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
 
-    cursor, issuances = util.get_issuances(cursor, validity='Valid', asset_id=asset_id)
+    issuances = api.get_issuances(validity='Valid', asset_id=asset_id)
     total_shares = sum([issuance['amount'] for issuance in issuances])
     amount = amount_per_share * total_shares
     cursor, balance = util.balance(cursor, source, 1)
@@ -44,7 +44,7 @@ def parse (db, cursor, tx, message):
         validity = 'Invalid: could not unpack'
 
     # Debit.
-    cursor, issuances = util.get_issuances(cursor, validity='Valid', asset_id=asset_id)
+    issuances = api.get_issuances(validity='Valid', asset_id=asset_id)
     total_shares = sum([issuance['amount'] for issuance in issuances])
     amount = amount_per_share * total_shares
     if validity == 'Valid':
@@ -52,7 +52,7 @@ def parse (db, cursor, tx, message):
 
     # Credit.
     if validity == 'Valid':
-        cursor, balances = util.get_balances(cursor, asset_id=asset_id)
+        balances = api.get_balances(asset_id=asset_id)
         for balance in balances:
             address, address_amount = balance['address'], balance['amount']
             db, cursor = util.credit(db, cursor, address, 1, address_amount * amount_per_share)

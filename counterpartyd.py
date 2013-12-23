@@ -20,7 +20,7 @@ import dateutil.parser
 from datetime import datetime
 
 from lib import (config, util, exceptions, bitcoin, blocks)
-from lib import (send, order, btcpay, issue, broadcast, bet, dividend, burn)
+from lib import (send, order, btcpay, issue, broadcast, bet, dividend, burn, api)
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
@@ -30,9 +30,9 @@ def format_order (cursor, order):
     give_remaining = D(order['give_remaining'])
     get_remaining = give_remaining * price
 
-    issuance = util.get_issuance(order['give_id'])
+    issuance = api.get_issuance(order['give_id'])[0]
     if issuance['divisible']: give_remaining /= config.UNIT
-    issuance = util.get_issuance(order['give_id'])
+    issuance = api.get_issuance(order['give_id'])[0]
     if issuance['divisible']: get_remaining /= config.UNIT
     give_name = util.get_asset_name(order['give_id'])
     get_name = util.get_asset_name(order['get_id'])
@@ -62,10 +62,10 @@ def format_bet (cursor, bet):
 
     return cursor, [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], threshold, leverage, str(wager_remaining / config.UNIT) + ' XCP', str(counterwager_remaining / config.UNIT) + ' XCP', odds.quantize(config.FOUR).normalize(), util.get_time_left(bet), util.short(bet['tx_hash'])]
 
-def format_matched_order (matched_order):
-    matched_order_id = matched_order['tx0_hash'] + matched_order['tx1_hash']
-    matched_order_time_left = util.get_matched_order_time_left(matched_order)
-    return [matched_order_id, matched_order_time_left]
+def format_order_match (order_match):
+    order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']
+    order_match_time_left = util.get_order_match_time_left(order_match)
+    return [order_match_id, order_match_time_left]
 
 if __name__ == '__main__':
     data_dir_default = appdirs.user_data_dir('Counterparty', 'Counterparty')
@@ -101,7 +101,7 @@ if __name__ == '__main__':
     parser_order.add_argument('--fee', metavar='FEE', required=True, help='either the required fee, or the provided fee, as appropriate; in BTC, to be paid to miners')
 
     parser_btcpay= subparsers.add_parser('btcpay', help='requires bitcoind')
-    parser_btcpay.add_argument('--matched_order-id', metavar='matched_order_ID', required=True, help='')
+    parser_btcpay.add_argument('--order_match-id', metavar='order_match_ID', required=True, help='')
 
     parser_issue = subparsers.add_parser('issue', help='requires bitcoind')
     parser_issue.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='')
@@ -151,7 +151,6 @@ if __name__ == '__main__':
 
     if not args.database_file: config.DATABASE = data_dir_default + '/counterparty.' + str(config.DB_VERSION) + '.db'
     else: config.DATABASE = args.database_file
-    from lib import api # HACK
 
     if not args.log_file: config.LOG = config.data_dir + '/counterparty.log'
 
@@ -170,12 +169,12 @@ if __name__ == '__main__':
 
         asset_id = util.get_asset_id(args.asset)
 
-        db = sqlite3.connect(DATABASE)
+        db = sqlite3.connect(config.DATABASE)
         db.row_factory = sqlite3.Row
         cursor = db.cursor()
-        issuance = util.get_issuance(asset_id)
+        issuance = api.get_issuances(asset_id)[0]
         cursor.close()
-        if issuance['divisible']: quantity = D(args.quantity) * config.UNIT
+        if issuances['divisible']: quantity = D(args.quantity) * config.UNIT
         else: quantity = args.quantity
 
         json_print(send.create(args.source, args.destination, round(quantity), 
@@ -198,15 +197,15 @@ if __name__ == '__main__':
             assert fee_required >= config.MIN_FEE
             fee_provided = config.MIN_FEE
 
-        db = sqlite3.connect(DATABASE)
+        db = sqlite3.connect(config.DATABASE)
         db.row_factory = sqlite3.Row
         cursor = db.cursor()
-        issuance = util.get_issuance(give_id)
+        issuance = api.get_issuances(give_id)[0]
         if issuance['divisible']:
             give_quantity = D(args.give_quantity) * config.UNIT
         else:
             give_quantity = args.give_quantity
-        issuance = util.get_issuance(get_id)
+        issuance = api.get_issuances(get_id)[0]
         if issuance['divisible']:
             get_quantity = D(args.get_quantity) * config.UNIT
         else:
@@ -218,7 +217,7 @@ if __name__ == '__main__':
                                 args.expiration, fee_required, fee_provided))
 
     elif args.action == 'btcpay':
-        json_print(btcpay.create(args.matched_order_id))
+        json_print(btcpay.create(args.order_match_id))
 
     elif args.action == 'issue':
         bitcoin.bitcoind_check()
@@ -267,7 +266,7 @@ if __name__ == '__main__':
         json_print(burn.create(args.source, round(D(args.quantity) * config.UNIT)))
 
     elif args.action == 'watch':
-        db = sqlite3.connect(DATABASE)
+        db = sqlite3.connect(config.DATABASE)
         db.row_factory = sqlite3.Row
         cursor = db.cursor()
 
@@ -296,12 +295,12 @@ if __name__ == '__main__':
 
             # Matched orders waiting for BTC payments from you.
             my_addresses  = [ element['address'] for element in bitcoin.rpc('listreceivedbyaddress', [0,True])['result'] ]
-            awaiting_btcs = api.get_matched_orders(validity='Valid: awaiting BTC payment', addresses=my_addresses, show_expired=False)
+            awaiting_btcs = api.get_order_matches(validity='Valid: awaiting BTC payment', addresses=my_addresses, show_expired=False)
             awaiting_btc_table = PrettyTable(['Matched Order ID', 'Time Left'])
-            for matched_order in awaiting_btcs:
-                matched_order = format_matched_order(matched_order)
-                awaiting_btc_table.add_row(matched_order)
-            print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Matched Orders Awaiting BTC Payment' + colorama.Style.RESET_ALL)
+            for order_match in awaiting_btcs:
+                order_match = format_order_match(order_match)
+                awaiting_btc_table.add_row(order_match)
+            print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Order Matches Awaiting BTC Payment' + colorama.Style.RESET_ALL)
             print(colorama.Fore.CYAN + str(awaiting_btc_table) + colorama.Style.RESET_ALL)
 
             time.sleep(30)

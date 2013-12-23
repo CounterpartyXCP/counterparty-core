@@ -26,14 +26,18 @@ def short (string):
 def isodt (epoch_time):
     return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
 
-def get_time_left (order):
+def get_time_left (unmatched):
     """order or bet"""
     # TODO: Inclusive/exclusive expiration?
     block_count = bitcoin.rpc('getblockcount', [])['result']
-    return order['block_index'] + order['expiration'] - block_count
-def get_matched_order_time_left (matched_order):
+    return unmatched['block_index'] + unmatched['expiration'] - block_count
+def get_order_match_time_left (matched):
+    """order_match or bet_match"""
+    # TODO: Inclusive/exclusive expiration?
     block_count = bitcoin.rpc('getblockcount', [])['result']
-    return matched_order['expiration_date'] - block_count   # TODO: Ugly
+    tx0_time_left = matched['tx0_block_index'] + matched['tx0_expiration'] - block_count
+    tx1_time_left = matched['tx1_block_index'] + matched['tx1_expiration'] - block_count
+    return min(tx0_time_left, tx1_time_left)
 
 def get_asset_id (asset):
     """Always returns ID"""
@@ -124,17 +128,5 @@ def last_value_of_feed (cursor, feed_address):
                       WHERE (source=? AND validity=?) \
                       ORDER BY tx_index DESC''', (feed_address, 'Valid'))
     return cursor, cursor.fetchone()['value']
-
-
-# TODO: TEMP
-def get_balances(cursor, asset_id, address=None, validity=None):
-    from lib import api
-    return cursor, [balance for balance in api.get_balances(address, asset_id)]
-def get_issuances(cursor, asset_id, validity=None):
-    from lib import api
-    return cursor, [issuance for issuance in api.get_issuances(validity, asset_id)]
-def get_burns(cursor, address=None, validity=None):
-    from lib import api
-    return cursor, [burn for burn in api.get_burns(validity, address)]
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

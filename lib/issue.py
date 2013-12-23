@@ -4,7 +4,7 @@ import struct
 import sqlite3
 import logging
 
-from . import (config, util, exceptions, bitcoin)
+from . import (config, util, exceptions, bitcoin, api)
 
 FORMAT = '>QQ?'
 ID = 20
@@ -16,7 +16,7 @@ def create (source, asset_id, amount, divisible):
     cursor = db.cursor()
 
     # Handle potential re‐issuances.
-    cursor, issuances = util.get_issuances(cursor, asset_id)
+    issuances = api.get_issuances(validity='Valid', asset_id=asset_id)
     if issuances:
         if issuances[0]['issuer'] != source:
             raise exceptions.IssuanceError('Asset exists and was not issued by this address.')
@@ -40,7 +40,7 @@ def parse (db, cursor, tx, message):
         validity = 'Invalid: could not unpack'
 
     # If re‐issuance, check for compatability in divisibility, issuer.
-    cursor, issuances = util.get_issuance(cursor, asset_id)
+    issuances = api.get_issuance(validity='Valid', asset_id=asset_id)
     if issuances:
         if issuances[0]['issuer'] != tx['source']:
             validity = 'Invalid: that asset already exists and was not issued by this address'

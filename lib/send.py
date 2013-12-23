@@ -6,7 +6,7 @@ import struct
 import sqlite3
 import logging
 
-from . import (util, config, exceptions, bitcoin)
+from . import (util, config, exceptions, bitcoin, api)
 
 FORMAT = '>QQ'
 ID = 0
@@ -70,7 +70,7 @@ def parse (db, cursor, tx, message):
                         validity)
                   )
     if validity == 'Valid':
-        cursor, issuances = util.get_issuances(cursor, asset_id)
+        issuances = api.get_issuances(validity='Valid', asset_id=asset_id)
         if issuances and issuances[0]['divisible']: amount /= config.UNIT
         logging.info('Send: {} of asset {} from {} to {} ({})'.format(amount, util.get_asset_name(asset_id), tx['source'], tx['destination'], util.short(tx['tx_hash'])))
 

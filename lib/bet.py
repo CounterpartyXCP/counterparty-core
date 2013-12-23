@@ -4,8 +4,6 @@
 Datastreams are identified by the address that publishes them, and referenced
 in transaction outputs.
 
-In matching bets, look for *at least* counterwager_amount, or whatever.
-
 For CFD leverage, 1x = 5040, 2x = 10080, etc.: 5040 is a superior highly
 composite number and a colossally abundant number, and has 1-10, 12 as factors.
 
@@ -136,16 +134,11 @@ def parse (db, cursor, tx, message):
 
     if validity == 'Valid':
         logging.info('Bet: {} on {} at {} for {} XCP against {} XCP in {} blocks, leveraged {}x  ({})'.format(util.BET_TYPE_NAME[bet_type], feed_address, util.isodt(deadline), wager_amount / config.UNIT, counterwager_amount / config.UNIT, expiration, D(leverage / 5040).quantize(config.FOUR).normalize(), util.short(tx['tx_hash'])))
-
-        db, cursor = matched_bet(db, cursor, bet_type, deadline,
-                                   wager_amount, counterwager_amount,
-                                   threshold, leverage, expiration, tx)
+        db, cursor = bet_match(db, cursor, tx)
 
     return db, cursor
 
-def matched_bet (db, cursor, bet_type, deadline, 
-               wager_amount, counterwager_amount, threshold, leverage,
-               expiration, tx):
+def bet_match (db, cursor, tx):
 
     # Get bet in question.
     cursor.execute('''SELECT * FROM bets\
@@ -154,18 +147,15 @@ def matched_bet (db, cursor, bet_type, deadline,
     assert not cursor.fetchone()
 
     # Get counterbet_type.
-    if bet_type % 2: counterbet_type = bet_type - 1
-    else: counterbet_type = bet_type + 1
+    if tx1['bet_type'] % 2: counterbet_type = tx1['bet_type'] - 1
+    else: counterbet_type = tx1['bet_type'] + 1
 
     feed_address = tx1['feed_address']
     cursor.execute('''SELECT * FROM bets\
                       WHERE (feed_address=? AND block_index>=? AND validity=? AND bet_type=?) \
                       ORDER BY odds DESC, tx_index''',
-                   (feed_address, tx1['block_index'] - expiration, 'Valid', counterbet_type))
-
-    ask_odds = wager_amount / counterwager_amount
-
-    wager_remaining = wager_amount
+                   (tx1['feed_address'], tx1['block_index'] - tx1['expiration'], 'Valid', counterbet_type))
+    wager_remaining = tx1['wager_amount']
     for tx0 in cursor.fetchall():
         if not counterbet_type == tx0['bet_type']: continue
         if not tx0['leverage'] == tx1['leverage']: continue
@@ -176,7 +166,7 @@ def matched_bet (db, cursor, bet_type, deadline,
         # If the odds agree, make the trade. The found order sets the odds,
         # and they trade as much as they can.
         odds = D(tx0['wager_amount']) / D(tx0['counterwager_amount'])
-        if odds <= 1/ask_odds:  # Ugly
+        if odds <= 1 / tx1['odds']:
 
             validity = 'Valid'
 
@@ -184,13 +174,13 @@ def matched_bet (db, cursor, bet_type, deadline,
             backward_amount = round(forward_amount * odds)
 
             # When a match is made, pay XCP fee.
-            fee = get_fee_multiplier(feed_address) * backward_amount
+            fee = get_fee_multiplier(tx1['feed_address']) * backward_amount
             db, cursor, validity = util.debit(db, cursor, tx1['source'], 1, fee)
             if validity != 'Valid': continue
-            db, cursor = util.credit(db, cursor, feed_address, 1, int(fee))
+            db, cursor = util.credit(db, cursor, tx1['feed_address'], 1, int(fee))
 
-            matched_bet_id = tx0['tx_hash'] + tx1['tx_hash']
-            logging.info('matched_bet: {} for {} XCP against {} for {} XCP on {} at {}, leveraged {}x ({})'.format(util.BET_TYPE_NAME[tx0['bet_type']], forward_amount / config.UNIT, util.BET_TYPE_NAME[tx1['bet_type']], backward_amount / config.UNIT, feed_address, util.isodt(deadline), D(leverage / 5040).quantize(config.FOUR).normalize(), util.short(matched_bet_id)))
+            bet_match_id = tx0['tx_hash'] + tx1['tx_hash']
+            logging.info('bet_match: {} for {} XCP against {} for {} XCP on {} at {}, leveraged {}x ({})'.format(util.BET_TYPE_NAME[tx0['bet_type']], forward_amount / config.UNIT, util.BET_TYPE_NAME[tx1['bet_type']], backward_amount / config.UNIT, tx1['feed_address'], util.isodt(tx1['deadline']), D(tx1['leverage'] / 5040).quantize(config.FOUR).normalize(), util.short(bet_match_id)))
 
             # Debit the order.
             wager_remaining -= backward_amount
@@ -208,10 +198,10 @@ def matched_bet (db, cursor, bet_type, deadline,
                            tx1['tx_hash']))
 
             # Get last value of feed.
-            cursor, initial_value = util.last_value_of_feed(cursor, feed_address)
+            cursor, initial_value = util.last_value_of_feed(cursor, tx1['feed_address'])
 
             # Record order fulfillment.
-            cursor.execute('''INSERT into matched_bets(
+            cursor.execute('''INSERT into bet_matches(
                                 tx0_index,
                                 tx0_hash,
                                 tx0_address,
@@ -240,17 +230,17 @@ def matched_bet (db, cursor, bet_type, deadline,
                                 tx1['source'],
                                 tx0['bet_type'],
                                 tx1['bet_type'],
-                                feed_address,
+                                tx1['feed_address'],
                                 initial_value,
-                                deadline,
-                                threshold,
-                                leverage,
+                                tx1['deadline'],
+                                tx1['threshold'],
+                                tx1['leverage'],
                                 int(forward_amount),
                                 int(backward_amount),
                                 tx0['block_index'],
                                 tx1['block_index'],
                                 tx0['expiration'],
-                                expiration,
+                                tx1['expiration'],
                                 validity)
                           )
             db.commit()

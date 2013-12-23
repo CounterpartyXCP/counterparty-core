@@ -127,8 +127,8 @@ def initialise(db, cursor):
                         validity TEXT)
                    ''')
 
-    cursor.execute('''DROP TABLE IF EXISTS matched_orders''')
-    cursor.execute('''CREATE TABLE matched_orders(
+    cursor.execute('''DROP TABLE IF EXISTS order_matches''')
+    cursor.execute('''CREATE TABLE order_matches(
                         tx0_index INTEGER,
                         tx0_hash TEXT,
                         tx0_address TEXT,
@@ -143,7 +143,6 @@ def initialise(db, cursor):
                         tx1_block_index INTEGER,
                         tx0_expiration INTEGER,
                         tx1_expiration INTEGER,
-                        expiration_date INTEGER,
                         validity TEXT)
                    ''')
     # TODO: Expiration date?!?!
@@ -224,8 +223,8 @@ def initialise(db, cursor):
                         validity TEXT)
                    ''')
 
-    cursor.execute('''DROP TABLE IF EXISTS matched_bets''')
-    cursor.execute('''CREATE TABLE matched_bets(
+    cursor.execute('''DROP TABLE IF EXISTS bet_matches''')
+    cursor.execute('''CREATE TABLE bet_matches(
                         tx0_index INTEGER,
                         tx0_hash TEXT,
                         tx0_address TEXT,
