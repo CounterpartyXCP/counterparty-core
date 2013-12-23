@@ -25,29 +25,66 @@ ADDRESSVERSION = b'\x6F'        # testnet
 
 dhash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
 
-def rpc (method, params):
-    headers = {'content-type': 'application/json'}
-    payload = {
-        "method": method,
-        "params": params,
-        "jsonrpc": "2.0",
-        "id": 0,
-    }
-    try:
-        response = requests.post(config.RPC, data=json.dumps(payload), headers=headers)
-    except requests.exceptions.ConnectionError:
-        raise exceptions.BitcoindRPCError('Cannot communicate with bitcoind.')
-    if response.status_code == 401:
-        raise exceptions.BitcoindRPCError('Bitcoind RPC: unauthorized')
-    return response.json()
+class RPC:
+    def __init__ (self, host):
+        # TODO: replace bitcoind.check with this
+        self.session = requests.Session()
+        self.host = host
+        
+    def rpc (self, method, params):
+        headers = {'content-type': 'application/json'}
+        payload = {
+            "method": method,
+            "params": params,
+            "jsonrpc": "2.0",
+            "id": 0,
+        }
+        try:
+            response = self.session.post(self.host, data=json.dumps(payload), headers=headers)
+        except requests.exceptions.ConnectionError:
+            raise exceptions.BitcoindRPCError('Cannot communicate with bitcoind.')
+        if response.status_code == 401:
+            raise exceptions.BitcoindRPCError('Bitcoind RPC: unauthorized')
+        return response.json()
 
 def bitcoind_check ():
     """Check blocktime of last block to see if `bitcoind` is running behind."""
-    block_count = rpc('getblockcount', [])['result']
-    block_hash = rpc('getblockhash', [block_count])['result']
-    block = rpc('getblock', [block_hash])['result']
+    block_count = config.session.rpc('getblockcount', [])['result']
+    block_hash = config.session.rpc('getblockhash', [block_count])['result']
+    block = config.session.rpc('getblock', [block_hash])['result']
     if block['time'] < (time.time() - 60 * 60 * 2):
         logger.warning('bitcoind is running behind.')
+
+def base58_check_encode(b):
+    h = hashlib.sha256(b).digest()
+
+    ripe160 = hashlib.new('ripemd160')
+    ripe160.update(h)
+    d = ripe160.digest()
+
+    # d = b'\x00' + d   # mainnet
+    d = b'\x6f' + d     # testnet
+
+    address_hex = d + dhash(d)[:4]
+
+    # Convert big‐endian bytes to integer
+    n = int('0x0' + binascii.hexlify(address_hex).decode('utf8'), 16)
+
+    # Divide that integer into bas58
+    res = []
+    while n > 0:
+        n, r = divmod (n, 58)
+        res.append(b58_digits[r])
+    res = ''.join(res[::-1])
+
+    # Encode leading zeros as base58 zeros
+    czero = 0
+    pad = 0
+    for c in b:
+        if c == czero: pad += 1
+        else: break
+    return b58_digits[0] * pad + res
+
 
 def base58_decode (s, version):
     # Convert the string to an integer
@@ -160,7 +197,7 @@ def serialize (inputs, outputs, data):
 
 def get_inputs (source, amount, fee):
     """List unspent inputs for source."""
-    listunspent = rpc('listunspent', [-1])['result']  # TODO: Reconsider this. (Will this only allow sending unconfirmed *change*?!)
+    listunspent = config.session.rpc('listunspent', [-1])['result']  # TODO: Reconsider this. (Will this only allow sending unconfirmed *change*?!)
     unspent = [coin for coin in listunspent if coin['address'] == source]
     inputs, total = [], 0
     for coin in unspent:                                                      
@@ -174,12 +211,12 @@ def transaction (source, destination, btc_amount, fee, data):
     # Validate addresses.
     for address in (source, destination):
         if address:
-            if not rpc('validateaddress', [address])['result']['isvalid']:
+            if not config.session.rpc('validateaddress', [address])['result']['isvalid']:
                 raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
                                           address)
 
     # Check that the source is in wallet.
-    if not rpc('validateaddress', [source])['result']['ismine']:
+    if not config.session.rpc('validateaddress', [source])['result']['ismine']:
         raise exceptions.InvalidAddressError('Not one of your Bitcoin addresses:', source)
 
     # Check that the destination output isn’t a dust output.
@@ -212,12 +249,12 @@ def transaction (source, destination, btc_amount, fee, data):
         sys.exit(1)
 
     # Sign transaction.
-    response = rpc('signrawtransaction', [transaction_hex])
+    response = config.session.rpc('signrawtransaction', [transaction_hex])
     result = response['result']
     if result:
         if result['complete']:
             # return eligius(result['hex'])                     # mainnet HACK
-            return rpc('sendrawtransaction', [result['hex']])
+            return config.session.rpc('sendrawtransaction', [result['hex']])
     else:
         return response['error']
 

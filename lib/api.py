@@ -41,7 +41,7 @@ def get_orders (validity=None, address=None, show_empty=True, show_expired=True)
     cursor = db.cursor()
 
     cursor.execute('''SELECT * FROM orders ORDER BY price ASC, tx_index''')
-    block_count = bitcoin.rpc('getblockcount', [])['result']
+    block_count = bitcoin.config.session.rpc('getblockcount', [])['result']
     orders = []
     for order in cursor.fetchall():
         if validity and order['Validity'] != validity: continue
@@ -132,7 +132,7 @@ def get_bets (validity=None, address=None, show_empty=True, show_expired=True):
     cursor = db.cursor()
 
     cursor.execute('''SELECT * FROM bets ORDER BY odds DESC, tx_index''')
-    block_count = bitcoin.rpc('getblockcount', [])['result']
+    block_count = bitcoin.config.session.rpc('getblockcount', [])['result']
     bets = []
     for bet in cursor.fetchall():
         if validity and bet['Validity'] != validity: continue
@@ -194,7 +194,7 @@ def get_burns (validity=True, address=None):
 
 
 def get_history (address):
-    if not bitcoin.rpc('validateaddress', [address])['result']['isvalid']:
+    if not bitcoin.config.session.rpc('validateaddress', [address])['result']['isvalid']:
         raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
                                              address)
     history = {}
