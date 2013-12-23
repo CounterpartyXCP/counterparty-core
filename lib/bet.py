@@ -130,7 +130,6 @@ def parse (db, cursor, tx, message):
                         expiration,
                         validity)
                   )
-    db.commit()
 
     if validity == 'Valid':
         logging.info('Bet: {} on {} at {} for {} XCP against {} XCP in {} blocks, leveraged {}x  ({})'.format(util.BET_TYPE_NAME[bet_type], feed_address, util.isodt(deadline), wager_amount / config.UNIT, counterwager_amount / config.UNIT, expiration, D(leverage / 5040).quantize(config.FOUR).normalize(), util.short(tx['tx_hash'])))

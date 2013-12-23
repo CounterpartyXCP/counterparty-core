@@ -59,7 +59,7 @@ def parse_block (db, cursor, block_index):
                               WHERE tx_hash=?''',
                            ('False', tx['tx_hash']))
             logging.warning('Unsupported: message type {}; transaction hash {}'.format(message_type_id, tx['tx_hash']))
-        db.commit()
+    db.commit()
 
     # TODO: Is it a problem that this comes after the parsing?! (inclusive vs. exclusive)
     db, cursor = order.expire(db, cursor, block_index)
@@ -410,7 +410,6 @@ def follow ():
                                 block_hash,
                                 block_time)
                           )
-            db.commit() # Commit only at end of block.
 
             # Parse transactions in this block.
             db, cursor = parse_block(db, cursor, block_index)

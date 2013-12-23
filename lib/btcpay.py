@@ -59,7 +59,6 @@ def parse (db, cursor, tx, message):
     # BTC must be paid all at once and come from the ‘correct’ address.
     if order_match['tx0_address'] == tx['source'] and tx['btc_amount'] >= order_match['forward_amount']:
         cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Valid', tx0_hash, tx1_hash))
-        db.commit()
         if order_match['backward_id']:    # Gratuitous
             db, cursor = util.credit(db, cursor, tx['source'], order_match['backward_id'], order_match['backward_amount'])
     if order_match['tx1_address'] == tx['source'] and tx['btc_amount'] >= order_match['backward_amount']:

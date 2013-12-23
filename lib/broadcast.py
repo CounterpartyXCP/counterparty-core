@@ -134,8 +134,6 @@ def parse (db, cursor, tx, message):
                               WHERE (tx0_hash=? and tx1_hash=?)''',
                           (validity, bet_match['tx0_hash'], bet_match['tx1_hash']))
 
-    db.commit()
-
     return db, cursor
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
