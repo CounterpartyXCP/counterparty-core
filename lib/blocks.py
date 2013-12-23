@@ -268,12 +268,6 @@ def initialise(db, cursor):
                         validity TEXT)
                    ''')
 
-
-    # Initialize XCP balances. TEMP
-    for address in ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'mnkzHBHRkBWoP9aFtocDe5atxmRfSRHnjR',
-                    'mz8qzVaH8RaVp2Rq6m8D2dTiSFirhFf4th'):
-        db, cursor = util.credit(db, cursor, address, 1, 10000 * int(config.UNIT))
     db.commit()
 
     return db, cursor
@@ -286,7 +280,6 @@ def get_tx_info (tx):
     for vin in tx['vin']:                                               # Loop through input transactions.
         if 'coinbase' in vin: return None, None, None, None, None
         vin_tx = bitcoin.config.session.rpc('getrawtransaction', [vin['txid'], 1])['result']   # Get the full transaction data for this input transaction.
-        # TODO: Get in input addresses by Base58 encoding outputs scriptsigs.
         vout = vin_tx['vout'][vin['vout']]
         fee += D(vout['value']) * config.UNIT
         source_list.append(vout['scriptPubKey']['addresses'][0])        # Assume that the output was not not multi‐sig.

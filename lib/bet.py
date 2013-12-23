@@ -33,6 +33,7 @@ def get_fee_multiplier (feed_address):
                       ORDER BY tx_index desc''', (feed_address,)
                   )
     broadcast = cursor.fetchone()
+    cursor.close()
     return D(broadcast['fee_multiplier'] / 1e8)
 
 def create (source, feed_address, bet_type, deadline, wager_amount,

@@ -20,7 +20,7 @@ def create (source, quantity):
     cursor = db.cursor()
 
     # Make sure that the burned funds won’t go to waste.
-    block_count = bitcoin.rpc('getblockcount', [])['result']
+    block_count = bitcoin.config.session.rpc('getblockcount', [])['result']
     if block_count < config.BURN_START:
         raise exceptions.UselessError('The proof‐of‐burn period has not yet begun.')
     elif block_count > config.BURN_END:

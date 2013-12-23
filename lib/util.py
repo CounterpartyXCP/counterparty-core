@@ -27,12 +27,12 @@ def isodt (epoch_time):
 def get_time_left (unmatched):
     """order or bet"""
     # TODO: Inclusive/exclusive expiration?
-    block_count = bitcoin.rpc('getblockcount', [])['result']
+    block_count = bitcoin.config.session.rpc('getblockcount', [])['result']
     return unmatched['block_index'] + unmatched['expiration'] - block_count
 def get_order_match_time_left (matched):
     """order_match or bet_match"""
     # TODO: Inclusive/exclusive expiration?
-    block_count = bitcoin.rpc('getblockcount', [])['result']
+    block_count = bitcoin.config.session.rpc('getblockcount', [])['result']
     tx0_time_left = matched['tx0_block_index'] + matched['tx0_expiration'] - block_count
     tx1_time_left = matched['tx1_block_index'] + matched['tx1_expiration'] - block_count
     return min(tx0_time_left, tx1_time_left)
@@ -103,7 +103,6 @@ def good_feed (cursor, feed_address):
     return cursor, True                                     # Exists and is unlocked
 
 def devise (quantity, asset_id, precision=8):
-    # TODO: Always use this.
     from lib import api #
     import decimal
     D = decimal.Decimal
