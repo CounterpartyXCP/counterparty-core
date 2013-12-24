@@ -60,8 +60,8 @@ def parse (db, cursor, tx, message):
             balances = api.get_balances(address=tx['source'], asset_id=give_id)
             if balances and balances[0]['amount'] >= give_amount:
                 cursor, validity = util.debit(db, cursor, tx['source'], give_id, give_amount)
-        else:
-            validity = 'Invalid: insufficient funds.'
+            else:
+                validity = 'Invalid: insufficient funds.'
 
     # Add parsed transaction to message‐type–specific table.
     cursor.execute('''INSERT INTO orders(
@@ -141,10 +141,11 @@ def order_match (db, cursor, tx):
             forward_id, backward_id = tx1['get_id'], tx1['give_id']
             order_match_id = tx0['tx_hash'] + tx1['tx_hash']
 
-            forward_amount = util.devise(forward_amount, forward_id, 'output')
-            backward_amount = util.devise(backward_amount, backward_id, 'output')
+            # This can’t be gotten rid of!
+            forward_unit = util.devise(forward_amount, forward_id, 'output')
+            backward_unit = util.devise(backward_amount, backward_id, 'output')
 
-            logging.info('order_match: {} {} for {} {} at {} {}/{} ({})'.format(forward_amount/forward_unit, util.get_asset_name(forward_id), backward_amount/backward_unit, util.get_asset_name(backward_id), price.quantize(config.FOUR).normalize(), util.get_asset_name(backward_id), util.get_asset_name(forward_id), util.short(order_match_id)))
+            logging.info('order_match: {} {} for {} {} at {} {}/{} ({})'.format(forward_amount / forward_unit, util.get_asset_name(forward_id), backward_amount / backward_unit, util.get_asset_name(backward_id), price.quantize(config.FOUR).normalize(), util.get_asset_name(backward_id), util.get_asset_name(forward_id), util.short(order_match_id)))
 
             if 0 in (tx1['give_id'], tx1['get_id']):
                 validity = 'Valid: awaiting BTC payment'
