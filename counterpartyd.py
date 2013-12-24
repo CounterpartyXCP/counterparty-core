@@ -138,7 +138,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Configuration
-    config.session = bitcoin.RPC('http://' + args.rpc_user + ':' + args.rpc_password + '@' + args.rpc_connect + ':' + str(args.rpc_port))
+    config.RPC = 'http://' + args.rpc_user + ':' + args.rpc_password + '@' + args.rpc_connect + ':' + str(args.rpc_port)
 
     if not args.data_dir: config.data_dir = data_dir_default
     else: config.data_dir = args.data_dir
@@ -266,7 +266,7 @@ if __name__ == '__main__':
             print('\n')
 
             # Matched orders waiting for BTC payments from you.
-            my_addresses  = [ element['address'] for element in bitcoin.config.session.rpc('listreceivedbyaddress', [0,True])['result'] ]
+            my_addresses  = [ element['address'] for element in bitcoin.rpc('listreceivedbyaddress', [0,True])['result'] ]
             awaiting_btcs = api.get_order_matches(validity='Valid: awaiting BTC payment', addresses=my_addresses, show_expired=False)
             table = PrettyTable(['Matched Order ID', 'Time Left'])
             for order_match in awaiting_btcs:

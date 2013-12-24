@@ -275,33 +275,6 @@ def initialise(db, cursor):
     return cursor
 
 def get_tx_info (tx):
-    fee = D(0)
-
-    # Collect all possible source addresses; ignore coinbase transactions.
-    source_list = []
-    for vin in tx['vin']:                                               # Loop through input transactions.
-        if 'coinbase' in vin: return None, None, None, None, None
-        vin_tx = bitcoin.config.session.rpc('getrawtransaction', [vin['txid'], 1])['result']   # Get the full transaction data for this input transaction.
-        vout = vin_tx['vout'][vin['vout']]
-        fee += D(vout['value']) * config.UNIT
-        source_list.append(vout['scriptPubKey']['addresses'][0])        # Assume that the output was not not multi‐sig.
-
-    # Require that all possible source addresses be the same.
-    if all(x == source_list[0] for x in source_list): source = source_list[0]
-    else: source = None
-
-    # Destination is the first output with a valid address, (if it exists).
-    destination, btc_amount = None, None
-    for vout in tx['vout']:
-        if 'addresses' in vout['scriptPubKey']:
-            address = vout['scriptPubKey']['addresses'][0]
-            if bitcoin.config.session.rpc('validateaddress', [address])['result']['isvalid']:
-                destination, btc_amount = address, round(D(vout['value']) * config.UNIT)
-                break
-
-    for vout in tx['vout']:
-        fee -= D(vout['value']) * config.UNIT
-
     # Loop through outputs until you come upon OP_RETURN, then get the data.
     # NOTE: This assumes only one OP_RETURN output.
     data = None
@@ -309,6 +282,36 @@ def get_tx_info (tx):
         asm = vout['scriptPubKey']['asm'].split(' ')
         if asm[0] == 'OP_RETURN' and len(asm) == 2:
             data = binascii.unhexlify(asm[1])
+
+    # Only look for source if data were found, for speed.
+    if not data: return None, None, None, None, None
+
+    fee = D(0)
+
+    # Collect all possible source addresses; ignore coinbase transactions.
+    source_list = []
+    for vin in tx['vin']:                                               # Loop through input transactions.
+        if 'coinbase' in vin: return None, None, None, None, None
+        vin_tx = bitcoin.rpc('getrawtransaction', [vin['txid'], 1])['result']   # Get the full transaction data for this input transaction.
+        vout = vin_tx['vout'][vin['vout']]
+        fee += D(vout['value']) * config.UNIT
+        source_list.append(vout['scriptPubKey']['addresses'][0])        # Assume that the output was not not multi‐sig.
+    # Require that all possible source addresses be the same.
+    if all(x == source_list[0] for x in source_list): source = source_list[0]
+    else: source = None
+
+    # Fee is the input value minus output value.
+    for vout in tx['vout']:
+        fee -= D(vout['value']) * config.UNIT
+
+    # Destination is the first output with a valid address, (if it exists).
+    destination, btc_amount = None, None
+    for vout in tx['vout']:
+        if 'addresses' in vout['scriptPubKey']:
+            address = vout['scriptPubKey']['addresses'][0]
+            if bitcoin.rpc('validateaddress', [address])['result']['isvalid']:
+                destination, btc_amount = address, round(D(vout['value']) * config.UNIT)
+                break
 
     return source, destination, btc_amount, round(fee), data
 
@@ -357,10 +360,10 @@ def follow ():
             pass
 
         # Get block.
-        block_count = bitcoin.config.session.rpc('getblockcount', [])['result']
+        block_count = bitcoin.rpc('getblockcount', [])['result']
         while block_index <= block_count:
-            block_hash = bitcoin.config.session.rpc('getblockhash', [block_index])['result']
-            block = bitcoin.config.session.rpc('getblock', [block_hash])['result']
+            block_hash = bitcoin.rpc('getblockhash', [block_index])['result']
+            block = bitcoin.rpc('getblock', [block_hash])['result']
             block_time = block['time']
             tx_hash_list = block['tx']
 
@@ -372,9 +375,9 @@ def follow ():
                     tx_index += 1
                     continue
                 # Get the important details about each transaction.
-                tx = bitcoin.config.session.rpc('getrawtransaction', [tx_hash, 1])['result']
+                tx = bitcoin.rpc('getrawtransaction', [tx_hash, 1])['result']
                 source, destination, btc_amount, fee, data = get_tx_info(tx)
-                if data and source:
+                if source and data:
                     cursor.execute('''INSERT INTO transactions(
                                         tx_index,
                                         tx_hash,
@@ -411,11 +414,11 @@ def follow ():
             cursor = parse_block(db, cursor, block_index)
 
             # Increment block index.
-            block_count = bitcoin.config.session.rpc('getblockcount', [])['result'] # Get block count.
+            block_count = bitcoin.rpc('getblockcount', [])['result'] # Get block count.
             block_index +=1
 
         while block_index > block_count: # DUPE
-            block_count = bitcoin.config.session.rpc('getblockcount', [])['result']
+            block_count = bitcoin.rpc('getblockcount', [])['result']
             time.sleep(20)
 
     cursor.close()
