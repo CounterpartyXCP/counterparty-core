@@ -29,7 +29,7 @@ def create (source, asset_id, amount, divisible):
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount, divisible)
     db.close()
-    return bitcoin.transaction(source, None, config.DUST_SIZE, config.MIN_FEE, data)
+    return bitcoin.transaction(source, None, None, config.MIN_FEE, data)
 
 def parse (db, cursor, tx, message):
     # Ask for forgiveness…

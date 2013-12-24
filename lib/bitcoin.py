@@ -36,9 +36,9 @@ def rpc (method, params):
     try:
         response = requests.post(config.RPC, data=json.dumps(payload), headers=headers)
     except requests.exceptions.ConnectionError:
-        raise exceptions.RPCError('Cannot communicate with bitcoind.')
+        raise exceptions.BitcoinRPCError('Cannot communicate with bitcoind.')
     if response.status_code == 401:
-        raise exceptions.RPCError('Bitcoind RPC: unauthorized')
+        raise exceptions.BitcoinRPCError('Bitcoind RPC: unauthorized')
     return response.json()
 
 def bitcoind_check ():
@@ -158,19 +158,23 @@ def serialize (inputs, outputs, data):
     s += (0).to_bytes(4, byteorder='little')                # LockTime
     return s
 
-def get_inputs (source, amount, fee):
+def get_inputs (source, total_btc_out, test=False):
     """List unspent inputs for source."""
-    listunspent = rpc('listunspent', [-1])['result']  # TODO: Reconsider this. (Will this only allow sending unconfirmed *change*?!)
+    if not test:
+        listunspent = rpc('listunspent', [-1])['result']  # TODO: Reconsider this. (Will this only allow sending unconfirmed *change*?!)
+    else:
+        with open('test/listunspent.test.json', 'r') as listunspent_test_file:
+            listunspent = json.load(listunspent_test_file)
     unspent = [coin for coin in listunspent if coin['address'] == source]
-    inputs, total = [], 0
+    inputs, total_btc_in = [], 0
     for coin in unspent:                                                      
         inputs.append(coin)
-        total += int(coin['amount'] * config.UNIT)
-        if total >= amount + fee:
-            return inputs, total
+        total_btc_in += int(coin['amount'] * config.UNIT)
+        if total_btc_in >= total_btc_out:
+            return inputs, total_btc_in
     return None, None
 
-def transaction (source, destination, btc_amount, fee, data):
+def transaction (source, destination, btc_amount, fee, data, test=False):
     # Validate addresses.
     for address in (source, destination):
         if address:
@@ -183,22 +187,31 @@ def transaction (source, destination, btc_amount, fee, data):
         raise exceptions.InvalidAddressError('Not one of your Bitcoin addresses:', source)
 
     # Check that the destination output isn’t a dust output.
-    if not btc_amount >= config.DUST_SIZE:
-        raise exceptions.TXConstructionError('Destination output is below the dust threshold.')
+    if destination:
+        if not btc_amount >= config.DUST_SIZE:
+            raise exceptions.TXConstructionError('Destination output is below the dust threshold.')
+    else:
+        assert not btc_amount
+
+    # Calculate total BTC to be sent.
+    total_btc_out = fee
+    total_btc_out += config.DUST_SIZE            # For data output.
+    if destination:
+        total_btc_out += btc_amount  # For destination output.
 
     # Construct inputs.
-    inputs, total = get_inputs(source, btc_amount, fee)
+    inputs, total_btc_in = get_inputs(source, total_btc_out, test)
     if not inputs:
-        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need {} BTC.)'.format(source, btc_amount / config.UNIT))
+        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need {} BTC.)'.format(source, total_btc_out / config.UNIT))
 
-    # Construct outputs.
-    change_amount = total - fee
+    # Destination output.
     outputs = []
     if destination:
         outputs.append((destination, btc_amount))
-        change_amount -= btc_amount
-    if change_amount:
-        outputs.append((source, change_amount))
+
+    # Change output.
+    change_amount = total_btc_in - total_btc_out    # This does not check to make sure that the change output is above the dust threshold.
+    if change_amount: outputs.append((source, change_amount))
 
     # Serialise inputs and outputs.
     transaction = serialize(inputs, outputs, data)

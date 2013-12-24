@@ -3,7 +3,7 @@
 import sqlite3
 import json
 
-from lib import (config, util, bitcoin)
+from lib import (config, exceptions, util, bitcoin)
 
 def get_balances (address=None, asset_id=None):
     """This should never be used to check Bitcoin balances."""

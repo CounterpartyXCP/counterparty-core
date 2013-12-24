@@ -156,6 +156,8 @@ Payments of bitcoins to close deals waiting for bitcoins are done with the
 ``btcpay`` command, which needs only the ID of the deal in question to make the
 necessary payment.
 
+The ``deadline`` should be after the expiration.
+
 
 Issue
 ^^^^^

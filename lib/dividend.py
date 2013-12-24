@@ -33,7 +33,7 @@ def create (source, amount_per_share, asset_id):
     print('Total amount to be distributed in dividends:', amount / config.UNIT)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, amount_per_share, asset_id)
-    return bitcoin.transaction(source, None, config.DUST_SIZE, config.MIN_FEE, data)
+    return bitcoin.transaction(source, None, None, config.MIN_FEE, data)
 
 def parse (db, cursor, tx, message):
     # Ask for forgiveness…

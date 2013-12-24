@@ -34,7 +34,7 @@ def create (source, quantity):
         
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, 'ProofOfBurn'.encode('utf-8'))
-    return bitcoin.transaction(source, None, config.DUST_SIZE, int(quantity), data)
+    return bitcoin.transaction(source, None, None, int(quantity), data)
 
 def parse (db, cursor, tx, message):
     # Ask for forgiveness…
@@ -90,6 +90,7 @@ def parse (db, cursor, tx, message):
                         earned,
                         validity)
                   )
+    
     if validity == 'Valid':
         logging.info('Burn: {} BTC burned; {} XCP earned ({})'.format(burned / config.UNIT, earned / config.UNIT, util.short(tx['tx_hash'])))
 

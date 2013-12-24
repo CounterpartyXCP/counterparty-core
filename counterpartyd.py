@@ -27,8 +27,8 @@ json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 def format_order (order):
     price = D(order['get_amount']) / D(order['give_amount'])
 
-    give_remaining = util.devise(D(order['give_remaining']), order['give_id'], 'input')
-    get_remaining = util.devise(give_remaining * price, order['get_id'], 'input')
+    give_remaining = util.devise(D(order['give_remaining']), order['give_id'], 'output')
+    get_remaining = util.devise(give_remaining * price, order['get_id'], 'ouput')
     give_name = util.get_asset_name(order['give_id'])
     get_name = util.get_asset_name(order['get_id'])
     give = str(give_remaining) + ' ' + give_name
@@ -96,7 +96,7 @@ if __name__ == '__main__':
     parser_order.add_argument('--fee', metavar='FEE', required=True, help='either the required fee, or the provided fee, as appropriate; in BTC, to be paid to miners')
 
     parser_btcpay= subparsers.add_parser('btcpay', help='requires bitcoind')
-    parser_btcpay.add_argument('--order_match-id', metavar='order_match_ID', required=True, help='')
+    parser_btcpay.add_argument('--order-match-id', metavar='ORDER_MATCH_ID', required=True, help='')
 
     parser_issuance = subparsers.add_parser('issuance', help='requires bitcoind')
     parser_issuance.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='')
@@ -240,8 +240,8 @@ if __name__ == '__main__':
 
     elif args.action == 'burn':
         bitcoin.bitcoind_check()
-
-        json_print(burn.create(args.source, round(D(args.quantity) * config.UNIT)))
+        unsigned_tx_hex = burn.create(args.source, round(D(args.quantity) * config.UNIT))
+        json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'watch':
         while True:
@@ -287,7 +287,7 @@ if __name__ == '__main__':
         table = PrettyTable(['Asset', 'Amount'])
         for balance in balances:
             asset = util.get_asset_name(balance['asset_id'])
-            amount = util.devise(balance['amount'], balance['asset_id'], 'input')
+            amount = util.devise(balance['amount'], balance['asset_id'], 'output')
             table.add_row([asset, amount])
         print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Balances' + colorama.Style.RESET_ALL)
         print(colorama.Fore.CYAN + str(table) + colorama.Style.RESET_ALL)
@@ -297,7 +297,7 @@ if __name__ == '__main__':
         sends = history['sends']
         table = PrettyTable(['Amount', 'Asset', 'Source', 'Destination', 'Tx Hash'])
         for send in sends:
-            amount = util.devise(send['amount'], send['asset_id'], 'input')
+            amount = util.devise(send['amount'], send['asset_id'], 'output')
             asset = util.get_asset_name(send['asset_id'])
             table.add_row([amount, asset, send['source'], send['destination'], util.short(send['tx_hash'])])
         print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Sends' + colorama.Style.RESET_ALL)

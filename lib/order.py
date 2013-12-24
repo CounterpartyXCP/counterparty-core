@@ -27,7 +27,7 @@ def create (source, give_id, give_amount, get_id, get_amount, expiration, fee_re
     data += struct.pack(FORMAT, give_id, give_amount, get_id, get_amount,
                         expiration, fee_required)
     cursor.close()
-    return bitcoin.transaction(source, None, config.DUST_SIZE, int(fee_provided), data)
+    return bitcoin.transaction(source, None, None, int(fee_provided), data)
 
 def parse (db, cursor, tx, message):
     # Ask for forgiveness…
