@@ -49,7 +49,7 @@ def parse (db, cursor, tx, message):
 
     # Credit.
     if validity == 'Valid':
-        db, cursor = util.credit(db, cursor, tx['source'], asset_id, amount)
+        cursor = util.credit(db, cursor, tx['source'], asset_id, amount)
         if divisible: divisibility = 'divisible'
         else: divisibility = 'indivisible'
         logging.info('(Re‐)Issuance: {} created {} of {} asset {} ({})'.format(tx['source'], util.devise(amount, asset_id), divisibility, asset_id, util.short(tx['tx_hash'])))
@@ -74,6 +74,6 @@ def parse (db, cursor, tx, message):
                         validity)
                   )
 
-    return db, cursor
+    return cursor
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

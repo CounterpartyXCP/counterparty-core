@@ -54,18 +54,17 @@ def parse (db, cursor, tx, message):
     cursor.execute('''SELECT * FROM order_matches WHERE (tx0_hash=? AND tx1_hash=?)''', (tx0_hash, tx1_hash))
     order_match = cursor.fetchone()
     assert not cursor.fetchone()
-    if not order_match: return db, cursor
+    if not order_match: return cursor
     # Credit source address for the currency that he bought with the bitcoins.
     # BTC must be paid all at once and come from the ‘correct’ address.
     if order_match['tx0_address'] == tx['source'] and tx['btc_amount'] >= order_match['forward_amount']:
         cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Valid', tx0_hash, tx1_hash))
-        db.commit()
         if order_match['backward_id']:    # Gratuitous
-            db, cursor = util.credit(db, cursor, tx['source'], order_match['backward_id'], order_match['backward_amount'])
+            cursor = util.credit(db, cursor, tx['source'], order_match['backward_id'], order_match['backward_amount'])
     if order_match['tx1_address'] == tx['source'] and tx['btc_amount'] >= order_match['backward_amount']:
         cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Valid', tx0_hash, tx1_hash))
         if order_match['forward_id']:     # Gratuitous
-            db, cursor = util.credit(db, cursor, tx['source'], order_match['forward_id'], order_match['forward_amount'])
+            cursor = util.credit(db, cursor, tx['source'], order_match['forward_id'], order_match['forward_amount'])
 
     order_match_id = tx0_hash + tx1_hash
 
@@ -87,6 +86,6 @@ def parse (db, cursor, tx, message):
                         validity)
                   )
     logging.info('BTC payment for order_match: {} ({})'.format(util.short(order_match_id), util.short(tx['tx_hash'])))
-    return db, cursor
+    return cursor
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

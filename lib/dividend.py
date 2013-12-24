@@ -49,14 +49,14 @@ def parse (db, cursor, tx, message):
     total_shares = sum([issuance['amount'] for issuance in issuances])
     amount = amount_per_share * total_shares
     if validity == 'Valid':
-        db, cursor, validity = util.debit(db, cursor, tx['source'], 1, amount)
+        cursor, validity = util.debit(db, cursor, tx['source'], 1, amount)
 
     # Credit.
     if validity == 'Valid':
         balances = api.get_balances(asset_id=asset_id)
         for balance in balances:
             address, address_amount = balance['address'], balance['amount']
-            db, cursor = util.credit(db, cursor, address, 1, address_amount * amount_per_share)
+            cursor = util.credit(db, cursor, address, 1, address_amount * amount_per_share)
 
     # Add parsed transaction to message‐type–specific table.
     cursor.execute('''INSERT INTO dividends(
@@ -78,6 +78,6 @@ def parse (db, cursor, tx, message):
     if validity == 'Valid':
         logging.info('Dividend: {} paid {} per share of asset {} ({})'.format(tx['source'], amount_per_share / config.UNIT, util.get_asset_name(asset_id), util.short(tx['tx_hash'])))
 
-    return db, cursor
+    return cursor
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

@@ -64,8 +64,7 @@ def debit (db, cursor, address, asset_id, amount):
             validity = 'Valid'
         else:
             validity = 'Invalid: insufficient funds'
-    db.commit()
-    return db, cursor, validity
+    return cursor, validity
 
 def credit (db, cursor, address, asset_id, amount):
     from lib import api #
@@ -84,8 +83,7 @@ def credit (db, cursor, address, asset_id, amount):
         cursor.execute('''UPDATE balances SET amount=? \
                           WHERE (address=? and asset_id=?)''',
                        (old_balance + amount, address, asset_id)) 
-    db.commit()
-    return db, cursor
+    return cursor
 
 def good_feed (cursor, feed_address):
     """

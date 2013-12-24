@@ -71,7 +71,7 @@ def parse (db, cursor, tx, message):
  
     # Credit source address with earned XCP.
     if validity == 'Valid':
-        db, cursor = util.credit(db, cursor, tx['source'], 1, earned)
+        cursor = util.credit(db, cursor, tx['source'], 1, earned)
 
     # Add parsed transaction to message‐type–specific table.
     cursor.execute('''INSERT INTO burns(
@@ -93,6 +93,6 @@ def parse (db, cursor, tx, message):
     if validity == 'Valid':
         logging.info('Burn: {} BTC burned; {} XCP earned ({})'.format(burned / config.UNIT, earned / config.UNIT, util.short(tx['tx_hash'])))
 
-    return db, cursor
+    return cursor
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

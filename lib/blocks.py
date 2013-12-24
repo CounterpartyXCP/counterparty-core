@@ -37,21 +37,21 @@ def parse_block (db, cursor, block_index):
         message_type_id = struct.unpack(config.TXTYPE_FORMAT, post_prefix[:4])[0]
         message = post_prefix[4:]
         if message_type_id == send.ID and len(message) == send.LENGTH:
-            db, cursor = send.parse(db, cursor, tx, message)
+            cursor = send.parse(db, cursor, tx, message)
         elif message_type_id == order.ID and len(message) == order.LENGTH:
-            db, cursor = order.parse(db, cursor, tx, message)
+            cursor = order.parse(db, cursor, tx, message)
         elif message_type_id == btcpay.ID and len(message) == btcpay.LENGTH:
-            db, cursor = btcpay.parse(db, cursor, tx, message)
+            cursor = btcpay.parse(db, cursor, tx, message)
         elif message_type_id == issuance.ID and len(message) == issuance.LENGTH:
-            db, cursor = issuance.parse(db, cursor, tx, message)
+            cursor = issuance.parse(db, cursor, tx, message)
         elif message_type_id == broadcast.ID and len(message) == broadcast.LENGTH:
-            db, cursor = broadcast.parse(db, cursor, tx, message)
+            cursor = broadcast.parse(db, cursor, tx, message)
         elif message_type_id == bet.ID and len(message) == bet.LENGTH:
-            db, cursor = bet.parse(db, cursor, tx, message)
+            cursor = bet.parse(db, cursor, tx, message)
         elif message_type_id == dividend.ID and len(message) == dividend.LENGTH:
-            db, cursor = dividend.parse(db, cursor, tx, message)
+            cursor = dividend.parse(db, cursor, tx, message)
         elif message_type_id == burn.ID and len(message) == burn.LENGTH:
-            db, cursor = burn.parse(db, cursor, tx, message)
+            cursor = burn.parse(db, cursor, tx, message)
         else:
             # Mark transaction as of unsupported type.
             cursor.execute('''UPDATE transactions \
@@ -59,12 +59,14 @@ def parse_block (db, cursor, block_index):
                               WHERE tx_hash=?''',
                            ('False', tx['tx_hash']))
             logging.warning('Unsupported: message type {}; transaction hash {}'.format(message_type_id, tx['tx_hash']))
-        db.commit()
 
     # TODO: Is it a problem that this comes after the parsing?! (inclusive vs. exclusive)
-    db, cursor = order.expire(db, cursor, block_index)
+    cursor = order.expire(db, cursor, block_index)
 
-    return db, cursor
+    # Commit!
+    db.commit()
+
+    return cursor
 
 def initialise(db, cursor):
     cursor.execute('''CREATE TABLE IF NOT EXISTS blocks(
@@ -270,7 +272,7 @@ def initialise(db, cursor):
 
     db.commit()
 
-    return db, cursor
+    return cursor
 
 def get_tx_info (tx):
     fee = D(0)
@@ -330,10 +332,10 @@ def follow ():
 
     # Always re‐parse from beginning on start‐up.
     logging.info('RESTART')
-    db, cursor = initialise(db, cursor)
+    cursor = initialise(db, cursor)
     cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
     for block in cursor.fetchall():
-        db, cursor = parse_block(db, cursor, block['block_index'])
+        cursor = parse_block(db, cursor, block['block_index'])
 
     tx_index = 0
     while True:
@@ -404,10 +406,9 @@ def follow ():
                                 block_hash,
                                 block_time)
                           )
-            db.commit() # Commit only at end of block.
 
             # Parse transactions in this block.
-            db, cursor = parse_block(db, cursor, block_index)
+            cursor = parse_block(db, cursor, block_index)
 
             # Increment block index.
             block_count = bitcoin.config.session.rpc('getblockcount', [])['result'] # Get block count.

@@ -44,11 +44,11 @@ def parse (db, cursor, tx, message):
 
     # Debit.
     if validity == 'Valid':
-        db, cursor, validity = util.debit(db, cursor, tx['source'], asset_id, amount)
+        cursor, validity = util.debit(db, cursor, tx['source'], asset_id, amount)
 
     # Credit.
     if validity == 'Valid':
-        db, cursor = util.credit(db, cursor, tx['destination'], asset_id, amount)
+        cursor = util.credit(db, cursor, tx['destination'], asset_id, amount)
 
     # Add parsed transaction to message‐type–specific table.
     cursor.execute('''INSERT INTO sends(
@@ -73,6 +73,6 @@ def parse (db, cursor, tx, message):
         amount = util.devise(amount, asset_id)
         logging.info('Send: {} of asset {} from {} to {} ({})'.format(amount, util.get_asset_name(asset_id), tx['source'], tx['destination'], util.short(tx['tx_hash'])))
 
-    return db, cursor
+    return cursor
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

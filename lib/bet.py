@@ -90,7 +90,7 @@ def parse (db, cursor, tx, message):
     if validity == 'Valid':
         # Debit amount wagered and fee.
         fee_multiplier = get_fee_multiplier(feed_address)
-        db, cursor, validity = util.debit(db, cursor, tx['source'], 1, wager_amount * (1 + fee_multiplier))
+        cursor, validity = util.debit(db, cursor, tx['source'], 1, wager_amount * (1 + fee_multiplier))
 
         wager_amount = int(wager_amount)
         counterwager_amount = int(counterwager_amount)
@@ -131,13 +131,12 @@ def parse (db, cursor, tx, message):
                         expiration,
                         validity)
                   )
-    db.commit()
 
     if validity == 'Valid':
         logging.info('Bet: {} on {} at {} for {} XCP against {} XCP in {} blocks, leveraged {}x  ({})'.format(util.BET_TYPE_NAME[bet_type], feed_address, util.isodt(deadline), wager_amount / config.UNIT, counterwager_amount / config.UNIT, expiration, D(leverage / 5040).quantize(config.FOUR).normalize(), util.short(tx['tx_hash'])))
-        db, cursor = bet_match(db, cursor, tx)
+        cursor = bet_match(db, cursor, tx)
 
-    return db, cursor
+    return cursor
 
 def bet_match (db, cursor, tx):
 
@@ -176,9 +175,9 @@ def bet_match (db, cursor, tx):
 
             # When a match is made, pay XCP fee.
             fee = get_fee_multiplier(tx1['feed_address']) * backward_amount
-            db, cursor, validity = util.debit(db, cursor, tx1['source'], 1, fee)
+            cursor, validity = util.debit(db, cursor, tx1['source'], 1, fee)
             if validity != 'Valid': continue
-            db, cursor = util.credit(db, cursor, tx1['feed_address'], 1, int(fee))
+            cursor = util.credit(db, cursor, tx1['feed_address'], 1, int(fee))
 
             bet_match_id = tx0['tx_hash'] + tx1['tx_hash']
             logging.info('bet_match: {} for {} XCP against {} for {} XCP on {} at {}, leveraged {}x ({})'.format(util.BET_TYPE_NAME[tx0['bet_type']], forward_amount / config.UNIT, util.BET_TYPE_NAME[tx1['bet_type']], backward_amount / config.UNIT, tx1['feed_address'], util.isodt(tx1['deadline']), D(tx1['leverage'] / 5040).quantize(config.FOUR).normalize(), util.short(bet_match_id)))
@@ -244,8 +243,7 @@ def bet_match (db, cursor, tx):
                                 tx1['expiration'],
                                 validity)
                           )
-            db.commit()
-    return db, cursor
+    return cursor
 
 # TODO: How long after deadline has been passed (in blocks?!) should the bet be expired?!
 def expire (db, cursor, block_index):
@@ -256,11 +254,9 @@ def expire (db, cursor, block_index):
         time_left = bet['block_index'] + bet['expiration'] - block_index # TODO: Inclusive/exclusive expiration? DUPE
         if time_left <= 0 and bet['validity'] == 'Valid':
             cursor.execute('''UPDATE bets SET validity=? WHERE tx_hash=?''', ('Invalid: expired', bet['tx_hash']))
-            db, cursor = util.credit(db, cursor, bet['source'], 1, bet['wager_remaining'])
+            cursor = util.credit(db, cursor, bet['source'], 1, bet['wager_remaining'])
             logging.info('Expired bet: {}'.format(bet['tx_hash']))
-        db.commit()
-
-    return db, cursor
+    return cursor
 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

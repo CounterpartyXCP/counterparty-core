@@ -114,18 +114,18 @@ def parse (db, cursor, tx, message):
 
             # Liquidate, as necessary.
             if bull_credit >= total_escrow:
-                db, cursor = util.credit(db, cursor, bull_address, 1, total_escrow)
+                cursor = util.credit(db, cursor, bull_address, 1, total_escrow)
                 validity = 'Force‐Liquidated'
                 logging.info('Contract Force‐Liquidated: {} XCP credited to the bull, and 0 XCP credited to the bear ({})'.format(total_escrow / config.UNIT, util.short(bet_match_id)))
             elif bull_credit <= 0:
-                db, cursor = util.credit(db, cursor, bear_address, 1, total_escrow)
+                cursor = util.credit(db, cursor, bear_address, 1, total_escrow)
                 validity = 'Force‐Liquidated'
                 logging.info('Contract Force‐Liquidated: 0 XCP credited to the bull, and {} XCP credited to the bear ({})'.format(total_escrow / config.UNIT, util.short(bet_match_id)))
 
             # Settle.
             if timestamp > bet_match['deadline'] and validity != 'Liquidated':
-                db, cursor = util.credit(db, cursor, bull_address, 1, bull_credit)
-                db, cursor = util.credit(db, cursor, bear_address, 1, bear_credit)
+                cursor = util.credit(db, cursor, bull_address, 1, bull_credit)
+                cursor = util.credit(db, cursor, bear_address, 1, bear_credit)
                 validity = 'Settled'
                 logging.info('Contract Settled: {} XCP credited to the bull, and {} XCP credited to the bear ({})'.format(bull_credit / config.UNIT, bear_credit / config.UNIT, util.short(bet_match_id)))
 
@@ -134,8 +134,6 @@ def parse (db, cursor, tx, message):
                               WHERE (tx0_hash=? and tx1_hash=?)''',
                           (validity, bet_match['tx0_hash'], bet_match['tx1_hash']))
 
-    db.commit()
-
-    return db, cursor
+    return cursor
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
