@@ -12,7 +12,7 @@ FORMAT = '>QQQQHQ'
 ID = 10
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8
 
-def create (source, give_id, give_amount, get_id, get_amount, expiration, fee_required, fee_provided):
+def create (source, give_id, give_amount, get_id, get_amount, expiration, fee_required, fee_provided, test=False):
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
@@ -27,7 +27,7 @@ def create (source, give_id, give_amount, get_id, get_amount, expiration, fee_re
     data += struct.pack(FORMAT, give_id, give_amount, get_id, get_amount,
                         expiration, fee_required)
     cursor.close()
-    return bitcoin.transaction(source, None, None, int(fee_provided), data)
+    return bitcoin.transaction(source, None, None, int(fee_provided), data, test=False)
 
 def parse (db, cursor, tx, message):
     # Ask for forgiveness…

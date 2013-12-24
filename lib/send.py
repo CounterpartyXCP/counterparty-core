@@ -12,7 +12,7 @@ FORMAT = '>QQ'
 ID = 0
 LENGTH = 8 + 8
 
-def create (source, destination, amount, asset_id):
+def create (source, destination, amount, asset_id, test=False):
 
     # Check that it is not BTC that someone was trying to send.
     if not asset_id: raise exceptions.BalanceError('Cannot send bitcoins.')
@@ -28,7 +28,7 @@ def create (source, destination, amount, asset_id):
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount)
-    return bitcoin.transaction(source, destination, config.DUST_SIZE, config.MIN_FEE, data)
+    return bitcoin.transaction(source, destination, config.DUST_SIZE, config.MIN_FEE, data, test=False)
 
 def parse (db, cursor, tx, message):
     # Ask for forgiveness…

@@ -107,7 +107,7 @@ def test_initialise():
 
 def test_burn():
     global db, cursor
-    unsigned_tx_hex = burn.create(source, quantity)
+    unsigned_tx_hex = burn.create(source, quantity, test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02de68f405000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000156a13544553540000003c50726f6f664f664275726e00000000'
     fee = quantity
     data = get_tx_data(unsigned_tx_hex)
@@ -116,7 +116,7 @@ def test_burn():
 
 def test_send():
     global db, cursor
-    unsigned_tx_hex = send.create(source, destination, small, 1)
+    unsigned_tx_hex = send.create(source, destination, small, 1, test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0336150000000000001976a914edb5c902eadd71e698a8ce05ba1d7b31efbaa57b88ac980dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000000000001a6a185445535400000000000000000000000100000000004c4b4000000000'
     fee = config.MIN_FEE
     data = get_tx_data(unsigned_tx_hex)
@@ -125,7 +125,7 @@ def test_send():
 
 def test_order_buy_xcp():
     global db, cursor
-    unsigned_tx_hex = order.create(source, 0, small, 1, small * 2, expiration, 0, fee_provided)
+    unsigned_tx_hex = order.create(source, 0, small, 1, small * 2, expiration, 0, fee_provided, test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff029e07db0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000346a32544553540000000a000000000000000000000000004c4b4000000000000000010000000000989680000a000000000000000000000000'
     fee = config.MIN_FEE
     data = get_tx_data(unsigned_tx_hex)
@@ -134,7 +134,7 @@ def test_order_buy_xcp():
 
 def test_order_sell_xcp():
     global db, cursor
-    unsigned_tx_hex = order.create(source, 1, int(small * 2.1), 0, small, expiration, fee_required, 0)
+    unsigned_tx_hex = order.create(source, 1, int(small * 2.1), 0, small, expiration, fee_required, 0, test=True)
     print(unsigned_tx_hex)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02de49ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000346a32544553540000000a00000000000000010000000000a037a0000000000000000000000000004c4b40000a00000000000dbba000000000'
     fee = config.MIN_FEE

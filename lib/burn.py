@@ -14,7 +14,7 @@ FORMAT = '>11s'
 ID = 60
 LENGTH = 11
 
-def create (source, quantity):
+def create (source, quantity, test=False):
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
@@ -34,7 +34,7 @@ def create (source, quantity):
         
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, 'ProofOfBurn'.encode('utf-8'))
-    return bitcoin.transaction(source, None, None, int(quantity), data)
+    return bitcoin.transaction(source, None, None, int(quantity), data, test)
 
 def parse (db, cursor, tx, message):
     # Ask for forgiveness…
