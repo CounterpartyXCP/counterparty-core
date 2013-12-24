@@ -19,3 +19,4 @@ The Counterparty documentation may be found at <http://counterparty.rtd.org>.
 	* Right now, Counterparty should only be used on testnet, for which the command‐line option `-testnet` should given too.
 * Run `python3 counterpartyd.py` in one terminal.
 * In another terminal, run any of counterparty’s other functions (e.g. `python3 counterpartyd.py send` or `python3 counterpartyd.py order`).
+* Test with `py.test test.py`.
