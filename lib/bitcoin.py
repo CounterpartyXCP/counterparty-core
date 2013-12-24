@@ -36,9 +36,9 @@ def rpc (method, params):
     try:
         response = requests.post(config.RPC, data=json.dumps(payload), headers=headers)
     except requests.exceptions.ConnectionError:
-        raise exceptions.rpcError('Cannot communicate with bitcoind.')
+        raise exceptions.RPCError('Cannot communicate with bitcoind.')
     if response.status_code == 401:
-        raise exceptions.rpcError('Bitcoind RPC: unauthorized')
+        raise exceptions.RPCError('Bitcoind RPC: unauthorized')
     return response.json()
 
 def bitcoind_check ():
@@ -170,7 +170,7 @@ def get_inputs (source, amount, fee):
             return inputs, total
     return None, None
 
-def transaction (source, destination, btc_amount, fee, data, force=False):
+def transaction (source, destination, btc_amount, fee, data):
     # Validate addresses.
     for address in (source, destination):
         if address:
@@ -202,23 +202,26 @@ def transaction (source, destination, btc_amount, fee, data, force=False):
 
     # Serialise inputs and outputs.
     transaction = serialize(inputs, outputs, data)
-    transaction_hex = binascii.hexlify(transaction).decode('utf-8')
+    unsigned_tx_hex = binascii.hexlify(transaction).decode('utf-8')
+    
+    return unsigned_tx_hex
 
+def transmit (unsigned_tx_hex, ask=True):
     # Confirm transaction.
-    if not force:
+    if ask:
         if config.PREFIX == b'TEST': print('Attention: COUNTERPARTY TEST!') 
         if ADDRESSVERSION == b'0x6F': print('\nAttention: BITCOIN TESTNET!\n') 
         if input('Confirm? (y/N) ') != 'y':
             print('Transaction aborted.', file=sys.stderr)
             sys.exit(1)
-
     # Sign transaction.
-    response = rpc('signrawtransaction', [transaction_hex])
+    response = rpc('signrawtransaction', [unsigned_tx_hex])
     result = response['result']
     if result:
         if result['complete']:
+            signed_tx_hex = result['hex']
             # return eligius(result['hex'])                     # mainnet HACK
-            return rpc('sendrawtransaction', [result['hex']])
+            return rpc('sendrawtransaction', [signed_tx_hex])
     else:
         return response['error']
 

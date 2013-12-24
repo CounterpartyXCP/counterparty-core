@@ -12,20 +12,23 @@ FORMAT = '>QQ'
 ID = 0
 LENGTH = 8 + 8
 
-def create (source, destination, amount, asset_id, force=False):
+def create (source, destination, amount, asset_id):
+
     # Check that it is not BTC that someone was trying to send.
     if not asset_id: raise exceptions.BalanceError('Cannot send bitcoins.')
 
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
-    balance = api.get_balances(address=source, asset_id=asset_id)[0]['amount']
-    if not balance or balance < amount:
+    balances = api.get_balances(address=source, asset_id=asset_id)
+    if not balances or balances[0]['amount'] < amount:
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
+    if not amount:
+        raise exceptions.UselessError('Zero quantity.')
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount)
-    return bitcoin.transaction(source, destination, config.DUST_SIZE, config.MIN_FEE, data, force=True)
+    return bitcoin.transaction(source, destination, config.DUST_SIZE, config.MIN_FEE, data)
 
 def parse (db, cursor, tx, message):
     # Ask for forgiveness…
@@ -38,12 +41,15 @@ def parse (db, cursor, tx, message):
         asset_id, amount = None, None
         validity = 'Invalid: could not unpack'
 
+
     # Check that it is not BTC that someone was trying to send.
     if not asset_id:
         validity = 'Invalid: cannot send bitcoins'
 
     # Debit.
     if validity == 'Valid':
+        if not amount:
+            validity = 'Invalid: zero quantity.'
         cursor, validity = util.debit(db, cursor, tx['source'], asset_id, amount)
 
     # Credit.
@@ -70,7 +76,7 @@ def parse (db, cursor, tx, message):
                         validity)
                   )
     if validity == 'Valid':
-        amount = util.devise(amount, asset_id)
+        amount = util.devise(amount, asset_id, 'output')
         logging.info('Send: {} of asset {} from {} to {} ({})'.format(amount, util.get_asset_name(asset_id), tx['source'], tx['destination'], util.short(tx['tx_hash'])))
 
     return cursor

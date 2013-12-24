@@ -23,6 +23,9 @@ def create (source, asset_id, amount, divisible):
         if issuances[0]['divisible'] != divisible:
             raise exceptions.IssuanceError('That asset exists with a different divisibility.')
 
+    if not amount:
+        raise exceptions.UselessError('Zero amount.')
+
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount, divisible)
     db.close()
@@ -39,6 +42,10 @@ def parse (db, cursor, tx, message):
         asset_id, amount, divisible = None, None, None
         validity = 'Invalid: could not unpack'
 
+    if validity == 'Valid':
+        if not amount:
+            validity = 'Invalid: zero amount.'
+
     # If re‐issuance, check for compatability in divisibility, issuer.
     issuances = api.get_issuances(validity='Valid', asset_id=asset_id)
     if issuances:
@@ -52,7 +59,7 @@ def parse (db, cursor, tx, message):
         cursor = util.credit(db, cursor, tx['source'], asset_id, amount)
         if divisible: divisibility = 'divisible'
         else: divisibility = 'indivisible'
-        logging.info('(Re‐)Issuance: {} created {} of {} asset {} ({})'.format(tx['source'], util.devise(amount, asset_id), divisibility, asset_id, util.short(tx['tx_hash'])))
+        logging.info('(Re‐)Issuance: {} created {} of {} asset {} ({})'.format(tx['source'], util.devise(amount, asset_id, 'output'), divisibility, asset_id, util.short(tx['tx_hash'])))
 
     # Add parsed transaction to message‐type–specific table.
     cursor.execute('''INSERT INTO issuances(

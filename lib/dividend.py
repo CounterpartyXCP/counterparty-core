@@ -28,6 +28,8 @@ def create (source, amount_per_share, asset_id):
         raise exceptions.DividendError('No such asset: {}.'.format(asset_id))
     elif issuances[0]['divisible'] == True:
         raise exceptions.DividendError('Dividend‐yielding assets must be indivisible.')
+    if not amount_per_share:
+        raise exceptions.UselessError('Zero amount per share.')
     print('Total amount to be distributed in dividends:', amount / config.UNIT)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, amount_per_share, asset_id)
@@ -43,6 +45,10 @@ def parse (db, cursor, tx, message):
     except Exception:
         amount_per_share, asset_id = None, None
         validity = 'Invalid: could not unpack'
+
+    if validity == 'Valid':
+        if not amount_per_share:
+            validity = 'Invalid: zero amount per share.'
 
     # Debit.
     issuances = api.get_issuances(validity='Valid', asset_id=asset_id)

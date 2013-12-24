@@ -11,7 +11,7 @@ The Counterparty documentation may be found at <http://counterparty.rtd.org>.
 
 ## Dependencies
 * Python 3
-* SQLite3, Requests, AppDirs, Colorama, PrettyTable
+* Python 3 packages: SQLite3, Requests, AppDirs, Colorama, PrettyTable
 * Bitcoind
 
 ## Instructions

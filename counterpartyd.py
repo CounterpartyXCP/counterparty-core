@@ -27,8 +27,8 @@ json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 def format_order (order):
     price = D(order['get_amount']) / D(order['give_amount'])
 
-    give_remaining = util.devise(D(order['give_remaining']), order['give_id'])
-    get_remaining = util.devise(give_remaining * price, order['get_id'])
+    give_remaining = util.devise(D(order['give_remaining']), order['give_id'], 'input')
+    get_remaining = util.devise(give_remaining * price, order['get_id'], 'input')
     give_name = util.get_asset_name(order['give_id'])
     get_name = util.get_asset_name(order['get_id'])
     give = str(give_remaining) + ' ' + give_name
@@ -166,10 +166,11 @@ if __name__ == '__main__':
         bitcoin.bitcoind_check()
 
         asset_id = util.get_asset_id(args.asset)
-        quantity = util.devise(args.quantity, asset_id)
+        quantity = util.devise(args.quantity, asset_id, 'input')
 
-        json_print(send.create(args.source, args.destination, round(quantity), 
-                               asset_id))
+        unsigned_tx_hex = send.create(args.source, args.destination,
+                                      round(quantity), asset_id)
+        json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'order':
         bitcoin.bitcoind_check()
@@ -188,11 +189,12 @@ if __name__ == '__main__':
             assert fee_required >= config.MIN_FEE
             fee_provided = config.MIN_FEE
 
-        give_quantity = util.devise(args.give_quantity, give_id)
-        get_quantity = util.devise(args.get_quantity, get_id)
-        json_print(order.create(args.source, give_id, round(give_quantity),
+        give_quantity = util.devise(args.give_quantity, give_id, 'input')
+        get_quantity = util.devise(args.get_quantity, get_id, 'input')
+        unsigned_tx_hex = order.create(args.source, give_id, round(give_quantity),
                                 get_id, round(get_quantity),
-                                args.expiration, fee_required, fee_provided))
+                                args.expiration, fee_required, fee_provided)
+        json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'btcpay':
         json_print(btcpay.create(args.order_match_id))
@@ -200,7 +202,7 @@ if __name__ == '__main__':
     elif args.action == 'issuance':
         bitcoin.bitcoind_check()
 
-        quantity = util.devise(args.quantity, asset_id)
+        quantity = util.devise(args.quantity, asset_id, 'input')
         json_print(issuance.create(args.source, args.asset_id, round(quantity),
                                 args.divisible))
 
@@ -285,7 +287,7 @@ if __name__ == '__main__':
         table = PrettyTable(['Asset', 'Amount'])
         for balance in balances:
             asset = util.get_asset_name(balance['asset_id'])
-            amount = util.devise(balance['amount'], balance['asset_id'])
+            amount = util.devise(balance['amount'], balance['asset_id'], 'input')
             table.add_row([asset, amount])
         print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Balances' + colorama.Style.RESET_ALL)
         print(colorama.Fore.CYAN + str(table) + colorama.Style.RESET_ALL)
@@ -295,7 +297,7 @@ if __name__ == '__main__':
         sends = history['sends']
         table = PrettyTable(['Amount', 'Asset', 'Source', 'Destination', 'Tx Hash'])
         for send in sends:
-            amount = util.devise(send['amount'], send['asset_id'])
+            amount = util.devise(send['amount'], send['asset_id'], 'input')
             asset = util.get_asset_name(send['asset_id'])
             table.add_row([amount, asset, send['source'], send['destination'], util.short(send['tx_hash'])])
         print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Sends' + colorama.Style.RESET_ALL)

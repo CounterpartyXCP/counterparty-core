@@ -16,11 +16,13 @@ def create (source, give_id, give_amount, get_id, get_amount, expiration, fee_re
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
-    balance = api.get_balances(address=source, asset_id=give_id)[0]['amount']
-    if not balance or balance < give_amount:
+    balances = api.get_balances(address=source, asset_id=give_id)
+    if give_id and (not balances or balances[0]['amount'] < give_amount):
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
     if give_id == get_id:
         raise exceptions.UselessError('You can’t trade an asset for itself.')
+    if not get_amount or not get_amount:
+        raise exceptions.UselessError('Zero give or zero get.')
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, give_id, give_amount, get_id, get_amount,
                         expiration, fee_required)
@@ -38,13 +40,19 @@ def parse (db, cursor, tx, message):
         give_id, give_amount, get_id, get_amount, expiration, fee_required = None, None, None, None, None, None
         validity = 'Invalid: could not unpack'
 
-    if give_id == get_id:
-        validity = 'Invalid: cannot trade an asset for itself.'
+    if validity == 'Valid':
+        if give_id == get_id:
+            validity = 'Invalid: cannot trade an asset for itself.'
+    if validity == 'Valid':
+        if not get_amount or not get_amount:
+            validity = 'Invalid: zero give or zero get.'
 
     if validity == 'Valid':
         give_amount = D(give_amount)
         get_amount = D(get_amount)
         price = get_amount / give_amount
+    else:
+        price = 0
 
     # Debit the address that makes the order. Check for sufficient funds.
     if validity == 'Valid':
@@ -89,8 +97,8 @@ def parse (db, cursor, tx, message):
 
     if validity == 'Valid':
 
-        give_amount = util.devise(give_amount, give_id)
-        get_amount = util.devise(get_amount, get_id)
+        give_amount = util.devise(give_amount, give_id, 'output')
+        get_amount = util.devise(get_amount, get_id, 'output')
 
         if not give_id:
             fee_text = 'with a provided fee of ' + str(tx['fee'] / config.UNIT) + ' BTC'
@@ -133,8 +141,8 @@ def order_match (db, cursor, tx):
             forward_id, backward_id = tx1['get_id'], tx1['give_id']
             order_match_id = tx0['tx_hash'] + tx1['tx_hash']
 
-            forward_amount = util.devise(forward_amount, forward_id)
-            backward_amount = util.devise(backward_amount, backward_id)
+            forward_amount = util.devise(forward_amount, forward_id, 'output')
+            backward_amount = util.devise(backward_amount, backward_id, 'output')
 
             logging.info('order_match: {} {} for {} {} at {} {}/{} ({})'.format(forward_amount/forward_unit, util.get_asset_name(forward_id), backward_amount/backward_unit, util.get_asset_name(backward_id), price.quantize(config.FOUR).normalize(), util.get_asset_name(backward_id), util.get_asset_name(forward_id), util.short(order_match_id)))
 

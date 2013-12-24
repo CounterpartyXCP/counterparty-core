@@ -48,6 +48,9 @@ def create (source, feed_address, bet_type, deadline, wager_amount,
     elif not good_feed:
         raise exceptions.FeedError('That feed is locked.')
 
+    if not get_amount or not get_amount:
+        raise exceptions.UselessError('Zero wager or counterwager')
+
     fee_multiplier = get_fee_multiplier(feed_address)
     balances = api.get_balances(address=source, asset_id=1)
     cursor.close()
@@ -86,6 +89,10 @@ def parse (db, cursor, tx, message):
             validity = 'Invalid: no such feed'
         elif not good_feed:
             validity = 'Invalid: locked feed'
+
+    if validity == 'Valid':
+        if not wager_amount or not counterwager_amount:
+            validity = 'Invalid: zero wager or zero counterwager.'
 
     if validity == 'Valid':
         # Debit amount wagered and fee.
