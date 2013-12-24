@@ -28,7 +28,7 @@ def create (source, destination, amount, asset_id, test=False):
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount)
-    return bitcoin.transaction(source, destination, config.DUST_SIZE, config.MIN_FEE, data, test=False)
+    return bitcoin.transaction(source, destination, config.DUST_SIZE, config.MIN_FEE, data, test)
 
 def parse (db, cursor, tx, message):
     # Ask for forgiveness…
