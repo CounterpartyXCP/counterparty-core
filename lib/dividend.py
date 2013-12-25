@@ -12,7 +12,7 @@ FORMAT = '>QQ'
 ID = 50
 LENGTH = 8 + 8
 
-def create (source, amount_per_share, asset_id):
+def create (source, amount_per_share, asset_id, test=False):
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
@@ -26,14 +26,14 @@ def create (source, amount_per_share, asset_id):
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
     if not issuances:
         raise exceptions.DividendError('No such asset: {}.'.format(asset_id))
-    elif issuances[0]['divisible'] == True:
-        raise exceptions.DividendError('Dividend‐yielding assets must be indivisible.')
+    # elif issuances[0]['divisible'] == True:
+    #     raise exceptions.DividendError('Dividend‐yielding assets must be indivisible.')
     if not amount_per_share:
         raise exceptions.UselessError('Zero amount per share.')
     print('Total amount to be distributed in dividends:', amount / config.UNIT)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, amount_per_share, asset_id)
-    return bitcoin.transaction(source, None, None, config.MIN_FEE, data)
+    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test)
 
 def parse (db, cursor, tx, message):
     # Ask for forgiveness…

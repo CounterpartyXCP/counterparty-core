@@ -10,7 +10,7 @@ FORMAT = '>QQ?'
 ID = 20
 LENGTH = 8 + 8 + 1
 
-def create (source, asset_id, amount, divisible):
+def create (source, asset_id, amount, divisible, test=False):
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
@@ -29,7 +29,7 @@ def create (source, asset_id, amount, divisible):
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount, divisible)
     db.close()
-    return bitcoin.transaction(source, None, None, config.MIN_FEE, data)
+    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test)
 
 def parse (db, cursor, tx, message):
     # Ask for forgiveness…

@@ -204,8 +204,9 @@ if __name__ == '__main__':
         bitcoin.bitcoind_check()
 
         quantity = util.devise(args.quantity, asset_id, 'input')
-        json_print(issuance.create(args.source, args.asset_id, round(quantity),
-                                args.divisible))
+        unsigned_tx_hex = issuance.create(args.source, args.asset_id, round(quantity),
+                                args.divisible)
+        json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'broadcast':
         bitcoin.bitcoind_check()
@@ -236,8 +237,9 @@ if __name__ == '__main__':
         asset_id = util.get_asset_id(args.share_asset)
         quantity_per_share = D(args.quantity_per_share) * config.UNIT
 
-        json_print(dividend.create(args.source, round(quantity_per_share),
-                                   asset_id))
+        unsigned_tx_hex = dividend.create(args.source, round(quantity_per_share),
+                                   asset_id)
+        json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'burn':
         bitcoin.bitcoind_check()

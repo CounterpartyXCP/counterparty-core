@@ -204,8 +204,8 @@ Dividend
 
 A dividend payment is a payment of some quantity of XCP to every holder of a
 given asset in proportion to the size of their holdings. Dividend‐yielding
-assets must be indivisible. The dividend payment need not be made from the
-address which first issued the shares (indivisible assets).
+assets may be either divisible or indivisible. The dividend payment need not be
+made from the address which first issued the shares (indivisible assets).
 
 
 Watch
