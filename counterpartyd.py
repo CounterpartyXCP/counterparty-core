@@ -67,8 +67,8 @@ if __name__ == '__main__':
 
     # Parse command‐line arguments.
     parser = argparse.ArgumentParser(prog='counterparty', description='')
-    parser.add_argument('--version', action='store_true', 
-                        help='print version information')
+    parser.add_argument('-V', '--version', action='version',
+        version="counterpartyd v%s" % config.VERSION)
     parser.add_argument('--rpc-connect', default='localhost', help='')
     parser.add_argument('--rpc-port', type=int, default=18332, help='')    # testnet
     parser.add_argument('--rpc-user', default='bitcoinrpc', help='')
@@ -159,10 +159,7 @@ if __name__ == '__main__':
     requests_log.setLevel(logging.WARNING)
 
     # Do something.
-    if args.version:
-        print('This is Version 0.01 of counterparty.')
-
-    elif args.action == 'send':
+    if args.action == 'send':
         bitcoin.bitcoind_check()
 
         asset_id = util.get_asset_id(args.asset)
