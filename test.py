@@ -9,6 +9,7 @@ import appdirs
 import logging
 import decimal
 D = decimal.Decimal
+import difflib
 
 from lib import (config, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, api)
@@ -211,7 +212,7 @@ def test_dividend_indivisible ():
     tx_insert(source_default, destination, btc_amount, fee, data)
     cursor = blocks.parse_block(db, cursor, tx_index - 1)
 
-def test_broadcast_first ():
+def test_broadcast_initial ():
     global db, cursor
     unsigned_tx_hex = broadcast.create(source_default, 1388000000, 100, round(D(.05) * D(1e8)), 'Unit Test', test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02ce22ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000426a40544553540000001e52bb33004059000000000000004c4b4009556e6974205465737400000000000000000000000000000000000000000000000000000000000000000000'
@@ -231,7 +232,27 @@ def test_bet_bullcfd_to_be_liquidated ():
     tx_insert(source_default, destination, btc_amount, fee, data)
     cursor = blocks.parse_block(db, cursor, tx_index - 1)
 
-# bear cfd to be liquidated
+def test_bet_bearcfd_to_be_liquidated ():
+    global db, cursor
+    unsigned_tx_hex = bet.create(source_default, source_default, 1, 1388000100, round(small / 2), round(small * 1.2), 110, 15120, expiration, test=True)
+    assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac980dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000306a2e5445535400000028000152bb336400000000002625a000000000005b8d80405b80000000000000003b100000000a00000000'
+    fee = config.MIN_FEE
+
+    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
+    tx_insert(source_default, destination, btc_amount, fee, data)
+    cursor = blocks.parse_block(db, cursor, tx_index - 1)
+def test_broadcast_liquidate ():
+    global db, cursor
+    unsigned_tx_hex = broadcast.create(source_default, 1388000105, 100, round(D(.05) * D(1e8)), 'Unit Test', test=True)
+    logging.info(unsigned_tx_hex)
+    # assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02ce22ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000426a40544553540000001e52bb33004059000000000000004c4b4009556e6974205465737400000000000000000000000000000000000000000000000000000000000000000000'
+    fee = config.MIN_FEE
+
+    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
+    tx_insert(source_default, destination, btc_amount, fee, data)
+    cursor = blocks.parse_block(db, cursor, tx_index - 1)
+
+
 # bull, bear to be settled
 
 
@@ -246,14 +267,18 @@ def test_parse_from_the_start():
         cursor = blocks.parse_block(db, cursor, i)
 
 
-"""
 def test_db_dump():
-    import difflib
-    data = '\n'.join(db.iterdump())
-    with open('test/db.test.dump', 'w') as f:
-        print(difflib.SequenceMatcher(None, data, f.read())
-"""
+    with open('test/db.test.dump', 'r') as f:
+        good_data = f.readlines()
 
+    # Hacky
+    with open('test/db.test.dump.new', 'w') as f:
+        f.write('\n'.join(list(db.iterdump())) + '\n')
+    with open('test/db.test.dump.new', 'r') as f:
+        new_data = f.readlines()
+
+    lines = list(difflib.unified_diff(good_data, new_data, n=0))
+    assert not len(lines)
 
 
 # Can’t do follow().

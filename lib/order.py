@@ -121,9 +121,8 @@ def order_match (db, cursor, tx):
                       WHERE (give_id=? AND get_id=? AND validity=?) \
                       ORDER BY price ASC, tx_index''',
                    (tx1['get_id'], tx1['give_id'], 'Valid'))
-    give_remaining = tx1['give_amount']
+    give_remaining = tx1['give_remaining']
     for tx0 in cursor.fetchall():
-
         # Check whether fee conditions are satisfied.
         if not tx1['get_id'] and tx0['fee_provided'] < tx1['fee_required']: continue
         elif not tx1['give_id'] and tx1['fee_provided'] < tx0['fee_required']: continue
@@ -133,10 +132,9 @@ def order_match (db, cursor, tx):
 
         # If the prices agree, make the trade. The found order sets the price,
         # and they trade as much as they can.
-        price = D(tx0['get_amount']) / D(tx0['give_amount'])
-        if price <= 1 / tx1['price']:
-            forward_amount = round(min(D(tx0['give_remaining']), give_remaining / price))
-            backward_amount = round(forward_amount * price)
+        if tx0['price'] <= 1 / tx1['price']:
+            forward_amount = round(min(D(tx0['give_remaining']), give_remaining / D(tx1['price'])))
+            backward_amount = round(forward_amount * tx0['price'])
 
             forward_id, backward_id = tx1['get_id'], tx1['give_id']
             order_match_id = tx0['tx_hash'] + tx1['tx_hash']
@@ -145,7 +143,7 @@ def order_match (db, cursor, tx):
             forward_unit = util.devise(1, forward_id, 'output')
             backward_unit = util.devise(1, backward_id, 'output')
 
-            logging.info('Order Match: {} {} for {} {} at {} {}/{} ({})'.format(D(forward_amount * forward_unit).quantize(config.EIGHT).normalize(), util.get_asset_name(forward_id), D(backward_amount * backward_unit).quantize(config.EIGHT).normalize(), util.get_asset_name(backward_id), price.quantize(config.FOUR).normalize(), util.get_asset_name(backward_id), util.get_asset_name(forward_id), util.short(order_match_id)))
+            logging.info('Order Match: {} {} for {} {} at {} {}/{} ({})'.format(D(forward_amount * forward_unit).quantize(config.EIGHT).normalize(), util.get_asset_name(forward_id), D(backward_amount * backward_unit).quantize(config.EIGHT).normalize(), util.get_asset_name(backward_id), D(tx0['price']).quantize(config.FOUR).normalize(), util.get_asset_name(backward_id), util.get_asset_name(forward_id), util.short(order_match_id)))
 
             if 0 in (tx1['give_id'], tx1['get_id']):
                 validity = 'Valid: awaiting BTC payment'

@@ -1,0 +1,174 @@
+BEGIN TRANSACTION;
+CREATE TABLE balances(
+                        address TEXT,
+                        asset_id INTEGER,
+                        amount INTEGER);
+INSERT INTO "balances" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,25990174999);
+INSERT INTO "balances" VALUES('n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7',1,5000000);
+INSERT INTO "balances" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',2,1000000000);
+INSERT INTO "balances" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,100000);
+CREATE TABLE bet_matches(
+                        tx0_index INTEGER,
+                        tx0_hash TEXT,
+                        tx0_address TEXT,
+                        tx1_index INTEGER,
+                        tx1_hash TEXT,
+                        tx1_address TEXT,
+                        tx0_bet_type INTEGER,
+                        tx1_bet_type INTEGER,
+                        feed_address TEXT,
+                        initial_value INTEGER,
+                        deadline INTEGER,
+                        threshold REAL,
+                        leverage INTEGER,
+                        forward_amount INTEGER,
+                        backward_amount INTEGER,
+                        tx0_block_index INTEGER,
+                        tx1_block_index INTEGER,
+                        tx0_expiration INTEGER,
+                        tx1_expiration INTEGER,
+                        validity TEXT);
+INSERT INTO "bet_matches" VALUES(10,'01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',11,'e7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000100,110.0,15120,5000000,2500000,10,11,10,10,'Valid');
+CREATE TABLE bets(
+                        tx_index INTEGER PRIMARY KEY,
+                        tx_hash TEXT UNIQUE,
+                        block_index INTEGER,
+                        source TEXT,
+                        feed_address TEXT,
+                        bet_type INTEGER,
+                        deadline INTEGER,
+                        wager_amount INTEGER,
+                        counterwager_amount INTEGER,
+                        wager_remaining INTEGER,
+                        odds REAL,
+                        threshold REAL,
+                        leverage INTEGER,
+                        expiration INTEGER,
+                        validity TEXT);
+INSERT INTO "bets" VALUES(10,'01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b',10,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1388000100,5000000,2500000,0,2.0,110.0,15120,10,'Valid');
+INSERT INTO "bets" VALUES(11,'e7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6',11,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,1388000100,2500000,6000000,0,4.1666666666666668517e-01,110.0,15120,10,'Valid');
+CREATE TABLE blocks(
+                        block_index INTEGER PRIMARY KEY,
+                        block_hash TEXT UNIQUE,
+                        block_time INTEGER);
+CREATE TABLE broadcasts(
+                        tx_index INTEGER PRIMARY KEY,
+                        tx_hash TEXT UNIQUE,
+                        block_index INTEGER,
+                        source TEXT,
+                        timestamp INTEGER,
+                        value REAL,
+                        fee_multiplier INTEGER,
+                        text TEXT,
+                        validity TEXT);
+INSERT INTO "broadcasts" VALUES(9,'2b4c342f5433ebe591a1da77e013d1b72475562d48578dca8b84bac6651c3cb9',9,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1388000000,100.0,5000000,'Unit Test','Valid');
+CREATE TABLE btcpays(
+                        tx_index INTEGER PRIMARY KEY,
+                        tx_hash TEXT UNIQUE,
+                        block_index INTEGER,
+                        source TEXT,
+                        amount INTEGER,
+                        order_match_id TEXT,
+                        validity TEXT);
+INSERT INTO "btcpays" VALUES(4,'e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71',4,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',5000000,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5','Valid');
+CREATE TABLE burns(
+                        tx_index INTEGER PRIMARY KEY,
+                        tx_hash TEXT UNIQUE,
+                        block_index INTEGER,
+                        address TEXT,
+                        burned INTEGER,
+                        earned INTEGER,
+                        validity TEXT);
+INSERT INTO "burns" VALUES(0,'6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d',0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100000000,20000000000,'Valid');
+CREATE TABLE dividends(
+                        tx_index INTEGER PRIMARY KEY,
+                        tx_hash TEXT UNIQUE,
+                        block_index INTEGER,
+                        source TEXT,
+                        asset_id INTEGER,
+                        amount_per_share INTEGER,
+                        validity TEXT);
+INSERT INTO "dividends" VALUES(7,'ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879',7,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',2,6,'Valid');
+INSERT INTO "dividends" VALUES(8,'beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a',8,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,8,'Valid');
+CREATE TABLE issuances(
+                        tx_index INTEGER PRIMARY KEY,
+                        tx_hash TEXT UNIQUE,
+                        block_index INTEGER,
+                        asset_id INTEGER,
+                        amount INTEGER,
+                        divisible BOOL,
+                        issuer TEXT,
+                        validity TEXT
+                        );
+INSERT INTO "issuances" VALUES(1,NULL,NULL,0,0,1,NULL,'Valid');
+INSERT INTO "issuances" VALUES(2,NULL,NULL,1,0,1,NULL,'Valid');
+INSERT INTO "issuances" VALUES(5,'e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db',5,2,1000000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','Valid');
+INSERT INTO "issuances" VALUES(6,'67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6',6,3,100000,0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','Valid');
+CREATE TABLE order_matches(
+                        tx0_index INTEGER,
+                        tx0_hash TEXT,
+                        tx0_address TEXT,
+                        tx1_index INTEGER,
+                        tx1_hash TEXT,
+                        tx1_address TEXT,
+                        forward_id INTEGER,
+                        forward_amount INTEGER,
+                        backward_id INTEGER,
+                        backward_amount INTEGER,
+                        tx0_block_index INTEGER,
+                        tx1_block_index INTEGER,
+                        tx0_expiration INTEGER,
+                        tx1_expiration INTEGER,
+                        validity TEXT);
+INSERT INTO "order_matches" VALUES(2,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,5000000,1,10000000,2,3,10,10,'Valid');
+CREATE TABLE orders(
+                        tx_index INTEGER PRIMARY KEY,
+                        tx_hash TEXT UNIQUE,
+                        block_index INTEGER,
+                        source TEXT,
+                        give_id INTEGER,
+                        give_amount INTEGER,
+                        give_remaining INTEGER,
+                        get_id INTEGER,
+                        get_amount INTEGER,
+                        price REAL,
+                        expiration INTEGER,
+                        fee_required INTEGER,
+                        fee_provided INTEGER,
+                        validity TEXT);
+INSERT INTO "orders" VALUES(2,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986',2,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,5000000,0,1,10000000,2.0,10,0,1000000,'Valid');
+INSERT INTO "orders" VALUES(3,'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5',3,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,10500000,500000,0,5000000,4.76190476190476164042e-01,10,900000,10000,'Valid');
+CREATE TABLE sends(
+                        tx_index INTEGER PRIMARY KEY,
+                        tx_hash TEXT UNIQUE,
+                        block_index INTEGER,
+                        source TEXT,
+                        destination TEXT,
+                        asset_id INTEGER,
+                        amount INTEGER,
+                        validity TEXT);
+INSERT INTO "sends" VALUES(1,'4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a',1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7',1,5000000,'Valid');
+CREATE TABLE transactions(
+                        tx_index INTEGER PRIMARY KEY,
+                        tx_hash TEXT UNIQUE,
+                        block_index INTEGER,
+                        block_time INTEGER,
+                        source TEXT,
+                        destination TEXT,
+                        btc_amount INTEGER,
+                        fee INTEGER,
+                        data BLOB,
+                        supported TEXT DEFAULT 'True');
+INSERT INTO "transactions" VALUES(0,'6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d',0,0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',99903710,100000000,X'544553540000003C50726F6F664F664275726E','True');
+INSERT INTO "transactions" VALUES(1,'4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a',1,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7',5430,10000,X'5445535400000000000000000000000100000000004C4B40','True');
+INSERT INTO "transactions" VALUES(2,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986',2,2,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',198903710,1000000,X'544553540000000A000000000000000000000000004C4B4000000000000000010000000000989680000A0000000000000000','True');
+INSERT INTO "transactions" VALUES(3,'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5',3,3,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',199903710,10000,X'544553540000000A00000000000000010000000000A037A0000000000000000000000000004C4B40000A00000000000DBBA0','True');
+INSERT INTO "transactions" VALUES(4,'e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71',4,4,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',5000000,10000,X'544553540000000BDBC1B4C900FFE48D575B5DA5C638040125F65DB0FE3E24494B76EA986457D986084FED08B978AF4D7D196A7446A86B58009E636B611DB16211B65A9AADFF29C5','True');
+INSERT INTO "transactions" VALUES(5,'e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db',5,5,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',199893710,10000,X'54455354000000140000000000000002000000003B9ACA0001','True');
+INSERT INTO "transactions" VALUES(6,'67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6',6,6,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',199893710,10000,X'5445535400000014000000000000000300000000000186A000','True');
+INSERT INTO "transactions" VALUES(7,'ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879',7,7,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',199893710,10000,X'544553540000003200000000000000060000000000000002','True');
+INSERT INTO "transactions" VALUES(8,'beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a',8,8,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',199893710,10000,X'544553540000003200000000000000080000000000000003','True');
+INSERT INTO "transactions" VALUES(9,'2b4c342f5433ebe591a1da77e013d1b72475562d48578dca8b84bac6651c3cb9',9,9,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',199893710,10000,X'544553540000001E52BB33004059000000000000004C4B4009556E69742054657374000000000000000000000000000000000000000000000000000000000000','True');
+INSERT INTO "transactions" VALUES(10,'01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b',10,10,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',5430,10000,X'5445535400000028000052BB336400000000004C4B4000000000002625A0405B80000000000000003B100000000A','True');
+INSERT INTO "transactions" VALUES(11,'e7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6',11,11,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',5430,10000,X'5445535400000028000152BB336400000000002625A000000000005B8D80405B80000000000000003B100000000A','True');
+COMMIT;

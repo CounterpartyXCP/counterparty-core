@@ -162,7 +162,7 @@ def bet_match (db, cursor, tx):
                       WHERE (feed_address=? AND block_index>=? AND validity=? AND bet_type=?) \
                       ORDER BY odds DESC, tx_index''',
                    (tx1['feed_address'], tx1['block_index'] - tx1['expiration'], 'Valid', counterbet_type))
-    wager_remaining = tx1['wager_amount']
+    wager_remaining = D(tx1['wager_remaining'])
     for tx0 in cursor.fetchall():
         if not counterbet_type == tx0['bet_type']: continue
         if not tx0['leverage'] == tx1['leverage']: continue
@@ -172,13 +172,9 @@ def bet_match (db, cursor, tx):
 
         # If the odds agree, make the trade. The found order sets the odds,
         # and they trade as much as they can.
-        odds = D(tx0['wager_amount']) / D(tx0['counterwager_amount'])
-        if odds <= 1 / tx1['odds']:
-
-            validity = 'Valid'
-
-            forward_amount = round(min(D(tx0['wager_remaining']), wager_remaining / odds))
-            backward_amount = round(forward_amount * odds)
+        if tx0['odds'] <= 1 / tx1['odds']:
+            forward_amount = round(min(D(tx0['wager_remaining']), wager_remaining / D(tx1['odds'])))
+            backward_amount = round(forward_amount / D(tx0['odds']))
 
             # When a match is made, pay XCP fee.
             fee = get_fee_multiplier(tx1['feed_address']) * backward_amount
@@ -187,7 +183,7 @@ def bet_match (db, cursor, tx):
             cursor = util.credit(db, cursor, tx1['feed_address'], 1, int(fee))
 
             bet_match_id = tx0['tx_hash'] + tx1['tx_hash']
-            logging.info('bet_match: {} for {} XCP against {} for {} XCP on {} at {}, leveraged {}x ({})'.format(util.BET_TYPE_NAME[tx0['bet_type']], forward_amount / config.UNIT, util.BET_TYPE_NAME[tx1['bet_type']], backward_amount / config.UNIT, tx1['feed_address'], util.isodt(tx1['deadline']), D(tx1['leverage'] / 5040).quantize(config.FOUR).normalize(), util.short(bet_match_id)))
+            logging.info('Bet Match: {} for {} XCP against {} for {} XCP on {} at {}, leveraged {}x ({})'.format(util.BET_TYPE_NAME[tx0['bet_type']], forward_amount / config.UNIT, util.BET_TYPE_NAME[tx1['bet_type']], backward_amount / config.UNIT, tx1['feed_address'], util.isodt(tx1['deadline']), D(tx1['leverage'] / 5040).quantize(config.FOUR).normalize(), util.short(bet_match_id)))
 
             # Debit the order.
             wager_remaining -= backward_amount
