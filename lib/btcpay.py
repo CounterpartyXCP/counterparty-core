@@ -11,7 +11,7 @@ FORMAT = '>32s32s'
 ID = 11
 LENGTH = 32 + 32
 
-def create (order_match_id):
+def create (order_match_id, test=False):
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
@@ -37,7 +37,7 @@ def create (order_match_id):
         destination = order_match['tx1_address']
         btc_amount = order_match['forward_amount']
 
-    return bitcoin.transaction(source, destination, btc_amount, config.MIN_FEE, data)
+    return bitcoin.transaction(source, destination, btc_amount, config.MIN_FEE, data, test)
 
 def parse (db, cursor, tx, message):
     # Ask for forgiveness…

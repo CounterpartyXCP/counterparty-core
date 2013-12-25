@@ -47,7 +47,7 @@ def bitcoind_check ():
     block_hash = rpc('getblockhash', [block_count])['result']
     block = rpc('getblock', [block_hash])['result']
     if block['time'] < (time.time() - 60 * 60 * 2):
-        logger.warning('bitcoind is running behind.')
+        raise exceptions.BitcoinRPCError('bitcoind is running behind.')
 
 def base58_decode (s, version):
     # Convert the string to an integer
@@ -179,7 +179,9 @@ def transaction (source, destination, btc_amount, fee, data, test=False):
     # Validate addresses.
     for address in (source, destination):
         if address:
-            if not rpc('validateaddress', [address])['result']['isvalid']:
+            try:
+                base58_decode(address, ADDRESSVERSION)
+            except:
                 raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
                                           address)
 

@@ -197,7 +197,8 @@ if __name__ == '__main__':
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'btcpay':
-        json_print(btcpay.create(args.order_match_id))
+        unsigned_tx_hex = btcpay.create(args.order_match_id)
+        json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'issuance':
         bitcoin.bitcoind_check()
