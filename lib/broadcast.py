@@ -33,12 +33,11 @@ FORMAT = '>IdI40p' # How many characters *can* the text be?! (That is, how long 
 ID = 30
 LENGTH = 4 + 8 + 4 + 40
 
-def create (source, timestamp, value, fee_multiplier, text):
+def create (source, timestamp, value, fee_multiplier, text, test=False):
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, timestamp, value, fee_multiplier,
                         text.encode('utf-8'))
-    return bitcoin.transaction(source, None, None, config.MIN_FEE,
-                               data)
+    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test)
 
 def parse (db, cursor, tx, message):
     # Ask for forgiveness…
@@ -81,7 +80,7 @@ def parse (db, cursor, tx, message):
     if validity == 'Valid':
         if not value: infix = '‘' + text + '’'
         else: infix = '‘' + text + ' = ' + str(value) + '’'
-        suffix = ' from ' + tx['source'] + ' at ' + util.isodt(timestamp) + ' ' + util.short(tx['tx_hash'])
+        suffix = ' from ' + tx['source'] + ' at ' + util.isodt(timestamp) + ' (' + util.short(tx['tx_hash']) + ')'
         logging.info('Broadcast: {}'.format(infix + suffix))
 
 

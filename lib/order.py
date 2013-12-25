@@ -125,7 +125,7 @@ def order_match (db, cursor, tx):
     for tx0 in cursor.fetchall():
 
         # Check whether fee conditions are satisfied.
-        if not tx1['get_id'] and tx0['fee_provided'] < tx0['fee_required']: continue
+        if not tx1['get_id'] and tx0['fee_provided'] < tx1['fee_required']: continue
         elif not tx1['give_id'] and tx1['fee_provided'] < tx0['fee_required']: continue
 
         # Make sure that that both orders still have funds remaining [to be sold].
@@ -142,10 +142,10 @@ def order_match (db, cursor, tx):
             order_match_id = tx0['tx_hash'] + tx1['tx_hash']
 
             # This can’t be gotten rid of!
-            forward_unit = util.devise(forward_amount, forward_id, 'output')
-            backward_unit = util.devise(backward_amount, backward_id, 'output')
+            forward_unit = util.devise(1, forward_id, 'output')
+            backward_unit = util.devise(1, backward_id, 'output')
 
-            logging.info('order_match: {} {} for {} {} at {} {}/{} ({})'.format(forward_amount / forward_unit, util.get_asset_name(forward_id), backward_amount / backward_unit, util.get_asset_name(backward_id), price.quantize(config.FOUR).normalize(), util.get_asset_name(backward_id), util.get_asset_name(forward_id), util.short(order_match_id)))
+            logging.info('Order Match: {} {} for {} {} at {} {}/{} ({})'.format(D(forward_amount * forward_unit).quantize(config.EIGHT).normalize(), util.get_asset_name(forward_id), D(backward_amount * backward_unit).quantize(config.EIGHT).normalize(), util.get_asset_name(backward_id), price.quantize(config.FOUR).normalize(), util.get_asset_name(backward_id), util.get_asset_name(forward_id), util.short(order_match_id)))
 
             if 0 in (tx1['give_id'], tx1['get_id']):
                 validity = 'Valid: awaiting BTC payment'

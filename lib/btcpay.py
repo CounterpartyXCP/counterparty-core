@@ -85,7 +85,7 @@ def parse (db, cursor, tx, message):
                         order_match_id,
                         validity)
                   )
-    logging.info('BTC payment for order_match: {} ({})'.format(util.short(order_match_id), util.short(tx['tx_hash'])))
+    logging.info('BTC Payment for Order Match: {} ({})'.format(util.short(order_match_id), util.short(tx['tx_hash'])))
     return cursor
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

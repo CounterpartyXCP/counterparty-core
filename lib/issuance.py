@@ -3,6 +3,8 @@
 import struct
 import sqlite3
 import logging
+import decimal
+D = decimal.Decimal
 
 from . import (config, util, exceptions, bitcoin, api)
 
@@ -57,9 +59,13 @@ def parse (db, cursor, tx, message):
     # Credit.
     if validity == 'Valid':
         cursor = util.credit(db, cursor, tx['source'], asset_id, amount)
-        if divisible: divisibility = 'divisible'
-        else: divisibility = 'indivisible'
-        logging.info('(Re‐)Issuance: {} created {} of {} asset {} ({})'.format(tx['source'], util.devise(amount, asset_id, 'output'), divisibility, asset_id, util.short(tx['tx_hash'])))
+        if divisible:
+            divisibility = 'divisible'
+            unit = config.UNIT
+        else:
+            divisibility = 'indivisible'
+            unit = 1
+        logging.info('(Re‐)Issuance: {} created {} of {} asset {} ({})'.format(tx['source'], D(amount / unit).quantize(config.EIGHT).normalize(), divisibility, asset_id, util.short(tx['tx_hash'])))
 
     # Add parsed transaction to message‐type–specific table.
     cursor.execute('''INSERT INTO issuances(

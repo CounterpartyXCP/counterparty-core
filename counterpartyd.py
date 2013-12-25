@@ -216,20 +216,22 @@ if __name__ == '__main__':
         if fee_multiplier > 4294967295:
             raise exceptions.OverflowError('Fee multiplier must be less than or equal to 42.94967295.')
 
-        json_print(broadcast.create(args.source, int(time.time()), args.value,
-                                    round(fee_multiplier), args.text))
+        unsigned_tx_hex = broadcast.create(args.source, int(time.time()), args.value,
+                                    round(fee_multiplier), args.text)
+        json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'bet':
         bitcoin.bitcoind_check()
 
         deadline = datetime.timestamp(dateutil.parser.parse(args.deadline))
 
-        json_print(bet.create(args.source, args.feed_address,
+        unsigned_tx_hex = bet.create(args.source, args.feed_address,
                               util.BET_TYPE_ID[args.bet_type], round(deadline),
                               round(D(args.wager) * config.UNIT),
                               round(D(args.counterwager) * config.UNIT),
                               float(args.threshold), args.leverage,
-                              args.expiration))
+                              args.expiration)
+        json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'dividend':
         bitcoin.bitcoind_check()

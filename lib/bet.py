@@ -37,7 +37,7 @@ def get_fee_multiplier (feed_address):
     return D(broadcast['fee_multiplier'] / 1e8)
 
 def create (source, feed_address, bet_type, deadline, wager_amount,
-            counterwager_amount, threshold, leverage, expiration):
+            counterwager_amount, threshold, leverage, expiration, test=False):
 
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
@@ -48,7 +48,7 @@ def create (source, feed_address, bet_type, deadline, wager_amount,
     elif not good_feed:
         raise exceptions.FeedError('That feed is locked.')
 
-    if not get_amount or not get_amount:
+    if not wager_amount or not counterwager_amount:
         raise exceptions.UselessError('Zero wager or counterwager')
 
     fee_multiplier = get_fee_multiplier(feed_address)
@@ -65,7 +65,7 @@ def create (source, feed_address, bet_type, deadline, wager_amount,
                         expiration)
 
     return bitcoin.transaction(source, feed_address, config.DUST_SIZE,
-                               config.MIN_FEE, data)
+                               config.MIN_FEE, data, test)
 
 def parse (db, cursor, tx, message):
     # Ask for forgiveness…
@@ -140,7 +140,7 @@ def parse (db, cursor, tx, message):
                   )
 
     if validity == 'Valid':
-        logging.info('Bet: {} on {} at {} for {} XCP against {} XCP in {} blocks, leveraged {}x  ({})'.format(util.BET_TYPE_NAME[bet_type], feed_address, util.isodt(deadline), wager_amount / config.UNIT, counterwager_amount / config.UNIT, expiration, D(leverage / 5040).quantize(config.FOUR).normalize(), util.short(tx['tx_hash'])))
+        logging.info('Bet: {} on {} at {} for {} XCP against {} XCP in {} blocks, leveraged {}x ({})'.format(util.BET_TYPE_NAME[bet_type], feed_address, util.isodt(deadline), wager_amount / config.UNIT, counterwager_amount / config.UNIT, expiration, D(leverage / 5040).quantize(config.FOUR).normalize(), util.short(tx['tx_hash'])))
         cursor = bet_match(db, cursor, tx)
 
     return cursor
