@@ -207,13 +207,14 @@ def order_match (db, cursor, tx):
     return cursor
 
 def expire (db, cursor, block_index):
-    # Expire orders and give refunds for the amount give_remaining.
+    # Expire orders and give refunds for the amount give_remaining (if non‐zero; if not BTC).
     cursor.execute('''SELECT * FROM orders''')
     for order in cursor.fetchall():
         time_left = order['block_index'] + order['expiration'] - block_index # Inclusive/exclusive expiration? DUPE
         if time_left <= 0 and order['validity'] == 'Valid':
             cursor.execute('''UPDATE orders SET validity=? WHERE tx_hash=?''', ('Invalid: expired', order['tx_hash']))
-            cursor = util.credit(db, cursor, order['source'], order['give_id'], order['give_remaining'])
+            if order['give_id']:    # Can’t credit BTC.
+                cursor = util.credit(db, cursor, order['source'], order['give_id'], order['give_remaining'])
             logging.info('Expired order: {}'.format(util.short(order['tx_hash'])))
 
     # Expire order_matches for BTC with no BTC.

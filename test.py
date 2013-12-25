@@ -241,11 +241,11 @@ def test_bet_bearcfd_to_be_liquidated ():
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
     tx_insert(source_default, destination, btc_amount, fee, data)
     cursor = blocks.parse_block(db, cursor, tx_index - 1)
+
 def test_broadcast_liquidate ():
     global db, cursor
-    unsigned_tx_hex = broadcast.create(source_default, 1388000105, 100, round(D(.05) * D(1e8)), 'Unit Test', test=True)
-    logging.info(unsigned_tx_hex)
-    # assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02ce22ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000426a40544553540000001e52bb33004059000000000000004c4b4009556e6974205465737400000000000000000000000000000000000000000000000000000000000000000000'
+    unsigned_tx_hex = broadcast.create(source_default, 1388000050, round(100 - (.05 / 3) - .00001, 5), round(D(.05) * D(1e8)), 'Unit Test', test=True)
+    assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02ce22ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000426a40544553540000001e52bb33324058feeeb702602d004c4b4009556e6974205465737400000000000000000000000000000000000000000000000000000000000000000000'
     fee = config.MIN_FEE
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
@@ -254,7 +254,6 @@ def test_broadcast_liquidate ():
 
 
 # bull, bear to be settled
-
 
 # history
 

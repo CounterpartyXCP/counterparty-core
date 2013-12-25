@@ -108,21 +108,21 @@ def parse (db, cursor, tx, message):
                 bear_escrow = bet_match['forward_amount']
                 
             total_escrow = bull_escrow + bear_escrow
-            bear_credit = bear_escrow - D(value - initial_value) * leverage * config.UNIT
+            bear_credit = round(bear_escrow - D(value - initial_value) * leverage * config.UNIT)
             bull_credit = total_escrow - bear_credit
 
             # Liquidate, as necessary.
             if bull_credit >= total_escrow:
                 cursor = util.credit(db, cursor, bull_address, 1, total_escrow)
                 validity = 'Force‐Liquidated'
-                logging.info('Contract Force‐Liquidated: {} XCP credited to the bull, and 0 XCP credited to the bear ({})'.format(total_escrow / config.UNIT, util.short(bet_match_id)))
+                logging.info('Contract Force‐Liquidated: {} XCP credited to the bull, and 0 XCP credited to the bear ({})'.format(util.devise(total_escrow, 1, 'output'), util.short(bet_match_id)))
             elif bull_credit <= 0:
                 cursor = util.credit(db, cursor, bear_address, 1, total_escrow)
                 validity = 'Force‐Liquidated'
-                logging.info('Contract Force‐Liquidated: 0 XCP credited to the bull, and {} XCP credited to the bear ({})'.format(total_escrow / config.UNIT, util.short(bet_match_id)))
+                logging.info('Contract Force‐Liquidated: 0 XCP credited to the bull, and {} XCP credited to the bear ({})'.format(util.devise(total_escrow, 1, 'output'), util.short(bet_match_id)))
 
             # Settle.
-            if timestamp > bet_match['deadline'] and validity != 'Liquidated':
+            if timestamp >= bet_match['deadline'] and validity != 'Force‐Liquidated':
                 cursor = util.credit(db, cursor, bull_address, 1, bull_credit)
                 cursor = util.credit(db, cursor, bear_address, 1, bear_credit)
                 validity = 'Settled'
