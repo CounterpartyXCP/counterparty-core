@@ -46,7 +46,7 @@ def parse (db, cursor, tx, message):
     except Exception:   #
         validity = 'Invalid: could not unpack'
 
-    if not hidden_message[0].decode('utf-8') == 'ProofOfBurn':
+    if validity == 'Valid' and hidden_message[0].decode('utf-8') != 'ProofOfBurn':
         validity = 'Invalid: secret message not found'
 
     burned = int(tx['fee'])

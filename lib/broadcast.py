@@ -86,8 +86,10 @@ def parse (db, cursor, tx, message):
 
     # Handle bet_matches that use this feed.
     cursor.execute('''SELECT * FROM bet_matches \
-                      WHERE (validity=? AND feed_address=?)''', ('Valid', tx['source']))
+                      WHERE (validity=? AND feed_address=?)
+                      ORDER BY tx1_index ASC, tx0_index ASC''', ('Valid', tx['source']))
     for bet_match in cursor.fetchall():
+        validity = 'Valid'
         bet_match_id = bet_match['tx0_hash'] + bet_match['tx1_hash']
 
         # Contract for difference, with determinate settlement date.
@@ -111,18 +113,19 @@ def parse (db, cursor, tx, message):
             bear_credit = round(bear_escrow - D(value - initial_value) * leverage * config.UNIT)
             bull_credit = total_escrow - bear_credit
 
-            # Liquidate, as necessary.
-            if bull_credit >= total_escrow:
-                cursor = util.credit(db, cursor, bull_address, 1, total_escrow)
-                validity = 'Force‐Liquidated'
-                logging.info('Contract Force‐Liquidated: {} XCP credited to the bull, and 0 XCP credited to the bear ({})'.format(util.devise(total_escrow, 1, 'output'), util.short(bet_match_id)))
-            elif bull_credit <= 0:
-                cursor = util.credit(db, cursor, bear_address, 1, total_escrow)
-                validity = 'Force‐Liquidated'
-                logging.info('Contract Force‐Liquidated: 0 XCP credited to the bull, and {} XCP credited to the bear ({})'.format(util.devise(total_escrow, 1, 'output'), util.short(bet_match_id)))
+            if bet_match['validity'] == 'Valid':
+                # Liquidate, as necessary.
+                if bull_credit >= total_escrow:
+                    cursor = util.credit(db, cursor, bull_address, 1, total_escrow)
+                    validity = 'Force‐Liquidated'
+                    logging.info('Contract Force‐Liquidated: {} XCP credited to the bull, and 0 XCP credited to the bear ({})'.format(util.devise(total_escrow, 1, 'output'), util.short(bet_match_id)))
+                elif bull_credit <= 0:
+                    cursor = util.credit(db, cursor, bear_address, 1, total_escrow)
+                    validity = 'Force‐Liquidated'
+                    logging.info('Contract Force‐Liquidated: 0 XCP credited to the bull, and {} XCP credited to the bear ({})'.format(util.devise(total_escrow, 1, 'output'), util.short(bet_match_id)))
 
             # Settle.
-            if timestamp >= bet_match['deadline'] and validity != 'Force‐Liquidated':
+            if validity == 'Valid' and timestamp >= bet_match['deadline']:
                 cursor = util.credit(db, cursor, bull_address, 1, bull_credit)
                 cursor = util.credit(db, cursor, bear_address, 1, bear_credit)
                 validity = 'Settled'

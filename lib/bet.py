@@ -36,6 +36,7 @@ def get_fee_multiplier (feed_address):
     cursor.close()
     return D(broadcast['fee_multiplier'] / 1e8)
 
+# TODO: Re‐name threshold ‘target value’?!
 def create (source, feed_address, bet_type, deadline, wager_amount,
             counterwager_amount, threshold, leverage, expiration, test=False):
 
