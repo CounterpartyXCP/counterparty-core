@@ -5,7 +5,7 @@ Counterparty is a protocol for the creation and use of decentralised financial i
 
 The contents of this repository, `counterpartyd`, constitute the reference implementation of the protocol.
 
-The Counterparty documentation may be found at <http://counterparty.rtd.org>.
+The Counterparty documentation may be found at <http://counterparty.rtfd.org/>.
 
 ## Dependencies
 * Python 3
@@ -14,4 +14,4 @@ The Counterparty documentation may be found at <http://counterparty.rtd.org>.
 
 ## Instructions
 
-Please see the "Getting Started" section at <http://counterparty.rtd.org>.
+Please see the "Getting Started" section at <http://counterparty.rtfd.org/>.
