@@ -3,11 +3,6 @@ Counterparty Specification
 
 **Version: 0.0.1**
 
-**ATTENTION:**
-*Counterparty* is currently operating only on the Bitcoin ``testnet``
-blockchain, because it requires the use of a feature of the Bitcoin protocol
-that is not yet enabled in the official client (namely ``OP_RETURN`` outputs).
-
 
 Summary
 -------
@@ -59,9 +54,10 @@ has a formatting specific to the message type.
 All messages are parsed in order, one at a time, ignoring block boundaries for
 everything except for the expiration of orders and bets.
 
-Orders and deals are identified by an ‘Order ID’ and a ‘Deal ID’, respectively,
-which, in both cases, are a concatenation of hashes of the two transaction
-which compose them, in order of their appearance in the blockchain.
+Orders and Order Matches are identified by an ‘Order ID’ and a ‘Order Match
+ID’, respectively, which, in both cases, are a concatenation of hashes of the
+two transaction which compose them, in order of their appearance in the
+blockchain.
 
 A feed is identified by the address which publishes it.
 
@@ -117,14 +113,14 @@ reduced by one,
 
 When an order is seen in the blockchain, the protocol attempts to match it,
 deterministically, with another open order previously seen. Two matched orders
-are called a ‘deal’. If either of a deal’s orders involved Bitcoin, then the
-deal is assigned the status ‘waiting for bitcoins’, until the necessary BTCPay
+are called a ‘order match’. If either of a order match’s orders involved Bitcoin, then the
+order match is assigned the status ‘waiting for bitcoins’, until the necessary BTCPay
 transaction is published. Otherwise, the trade is completed immediately, with
 the protocol itself assigning the participating addresses their new balances.
 
 All orders are *limit orders*: an asking price is specified in the ratio of how
 much of one would like to get and give; an order is matched to the open order
-with the best price, and the deal is made at *that* price. That is, if there is
+with the best price, and the order match is made at *that* price. That is, if there is
 one open order to sell at .11 XCP/BTC, and another at .12 XCP/BTC.  Then any
 new order to buy at .14 XCP/BTC will be matched to the first sell order, and
 the XCP and BTC will be traded at a price of .11 XCP/BTC.
@@ -133,7 +129,7 @@ All orders allow for partial execution; there are no all‐or‐none orders (but
 the Chicago Board Options Exchange doesn’t allow those either). If, in the
 previous example, the party buying the bitcoins wanted to buy more than the
 first sell offer had available, then the rest of the buy order would be filled
-by the latter existing order. After all possible deals are made, the current
+by the latter existing order. After all possible order matches are made, the current
 (buy) order is listed as an open order itself. If there exist multiple open
 orders at the same price, the order that was placed earlier is matched first.
 
@@ -141,8 +137,8 @@ Open orders cannot be changed. To cancel an open order of yours, simply
 [attempt to] fill it yourself.
 
 Open orders expire after they have been open for a user‐specified number of
-blocks. Deals waiting for bitcoin payments expire as soon as one of the
-constituent orders expires. Upon the expiration of all orders and deals, the
+blocks. Order Matches waiting for bitcoin payments expire as soon as one of the
+constituent orders expires. Upon the expiration of all orders and order matches, the
 escrowed funds are returned to the parties that originally had them.
 
 In general, there can be no such thing as a fake order, because the assets that
@@ -152,8 +148,8 @@ which pay a fee in bitcoins to Bitcoin miners be matched to their own. On the
 other hand, when creating an order to sell bitcoins, a user may pay whatever
 fee he likes.
 
-Payments of bitcoins to close deals waiting for bitcoins are done with the
-``btcpay`` command, which needs only the ID of the deal in question to make the
+Payments of bitcoins to close order matches waiting for bitcoins are done with the
+``btcpay`` command, which needs only the ID of the order match in question to make the
 necessary payment.
 
 The ``deadline`` should be after the expiration.
@@ -189,8 +185,8 @@ and announce the results with ``--text='US QE on 2014-01-01: decrease!'
 The publishing of a single broadcast with a null string for a textual message
 locks that feed, and prevents it both from being the source of any further
 broadcasts and from being the subject of any new bets. (If a feed is locked
-while there are open bets or unsettled contracts that refer to it, then those
-bets and contracts will expire harmlessly.)
+while there are open bets or unsettled bet matches that refer to it, then those
+bets and bet matches will expire harmlessly.)
 
 
 Bet
@@ -211,7 +207,7 @@ made from the address which first issued the shares (indivisible assets).
 Watch
 ^^^^^
 
-The ``watch`` command prints out tables of open orders, open bets, and deals
+The ``watch`` command prints out tables of open orders, open bets, and order matches
 currently waiting for bitcoin payments from one of your addresses.
 
 

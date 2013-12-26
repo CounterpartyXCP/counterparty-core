@@ -78,7 +78,7 @@ In another command window, you can then run any of counterparty’s other functi
 
 To run the counterparty testsuite::
 
-    cd C:\CounterParty
+    cd C:\Counterparty
     run.py tests 
 
 

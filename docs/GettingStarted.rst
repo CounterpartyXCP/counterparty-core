@@ -6,15 +6,18 @@ Running bitcoind
 
 .. warning::
 
-    Currently, ``bitcoind`` must be run on testnet. **Until ``bitcoind`` 0.9 is released, do not use ``counterpartyd``
-    with a ``bitcoind`` running on production unless you know what you're doing.**
-    
+    *Counterparty* is currently operating only on the Bitcoin ``testnet``
+    blockchain, because it requires the use of a feature of the Bitcoin protocol
+    that is not yet enabled in the official client (namely ``OP_RETURN`` outputs).
+    Please **run ``bitcoind`` with ``-testnet=1``**, when using it with Counterparty, for the time being.
+
+
 
 ``counterpartyd`` communicates with the Bitcoin reference client (``bitcoind``). Normally, you'll run ``bitcoind``
 on the same computer as your instance of ``counterpartyd`` runs on. However, you can also use a ``bitcoind``
-sitting on a different server entirely, if you already have one running on your network. 
+sitting on a different server entirely.
 
-At this time, 3rd party RPC interfaces like Blockchain.info's are not supported.
+At this time, third-party RPC interfaces such as Blockchain.info's are not supported.
 
 On Windows
 ~~~~~~~~~~~~
@@ -91,9 +94,9 @@ On Windows
 - The installer will verify all dependencies are on your system, as well as installing ``counterpartyd.exe``
   (i.e. which has been created as a self-contained program with all the necessary Python dependencies compiled in)
 - The installer will gather data on your bitcoind installation, and create a basic ``counterpartyd`` configuration file from that
-- The installer will also have ``counterpartyd`` run as a service on startup (called "CounterParty") automatically
+- The installer will also have ``counterpartyd`` run as a service on startup (called "Counterparty") automatically
 
-You can start and stop the CounterParty service via the Services icon in the Administrative Tools Control Panel.
+You can start and stop the Counterparty service via the Services icon in the Administrative Tools Control Panel.
 
 
 On Linux
@@ -113,10 +116,10 @@ Finding the Data Directory
 ``counterpartyd`` stores its configuration, logging, and state data in a place known as the ``counterpartyd``
 data directory.
 
-Under Linux, the data directory is normally located in ``/home/counterpartyd/.config/counterparty`` (when
+Under Linux, the data directory is normally located in ``~/.config/counterparty`` (when
 ``counterparty`` is installed normally, via the ``setup.py`` installer).
 
-Under Windows, the data directory is normally located at ``%APPDATA%\CounterParty\Counterparty``. Examples of this are:
+Under Windows, the data directory is normally located at ``%APPDATA%\Counterparty\Counterparty``. Examples of this are:
 
 - ``C:\users\<user name>\AppData\Roaming\Counterparty\Counterparty`` (Windows 7/8/Server)
 - ``C:\users\<user name>\AppData\Local\Counterparty\Counterparty`` (Windows 7/8/Server Alternate location)
@@ -143,9 +146,9 @@ Viewing the Logs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 By default, ``counterpartyd`` logs data to a file named ``counterpartyd.log``, located within the ``counterpartyd``
-data directory (the location of which is detailed in the section above).
+data directory.
 
-Under Linux, you can monitor these logs via a command like ``tail -f /home/counterpartyd/.config/counterparty/counterparty.log``.
+Under Linux, you can monitor these logs via a command like ``tail -f ~/.config/counterparty/counterparty.log``.
 
 Under Windows, you can use a tool like `Notepad++ <http://notepad-plus-plus.org/>`__ to view the log file,
 which will detect changes to the file and update if necessary.
