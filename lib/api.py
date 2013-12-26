@@ -50,8 +50,8 @@ def get_orders (validity=None, address=None, show_empty=True, show_expired=True)
 
         # Ignore BTC orders one block early.
         time_left = util.get_time_left(order)
-        if not show_expired and not ((time_left > 0 and order['give_id'] and
-                                    order['get_id']) or time_left > 1):
+        if not order['give_id']: time_left -= 1
+        if not show_expired and time_left < 0:
             continue
 
         orders.append(dict(order))
@@ -70,7 +70,7 @@ def get_order_matches (validity=None, addresses=[], show_expired=True):
 
         if not show_expired:
             order_match_time_left = util.get_order_match_time_left(order_match)
-            if order_match_time_left <= 0: continue
+            if order_match_time_left < 0: continue
 
         if addresses and not ((order_match['tx0_address'] in addresses and
                                not order_match['forward_id']) or
@@ -158,7 +158,7 @@ def get_bet_matches (validity=None, addresses=None, show_expired=True):
         if validity and bet_match['validity'] != validity: continue
         if not show_expired:
             bet_match_time_left = get_bet_match_time_left(bet_match)
-            if bet_match_time_left <= 0: continue
+            if bet_match_time_left < 0: continue
         if addresses and not (bet_match['tx0_address'] in addresses or
                               bet_match['tx1_address'] in addresses):
             continue

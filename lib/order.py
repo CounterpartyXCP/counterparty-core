@@ -210,8 +210,8 @@ def expire (db, cursor, block_index):
     # Expire orders and give refunds for the amount give_remaining (if non‐zero; if not BTC).
     cursor.execute('''SELECT * FROM orders''')
     for order in cursor.fetchall():
-        time_left = order['block_index'] + order['expiration'] - block_index # Inclusive/exclusive expiration? DUPE
-        if time_left <= 0 and order['validity'] == 'Valid':
+        time_left = util.get_time_left(order)
+        if time_left < 0 and order['validity'] == 'Valid':
             cursor.execute('''UPDATE orders SET validity=? WHERE tx_hash=?''', ('Invalid: expired', order['tx_hash']))
             if order['give_id']:    # Can’t credit BTC.
                 cursor = util.credit(db, cursor, order['source'], order['give_id'], order['give_remaining'])
@@ -220,9 +220,7 @@ def expire (db, cursor, block_index):
     # Expire order_matches for BTC with no BTC.
     cursor.execute('''SELECT * FROM order_matches''')
     for order_match in cursor.fetchall():
-        tx0_time_left = order_match['tx0_block_index'] + order_match['tx0_expiration'] - block_index # Inclusive/exclusive expiration? DUPE
-        tx1_time_left = order_match['tx1_block_index'] + order_match['tx1_expiration'] - block_index # Inclusive/exclusive expiration? DUPE
-        if (tx0_time_left <= 0 or tx1_time_left <=0) and order_match['validity'] == 'Valid: waiting for bitcoins':
+        if order_match['validity'] == 'Valid: waiting for bitcoins' and util.get_order_match_time_left(order_match()) >= 0:
             cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Invalid: expired while waiting for bitcoins', order_match['tx0_hash'], order_match['tx1_hash']))
             if not order_match['forward_id']:
                 cursor = util.credit(db, cursor, order_match['tx1_address'],
