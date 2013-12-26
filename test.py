@@ -294,10 +294,6 @@ def test_broadcast_settle ():
     tx_insert(source_default, destination, btc_amount, fee, data)
     parse_tx(tx_index - 1, data, broadcast.parse)
 
-# history
-
-# watch
-
 def test_parse_from_the_start():
     global db, cursor
     blocks.initialise(db, cursor)
@@ -319,7 +315,24 @@ def test_db_dump():
     assert not len(lines)
 
 
+def test_base58_decode():
+    """
+    mainnet addresses here
+
+    The leading zeros are not included in the pubkeyhash: see
+    <http://www.bitcoinsecurity.org/wp-content/uploads/2012/07/tx_binary_map.png>.
+    """
+    address = '16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM'
+    pubkeyhash = bitcoin.base58_decode(address, b'\x00')
+    assert binascii.hexlify(pubkeyhash).decode('utf-8') == '010966776006953D5567439E5E39F86A0D273BEE'.lower()
+    assert len(pubkeyhash) == 20
+
+
 # Can’t do follow().
+
+# history
+
+# watch
 
 """
 lib/api.py:8:def get_balances (address=None, asset_id=None):
@@ -348,6 +361,7 @@ lib/util.py:69:def credit (db, cursor, address, asset_id, amount):
 
 lib/util.py:88:def good_feed (cursor, feed_address):
 lib/util.py:103:def devise (quantity, asset_id, precision=8):
+
 lib/bet.py:26:def get_fee_multiplier (feed_address):
 lib/bet.py:141:def bet_match (db, cursor, tx):
 lib/bet.py:249:def expire (db, cursor, block_index):
@@ -355,10 +369,8 @@ lib/order.py:104:def order_match (db, cursor, tx):
 lib/order.py:202:def expire (db, cursor, block_index):
 lib/blocks.py:71:def initialise(db, cursor):
 lib/blocks.py:277:def get_tx_info (tx):
-lib/blocks.py:318:def follow ():
 lib/bitcoin.py:28:def rpc (method, params):
 lib/bitcoin.py:44:def bitcoind_check ():
-lib/bitcoin.py:52:def base58_decode (s, version):
 lib/bitcoin.py:117:def serialize (inputs, outputs, data):
 lib/bitcoin.py:161:def get_inputs (source, amount, fee):
 lib/bitcoin.py:173:def transaction (source, destination, btc_amount, fee, data, ask=False):
