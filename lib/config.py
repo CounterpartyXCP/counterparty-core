@@ -23,4 +23,7 @@ BURN_END = 156000               # testnet
 PREFIX = b'TEST'                # 4 bytes (possibly accidentally created)
 TXTYPE_FORMAT = '>I'
 
+# Counterpartyd version
+VERSION = "0.0.1"
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
