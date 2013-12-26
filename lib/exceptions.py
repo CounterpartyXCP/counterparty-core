@@ -1,6 +1,8 @@
 #! /usr/bin/python3
 
 # Exceptions
+class PossibleInjectionAttackError (Exception):
+    pass
 class TXConstructionError(Exception):
     pass
 class OverflowError(Exception):

@@ -62,6 +62,15 @@ def format_order_match (order_match):
     order_match_time_left = util.get_order_match_time_left(order_match)
     return [order_match_id, order_match_time_left]
 
+def format_feed (feed):
+    timestamp = util.isodt(feed['timestamp'])
+    if not feed['text']:
+        text = '<Locked>'
+    else:
+        text = feed['text']
+    return [feed['source'], timestamp, text, feed['value'], D(feed['fee_multiplier']) / D(1e8)]
+
+
 if __name__ == '__main__':
     data_dir_default = appdirs.user_data_dir('Counterparty', 'Counterparty')
 
@@ -277,9 +286,23 @@ if __name__ == '__main__':
                 order_match = format_order_match(order_match)
                 table.add_row(order_match)
             print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Order Matches Awaiting BTC Payment' + colorama.Style.RESET_ALL)
-            print(colorama.Fore.CYAN + str(table) + colorama.Style.RESET_ALL)
+            print(colorama.Fore.CYAN + colorama.Style.BRIGHT + str(table) + colorama.Style.RESET_ALL)
+            print('\n')
 
-            # TODO: Running feeds
+            # Running feeds
+            broadcasts = api.get_broadcasts(validity='Valid', order_by='timestamp DESC')
+            table = PrettyTable(['Feed Address', 'Timestamp', 'Text', 'Value', 'Fee Multiplier'])
+            seen_addresses = []
+            for broadcast in broadcasts:
+                # Always show only the latest broadcast from a feed address.
+                if broadcast['source'] not in seen_addresses:
+                    feed = format_feed(broadcast)
+                    table.add_row(feed)
+                    seen_addresses.append(broadcast['source'])
+                else:
+                    continue
+            print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Running Feeds' + colorama.Style.RESET_ALL)
+            print(colorama.Fore.MAGENTA + str(table) + colorama.Style.RESET_ALL)
 
             time.sleep(30)
             

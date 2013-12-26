@@ -111,13 +111,16 @@ def get_issuances (validity=None, asset_id=None, issuer=None):
     cursor.close()
     return issuances
 
-def get_broadcasts (validity=None, source=None):
+def get_broadcasts (validity=None, source=None, order_by='tx_index ASC'):
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
 
+    if order_by not in ('tx_index ASC', 'timestamp DESC'):
+        raise exceptions.PossibleInjectionAttackError('Unknown scheme for ordering broadcasts.')
+
     cursor.execute('''SELECT * FROM broadcasts \
-                      ORDER BY tx_index ASC''')
+                      ORDER BY ?''', (order_by,))
     broadcasts = []
     for broadcast in cursor.fetchall():
         if validity and broadcast['Validity'] != validity: continue

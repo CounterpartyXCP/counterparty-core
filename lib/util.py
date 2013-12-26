@@ -94,7 +94,7 @@ def good_feed (cursor, feed_address):
     Locks are [necessarily] based on tx_index and not timestamp.
     """
     from lib import api #
-    broadcasts = api.get_broadcasts(validity='Valid', source=feed_address)
+    broadcasts = api.get_broadcasts(validity='Valid', source=feed_address, order_by='tx_index ASC')
     if not len(broadcasts): return cursor, None             # Non‐existant
     for broadcast in broadcasts:
         if broadcast['text'] == '': return cursor, False    # Locked
