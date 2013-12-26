@@ -50,12 +50,12 @@ def format_bet (bet):
     wager_remaining = D(bet['wager_remaining'])
     counterwager_remaining = round(wager_remaining * odds)
 
-    if not bet['threshold']: threshold = None
-    else: threshold = bet['threshold']
+    if not bet['target_value']: target_value = None
+    else: target_value = bet['target_value']
     if not bet['leverage']: leverage = None
     else: leverage = D(D(bet['leverage']) / 5040).quantize(config.FOUR).normalize()
 
-    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], bet['deadline'], threshold, leverage, str(wager_remaining / config.UNIT) + ' XCP', str(counterwager_remaining / config.UNIT) + ' XCP', odds.quantize(config.FOUR).normalize(), util.get_time_left(bet), util.short(bet['tx_hash'])]
+    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], bet['deadline'], target_value, leverage, str(wager_remaining / config.UNIT) + ' XCP', str(counterwager_remaining / config.UNIT) + ' XCP', odds.quantize(config.FOUR).normalize(), util.get_time_left(bet), util.short(bet['tx_hash'])]
 
 def format_order_match (order_match):
     order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     parser_order.add_argument('--deadline', metavar='DEADLINE', required=True, help='')
     parser_order.add_argument('--wager', metavar='WAGER_QUANTITY', required=True, help='')
     parser_order.add_argument('--counterwager', metavar='COUNTERWAGER_QUANTITY', required=True, help='')
-    parser_order.add_argument('--threshold', metavar='THRESHOLD', help='over‐under (?) (bet)')
+    parser_order.add_argument('--target-value', metavar='target_value', help='over‐under (?) (bet)')
     parser_order.add_argument('--leverage', metavar='LEVERAGE', type=int, default=5040, help='leverage, as a fraction of 5040')
     parser_order.add_argument('--expiration', metavar='EXPIRATION', type=int, required=True, help='')
 
@@ -226,7 +226,7 @@ if __name__ == '__main__':
                               util.BET_TYPE_ID[args.bet_type], round(deadline),
                               round(D(args.wager) * config.UNIT),
                               round(D(args.counterwager) * config.UNIT),
-                              float(args.threshold), args.leverage,
+                              float(args.target_value), args.leverage,
                               args.expiration)
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
@@ -261,7 +261,7 @@ if __name__ == '__main__':
 
             # Open bets.
             bets = api.get_bets(validity='Valid', show_expired=False, show_empty=False)
-            table = PrettyTable(['Bet Type', 'Feed Address', 'Deadline', 'Threshold', 'Leverage', 'Wager', 'Counterwager', 'Odds', 'Time Left', 'Tx Hash'])
+            table = PrettyTable(['Bet Type', 'Feed Address', 'Deadline', 'target_value', 'Leverage', 'Wager', 'Counterwager', 'Odds', 'Time Left', 'Tx Hash'])
             for bet in bets:
                 bet = format_bet(bet)
                 table.add_row(bet)
@@ -278,6 +278,8 @@ if __name__ == '__main__':
                 table.add_row(order_match)
             print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Order Matches Awaiting BTC Payment' + colorama.Style.RESET_ALL)
             print(colorama.Fore.CYAN + str(table) + colorama.Style.RESET_ALL)
+
+            # TODO: Running feeds
 
             time.sleep(30)
             

@@ -12,8 +12,8 @@ from . import (config, bitcoin)
 # Obsolete in Python 3.4, with enum module.
 ASSET_NAME = {0: 'BTC', 1: 'XCP'}
 ASSET_ID = {'BTC': 0, 'XCP': 1}
-BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD'}
-BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1}
+BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
+BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
 
 def short (string):
     if len(string) == 64: length = 8

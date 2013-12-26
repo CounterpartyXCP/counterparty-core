@@ -193,7 +193,7 @@ def transaction (source, destination, btc_amount, fee, data, test=False):
     # Check that the destination output isn’t a dust output.
     if destination:
         if not btc_amount >= config.DUST_SIZE:
-            raise exceptions.TXConstructionError('Destination output is below the dust threshold.')
+            raise exceptions.TXConstructionError('Destination output is below the dust target_value.')
     else:
         assert not btc_amount
 
@@ -214,7 +214,7 @@ def transaction (source, destination, btc_amount, fee, data, test=False):
         outputs.append((destination, btc_amount))
 
     # Change output.
-    change_amount = total_btc_in - total_btc_out    # This does not check to make sure that the change output is above the dust threshold.
+    change_amount = total_btc_in - total_btc_out    # This does not check to make sure that the change output is above the dust target_value.
     if change_amount: outputs.append((source, change_amount))
 
     # Serialise inputs and outputs.

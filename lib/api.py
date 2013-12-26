@@ -194,7 +194,7 @@ def get_burns (validity=True, address=None):
 
 
 def get_history (address):
-    if not base58_decode(address, ADDRESSVERSION):
+    if not bitcoin.base58_decode(address, bitcoin.ADDRESSVERSION):
         raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
                                              address)
     history = {}

@@ -34,6 +34,16 @@ ID = 30
 LENGTH = 4 + 8 + 4 + 40
 
 def create (source, timestamp, value, fee_multiplier, text, test=False):
+
+    # Check that the publishing address is not locked.
+    db = sqlite3.connect(config.DATABASE)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
+    cursor, good_feed = util.good_feed(cursor, source)
+    if good_feed != None and not good_feed:
+        raise exceptions.UselessError('Invalid: locked feed')
+    cursor.close()
+
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, timestamp, value, fee_multiplier,
                         text.encode('utf-8'))
@@ -84,7 +94,7 @@ def parse (db, cursor, tx, message):
         logging.info('Broadcast: {}'.format(infix + suffix))
 
 
-    # Handle bet_matches that use this feed.
+    # Handle bet matches that use this feed.
     cursor.execute('''SELECT * FROM bet_matches \
                       WHERE (validity=? AND feed_address=?)
                       ORDER BY tx1_index ASC, tx0_index ASC''', ('Valid', tx['source']))
@@ -92,13 +102,18 @@ def parse (db, cursor, tx, message):
         validity = 'Valid'
         bet_match_id = bet_match['tx0_hash'] + bet_match['tx1_hash']
 
-        # Contract for difference, with determinate settlement date.
-        cfd_id_sum = util.BET_TYPE_ID['BullCFD'] + util.BET_TYPE_ID['BearCFD']
-        if bet_match['tx0_bet_type'] + bet_match['tx1_bet_type'] == cfd_id_sum:
-            leverage = D(bet_match['leverage']) / 5040
-            initial_value = bet_match['initial_value']
+        # Get known bet match type IDs.
+        cfd_type_id = util.BET_TYPE_ID['BullCFD'] + util.BET_TYPE_ID['BearCFD']
+        equal_type_id = util.BET_TYPE_ID['Equal'] + util.BET_TYPE_ID['NotEqual']
 
-            if bet_match['tx0_bet_type'] == 0 and bet_match['tx1_bet_type'] == 1:
+        # Get the bet match type ID of this bet match.
+        bet_match_type_id = bet_match['tx0_bet_type'] + bet_match['tx1_bet_type']
+
+        # Contract for difference, with determinate settlement date.
+        if validity == 'Valid' and bet_match_type_id == cfd_type_id:
+
+            # Recognise tx0, tx1 as the bull, bear (in the right direction).
+            if bet_match['tx0_bet_type'] < bet_match['tx1_bet_type']:
                 bull_address = bet_match['tx0_address']
                 bear_address = bet_match['tx1_address']
                 bull_escrow = bet_match['forward_amount']
@@ -108,6 +123,9 @@ def parse (db, cursor, tx, message):
                 bear_address = bet_match['tx0_address']
                 bull_escrow = bet_match['backward_amount']
                 bear_escrow = bet_match['forward_amount']
+
+            leverage = D(bet_match['leverage']) / 5040
+            initial_value = bet_match['initial_value']
                 
             total_escrow = bull_escrow + bear_escrow
             bear_credit = round(bear_escrow - D(value - initial_value) * leverage * config.UNIT)
@@ -117,24 +135,50 @@ def parse (db, cursor, tx, message):
                 # Liquidate, as necessary.
                 if bull_credit >= total_escrow:
                     cursor = util.credit(db, cursor, bull_address, 1, total_escrow)
-                    validity = 'Force‐Liquidated'
+                    validity = 'Force‐Liquidated Bear'
                     logging.info('Contract Force‐Liquidated: {} XCP credited to the bull, and 0 XCP credited to the bear ({})'.format(util.devise(total_escrow, 1, 'output'), util.short(bet_match_id)))
                 elif bull_credit <= 0:
                     cursor = util.credit(db, cursor, bear_address, 1, total_escrow)
-                    validity = 'Force‐Liquidated'
+                    validity = 'Force‐Liquidated Bull'
                     logging.info('Contract Force‐Liquidated: 0 XCP credited to the bull, and {} XCP credited to the bear ({})'.format(util.devise(total_escrow, 1, 'output'), util.short(bet_match_id)))
 
             # Settle.
             if validity == 'Valid' and timestamp >= bet_match['deadline']:
                 cursor = util.credit(db, cursor, bull_address, 1, bull_credit)
                 cursor = util.credit(db, cursor, bear_address, 1, bear_credit)
-                validity = 'Settled'
+                validity = 'Settled (CFD)'
                 logging.info('Contract Settled: {} XCP credited to the bull, and {} XCP credited to the bear ({})'.format(bull_credit / config.UNIT, bear_credit / config.UNIT, util.short(bet_match_id)))
 
-            cursor.execute('''UPDATE bet_matches \
-                              SET validity=? \
-                              WHERE (tx0_hash=? and tx1_hash=?)''',
-                          (validity, bet_match['tx0_hash'], bet_match['tx1_hash']))
+        # Equal[/NotEqual] bet.
+        if validity == 'Valid' and  bet_match_type_id == equal_type_id and timestamp >= bet_match['deadline']:
+
+            # Recognise tx0, tx1 as the bull, bear (in the right direction).
+            if bet_match['tx0_bet_type'] < bet_match['tx1_bet_type']:
+                equal_address = bet_match['tx0_address']
+                notequal_address = bet_match['tx1_address']
+            else:
+                equal_address = bet_match['tx1_address']
+                notequal_address = bet_match['tx0_address']
+
+            # Decide who won.
+            total_escrow = bet_match['forward_amount'] + bet_match['backward_amount']
+            if value == bet_match['target_value']:
+                winner = 'Equal'
+                cursor = util.credit(db, cursor, equal_address, 1, total_escrow)
+                validity = 'Settled for Equal'
+            else:
+                winner = 'NotEqual'
+                cursor = util.credit(db, cursor, notequal_address, 1, total_escrow)
+                validity = 'Settled for NotEqual'
+
+            logging.info('Contract Settled: {} won ({})'.format(winner, util.short(bet_match_id)))
+
+        # Update the bet match’s status.
+        cursor.execute('''UPDATE bet_matches \
+                          SET validity=? \
+                          WHERE (tx0_hash=? and tx1_hash=?)''',
+                      (validity, bet_match['tx0_hash'], bet_match['tx1_hash']))
+       
 
     return cursor
 

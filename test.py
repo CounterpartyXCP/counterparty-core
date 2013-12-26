@@ -128,6 +128,7 @@ def get_tx_data (tx_hex):
 
 def test_initialise ():
     global db, cursor
+    logging.info('START TEST')
     blocks.initialise(db, cursor)
 
 def test_burn ():
@@ -274,6 +275,26 @@ def test_bet_bearcfd_to_be_settled ():
     tx_insert(source_default, destination, btc_amount, fee, data)
     parse_tx(tx_index - 1, data, bet.parse)
 
+def test_bet_equal ():
+    global db, cursor
+    unsigned_tx_hex = bet.create(source_default, source_default, 2, 1388000200, small * 15, small * 13, 1, 0, expiration, test=True)
+    assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac980dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000306a2e5445535400000028000252bb33c800000000047868c00000000003dfd2403ff0000000000000000000000000000a00000000'
+    fee = config.MIN_FEE
+
+    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
+    tx_insert(source_default, destination, btc_amount, fee, data)
+    parse_tx(tx_index - 1, data, bet.parse)
+
+def test_bet_notequal ():
+    global db, cursor
+    unsigned_tx_hex = bet.create(source_default, source_default, 3, 1388000200, small * 13, small * 15, 1, 0, expiration, test=True)
+    assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac980dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000306a2e5445535400000028000352bb33c80000000003dfd24000000000047868c03ff0000000000000000000000000000a00000000'
+    fee = config.MIN_FEE
+
+    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
+    tx_insert(source_default, destination, btc_amount, fee, data)
+    parse_tx(tx_index - 1, data, bet.parse)
+
 def test_broadcast_liquidate ():
     global db, cursor
     unsigned_tx_hex = broadcast.create(source_default, 1388000050, round(100 - (.05 / 3) - .00001, 5), fee_multiplier_default, 'Unit Test', test=True)
@@ -288,6 +309,16 @@ def test_broadcast_settle ():
     global db, cursor
     unsigned_tx_hex = broadcast.create(source_default, 1388000101, 100.443, fee_multiplier_default, 'Unit Test', test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02ce22ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000426a40544553540000001e52bb336540591c5a1cac0831004c4b4009556e6974205465737400000000000000000000000000000000000000000000000000000000000000000000'
+    fee = config.MIN_FEE
+
+    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
+    tx_insert(source_default, destination, btc_amount, fee, data)
+    parse_tx(tx_index - 1, data, broadcast.parse)
+
+def test_broadcast_equal ():
+    global db, cursor
+    unsigned_tx_hex = broadcast.create(source_default, 1388000201, 2, fee_multiplier_default, 'Unit Test', test=True)
+    assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02ce22ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000426a40544553540000001e52bb33c94000000000000000004c4b4009556e6974205465737400000000000000000000000000000000000000000000000000000000000000000000'
     fee = config.MIN_FEE
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
@@ -327,6 +358,7 @@ def test_base58_decode():
     assert binascii.hexlify(pubkeyhash).decode('utf-8') == '010966776006953D5567439E5E39F86A0D273BEE'.lower()
     assert len(pubkeyhash) == 20
 
+    logging.info('STOP TEST')
 
 # Can’t do follow().
 

@@ -192,7 +192,7 @@ bets and bet matches will expire harmlessly.)
 Bet
 ^^^
 
-**TBA**
+* 0 is not a valid target value.
 
 
 Dividend

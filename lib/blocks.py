@@ -218,7 +218,7 @@ def initialise(db, cursor):
                         counterwager_amount INTEGER,
                         wager_remaining INTEGER,
                         odds REAL,
-                        threshold REAL,
+                        target_value REAL,
                         leverage INTEGER,
                         expiration INTEGER,
                         validity TEXT)
@@ -237,7 +237,7 @@ def initialise(db, cursor):
                         feed_address TEXT,
                         initial_value INTEGER,
                         deadline INTEGER,
-                        threshold REAL,
+                        target_value REAL,
                         leverage INTEGER,
                         forward_amount INTEGER,
                         backward_amount INTEGER,
@@ -309,7 +309,7 @@ def get_tx_info (tx):
     for vout in tx['vout']:
         if 'addresses' in vout['scriptPubKey']:
             address = vout['scriptPubKey']['addresses'][0]
-            if base58_decode(address, ADDRESSVERSION):  # If address is valid…
+            if bitcoin.base58_decode(address, bitcoin.ADDRESSVERSION):  # If address is valid…
                 destination, btc_amount = address, round(D(vout['value']) * config.UNIT)
                 break
 

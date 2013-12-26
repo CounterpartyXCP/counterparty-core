@@ -36,9 +36,8 @@ def get_fee_multiplier (feed_address):
     cursor.close()
     return D(broadcast['fee_multiplier'] / 1e8)
 
-# TODO: Re‐name threshold ‘target value’?!
 def create (source, feed_address, bet_type, deadline, wager_amount,
-            counterwager_amount, threshold, leverage, expiration, test=False):
+            counterwager_amount, target_value, leverage, expiration, test=False):
 
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
@@ -58,11 +57,15 @@ def create (source, feed_address, bet_type, deadline, wager_amount,
     if not balances or balances[0]['amount'] < wager_amount * (1 + fee_multiplier):
         raise exceptions.BalanceError('Insufficient funds to both make wager and pay feed fee (in XCP). (Check that the database is up‐to‐date.)')
 
-    if not threshold: threshold = 0.0
+    # Store a null target_value as a zero float.
+    if not target_value: target_value = 0.0
+
+    if leverage != 5040 and bet_type in (2,3):   # Equal, NotEqual
+        raise exceptions.UselessError('Leverage cannot be used with bet types Equal and NotEqual.')
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, bet_type, deadline, 
-                        int(wager_amount), int(counterwager_amount), threshold, int(leverage),
+                        int(wager_amount), int(counterwager_amount), target_value, int(leverage),
                         expiration)
 
     return bitcoin.transaction(source, feed_address, config.DUST_SIZE,
@@ -75,11 +78,11 @@ def parse (db, cursor, tx, message):
     # Unpack message.
     try:
         (bet_type, deadline, wager_amount,
-         counterwager_amount, threshold, leverage,
+         counterwager_amount, target_value, leverage,
          expiration) = struct.unpack(FORMAT, message)
     except Exception:   #
         (bet_type, deadline, wager_amount,
-         counterwager_amount, threshold, leverage,
+         counterwager_amount, target_value, leverage,
          expiration) = None, None, None, None, None, None, None
         validity = 'Invalid: could not unpack'
 
@@ -94,6 +97,9 @@ def parse (db, cursor, tx, message):
     if validity == 'Valid':
         if not wager_amount or not counterwager_amount:
             validity = 'Invalid: zero wager or zero counterwager.'
+
+    if validity == 'Valid' and leverage != 5040 and bet_type in (2,3):   # Equal, NotEqual
+        validity  = 'Invalid: leverage used with an inappropriate bet type.'
 
     if validity == 'Valid':
         # Debit amount wagered and fee.
@@ -119,7 +125,7 @@ def parse (db, cursor, tx, message):
                         counterwager_amount,
                         wager_remaining,
                         odds,
-                        threshold,
+                        target_value,
                         leverage,
                         expiration,
                         validity) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
@@ -134,14 +140,19 @@ def parse (db, cursor, tx, message):
                         counterwager_amount,
                         wager_amount,
                         odds,
-                        threshold,
+                        target_value,
                         leverage,
                         expiration,
                         validity)
                   )
 
     if validity == 'Valid':
-        logging.info('Bet: {} on {} at {} for {} XCP against {} XCP in {} blocks, leveraged {}x ({})'.format(util.BET_TYPE_NAME[bet_type], feed_address, util.isodt(deadline), wager_amount / config.UNIT, counterwager_amount / config.UNIT, expiration, D(leverage / 5040).quantize(config.FOUR).normalize(), util.short(tx['tx_hash'])))
+        placeholder = ''
+        if target_value:    # 0 is not a valid target value.
+            placeholder = ' that ' + str(D(target_value).quantize(config.FOUR).normalize())
+        if leverage:
+            placeholder += ', leveraged {}x'.format(str(D(leverage / 5040).quantize(config.FOUR).normalize()))
+        logging.info('Bet: {} on {} at {} for {} XCP against {} XCP in {} blocks{} ({})'.format(util.BET_TYPE_NAME[bet_type], feed_address, util.isodt(deadline), wager_amount / config.UNIT, counterwager_amount / config.UNIT, expiration, placeholder, util.short(tx['tx_hash'])))
         cursor = bet_match(db, cursor, tx)
 
     return cursor
@@ -166,7 +177,14 @@ def bet_match (db, cursor, tx):
     wager_remaining = D(tx1['wager_remaining'])
     for tx0 in cursor.fetchall():
         if not counterbet_type == tx0['bet_type']: continue
-        if not tx0['leverage'] == tx1['leverage']: continue
+        if tx0['leverage'] == tx1['leverage']:
+            leverage = tx0['leverage']
+        else:
+            continue
+        if tx0['target_value'] == tx1['target_value']:
+            target_value = tx0['target_value']
+        else:
+            continue
 
         # Make sure that that both bets still have funds remaining [to be wagered].
         if tx0['wager_remaining'] <= 0 or wager_remaining <= 0: continue
@@ -184,7 +202,13 @@ def bet_match (db, cursor, tx):
             cursor = util.credit(db, cursor, tx1['feed_address'], 1, int(fee))
 
             bet_match_id = tx0['tx_hash'] + tx1['tx_hash']
-            logging.info('Bet Match: {} for {} XCP against {} for {} XCP on {} at {}, leveraged {}x ({})'.format(util.BET_TYPE_NAME[tx0['bet_type']], forward_amount / config.UNIT, util.BET_TYPE_NAME[tx1['bet_type']], backward_amount / config.UNIT, tx1['feed_address'], util.isodt(tx1['deadline']), D(tx1['leverage'] / 5040).quantize(config.FOUR).normalize(), util.short(bet_match_id)))
+
+            placeholder = ''
+            if target_value:    # 0 is not a valid target value.
+                placeholder = ' that ' + str(D(target_value).quantize(config.FOUR).normalize())
+            if leverage:
+                placeholder += ', leveraged {}x'.format(str(D(leverage / 5040).quantize(config.FOUR).normalize()))
+            logging.info('Bet Match: {} for {} XCP against {} for {} XCP on {} at {}{} ({})'.format(util.BET_TYPE_NAME[tx0['bet_type']], forward_amount / config.UNIT, util.BET_TYPE_NAME[tx1['bet_type']], backward_amount / config.UNIT, tx1['feed_address'], util.isodt(tx1['deadline']), placeholder, util.short(bet_match_id)))
 
             # Debit the order.
             wager_remaining -= backward_amount
@@ -217,7 +241,7 @@ def bet_match (db, cursor, tx):
                                 feed_address,
                                 initial_value,
                                 deadline,
-                                threshold,
+                                target_value,
                                 leverage,
                                 forward_amount,
                                 backward_amount,
@@ -237,7 +261,7 @@ def bet_match (db, cursor, tx):
                                 tx1['feed_address'],
                                 initial_value,
                                 tx1['deadline'],
-                                tx1['threshold'],
+                                tx1['target_value'],
                                 tx1['leverage'],
                                 int(forward_amount),
                                 int(backward_amount),
