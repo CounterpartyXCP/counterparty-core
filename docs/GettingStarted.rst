@@ -23,12 +23,12 @@ Go to `the bitcoind download page <http://bitcoin.org/en/download>`__
 and grab the installer for Windows. Install it with the default options.
 
 Once installed, launch the GUI wallet program (Bitcoin-QT) to start the download of the blockchain.
-Then, type Windows Key-R and enter ``cmd.exe`` to open a Windows command prompt. Type the following:::
+Then, type Windows Key-R and enter ``cmd.exe`` to open a Windows command prompt. Type the following::
 
     cd %LOCALAPPDATA%\..\Roaming\.bitcoin
     notepad bitcoin.conf  
 
-Say Yes to when Notepad asks if you want to create a new file, then paste in the text below:::
+Say Yes to when Notepad asks if you want to create a new file, then paste in the text below::
 
     rpcuser=rpc
     rpcpassword=rpcpw1234
@@ -53,7 +53,7 @@ On Ubuntu Linux
 ~~~~~~~~~~~~~~~~~
 
 If not already installed (or running on a different machine), do the following
-to install it (on Ubuntu, other distros will have similar instructions):::
+to install it (on Ubuntu, other distros will have similar instructions)::
 
     sudo apt-get install python-software-properties
     sudo add-apt-repository ppa:bitcoin/bitcoin
@@ -64,12 +64,12 @@ to install it (on Ubuntu, other distros will have similar instructions):::
 
 Please then edit the ``~/.bitcoin/bitcoin.conf`` file and set the file to the contents specified above (.
 
-Next, start ``bitcoind``:::
+Next, start ``bitcoind``::
 
     bitcoind
 
 The bitcoin server should now be started. The blockchain will begin to download automatically. You must let it finish 
-downloading entirely before going to the next step. You can check the status of this by running:::
+downloading entirely before going to the next step. You can check the status of this by running::
 
      bitcoind getinfo|grep blocks
 
@@ -126,10 +126,10 @@ Under Windows, the data directory is normally located at ``%APPDATA%\CounterPart
 Editing the Config
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``counterpartyd`` can read its configuration data from a file. .
+``counterpartyd`` can read its configuration data from a file.
 
 If not using the Windows installer, you'll need to create a basic ``counterpartyd.conf`` file that contains
-options that tell ``counterpartyd`` where and how to connect to your ``bitcoind`` process. Here's an example:::
+options that tell ``counterpartyd`` where and how to connect to your ``bitcoind`` process. Here's an example::
 
     rpc-connect=
     rpc-port=18832

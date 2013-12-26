@@ -21,14 +21,16 @@ CounterParty specification can perform the following types of operations:
 - **Betting**
 - **what else?**
 
-Specifications:
+Specifications
+---------------
 
 .. toctree::
    :maxdepth: 3
 
    CounterPartySpec
 
-``counterpartyd``:
+counterpartyd
+---------------
 
 .. toctree::
    :maxdepth: 3

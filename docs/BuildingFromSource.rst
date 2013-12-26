@@ -40,7 +40,7 @@ Installing
 
 Type ``<Windows Key>-R`` to open the run dialog, and enter "cmd.exe" to launch a command window.
 
-In the command window, type the following commands:::
+In the command window, type the following commands::
 
     cd C:\
     git clone https://github.com/PhantomPhreak/Counterparty.git
@@ -59,24 +59,24 @@ Upon the successful completion of this script, you can now run ``counterpartyd``
 Running from Source
 ~~~~~~~~~~~~~~~~~~~
 
-After installing, open a command window and run ``counterpartyd`` in the foreground via:::
+After installing, open a command window and run ``counterpartyd`` in the foreground via::
 
     cd C:\Counterparty
     run.py
 
 
-Or, if you have multiple versions of python on your computer and want to make sure you use the right one:::
+Or, if you have multiple versions of python on your computer and want to make sure you use the right one::
     
     cd C:\Counterparty
     C:\Python33\python.exe run.py
 
-In another command window, you can then run any of counterparty’s other functions, like:::
+In another command window, you can then run any of counterparty’s other functions, like::
 
     run.py --help
     run.py send <options....>
     run.py order <options....>
 
-To run the counterparty testsuite:::
+To run the counterparty testsuite::
 
     cd C:\CounterParty
     run.py tests 
@@ -86,7 +86,7 @@ Building your own Installer
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Complete the instructions under **Running from Source** above.
-Then, execute the following commands to build from source:::
+Then, execute the following commands to build from source::
 
     cd C:\Counterparty\dist
     C:\Python33\python.exe setup.py -b
@@ -108,7 +108,7 @@ Support for other distributions is a future task.
 Installing
 ~~~~~~~~~~~
 
-Launch a terminal window, and type the following:::
+Launch a terminal window, and type the following::
 
     sudo apt-get -y update
     sudo apt-get -y install git-core
@@ -130,24 +130,24 @@ Running from Source
 ~~~~~~~~~~~~~~~~~~~
 
 After installing and creating the necessary basic config, run ``counterpartyd`` in the foreground to make sure
-everything works fine:::
+everything works fine::
 
     counterpartyd
     
 (The above assumes ``/usr/local/bin`` is in your PATH, which is where the ``counterpartyd`` symlink (which just
 points to the ``run.py`` script) is placed. If not, run ``/usr/local/bin/counterpartyd`` instead.
 
-Once you're sure it launches and runs fine, press CTRL-C to exit it, and then run ``counterpartyd`` as a background process via:::
+Once you're sure it launches and runs fine, press CTRL-C to exit it, and then run ``counterpartyd`` as a background process via::
 
     sudo service counterpartyd start
 
-You can then run any of counterparty’s other functions, like:::
+You can then run any of counterparty’s other functions, like::
 
     counterpartyd --help
     counterpartyd send <options....>
     counterpartyd order <options....>
 
-To run the counterparty testsuite:::
+To run the counterparty testsuite::
 
     counterpartyd tests
 
