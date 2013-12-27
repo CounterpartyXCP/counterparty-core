@@ -11,6 +11,7 @@ import decimal
 D = decimal.Decimal
 import difflib
 
+import counterpartyd
 from lib import (config, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, api)
 
@@ -346,6 +347,15 @@ def test_db_dump():
     assert not len(lines)
 
 
+"""
+def test_watch():
+    counterpartyd.watch()
+
+def test_history():
+    counterpartyd.history('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc')
+"""
+
+
 def test_base58_decode():
     """
     mainnet addresses here
@@ -360,50 +370,48 @@ def test_base58_decode():
 
     logging.info('STOP TEST')
 
-# Can’t do follow().
 
-# history
-
-# watch
 
 """
-lib/api.py:8:def get_balances (address=None, asset_id=None):
-lib/api.py:23:def get_sends (validity=None, source=None, destination=None):
-lib/api.py:38:def get_orders (validity=None, address=None, show_empty=True, show_expired=True):
-lib/api.py:61:def get_order_matches (validity=None, addresses=[], show_expired=True):
-lib/api.py:85:def get_btcpays (validity=None):
-lib/api.py:98:def get_issuances (validity=None, asset_id=None, issuer=None):
-lib/api.py:114:def get_broadcasts (validity=None, source=None):
-lib/api.py:129:def get_bets (validity=None, address=None, show_empty=True, show_expired=True):
-lib/api.py:147:def get_bet_matches (validity=None, addresses=None, show_expired=True):
-lib/api.py:166:def get_dividends (validity=None, address=None, asset_id=None):
-lib/api.py:181:def get_burns (validity=True, address=None):
-lib/api.py:196:def get_history (address):
+follow()
 
-lib/util.py:18:def short (string):
-lib/util.py:24:def isodt (epoch_time):
+get_balances (address=None, asset_id=None)
+get_sends (validity=None, source=None, destination=None)
+get_orders (validity=None, address=None, show_empty=True, show_expired=True)
+get_order_matches (validity=None, addresses=[], show_expired=True)
+get_btcpays (validity=None)
+get_issuances (validity=None, asset_id=None, issuer=None)
+get_broadcasts (validity=None, source=None)
+get_bets (validity=None, address=None, show_empty=True, show_expired=True)
+get_bet_matches (validity=None, addresses=None, show_expired=True)
+get_dividends (validity=None, address=None, asset_id=None)
+get_burns (validity=True, address=None)
+get_history (address)
 
-lib/util.py:27:def get_time_left (unmatched):
-lib/util.py:32:def get_order_match_time_left (matched):
-lib/util.py:40:def get_asset_id (asset):
-lib/util.py:44:def get_asset_name (asset_id):
+short (string)
+isodt (epoch_time)
 
-lib/util.py:49:def debit (db, cursor, address, asset_id, amount):
-lib/util.py:69:def credit (db, cursor, address, asset_id, amount):
+get_time_left (unmatched)
+get_order_match_time_left (matched)
+get_asset_id (asset)
+get_asset_name (asset_id)
 
-lib/util.py:88:def good_feed (cursor, feed_address):
-lib/util.py:103:def devise (quantity, asset_id, precision=8):
+debit (db, cursor, address, asset_id, amount)
+credit (db, cursor, address, asset_id, amount)
 
-lib/bet.py:26:def get_fee_multiplier (feed_address):
-lib/bet.py:141:def bet_match (db, cursor, tx):
-lib/bet.py:249:def expire (db, cursor, block_index):
-lib/order.py:104:def order_match (db, cursor, tx):
-lib/order.py:202:def expire (db, cursor, block_index):
-lib/blocks.py:71:def initialise(db, cursor):
-lib/blocks.py:277:def get_tx_info (tx):
-lib/bitcoin.py:28:def rpc (method, params):
-lib/bitcoin.py:44:def bitcoind_check ():
-lib/bitcoin.py:117:def serialize (inputs, outputs, data):
-lib/bitcoin.py:161:def get_inputs (source, amount, fee):
-lib/bitcoin.py:173:def transaction (source, destination, btc_amount, fee, data, ask=False):
+good_feed (cursor, feed_address)
+devise (quantity, asset_id, precision=8)
+
+get_fee_multiplier (feed_address)
+bet_match (db, cursor, tx)
+expire (db, cursor, block_index)
+order_match (db, cursor, tx)
+expire (db, cursor, block_index)
+initialise(db, cursor)
+get_tx_info (tx)
+rpc (method, params)
+bitcoind_check ()
+serialize (inputs, outputs, data)
+get_inputs (source, amount, fee)
+transaction (source, destination, btc_amount, fee, data, ask=False)
 """

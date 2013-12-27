@@ -24,11 +24,91 @@ from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, 
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
+def watch ():
+    os.system('cls' if os.name=='nt' else 'clear')
+
+    # Open orders.
+    orders = api.get_orders(validity='Valid', show_expired=False, show_empty=False)
+    table = PrettyTable(['Give', 'Get', 'Price', 'Fee', 'Time Left', 'Tx Hash'])
+    for order in orders:
+        order = format_order(order)
+        table.add_row(order)
+    print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Open Orders' + colorama.Style.RESET_ALL)
+    print(colorama.Fore.BLUE + str(table) + colorama.Style.RESET_ALL)
+    print('\n')
+
+    # Open bets.
+    bets = api.get_bets(validity='Valid', show_expired=False, show_empty=False)
+    table = PrettyTable(['Bet Type', 'Feed Address', 'Deadline', 'target_value', 'Leverage', 'Wager', 'Counterwager', 'Odds', 'Time Left', 'Tx Hash'])
+    for bet in bets:
+        bet = format_bet(bet)
+        table.add_row(bet)
+    print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Open Bets' + colorama.Style.RESET_ALL)
+    print(colorama.Fore.GREEN + str(table) + colorama.Style.RESET_ALL)
+    print('\n')
+
+    # Matched orders awaiting BTC payments from you.
+    my_addresses  = [ element['address'] for element in bitcoin.rpc('listreceivedbyaddress', [0,True])['result'] ]
+    awaiting_btcs = api.get_order_matches(validity='Valid: awaiting BTC payment', addresses=my_addresses, show_expired=False)
+    table = PrettyTable(['Matched Order ID', 'Time Left'])
+    for order_match in awaiting_btcs:
+        order_match = format_order_match(order_match)
+        table.add_row(order_match)
+    print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Order Matches Awaiting BTC Payment' + colorama.Style.RESET_ALL)
+    print(colorama.Fore.CYAN + colorama.Style.BRIGHT + str(table) + colorama.Style.RESET_ALL)
+    print('\n')
+
+    # Running feeds
+    broadcasts = api.get_broadcasts(validity='Valid', order_by='timestamp DESC')
+    table = PrettyTable(['Feed Address', 'Timestamp', 'Text', 'Value', 'Fee Multiplier'])
+    seen_addresses = []
+    for broadcast in broadcasts:
+        # Always show only the latest broadcast from a feed address.
+        if broadcast['source'] not in seen_addresses:
+            feed = format_feed(broadcast)
+            table.add_row(feed)
+            seen_addresses.append(broadcast['source'])
+        else:
+            continue
+    print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Running Feeds' + colorama.Style.RESET_ALL)
+    print(colorama.Fore.MAGENTA + str(table) + colorama.Style.RESET_ALL)
+
+    time.sleep(30)
+
+
+def history (address):
+    history = api.get_history(address)
+
+    # Balances.
+    balances = history['balances']
+    table = PrettyTable(['Asset', 'Amount'])
+    for balance in balances:
+        asset = util.get_asset_name(balance['asset_id'])
+        amount = util.devise(balance['amount'], balance['asset_id'], 'output')
+        table.add_row([asset, amount])
+    print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Balances' + colorama.Style.RESET_ALL)
+    print(colorama.Fore.CYAN + str(table) + colorama.Style.RESET_ALL)
+    print('\n')
+
+    # Sends.
+    sends = history['sends']
+    table = PrettyTable(['Amount', 'Asset', 'Source', 'Destination', 'Tx Hash'])
+    for send in sends:
+        amount = util.devise(send['amount'], send['asset_id'], 'output')
+        asset = util.get_asset_name(send['asset_id'])
+        table.add_row([amount, asset, send['source'], send['destination'], util.short(send['tx_hash'])])
+    print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Sends' + colorama.Style.RESET_ALL)
+    print(colorama.Fore.YELLOW + str(table) + colorama.Style.RESET_ALL)
+    print('\n')
+
+    # TODO
+
+
 def format_order (order):
     price = D(order['get_amount']) / D(order['give_amount'])
 
     give_remaining = util.devise(D(order['give_remaining']), order['give_id'], 'output')
-    get_remaining = util.devise(give_remaining * price, order['get_id'], 'ouput')
+    get_remaining = give_remaining * price
     give_name = util.get_asset_name(order['give_id'])
     get_name = util.get_asset_name(order['get_id'])
     give = str(give_remaining) + ' ' + give_name
@@ -256,80 +336,10 @@ if __name__ == '__main__':
 
     elif args.action == 'watch':
         while True:
-            os.system('cls' if os.name=='nt' else 'clear')
-
-            # Open orders.
-            orders = api.get_orders(validity='Valid', show_expired=False, show_empty=False)
-            table = PrettyTable(['Give', 'Get', 'Price', 'Fee', 'Time Left', 'Tx Hash'])
-            for order in orders:
-                order = format_order(order)
-                table.add_row(order)
-            print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Open Orders' + colorama.Style.RESET_ALL)
-            print(colorama.Fore.BLUE + str(table) + colorama.Style.RESET_ALL)
-            print('\n')
-
-            # Open bets.
-            bets = api.get_bets(validity='Valid', show_expired=False, show_empty=False)
-            table = PrettyTable(['Bet Type', 'Feed Address', 'Deadline', 'target_value', 'Leverage', 'Wager', 'Counterwager', 'Odds', 'Time Left', 'Tx Hash'])
-            for bet in bets:
-                bet = format_bet(bet)
-                table.add_row(bet)
-            print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Open Bets' + colorama.Style.RESET_ALL)
-            print(colorama.Fore.GREEN + str(table) + colorama.Style.RESET_ALL)
-            print('\n')
-
-            # Matched orders awaiting BTC payments from you.
-            my_addresses  = [ element['address'] for element in bitcoin.rpc('listreceivedbyaddress', [0,True])['result'] ]
-            awaiting_btcs = api.get_order_matches(validity='Valid: awaiting BTC payment', addresses=my_addresses, show_expired=False)
-            table = PrettyTable(['Matched Order ID', 'Time Left'])
-            for order_match in awaiting_btcs:
-                order_match = format_order_match(order_match)
-                table.add_row(order_match)
-            print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Order Matches Awaiting BTC Payment' + colorama.Style.RESET_ALL)
-            print(colorama.Fore.CYAN + colorama.Style.BRIGHT + str(table) + colorama.Style.RESET_ALL)
-            print('\n')
-
-            # Running feeds
-            broadcasts = api.get_broadcasts(validity='Valid', order_by='timestamp DESC')
-            table = PrettyTable(['Feed Address', 'Timestamp', 'Text', 'Value', 'Fee Multiplier'])
-            seen_addresses = []
-            for broadcast in broadcasts:
-                # Always show only the latest broadcast from a feed address.
-                if broadcast['source'] not in seen_addresses:
-                    feed = format_feed(broadcast)
-                    table.add_row(feed)
-                    seen_addresses.append(broadcast['source'])
-                else:
-                    continue
-            print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Running Feeds' + colorama.Style.RESET_ALL)
-            print(colorama.Fore.MAGENTA + str(table) + colorama.Style.RESET_ALL)
-
-            time.sleep(30)
-            
+            watch()
+           
     elif args.action == 'history':
-        history = api.get_history(args.address)
-
-        # Balances.
-        balances = history['balances']
-        table = PrettyTable(['Asset', 'Amount'])
-        for balance in balances:
-            asset = util.get_asset_name(balance['asset_id'])
-            amount = util.devise(balance['amount'], balance['asset_id'], 'output')
-            table.add_row([asset, amount])
-        print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Balances' + colorama.Style.RESET_ALL)
-        print(colorama.Fore.CYAN + str(table) + colorama.Style.RESET_ALL)
-        print('\n')
- 
-        # Sends.
-        sends = history['sends']
-        table = PrettyTable(['Amount', 'Asset', 'Source', 'Destination', 'Tx Hash'])
-        for send in sends:
-            amount = util.devise(send['amount'], send['asset_id'], 'output')
-            asset = util.get_asset_name(send['asset_id'])
-            table.add_row([amount, asset, send['source'], send['destination'], util.short(send['tx_hash'])])
-        print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Sends' + colorama.Style.RESET_ALL)
-        print(colorama.Fore.YELLOW + str(table) + colorama.Style.RESET_ALL)
-        print('\n')
+        history(args.address)
 
     elif args.action == 'help':
         parser.print_help()
