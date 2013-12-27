@@ -36,9 +36,9 @@ def rpc (method, params):
     try:
         response = requests.post(config.RPC, data=json.dumps(payload), headers=headers)
     except requests.exceptions.ConnectionError:
-        raise exceptions.BitcoinRPCError('Cannot communicate with bitcoind.')
+        raise exceptions.BitcoindRPCError('Cannot communicate with bitcoind.')
     if response.status_code == 401:
-        raise exceptions.BitcoinRPCError('Bitcoind RPC: unauthorized')
+        raise exceptions.BitcoindRPCError('Bitcoind RPC: unauthorized')
     return response.json()
 
 def bitcoind_check ():
@@ -47,7 +47,7 @@ def bitcoind_check ():
     block_hash = rpc('getblockhash', [block_count])['result']
     block = rpc('getblock', [block_hash])['result']
     if block['time'] < (time.time() - 60 * 60 * 2):
-        raise exceptions.BitcoinRPCError('bitcoind is running behind.')
+        raise exceptions.BitcoindRPCError('bitcoind is running behind.')
 
 def base58_decode (s, version):
     # Convert the string to an integer

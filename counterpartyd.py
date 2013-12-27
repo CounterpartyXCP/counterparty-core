@@ -14,6 +14,7 @@ D = decimal.Decimal
 
 import logging
 import appdirs
+import configparser
 
 import time
 import dateutil.parser
@@ -23,6 +24,7 @@ from lib import (config, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, api)
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
+
 
 def watch ():
     os.system('cls' if os.name=='nt' else 'clear')
@@ -152,19 +154,20 @@ def format_feed (feed):
 
 
 if __name__ == '__main__':
-    data_dir_default = appdirs.user_data_dir('Counterparty', 'Counterparty')
-
     # Parse command‐line arguments.
     parser = argparse.ArgumentParser(prog='counterparty', description='')
     parser.add_argument('-V', '--version', action='version',
         version="counterpartyd v%s" % config.VERSION)
-    parser.add_argument('--rpc-connect', default='localhost', help='')
-    parser.add_argument('--rpc-port', type=int, default=18332, help='')    # testnet
-    parser.add_argument('--rpc-user', default='bitcoinrpc', help='')
-    parser.add_argument('--rpc-password', required=True, help='')
-    parser.add_argument('--data-dir', default=data_dir_default, help='')
+
+    parser.add_argument('--data-dir', help='')
     parser.add_argument('--database-file', help='')
+    parser.add_argument('--config-file', help='')
     parser.add_argument('--log-file', help='')
+
+    parser.add_argument('--rpc-connect', help='')
+    parser.add_argument('--rpc-port', type=int, help='')
+    parser.add_argument('--rpc-user', help='')
+    parser.add_argument('--rpc-password', help='')
 
     subparsers = parser.add_subparsers(dest='action', 
                                        help='the action to be taken')
@@ -226,26 +229,70 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # Configuration
-    config.RPC = 'http://' + args.rpc_user + ':' + args.rpc_password + '@' + args.rpc_connect + ':' + str(args.rpc_port)
 
-    if not args.data_dir: config.data_dir = data_dir_default
-    else: config.data_dir = args.data_dir
+    # Configuration
+
+    # Data directory
+    if not args.data_dir:
+        config.data_dir = appdirs.user_data_dir('Counterparty', 'Counterparty')
+    else:
+        config.data_dir = args.data_dir
     if not os.path.isdir(config.data_dir): os.mkdir(config.data_dir)
 
-    if not args.database_file: config.DATABASE = data_dir_default + '/counterparty.' + str(config.DB_VERSION) + '.db'
-    else: config.DATABASE = args.database_file
+    # Bitcoind RPC options.
+    configfile = configparser.ConfigParser()
+    configfile.read(config.data_dir + '/config.ini')
+
+    if args.rpc_user:
+        config.rpc_user = args.rpc_user
+    elif 'rpcuser' in configfile:
+        config.rpc_user = configfile['rpcuser']
+    else:
+        config.rpc_user = 'bitcoinrpc'
+
+    if args.rpc_connect:
+        config.rpc_connect = args.rpc_connect
+    elif 'rpcconnect' in configfile:
+        config.rpc_connect = configfile['rpcconnect']
+    else:
+        config.rpc_connect = 'localhost'
+
+    if args.rpc_port:
+        config.rpc_port = args.rpc_port
+    elif 'rpcport' in configfile:
+        config.rpc_port = configfile['rpcport']
+    else:
+        config.rpc_port = '18332'   # testnet
+
+    if args.rpc_password:
+        config.rpc_password = args.rpc_password
+    elif 'rpcpassword' in configfile:
+        config.rpc_password = configfile['rpc_password']
+    else:
+        raise exceptions.ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
+
+    config.RPC = 'http://' + config.rpc_user + ':' + config.rpc_password + '@' + config.rpc_connect + ':' + str(config.rpc_port)
+
+    # Database
+    if args.database_file:
+        config.DATABASE = args.database_file
+    else:
+        config.DATABASE = config.data_dir + '/counterparty.' + str(config.DB_VERSION) + '.db'
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
 
-    if not args.log_file: config.LOG = config.data_dir + '/counterparty.log'
-
+    # Log
+    if args.log_file:
+        config.LOG = config.data_dir + '/counterparty.log'
+    else:
+        config.LOG = args.log_file
     logging.basicConfig(filename=config.LOG, level=logging.INFO,
                         format='%(asctime)s %(message)s',
                         datefmt='%m-%d-%YT%I:%M:%S%z')
     requests_log = logging.getLogger("requests")
     requests_log.setLevel(logging.WARNING)
+
 
     # Do something.
     if args.action == 'send':
