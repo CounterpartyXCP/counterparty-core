@@ -241,7 +241,7 @@ if __name__ == '__main__':
 
     # Bitcoind RPC options.
     configfile = configparser.ConfigParser()
-    configfile.read(config.data_dir + '/config.ini')
+    configfile.read(config.data_dir + '/counterparty.config.ini')
 
     if args.rpc_user:
         config.rpc_user = args.rpc_user
@@ -284,9 +284,11 @@ if __name__ == '__main__':
 
     # Log
     if args.log_file:
-        config.LOG = config.data_dir + '/counterparty.log'
-    else:
         config.LOG = args.log_file
+    else:
+        config.LOG = config.data_dir + '/counterparty.log'
+    if config.LOG == '-':
+        config.LOG = None   # Log to stdout.
     logging.basicConfig(filename=config.LOG, level=logging.INFO,
                         format='%(asctime)s %(message)s',
                         datefmt='%m-%d-%YT%I:%M:%S%z')
