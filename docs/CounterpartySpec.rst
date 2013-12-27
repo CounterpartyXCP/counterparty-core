@@ -114,7 +114,7 @@ reduced by one,
 When an order is seen in the blockchain, the protocol attempts to match it,
 deterministically, with another open order previously seen. Two matched orders
 are called a ‘order match’. If either of a order match’s orders involved Bitcoin, then the
-order match is assigned the status ‘waiting for bitcoins’, until the necessary BTCPay
+order match is assigned the status ‘awaiting BTC payment’, until the necessary BTCPay
 transaction is published. Otherwise, the trade is completed immediately, with
 the protocol itself assigning the participating addresses their new balances.
 

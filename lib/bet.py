@@ -60,7 +60,7 @@ def create (source, feed_address, bet_type, deadline, wager_amount,
     # Store a null target_value as a zero float.
     if not target_value: target_value = 0.0
 
-    if leverage != 5040 and bet_type in (2,3):   # Equal, NotEqual
+    if leverage and bet_type in (2,3):   # Equal, NotEqual
         raise exceptions.UselessError('Leverage cannot be used with bet types Equal and NotEqual.')
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
@@ -98,7 +98,7 @@ def parse (db, cursor, tx, message):
         if not wager_amount or not counterwager_amount:
             validity = 'Invalid: zero wager or zero counterwager.'
 
-    if validity == 'Valid' and leverage != 5040 and bet_type in (2,3):   # Equal, NotEqual
+    if validity == 'Valid' and leverage and bet_type in (2,3):   # Equal, NotEqual
         validity  = 'Invalid: leverage used with an inappropriate bet type.'
 
     if validity == 'Valid':

@@ -51,22 +51,28 @@ def parse (db, cursor, tx, message):
         tx0_hash, tx1_hash = None, None
         validity = 'Invalid: could not unpack'
 
-    cursor.execute('''SELECT * FROM order_matches WHERE (tx0_hash=? AND tx1_hash=?)''', (tx0_hash, tx1_hash))
-    order_match = cursor.fetchone()
-    assert not cursor.fetchone()
-    if not order_match: return cursor
-    # Credit source address for the currency that he bought with the bitcoins.
-    # BTC must be paid all at once and come from the ‘correct’ address.
-    if order_match['tx0_address'] == tx['source'] and tx['btc_amount'] >= order_match['forward_amount']:
-        cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Valid', tx0_hash, tx1_hash))
-        if order_match['backward_id']:    # Gratuitous
-            cursor = util.credit(db, cursor, tx['source'], order_match['backward_id'], order_match['backward_amount'])
-    if order_match['tx1_address'] == tx['source'] and tx['btc_amount'] >= order_match['backward_amount']:
-        cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Valid', tx0_hash, tx1_hash))
-        if order_match['forward_id']:     # Gratuitous
-            cursor = util.credit(db, cursor, tx['source'], order_match['forward_id'], order_match['forward_amount'])
+    if validity == 'Valid':
+        order_match_id = tx0_hash + tx1_hash
 
-    order_match_id = tx0_hash + tx1_hash
+        # Try to match.
+        cursor.execute('''SELECT * FROM order_matches WHERE (tx0_hash=? AND tx1_hash=? AND validity=?)''', (tx0_hash, tx1_hash, 'Valid: awaiting BTC payment'))
+        order_match = cursor.fetchone()
+        assert not cursor.fetchone()
+        if not order_match:
+            validity = 'Invalid: No Such Order Match ID'
+
+    if validity == 'Valid':
+        # Credit source address for the currency that he bought with the bitcoins.
+        # BTC must be paid all at once and come from the ‘correct’ address.
+        if order_match['tx0_address'] == tx['source'] and tx['btc_amount'] >= order_match['forward_amount']:
+            cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Valid', tx0_hash, tx1_hash))
+            cursor = util.credit(db, cursor, tx['source'], order_match['backward_id'], order_match['backward_amount'])
+            validity = 'Paid'
+        if order_match['tx1_address'] == tx['source'] and tx['btc_amount'] >= order_match['backward_amount']:
+            cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Valid', tx0_hash, tx1_hash))
+            cursor = util.credit(db, cursor, tx['source'], order_match['forward_id'], order_match['forward_amount'])
+            validity = 'Paid'
+        logging.info('BTC Payment for Order Match: {} ({})'.format(util.short(order_match_id), util.short(tx['tx_hash'])))
 
     # Add parsed transaction to message‐type–specific table.
     cursor.execute('''INSERT INTO btcpays(
@@ -85,7 +91,6 @@ def parse (db, cursor, tx, message):
                         order_match_id,
                         validity)
                   )
-    logging.info('BTC Payment for Order Match: {} ({})'.format(util.short(order_match_id), util.short(tx['tx_hash'])))
     return cursor
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

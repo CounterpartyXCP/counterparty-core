@@ -171,7 +171,7 @@ def order_match (db, cursor, tx):
                           (int(give_remaining),
                            tx1['tx_hash']))
 
-            # Record order fulfillment.
+            # Record order match.
             cursor.execute('''INSERT into order_matches(
                                 tx0_index,
                                 tx0_hash,
@@ -210,7 +210,7 @@ def expire (db, cursor, block_index):
     # Expire orders and give refunds for the amount give_remaining (if non‐zero; if not BTC).
     cursor.execute('''SELECT * FROM orders''')
     for order in cursor.fetchall():
-        time_left = util.get_time_left(order)
+        time_left = util.get_time_left(order, block_index=block_index)
         if time_left < 0 and order['validity'] == 'Valid':
             cursor.execute('''UPDATE orders SET validity=? WHERE tx_hash=?''', ('Invalid: expired', order['tx_hash']))
             if order['give_id']:    # Can’t credit BTC.
@@ -220,8 +220,8 @@ def expire (db, cursor, block_index):
     # Expire order_matches for BTC with no BTC.
     cursor.execute('''SELECT * FROM order_matches''')
     for order_match in cursor.fetchall():
-        if order_match['validity'] == 'Valid: waiting for bitcoins' and util.get_order_match_time_left(order_match()) >= 0:
-            cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Invalid: expired while waiting for bitcoins', order_match['tx0_hash'], order_match['tx1_hash']))
+        if order_match['validity'] == 'Valid: awaiting BTC payment' and util.get_order_match_time_left(order_match, block_index=block_index) < 0:
+            cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Invalid: expired awaiting BTC payment', order_match['tx0_hash'], order_match['tx1_hash']))
             if not order_match['forward_id']:
                 cursor = util.credit(db, cursor, order_match['tx1_address'],
                                     order_match['backward_id'],
@@ -230,7 +230,7 @@ def expire (db, cursor, block_index):
                 cursor = util.credit(db, cursor, order_match['tx0_address'],
                                     order_match['forward_id'],
                                     order_match['forward_amount'])
-            logging.info('Expired order_match waiting for bitcoins: {}'.format(util.short(order_match['tx0_hash'] + order_match['tx1_hash'])))
+            logging.info('Expired order_match awaiting BTC payment: {}'.format(util.short(order_match['tx0_hash'] + order_match['tx1_hash'])))
 
     return cursor
 

@@ -414,7 +414,7 @@ def follow ():
             cursor = parse_block(db, cursor, block_index)
 
             # Increment block index.
-            block_count = bitcoin.rpc('getblockcount', [])['result'] # Get block count.
+            block_count = bitcoin.rpc('getblockcount', [])['result']
             block_index +=1
 
         while block_index > block_count: # DUPE

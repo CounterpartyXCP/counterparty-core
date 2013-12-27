@@ -24,16 +24,16 @@ def short (string):
 def isodt (epoch_time):
     return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
 
-def get_time_left (unmatched):
+def get_time_left (unmatched, block_index=None):
     """order or bet"""
     """zero time left means it expires *this* block; that is, expire when strictly less than 0"""
-    block_count = bitcoin.rpc('getblockcount', [])['result']
-    return unmatched['block_index'] + unmatched['expiration'] - block_count
-def get_order_match_time_left (matched):
+    if not block_index: block_index = bitcoin.rpc('getblockcount', [])['result']
+    return unmatched['block_index'] + unmatched['expiration'] - block_index
+def get_order_match_time_left (matched, block_index=None):
     """order_match or bet_match"""
-    block_count = bitcoin.rpc('getblockcount', [])['result']
-    tx0_time_left = matched['tx0_block_index'] + matched['tx0_expiration'] - block_count
-    tx1_time_left = matched['tx1_block_index'] + matched['tx1_expiration'] - block_count
+    if not block_index: block_index = bitcoin.rpc('getblockcount', [])['result']
+    tx0_time_left = matched['tx0_block_index'] + matched['tx0_expiration'] - block_index
+    tx1_time_left = matched['tx1_block_index'] + matched['tx1_expiration'] - block_index
     return min(tx0_time_left, tx1_time_left)
 
 def get_asset_id (asset):

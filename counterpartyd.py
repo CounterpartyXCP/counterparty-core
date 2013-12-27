@@ -278,7 +278,7 @@ if __name__ == '__main__':
             print(colorama.Fore.GREEN + str(table) + colorama.Style.RESET_ALL)
             print('\n')
 
-            # Matched orders waiting for BTC payments from you.
+            # Matched orders awaiting BTC payments from you.
             my_addresses  = [ element['address'] for element in bitcoin.rpc('listreceivedbyaddress', [0,True])['result'] ]
             awaiting_btcs = api.get_order_matches(validity='Valid: awaiting BTC payment', addresses=my_addresses, show_expired=False)
             table = PrettyTable(['Matched Order ID', 'Time Left'])

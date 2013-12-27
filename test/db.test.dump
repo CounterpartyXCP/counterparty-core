@@ -3,7 +3,7 @@ CREATE TABLE balances(
                         address TEXT,
                         asset_id INTEGER,
                         amount INTEGER);
-INSERT INTO "balances" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,26059774997);
+INSERT INTO "balances" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,26140274998);
 INSERT INTO "balances" VALUES('n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7',1,5000000);
 INSERT INTO "balances" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',2,1000000000);
 INSERT INTO "balances" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,100000);
@@ -79,7 +79,7 @@ CREATE TABLE btcpays(
                         amount INTEGER,
                         order_match_id TEXT,
                         validity TEXT);
-INSERT INTO "btcpays" VALUES(4,'e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71',4,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',5000000,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5','Valid');
+INSERT INTO "btcpays" VALUES(4,'e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71',4,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',5000000,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5','Paid');
 CREATE TABLE burns(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
