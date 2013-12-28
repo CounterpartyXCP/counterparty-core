@@ -36,7 +36,7 @@ def rpc (method, params):
     try:
         response = requests.post(config.RPC, data=json.dumps(payload), headers=headers)
     except requests.exceptions.ConnectionError:
-        raise exceptions.BitcoindRPCError('Cannot communicate with bitcoind.')
+        raise exceptions.BitcoindRPCError('Cannot communicate with bitcoind. (Are you on testnet?)')
     if response.status_code == 401:
         raise exceptions.BitcoindRPCError('Bitcoind RPC: unauthorized')
     return response.json()

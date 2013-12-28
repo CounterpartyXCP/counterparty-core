@@ -1,7 +1,6 @@
 #! /usr/bin/python3
 
 import struct
-import sqlite3
 import logging
 import decimal
 D = decimal.Decimal
@@ -13,10 +12,6 @@ ID = 20
 LENGTH = 8 + 8 + 1
 
 def create (source, asset_id, amount, divisible, test=False):
-    db = sqlite3.connect(config.DATABASE)
-    db.row_factory = sqlite3.Row
-    cursor = db.cursor()
-
     # Handle potential re‐issuances.
     issuances = api.get_issuances(validity='Valid', asset_id=asset_id)
     if issuances:
@@ -30,7 +25,6 @@ def create (source, asset_id, amount, divisible, test=False):
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount, divisible)
-    db.close()
     return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test)
 
 def parse (db, cursor, tx, message):

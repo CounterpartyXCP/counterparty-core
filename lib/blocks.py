@@ -24,6 +24,9 @@ def parse_block (db, cursor, block_index):
     """
     logging.info('Block: {}'.format(str(block_index)))
 
+    # Expire orders (those with less than zero time left).
+    cursor = order.expire(db, cursor, block_index)
+
     # Parse transactions, sorting them by type.
     cursor.execute('''SELECT * FROM transactions \
                       WHERE block_index=? ORDER BY tx_index''',
@@ -60,9 +63,6 @@ def parse_block (db, cursor, block_index):
                            ('False', tx['tx_hash']))
             logging.warning('Unsupported: message type {}; transaction hash {}'.format(message_type_id, tx['tx_hash']))
 
-    # TODO: Is it a problem that this comes after the parsing?! (inclusive vs. exclusive)
-    cursor = order.expire(db, cursor, block_index)
-
     # Commit!
     db.commit()
 
@@ -91,6 +91,20 @@ def initialise(db, cursor):
     # Purge database of blocks, transactions from before BLOCK_FIRST.
     cursor.execute('''DELETE FROM blocks WHERE block_index<?''', (config.BLOCK_FIRST,))
     cursor.execute('''DELETE FROM transactions WHERE block_index<?''', (config.BLOCK_FIRST,))
+
+    cursor.execute('''DROP TABLE IF EXISTS debits''')
+    cursor.execute('''CREATE TABLE debits(
+                        address TEXT,
+                        asset_id INTEGER,
+                        amount INTEGER)
+                   ''')
+
+    cursor.execute('''DROP TABLE IF EXISTS credits''')
+    cursor.execute('''CREATE TABLE credits(
+                        address TEXT,
+                        asset_id INTEGER,
+                        amount INTEGER)
+                   ''')
 
     cursor.execute('''DROP TABLE IF EXISTS balances''')
     cursor.execute('''CREATE TABLE balances(

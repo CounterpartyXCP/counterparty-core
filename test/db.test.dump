@@ -3,7 +3,7 @@ CREATE TABLE balances(
                         address TEXT,
                         asset_id INTEGER,
                         amount INTEGER);
-INSERT INTO "balances" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,26140274998);
+INSERT INTO "balances" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,19985125000);
 INSERT INTO "balances" VALUES('n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7',1,5000000);
 INSERT INTO "balances" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',2,1000000000);
 INSERT INTO "balances" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,100000);
@@ -89,6 +89,42 @@ CREATE TABLE burns(
                         earned INTEGER,
                         validity TEXT);
 INSERT INTO "burns" VALUES(0,'6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d',0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100000000,20000000000,'Valid');
+CREATE TABLE credits(
+                        address TEXT,
+                        asset_id INTEGER,
+                        amount INTEGER);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,20000000000);
+INSERT INTO "credits" VALUES('n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7',1,5000000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,10000000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',2,1000000000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,100000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,6000000000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,800000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,125000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,1750000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,500000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,3250000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,7500000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,37150000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,12850000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,140000000);
+CREATE TABLE debits(
+                        address TEXT,
+                        asset_id INTEGER,
+                        amount INTEGER);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,5000000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,10500000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,6000000000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,800000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,5250000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,2625000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,125000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,15750000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,36750000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,1750000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,78750000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,68250000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,3250000);
 CREATE TABLE dividends(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,

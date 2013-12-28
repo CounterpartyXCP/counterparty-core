@@ -2,31 +2,27 @@
 
 import binascii
 import struct
-import sqlite3
 import logging
 
-from . import (util, config, exceptions, bitcoin)
+from . import (util, config, exceptions, bitcoin, api)
 
 FORMAT = '>32s32s'
 ID = 11
 LENGTH = 32 + 32
 
 def create (order_match_id, test=False):
-    db = sqlite3.connect(config.DATABASE)
-    db.row_factory = sqlite3.Row
-    cursor = db.cursor()
-
     tx0_hash, tx1_hash = order_match_id[:64], order_match_id[64:] # UTF‐8 encoding means that the indices are doubled.
     tx0_hash_bytes, tx1_hash_bytes = binascii.unhexlify(tx0_hash), binascii.unhexlify(tx1_hash)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, tx0_hash_bytes, tx1_hash_bytes)
 
-    cursor.execute('''SELECT * FROM order_matches \
-                      WHERE (tx0_hash=? AND tx1_hash=?)''',
-                   (tx0_hash, tx1_hash))
-    order_match = cursor.fetchone()
-    assert not cursor.fetchone()
-    if not order_match: raise exceptions.InvalidDealError('Invalid Deal ID:', order_match_id)
+    order_matches = api.get_order_matches(validity='Valid: awaiting BTC payment', tx0_hash=tx0_hash, tx1_hash=tx1_hash)
+    if len(order_matches) == 0:
+        raise exceptions.InvalidDealError('Invalid Order Match ID:', order_match_id)
+    elif len(order_matches) > 1:
+        raise Exception
+    else:
+        order_match = order_matches[0]
 
     if not order_match['backward_id']:
         source = order_match['tx1_address']

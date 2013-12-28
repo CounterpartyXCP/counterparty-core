@@ -3,7 +3,6 @@
 """Burn BTC (in miners’ fees) to earn XCP during a special period of time."""
 
 import struct
-import sqlite3
 import decimal
 D = decimal.Decimal
 import logging
@@ -15,10 +14,6 @@ ID = 60
 LENGTH = 11
 
 def create (source, quantity, test=False):
-    db = sqlite3.connect(config.DATABASE)
-    db.row_factory = sqlite3.Row
-    cursor = db.cursor()
-
     # Try to make sure that the burned funds won’t go to waste.
     block_count = bitcoin.rpc('getblockcount', [])['result']
     if block_count < config.BURN_START:

@@ -3,7 +3,6 @@
 """Create and parse ‘send’‐type messages."""
 
 import struct
-import sqlite3
 import logging
 
 from . import (util, config, exceptions, bitcoin, api)
@@ -17,9 +16,6 @@ def create (source, destination, amount, asset_id, test=False):
     # Check that it is not BTC that someone was trying to send.
     if not asset_id: raise exceptions.BalanceError('Cannot send bitcoins.')
 
-    db = sqlite3.connect(config.DATABASE)
-    db.row_factory = sqlite3.Row
-    cursor = db.cursor()
     balances = api.get_balances(address=source, asset_id=asset_id)
     if not balances or balances[0]['amount'] < amount:
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')

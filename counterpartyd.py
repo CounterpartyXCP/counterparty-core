@@ -3,7 +3,6 @@
 import os
 import argparse
 import json
-import sqlite3
 
 import colorama
 colorama.init()
@@ -81,6 +80,8 @@ def watch ():
 def history (address):
     history = api.get_history(address)
 
+    # TODO: Debits, credits
+
     # Balances.
     balances = history['balances']
     table = PrettyTable(['Asset', 'Amount'])
@@ -155,9 +156,12 @@ def format_feed (feed):
 
 if __name__ == '__main__':
     # Parse command‐line arguments.
-    parser = argparse.ArgumentParser(prog='counterparty', description='')
+    parser = argparse.ArgumentParser(prog='counterpartyd', description='')
     parser.add_argument('-V', '--version', action='version',
         version="counterpartyd v%s" % config.VERSION)
+
+    parser.add_argument('--testnet', type=bool, help='')
+    parser.add_argument('--testcoin', type=bool, help='')
 
     parser.add_argument('--data-dir', help='')
     parser.add_argument('--database-file', help='')
@@ -234,40 +238,63 @@ if __name__ == '__main__':
 
     # Data directory
     if not args.data_dir:
-        config.data_dir = appdirs.user_data_dir('Counterparty', 'Counterparty')
+        config.data_dir = appdirs.user_data_dir('Counterparty', 'counterpartyd')
     else:
         config.data_dir = args.data_dir
     if not os.path.isdir(config.data_dir): os.mkdir(config.data_dir)
 
     # Bitcoind RPC options.
     configfile = configparser.ConfigParser()
-    configfile.read(config.data_dir + '/counterparty.config.ini')
+    configfile.read(config.data_dir + '/counterpartyd.config.ini')
 
+    # testnet
+    if args.testnet:
+        config.TESTNET = args.testnet
+    elif 'testnet' in configfile['Default']:
+        config.TESTNET = configfile['Default'].getboolean('testnet')
+    else:
+        config.TESTNET = False
+
+    # testcoin
+    if args.testcoin:
+        config.TESTCOIN = args.testcoin
+    elif 'testcoin' in configfile['Default']:
+        config.TESTCOIN = configfile['Default'].getboolean('testcoin')
+    else:
+        config.TESTCOIN = False
+
+    # RPC user
     if args.rpc_user:
         config.rpc_user = args.rpc_user
-    elif 'rpcuser' in configfile:
-        config.rpc_user = configfile['rpcuser']
+    elif 'rpcuser' in configfile['Default']:
+        config.rpc_user = configfile['Default']['rpcuser']
     else:
         config.rpc_user = 'bitcoinrpc'
 
+    # RPC host
     if args.rpc_connect:
         config.rpc_connect = args.rpc_connect
-    elif 'rpcconnect' in configfile:
-        config.rpc_connect = configfile['rpcconnect']
+    elif 'rpcconnect' in configfile['Default']:
+        config.rpc_connect = configfile['Default']['rpcconnect']
     else:
         config.rpc_connect = 'localhost'
 
+    # RPC port
     if args.rpc_port:
         config.rpc_port = args.rpc_port
-    elif 'rpcport' in configfile:
-        config.rpc_port = configfile['rpcport']
+    elif 'rpcport' in configfile['Default']:
+        config.rpc_port = configfile['Default']['rpcport']
     else:
-        config.rpc_port = '18332'   # testnet
-
+        if config.TESTNET:
+            config.rpc_port = '18332'
+        else:
+            config.rpc_port = '8332'
+            
+    # RPC password
     if args.rpc_password:
         config.rpc_password = args.rpc_password
-    elif 'rpcpassword' in configfile:
-        config.rpc_password = configfile['rpc_password']
+    elif 'rpcpassword' in configfile['Default']:
+        config.rpc_password = configfile['Default']['rpc_password']
     else:
         raise exceptions.ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
 
@@ -277,16 +304,13 @@ if __name__ == '__main__':
     if args.database_file:
         config.DATABASE = args.database_file
     else:
-        config.DATABASE = config.data_dir + '/counterparty.' + str(config.DB_VERSION) + '.db'
-    db = sqlite3.connect(config.DATABASE)
-    db.row_factory = sqlite3.Row
-    cursor = db.cursor()
+        config.DATABASE = config.data_dir + '/counterpartyd.' + str(config.DB_VERSION) + '.db'
 
     # Log
     if args.log_file:
         config.LOG = args.log_file
     else:
-        config.LOG = config.data_dir + '/counterparty.log'
+        config.LOG = config.data_dir + '/counterpartyd.log'
     if config.LOG == '-':
         config.LOG = None   # Log to stdout.
     logging.basicConfig(filename=config.LOG, level=logging.INFO,
@@ -294,6 +318,22 @@ if __name__ == '__main__':
                         datefmt='%m-%d-%YT%I:%M:%S%z')
     requests_log = logging.getLogger("requests")
     requests_log.setLevel(logging.WARNING)
+
+    # (more) Testnet
+    if config.TESTNET:
+        config.BLOCK_FIRST = 153560
+        config.BURN_START = 153000
+        config.BURN_END = 156000
+    else:
+        pass
+        # TODO
+
+    config.TESTCOIN = True
+    if config.TESTCOIN:
+        config.PREFIX = b'TEST'                # 4 bytes (possibly accidentally created)
+    else:
+        pass
+        # TODO
 
 
     # Do something.

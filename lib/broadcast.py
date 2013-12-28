@@ -22,7 +22,6 @@ because it is stored as a four‐byte integer, it may not be greater than about
 """
 
 import struct
-import sqlite3
 import decimal
 D = decimal.Decimal
 import logging
@@ -34,16 +33,10 @@ ID = 30
 LENGTH = 4 + 8 + 4 + 40
 
 def create (source, timestamp, value, fee_multiplier, text, test=False):
-
     # Check that the publishing address is not locked.
-    db = sqlite3.connect(config.DATABASE)
-    db.row_factory = sqlite3.Row
-    cursor = db.cursor()
-    cursor, good_feed = util.good_feed(cursor, source)
+    good_feed = util.good_feed(source)
     if good_feed != None and not good_feed:
         raise exceptions.UselessError('Invalid: locked feed')
-    cursor.close()
-
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, timestamp, value, fee_multiplier,
                         text.encode('utf-8'))
@@ -62,7 +55,7 @@ def parse (db, cursor, tx, message):
         validity = 'Invalid: could not unpack'
 
     # Check that the publishing address is not locked.
-    cursor, good_feed = util.good_feed(cursor, tx['source'])
+    good_feed = util.good_feed(tx['source'])
     if good_feed != None and not good_feed:
         validity = 'Invalid: locked feed'
 

@@ -22,9 +22,11 @@ requests_log.setLevel(logging.WARNING)
 
 # JSON‐RPC Options
 CONFIGFILE = os.path.expanduser('~') + '/.bitcoin/bitcoin.conf'
-RPCCONNECT = 'localhost'
-# RPCPORT = '8332' # mainnet
-RPCPORT = '18332' # testnet
+config.PREFIX = b'TEST'
+config.RPCCONNECT = 'localhost'
+# TODO: Make this try both mainnet and testnet?
+# config.RPCPORT = '8332' # mainnet
+config.RPCPORT = '18332' # testnet
 try:
     with open(CONFIGFILE, 'r') as configfile:
         for line in configfile.readlines():
@@ -34,15 +36,15 @@ try:
             if len(array) != 2:
                 continue
             key, value = array[:2]
-            if key == 'rpcuser': RPCUSER = value
-            elif key == 'rpcpassword': RPCPASSWORD = value
-            elif key == 'rpcconnect': RPCCONNECT = value
-            elif key == 'rpcport': RPCCONNECT = value
+            if key == 'rpcuser': config.RPCUSER = value
+            elif key == 'rpcpassword': config.RPCPASSWORD = value
+            elif key == 'rpcconnect': config.RPCCONNECT = value
+            elif key == 'rpcport': config.RPCCONNECT = value
 except Exception:
     raise exceptions.BitcoinConfError('Put a (valid) copy of your \
 bitcoin.conf in ~/.bitcoin/bitcoin.conf')
     sys.exit(1)
-config.RPC = 'http://'+RPCUSER+':'+RPCPASSWORD+'@'+RPCCONNECT+':'+RPCPORT
+config.RPC = 'http://'+config.RPCUSER+':'+config.RPCPASSWORD+'@'+config.RPCCONNECT+':'+config.RPCPORT
 
 config.DATABASE = '/tmp/counterparty.test.db'
 try:
@@ -70,6 +72,15 @@ fee_multiplier_default = round(D(.05) * D(1e8))
 
 # Each tx has a block_index equal to its tx_index
 
+def check_balance():
+    for balance in api.get_balances():
+        amount = 0
+        for debit in api.get_debits(address=balance['address'], asset_id=balance['asset_id']):
+            amount -= debit['amount']
+        for credit in api.get_credits(address=balance['address'], asset_id=balance['asset_id']):
+            amount += credit['amount']
+        assert amount == balance['amount']
+
 def parse_tx (tx_index, data, parse_func):
     cursor.execute('''SELECT * FROM transactions \
                       WHERE tx_index=?''', (tx_index,))
@@ -79,6 +90,9 @@ def parse_tx (tx_index, data, parse_func):
 
     parse_func(db, cursor, tx, message)
     db.commit()
+
+    # After parsing every transaction, check that the credits, debits sum properly.
+    check_balance()
 
 def tx_insert (source, destination, btc_amount, fee, data):
     tx_hash = hashlib.sha256(chr(tx_index).encode('utf-8')).hexdigest()
@@ -133,7 +147,6 @@ def test_initialise ():
     blocks.initialise(db, cursor)
 
 def test_burn ():
-    global db, cursor
     unsigned_tx_hex = burn.create(source_default, quantity, test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02de68f405000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000156a13544553540000003c50726f6f664f664275726e00000000'
     fee = quantity
@@ -143,7 +156,6 @@ def test_burn ():
     parse_tx(tx_index - 1, data, burn.parse)
 
 def test_send ():
-    global db, cursor
     api.get_balances()
     unsigned_tx_hex = send.create(source_default, destination_default, small, 1, test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0336150000000000001976a914edb5c902eadd71e698a8ce05ba1d7b31efbaa57b88ac980dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000000000001a6a185445535400000000000000000000000100000000004c4b4000000000'
@@ -154,7 +166,6 @@ def test_send ():
     parse_tx(tx_index - 1, data, send.parse)
 
 def test_order_buy_xcp ():
-    global db, cursor
     unsigned_tx_hex = order.create(source_default, 0, small, 1, small * 2, expiration, 0, fee_provided, test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff029e07db0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000346a32544553540000000a000000000000000000000000004c4b4000000000000000010000000000989680000a000000000000000000000000'
     fee = fee_provided
@@ -164,7 +175,6 @@ def test_order_buy_xcp ():
     parse_tx(tx_index - 1, data, order.parse)
 
 def test_order_sell_xcp ():
-    global db, cursor
     unsigned_tx_hex = order.create(source_default, 1, int(small * 2.1), 0, small, expiration, fee_required, 0, test=True)
     print(unsigned_tx_hex)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02de49ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000346a32544553540000000a00000000000000010000000000a037a0000000000000000000000000004c4b40000a00000000000dbba000000000'
@@ -175,7 +185,6 @@ def test_order_sell_xcp ():
     parse_tx(tx_index - 1, data, order.parse)
 
 def test_btcpay ():
-    global db, cursor
     
     order_match_id = 'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5'
     unsigned_tx_hex = btcpay.create(order_match_id, test=True)
@@ -187,7 +196,6 @@ def test_btcpay ():
     parse_tx(tx_index - 1, data, btcpay.parse)
 
 def test_issuance_divisible ():
-    global db, cursor
     unsigned_tx_hex = issuance.create(source_default, 2, quantity * 10, True, test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02ce22ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000000000001b6a1954455354000000140000000000000002000000003b9aca000100000000'
     fee = config.MIN_FEE
@@ -197,7 +205,6 @@ def test_issuance_divisible ():
     parse_tx(tx_index - 1, data, issuance.parse)
 
 def test_issuance_indivisible ():
-    global db, cursor
     unsigned_tx_hex = issuance.create(source_default, 3, int(quantity / 1000), False, test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02ce22ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000000000001b6a195445535400000014000000000000000300000000000186a00000000000'
     fee = config.MIN_FEE
@@ -207,7 +214,6 @@ def test_issuance_indivisible ():
     parse_tx(tx_index - 1, data, issuance.parse)
 
 def test_dividend_divisible ():
-    global db, cursor
     unsigned_tx_hex = dividend.create(source_default, 6, 2, test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02ce22ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000000000001a6a1854455354000000320000000000000006000000000000000200000000'
     fee = config.MIN_FEE
@@ -217,7 +223,6 @@ def test_dividend_divisible ():
     parse_tx(tx_index - 1, data, dividend.parse)
 
 def test_dividend_indivisible ():
-    global db, cursor
     unsigned_tx_hex = dividend.create(source_default, 8, 3, test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02ce22ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000000000001a6a1854455354000000320000000000000008000000000000000300000000'
     fee = config.MIN_FEE
@@ -227,7 +232,6 @@ def test_dividend_indivisible ():
     parse_tx(tx_index - 1, data, dividend.parse)
 
 def test_broadcast_initial ():
-    global db, cursor
     unsigned_tx_hex = broadcast.create(source_default, 1388000000, 100, fee_multiplier_default, 'Unit Test', test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02ce22ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000426a40544553540000001e52bb33004059000000000000004c4b4009556e6974205465737400000000000000000000000000000000000000000000000000000000000000000000'
     fee = config.MIN_FEE
@@ -237,7 +241,6 @@ def test_broadcast_initial ():
     parse_tx(tx_index - 1, data, broadcast.parse)
 
 def test_bet_bullcfd_to_be_liquidated ():
-    global db, cursor
     unsigned_tx_hex = bet.create(source_default, source_default, 0, 1388000100, small, round(small / 2), None, 15120, expiration, test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac980dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000306a2e5445535400000028000052bb336400000000004c4b4000000000002625a0000000000000000000003b100000000a00000000'
     fee = config.MIN_FEE
@@ -247,7 +250,6 @@ def test_bet_bullcfd_to_be_liquidated ():
     parse_tx(tx_index - 1, data, bet.parse)
 
 def test_bet_bearcfd_to_be_liquidated ():
-    global db, cursor
     unsigned_tx_hex = bet.create(source_default, source_default, 1, 1388000100, round(small / 2), round(small * 1.2), None, 15120, expiration, test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac980dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000306a2e5445535400000028000152bb336400000000002625a000000000005b8d80000000000000000000003b100000000a00000000'
     fee = config.MIN_FEE
@@ -257,7 +259,6 @@ def test_bet_bearcfd_to_be_liquidated ():
     parse_tx(tx_index - 1, data, bet.parse)
 
 def test_bet_bullcfd_to_be_settled ():
-    global db, cursor
     unsigned_tx_hex = bet.create(source_default, source_default, 0, 1388000100, small * 3, small * 7, None, 2520, expiration, test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac980dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000306a2e5445535400000028000052bb33640000000000e4e1c00000000002160ec00000000000000000000009d80000000a00000000'
     fee = config.MIN_FEE
@@ -267,7 +268,6 @@ def test_bet_bullcfd_to_be_settled ():
     parse_tx(tx_index - 1, data, bet.parse)
 
 def test_bet_bearcfd_to_be_settled ():
-    global db, cursor
     unsigned_tx_hex = bet.create(source_default, source_default, 1, 1388000100, small * 7, small * 3, None, 2520, expiration, test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac980dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000306a2e5445535400000028000152bb33640000000002160ec00000000000e4e1c00000000000000000000009d80000000a00000000'
     fee = config.MIN_FEE
@@ -277,7 +277,6 @@ def test_bet_bearcfd_to_be_settled ():
     parse_tx(tx_index - 1, data, bet.parse)
 
 def test_bet_equal ():
-    global db, cursor
     unsigned_tx_hex = bet.create(source_default, source_default, 2, 1388000200, small * 15, small * 13, 1, 0, expiration, test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac980dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000306a2e5445535400000028000252bb33c800000000047868c00000000003dfd2403ff0000000000000000000000000000a00000000'
     fee = config.MIN_FEE
@@ -287,7 +286,6 @@ def test_bet_equal ():
     parse_tx(tx_index - 1, data, bet.parse)
 
 def test_bet_notequal ():
-    global db, cursor
     unsigned_tx_hex = bet.create(source_default, source_default, 3, 1388000200, small * 13, small * 15, 1, 0, expiration, test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac980dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000306a2e5445535400000028000352bb33c80000000003dfd24000000000047868c03ff0000000000000000000000000000a00000000'
     fee = config.MIN_FEE
@@ -297,7 +295,6 @@ def test_bet_notequal ():
     parse_tx(tx_index - 1, data, bet.parse)
 
 def test_broadcast_liquidate ():
-    global db, cursor
     unsigned_tx_hex = broadcast.create(source_default, 1388000050, round(100 - (.05 / 3) - .00001, 5), fee_multiplier_default, 'Unit Test', test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02ce22ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000426a40544553540000001e52bb33324058feeeb702602d004c4b4009556e6974205465737400000000000000000000000000000000000000000000000000000000000000000000'
     fee = config.MIN_FEE
@@ -307,7 +304,6 @@ def test_broadcast_liquidate ():
     parse_tx(tx_index - 1, data, broadcast.parse)
 
 def test_broadcast_settle ():
-    global db, cursor
     unsigned_tx_hex = broadcast.create(source_default, 1388000101, 100.443, fee_multiplier_default, 'Unit Test', test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02ce22ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000426a40544553540000001e52bb336540591c5a1cac0831004c4b4009556e6974205465737400000000000000000000000000000000000000000000000000000000000000000000'
     fee = config.MIN_FEE
@@ -317,7 +313,6 @@ def test_broadcast_settle ():
     parse_tx(tx_index - 1, data, broadcast.parse)
 
 def test_broadcast_equal ():
-    global db, cursor
     unsigned_tx_hex = broadcast.create(source_default, 1388000201, 2, fee_multiplier_default, 'Unit Test', test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02ce22ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000426a40544553540000001e52bb33c94000000000000000004c4b4009556e6974205465737400000000000000000000000000000000000000000000000000000000000000000000'
     fee = config.MIN_FEE
@@ -375,7 +370,6 @@ def test_base58_decode():
 """
 follow()
 
-get_balances (address=None, asset_id=None)
 get_sends (validity=None, source=None, destination=None)
 get_orders (validity=None, address=None, show_empty=True, show_expired=True)
 get_order_matches (validity=None, addresses=[], show_expired=True)

@@ -11,7 +11,6 @@ All wagers are in XCP.
 """
 
 import struct
-import sqlite3
 import decimal
 D = decimal.Decimal
 # decimal.getcontext().prec = 8
@@ -24,25 +23,14 @@ ID = 40
 LENGTH = 2 + 4 + 8 + 8 + 8 + 4 + 4
 
 def get_fee_multiplier (feed_address):
-    db = sqlite3.connect(config.DATABASE)
-    db.row_factory = sqlite3.Row
-    cursor = db.cursor()
     # Get fee_multiplier from the last broadcast from the feed_address address.
-    cursor.execute('''SELECT * FROM broadcasts \
-                      WHERE source=? \
-                      ORDER BY tx_index desc''', (feed_address,)
-                  )
-    broadcast = cursor.fetchone()
-    cursor.close()
-    return D(broadcast['fee_multiplier'] / 1e8)
+    broadcasts = api.get_broadcasts(source=feed_address)
+    last_broadcast = broadcasts[-1]
+    return D(last_broadcast['fee_multiplier'] / 1e8)
 
 def create (source, feed_address, bet_type, deadline, wager_amount,
             counterwager_amount, target_value, leverage, expiration, test=False):
-
-    db = sqlite3.connect(config.DATABASE)
-    db.row_factory = sqlite3.Row
-    cursor = db.cursor()
-    cursor, good_feed = util.good_feed(cursor, feed_address)
+    good_feed = util.good_feed(feed_address)
     if good_feed == None:
         raise exceptions.FeedError('That feed doesn’t exist.')
     elif not good_feed:
@@ -53,7 +41,6 @@ def create (source, feed_address, bet_type, deadline, wager_amount,
 
     fee_multiplier = get_fee_multiplier(feed_address)
     balances = api.get_balances(address=source, asset_id=1)
-    cursor.close()
     if not balances or balances[0]['amount'] < wager_amount * (1 + fee_multiplier):
         raise exceptions.BalanceError('Insufficient funds to both make wager and pay feed fee (in XCP). (Check that the database is up‐to‐date.)')
 
@@ -88,7 +75,7 @@ def parse (db, cursor, tx, message):
 
     feed_address = tx['destination']
     if validity == 'Valid':
-        cursor, good_feed = util.good_feed(cursor, feed_address)
+        good_feed = util.good_feed(feed_address)
         if good_feed == None:
             validity = 'Invalid: no such feed'
         elif not good_feed:
@@ -104,7 +91,7 @@ def parse (db, cursor, tx, message):
     if validity == 'Valid':
         # Debit amount wagered and fee.
         fee_multiplier = get_fee_multiplier(feed_address)
-        cursor, validity = util.debit(db, cursor, tx['source'], 1, wager_amount * (1 + fee_multiplier))
+        cursor, validity = util.debit(db, cursor, tx['source'], 1, round(wager_amount * (1 + fee_multiplier)))
 
         wager_amount = int(wager_amount)
         counterwager_amount = int(counterwager_amount)
@@ -197,7 +184,7 @@ def bet_match (db, cursor, tx):
 
             # When a match is made, pay XCP fee.
             fee = get_fee_multiplier(tx1['feed_address']) * backward_amount
-            cursor, validity = util.debit(db, cursor, tx1['source'], 1, fee)
+            cursor, validity = util.debit(db, cursor, tx1['source'], 1, round(fee))
             if validity != 'Valid': continue
             cursor = util.credit(db, cursor, tx1['feed_address'], 1, int(fee))
 

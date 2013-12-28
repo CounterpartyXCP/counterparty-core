@@ -1,7 +1,6 @@
 #! /usr/bin/python3
 
 import struct
-import sqlite3
 import decimal
 D = decimal.Decimal
 import logging
@@ -13,9 +12,6 @@ ID = 10
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8
 
 def create (source, give_id, give_amount, get_id, get_amount, expiration, fee_required, fee_provided, test=False):
-    db = sqlite3.connect(config.DATABASE)
-    db.row_factory = sqlite3.Row
-    cursor = db.cursor()
     balances = api.get_balances(address=source, asset_id=give_id)
     if give_id and (not balances or balances[0]['amount'] < give_amount):
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
@@ -26,7 +22,6 @@ def create (source, give_id, give_amount, get_id, get_amount, expiration, fee_re
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, give_id, give_amount, get_id, get_amount,
                         expiration, fee_required)
-    cursor.close()
     return bitcoin.transaction(source, None, None, int(fee_provided), data, test)
 
 def parse (db, cursor, tx, message):
@@ -48,9 +43,9 @@ def parse (db, cursor, tx, message):
             validity = 'Invalid: zero give or zero get.'
 
     if validity == 'Valid':
-        give_amount = D(give_amount)
-        get_amount = D(get_amount)
-        price = get_amount / give_amount
+        give_amount = give_amount
+        get_amount = get_amount
+        price = D(get_amount) / D(give_amount)
     else:
         price = 0
 
@@ -84,10 +79,10 @@ def parse (db, cursor, tx, message):
                         tx['block_index'],
                         tx['source'],
                         give_id,
-                        int(give_amount),
-                        int(give_amount),
+                        give_amount,
+                        give_amount,
                         get_id,
-                        int(get_amount),
+                        get_amount,
                         float(price),
                         expiration,
                         fee_required,

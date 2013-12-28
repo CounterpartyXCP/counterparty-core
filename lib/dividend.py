@@ -3,7 +3,6 @@
 """Pay out dividends."""
 
 import struct
-import sqlite3
 import logging
 
 from . import (util, config, exceptions, bitcoin, api)
@@ -13,10 +12,6 @@ ID = 50
 LENGTH = 8 + 8
 
 def create (source, amount_per_share, asset_id, test=False):
-    db = sqlite3.connect(config.DATABASE)
-    db.row_factory = sqlite3.Row
-    cursor = db.cursor()
-
     issuances = api.get_issuances(validity='Valid', asset_id=asset_id)
     total_shares = sum([issuance['amount'] for issuance in issuances])
     amount = amount_per_share * total_shares
@@ -61,6 +56,7 @@ def parse (db, cursor, tx, message):
     if validity == 'Valid':
         balances = api.get_balances(asset_id=asset_id)
         for balance in balances:
+            logging.info('foobar')  # TODO
             address, address_amount = balance['address'], balance['amount']
             cursor = util.credit(db, cursor, address, 1, address_amount * amount_per_share)
 

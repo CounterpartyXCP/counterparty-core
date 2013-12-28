@@ -5,6 +5,36 @@ import json
 
 from lib import (config, exceptions, util, bitcoin)
 
+def get_debits (address=None, asset_id=None):
+    """This does not include BTC."""
+    db = sqlite3.connect(config.DATABASE)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
+
+    cursor.execute('''SELECT * FROM debits''')
+    debits = []
+    for debit in cursor.fetchall():
+        if address and debit['address'] != address: continue
+        if asset_id != None and debit['asset_id'] != asset_id: continue
+        debits.append(dict(debit))
+    cursor.close()
+    return debits
+
+def get_credits (address=None, asset_id=None):
+    """This does not include BTC."""
+    db = sqlite3.connect(config.DATABASE)
+    db.row_factory = sqlite3.Row
+    cursor = db.cursor()
+
+    cursor.execute('''SELECT * FROM credits''')
+    credits = []
+    for credit in cursor.fetchall():
+        if address and credit['address'] != address: continue
+        if asset_id != None and credit['asset_id'] != asset_id: continue
+        credits.append(dict(credit))
+    cursor.close()
+    return credits
+
 def get_balances (address=None, asset_id=None):
     """This should never be used to check Bitcoin balances."""
     db = sqlite3.connect(config.DATABASE)
@@ -16,6 +46,7 @@ def get_balances (address=None, asset_id=None):
     for balance in cursor.fetchall():
         if address and balance['address'] != address: continue
         if asset_id != None and balance['asset_id'] != asset_id: continue
+        if asset_id == 0: raise Exception
         balances.append(dict(balance))
     cursor.close()
     return balances
@@ -25,7 +56,7 @@ def get_sends (validity=None, source=None, destination=None):
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
 
-    cursor.execute('''SELECT * FROM sends''')
+    cursor.execute('''SELECT * FROM sends ORDER BY tx_index''')
     sends = []
     for send in cursor.fetchall():
         if validity and send['Validity'] != validity: continue
@@ -58,7 +89,7 @@ def get_orders (validity=None, address=None, show_empty=True, show_expired=True)
     cursor.close()
     return orders
 
-def get_order_matches (validity=None, addresses=[], show_expired=True):
+def get_order_matches (validity=None, addresses=[], show_expired=True, tx0_hash=None, tx1_hash=None):
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
@@ -77,7 +108,8 @@ def get_order_matches (validity=None, addresses=[], show_expired=True):
                               (order_match['tx1_address'] in addresses and
                                not order_match['backward_id'])):
             continue
-
+        if tx0_hash and tx0_hash != order_match['tx0_hash']: continue
+        if tx1_hash and tx1_hash != order_match['tx1_hash']: continue
         order_matches.append(dict(order_match))
     cursor.close()
     return order_matches
@@ -87,7 +119,7 @@ def get_btcpays (validity=None):
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
 
-    cursor.execute('''SELECT * FROM btcpays''')
+    cursor.execute('''SELECT * FROM btcpays ORDER BY tx_index''')
     btcpays = []
     for btcpay in cursor.fetchall():
         if validity and btcpay['Validity'] != validity: continue
@@ -147,7 +179,7 @@ def get_bets (validity=None, address=None, show_empty=True, show_expired=True):
     cursor.close()
     return bets
 
-def get_bet_matches (validity=None, addresses=None, show_expired=True):
+def get_bet_matches (validity=None, addresses=None, show_expired=True, tx0_hash=None, tx1_hash=None):
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
@@ -162,6 +194,8 @@ def get_bet_matches (validity=None, addresses=None, show_expired=True):
         if addresses and not (bet_match['tx0_address'] in addresses or
                               bet_match['tx1_address'] in addresses):
             continue
+        if tx0_hash and tx0_hash != bet_match['tx0_hash']: continue
+        if tx1_hash and tx1_hash != bet_match['tx1_hash']: continue
         bet_matches.append(dict(bet_match))
     cursor.close()
     return bet_matches
@@ -171,7 +205,7 @@ def get_dividends (validity=None, address=None, asset_id=None):
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
 
-    cursor.execute('''SELECT * FROM dividends''')
+    cursor.execute('''SELECT * FROM dividends ORDER BY tx_index''')
     dividends = []
     for dividend in cursor.fetchall():
         if validity and dividend['Validity'] != validity: continue
@@ -186,7 +220,7 @@ def get_burns (validity=True, address=None):
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
 
-    cursor.execute('''SELECT * FROM burns''')
+    cursor.execute('''SELECT * FROM burns ORDER BY tx_index''')
     burns = []
     for burn in cursor.fetchall():
         if validity and burn['Validity'] != validity: continue

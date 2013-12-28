@@ -46,30 +46,47 @@ def get_asset_name (asset_id):
     except Exception: return str(asset_id)
 
 def debit (db, cursor, address, asset_id, amount):
-    from lib import api #
+    assert asset_id != 0 # Never BTC.
+    assert type(amount) == int
+    from lib import api # TODO
     if not asset_id:
         raise exceptions.BalanceError('Cannot debit bitcoins from a Counterparty address!')
-    try:
-        old_balance = api.get_balances(address=address, asset_id=asset_id)[0]['amount']
-    except IndexError:
+    balances = api.get_balances(address=address, asset_id=asset_id)
+    if not len(balances) == 1:
         old_balance = 0
-    finally:
-        assert not cursor.fetchone()
-        if old_balance >= amount:
-            cursor.execute('''UPDATE balances \
-                              SET amount=? \
-                              WHERE (address=? and asset_id=?)''',
-                           (int(old_balance - amount), address, asset_id)) 
-            validity = 'Valid'
-        else:
-            validity = 'Invalid: insufficient funds'
+    else:
+        old_balance = balances[0]['amount']
+        assert type(old_balance) == int
+
+    if old_balance >= amount:
+        cursor.execute('''UPDATE balances \
+                          SET amount=? \
+                          WHERE (address=? and asset_id=?)''',
+                       (int(old_balance - amount), address, asset_id)) 
+        validity = 'Valid'
+    else:
+        validity = 'Invalid: insufficient funds'
+
+    # Record debit.
+    cursor.execute('''INSERT INTO debits(
+                        address,
+                        asset_id,
+                        amount) VALUES(?,?,?)''',
+                        (address,
+                        asset_id,
+                        amount)
+                  )
+    db.commit() # TODO
     return cursor, validity
 
 def credit (db, cursor, address, asset_id, amount):
-    from lib import api #
-    try:
-        old_balance = api.get_balances(address=address, asset_id=asset_id)[0]['amount']
-    except IndexError:
+    assert asset_id != 0 # Never BTC.
+    assert type(amount) == int
+    from lib import api # TODO
+
+    balances = api.get_balances(address=address, asset_id=asset_id)
+    if len(balances) != 1:
+        assert balances == []
         cursor.execute('''INSERT INTO balances(
                             address,
                             asset_id,
@@ -79,12 +96,25 @@ def credit (db, cursor, address, asset_id, amount):
                             amount)
                       )
     else:
+        old_balance = balances[0]['amount']
+        assert type(old_balance) == int
         cursor.execute('''UPDATE balances SET amount=? \
                           WHERE (address=? and asset_id=?)''',
                        (old_balance + amount, address, asset_id)) 
+
+    # Record credit.
+    cursor.execute('''INSERT INTO credits(
+                        address,
+                        asset_id,
+                        amount) VALUES(?,?,?)''',
+                        (address,
+                        asset_id,
+                        amount)
+                  )
+    db.commit() # TODO
     return cursor
 
-def good_feed (cursor, feed_address):
+def good_feed (feed_address):
     """
     Feed is locked if *any* of its broadcasts lacks a textual message.
 
@@ -92,15 +122,15 @@ def good_feed (cursor, feed_address):
 
     Locks are [necessarily] based on tx_index and not timestamp.
     """
-    from lib import api #
+    from lib import api # TODO
     broadcasts = api.get_broadcasts(validity='Valid', source=feed_address, order_by='tx_index ASC')
-    if not len(broadcasts): return cursor, None             # Non‐existant
+    if not len(broadcasts): return None             # Non‐existant
     for broadcast in broadcasts:
-        if broadcast['text'] == '': return cursor, False    # Locked
-    return cursor, True                                     # Exists and is unlocked
+        if broadcast['text'] == '': return False    # Locked
+    return True                                     # Exists and is unlocked
 
 def devise (quantity, asset_id, dest):
-    from lib import api #
+    from lib import api # TODO
     import decimal
     D = decimal.Decimal
 
