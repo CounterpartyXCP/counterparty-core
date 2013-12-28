@@ -5,7 +5,7 @@ import logging
 import decimal
 D = decimal.Decimal
 
-from . import (config, util, exceptions, bitcoin, api)
+from . import (config, util, exceptions, bitcoin, util)
 
 FORMAT = '>QQ?'
 ID = 20
@@ -13,7 +13,7 @@ LENGTH = 8 + 8 + 1
 
 def create (db, source, asset_id, amount, divisible, test=False):
     # Handle potential re‐issuances.
-    issuances = api.get_issuances(db, validity='Valid', asset_id=asset_id)
+    issuances = util.get_issuances(db, validity='Valid', asset_id=asset_id)
     if issuances:
         if issuances[0]['issuer'] != source:
             raise exceptions.IssuanceError('Asset exists and was not issuanced by this address.')
@@ -45,7 +45,7 @@ def parse (db, tx, message):
             validity = 'Invalid: zero amount.'
 
     # If re‐issuance, check for compatability in divisibility, issuer.
-    issuances = api.get_issuances(db, validity='Valid', asset_id=asset_id)
+    issuances = util.get_issuances(db, validity='Valid', asset_id=asset_id)
     if issuances:
         if issuances[0]['issuer'] != tx['source']:
             validity = 'Invalid: that asset already exists and was not issuanced by this address'

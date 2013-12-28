@@ -16,7 +16,7 @@ D = decimal.Decimal
 # decimal.getcontext().prec = 8
 import logging
 
-from . import (util, config, bitcoin, exceptions, api)
+from . import (util, config, bitcoin, exceptions, util)
 
 FORMAT = '>HIQQdII'
 ID = 40
@@ -24,7 +24,7 @@ LENGTH = 2 + 4 + 8 + 8 + 8 + 4 + 4
 
 def get_fee_multiplier (db, feed_address):
     # Get fee_multiplier from the last broadcast from the feed_address address.
-    broadcasts = api.get_broadcasts(db, source=feed_address)
+    broadcasts = util.get_broadcasts(db, source=feed_address)
     last_broadcast = broadcasts[-1]
     return D(last_broadcast['fee_multiplier'] / 1e8)
 
@@ -40,7 +40,7 @@ def create (db, source, feed_address, bet_type, deadline, wager_amount,
         raise exceptions.UselessError('Zero wager or counterwager')
 
     fee_multiplier = get_fee_multiplier(db, feed_address)
-    balances = api.get_balances(db, address=source, asset_id=1)
+    balances = util.get_balances(db, address=source, asset_id=1)
     if not balances or balances[0]['amount'] < wager_amount * (1 + fee_multiplier):
         raise exceptions.BalanceError('Insufficient funds to both make wager and pay feed fee (in XCP). (Check that the database is up‐to‐date.)')
 
@@ -217,7 +217,7 @@ def match (db, tx):
                            tx1['tx_hash']))
 
             # Get last value of feed.
-            initial_value = api.get_broadcasts(db, validity='Valid', source=tx1['feed_address'])[-1]['value']
+            initial_value = util.get_broadcasts(db, validity='Valid', source=tx1['feed_address'])[-1]['value']
 
             # Record order fulfillment.
             bet_match_cursor.execute('''INSERT into bet_matches(

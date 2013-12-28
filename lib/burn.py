@@ -7,7 +7,7 @@ import decimal
 D = decimal.Decimal
 import logging
 
-from . import (util, config, exceptions, bitcoin, api)
+from . import (util, config, exceptions, bitcoin, util)
 
 FORMAT = '>11s'
 ID = 60
@@ -22,7 +22,7 @@ def create (db, source, quantity, test=False):
         raise exceptions.UselessError('The proof‐of‐burn period has already ended.')
 
     # Check that a maximum of 1 BTC total is burned per address.
-    burns = api.get_burns(db, address=source, validity='Valid')
+    burns = util.get_burns(db, address=source, validity='Valid')
     total_burned = sum([burn['burned'] for burn in burns])
     if quantity > (1 * config.UNIT - total_burned):
         raise exceptions.UselessError('A maximum of 1 BTC may be burned per address.')
@@ -48,7 +48,7 @@ def parse (db, tx, message):
     burned = int(tx['fee'])
 
     # Check that a maximum of 1 BTC total is burned per address.
-    burns = api.get_burns(db, validity='Valid', address=tx['source'])
+    burns = util.get_burns(db, validity='Valid', address=tx['source'])
     total_burned = sum([burn['burned'] for burn in burns])
     if burned > (1 * config.UNIT - total_burned):
         validity = 'Invalid: exceeded maximum burn'

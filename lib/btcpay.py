@@ -4,7 +4,7 @@ import binascii
 import struct
 import logging
 
-from . import (util, config, exceptions, bitcoin, api)
+from . import (util, config, exceptions, bitcoin, util)
 
 FORMAT = '>32s32s'
 ID = 11
@@ -16,7 +16,7 @@ def create (db, order_match_id, test=False):
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, tx0_hash_bytes, tx1_hash_bytes)
 
-    order_matches = api.get_order_matches(db, validity='Valid: awaiting BTC payment', tx0_hash=tx0_hash, tx1_hash=tx1_hash)
+    order_matches = util.get_order_matches(db, validity='Valid: awaiting BTC payment', tx0_hash=tx0_hash, tx1_hash=tx1_hash)
     if len(order_matches) == 0:
         raise exceptions.InvalidDealError('Invalid Order Match ID:', order_match_id)
     elif len(order_matches) > 1:

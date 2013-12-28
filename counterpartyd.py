@@ -21,7 +21,7 @@ import dateutil.parser
 from datetime import datetime
 
 from lib import (config, util, exceptions, bitcoin, blocks)
-from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, api)
+from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, util)
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
@@ -30,7 +30,7 @@ def watch ():
     os.system('cls' if os.name=='nt' else 'clear')
 
     # Open orders.
-    orders = api.get_orders(db, validity='Valid', show_expired=False, show_empty=False)
+    orders = util.get_orders(db, validity='Valid', show_expired=False, show_empty=False)
     table = PrettyTable(['Give', 'Get', 'Price', 'Fee', 'Time Left', 'Tx Hash'])
     for order in orders:
         order = format_order(order)
@@ -40,7 +40,7 @@ def watch ():
     print('\n')
 
     # Open bets.
-    bets = api.get_bets(db, validity='Valid', show_expired=False, show_empty=False)
+    bets = util.get_bets(db, validity='Valid', show_expired=False, show_empty=False)
     table = PrettyTable(['Bet Type', 'Feed Address', 'Deadline', 'target_value', 'Leverage', 'Wager', 'Counterwager', 'Odds', 'Time Left', 'Tx Hash'])
     for bet in bets:
         bet = format_bet(bet)
@@ -51,7 +51,7 @@ def watch ():
 
     # Matched orders awaiting BTC payments from you.
     my_addresses  = [ element['address'] for element in bitcoin.rpc('listreceivedbyaddress', [0,True])['result'] ]
-    awaiting_btcs = api.get_order_matches(db, validity='Valid: awaiting BTC payment', addresses=my_addresses, show_expired=False)
+    awaiting_btcs = util.get_order_matches(db, validity='Valid: awaiting BTC payment', addresses=my_addresses, show_expired=False)
     table = PrettyTable(['Matched Order ID', 'Time Left'])
     for order_match in awaiting_btcs:
         order_match = format_order_match(order_match)
@@ -61,7 +61,7 @@ def watch ():
     print('\n')
 
     # Running feeds
-    broadcasts = api.get_broadcasts(db, validity='Valid', order_by='timestamp DESC')
+    broadcasts = util.get_broadcasts(db, validity='Valid', order_by='timestamp DESC')
     table = PrettyTable(['Feed Address', 'Timestamp', 'Text', 'Value', 'Fee Multiplier'])
     seen_addresses = []
     for broadcast in broadcasts:
@@ -79,9 +79,7 @@ def watch ():
 
 
 def history (address):
-    history = api.get_history(db, address)
-
-    # TODO: Debits, credits
+    history = util.get_history(db, address)
 
     # Balances.
     balances = history['balances']
@@ -315,6 +313,8 @@ if __name__ == '__main__':
     # Log
     if args.log_file:
         config.LOG = args.log_file
+    elif 'logfile' in configfile['Default']:
+        config.LOG = configfile['Default']['logfile']
     else:
         config.LOG = config.data_dir + '/counterpartyd.log'
     if config.LOG == '-':

@@ -13,7 +13,7 @@ import difflib
 
 # import counterpartyd
 from lib import (config, util, exceptions, bitcoin, blocks)
-from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, api)
+from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, util)
 
 logging.basicConfig(filename='/tmp/counterparty.test.log', level=logging.INFO,
                         format='%(message)s')
@@ -72,13 +72,13 @@ fee_multiplier_default = round(D(.05) * D(1e8))
 # Each tx has a block_index equal to its tx_index
 
 def check_balance():
-    balances = api.get_balances(db)
+    balances = util.get_balances(db)
     for balance in balances:
         amount = 0
-        debits = api.get_debits(db, address=balance['address'], asset_id=balance['asset_id'])
+        debits = util.get_debits(db, address=balance['address'], asset_id=balance['asset_id'])
         for debit in debits:
             amount -= debit['amount']
-        credits = api.get_credits(db, address=balance['address'], asset_id=balance['asset_id'])
+        credits = util.get_credits(db, address=balance['address'], asset_id=balance['asset_id'])
         for credit in credits:
             amount += credit['amount']
         assert amount == balance['amount']

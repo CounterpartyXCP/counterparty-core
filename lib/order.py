@@ -5,14 +5,14 @@ import decimal
 D = decimal.Decimal
 import logging
 
-from . import (util, config, exceptions, bitcoin, api)
+from . import (util, config, exceptions, bitcoin, util)
 
 FORMAT = '>QQQQHQ'
 ID = 10
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8
 
 def create (db, source, give_id, give_amount, get_id, get_amount, expiration, fee_required, fee_provided, test=False):
-    balances = api.get_balances(db, address=source, asset_id=give_id)
+    balances = util.get_balances(db, address=source, asset_id=give_id)
     if give_id and (not balances or balances[0]['amount'] < give_amount):
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
     if give_id == get_id:
@@ -54,7 +54,7 @@ def parse (db, tx, message):
     # Debit the address that makes the order. Check for sufficient funds.
     if validity == 'Valid':
         if give_id:  # No need (or way) to debit BTC.
-            balances = api.get_balances(db, address=tx['source'], asset_id=give_id)
+            balances = util.get_balances(db, address=tx['source'], asset_id=give_id)
             if balances and balances[0]['amount'] >= give_amount:
                 validity = util.debit(db, tx['source'], give_id, give_amount)
             else:

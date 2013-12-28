@@ -5,7 +5,7 @@
 import struct
 import logging
 
-from . import (util, config, exceptions, bitcoin, api)
+from . import (util, config, exceptions, bitcoin, util)
 
 FORMAT = '>QQ'
 ID = 0
@@ -16,7 +16,7 @@ def create (db, source, destination, amount, asset_id, test=False):
     # Check that it is not BTC that someone was trying to send.
     if not asset_id: raise exceptions.BalanceError('Cannot send bitcoins.')
 
-    balances = api.get_balances(db, address=source, asset_id=asset_id)
+    balances = util.get_balances(db, address=source, asset_id=asset_id)
     if not balances or balances[0]['amount'] < amount:
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
     if not amount:

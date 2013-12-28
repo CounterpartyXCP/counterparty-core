@@ -5,17 +5,17 @@
 import struct
 import logging
 
-from . import (util, config, exceptions, bitcoin, api)
+from . import (util, config, exceptions, bitcoin, util)
 
 FORMAT = '>QQ'
 ID = 50
 LENGTH = 8 + 8
 
 def create (db, source, amount_per_share, asset_id, test=False):
-    issuances = api.get_issuances(db, validity='Valid', asset_id=asset_id)
+    issuances = util.get_issuances(db, validity='Valid', asset_id=asset_id)
     total_shares = sum([issuance['amount'] for issuance in issuances])
     amount = amount_per_share * total_shares
-    balances = api.get_balances(db, address=source, asset_id=1)
+    balances = util.get_balances(db, address=source, asset_id=1)
     print(balances[0]['amount'], amount)
     if not balances or balances[0]['amount'] < amount:
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
@@ -47,7 +47,7 @@ def parse (db, tx, message):
             validity = 'Invalid: zero amount per share.'
 
     # Debit.
-    issuances = api.get_issuances(db, validity='Valid', asset_id=asset_id)
+    issuances = util.get_issuances(db, validity='Valid', asset_id=asset_id)
     total_shares = sum([issuance['amount'] for issuance in issuances])
     amount = amount_per_share * total_shares
     if validity == 'Valid':
@@ -55,7 +55,7 @@ def parse (db, tx, message):
 
     # Credit.
     if validity == 'Valid':
-        balances = api.get_balances(db, asset_id=asset_id)
+        balances = util.get_balances(db, asset_id=asset_id)
         for balance in balances:
             address, address_amount = balance['address'], balance['amount']
             util.credit(db, address, 1, address_amount * amount_per_share)
