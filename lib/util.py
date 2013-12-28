@@ -334,6 +334,7 @@ def get_history (db, address):
                                              address)
     history = {}
     history['balances'] = get_balances(db, address=address)
+    history['burns'] = get_burns(db, validity='Valid', address=address)
     history['sends'] = get_sends(db, validity='Valid', source=address)
     history['orders'] = get_orders(db, validity='Valid', address=address)
     history['order_matches'] = get_order_matches(db, validity='Valid', addresses=[address])
@@ -343,7 +344,6 @@ def get_history (db, address):
     history['bets'] = get_bets(db, validity='Valid', address=address)
     history['bet_matches'] = get_bet_matches(db, validity='Valid', addresses=[address])
     history['dividends'] = get_dividends(db, validity='Valid', address=address)
-    history['burns'] = get_burns(db, validity='Valid', address=address)
     return history 
 
 

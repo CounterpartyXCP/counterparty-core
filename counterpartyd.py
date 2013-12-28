@@ -26,23 +26,28 @@ from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
 
-def watch ():
+def watch (give_asset, get_asset, feed_address):
     os.system('cls' if os.name=='nt' else 'clear')
 
     # Open orders.
     orders = util.get_orders(db, validity='Valid', show_expired=False, show_empty=False)
-    table = PrettyTable(['Give', 'Get', 'Price', 'Fee', 'Time Left', 'Tx Hash'])
+    table = PrettyTable(['Give Quantity', 'Give Asset', 'Get Quantity', 'Get Asset', 'Price', 'Price Assets', 'Fee', 'Time Left', 'Tx Hash'])
     for order in orders:
+        if give_asset and order['give_id'] != util.get_asset_id(give_asset):
+            continue
+        if get_asset and order['get_id'] != util.get_asset_id(get_asset):
+            continue
         order = format_order(order)
         table.add_row(order)
     print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Open Orders' + colorama.Style.RESET_ALL)
-    print(colorama.Fore.BLUE + str(table) + colorama.Style.RESET_ALL)
+    print(colorama.Fore.BLUE + str(table.get_string(sortby='Price')) + colorama.Style.RESET_ALL)
     print('\n')
 
     # Open bets.
     bets = util.get_bets(db, validity='Valid', show_expired=False, show_empty=False)
-    table = PrettyTable(['Bet Type', 'Feed Address', 'Deadline', 'target_value', 'Leverage', 'Wager', 'Counterwager', 'Odds', 'Time Left', 'Tx Hash'])
+    table = PrettyTable(['Bet Type', 'Feed Address', 'Deadline', 'Target Value', 'Leverage', 'Wager', 'Counterwager', 'Odds', 'Time Left', 'Tx Hash'])
     for bet in bets:
+        if feed_address and bet['feed_address'] != feed_address: continue
         bet = format_bet(bet)
         table.add_row(bet)
     print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Open Bets' + colorama.Style.RESET_ALL)
@@ -103,6 +108,30 @@ def history (address):
     print(colorama.Fore.YELLOW + str(table) + colorama.Style.RESET_ALL)
     print('\n')
 
+    # Orders.
+    orders = history['orders']
+    json_print(orders)
+    table = PrettyTable(['Amount', 'Asset', 'Source', 'Destination', 'Tx Hash'])
+    for order in orders:
+        amount = util.devise(db, order['amount'], order['asset_id'], 'output')
+        asset = util.get_asset_name(order['asset_id'])
+        table.add_row([amount, asset, order['source'], order['destination'], util.short(order['tx_hash'])])
+    print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'orders' + colorama.Style.RESET_ALL)
+    print(colorama.Fore.YELLOW + str(table) + colorama.Style.RESET_ALL)
+    print('\n')
+
+    # order_matches.
+    order_matches = history['order_matches']
+    json_print(order_matches)
+    table = PrettyTable(['Give', 'Get', 'Source', 'Destination', 'Tx Hash'])
+    for order_match in order_matches:
+        amount = util.devise(db, order_match['amount'], order['asset_id'], 'output')
+        asset = util.get_asset_name(order_match['asset_id'])
+        table.add_row([amount, asset, order_match['source'], order_match['destination'], util.short(order_match['tx_hash'])])
+    print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'order_matches' + colorama.Style.RESET_ALL)
+    print(colorama.Fore.YELLOW + str(table) + colorama.Style.RESET_ALL)
+    print('\n')
+
     # TODO
 
 
@@ -110,21 +139,20 @@ def format_order (order):
     price = D(order['get_amount']) / D(order['give_amount'])
 
     give_remaining = util.devise(db, D(order['give_remaining']), order['give_id'], 'output')
-    get_remaining = give_remaining * price
-    give_name = util.get_asset_name(order['give_id'])
-    get_name = util.get_asset_name(order['get_id'])
-    give = str(give_remaining) + ' ' + give_name
-    get = str(round(get_remaining, 8)) + ' ' + get_name
+    get_remaining = round(give_remaining * price, 8)
 
-    price_string = str(price.quantize(config.FOUR).normalize())
-    price_string += ' ' + get_name + '/' + give_name
+    give_asset = util.get_asset_name(order['give_id'])
+    get_asset = util.get_asset_name(order['get_id'])
+
+    price = price.quantize(config.FOUR).normalize()
+    price_assets = get_asset + '/' + give_asset
 
     if order['fee_required']:
         fee = str(order['fee_required'] / config.UNIT) + ' BTC (required)'
     else:
         fee = str(order['fee_provided'] / config.UNIT) + ' BTC (provided)'
 
-    return [give, get, price_string, fee, util.get_time_left(order), util.short(order['tx_hash'])]
+    return [give_remaining, give_asset, get_remaining, get_asset, price, price_assets, fee, util.get_time_left(order), util.short(order['tx_hash'])]
 
 def format_bet (bet):
     odds = D(bet['counterwager_amount']) / D(bet['wager_amount'])
@@ -188,7 +216,7 @@ if __name__ == '__main__':
     parser_order.add_argument('--give-quantity', metavar='GIVE_QUANTITY', required=True, help='')
     parser_order.add_argument('--give-asset', metavar='GIVE_ASSET', required=True, help='')
     parser_order.add_argument('--expiration', metavar='EXPIRATION', type=int, required=True, help='')
-    parser_order.add_argument('--fee', metavar='FEE', required=True, help='either the required fee, or the provided fee, as appropriate; in BTC, to be paid to miners')
+    parser_order.add_argument('--fee', metavar='FEE', help='either the required fee, or the provided fee, as appropriate; in BTC, to be paid to miners; required iff the order involves BTC')
 
     parser_btcpay= subparsers.add_parser('btcpay', help='requires bitcoind')
     parser_btcpay.add_argument('--order-match-id', metavar='ORDER_MATCH_ID', required=True, help='')
@@ -212,7 +240,7 @@ if __name__ == '__main__':
     parser_order.add_argument('--deadline', metavar='DEADLINE', required=True, help='')
     parser_order.add_argument('--wager', metavar='WAGER_QUANTITY', required=True, help='')
     parser_order.add_argument('--counterwager', metavar='COUNTERWAGER_QUANTITY', required=True, help='')
-    parser_order.add_argument('--target-value', metavar='target_value', help='over‐under (?) (bet)')
+    parser_order.add_argument('--target-value', metavar='TARGET_VALUE', help='over‐under (?) (bet)')
     parser_order.add_argument('--leverage', metavar='LEVERAGE', type=int, default=5040, help='leverage, as a fraction of 5040')
     parser_order.add_argument('--expiration', metavar='EXPIRATION', type=int, required=True, help='')
 
@@ -226,6 +254,9 @@ if __name__ == '__main__':
     parser_burn.add_argument('--quantity', metavar='QUANTITY', required=True, help='quantity of BTC to be destroyed in miners’ fees')
 
     parser_watch = subparsers.add_parser('watch', help='')
+    parser_watch.add_argument('--give-asset', help='')
+    parser_watch.add_argument('--get-asset', help='')
+    parser_watch.add_argument('--feed-address', help='')
 
     parser_history = subparsers.add_parser('history', help='')
     parser_history.add_argument('--address', metavar='ADDRESS', required=True, help='')
@@ -360,14 +391,18 @@ if __name__ == '__main__':
         get_id = util.get_asset_id(args.get_asset)
 
         # Fee argument is either fee_required or fee_provided, as necessary.
-        fee = round(D(args.fee) * config.UNIT)
         if not give_id:
-            fee_provided = fee
+            fee_provided = round(D(args.fee) * config.UNIT)
             assert fee_provided >= config.MIN_FEE
             fee_required = 0
         elif not get_id:
-            fee_required = fee
+            fee_required = round(D(args.fee) * config.UNIT)
             assert fee_required >= config.MIN_FEE
+            fee_provided = config.MIN_FEE
+        else:
+            if args.fee:
+                raise exceptions.UselessError('No fee should be specified if not buying or selling BTC.')
+            fee_required = 0
             fee_provided = config.MIN_FEE
 
         give_quantity = util.devise(db, args.give_quantity, give_id, 'input')
@@ -431,7 +466,7 @@ if __name__ == '__main__':
 
     elif args.action == 'watch':
         while True:
-            watch()
+            watch(args.give_asset, args.get_asset, args.feed_address)
            
     elif args.action == 'history':
         history(args.address)
