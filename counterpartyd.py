@@ -139,12 +139,12 @@ def format_order (order):
     price = D(order['get_amount']) / D(order['give_amount'])
 
     give_remaining = util.devise(db, D(order['give_remaining']), order['give_id'], 'output')
-    get_remaining = round(give_remaining * price, 8)
+    get_remaining = util.devise(db, D(give_remaining * price), order['get_id'], 'output')
 
     give_asset = util.get_asset_name(order['give_id'])
     get_asset = util.get_asset_name(order['get_id'])
 
-    price = price.quantize(config.FOUR).normalize()
+    price = D(get_remaining/ give_remaining).quantize(config.FOUR).normalize()
     price_assets = get_asset + '/' + give_asset
 
     if order['fee_required']:

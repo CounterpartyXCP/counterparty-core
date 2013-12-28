@@ -98,10 +98,13 @@ def parse (db, tx, message):
         get_amount = util.devise(db, get_amount, get_id, 'output')
 
         if not give_id:
-            fee_text = 'with a provided fee of ' + str(tx['fee'] / config.UNIT) + ' BTC'
+            fee_text = 'with a provided fee of ' + str(tx['fee'] / config.UNIT) + ' BTC '
         elif not get_id:
-            fee_text = 'with a required fee of ' + str(fee_required / config.UNIT) + ' BTC'
-        logging.info('Order: sell {} {} for {} {} at {} {}/{} in {} blocks {} ({})'.format(give_amount, util.get_asset_name(give_id), get_amount, util.get_asset_name(get_id), price.quantize(config.FOUR).normalize(), util.get_asset_name(get_id), util.get_asset_name(give_id), expiration, fee_text, util.short(tx['tx_hash'])))
+            fee_text = 'with a required fee of ' + str(fee_required / config.UNIT) + ' BTC '
+        else:
+            fee_text = ''
+        display_price = D(get_amount / give_amount).quantize(config.FOUR).normalize()
+        logging.info('Order: sell {} {} for {} {} at {} {}/{} in {} blocks {}({})'.format(give_amount, util.get_asset_name(give_id), get_amount, util.get_asset_name(get_id), display_price, util.get_asset_name(get_id), util.get_asset_name(give_id), expiration, fee_text, util.short(tx['tx_hash'])))
         match(db, tx)
 
     order_parse_cursor.close()

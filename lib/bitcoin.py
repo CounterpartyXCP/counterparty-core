@@ -199,7 +199,7 @@ def transaction (source, destination, btc_amount, fee, data, test=False):
 
     # Calculate total BTC to be sent.
     total_btc_out = fee
-    total_btc_out += config.DUST_SIZE            # For data output.
+    # total_btc_out += config.DUST_SIZE            # For data output.   # Data output has zero value.
     if destination:
         total_btc_out += btc_amount  # For destination output.
 

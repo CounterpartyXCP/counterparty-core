@@ -18,7 +18,7 @@ def create (db, order_match_id, test=False):
 
     order_matches = util.get_order_matches(db, validity='Valid: awaiting BTC payment', tx0_hash=tx0_hash, tx1_hash=tx1_hash)
     if len(order_matches) == 0:
-        raise exceptions.InvalidDealError('Invalid Order Match ID:', order_match_id)
+        raise exceptions.InvalidOrderMatchError('Invalid Order Match ID:', order_match_id)
     elif len(order_matches) > 1:
         raise Exception
     else:

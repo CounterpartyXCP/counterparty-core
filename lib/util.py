@@ -6,6 +6,8 @@ all necessary database connexions.
 
 from datetime import datetime
 from dateutil.tz import tzlocal
+import decimal
+D = decimal.Decimal
 
 from . import (config, bitcoin)
 
@@ -128,19 +130,13 @@ def good_feed (db, feed_address):
     return True                                     # Exists and is unlocked
 
 def devise (db, quantity, asset_id, dest):
-    import decimal
-    D = decimal.Decimal
-
     issuances = get_issuances(db, validity='Valid', asset_id=asset_id)
-    if issuances and issuances[0]['divisible']:
-        if dest == 'output':
-            quantity = D(quantity) / config.UNIT
-            return quantity.quantize(config.EIGHT).normalize()
-        else:
-            return D(quantity) * config.UNIT
+    if not issuances: raise exceptions.AssetError('No such asset.')
+    if issuances[0]['divisible'] and dest == 'output':
+        quantity = D(quantity) / config.UNIT
+        return quantity.quantize(config.EIGHT).normalize()
     else:
-        return D(quantity)
-
+        return int(quantity * config.UNIT)
 
 def get_debits (db, address=None, asset_id=None):
     """This does not include BTC."""

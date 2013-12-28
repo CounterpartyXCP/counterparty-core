@@ -23,7 +23,9 @@ class BalanceError (Exception):
     pass
 class IssuanceError (Exception):
     pass
-class InvalidDealError (Exception):
+class AssetError (Exception):
+    pass
+class InvalidOrderMatchError (Exception):
     pass
 class Base58Error (Exception):
     pass
