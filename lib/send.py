@@ -11,12 +11,12 @@ FORMAT = '>QQ'
 ID = 0
 LENGTH = 8 + 8
 
-def create (source, destination, amount, asset_id, test=False):
+def create (db, source, destination, amount, asset_id, test=False):
 
     # Check that it is not BTC that someone was trying to send.
     if not asset_id: raise exceptions.BalanceError('Cannot send bitcoins.')
 
-    balances = api.get_balances(address=source, asset_id=asset_id)
+    balances = api.get_balances(db, address=source, asset_id=asset_id)
     if not balances or balances[0]['amount'] < amount:
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
     if not amount:
@@ -26,7 +26,9 @@ def create (source, destination, amount, asset_id, test=False):
     data += struct.pack(FORMAT, asset_id, amount)
     return bitcoin.transaction(source, destination, config.DUST_SIZE, config.MIN_FEE, data, test)
 
-def parse (db, cursor, tx, message):
+def parse (db, tx, message):
+    send_parse_cursor = db.cursor()
+
     # Ask for forgiveness…
     validity = 'Valid'
 
@@ -46,14 +48,14 @@ def parse (db, cursor, tx, message):
     if validity == 'Valid':
         if not amount:
             validity = 'Invalid: zero quantity.'
-        cursor, validity = util.debit(db, cursor, tx['source'], asset_id, amount)
+        validity = util.debit(db, tx['source'], asset_id, amount)
 
     # Credit.
     if validity == 'Valid':
-        cursor = util.credit(db, cursor, tx['destination'], asset_id, amount)
+        util.credit(db, tx['destination'], asset_id, amount)
 
     # Add parsed transaction to message‐type–specific table.
-    cursor.execute('''INSERT INTO sends(
+    send_parse_cursor.execute('''INSERT INTO sends(
                         tx_index,
                         tx_hash,
                         block_index,
@@ -72,9 +74,9 @@ def parse (db, cursor, tx, message):
                         validity)
                   )
     if validity == 'Valid':
-        amount = util.devise(amount, asset_id, 'output')
+        amount = util.devise(db, amount, asset_id, 'output')
         logging.info('Send: {} of asset {} from {} to {} ({})'.format(amount, util.get_asset_name(asset_id), tx['source'], tx['destination'], util.short(tx['tx_hash'])))
 
-    return cursor
+    send_parse_cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

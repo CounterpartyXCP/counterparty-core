@@ -11,11 +11,11 @@ FORMAT = '>QQ'
 ID = 50
 LENGTH = 8 + 8
 
-def create (source, amount_per_share, asset_id, test=False):
-    issuances = api.get_issuances(validity='Valid', asset_id=asset_id)
+def create (db, source, amount_per_share, asset_id, test=False):
+    issuances = api.get_issuances(db, validity='Valid', asset_id=asset_id)
     total_shares = sum([issuance['amount'] for issuance in issuances])
     amount = amount_per_share * total_shares
-    balances = api.get_balances(address=source, asset_id=1)
+    balances = api.get_balances(db, address=source, asset_id=1)
     print(balances[0]['amount'], amount)
     if not balances or balances[0]['amount'] < amount:
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
@@ -30,7 +30,8 @@ def create (source, amount_per_share, asset_id, test=False):
     data += struct.pack(FORMAT, amount_per_share, asset_id)
     return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test)
 
-def parse (db, cursor, tx, message):
+def parse (db, tx, message):
+    dividend_parse_cursor = db.cursor()
     # Ask for forgiveness…
     validity = 'Valid'
 
@@ -46,22 +47,21 @@ def parse (db, cursor, tx, message):
             validity = 'Invalid: zero amount per share.'
 
     # Debit.
-    issuances = api.get_issuances(validity='Valid', asset_id=asset_id)
+    issuances = api.get_issuances(db, validity='Valid', asset_id=asset_id)
     total_shares = sum([issuance['amount'] for issuance in issuances])
     amount = amount_per_share * total_shares
     if validity == 'Valid':
-        cursor, validity = util.debit(db, cursor, tx['source'], 1, amount)
+        validity = util.debit(db, tx['source'], 1, amount)
 
     # Credit.
     if validity == 'Valid':
-        balances = api.get_balances(asset_id=asset_id)
+        balances = api.get_balances(db, asset_id=asset_id)
         for balance in balances:
-            logging.info('foobar')  # TODO
             address, address_amount = balance['address'], balance['amount']
-            cursor = util.credit(db, cursor, address, 1, address_amount * amount_per_share)
+            util.credit(db, address, 1, address_amount * amount_per_share)
 
     # Add parsed transaction to message‐type–specific table.
-    cursor.execute('''INSERT INTO dividends(
+    dividend_parse_cursor.execute('''INSERT INTO dividends(
                         tx_index,
                         tx_hash,
                         block_index,
@@ -80,6 +80,6 @@ def parse (db, cursor, tx, message):
     if validity == 'Valid':
         logging.info('Dividend: {} paid {} per share of asset {} ({})'.format(tx['source'], amount_per_share / config.UNIT, util.get_asset_name(asset_id), util.short(tx['tx_hash'])))
 
-    return cursor
+    dividend_parse_cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

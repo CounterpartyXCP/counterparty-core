@@ -11,8 +11,8 @@ FORMAT = '>QQQQHQ'
 ID = 10
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8
 
-def create (source, give_id, give_amount, get_id, get_amount, expiration, fee_required, fee_provided, test=False):
-    balances = api.get_balances(address=source, asset_id=give_id)
+def create (db, source, give_id, give_amount, get_id, get_amount, expiration, fee_required, fee_provided, test=False):
+    balances = api.get_balances(db, address=source, asset_id=give_id)
     if give_id and (not balances or balances[0]['amount'] < give_amount):
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
     if give_id == get_id:
@@ -24,7 +24,9 @@ def create (source, give_id, give_amount, get_id, get_amount, expiration, fee_re
                         expiration, fee_required)
     return bitcoin.transaction(source, None, None, int(fee_provided), data, test)
 
-def parse (db, cursor, tx, message):
+def parse (db, tx, message):
+    order_parse_cursor = db.cursor()
+
     # Ask for forgiveness…
     validity = 'Valid'
 
@@ -52,14 +54,14 @@ def parse (db, cursor, tx, message):
     # Debit the address that makes the order. Check for sufficient funds.
     if validity == 'Valid':
         if give_id:  # No need (or way) to debit BTC.
-            balances = api.get_balances(address=tx['source'], asset_id=give_id)
+            balances = api.get_balances(db, address=tx['source'], asset_id=give_id)
             if balances and balances[0]['amount'] >= give_amount:
-                cursor, validity = util.debit(db, cursor, tx['source'], give_id, give_amount)
+                validity = util.debit(db, tx['source'], give_id, give_amount)
             else:
                 validity = 'Invalid: insufficient funds.'
 
     # Add parsed transaction to message‐type–specific table.
-    cursor.execute('''INSERT INTO orders(
+    order_parse_cursor.execute('''INSERT INTO orders(
                         tx_index,
                         tx_hash,
                         block_index,
@@ -92,32 +94,35 @@ def parse (db, cursor, tx, message):
 
     if validity == 'Valid':
 
-        give_amount = util.devise(give_amount, give_id, 'output')
-        get_amount = util.devise(get_amount, get_id, 'output')
+        give_amount = util.devise(db, give_amount, give_id, 'output')
+        get_amount = util.devise(db, get_amount, get_id, 'output')
 
         if not give_id:
             fee_text = 'with a provided fee of ' + str(tx['fee'] / config.UNIT) + ' BTC'
         elif not get_id:
             fee_text = 'with a required fee of ' + str(fee_required / config.UNIT) + ' BTC'
         logging.info('Order: sell {} {} for {} {} at {} {}/{} in {} blocks {} ({})'.format(give_amount, util.get_asset_name(give_id), get_amount, util.get_asset_name(get_id), price.quantize(config.FOUR).normalize(), util.get_asset_name(get_id), util.get_asset_name(give_id), expiration, fee_text, util.short(tx['tx_hash'])))
-        cursor = order_match(db, cursor, tx)
+        match(db, tx)
 
-    return cursor
+    order_parse_cursor.close()
 
-def order_match (db, cursor, tx):
+def match (db, tx):
+
+    order_match_cursor = db.cursor()
 
     # Get order in question.
-    cursor.execute('''SELECT * FROM orders\
+    order_match_cursor.execute('''SELECT * FROM orders\
                       WHERE tx_index=?''', (tx['tx_index'],))
-    tx1 = cursor.fetchone()
-    assert not cursor.fetchone()
+    tx1 = order_match_cursor.fetchone()
+    assert not order_match_cursor.fetchone()
 
-    cursor.execute('''SELECT * FROM orders \
+    order_match_cursor.execute('''SELECT * FROM orders \
                       WHERE (give_id=? AND get_id=? AND validity=?) \
                       ORDER BY price ASC, tx_index''',
                    (tx1['get_id'], tx1['give_id'], 'Valid'))
     give_remaining = tx1['give_remaining']
-    for tx0 in cursor.fetchall():
+    order_matches = order_match_cursor.fetchall()
+    for tx0 in order_matches:
         # Check whether fee conditions are satisfied.
         if not tx1['get_id'] and tx0['fee_provided'] < tx1['fee_required']: continue
         elif not tx1['give_id'] and tx1['fee_provided'] < tx0['fee_required']: continue
@@ -135,8 +140,8 @@ def order_match (db, cursor, tx):
             order_match_id = tx0['tx_hash'] + tx1['tx_hash']
 
             # This can’t be gotten rid of!
-            forward_unit = util.devise(1, forward_id, 'output')
-            backward_unit = util.devise(1, backward_id, 'output')
+            forward_unit = util.devise(db, 1, forward_id, 'output')
+            backward_unit = util.devise(db, 1, backward_id, 'output')
 
             logging.info('Order Match: {} {} for {} {} at {} {}/{} ({})'.format(D(forward_amount * forward_unit).quantize(config.EIGHT).normalize(), util.get_asset_name(forward_id), D(backward_amount * backward_unit).quantize(config.EIGHT).normalize(), util.get_asset_name(backward_id), D(tx0['price']).quantize(config.FOUR).normalize(), util.get_asset_name(backward_id), util.get_asset_name(forward_id), util.short(order_match_id)))
 
@@ -145,9 +150,9 @@ def order_match (db, cursor, tx):
             else:
                 validity = 'Valid'
                 # Credit.
-                cursor = util.credit(db, cursor, tx1['source'], tx1['get_id'],
+                util.credit(db, tx1['source'], tx1['get_id'],
                                     forward_amount)
-                cursor = util.credit(db, cursor, tx0['source'], tx0['get_id'],
+                util.credit(db, tx0['source'], tx0['get_id'],
                                     backward_amount)
 
             # Debit the order, even if it involves giving bitcoins, and so one
@@ -155,19 +160,19 @@ def order_match (db, cursor, tx):
             give_remaining -= backward_amount
 
             # Update give_remaining.
-            cursor.execute('''UPDATE orders \
+            order_match_cursor.execute('''UPDATE orders \
                               SET give_remaining=? \
                               WHERE tx_hash=?''',
                           (int(tx0['give_remaining'] - forward_amount),
                            tx0['tx_hash']))
-            cursor.execute('''UPDATE orders \
+            order_match_cursor.execute('''UPDATE orders \
                               SET give_remaining=? \
                               WHERE tx_hash=?''',
                           (int(give_remaining),
                            tx1['tx_hash']))
 
             # Record order match.
-            cursor.execute('''INSERT into order_matches(
+            order_match_cursor.execute('''INSERT into order_matches(
                                 tx0_index,
                                 tx0_hash,
                                 tx0_address,
@@ -199,34 +204,37 @@ def order_match (db, cursor, tx):
                                 tx1['expiration'],
                                 validity)
                           )
-    return cursor
+    order_match_cursor.close()
 
-def expire (db, cursor, block_index):
+def expire (db, block_index):
+    order_expire_cursor = db.cursor()
     # Expire orders and give refunds for the amount give_remaining (if non‐zero; if not BTC).
-    cursor.execute('''SELECT * FROM orders''')
-    for order in cursor.fetchall():
+    order_expire_cursor.execute('''SELECT * FROM orders''')
+    orders = order_expire_cursor.fetchall()
+    for order in orders:
         time_left = util.get_time_left(order, block_index=block_index)
         if time_left < 0 and order['validity'] == 'Valid':
-            cursor.execute('''UPDATE orders SET validity=? WHERE tx_hash=?''', ('Invalid: expired', order['tx_hash']))
+            order_expire_cursor.execute('''UPDATE orders SET validity=? WHERE tx_hash=?''', ('Invalid: expired', order['tx_hash']))
             if order['give_id']:    # Can’t credit BTC.
-                cursor = util.credit(db, cursor, order['source'], order['give_id'], order['give_remaining'])
+                util.credit(db, order['source'], order['give_id'], order['give_remaining'])
             logging.info('Expired order: {}'.format(util.short(order['tx_hash'])))
 
     # Expire order_matches for BTC with no BTC.
-    cursor.execute('''SELECT * FROM order_matches''')
-    for order_match in cursor.fetchall():
+    order_expire_cursor.execute('''SELECT * FROM order_matches''')
+    order_matches = order_expire_cursor.fetchall()
+    for order_match in order_matches:
         if order_match['validity'] == 'Valid: awaiting BTC payment' and util.get_order_match_time_left(order_match, block_index=block_index) < 0:
-            cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Invalid: expired awaiting BTC payment', order_match['tx0_hash'], order_match['tx1_hash']))
+            order_expire_cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Invalid: expired awaiting BTC payment', order_match['tx0_hash'], order_match['tx1_hash']))
             if not order_match['forward_id']:
-                cursor = util.credit(db, cursor, order_match['tx1_address'],
+                util.credit(db, order_match['tx1_address'],
                                     order_match['backward_id'],
                                     order_match['backward_amount'])
             elif not order_match['backward_id']:
-                cursor = util.credit(db, cursor, order_match['tx0_address'],
+                util.credit(db, order_match['tx0_address'],
                                     order_match['forward_id'],
                                     order_match['forward_amount'])
             logging.info('Expired order_match awaiting BTC payment: {}'.format(util.short(order_match['tx0_hash'] + order_match['tx1_hash'])))
 
-    return cursor
+    order_expire_cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

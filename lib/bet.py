@@ -22,15 +22,15 @@ FORMAT = '>HIQQdII'
 ID = 40
 LENGTH = 2 + 4 + 8 + 8 + 8 + 4 + 4
 
-def get_fee_multiplier (feed_address):
+def get_fee_multiplier (db, feed_address):
     # Get fee_multiplier from the last broadcast from the feed_address address.
-    broadcasts = api.get_broadcasts(source=feed_address)
+    broadcasts = api.get_broadcasts(db, source=feed_address)
     last_broadcast = broadcasts[-1]
     return D(last_broadcast['fee_multiplier'] / 1e8)
 
-def create (source, feed_address, bet_type, deadline, wager_amount,
+def create (db, source, feed_address, bet_type, deadline, wager_amount,
             counterwager_amount, target_value, leverage, expiration, test=False):
-    good_feed = util.good_feed(feed_address)
+    good_feed = util.good_feed(db, feed_address)
     if good_feed == None:
         raise exceptions.FeedError('That feed doesn’t exist.')
     elif not good_feed:
@@ -39,8 +39,8 @@ def create (source, feed_address, bet_type, deadline, wager_amount,
     if not wager_amount or not counterwager_amount:
         raise exceptions.UselessError('Zero wager or counterwager')
 
-    fee_multiplier = get_fee_multiplier(feed_address)
-    balances = api.get_balances(address=source, asset_id=1)
+    fee_multiplier = get_fee_multiplier(db, feed_address)
+    balances = api.get_balances(db, address=source, asset_id=1)
     if not balances or balances[0]['amount'] < wager_amount * (1 + fee_multiplier):
         raise exceptions.BalanceError('Insufficient funds to both make wager and pay feed fee (in XCP). (Check that the database is up‐to‐date.)')
 
@@ -58,7 +58,9 @@ def create (source, feed_address, bet_type, deadline, wager_amount,
     return bitcoin.transaction(source, feed_address, config.DUST_SIZE,
                                config.MIN_FEE, data, test)
 
-def parse (db, cursor, tx, message):
+def parse (db, tx, message):
+    bet_parse_cursor = db.cursor()
+
     # Ask for forgiveness…
     validity = 'Valid'
 
@@ -75,7 +77,7 @@ def parse (db, cursor, tx, message):
 
     feed_address = tx['destination']
     if validity == 'Valid':
-        good_feed = util.good_feed(feed_address)
+        good_feed = util.good_feed(db, feed_address)
         if good_feed == None:
             validity = 'Invalid: no such feed'
         elif not good_feed:
@@ -90,8 +92,8 @@ def parse (db, cursor, tx, message):
 
     if validity == 'Valid':
         # Debit amount wagered and fee.
-        fee_multiplier = get_fee_multiplier(feed_address)
-        cursor, validity = util.debit(db, cursor, tx['source'], 1, round(wager_amount * (1 + fee_multiplier)))
+        fee_multiplier = get_fee_multiplier(db, feed_address)
+        validity = util.debit(db, tx['source'], 1, round(wager_amount * (1 + fee_multiplier)))
 
         wager_amount = int(wager_amount)
         counterwager_amount = int(counterwager_amount)
@@ -100,7 +102,7 @@ def parse (db, cursor, tx, message):
         odds = 0
 
     # Add parsed transaction to message‐type–specific table.
-    cursor.execute('''INSERT INTO bets(
+    bet_parse_cursor.execute('''INSERT INTO bets(
                         tx_index,
                         tx_hash,
                         block_index,
@@ -140,29 +142,31 @@ def parse (db, cursor, tx, message):
         if leverage:
             placeholder += ', leveraged {}x'.format(str(D(leverage / 5040).quantize(config.FOUR).normalize()))
         logging.info('Bet: {} on {} at {} for {} XCP against {} XCP in {} blocks{} ({})'.format(util.BET_TYPE_NAME[bet_type], feed_address, util.isodt(deadline), wager_amount / config.UNIT, counterwager_amount / config.UNIT, expiration, placeholder, util.short(tx['tx_hash'])))
-        cursor = bet_match(db, cursor, tx)
+        match(db, tx)
 
-    return cursor
+    bet_parse_cursor.close()
 
-def bet_match (db, cursor, tx):
+def match (db, tx):
+    bet_match_cursor = db.cursor()
 
     # Get bet in question.
-    cursor.execute('''SELECT * FROM bets\
+    bet_match_cursor.execute('''SELECT * FROM bets\
                       WHERE tx_index=?''', (tx['tx_index'],))
-    tx1 = cursor.fetchone()
-    assert not cursor.fetchone()
+    tx1 = bet_match_cursor.fetchone()
+    assert not bet_match_cursor.fetchone()
 
     # Get counterbet_type.
     if tx1['bet_type'] % 2: counterbet_type = tx1['bet_type'] - 1
     else: counterbet_type = tx1['bet_type'] + 1
 
     feed_address = tx1['feed_address']
-    cursor.execute('''SELECT * FROM bets\
+    bet_match_cursor.execute('''SELECT * FROM bets\
                       WHERE (feed_address=? AND block_index>=? AND validity=? AND bet_type=?) \
                       ORDER BY odds DESC, tx_index''',
                    (tx1['feed_address'], tx1['block_index'] - tx1['expiration'], 'Valid', counterbet_type))
     wager_remaining = D(tx1['wager_remaining'])
-    for tx0 in cursor.fetchall():
+    bet_matches = bet_match_cursor.fetchall()
+    for tx0 in bet_matches:
         if not counterbet_type == tx0['bet_type']: continue
         if tx0['leverage'] == tx1['leverage']:
             leverage = tx0['leverage']
@@ -183,10 +187,10 @@ def bet_match (db, cursor, tx):
             backward_amount = round(forward_amount / D(tx0['odds']))
 
             # When a match is made, pay XCP fee.
-            fee = get_fee_multiplier(tx1['feed_address']) * backward_amount
-            cursor, validity = util.debit(db, cursor, tx1['source'], 1, round(fee))
+            fee = get_fee_multiplier(db, tx1['feed_address']) * backward_amount
+            validity = util.debit(db, tx1['source'], 1, round(fee))
             if validity != 'Valid': continue
-            cursor = util.credit(db, cursor, tx1['feed_address'], 1, int(fee))
+            util.credit(db, tx1['feed_address'], 1, int(fee))
 
             bet_match_id = tx0['tx_hash'] + tx1['tx_hash']
 
@@ -201,22 +205,22 @@ def bet_match (db, cursor, tx):
             wager_remaining -= backward_amount
 
             # Update wager_remaining.
-            cursor.execute('''UPDATE bets \
+            bet_match_cursor.execute('''UPDATE bets \
                               SET wager_remaining=? \
                               WHERE tx_hash=?''',
                           (int(tx0['wager_remaining'] - forward_amount),
                            tx0['tx_hash']))
-            cursor.execute('''UPDATE bets \
+            bet_match_cursor.execute('''UPDATE bets \
                               SET wager_remaining=? \
                               WHERE tx_hash=?''',
                           (int(wager_remaining),
                            tx1['tx_hash']))
 
             # Get last value of feed.
-            initial_value = api.get_broadcasts(validity='Valid', source=tx1['feed_address'])[-1]['value']
+            initial_value = api.get_broadcasts(db, validity='Valid', source=tx1['feed_address'])[-1]['value']
 
             # Record order fulfillment.
-            cursor.execute('''INSERT into bet_matches(
+            bet_match_cursor.execute('''INSERT into bet_matches(
                                 tx0_index,
                                 tx0_hash,
                                 tx0_address,
@@ -258,19 +262,24 @@ def bet_match (db, cursor, tx):
                                 tx1['expiration'],
                                 validity)
                           )
-    return cursor
+
+    bet_match_cursor.close()
 
 # TODO: How long after deadline has been passed (in blocks?!) should the bet be expired?!
-def expire (db, cursor, block_index):
+def expire (db, block_index):
+
+    bet_expire_cursor = db.cursor()
 
     # Expire bets  and give refunds for the amount wager_remaining.
-    cursor.execute('''SELECT * FROM bets''')
-    for bet in cursor.fetchall():
+    bet_expire_cursor.execute('''SELECT * FROM bets''')
+    bets = bet_expire_cursor.fetchall()
+    for bet in bets:
         if util.get_time_left(bet) < 0 and bet['validity'] == 'Valid':
-            cursor.execute('''UPDATE bets SET validity=? WHERE tx_hash=?''', ('Invalid: expired', bet['tx_hash']))
-            cursor = util.credit(db, cursor, bet['source'], 1, bet['wager_remaining'])
+            bet_expire_cursor.execute('''UPDATE bets SET validity=? WHERE tx_hash=?''', ('Invalid: expired', bet['tx_hash']))
+            util.credit(db, bet['source'], 1, bet['wager_remaining'])
             logging.info('Expired bet: {}'.format(bet['tx_hash']))
-    return cursor
+
+    bet_expire_cursor.close()
 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

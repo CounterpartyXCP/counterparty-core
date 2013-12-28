@@ -13,7 +13,7 @@ FORMAT = '>11s'
 ID = 60
 LENGTH = 11
 
-def create (source, quantity, test=False):
+def create (db, source, quantity, test=False):
     # Try to make sure that the burned funds won’t go to waste.
     block_count = bitcoin.rpc('getblockcount', [])['result']
     if block_count < config.BURN_START:
@@ -22,7 +22,7 @@ def create (source, quantity, test=False):
         raise exceptions.UselessError('The proof‐of‐burn period has already ended.')
 
     # Check that a maximum of 1 BTC total is burned per address.
-    burns = api.get_burns(address=source, validity='Valid')
+    burns = api.get_burns(db, address=source, validity='Valid')
     total_burned = sum([burn['burned'] for burn in burns])
     if quantity > (1 * config.UNIT - total_burned):
         raise exceptions.UselessError('A maximum of 1 BTC may be burned per address.')
@@ -31,7 +31,8 @@ def create (source, quantity, test=False):
     data += struct.pack(FORMAT, 'ProofOfBurn'.encode('utf-8'))
     return bitcoin.transaction(source, None, None, int(quantity), data, test)
 
-def parse (db, cursor, tx, message):
+def parse (db, tx, message):
+    burn_parse_cursor = db.cursor()
     # Ask for forgiveness…
     validity = 'Valid'
 
@@ -47,7 +48,7 @@ def parse (db, cursor, tx, message):
     burned = int(tx['fee'])
 
     # Check that a maximum of 1 BTC total is burned per address.
-    burns = api.get_burns(validity='Valid', address=tx['source'])
+    burns = api.get_burns(db, validity='Valid', address=tx['source'])
     total_burned = sum([burn['burned'] for burn in burns])
     if burned > (1 * config.UNIT - total_burned):
         validity = 'Invalid: exceeded maximum burn'
@@ -66,10 +67,10 @@ def parse (db, cursor, tx, message):
  
     # Credit source address with earned XCP.
     if validity == 'Valid':
-        cursor = util.credit(db, cursor, tx['source'], 1, earned)
+        util.credit(db, tx['source'], 1, earned)
 
     # Add parsed transaction to message‐type–specific table.
-    cursor.execute('''INSERT INTO burns(
+    burn_parse_cursor.execute('''INSERT INTO burns(
                         tx_index,
                         tx_hash,
                         block_index,
@@ -89,6 +90,6 @@ def parse (db, cursor, tx, message):
     if validity == 'Valid':
         logging.info('Burn: {} BTC burned; {} XCP earned ({})'.format(burned / config.UNIT, earned / config.UNIT, util.short(tx['tx_hash'])))
 
-    return cursor
+    burn_parse_cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

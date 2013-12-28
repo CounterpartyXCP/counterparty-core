@@ -11,9 +11,9 @@ FORMAT = '>QQ?'
 ID = 20
 LENGTH = 8 + 8 + 1
 
-def create (source, asset_id, amount, divisible, test=False):
+def create (db, source, asset_id, amount, divisible, test=False):
     # Handle potential re‐issuances.
-    issuances = api.get_issuances(validity='Valid', asset_id=asset_id)
+    issuances = api.get_issuances(db, validity='Valid', asset_id=asset_id)
     if issuances:
         if issuances[0]['issuer'] != source:
             raise exceptions.IssuanceError('Asset exists and was not issuanced by this address.')
@@ -27,7 +27,9 @@ def create (source, asset_id, amount, divisible, test=False):
     data += struct.pack(FORMAT, asset_id, amount, divisible)
     return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test)
 
-def parse (db, cursor, tx, message):
+def parse (db, tx, message):
+    issuance_parse_cursor = db.cursor()
+
     # Ask for forgiveness…
     validity = 'Valid'
 
@@ -43,7 +45,7 @@ def parse (db, cursor, tx, message):
             validity = 'Invalid: zero amount.'
 
     # If re‐issuance, check for compatability in divisibility, issuer.
-    issuances = api.get_issuances(validity='Valid', asset_id=asset_id)
+    issuances = api.get_issuances(db, validity='Valid', asset_id=asset_id)
     if issuances:
         if issuances[0]['issuer'] != tx['source']:
             validity = 'Invalid: that asset already exists and was not issuanced by this address'
@@ -52,7 +54,7 @@ def parse (db, cursor, tx, message):
 
     # Credit.
     if validity == 'Valid':
-        cursor = util.credit(db, cursor, tx['source'], asset_id, amount)
+        util.credit(db, tx['source'], asset_id, amount)
         if divisible:
             divisibility = 'divisible'
             unit = config.UNIT
@@ -62,7 +64,7 @@ def parse (db, cursor, tx, message):
         logging.info('(Re‐)Issuance: {} created {} of {} asset {} ({})'.format(tx['source'], D(amount / unit).quantize(config.EIGHT).normalize(), divisibility, asset_id, util.short(tx['tx_hash'])))
 
     # Add parsed transaction to message‐type–specific table.
-    cursor.execute('''INSERT INTO issuances(
+    issuance_parse_cursor.execute('''INSERT INTO issuances(
                         tx_index,
                         tx_hash,
                         block_index,
@@ -81,6 +83,6 @@ def parse (db, cursor, tx, message):
                         validity)
                   )
 
-    return cursor
+    issuance_parse_cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

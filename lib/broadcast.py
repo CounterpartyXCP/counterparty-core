@@ -32,9 +32,9 @@ FORMAT = '>IdI40p' # How many characters *can* the text be?! (That is, how long 
 ID = 30
 LENGTH = 4 + 8 + 4 + 40
 
-def create (source, timestamp, value, fee_multiplier, text, test=False):
+def create (db, source, timestamp, value, fee_multiplier, text, test=False):
     # Check that the publishing address is not locked.
-    good_feed = util.good_feed(source)
+    good_feed = util.good_feed(db, source)
     if good_feed != None and not good_feed:
         raise exceptions.UselessError('Invalid: locked feed')
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
@@ -42,7 +42,8 @@ def create (source, timestamp, value, fee_multiplier, text, test=False):
                         text.encode('utf-8'))
     return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test)
 
-def parse (db, cursor, tx, message):
+def parse (db, tx, message):
+    broadcast_parse_cursor = db.cursor()
     # Ask for forgiveness…
     validity = 'Valid'
 
@@ -55,12 +56,12 @@ def parse (db, cursor, tx, message):
         validity = 'Invalid: could not unpack'
 
     # Check that the publishing address is not locked.
-    good_feed = util.good_feed(tx['source'])
+    good_feed = util.good_feed(db, tx['source'])
     if good_feed != None and not good_feed:
         validity = 'Invalid: locked feed'
 
     # Add parsed transaction to message‐type–specific table.
-    cursor.execute('''INSERT INTO broadcasts(
+    broadcast_parse_cursor.execute('''INSERT INTO broadcasts(
                         tx_index,
                         tx_hash,
                         block_index,
@@ -88,10 +89,11 @@ def parse (db, cursor, tx, message):
 
 
     # Handle bet matches that use this feed.
-    cursor.execute('''SELECT * FROM bet_matches \
+    broadcast_parse_cursor.execute('''SELECT * FROM bet_matches \
                       WHERE (validity=? AND feed_address=?)
                       ORDER BY tx1_index ASC, tx0_index ASC''', ('Valid', tx['source']))
-    for bet_match in cursor.fetchall():
+    for bet_match in broadcast_parse_cursor.fetchall():
+        broadcast_bet_match_cursor = db.cursor()
         validity = 'Valid'
         bet_match_id = bet_match['tx0_hash'] + bet_match['tx1_hash']
 
@@ -127,18 +129,18 @@ def parse (db, cursor, tx, message):
             if bet_match['validity'] == 'Valid':
                 # Liquidate, as necessary.
                 if bull_credit >= total_escrow:
-                    cursor = util.credit(db, cursor, bull_address, 1, total_escrow)
+                    util.credit(db, bull_address, 1, total_escrow)
                     validity = 'Force‐Liquidated Bear'
-                    logging.info('Contract Force‐Liquidated: {} XCP credited to the bull, and 0 XCP credited to the bear ({})'.format(util.devise(total_escrow, 1, 'output'), util.short(bet_match_id)))
+                    logging.info('Contract Force‐Liquidated: {} XCP credited to the bull, and 0 XCP credited to the bear ({})'.format(util.devise(db, total_escrow, 1, 'output'), util.short(bet_match_id)))
                 elif bull_credit <= 0:
-                    cursor = util.credit(db, cursor, bear_address, 1, total_escrow)
+                    util.credit(db, bear_address, 1, total_escrow)
                     validity = 'Force‐Liquidated Bull'
-                    logging.info('Contract Force‐Liquidated: 0 XCP credited to the bull, and {} XCP credited to the bear ({})'.format(util.devise(total_escrow, 1, 'output'), util.short(bet_match_id)))
+                    logging.info('Contract Force‐Liquidated: 0 XCP credited to the bull, and {} XCP credited to the bear ({})'.format(util.devise(db, total_escrow, 1, 'output'), util.short(bet_match_id)))
 
             # Settle.
             if validity == 'Valid' and timestamp >= bet_match['deadline']:
-                cursor = util.credit(db, cursor, bull_address, 1, bull_credit)
-                cursor = util.credit(db, cursor, bear_address, 1, bear_credit)
+                util.credit(db, bull_address, 1, bull_credit)
+                util.credit(db, bear_address, 1, bear_credit)
                 validity = 'Settled (CFD)'
                 logging.info('Contract Settled: {} XCP credited to the bull, and {} XCP credited to the bear ({})'.format(bull_credit / config.UNIT, bear_credit / config.UNIT, util.short(bet_match_id)))
 
@@ -157,22 +159,22 @@ def parse (db, cursor, tx, message):
             total_escrow = bet_match['forward_amount'] + bet_match['backward_amount']
             if value == bet_match['target_value']:
                 winner = 'Equal'
-                cursor = util.credit(db, cursor, equal_address, 1, total_escrow)
+                util.credit(db, equal_address, 1, total_escrow)
                 validity = 'Settled for Equal'
             else:
                 winner = 'NotEqual'
-                cursor = util.credit(db, cursor, notequal_address, 1, total_escrow)
+                util.credit(db, notequal_address, 1, total_escrow)
                 validity = 'Settled for NotEqual'
 
             logging.info('Contract Settled: {} won ({})'.format(winner, util.short(bet_match_id)))
 
         # Update the bet match’s status.
-        cursor.execute('''UPDATE bet_matches \
+        broadcast_bet_match_cursor.execute('''UPDATE bet_matches \
                           SET validity=? \
                           WHERE (tx0_hash=? and tx1_hash=?)''',
                       (validity, bet_match['tx0_hash'], bet_match['tx1_hash']))
+        broadcast_bet_match_cursor.close()
+
+    broadcast_parse_cursor.close()
        
-
-    return cursor
-
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

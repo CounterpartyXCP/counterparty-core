@@ -11,6 +11,7 @@ from prettytable import PrettyTable
 import decimal
 D = decimal.Decimal
 
+import sqlite3
 import logging
 import appdirs
 import configparser
@@ -29,7 +30,7 @@ def watch ():
     os.system('cls' if os.name=='nt' else 'clear')
 
     # Open orders.
-    orders = api.get_orders(validity='Valid', show_expired=False, show_empty=False)
+    orders = api.get_orders(db, validity='Valid', show_expired=False, show_empty=False)
     table = PrettyTable(['Give', 'Get', 'Price', 'Fee', 'Time Left', 'Tx Hash'])
     for order in orders:
         order = format_order(order)
@@ -39,7 +40,7 @@ def watch ():
     print('\n')
 
     # Open bets.
-    bets = api.get_bets(validity='Valid', show_expired=False, show_empty=False)
+    bets = api.get_bets(db, validity='Valid', show_expired=False, show_empty=False)
     table = PrettyTable(['Bet Type', 'Feed Address', 'Deadline', 'target_value', 'Leverage', 'Wager', 'Counterwager', 'Odds', 'Time Left', 'Tx Hash'])
     for bet in bets:
         bet = format_bet(bet)
@@ -50,7 +51,7 @@ def watch ():
 
     # Matched orders awaiting BTC payments from you.
     my_addresses  = [ element['address'] for element in bitcoin.rpc('listreceivedbyaddress', [0,True])['result'] ]
-    awaiting_btcs = api.get_order_matches(validity='Valid: awaiting BTC payment', addresses=my_addresses, show_expired=False)
+    awaiting_btcs = api.get_order_matches(db, validity='Valid: awaiting BTC payment', addresses=my_addresses, show_expired=False)
     table = PrettyTable(['Matched Order ID', 'Time Left'])
     for order_match in awaiting_btcs:
         order_match = format_order_match(order_match)
@@ -60,7 +61,7 @@ def watch ():
     print('\n')
 
     # Running feeds
-    broadcasts = api.get_broadcasts(validity='Valid', order_by='timestamp DESC')
+    broadcasts = api.get_broadcasts(db, validity='Valid', order_by='timestamp DESC')
     table = PrettyTable(['Feed Address', 'Timestamp', 'Text', 'Value', 'Fee Multiplier'])
     seen_addresses = []
     for broadcast in broadcasts:
@@ -78,7 +79,7 @@ def watch ():
 
 
 def history (address):
-    history = api.get_history(address)
+    history = api.get_history(db, address)
 
     # TODO: Debits, credits
 
@@ -87,7 +88,7 @@ def history (address):
     table = PrettyTable(['Asset', 'Amount'])
     for balance in balances:
         asset = util.get_asset_name(balance['asset_id'])
-        amount = util.devise(balance['amount'], balance['asset_id'], 'output')
+        amount = util.devise(db, balance['amount'], balance['asset_id'], 'output')
         table.add_row([asset, amount])
     print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Balances' + colorama.Style.RESET_ALL)
     print(colorama.Fore.CYAN + str(table) + colorama.Style.RESET_ALL)
@@ -97,7 +98,7 @@ def history (address):
     sends = history['sends']
     table = PrettyTable(['Amount', 'Asset', 'Source', 'Destination', 'Tx Hash'])
     for send in sends:
-        amount = util.devise(send['amount'], send['asset_id'], 'output')
+        amount = util.devise(db, send['amount'], send['asset_id'], 'output')
         asset = util.get_asset_name(send['asset_id'])
         table.add_row([amount, asset, send['source'], send['destination'], util.short(send['tx_hash'])])
     print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Sends' + colorama.Style.RESET_ALL)
@@ -110,7 +111,7 @@ def history (address):
 def format_order (order):
     price = D(order['get_amount']) / D(order['give_amount'])
 
-    give_remaining = util.devise(D(order['give_remaining']), order['give_id'], 'output')
+    give_remaining = util.devise(db, D(order['give_remaining']), order['give_id'], 'output')
     get_remaining = give_remaining * price
     give_name = util.get_asset_name(order['give_id'])
     get_name = util.get_asset_name(order['get_id'])
@@ -294,7 +295,7 @@ if __name__ == '__main__':
     if args.rpc_password:
         config.rpc_password = args.rpc_password
     elif 'rpcpassword' in configfile['Default']:
-        config.rpc_password = configfile['Default']['rpc_password']
+        config.rpc_password = configfile['Default']['rpcpassword']
     else:
         raise exceptions.ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
 
@@ -305,6 +306,11 @@ if __name__ == '__main__':
         config.DATABASE = args.database_file
     else:
         config.DATABASE = config.data_dir + '/counterpartyd.' + str(config.DB_VERSION) + '.db'
+
+    # For create()s.
+    db = sqlite3.connect(config.DATABASE)
+    db.row_factory = sqlite3.Row
+    follow_cursor = db.cursor()
 
     # Log
     if args.log_file:
@@ -341,9 +347,9 @@ if __name__ == '__main__':
         bitcoin.bitcoind_check()
 
         asset_id = util.get_asset_id(args.asset)
-        quantity = util.devise(args.quantity, asset_id, 'input')
+        quantity = util.devise(db, args.quantity, asset_id, 'input')
 
-        unsigned_tx_hex = send.create(args.source, args.destination,
+        unsigned_tx_hex = send.create(db, args.source, args.destination,
                                       round(quantity), asset_id)
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
@@ -364,22 +370,22 @@ if __name__ == '__main__':
             assert fee_required >= config.MIN_FEE
             fee_provided = config.MIN_FEE
 
-        give_quantity = util.devise(args.give_quantity, give_id, 'input')
-        get_quantity = util.devise(args.get_quantity, get_id, 'input')
-        unsigned_tx_hex = order.create(args.source, give_id, round(give_quantity),
+        give_quantity = util.devise(db, args.give_quantity, give_id, 'input')
+        get_quantity = util.devise(db, args.get_quantity, get_id, 'input')
+        unsigned_tx_hex = order.create(db, args.source, give_id, round(give_quantity),
                                 get_id, round(get_quantity),
                                 args.expiration, fee_required, fee_provided)
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'btcpay':
-        unsigned_tx_hex = btcpay.create(args.order_match_id)
+        unsigned_tx_hex = btcpay.create(db, args.order_match_id)
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'issuance':
         bitcoin.bitcoind_check()
 
-        quantity = util.devise(args.quantity, asset_id, 'input')
-        unsigned_tx_hex = issuance.create(args.source, args.asset_id, round(quantity),
+        quantity = util.devise(db, args.quantity, asset_id, 'input')
+        unsigned_tx_hex = issuance.create(db, args.source, args.asset_id, round(quantity),
                                 args.divisible)
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
@@ -414,13 +420,13 @@ if __name__ == '__main__':
         asset_id = util.get_asset_id(args.share_asset)
         quantity_per_share = D(args.quantity_per_share) * config.UNIT
 
-        unsigned_tx_hex = dividend.create(args.source, round(quantity_per_share),
+        unsigned_tx_hex = dividend.create(db, args.source, round(quantity_per_share),
                                    asset_id)
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'burn':
         bitcoin.bitcoind_check()
-        unsigned_tx_hex = burn.create(args.source, round(D(args.quantity) * config.UNIT))
+        unsigned_tx_hex = burn.create(db, args.source, round(D(args.quantity) * config.UNIT))
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'watch':
