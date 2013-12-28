@@ -12,6 +12,7 @@ ID = 10
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8
 
 def create (db, source, give_id, give_amount, get_id, get_amount, expiration, fee_required, fee_provided, test=False):
+
     balances = util.get_balances(db, address=source, asset_id=give_id)
     if give_id and (not balances or balances[0]['amount'] < give_amount):
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
@@ -19,6 +20,9 @@ def create (db, source, give_id, give_amount, get_id, get_amount, expiration, fe
         raise exceptions.UselessError('You can’t trade an asset for itself.')
     if not get_amount or not get_amount:
         raise exceptions.UselessError('Zero give or zero get.')
+    if not util.get_issuances(db, validity='Valid', asset_id=get_id):
+        raise exceptions.DividendError('No such asset to get: {}.'.format(get_id))
+
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, give_id, give_amount, get_id, get_amount,
                         expiration, fee_required)
@@ -43,6 +47,9 @@ def parse (db, tx, message):
     if validity == 'Valid':
         if not get_amount or not get_amount:
             validity = 'Invalid: zero give or zero get.'
+
+    if validity and ((not give_id > 49**3 and not give_id in (0, 1)) or (not get_id > 49**3 and not get_id in (0, 1))):
+        validity = 'Invalid: bad Asset ID'
 
     if validity == 'Valid':
         give_amount = give_amount

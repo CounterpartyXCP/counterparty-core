@@ -9,11 +9,11 @@ from dateutil.tz import tzlocal
 import decimal
 D = decimal.Decimal
 
-from . import (config, bitcoin)
+from . import (config, exceptions, bitcoin)
+
+b49_digits = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
 # Obsolete in Python 3.4, with enum module.
-ASSET_NAME = {0: 'BTC', 1: 'XCP'}
-ASSET_ID = {'BTC': 0, 'XCP': 1}
 BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
 BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
 
@@ -39,13 +39,37 @@ def get_order_match_time_left (matched, block_index=None):
     return min(tx0_time_left, tx1_time_left)
 
 def get_asset_id (asset):
-    """Always returns ID"""
-    try: return ASSET_ID[asset]
-    except: return int(asset)
+    if asset == 'BTC': return 0
+    elif asset == 'XCP': return 1
+
+    # Minimum of four letters long.
+    assert len(asset) >= 4
+
+    # Convert the base49 string to an integer.
+    n = 0
+    s = asset
+    for c in s:
+        n *= 49
+        if c not in b49_digits:
+            raise BaseException # TODO
+        digit = b49_digits.index(c)
+        n += digit
+    return n
+
 def get_asset_name (asset_id):
-    """Returns ID if no name was found"""
-    try: return ASSET_NAME[asset_id]
-    except Exception: return str(asset_id)
+    if asset_id == 0: return 'BTC'
+    elif asset_id == 1: return 'XCP'
+
+    # Minimum of four letters long.
+    assert asset_id > 49**3
+
+    # Divide that integer into base49 string.
+    res = []
+    n = asset_id
+    while n > 0:
+        n, r = divmod (n, 49)
+        res.append(b49_digits[r])
+    return ''.join(res[::-1])
 
 def debit (db, address, asset_id, amount):
     debit_cursor = db.cursor()
@@ -129,10 +153,17 @@ def good_feed (db, feed_address):
         if broadcast['text'] == '': return False    # Locked
     return True                                     # Exists and is unlocked
 
+def last_issued (db):
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM issuances \
+                      ORDER BY asset_id DESC''')
+    issuance = cursor.fetchone()
+    return issuances['asset_id']
+
 def devise (db, quantity, asset_id, dest):
     issuances = get_issuances(db, validity='Valid', asset_id=asset_id)
     if not issuances: raise exceptions.AssetError('No such asset.')
-    if issuances[0]['divisible'] and dest == 'output':
+    if (issuances[0]['divisible'] or asset_id == True) and dest == 'output':
         quantity = D(quantity) / config.UNIT
         return quantity.quantize(config.EIGHT).normalize()
     else:
@@ -325,7 +356,7 @@ def get_burns (db, validity=True, address=None):
 
 
 def get_history (db, address):
-    if not bitcoin.base58_decode(address, bitcoin.ADDRESSVERSION):
+    if not bitcoin.base58_decode(address, config.ADDRESSVERSION):
         raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
                                              address)
     history = {}

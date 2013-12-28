@@ -12,15 +12,12 @@ ID = 0
 LENGTH = 8 + 8
 
 def create (db, source, destination, amount, asset_id, test=False):
-
-    # Check that it is not BTC that someone was trying to send.
     if not asset_id: raise exceptions.BalanceError('Cannot send bitcoins.')
+    if not amount: raise exceptions.UselessError('Zero quantity.')
 
     balances = util.get_balances(db, address=source, asset_id=asset_id)
     if not balances or balances[0]['amount'] < amount:
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
-    if not amount:
-        raise exceptions.UselessError('Zero quantity.')
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount)
@@ -39,10 +36,12 @@ def parse (db, tx, message):
         asset_id, amount = None, None
         validity = 'Invalid: could not unpack'
 
-
     # Check that it is not BTC that someone was trying to send.
-    if not asset_id:
-        validity = 'Invalid: cannot send bitcoins'
+    if validity:
+        if not asset_id:
+            validity = 'Invalid: cannot send bitcoins'
+        elif not asset_id > 49**3 and not asset_id == 1:
+            validity = 'Invalid: bad Asset ID'
 
     # Debit.
     if validity == 'Valid':

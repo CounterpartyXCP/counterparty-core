@@ -46,6 +46,12 @@ def parse (db, tx, message):
         if not amount_per_share:
             validity = 'Invalid: zero amount per share.'
 
+    if validity:
+        if asset_id in (0, 1):
+            validity = 'Invalid: cannot send dividends to BTC or XCP'
+        elif not asset_id > 49**3:
+            validity = 'Invalid: bad Asset ID'
+
     # Debit.
     issuances = util.get_issuances(db, validity='Valid', asset_id=asset_id)
     total_shares = sum([issuance['amount'] for issuance in issuances])

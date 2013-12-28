@@ -20,6 +20,9 @@ def create (db, source, asset_id, amount, divisible, test=False):
         if issuances[0]['divisible'] != divisible:
             raise exceptions.IssuanceError('That asset exists with a different divisibility.')
 
+    if not asset_id > 49**3:
+        raise execeptions.AssetError('Asset ID must be greater than 49^3.')
+
     if not amount:
         raise exceptions.UselessError('Zero amount.')
 
@@ -44,6 +47,9 @@ def parse (db, tx, message):
         if not amount:
             validity = 'Invalid: zero amount.'
 
+    if validity and not asset_id > 49**3:
+        validity = 'Invalid: bad Asset ID'
+
     # If re‐issuance, check for compatability in divisibility, issuer.
     issuances = util.get_issuances(db, validity='Valid', asset_id=asset_id)
     if issuances:
@@ -61,7 +67,7 @@ def parse (db, tx, message):
         else:
             divisibility = 'indivisible'
             unit = 1
-        logging.info('(Re‐)Issuance: {} created {} of {} asset {} ({})'.format(tx['source'], D(amount / unit).quantize(config.EIGHT).normalize(), divisibility, asset_id, util.short(tx['tx_hash'])))
+        logging.info('(Re‐)Issuance: {} created {} of {} asset {} ({})'.format(tx['source'], D(amount / unit).quantize(config.EIGHT).normalize(), divisibility, util.get_asset_name(asset_id), util.short(tx['tx_hash'])))
 
     # Add parsed transaction to message‐type–specific table.
     issuance_parse_cursor.execute('''INSERT INTO issuances(

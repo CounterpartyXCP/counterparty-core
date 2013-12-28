@@ -323,7 +323,7 @@ def get_tx_info (tx):
     for vout in tx['vout']:
         if 'addresses' in vout['scriptPubKey']:
             address = vout['scriptPubKey']['addresses'][0]
-            if bitcoin.base58_decode(address, bitcoin.ADDRESSVERSION):  # If address is valid…
+            if bitcoin.base58_decode(address, config.ADDRESSVERSION):  # If address is valid…
                 destination, btc_amount = address, round(D(vout['value']) * config.UNIT)
                 break
 

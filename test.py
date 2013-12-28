@@ -59,6 +59,7 @@ tx_index = 0
 config.BLOCK_FIRST = 0
 config.BURN_START = 0
 config.BURN_END = 9999999
+config.ADDRESSVERSION = b'\x6F' # testnet
 
 source_default = 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'
 destination_default = 'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7'
@@ -143,7 +144,7 @@ def get_tx_data (tx_hex):
     for vout in tx['vout']:
         if 'addresses' in vout['scriptPubKey']:
             address = vout['scriptPubKey']['addresses'][0]
-            if bitcoin.base58_decode(address, bitcoin.ADDRESSVERSION):  # If address is valid…
+            if bitcoin.base58_decode(address, config.ADDRESSVERSION):  # If address is valid…
                 destination, btc_amount = address, round(D(vout['value']) * config.UNIT)
                 break
     return destination, btc_amount, data
@@ -207,8 +208,8 @@ def test_btcpay ():
 
 def test_issuance_divisible ():
     global db
-    unsigned_tx_hex = issuance.create(db, source_default, 2, quantity * 10, True, test=True)
-    assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff020438ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000000000001b6a1954455354000000140000000000000002000000003b9aca000100000000'
+    unsigned_tx_hex = issuance.create(db, source_default, 120000, quantity * 10, True, test=True)
+    assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff020438ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000000000001b6a195445535400000014000000000001d4c0000000003b9aca000100000000'
     fee = config.MIN_FEE
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
@@ -217,8 +218,8 @@ def test_issuance_divisible ():
 
 def test_issuance_indivisible ():
     global db
-    unsigned_tx_hex = issuance.create(db, source_default, 3, int(quantity / 1000), False, test=True)
-    assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff020438ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000000000001b6a195445535400000014000000000000000300000000000186a00000000000'
+    unsigned_tx_hex = issuance.create(db, source_default, 120001, int(quantity / 1000), False, test=True)
+    assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff020438ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000000000001b6a195445535400000014000000000001d4c100000000000186a00000000000'
     fee = config.MIN_FEE
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
@@ -227,8 +228,8 @@ def test_issuance_indivisible ():
 
 def test_dividend_divisible ():
     global db
-    unsigned_tx_hex = dividend.create(db, source_default, 6, 2, test=True)
-    assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff020438ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000000000001a6a1854455354000000320000000000000006000000000000000200000000'
+    unsigned_tx_hex = dividend.create(db, source_default, 6, 120000, test=True)
+    assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff020438ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000000000001a6a1854455354000000320000000000000006000000000001d4c000000000'
     fee = config.MIN_FEE
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
@@ -237,8 +238,8 @@ def test_dividend_divisible ():
 
 def test_dividend_indivisible ():
     global db
-    unsigned_tx_hex = dividend.create(db, source_default, 8, 3, test=True)
-    assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff020438ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000000000001a6a1854455354000000320000000000000008000000000000000300000000'
+    unsigned_tx_hex = dividend.create(db, source_default, 8, 120001, test=True)
+    assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff020438ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000000000001a6a1854455354000000320000000000000008000000000001d4c100000000'
     fee = config.MIN_FEE
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)

@@ -20,8 +20,6 @@ OP_HASH160 = b'\xa9'
 OP_EQUALVERIFY = b'\x88'
 OP_CHECKSIG = b'\xac'
 b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
-# ADDRESSVERSION = b'\x00'      # mainnet
-ADDRESSVERSION = b'\x6F'        # testnet
 
 dhash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
 
@@ -141,7 +139,7 @@ def serialize (inputs, outputs, data):
         script = OP_DUP                                     # OP_DUP
         script += OP_HASH160                                # OP_HASH160
         script += op_push(20)                               # Push 0x14 bytes
-        script += base58_decode(address, ADDRESSVERSION)    # Address (pubKeyHash)
+        script += base58_decode(address, config.ADDRESSVERSION)    # Address (pubKeyHash)
         script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
         script += OP_CHECKSIG                               # OP_CHECKSIG
         s += var_int(int(len(script)))                      # Script length
@@ -180,8 +178,8 @@ def transaction (source, destination, btc_amount, fee, data, test=False):
     for address in (source, destination):
         if address:
             try:
-                base58_decode(address, ADDRESSVERSION)
-            except:
+                base58_decode(address, config.ADDRESSVERSION)
+            except:  # TODO
                 raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
                                           address)
 
@@ -227,7 +225,7 @@ def transmit (unsigned_tx_hex, ask=True):
     # Confirm transaction.
     if ask:
         if config.PREFIX == b'TEST': print('Attention: COUNTERPARTY TEST!') 
-        if ADDRESSVERSION == b'0x6F': print('\nAttention: BITCOIN TESTNET!\n') 
+        if config.ADDRESSVERSION == b'0x6F': print('\nAttention: BITCOIN TESTNET!\n') 
         if input('Confirm? (y/N) ') != 'y':
             print('Transaction aborted.', file=sys.stderr)
             sys.exit(1)

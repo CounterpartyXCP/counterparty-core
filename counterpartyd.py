@@ -224,7 +224,7 @@ if __name__ == '__main__':
     parser_issuance = subparsers.add_parser('issuance', help='requires bitcoind')
     parser_issuance.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='')
     parser_issuance.add_argument('--quantity', metavar='QUANTITY', required=True, help='')
-    parser_issuance.add_argument('--asset-id', metavar='ASSET_ID', type=int, required=True, help='')
+    parser_issuance.add_argument('--asset', metavar='ASSET', required=True, help='')
     parser_issuance.add_argument('--divisible', metavar='DIVISIBLE', type=bool, required=True, help='whether or not the asset is divisible (must agree with previous issuances, if this is a re‐issuance)')
 
     parser_broadcast = subparsers.add_parser('broadcast', help='requires bitcoind')
@@ -361,8 +361,9 @@ if __name__ == '__main__':
         config.BLOCK_FIRST = 153560
         config.BURN_START = 153000
         config.BURN_END = 156000
+        config.ADDRESSVERSION = b'\x6F'
     else:
-        pass
+        config.ADDRESSVERSION = b'\x00'
         # TODO
 
     config.TESTCOIN = True
@@ -419,8 +420,9 @@ if __name__ == '__main__':
     elif args.action == 'issuance':
         bitcoin.bitcoind_check()
 
-        quantity = util.devise(db, args.quantity, asset_id, 'input')
-        unsigned_tx_hex = issuance.create(db, args.source, args.asset_id, round(quantity),
+        asset_id = util.get_asset_id(args.asset)
+        quantity = util.devise(db, float(args.quantity), args.divisible, 'input')
+        unsigned_tx_hex = issuance.create(db, args.source, asset_id, round(quantity),
                                 args.divisible)
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
