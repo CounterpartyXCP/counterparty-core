@@ -21,8 +21,7 @@ def create (db, source, asset, amount, divisible, test=False):
             raise exceptions.IssuanceError('That asset exists with a different divisibility.')
 
     if not util.valid_asset_name(asset):
-        raise execeptions.AssetError('Bad asset name.')
-
+        raise exceptions.AssetError('Bad asset name.')
     if not amount:
         raise exceptions.UselessError('Zero amount.')
 

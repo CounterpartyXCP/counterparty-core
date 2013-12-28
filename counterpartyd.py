@@ -421,7 +421,7 @@ if __name__ == '__main__':
         bitcoin.bitcoind_check()
 
         asset = args.asset
-        quantity = util.devise(db, float(args.quantity), args.divisible, 'input')
+        quantity = util.devise(db, D(args.quantity), args.divisible, 'input')
         unsigned_tx_hex = issuance.create(db, args.source, asset, round(quantity),
                                 args.divisible)
         json_print(bitcoin.transmit(unsigned_tx_hex))

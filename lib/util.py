@@ -177,9 +177,15 @@ def last_issued (db):
 """
 
 def devise (db, quantity, asset, dest):
+    # For issuances.
+    if asset == True:
+        return quantity.quantize(config.EIGHT).normalize()
+    if asset == False:
+        return int(quantity * config.UNIT)
+
     issuances = get_issuances(db, validity='Valid', asset=asset)
     if not issuances: raise exceptions.AssetError('No such asset.')
-    if (issuances[0]['divisible'] or asset == True) and dest == 'output':
+    if issuances[0]['divisible'] and dest == 'output':
         quantity = D(quantity) / config.UNIT
         return quantity.quantize(config.EIGHT).normalize()
     else:
