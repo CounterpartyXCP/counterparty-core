@@ -33,9 +33,9 @@ def watch (give_asset, get_asset, feed_address):
     orders = util.get_orders(db, validity='Valid', show_expired=False, show_empty=False)
     table = PrettyTable(['Give Quantity', 'Give Asset', 'Get Quantity', 'Get Asset', 'Price', 'Price Assets', 'Fee', 'Time Left', 'Tx Hash'])
     for order in orders:
-        if give_asset and order['give_id'] != util.get_asset_id(give_asset):
+        if give_asset and order['give_asset'] != give_asset:
             continue
-        if get_asset and order['get_id'] != util.get_asset_id(get_asset):
+        if get_asset and order['get_asset'] != get_asset:
             continue
         order = format_order(order)
         table.add_row(order)
@@ -90,8 +90,8 @@ def history (address):
     balances = history['balances']
     table = PrettyTable(['Asset', 'Amount'])
     for balance in balances:
-        asset = util.get_asset_name(balance['asset_id'])
-        amount = util.devise(db, balance['amount'], balance['asset_id'], 'output')
+        asset = balance['asset']
+        amount = util.devise(db, balance['amount'], balance['asset'], 'output')
         table.add_row([asset, amount])
     print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Balances' + colorama.Style.RESET_ALL)
     print(colorama.Fore.CYAN + str(table) + colorama.Style.RESET_ALL)
@@ -101,8 +101,8 @@ def history (address):
     sends = history['sends']
     table = PrettyTable(['Amount', 'Asset', 'Source', 'Destination', 'Tx Hash'])
     for send in sends:
-        amount = util.devise(db, send['amount'], send['asset_id'], 'output')
-        asset = util.get_asset_name(send['asset_id'])
+        amount = util.devise(db, send['amount'], send['asset'], 'output')
+        asset = send['asset']
         table.add_row([amount, asset, send['source'], send['destination'], util.short(send['tx_hash'])])
     print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Sends' + colorama.Style.RESET_ALL)
     print(colorama.Fore.YELLOW + str(table) + colorama.Style.RESET_ALL)
@@ -113,8 +113,8 @@ def history (address):
     json_print(orders)
     table = PrettyTable(['Amount', 'Asset', 'Source', 'Destination', 'Tx Hash'])
     for order in orders:
-        amount = util.devise(db, order['amount'], order['asset_id'], 'output')
-        asset = util.get_asset_name(order['asset_id'])
+        amount = util.devise(db, order['amount'], order['asset'], 'output')
+        asset = order['asset']
         table.add_row([amount, asset, order['source'], order['destination'], util.short(order['tx_hash'])])
     print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'orders' + colorama.Style.RESET_ALL)
     print(colorama.Fore.YELLOW + str(table) + colorama.Style.RESET_ALL)
@@ -125,8 +125,8 @@ def history (address):
     json_print(order_matches)
     table = PrettyTable(['Give', 'Get', 'Source', 'Destination', 'Tx Hash'])
     for order_match in order_matches:
-        amount = util.devise(db, order_match['amount'], order['asset_id'], 'output')
-        asset = util.get_asset_name(order_match['asset_id'])
+        amount = util.devise(db, order_match['amount'], order['asset'], 'output')
+        asset = order_match['asset']
         table.add_row([amount, asset, order_match['source'], order_match['destination'], util.short(order_match['tx_hash'])])
     print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'order_matches' + colorama.Style.RESET_ALL)
     print(colorama.Fore.YELLOW + str(table) + colorama.Style.RESET_ALL)
@@ -138,11 +138,11 @@ def history (address):
 def format_order (order):
     price = D(order['get_amount']) / D(order['give_amount'])
 
-    give_remaining = util.devise(db, D(order['give_remaining']), order['give_id'], 'output')
-    get_remaining = util.devise(db, D(give_remaining * price), order['get_id'], 'output')
+    give_remaining = util.devise(db, D(order['give_remaining']), order['give_asset'], 'output')
+    get_remaining = util.devise(db, D(give_remaining * price), order['get_asset'], 'output')
 
-    give_asset = util.get_asset_name(order['give_id'])
-    get_asset = util.get_asset_name(order['get_id'])
+    give_asset = order['give_asset']
+    get_asset = order['get_asset']
 
     price = D(get_remaining/ give_remaining).quantize(config.FOUR).normalize()
     price_assets = get_asset + '/' + give_asset
@@ -378,25 +378,25 @@ if __name__ == '__main__':
     if args.action == 'send':
         bitcoin.bitcoind_check()
 
-        asset_id = util.get_asset_id(args.asset)
-        quantity = util.devise(db, args.quantity, asset_id, 'input')
+        asset = args.asset
+        quantity = util.devise(db, args.quantity, asset, 'input')
 
         unsigned_tx_hex = send.create(db, args.source, args.destination,
-                                      round(quantity), asset_id)
+                                      round(quantity), asset)
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'order':
         bitcoin.bitcoind_check()
 
-        give_id = util.get_asset_id(args.give_asset)
-        get_id = util.get_asset_id(args.get_asset)
+        give_asset = args.give_asset
+        get_asset = args.get_asset
 
         # Fee argument is either fee_required or fee_provided, as necessary.
-        if not give_id:
+        if not give_asset:
             fee_provided = round(D(args.fee) * config.UNIT)
             assert fee_provided >= config.MIN_FEE
             fee_required = 0
-        elif not get_id:
+        elif not get_asset:
             fee_required = round(D(args.fee) * config.UNIT)
             assert fee_required >= config.MIN_FEE
             fee_provided = config.MIN_FEE
@@ -406,10 +406,10 @@ if __name__ == '__main__':
             fee_required = 0
             fee_provided = config.MIN_FEE
 
-        give_quantity = util.devise(db, args.give_quantity, give_id, 'input')
-        get_quantity = util.devise(db, args.get_quantity, get_id, 'input')
-        unsigned_tx_hex = order.create(db, args.source, give_id, round(give_quantity),
-                                get_id, round(get_quantity),
+        give_quantity = util.devise(db, args.give_quantity, give_asset, 'input')
+        get_quantity = util.devise(db, args.get_quantity, get_asset, 'input')
+        unsigned_tx_hex = order.create(db, args.source, give_asset, round(give_quantity),
+                                get_asset, round(get_quantity),
                                 args.expiration, fee_required, fee_provided)
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
@@ -420,9 +420,9 @@ if __name__ == '__main__':
     elif args.action == 'issuance':
         bitcoin.bitcoind_check()
 
-        asset_id = util.get_asset_id(args.asset)
+        asset = args.asset
         quantity = util.devise(db, float(args.quantity), args.divisible, 'input')
-        unsigned_tx_hex = issuance.create(db, args.source, asset_id, round(quantity),
+        unsigned_tx_hex = issuance.create(db, args.source, asset, round(quantity),
                                 args.divisible)
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
@@ -454,11 +454,11 @@ if __name__ == '__main__':
     elif args.action == 'dividend':
         bitcoin.bitcoind_check()
 
-        asset_id = util.get_asset_id(args.share_asset)
+        asset = args.share_asset
         quantity_per_share = D(args.quantity_per_share) * config.UNIT
 
         unsigned_tx_hex = dividend.create(db, args.source, round(quantity_per_share),
-                                   asset_id)
+                                   asset)
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'burn':

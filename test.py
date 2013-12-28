@@ -76,10 +76,10 @@ def check_balance():
     balances = util.get_balances(db)
     for balance in balances:
         amount = 0
-        debits = util.get_debits(db, address=balance['address'], asset_id=balance['asset_id'])
+        debits = util.get_debits(db, address=balance['address'], asset=balance['asset'])
         for debit in debits:
             amount -= debit['amount']
-        credits = util.get_credits(db, address=balance['address'], asset_id=balance['asset_id'])
+        credits = util.get_credits(db, address=balance['address'], asset=balance['asset'])
         for credit in credits:
             amount += credit['amount']
         assert amount == balance['amount']
@@ -167,7 +167,7 @@ def test_burn ():
 
 def test_send ():
     global db
-    unsigned_tx_hex = send.create(db, source_default, destination_default, small, 1, test=True)
+    unsigned_tx_hex = send.create(db, source_default, destination_default, small, 'XCP', test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0336150000000000001976a914edb5c902eadd71e698a8ce05ba1d7b31efbaa57b88acce22ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000000000001a6a185445535400000000000000000000000100000000004c4b4000000000'
     fee = config.MIN_FEE
 
@@ -177,7 +177,7 @@ def test_send ():
 
 def test_order_buy_xcp ():
     global db
-    unsigned_tx_hex = order.create(db, source_default, 0, small, 1, small * 2, expiration, 0, fee_provided, test=True)
+    unsigned_tx_hex = order.create(db, source_default, 'BTC', small, 'XCP', small * 2, expiration, 0, fee_provided, test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02d41cdb0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000346a32544553540000000a000000000000000000000000004c4b4000000000000000010000000000989680000a000000000000000000000000'
     fee = fee_provided
 
@@ -187,7 +187,7 @@ def test_order_buy_xcp ():
 
 def test_order_sell_xcp ():
     global db
-    unsigned_tx_hex = order.create(db, source_default, 1, int(small * 2.1), 0, small, expiration, fee_required, 0, test=True)
+    unsigned_tx_hex = order.create(db, source_default, 'XCP', int(small * 2.1), 'BTC', small, expiration, fee_required, 0, test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02145fea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000346a32544553540000000a00000000000000010000000000a037a0000000000000000000000000004c4b40000a00000000000dbba000000000'
     fee = config.MIN_FEE
 
@@ -208,7 +208,7 @@ def test_btcpay ():
 
 def test_issuance_divisible ():
     global db
-    unsigned_tx_hex = issuance.create(db, source_default, 120000, quantity * 10, True, test=True)
+    unsigned_tx_hex = issuance.create(db, source_default, 'BAyz', quantity * 10, True, test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff020438ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000000000001b6a195445535400000014000000000001d4c0000000003b9aca000100000000'
     fee = config.MIN_FEE
 
@@ -218,7 +218,7 @@ def test_issuance_divisible ():
 
 def test_issuance_indivisible ():
     global db
-    unsigned_tx_hex = issuance.create(db, source_default, 120001, int(quantity / 1000), False, test=True)
+    unsigned_tx_hex = issuance.create(db, source_default, 'BAzA', int(quantity / 1000), False, test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff020438ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000000000001b6a195445535400000014000000000001d4c100000000000186a00000000000'
     fee = config.MIN_FEE
 
@@ -228,7 +228,7 @@ def test_issuance_indivisible ():
 
 def test_dividend_divisible ():
     global db
-    unsigned_tx_hex = dividend.create(db, source_default, 6, 120000, test=True)
+    unsigned_tx_hex = dividend.create(db, source_default, 6, 'BAyz', test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff020438ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000000000001a6a1854455354000000320000000000000006000000000001d4c000000000'
     fee = config.MIN_FEE
 
@@ -238,7 +238,7 @@ def test_dividend_divisible ():
 
 def test_dividend_indivisible ():
     global db
-    unsigned_tx_hex = dividend.create(db, source_default, 8, 120001, test=True)
+    unsigned_tx_hex = dividend.create(db, source_default, 8, 'BAzA', test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff020438ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000000000001a6a1854455354000000320000000000000008000000000001d4c100000000'
     fee = config.MIN_FEE
 
@@ -399,11 +399,11 @@ get_sends (validity=None, source=None, destination=None)
 get_orders (validity=None, address=None, show_empty=True, show_expired=True)
 get_order_matches (validity=None, addresses=[], show_expired=True)
 get_btcpays (validity=None)
-get_issuances (validity=None, asset_id=None, issuer=None)
+get_issuances (validity=None, asset=None, issuer=None)
 get_broadcasts (validity=None, source=None)
 get_bets (validity=None, address=None, show_empty=True, show_expired=True)
 get_bet_matches (validity=None, addresses=None, show_expired=True)
-get_dividends (validity=None, address=None, asset_id=None)
+get_dividends (validity=None, address=None, asset=None)
 get_burns (validity=True, address=None)
 get_history (address)
 
@@ -412,21 +412,20 @@ isodt (epoch_time)
 
 get_time_left (unmatched)
 get_order_match_time_left (matched)
-get_asset_id (asset)
-get_asset_name (asset_id)
+get_asset (asset)
+get_asset_name (asset)
 
-debit (db, address, asset_id, amount)
-credit (db, address, asset_id, amount)
+debit (db, address, asset, amount)
+credit (db, address, asset, amount)
 
 good_feed (feed_address)
-devise (quantity, asset_id, precision=8)
+devise (quantity, asset, precision=8)
 
 get_fee_multiplier (feed_address)
 bet_match (db, tx)
 expire (db, block_index)
 order_match (db, tx)
 expire (db, block_index)
-initialise(db)
 get_tx_info (tx)
 rpc (method, params)
 bitcoind_check ()

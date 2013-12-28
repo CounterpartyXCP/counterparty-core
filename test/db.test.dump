@@ -1,12 +1,12 @@
 BEGIN TRANSACTION;
 CREATE TABLE balances(
                         address TEXT,
-                        asset_id INTEGER,
+                        asset TEXT,
                         amount INTEGER);
-INSERT INTO "balances" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,19985125000);
-INSERT INTO "balances" VALUES('n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7',1,5000000);
-INSERT INTO "balances" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',120000,1000000000);
-INSERT INTO "balances" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',120001,100000);
+INSERT INTO "balances" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',19985125000);
+INSERT INTO "balances" VALUES('n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',5000000);
+INSERT INTO "balances" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BAyz',1000000000);
+INSERT INTO "balances" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BAzA',100000);
 CREATE TABLE bet_matches(
                         tx0_index INTEGER,
                         tx0_hash TEXT,
@@ -91,64 +91,64 @@ CREATE TABLE burns(
 INSERT INTO "burns" VALUES(0,'6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d',0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100000000,20000000000,'Valid');
 CREATE TABLE credits(
                         address TEXT,
-                        asset_id INTEGER,
+                        asset TEXT,
                         amount INTEGER);
-INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,20000000000);
-INSERT INTO "credits" VALUES('n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7',1,5000000);
-INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,10000000);
-INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',120000,1000000000);
-INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',120001,100000);
-INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,6000000000);
-INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,800000);
-INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,125000);
-INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,1750000);
-INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,500000);
-INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,3250000);
-INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,7500000);
-INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,37150000);
-INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,12850000);
-INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,140000000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',20000000000);
+INSERT INTO "credits" VALUES('n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',5000000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',10000000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BAyz',1000000000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BAzA',100000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',6000000000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',800000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',125000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',1750000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',500000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',3250000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',7500000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',37150000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',12850000);
+INSERT INTO "credits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',140000000);
 CREATE TABLE debits(
                         address TEXT,
-                        asset_id INTEGER,
+                        asset TEXT,
                         amount INTEGER);
-INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,5000000);
-INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,10500000);
-INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,6000000000);
-INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,800000);
-INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,5250000);
-INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,2625000);
-INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,125000);
-INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,15750000);
-INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,36750000);
-INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,1750000);
-INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,78750000);
-INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,68250000);
-INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,3250000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',5000000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',10500000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',6000000000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',800000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',5250000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',2625000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',125000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',15750000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',36750000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',1750000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',78750000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',68250000);
+INSERT INTO "debits" VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',3250000);
 CREATE TABLE dividends(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
                         source TEXT,
-                        asset_id INTEGER,
+                        asset TEXT,
                         amount_per_share INTEGER,
                         validity TEXT);
-INSERT INTO "dividends" VALUES(7,'ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879',7,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',120000,6,'Valid');
-INSERT INTO "dividends" VALUES(8,'beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a',8,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',120001,8,'Valid');
+INSERT INTO "dividends" VALUES(7,'ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879',7,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BAyz',6,'Valid');
+INSERT INTO "dividends" VALUES(8,'beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a',8,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BAzA',8,'Valid');
 CREATE TABLE issuances(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
-                        asset_id INTEGER,
+                        asset TEXT,
                         amount INTEGER,
                         divisible BOOL,
                         issuer TEXT,
                         validity TEXT
                         );
-INSERT INTO "issuances" VALUES(1,NULL,NULL,0,0,1,NULL,'Valid');
-INSERT INTO "issuances" VALUES(2,NULL,NULL,1,0,1,NULL,'Valid');
-INSERT INTO "issuances" VALUES(5,'e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db',5,120000,1000000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','Valid');
-INSERT INTO "issuances" VALUES(6,'67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6',6,120001,100000,0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','Valid');
+INSERT INTO "issuances" VALUES(1,NULL,NULL,'BTC',0,1,NULL,'Valid');
+INSERT INTO "issuances" VALUES(2,NULL,NULL,'XCP',0,1,NULL,'Valid');
+INSERT INTO "issuances" VALUES(5,'e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db',5,'BAyz',1000000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','Valid');
+INSERT INTO "issuances" VALUES(6,'67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6',6,'BAzA',100000,0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','Valid');
 CREATE TABLE order_matches(
                         tx0_index INTEGER,
                         tx0_hash TEXT,
@@ -156,43 +156,43 @@ CREATE TABLE order_matches(
                         tx1_index INTEGER,
                         tx1_hash TEXT,
                         tx1_address TEXT,
-                        forward_id INTEGER,
+                        forward_asset INTEGER,
                         forward_amount INTEGER,
-                        backward_id INTEGER,
+                        backward_asset INTEGER,
                         backward_amount INTEGER,
                         tx0_block_index INTEGER,
                         tx1_block_index INTEGER,
                         tx0_expiration INTEGER,
                         tx1_expiration INTEGER,
                         validity TEXT);
-INSERT INTO "order_matches" VALUES(2,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,5000000,1,10000000,2,3,10,10,'Valid');
+INSERT INTO "order_matches" VALUES(2,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BTC',5000000,'XCP',10000000,2,3,10,10,'Valid');
 CREATE TABLE orders(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
                         source TEXT,
-                        give_id INTEGER,
+                        give_asset TEXT,
                         give_amount INTEGER,
                         give_remaining INTEGER,
-                        get_id INTEGER,
+                        get_asset TEXT,
                         get_amount INTEGER,
                         price REAL,
                         expiration INTEGER,
                         fee_required INTEGER,
                         fee_provided INTEGER,
                         validity TEXT);
-INSERT INTO "orders" VALUES(2,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986',2,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,5000000,0,1,10000000,2.0,10,0,1000000,'Invalid: expired');
-INSERT INTO "orders" VALUES(3,'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5',3,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,10500000,500000,0,5000000,4.76190476190476164042e-01,10,900000,10000,'Invalid: expired');
+INSERT INTO "orders" VALUES(2,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986',2,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BTC',5000000,0,'XCP',10000000,2.0,10,0,1000000,'Invalid: expired');
+INSERT INTO "orders" VALUES(3,'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5',3,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',10500000,500000,'BTC',5000000,4.76190476190476164042e-01,10,900000,10000,'Invalid: expired');
 CREATE TABLE sends(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
                         source TEXT,
                         destination TEXT,
-                        asset_id INTEGER,
+                        asset TEXT,
                         amount INTEGER,
                         validity TEXT);
-INSERT INTO "sends" VALUES(1,'4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a',1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7',1,5000000,'Valid');
+INSERT INTO "sends" VALUES(1,'4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a',1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',5000000,'Valid');
 CREATE TABLE transactions(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,

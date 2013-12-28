@@ -67,7 +67,7 @@ def parse (db, tx, message):
  
     # Credit source address with earned XCP.
     if validity == 'Valid':
-        util.credit(db, tx['source'], 1, earned)
+        util.credit(db, tx['source'], 'XCP', earned)
 
     # Add parsed transaction to message‐type–specific table.
     burn_parse_cursor.execute('''INSERT INTO burns(

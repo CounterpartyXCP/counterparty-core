@@ -38,12 +38,18 @@ def get_order_match_time_left (matched, block_index=None):
     tx1_time_left = matched['tx1_block_index'] + matched['tx1_expiration'] - block_index
     return min(tx0_time_left, tx1_time_left)
 
+def valid_asset_name (asset_name):
+    if asset_name in ('BTC', 'XCP'): return True
+    if len(asset_name) < 4: return False
+    for c in asset_name:
+        if c not in b49_digits:
+            return False
+    return True
+
 def get_asset_id (asset):
+    if not valid_asset_name(asset): raise exceptions.AssetError('Invalid asset name.')
     if asset == 'BTC': return 0
     elif asset == 'XCP': return 1
-
-    # Minimum of four letters long.
-    assert len(asset) >= 4
 
     # Convert the base49 string to an integer.
     n = 0
@@ -51,9 +57,13 @@ def get_asset_id (asset):
     for c in s:
         n *= 49
         if c not in b49_digits:
-            raise BaseException # TODO
+            raise Exception # TODO
         digit = b49_digits.index(c)
         n += digit
+
+    # Minimum of four letters long.
+    if not n > 49**3:
+        raise exceptions.AssetError('Invalid asset name.')
     return n
 
 def get_asset_name (asset_id):
@@ -61,23 +71,27 @@ def get_asset_name (asset_id):
     elif asset_id == 1: return 'XCP'
 
     # Minimum of four letters long.
-    assert asset_id > 49**3
-
+    if not asset_id > 49**3:
+        raise exceptions.AssetError('Invalid asset name.')
     # Divide that integer into base49 string.
     res = []
     n = asset_id
     while n > 0:
         n, r = divmod (n, 49)
         res.append(b49_digits[r])
-    return ''.join(res[::-1])
+    asset = ''.join(res[::-1])
+    if not valid_asset_name(asset): raise exceptions.AssetError('Invalid asset name.')
+    return asset
 
-def debit (db, address, asset_id, amount):
+
+def debit (db, address, asset, amount):
     debit_cursor = db.cursor()
-    assert asset_id != 0 # Never BTC.
+    assert asset != 'BTC' # Never BTC.
     assert type(amount) == int
-    if not asset_id:
+    if asset == 'BTC':
         raise exceptions.BalanceError('Cannot debit bitcoins from a Counterparty address!')
-    balances = get_balances(db, address=address, asset_id=asset_id)
+
+    balances = get_balances(db, address=address, asset=asset)
     if not len(balances) == 1:
         old_balance = 0
     else:
@@ -87,8 +101,8 @@ def debit (db, address, asset_id, amount):
     if old_balance >= amount:
         debit_cursor.execute('''UPDATE balances \
                           SET amount=? \
-                          WHERE (address=? and asset_id=?)''',
-                       (int(old_balance - amount), address, asset_id)) 
+                          WHERE (address=? and asset=?)''',
+                       (int(old_balance - amount), address, asset)) 
         validity = 'Valid'
     else:
         validity = 'Invalid: insufficient funds'
@@ -96,45 +110,45 @@ def debit (db, address, asset_id, amount):
     # Record debit.
     debit_cursor.execute('''INSERT INTO debits(
                         address,
-                        asset_id,
+                        asset,
                         amount) VALUES(?,?,?)''',
                         (address,
-                        asset_id,
+                        asset,
                         amount)
                   )
     debit_cursor.close()
     return validity
 
-def credit (db, address, asset_id, amount):
+def credit (db, address, asset, amount):
     credit_cursor = db.cursor()
-    assert asset_id != 0 # Never BTC.
+    assert asset != 'BTC' # Never BTC.
     assert type(amount) == int
 
-    balances = get_balances(db, address=address, asset_id=asset_id)
+    balances = get_balances(db, address=address, asset=asset)
     if len(balances) != 1:
         assert balances == []
         credit_cursor.execute('''INSERT INTO balances(
                             address,
-                            asset_id,
+                            asset,
                             amount) VALUES(?,?,?)''',
                             (address,
-                            asset_id,
+                            asset,
                             amount)
                       )
     else:
         old_balance = balances[0]['amount']
         assert type(old_balance) == int
         credit_cursor.execute('''UPDATE balances SET amount=? \
-                          WHERE (address=? and asset_id=?)''',
-                       (old_balance + amount, address, asset_id)) 
+                          WHERE (address=? and asset=?)''',
+                       (old_balance + amount, address, asset)) 
 
     # Record credit.
     credit_cursor.execute('''INSERT INTO credits(
                         address,
-                        asset_id,
+                        asset,
                         amount) VALUES(?,?,?)''',
                         (address,
-                        asset_id,
+                        asset,
                         amount)
                   )
     credit_cursor.close()
@@ -153,55 +167,57 @@ def good_feed (db, feed_address):
         if broadcast['text'] == '': return False    # Locked
     return True                                     # Exists and is unlocked
 
+"""
 def last_issued (db):
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM issuances \
-                      ORDER BY asset_id DESC''')
+                      ORDER BY asset DESC''')
     issuance = cursor.fetchone()
-    return issuances['asset_id']
+    return issuances['asset']
+"""
 
-def devise (db, quantity, asset_id, dest):
-    issuances = get_issuances(db, validity='Valid', asset_id=asset_id)
+def devise (db, quantity, asset, dest):
+    issuances = get_issuances(db, validity='Valid', asset=asset)
     if not issuances: raise exceptions.AssetError('No such asset.')
-    if (issuances[0]['divisible'] or asset_id == True) and dest == 'output':
+    if (issuances[0]['divisible'] or asset == True) and dest == 'output':
         quantity = D(quantity) / config.UNIT
         return quantity.quantize(config.EIGHT).normalize()
     else:
         return int(quantity * config.UNIT)
 
-def get_debits (db, address=None, asset_id=None):
+def get_debits (db, address=None, asset=None):
     """This does not include BTC."""
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM debits''')
     debits = []
     for debit in cursor.fetchall():
         if address and debit['address'] != address: continue
-        if asset_id != None and debit['asset_id'] != asset_id: continue
+        if asset != None and debit['asset'] != asset: continue
         debits.append(dict(debit))
     cursor.close()
     return debits
 
-def get_credits (db, address=None, asset_id=None):
+def get_credits (db, address=None, asset=None):
     """This does not include BTC."""
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM credits''')
     credits = []
     for credit in cursor.fetchall():
         if address and credit['address'] != address: continue
-        if asset_id != None and credit['asset_id'] != asset_id: continue
+        if asset != None and credit['asset'] != asset: continue
         credits.append(dict(credit))
     cursor.close()
     return credits
 
-def get_balances (db, address=None, asset_id=None):
+def get_balances (db, address=None, asset=None):
     """This should never be used to check Bitcoin balances."""
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM balances''')
     balances = []
     for balance in cursor.fetchall():
         if address and balance['address'] != address: continue
-        if asset_id != None and balance['asset_id'] != asset_id: continue
-        if asset_id == 0: raise Exception
+        if asset != None and balance['asset'] != asset: continue
+        if asset == 'BTC': raise Exception
         balances.append(dict(balance))
     cursor.close()
     return balances
@@ -230,7 +246,7 @@ def get_orders (db, validity=None, address=None, show_empty=True, show_expired=T
 
         # Ignore BTC orders one block early.
         time_left = get_time_left(order)
-        if not order['give_id']: time_left -= 1
+        if not order['give_asset']: time_left -= 1
         if not show_expired and time_left < 0:
             continue
 
@@ -250,9 +266,9 @@ def get_order_matches (db, validity=None, addresses=[], show_expired=True, tx0_h
             if order_match_time_left < 0: continue
 
         if addresses and not ((order_match['tx0_address'] in addresses and
-                               not order_match['forward_id']) or
+                               not order_match['forward_asset']) or
                               (order_match['tx1_address'] in addresses and
-                               not order_match['backward_id'])):
+                               not order_match['backward_asset'])):
             continue
         if tx0_hash and tx0_hash != order_match['tx0_hash']: continue
         if tx1_hash and tx1_hash != order_match['tx1_hash']: continue
@@ -270,14 +286,14 @@ def get_btcpays (db, validity=None):
     cursor.close()
     return btcpays
 
-def get_issuances (db, validity=None, asset_id=None, issuer=None):
+def get_issuances (db, validity=None, asset=None, issuer=None):
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM issuances \
                       ORDER BY tx_index ASC''')
     issuances = []
     for issuance in cursor.fetchall():
         if validity and issuance['Validity'] != validity: continue
-        if asset_id != None and issuance['asset_id'] != asset_id: continue
+        if asset != None and issuance['asset'] != asset: continue
         if issuer and issuance['issuer'] != issuer: continue
         issuances.append(dict(issuance))
     cursor.close()
@@ -331,14 +347,14 @@ def get_bet_matches (db, validity=None, addresses=None, show_expired=True, tx0_h
     cursor.close()
     return bet_matches
 
-def get_dividends (db, validity=None, address=None, asset_id=None):
+def get_dividends (db, validity=None, address=None, asset=None):
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM dividends ORDER BY tx_index''')
     dividends = []
     for dividend in cursor.fetchall():
         if validity and dividend['Validity'] != validity: continue
         if address and dividend['source'] != address: continue
-        if asset_id != None and dividend['asset_id'] != asset_id: continue
+        if asset != None and dividend['asset'] != asset: continue
         dividends.append(dict(dividend))
     cursor.close()
     return dividends

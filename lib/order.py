@@ -11,18 +11,21 @@ FORMAT = '>QQQQHQ'
 ID = 10
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8
 
-def create (db, source, give_id, give_amount, get_id, get_amount, expiration, fee_required, fee_provided, test=False):
+def create (db, source, give_asset, give_amount, get_asset, get_amount, expiration, fee_required, fee_provided, test=False):
 
-    balances = util.get_balances(db, address=source, asset_id=give_id)
-    if give_id and (not balances or balances[0]['amount'] < give_amount):
+    balances = util.get_balances(db, address=source, asset=give_asset)
+    if give_asset != 'BTC' and (not balances or balances[0]['amount'] < give_amount):
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
-    if give_id == get_id:
+    if give_asset == get_asset:
         raise exceptions.UselessError('You can’t trade an asset for itself.')
     if not get_amount or not get_amount:
         raise exceptions.UselessError('Zero give or zero get.')
-    if not util.get_issuances(db, validity='Valid', asset_id=get_id):
-        raise exceptions.DividendError('No such asset to get: {}.'.format(get_id))
+    if not util.get_issuances(db, validity='Valid', asset=get_asset):
+        raise exceptions.DividendError('No such asset to get: {}.'.format(get_asset))
 
+    
+    give_id = util.get_asset_id(give_asset)
+    get_id = util.get_asset_id(get_asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, give_id, give_amount, get_id, get_amount,
                         expiration, fee_required)
@@ -37,18 +40,20 @@ def parse (db, tx, message):
     # Unpack message.
     try:
         give_id, give_amount, get_id, get_amount, expiration, fee_required = struct.unpack(FORMAT, message)
+        give_asset = util.get_asset_name(give_id)
+        get_asset = util.get_asset_name(get_id)
     except Exception:   #
-        give_id, give_amount, get_id, get_amount, expiration, fee_required = None, None, None, None, None, None
+        give_asset, give_amount, get_asset, get_amount, expiration, fee_required = None, None, None, None, None, None
         validity = 'Invalid: could not unpack'
 
     if validity == 'Valid':
-        if give_id == get_id:
+        if give_asset == get_asset:
             validity = 'Invalid: cannot trade an asset for itself.'
     if validity == 'Valid':
         if not get_amount or not get_amount:
             validity = 'Invalid: zero give or zero get.'
 
-    if validity and ((not give_id > 49**3 and not give_id in (0, 1)) or (not get_id > 49**3 and not get_id in (0, 1))):
+    if validity == 'Valid' and not (util.valid_asset_name(give_asset) and util.valid_asset_name(get_asset)):
         validity = 'Invalid: bad Asset ID'
 
     if validity == 'Valid':
@@ -60,10 +65,10 @@ def parse (db, tx, message):
 
     # Debit the address that makes the order. Check for sufficient funds.
     if validity == 'Valid':
-        if give_id:  # No need (or way) to debit BTC.
-            balances = util.get_balances(db, address=tx['source'], asset_id=give_id)
+        if give_asset != 'BTC':  # No need (or way) to debit BTC.
+            balances = util.get_balances(db, address=tx['source'], asset=give_asset)
             if balances and balances[0]['amount'] >= give_amount:
-                validity = util.debit(db, tx['source'], give_id, give_amount)
+                validity = util.debit(db, tx['source'], give_asset, give_amount)
             else:
                 validity = 'Invalid: insufficient funds.'
 
@@ -73,10 +78,10 @@ def parse (db, tx, message):
                         tx_hash,
                         block_index,
                         source,
-                        give_id,
+                        give_asset,
                         give_amount,
                         give_remaining,
-                        get_id,
+                        get_asset,
                         get_amount,
                         price,
                         expiration,
@@ -87,10 +92,10 @@ def parse (db, tx, message):
                         tx['tx_hash'],
                         tx['block_index'],
                         tx['source'],
-                        give_id,
+                        give_asset,
                         give_amount,
                         give_amount,
-                        get_id,
+                        get_asset,
                         get_amount,
                         float(price),
                         expiration,
@@ -101,17 +106,17 @@ def parse (db, tx, message):
 
     if validity == 'Valid':
 
-        give_amount = util.devise(db, give_amount, give_id, 'output')
-        get_amount = util.devise(db, get_amount, get_id, 'output')
+        give_amount = util.devise(db, give_amount, give_asset, 'output')
+        get_amount = util.devise(db, get_amount, get_asset, 'output')
 
-        if not give_id:
+        if not give_asset:
             fee_text = 'with a provided fee of ' + str(tx['fee'] / config.UNIT) + ' BTC '
-        elif not get_id:
+        elif not get_asset:
             fee_text = 'with a required fee of ' + str(fee_required / config.UNIT) + ' BTC '
         else:
             fee_text = ''
         display_price = D(get_amount / give_amount).quantize(config.FOUR).normalize()
-        logging.info('Order: sell {} {} for {} {} at {} {}/{} in {} blocks {}({})'.format(give_amount, util.get_asset_name(give_id), get_amount, util.get_asset_name(get_id), display_price, util.get_asset_name(get_id), util.get_asset_name(give_id), expiration, fee_text, util.short(tx['tx_hash'])))
+        logging.info('Order: sell {} {} for {} {} at {} {}/{} in {} blocks {}({})'.format(give_amount, give_asset, get_amount, get_asset, display_price, get_asset, give_asset, expiration, fee_text, util.short(tx['tx_hash'])))
         match(db, tx)
 
     order_parse_cursor.close()
@@ -127,15 +132,15 @@ def match (db, tx):
     assert not order_match_cursor.fetchone()
 
     order_match_cursor.execute('''SELECT * FROM orders \
-                      WHERE (give_id=? AND get_id=? AND validity=?) \
+                      WHERE (give_asset=? AND get_asset=? AND validity=?) \
                       ORDER BY price ASC, tx_index''',
-                   (tx1['get_id'], tx1['give_id'], 'Valid'))
+                   (tx1['get_asset'], tx1['give_asset'], 'Valid'))
     give_remaining = tx1['give_remaining']
     order_matches = order_match_cursor.fetchall()
     for tx0 in order_matches:
         # Check whether fee conditions are satisfied.
-        if not tx1['get_id'] and tx0['fee_provided'] < tx1['fee_required']: continue
-        elif not tx1['give_id'] and tx1['fee_provided'] < tx0['fee_required']: continue
+        if not tx1['get_asset'] and tx0['fee_provided'] < tx1['fee_required']: continue
+        elif not tx1['give_asset'] and tx1['fee_provided'] < tx0['fee_required']: continue
 
         # Make sure that that both orders still have funds remaining [to be sold].
         if tx0['give_remaining'] <= 0 or tx1['give_remaining'] <= 0: continue
@@ -146,23 +151,23 @@ def match (db, tx):
             forward_amount = round(min(D(tx0['give_remaining']), give_remaining / D(tx1['price'])))
             backward_amount = round(forward_amount * tx0['price'])
 
-            forward_id, backward_id = tx1['get_id'], tx1['give_id']
+            forward_asset, backward_asset = tx1['get_asset'], tx1['give_asset']
             order_match_id = tx0['tx_hash'] + tx1['tx_hash']
 
             # This can’t be gotten rid of!
-            forward_unit = util.devise(db, 1, forward_id, 'output')
-            backward_unit = util.devise(db, 1, backward_id, 'output')
+            forward_unit = util.devise(db, 1, forward_asset, 'output')
+            backward_unit = util.devise(db, 1, backward_asset, 'output')
 
-            logging.info('Order Match: {} {} for {} {} at {} {}/{} ({})'.format(D(forward_amount * forward_unit).quantize(config.EIGHT).normalize(), util.get_asset_name(forward_id), D(backward_amount * backward_unit).quantize(config.EIGHT).normalize(), util.get_asset_name(backward_id), D(tx0['price']).quantize(config.FOUR).normalize(), util.get_asset_name(backward_id), util.get_asset_name(forward_id), util.short(order_match_id)))
+            logging.info('Order Match: {} {} for {} {} at {} {}/{} ({})'.format(D(forward_amount * forward_unit).quantize(config.EIGHT).normalize(), forward_asset, D(backward_amount * backward_unit).quantize(config.EIGHT).normalize(), backward_asset, D(tx0['price']).quantize(config.FOUR).normalize(), backward_asset, forward_asset, util.short(order_match_id)))
 
-            if 0 in (tx1['give_id'], tx1['get_id']):
+            if 'BTC' in (tx1['give_asset'], tx1['get_asset']):
                 validity = 'Valid: awaiting BTC payment'
             else:
                 validity = 'Valid'
                 # Credit.
-                util.credit(db, tx1['source'], tx1['get_id'],
+                util.credit(db, tx1['source'], tx1['get_asset'],
                                     forward_amount)
-                util.credit(db, tx0['source'], tx0['get_id'],
+                util.credit(db, tx0['source'], tx0['get_asset'],
                                     backward_amount)
 
             # Debit the order, even if it involves giving bitcoins, and so one
@@ -189,9 +194,9 @@ def match (db, tx):
                                 tx1_index,
                                 tx1_hash,
                                 tx1_address,
-                                forward_id,
+                                forward_asset,
                                 forward_amount,
-                                backward_id,
+                                backward_asset,
                                 backward_amount,
                                 tx0_block_index,
                                 tx1_block_index,
@@ -204,9 +209,9 @@ def match (db, tx):
                                 tx1['tx_index'],
                                 tx1['tx_hash'],
                                 tx1['source'],
-                                forward_id,
+                                forward_asset,
                                 int(forward_amount),
-                                backward_id,
+                                backward_asset,
                                 int(backward_amount),
                                 tx0['block_index'],
                                 tx1['block_index'],
@@ -222,11 +227,10 @@ def expire (db, block_index):
     order_expire_cursor.execute('''SELECT * FROM orders''')
     orders = order_expire_cursor.fetchall()
     for order in orders:
-        time_left = util.get_time_left(order, block_index=block_index)
-        if time_left < 0 and order['validity'] == 'Valid':
+        if order['Validity'] == 'Valid' and util.get_time_left(order, block_index=block_index) < 0:
             order_expire_cursor.execute('''UPDATE orders SET validity=? WHERE tx_hash=?''', ('Invalid: expired', order['tx_hash']))
-            if order['give_id']:    # Can’t credit BTC.
-                util.credit(db, order['source'], order['give_id'], order['give_remaining'])
+            if order['give_asset'] != 'BTC':    # Can’t credit BTC.
+                util.credit(db, order['source'], order['give_asset'], order['give_remaining'])
             logging.info('Expired order: {}'.format(util.short(order['tx_hash'])))
 
     # Expire order_matches for BTC with no BTC.
@@ -235,13 +239,13 @@ def expire (db, block_index):
     for order_match in order_matches:
         if order_match['validity'] == 'Valid: awaiting BTC payment' and util.get_order_match_time_left(order_match, block_index=block_index) < 0:
             order_expire_cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Invalid: expired awaiting BTC payment', order_match['tx0_hash'], order_match['tx1_hash']))
-            if not order_match['forward_id']:
+            if not order_match['forward_asset']:
                 util.credit(db, order_match['tx1_address'],
-                                    order_match['backward_id'],
+                                    order_match['backward_asset'],
                                     order_match['backward_amount'])
-            elif not order_match['backward_id']:
+            elif not order_match['backward_asset']:
                 util.credit(db, order_match['tx0_address'],
-                                    order_match['forward_id'],
+                                    order_match['forward_asset'],
                                     order_match['forward_amount'])
             logging.info('Expired order_match awaiting BTC payment: {}'.format(util.short(order_match['tx0_hash'] + order_match['tx1_hash'])))
 

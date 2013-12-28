@@ -96,21 +96,21 @@ def initialise(db):
     initialise_cursor.execute('''DROP TABLE IF EXISTS debits''')
     initialise_cursor.execute('''CREATE TABLE debits(
                         address TEXT,
-                        asset_id INTEGER,
+                        asset TEXT,
                         amount INTEGER)
                    ''')
 
     initialise_cursor.execute('''DROP TABLE IF EXISTS credits''')
     initialise_cursor.execute('''CREATE TABLE credits(
                         address TEXT,
-                        asset_id INTEGER,
+                        asset TEXT,
                         amount INTEGER)
                    ''')
 
     initialise_cursor.execute('''DROP TABLE IF EXISTS balances''')
     initialise_cursor.execute('''CREATE TABLE balances(
                         address TEXT,
-                        asset_id INTEGER,
+                        asset TEXT,
                         amount INTEGER)
                    ''')
 
@@ -121,7 +121,7 @@ def initialise(db):
                         block_index INTEGER,
                         source TEXT,
                         destination TEXT,
-                        asset_id INTEGER,
+                        asset TEXT,
                         amount INTEGER,
                         validity TEXT)
                    ''')
@@ -132,10 +132,10 @@ def initialise(db):
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
                         source TEXT,
-                        give_id INTEGER,
+                        give_asset TEXT,
                         give_amount INTEGER,
                         give_remaining INTEGER,
-                        get_id INTEGER,
+                        get_asset TEXT,
                         get_amount INTEGER,
                         price REAL,
                         expiration INTEGER,
@@ -152,9 +152,9 @@ def initialise(db):
                         tx1_index INTEGER,
                         tx1_hash TEXT,
                         tx1_address TEXT,
-                        forward_id INTEGER,
+                        forward_asset INTEGER,
                         forward_amount INTEGER,
-                        backward_id INTEGER,
+                        backward_asset INTEGER,
                         backward_amount INTEGER,
                         tx0_block_index INTEGER,
                         tx1_block_index INTEGER,
@@ -179,7 +179,7 @@ def initialise(db):
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
-                        asset_id INTEGER,
+                        asset TEXT,
                         amount INTEGER,
                         divisible BOOL,
                         issuer TEXT,
@@ -187,12 +187,12 @@ def initialise(db):
                         )
                    ''')
 
-    for asset_id in (0,1):
+    for asset in ('BTC','XCP'):
         initialise_cursor.execute('''INSERT INTO issuances(
                             tx_index,
                             tx_hash,
                             block_index,
-                            asset_id,
+                            asset,
                             amount,
                             divisible,
                             issuer,
@@ -200,7 +200,7 @@ def initialise(db):
                             (None,
                             None,
                             None,
-                            asset_id,
+                            asset,
                             0,
                             True,
                             None,
@@ -269,7 +269,7 @@ def initialise(db):
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
                         source TEXT,
-                        asset_id INTEGER,
+                        asset TEXT,
                         amount_per_share INTEGER,
                         validity TEXT)
                    ''')

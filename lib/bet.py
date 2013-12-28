@@ -40,7 +40,7 @@ def create (db, source, feed_address, bet_type, deadline, wager_amount,
         raise exceptions.UselessError('Zero wager or counterwager')
 
     fee_multiplier = get_fee_multiplier(db, feed_address)
-    balances = util.get_balances(db, address=source, asset_id=1)
+    balances = util.get_balances(db, address=source, asset='XCP')
     if not balances or balances[0]['amount'] < wager_amount * (1 + fee_multiplier):
         raise exceptions.BalanceError('Insufficient funds to both make wager and pay feed fee (in XCP). (Check that the database is up‐to‐date.)')
 
@@ -93,7 +93,7 @@ def parse (db, tx, message):
     if validity == 'Valid':
         # Debit amount wagered and fee.
         fee_multiplier = get_fee_multiplier(db, feed_address)
-        validity = util.debit(db, tx['source'], 1, round(wager_amount * (1 + fee_multiplier)))
+        validity = util.debit(db, tx['source'], 'XCP', round(wager_amount * (1 + fee_multiplier)))
 
         wager_amount = int(wager_amount)
         counterwager_amount = int(counterwager_amount)
@@ -188,9 +188,9 @@ def match (db, tx):
 
             # When a match is made, pay XCP fee.
             fee = get_fee_multiplier(db, tx1['feed_address']) * backward_amount
-            validity = util.debit(db, tx1['source'], 1, round(fee))
+            validity = util.debit(db, tx1['source'], 'XCP', round(fee))
             if validity != 'Valid': continue
-            util.credit(db, tx1['feed_address'], 1, int(fee))
+            util.credit(db, tx1['feed_address'], 'XCP', int(fee))
 
             bet_match_id = tx0['tx_hash'] + tx1['tx_hash']
 
@@ -276,7 +276,7 @@ def expire (db, block_index):
     for bet in bets:
         if util.get_time_left(bet) < 0 and bet['validity'] == 'Valid':
             bet_expire_cursor.execute('''UPDATE bets SET validity=? WHERE tx_hash=?''', ('Invalid: expired', bet['tx_hash']))
-            util.credit(db, bet['source'], 1, bet['wager_remaining'])
+            util.credit(db, bet['source'], 'XCP', bet['wager_remaining'])
             logging.info('Expired bet: {}'.format(bet['tx_hash']))
 
     bet_expire_cursor.close()
