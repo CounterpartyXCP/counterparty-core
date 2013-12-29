@@ -55,7 +55,7 @@ Section "Counterpartyd (required)"
   WriteUninstaller "uninstall.exe"
   
   ; Install a service - ServiceType own process - StartType automatic - NoDependencies - Logon as System Account
-  SimpleSC::InstallService "Counterpartyd" "CounterParty Daemon" "16" "2" "$INSTDIR\counterpartyd.exe" "" "" ""
+  SimpleSC::InstallService "Counterpartyd" "Counterparty Daemon" "16" "2" "$INSTDIR\counterpartyd.exe" "" "" ""
   Pop $0 ; returns an errorcode (<>0) otherwise success (0)
 
   ; Start a service. Be sure to pass the service name, not the display name.

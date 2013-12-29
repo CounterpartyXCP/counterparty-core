@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 """
-CounterParty setup script - works under Ubuntu Linux and Windows at the present moment
+Counterparty setup script - works under Ubuntu Linux and Windows at the present moment
 """
 import os
 import sys

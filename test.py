@@ -70,6 +70,8 @@ fee_multiplier_default = round(D(.05) * D(1e8))
 
 # Each tx has a block_index equal to its tx_index
 
+print('Run `test.py` with `py.test test.py`.')
+
 def check_balance():
     balances = util.get_balances(db)
     for balance in balances:
