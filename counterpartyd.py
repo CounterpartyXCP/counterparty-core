@@ -139,7 +139,7 @@ def format_order (order):
     price = D(order['get_amount']) / D(order['give_amount'])
 
     give_remaining = util.devise(db, D(order['give_remaining']), order['give_asset'], 'output')
-    get_remaining = util.devise(db, D(give_remaining * price), order['get_asset'], 'output')
+    get_remaining = give_remaining * price
 
     give_asset = order['give_asset']
     get_asset = order['get_asset']
