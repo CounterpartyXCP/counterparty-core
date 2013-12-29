@@ -30,10 +30,11 @@ def get_fee_multiplier (db, feed_address):
 
 def create (db, source, feed_address, bet_type, deadline, wager_amount,
             counterwager_amount, target_value, leverage, expiration, test=False):
-    good_feed = util.good_feed(db, feed_address)
-    if good_feed == None:
+
+    broadcasts = util.get_broadcasts(db, validity='Valid', source=feed_address)
+    if not broadcasts:
         raise exceptions.FeedError('That feed doesn’t exist.')
-    elif not good_feed:
+    elif not broadcasts[-1]['text']:
         raise exceptions.FeedError('That feed is locked.')
 
     if not wager_amount or not counterwager_amount:
@@ -80,10 +81,10 @@ def parse (db, tx, message):
 
     feed_address = tx['destination']
     if validity == 'Valid':
-        good_feed = util.good_feed(db, feed_address)
-        if good_feed == None:
+        broadcasts = util.get_broadcasts(db, validity='Valid', source=feed_address)
+        if not broadcasts:
             validity = 'Invalid: no such feed'
-        elif not good_feed:
+        elif not broadcasts[-1]['text']:
             validity = 'Invalid: locked feed'
 
     # Leverage < 5040 is allowed.

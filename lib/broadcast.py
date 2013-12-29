@@ -33,10 +33,15 @@ ID = 30
 LENGTH = 4 + 8 + 4 + 40
 
 def create (db, source, timestamp, value, fee_multiplier, text, test=False):
-    # Check that the publishing address is not locked.
-    good_feed = util.good_feed(db, source)
-    if good_feed != None and not good_feed:
-        raise exceptions.UselessError('Invalid: locked feed')
+
+    broadcasts = util.get_broadcasts(db, validity='Valid', source=source, order_by='tx_index ASC')
+    if broadcasts:
+        last_broadcast = broadcasts[-1]
+        if not last_broadcast['text']:
+            raise exceptions.UselessError('Locked feed')
+        elif timestamp <= last_broadcast['timestamp']:
+            raise exceptions.UselessError('Feed timestamps must be monotonically increasing')
+
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, timestamp, value, fee_multiplier,
                         text.encode('utf-8'))
@@ -55,10 +60,13 @@ def parse (db, tx, message):
         timestamp, value, fee_multiplier, text = None, None, None, None
         validity = 'Invalid: could not unpack'
 
-    # Check that the publishing address is not locked.
-    good_feed = util.good_feed(db, tx['source'])
-    if good_feed != None and not good_feed:
-        validity = 'Invalid: locked feed'
+    broadcasts = util.get_broadcasts(db, validity='Valid', source=tx['source'], order_by='tx_index ASC')
+    if broadcasts:
+        last_broadcast = broadcasts[-1]
+        if not last_broadcast['text']:
+            validity = 'Invalid: locked feed'
+        elif not timestamp > last_broadcast['timestamp']:
+            validity = 'Invalid: feed timestamps must be monotonically increasing'
 
     # Add parsed transaction to message‐type–specific table.
     broadcast_parse_cursor.execute('''INSERT INTO broadcasts(

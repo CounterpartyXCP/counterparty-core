@@ -416,7 +416,6 @@ get_asset_name (asset)
 debit (db, address, asset, amount)
 credit (db, address, asset, amount)
 
-good_feed (feed_address)
 devise (quantity, asset, precision=8)
 
 get_fee_multiplier (feed_address)

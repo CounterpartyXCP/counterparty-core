@@ -153,20 +153,6 @@ def credit (db, address, asset, amount):
                   )
     credit_cursor.close()
 
-def good_feed (db, feed_address):
-    """
-    Feed is locked if *any* of its broadcasts lacks a textual message.
-
-    Returns None if no broadcast from address can be found.
-
-    Locks are [necessarily] based on tx_index and not timestamp.
-    """
-    broadcasts = get_broadcasts(db, validity='Valid', source=feed_address, order_by='tx_index ASC')
-    if not len(broadcasts): return None             # Non‐existant
-    for broadcast in broadcasts:
-        if broadcast['text'] == '': return False    # Locked
-    return True                                     # Exists and is unlocked
-
 """
 def last_issued (db):
     cursor = db.cursor()
