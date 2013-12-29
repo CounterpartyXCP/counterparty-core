@@ -11,7 +11,7 @@ FORMAT = '>QQ?'
 ID = 20
 LENGTH = 8 + 8 + 1
 
-def create (db, source, asset, amount, divisible, test=False):
+def create (db, source, destination, asset, amount, divisible, test=False):
 
     if not util.valid_asset_name(asset):
         raise exceptions.AssetError('Bad asset name.')
@@ -24,9 +24,14 @@ def create (db, source, asset, amount, divisible, test=False):
             raise exceptions.IssuanceError('Asset exists and was not issued by this address.')
         elif last_issuance['divisible'] != divisible:
             raise exceptions.IssuanceError('Asset exists with a different divisibility.')
-        elif not last_issuance['amount']:
+        elif not last_issuance['amount'] and not last_issuance['transfer']:
             raise exceptions.IssuanceError('Asset is locked.')
-
+    elif not amount:
+        raise exceptions.IssuanceError('Cannot lock or transfer an unissued asset.')
+        
+    if destination and amount:
+        raise exceptions.IssuanceError('Cannot issue and transfer simultaneously.')
+        
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount, divisible)
@@ -34,8 +39,6 @@ def create (db, source, asset, amount, divisible, test=False):
 
 def parse (db, tx, message):
     issuance_parse_cursor = db.cursor()
-
-    # Ask for forgiveness…
     validity = 'Valid'
 
     # Unpack message.
@@ -58,12 +61,24 @@ def parse (db, tx, message):
                 validity = 'Invalid: asset already exists and was not issued by this address'
             elif last_issuance['divisible'] != divisible:
                 validity = 'Invalid: asset exists with a different divisibility'
-            elif not last_issuance['amount']:
+            elif not last_issuance['amount'] and not last_issuance['transfer']:
                 validity = 'Invalid: asset is locked'
+        elif not amount:
+            validity = 'Invalid: cannot lock or transfer an unissued asset'
 
+    if tx['destination'] and amount:
+        validity = 'Invalid: cannot issue and transfer simultaneously'
+        
     # Credit.
-    if validity == 'Valid':
+    if validity == 'Valid' and amount:
         util.credit(db, tx['source'], asset, amount)
+
+    if tx['destination']:
+        issuer = tx['destination']
+        transfer = True
+    else:
+        issuer = tx['source']
+        transfer = False
 
     # Add parsed transaction to message‐type–specific table.
     issuance_parse_cursor.execute('''INSERT INTO issuances(
@@ -74,21 +89,25 @@ def parse (db, tx, message):
                         amount,
                         divisible,
                         issuer,
-                        validity) VALUES(?,?,?,?,?,?,?,?)''',
+                        transfer,
+                        validity) VALUES(?,?,?,?,?,?,?,?,?)''',
                         (tx['tx_index'],
                         tx['tx_hash'],
                         tx['block_index'],
                         asset,
                         amount,
                         divisible,
-                        tx['source'],
+                        issuer,
+                        transfer,
                         validity)
                   )
 
     # Log.
     if validity == 'Valid':
-        if not amount:
-            logging.info('(Re‐)Issuance: {} locked asset {} ({})'.format(tx['source'], asset, util.short(tx['tx_hash'])))
+        if tx['destination']:
+            logging.info('Issuance: {} transfered asset {} to {} ({})'.format(tx['source'], asset, tx['destination'], util.short(tx['tx_hash'])))
+        elif not amount:
+            logging.info('Issuance: {} locked asset {} ({})'.format(tx['source'], asset, util.short(tx['tx_hash'])))
         else:
             if divisible:
                 divisibility = 'divisible'
@@ -96,7 +115,7 @@ def parse (db, tx, message):
             else:
                 divisibility = 'indivisible'
                 unit = 1
-            logging.info('(Re‐)Issuance: {} created {} of {} asset {} ({})'.format(tx['source'], D(amount / unit).quantize(config.EIGHT).normalize(), divisibility, asset, util.short(tx['tx_hash'])))
+            logging.info('Issuance: {} created {} of {} asset {} ({})'.format(tx['source'], D(amount / unit).quantize(config.EIGHT).normalize(), divisibility, asset, util.short(tx['tx_hash'])))
 
     issuance_parse_cursor.close()
 

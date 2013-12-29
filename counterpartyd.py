@@ -226,6 +226,7 @@ if __name__ == '__main__':
 
     parser_issuance = subparsers.add_parser('issuance', help='requires bitcoind')
     parser_issuance.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='')
+    parser_issuance.add_argument('--to', metavar='DESTINATION', dest='destination', help='for transfer of ownership of asset issuance rights')
     parser_issuance.add_argument('--quantity', metavar='QUANTITY', required=True, help='')
     parser_issuance.add_argument('--asset', metavar='ASSET', required=True, help='')
     parser_issuance.add_argument('--divisible', action='store_true', help='whether or not the asset is divisible (must agree with previous issuances, if this is a re‐issuance)')
@@ -364,8 +365,8 @@ if __name__ == '__main__':
 
     # (more) Testnet
     if config.TESTNET:
-        config.BLOCK_FIRST = 153560
-        config.BURN_START = 153000
+        config.BLOCK_FIRST = 154759
+        config.BURN_START = 154759
         config.BURN_END = 156000
         config.ADDRESSVERSION = b'\x6F'
     else:
@@ -428,7 +429,7 @@ if __name__ == '__main__':
 
         asset = args.asset
         quantity = util.devise(db, D(args.quantity), args.divisible, 'input')
-        unsigned_tx_hex = issuance.create(db, args.source, asset, round(quantity),
+        unsigned_tx_hex = issuance.create(db, args.source, args.destination, asset, round(quantity),
                                 args.divisible)
         json_print(bitcoin.transmit(unsigned_tx_hex))
 

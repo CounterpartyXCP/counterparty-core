@@ -184,6 +184,7 @@ def initialise(db):
                         amount INTEGER,
                         divisible BOOL,
                         issuer TEXT,
+                        transfer BOOL,
                         validity TEXT
                         )
                    ''')
@@ -290,18 +291,34 @@ def initialise(db):
     db.commit()
 
 def get_tx_info (tx):
-    # Loop through outputs until you come upon OP_RETURN, then get the data.
-    # NOTE: This assumes only one OP_RETURN output.
-    data = None
+    """
+    The destination, if it exists, always comes before the data output; the
+    change, if it exists, always comes after.
+    """
+
+    # Fee is the input values minus output values.
+    fee = D(0)
+
+    # Get destination output and data output.
+    destination, btc_amount, data = None, None, None
     for vout in tx['vout']:
-        asm = vout['scriptPubKey']['asm'].split(' ')
-        if asm[0] == 'OP_RETURN' and len(asm) == 2:
-            data = binascii.unhexlify(asm[1])
+        fee -= D(vout['value']) * config.UNIT
+
+        # Destination is the first output before the data.
+        if not destination and not btc_amount and not data:
+            if 'addresses' in vout['scriptPubKey']:
+                address = vout['scriptPubKey']['addresses'][0]
+                if bitcoin.base58_decode(address, config.ADDRESSVERSION):  # If address is valid…
+                    destination, btc_amount = address, round(D(vout['value']) * config.UNIT)
+
+        # Assume only one OP_RETURN output.
+        if not data:
+            asm = vout['scriptPubKey']['asm'].split(' ')
+            if asm[0] == 'OP_RETURN' and len(asm) == 2:
+                data = binascii.unhexlify(asm[1])
 
     # Only look for source if data were found, for speed.
     if not data: return None, None, None, None, None
-
-    fee = D(0)
 
     # Collect all possible source addresses; ignore coinbase transactions.
     source_list = []
@@ -315,19 +332,6 @@ def get_tx_info (tx):
     if all(x == source_list[0] for x in source_list): source = source_list[0]
     else: source = None
 
-    # Fee is the input value minus output value.
-    for vout in tx['vout']:
-        fee -= D(vout['value']) * config.UNIT
-
-    # Destination is the first output with a valid address, (if it exists).
-    destination, btc_amount = None, None
-    for vout in tx['vout']:
-        if 'addresses' in vout['scriptPubKey']:
-            address = vout['scriptPubKey']['addresses'][0]
-            if bitcoin.base58_decode(address, config.ADDRESSVERSION):  # If address is valid…
-                destination, btc_amount = address, round(D(vout['value']) * config.UNIT)
-                break
-
     return source, destination, btc_amount, round(fee), data
 
 def follow ():
@@ -338,10 +342,11 @@ def follow ():
         filename_array = filename.split('.')
         if len(filename_array) != 3:
             continue
-        if 'ledger' == filename_array[0] and 'db' == filename_array[2]:
+        if 'counterpartyd' == filename_array[0] and 'db' == filename_array[2]:
             if filename_array[1] != str(config.DB_VERSION):
+                print(filename)
                 os.remove(filename)
-                logger.warning('New version of transaction table! Deleting old databases.')
+                logging.warning('New version of transaction table! Deleting old databases.')
 
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row

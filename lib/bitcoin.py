@@ -112,7 +112,7 @@ for i in range(0,len(html)):
         break'''
     return subprocess.call(["python2", "-c", text])
 
-def serialize (inputs, outputs, data):
+def serialise (inputs, destination_output=None, data_output=None, change_output=None):
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
     # Number of inputs.
@@ -130,11 +130,15 @@ def serialize (inputs, outputs, data):
         s += script                                         # Script
         s += b'\xff' * 4                                    # Sequence
 
-    # Number of outputs (including data output).
-    s += var_int(len(outputs) + 1)
+    # Number of outputs.
+    n = 1                       # Data output
+    if destination_output: n += 1
+    if change_output: n += 1
+    s += var_int(n)
 
-    # List of regular outputs.
-    for address, value in outputs:
+    # Destination output.
+    if destination_output:
+        address, value = destination_output
         s += value.to_bytes(8, byteorder='little')          # Value
         script = OP_DUP                                     # OP_DUP
         script += OP_HASH160                                # OP_HASH160
@@ -146,12 +150,26 @@ def serialize (inputs, outputs, data):
         s += script
 
     # Data output.
+    data, value = data_output
     s += (0).to_bytes(8, byteorder='little')                # Value
     script = OP_RETURN                                      # OP_RETURN
     script += op_push(len(data))                            # Push bytes of data (NOTE: OP_SMALLDATA?)
     script += data                                          # Data
     s += var_int(int(len(script)))                          # Script length
     s += script
+
+    # Change output.
+    if change_output:
+        address, value = change_output
+        s += value.to_bytes(8, byteorder='little')          # Value
+        script = OP_DUP                                     # OP_DUP
+        script += OP_HASH160                                # OP_HASH160
+        script += op_push(20)                               # Push 0x14 bytes
+        script += base58_decode(address, config.ADDRESSVERSION)    # Address (pubKeyHash)
+        script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
+        script += OP_CHECKSIG                               # OP_CHECKSIG
+        s += var_int(int(len(script)))                      # Script length
+        s += script
 
     s += (0).to_bytes(4, byteorder='little')                # LockTime
     return s
@@ -197,26 +215,25 @@ def transaction (source, destination, btc_amount, fee, data, test=False):
 
     # Calculate total BTC to be sent.
     total_btc_out = fee
-    # total_btc_out += config.DUST_SIZE            # For data output.   # Data output has zero value.
+    total_btc_out += config.DATA_VALUE      # For data output.
     if destination:
-        total_btc_out += btc_amount  # For destination output.
+        total_btc_out += btc_amount         # For destination output.
 
     # Construct inputs.
     inputs, total_btc_in = get_inputs(source, total_btc_out, test)
     if not inputs:
         raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need {} BTC.)'.format(source, total_btc_out / config.UNIT))
 
-    # Destination output.
-    outputs = []
-    if destination:
-        outputs.append((destination, btc_amount))
-
-    # Change output.
-    change_amount = total_btc_in - total_btc_out    # This does not check to make sure that the change output is above the dust target_value.
-    if change_amount: outputs.append((source, change_amount))
+    # Construct outputs.
+    if destination: destination_output = (destination, btc_amount)
+    else: destination_output = None
+    data_output = (data, config.DATA_VALUE)
+    change_amount = total_btc_in - total_btc_out    # No check to make sure that the change output is above the dust target_value.
+    if change_amount: change_output = (source, change_amount)
+    else: change_output = None
 
     # Serialise inputs and outputs.
-    transaction = serialize(inputs, outputs, data)
+    transaction = serialise(inputs, destination_output, data_output, change_output)
     unsigned_tx_hex = binascii.hexlify(transaction).decode('utf-8')
     
     return unsigned_tx_hex

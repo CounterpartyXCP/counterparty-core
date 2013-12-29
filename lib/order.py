@@ -53,7 +53,9 @@ def parse (db, tx, message):
         if not get_amount or not get_amount:
             validity = 'Invalid: zero give or zero get.'
 
-    if validity == 'Valid' and not (util.valid_asset_name(give_asset) and util.valid_asset_name(get_asset)):
+    if validity == 'Valid' and not util.get_issuances(db, validity='Valid', asset=give_asset):
+        validity = 'Invalid: bad Asset ID'
+    elif not util.get_issuances(db, validity='Valid', asset=get_asset):
         validity = 'Invalid: bad Asset ID'
 
     if validity == 'Valid':
@@ -246,7 +248,7 @@ def expire (db, block_index):
                 util.credit(db, order_match['tx0_address'],
                                     order_match['forward_asset'],
                                     order_match['forward_amount'])
-            logging.info('Expired order_match awaiting BTC payment: {}'.format(util.short(order_match['tx0_hash'] + order_match['tx1_hash'])))
+            logging.info('Expired Order Match awaiting BTC payment: {}'.format(util.short(order_match['tx0_hash'] + order_match['tx1_hash'])))
 
     order_expire_cursor.close()
 

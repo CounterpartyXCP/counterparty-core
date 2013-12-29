@@ -49,9 +49,11 @@ def create (db, source, feed_address, bet_type, deadline, wager_amount,
 
     if leverage != 5040 and bet_type in (2,3):   # Equal, NotEqual
         raise exceptions.UselessError('Leverage cannot be used with bet types Equal and NotEqual.')
-
     if leverage < 5040:
         raise exceptions.UselessError('A leverage level less than 5040 (1:1) isn’t useful.')
+
+    if target_value and bet_type in (0,1):   # BullCFD, BearCFD
+        raise exceptions.UselessError('CFDs have no target value.')
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, bet_type, deadline, 
