@@ -141,8 +141,8 @@ def match (db, tx):
     order_matches = order_match_cursor.fetchall()
     for tx0 in order_matches:
         # Check whether fee conditions are satisfied.
-        if not tx1['get_asset'] and tx0['fee_provided'] < tx1['fee_required']: continue
-        elif not tx1['give_asset'] and tx1['fee_provided'] < tx0['fee_required']: continue
+        if tx1['get_asset'] == 'BTC' and tx0['fee_provided'] < tx1['fee_required']: continue
+        elif tx1['give_asset'] == 'BTC' and tx1['fee_provided'] < tx0['fee_required']: continue
 
         # Make sure that that both orders still have funds remaining [to be sold].
         if tx0['give_remaining'] <= 0 or tx1['give_remaining'] <= 0: continue
@@ -240,11 +240,11 @@ def expire (db, block_index):
     for order_match in order_matches:
         if order_match['validity'] == 'Valid: awaiting BTC payment' and util.get_order_match_time_left(order_match, block_index=block_index) < 0:
             order_expire_cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Invalid: expired awaiting BTC payment', order_match['tx0_hash'], order_match['tx1_hash']))
-            if not order_match['forward_asset']:
+            if order_match['forward_asset'] == 'BTC':
                 util.credit(db, order_match['tx1_address'],
                                     order_match['backward_asset'],
                                     order_match['backward_amount'])
-            elif not order_match['backward_asset']:
+            elif order_match['backward_asset'] == 'BTC':
                 util.credit(db, order_match['tx0_address'],
                                     order_match['forward_asset'],
                                     order_match['forward_amount'])

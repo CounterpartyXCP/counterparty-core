@@ -24,7 +24,7 @@ def create (db, order_match_id, test=False):
     else:
         order_match = order_matches[0]
 
-    if not order_match['backward_asset']:
+    if order_match['backward_asset'] == 'BTC':
         source = order_match['tx1_address']
         destination = order_match['tx0_address']
         btc_amount = order_match['backward_amount']
