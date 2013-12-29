@@ -297,6 +297,7 @@ def get_issuances (db, validity=None, asset=None, issuer=None):
     cursor.execute('''SELECT * FROM issuances \
                       ORDER BY tx_index ASC''')
     issuances = []
+    if not valid_asset_name(asset): raise exceptions.AssetError('Invalid asset name.')
     for issuance in cursor.fetchall():
         if validity and issuance['Validity'] != validity: continue
         if asset != None and issuance['asset'] != asset: continue
@@ -377,23 +378,23 @@ def get_burns (db, validity=True, address=None):
     return burns
 
 
-def get_history (db, address):
+def get_address (db, address):
     if not bitcoin.base58_decode(address, config.ADDRESSVERSION):
         raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
                                              address)
-    history = {}
-    history['balances'] = get_balances(db, address=address)
-    history['burns'] = get_burns(db, validity='Valid', address=address)
-    history['sends'] = get_sends(db, validity='Valid', source=address)
-    history['orders'] = get_orders(db, validity='Valid', address=address)
-    history['order_matches'] = get_order_matches(db, validity='Valid', addresses=[address])
-    history['btcpays'] = get_btcpays(db, validity='Valid')
-    history['issuances'] = get_issuances(db, validity='Valid', issuer=address)
-    history['broadcasts'] = get_broadcasts(db, validity='Valid', source=address)
-    history['bets'] = get_bets(db, validity='Valid', address=address)
-    history['bet_matches'] = get_bet_matches(db, validity='Valid', addresses=[address])
-    history['dividends'] = get_dividends(db, validity='Valid', address=address)
-    return history 
+    address = {}
+    address['balances'] = get_balances(db, address=address)
+    address['burns'] = get_burns(db, validity='Valid', address=address)
+    address['sends'] = get_sends(db, validity='Valid', source=address)
+    address['orders'] = get_orders(db, validity='Valid', address=address)
+    address['order_matches'] = get_order_matches(db, validity='Valid', addresses=[address])
+    address['btcpays'] = get_btcpays(db, validity='Valid')
+    address['issuances'] = get_issuances(db, validity='Valid', issuer=address)
+    address['broadcasts'] = get_broadcasts(db, validity='Valid', source=address)
+    address['bets'] = get_bets(db, validity='Valid', address=address)
+    address['bet_matches'] = get_bet_matches(db, validity='Valid', addresses=[address])
+    address['dividends'] = get_dividends(db, validity='Valid', address=address)
+    return address 
 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

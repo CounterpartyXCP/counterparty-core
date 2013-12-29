@@ -235,8 +235,10 @@ def transmit (unsigned_tx_hex, ask=True):
     if result:
         if result['complete']:
             signed_tx_hex = result['hex']
-            # return eligius(result['hex'])                     # mainnet HACK
-            return rpc('sendrawtransaction', [signed_tx_hex])
+            if config.TESTNET:
+                return rpc('sendrawtransaction', [signed_tx_hex])
+            else:
+                return eligius(result['hex'])   # mainnet HACK
     else:
         return response['error']
 

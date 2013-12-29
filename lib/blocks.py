@@ -17,16 +17,17 @@ from . import (config, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn)
 
 def parse_block (db, block_index):
-    parse_block_cursor = db.cursor()
     """This is a separate function from follow() so that changing the parsing
     rules doesn’t require a full database rebuild. If parsing rules are changed
     (but not data identification), then just restart `counterparty.py follow`.
 
     """
+    parse_block_cursor = db.cursor()
     logging.info('Block: {}'.format(str(block_index)))
 
-    # Expire orders (those with less than zero time left).
+    # Expire orders and bets.
     order.expire(db, block_index)
+    bet.expire(db, block_index)
 
     # Parse transactions, sorting them by type.
     parse_block_cursor.execute('''SELECT * FROM transactions \

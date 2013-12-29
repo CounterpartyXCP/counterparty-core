@@ -52,12 +52,13 @@ def parse (db, tx, message):
         validity = 'Invalid: bad asset name'
 
     # If re‐issuance, check for compatability in divisibility, issuer.
-    issuances = util.get_issuances(db, validity='Valid', asset=asset)
-    if issuances:
-        if issuances[0]['issuer'] != tx['source']:
-            validity = 'Invalid: that asset already exists and was not issuanced by this address'
-        if validity == 'Valid' and issuance['divisible'] != divisible:
-            validity = 'Invalid: asset exists with a different divisibility'
+    if validity == 'Valid':
+        issuances = util.get_issuances(db, validity='Valid', asset=asset)
+        if issuances:
+            if issuances[0]['issuer'] != tx['source']:
+                validity = 'Invalid: that asset already exists and was not issuanced by this address'
+            if validity == 'Valid' and issuance['divisible'] != divisible:
+                validity = 'Invalid: asset exists with a different divisibility'
 
     # Credit.
     if validity == 'Valid':

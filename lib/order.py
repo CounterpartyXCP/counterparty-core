@@ -225,8 +225,7 @@ def expire (db, block_index):
     order_expire_cursor = db.cursor()
     # Expire orders and give refunds for the amount give_remaining (if non‐zero; if not BTC).
     order_expire_cursor.execute('''SELECT * FROM orders''')
-    orders = order_expire_cursor.fetchall()
-    for order in orders:
+    for order in order_expire_cursor.fetchall():
         if order['Validity'] == 'Valid' and util.get_time_left(order, block_index=block_index) < 0:
             order_expire_cursor.execute('''UPDATE orders SET validity=? WHERE tx_hash=?''', ('Invalid: expired', order['tx_hash']))
             if order['give_asset'] != 'BTC':    # Can’t credit BTC.

@@ -50,6 +50,9 @@ def create (db, source, feed_address, bet_type, deadline, wager_amount,
     if leverage and bet_type in (2,3):   # Equal, NotEqual
         raise exceptions.UselessError('Leverage cannot be used with bet types Equal and NotEqual.')
 
+    if leverage and leverage < 5040:
+        raise exceptions.UselessError('A leverage level less than 5040 (1:1) isn’t useful.')
+
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, bet_type, deadline, 
                         int(wager_amount), int(counterwager_amount), target_value, int(leverage),
@@ -82,6 +85,8 @@ def parse (db, tx, message):
             validity = 'Invalid: no such feed'
         elif not good_feed:
             validity = 'Invalid: locked feed'
+
+    # Leverage < 5040 is allowed.
 
     if validity == 'Valid':
         if not wager_amount or not counterwager_amount:
@@ -265,21 +270,36 @@ def match (db, tx):
 
     bet_match_cursor.close()
 
-# TODO: How long after deadline has been passed (in blocks?!) should the bet be expired?!
 def expire (db, block_index):
-
     bet_expire_cursor = db.cursor()
 
-    # Expire bets  and give refunds for the amount wager_remaining.
+    # Expire bets and give refunds for the amount wager_remaining.
     bet_expire_cursor.execute('''SELECT * FROM bets''')
-    bets = bet_expire_cursor.fetchall()
-    for bet in bets:
-        if util.get_time_left(bet) < 0 and bet['validity'] == 'Valid':
+    for bet in bet_expire_cursor.fetchall():
+        if bet['validity'] == 'Valid' and util.get_time_left(bet, block_index=block_index) < 0:
             bet_expire_cursor.execute('''UPDATE bets SET validity=? WHERE tx_hash=?''', ('Invalid: expired', bet['tx_hash']))
             util.credit(db, bet['source'], 'XCP', bet['wager_remaining'])
-            logging.info('Expired bet: {}'.format(bet['tx_hash']))
+            logging.info('Expired bet: {}'.format(util.short(bet['tx_hash'])))
 
     bet_expire_cursor.close()
 
+    # Expire bet matches whose deadline was passed 2016 blocks ago.
+    # TODO: Untested
+    bet_expire_match_cursor = db.cursor()
+    bet_expire_match_cursor.execute('''SELECT * FROM blocks \
+                                  WHERE block_index=?''', (block_index - 2016,)
+                              )
+    old_block = bet_expire_match_cursor.fetchone()
+    assert not bet_expire_match_cursor.fetchone()
+    if not old_block: return
+
+    for bet_match in util.get_bet_matches(db, validity='Valid'):
+        if bet_match['deadline'] < old_block['block_time']:
+            bet_expire_match_cursor.execute('''UPDATE bet_matches \
+                                          SET validity=? \
+                                          WHERE (tx0_hash=? AND tx1_hash=?)''', ('Invalid: expired awaiting broadcast', bet_match['tx0_hash'], bet_match['tx1_hash'])
+                                      )
+
+    bet_expire_match_cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

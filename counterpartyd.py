@@ -83,11 +83,11 @@ def watch (give_asset, get_asset, feed_address):
     time.sleep(30)
 
 
-def history (address):
-    history = util.get_history(db, address)
+def address (address):
+    address = util.get_address(db, address)
 
     # Balances.
-    balances = history['balances']
+    balances = address['balances']
     table = PrettyTable(['Asset', 'Amount'])
     for balance in balances:
         asset = balance['asset']
@@ -98,7 +98,7 @@ def history (address):
     print('\n')
 
     # Sends.
-    sends = history['sends']
+    sends = address['sends']
     table = PrettyTable(['Amount', 'Asset', 'Source', 'Destination', 'Tx Hash'])
     for send in sends:
         amount = util.devise(db, send['amount'], send['asset'], 'output')
@@ -109,7 +109,7 @@ def history (address):
     print('\n')
 
     # Orders.
-    orders = history['orders']
+    orders = address['orders']
     json_print(orders)
     table = PrettyTable(['Amount', 'Asset', 'Source', 'Destination', 'Tx Hash'])
     for order in orders:
@@ -121,7 +121,7 @@ def history (address):
     print('\n')
 
     # order_matches.
-    order_matches = history['order_matches']
+    order_matches = address['order_matches']
     json_print(order_matches)
     table = PrettyTable(['Give', 'Get', 'Source', 'Destination', 'Tx Hash'])
     for order_match in order_matches:
@@ -253,13 +253,16 @@ if __name__ == '__main__':
     parser_burn.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='')
     parser_burn.add_argument('--quantity', metavar='QUANTITY', required=True, help='quantity of BTC to be destroyed in miners’ fees')
 
+    parser_address = subparsers.add_parser('address', help='')
+    parser_address.add_argument('address', metavar='ADDRESS', help='')
+
+    parser_asset = subparsers.add_parser('asset', help='')
+    parser_asset.add_argument('asset', metavar='ASSET', help='')
+
     parser_watch = subparsers.add_parser('watch', help='')
     parser_watch.add_argument('--give-asset', help='')
     parser_watch.add_argument('--get-asset', help='')
     parser_watch.add_argument('--feed-address', help='')
-
-    parser_history = subparsers.add_parser('history', help='')
-    parser_history.add_argument('--address', metavar='ADDRESS', required=True, help='')
 
     args = parser.parse_args()
 
@@ -466,13 +469,22 @@ if __name__ == '__main__':
         unsigned_tx_hex = burn.create(db, args.source, round(D(args.quantity) * config.UNIT))
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
+    elif args.action == 'address':
+        address(args.address)
+
+    elif args.action == 'asset':
+        issuances = util.get_issuances(db, validity='Valid', asset=args.asset)
+        total = sum([issuance['amount'] for issuance in issuances])
+        print('Asset Name:', args.asset)
+        print('Asset ID:', util.get_asset_id(args.asset))
+        print('Total Issued:', util.devise(db, total, args.asset, dest='output'))
+        print('Divisible:', bool(issuances[-1]['divisible']))
+        print('Issuer:', issuances[-1]['issuer']) # Issuer of last issuance.
+
     elif args.action == 'watch':
         while True:
             watch(args.give_asset, args.get_asset, args.feed_address)
            
-    elif args.action == 'history':
-        history(args.address)
-
     elif args.action == 'help':
         parser.print_help()
 
