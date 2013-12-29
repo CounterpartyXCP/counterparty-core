@@ -240,7 +240,7 @@ if __name__ == '__main__':
     parser_order.add_argument('--deadline', metavar='DEADLINE', required=True, help='')
     parser_order.add_argument('--wager', metavar='WAGER_QUANTITY', required=True, help='')
     parser_order.add_argument('--counterwager', metavar='COUNTERWAGER_QUANTITY', required=True, help='')
-    parser_order.add_argument('--target-value', metavar='TARGET_VALUE', help='over‐under (?) (bet)')
+    parser_order.add_argument('--target-value', metavar='TARGET_VALUE', default=0.0, help='target value for Equal/NotEqual bet')
     parser_order.add_argument('--leverage', metavar='LEVERAGE', type=int, default=5040, help='leverage, as a fraction of 5040')
     parser_order.add_argument('--expiration', metavar='EXPIRATION', type=int, required=True, help='')
 
@@ -446,7 +446,7 @@ if __name__ == '__main__':
 
         deadline = datetime.timestamp(dateutil.parser.parse(args.deadline))
 
-        unsigned_tx_hex = bet.create(args.source, args.feed_address,
+        unsigned_tx_hex = bet.create(db, args.source, args.feed_address,
                               util.BET_TYPE_ID[args.bet_type], round(deadline),
                               round(D(args.wager) * config.UNIT),
                               round(D(args.counterwager) * config.UNIT),

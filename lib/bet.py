@@ -45,13 +45,12 @@ def create (db, source, feed_address, bet_type, deadline, wager_amount,
     if not balances or balances[0]['amount'] < wager_amount * (1 + fee_multiplier):
         raise exceptions.BalanceError('Insufficient funds to both make wager and pay feed fee (in XCP). (Check that the database is up‐to‐date.)')
 
-    # Store a null target_value as a zero float.
-    if not target_value: target_value = 0.0
+    # TODO: Can't bet on the past.
 
-    if leverage and bet_type in (2,3):   # Equal, NotEqual
+    if leverage != 5040 and bet_type in (2,3):   # Equal, NotEqual
         raise exceptions.UselessError('Leverage cannot be used with bet types Equal and NotEqual.')
 
-    if leverage and leverage < 5040:
+    if leverage < 5040:
         raise exceptions.UselessError('A leverage level less than 5040 (1:1) isn’t useful.')
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
@@ -87,13 +86,15 @@ def parse (db, tx, message):
         elif not broadcasts[-1]['text']:
             validity = 'Invalid: locked feed'
 
+    # TODO: Can't bet on the past.
+
     # Leverage < 5040 is allowed.
 
     if validity == 'Valid':
         if not wager_amount or not counterwager_amount:
             validity = 'Invalid: zero wager or zero counterwager.'
 
-    if validity == 'Valid' and leverage and bet_type in (2,3):   # Equal, NotEqual
+    if validity == 'Valid' and leverage != 5040 and bet_type in (2,3):   # Equal, NotEqual
         validity  = 'Invalid: leverage used with an inappropriate bet type.'
 
     if validity == 'Valid':
@@ -143,7 +144,7 @@ def parse (db, tx, message):
 
     if validity == 'Valid':
         placeholder = ''
-        if target_value:    # 0 is not a valid target value.
+        if target_value:    # 0.0 is not a valid target value.
             placeholder = ' that ' + str(D(target_value).quantize(config.FOUR).normalize())
         if leverage:
             placeholder += ', leveraged {}x'.format(str(D(leverage / 5040).quantize(config.FOUR).normalize()))

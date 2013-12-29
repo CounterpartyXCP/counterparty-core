@@ -256,7 +256,7 @@ def test_broadcast_initial ():
 
 def test_bet_bullcfd_to_be_liquidated ():
     global db
-    unsigned_tx_hex = bet.create(db, source_default, source_default, 0, 1388000100, small, round(small / 2), None, 15120, expiration, test=True)
+    unsigned_tx_hex = bet.create(db, source_default, source_default, 0, 1388000100, small, round(small / 2), 0.0, 15120, expiration, test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acce22ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000306a2e5445535400000028000052bb336400000000004c4b4000000000002625a0000000000000000000003b100000000a00000000'
     fee = config.MIN_FEE
 
@@ -266,7 +266,7 @@ def test_bet_bullcfd_to_be_liquidated ():
 
 def test_bet_bearcfd_to_be_liquidated ():
     global db
-    unsigned_tx_hex = bet.create(db, source_default, source_default, 1, 1388000100, round(small / 2), round(small * 1.2), None, 15120, expiration, test=True)
+    unsigned_tx_hex = bet.create(db, source_default, source_default, 1, 1388000100, round(small / 2), round(small * 1.2), 0.0, 15120, expiration, test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acce22ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000306a2e5445535400000028000152bb336400000000002625a000000000005b8d80000000000000000000003b100000000a00000000'
     fee = config.MIN_FEE
 
@@ -276,7 +276,7 @@ def test_bet_bearcfd_to_be_liquidated ():
 
 def test_bet_bullcfd_to_be_settled ():
     global db
-    unsigned_tx_hex = bet.create(db, source_default, source_default, 0, 1388000100, small * 3, small * 7, None, 5040, expiration, test=True)
+    unsigned_tx_hex = bet.create(db, source_default, source_default, 0, 1388000100, small * 3, small * 7, 0.0, 5040, expiration, test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acce22ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000306a2e5445535400000028000052bb33640000000000e4e1c00000000002160ec00000000000000000000013b00000000a00000000'
     fee = config.MIN_FEE
 
@@ -286,7 +286,7 @@ def test_bet_bullcfd_to_be_settled ():
 
 def test_bet_bearcfd_to_be_settled ():
     global db
-    unsigned_tx_hex = bet.create(db, source_default, source_default, 1, 1388000100, small * 7, small * 3, None, 5040, expiration, test=True)
+    unsigned_tx_hex = bet.create(db, source_default, source_default, 1, 1388000100, small * 7, small * 3, 0.0, 5040, expiration, test=True)
     assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acce22ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000306a2e5445535400000028000152bb33640000000002160ec00000000000e4e1c00000000000000000000013b00000000a00000000'
     fee = config.MIN_FEE
 
@@ -296,8 +296,8 @@ def test_bet_bearcfd_to_be_settled ():
 
 def test_bet_equal ():
     global db
-    unsigned_tx_hex = bet.create(db, source_default, source_default, 2, 1388000200, small * 15, small * 13, 1, 0, expiration, test=True)
-    assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acce22ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000306a2e5445535400000028000252bb33c800000000047868c00000000003dfd2403ff0000000000000000000000000000a00000000'
+    unsigned_tx_hex = bet.create(db, source_default, source_default, 2, 1388000200, small * 15, small * 13, 1, 5040, expiration, test=True)
+    assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acce22ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000306a2e5445535400000028000252bb33c800000000047868c00000000003dfd2403ff0000000000000000013b00000000a00000000'
     fee = config.MIN_FEE
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
@@ -306,8 +306,8 @@ def test_bet_equal ():
 
 def test_bet_notequal ():
     global db
-    unsigned_tx_hex = bet.create(db, source_default, source_default, 3, 1388000200, small * 13, small * 15, 1, 0, expiration, test=True)
-    assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acce22ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000306a2e5445535400000028000352bb33c80000000003dfd24000000000047868c03ff0000000000000000000000000000a00000000'
+    unsigned_tx_hex = bet.create(db, source_default, source_default, 3, 1388000200, small * 13, small * 15, 1, 5040, expiration, test=True)
+    assert unsigned_tx_hex == '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acce22ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000306a2e5445535400000028000352bb33c80000000003dfd24000000000047868c03ff0000000000000000013b00000000a00000000'
     fee = config.MIN_FEE
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
