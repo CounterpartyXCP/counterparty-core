@@ -109,9 +109,9 @@ def parse (db, tx, message):
         give_amount = util.devise(db, give_amount, give_asset, 'output')
         get_amount = util.devise(db, get_amount, get_asset, 'output')
 
-        if give_asset != 'BTC':
+        if give_asset == 'BTC':
             fee_text = 'with a provided fee of ' + str(tx['fee'] / config.UNIT) + ' BTC '
-        elif get_asset != 'BTC':
+        elif get_asset == 'BTC':
             fee_text = 'with a required fee of ' + str(fee_required / config.UNIT) + ' BTC '
         else:
             fee_text = ''
@@ -148,7 +148,7 @@ def match (db, tx):
         # If the prices agree, make the trade. The found order sets the price,
         # and they trade as much as they can.
         if tx0['price'] <= 1 / tx1['price']:
-            forward_amount = round(min(D(tx0['give_remaining']), give_remaining / D(tx1['price'])))
+            forward_amount = round(min(D(tx0['give_remaining']), give_remaining * D(tx1['price'])))
             backward_amount = round(forward_amount * tx0['price'])
 
             forward_asset, backward_asset = tx1['get_asset'], tx1['give_asset']
