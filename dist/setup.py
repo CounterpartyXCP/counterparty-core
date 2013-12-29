@@ -4,9 +4,6 @@ Counterparty setup script - works under Ubuntu Linux and Windows at the present 
 """
 import os
 import sys
-import pwd
-import grp
-import stat
 import getopt
 import logging
 import shutil
@@ -14,6 +11,13 @@ import urllib
 import zipfile
 import platform
 import tempfile
+import stat
+
+try: #ignore import errors on windows
+    import pwd
+    import grp
+except ImportError:
+    pass
 
 COUNTERPARTY_USER = "counterpartyd"
 
@@ -53,11 +57,8 @@ def get_paths():
         paths['virtualenv_path'] = "/usr/bin/virtualenv"
         paths['virtualenv_args'] = "--python=python3.3"
     elif os.name == "nt":
-        paths['virtualenv_path'] = paths['python_path'] + "virtualenv.exe"
+        paths['virtualenv_path'] = os.path.join(paths['python_path'], "Scripts", "virtualenv.exe")
         paths['virtualenv_args'] = ""
-    if paths['virtualenv_path'] is None or not os.path.exists(paths['virtualenv_path']):
-        logging.debug("ERROR: virtualenv missing (%s)" % (paths['virtualenv_path'],))
-        sys.exit(1)
     
     #compose the rest of the paths...
     paths['dist_path'] = os.path.join(paths['base_path'], "dist")
@@ -67,7 +68,7 @@ def get_paths():
     logging.debug("env path: '%s'" % paths['env_path'])
     
     #the pip executiable that we'll be using does not exist yet, but it will, once we've created the virtualenv
-    paths['pip_path'] = os.path.join(paths['env_path'], "bin", "pip.exe" if os.name == "nt" else "pip")
+    paths['pip_path'] = os.path.join(paths['env_path'], "Scripts" if os.name == "nt" else "bin", "pip.exe" if os.name == "nt" else "pip")
     
     return paths
 
@@ -84,14 +85,18 @@ def install_dependencies(paths):
         #now that pip is installed, install necessary deps outside of the virtualenv (e.g. for this script)
         runcmd("sudo pip install appdirs==1.2.0")
     elif os.name == 'nt':
-        #run the ez_setup.py script to download and install easy_install.exe so we can grab virtualenv and more...
-        runcmd("pushd %TEMP% && %s %swindows\ez_setup.py && popd" % (sys.executable, paths['deps_path'],))
+        logging.info("WINDOWS: Installing Required Packages...")
+        if not os.path.exists(os.path.join(paths['python_path'], "Scripts", "easy_install.exe")):
+            #^ ez_setup.py doesn't seem to tolerate being run after it's already been installed... errors out
+            #run the ez_setup.py script to download and install easy_install.exe so we can grab virtualenv and more...
+            runcmd("pushd %%TEMP%% && %s %s && popd" % (sys.executable,
+                os.path.join(paths['dist_path'], "windows", "ez_setup.py")))
         
         #now easy_install is installed, install virtualenv, and sphinx for doc building
-        runcmd("%s\Scripts\easy_install.exe virtualenv sphinx pip" % (paths['python_path'],))
+        runcmd("%s virtualenv sphinx pip" % (os.path.join(paths['python_path'], "Scripts", "easy_install.exe")))
         
         #now that pip is installed, install necessary deps outside of the virtualenv (e.g. for this script)
-        runcmd("%s\Scripts\pip.exe install appdirs==1.2.0" % (paths['python_path'],))
+        runcmd("%s install appdirs==1.2.0" % (os.path.join(paths['python_path'], "Scripts", "pip.exe")))
 
 def create_user(paths):
     #don't create a user on windows
@@ -107,6 +112,10 @@ def create_user(paths):
         logging.info("counterpartyd user already exists...skipping")
 
 def create_virtualenv(paths):
+    if paths['virtualenv_path'] is None or not os.path.exists(paths['virtualenv_path']):
+        logging.debug("ERROR: virtualenv missing (%s)" % (paths['virtualenv_path'],))
+        sys.exit(1)
+    
     if os.path.exists(paths['env_path']):
         logging.warning("Deleting existing virtualenv...")
         shutil.rmtree(paths['env_path'])
@@ -120,16 +129,6 @@ def create_virtualenv(paths):
     
     #install packages from manifest via pip
     runcmd("%s install -r %s" % (paths['pip_path'], os.path.join(paths['dist_path'], "reqs.txt")))
-    
-    #Don't use this code (for now at least), since we don't need cx_freeze under Linux
-    #if os.name == "posix" and platform.dist()[0] == "Ubuntu":
-    #cx_freeze has a build bug under Ubuntu 13.04 and 13.10 (at least)
-    #runcmd("""sudo rm -rf /tmp/cx_Freeze-4.3.2* && \
-    #wget -O /tmp/cx_Freeze-4.3.2.tar.gz "http://downloads.sourceforge.net/project/cx-freeze/4.3.2/cx_Freeze-4.3.2.tar.gz?r=http%3A%2F%2Fcx-freeze.sourceforge.net%2F&ts=1388338830&use_mirror=softlayer-dal" && \
-    #tar -zxvf /tmp/cx_Freeze-4.3.2.tar.gz -C /tmp && \
-    #sed -r -i -e "s/if not vars\.get\(\"Py_ENABLE_SHARED\", 0\)/if True/g" /tmp/cx_Freeze-4.3.2/setup.py && \
-    #cd /tmp/cx_Freeze-4.3.2 && sudo python3.3 setup.py install""")
-    
 
 def setup_startup(paths):
     while True:
@@ -167,8 +166,12 @@ def setup_startup(paths):
 def create_default_config(paths):
     import appdirs #installed earlier
     cfg_path = os.path.join(
-        appdirs.user_data_dir('Counterparty', 'counterpartyd') if os.name == "nt" else "/var/lib/counterpartyd",
+        appdirs.user_data_dir(appauthor='Counterparty', appname='counterpartyd') if os.name == "nt" else "/var/lib/counterpartyd",
         "counterpartyd.conf")
+    cfg_dir = os.path.dirname(cfg_path)
+    
+    if not os.path.exists(cfg_dir):
+        os.makedirs(cfg_dir)
     
     #create a default config file
     default_config = "[Default]%srpc-connect=localhost%srpc-port=18832%srpc-user=rpc%srpc-password=rpcpw1234" % (
@@ -183,6 +186,13 @@ def create_default_config(paths):
         gid = grp.getgrnam(COUNTERPARTY_USER).gr_gid    
         os.chown(cfg_path, uid, gid)
         os.chmod(cfg_path, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP) #660
+    else:
+        #on windows, open notepad to the file to help out
+        import win32api
+        try:
+            win32api.WinExec('NOTEPAD.exe "%s"' % cfg_path)
+        except:
+            pass        
 
     logging.info("NEXT STEP: Edit the config file we created '%s', according to the documentation" % cfg_path)
     
