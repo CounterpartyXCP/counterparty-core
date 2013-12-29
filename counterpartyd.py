@@ -62,7 +62,7 @@ def watch (give_asset, get_asset, feed_address):
         order_match = format_order_match(order_match)
         table.add_row(order_match)
     print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Order Matches Awaiting BTC Payment' + colorama.Style.RESET_ALL)
-    print(colorama.Fore.CYAN + colorama.Style.BRIGHT + str(table) + colorama.Style.RESET_ALL)
+    print(colorama.Fore.CYAN + str(table) + colorama.Style.RESET_ALL)
     print('\n')
 
     # Running feeds

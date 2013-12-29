@@ -257,10 +257,10 @@ def get_order_matches (db, validity=None, addresses=[], show_expired=True, tx0_h
             order_match_time_left = get_order_match_time_left(order_match)
             if order_match_time_left < 0: continue
 
-        if addresses and not ((order_match['tx0_address'] in addresses and
-                               not order_match['forward_asset']) or
-                              (order_match['tx1_address'] in addresses and
-                               not order_match['backward_asset'])):
+        if addresses and ((order_match['tx0_address'] in addresses and
+                           not order_match['forward_asset']) or
+                          (order_match['tx1_address'] in addresses and
+                           not order_match['backward_asset'])):
             continue
         if tx0_hash and tx0_hash != order_match['tx0_hash']: continue
         if tx1_hash and tx1_hash != order_match['tx1_hash']: continue
