@@ -165,9 +165,9 @@ def last_issued (db):
 def devise (db, quantity, asset, dest):
     # For issuances.
     if asset == True:
-        return quantity.quantize(config.EIGHT).normalize()
+        return D(quantity).quantize(config.EIGHT).normalize()
     if asset == False:
-        return int(quantity * config.UNIT)
+        return int(D(quantity) * config.UNIT)
 
     issuances = get_issuances(db, validity='Valid', asset=asset)
     if not issuances: raise exceptions.AssetError('No such asset.')
@@ -175,7 +175,7 @@ def devise (db, quantity, asset, dest):
         quantity = D(quantity) / config.UNIT
         return quantity.quantize(config.EIGHT).normalize()
     else:
-        return int(quantity * config.UNIT)
+        return int(D(quantity) * config.UNIT)
 
 def get_debits (db, address=None, asset=None):
     """This does not include BTC."""
