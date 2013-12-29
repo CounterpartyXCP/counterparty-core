@@ -353,6 +353,8 @@ def test_parse_from_the_start():
     for i in range(tx_index):
         blocks.parse_block(db, i)
 
+    # Check balances of source_default.
+    assert str(util.get_balances(db, address=source_default)) == '''[{'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'asset': 'XCP', 'amount': 19837625000}, {'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'asset': 'BAyz', 'amount': 1000000000}, {'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'asset': 'BAzA', 'amount': 100000}]'''
 
 def test_db_dump():
     with open('test/db.test.dump', 'r') as f:
@@ -366,15 +368,6 @@ def test_db_dump():
 
     lines = list(difflib.unified_diff(good_data, new_data, n=0))
     assert not len(lines)
-
-
-"""
-def test_watch():
-    counterpartyd.watch()
-
-def test_history():
-    counterpartyd.history('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc')
-"""
 
 
 def test_base58_decode():
@@ -391,12 +384,21 @@ def test_base58_decode():
 
     logging.info('STOP TEST')
 
-# TODO
-    # asset lock
-    # asset transfer
-    # expire order matches
-    # expire bet matches
 """
+def test_watch():
+    counterpartyd.watch()
+
+def test_history():
+    counterpartyd.history(source_default)
+"""
+
+
+"""
+asset lock
+asset transfer
+expire order matches
+expire bet matches
+
 follow()
 
 get_sends (validity=None, source=None, destination=None)
