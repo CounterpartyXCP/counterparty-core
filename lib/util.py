@@ -164,9 +164,9 @@ def last_issued (db):
 
 def devise (db, quantity, asset, dest):
     # For issuances.
-    if asset == True:
-        return D(quantity).quantize(config.EIGHT).normalize()
     if asset == False:
+        return int(quantity)
+    if asset == True:
         return int(D(quantity) * config.UNIT)
 
     issuances = get_issuances(db, validity='Valid', asset=asset)
@@ -369,19 +369,19 @@ def get_address (db, address):
     if not bitcoin.base58_decode(address, config.ADDRESSVERSION):
         raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
                                              address)
-    address = {}
-    address['balances'] = get_balances(db, address=address)
-    address['burns'] = get_burns(db, validity='Valid', address=address)
-    address['sends'] = get_sends(db, validity='Valid', source=address)
-    address['orders'] = get_orders(db, validity='Valid', address=address)
-    address['order_matches'] = get_order_matches(db, validity='Valid', addresses=[address])
-    address['btcpays'] = get_btcpays(db, validity='Valid')
-    address['issuances'] = get_issuances(db, validity='Valid', issuer=address)
-    address['broadcasts'] = get_broadcasts(db, validity='Valid', source=address)
-    address['bets'] = get_bets(db, validity='Valid', address=address)
-    address['bet_matches'] = get_bet_matches(db, validity='Valid', addresses=[address])
-    address['dividends'] = get_dividends(db, validity='Valid', address=address)
-    return address 
+    address_dict = {}
+    address_dict['balances'] = get_balances(db, address=address)
+    address_dict['burns'] = get_burns(db, validity='Valid', address=address)
+    address_dict['sends'] = get_sends(db, validity='Valid', source=address)
+    address_dict['orders'] = get_orders(db, validity='Valid', address=address)
+    address_dict['order_matches'] = get_order_matches(db, validity='Valid', addresses=[address])
+    address_dict['btcpays'] = get_btcpays(db, validity='Valid')
+    address_dict['issuances'] = get_issuances(db, validity='Valid', issuer=address)
+    address_dict['broadcasts'] = get_broadcasts(db, validity='Valid', source=address)
+    address_dict['bets'] = get_bets(db, validity='Valid', address=address)
+    address_dict['bet_matches'] = get_bet_matches(db, validity='Valid', addresses=[address])
+    address_dict['dividends'] = get_dividends(db, validity='Valid', address=address)
+    return address_dict
 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

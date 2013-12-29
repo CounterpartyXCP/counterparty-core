@@ -84,7 +84,7 @@ def watch (give_asset, get_asset, feed_address):
 
 
 def address (address):
-    address = util.get_address(db, address)
+    address = util.get_address(db, address=address)
 
     # Balances.
     balances = address['balances']
@@ -108,6 +108,7 @@ def address (address):
     print(colorama.Fore.YELLOW + str(table) + colorama.Style.RESET_ALL)
     print('\n')
 
+    """
     # Orders.
     orders = address['orders']
     json_print(orders)
@@ -119,7 +120,9 @@ def address (address):
     print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'orders' + colorama.Style.RESET_ALL)
     print(colorama.Fore.YELLOW + str(table) + colorama.Style.RESET_ALL)
     print('\n')
+    """
 
+    """
     # order_matches.
     order_matches = address['order_matches']
     json_print(order_matches)
@@ -131,7 +134,7 @@ def address (address):
     print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'order_matches' + colorama.Style.RESET_ALL)
     print(colorama.Fore.YELLOW + str(table) + colorama.Style.RESET_ALL)
     print('\n')
-
+    """
     # TODO
 
 
@@ -187,8 +190,8 @@ if __name__ == '__main__':
     parser.add_argument('-V', '--version', action='version',
         version="counterpartyd v%s" % config.VERSION)
 
-    parser.add_argument('--testnet', type=bool, help='')
-    parser.add_argument('--testcoin', type=bool, help='')
+    parser.add_argument('--testnet', action='store_true', help='')
+    parser.add_argument('--testcoin', action='store_true', help='')
 
     parser.add_argument('--data-dir', help='')
     parser.add_argument('--database-file', help='')
@@ -216,7 +219,7 @@ if __name__ == '__main__':
     parser_order.add_argument('--give-quantity', metavar='GIVE_QUANTITY', required=True, help='')
     parser_order.add_argument('--give-asset', metavar='GIVE_ASSET', required=True, help='')
     parser_order.add_argument('--expiration', metavar='EXPIRATION', type=int, required=True, help='')
-    parser_order.add_argument('--fee', metavar='FEE', help='either the required fee, or the provided fee, as appropriate; in BTC, to be paid to miners; required iff the order involves BTC')
+    parser_order.add_argument('--fee', metavar='FEE', default='0', help='either the required fee, or the provided fee, as appropriate; in BTC, to be paid to miners; required iff the order involves BTC')
 
     parser_btcpay= subparsers.add_parser('btcpay', help='requires bitcoind')
     parser_btcpay.add_argument('--order-match-id', metavar='ORDER_MATCH_ID', required=True, help='')
@@ -225,7 +228,7 @@ if __name__ == '__main__':
     parser_issuance.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='')
     parser_issuance.add_argument('--quantity', metavar='QUANTITY', required=True, help='')
     parser_issuance.add_argument('--asset', metavar='ASSET', required=True, help='')
-    parser_issuance.add_argument('--divisible', metavar='DIVISIBLE', type=bool, required=True, help='whether or not the asset is divisible (must agree with previous issuances, if this is a re‐issuance)')
+    parser_issuance.add_argument('--divisible', action='store_true', help='whether or not the asset is divisible (must agree with previous issuances, if this is a re‐issuance)')
 
     parser_broadcast = subparsers.add_parser('broadcast', help='requires bitcoind')
     parser_broadcast.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='')
