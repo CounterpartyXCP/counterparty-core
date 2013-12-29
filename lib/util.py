@@ -297,10 +297,11 @@ def get_issuances (db, validity=None, asset=None, issuer=None):
     cursor.execute('''SELECT * FROM issuances \
                       ORDER BY tx_index ASC''')
     issuances = []
-    if not valid_asset_name(asset): raise exceptions.AssetError('Invalid asset name.')
     for issuance in cursor.fetchall():
         if validity and issuance['Validity'] != validity: continue
-        if asset != None and issuance['asset'] != asset: continue
+        if asset != None and issuance['asset'] != asset:
+            if not valid_asset_name(asset): raise exceptions.AssetError('Invalid asset name.')
+            continue
         if issuer and issuance['issuer'] != issuer: continue
         issuances.append(dict(issuance))
     cursor.close()

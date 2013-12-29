@@ -24,9 +24,7 @@ requests_log.setLevel(logging.WARNING)
 CONFIGFILE = os.path.expanduser('~') + '/.bitcoin/bitcoin.conf'
 config.PREFIX = b'TEST'
 config.RPCCONNECT = 'localhost'
-# TODO: Make this try both mainnet and testnet?
-# config.RPCPORT = '8332' # mainnet
-config.RPCPORT = '18332' # testnet
+config.RPCPORT = '18332' # Only run tests on testnet.
 try:
     with open(CONFIGFILE, 'r') as configfile:
         for line in configfile.readlines():
