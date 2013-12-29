@@ -238,7 +238,7 @@ def get_orders (db, validity=None, address=None, show_empty=True, show_expired=T
 
         # Ignore BTC orders one block early.
         time_left = get_time_left(order)
-        if not order['give_asset']: time_left -= 1
+        if order['give_asset'] == 'BTC': time_left -= 1
         if not show_expired and time_left < 0:
             continue
 

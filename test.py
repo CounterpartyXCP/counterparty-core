@@ -389,7 +389,6 @@ def test_base58_decode():
 
     logging.info('STOP TEST')
 
-
 # TODO
     # asset lock
     # asset transfer
