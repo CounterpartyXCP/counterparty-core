@@ -131,15 +131,17 @@ Editing the Config
 
 ``counterpartyd`` can read its configuration data from a file.
 
-If not using the Windows installer, you'll need to create a basic ``counterpartyd.conf`` file that contains
-options that tell ``counterpartyd`` where and how to connect to your ``bitcoind`` process. Here's an example::
+If not using the Windows installer, the ``setup.py`` script will create a basic ``counterpartyd.conf`` file for you that contains
+options that tell ``counterpartyd`` where and how to connect to your ``bitcoind`` process. Here's an example of the default file created::
 
-    rpc-connect=
+    [Default]
+    rpc-connect=localhost
     rpc-port=18832
     rpc-user=rpc
     rpc-password=rpcpw1234
 
-Simply paste this snippet into a text editor, and then save as ``counterpartyd.conf`` in your ``counterparty`` data directory.
+After running the ``setup.py`` script to create this file, you'll probably need to edit it and tweak the settings
+to match your exact ``bitcoind`` configuration (e.g. especially ``rpc-password``).
 
 
 Viewing the Logs
