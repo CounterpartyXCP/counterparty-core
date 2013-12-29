@@ -89,11 +89,16 @@ def parse (db, tx, message):
                         text,
                         validity)
                   )
+
+    # Log.
     if validity == 'Valid':
-        if not value: infix = '‘' + text + '’'
-        else: infix = '‘' + text + ' = ' + str(value) + '’'
-        suffix = ' from ' + tx['source'] + ' at ' + util.isodt(timestamp) + ' (' + util.short(tx['tx_hash']) + ')'
-        logging.info('Broadcast: {}'.format(infix + suffix))
+        if not text:
+            logging.info('Broadcast: {} locked his feed.'.format(tx['source'], util.short(tx['tx_hash'])))
+        else:
+            if not value: infix = '‘' + text + '’'
+            else: infix = '‘' + text + ' = ' + str(value) + '’'
+            suffix = ' from ' + tx['source'] + ' at ' + util.isodt(timestamp) + ' (' + util.short(tx['tx_hash']) + ')'
+            logging.info('Broadcast: {}'.format(infix + suffix))
 
 
     # Handle bet matches that use this feed.

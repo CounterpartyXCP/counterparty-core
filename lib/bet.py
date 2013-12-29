@@ -36,6 +36,8 @@ def create (db, source, feed_address, bet_type, deadline, wager_amount,
         raise exceptions.FeedError('That feed doesn’t exist.')
     elif not broadcasts[-1]['text']:
         raise exceptions.FeedError('That feed is locked.')
+    elif broadcasts[-1]['timestamp'] >= deadline:
+        raise exceptions.FeedError('Deadline is in that feed’s past.')
 
     if not wager_amount or not counterwager_amount:
         raise exceptions.UselessError('Zero wager or counterwager')
@@ -44,8 +46,6 @@ def create (db, source, feed_address, bet_type, deadline, wager_amount,
     balances = util.get_balances(db, address=source, asset='XCP')
     if not balances or balances[0]['amount'] < wager_amount * (1 + fee_multiplier):
         raise exceptions.BalanceError('Insufficient funds to both make wager and pay feed fee (in XCP). (Check that the database is up‐to‐date.)')
-
-    # TODO: Can't bet on the past.
 
     if leverage != 5040 and bet_type in (2,3):   # Equal, NotEqual
         raise exceptions.UselessError('Leverage cannot be used with bet types Equal and NotEqual.')
@@ -85,8 +85,8 @@ def parse (db, tx, message):
             validity = 'Invalid: no such feed'
         elif not broadcasts[-1]['text']:
             validity = 'Invalid: locked feed'
-
-    # TODO: Can't bet on the past.
+        elif broadcasts[-1]['timestamp'] >= deadline:
+            validity = 'Invalid: deadline is in that feed’s past'
 
     # Leverage < 5040 is allowed.
 
@@ -142,6 +142,7 @@ def parse (db, tx, message):
                         validity)
                   )
 
+    # Log.
     if validity == 'Valid':
         placeholder = ''
         if target_value:    # 0.0 is not a valid target value.
