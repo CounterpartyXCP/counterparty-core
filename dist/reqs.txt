@@ -1,0 +1,16 @@
+#counterparty dependencies (installed via pip)
+
+appdirs==1.2.0
+#helps locate OS-specific directories (user data dir, etc)
+
+colorama==0.2.7
+#for pretty color printing on console output
+
+prettytable==0.7.2
+
+python-dateutil==2.2
+
+requests==2.1.0
+
+#sphinx==1.2
+#for documentation

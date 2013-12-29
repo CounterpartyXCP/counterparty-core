@@ -190,6 +190,7 @@ if __name__ == '__main__':
     parser.add_argument('-V', '--version', action='version',
         version="counterpartyd v%s" % config.VERSION)
 
+    parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='')
     parser.add_argument('--testnet', action='store_true', help='')
     parser.add_argument('--testcoin', action='store_true', help='')
 
@@ -282,12 +283,15 @@ if __name__ == '__main__':
 
     # Bitcoind RPC options.
     configfile = configparser.ConfigParser()
-    configfile.read(config.data_dir + '/counterpartyd.config.ini')
+    config_path = os.path.join(config.data_dir, 'counterpartyd.conf')
+    configfile.read(config_path)
+    has_config = 'Default' in configfile
+    #logging.debug("Config file: %s; Exists: %s" % (config_path, "Yes" if has_config else "No"))
 
     # testnet
     if args.testnet:
         config.TESTNET = args.testnet
-    elif 'testnet' in configfile['Default']:
+    elif has_config and 'testnet' in configfile['Default']:
         config.TESTNET = configfile['Default'].getboolean('testnet')
     else:
         config.TESTNET = False
@@ -295,7 +299,7 @@ if __name__ == '__main__':
     # testcoin
     if args.testcoin:
         config.TESTCOIN = args.testcoin
-    elif 'testcoin' in configfile['Default']:
+    elif has_config and 'testcoin' in configfile['Default']:
         config.TESTCOIN = configfile['Default'].getboolean('testcoin')
     else:
         config.TESTCOIN = False
@@ -303,24 +307,24 @@ if __name__ == '__main__':
     # RPC user
     if args.rpc_user:
         config.rpc_user = args.rpc_user
-    elif 'rpcuser' in configfile['Default']:
-        config.rpc_user = configfile['Default']['rpcuser']
+    elif has_config and 'rpc-user' in configfile['Default']:
+        config.rpc_user = configfile['Default']['rpc-user']
     else:
         config.rpc_user = 'bitcoinrpc'
 
     # RPC host
     if args.rpc_connect:
         config.rpc_connect = args.rpc_connect
-    elif 'rpcconnect' in configfile['Default']:
-        config.rpc_connect = configfile['Default']['rpcconnect']
+    elif has_config and 'rpc-connect' in configfile['Default']:
+        config.rpc_connect = configfile['Default']['rpc-connect']
     else:
         config.rpc_connect = 'localhost'
 
     # RPC port
     if args.rpc_port:
         config.rpc_port = args.rpc_port
-    elif 'rpcport' in configfile['Default']:
-        config.rpc_port = configfile['Default']['rpcport']
+    elif has_config and 'rpc-port' in configfile['Default']:
+        config.rpc_port = configfile['Default']['rpc-port']
     else:
         if config.TESTNET:
             config.rpc_port = '18332'
@@ -330,8 +334,8 @@ if __name__ == '__main__':
     # RPC password
     if args.rpc_password:
         config.rpc_password = args.rpc_password
-    elif 'rpcpassword' in configfile['Default']:
-        config.rpc_password = configfile['Default']['rpcpassword']
+    elif has_config and 'rpc-password' in configfile['Default']:
+        config.rpc_password = configfile['Default']['rpc-password']
     else:
         raise exceptions.ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
 
@@ -341,7 +345,7 @@ if __name__ == '__main__':
     if args.database_file:
         config.DATABASE = args.database_file
     else:
-        config.DATABASE = config.data_dir + '/counterpartyd.' + str(config.DB_VERSION) + '.db'
+        config.DATABASE = os.path.join(config.data_dir, 'counterpartyd.' + str(config.DB_VERSION) + '.db')
 
     # For create()s.
     db = sqlite3.connect(config.DATABASE)
@@ -354,14 +358,14 @@ if __name__ == '__main__':
     elif 'logfile' in configfile['Default']:
         config.LOG = configfile['Default']['logfile']
     else:
-        config.LOG = config.data_dir + '/counterpartyd.log'
+        config.LOG = os.path.join(config.data_dir, 'counterpartyd.log')
     if config.LOG == '-':
         config.LOG = None   # Log to stdout.
     logging.basicConfig(filename=config.LOG, level=logging.INFO,
                         format='%(asctime)s %(message)s',
                         datefmt='%m-%d-%YT%I:%M:%S%z')
     requests_log = logging.getLogger("requests")
-    requests_log.setLevel(logging.WARNING)
+    requests_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
 
     # (more) Testnet
     if config.TESTNET:
