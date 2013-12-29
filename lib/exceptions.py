@@ -11,21 +11,30 @@ class OverflowError(Exception):
     pass
 class BitcoindRPCError (Exception):
     pass
+
 class DividendError (Exception):
+    pass
+class BroadcastError (Exception):
     pass
 class FeedError (Exception):
     pass
+class IssuanceError (Exception):
+    pass
+
 class UselessError (Exception):
     pass
-class InvalidAddressError (Exception):
-    pass
+
 class BalanceError (Exception):
-    pass
-class IssuanceError (Exception):
     pass
 class AssetError (Exception):
     pass
+class InvalidAddressError (Exception):
+    pass
+
 class InvalidOrderMatchError (Exception):
+    pass
+
+class Base49Error (Exception):
     pass
 class Base58Error (Exception):
     pass

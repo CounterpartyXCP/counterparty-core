@@ -28,9 +28,9 @@ import logging
 
 from . import (util, config, bitcoin)
 
-FORMAT = '>IdI40p' # How many characters *can* the text be?! (That is, how long is PREFIX?!)
+FORMAT = '>IdI52p' # How many characters *can* the text be?! (That is, how long is PREFIX?!)
 ID = 30
-LENGTH = 4 + 8 + 4 + 40
+LENGTH = 4 + 8 + 4 + 52
 
 def create (db, source, timestamp, value, fee_multiplier, text, test=False):
 
@@ -41,6 +41,9 @@ def create (db, source, timestamp, value, fee_multiplier, text, test=False):
             raise exceptions.UselessError('Locked feed')
         elif timestamp <= last_broadcast['timestamp']:
             raise exceptions.UselessError('Feed timestamps must be monotonically increasing')
+
+    if len(text) > 52:
+        raise exceptions.BroadcastError('Text is greater than 52 characters in length.')
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, timestamp, value, fee_multiplier,

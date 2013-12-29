@@ -280,34 +280,28 @@ def match (db, tx):
     bet_match_cursor.close()
 
 def expire (db, block_index):
-    bet_expire_cursor = db.cursor()
-
     # Expire bets and give refunds for the amount wager_remaining.
+    bet_expire_cursor = db.cursor()
     bet_expire_cursor.execute('''SELECT * FROM bets''')
     for bet in bet_expire_cursor.fetchall():
         if bet['validity'] == 'Valid' and util.get_time_left(bet, block_index=block_index) < 0:
             bet_expire_cursor.execute('''UPDATE bets SET validity=? WHERE tx_hash=?''', ('Invalid: expired', bet['tx_hash']))
             util.credit(db, bet['source'], 'XCP', bet['wager_remaining'])
             logging.info('Expired bet: {}'.format(util.short(bet['tx_hash'])))
-
     bet_expire_cursor.close()
 
     # Expire bet matches whose deadline was passed 2016 blocks ago.
-    # TODO: Untested
     bet_expire_match_cursor = db.cursor()
     bet_expire_match_cursor.execute('''SELECT * FROM blocks \
-                                  WHERE block_index=?''', (block_index - 2016,)
+                                  WHERE block_index<=?''', (block_index - 2016,)
                               )
-    old_block = bet_expire_match_cursor.fetchone()
-    assert not bet_expire_match_cursor.fetchone()
-    if not old_block: return
-
-    for bet_match in util.get_bet_matches(db, validity='Valid'):
-        if bet_match['deadline'] < old_block['block_time']:
-            bet_expire_match_cursor.execute('''UPDATE bet_matches \
-                                          SET validity=? \
-                                          WHERE (tx0_hash=? AND tx1_hash=?)''', ('Invalid: expired awaiting broadcast', bet_match['tx0_hash'], bet_match['tx1_hash'])
-                                      )
+    for old_block in bet_expire_match_cursor.fetchall():
+        for bet_match in util.get_bet_matches(db, validity='Valid'):
+            if bet_match['deadline'] < old_block['block_time']:
+                bet_expire_match_cursor.execute('''UPDATE bet_matches \
+                                              SET validity=? \
+                                              WHERE (tx0_hash=? AND tx1_hash=?)''', ('Invalid: expired awaiting broadcast', bet_match['tx0_hash'], bet_match['tx1_hash'])
+                                          )
 
     bet_expire_match_cursor.close()
 

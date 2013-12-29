@@ -177,7 +177,7 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
 def get_inputs (source, total_btc_out, test=False):
     """List unspent inputs for source."""
     if not test:
-        listunspent = rpc('listunspent', [-1])['result']  # TODO: Reconsider this. (Will this only allow sending unconfirmed *change*?!)
+        listunspent = rpc('listunspent', [-1])['result']  # NOTE: Reconsider this. (Will this only allow sending unconfirmed *change*?!)
     else:
         with open('test/listunspent.test.json', 'r') as listunspent_test_file:
             listunspent = json.load(listunspent_test_file)
@@ -197,8 +197,8 @@ def transaction (source, destination, btc_amount, fee, data, test=False):
         if address:
             try:
                 base58_decode(address, config.ADDRESSVERSION)
-            except:  # TODO
-                raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
+            except Exception:
+                raise exceptions.InvalidAddressError('Invalid Bitcoin address:',
                                           address)
 
     # Check that the source is in wallet.

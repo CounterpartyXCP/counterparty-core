@@ -394,7 +394,8 @@ def test_base58_decode():
 # TODO
     # asset lock
     # asset transfer
-
+    # expire order matches
+    # expire bet matches
 """
 follow()
 

@@ -379,10 +379,9 @@ if __name__ == '__main__':
 
     config.TESTCOIN = True
     if config.TESTCOIN:
-        config.PREFIX = b'TEST'                # 4 bytes (possibly accidentally created)
+        config.PREFIX = b'TEST'                 # 4 bytes (possibly accidentally created)
     else:
-        pass
-        # TODO
+        config.PREFIX = b'CNTRPRTY'             # 8 bytes
 
 
     # Do something.
@@ -431,9 +430,8 @@ if __name__ == '__main__':
     elif args.action == 'issuance':
         bitcoin.bitcoind_check()
 
-        asset = args.asset
-        quantity = util.devise(db, D(args.quantity), args.divisible, 'input')
-        unsigned_tx_hex = issuance.create(db, args.source, args.destination, asset, round(quantity),
+        quantity = util.devise(db, D(args.quantity), None, 'input', divisible=args.divisible)
+        unsigned_tx_hex = issuance.create(db, args.source, args.destination, args.asset, round(quantity),
                                 args.divisible)
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
@@ -445,7 +443,7 @@ if __name__ == '__main__':
         if fee_multiplier > 4294967295:
             raise exceptions.OverflowError('Fee multiplier must be less than or equal to 42.94967295.')
 
-        unsigned_tx_hex = broadcast.create(args.source, int(time.time()), args.value,
+        unsigned_tx_hex = broadcast.create(db, args.source, int(time.time()), args.value,
                                     round(fee_multiplier), args.text)
         json_print(bitcoin.transmit(unsigned_tx_hex))
 

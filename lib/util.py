@@ -57,7 +57,7 @@ def get_asset_id (asset):
     for c in s:
         n *= 49
         if c not in b49_digits:
-            raise Exception # TODO
+            raise exceptions.InvalidBase49Error('Not a valid base49 character:', c)
         digit = b49_digits.index(c)
         n += digit
 
@@ -162,20 +162,20 @@ def last_issued (db):
     return issuances['asset']
 """
 
-def devise (db, quantity, asset, dest):
-    # For issuances.
-    if asset == False:
-        return int(quantity)
-    if asset == True:
-        return int(D(quantity) * config.UNIT)
+def devise (db, quantity, asset, dest, divisible=None):
+    if divisible == None:
+        issuances = get_issuances(db, validity='Valid', asset=asset)
+        if not issuances: raise exceptions.AssetError('No such asset.')
+        divisible = issuances[0]['divisible']
 
-    issuances = get_issuances(db, validity='Valid', asset=asset)
-    if not issuances: raise exceptions.AssetError('No such asset.')
-    if issuances[0]['divisible'] and dest == 'output':
-        quantity = D(quantity) / config.UNIT
-        return quantity.quantize(config.EIGHT).normalize()
+    if divisible:
+        if dest == 'output':
+            quantity = D(quantity) / config.UNIT
+            return quantity.quantize(config.EIGHT).normalize()
+        else:
+            return int(D(quantity) * config.UNIT)
     else:
-        return int(D(quantity) * config.UNIT)
+        return int(D(quantity))
 
 def get_debits (db, address=None, asset=None):
     """This does not include BTC."""
