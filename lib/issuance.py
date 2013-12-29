@@ -16,7 +16,7 @@ def create (db, source, asset, amount, divisible, test=False):
     issuances = util.get_issuances(db, validity='Valid', asset=asset)
     if issuances:
         if issuances[0]['issuer'] != source:
-            raise exceptions.IssuanceError('Asset exists and was not issuanced by this address.')
+            raise exceptions.IssuanceError('Asset exists and was not issued by this address.')
         if issuances[0]['divisible'] != divisible:
             raise exceptions.IssuanceError('That asset exists with a different divisibility.')
 
@@ -56,8 +56,8 @@ def parse (db, tx, message):
         issuances = util.get_issuances(db, validity='Valid', asset=asset)
         if issuances:
             if issuances[0]['issuer'] != tx['source']:
-                validity = 'Invalid: that asset already exists and was not issuanced by this address'
-            if validity == 'Valid' and issuance['divisible'] != divisible:
+                validity = 'Invalid: that asset already exists and was not issued by this address'
+            if validity == 'Valid' and issuances[0]['divisible'] != divisible:
                 validity = 'Invalid: asset exists with a different divisibility'
 
     # Credit.

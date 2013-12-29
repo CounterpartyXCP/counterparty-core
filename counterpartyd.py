@@ -148,9 +148,9 @@ def format_order (order):
     price_assets = get_asset + '/' + give_asset
 
     if order['fee_required']:
-        fee = str(order['fee_required'] / config.UNIT) + ' BTC (required)'
+        fee = str(order['fee_required'] / config.UNIT)
     else:
-        fee = str(order['fee_provided'] / config.UNIT) + ' BTC (provided)'
+        fee = str(order['fee_provided'] / config.UNIT)
 
     return [give_remaining, give_asset, get_remaining, get_asset, price, price_assets, fee, util.get_time_left(order), util.short(order['tx_hash'])]
 
@@ -395,11 +395,11 @@ if __name__ == '__main__':
         get_asset = args.get_asset
 
         # Fee argument is either fee_required or fee_provided, as necessary.
-        if not give_asset:
+        if give_asset == 'BTC':
             fee_provided = round(D(args.fee) * config.UNIT)
             assert fee_provided >= config.MIN_FEE
             fee_required = 0
-        elif not get_asset:
+        elif get_asset == 'BTC':
             fee_required = round(D(args.fee) * config.UNIT)
             assert fee_required >= config.MIN_FEE
             fee_provided = config.MIN_FEE

@@ -109,9 +109,9 @@ def parse (db, tx, message):
         give_amount = util.devise(db, give_amount, give_asset, 'output')
         get_amount = util.devise(db, get_amount, get_asset, 'output')
 
-        if not give_asset:
+        if give_asset != 'BTC':
             fee_text = 'with a provided fee of ' + str(tx['fee'] / config.UNIT) + ' BTC '
-        elif not get_asset:
+        elif get_asset != 'BTC':
             fee_text = 'with a required fee of ' + str(fee_required / config.UNIT) + ' BTC '
         else:
             fee_text = ''
