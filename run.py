@@ -19,8 +19,8 @@ if os.name == "posix" and not any(["data-dir" in e for e in args]):
     
 base_path = os.path.dirname(os.path.realpath(sys.argv[0]))
 env_path = os.path.join(base_path, "env")
-python_path = os.path.join(env_path, "bin", "python.exe" if os.name == "nt" else "python3")
-pytest_path = os.path.join(env_path, "bin", "py.test.exe" if os.name == "nt" else "pytest")
+python_path = os.path.join(env_path, "Scripts" if os.name == "nt" else "bin", "python.exe" if os.name == "nt" else "python3")
+pytest_path = os.path.join(env_path, "Scripts" if os.name == "nt" else "bin", "py.test.exe" if os.name == "nt" else "pytest")
 counterparty_path = os.path.join(base_path, "counterpartyd.py")
 cmd_prefix = ""
 if os.name == "posix":
