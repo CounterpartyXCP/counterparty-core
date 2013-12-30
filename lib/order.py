@@ -117,7 +117,7 @@ def parse (db, tx, message):
             fee_text = 'with a required fee of ' + str(fee_required / config.UNIT) + ' BTC '
         else:
             fee_text = ''
-        display_price = D(get_amount / give_amount).quantize(config.FOUR).normalize()
+        display_price = util.devise(db, get_amount / give_amount, 'price', dest='output')
         logging.info('Order: sell {} {} for {} {} at {} {}/{} in {} blocks {}({})'.format(give_amount, give_asset, get_amount, get_asset, display_price, get_asset, give_asset, expiration, fee_text, util.short(tx['tx_hash'])))
         match(db, tx)
 
@@ -160,7 +160,7 @@ def match (db, tx):
             forward_unit = util.devise(db, 1, forward_asset, 'output')
             backward_unit = util.devise(db, 1, backward_asset, 'output')
 
-            logging.info('Order Match: {} {} for {} {} at {} {}/{} ({})'.format(D(forward_amount * forward_unit).quantize(config.EIGHT).normalize(), forward_asset, D(backward_amount * backward_unit).quantize(config.EIGHT).normalize(), backward_asset, D(tx0['price']).quantize(config.FOUR).normalize(), backward_asset, forward_asset, util.short(order_match_id)))
+            logging.info('Order Match: {} {} for {} {} at {} {}/{} ({})'.format(util.devise(db, forward_amount * forward_unit, None, None), forward_asset, util.devise(db, backward_amount * backward_unit, None, None), backward_asset, util.devise(db, tx0['price'], 'price', 'output'), backward_asset, forward_asset, util.short(order_match_id)))
 
             if 'BTC' in (tx1['give_asset'], tx1['get_asset']):
                 validity = 'Valid: awaiting BTC payment'

@@ -6,8 +6,6 @@ D = decimal.Decimal
 
 # Units
 UNIT = 100000000    # The same across currencies.
-FOUR = D(10) ** -4
-EIGHT = D(10) ** -8
 
 # Versions
 VERSION = 1

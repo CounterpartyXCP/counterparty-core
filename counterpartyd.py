@@ -146,7 +146,7 @@ def format_order (order):
     give_asset = order['give_asset']
     get_asset = order['get_asset']
 
-    price = D(get_remaining/ give_remaining).quantize(config.FOUR).normalize()
+    price = util.devise(db, get_remaining/ give_remaining, 'price')
     price_assets = get_asset + '/' + give_asset
 
     if order['fee_required']:
@@ -165,9 +165,9 @@ def format_bet (bet):
     if not bet['target_value']: target_value = None
     else: target_value = bet['target_value']
     if not bet['leverage']: leverage = None
-    else: leverage = D(D(bet['leverage']) / 5040).quantize(config.FOUR).normalize()
+    else: leverage = util.devise(db, D(bet['leverage']) / 5040, 'leverage')
 
-    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], bet['deadline'], target_value, leverage, str(wager_remaining / config.UNIT) + ' XCP', str(counterwager_remaining / config.UNIT) + ' XCP', odds.quantize(config.FOUR).normalize(), util.get_time_left(bet), util.short(bet['tx_hash'])]
+    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], bet['deadline'], target_value, leverage, str(wager_remaining / config.UNIT) + ' XCP', str(counterwager_remaining / config.UNIT) + ' XCP', util.devise(db, odds, 'odds'), util.get_time_left(bet), util.short(bet['tx_hash'])]
 
 def format_order_match (order_match):
     order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']

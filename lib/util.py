@@ -163,6 +163,14 @@ def last_issued (db):
 """
 
 def devise (db, quantity, asset, dest, divisible=None):
+    FOUR = D(10) ** -4
+    EIGHT = D(10) ** -8
+
+    quantity = D(quantity)
+
+    if asset in ('leverage', 'price', 'odds', 'value'):
+        return quantity.quantize(FOUR)
+
     if divisible == None:
         issuances = get_issuances(db, validity='Valid', asset=asset)
         if not issuances: raise exceptions.AssetError('No such asset.')
@@ -170,12 +178,14 @@ def devise (db, quantity, asset, dest, divisible=None):
 
     if divisible:
         if dest == 'output':
-            quantity = D(quantity) / config.UNIT
-            return quantity.quantize(config.EIGHT).normalize()
+            quantity = D(quantity / config.UNIT)
+            return quantity.quantize(EIGHT)
+        elif dest == 'input':
+            return round(quantity * config.UNIT)
         else:
-            return round(D(quantity) * config.UNIT)
+            return quantity.quantize(EIGHT)
     else:
-        return round(D(quantity))
+        return round(quantity)
 
 def get_debits (db, address=None, asset=None):
     """This does not include BTC."""

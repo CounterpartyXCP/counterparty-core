@@ -88,7 +88,7 @@ def parse (db, tx, message):
                   )
     
     if validity == 'Valid':
-        logging.info('Burn: {} BTC burned; {} XCP earned ({})'.format(burned / config.UNIT, earned / config.UNIT, util.short(tx['tx_hash'])))
+        logging.info('Burn: {} BTC burned; {} XCP earned ({})'.format(util.devise(db, burned, 'BTC', 'output'), util.devise(db, earned, 'XCP', 'output'), util.short(tx['tx_hash'])))
 
     burn_parse_cursor.close()
 

@@ -50,7 +50,7 @@ def create (db, source, feed_address, bet_type, deadline, wager_amount,
     if leverage != 5040 and bet_type in (2,3):   # Equal, NotEqual
         raise exceptions.UselessError('Leverage cannot be used with bet types Equal and NotEqual.')
     if leverage < 5040:
-        raise exceptions.UselessError('A leverage level less than 5040 (1:1) isn’t useful.')
+        raise exceptions.UselessError('Leverage level too low (less than 5040, which is 1:1).')
 
     if target_value and bet_type in (0,1):   # BullCFD, BearCFD
         raise exceptions.UselessError('CFDs have no target value.')
@@ -148,9 +148,9 @@ def parse (db, tx, message):
     if validity == 'Valid':
         placeholder = ''
         if target_value:    # 0.0 is not a valid target value.
-            placeholder = ' that ' + str(D(target_value).quantize(config.FOUR).normalize())
+            placeholder = ' that ' + str(util.devise(db, target_value, 'value', 'output'))
         if leverage:
-            placeholder += ', leveraged {}x'.format(str(D(leverage / 5040).quantize(config.FOUR).normalize()))
+            placeholder += ', leveraged {}x'.format(util.devise(db, leverage / 5040, 'leverage', 'output'))
         logging.info('Bet: {} on {} at {} for {} XCP against {} XCP in {} blocks{} ({})'.format(util.BET_TYPE_NAME[bet_type], feed_address, util.isodt(deadline), wager_amount / config.UNIT, counterwager_amount / config.UNIT, expiration, placeholder, util.short(tx['tx_hash'])))
         match(db, tx)
 
@@ -210,9 +210,9 @@ def match (db, tx):
 
             placeholder = ''
             if target_value:    # 0 is not a valid target value.
-                placeholder = ' that ' + str(D(target_value).quantize(config.FOUR).normalize())
+                placeholder = ' that ' + str(util.devise(db, target_value, 'value', 'output'))
             if leverage:
-                placeholder += ', leveraged {}x'.format(str(D(leverage / 5040).quantize(config.FOUR).normalize()))
+                placeholder += ', leveraged {}x'.format(util.devise(db, leverage / 5040, 'leverage', 'output'))
             logging.info('Bet Match: {} for {} XCP against {} for {} XCP on {} at {}{} ({})'.format(util.BET_TYPE_NAME[tx0['bet_type']], forward_amount / config.UNIT, util.BET_TYPE_NAME[tx1['bet_type']], backward_amount / config.UNIT, tx1['feed_address'], util.isodt(tx1['deadline']), placeholder, util.short(bet_match_id)))
 
             # Debit the order.

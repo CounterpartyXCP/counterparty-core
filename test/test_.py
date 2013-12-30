@@ -171,8 +171,10 @@ with open(CURR_DIR + '/output.json', 'r') as output_file:
     output = json.load(output_file)
 
 
-def test_initialise ():
+def test_start ():
     logging.info('START TEST')
+
+def test_initialise ():
     blocks.initialise(db)
 
 def test_burn ():
