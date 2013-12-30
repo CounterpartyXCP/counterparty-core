@@ -57,7 +57,7 @@ def create (db, source, feed_address, bet_type, deadline, wager_amount,
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, bet_type, deadline, 
-                        int(wager_amount), int(counterwager_amount), target_value, int(leverage),
+                        wager_amount, counterwager_amount, target_value, leverage,
                         expiration)
 
     return bitcoin.transaction(source, feed_address, config.DUST_SIZE,
@@ -104,8 +104,8 @@ def parse (db, tx, message):
         fee_multiplier = get_fee_multiplier(db, feed_address)
         validity = util.debit(db, tx['source'], 'XCP', round(wager_amount * (1 + fee_multiplier)))
 
-        wager_amount = int(wager_amount)
-        counterwager_amount = int(counterwager_amount)
+        wager_amount = round(wager_amount)
+        counterwager_amount = round(counterwager_amount)
         odds = wager_amount / counterwager_amount
     else:
         odds = 0
@@ -204,7 +204,7 @@ def match (db, tx):
             fee = get_fee_multiplier(db, tx1['feed_address']) * backward_amount
             validity = util.debit(db, tx1['source'], 'XCP', round(fee))
             if validity != 'Valid': continue
-            util.credit(db, tx1['feed_address'], 'XCP', int(fee))
+            util.credit(db, tx1['feed_address'], 'XCP', round(fee))
 
             bet_match_id = tx0['tx_hash'] + tx1['tx_hash']
 
@@ -216,18 +216,18 @@ def match (db, tx):
             logging.info('Bet Match: {} for {} XCP against {} for {} XCP on {} at {}{} ({})'.format(util.BET_TYPE_NAME[tx0['bet_type']], forward_amount / config.UNIT, util.BET_TYPE_NAME[tx1['bet_type']], backward_amount / config.UNIT, tx1['feed_address'], util.isodt(tx1['deadline']), placeholder, util.short(bet_match_id)))
 
             # Debit the order.
-            wager_remaining -= backward_amount
+            wager_remaining = round(wager_remaining - backward_amount)
 
             # Update wager_remaining.
             bet_match_cursor.execute('''UPDATE bets \
                               SET wager_remaining=? \
                               WHERE tx_hash=?''',
-                          (int(tx0['wager_remaining'] - forward_amount),
+                          (tx0['wager_remaining'] - forward_amount,
                            tx0['tx_hash']))
             bet_match_cursor.execute('''UPDATE bets \
                               SET wager_remaining=? \
                               WHERE tx_hash=?''',
-                          (int(wager_remaining),
+                          (wager_remaining,
                            tx1['tx_hash']))
 
             # Get last value of feed.
@@ -268,8 +268,8 @@ def match (db, tx):
                                 tx1['deadline'],
                                 tx1['target_value'],
                                 tx1['leverage'],
-                                int(forward_amount),
-                                int(backward_amount),
+                                forward_amount,
+                                backward_amount,
                                 tx0['block_index'],
                                 tx1['block_index'],
                                 tx0['expiration'],
@@ -301,7 +301,12 @@ def expire (db, block_index):
                 bet_expire_match_cursor.execute('''UPDATE bet_matches \
                                               SET validity=? \
                                               WHERE (tx0_hash=? AND tx1_hash=?)''', ('Invalid: expired awaiting broadcast', bet_match['tx0_hash'], bet_match['tx1_hash'])
-                                          )
+                                             )
+                util.credit(db, bet_match['tx0_address'], 'XCP',
+                            bet_match['forward_amount'])
+                util.credit(db, bet_match['tx1_address'], 'XCP',
+                            bet_match['backward_amount'])
+                logging.info('Expired Bet Match: {}'.format(util.short(bet_match['tx0_hash'] + bet_match['tx1_hash'])))
 
     bet_expire_match_cursor.close()
 

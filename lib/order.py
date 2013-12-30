@@ -29,7 +29,7 @@ def create (db, source, give_asset, give_amount, get_asset, get_amount, expirati
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, give_id, give_amount, get_id, get_amount,
                         expiration, fee_required)
-    return bitcoin.transaction(source, None, None, int(fee_provided), data, test)
+    return bitcoin.transaction(source, None, None, fee_provided, data, test)
 
 def parse (db, tx, message):
     order_parse_cursor = db.cursor()
@@ -174,18 +174,18 @@ def match (db, tx):
 
             # Debit the order, even if it involves giving bitcoins, and so one
             # can’t debit the sending account.
-            give_remaining -= backward_amount
+            give_remaining = round(give_remaining - backward_amount)
 
             # Update give_remaining.
             order_match_cursor.execute('''UPDATE orders \
                               SET give_remaining=? \
                               WHERE tx_hash=?''',
-                          (int(tx0['give_remaining'] - forward_amount),
+                          (tx0['give_remaining'] - forward_amount,
                            tx0['tx_hash']))
             order_match_cursor.execute('''UPDATE orders \
                               SET give_remaining=? \
                               WHERE tx_hash=?''',
-                          (int(give_remaining),
+                          (give_remaining,
                            tx1['tx_hash']))
 
             # Record order match.
@@ -212,9 +212,9 @@ def match (db, tx):
                                 tx1['tx_hash'],
                                 tx1['source'],
                                 forward_asset,
-                                int(forward_amount),
+                                forward_amount,
                                 backward_asset,
-                                int(backward_amount),
+                                backward_amount,
                                 tx0['block_index'],
                                 tx1['block_index'],
                                 tx0['expiration'],

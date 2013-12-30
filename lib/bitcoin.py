@@ -73,7 +73,7 @@ def base58_decode (s, version):
     addrbyte, data, chk0 = k[0:1], k[1:-4], k[-4:]
     chk1 = dhash(addrbyte + data)[:4]
     if chk0 != chk1:
-        raise exceptions.Base58ChecksumError('Checksum mismatch: %r ≠ %r' % (chk0, ch1))
+        raise exceptions.Base58ChecksumError('Checksum mismatch: %r ≠ %r' % (chk0, chk1))
     return data
 
 def var_int (i):
@@ -185,7 +185,7 @@ def get_inputs (source, total_btc_out, test=False):
     inputs, total_btc_in = [], 0
     for coin in unspent:                                                      
         inputs.append(coin)
-        total_btc_in += int(coin['amount'] * config.UNIT)
+        total_btc_in += round(coin['amount'] * config.UNIT)
         if total_btc_in >= total_btc_out:
             return inputs, total_btc_in
     return None, None

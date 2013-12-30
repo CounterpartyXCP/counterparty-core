@@ -29,7 +29,7 @@ def create (db, source, quantity, test=False):
         
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, 'ProofOfBurn'.encode('utf-8'))
-    return bitcoin.transaction(source, None, None, int(quantity), data, test)
+    return bitcoin.transaction(source, None, None, round(quantity), data, test)
 
 def parse (db, tx, message):
     burn_parse_cursor = db.cursor()
@@ -45,7 +45,7 @@ def parse (db, tx, message):
     if validity == 'Valid' and hidden_message[0].decode('utf-8') != 'ProofOfBurn':
         validity = 'Invalid: secret message not found'
 
-    burned = int(tx['fee'])
+    burned = round(tx['fee'])
 
     # Check that a maximum of 1 BTC total is burned per address.
     burns = util.get_burns(db, validity='Valid', address=tx['source'])
@@ -63,7 +63,7 @@ def parse (db, tx, message):
     total_time = D(config.BURN_END - config.BURN_START)
     partial_time = D(config.BURN_END - tx['block_index'])
     multiplier = 100 * (1 + (partial_time / total_time))
-    earned = burned * int(multiplier)
+    earned = round(burned * multiplier)
  
     # Credit source address with earned XCP.
     if validity == 'Valid':

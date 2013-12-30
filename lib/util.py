@@ -11,7 +11,7 @@ D = decimal.Decimal
 
 from . import (config, exceptions, bitcoin)
 
-b49_digits = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 # Obsolete in Python 3.4, with enum module.
 BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
@@ -42,7 +42,7 @@ def valid_asset_name (asset_name):
     if asset_name in ('BTC', 'XCP'): return True
     if len(asset_name) < 4: return False
     for c in asset_name:
-        if c not in b49_digits:
+        if c not in b26_digits:
             return False
     return True
 
@@ -51,18 +51,18 @@ def get_asset_id (asset):
     if asset == 'BTC': return 0
     elif asset == 'XCP': return 1
 
-    # Convert the base49 string to an integer.
+    # Convert the Base 26 string to an integer.
     n = 0
     s = asset
     for c in s:
-        n *= 49
-        if c not in b49_digits:
-            raise exceptions.InvalidBase49Error('Not a valid base49 character:', c)
-        digit = b49_digits.index(c)
+        n *= 26
+        if c not in b26_digits:
+            raise exceptions.InvalidBase26Error('Not an uppercase ASCII character:', c)
+        digit = b26_digits.index(c)
         n += digit
 
     # Minimum of four letters long.
-    if not n > 49**3:
+    if not n > 26**3:
         raise exceptions.AssetError('Invalid asset name.')
     return n
 
@@ -71,14 +71,14 @@ def get_asset_name (asset_id):
     elif asset_id == 1: return 'XCP'
 
     # Minimum of four letters long.
-    if not asset_id > 49**3:
+    if not asset_id > 26**3:
         raise exceptions.AssetError('Invalid asset name.')
-    # Divide that integer into base49 string.
+    # Divide that integer into Base 26 string.
     res = []
     n = asset_id
     while n > 0:
-        n, r = divmod (n, 49)
-        res.append(b49_digits[r])
+        n, r = divmod (n, 26)
+        res.append(b26_digits[r])
     asset = ''.join(res[::-1])
     if not valid_asset_name(asset): raise exceptions.AssetError('Invalid asset name.')
     return asset
@@ -102,7 +102,7 @@ def debit (db, address, asset, amount):
         debit_cursor.execute('''UPDATE balances \
                           SET amount=? \
                           WHERE (address=? and asset=?)''',
-                       (int(old_balance - amount), address, asset)) 
+                       (round(old_balance - amount), address, asset)) 
         validity = 'Valid'
     else:
         validity = 'Invalid: insufficient funds'
@@ -173,9 +173,9 @@ def devise (db, quantity, asset, dest, divisible=None):
             quantity = D(quantity) / config.UNIT
             return quantity.quantize(config.EIGHT).normalize()
         else:
-            return int(D(quantity) * config.UNIT)
+            return round(D(quantity) * config.UNIT)
     else:
-        return int(D(quantity))
+        return round(D(quantity))
 
 def get_debits (db, address=None, asset=None):
     """This does not include BTC."""

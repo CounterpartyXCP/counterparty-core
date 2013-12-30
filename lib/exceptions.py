@@ -34,7 +34,7 @@ class InvalidAddressError (Exception):
 class InvalidOrderMatchError (Exception):
     pass
 
-class Base49Error (Exception):
+class Base26Error (Exception):
     pass
 class Base58Error (Exception):
     pass

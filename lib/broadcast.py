@@ -103,6 +103,10 @@ def parse (db, tx, message):
             suffix = ' from ' + tx['source'] + ' at ' + util.isodt(timestamp) + ' (' + util.short(tx['tx_hash']) + ')'
             logging.info('Broadcast: {}'.format(infix + suffix))
 
+    # Null values are special.
+    if not value:
+        broadcast_parse_cursor.close()
+        return
 
     # Handle bet matches that use this feed.
     broadcast_parse_cursor.execute('''SELECT * FROM bet_matches \
