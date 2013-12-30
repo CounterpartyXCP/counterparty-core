@@ -179,7 +179,9 @@ def get_inputs (source, total_btc_out, test=False):
     if not test:
         listunspent = rpc('listunspent', [-1])['result']  # NOTE: Reconsider this. (Will this only allow sending unconfirmed *change*?!)
     else:
-        with open('test/listunspent.test.json', 'r') as listunspent_test_file:   # HACK
+        import os
+        CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
+        with open(CURR_DIR + '/../test/listunspent.test.json', 'r') as listunspent_test_file:   # HACK
             listunspent = json.load(listunspent_test_file)
     unspent = [coin for coin in listunspent if coin['address'] == source]
     inputs, total_btc_in = [], 0

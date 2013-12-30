@@ -11,18 +11,14 @@ import decimal
 D = decimal.Decimal
 import difflib
 import json
+import inspect
 
 import os
 import sys
-CWD = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
-sys.path.append(os.path.normpath(os.path.join(CWD, '..')))
+CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
+sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 from lib import (config, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, util)
-
-logging.basicConfig(filename='/tmp/counterparty.test.log', level=logging.INFO,
-                        format='%(message)s')
-requests_log = logging.getLogger("requests")
-requests_log.setLevel(logging.WARNING)
 
 # JSON‐RPC Options
 CONFIGFILE = os.path.expanduser('~') + '/.bitcoin/bitcoin.conf'
@@ -49,10 +45,8 @@ bitcoin.conf in ~/.bitcoin/bitcoin.conf')
 config.RPC = 'http://'+config.RPCUSER+':'+config.RPCPASSWORD+'@'+config.RPCCONNECT+':'+config.RPCPORT
 
 config.DATABASE = '/tmp/counterparty.test.db'
-try:
-    os.remove(config.DATABASE)
-except:
-    pass
+try: os.remove(config.DATABASE)
+except: pass
 db = sqlite3.connect(config.DATABASE)
 db.row_factory = sqlite3.Row
 
@@ -75,6 +69,9 @@ fee_multiplier_default = round(D(.05) * D(1e8))
 # Each tx has a block_index equal to its tx_index
 
 print('Run `test.py` with `py.test test.py`.')
+
+
+
 
 def check_balance():
     balances = util.get_balances(db)
@@ -158,16 +155,19 @@ def get_tx_data (tx_hex):
 
 
 
-
-
 def setup_function(function):
     global db
 
+# Logs.
+try: os.remove(CURR_DIR + '/log.new')
+except: pass
+logging.basicConfig(filename=CURR_DIR + '/log.new', level=logging.INFO, format='%(message)s')
+requests_log = logging.getLogger("requests")
+requests_log.setLevel(logging.WARNING)
 
-import inspect
-
+# Output.
 output_new = {}
-with open(CWD + '/output.json', 'r') as output_file:
+with open(CURR_DIR + '/output.json', 'r') as output_file:
     output = json.load(output_file)
 
 
@@ -177,40 +177,43 @@ def test_initialise ():
 
 def test_burn ():
     unsigned_tx_hex = burn.create(db, source_default, quantity, test=True)
-    output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
     tx_insert(source_default, destination, btc_amount, quantity, data)
 
     parse_tx(tx_index - 1, data, burn.parse)
 
+    output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_send ():
     unsigned_tx_hex = send.create(db, source_default, destination_default, small, 'XCP', test=True)
-    output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
     tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
 
     parse_tx(tx_index - 1, data, send.parse)
 
+    output_new[inspect.stack()[0][3]] = unsigned_tx_hex
+
 def test_order_buy_xcp ():
     unsigned_tx_hex = order.create(db, source_default, 'BTC', small, 'XCP', small * 2, expiration, 0, fee_provided, test=True)
-    output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
     tx_insert(source_default, destination, btc_amount, fee_provided, data)
 
     parse_tx(tx_index - 1, data, order.parse)
 
+    output_new[inspect.stack()[0][3]] = unsigned_tx_hex
+
 def test_order_sell_xcp ():
     unsigned_tx_hex = order.create(db, source_default, 'XCP', round(small * 2.1), 'BTC', small, expiration, fee_required, 0, test=True)
-    output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
     tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
 
     parse_tx(tx_index - 1, data, order.parse)
+
+    output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_btcpay ():
     order_match_id = 'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5'
@@ -227,148 +230,130 @@ def test_issuance_divisible ():
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
     tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
+
     parse_tx(tx_index - 1, data, issuance.parse)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_issuance_indivisible ():
-    
     unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBC', round(quantity / 1000), False, test=True)
-    fee = config.MIN_FEE
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, fee, data)
+    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
     parse_tx(tx_index - 1, data, issuance.parse)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_dividend_divisible ():
-    
     unsigned_tx_hex = dividend.create(db, source_default, 6, 'BBBB', test=True)
-    fee = config.MIN_FEE
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, fee, data)
+    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
     parse_tx(tx_index - 1, data, dividend.parse)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_dividend_indivisible ():
-    
     unsigned_tx_hex = dividend.create(db, source_default, 8, 'BBBC', test=True)
-    fee = config.MIN_FEE
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, fee, data)
+    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
     parse_tx(tx_index - 1, data, dividend.parse)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_broadcast_initial ():
     unsigned_tx_hex = broadcast.create(db, source_default, 1388000000, 100, fee_multiplier_default, 'Unit Test', test=True)
-    fee = config.MIN_FEE
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, fee, data)
+    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
     parse_tx(tx_index - 1, data, broadcast.parse)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_bet_bullcfd_to_be_liquidated ():
     unsigned_tx_hex = bet.create(db, source_default, source_default, 0, 1388000100, small, round(small / 2), 0.0, 15120, expiration, test=True)
-    fee = config.MIN_FEE
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, fee, data)
+    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
     parse_tx(tx_index - 1, data, bet.parse)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_bet_bearcfd_to_be_liquidated ():
     unsigned_tx_hex = bet.create(db, source_default, source_default, 1, 1388000100, round(small / 2), round(small * 1.2), 0.0, 15120, expiration, test=True)
-    fee = config.MIN_FEE
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, fee, data)
+    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
     parse_tx(tx_index - 1, data, bet.parse)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_bet_bullcfd_to_be_settled ():
     unsigned_tx_hex = bet.create(db, source_default, source_default, 0, 1388000100, small * 3, small * 7, 0.0, 5040, expiration, test=True)
-    fee = config.MIN_FEE
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, fee, data)
+    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
     parse_tx(tx_index - 1, data, bet.parse)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_bet_bearcfd_to_be_settled ():
     unsigned_tx_hex = bet.create(db, source_default, source_default, 1, 1388000100, small * 7, small * 3, 0.0, 5040, expiration, test=True)
-    fee = config.MIN_FEE
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, fee, data)
+    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
     parse_tx(tx_index - 1, data, bet.parse)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_bet_equal ():
     unsigned_tx_hex = bet.create(db, source_default, source_default, 2, 1388000200, small * 15, small * 13, 1, 5040, expiration, test=True)
-    fee = config.MIN_FEE
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, fee, data)
+    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
     parse_tx(tx_index - 1, data, bet.parse)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_bet_notequal ():
     unsigned_tx_hex = bet.create(db, source_default, source_default, 3, 1388000200, small * 13, small * 15, 1, 5040, expiration, test=True)
-    fee = config.MIN_FEE
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, fee, data)
+    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
     parse_tx(tx_index - 1, data, bet.parse)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_broadcast_liquidate ():
-    
     unsigned_tx_hex = broadcast.create(db, source_default, 1388000050, round(100 - (.05 / 3) - .00001, 5), fee_multiplier_default, 'Unit Test', test=True)
-    fee = config.MIN_FEE
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, fee, data)
+    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
     parse_tx(tx_index - 1, data, broadcast.parse)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_broadcast_settle ():
-    
     unsigned_tx_hex = broadcast.create(db, source_default, 1388000101, 100.443, fee_multiplier_default, 'Unit Test', test=True)
-    fee = config.MIN_FEE
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, fee, data)
+    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
     parse_tx(tx_index - 1, data, broadcast.parse)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_broadcast_equal ():
-    
     unsigned_tx_hex = broadcast.create(db, source_default, 1388000201, 2, fee_multiplier_default, 'Unit Test', test=True)
-    fee = config.MIN_FEE
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, fee, data)
+    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
     parse_tx(tx_index - 1, data, broadcast.parse)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
+
 def test_parse_from_the_start():
-    
     blocks.initialise(db)
     for i in range(tx_index):
         blocks.parse_block(db, i)
@@ -376,25 +361,30 @@ def test_parse_from_the_start():
     # Check balances of source_default.
     output_new['get_balances'] = util.get_balances(db, address=source_default)
 
-
-def test_db_dump():
-    with open(CWD + '/db.dump', 'r') as f:
-        good_data = f.readlines()
-
-    # Hacky
-    with open(CWD + '/db.new.dump', 'w') as f:
-        f.write('\n'.join(list(db.iterdump())) + '\n')
-    with open(CWD + '/db.new.dump', 'r') as f:
-        new_data = f.readlines()
-
-    lines = list(difflib.unified_diff(good_data, new_data, n=0))
-    assert not len(lines)
-
 def test_get_address():
     output_new['get_address'] = util.get_address(db, source_default)
 
+def test_stop():
+    logging.info('STOP TEST')
+
+
+
+
+def test_db():
+    with open(CURR_DIR + '/db.dump', 'r') as f:
+        good_data = f.readlines()
+
+    # Hack
+    with open(CURR_DIR + '/db.new.dump', 'w') as f:
+        f.write('\n'.join(list(db.iterdump())) + '\n')
+    with open(CURR_DIR + '/db.new.dump', 'r') as f:
+        new_data = f.readlines()
+
+    db_diff = list(difflib.unified_diff(good_data, new_data, n=0))
+    assert not len(db_diff)
+
 def test_output():
-    with open(CWD + '/output.new.json', 'w') as output_new_file:
+    with open(CURR_DIR + '/output.new.json', 'w') as output_new_file:
         json.dump(output_new, output_new_file, sort_keys=True, indent=4)
     for key in output_new.keys():
         try:
@@ -407,7 +397,16 @@ def test_output():
             print(output_new[key])
             raise Exception
 
-# TODO: Test log output.
+def test_log():
+    with open(CURR_DIR + '/log', 'r') as f:
+        old_log = f.readlines()
+    with open(CURR_DIR + '/log.new', 'r') as f:
+        new_log = f.readlines()
+
+    log_diff = list(difflib.unified_diff(old_log, new_log, n=0))
+    print(log_diff)
+    assert not len(log_diff)
+
 
 
 def test_base58_decode():
@@ -422,10 +421,14 @@ def test_base58_decode():
     assert binascii.hexlify(pubkeyhash).decode('utf-8') == '010966776006953D5567439E5E39F86A0D273BEE'.lower()
     assert len(pubkeyhash) == 20
 
-    logging.info('STOP TEST')
 
-
-
+"""
+Too small:
+util.short()
+util.isodt()
+util.devise()
+bet.get_fee_multiplier()
+"""
 
 
 """
@@ -438,8 +441,6 @@ expire bet matches
 cancelling bets, orders
 
 follow()
-short (string)
-isodt (epoch_time)
 
 get_time_left (unmatched)
 get_order_match_time_left (matched)
@@ -449,9 +450,6 @@ get_asset_name (asset)
 debit (db, address, asset, amount)
 credit (db, address, asset, amount)
 
-devise (quantity, asset, precision=8)
-
-get_fee_multiplier (feed_address)
 bet_match (db, tx)
 order_match (db, tx)
 get_tx_info (tx)

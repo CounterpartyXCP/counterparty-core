@@ -26,7 +26,7 @@ from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
 
-def watch (give_asset, get_asset):
+def market (give_asset, get_asset):
     os.system('cls' if os.name=='nt' else 'clear')
 
     # Open orders.
@@ -261,9 +261,9 @@ if __name__ == '__main__':
     parser_asset = subparsers.add_parser('asset', help='display the basic properties of a Counterparty asset')
     parser_asset.add_argument('asset', metavar='ASSET', help='the asset you are interested in')
 
-    parser_watch = subparsers.add_parser('market', help='fill the screen with an always up‐to‐date summary of the Counterparty market')
-    parser_watch.add_argument('--give-asset', metavar='GIVE_ASSET', help='limit orders listed to those selling GIVE_ASSET')
-    parser_watch.add_argument('--get-asset', metavar='GET_ASSET', help='limit orders listed to those buying GET_ASSET')
+    parser_market = subparsers.add_parser('market', help='fill the screen with an always up‐to‐date summary of the Counterparty market')
+    parser_market.add_argument('--give-asset', metavar='GIVE_ASSET', help='limit orders listed to those selling GIVE_ASSET')
+    parser_market.add_argument('--get-asset', metavar='GET_ASSET', help='limit orders listed to those buying GET_ASSET')
 
     args = parser.parse_args()
 
@@ -483,9 +483,9 @@ if __name__ == '__main__':
         print('Divisible:', bool(issuances[-1]['divisible']))
         print('Issuer:', issuances[-1]['issuer']) # Issuer of last issuance.
 
-    elif args.action == 'watch':
+    elif args.action == 'market':
         while True:
-            watch(args.give_asset, args.get_asset)
+            market(args.give_asset, args.get_asset)
            
     elif args.action == 'help':
         parser.print_help()

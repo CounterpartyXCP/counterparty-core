@@ -1,0 +1,67 @@
+START TEST
+Burn: 1.0 BTC burned; 200.0 XCP earned (6e340b9c…17afa01d)
+Send: 0.05 of asset XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 (4bf5122f…7785459a)
+Order: sell 0.05 BTC for 0.1 XCP at 2 XCP/BTC in 10 blocks with a provided fee of 0.01 BTC (dbc1b4c9…6457d986)
+Order: sell 0.105 XCP for 0.05 BTC at 0.4762 BTC/XCP in 10 blocks with a required fee of 0.009 BTC (084fed08…adff29c5)
+Order Match: 0.05 BTC for 0.1 XCP at 2 XCP/BTC (dbc1b4c900ffe48d…11b65a9aadff29c5)
+BTC Payment for Order Match: dbc1b4c900ffe48d…11b65a9aadff29c5 (e52d9c50…81c89e71)
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 1E+1 of divisible asset BBBB (e77b9a9a…5ab743db)
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 1E+5 of indivisible asset BBBC (67586e98…08c5ecf6)
+Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 6e-08 per share of asset BBBB (ca358758…005ee879)
+Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 8e-08 per share of asset BBBC (beead779…8dc1829a)
+Broadcast: ‘Unit Test = 100.0’ from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:33:20-05:00 (2b4c342f…651c3cb9)
+Bet: BullCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 0.05 XCP against 0.025 XCP in 10 blocks, leveraged 3x (01ba4719…daca546b)
+Bet: BearCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 0.025 XCP against 0.06 XCP in 10 blocks, leveraged 3x (e7cf46a0…4b7cc3a6)
+Bet: BullCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 0.15 XCP against 0.35 XCP in 10 blocks, leveraged 1x (ef6cbd21…9b44c977)
+Bet: BearCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 0.35 XCP against 0.15 XCP in 10 blocks, leveraged 1x (9d1e0e2d…113599c4)
+Bet Match: BullCFD for 0.15 XCP against BearCFD for 0.35 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00, leveraged 1x (ef6cbd2161eaea79…f30eba2e113599c4)
+Bet: Equal on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 for 0.75 XCP against 0.65 XCP in 10 blocks that 1, leveraged 1x (4d7b3ef7…9a0d0f47)
+Bet: NotEqual on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 for 0.65 XCP against 0.75 XCP in 10 blocks that 1, leveraged 1x (dc0e9c36…e30f8cb8)
+Broadcast: ‘Unit Test = 99.98332’ from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:34:10-05:00 (c555eab4…89b88ee3)
+Broadcast: ‘Unit Test = 100.443’ from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:01-05:00 (4a64a107…1d4ea80a)
+Contract Force‐Liquidated: 0.5 XCP credited to the bull, and 0 XCP credited to the bear (ef6cbd2161eaea79…f30eba2e113599c4)
+Broadcast: ‘Unit Test = 2.0’ from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:41-05:00 (f299791c…e91e750c)
+Block: 0
+Burn: 1.0 BTC burned; 200.0 XCP earned (6e340b9c…17afa01d)
+Block: 1
+Send: 0.05 of asset XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 (4bf5122f…7785459a)
+Block: 2
+Order: sell 0.05 BTC for 0.1 XCP at 2 XCP/BTC in 10 blocks with a provided fee of 0.01 BTC (dbc1b4c9…6457d986)
+Block: 3
+Order: sell 0.105 XCP for 0.05 BTC at 0.4762 BTC/XCP in 10 blocks with a required fee of 0.009 BTC (084fed08…adff29c5)
+Order Match: 0.05 BTC for 0.1 XCP at 2 XCP/BTC (dbc1b4c900ffe48d…11b65a9aadff29c5)
+Block: 4
+BTC Payment for Order Match: dbc1b4c900ffe48d…11b65a9aadff29c5 (e52d9c50…81c89e71)
+Block: 5
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 1E+1 of divisible asset BBBB (e77b9a9a…5ab743db)
+Block: 6
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 1E+5 of indivisible asset BBBC (67586e98…08c5ecf6)
+Block: 7
+Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 6e-08 per share of asset BBBB (ca358758…005ee879)
+Block: 8
+Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 8e-08 per share of asset BBBC (beead779…8dc1829a)
+Block: 9
+Broadcast: ‘Unit Test = 100.0’ from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:33:20-05:00 (2b4c342f…651c3cb9)
+Block: 10
+Bet: BullCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 0.05 XCP against 0.025 XCP in 10 blocks, leveraged 3x (01ba4719…daca546b)
+Block: 11
+Bet: BearCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 0.025 XCP against 0.06 XCP in 10 blocks, leveraged 3x (e7cf46a0…4b7cc3a6)
+Block: 12
+Bet: BullCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 0.15 XCP against 0.35 XCP in 10 blocks, leveraged 1x (ef6cbd21…9b44c977)
+Block: 13
+Expired order: dbc1b4c9…6457d986
+Bet: BearCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 0.35 XCP against 0.15 XCP in 10 blocks, leveraged 1x (9d1e0e2d…113599c4)
+Bet Match: BullCFD for 0.15 XCP against BearCFD for 0.35 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00, leveraged 1x (ef6cbd2161eaea79…f30eba2e113599c4)
+Block: 14
+Expired order: 084fed08…adff29c5
+Bet: Equal on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 for 0.75 XCP against 0.65 XCP in 10 blocks that 1, leveraged 1x (4d7b3ef7…9a0d0f47)
+Block: 15
+Bet: NotEqual on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 for 0.65 XCP against 0.75 XCP in 10 blocks that 1, leveraged 1x (dc0e9c36…e30f8cb8)
+Block: 16
+Broadcast: ‘Unit Test = 99.98332’ from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:34:10-05:00 (c555eab4…89b88ee3)
+Block: 17
+Broadcast: ‘Unit Test = 100.443’ from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:01-05:00 (4a64a107…1d4ea80a)
+Contract Force‐Liquidated: 0.5 XCP credited to the bull, and 0 XCP credited to the bear (ef6cbd2161eaea79…f30eba2e113599c4)
+Block: 18
+Broadcast: ‘Unit Test = 2.0’ from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:41-05:00 (f299791c…e91e750c)
+STOP TEST
