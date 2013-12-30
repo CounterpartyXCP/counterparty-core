@@ -1,7 +1,7 @@
 Counterparty
 ============
 
-Counterparty is a protocol for the creation and use of decentralised financial instruments such as asset exchanges, contracts for difference and dividend payments.
+Counterparty is a protocol for the creation and use of decentralised financial instruments such as asset exchanges, contracts for difference and dividend payments. It uses Bitcoin as a transport layer.
 
 The contents of this repository, `counterpartyd`, constitute the reference implementation of the protocol.
 
