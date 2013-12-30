@@ -283,7 +283,7 @@ def test_bet_bullcfd_to_be_liquidated ():
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_bet_bearcfd_to_be_liquidated ():
-    unsigned_tx_hex = bet.create(db, source_default, source_default, 1, 1388000100, round(small / 2), round(small * 1.2), 0.0, 15120, expiration, test=True)
+    unsigned_tx_hex = bet.create(db, source_default, source_default, 1, 1388000100, round(small / 2), round(small * .83), 0.0, 15120, expiration, test=True)
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
     tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
@@ -364,7 +364,9 @@ def test_parse_from_the_start():
     output_new['get_balances'] = util.get_balances(db, address=source_default)
 
 def test_get_address():
-    output_new['get_address'] = util.get_address(db, source_default)
+    get_address = util.get_address(db, source_default)
+    for field in get_address:
+        output_new['get_address_' + field] = get_address[field]
 
 def test_stop():
     logging.info('STOP TEST')
