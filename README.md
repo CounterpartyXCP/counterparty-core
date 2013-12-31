@@ -12,7 +12,7 @@ The Counterparty protocol specification may be found at
 <https://github.com/PhantomPhreak/Counterparty>.
 
 # Dependencies
-* [python3](http://python.org)
+* [Python 3](http://python.org)
 * Python 3 packages: SQLite3, Requests, AppDirs, PrettyTable, ConfigParser,
   dateutil
 * Bitcoind
@@ -65,7 +65,7 @@ or open orders.
 For a summary of the command‐line arguments and options, see `python3
 counterpartyd.py --help`.
 
-## Display
+### Input and Output
 * Quantities of divisible assets are written to eight decimal places.
 * Quantities of indivisible assets are written as integers.
 * All other quantities, i.e. prices, odds, leverages, feed values and target
@@ -83,15 +83,15 @@ This should be running in the background. All other commands will fail if the in
 
 * Burn
 
-	python3 counterpartyd.py --testnet --rpc-password=PASSWORD burn --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity=.5
+	`python3 counterpartyd.py --testnet --rpc-password=PASSWORD burn --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity=.5`
 
 * Send divisible or indivisible assets
 
-	python3 counterpartyd.py --testnet --rpc-password=PASSWORD send --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity=3 --asset=BBBC --to=n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7
+	`python3 counterpartyd.py --testnet --rpc-password=PASSWORD send --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity=3 --asset=BBBC --to=n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7`
 
 * Buy BTC for XCP
 
-	python3 counterpartyd.py --testnet --rpc-password=PASSWORD order --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=BTC --give-quantity=20 --give-asset=XCP --expiration=10 --fee_provided=.001
+	`python3 counterpartyd.py --testnet --rpc-password=PASSWORD order --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=BTC --give-quantity=20 --give-asset=XCP --expiration=10 --fee_provided=.001`
 
 	* Buy BBBC for BTC: `python3 counterpartyd.py --testnet --rpc-password=PASSWORD order --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=BBBC --give-quantity=20 --give-asset=BTC --expiration=10 --fee_required.001`
 
