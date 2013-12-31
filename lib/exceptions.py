@@ -30,6 +30,8 @@ class IssuanceError (Exception):
 class UselessError (Exception):
     pass
 
+class FeeError (Exception):
+    pass
 class BalanceError (Exception):
     pass
 class AssetError (Exception):

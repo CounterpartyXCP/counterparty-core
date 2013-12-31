@@ -45,7 +45,7 @@ Functions
 
 Server
 """"""
-This must be running in the background.
+This should be running in the background. All other commands will fail if the index of the last block in the database is less than that of the last block seen by Bitcoind.
 
 Burn
 """"
@@ -58,7 +58,14 @@ Send
 
 Order
 """""
+* ``python3 counterpartyd.py --testnet --rpc-password=PASSWORD order --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=BTC --give-quantity=20 --give-asset=XCP --expiration=10 --fee_provided=.001``
+        * Buy BTC for XCP.
 
+* ``python3 counterpartyd.py --testnet --rpc-password=PASSWORD order --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=BBBC --give-quantity=20 --give-asset=BTC --expiration=10 --fee_required.001``
+        * Buy BBBC for BTC.
+
+* ``python3 counterpartyd.py --testnet --rpc-password=PASSWORD order --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=XCP --give-quantity=20 --give-asset=BBBC --expiration=10``
+        * Buy XCP for BBBC.
 
 BTCPay
 """"""

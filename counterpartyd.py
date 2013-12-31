@@ -218,7 +218,8 @@ if __name__ == '__main__':
     parser_order.add_argument('--give-quantity', metavar='GIVE_QUANTITY', required=True, help='the quantity of GIVE_ASSET that you are willing to give')
     parser_order.add_argument('--give-asset', metavar='GIVE_ASSET', required=True, help='the asset that you would like to buy')
     parser_order.add_argument('--expiration', metavar='EXPIRATION', type=int, required=True, help='the number of blocks for which the order should be valid')
-    parser_order.add_argument('--fee', metavar='FEE', help='either the required fee, or the provided fee, as appropriate; in BTC, to be paid to miners; required iff the order involves BTC')
+    parser_order.add_argument('--fee_required', metavar='FEE_REQUIRED', default=0, help='the miners’ fee required to be paid by orders for them to match this one; in BTC; required iff buying BTC (may be zero, though)')
+    parser_order.add_argument('--fee_provided', metavar='FEE_PROVIDED', default=(config.MIN_FEE / config.UNIT), help='the miners’ fee provided; in BTC; required iff selling BTC (should not be lower than is required for acceptance in a block)')
 
     parser_btcpay= subparsers.add_parser('btcpay', help='create and broadcast a *BTCpay* message, to settle an Order Match for which you owe BTC')
     parser_btcpay.add_argument('--order-match-id', metavar='ORDER_MATCH_ID', required=True, help='the concatenation of the hashes of the two transactions which compose the order match')
@@ -397,17 +398,19 @@ if __name__ == '__main__':
 
     elif args.action == 'order':
         # Fee argument is either fee_required or fee_provided, as necessary.
-        if give_asset == 'BTC':
-            fee_provided = round(D(args.fee) * config.UNIT)
-            assert fee_provided >= config.MIN_FEE
-            fee_required = 0
-        elif get_asset == 'BTC':
-            fee_required = round(D(args.fee) * config.UNIT)
-            assert fee_required >= config.MIN_FEE
-            fee_provided = config.MIN_FEE
+        if args.give_asset == 'BTC':
+            if args.fee_required != 0:
+                raise exceptions.FeeError('When selling BTC, do not specify a fee required.')
+            fee_required = args.fee_required
+            fee_provided = util.devise(db, args.fee_provided, 'BTC', 'input')
+        elif args.get_asset == 'BTC':
+            fee_required = util.devise(db, args.fee_required, 'BTC', 'input')
+            if args.fee_provided != config.MIN_FEE / config.UNIT:
+                raise exceptions.FeeError('When buying BTC, do not specify a fee provided.')
+            fee_provided = util.devise(db, args.fee_provided, 'BTC', 'input')
         else:
-            if args.fee:
-                raise exceptions.UselessError('No fee should be specified if not buying or selling BTC.')
+            if args.fee_provided != config.MIN_FEE or args.fee_required != 0:
+                raise exceptions.UselessError('No fee should be required or provided (explicitly) if not buying or selling BTC.')
             fee_required = 0
             fee_provided = config.MIN_FEE
 
