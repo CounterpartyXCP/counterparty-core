@@ -187,6 +187,7 @@ if __name__ == '__main__':
     parser.add_argument('-V', '--version', action='version', version="counterpartyd v%s" % config.VERSION)
 
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='sets log level to DEBUG instead of WARNING')
+    parser.add_argument('--force', action='store_true', help='don’t check whether Bitcoind is caught up')
     parser.add_argument('--testnet', type=int, choices=[0,1], help='use Bitcoin testnet addresses and block numbers')
     parser.add_argument('--testcoin', type=int, choices=[0,1], help='use the test Counterparty network on every blockchain')
 
@@ -382,7 +383,8 @@ if __name__ == '__main__':
         config.PREFIX = b'CNTRPRTY'             # 8 bytes
 
     # Check that bitcoind is running, communicable, and caught up with the blockchain.
-    bitcoin.bitcoind_check()
+    if not args.force:
+        bitcoin.bitcoind_check()
 
     # Do something.
     if args.action == 'send':
