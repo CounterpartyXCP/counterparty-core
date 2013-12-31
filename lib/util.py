@@ -184,7 +184,11 @@ def devise (db, quantity, asset, dest, divisible=None):
             else:
                 return str(quantity.quantize(EIGHT).normalize())
         elif dest == 'input':
-            return round(quantity * config.UNIT)
+            quantity *= config.UNIT
+            if quantity == quantity.to_integral():
+                return quantity
+            else:
+                raise exceptions.QuantityError('Divisible assets have only eight decimal places of precision.')
         else:
             return quantity.quantize(EIGHT)
     else:

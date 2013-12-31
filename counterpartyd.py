@@ -388,18 +388,12 @@ if __name__ == '__main__':
 
     # Do something.
     if args.action == 'send':
-        asset = args.asset
         quantity = util.devise(db, args.quantity, asset, 'input')
-
         unsigned_tx_hex = send.create(db, args.source, args.destination,
-                                      round(quantity), asset)
+                                      quantity, args.asset)
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'order':
-        give_asset = args.give_asset
-        get_asset = args.get_asset
-        args.fee = 0
-
         # Fee argument is either fee_required or fee_provided, as necessary.
         if give_asset == 'BTC':
             fee_provided = round(D(args.fee) * config.UNIT)
@@ -415,10 +409,10 @@ if __name__ == '__main__':
             fee_required = 0
             fee_provided = config.MIN_FEE
 
-        give_quantity = util.devise(db, args.give_quantity, give_asset, 'input')
-        get_quantity = util.devise(db, args.get_quantity, get_asset, 'input')
-        unsigned_tx_hex = order.create(db, args.source, give_asset, round(give_quantity),
-                                get_asset, round(get_quantity),
+        give_quantity = util.devise(db, args.give_quantity, args.give_asset, 'input')
+        get_quantity = util.devise(db, args.get_quantity, args.get_asset, 'input')
+        unsigned_tx_hex = order.create(db, args.source, args.give_asset, give_quantity,
+                                args.get_asset, get_quantity,
                                 args.expiration, fee_required, fee_provided)
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
@@ -427,42 +421,43 @@ if __name__ == '__main__':
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'issuance':
-        quantity = util.devise(db, D(args.quantity), None, 'input', divisible=args.divisible)
-        unsigned_tx_hex = issuance.create(db, args.source, args.transfer_destination, args.asset, round(quantity),
+        quantity = util.devise(db, args.quantity, None, 'input', divisible=args.divisible)
+        unsigned_tx_hex = issuance.create(db, args.source, args.transfer_destination, args.asset, quantity,
                                 args.divisible)
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'broadcast':
         # Use a magic number to store the fee multplier as an integer.
-        fee_multiplier = D(args.fee_multiplier) * D(1e8)
+        fee_multiplier = round(D(args.fee_multiplier) * D(1e8))
         if fee_multiplier > 4294967295:
             raise exceptions.OverflowError('Fee multiplier must be less than or equal to 42.94967295.')
-
-        unsigned_tx_hex = broadcast.create(db, args.source, int(time.time()), args.value,
-                                    round(fee_multiplier), args.text)
+        value = util.devise(db, value, 'value', 'input')
+        unsigned_tx_hex = broadcast.create(db, args.source, int(time.time()),
+                                           value, fee_multiplier, args.text)
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'bet':
-        deadline = datetime.timestamp(dateutil.parser.parse(args.deadline))
+        deadline = round(datetime.timestamp(dateutil.parser.parse(args.deadline)))
+        wager = util.devise(db, value, 'XCP', 'input')
+        counterwager = util.devise(db, value, 'XCP', 'input')
+        target_value = util.devise(db, value, 'value', 'input')
+        leverage = util.devise(db, value, 'leverage', 'input')
 
         unsigned_tx_hex = bet.create(db, args.source, args.feed_address,
-                              util.BET_TYPE_ID[args.bet_type], round(deadline),
-                              round(D(args.wager) * config.UNIT),
-                              round(D(args.counterwager) * config.UNIT),
-                              float(args.target_value), round(args.leverage),
-                              args.expiration)
+                                     util.BET_TYPE_ID[args.bet_type], deadline,
+                                     wager, counterwager, target_value,
+                                     leverage, args.expiration)
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'dividend':
-        asset = args.share_asset
-        quantity_per_share = D(args.quantity_per_share) * config.UNIT
-
-        unsigned_tx_hex = dividend.create(db, args.source, round(quantity_per_share),
-                                   asset)
+        quantity_per_share = util.devise(db, args.quantity_per_share, 'XCP', 'input')
+        unsigned_tx_hex = dividend.create(db, args.source, quantity_per_share,
+                                   args.share_asset)
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'burn':
-        unsigned_tx_hex = burn.create(db, args.source, round(D(args.quantity) * config.UNIT))
+        quantity = util.devise(db, args.quantity, 'BTC', 'input')
+        unsigned_tx_hex = burn.create(db, args.source, quantity)
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'address':

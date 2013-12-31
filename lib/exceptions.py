@@ -28,6 +28,8 @@ class BalanceError (Exception):
     pass
 class AssetError (Exception):
     pass
+class QuantityError(Exception):
+    pass
 class InvalidAddressError (Exception):
     pass
 
