@@ -188,8 +188,8 @@ if __name__ == '__main__':
 
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='sets log level to DEBUG instead of WARNING')
     parser.add_argument('--force', action='store_true', help='don’t check whether Bitcoind is caught up')
-    parser.add_argument('--testnet', type=int, choices=[0,1], help='use Bitcoin testnet addresses and block numbers')
-    parser.add_argument('--testcoin', type=int, choices=[0,1], help='use the test Counterparty network on every blockchain')
+    parser.add_argument('--testnet', action='store_true', help='use Bitcoin testnet addresses and block numbers')
+    parser.add_argument('--testcoin', action='store_true', help='use the test Counterparty network on every blockchain')
 
     parser.add_argument('--data-dir', help='the directory in which to keep the database, config file and log file, by default')
     parser.add_argument('--database-file', help='the location of the SQLite3 database')
@@ -286,15 +286,15 @@ if __name__ == '__main__':
     #logging.debug("Config file: %s; Exists: %s" % (config_path, "Yes" if has_config else "No"))
 
     # testnet
-    if args.testnet != None:
-        config.TESTNET = bool(args.testnet)
+    if args.testnet:
+        config.TESTNET = args.testnet
     elif has_config and 'testnet' in configfile['Default']:
         config.TESTNET = configfile['Default'].getboolean('testnet')
     else:
         config.TESTNET = False
 
     # testcoin
-    if args.testcoin != None:
+    if args.testcoin:
         config.TESTCOIN = args.testcoin
     elif has_config and 'testcoin' in configfile['Default']:
         config.TESTCOIN = configfile['Default'].getboolean('testcoin')
@@ -376,7 +376,6 @@ if __name__ == '__main__':
         config.BURN_START = 277910 # TODO: TEMP
         config.BURN_END = 278910 # TODO: TEMP
 
-    config.TESTCOIN = True  # TODO: TEMP (should be False, for release)
     if config.TESTCOIN:
         config.PREFIX = b'XX'                   # 2 bytes (possibly accidentally created)
     else:
@@ -388,7 +387,7 @@ if __name__ == '__main__':
 
     # Do something.
     if args.action == 'send':
-        quantity = util.devise(db, args.quantity, asset, 'input')
+        quantity = util.devise(db, args.quantity, args.asset, 'input')
         unsigned_tx_hex = send.create(db, args.source, args.destination,
                                       quantity, args.asset)
         json_print(bitcoin.transmit(unsigned_tx_hex))
@@ -421,9 +420,11 @@ if __name__ == '__main__':
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'issuance':
-        quantity = util.devise(db, args.quantity, None, 'input', divisible=args.divisible)
-        unsigned_tx_hex = issuance.create(db, args.source, args.transfer_destination, args.asset, quantity,
-                                args.divisible)
+        quantity = util.devise(db, args.quantity, None, 'input',
+                               divisible=args.divisible)
+        unsigned_tx_hex = issuance.create(db, args.source,
+                                          args.transfer_destination,
+                                          args.asset, quantity, args.divisible)
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'broadcast':

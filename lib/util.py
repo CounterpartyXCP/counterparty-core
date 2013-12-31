@@ -186,7 +186,7 @@ def devise (db, quantity, asset, dest, divisible=None):
         elif dest == 'input':
             quantity *= config.UNIT
             if quantity == quantity.to_integral():
-                return quantity
+                return int(quantity)
             else:
                 raise exceptions.QuantityError('Divisible assets have only eight decimal places of precision.')
         else:
