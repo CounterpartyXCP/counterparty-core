@@ -144,7 +144,7 @@ def format_order (order):
     give_asset = order['give_asset']
     get_asset = order['get_asset']
 
-    price = util.devise(db, get_remaining/ give_remaining, 'price')
+    price = util.devise(db, get_remaining/ give_remaining, 'price', 'output')
     price_assets = get_asset + '/' + give_asset
 
     if order['fee_required']:
@@ -163,9 +163,9 @@ def format_bet (bet):
     if not bet['target_value']: target_value = None
     else: target_value = bet['target_value']
     if not bet['leverage']: leverage = None
-    else: leverage = util.devise(db, D(bet['leverage']) / 5040, 'leverage')
+    else: leverage = util.devise(db, D(bet['leverage']) / 5040, 'leverage', 'output')
 
-    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], bet['deadline'], target_value, leverage, str(wager_remaining / config.UNIT) + ' XCP', str(counterwager_remaining / config.UNIT) + ' XCP', util.devise(db, odds, 'odds'), util.get_time_left(bet), util.short(bet['tx_hash'])]
+    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], bet['deadline'], target_value, leverage, str(wager_remaining / config.UNIT) + ' XCP', str(counterwager_remaining / config.UNIT) + ' XCP', util.devise(db, odds, 'odds', 'output'), util.get_time_left(bet), util.short(bet['tx_hash'])]
 
 def format_order_match (order_match):
     order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']
@@ -263,8 +263,8 @@ if __name__ == '__main__':
     parser_asset.add_argument('asset', metavar='ASSET', help='the asset you are interested in')
 
     parser_market = subparsers.add_parser('market', help='fill the screen with an always up‐to‐date summary of the Counterparty market')
-    parser_market.add_argument('--give-asset', metavar='GIVE_ASSET', help='limit orders listed to those selling GIVE_ASSET')
-    parser_market.add_argument('--get-asset', metavar='GET_ASSET', help='limit orders listed to those buying GET_ASSET')
+    parser_market.add_argument('--give-asset', metavar='GIVE_ASSET', help='only show orders offering to sell GIVE_ASSET')
+    parser_market.add_argument('--get-asset', metavar='GET_ASSET', help='only show orders offering to buy GET_ASSET')
 
     args = parser.parse_args()
 
@@ -473,7 +473,7 @@ if __name__ == '__main__':
         total = sum([issuance['amount'] for issuance in issuances])
         print('Asset Name:', args.asset)
         print('Asset ID:', util.get_asset_id(args.asset))
-        print('Total Issued:', util.devise(db, total, args.asset, dest='output'))
+        print('Total Issued:', util.devise(db, total, args.asset, 'output'))
         print('Divisible:', bool(issuances[-1]['divisible']))
         print('Issuer:', issuances[-1]['issuer']) # Issuer of last issuance.
 

@@ -345,8 +345,8 @@ def follow ():
         if 'counterpartyd' == filename_array[0] and 'db' == filename_array[2]:
             if filename_array[1] != str(config.DB_VERSION):
                 logging.warning('New version of transaction table!')
-                # os.remove(filename)
-                # logging.warning('Deleting old databases.')
+                os.remove(filename)
+                logging.warning('Deleting old databases.')
 
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
