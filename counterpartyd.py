@@ -339,21 +339,10 @@ if __name__ == '__main__':
 
     config.RPC = 'http://' + config.rpc_user + ':' + config.rpc_password + '@' + config.rpc_connect + ':' + str(config.rpc_port)
 
-    # Database
-    if args.database_file:
-        config.DATABASE = args.database_file
-    else:
-        config.DATABASE = os.path.join(config.data_dir, 'counterpartyd.' + str(config.DB_VERSION) + '.db')
-
-    # For create()s.
-    db = sqlite3.connect(config.DATABASE)
-    db.row_factory = sqlite3.Row
-    follow_cursor = db.cursor()
-
     # Log
     if args.log_file:
         config.LOG = args.log_file
-    elif 'logfile' in configfile['Default']:
+    elif has_config and 'logfile' in configfile['Default']:
         config.LOG = configfile['Default']['logfile']
     else:
         config.LOG = os.path.join(config.data_dir, 'counterpartyd.log')
@@ -364,6 +353,17 @@ if __name__ == '__main__':
                         datefmt='%m-%d-%YT%I:%M:%S%z')
     requests_log = logging.getLogger("requests")
     requests_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
+
+    # Database
+    if args.database_file:
+        config.DATABASE = args.database_file
+    else:
+        config.DATABASE = os.path.join(config.data_dir, 'counterpartyd.' + str(config.DB_VERSION) + '.db')
+
+    # For create()s.
+    db = sqlite3.connect(config.DATABASE)
+    db.row_factory = sqlite3.Row
+    follow_cursor = db.cursor()
 
     # (more) Testnet
     if config.TESTNET:
