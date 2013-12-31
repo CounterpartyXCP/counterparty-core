@@ -78,16 +78,20 @@ corresponding Match, in the order of their appearances in the blockchain.
 
 ## Examples
 * Server
+
 This should be running in the background. All other commands will fail if the index of the last block in the database is less than that of the last block seen by Bitcoind.
 
 * Burn
-	* `python3 counterpartyd.py --testnet --rpc-password=PASSWORD burn --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity=.5`
 
-* Send
-	* Divisible or indivisible: `python3 counterpartyd.py --testnet --rpc-password=PASSWORD send --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity=3 --asset=BBBC --to=n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7`
+	python3 counterpartyd.py --testnet --rpc-password=PASSWORD burn --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity=.5
 
-* Order
-	* Buy BTC for XCP: `python3 counterpartyd.py --testnet --rpc-password=PASSWORD order --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=BTC --give-quantity=20 --give-asset=XCP --expiration=10 --fee_provided=.001`
+* Send divisible or indivisible assets
+
+	python3 counterpartyd.py --testnet --rpc-password=PASSWORD send --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity=3 --asset=BBBC --to=n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7
+
+* Buy BTC for XCP
+
+	python3 counterpartyd.py --testnet --rpc-password=PASSWORD order --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=BTC --give-quantity=20 --give-asset=XCP --expiration=10 --fee_provided=.001
 
 	* Buy BBBC for BTC: `python3 counterpartyd.py --testnet --rpc-password=PASSWORD order --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=BBBC --give-quantity=20 --give-asset=BTC --expiration=10 --fee_required.001`
 
@@ -96,8 +100,10 @@ This should be running in the background. All other commands will fail if the in
 * BTCPay
 
 * Issue
-	* `python3 counterpartyd.py --testnet --rpc-password=PASSWORD issuance --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity 100 --asset 'BBBC'`
-	* `python3 counterpartyd.py --testnet --rpc-password=PASSWORD issuance --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity 100 --asset 'BBBQ' --divisible`
+
+	python3 counterpartyd.py --testnet --rpc-password=PASSWORD issuance --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity 100 --asset 'BBBC'
+
+	python3 counterpartyd.py --testnet --rpc-password=PASSWORD issuance --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity 100 --asset 'BBBQ' --divisible
 
 * Broadcast
 
@@ -106,13 +112,16 @@ This should be running in the background. All other commands will fail if the in
 * Dividend
 
 * Market
+
 The `market` action prints out tables of open orders, open bets, feeds, and
 order matches currently awaiting Bitcoin payments from one of your addresses.
 It is capable of filtering orders by assets to be bought and sold.
 
 * Asset
+
 The `asset` action displays the basic properties of a given asset.
 
 * Address
+
 The `address` action displays the details of of all transactions involving the
 Counterparty address which is its argument.
