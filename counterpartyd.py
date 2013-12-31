@@ -274,7 +274,7 @@ if __name__ == '__main__':
 
     # Data directory
     if not args.data_dir:
-        config.data_dir = appdirs.user_data_dir(appauthor='Counterparty', appname='counterpartyd')
+        config.data_dir = appdirs.user_data_dir(appauthor='Counterparty', appname='counterpartyd', roaming=True)
     else:
         config.data_dir = args.data_dir
     if not os.path.isdir(config.data_dir): os.mkdir(config.data_dir)
