@@ -204,6 +204,8 @@ if __name__ == '__main__':
 
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
+    parser_server = subparsers.add_parser('server', help='run the server')
+
     parser_send = subparsers.add_parser('send', help='create and broadcast a *send* message; requires Bitcoind to be running')
     parser_send.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
     parser_send.add_argument('--to', metavar='DESTINATION', dest='destination', required=True, help='the destination address')
