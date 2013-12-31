@@ -43,7 +43,7 @@ files are not the same. A Bitcoind configuration file looks like this:
 
 However, a counterpartyd configuration file looks like this:
         [Default]
-        rpc-password=AF1pAFNCY2eyRkiuoWJxnv9czJJ7eA6u7rDDQG3hUPup
+        rpc-password=PASSWORD
         testnet = 1
 
 Note the change in hyphenation between ‘rpcpassword’ and ‘rcp-password’.
