@@ -1,4 +1,4 @@
-The command‐line syntax of ``counterpartyd`` is generally that of ``python3
+The command‐line syntax of counterpartyd is generally that of ``python3
 counterpartyd.py {OPTIONS} ACTION {ACTION-OPTIONS}``. There is a one action per
 message type, which action produces and broadcasts such a message; the message
 parameters are specified following the name of the message type. There are also
@@ -9,27 +9,42 @@ or open orders.
 For a summary of the command‐line arguments and options, see ``python3
 counterpartyd.py --help``.
 
-N.B. ``counterpartyd`` identifies an Order, Bet, Order Match or Bet Match by an
-‘Order ID’, ‘Bet ID’, ‘Order Match ID’, or ‘Bet Match ID’, respectively. Match
-IDs are concatenations of the hashes of the two transactions which compose the
-corresponding Match, in the order of their appearances in the blockchain.
-
-
 Configuration
 ^^^^^^^^^^^^^
+In order for counterpartyd to function, it must be able to communicate with a
+running instance of Bitcoind or Bitcoin-Qt, which handles many Bitcoin‐specific
+matters on its behalf, including all wallet and private key management. For
+such interoperability, Bitcoind must be run with the following options:
+``-txindex=1`` ``-server=1`` and, as desired, ``--testnet=1``. This may require
+the settiing of a JSON‐RPC password, which may be saved in Bitcoind’s
+configuration file.
 
-testnet
-``--testnet``
+counterpartyd needs to know at least the JSON‐RPC password of the Bitcoind with
+which it is supposed to communicate. The simplest way to set this is to
+include it in all command‐line invocations of counterpartyd, such as ``python3
+counterpartyd.py --rpc-password=PASSWORD ACTION``. To make this and other
+options persistent across counterpartyd sessions, one may store the desired
+settings in a configuration file specific to counterpartyd.
 
-testcoin
-``--testcoin``
+Note that the syntaxes for the countpartyd and the Bitcoind configuraion
+files are not the same. A Bitcoind configuration file looks like this:
+        rpcuser=bitcoinrpc
+        rpcpassword=PASSWORD
+        testnet=1
+        txindex=1
+        server=1
 
+However, a counterpartyd configuration file looks like this:
+        [Default]
+        rpc-password = AF1pAFNCY2eyRkiuoWJxnv9czJJ7eA6u7rDDQG3hUPup
+        testnet = 1
 
---rpc-password
+Note the change in hyphenation between ‘rpcpassword’ and ‘rcp-password’.
 
-configuration file
-        different format from bitcoin.conf
-        server options
+If and only if counterpartyd is to be run on the Bitcoin testnet, with the
+``--testnet`` CLI option, Bitcoind must be set to do the same (``-testnet=1``).
+counterpartyd may run with the ``--testcoin`` option on any blockchain,
+however.
 
 
 Display
@@ -38,6 +53,11 @@ Display
 * Quantities of indivisible assets are written as integers.
 * All other quantities, i.e. prices, odds, leverages, feed values and target
 values, are specified to four decimal places.
+* counterpartyd identifies an Order, Bet, Order Match or Bet Match by an
+‘Order ID’, ‘Bet ID’, ‘Order Match ID’, or ‘Bet Match ID’, respectively. Match
+IDs are concatenations of the hashes of the two transactions which compose the
+corresponding Match, in the order of their appearances in the blockchain.
+
 
 
 Functions
