@@ -15,14 +15,6 @@ The Counterparty reference client (``counterpartyd``), as well as any other prog
 - **Feeds**: Broadcast information which may be used as the subject of a bet.
 - **Betting, Financial Derivatives**: Make bets, or construct contracts for difference, on the numerical value of a feed.
 
-Specifications
----------------
-
-.. toctree::
-   :maxdepth: 3
-
-   CounterpartySpec
-
 counterpartyd
 ---------------
 
@@ -30,9 +22,7 @@ counterpartyd
    :maxdepth: 3
 
    GettingStarted
-   Usage 
    BuildingFromSource
-   API
 
 
 Indices and tables
