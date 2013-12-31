@@ -20,6 +20,9 @@ except ImportError:
     pass
 
 COUNTERPARTY_USER = "counterpartyd"
+PYTHON_VER = "3.3"
+DEFAULT_CONFIG = "[Default]%srpc-connect=localhost%srpc-port=18832%srpc-user=rpc%srpc-password=rpcpw1234" % (
+    os.linesep, os.linesep, os.linesep, os.linesep)    
 
 def usage():
     print("SYNTAX: %s [-h] [--build]" % sys.argv[0])
@@ -51,11 +54,12 @@ def get_paths():
     paths['base_path'] = os.path.normpath(os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])), ".."))
     #^ the dir of where counterparty source was downloaded to
     logging.debug("base path: '%s'" % paths['base_path'])
+    sys.path.insert(0, paths['base_path']) #can now import counterparty modules
     
     #find the location of the virtualenv command and make sure it exists
     if os.name == "posix":
         paths['virtualenv_path'] = "/usr/bin/virtualenv"
-        paths['virtualenv_args'] = "--python=python3.3"
+        paths['virtualenv_args'] = "--python=python%s" % PYTHON_VER
     elif os.name == "nt":
         paths['virtualenv_path'] = os.path.join(paths['python_path'], "Scripts", "virtualenv.exe")
         paths['virtualenv_args'] = ""
@@ -66,6 +70,9 @@ def get_paths():
 
     paths['env_path'] = os.path.join(paths['base_path'], "env") # home for the virtual environment
     logging.debug("env path: '%s'" % paths['env_path'])
+
+    paths['bin_path'] = os.path.join(paths['base_path'], "bin")
+    logging.debug("bin path: '%s'" % paths['bin_path'])
     
     #the pip executiable that we'll be using does not exist yet, but it will, once we've created the virtualenv
     paths['pip_path'] = os.path.join(paths['env_path'], "Scripts" if os.name == "nt" else "bin", "pip.exe" if os.name == "nt" else "pip")
@@ -166,7 +173,7 @@ def setup_startup(paths):
 def create_default_config(paths):
     import appdirs #installed earlier
     cfg_path = os.path.join(
-        appdirs.user_data_dir(appauthor='Counterparty', appname='counterpartyd') if os.name == "nt" else "/var/lib/counterpartyd",
+        appdirs.user_data_dir(appauthor='Counterparty', appname='counterpartyd', roaming=True) if os.name == "nt" else "/var/lib/counterpartyd",
         "counterpartyd.conf")
     cfg_dir = os.path.dirname(cfg_path)
     
@@ -174,10 +181,8 @@ def create_default_config(paths):
         os.makedirs(cfg_dir)
     
     #create a default config file
-    default_config = "[Default]%srpc-connect=localhost%srpc-port=18832%srpc-user=rpc%srpc-password=rpcpw1234" % (
-        os.linesep, os.linesep, os.linesep, os.linesep)    
     cfg = open(cfg_path, 'w')
-    cfg.write(default_config)
+    cfg.write(DEFAULT_CONFIG)
     cfg.close()
     
     #set proper file mode
@@ -195,7 +200,54 @@ def create_default_config(paths):
             pass        
 
     logging.info("NEXT STEP: Edit the config file we created '%s', according to the documentation" % cfg_path)
+
+def do_build(paths):
+    if os.name != "nt":
+        logging.error("Building an installer only supported on Windows at this time.")
+        sys.exit(1)
+
+    logging.debug("Cleaning any old build dirs...")
+    if os.path.exists(os.path.join(paths['bin_path'], "exe.win-amd64-%s" % PYTHON_VER)):
+        shutil.rmtree(os.path.join(paths['bin_path'], "exe.win-amd64-%s" % PYTHON_VER))
+    if os.path.exists(os.path.join(paths['bin_path'], "exe.win-i386-%s" % PYTHON_VER)):
+        shutil.rmtree(os.path.join(paths['bin_path'], "exe.win-i386-%s" % PYTHON_VER))
+    if os.path.exists(os.path.join(paths['bin_path'], "build")):
+        shutil.rmtree(os.path.join(paths['bin_path'], "build"))
+
+    logging.info("Building Counterparty...")
+    #Run cx_freeze to build the counterparty sources into a self-contained executiable
+    runcmd("%s \"%s\" build -b \"%s\"" % (
+        sys.executable, os.path.join(paths['dist_path'], "_cxfreeze_setup.py"), paths['bin_path']))
+    #move the build dir to something more predictable so we can build an installer with it
+    arch = "amd64" if os.path.exists(os.path.join(paths['bin_path'], "exe.win-amd64-%s" % PYTHON_VER)) else "i386"
+    shutil.move(os.path.join(paths['bin_path'], "exe.win-%s-%s" % (arch, PYTHON_VER)), os.path.join(paths['bin_path'], "build"))
     
+    logging.info("Frozen executiable data created in %s" % os.path.join(paths['bin_path'], "build"))
+    
+    #Add a default config to the build
+    cfg = open(os.path.join(paths['bin_path'], "counterpartyd.conf.default"), 'w')
+    cfg.write(DEFAULT_CONFIG)
+    cfg.close()
+    
+    #find the location of makensis.exe (freaking windows...)
+    if 'PROGRAMFILES(X86)' in os.environ:
+        pf_path = os.environ['PROGRAMFILES(X86)'].replace("Program Files (x86)", "Progra~2")
+    else:
+        pf_path = os.environ['PROGRAMFILES'].replace("Program Files", "Progra~1")
+    
+    make_nsis_path = os.path.normpath(os.path.join(pf_path, "NSIS", "makensis.exe"))
+    if not os.path.exists(make_nsis_path):
+        logging.error("Error finding makensis.exe at path '%s'. Did you install NSIS?" % make_nsis_path)
+        sys.exit(1)
+    runcmd(r'%s %s' % (make_nsis_path, os.path.normpath(os.path.join(paths['dist_path'], "windows", "installer.nsi"))))
+    
+    #move created .msi file to the bin dir
+    from lib import config #counter party
+    installer_dest = os.path.join(paths['bin_path'], "counterpartyd-v%s-%s_install.exe" % (config.VERSION, arch))
+    if os.path.exists(installer_dest):
+        os.remove(installer_dest)
+    shutil.move(os.path.join(paths['dist_path'], "windows", "counterpartyd_install.exe"), installer_dest)
+    logging.info("FINAL installer created as %s" % installer_dest)
 
 def main():
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s|%(levelname)s: %(message)s')
@@ -221,37 +273,17 @@ def main():
             assert False, "Unhandled or unimplemented switch or option"
 
     if build:
-        logging.info("BUILDING COUNTERPARTY...")
-        #Run cx_freeze to build the counterparty sources into a self-contained executiable
-        dest_dir = tempfile.mkdtemp()
-        
-        runcmd("%s %s build -b %s" % (
-            paths['python_path'], os.path.join(paths['dist_path'], "_cxfreeze_setup.py"), dest_dir))
-        
-        logging.info("Frozen executiable data created in %s" % dest_dir)
-        
-        if os.name != "nt":
-            return
-        
-        #find the location of makensis.exe
-        makeNSISPath = os.path.join(os.environ.get('PROGRAMFILES(X86)', os.environ['PROGRAMFILES']), "makensis.exe")
-        if not os.path.exists(makeNSISPath):
-            logging.error("Error finding makensis.exe at path '%s'. Did you install NSIS?" % makeNSISPath)
-            sys.exit(1)
-        runcmd("%s %sdist\windows\installer.nsi" % (makeNSISPath, paths['dist_path']))
-        
-        #move created .msi file to the same temp directory
-        
-        logging.info("FINAL installer created as %s%s%s" % (os.path.join(dest_dir, "counterpartyd_installer.exe")))
+        do_build(paths)
     else: #install mode
-        logging.info("INSTALLING COUNTERPARTY FROM SOURCE...")
+        logging.info("Installing Counterparty from source...")
         install_dependencies(paths)
         create_user(paths)
         create_virtualenv(paths)
         setup_startup(paths)
     
-    logging.info("SETUP DONE. (It's time to kick ass, and chew bubblegum... and I'm all outta gum.)")
-    create_default_config(paths)
+    logging.info("%s DONE. (It's time to kick ass, and chew bubblegum... and I'm all outta gum.)" % ("BUILD" if build else "SETUP"))
+    if not build:
+        create_default_config(paths)
 
 
 if __name__ == "__main__":
