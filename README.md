@@ -18,7 +18,6 @@ The Counterparty protocol specification may be found at
 * Bitcoind
 
 # Installation
-
 In order for counterpartyd to function, it must be able to communicate with a
 running instance of Bitcoind or Bitcoin-Qt, which handles many Bitcoin‐specific
 matters on its behalf, including all wallet and private key management. For
@@ -115,5 +114,5 @@ It is capable of filtering orders by assets to be bought and sold.
 The `asset` action displays the basic properties of a given asset.
 
 * Address
-The `address` action displays the details of of all transactions involving
-the Counterparty address which is its argument.
+The `address` action displays the details of of all transactions involving the
+Counterparty address which is its argument.
