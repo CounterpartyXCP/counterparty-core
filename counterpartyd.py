@@ -4,8 +4,6 @@ import os
 import argparse
 import json
 
-import colorama
-colorama.init()
 from prettytable import PrettyTable
 
 import decimal
@@ -39,8 +37,8 @@ def market (give_asset, get_asset):
             continue
         order = format_order(order)
         table.add_row(order)
-    print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Open Orders' + colorama.Style.RESET_ALL)
-    print(colorama.Fore.BLUE + str(table.get_string(sortby='Price')) + colorama.Style.RESET_ALL)
+    print('Open Orders')
+    print(str(table.get_string(sortby='Price')))
     print('\n')
 
     # Open bets.
@@ -49,8 +47,8 @@ def market (give_asset, get_asset):
     for bet in bets:
         bet = format_bet(bet)
         table.add_row(bet)
-    print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Open Bets' + colorama.Style.RESET_ALL)
-    print(colorama.Fore.GREEN + str(table) + colorama.Style.RESET_ALL)
+    print('Open Bets')
+    print(str(table))
     print('\n')
 
     # Matched orders awaiting BTC payments from you.
@@ -60,8 +58,8 @@ def market (give_asset, get_asset):
     for order_match in awaiting_btcs:
         order_match = format_order_match(order_match)
         table.add_row(order_match)
-    print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Order Matches Awaiting BTC Payment' + colorama.Style.RESET_ALL)
-    print(colorama.Fore.CYAN + str(table) + colorama.Style.RESET_ALL)
+    print('Order Matches Awaiting BTC Payment')
+    print(str(table))
     print('\n')
 
     # Feeds
@@ -76,8 +74,8 @@ def market (give_asset, get_asset):
             seen_addresses.append(broadcast['source'])
         else:
             continue
-    print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Feeds' + colorama.Style.RESET_ALL)
-    print(colorama.Fore.MAGENTA + str(table) + colorama.Style.RESET_ALL)
+    print('Feeds')
+    print(str(table))
 
     time.sleep(30)
 
@@ -92,8 +90,8 @@ def address (address):
         asset = balance['asset']
         amount = util.devise(db, balance['amount'], balance['asset'], 'output')
         table.add_row([asset, amount])
-    print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Balances' + colorama.Style.RESET_ALL)
-    print(colorama.Fore.CYAN + str(table) + colorama.Style.RESET_ALL)
+    print('Balances')
+    print(str(table))
     print('\n')
 
     # Sends.
@@ -103,8 +101,8 @@ def address (address):
         amount = util.devise(db, send['amount'], send['asset'], 'output')
         asset = send['asset']
         table.add_row([amount, asset, send['source'], send['destination'], util.short(send['tx_hash'])])
-    print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'Sends' + colorama.Style.RESET_ALL)
-    print(colorama.Fore.YELLOW + str(table) + colorama.Style.RESET_ALL)
+    print('Sends')
+    print(str(table))
     print('\n')
 
     """
@@ -116,8 +114,8 @@ def address (address):
         amount = util.devise(db, order['amount'], order['asset'], 'output')
         asset = order['asset']
         table.add_row([amount, asset, order['source'], order['destination'], util.short(order['tx_hash'])])
-    print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'orders' + colorama.Style.RESET_ALL)
-    print(colorama.Fore.YELLOW + str(table) + colorama.Style.RESET_ALL)
+    print('orders')
+    print(str(table))
     print('\n')
     """
 
@@ -130,8 +128,8 @@ def address (address):
         amount = util.devise(db, order_match['amount'], order['asset'], 'output')
         asset = order_match['asset']
         table.add_row([amount, asset, order_match['source'], order_match['destination'], util.short(order_match['tx_hash'])])
-    print(colorama.Fore.WHITE + colorama.Style.BRIGHT + 'order_matches' + colorama.Style.RESET_ALL)
-    print(colorama.Fore.YELLOW + str(table) + colorama.Style.RESET_ALL)
+    print('order_matches')
+    print(str(table))
     print('\n')
     """
     # TODO
@@ -189,8 +187,8 @@ if __name__ == '__main__':
     parser.add_argument('-V', '--version', action='version', version="counterpartyd v%s" % config.VERSION)
 
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='sets log level to DEBUG instead of WARNING')
-    parser.add_argument('--testnet', action='store_true', help='use Bitcoin testnet addresses and block numbers')
-    parser.add_argument('--testcoin', action='store_true', help='use the test Counterparty network on every blockchain')
+    parser.add_argument('--testnet', type=int, choices=[0,1], help='use Bitcoin testnet addresses and block numbers')
+    parser.add_argument('--testcoin', type=int, choices=[0,1], help='use the test Counterparty network on every blockchain')
 
     parser.add_argument('--data-dir', help='the directory in which to keep the database, config file and log file, by default')
     parser.add_argument('--database-file', help='the location of the SQLite3 database')
@@ -206,38 +204,38 @@ if __name__ == '__main__':
 
     parser_server = subparsers.add_parser('server', help='run the server')
 
-    parser_send = subparsers.add_parser('send', help='create and broadcast a *send* message; requires Bitcoind to be running')
+    parser_send = subparsers.add_parser('send', help='create and broadcast a *send* message')
     parser_send.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
     parser_send.add_argument('--to', metavar='DESTINATION', dest='destination', required=True, help='the destination address')
     parser_send.add_argument('--quantity', metavar='QUANTITY', required=True, help='the quantity of ASSET to send')
     parser_send.add_argument('--asset', metavar='ASSET', dest='asset', required=True, help='the ASSET of which you would like to send QUANTITY')
 
-    parser_order = subparsers.add_parser('order', help='create and broadcast an *order* message; requires Bitcoind to be running')
+    parser_order = subparsers.add_parser('order', help='create and broadcast an *order* message')
     parser_order.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
     parser_order.add_argument('--get-quantity', metavar='GET_QUANTITY', required=True, help='the quantity of GET_ASSET that you would like to receive')
     parser_order.add_argument('--get-asset', metavar='GET_ASSET', required=True, help='the asset that you would like to sell')
     parser_order.add_argument('--give-quantity', metavar='GIVE_QUANTITY', required=True, help='the quantity of GIVE_ASSET that you are willing to give')
     parser_order.add_argument('--give-asset', metavar='GIVE_ASSET', required=True, help='the asset that you would like to buy')
     parser_order.add_argument('--expiration', metavar='EXPIRATION', type=int, required=True, help='the number of blocks for which the order should be valid')
-    parser_order.add_argument('--fee', metavar='FEE', default='0', help='either the required fee, or the provided fee, as appropriate; in BTC, to be paid to miners; required iff the order involves BTC')
+    parser_order.add_argument('--fee', metavar='FEE', help='either the required fee, or the provided fee, as appropriate; in BTC, to be paid to miners; required iff the order involves BTC')
 
-    parser_btcpay= subparsers.add_parser('btcpay', help='create and broadcast a *BTCpay* message, to settle an Order Match for which you owe BTC; requires Bitcoind to be running')
+    parser_btcpay= subparsers.add_parser('btcpay', help='create and broadcast a *BTCpay* message, to settle an Order Match for which you owe BTC')
     parser_btcpay.add_argument('--order-match-id', metavar='ORDER_MATCH_ID', required=True, help='the concatenation of the hashes of the two transactions which compose the order match')
 
-    parser_issuance = subparsers.add_parser('issuance', help='requires Bitcoind to be running')
+    parser_issuance = subparsers.add_parser('issuance', help='issue a new asset, issue more of an existing asset or transfer the ownership of an asset')
     parser_issuance.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
     parser_issuance.add_argument('--transfer-asset-to', metavar='TRANSFER_DESTINATION', dest='transfer_destination', help='for transfer of ownership of asset issuance rights')
     parser_issuance.add_argument('--quantity', metavar='QUANTITY', required=True, help='the quantity of ASSET to be issued')
     parser_issuance.add_argument('--asset', metavar='ASSET', required=True, help='the name of the asset to be issued (if it’s available)')
     parser_issuance.add_argument('--divisible', action='store_true', help='whether or not the asset is divisible (must agree with previous issuances, if there are any)')
 
-    parser_broadcast = subparsers.add_parser('broadcast', help='requires Bitcoind to be running')
+    parser_broadcast = subparsers.add_parser('broadcast', help='broadcast textual and numerical information to the network')
     parser_broadcast.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
     parser_broadcast.add_argument('--text', metavar='TEXT', required=True, help='the textual part of the broadcast')
     parser_broadcast.add_argument('--value', metavar='VALUE', type=float, default=0, help='numerical value of the broadcast')
     parser_broadcast.add_argument('--fee-multiplier', metavar='FEE_MULTIPLIER', required=True, help='how much of every bet on this feed should go to its operator; a fraction of 1, (i.e. .05 is five percent)')
 
-    parser_order = subparsers.add_parser('bet', help='requires Bitcoind to be running')
+    parser_order = subparsers.add_parser('bet', help='offer to make a bet on the value of a feed')
     parser_order.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
     parser_order.add_argument('--feed-address', metavar='FEED_ADDRESS', required=True, help='the address which publishes the feed to bet on')
     parser_order.add_argument('--bet-type', metavar='BET_TYPE', choices=list(util.BET_TYPE_NAME.values()), required=True, help='choices: {}'.format(list(util.BET_TYPE_NAME.values())))
@@ -248,12 +246,12 @@ if __name__ == '__main__':
     parser_order.add_argument('--leverage', metavar='LEVERAGE', type=int, default=5040, help='leverage, as a fraction of 5040')
     parser_order.add_argument('--expiration', metavar='EXPIRATION', type=int, required=True, help='the number of blocks for which the bet should be valid')
 
-    parser_dividend = subparsers.add_parser('dividend', help='requires Bitcoind to be running')
+    parser_dividend = subparsers.add_parser('dividend', help='pay dividends to the holders of an asset (in proportion to their stake in it)')
     parser_dividend.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
     parser_dividend.add_argument('--quantity-per-share', metavar='QUANTITY_PER_SHARE', required=True, help='the quantity of XCP to be paid per unit (satoshi) held of SHARE_ASSET')
     parser_dividend.add_argument('--share-asset', metavar='SHARE_ASSET', required=True, help='the asset to which pay dividends')
 
-    parser_burn = subparsers.add_parser('burn', help='requires Bitcoind to be running')
+    parser_burn = subparsers.add_parser('burn', help='destroy bitcoins in miners’s fees to earn XCP, during an initial period of time')
     parser_burn.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
     parser_burn.add_argument('--quantity', metavar='QUANTITY', required=True, help='quantity of BTC to be destroyed in miners’ fees')
 
@@ -287,15 +285,15 @@ if __name__ == '__main__':
     #logging.debug("Config file: %s; Exists: %s" % (config_path, "Yes" if has_config else "No"))
 
     # testnet
-    if args.testnet:
-        config.TESTNET = args.testnet
+    if args.testnet != None:
+        config.TESTNET = bool(args.testnet)
     elif has_config and 'testnet' in configfile['Default']:
         config.TESTNET = configfile['Default'].getboolean('testnet')
     else:
         config.TESTNET = False
 
     # testcoin
-    if args.testcoin:
+    if args.testcoin != None:
         config.TESTCOIN = args.testcoin
     elif has_config and 'testcoin' in configfile['Default']:
         config.TESTCOIN = configfile['Default'].getboolean('testcoin')
@@ -367,25 +365,27 @@ if __name__ == '__main__':
 
     # (more) Testnet
     if config.TESTNET:
+        config.ADDRESSVERSION = b'\x6F'
         config.BLOCK_FIRST = 154759
         config.BURN_START = 154759
         config.BURN_END = 156000
-        config.ADDRESSVERSION = b'\x6F'
     else:
         config.ADDRESSVERSION = b'\x00'
-        # TODO
+        config.BLOCK_FIRST = 277910 # TODO: TEMP
+        config.BURN_START = 277910 # TODO: TEMP
+        config.BURN_END = 278910 # TODO: TEMP
 
-    config.TESTCOIN = True
+    config.TESTCOIN = True  # TODO: TEMP (should be False, for release)
     if config.TESTCOIN:
-        config.PREFIX = b'TEST'                 # 4 bytes (possibly accidentally created)
+        config.PREFIX = b'XX'                   # 2 bytes (possibly accidentally created)
     else:
         config.PREFIX = b'CNTRPRTY'             # 8 bytes
 
+    # Check that bitcoind is running, communicable, and caught up with the blockchain.
+    bitcoin.bitcoind_check()
 
     # Do something.
     if args.action == 'send':
-        bitcoin.bitcoind_check()
-
         asset = args.asset
         quantity = util.devise(db, args.quantity, asset, 'input')
 
@@ -394,10 +394,9 @@ if __name__ == '__main__':
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'order':
-        bitcoin.bitcoind_check()
-
         give_asset = args.give_asset
         get_asset = args.get_asset
+        args.fee = 0
 
         # Fee argument is either fee_required or fee_provided, as necessary.
         if give_asset == 'BTC':
@@ -426,16 +425,12 @@ if __name__ == '__main__':
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'issuance':
-        bitcoin.bitcoind_check()
-
         quantity = util.devise(db, D(args.quantity), None, 'input', divisible=args.divisible)
         unsigned_tx_hex = issuance.create(db, args.source, args.transfer_destination, args.asset, round(quantity),
                                 args.divisible)
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'broadcast':
-        bitcoin.bitcoind_check()
-
         # Use a magic number to store the fee multplier as an integer.
         fee_multiplier = D(args.fee_multiplier) * D(1e8)
         if fee_multiplier > 4294967295:
@@ -446,8 +441,6 @@ if __name__ == '__main__':
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'bet':
-        bitcoin.bitcoind_check()
-
         deadline = datetime.timestamp(dateutil.parser.parse(args.deadline))
 
         unsigned_tx_hex = bet.create(db, args.source, args.feed_address,
@@ -459,8 +452,6 @@ if __name__ == '__main__':
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'dividend':
-        bitcoin.bitcoind_check()
-
         asset = args.share_asset
         quantity_per_share = D(args.quantity_per_share) * config.UNIT
 
@@ -469,7 +460,6 @@ if __name__ == '__main__':
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'burn':
-        bitcoin.bitcoind_check()
         unsigned_tx_hex = burn.create(db, args.source, round(D(args.quantity) * config.UNIT))
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
@@ -493,7 +483,6 @@ if __name__ == '__main__':
         parser.print_help()
 
     else:
-        bitcoin.bitcoind_check()
         blocks.follow()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

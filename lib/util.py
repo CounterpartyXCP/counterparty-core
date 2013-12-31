@@ -179,7 +179,10 @@ def devise (db, quantity, asset, dest, divisible=None):
     if divisible:
         if dest == 'output':
             quantity = D(quantity / config.UNIT)
-            return quantity.quantize(EIGHT)
+            if quantity == quantity.to_integral():
+                return str(float(quantity))  # For divisible assets, display the decimal point.
+            else:
+                return str(quantity.quantize(EIGHT).normalize())
         elif dest == 'input':
             return round(quantity * config.UNIT)
         else:

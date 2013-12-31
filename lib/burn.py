@@ -62,7 +62,7 @@ def parse (db, tx, message):
     # Calculate quantity of XPC earned.
     total_time = D(config.BURN_END - config.BURN_START)
     partial_time = D(config.BURN_END - tx['block_index'])
-    multiplier = 100 * (1 + (partial_time / total_time))
+    multiplier = 1000 * (1 + D(.5) * (partial_time / total_time))
     earned = round(burned * multiplier)
  
     # Credit source address with earned XCP.

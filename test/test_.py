@@ -60,7 +60,7 @@ config.ADDRESSVERSION = b'\x6F' # testnet
 source_default = 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'
 destination_default = 'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7'
 quantity = 100000000
-small = round(quantity / 20)
+small = round(quantity / 2)
 expiration = 10
 fee_required = 900000
 fee_provided = 1000000
@@ -337,7 +337,7 @@ def test_broadcast_liquidate ():
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_broadcast_settle ():
-    unsigned_tx_hex = broadcast.create(db, source_default, 1388000101, 100.443, fee_multiplier_default, 'Unit Test', test=True)
+    unsigned_tx_hex = broadcast.create(db, source_default, 1388000101, 100.343, fee_multiplier_default, 'Unit Test', test=True)
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
     tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
@@ -356,6 +356,7 @@ def test_broadcast_equal ():
 
 
 def test_parse_from_the_start():
+    logging.info('\n')
     blocks.initialise(db)
     for i in range(tx_index):
         blocks.parse_block(db, i)
@@ -427,6 +428,34 @@ def test_base58_decode():
 
 
 """
+follow()
+
+asset lock
+asset transfer
+expire order matches
+expire bet matches
+cancelling bets, orders
+
+get_time_left
+get_order_match_time_left
+get_asset
+get_asset_name
+
+debit
+credit
+
+bet_match
+order_match
+get_tx_info
+rpc
+bitcoind_check
+serialize
+get_inputs
+transaction
+"""
+
+
+"""
 Too small:
 util.short()
 util.isodt()
@@ -435,31 +464,4 @@ bet.get_fee_multiplier()
 """
 
 
-"""
-asset lock
-asset transfer
-expire orders
-expire bets
-expire order matches
-expire bet matches
-cancelling bets, orders
 
-follow()
-
-get_time_left (unmatched)
-get_order_match_time_left (matched)
-get_asset (asset)
-get_asset_name (asset)
-
-debit (db, address, asset, amount)
-credit (db, address, asset, amount)
-
-bet_match (db, tx)
-order_match (db, tx)
-get_tx_info (tx)
-rpc (method, params)
-bitcoind_check ()
-serialize (inputs, outputs, data)
-get_inputs (source, amount, fee)
-transaction (source, destination, btc_amount, fee, data, ask=False)
-"""

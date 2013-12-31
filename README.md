@@ -9,7 +9,7 @@ The Counterparty documentation may be found at <http://counterparty.rtfd.org/>.
 
 ## Dependencies
 * Python 3
-* Python 3 packages: SQLite3, Requests, AppDirs, Colorama, PrettyTable, ConfigParser, dateutil
+* Python 3 packages: SQLite3, Requests, AppDirs, PrettyTable, ConfigParser, dateutil
 * Bitcoind
 
 ## Instructions

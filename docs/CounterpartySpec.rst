@@ -30,10 +30,10 @@ a block.
 one alloted ``OP_RETURN`` output.
 
 For identification purposes, every Counterparty transaction’s ‘data’ field is
-prefixed by the string ‘CNTRPRTY’, encoded in UTF‐8. In testing, this string is
-simply ‘TEST’. This string is long enough that transactions with pseudo‐random
-data stored in the ``OP_RETURN`` field will be extremely unlikely to be
-mistaken for Counterparty transactions.
+prefixed by the string ‘CNTRPRTY’, encoded in UTF‐8. This string is long enough
+that transactions with pseudo‐random data stored in the ``OP_RETURN`` field
+will be extremely unlikely to be mistaken for Counterparty transactions. In
+testing, this string is simply ‘XX’.
 
 Every Bitcoin transaction carrying a Counterparty transaction must have between
 one and three outputs: the destination output (optional), the data output
@@ -240,11 +240,11 @@ Balances in Counterparty’s native currency, ‘XCP’, will be initialised by
 a **burn** message type. The number of XCP earned per bitcoin is calculated
 thus: 
 
-XCP_EARNED = BTC_BURNED * (100 * (1 + ((END_BLOCK - CURRENT_BLOCK) / (END_BLOCK - START_BLOCK))
+XCP_EARNED = BTC_BURNED * (1000 * (1 + .5 * ((END_BLOCK - CURRENT_BLOCK) / (END_BLOCK - START_BLOCK))
 
 ``END_BLOCK`` is the block after which the burn period is over and
 ``START_BLOCK`` is the block with which the burn period begins. The earlier the
-burn, the better the price, which may be between 100 and 200 XCP/BTC.
+burn, the better the price, which may be between 1000 and 1500 XCP/BTC.
 
 Burn messages have precisely the string ‘ProofOfBurn’ stored in the
 ``OP_RETURN`` output.

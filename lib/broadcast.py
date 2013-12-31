@@ -157,6 +157,7 @@ def parse (db, tx, message):
                     validity = 'Force‐Liquidated Bull'
                     logging.info('Contract Force‐Liquidated: 0 XCP credited to the bull, and {} XCP credited to the bear ({})'.format(util.devise(db, total_escrow, 'XCP', 'output'), util.short(bet_match_id)))
 
+
             # Settle.
             if validity == 'Valid' and timestamp >= bet_match['deadline']:
                 util.credit(db, bull_address, 'XCP', bull_credit)

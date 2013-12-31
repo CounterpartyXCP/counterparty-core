@@ -243,8 +243,8 @@ def transaction (source, destination, btc_amount, fee, data, test=False):
 def transmit (unsigned_tx_hex, ask=True):
     # Confirm transaction.
     if ask:
-        if config.PREFIX == b'TEST': print('Attention: COUNTERPARTY TEST!') 
-        if config.ADDRESSVERSION == b'0x6F': print('\nAttention: BITCOIN TESTNET!\n') 
+        if config.ADDRESSVERSION == b'0x6F': print('\nAttention: TESTNET!\n') 
+        if config.PREFIX == b'XX': print('Attention: TESTCOIN!') 
         if input('Confirm? (y/N) ') != 'y':
             print('Transaction aborted.', file=sys.stderr)
             sys.exit(1)
