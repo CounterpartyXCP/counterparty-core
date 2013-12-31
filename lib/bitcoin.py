@@ -4,7 +4,6 @@ Interface with Bitcoind.
 """
 
 import sys
-import time
 import binascii
 import json
 import hashlib
@@ -38,14 +37,6 @@ def rpc (method, params):
     if response.status_code == 401:
         raise exceptions.BitcoindRPCError('Bitcoind RPC: unauthorized')
     return response.json()
-
-def bitcoind_check ():
-    """Check blocktime of last block to see if `bitcoind` is running behind."""
-    block_count = rpc('getblockcount', [])['result']
-    block_hash = rpc('getblockhash', [block_count])['result']
-    block = rpc('getblock', [block_hash])['result']
-    if block['time'] < (time.time() - 60 * 60 * 2):
-        raise exceptions.BitcoindRPCError('bitcoind is running behind.')
 
 def base58_decode (s, version):
     # Convert the string to an integer

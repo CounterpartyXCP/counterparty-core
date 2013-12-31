@@ -382,8 +382,11 @@ if __name__ == '__main__':
         config.PREFIX = b'CNTRPRTY'             # 8 bytes
 
     # Check that bitcoind is running, communicable, and caught up with the blockchain.
+    # Check that the database has caught up with bitcoind.
     if not args.force:
-        bitcoin.bitcoind_check()
+        util.bitcoind_check(db)
+        if args.action not in ('server',):
+            util.database_check(db)
 
     # Do something.
     if args.action == 'send':

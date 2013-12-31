@@ -9,7 +9,13 @@ class TXConstructionError(Exception):
     pass
 class OverflowError(Exception):
     pass
-class BitcoindRPCError (Exception):
+
+class BitcoindError (Exception):
+    pass
+class DatabaseError (Exception):
+    pass
+
+class BitcoindRPCError (BitcoindError):
     pass
 
 class DividendError (Exception):

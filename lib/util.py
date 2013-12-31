@@ -4,6 +4,8 @@ all necessary database connexions.
 
 """
 
+import sqlite3
+import time
 from datetime import datetime
 from dateutil.tz import tzlocal
 import decimal
@@ -16,6 +18,29 @@ b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 # Obsolete in Python 3.4, with enum module.
 BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
 BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
+
+def bitcoind_check (db):
+    # Check blocktime of last block to see if Bitcoind is running behind.
+    block_count = bitcoin.rpc('getblockcount', [])['result']
+    block_hash = bitcoin.rpc('getblockhash', [block_count])['result']
+    block = bitcoin.rpc('getblock', [block_hash])['result']
+    if block['time'] < (time.time() - 60 * 60 * 2):
+        raise exceptions.BitcoindError('Bitcoind is running behind.')
+
+def database_check (db):
+    # Check Counterparty database to see if the counterpartyd server has caught up with Bitcoind.
+    cursor = db.cursor()
+    try:
+        cursor.execute('''SELECT * FROM blocks ORDER BY block_index ASC''')
+    except sqlite3.OperationalError:
+        raise exceptions.DatabaseError('Counterparty database does not exist. Run server command.')
+    block_list = cursor.fetchall()
+    assert block_list
+    last_block = block_list[-1]
+    if last_block['block_index'] != bitcoin.rpc('getblockcount', [])['result']:
+        raise exceptions.DatabaseError('Countparty database is behind Bitcoind.')
+    cursor.close()
+    return
 
 def short (string):
     if len(string) == 64: length = 8

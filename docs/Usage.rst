@@ -43,6 +43,10 @@ values, are specified to four decimal places.
 Functions
 ^^^^^^^^^^^^^^^^^
 
+Server
+""""""
+This must be running in the background.
+
 Burn
 """"
 * ``python3 counterpartyd.py --testnet --rpc-password=PASSWORD burn --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity=.5``
