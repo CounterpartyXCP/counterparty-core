@@ -33,13 +33,12 @@ def create (db, source, quantity, test=False):
 
 def parse (db, tx, message):
     burn_parse_cursor = db.cursor()
-    # Ask for forgiveness…
     validity = 'Valid'
 
     # Unpack message.
     try:
         hidden_message = struct.unpack(FORMAT, message)
-    except Exception:   #
+    except Exception:
         validity = 'Invalid: could not unpack'
 
     if validity == 'Valid' and hidden_message[0].decode('utf-8') != 'ProofOfBurn':

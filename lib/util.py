@@ -1,9 +1,3 @@
-"""
-The functions herein defined are meant to be used internally, and so are passed
-all necessary database connexions.
-
-"""
-
 import sqlite3
 import time
 from datetime import datetime
@@ -177,15 +171,6 @@ def credit (db, address, asset, amount):
                         amount)
                   )
     credit_cursor.close()
-
-"""
-def last_issued (db):
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM issuances \
-                      ORDER BY asset DESC''')
-    issuance = cursor.fetchone()
-    return issuances['asset']
-"""
 
 def devise (db, quantity, asset, dest, divisible=None):
     FOUR = D(10) ** -4
@@ -409,7 +394,6 @@ def get_burns (db, validity=True, address=None):
     cursor.close()
     return burns
 
-
 def get_address (db, address):
     if not bitcoin.base58_decode(address, config.ADDRESSVERSION):
         raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
@@ -427,6 +411,5 @@ def get_address (db, address):
     address_dict['bet_matches'] = get_bet_matches(db, validity='Valid', addresses=[address])
     address_dict['dividends'] = get_dividends(db, validity='Valid', address=address)
     return address_dict
-
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

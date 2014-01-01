@@ -1,8 +1,6 @@
 import sys
 import os
 import hashlib
-import decimal
-D = decimal.Decimal
 
 # Units
 UNIT = 100000000    # The same across currencies.

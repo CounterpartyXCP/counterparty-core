@@ -20,8 +20,6 @@ def create (db, source, amount_per_share, asset, test=False):
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
     if not issuances:
         raise exceptions.DividendError('No such asset: {}.'.format(asset))
-    # elif issuances[0]['divisible'] == True:
-    #     raise exceptions.DividendError('Dividend‐yielding assets must be indivisible.')
     if not amount_per_share:
         raise exceptions.UselessError('Zero amount per share.')
     print('Total amount to be distributed in dividends:', amount / config.UNIT)

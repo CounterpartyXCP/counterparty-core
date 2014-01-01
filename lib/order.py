@@ -23,7 +23,6 @@ def create (db, source, give_asset, give_amount, get_asset, get_amount, expirati
     if not util.get_issuances(db, validity='Valid', asset=get_asset):
         raise exceptions.DividendError('No such asset to get: {}.'.format(get_asset))
 
-    
     give_id = util.get_asset_id(give_asset)
     get_id = util.get_asset_id(get_asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)

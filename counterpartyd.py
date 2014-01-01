@@ -4,8 +4,6 @@ import os
 import argparse
 import json
 
-from prettytable import PrettyTable
-
 import decimal
 D = decimal.Decimal
 
@@ -13,6 +11,7 @@ import sqlite3
 import logging
 import appdirs
 import configparser
+from prettytable import PrettyTable
 
 import time
 import dateutil.parser
@@ -22,7 +21,6 @@ from lib import (config, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, util)
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
-
 
 def market (give_asset, get_asset):
     os.system('cls' if os.name=='nt' else 'clear')
@@ -254,10 +252,6 @@ if __name__ == '__main__':
     parser_dividend.add_argument('--share-asset', metavar='SHARE_ASSET', required=True, help='the asset to which pay dividends')
 
     parser_burn = subparsers.add_parser('burn', help='destroy bitcoins in miners’s fees to earn XCP, during an initial period of time')
-    parser_burn.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
-    parser_burn.add_argument('--quantity', metavar='QUANTITY', required=True, help='quantity of BTC to be destroyed in miners’ fees')
-
-    parser_address = subparsers.add_parser('address', help='display the history of a Counterparty address')
     parser_address.add_argument('address', metavar='ADDRESS', help='the address you are interested in')
 
     parser_asset = subparsers.add_parser('asset', help='display the basic properties of a Counterparty asset')

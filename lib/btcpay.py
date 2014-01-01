@@ -24,6 +24,7 @@ def create (db, order_match_id, test=False):
     else:
         order_match = order_matches[0]
 
+    # Figure out to which address the BTC are being paid.
     if order_match['backward_asset'] == 'BTC':
         source = order_match['tx1_address']
         destination = order_match['tx0_address']
@@ -37,7 +38,6 @@ def create (db, order_match_id, test=False):
 
 def parse (db, tx, message):
     btcpay_parse_cursor = db.cursor()
-    # Ask for forgiveness…
     validity = 'Valid'
 
     # Unpack message.

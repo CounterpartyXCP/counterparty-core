@@ -13,7 +13,6 @@ All wagers are in XCP.
 import struct
 import decimal
 D = decimal.Decimal
-# decimal.getcontext().prec = 8
 import logging
 
 from . import (util, config, bitcoin, exceptions, util)
@@ -31,6 +30,7 @@ def get_fee_multiplier (db, feed_address):
 def create (db, source, feed_address, bet_type, deadline, wager_amount,
             counterwager_amount, target_value, leverage, expiration, test=False):
 
+    # Look at feed to be bet on.
     broadcasts = util.get_broadcasts(db, validity='Valid', source=feed_address)
     if not broadcasts:
         raise exceptions.FeedError('That feed doesn’t exist.')
@@ -39,34 +39,33 @@ def create (db, source, feed_address, bet_type, deadline, wager_amount,
     elif broadcasts[-1]['timestamp'] >= deadline:
         raise exceptions.FeedError('Deadline is in that feed’s past.')
 
-    if not wager_amount or not counterwager_amount:
-        raise exceptions.UselessError('Zero wager or counterwager')
-
+    # Check for sufficient funds.
     fee_multiplier = get_fee_multiplier(db, feed_address)
     balances = util.get_balances(db, address=source, asset='XCP')
     if not balances or balances[0]['amount'] < wager_amount * (1 + fee_multiplier / 1e8):
         raise exceptions.BalanceError('Insufficient funds to both make wager and pay feed fee (in XCP). (Check that the database is up‐to‐date.)')
 
+    # Valid leverage level?
     if leverage != 5040 and bet_type in (2,3):   # Equal, NotEqual
         raise exceptions.UselessError('Leverage cannot be used with bet types Equal and NotEqual.')
     if leverage < 5040:
         raise exceptions.UselessError('Leverage level too low (less than 5040, which is 1:1).')
+
+    if not wager_amount or not counterwager_amount:
+        raise exceptions.UselessError('Zero wager or counterwager')
 
     if target_value and bet_type in (0,1):   # BullCFD, BearCFD
         raise exceptions.UselessError('CFDs have no target value.')
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, bet_type, deadline, 
-                        wager_amount, counterwager_amount, target_value, leverage,
-                        expiration)
-
+                        wager_amount, counterwager_amount, target_value,
+                        leverage, expiration)
     return bitcoin.transaction(source, feed_address, config.DUST_SIZE,
                                config.MIN_FEE, data, test)
 
 def parse (db, tx, message):
     bet_parse_cursor = db.cursor()
-
-    # Ask for forgiveness…
     validity = 'Valid'
 
     # Unpack message.
@@ -74,12 +73,13 @@ def parse (db, tx, message):
         (bet_type, deadline, wager_amount,
          counterwager_amount, target_value, leverage,
          expiration) = struct.unpack(FORMAT, message)
-    except Exception:   #
+    except Exception:
         (bet_type, deadline, wager_amount,
          counterwager_amount, target_value, leverage,
          expiration) = None, None, None, None, None, None, None
         validity = 'Invalid: could not unpack'
 
+    # Look at feed to be bet on.
     feed_address = tx['destination']
     if validity == 'Valid':
         broadcasts = util.get_broadcasts(db, validity='Valid', source=feed_address)
@@ -99,8 +99,8 @@ def parse (db, tx, message):
     if validity == 'Valid' and leverage != 5040 and bet_type in (2,3):   # Equal, NotEqual
         validity  = 'Invalid: leverage used with an inappropriate bet type.'
 
+    # Debit amount wagered and fee.
     if validity == 'Valid':
-        # Debit amount wagered and fee.
         fee_multiplier = get_fee_multiplier(db, feed_address)
         fee = round(wager_amount * fee_multiplier / 1e8)
         validity = util.debit(db, tx['source'], 'XCP', wager_amount)
@@ -214,6 +214,7 @@ def match (db, tx):
 
             bet_match_id = tx0['tx_hash'] + tx1['tx_hash']
 
+            # Log.
             placeholder = ''
             if target_value:    # 0 is not a valid target value.
                 placeholder = ' that ' + str(util.devise(db, target_value, 'value', 'output'))

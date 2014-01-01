@@ -202,7 +202,7 @@ def transaction (source, destination, btc_amount, fee, data, test=False):
     # Check that the destination output isn’t a dust output.
     if destination:
         if not btc_amount >= config.DUST_SIZE:
-            raise exceptions.TXConstructionError('Destination output is below the dust target_value.')
+            raise exceptions.TXConstructionError('Destination output is below the dust target value.')
     else:
         assert not btc_amount
 
