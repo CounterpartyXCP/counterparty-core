@@ -441,9 +441,9 @@ if __name__ == '__main__':
 
     elif args.action == 'bet':
         deadline = round(datetime.timestamp(dateutil.parser.parse(args.deadline)))
-        wager = util.devise(db, value, 'XCP', 'input')
-        counterwager = util.devise(db, value, 'XCP', 'input')
-        target_value = util.devise(db, value, 'value', 'input')
+        wager = util.devise(db, args.wager, 'XCP', 'input')
+        counterwager = util.devise(db, args.counterwager, 'XCP', 'input')
+        target_value = util.devise(db, args.target_value, 'value', 'input')
         leverage = util.devise(db, value, 'leverage', 'input')
 
         unsigned_tx_hex = bet.create(db, args.source, args.feed_address,
