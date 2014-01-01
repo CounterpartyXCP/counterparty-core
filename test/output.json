@@ -2,7 +2,7 @@
     "get_address_balances": [
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "amount": 149838500000, 
+            "amount": 149891612500, 
             "asset": "XCP"
         }, 
         {
@@ -24,6 +24,7 @@
             "counterwager_amount": 150000000, 
             "deadline": 1388000100, 
             "expiration": 10, 
+            "fee_multiplier": 5000000, 
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "leverage": 5040, 
             "odds": 2.3333333333333335, 
@@ -41,6 +42,7 @@
             "counterwager_amount": 25000000, 
             "deadline": 1388000100, 
             "expiration": 10, 
+            "fee_multiplier": 5000000, 
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "leverage": 15120, 
             "odds": 2.0, 
@@ -50,7 +52,7 @@
             "tx_index": 10, 
             "validity": "Valid", 
             "wager_amount": 50000000, 
-            "wager_remaining": 8500000
+            "wager_remaining": 8075000
         }, 
         {
             "bet_type": 2, 
@@ -58,6 +60,7 @@
             "counterwager_amount": 650000000, 
             "deadline": 1388000200, 
             "expiration": 10, 
+            "fee_multiplier": 5000000, 
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "leverage": 5040, 
             "odds": 1.1538461538461537, 
@@ -75,6 +78,7 @@
             "counterwager_amount": 750000000, 
             "deadline": 1388000200, 
             "expiration": 10, 
+            "fee_multiplier": 5000000, 
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "leverage": 5040, 
             "odds": 0.8666666666666667, 
@@ -92,6 +96,7 @@
             "counterwager_amount": 41500000, 
             "deadline": 1388000100, 
             "expiration": 10, 
+            "fee_multiplier": 5000000, 
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "leverage": 15120, 
             "odds": 0.6024096385542169, 
@@ -101,7 +106,7 @@
             "tx_index": 11, 
             "validity": "Valid", 
             "wager_amount": 25000000, 
-            "wager_remaining": 4250000
+            "wager_remaining": 4037500
         }, 
         {
             "bet_type": 0, 
@@ -109,6 +114,7 @@
             "counterwager_amount": 350000000, 
             "deadline": 1388000100, 
             "expiration": 10, 
+            "fee_multiplier": 5000000, 
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "leverage": 5040, 
             "odds": 0.42857142857142855, 
@@ -258,7 +264,7 @@
     "get_balances": [
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "amount": 149838500000, 
+            "amount": 149891612500, 
             "asset": "XCP"
         }, 
         {

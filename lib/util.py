@@ -196,6 +196,9 @@ def devise (db, quantity, asset, dest, divisible=None):
     if asset in ('leverage', 'price', 'odds', 'value'):
         return quantity.quantize(FOUR)
 
+    if asset in ('fee_multiplier',):
+        return D(quantity / D(1e8)).quantize(FOUR)
+
     if divisible == None:
         issuances = get_issuances(db, validity='Valid', asset=asset)
         if not issuances: raise exceptions.AssetError('No such asset.')

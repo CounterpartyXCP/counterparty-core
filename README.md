@@ -71,7 +71,7 @@ counterpartyd.py --help`.
 * Quantities of divisible assets are written to eight decimal places.
 * Quantities of indivisible assets are written as integers.
 * All other quantities, i.e. prices, odds, leverages, feed values and target
-values, are specified to four decimal places.
+values, fee multipliers, are specified to four decimal places.
 * counterpartyd identifies an Order, Bet, Order Match or Bet Match by an
 ‘Order ID’, ‘Bet ID’, ‘Order Match ID’, or ‘Bet Match ID’, respectively. Match
 IDs are concatenations of the hashes of the two transactions which compose the

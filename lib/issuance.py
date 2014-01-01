@@ -34,7 +34,6 @@ def create (db, source, destination, asset, amount, divisible, test=False):
         
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
-    print(type(asset_id), type(amount))
     data += struct.pack(FORMAT, asset_id, amount, divisible)
     return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test)
 

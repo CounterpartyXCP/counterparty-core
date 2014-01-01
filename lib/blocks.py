@@ -238,6 +238,7 @@ def initialise(db):
                         target_value REAL,
                         leverage INTEGER,
                         expiration INTEGER,
+                        fee_multiplier INTEGER,
                         validity TEXT)
                    ''')
 
@@ -262,6 +263,7 @@ def initialise(db):
                         tx1_block_index INTEGER,
                         tx0_expiration INTEGER,
                         tx1_expiration INTEGER,
+                        fee_multiplier INTEGER,
                         validity TEXT)
                    ''')
 
