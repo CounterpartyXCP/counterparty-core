@@ -297,7 +297,7 @@ def expire (db, block_index):
     for bet in bet_expire_cursor.fetchall():
         if bet['validity'] == 'Valid' and util.get_time_left(bet, block_index=block_index) < 0:
             bet_expire_cursor.execute('''UPDATE bets SET validity=? WHERE tx_hash=?''', ('Invalid: expired', bet['tx_hash']))
-            util.credit(db, bet['source'], 'XCP', bet['wager_remaining'] * (1 + bet['fee_multiplier'] / 1e8))
+            util.credit(db, bet['source'], 'XCP', round(bet['wager_remaining'] * (1 + bet['fee_multiplier'] / 1e8)))
             logging.info('Expired bet: {}'.format(util.short(bet['tx_hash'])))
     bet_expire_cursor.close()
 
@@ -314,9 +314,9 @@ def expire (db, block_index):
                                               WHERE (tx0_hash=? AND tx1_hash=?)''', ('Invalid: expired awaiting broadcast', bet_match['tx0_hash'], bet_match['tx1_hash'])
                                              )
                 util.credit(db, bet_match['tx0_address'], 'XCP',
-                            bet_match['forward_amount'] * (1 + bet_match['fee_multiplier'] / 1e8))
+                            round(bet_match['forward_amount'] * (1 + bet_match['fee_multiplier'] / 1e8)))
                 util.credit(db, bet_match['tx1_address'], 'XCP',
-                            bet_match['backward_amount'] * (1 + bet_match['fee_multiplier'] / 1e8))
+                            round(bet_match['backward_amount'] * (1 + bet_match['fee_multiplier'] / 1e8)))
                 logging.info('Expired Bet Match: {}'.format(util.short(bet_match['tx0_hash'] + bet_match['tx1_hash'])))
 
     bet_expire_match_cursor.close()
