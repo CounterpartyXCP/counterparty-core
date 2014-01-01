@@ -137,12 +137,12 @@ def format_order (order):
     price = D(order['get_amount']) / D(order['give_amount'])
 
     give_remaining = util.devise(db, D(order['give_remaining']), order['give_asset'], 'output')
-    get_remaining = give_remaining * price
+    get_remaining = D(give_remaining) * price
 
     give_asset = order['give_asset']
     get_asset = order['get_asset']
 
-    price = util.devise(db, get_remaining/ give_remaining, 'price', 'output')
+    price = util.devise(db, get_remaining / D(give_remaining), 'price', 'output')
     price_assets = get_asset + '/' + give_asset
 
     if order['fee_required']:
@@ -252,7 +252,11 @@ if __name__ == '__main__':
     parser_dividend.add_argument('--share-asset', metavar='SHARE_ASSET', required=True, help='the asset to which pay dividends')
 
     parser_burn = subparsers.add_parser('burn', help='destroy bitcoins in miners’s fees to earn XCP, during an initial period of time')
-    parser_burn.add_argument('address', metavar='ADDRESS', help='the address you are interested in')
+    parser_burn.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
+    parser_burn.add_argument('--quantity', metavar='QUANTITY', required=True, help='quantity of BTC to be destroyed in miners’ fees')
+
+    parser_address = subparsers.add_parser('address', help='display the history of a Counterparty address')
+    parser_address.add_argument('address', metavar='ADDRESS', help='the address you are interested in')
 
     parser_asset = subparsers.add_parser('asset', help='display the basic properties of a Counterparty asset')
     parser_asset.add_argument('asset', metavar='ASSET', help='the asset you are interested in')
@@ -434,7 +438,7 @@ if __name__ == '__main__':
         fee_multiplier = round(D(args.fee_multiplier) * D(1e8))
         if fee_multiplier > 4294967295:
             raise exceptions.OverflowError('Fee multiplier must be less than or equal to 42.94967295.')
-        value = util.devise(db, value, 'value', 'input')
+        value = util.devise(db, args.value, 'value', 'input')
         unsigned_tx_hex = broadcast.create(db, args.source, int(time.time()),
                                            value, fee_multiplier, args.text)
         json_print(bitcoin.transmit(unsigned_tx_hex))
@@ -444,7 +448,7 @@ if __name__ == '__main__':
         wager = util.devise(db, args.wager, 'XCP', 'input')
         counterwager = util.devise(db, args.counterwager, 'XCP', 'input')
         target_value = util.devise(db, args.target_value, 'value', 'input')
-        leverage = util.devise(db, value, 'leverage', 'input')
+        leverage = util.devise(db, args.leverage, 'leverage', 'input')
 
         unsigned_tx_hex = bet.create(db, args.source, args.feed_address,
                                      util.BET_TYPE_ID[args.bet_type], deadline,

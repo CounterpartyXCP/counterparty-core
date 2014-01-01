@@ -13,8 +13,7 @@ The Counterparty protocol specification may be found at
 
 # Dependencies
 * [Python 3](http://python.org)
-* Python 3 packages: SQLite3, Requests, AppDirs, PrettyTable, ConfigParser,
-  dateutil
+* Python 3 packages: SQLite3, Requests, AppDirs, PrettyTable, ConfigParser, dateutil
 * Bitcoind
 
 # Installation
