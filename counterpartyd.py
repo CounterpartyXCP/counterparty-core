@@ -348,7 +348,7 @@ if __name__ == '__main__':
         config.LOG = None   # Log to stdout.
     logging.basicConfig(filename=config.LOG, level=logging.INFO,
                         format='%(asctime)s %(message)s',
-                        datefmt='%m-%d-%YT%I:%M:%S%z')
+                        datefmt='%Y-%m-%d-T%I:%M:%S%z')
     requests_log = logging.getLogger("requests")
     requests_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
 
@@ -368,12 +368,12 @@ if __name__ == '__main__':
         config.ADDRESSVERSION = b'\x6F'
         config.BLOCK_FIRST = 154908
         config.BURN_START = 154908
-        config.BURN_END = 417708    # Five years, at ten minutes per block.
+        config.BURN_END = 4017708    # Fifty years, at ten minutes per block.
     else:
         config.ADDRESSVERSION = b'\x00'
-        config.BLOCK_FIRST = 277910 # TODO: TEMP
-        config.BURN_START = 277910 # TODO: TEMP
-        config.BURN_END = 278910 # TODO: TEMP
+        config.BLOCK_FIRST = 278350
+        config.BURN_START = 278350
+        config.BURN_END = 283350
 
     if config.TESTCOIN:
         config.PREFIX = b'XX'                   # 2 bytes (possibly accidentally created)
