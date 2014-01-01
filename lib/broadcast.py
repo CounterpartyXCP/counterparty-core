@@ -98,7 +98,7 @@ def parse (db, tx, message):
             logging.info('Broadcast: {} locked his feed.'.format(tx['source'], util.short(tx['tx_hash'])))
         else:
             if not value: infix = '‘' + text + '’'
-            else: infix = '‘' + text + ' = ' + str(value) + '’'
+            else: infix = '‘' + text + '’' + ' = ' + str(value)
             suffix = ' from ' + tx['source'] + ' at ' + util.isodt(timestamp) + ' with a fee multiplier of {}'.format(util.devise(db, fee_multiplier, 'fee_multiplier', 'output')) + ' (' + util.short(tx['tx_hash']) + ')'
             logging.info('Broadcast: {}'.format(infix + suffix))
 
