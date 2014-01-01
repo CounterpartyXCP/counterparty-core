@@ -54,6 +54,8 @@ If and only if counterpartyd is to be run on the Bitcoin testnet, with the
 counterpartyd may run with the `--testcoin` option on any blockchain,
 however.
 
+The test suite is invoked with `py.test`.
+
 # Usage
 The command‐line syntax of counterpartyd is generally that of `python3
 counterpartyd.py {OPTIONS} ACTION {ACTION-OPTIONS}`. There is a one action per
