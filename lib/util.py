@@ -179,7 +179,10 @@ def devise (db, quantity, asset, dest, divisible=None):
     quantity = D(quantity)
 
     if asset in ('leverage', 'price', 'odds', 'value'):
-        return quantity.quantize(FOUR)
+        if dest == 'output':
+            return quantity.quantize(FOUR)
+        elif dest == 'input':
+            return round(quantity)
 
     if asset in ('fee_multiplier',):
         return D(quantity / D(1e8)).quantize(FOUR)

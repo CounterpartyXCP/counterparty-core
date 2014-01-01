@@ -12,6 +12,9 @@ ID = 50
 LENGTH = 8 + 8
 
 def create (db, source, amount_per_share, asset, test=False):
+    if asset in ('BTC', 'XCP'):
+        raise exceptions.DividendError('Cannot send dividends to BTC or XCP.')
+
     issuances = util.get_issuances(db, validity='Valid', asset=asset)
     total_shares = sum([issuance['amount'] for issuance in issuances])
     amount = amount_per_share * total_shares
@@ -46,7 +49,7 @@ def parse (db, tx, message):
             validity = 'Invalid: zero amount per share.'
 
     if validity == 'Valid':
-        if asset in (0, 1):
+        if asset in ('BTC', 'XCP'):
             validity = 'Invalid: cannot send dividends to BTC or XCP'
         elif not util.valid_asset_name(asset):
             validity = 'Invalid: bad Asset ID'
