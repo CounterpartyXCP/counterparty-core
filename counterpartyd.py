@@ -382,6 +382,8 @@ if __name__ == '__main__':
     else:
         config.PREFIX = b'CNTRPRTY'             # 8 bytes
 
+    if args.action == None: args.action = 'server'
+
     # Check that bitcoind is running, communicable, and caught up with the blockchain.
     # Check that the database has caught up with bitcoind.
     if not args.force:
@@ -486,7 +488,10 @@ if __name__ == '__main__':
     elif args.action == 'help':
         parser.print_help()
 
-    else:
+    elif args.action == 'server':
         blocks.follow()
+
+    else:
+        parser.print_help()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
