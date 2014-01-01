@@ -47,7 +47,7 @@ However, a counterpartyd configuration file looks like this:
 	rpc-password=PASSWORD
 	testnet = 1
 
-Note the change in hyphenation between ‘rpcpassword’ and ‘rcp-password’.
+Note the change in hyphenation between ‘rpcpassword’ and ‘rpc-password’.
 
 If and only if counterpartyd is to be run on the Bitcoin testnet, with the
 `--testnet` CLI option, Bitcoind must be set to do the same (`-testnet=1`).

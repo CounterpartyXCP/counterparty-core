@@ -44,7 +44,7 @@ bitcoin.conf in ~/.bitcoin/bitcoin.conf')
     sys.exit(1)
 config.RPC = 'http://'+config.RPCUSER+':'+config.RPCPASSWORD+'@'+config.RPCCONNECT+':'+config.RPCPORT
 
-config.DATABASE = '/tmp/counterparty.test.db'
+config.DATABASE = CURR_DIR + '/counterparty.test.db'
 try: os.remove(config.DATABASE)
 except: pass
 db = sqlite3.connect(config.DATABASE)
