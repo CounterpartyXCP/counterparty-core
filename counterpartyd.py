@@ -252,7 +252,7 @@ if __name__ == '__main__':
     parser_dividend.add_argument('--share-asset', metavar='SHARE_ASSET', required=True, help='the asset to which pay dividends')
 
     parser_burn = subparsers.add_parser('burn', help='destroy bitcoins in miners’s fees to earn XCP, during an initial period of time')
-    parser_address.add_argument('address', metavar='ADDRESS', help='the address you are interested in')
+    parser_burn.add_argument('address', metavar='ADDRESS', help='the address you are interested in')
 
     parser_asset = subparsers.add_parser('asset', help='display the basic properties of a Counterparty asset')
     parser_asset.add_argument('asset', metavar='ASSET', help='the asset you are interested in')
@@ -362,9 +362,9 @@ if __name__ == '__main__':
     # (more) Testnet
     if config.TESTNET:
         config.ADDRESSVERSION = b'\x6F'
-        config.BLOCK_FIRST = 154759
-        config.BURN_START = 154759
-        config.BURN_END = 156000
+        config.BLOCK_FIRST = 154908
+        config.BURN_START = 154908
+        config.BURN_END = 417708    # Five years, at ten minutes per block.
     else:
         config.ADDRESSVERSION = b'\x00'
         config.BLOCK_FIRST = 277910 # TODO: TEMP
