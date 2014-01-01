@@ -49,7 +49,7 @@ def parse (db, tx, message):
         if give_asset == get_asset:
             validity = 'Invalid: cannot trade an asset for itself.'
     if validity == 'Valid':
-        if not get_amount or not get_amount:
+        if not give_amount or not get_amount:
             validity = 'Invalid: zero give or zero get.'
 
     if validity == 'Valid' and not util.get_issuances(db, validity='Valid', asset=give_asset):

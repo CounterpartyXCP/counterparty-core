@@ -7,7 +7,7 @@ UNIT = 100000000    # The same across currencies.
 
 # Versions
 VERSION = 1
-DB_VERSION = 5
+DB_VERSION = 0
 
 # Bitcoin protocol
 DUST_SIZE = 5430

@@ -51,12 +51,14 @@ However, a counterpartyd configuration file looks like this:
 	rpc-password=PASSWORD
 	testnet = 1
 
-Note the change in hyphenation between ‘rpcpassword’ and ‘rcp-password’.
+Note the change in hyphenation between ‘rpcpassword’ and ‘rpc-password’.
 
 If and only if counterpartyd is to be run on the Bitcoin testnet, with the
 `--testnet` CLI option, Bitcoind must be set to do the same (`-testnet=1`).
 counterpartyd may run with the `--testcoin` option on any blockchain,
 however.
+
+The test suite is invoked with `py.test`.
 
 # Usage
 The command‐line syntax of counterpartyd is generally that of `python3
