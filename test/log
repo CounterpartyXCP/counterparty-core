@@ -5,29 +5,29 @@ Order: sell 0.5 BTC for 1.0 XCP at 2.0000 XCP/BTC in 10 blocks with a provided f
 Order: sell 1.05 XCP for 0.5 BTC at 0.4762 BTC/XCP in 10 blocks with a required fee of 0.009 BTC (084fed08…adff29c5)
 Order Match: 0.50000000 BTC for 1.00000000 XCP at 2.0000 XCP/BTC (dbc1b4c900ffe48d…11b65a9aadff29c5)
 BTC Payment for Order Match: dbc1b4c900ffe48d…11b65a9aadff29c5 (e52d9c50…81c89e71)
-Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 10 of divisible asset BBBB (e77b9a9a…5ab743db)
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 10.0 of divisible asset BBBB (e77b9a9a…5ab743db)
 Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 100000 of indivisible asset BBBC (67586e98…08c5ecf6)
 Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 6E-8 per share of asset BBBB (ca358758…005ee879)
 Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 8E-8 per share of asset BBBC (beead779…8dc1829a)
 Broadcast: ‘Unit Test = 100.0’ from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:33:20-05:00 with a fee multiplier of 0.0500 (2b4c342f…651c3cb9)
-Bet: BullCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 0.5 XCP against 0.25 XCP in 10 blocks, leveraged 3.0000x (01ba4719…daca546b)
-Bet: BearCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 0.25 XCP against 0.415 XCP in 10 blocks, leveraged 3.0000x (e7cf46a0…4b7cc3a6)
-Bet Match: BullCFD for 0.39425 XCP against BearCFD for 0.197125 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00, leveraged 3.0000x (01ba4719c80b6fe9…14add3314b7cc3a6)
-Bet: BullCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 1.5 XCP against 3.5 XCP in 10 blocks, leveraged 1.0000x (ef6cbd21…9b44c977)
-Bet: BearCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 3.5 XCP against 1.5 XCP in 10 blocks, leveraged 1.0000x (9d1e0e2d…113599c4)
-Bet Match: BullCFD for 1.425 XCP against BearCFD for 3.325 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00, leveraged 1.0000x (ef6cbd2161eaea79…f30eba2e113599c4)
-Bet: Equal on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 for 7.5 XCP against 6.5 XCP in 10 blocks that 1.0000, leveraged 1.0000x (4d7b3ef7…9a0d0f47)
-Bet: NotEqual on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 for 6.5 XCP against 7.5 XCP in 10 blocks that 1.0000, leveraged 1.0000x (dc0e9c36…e30f8cb8)
-Bet Match: Equal for 7.125 XCP against NotEqual for 6.175 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 that 1.0000, leveraged 1.0000x (4d7b3ef7300acf70…923ad9bde30f8cb8)
+Bet: BullCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 0.5 XCP against 0.25 XCP in 10 blocks, leveraged 3.0000x for a fee of 0.025 XCP (01ba4719…daca546b)
+Bet: BearCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 0.25 XCP against 0.415 XCP in 10 blocks, leveraged 3.0000x for a fee of 0.0125 XCP (e7cf46a0…4b7cc3a6)
+Bet Match: BullCFD for 0.415 XCP against BearCFD for 0.2075 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00, leveraged 3.0000x (01ba4719c80b6fe9…14add3314b7cc3a6)
+Bet: BullCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 1.5 XCP against 3.5 XCP in 10 blocks, leveraged 1.0000x for a fee of 0.075 XCP (ef6cbd21…9b44c977)
+Bet: BearCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 3.5 XCP against 1.5 XCP in 10 blocks, leveraged 1.0000x for a fee of 0.175 XCP (9d1e0e2d…113599c4)
+Bet Match: BullCFD for 1.5 XCP against BearCFD for 3.5 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00, leveraged 1.0000x (ef6cbd2161eaea79…f30eba2e113599c4)
+Bet: Equal on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 for 7.5 XCP against 6.5 XCP in 10 blocks that 1.0000, leveraged 1.0000x for a fee of 0.375 XCP (4d7b3ef7…9a0d0f47)
+Bet: NotEqual on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 for 6.5 XCP against 7.5 XCP in 10 blocks that 1.0000, leveraged 1.0000x for a fee of 0.325 XCP (dc0e9c36…e30f8cb8)
+Bet Match: Equal for 7.5 XCP against NotEqual for 6.5 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 that 1.0000, leveraged 1.0000x (4d7b3ef7300acf70…923ad9bde30f8cb8)
 Broadcast: ‘Unit Test = 99.98332’ from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:34:10-05:00 with a fee multiplier of 0.0500 (c555eab4…89b88ee3)
-Contract Force‐Liquidated: 0.34421 XCP credited to the bull, 0.247165 XCP credited to the bear, and 0.031125 XCP credited to the feed address (01ba4719c80b6fe9…14add3314b7cc3a6)
-Contract Force‐Liquidated: 1.40832 XCP credited to the bull, 3.34168 XCP credited to the bear, and 0.25 XCP credited to the feed address (ef6cbd2161eaea79…f30eba2e113599c4)
+Contract Force‐Liquidated: 0.36496 XCP credited to the bull, 0.25754 XCP credited to the bear, and 0.031125 XCP credited to the feed address (01ba4719c80b6fe9…14add3314b7cc3a6)
+Contract Force‐Liquidated: 1.48332 XCP credited to the bull, 3.51668 XCP credited to the bear, and 0.25 XCP credited to the feed address (ef6cbd2161eaea79…f30eba2e113599c4)
 Broadcast: ‘Unit Test = 100.343’ from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:01-05:00 with a fee multiplier of 0.0500 (4a64a107…1d4ea80a)
-Contract Force‐Liquidated: 0.591375 XCP credited to the bull, 0.0 XCP credited to the bear, and 0.031125 XCP credited to the feed address (01ba4719c80b6fe9…14add3314b7cc3a6)
-Contract Force‐Liquidated: 1.768 XCP credited to the bull, 2.982 XCP credited to the bear, and 0.25 XCP credited to the feed address (ef6cbd2161eaea79…f30eba2e113599c4)
-Contract Settled: 1.768 XCP credited to the bull, 2.982 XCP credited to the bear, and 0.25 XCP credited to the feed address (ef6cbd2161eaea79…f30eba2e113599c4)
+Contract Force‐Liquidated: 0.6225 XCP credited to the bull, 0.0 XCP credited to the bear, and 0.031125 XCP credited to the feed address (01ba4719c80b6fe9…14add3314b7cc3a6)
+Contract Force‐Liquidated: 1.843 XCP credited to the bull, 3.157 XCP credited to the bear, and 0.25 XCP credited to the feed address (ef6cbd2161eaea79…f30eba2e113599c4)
+Contract Settled: 1.843 XCP credited to the bull, 3.157 XCP credited to the bear, and 0.25 XCP credited to the feed address (ef6cbd2161eaea79…f30eba2e113599c4)
 Broadcast: ‘Unit Test = 2.0’ from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:41-05:00 with a fee multiplier of 0.0500 (f299791c…e91e750c)
-Contract Settled: NotEqual won the pot of 13.3 XCP; 0.7 XCP credited to the feed address (4d7b3ef7300acf70…923ad9bde30f8cb8)
+Contract Settled: NotEqual won the pot of 14.0 XCP; 0.7 XCP credited to the feed address (4d7b3ef7300acf70…923ad9bde30f8cb8)
 
 
 Block: 0
@@ -42,7 +42,7 @@ Order Match: 0.50000000 BTC for 1.00000000 XCP at 2.0000 XCP/BTC (dbc1b4c900ffe4
 Block: 4
 BTC Payment for Order Match: dbc1b4c900ffe48d…11b65a9aadff29c5 (e52d9c50…81c89e71)
 Block: 5
-Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 10 of divisible asset BBBB (e77b9a9a…5ab743db)
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 10.0 of divisible asset BBBB (e77b9a9a…5ab743db)
 Block: 6
 Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 100000 of indivisible asset BBBC (67586e98…08c5ecf6)
 Block: 7
@@ -52,32 +52,32 @@ Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 8E-8 per share of asset BBBC (
 Block: 9
 Broadcast: ‘Unit Test = 100.0’ from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:33:20-05:00 with a fee multiplier of 0.0500 (2b4c342f…651c3cb9)
 Block: 10
-Bet: BullCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 0.5 XCP against 0.25 XCP in 10 blocks, leveraged 3.0000x (01ba4719…daca546b)
+Bet: BullCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 0.5 XCP against 0.25 XCP in 10 blocks, leveraged 3.0000x for a fee of 0.025 XCP (01ba4719…daca546b)
 Block: 11
-Bet: BearCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 0.25 XCP against 0.415 XCP in 10 blocks, leveraged 3.0000x (e7cf46a0…4b7cc3a6)
-Bet Match: BullCFD for 0.39425 XCP against BearCFD for 0.197125 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00, leveraged 3.0000x (01ba4719c80b6fe9…14add3314b7cc3a6)
+Bet: BearCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 0.25 XCP against 0.415 XCP in 10 blocks, leveraged 3.0000x for a fee of 0.0125 XCP (e7cf46a0…4b7cc3a6)
+Bet Match: BullCFD for 0.415 XCP against BearCFD for 0.2075 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00, leveraged 3.0000x (01ba4719c80b6fe9…14add3314b7cc3a6)
 Block: 12
-Bet: BullCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 1.5 XCP against 3.5 XCP in 10 blocks, leveraged 1.0000x (ef6cbd21…9b44c977)
+Bet: BullCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 1.5 XCP against 3.5 XCP in 10 blocks, leveraged 1.0000x for a fee of 0.075 XCP (ef6cbd21…9b44c977)
 Block: 13
 Expired order: dbc1b4c9…6457d986
-Bet: BearCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 3.5 XCP against 1.5 XCP in 10 blocks, leveraged 1.0000x (9d1e0e2d…113599c4)
-Bet Match: BullCFD for 1.425 XCP against BearCFD for 3.325 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00, leveraged 1.0000x (ef6cbd2161eaea79…f30eba2e113599c4)
+Bet: BearCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 3.5 XCP against 1.5 XCP in 10 blocks, leveraged 1.0000x for a fee of 0.175 XCP (9d1e0e2d…113599c4)
+Bet Match: BullCFD for 1.5 XCP against BearCFD for 3.5 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00, leveraged 1.0000x (ef6cbd2161eaea79…f30eba2e113599c4)
 Block: 14
 Expired order: 084fed08…adff29c5
-Bet: Equal on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 for 7.5 XCP against 6.5 XCP in 10 blocks that 1.0000, leveraged 1.0000x (4d7b3ef7…9a0d0f47)
+Bet: Equal on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 for 7.5 XCP against 6.5 XCP in 10 blocks that 1.0000, leveraged 1.0000x for a fee of 0.375 XCP (4d7b3ef7…9a0d0f47)
 Block: 15
-Bet: NotEqual on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 for 6.5 XCP against 7.5 XCP in 10 blocks that 1.0000, leveraged 1.0000x (dc0e9c36…e30f8cb8)
-Bet Match: Equal for 7.125 XCP against NotEqual for 6.175 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 that 1.0000, leveraged 1.0000x (4d7b3ef7300acf70…923ad9bde30f8cb8)
+Bet: NotEqual on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 for 6.5 XCP against 7.5 XCP in 10 blocks that 1.0000, leveraged 1.0000x for a fee of 0.325 XCP (dc0e9c36…e30f8cb8)
+Bet Match: Equal for 7.5 XCP against NotEqual for 6.5 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 that 1.0000, leveraged 1.0000x (4d7b3ef7300acf70…923ad9bde30f8cb8)
 Block: 16
 Broadcast: ‘Unit Test = 99.98332’ from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:34:10-05:00 with a fee multiplier of 0.0500 (c555eab4…89b88ee3)
-Contract Force‐Liquidated: 0.34421 XCP credited to the bull, 0.247165 XCP credited to the bear, and 0.031125 XCP credited to the feed address (01ba4719c80b6fe9…14add3314b7cc3a6)
-Contract Force‐Liquidated: 1.40832 XCP credited to the bull, 3.34168 XCP credited to the bear, and 0.25 XCP credited to the feed address (ef6cbd2161eaea79…f30eba2e113599c4)
+Contract Force‐Liquidated: 0.36496 XCP credited to the bull, 0.25754 XCP credited to the bear, and 0.031125 XCP credited to the feed address (01ba4719c80b6fe9…14add3314b7cc3a6)
+Contract Force‐Liquidated: 1.48332 XCP credited to the bull, 3.51668 XCP credited to the bear, and 0.25 XCP credited to the feed address (ef6cbd2161eaea79…f30eba2e113599c4)
 Block: 17
 Broadcast: ‘Unit Test = 100.343’ from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:01-05:00 with a fee multiplier of 0.0500 (4a64a107…1d4ea80a)
-Contract Force‐Liquidated: 0.591375 XCP credited to the bull, 0.0 XCP credited to the bear, and 0.031125 XCP credited to the feed address (01ba4719c80b6fe9…14add3314b7cc3a6)
-Contract Force‐Liquidated: 1.768 XCP credited to the bull, 2.982 XCP credited to the bear, and 0.25 XCP credited to the feed address (ef6cbd2161eaea79…f30eba2e113599c4)
-Contract Settled: 1.768 XCP credited to the bull, 2.982 XCP credited to the bear, and 0.25 XCP credited to the feed address (ef6cbd2161eaea79…f30eba2e113599c4)
+Contract Force‐Liquidated: 0.6225 XCP credited to the bull, 0.0 XCP credited to the bear, and 0.031125 XCP credited to the feed address (01ba4719c80b6fe9…14add3314b7cc3a6)
+Contract Force‐Liquidated: 1.843 XCP credited to the bull, 3.157 XCP credited to the bear, and 0.25 XCP credited to the feed address (ef6cbd2161eaea79…f30eba2e113599c4)
+Contract Settled: 1.843 XCP credited to the bull, 3.157 XCP credited to the bear, and 0.25 XCP credited to the feed address (ef6cbd2161eaea79…f30eba2e113599c4)
 Block: 18
 Broadcast: ‘Unit Test = 2.0’ from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:41-05:00 with a fee multiplier of 0.0500 (f299791c…e91e750c)
-Contract Settled: NotEqual won the pot of 13.3 XCP; 0.7 XCP credited to the feed address (4d7b3ef7300acf70…923ad9bde30f8cb8)
+Contract Settled: NotEqual won the pot of 14.0 XCP; 0.7 XCP credited to the feed address (4d7b3ef7300acf70…923ad9bde30f8cb8)
 STOP TEST

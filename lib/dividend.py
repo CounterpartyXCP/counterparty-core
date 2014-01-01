@@ -4,6 +4,8 @@
 
 import struct
 import logging
+import decimal
+D = decimal.Decimal
 
 from . import (util, config, exceptions, bitcoin, util)
 
@@ -17,9 +19,10 @@ def create (db, source, amount_per_share, asset, test=False):
 
     issuances = util.get_issuances(db, validity='Valid', asset=asset)
     total_shares = sum([issuance['amount'] for issuance in issuances])
-    amount = amount_per_share * total_shares
+    amount = amount_per_share * round(D(util.devise(db, total_shares, 'XCP', 'output')))    # Hackish
     balances = util.get_balances(db, address=source, asset='XCP')
     if not balances or balances[0]['amount'] < amount:
+        print(balances[0]['amount'], amount)
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
     if not issuances:
         raise exceptions.DividendError('No such asset: {}.'.format(asset))
@@ -58,7 +61,7 @@ def parse (db, tx, message):
     if validity == 'Valid':
         issuances = util.get_issuances(db, validity='Valid', asset=asset)
         total_shares = sum([issuance['amount'] for issuance in issuances])
-        amount = amount_per_share * total_shares
+        amount = amount_per_share * round(D(util.devise(db, total_shares, 'XCP', 'output')))    # Hackish
         validity = util.debit(db, tx['source'], 'XCP', amount)
 
     # Credit.

@@ -121,7 +121,7 @@ def parse (db, tx, message):
         # the bet match is settled.
         total_escrow = bet_match['forward_amount'] + bet_match['backward_amount']
         fee_fraction = bet_match['fee_multiplier'] / 1e8
-        fee = round(total_escrow / (1 - fee_fraction) * fee_fraction)
+        fee = round(total_escrow * fee_fraction)
 
         # Get known bet match type IDs.
         cfd_type_id = util.BET_TYPE_ID['BullCFD'] + util.BET_TYPE_ID['BearCFD']

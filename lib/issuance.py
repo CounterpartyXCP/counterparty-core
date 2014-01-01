@@ -115,7 +115,7 @@ def parse (db, tx, message):
             else:
                 divisibility = 'indivisible'
                 unit = 1
-            logging.info('Issuance: {} created {} of {} asset {} ({})'.format(tx['source'], D(amount / unit), divisibility, asset, util.short(tx['tx_hash'])))
+            logging.info('Issuance: {} created {} of {} asset {} ({})'.format(tx['source'], util.devise(db, amount, None, 'output', divisible=divisible), divisibility, asset, util.short(tx['tx_hash'])))
 
     issuance_parse_cursor.close()
 

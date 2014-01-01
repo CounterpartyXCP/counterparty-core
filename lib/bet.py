@@ -139,7 +139,7 @@ def parse (db, tx, message):
                         deadline,
                         wager_amount,
                         counterwager_amount,
-                        wager_amount - fee,
+                        wager_amount,
                         odds,
                         target_value,
                         leverage,
@@ -155,7 +155,7 @@ def parse (db, tx, message):
             placeholder = ' that ' + str(util.devise(db, target_value, 'value', 'output'))
         if leverage:
             placeholder += ', leveraged {}x'.format(util.devise(db, leverage / 5040, 'leverage', 'output'))
-        logging.info('Bet: {} on {} at {} for {} XCP against {} XCP in {} blocks{} ({})'.format(util.BET_TYPE_NAME[bet_type], feed_address, util.isodt(deadline), wager_amount / config.UNIT, counterwager_amount / config.UNIT, expiration, placeholder, util.short(tx['tx_hash'])))
+        logging.info('Bet: {} on {} at {} for {} XCP against {} XCP in {} blocks{} for a fee of {} XCP ({})'.format(util.BET_TYPE_NAME[bet_type], feed_address, util.isodt(deadline), wager_amount / config.UNIT, counterwager_amount / config.UNIT, expiration, placeholder, util.devise(db, fee, 'XCP', 'output'), util.short(tx['tx_hash'])))
         match(db, tx)
 
     bet_parse_cursor.close()
@@ -198,6 +198,8 @@ def match (db, tx):
         # Fee multipliers must agree exactly.
         if tx0['fee_multiplier'] != tx1['fee_multiplier']:
             continue
+        else:
+            fee_multiplier = tx0['fee_multiplier']
 
         # Deadlines must agree exactly.
         if tx0['deadline'] != tx1['deadline']:
@@ -220,15 +222,15 @@ def match (db, tx):
                 placeholder = ' that ' + str(util.devise(db, target_value, 'value', 'output'))
             if leverage:
                 placeholder += ', leveraged {}x'.format(util.devise(db, leverage / 5040, 'leverage', 'output'))
-            logging.info('Bet Match: {} for {} XCP against {} for {} XCP on {} at {}{} ({})'.format(util.BET_TYPE_NAME[tx0['bet_type']], forward_amount / config.UNIT, util.BET_TYPE_NAME[tx1['bet_type']], backward_amount / config.UNIT, tx1['feed_address'], util.isodt(tx1['deadline']), placeholder, util.short(bet_match_id)))
+            logging.info('Bet Match: {} for {} XCP against {} for {} XCP on {} at {}{} ({})'.format(util.BET_TYPE_NAME[tx0['bet_type']], util.devise(db, forward_amount, 'XCP', 'output'), util.BET_TYPE_NAME[tx1['bet_type']], util.devise(db, backward_amount, 'XCP', 'output'), tx1['feed_address'], util.isodt(tx1['deadline']), placeholder, util.short(bet_match_id)))
 
             # Debit the order.
             wager_remaining = round(wager_remaining - backward_amount)
 
             # Update wager_remaining.
             bet_match_cursor.execute('''UPDATE bets \
-                              SET wager_remaining=? \
-                              WHERE tx_hash=?''',
+                              set wager_remaining=? \
+                              where tx_hash=?''',
                           (tx0['wager_remaining'] - forward_amount,
                            tx0['tx_hash']))
             bet_match_cursor.execute('''UPDATE bets \
@@ -282,7 +284,7 @@ def match (db, tx):
                                 tx1['block_index'],
                                 tx0['expiration'],
                                 tx1['expiration'],
-                                tx0['fee_multiplier'],
+                                fee_multiplier,
                                 'Valid')
                           )
 
