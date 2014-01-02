@@ -1,5 +1,5 @@
 START TEST
-Burn: 1.0 BTC burned; 1500.0 XCP earned (6e340b9c…17afa01d)
+Burn: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 1.0 BTC for 1500.0 XCP (6e340b9c…17afa01d)
 Send: 0.5 of asset XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 (4bf5122f…7785459a)
 Order: sell 0.5 BTC for 1.0 XCP at 2.0000 XCP/BTC in 10 blocks with a provided fee of 0.01 BTC (dbc1b4c9…6457d986)
 Order: sell 1.05 XCP for 0.5 BTC at 0.4762 BTC/XCP in 10 blocks with a required fee of 0.009 BTC (084fed08…adff29c5)
@@ -31,7 +31,7 @@ Contract Settled: NotEqual won the pot of 14.0 XCP; 0.7 XCP credited to the feed
 
 
 Block: 0
-Burn: 1.0 BTC burned; 1500.0 XCP earned (6e340b9c…17afa01d)
+Burn: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 1.0 BTC for 1500.0 XCP (6e340b9c…17afa01d)
 Block: 1
 Send: 0.5 of asset XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 (4bf5122f…7785459a)
 Block: 2

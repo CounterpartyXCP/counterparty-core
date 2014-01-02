@@ -31,8 +31,8 @@ configuration file.
 
 counterpartyd needs to know at least the JSON‐RPC password of the Bitcoind with
 which it is supposed to communicate. The simplest way to set this is to
-include it in all command‐line invocations of counterpartyd, such as `python3
-counterpartyd.py --rpc-password=PASSWORD ACTION`. To make this and other
+include it in all command‐line invocations of counterpartyd, such as
+`./counterpartyd.py --rpc-password=PASSWORD ACTION`. To make this and other
 options persistent across counterpartyd sessions, one may store the desired
 settings in a configuration file specific to counterpartyd.
 
@@ -61,16 +61,16 @@ however.
 The test suite is invoked with `py.test`.
 
 # Usage
-The command‐line syntax of counterpartyd is generally that of `python3
-counterpartyd.py {OPTIONS} ACTION {ACTION-OPTIONS}`. There is a one action per
-message type, which action produces and broadcasts such a message; the message
-parameters are specified following the name of the message type. There are also
-actions which do not correspond to message types, but rather exist to provide
-information about the state of the Counterparty network, e.g. current balances
-or open orders.
+The command‐line syntax of counterpartyd is generally that of
+`./counterpartyd.py {OPTIONS} ACTION {ACTION-OPTIONS}`. There is a one action
+per message type, which action produces and broadcasts such a message; the
+message parameters are specified following the name of the message type. There
+are also actions which do not correspond to message types, but rather exist to
+provide information about the state of the Counterparty network, e.g. current
+balances or open orders.
 
-For a summary of the command‐line arguments and options, see `python3
-counterpartyd.py --help`.
+For a summary of the command‐line arguments and options, see
+`./counterpartyd.py --help`.
 
 ## Input and Output
 * Quantities of divisible assets are written to eight decimal places.

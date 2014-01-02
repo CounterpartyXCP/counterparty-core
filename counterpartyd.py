@@ -92,6 +92,17 @@ def address (address):
     print(str(table))
     print('\n')
 
+    # Burns.
+    burns = address['burns']
+    table = PrettyTable(['Block Index', 'Burned', 'Earned', 'Tx Hash'])
+    for burn in burns:
+        burned = util.devise(db, burn['burned'], 'BTC', 'output')
+        earned = util.devise(db, burn['earned'], 'BTC', 'output')
+        table.add_row([burn['block_index'], burned + ' BTC', earned + ' XCP', util.short(burn['tx_hash'])])
+    print('Burns')
+    print(str(table))
+    print('\n')
+
     # Sends.
     sends = address['sends']
     table = PrettyTable(['Amount', 'Asset', 'Source', 'Destination', 'Tx Hash'])
