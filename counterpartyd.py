@@ -383,7 +383,7 @@ if __name__ == '__main__':
         config.ADDRESSVERSION = b'\x00'
         config.BLOCK_FIRST = 278270
         config.BURN_START = 278310
-        config.BURN_END = 283310
+        config.BURN_END = 283810
 
     if config.TESTCOIN:
         config.PREFIX = b'XX'                   # 2 bytes (possibly accidentally created)
