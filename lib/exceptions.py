@@ -3,8 +3,6 @@
 # Exceptions
 class ConfigurationError (Exception):
     pass
-class PossibleInjectionAttackError (Exception):
-    pass
 class TXConstructionError(Exception):
     pass
 class OverflowError(Exception):

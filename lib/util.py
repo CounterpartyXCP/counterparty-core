@@ -328,11 +328,16 @@ def get_issuances (db, validity=None, asset=None, issuer=None):
 
 def get_broadcasts (db, validity=None, source=None, order_by='tx_index ASC'):
     cursor = db.cursor()
-    if order_by not in ('tx_index ASC', 'timestamp DESC'):
-        raise exceptions.PossibleInjectionAttackError('Unknown scheme for ordering broadcasts.')
 
-    cursor.execute('''SELECT * FROM broadcasts \
-                      ORDER BY ?''', (order_by,))
+    if order_by == 'tx_index ASC':
+        cursor.execute('''SELECT * FROM broadcasts \
+                          ORDER BY tx_index ASC''')
+    elif order_by == 'timestamp DESC':
+        cursor.execute('''SELECT * FROM broadcasts \
+                          ORDER BY timestamp DESC''')
+    else:
+        raise Exception('Unknown scheme for ordering broadcasts.')
+
     broadcasts = []
     for broadcast in cursor.fetchall():
         if validity and broadcast['Validity'] != validity: continue
