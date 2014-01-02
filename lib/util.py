@@ -182,7 +182,11 @@ def devise (db, quantity, asset, dest, divisible=None):
         if dest == 'output':
             return quantity.quantize(FOUR)
         elif dest == 'input':
-            return round(quantity)
+            # Hackish
+            if asset == 'leverage':
+                return round(quantity)
+            else:
+                return float(quantity)
 
     if asset in ('fee_multiplier',):
         return D(quantity / D(1e8)).quantize(FOUR)
