@@ -262,9 +262,9 @@ if __name__ == '__main__':
     parser_dividend.add_argument('--quantity-per-share', metavar='QUANTITY_PER_SHARE', required=True, help='the quantity of XCP to be paid per unit (satoshi) held of SHARE_ASSET')
     parser_dividend.add_argument('--share-asset', metavar='SHARE_ASSET', required=True, help='the asset to which pay dividends')
 
-    parser_burn = subparsers.add_parser('burn', help='destroy bitcoins in miners’s fees to earn XCP, during an initial period of time')
+    parser_burn = subparsers.add_parser('burn', help='destroy bitcoins to earn XCP, during an initial period of time')
     parser_burn.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
-    parser_burn.add_argument('--quantity', metavar='QUANTITY', required=True, help='quantity of BTC to be destroyed in miners’ fees')
+    parser_burn.add_argument('--quantity', metavar='QUANTITY', required=True, help='quantity of BTC to be destroyed')
 
     parser_address = subparsers.add_parser('address', help='display the history of a Counterparty address')
     parser_address.add_argument('address', metavar='ADDRESS', help='the address you are interested in')
@@ -379,11 +379,14 @@ if __name__ == '__main__':
         config.BLOCK_FIRST = 154908
         config.BURN_START = 154908
         config.BURN_END = 4017708    # Fifty years, at ten minutes per block.
+        config.UNSPENDABLE = 'mvCounterpartyXXXXXXXXXXXXXXW24Hef'
+
     else:
         config.ADDRESSVERSION = b'\x00'
         config.BLOCK_FIRST = 278270
         config.BURN_START = 278310
         config.BURN_END = 283810
+        config.UNSPENDABLE = '1CounterpartyXXXXXXXXXXXXXXXUWLpVr'
 
     if config.TESTCOIN:
         config.PREFIX = b'XX'                   # 2 bytes (possibly accidentally created)

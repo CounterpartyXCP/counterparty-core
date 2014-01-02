@@ -56,6 +56,7 @@ config.BLOCK_FIRST = 0
 config.BURN_START = 0
 config.BURN_END = 9999999
 config.ADDRESSVERSION = b'\x6F' # testnet
+config.UNSPENDABLE = 'mvCounterpartyXXXXXXXXXXXXXXW24Hef'
 
 source_default = 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'
 destination_default = 'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7'
@@ -181,7 +182,7 @@ def test_burn ():
     unsigned_tx_hex = burn.create(db, source_default, quantity, test=True)
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, quantity, data)
+    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
 
     parse_tx(tx_index - 1, data, burn.parse)
 
