@@ -168,7 +168,7 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
 def get_inputs (source, total_btc_out, test=False):
     """List unspent inputs for source."""
     if not test:
-        listunspent = rpc('listunspent', [-1])['result']  # NOTE: Reconsider this. (Will this only allow sending unconfirmed *change*?!)
+        listunspent = rpc('listunspent', [])['result']
     else:
         import os
         CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
