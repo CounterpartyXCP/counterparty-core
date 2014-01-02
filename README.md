@@ -1,5 +1,5 @@
 # Changelog
-* Version 1—initial release
+* v0.1—initial release
 
 # Description
 Counterparty is a protocol for the creation and use of decentralised financial

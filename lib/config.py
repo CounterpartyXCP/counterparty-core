@@ -6,7 +6,7 @@ import hashlib
 UNIT = 100000000    # The same across currencies.
 
 # Versions
-VERSION = 1
+VERSION = 0.1
 DB_VERSION = 0
 
 # Bitcoin protocol
