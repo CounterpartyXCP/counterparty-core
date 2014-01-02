@@ -2,7 +2,7 @@
     "get_address_balances": [
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "amount": 155990524940, 
+            "amount": 149989725000, 
             "asset": "XCP"
         }, 
         {
@@ -194,15 +194,6 @@
             "tx_hash": "ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879", 
             "tx_index": 7, 
             "validity": "Valid"
-        }, 
-        {
-            "amount_per_share": 8, 
-            "asset": "BBBC", 
-            "block_index": 8, 
-            "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "tx_hash": "beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a", 
-            "tx_index": 8, 
-            "validity": "Valid"
         }
     ], 
     "get_address_issuances": [
@@ -264,7 +255,7 @@
     "get_balances": [
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "amount": 155990524940, 
+            "amount": 149989725000, 
             "asset": "XCP"
         }, 
         {

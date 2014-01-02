@@ -8,7 +8,6 @@ BTC Payment for Order Match: dbc1b4c900ffe48d…11b65a9aadff29c5 (e52d9c50…81c
 Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 10.0 of divisible asset BBBB (e77b9a9a…5ab743db)
 Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 100000 of indivisible asset BBBC (67586e98…08c5ecf6)
 Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 6E-8 per share of asset BBBB (ca358758…005ee879)
-Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 8E-8 per share of asset BBBC (beead779…8dc1829a)
 Broadcast: ‘Unit Test’ = 100.0 from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:33:20-05:00 with a fee multiplier of 0.0500 (2b4c342f…651c3cb9)
 Bet: BullCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 0.5 XCP against 0.25 XCP in 10 blocks, leveraged 3.0000x for a fee of 0.025 XCP (01ba4719…daca546b)
 Bet: BearCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 0.25 XCP against 0.415 XCP in 10 blocks, leveraged 3.0000x for a fee of 0.0125 XCP (e7cf46a0…4b7cc3a6)
@@ -48,7 +47,6 @@ Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 100000 of indivisible asset
 Block: 7
 Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 6E-8 per share of asset BBBB (ca358758…005ee879)
 Block: 8
-Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 8E-8 per share of asset BBBC (beead779…8dc1829a)
 Block: 9
 Broadcast: ‘Unit Test’ = 100.0 from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:33:20-05:00 with a fee multiplier of 0.0500 (2b4c342f…651c3cb9)
 Block: 10

@@ -26,13 +26,15 @@ import decimal
 D = decimal.Decimal
 import logging
 
-from . import (util, config, bitcoin)
+from . import (util, exceptions, config, bitcoin)
 
 FORMAT = '>IdI52p'
 ID = 30
 LENGTH = 4 + 8 + 4 + 52
 
 def create (db, source, timestamp, value, fee_multiplier, text, test=False):
+    if not source:
+        raise exceptions.InputError('Null source address.')
     # Check previous broadcast in this feed.
     broadcasts = util.get_broadcasts(db, validity='Valid', source=source, order_by='tx_index ASC')
     if broadcasts:

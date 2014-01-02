@@ -61,15 +61,19 @@ def parse (db, tx, message):
     if validity == 'Valid':
         issuances = util.get_issuances(db, validity='Valid', asset=asset)
         total_shares = sum([issuance['amount'] for issuance in issuances])
-        amount = amount_per_share * round(D(util.devise(db, total_shares, 'XCP', 'output')))    # Hackish
-        validity = util.debit(db, tx['source'], 'XCP', amount)
+        amount = amount_per_share * round(D(total_shares) / config.UNIT)
+        if amount:
+            validity = util.debit(db, tx['source'], 'XCP', amount)
+        else: validity = 'Invalid: dividend too small'
 
     # Credit.
     if validity == 'Valid':
         balances = util.get_balances(db, asset=asset)
         for balance in balances:
             address, address_amount = balance['address'], balance['amount']
-            util.credit(db, address, 'XCP', address_amount * amount_per_share)
+            address_amount = round(D(address_amount) / config.UNIT)
+            amount = address_amount * amount_per_share
+            util.credit(db, address, 'XCP', amount)
 
     # Add parsed transaction to message‐type–specific table.
     dividend_parse_cursor.execute('''INSERT INTO dividends(

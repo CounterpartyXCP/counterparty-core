@@ -8,6 +8,9 @@ class TXConstructionError(Exception):
 class OverflowError(Exception):
     pass
 
+class InputError(Exception):
+    pass
+
 class BitcoindError (Exception):
     pass
 class DatabaseError (Exception):
