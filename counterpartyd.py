@@ -361,7 +361,6 @@ if __name__ == '__main__':
     # For create()s.
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
-    follow_cursor = db.cursor()
 
     # (more) Testnet
     if config.TESTNET:
