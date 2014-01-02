@@ -18,7 +18,7 @@ def create (db, source, give_asset, give_amount, get_asset, get_amount, expirati
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
     if give_asset == get_asset:
         raise exceptions.UselessError('You can’t trade an asset for itself.')
-    if not get_amount or not get_amount:
+    if not give_amount or not get_amount:
         raise exceptions.UselessError('Zero give or zero get.')
     if not util.get_issuances(db, validity='Valid', asset=get_asset):
         raise exceptions.DividendError('No such asset to get: {}.'.format(get_asset))

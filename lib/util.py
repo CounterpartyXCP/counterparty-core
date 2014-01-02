@@ -208,6 +208,8 @@ def devise (db, quantity, asset, dest, divisible=None):
         else:
             return quantity.quantize(EIGHT)
     else:
+        if quantity != round(quantity):
+            raise exceptions.QuantityError('Fractional quantities of indivisible assets.')
         return round(quantity)
 
 def get_debits (db, address=None, asset=None):
