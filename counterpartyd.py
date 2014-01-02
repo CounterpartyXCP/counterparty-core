@@ -450,7 +450,6 @@ if __name__ == '__main__':
         if fee_multiplier > 4294967295:
             raise exceptions.OverflowError('Fee multiplier must be less than or equal to 42.94967295.')
         value = util.devise(db, args.value, 'value', 'input')
-        print(value)
         unsigned_tx_hex = broadcast.create(db, args.source, int(time.time()),
                                            value, fee_multiplier, args.text)
         json_print(bitcoin.transmit(unsigned_tx_hex))
