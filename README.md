@@ -17,6 +17,10 @@ The Counterparty protocol specification may be found at
 * Bitcoind
 
 # Installation
+
+*NOTE: This section covers manual installation of counterpartyd. If you want more of
+an automated approach to counterpartyd installation for Windows and Linux, see [this link](http://counterpartyd-build.readthedocs.org/en/latest/).*
+
 In order for counterpartyd to function, it must be able to communicate with a
 running instance of Bitcoind or Bitcoin-Qt, which handles many Bitcoin‐specific
 matters on its behalf, including all wallet and private key management. For
