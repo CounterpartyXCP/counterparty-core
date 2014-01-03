@@ -193,9 +193,12 @@ def devise (db, quantity, asset, dest, divisible=None):
         return D(quantity / D(1e8)).quantize(FOUR)
 
     if divisible == None:
-        issuances = get_issuances(db, validity='Valid', asset=asset)
-        if not issuances: raise exceptions.AssetError('No such asset.')
-        divisible = issuances[0]['divisible']
+        if asset in ('BTC', 'XCP'):
+            divisible = True
+        else:
+            issuances = get_issuances(db, validity='Valid', asset=asset)
+            if not issuances: raise exceptions.AssetError('No such asset.')
+            divisible = issuances[0]['divisible']
 
     if divisible:
         if dest == 'output':

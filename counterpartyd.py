@@ -487,13 +487,28 @@ if __name__ == '__main__':
         address(args.address)
 
     elif args.action == 'asset':
-        issuances = util.get_issuances(db, validity='Valid', asset=args.asset)
-        total = sum([issuance['amount'] for issuance in issuances])
+        if args.asset == 'XCP':
+            burns = util.get_burns(db, validity='Valid', address=None)
+            total = sum([burn['earned'] for burn in burns])
+            total = util.devise(db, total, args.asset, 'output')
+            divisible = True
+            issuer = None
+        elif args.asset == 'BTC':
+            total = None
+            divisible = True
+            issuer = None
+        else:
+            issuances = util.get_issuances(db, validity='Valid', asset=args.asset)
+            total = sum([issuance['amount'] for issuance in issuances])
+            total = util.devise(db, total, args.asset, 'output')
+            divisible = bool(issuances[-1]['divisible'])
+            issuer = issuances[-1]['issuer'] # Issuer of last issuance.
+
         print('Asset Name:', args.asset)
         print('Asset ID:', util.get_asset_id(args.asset))
-        print('Total Issued:', util.devise(db, total, args.asset, 'output'))
-        print('Divisible:', bool(issuances[-1]['divisible']))
-        print('Issuer:', issuances[-1]['issuer']) # Issuer of last issuance.
+        print('Total Issued:', total)
+        print('Divisible:', divisible)
+        print('Issuer:', issuer)
 
     elif args.action == 'market':
         while True:
