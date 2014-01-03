@@ -18,8 +18,9 @@ def bitcoind_check (db):
     block_count = bitcoin.rpc('getblockcount', [])
     block_hash = bitcoin.rpc('getblockhash', [block_count])
     block = bitcoin.rpc('getblock', [block_hash])
-    if block['time'] < (time.time() - 60 * 60 * 2):
-        raise exceptions.BitcoindError('Bitcoind is running behind.')
+    time_behind = time.time() - block['time']   # How reliable is the block time?!
+    if time_behind > 60 * 60 * 2:   # Two hours.
+        raise exceptions.BitcoindError('Bitcoind is running about {} seconds behind.'.format(round(time_behind)))
 
 def database_check (db):
     # Check Counterparty database to see if the counterpartyd server has caught up with Bitcoind.
