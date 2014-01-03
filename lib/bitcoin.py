@@ -36,6 +36,7 @@ def rpc (method, params):
         raise exceptions.BitcoindRPCError('Cannot communicate with bitcoind. (Are you on testnet?)')
     if response.status_code == 401:
         raise exceptions.BitcoindRPCError('Bitcoind RPC: unauthorized')
+    # TODO: Do error checking here; make sure that response.json()['result'], notably, is not None.
     return response.json()
 
 def base58_decode (s, version):

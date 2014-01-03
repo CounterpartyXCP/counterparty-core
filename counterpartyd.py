@@ -364,6 +364,8 @@ if __name__ == '__main__':
     requests_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
 
     # Database
+    if config.TESTNET:
+        config.DB_VERSION = str(config.DB_VERSION) + '.testnet'
     if args.database_file:
         config.DATABASE = args.database_file
     else:
