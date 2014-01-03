@@ -79,14 +79,12 @@ def parse (db, tx, message):
                         tx_hash,
                         block_index,
                         source,
-                        amount,
                         order_match_id,
-                        validity) VALUES(?,?,?,?,?,?,?)''',
+                        validity) VALUES(?,?,?,?,?,?)''',
                         (tx['tx_index'],
                         tx['tx_hash'],
                         tx['block_index'],
                         tx['source'],
-                        tx['btc_amount'],
                         order_match_id,
                         validity)
                   )

@@ -270,6 +270,7 @@ def get_sends (db, validity=None, source=None, destination=None):
     return sends
 
 def get_orders (db, validity=None, address=None, show_empty=True, show_expired=True):
+    # TODO: Why do I need ‘show expired’, here, if expired orders, etc., are invalid?!
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM orders ORDER BY price ASC, tx_index''')
     block_count = bitcoin.rpc('getblockcount', [])
@@ -289,7 +290,7 @@ def get_orders (db, validity=None, address=None, show_empty=True, show_expired=T
     cursor.close()
     return orders
 
-def get_order_matches (db, validity=None, addresses=[], show_expired=True, tx0_hash=None, tx1_hash=None):
+def get_order_matches (db, validity=None, is_mine=True, show_expired=True, address=None, tx0_hash=None, tx1_hash=None):
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM order_matches ORDER BY tx1_index''')
     order_matches = []
@@ -300,11 +301,16 @@ def get_order_matches (db, validity=None, addresses=[], show_expired=True, tx0_h
             order_match_time_left = get_order_match_time_left(order_match)
             if order_match_time_left < 0: continue
 
-        if addresses and ((order_match['tx0_address'] not in addresses or 
+        if is_mine and ((not bitcoin.rpc('validateaddress', [order_match['tx0_address']])['ismine'] or 
                            order_match['forward_asset'] != 'BTC') and 
-                          (order_match['tx1_address'] not in addresses or
+                          (not bitcoin.rpc('validateaddress', [order_match['tx1_address']])['ismine'] or
                            order_match['backward_asset'] != 'BTC')):
             continue
+
+        if address and not (order_match['tx0_address'] == address or
+                            order_match['tx1_address'] == address):
+            continue
+
         if tx0_hash and tx0_hash != order_match['tx0_hash']: continue
         if tx1_hash and tx1_hash != order_match['tx1_hash']: continue
         order_matches.append(dict(order_match))
@@ -371,7 +377,7 @@ def get_bets (db, validity=None, address=None, show_empty=True, show_expired=Tru
     cursor.close()
     return bets
 
-def get_bet_matches (db, validity=None, addresses=None, show_expired=True, tx0_hash=None, tx1_hash=None):
+def get_bet_matches (db, validity=None, show_expired=True, address=None, tx0_hash=None, tx1_hash=None):
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM bet_matches ORDER BY tx1_index''')
     bet_matches = []
@@ -380,8 +386,8 @@ def get_bet_matches (db, validity=None, addresses=None, show_expired=True, tx0_h
         if not show_expired:
             bet_match_time_left = get_bet_match_time_left(bet_match)
             if bet_match_time_left < 0: continue
-        if addresses and not (bet_match['tx0_address'] in addresses or
-                              bet_match['tx1_address'] in addresses):
+        if address and not (bet_match['tx0_address'] == address or
+                            bet_match['tx1_address'] == address):
             continue
         if tx0_hash and tx0_hash != bet_match['tx0_hash']: continue
         if tx1_hash and tx1_hash != bet_match['tx1_hash']: continue
@@ -421,12 +427,12 @@ def get_address (db, address):
     address_dict['burns'] = get_burns(db, validity='Valid', address=address)
     address_dict['sends'] = get_sends(db, validity='Valid', source=address)
     address_dict['orders'] = get_orders(db, validity='Valid', address=address)
-    address_dict['order_matches'] = get_order_matches(db, validity='Valid', addresses=[address])
+    address_dict['order_matches'] = get_order_matches(db, validity='Valid', address=address)
     address_dict['btcpays'] = get_btcpays(db, validity='Valid')
     address_dict['issuances'] = get_issuances(db, validity='Valid', issuer=address)
     address_dict['broadcasts'] = get_broadcasts(db, validity='Valid', source=address)
     address_dict['bets'] = get_bets(db, validity='Valid', address=address)
-    address_dict['bet_matches'] = get_bet_matches(db, validity='Valid', addresses=[address])
+    address_dict['bet_matches'] = get_bet_matches(db, validity='Valid', address=address)
     address_dict['dividends'] = get_dividends(db, validity='Valid', address=address)
     return address_dict
 

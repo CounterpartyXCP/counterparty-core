@@ -133,6 +133,8 @@ The following examples are abridged for parsimony.
 
 * Bet
 
+* Cancel
+
 * Dividend
 
 * Market

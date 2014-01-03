@@ -78,10 +78,9 @@ CREATE TABLE btcpays(
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
                         source TEXT,
-                        amount INTEGER,
                         order_match_id TEXT,
                         validity TEXT);
-INSERT INTO "btcpays" VALUES(4,'e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71',4,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',50000000,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5','Paid');
+INSERT INTO "btcpays" VALUES(4,'e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71',4,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5','Paid');
 CREATE TABLE burns(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
@@ -91,6 +90,13 @@ CREATE TABLE burns(
                         earned INTEGER,
                         validity TEXT);
 INSERT INTO "burns" VALUES(0,'6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d',0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100000000,150000000000,'Valid');
+CREATE TABLE cancels(
+                        tx_index INTEGER PRIMARY KEY,
+                        tx_hash TEXT UNIQUE,
+                        block_index INTEGER,
+                        source TEXT,
+                        offer_hash TEXT,
+                        validity TEXT);
 CREATE TABLE credits(
                         address TEXT,
                         asset TEXT,

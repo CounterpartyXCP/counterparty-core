@@ -14,7 +14,7 @@ D = decimal.Decimal
 import logging
 
 from . import (config, util, bitcoin)
-from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn)
+from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel)
 
 def parse_block (db, block_index):
     """This is a separate function from follow() so that changing the parsing
@@ -57,6 +57,8 @@ def parse_block (db, block_index):
             dividend.parse(db, tx, message)
         elif message_type_id == burn.ID and len(message) == burn.LENGTH:
             burn.parse(db, tx, message)
+        elif message_type_id == cancel.ID and len(message) == cancel.LENGTH:
+            cancel.parse(db, tx, message)
         else:
             # Mark transaction as of unsupported type.
             parse_block_cursor.execute('''UPDATE transactions \
@@ -170,7 +172,6 @@ def initialise(db):
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
                         source TEXT,
-                        amount INTEGER,
                         order_match_id TEXT,
                         validity TEXT)
                    ''')
@@ -269,6 +270,16 @@ def initialise(db):
                         validity TEXT)
                    ''')
 
+    initialise_cursor.execute('''DROP TABLE IF EXISTS cancels''')
+    initialise_cursor.execute('''CREATE TABLE cancels(
+                        tx_index INTEGER PRIMARY KEY,
+                        tx_hash TEXT UNIQUE,
+                        block_index INTEGER,
+                        source TEXT,
+                        offer_hash TEXT,
+                        validity TEXT)
+                   ''')
+
     initialise_cursor.close()
     db.commit()
 
@@ -290,8 +301,11 @@ def get_tx_info (tx):
         if not destination and not btc_amount and not data:
             if 'addresses' in vout['scriptPubKey']:
                 address = vout['scriptPubKey']['addresses'][0]
-                if bitcoin.base58_decode(address, config.ADDRESSVERSION):  # If address is valid…
+                try:  # If address is valid…
+                    bitcoin.base58_decode(address, config.ADDRESSVERSION)
                     destination, btc_amount = address, round(D(vout['value']) * config.UNIT)
+                except:
+                    pass
 
         # Assume only one OP_RETURN output.
         if not data:

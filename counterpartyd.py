@@ -18,7 +18,7 @@ import dateutil.parser
 from datetime import datetime
 
 from lib import (config, util, exceptions, bitcoin, blocks)
-from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, util)
+from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, util)
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
@@ -50,8 +50,7 @@ def market (give_asset, get_asset):
     print('\n')
 
     # Matched orders awaiting BTC payments from you.
-    my_addresses  = [ element['address'] for element in bitcoin.rpc('listreceivedbyaddress', [0,True]) ]
-    awaiting_btcs = util.get_order_matches(db, validity='Valid: awaiting BTC payment', addresses=my_addresses, show_expired=False)
+    awaiting_btcs = util.get_order_matches(db, validity='Valid: awaiting BTC payment', is_mine=True, show_expired=False)
     table = PrettyTable(['Matched Order ID', 'Time Left'])
     for order_match in awaiting_btcs:
         order_match = format_order_match(order_match)
@@ -148,7 +147,7 @@ def format_order (order):
     price = D(order['get_amount']) / D(order['give_amount'])
 
     give_remaining = util.devise(db, D(order['give_remaining']), order['give_asset'], 'output')
-    get_remaining = D(give_remaining) * price
+    get_remaining = D(D(give_remaining) * price).quantize(D(10) ** -8).normalize()   # HACK
 
     give_asset = order['give_asset']
     get_asset = order['get_asset']
@@ -265,6 +264,9 @@ if __name__ == '__main__':
     parser_burn = subparsers.add_parser('burn', help='destroy bitcoins to earn XCP, during an initial period of time')
     parser_burn.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
     parser_burn.add_argument('--quantity', metavar='QUANTITY', required=True, help='quantity of BTC to be destroyed')
+
+    parser_cancel= subparsers.add_parser('cancel', help='cancel an open order or bet you created')
+    parser_cancel.add_argument('--offer-hash', metavar='OFFER_HASH', required=True, help='the transaction hash of the order or bet')
 
     parser_address = subparsers.add_parser('address', help='display the history of a Counterparty address')
     parser_address.add_argument('address', metavar='ADDRESS', help='the address you are interested in')
@@ -483,7 +485,16 @@ if __name__ == '__main__':
         unsigned_tx_hex = burn.create(db, args.source, quantity)
         json_print(bitcoin.transmit(unsigned_tx_hex))
 
+    elif args.action == 'cancel':
+        unsigned_tx_hex = cancel.create(db, args.offer_hash)
+        json_print(bitcoin.transmit(unsigned_tx_hex))
+
     elif args.action == 'address':
+        try:
+            bitcoin.base58_decode(args.address, config.ADDRESSVERSION)
+        except Exception:
+            raise exceptions.InvalidAddressError('Invalid Bitcoin address:',
+                                                  args.address)
         address(args.address)
 
     elif args.action == 'asset':

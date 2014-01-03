@@ -39,9 +39,14 @@ class AssetError (Exception):
     pass
 class QuantityError(Exception):
     pass
+
 class InvalidAddressError (Exception):
     pass
+class VersionByteError (InvalidAddressError):
+    pass
 
+class CancelError (Exception):
+    pass
 class InvalidOrderMatchError (Exception):
     pass
 
@@ -53,5 +58,4 @@ class InvalidBase58Error (Base58Error):
     pass
 class Base58ChecksumError (Base58Error):
     pass
-
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

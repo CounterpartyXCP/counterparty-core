@@ -356,6 +356,8 @@ def test_broadcast_equal ():
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
+# TODO: test cancel
+
 
 def test_parse_from_the_start():
     logging.info('\n')
