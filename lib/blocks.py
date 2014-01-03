@@ -338,18 +338,6 @@ def get_tx_info (tx):
 
 def follow ():
 
-    # Find and delete old versions of the database.
-    os.chdir(config.data_dir)
-    for filename in os.listdir('.'):
-        filename_array = filename.split('.')
-        if len(filename_array) != 3:
-            continue
-        if 'counterpartyd' == filename_array[0] and 'db' == filename_array[2]:
-            if filename_array[1] != str(config.DB_VERSION):
-                logging.warning('New version of transaction table!')
-                os.remove(filename)
-                logging.warning('Deleting old databases.')
-
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     # db.execute('pragma foreign_keys=ON')
@@ -371,6 +359,7 @@ def follow ():
             block_index = follow_cursor.fetchone()['block_index'] + 1
             assert not follow_cursor.fetchone()
         except Exception:
+            logging.warning('Rebuilding database of Counterparty transactions.')
             block_index = config.BLOCK_FIRST
 
         # Get index of last transaction.
