@@ -171,6 +171,7 @@ output_new = {}
 with open(CURR_DIR + '/output.json', 'r') as output_file:
     output = json.load(output_file)
 
+# TODO: replacp inspect.stack()[0][3] with inspect.currentframe().f_code.co_name?
 
 def test_start ():
     logging.info('START TEST')
