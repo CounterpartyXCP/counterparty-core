@@ -18,7 +18,7 @@ import sys
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 from lib import (config, util, exceptions, bitcoin, blocks)
-from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, util)
+from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, util)
 
 # JSON‐RPC Options
 CONFIGFILE = os.path.expanduser('~') + '/.bitcoin/bitcoin.conf'
@@ -356,7 +356,25 @@ def test_broadcast_equal ():
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
-# TODO: test cancel
+def test_order_to_be_cancelled ():
+    unsigned_tx_hex = order.create(db, source_default, 'BBBB', small, 'XCP', small, expiration, 0, 0, test=True)
+
+    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
+    tx_insert(source_default, destination, btc_amount, fee_provided, data)
+
+    parse_tx(tx_index - 1, data, order.parse)
+
+    output_new[inspect.stack()[0][3]] = unsigned_tx_hex
+
+def test_cancel ():
+    unsigned_tx_hex = cancel.create(db, 'ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2', test=True)
+
+    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
+    tx_insert(source_default, destination, btc_amount, fee_provided, data)
+
+    parse_tx(tx_index - 1, data, order.parse)
+
+    output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 
 def test_parse_from_the_start():

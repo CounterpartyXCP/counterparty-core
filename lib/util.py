@@ -270,7 +270,6 @@ def get_sends (db, validity=None, source=None, destination=None):
     return sends
 
 def get_orders (db, validity=None, address=None, show_empty=True, show_expired=True):
-    # TODO: Why do I need ‘show expired’, here, if expired orders, etc., are invalid?!
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM orders ORDER BY price ASC, tx_index''')
     block_count = bitcoin.rpc('getblockcount', [])
@@ -280,7 +279,7 @@ def get_orders (db, validity=None, address=None, show_empty=True, show_expired=T
         if not show_empty and not order['give_remaining']: continue
         if address and order['source'] != address: continue
 
-        # Ignore BTC orders one block early.
+        # Ignore BTC orders one block early. (This is why we need show_expired.)
         time_left = get_time_left(order)
         if order['give_asset'] == 'BTC': time_left -= 1
         if not show_expired and time_left < 0:
@@ -290,16 +289,12 @@ def get_orders (db, validity=None, address=None, show_empty=True, show_expired=T
     cursor.close()
     return orders
 
-def get_order_matches (db, validity=None, is_mine=True, show_expired=True, address=None, tx0_hash=None, tx1_hash=None):
+def get_order_matches (db, validity=None, is_mine=True, address=None, tx0_hash=None, tx1_hash=None):
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM order_matches ORDER BY tx1_index''')
     order_matches = []
     for order_match in cursor.fetchall():
         if validity and order_match['validity'] != validity: continue
-
-        if not show_expired:
-            order_match_time_left = get_order_match_time_left(order_match)
-            if order_match_time_left < 0: continue
 
         if is_mine and ((not bitcoin.rpc('validateaddress', [order_match['tx0_address']])['ismine'] or 
                            order_match['forward_asset'] != 'BTC') and 
@@ -362,7 +357,7 @@ def get_broadcasts (db, validity=None, source=None, order_by='tx_index ASC'):
     cursor.close()
     return broadcasts
 
-def get_bets (db, validity=None, address=None, show_empty=True, show_expired=True):
+def get_bets (db, validity=None, address=None, show_empty=True):
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM bets ORDER BY odds DESC, tx_index''')
     block_count = bitcoin.rpc('getblockcount', [])
@@ -371,21 +366,16 @@ def get_bets (db, validity=None, address=None, show_empty=True, show_expired=Tru
         if validity and bet['Validity'] != validity: continue
         if not show_empty and not bet['wager_remaining']: continue
         if address and bet['source'] != address: continue
-        time_left = get_time_left(bet)
-        if not show_expired and time_left < 0: continue
         bets.append(dict(bet))
     cursor.close()
     return bets
 
-def get_bet_matches (db, validity=None, show_expired=True, address=None, tx0_hash=None, tx1_hash=None):
+def get_bet_matches (db, validity=None, address=None, tx0_hash=None, tx1_hash=None):
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM bet_matches ORDER BY tx1_index''')
     bet_matches = []
     for bet_match in cursor.fetchall():
         if validity and bet_match['validity'] != validity: continue
-        if not show_expired:
-            bet_match_time_left = get_bet_match_time_left(bet_match)
-            if bet_match_time_left < 0: continue
         if address and not (bet_match['tx0_address'] == address or
                             bet_match['tx1_address'] == address):
             continue

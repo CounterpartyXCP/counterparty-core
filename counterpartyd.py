@@ -40,7 +40,7 @@ def market (give_asset, get_asset):
     print('\n')
 
     # Open bets.
-    bets = util.get_bets(db, validity='Valid', show_expired=False, show_empty=False)
+    bets = util.get_bets(db, validity='Valid', show_empty=False)
     table = PrettyTable(['Bet Type', 'Feed Address', 'Deadline', 'Target Value', 'Leverage', 'Wager', 'Counterwager', 'Odds', 'Time Left', 'Tx Hash'])
     for bet in bets:
         bet = format_bet(bet)
@@ -50,7 +50,7 @@ def market (give_asset, get_asset):
     print('\n')
 
     # Matched orders awaiting BTC payments from you.
-    awaiting_btcs = util.get_order_matches(db, validity='Valid: awaiting BTC payment', is_mine=True, show_expired=False)
+    awaiting_btcs = util.get_order_matches(db, validity='Valid: awaiting BTC payment', is_mine=True)
     table = PrettyTable(['Matched Order ID', 'Time Left'])
     for order_match in awaiting_btcs:
         order_match = format_order_match(order_match)
