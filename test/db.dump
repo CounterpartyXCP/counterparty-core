@@ -152,8 +152,6 @@ CREATE TABLE issuances(
                         transfer BOOL,
                         validity TEXT
                         );
-INSERT INTO "issuances" VALUES(1,NULL,NULL,'BTC',0,1,NULL,NULL,'Valid');
-INSERT INTO "issuances" VALUES(2,NULL,NULL,'XCP',0,1,NULL,NULL,'Valid');
 INSERT INTO "issuances" VALUES(5,'e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db',5,'BBBB',1000000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,'Valid');
 INSERT INTO "issuances" VALUES(6,'67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6',6,'BBBC',100000,0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,'Valid');
 CREATE TABLE order_matches(

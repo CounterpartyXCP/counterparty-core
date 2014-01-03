@@ -20,7 +20,7 @@ def create (db, source, give_asset, give_amount, get_asset, get_amount, expirati
         raise exceptions.UselessError('You can’t trade an asset for itself.')
     if not give_amount or not get_amount:
         raise exceptions.UselessError('Zero give or zero get.')
-    if not util.get_issuances(db, validity='Valid', asset=get_asset):
+    if get_asset not in ('BTC', 'XCP') and not util.get_issuances(db, validity='Valid', asset=get_asset):
         raise exceptions.DividendError('No such asset to get: {}.'.format(get_asset))
 
     give_id = util.get_asset_id(give_asset)
@@ -52,10 +52,8 @@ def parse (db, tx, message):
         if not give_amount or not get_amount:
             validity = 'Invalid: zero give or zero get.'
 
-    if validity == 'Valid' and not util.get_issuances(db, validity='Valid', asset=give_asset):
-        validity = 'Invalid: bad Asset ID'
-    elif not util.get_issuances(db, validity='Valid', asset=get_asset):
-        validity = 'Invalid: bad Asset ID'
+    elif get_asset not in ('BTC', 'XCP') and not util.get_issuances(db, validity='Valid', asset=get_asset):
+        validity = 'Invalid: bad get asset'
 
     if validity == 'Valid':
         give_amount = give_amount
@@ -156,10 +154,10 @@ def match (db, tx):
             order_match_id = tx0['tx_hash'] + tx1['tx_hash']
 
             # This can’t be gotten rid of!
-            forward_unit = D(util.devise(db, 1, forward_asset, 'output'))
-            backward_unit = D(util.devise(db, 1, backward_asset, 'output'))
+            forward_print = D(util.devise(db, forward_amount, forward_asset, 'output'))
+            backward_print = D(util.devise(db, backward_amount, backward_asset, 'output'))
 
-            logging.info('Order Match: {} {} for {} {} at {} {}/{} ({})'.format(util.devise(db, forward_amount * forward_unit, None, None), forward_asset, util.devise(db, backward_amount * backward_unit, None, None), backward_asset, util.devise(db, tx0['price'], 'price', 'output'), backward_asset, forward_asset, util.short(order_match_id)))
+            logging.info('Order Match: {} {} for {} {} at {} {}/{} ({})'.format(forward_print, forward_asset, backward_print, backward_asset, util.devise(db, tx0['price'], 'price', 'output'), backward_asset, forward_asset, util.short(order_match_id)))
 
             if 'BTC' in (tx1['give_asset'], tx1['get_asset']):
                 validity = 'Valid: awaiting BTC payment'

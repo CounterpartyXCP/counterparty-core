@@ -3,7 +3,7 @@ Burn: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 1.0 BTC for 1500.0 XCP (6e340b9c
 Send: 0.5 of asset XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 (4bf5122f…7785459a)
 Order: sell 0.5 BTC for 1.0 XCP at 2.0000 XCP/BTC in 10 blocks with a provided fee of 0.01 BTC (dbc1b4c9…6457d986)
 Order: sell 1.05 XCP for 0.5 BTC at 0.4762 BTC/XCP in 10 blocks with a required fee of 0.009 BTC (084fed08…adff29c5)
-Order Match: 0.50000000 BTC for 1.00000000 XCP at 2.0000 XCP/BTC (dbc1b4c900ffe48d…11b65a9aadff29c5)
+Order Match: 0.5 BTC for 1.0 XCP at 2.0000 XCP/BTC (dbc1b4c900ffe48d…11b65a9aadff29c5)
 BTC Payment for Order Match: dbc1b4c900ffe48d…11b65a9aadff29c5 (e52d9c50…81c89e71)
 Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 10.0 of divisible asset BBBB (e77b9a9a…5ab743db)
 Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 100000 of indivisible asset BBBC (67586e98…08c5ecf6)
@@ -37,7 +37,7 @@ Block: 2
 Order: sell 0.5 BTC for 1.0 XCP at 2.0000 XCP/BTC in 10 blocks with a provided fee of 0.01 BTC (dbc1b4c9…6457d986)
 Block: 3
 Order: sell 1.05 XCP for 0.5 BTC at 0.4762 BTC/XCP in 10 blocks with a required fee of 0.009 BTC (084fed08…adff29c5)
-Order Match: 0.50000000 BTC for 1.00000000 XCP at 2.0000 XCP/BTC (dbc1b4c900ffe48d…11b65a9aadff29c5)
+Order Match: 0.5 BTC for 1.0 XCP at 2.0000 XCP/BTC (dbc1b4c900ffe48d…11b65a9aadff29c5)
 Block: 4
 BTC Payment for Order Match: dbc1b4c900ffe48d…11b65a9aadff29c5 (e52d9c50…81c89e71)
 Block: 5

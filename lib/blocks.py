@@ -189,26 +189,6 @@ def initialise(db):
                         )
                    ''')
 
-    for asset in ('BTC','XCP'):
-        initialise_cursor.execute('''INSERT INTO issuances(
-                            tx_index,
-                            tx_hash,
-                            block_index,
-                            asset,
-                            amount,
-                            divisible,
-                            issuer,
-                            validity) VALUES(?,?,?,?,?,?,?,?)''',
-                            (None,
-                            None,
-                            None,
-                            asset,
-                            0,
-                            True,
-                            None,
-                            'Valid')
-                      )
-
     initialise_cursor.execute('''DROP TABLE IF EXISTS broadcasts''')
     initialise_cursor.execute('''CREATE TABLE broadcasts(
                         tx_index INTEGER PRIMARY KEY,
