@@ -31,14 +31,23 @@ def rpc (method, params):
         "jsonrpc": "2.0",
         "id": 0,
     }
+
     try:
         response = requests.post(config.RPC, data=json.dumps(payload), headers=headers)
     except requests.exceptions.ConnectionError:
         raise exceptions.BitcoindRPCError('Cannot communicate with bitcoind. (Are you on testnet?)')
     if response.status_code == 401:
         raise exceptions.BitcoindRPCError('Bitcoind RPC: unauthorized')
-    # TODO: Do error checking here; make sure that response.json()['result'], notably, is not None.
-    return response.json()
+
+    # Return result, with error handling.
+    response_json = response.json()
+    result, error = response_json['result'], response_json['error']
+    if error == None:
+        return result
+    elif error['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
+        raise exceptions.BitcoindError('{} Is txindex enabled in Bitcoind?'.format(error))
+    else:
+        raise exceptions.BitcoindError('{}'.format(error))
 
 def base58_decode (s, version):
     # Convert the string to an integer
@@ -167,7 +176,7 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
 def get_inputs (source, total_btc_out, test=False):
     """List unspent inputs for source."""
     if not test:
-        listunspent = rpc('listunspent', [])['result']
+        listunspent = rpc('listunspent', [])
     else:
         import os
         CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
@@ -195,7 +204,7 @@ def transaction (source, destination, btc_amount, fee, data, test=False):
 
     # Check that the source is in wallet.
     if not test:
-        if not rpc('validateaddress', [source])['result']['ismine']:
+        if not rpc('validateaddress', [source])['ismine']:
             raise exceptions.InvalidAddressError('Not one of your Bitcoin addresses:', source)
 
     # Check that the destination output isn’t a dust output.
@@ -239,16 +248,12 @@ def transmit (unsigned_tx_hex, ask=True):
             print('Transaction aborted.', file=sys.stderr)
             sys.exit(1)
     # Sign transaction.
-    response = rpc('signrawtransaction', [unsigned_tx_hex])
-    result = response['result']
-    if result:
-        if result['complete']:
-            signed_tx_hex = result['hex']
-            if config.TESTNET:
-                return rpc('sendrawtransaction', [signed_tx_hex])
-            else:
-                return eligius(result['hex'])   # mainnet HACK
-    else:
-        return response['error']
+    result = rpc('signrawtransaction', [unsigned_tx_hex])
+    if result['complete']:
+        signed_tx_hex = result['hex']
+        if config.TESTNET:
+            return rpc('sendrawtransaction', [signed_tx_hex])
+        else:
+            return eligius(result['hex'])   # mainnet HACK
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

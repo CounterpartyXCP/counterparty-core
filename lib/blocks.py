@@ -326,7 +326,7 @@ def get_tx_info (tx):
     source_list = []
     for vin in tx['vin']:                                               # Loop through input transactions.
         if 'coinbase' in vin: return None, None, None, None, None
-        vin_tx = bitcoin.rpc('getrawtransaction', [vin['txid'], 1])['result']   # Get the full transaction data for this input transaction.
+        vin_tx = bitcoin.rpc('getrawtransaction', [vin['txid'], 1])   # Get the full transaction data for this input transaction.
         vout = vin_tx['vout'][vin['vout']]
         fee += D(vout['value']) * config.UNIT
         source_list.append(vout['scriptPubKey']['addresses'][0])        # Assume that the output was not not multi‐sig.
@@ -382,10 +382,10 @@ def follow ():
             pass
 
         # Get block.
-        block_count = bitcoin.rpc('getblockcount', [])['result']
+        block_count = bitcoin.rpc('getblockcount', [])
         while block_index <= block_count:
-            block_hash = bitcoin.rpc('getblockhash', [block_index])['result']
-            block = bitcoin.rpc('getblock', [block_hash])['result']
+            block_hash = bitcoin.rpc('getblockhash', [block_index])
+            block = bitcoin.rpc('getblock', [block_hash])
             block_time = block['time']
             tx_hash_list = block['tx']
 
@@ -397,7 +397,7 @@ def follow ():
                     tx_index += 1
                     continue
                 # Get the important details about each transaction.
-                tx = bitcoin.rpc('getrawtransaction', [tx_hash, 1])['result']
+                tx = bitcoin.rpc('getrawtransaction', [tx_hash, 1])
                 source, destination, btc_amount, fee, data = get_tx_info(tx)
                 if source and data:
                     follow_cursor.execute('''INSERT INTO transactions(
@@ -436,11 +436,11 @@ def follow ():
             parse_block(db, block_index)
 
             # Increment block index.
-            block_count = bitcoin.rpc('getblockcount', [])['result']
+            block_count = bitcoin.rpc('getblockcount', [])
             block_index +=1
 
         while block_index > block_count: # DUPE
-            block_count = bitcoin.rpc('getblockcount', [])['result']
+            block_count = bitcoin.rpc('getblockcount', [])
             time.sleep(1)
 
     follow_cursor.close()

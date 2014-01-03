@@ -131,7 +131,7 @@ def tx_insert (source, destination, btc_amount, fee, data):
 
 def get_tx_data (tx_hex):
     """Accepts unsigned transactions."""
-    tx = bitcoin.rpc('decoderawtransaction', [tx_hex])['result']
+    tx = bitcoin.rpc('decoderawtransaction', [tx_hex])
 
     # Get destination output and data output.
     destination, btc_amount, data = None, None, None

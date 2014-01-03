@@ -50,7 +50,7 @@ def market (give_asset, get_asset):
     print('\n')
 
     # Matched orders awaiting BTC payments from you.
-    my_addresses  = [ element['address'] for element in bitcoin.rpc('listreceivedbyaddress', [0,True])['result'] ]
+    my_addresses  = [ element['address'] for element in bitcoin.rpc('listreceivedbyaddress', [0,True]) ]
     awaiting_btcs = util.get_order_matches(db, validity='Valid: awaiting BTC payment', addresses=my_addresses, show_expired=False)
     table = PrettyTable(['Matched Order ID', 'Time Left'])
     for order_match in awaiting_btcs:

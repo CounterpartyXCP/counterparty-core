@@ -15,9 +15,9 @@ BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
 
 def bitcoind_check (db):
     # Check blocktime of last block to see if Bitcoind is running behind.
-    block_count = bitcoin.rpc('getblockcount', [])['result']
-    block_hash = bitcoin.rpc('getblockhash', [block_count])['result']
-    block = bitcoin.rpc('getblock', [block_hash])['result']
+    block_count = bitcoin.rpc('getblockcount', [])
+    block_hash = bitcoin.rpc('getblockhash', [block_count])
+    block = bitcoin.rpc('getblock', [block_hash])
     if block['time'] < (time.time() - 60 * 60 * 2):
         raise exceptions.BitcoindError('Bitcoind is running behind.')
 
@@ -31,7 +31,7 @@ def database_check (db):
     block_list = cursor.fetchall()
     assert block_list
     last_block = block_list[-1]
-    if last_block['block_index'] != bitcoin.rpc('getblockcount', [])['result']:
+    if last_block['block_index'] != bitcoin.rpc('getblockcount', []):
         raise exceptions.DatabaseError('Countparty database is behind Bitcoind.')
     cursor.close()
     return
@@ -48,11 +48,11 @@ def isodt (epoch_time):
 def get_time_left (unmatched, block_index=None):
     """order or bet"""
     """zero time left means it expires *this* block; that is, expire when strictly less than 0"""
-    if not block_index: block_index = bitcoin.rpc('getblockcount', [])['result']
+    if not block_index: block_index = bitcoin.rpc('getblockcount', [])
     return unmatched['block_index'] + unmatched['expiration'] - block_index
 def get_order_match_time_left (matched, block_index=None):
     """order_match or bet_match"""
-    if not block_index: block_index = bitcoin.rpc('getblockcount', [])['result']
+    if not block_index: block_index = bitcoin.rpc('getblockcount', [])
     tx0_time_left = matched['tx0_block_index'] + matched['tx0_expiration'] - block_index
     tx1_time_left = matched['tx1_block_index'] + matched['tx1_expiration'] - block_index
     return min(tx0_time_left, tx1_time_left)
@@ -268,7 +268,7 @@ def get_sends (db, validity=None, source=None, destination=None):
 def get_orders (db, validity=None, address=None, show_empty=True, show_expired=True):
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM orders ORDER BY price ASC, tx_index''')
-    block_count = bitcoin.rpc('getblockcount', [])['result']
+    block_count = bitcoin.rpc('getblockcount', [])
     orders = []
     for order in cursor.fetchall():
         if validity and order['Validity'] != validity: continue
@@ -355,7 +355,7 @@ def get_broadcasts (db, validity=None, source=None, order_by='tx_index ASC'):
 def get_bets (db, validity=None, address=None, show_empty=True, show_expired=True):
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM bets ORDER BY odds DESC, tx_index''')
-    block_count = bitcoin.rpc('getblockcount', [])['result']
+    block_count = bitcoin.rpc('getblockcount', [])
     bets = []
     for bet in cursor.fetchall():
         if validity and bet['Validity'] != validity: continue
