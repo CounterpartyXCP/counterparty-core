@@ -8,6 +8,7 @@ import binascii
 import json
 import hashlib
 import requests
+import re
 
 from . import (config, exceptions)
 
@@ -90,19 +91,16 @@ def op_push (i):
 
 # HACK
 def eligius (signed_hex):
-    import subprocess
-    text = '''import mechanize                                                                
-browser = mechanize.Browser(factory=mechanize.RobustFactory())
-browser.open('http://eligius.st/~wizkid057/newstats/pushtxn.php')
-browser.select_form(nr=0)
-browser.form['transaction'] = \"''' + signed_hex +  '''\"
-browser.submit()
-html = browser.response().readlines()
-for i in range(0,len(html)):
-    if 'string' in html[i]:
-        print(html[i].strip())
-        break'''
-    return subprocess.call(["python2", "-c", text])
+    r = requests.post("http://eligius.st/~wizkid057/newstats/pushtxn.php",
+                      data={"transaction": signed_hex })
+    m = re.search(r'string\(64\) "([A-Za-z0-9]{64})"', r.text, re.MULTILINE)
+    if m:
+        eligius_ret = m.group(1)
+        print("Burn transaction *appeared* to be successful. Eligius returned hash: ", eligius_ret)
+        return True
+    else:
+        print("Burn did *not* appear to be successful. Full output from Eligius: %s" % r.text)
+        return False
 
 def serialise (inputs, destination_output=None, data_output=None, change_output=None):
     s  = (1).to_bytes(4, byteorder='little')                # Version
