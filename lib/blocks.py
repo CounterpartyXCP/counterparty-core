@@ -35,6 +35,13 @@ def parse_block (db, block_index):
                    (block_index,))
     transactions = parse_block_cursor.fetchall()   
     for tx in transactions:
+
+        # Burns.
+        if tx['destination'] == config.UNSPENDABLE:
+            burn.parse(db, tx)
+            continue
+
+        # Everything else.
         if tx['data'][:len(config.PREFIX)] == config.PREFIX:
             post_prefix = tx['data'][len(config.PREFIX):]
         else:
@@ -55,8 +62,6 @@ def parse_block (db, block_index):
             bet.parse(db, tx, message)
         elif message_type_id == dividend.ID and len(message) == dividend.LENGTH:
             dividend.parse(db, tx, message)
-        elif message_type_id == burn.ID and len(message) == burn.LENGTH:
-            burn.parse(db, tx, message)
         elif message_type_id == cancel.ID and len(message) == cancel.LENGTH:
             cancel.parse(db, tx, message)
         else:
@@ -313,8 +318,9 @@ def get_tx_info (tx):
             if asm[0] == 'OP_RETURN' and len(asm) == 2:
                 data = binascii.unhexlify(asm[1])
 
-    # Only look for source if data were found, for speed.
-    if not data: return None, None, None, None, None
+    # Only look for source if data were found (or destination is UNSPENDABLE), for speed.
+    if not data and destination != config.UNSPENDABLE:
+        return None, None, None, None, None
 
     # Collect all possible source addresses; ignore coinbase transactions.
     source_list = []
@@ -382,7 +388,7 @@ def follow ():
                 # Get the important details about each transaction.
                 tx = bitcoin.rpc('getrawtransaction', [tx_hash, 1])
                 source, destination, btc_amount, fee, data = get_tx_info(tx)
-                if source and data:
+                if source and (data or destination == config.UNSPENDABLE):
                     follow_cursor.execute('''INSERT INTO transactions(
                                         tx_index,
                                         tx_hash,

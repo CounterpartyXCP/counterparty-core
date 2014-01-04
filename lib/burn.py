@@ -31,10 +31,11 @@ def create (db, source, quantity, test=False):
     data += struct.pack(FORMAT, 'ProofOfBurn'.encode('utf-8'))
     return bitcoin.transaction(source, config.UNSPENDABLE, quantity, config.MIN_FEE, data, test)
 
-def parse (db, tx, message):
+def parse (db, tx, message=None):
     burn_parse_cursor = db.cursor()
     validity = 'Valid'
 
+    """
     # Unpack message.
     try:
         hidden_message = struct.unpack(FORMAT, message)
@@ -44,6 +45,7 @@ def parse (db, tx, message):
     # Check for burn notice (heh).
     if validity == 'Valid' and hidden_message[0].decode('utf-8') != 'ProofOfBurn':
         validity = 'Invalid: secret message not found'
+    """
 
     # Check destination address.
     if validity == 'Valid' and tx['destination'] != config.UNSPENDABLE:
