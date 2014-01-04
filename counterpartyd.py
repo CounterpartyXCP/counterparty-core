@@ -83,6 +83,7 @@ def address (address):
     # Balances.
     balances = address['balances']
     table = PrettyTable(['Asset', 'Amount'])
+    table.add_row(['BTC', '???'])  # BTC
     for balance in balances:
         asset = balance['asset']
         amount = util.devise(db, balance['amount'], balance['asset'], 'output')
