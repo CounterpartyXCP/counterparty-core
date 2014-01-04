@@ -110,6 +110,8 @@ def eligius (signed_hex):
     if m:
         eligius_ret = m.group(1)
         print("Burn transaction *appeared* to be successful. Eligius returned hash: ", eligius_ret)
+        print("Please note that it may take up to 2 or 3 hours for Eligius to publish your burn to the blockchain.")
+        print("Once published, it will be visible from https://blockchain.info/address/1CounterpartyXXXXXXXXXXXXXXXUWLpVr")
         return True
     else:
         print("Burn did *not* appear to be successful. Full output from Eligius: %s" % r.text)
