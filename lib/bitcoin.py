@@ -102,21 +102,6 @@ def op_push (i):
     else:
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
-# HACK
-def eligius (signed_hex):
-    r = requests.post("http://eligius.st/~wizkid057/newstats/pushtxn.php",
-                      data={"transaction": signed_hex })
-    m = re.search(r'string\(64\) "([A-Za-z0-9]{64})"', r.text, re.MULTILINE)
-    if m:
-        eligius_ret = m.group(1)
-        print("Burn transaction *appeared* to be successful. Eligius returned hash: ", eligius_ret)
-        print("Please note that it may take up to 2 or 3 hours for Eligius to publish your burn to the blockchain.")
-        print("Once published, it will be visible from https://blockchain.info/address/1CounterpartyXXXXXXXXXXXXXXXUWLpVr")
-        return True
-    else:
-        print("Burn did *not* appear to be successful. Full output from Eligius: %s" % r.text)
-        return False
-
 def serialise (inputs, destination_output=None, data_output=None, change_output=None):
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
@@ -136,7 +121,8 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
         s += b'\xff' * 4                                    # Sequence
 
     # Number of outputs.
-    n = 1                       # Data output
+    n = 0
+    if data_output: n += 1
     if destination_output: n += 1
     if change_output: n += 1
     s += var_int(n)
@@ -155,13 +141,14 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
         s += script
 
     # Data output.
-    data, value = data_output
-    s += (0).to_bytes(8, byteorder='little')                # Value
-    script = OP_RETURN                                      # OP_RETURN
-    script += op_push(len(data))                            # Push bytes of data (NOTE: OP_SMALLDATA?)
-    script += data                                          # Data
-    s += var_int(int(len(script)))                          # Script length
-    s += script
+    if data_output:
+        data, value = data_output
+        s += (0).to_bytes(8, byteorder='little')                # Value
+        script = OP_RETURN                                      # OP_RETURN
+        script += op_push(len(data))                            # Push bytes of data (NOTE: OP_SMALLDATA?)
+        script += data                                          # Data
+        s += var_int(int(len(script)))                          # Script length
+        s += script
 
     # Change output.
     if change_output:
@@ -234,7 +221,8 @@ def transaction (source, destination, btc_amount, fee, data, test=False):
     # Construct outputs.
     if destination: destination_output = (destination, btc_amount)
     else: destination_output = None
-    data_output = (data, config.DATA_VALUE)
+    if data: data_output = (data, config.DATA_VALUE)
+    else: data_output = None
     change_amount = total_btc_in - total_btc_out    # No check to make sure that the change output is above the dust target_value.
     if change_amount: change_output = (source, change_amount)
     else: change_output = None
@@ -257,9 +245,6 @@ def transmit (unsigned_tx_hex, ask=True):
     result = rpc('signrawtransaction', [unsigned_tx_hex])
     if result['complete']:
         signed_tx_hex = result['hex']
-        if config.TESTNET:
-            return rpc('sendrawtransaction', [signed_tx_hex])
-        else:
-            return eligius(result['hex'])   # mainnet HACK
+        return rpc('sendrawtransaction', [signed_tx_hex])
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

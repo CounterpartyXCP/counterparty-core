@@ -27,25 +27,11 @@ def create (db, source, quantity, test=False):
     if quantity > (1 * config.UNIT - total_burned):
         raise exceptions.UselessError('A maximum of 1 BTC may be burned per address.')
         
-    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
-    data += struct.pack(FORMAT, 'ProofOfBurn'.encode('utf-8'))
-    return bitcoin.transaction(source, config.UNSPENDABLE, quantity, config.MIN_FEE, data, test)
+    return bitcoin.transaction(source, config.UNSPENDABLE, quantity, config.MIN_FEE, None, test)
 
 def parse (db, tx, message=None):
     burn_parse_cursor = db.cursor()
     validity = 'Valid'
-
-    """
-    # Unpack message.
-    try:
-        hidden_message = struct.unpack(FORMAT, message)
-    except Exception:
-        validity = 'Invalid: could not unpack'
-
-    # Check for burn notice (heh).
-    if validity == 'Valid' and hidden_message[0].decode('utf-8') != 'ProofOfBurn':
-        validity = 'Invalid: secret message not found'
-    """
 
     # Check destination address.
     if validity == 'Valid' and tx['destination'] != config.UNSPENDABLE:

@@ -92,7 +92,10 @@ def parse_tx (tx_index, data, parse_func):
                       WHERE tx_index=?''', (tx_index,))
     tx = parse_tx_cursor.fetchone()
     assert not parse_tx_cursor.fetchone()
-    message = data[len(config.PREFIX) + 4:]
+    if data:
+        message = data[len(config.PREFIX) + 4:]
+    else:
+        message = None
 
     parse_func(db, tx, message)
     parse_tx_cursor.close()
