@@ -33,7 +33,7 @@ def database_check (db):
     assert block_list
     last_block = block_list[-1]
     if last_block['block_index'] != bitcoin.rpc('getblockcount', []):
-        raise exceptions.DatabaseError('Countparty database is behind Bitcoind.')
+        raise exceptions.DatabaseError('Countparty database is behind Bitcoind. Is the counterpartyd server running?')
     cursor.close()
     return
 
