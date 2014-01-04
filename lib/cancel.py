@@ -26,7 +26,7 @@ def create (db, offer_hash, test=False):
     if not bitcoin.rpc('validateaddress', [source])['ismine']:
         raise exceptions.CancelError('That offer was not made by one of your addresses.')
 
-    offer_hash_bytes = binascii.unhexlify(offer_hash)
+    offer_hash_bytes = binascii.unhexlify(bytes(offer_hash, 'utf-8'))
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, offer_hash_bytes)
     return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test)

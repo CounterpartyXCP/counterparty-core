@@ -12,7 +12,7 @@ LENGTH = 32 + 32
 
 def create (db, order_match_id, test=False):
     tx0_hash, tx1_hash = order_match_id[:64], order_match_id[64:] # UTF‐8 encoding means that the indices are doubled.
-    tx0_hash_bytes, tx1_hash_bytes = binascii.unhexlify(tx0_hash), binascii.unhexlify(tx1_hash)
+    tx0_hash_bytes, tx1_hash_bytes = binascii.unhexlify(bytes(tx0_hash, 'utf-8')), binascii.unhexlify(bytes(tx1_hash, 'utf-8'))
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, tx0_hash_bytes, tx1_hash_bytes)
 

@@ -151,7 +151,7 @@ def get_tx_data (tx_hex):
         if not data:
             asm = vout['scriptPubKey']['asm'].split(' ')
             if asm[0] == 'OP_RETURN' and len(asm) == 2:
-                data = binascii.unhexlify(asm[1])
+                data = binascii.unhexlify(bytes(asm[1], 'utf-8'))
 
     return destination, btc_amount, data
 

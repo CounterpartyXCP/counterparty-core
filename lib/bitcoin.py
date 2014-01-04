@@ -111,7 +111,7 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
     # List of Inputs.
     for i in range(len(inputs)):
         txin = inputs[i]
-        s += binascii.unhexlify(txin['txid'])[::-1]         # TxOutHash
+        s += binascii.unhexlify(bytes(txin['txid'], 'utf-8'))[::-1]         # TxOutHash
         s += txin['vout'].to_bytes(4, byteorder='little')   # TxOutIndex
 
         # No signature.

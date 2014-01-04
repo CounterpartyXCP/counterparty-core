@@ -316,7 +316,7 @@ def get_tx_info (tx):
         if not data:
             asm = vout['scriptPubKey']['asm'].split(' ')
             if asm[0] == 'OP_RETURN' and len(asm) == 2:
-                data = binascii.unhexlify(asm[1])
+                data = binascii.unhexlify(bytes(asm[1], 'utf-8'))
 
     # Only look for source if data were found (or destination is UNSPENDABLE), for speed.
     if not data and destination != config.UNSPENDABLE:
