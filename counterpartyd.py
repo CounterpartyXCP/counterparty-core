@@ -360,7 +360,11 @@ if __name__ == '__main__':
         config.LOG = os.path.join(config.data_dir, 'counterpartyd.log')
     if config.LOG == '-':
         config.LOG = None   # Log to stdout.
-    logging.basicConfig(filename=config.LOG, level=logging.INFO,
+    if args.verbose:
+        log_level = logging.INFO
+    else:
+        log_level = logging.DEBUG
+    logging.basicConfig(filename=config.LOG, level=log_level,
                         format='%(asctime)s %(message)s',
                         datefmt='%Y-%m-%d-T%I:%M:%S%z')
     requests_log = logging.getLogger("requests")
