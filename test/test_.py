@@ -61,7 +61,7 @@ config.UNSPENDABLE = 'mvCounterpartyXXXXXXXXXXXXXXW24Hef'
 
 source_default = 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'
 destination_default = 'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7'
-quantity = 100000000
+quantity = config.UNIT
 small = round(quantity / 2)
 expiration = 10
 fee_required = 900000
@@ -184,7 +184,7 @@ def test_initialise ():
     blocks.initialise(db)
 
 def test_burn ():
-    unsigned_tx_hex = burn.create(db, source_default, quantity, test=True)
+    unsigned_tx_hex = burn.create(db, source_default, int(.62 * quantity), test=True)
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
     tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
@@ -377,6 +377,16 @@ def test_cancel ():
     tx_insert(source_default, destination, btc_amount, fee_provided, data)
 
     parse_tx(tx_index - 1, data, cancel.parse)
+
+    output_new[inspect.stack()[0][3]] = unsigned_tx_hex
+
+def test_overburn ():
+    unsigned_tx_hex = burn.create(db, source_default, (1 * config.UNIT), test=True, overburn=True)  # Try to burn a whole ’nother BTC.
+
+    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
+    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
+
+    parse_tx(tx_index - 1, data, burn.parse)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 

@@ -13,7 +13,7 @@ FORMAT = '>11s'
 ID = 60
 LENGTH = 11
 
-def create (db, source, quantity, test=False):
+def create (db, source, quantity, test=False, overburn=False):
     # Try to make sure that the burned funds won’t go to waste.
     block_count = bitcoin.rpc('getblockcount', [])
     if block_count < config.BURN_START:
@@ -23,8 +23,8 @@ def create (db, source, quantity, test=False):
 
     # Check that a maximum of 1 BTC total is burned per address.
     burns = util.get_burns(db, address=source, validity='Valid')
-    total_burned = sum([burn['burned'] for burn in burns])
-    if quantity > (1 * config.UNIT - total_burned):
+    already_burned = sum([burn['burned'] for burn in burns])
+    if quantity > (1 * config.UNIT - already_burned) and not overburn:
         raise exceptions.UselessError('A maximum of 1 BTC may be burned per address.')
         
     return bitcoin.transaction(source, config.UNSPENDABLE, quantity, config.MIN_FEE, None, test)
@@ -38,15 +38,9 @@ def parse (db, tx, message=None):
         validity = 'Invalid: wrong destination address'
 
     if validity == 'Valid' and tx['btc_amount'] != None:
-        burned = tx['btc_amount']
+        sent = tx['btc_amount']
     else:
-        burned = 0
-
-    # Check that a maximum of 1 BTC total is burned per address.
-    burns = util.get_burns(db, validity='Valid', address=tx['source'])
-    total_burned = sum([burn['burned'] for burn in burns])
-    if burned > (1 * config.UNIT - total_burned):
-        validity = 'Invalid: exceeded maximum burn'
+        sent = 0
 
     # Check that the burn was done at the right time.
     if tx['block_index'] < config.BURN_START: 
@@ -54,17 +48,26 @@ def parse (db, tx, message=None):
     elif tx['block_index'] > config.BURN_END:
         validity = 'Invalid: too late'
 
-    # Calculate quantity of XPC earned.
-    total_time = D(config.BURN_END - config.BURN_START)
-    partial_time = D(config.BURN_END - tx['block_index'])
-    multiplier = 1000 * (1 + D(.5) * (partial_time / total_time))
-    earned = round(burned * multiplier)
- 
+    # Calculate quantity of XPC earned. (Maximum 1 BTC in total, ever.)
+    if validity == 'Valid':
+        burns = util.get_burns(db, validity='Valid', address=tx['source'])
+        already_burned = sum([burn['burned'] for burn in burns])
+        ONE_BTC = 1 * config.UNIT
+        max_burn = ONE_BTC - already_burned
+        if sent > max_burn: burned = max_burn   # TODO: exceeded maximum burn; earn what you can.
+        else: burned = sent
+
+        total_time = D(config.BURN_END - config.BURN_START)
+        partial_time = D(config.BURN_END - tx['block_index'])
+        multiplier = 1000 * (1 + D(.5) * (partial_time / total_time))
+        earned = round(burned * multiplier)
+
     # Credit source address with earned XCP.
     if validity == 'Valid':
         util.credit(db, tx['source'], 'XCP', earned)
 
     # Add parsed transaction to message‐type–specific table.
+    # TODO: store sent in table
     burn_parse_cursor.execute('''INSERT INTO burns(
                         tx_index,
                         tx_hash,
