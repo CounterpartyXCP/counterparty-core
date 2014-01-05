@@ -45,7 +45,7 @@ def rpc (method, params):
     }
 
     response = connect(config.RPC, payload, headers)
-    if not response:
+    if response == None:
         if config.TESTNET: network = 'testnet'
         else: network = 'mainnet'
         raise exceptions.BitcoindRPCError('Cannot communicate with Bitcoind. (counterpartyd is set to run on {}, is Bitcoind?)'.format(network))

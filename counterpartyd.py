@@ -275,6 +275,8 @@ if __name__ == '__main__':
     parser_asset = subparsers.add_parser('asset', help='display the basic properties of a Counterparty asset')
     parser_asset.add_argument('asset', metavar='ASSET', help='the asset you are interested in')
 
+    parser_wallet = subparsers.add_parser('wallet', help='list the addresses in your Bitcoind wallet along with their balances in all Counterparty assets')
+
     parser_market = subparsers.add_parser('market', help='fill the screen with an always up‐to‐date summary of the Counterparty market')
     parser_market.add_argument('--give-asset', metavar='GIVE_ASSET', help='only show orders offering to sell GIVE_ASSET')
     parser_market.add_argument('--get-asset', metavar='GET_ASSET', help='only show orders offering to buy GET_ASSET')
@@ -528,6 +530,30 @@ if __name__ == '__main__':
         print('Total Issued:', total)
         print('Divisible:', divisible)
         print('Issuer:', issuer)
+
+    elif args.action == 'wallet':
+        print()
+        for group in bitcoin.rpc('listaddressgroupings', []):
+            for bunch in group:
+                address, btc_balance = bunch[:2]
+                # Balances. DUPE
+                get_address = util.get_address(db, address=address)
+                balances = get_address['balances']
+                table = PrettyTable(['Asset', 'Amount'])
+                empty = True
+                if btc_balance:
+                    table.add_row(['BTC', btc_balance])  # BTC
+                    empty = False
+                for balance in balances:
+                    asset = balance['asset']
+                    amount = util.devise(db, balance['amount'], balance['asset'], 'output')
+                    if amount:
+                        table.add_row([asset, amount])
+                        empty = False
+                if not empty:
+                    print(address)
+                    print(str(table))
+                    print()
 
     elif args.action == 'market':
         while True:
