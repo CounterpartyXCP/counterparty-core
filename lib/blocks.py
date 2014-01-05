@@ -23,7 +23,6 @@ def parse_block (db, block_index):
 
     """
     parse_block_cursor = db.cursor()
-    logging.info('Block: {}'.format(str(block_index)))
 
     # Expire orders and bets.
     order.expire(db, block_index)
@@ -72,9 +71,7 @@ def parse_block (db, block_index):
                            ('False', tx['tx_hash']))
             logging.warning('Unsupported: message type {}; transaction hash {}'.format(message_type_id, tx['tx_hash']))
 
-    # Commit!
     parse_block_cursor.close()
-    db.commit()
 
 def initialise(db):
     initialise_cursor = db.cursor()
@@ -101,29 +98,25 @@ def initialise(db):
     initialise_cursor.execute('''DELETE FROM blocks WHERE block_index<?''', (config.BLOCK_FIRST,))
     initialise_cursor.execute('''DELETE FROM transactions WHERE block_index<?''', (config.BLOCK_FIRST,))
 
-    initialise_cursor.execute('''DROP TABLE IF EXISTS debits''')
-    initialise_cursor.execute('''CREATE TABLE debits(
+    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS debits(
                         address TEXT,
                         asset TEXT,
                         amount INTEGER)
                    ''')
 
-    initialise_cursor.execute('''DROP TABLE IF EXISTS credits''')
-    initialise_cursor.execute('''CREATE TABLE credits(
+    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS credits(
                         address TEXT,
                         asset TEXT,
                         amount INTEGER)
                    ''')
 
-    initialise_cursor.execute('''DROP TABLE IF EXISTS balances''')
-    initialise_cursor.execute('''CREATE TABLE balances(
+    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS balances(
                         address TEXT,
                         asset TEXT,
                         amount INTEGER)
                    ''')
 
-    initialise_cursor.execute('''DROP TABLE IF EXISTS sends''')
-    initialise_cursor.execute('''CREATE TABLE sends(
+    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS sends(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
@@ -134,8 +127,7 @@ def initialise(db):
                         validity TEXT)
                    ''')
 
-    initialise_cursor.execute('''DROP TABLE IF EXISTS orders''')
-    initialise_cursor.execute('''CREATE TABLE orders(
+    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS orders(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
@@ -152,8 +144,7 @@ def initialise(db):
                         validity TEXT)
                    ''')
 
-    initialise_cursor.execute('''DROP TABLE IF EXISTS order_matches''')
-    initialise_cursor.execute('''CREATE TABLE order_matches(
+    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS order_matches(
                         tx0_index INTEGER,
                         tx0_hash TEXT,
                         tx0_address TEXT,
@@ -171,8 +162,7 @@ def initialise(db):
                         validity TEXT)
                    ''')
 
-    initialise_cursor.execute('''DROP TABLE IF EXISTS btcpays''')
-    initialise_cursor.execute('''CREATE TABLE btcpays(
+    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS btcpays(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
@@ -181,8 +171,7 @@ def initialise(db):
                         validity TEXT)
                    ''')
 
-    initialise_cursor.execute('''DROP TABLE IF EXISTS issuances''')
-    initialise_cursor.execute('''CREATE TABLE issuances(
+    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS issuances(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
@@ -195,8 +184,7 @@ def initialise(db):
                         )
                    ''')
 
-    initialise_cursor.execute('''DROP TABLE IF EXISTS broadcasts''')
-    initialise_cursor.execute('''CREATE TABLE broadcasts(
+    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS broadcasts(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
@@ -208,8 +196,7 @@ def initialise(db):
                         validity TEXT)
                    ''')
 
-    initialise_cursor.execute('''DROP TABLE IF EXISTS bets''')
-    initialise_cursor.execute('''CREATE TABLE bets(
+    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS bets(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
@@ -228,8 +215,7 @@ def initialise(db):
                         validity TEXT)
                    ''')
 
-    initialise_cursor.execute('''DROP TABLE IF EXISTS bet_matches''')
-    initialise_cursor.execute('''CREATE TABLE bet_matches(
+    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS bet_matches(
                         tx0_index INTEGER,
                         tx0_hash TEXT,
                         tx0_address TEXT,
@@ -253,8 +239,7 @@ def initialise(db):
                         validity TEXT)
                    ''')
 
-    initialise_cursor.execute('''DROP TABLE IF EXISTS dividends''')
-    initialise_cursor.execute('''CREATE TABLE dividends(
+    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS dividends(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
@@ -264,8 +249,7 @@ def initialise(db):
                         validity TEXT)
                    ''')
 
-    initialise_cursor.execute('''DROP TABLE IF EXISTS burns''')
-    initialise_cursor.execute('''CREATE TABLE burns(
+    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS burns(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
@@ -275,8 +259,7 @@ def initialise(db):
                         validity TEXT)
                    ''')
 
-    initialise_cursor.execute('''DROP TABLE IF EXISTS cancels''')
-    initialise_cursor.execute('''CREATE TABLE cancels(
+    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS cancels(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
@@ -286,7 +269,6 @@ def initialise(db):
                    ''')
 
     initialise_cursor.close()
-    db.commit()
 
 def get_tx_info (tx):
     """
@@ -339,14 +321,9 @@ def get_tx_info (tx):
 def follow (db):
     follow_cursor = db.cursor()
 
-    # Always re‐parse from beginning on start‐up.
     logging.info('RESTART')
     initialise(db)
-    follow_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
-    for block in follow_cursor.fetchall():
-        parse_block(db, block['block_index'])
 
-    tx_index = 0
     while True:
 
         # Get index of last block.
@@ -355,18 +332,18 @@ def follow (db):
             block_index = follow_cursor.fetchone()['block_index'] + 1
             assert not follow_cursor.fetchone()
         except Exception:
-            logging.warning('Rebuilding database of Counterparty transactions.')
+            logging.warning('No blocks found in database. Starting from the beginning.')
             block_index = config.BLOCK_FIRST
 
         # Get index of last transaction.
-        try:    # Ugly
+        try:
             follow_cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)''')
             tx_index = follow_cursor.fetchone()['tx_index'] + 1
             assert not follow_cursor.fetchone()
         except Exception:
-            pass
+            tx_index = 0
 
-        # Get block.
+        # Get new blocks.
         block_count = bitcoin.rpc('getblockcount', [])
         while block_index <= block_count:
             block_hash = bitcoin.rpc('getblockhash', [block_index])
@@ -374,51 +351,62 @@ def follow (db):
             block_time = block['time']
             tx_hash_list = block['tx']
 
-            # Get the transaction list for each block.
-            for tx_hash in tx_hash_list:
-                # Skip duplicate transaction entries.
-                follow_cursor.execute('''SELECT * FROM transactions WHERE tx_hash=?''', (tx_hash,))
-                if follow_cursor.fetchone():
-                    tx_index += 1
-                    continue
-                # Get the important details about each transaction.
-                tx = bitcoin.rpc('getrawtransaction', [tx_hash, 1])
-                source, destination, btc_amount, fee, data = get_tx_info(tx)
-                if source and (data or destination == config.UNSPENDABLE):
-                    follow_cursor.execute('''INSERT INTO transactions(
-                                        tx_index,
-                                        tx_hash,
-                                        block_index,
-                                        block_time,
-                                        source,
-                                        destination,
-                                        btc_amount,
-                                        fee,
-                                        data) VALUES(?,?,?,?,?,?,?,?,?)''',
-                                        (tx_index,
-                                         tx_hash,
-                                         block_index,
-                                         block_time,
-                                         source,
-                                         destination,
-                                         btc_amount,
-                                         fee,
-                                         data)
-                                  )
-                    tx_index += 1
+            # Get and parse transactions in this block, atomically.
+            db.execute('SAVEPOINT pt;')
+            try:
+                # List the block.
+                follow_cursor.execute('''INSERT INTO blocks(
+                                    block_index,
+                                    block_hash,
+                                    block_time) VALUES(?,?,?)''',
+                                    (block_index,
+                                    block_hash,
+                                    block_time)
+                              )
 
-            # List the block after all of the transactions in it.
-            follow_cursor.execute('''INSERT INTO blocks(
-                                block_index,
-                                block_hash,
-                                block_time) VALUES(?,?,?)''',
-                                (block_index,
-                                block_hash,
-                                block_time)
-                          )
+                # List the transactions in the block.
+                for tx_hash in tx_hash_list:
+                    # Skip duplicate transaction entries.
+                    follow_cursor.execute('''SELECT * FROM transactions WHERE tx_hash=?''', (tx_hash,))
+                    if follow_cursor.fetchone():
+                        tx_index += 1
+                        continue
+                    # Get the important details about each transaction.
+                    tx = bitcoin.rpc('getrawtransaction', [tx_hash, 1])
+                    source, destination, btc_amount, fee, data = get_tx_info(tx)
+                    if source and (data or destination == config.UNSPENDABLE):
+                        follow_cursor.execute('''INSERT INTO transactions(
+                                            tx_index,
+                                            tx_hash,
+                                            block_index,
+                                            block_time,
+                                            source,
+                                            destination,
+                                            btc_amount,
+                                            fee,
+                                            data) VALUES(?,?,?,?,?,?,?,?,?)''',
+                                            (tx_index,
+                                             tx_hash,
+                                             block_index,
+                                             block_time,
+                                             source,
+                                             destination,
+                                             btc_amount,
+                                             fee,
+                                             data)
+                                      )
+                        tx_index += 1
 
-            # Parse transactions in this block.
-            parse_block(db, block_index)
+                # Parse the transactions in the block.
+                parse_block(db, block_index)
+
+                logging.info('Block: {}'.format(str(block_index)))
+                db.execute('RELEASE SAVEPOINT pt;')
+                db.commit()
+            except Exception as e:
+                db.execute('ROLLBACK TO SAVEPOINT pt;')
+                db.commit()
+                raise e
 
             # Increment block index.
             block_count = bitcoin.rpc('getblockcount', [])

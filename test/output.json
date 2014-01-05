@@ -2,7 +2,7 @@
     "get_address_balances": [
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "amount": 149989725000, 
+            "amount": 149984725000, 
             "asset": "XCP"
         }, 
         {
@@ -239,7 +239,40 @@
             "validity": "Valid"
         }
     ], 
-    "get_address_orders": [], 
+    "get_address_orders": [
+        {
+            "block_index": 3, 
+            "expiration": 10, 
+            "fee_provided": 10000, 
+            "fee_required": 900000, 
+            "get_amount": 50000000, 
+            "get_asset": "BTC", 
+            "give_amount": 105000000, 
+            "give_asset": "XCP", 
+            "give_remaining": 5000000, 
+            "price": 0.47619047619047616, 
+            "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "tx_hash": "084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5", 
+            "tx_index": 3, 
+            "validity": "Valid"
+        }, 
+        {
+            "block_index": 2, 
+            "expiration": 10, 
+            "fee_provided": 1000000, 
+            "fee_required": 0, 
+            "get_amount": 100000000, 
+            "get_asset": "XCP", 
+            "give_amount": 50000000, 
+            "give_asset": "BTC", 
+            "give_remaining": 0, 
+            "price": 2.0, 
+            "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "tx_hash": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986", 
+            "tx_index": 2, 
+            "validity": "Valid"
+        }
+    ], 
     "get_address_sends": [
         {
             "amount": 50000000, 
@@ -255,7 +288,7 @@
     "get_balances": [
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "amount": 149989725000, 
+            "amount": 149984725000, 
             "asset": "XCP"
         }, 
         {

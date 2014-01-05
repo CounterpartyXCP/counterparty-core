@@ -43,6 +43,7 @@ def parse (db, tx, message):
         offer_hash = None
         validity = 'Invalid: could not unpack'
 
+
     if validity == 'Valid':
         # Find the offer.
         cancel_parse_cursor.execute('''SELECT * FROM (orders JOIN bets) \

@@ -48,6 +48,7 @@ config.DATABASE = CURR_DIR + '/counterparty.test.db'
 try: os.remove(config.DATABASE)
 except: pass
 db = sqlite3.connect(config.DATABASE)
+db.isolation_level = None
 db.row_factory = sqlite3.Row
 
 tx_index = 0
@@ -375,17 +376,11 @@ def test_cancel ():
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
     tx_insert(source_default, destination, btc_amount, fee_provided, data)
 
-    parse_tx(tx_index - 1, data, order.parse)
+    parse_tx(tx_index - 1, data, cancel.parse)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
-
-def test_parse_from_the_start():
-    logging.info('\n')
-    blocks.initialise(db)
-    for i in range(tx_index):
-        blocks.parse_block(db, i)
-
+def test_get_balances():
     # Check balances of source_default.
     output_new['get_balances'] = util.get_balances(db, address=source_default)
 
@@ -395,6 +390,7 @@ def test_get_address():
         output_new['get_address_' + field] = get_address[field]
 
 def test_stop():
+    db.commit()
     logging.info('STOP TEST')
 
 

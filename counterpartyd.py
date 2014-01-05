@@ -386,6 +386,7 @@ if __name__ == '__main__':
     # For create()s.
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
+    db.isolation_level = None
     # db.execute('pragma foreign_keys=ON')
 
     # (more) Testnet
