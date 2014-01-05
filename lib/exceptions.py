@@ -1,6 +1,8 @@
 #! /usr/bin/python3
 
-# Exceptions
+class TryoutError (Exception):
+    pass
+
 class ConfigurationError (Exception):
     pass
 class TXConstructionError(Exception):

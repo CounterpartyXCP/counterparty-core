@@ -9,6 +9,7 @@ import json
 import hashlib
 import requests
 import re
+import time
 
 from . import (config, exceptions)
 
@@ -23,6 +24,17 @@ b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
 dhash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
 
+def connect (host, payload, headers):
+    TRIES = 12
+    for i in range(TRIES):
+        try:
+            response = requests.post(host, data=json.dumps(payload), headers=headers)
+            return response
+        except requests.exceptions.ConnectionError:
+            print('Could not connect to Bitcoind. Sleeping for five seconds. (Try {}/{})'.format(i, TRIES), file=sys.stderr)
+            time.sleep(5)
+    return None
+
 def rpc (method, params):
     headers = {'content-type': 'application/json'}
     payload = {
@@ -32,12 +44,12 @@ def rpc (method, params):
         "id": 0,
     }
 
-    try:
-        response = requests.post(config.RPC, data=json.dumps(payload), headers=headers)
-    except requests.exceptions.ConnectionError:
+    response = connect(config.RPC, payload, headers)
+    if not response:
         if config.TESTNET: network = 'testnet'
         else: network = 'mainnet'
         raise exceptions.BitcoindRPCError('Cannot communicate with Bitcoind. (counterpartyd is set to run on {}, is Bitcoind?)'.format(network))
+
     if response.status_code == 401:
         raise exceptions.BitcoindRPCError('Bitcoind RPC: unauthorized')
 

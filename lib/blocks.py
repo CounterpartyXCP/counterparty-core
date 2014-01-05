@@ -430,7 +430,7 @@ def follow ():
 
         while block_index > block_count: # DUPE
             block_count = bitcoin.rpc('getblockcount', [])
-            time.sleep(1)
+            time.sleep(2)
 
     follow_cursor.close()
 

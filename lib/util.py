@@ -4,6 +4,7 @@ from datetime import datetime
 from dateutil.tz import tzlocal
 import decimal
 D = decimal.Decimal
+import sys
 
 from . import (config, exceptions, bitcoin)
 
@@ -25,17 +26,18 @@ def bitcoind_check (db):
 def database_check (db):
     # Check Counterparty database to see if the counterpartyd server has caught up with Bitcoind.
     cursor = db.cursor()
-    try:
-        cursor.execute('''SELECT * FROM blocks ORDER BY block_index ASC''')
-    except sqlite3.OperationalError:
-        raise exceptions.DatabaseError('Counterparty database does not exist. Run server command.')
-    block_list = cursor.fetchall()
-    assert block_list
-    last_block = block_list[-1]
-    if last_block['block_index'] != bitcoin.rpc('getblockcount', []):
-        raise exceptions.DatabaseError('Countparty database is behind Bitcoind. Is the counterpartyd server running?')
-    cursor.close()
-    return
+    TRIES = 7
+    for i in range(TRIES):
+        try:
+            cursor.execute('''SELECT * FROM blocks ORDER BY block_index ASC''')
+        except sqlite3.OperationalError:
+            raise exceptions.DatabaseError('Counterparty database does not exist. Run the server command to create it.')
+        last_block = cursor.fetchall()[-1]
+        if last_block['block_index'] == bitcoin.rpc('getblockcount', []):
+            cursor.close()
+            return
+        time.sleep(1)
+    raise exceptions.DatabaseError('Counterparty database is behind Bitcoind. Is the counterpartyd server running?')
 
 def short (string):
     if len(string) == 64: length = 8

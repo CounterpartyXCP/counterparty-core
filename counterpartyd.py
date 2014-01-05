@@ -357,13 +357,16 @@ if __name__ == '__main__':
     elif has_config and 'logfile' in configfile['Default']:
         config.LOG = configfile['Default']['logfile']
     else:
-        config.LOG = os.path.join(config.data_dir, 'counterpartyd.log')
+        if config.TESTNET:
+            config.LOG = os.path.join(config.data_dir, 'counterpartyd.testnet.log')
+        else:
+            config.LOG = os.path.join(config.data_dir, 'counterpartyd.log')
     if config.LOG == '-':
         config.LOG = None   # Log to stdout.
     if args.verbose:
-        log_level = logging.INFO
-    else:
         log_level = logging.DEBUG
+    else:
+        log_level = logging.INFO
     logging.basicConfig(filename=config.LOG, level=log_level,
                         format='%(asctime)s %(message)s',
                         datefmt='%Y-%m-%d-T%I:%M:%S%z')
