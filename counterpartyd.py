@@ -386,6 +386,7 @@ if __name__ == '__main__':
     # For create()s.
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
+    # db.execute('pragma foreign_keys=ON')
 
     # (more) Testnet
     if config.TESTNET:
@@ -575,7 +576,7 @@ if __name__ == '__main__':
         parser.print_help()
 
     elif args.action == 'server':
-        blocks.follow()
+        blocks.follow(db)
 
     else:
         parser.print_help()

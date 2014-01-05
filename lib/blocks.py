@@ -336,11 +336,7 @@ def get_tx_info (tx):
 
     return source, destination, btc_amount, round(fee), data
 
-def follow ():
-
-    db = sqlite3.connect(config.DATABASE)
-    db.row_factory = sqlite3.Row
-    # db.execute('pragma foreign_keys=ON')
+def follow (db):
     follow_cursor = db.cursor()
 
     # Always re‐parse from beginning on start‐up.
