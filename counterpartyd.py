@@ -532,28 +532,40 @@ if __name__ == '__main__':
         print('Issuer:', issuer)
 
     elif args.action == 'wallet':
+        total_table = PrettyTable(['Asset', 'Balance'])
+        totals = {}
+
         print()
         for group in bitcoin.rpc('listaddressgroupings', []):
             for bunch in group:
                 address, btc_balance = bunch[:2]
-                # Balances. DUPE
                 get_address = util.get_address(db, address=address)
                 balances = get_address['balances']
-                table = PrettyTable(['Asset', 'Amount'])
+                table = PrettyTable(['Asset', 'Balance'])
                 empty = True
                 if btc_balance:
                     table.add_row(['BTC', btc_balance])  # BTC
+                    if 'BTC' in totals.keys(): totals['BTC'] += btc_balance
+                    else: totals['BTC'] = btc_balance
                     empty = False
                 for balance in balances:
                     asset = balance['asset']
-                    amount = util.devise(db, balance['amount'], balance['asset'], 'output')
-                    if amount:
-                        table.add_row([asset, amount])
+                    balance = D(util.devise(db, balance['amount'], balance['asset'], 'output'))
+                    if balance:
+                        if asset in totals.keys(): totals[asset] += balance
+                        else: totals[asset] = balance
+                        table.add_row([asset, balance])
                         empty = False
                 if not empty:
                     print(address)
                     print(str(table))
                     print()
+        for asset in totals.keys():
+            balance = totals[asset]
+            total_table.add_row([asset, balance])
+        print('TOTAL')
+        print(str(total_table))
+        print()
 
     elif args.action == 'market':
         while True:
