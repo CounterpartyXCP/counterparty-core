@@ -12,12 +12,14 @@ D = decimal.Decimal
 import difflib
 import json
 import inspect
+from threading import Thread
+import requests
 
 import os
 import sys
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
-from lib import (config, util, exceptions, bitcoin, blocks)
+from lib import (config, api, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, util)
 
 # JSON‐RPC Options
@@ -389,20 +391,42 @@ def test_overburn ():
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
-def test_get_balances():
-    # Check balances of source_default.
-    output_new['get_balances'] = util.get_balances(db, address=source_default)
-
 def test_get_address():
     get_address = util.get_address(db, source_default)
     for field in get_address:
         output_new['get_address_' + field] = get_address[field]
 
+def test_json_rpc():
+    thread=api.reqthread()
+    thread.daemon = True
+    thread.start()
+    time.sleep(.1)
+
+    url = "http://localhost:9999/jsonrpc"
+    headers = {'content-type': 'application/json'}
+
+    payloads = []
+    payloads.append({
+        "method": "get_balances",
+        "params": {"address": source_default, "asset": None},
+        "jsonrpc": "2.0",
+        "id": 0,
+    })
+
+    for payload in payloads:
+        response = requests.post(
+            url, data=json.dumps(payload), headers=headers).json()
+        print(response['result'])   # TODO
+        try:
+            output_new['rpc.' + payload['method']] = response['result']
+        except:
+            output_new['rpc.' + payload['method']] = response['error']
+        assert response['jsonrpc'] == '2.0'
+        assert response['id'] == 0
+
 def test_stop():
     db.commit()
     logging.info('STOP TEST')
-
-
 
 
 def test_db():
@@ -441,8 +465,6 @@ def test_log():
     log_diff = list(difflib.unified_diff(old_log, new_log, n=0))
     print(log_diff)
     assert not len(log_diff)
-
-
 
 def test_base58_decode():
     """

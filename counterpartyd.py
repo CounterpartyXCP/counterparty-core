@@ -16,8 +16,9 @@ from prettytable import PrettyTable
 import time
 import dateutil.parser
 from datetime import datetime
+from threading import Thread
 
-from lib import (config, util, exceptions, bitcoin, blocks)
+from lib import (config, api, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, util)
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
@@ -586,6 +587,10 @@ if __name__ == '__main__':
         parser.print_help()
 
     elif args.action == 'server':
+        thread=api.reqthread()
+        thread.daemon = True
+        thread.start()
+
         blocks.follow(db)
 
     else:
