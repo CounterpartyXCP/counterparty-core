@@ -92,7 +92,6 @@ def parse_tx (tx_index, data, parse_func):
     parse_tx_cursor.execute('''SELECT * FROM transactions \
                       WHERE tx_index=?''', (tx_index,))
     tx = parse_tx_cursor.fetchone()
-    assert not parse_tx_cursor.fetchone()
     if data:
         message = data[len(config.PREFIX) + 4:]
     else:
@@ -460,6 +459,8 @@ def test_base58_decode():
 
 """
 follow()
+
+reorg()
 
 asset lock
 asset transfer

@@ -167,7 +167,6 @@ def match (db, tx):
     bet_match_cursor.execute('''SELECT * FROM bets\
                       WHERE tx_index=?''', (tx['tx_index'],))
     tx1 = bet_match_cursor.fetchone()
-    assert not bet_match_cursor.fetchone()
 
     # Get counterbet_type.
     if tx1['bet_type'] % 2: counterbet_type = tx1['bet_type'] - 1

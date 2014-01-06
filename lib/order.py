@@ -128,7 +128,6 @@ def match (db, tx):
     order_match_cursor.execute('''SELECT * FROM orders\
                       WHERE tx_index=?''', (tx['tx_index'],))
     tx1 = order_match_cursor.fetchone()
-    assert not order_match_cursor.fetchone()
 
     order_match_cursor.execute('''SELECT * FROM orders \
                       WHERE (give_asset=? AND get_asset=? AND validity=?) \

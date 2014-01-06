@@ -363,8 +363,8 @@ if __name__ == '__main__':
             config.LOG = os.path.join(config.data_dir, 'counterpartyd.testnet.log')
         else:
             config.LOG = os.path.join(config.data_dir, 'counterpartyd.log')
-    if config.LOG == '-':
-        config.LOG = None   # Log to stdout.
+    if config.LOG == '-':                       # TODO: Kill
+        config.LOG = None   # Log to stdout.    # TODO: Kill
     if args.verbose:
         log_level = logging.DEBUG
     else:
@@ -372,6 +372,14 @@ if __name__ == '__main__':
     logging.basicConfig(filename=config.LOG, level=log_level,
                         format='%(asctime)s %(message)s',
                         datefmt='%Y-%m-%d-T%I:%M:%S%z')
+
+    # Log also to stderr.
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(message)s')
+    console.setFormatter(formatter)
+    logging.getLogger('').addHandler(console)
+
     requests_log = logging.getLogger("requests")
     requests_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
 
@@ -387,6 +395,7 @@ if __name__ == '__main__':
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     db.isolation_level = None
+
     # db.execute('pragma foreign_keys=ON')
 
     # (more) Testnet

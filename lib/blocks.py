@@ -69,7 +69,7 @@ def parse_block (db, block_index):
                               SET supported=? \
                               WHERE tx_hash=?''',
                            ('False', tx['tx_hash']))
-            logging.warning('Unsupported: message type {}; transaction hash {}'.format(message_type_id, tx['tx_hash']))
+            logging.info('Unsupported: message type {}; transaction hash {}'.format(message_type_id, tx['tx_hash']))
 
     parse_block_cursor.close()
 
@@ -318,10 +318,61 @@ def get_tx_info (tx):
 
     return source, destination, btc_amount, round(fee), data
 
+def reorg (db):
+    # Detect blockchain reorganisation.
+    reorg_cursor = db.cursor()
+    reorg_cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)''')
+    last_block_index = reorg_cursor.fetchone()['block_index']
+    reorg_necessary = False
+    for block_index in range(last_block_index - 6, last_block_index + 1):
+        block_hash_see = bitcoin.rpc('getblockhash', [block_index])
+        reorg_cursor.execute('''SELECT * FROM blocks WHERE block_index=?''', (block_index,))
+        block_hash_have = reorg_cursor.fetchone()['block_hash']
+        if block_hash_see != block_hash_have:
+            reorg_necessary = True
+            logging.warning('Status: Blockchain reorganisation at block {}.'.format(block_index))
+            break
+
+    if not reorg_necessary: return last_block_index + 1
+
+    # Delete all of the results of parsing from the database.
+    # TODO: This is extreme. Rather, have every table have a block index column, and only delete the stuff required. (What about table balances?)
+    reorg_cursor.execute('''DROP TABLE IF EXISTS debits''')
+    reorg_cursor.execute('''DROP TABLE IF EXISTS credits''')
+    reorg_cursor.execute('''DROP TABLE IF EXISTS balances''')
+    reorg_cursor.execute('''DROP TABLE IF EXISTS sends''')
+    reorg_cursor.execute('''DROP TABLE IF EXISTS orders''')
+    reorg_cursor.execute('''DROP TABLE IF EXISTS order_matches''')
+    reorg_cursor.execute('''DROP TABLE IF EXISTS btcpays''')
+    reorg_cursor.execute('''DROP TABLE IF EXISTS issuances''')
+    reorg_cursor.execute('''DROP TABLE IF EXISTS broadcasts''')
+    reorg_cursor.execute('''DROP TABLE IF EXISTS bets''')
+    reorg_cursor.execute('''DROP TABLE IF EXISTS bet_matches''')
+    reorg_cursor.execute('''DROP TABLE IF EXISTS dividends''')
+    reorg_cursor.execute('''DROP TABLE IF EXISTS burns''')
+    reorg_cursor.execute('''DROP TABLE IF EXISTS cancels''')
+
+    # Delete blocks and transactions back as far as necessary.
+    reorg_cursor.execute('''DELETE FROM blocks WHERE block_index>=?''', (block_index,))
+    reorg_cursor.execute('''DELETE FROM transactions WHERE block_index>=?''', (block_index,))
+
+    # Reparse everything up to the deleted blocks, transactions.
+    # TODO: Also extreme.
+    log = logging.getLogger('')
+    log.setLevel(logging.WARNING)
+    initialise(db)
+    reorg_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
+    for block in reorg_cursor.fetchall():
+        parse_block(db, block['block_index'])
+    log.setLevel(logging.INFO)
+
+    reorg_cursor.close()
+    return block_index
+
 def follow (db):
     follow_cursor = db.cursor()
 
-    logging.info('RESTART')
+    logging.info('Status: RESTART')
     initialise(db)
 
     while True:
@@ -330,16 +381,14 @@ def follow (db):
         try:
             follow_cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)''')
             block_index = follow_cursor.fetchone()['block_index'] + 1
-            assert not follow_cursor.fetchone()
         except Exception:
-            logging.warning('No blocks found in database. Starting from the beginning.')
+            logging.warning('Status: no blocks found in database; starting from the beginning.')
             block_index = config.BLOCK_FIRST
 
         # Get index of last transaction.
         try:
             follow_cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)''')
             tx_index = follow_cursor.fetchone()['tx_index'] + 1
-            assert not follow_cursor.fetchone()
         except Exception:
             tx_index = 0
 
@@ -352,7 +401,7 @@ def follow (db):
             tx_hash_list = block['tx']
 
             # Get and parse transactions in this block, atomically.
-            db.execute('SAVEPOINT pt;')
+            db.execute('SAVEPOINT block;')
             try:
                 # List the block.
                 follow_cursor.execute('''INSERT INTO blocks(
@@ -401,10 +450,10 @@ def follow (db):
                 parse_block(db, block_index)
 
                 logging.info('Block: {}'.format(str(block_index)))
-                db.execute('RELEASE SAVEPOINT pt;')
+                db.execute('RELEASE SAVEPOINT block;')
                 db.commit()
             except Exception as e:
-                db.execute('ROLLBACK TO SAVEPOINT pt;')
+                db.execute('ROLLBACK TO SAVEPOINT block;')
                 db.commit()
                 raise e
 
@@ -413,6 +462,17 @@ def follow (db):
             block_index +=1
 
         while block_index > block_count: # DUPE
+            # Handle blockchain reorganisations, as necessary, atomically.
+            db.execute('SAVEPOINT reorg;')
+            try:
+                block_index = reorg(db)
+                db.execute('RELEASE SAVEPOINT reorg;')
+                db.commit()
+            except Exception as e:
+                db.execute('ROLLBACK TO SAVEPOINT reorg;')
+                db.commit()
+                raise e
+
             block_count = bitcoin.rpc('getblockcount', [])
             time.sleep(2)
 

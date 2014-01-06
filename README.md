@@ -13,7 +13,7 @@ The Counterparty protocol specification may be found at
 
 # Dependencies
 * [Python 3](http://python.org)
-* Python 3 packages: SQLite3, Requests, AppDirs, PrettyTable, ConfigParser, dateutil
+* Python 3 packages: SQLite3, Requests, AppDirs, PrettyTable, ConfigParser, dateutil, json-rpc
 * Bitcoind
 
 # Installation
@@ -105,14 +105,14 @@ The following examples are abridged for parsimony.
 	
 	```
 	order --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=BTC
-	--give-quantity=20 --give-asset=XCP --expiration=10 --fee_provided=.001
+	--give-quantity=20 --give-asset=XCP --expiration=10 --fee_required=.001
 	```
 
 * Buy BBBC for BTC
 
 	```
 	order --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=BBBC
-	--give-quantity=20 --give-asset=BTC --expiration=10 --fee_required.001
+	--give-quantity=20 --give-asset=BTC --expiration=10 --fee_provided.001
 	```
 
 * Buy XCP for BBBC
