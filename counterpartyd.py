@@ -372,7 +372,7 @@ if __name__ == '__main__':
         log_level = logging.INFO
     logging.basicConfig(filename=config.LOG, level=log_level,
                         format='%(asctime)s %(message)s',
-                        datefmt='%Y-%m-%d-T%I:%M:%S%z')
+                        datefmt='%Y-%m-%d-T%H:%M:%S%z')
 
     # Log also to stderr.
     console = logging.StreamHandler()
