@@ -372,8 +372,8 @@ def reorg (db):
     if not reorg_necessary: return last_block_index + 1
 
     # Delete blocks and transactions back as far as necessary.
-    purge_cursor.execute('''DELETE FROM blocks WHERE block_index>=?''', (block_index,))
-    purge_cursor.execute('''DELETE FROM transactions WHERE block_index>=?''', (block_index,))
+    reorg_cursor.execute('''DELETE FROM blocks WHERE block_index>=?''', (block_index,))
+    reorg_cursor.execute('''DELETE FROM transactions WHERE block_index>=?''', (block_index,))
 
     # Re‐parse all transactions that are still there.
     purge(db, quiet=True)
