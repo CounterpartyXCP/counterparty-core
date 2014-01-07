@@ -18,7 +18,7 @@ from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, ca
 
 def parse_block (db, block_index):
     """This is a separate function from follow() so that changing the parsing
-    rules doesn’t require a full database rebuild. If parsing rules are changed
+    rules doesn't require a full database rebuild. If parsing rules are changed
     (but not data identification), then just restart `counterparty.py follow`.
 
     """
@@ -311,7 +311,7 @@ def get_tx_info (tx):
         vin_tx = bitcoin.rpc('getrawtransaction', [vin['txid'], 1])   # Get the full transaction data for this input transaction.
         vout = vin_tx['vout'][vin['vout']]
         fee += D(vout['value']) * config.UNIT
-        source_list.append(vout['scriptPubKey']['addresses'][0])        # Assume that the output was not not multi‐sig.
+        source_list.append(vout['scriptPubKey']['addresses'][0])        # Assume that the output was not not multi-sig.
     # Require that all possible source addresses be the same.
     if all(x == source_list[0] for x in source_list): source = source_list[0]
     else: source = None
@@ -375,7 +375,7 @@ def reorg (db):
     reorg_cursor.execute('''DELETE FROM blocks WHERE block_index>=?''', (block_index,))
     reorg_cursor.execute('''DELETE FROM transactions WHERE block_index>=?''', (block_index,))
 
-    # Re‐parse all transactions that are still there.
+    # Re-parse all transactions that are still there.
     purge(db, quiet=True)
 
     reorg_cursor.close()

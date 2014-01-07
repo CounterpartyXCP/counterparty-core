@@ -15,9 +15,9 @@ def create (db, source, give_asset, give_amount, get_asset, get_amount, expirati
 
     balances = util.get_balances(db, address=source, asset=give_asset)
     if give_asset != 'BTC' and (not balances or balances[0]['amount'] < give_amount):
-        raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
+        raise exceptions.BalanceError('Insufficient funds. (Check that the database is up-to-date.)')
     if give_asset == get_asset:
-        raise exceptions.UselessError('You can’t trade an asset for itself.')
+        raise exceptions.UselessError('You can\'t trade an asset for itself.')
     if not give_amount or not get_amount:
         raise exceptions.UselessError('Zero give or zero get.')
     if get_asset not in ('BTC', 'XCP') and not util.get_issuances(db, validity='Valid', asset=get_asset):
@@ -71,7 +71,7 @@ def parse (db, tx, message):
             else:
                 validity = 'Invalid: insufficient funds.'
 
-    # Add parsed transaction to message‐type–specific table.
+    # Add parsed transaction to message-type–specific table.
     order_parse_cursor.execute('''INSERT INTO orders(
                         tx_index,
                         tx_hash,
@@ -153,7 +153,7 @@ def match (db, tx):
             forward_asset, backward_asset = tx1['get_asset'], tx1['give_asset']
             order_match_id = tx0['tx_hash'] + tx1['tx_hash']
 
-            # This can’t be gotten rid of!
+            # This can't be gotten rid of!
             forward_print = D(util.devise(db, forward_amount, forward_asset, 'output'))
             backward_print = D(util.devise(db, backward_amount, backward_asset, 'output'))
 
@@ -170,7 +170,7 @@ def match (db, tx):
                                     backward_amount)
 
             # Debit the order, even if it involves giving bitcoins, and so one
-            # can’t debit the sending account.
+            # can't debit the sending account.
             give_remaining = round(give_remaining - backward_amount)
 
             # Update give_remaining.
@@ -222,12 +222,12 @@ def match (db, tx):
 
 def expire (db, block_index):
     order_expire_cursor = db.cursor()
-    # Expire orders and give refunds for the amount give_remaining (if non‐zero; if not BTC).
+    # Expire orders and give refunds for the amount give_remaining (if non-zero; if not BTC).
     order_expire_cursor.execute('''SELECT * FROM orders''')
     for order in order_expire_cursor.fetchall():
         if order['Validity'] == 'Valid' and util.get_time_left(order, block_index=block_index) < 0:
             order_expire_cursor.execute('''UPDATE orders SET validity=? WHERE tx_hash=?''', ('Invalid: expired', order['tx_hash']))
-            if order['give_asset'] != 'BTC':    # Can’t credit BTC.
+            if order['give_asset'] != 'BTC':    # Can't credit BTC.
                 util.credit(db, order['source'], order['give_asset'], order['give_remaining'])
             logging.info('Expired order: {}'.format(util.short(order['tx_hash'])))
 

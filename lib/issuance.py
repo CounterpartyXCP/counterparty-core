@@ -16,7 +16,7 @@ def create (db, source, destination, asset, amount, divisible, test=False):
     if not util.valid_asset_name(asset):
         raise exceptions.AssetError('Bad asset name.')
 
-    # Valid re‐issuance?
+    # Valid re-issuance?
     issuances = util.get_issuances(db, validity='Valid', asset=asset)
     if issuances:
         last_issuance = issuances[-1]
@@ -52,7 +52,7 @@ def parse (db, tx, message):
     if validity == 'Valid' and not util.valid_asset_name(asset):
         validity = 'Invalid: bad asset name'
 
-    # Valid re‐issuance?
+    # Valid re-issuance?
     if validity == 'Valid':
         issuances = util.get_issuances(db, validity='Valid', asset=asset)
         if issuances:
@@ -80,7 +80,7 @@ def parse (db, tx, message):
         issuer = tx['source']
         transfer = False
 
-    # Add parsed transaction to message‐type–specific table.
+    # Add parsed transaction to message-type–specific table.
     issuance_parse_cursor.execute('''INSERT INTO issuances(
                         tx_index,
                         tx_hash,

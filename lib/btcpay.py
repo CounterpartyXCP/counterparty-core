@@ -11,7 +11,7 @@ ID = 11
 LENGTH = 32 + 32
 
 def create (db, order_match_id, test=False):
-    tx0_hash, tx1_hash = order_match_id[:64], order_match_id[64:] # UTF‐8 encoding means that the indices are doubled.
+    tx0_hash, tx1_hash = order_match_id[:64], order_match_id[64:] # UTF-8 encoding means that the indices are doubled.
     tx0_hash_bytes, tx1_hash_bytes = binascii.unhexlify(bytes(tx0_hash, 'utf-8')), binascii.unhexlify(bytes(tx1_hash, 'utf-8'))
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, tx0_hash_bytes, tx1_hash_bytes)
@@ -60,7 +60,7 @@ def parse (db, tx, message):
 
     if validity == 'Valid':
         # Credit source address for the currency that he bought with the bitcoins.
-        # BTC must be paid all at once and come from the ‘correct’ address.
+        # BTC must be paid all at once and come from the 'correct' address.
         if order_match['tx0_address'] == tx['source'] and tx['btc_amount'] >= order_match['forward_amount']:
             btcpay_parse_cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Valid', tx0_hash, tx1_hash))
             if order_match['backward_asset'] != 'BTC':
@@ -73,7 +73,7 @@ def parse (db, tx, message):
             validity = 'Paid'
         logging.info('BTC Payment for Order Match: {} ({})'.format(util.short(order_match_id), util.short(tx['tx_hash'])))
 
-    # Add parsed transaction to message‐type–specific table.
+    # Add parsed transaction to message-type–specific table.
     btcpay_parse_cursor.execute('''INSERT INTO btcpays(
                         tx_index,
                         tx_hash,
