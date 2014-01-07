@@ -199,7 +199,7 @@ def devise (db, quantity, asset, dest, divisible=None):
             divisible = True
         else:
             issuances = get_issuances(db, validity='Valid', asset=asset)
-            if not issuances: raise exceptions.AssetError('No such asset.')
+            if not issuances: raise exceptions.AssetError('No such asset: {}'.format(asset))
             divisible = issuances[0]['divisible']
 
     if divisible:

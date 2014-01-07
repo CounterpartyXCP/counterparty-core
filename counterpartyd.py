@@ -282,6 +282,8 @@ if __name__ == '__main__':
     parser_market.add_argument('--give-asset', metavar='GIVE_ASSET', help='only show orders offering to sell GIVE_ASSET')
     parser_market.add_argument('--get-asset', metavar='GET_ASSET', help='only show orders offering to buy GET_ASSET')
 
+    parser_purge = subparsers.add_parser('purge', help='reparse all transactions in the database')
+
     args = parser.parse_args()
 
 
@@ -582,6 +584,9 @@ if __name__ == '__main__':
     elif args.action == 'market':
         while True:
             market(args.give_asset, args.get_asset)
+
+    elif args.action == 'purge':
+        blocks.purge(db)
            
     elif args.action == 'help':
         parser.print_help()

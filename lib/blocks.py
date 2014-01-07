@@ -318,6 +318,42 @@ def get_tx_info (tx):
 
     return source, destination, btc_amount, round(fee), data
 
+def purge (db, quiet=False):
+    purge_cursor = db.cursor()
+
+    # Delete all of the results of parsing from the database.
+    # TODO: This is more than is necessary for reorgs. Rather, in that case, have every table have a block index column, and only delete the stuff required.
+        # (What about table balances?)
+    purge_cursor.execute('''DROP TABLE IF EXISTS debits''')
+    purge_cursor.execute('''DROP TABLE IF EXISTS credits''')
+    purge_cursor.execute('''DROP TABLE IF EXISTS balances''')
+    purge_cursor.execute('''DROP TABLE IF EXISTS sends''')
+    purge_cursor.execute('''DROP TABLE IF EXISTS orders''')
+    purge_cursor.execute('''DROP TABLE IF EXISTS order_matches''')
+    purge_cursor.execute('''DROP TABLE IF EXISTS btcpays''')
+    purge_cursor.execute('''DROP TABLE IF EXISTS issuances''')
+    purge_cursor.execute('''DROP TABLE IF EXISTS broadcasts''')
+    purge_cursor.execute('''DROP TABLE IF EXISTS bets''')
+    purge_cursor.execute('''DROP TABLE IF EXISTS bet_matches''')
+    purge_cursor.execute('''DROP TABLE IF EXISTS dividends''')
+    purge_cursor.execute('''DROP TABLE IF EXISTS burns''')
+    purge_cursor.execute('''DROP TABLE IF EXISTS cancels''')
+
+    # Reparse everything up to the deleted blocks, transactions.
+    # TODO: Also more than necessary for reorgs.
+    if quiet:
+        log = logging.getLogger('')
+        log.setLevel(logging.WARNING)
+        initialise(db)
+    purge_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
+    for block in purge_cursor.fetchall():
+        parse_block(db, block['block_index'])
+    if quiet:
+        log.setLevel(logging.INFO)
+
+    purge_cursor.close()
+    return
+
 def reorg (db):
     # Detect blockchain reorganisation.
     reorg_cursor = db.cursor()
@@ -335,36 +371,12 @@ def reorg (db):
 
     if not reorg_necessary: return last_block_index + 1
 
-    # Delete all of the results of parsing from the database.
-    # TODO: This is extreme. Rather, have every table have a block index column, and only delete the stuff required. (What about table balances?)
-    reorg_cursor.execute('''DROP TABLE IF EXISTS debits''')
-    reorg_cursor.execute('''DROP TABLE IF EXISTS credits''')
-    reorg_cursor.execute('''DROP TABLE IF EXISTS balances''')
-    reorg_cursor.execute('''DROP TABLE IF EXISTS sends''')
-    reorg_cursor.execute('''DROP TABLE IF EXISTS orders''')
-    reorg_cursor.execute('''DROP TABLE IF EXISTS order_matches''')
-    reorg_cursor.execute('''DROP TABLE IF EXISTS btcpays''')
-    reorg_cursor.execute('''DROP TABLE IF EXISTS issuances''')
-    reorg_cursor.execute('''DROP TABLE IF EXISTS broadcasts''')
-    reorg_cursor.execute('''DROP TABLE IF EXISTS bets''')
-    reorg_cursor.execute('''DROP TABLE IF EXISTS bet_matches''')
-    reorg_cursor.execute('''DROP TABLE IF EXISTS dividends''')
-    reorg_cursor.execute('''DROP TABLE IF EXISTS burns''')
-    reorg_cursor.execute('''DROP TABLE IF EXISTS cancels''')
-
     # Delete blocks and transactions back as far as necessary.
-    reorg_cursor.execute('''DELETE FROM blocks WHERE block_index>=?''', (block_index,))
-    reorg_cursor.execute('''DELETE FROM transactions WHERE block_index>=?''', (block_index,))
+    purge_cursor.execute('''DELETE FROM blocks WHERE block_index>=?''', (block_index,))
+    purge_cursor.execute('''DELETE FROM transactions WHERE block_index>=?''', (block_index,))
 
-    # Reparse everything up to the deleted blocks, transactions.
-    # TODO: Also extreme.
-    log = logging.getLogger('')
-    log.setLevel(logging.WARNING)
-    initialise(db)
-    reorg_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
-    for block in reorg_cursor.fetchall():
-        parse_block(db, block['block_index'])
-    log.setLevel(logging.INFO)
+    # Re‐parse all transactions that are still there.
+    purge(db, quiet=True)
 
     reorg_cursor.close()
     return block_index

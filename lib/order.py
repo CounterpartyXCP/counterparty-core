@@ -136,17 +136,18 @@ def match (db, tx):
     give_remaining = tx1['give_remaining']
     order_matches = order_match_cursor.fetchall()
     for tx0 in order_matches:
+
         # Check whether fee conditions are satisfied.
         if tx1['get_asset'] == 'BTC' and tx0['fee_provided'] < tx1['fee_required']: continue
         elif tx1['give_asset'] == 'BTC' and tx1['fee_provided'] < tx0['fee_required']: continue
 
         # Make sure that that both orders still have funds remaining [to be sold].
-        if tx0['give_remaining'] <= 0 or tx1['give_remaining'] <= 0: continue
+        if tx0['give_remaining'] <= 0 or give_remaining <= 0: continue
 
         # If the prices agree, make the trade. The found order sets the price,
         # and they trade as much as they can.
         if tx0['price'] <= 1 / tx1['price']:
-            forward_amount = round(min(D(tx0['give_remaining']), give_remaining * D(tx1['price'])))
+            forward_amount = round(min(D(tx0['give_remaining']), give_remaining / D(tx0['price'])))
             backward_amount = round(forward_amount * tx0['price'])
 
             forward_asset, backward_asset = tx1['get_asset'], tx1['give_asset']
