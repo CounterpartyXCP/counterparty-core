@@ -344,7 +344,7 @@ def purge (db, quiet=False):
     if quiet:
         log = logging.getLogger('')
         log.setLevel(logging.WARNING)
-        initialise(db)
+    initialise(db)
     purge_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
     for block in purge_cursor.fetchall():
         parse_block(db, block['block_index'])
