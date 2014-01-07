@@ -3,21 +3,21 @@
 """
 Broadcast a message, with or without a price.
 
-Multiple messages per block are allowed. Bets are be made on the ‘timestamp’
+Multiple messages per block are allowed. Bets are be made on the 'timestamp'
 field, and not the block index.
 
 An address is a feed of broadcasts. Feeds (addresses) may be locked with a
-broadcast containing a blank ‘text’ field. Bets on a feed reference the address
+broadcast containing a blank 'text' field. Bets on a feed reference the address
 that is the source of the feed in an output which includes the (latest)
 required fee.
 
 Broadcasts without a price may not be used for betting. Broadcasts about events
 with a small number of possible outcomes (e.g. sports games), should be
 written, for example, such that a price of 1 XCP means one outcome, 2 XCP means
-another, etc., which schema should be described in the ‘text’ field.
+another, etc., which schema should be described in the 'text' field.
 
 fee_multipilier: .05 XCP means 5%. It may be greater than 1, however; but
-because it is stored as a four‐byte integer, it may not be greater than about
+because it is stored as a four-byte integer, it may not be greater than about
 42.
 """
 
@@ -72,7 +72,7 @@ def parse (db, tx, message):
         elif not timestamp > last_broadcast['timestamp']:
             validity = 'Invalid: feed timestamps must be monotonically increasing'
 
-    # Add parsed transaction to message‐type–specific table.
+    # Add parsed transaction to message-type–specific table.
     broadcast_parse_cursor.execute('''INSERT INTO broadcasts(
                         tx_index,
                         tx_hash,
@@ -99,8 +99,8 @@ def parse (db, tx, message):
         if not text:
             logging.info('Broadcast: {} locked his feed.'.format(tx['source'], util.short(tx['tx_hash'])))
         else:
-            if not value: infix = '‘' + text + '’'
-            else: infix = '‘' + text + '’' + ' = ' + str(value)
+            if not value: infix = '\'' + text + '\''
+            else: infix = '\'' + text + '\'' + ' = ' + str(value)
             suffix = ' from ' + tx['source'] + ' at ' + util.isodt(timestamp) + ' with a fee multiplier of {}'.format(util.devise(db, fee_multiplier, 'fee_multiplier', 'output')) + ' (' + util.short(tx['tx_hash']) + ')'
             logging.info('Broadcast: {}'.format(infix + suffix))
 
@@ -159,17 +159,17 @@ def parse (db, tx, message):
                     bull_credit = total_escrow
                     bear_credit = 0
                     util.credit(db, bull_address, 'XCP', bull_credit)
-                    validity = 'Force‐Liquidated Bear'
+                    validity = 'Force-Liquidated Bear'
                 elif bull_credit <= 0:
                     bull_credit = 0
                     bear_credit = total_escrow
                     util.credit(db, bear_address, 'XCP', bear_credit)
-                    validity = 'Force‐Liquidated Bull'
+                    validity = 'Force-Liquidated Bull'
 
                 # Pay fee to feed.
                 util.credit(db, bet_match['feed_address'], 'XCP', fee)
 
-                logging.info('Contract Force‐Liquidated: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), util.short(bet_match_id)))
+                logging.info('Contract Force-Liquidated: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), util.short(bet_match_id)))
 
             # Settle.
             if validity == 'Valid' and timestamp >= bet_match['deadline']:
@@ -208,7 +208,7 @@ def parse (db, tx, message):
 
             logging.info('Contract Settled: {} won the pot of {} XCP; {} XCP credited to the feed address ({})'.format(winner, util.devise(db, total_escrow, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), util.short(bet_match_id)))
 
-        # Update the bet match’s status.
+        # Update the bet match's status.
         broadcast_bet_match_cursor.execute('''UPDATE bet_matches \
                           SET validity=? \
                           WHERE (tx0_hash=? and tx1_hash=?)''',

@@ -33,17 +33,17 @@ def create (db, source, feed_address, bet_type, deadline, wager_amount,
     # Look at feed to be bet on.
     broadcasts = util.get_broadcasts(db, validity='Valid', source=feed_address)
     if not broadcasts:
-        raise exceptions.FeedError('That feed doesn’t exist.')
+        raise exceptions.FeedError('That feed doesn\'t exist.')
     elif not broadcasts[-1]['text']:
         raise exceptions.FeedError('That feed is locked.')
     elif broadcasts[-1]['timestamp'] >= deadline:
-        raise exceptions.FeedError('Deadline is in that feed’s past.')
+        raise exceptions.FeedError('Deadline is in that feed\'s past.')
 
     # Check for sufficient funds.
     fee_multiplier = get_fee_multiplier(db, feed_address)
     balances = util.get_balances(db, address=source, asset='XCP')
     if not balances or balances[0]['amount'] < wager_amount * (1 + fee_multiplier / 1e8):
-        raise exceptions.BalanceError('Insufficient funds to both make wager and pay feed fee (in XCP). (Check that the database is up‐to‐date.)')
+        raise exceptions.BalanceError('Insufficient funds to both make wager and pay feed fee (in XCP). (Check that the database is up-to-date.)')
 
     # Valid leverage level?
     if leverage != 5040 and bet_type in (2,3):   # Equal, NotEqual
@@ -88,7 +88,7 @@ def parse (db, tx, message):
         elif not broadcasts[-1]['text']:
             validity = 'Invalid: locked feed'
         elif broadcasts[-1]['timestamp'] >= deadline:
-            validity = 'Invalid: deadline is in that feed’s past'
+            validity = 'Invalid: deadline is in that feed\'s past'
 
     # Leverage < 5040 is allowed.
 
@@ -112,7 +112,7 @@ def parse (db, tx, message):
     else:
         odds = 0
 
-    # Add parsed transaction to message‐type–specific table.
+    # Add parsed transaction to message-type–specific table.
     bet_parse_cursor.execute('''INSERT INTO bets(
                         tx_index,
                         tx_hash,

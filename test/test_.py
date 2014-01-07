@@ -22,7 +22,7 @@ sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 from lib import (config, api, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, util)
 
-# JSON‐RPC Options
+# JSON-RPC Options
 CONFIGFILE = os.path.expanduser('~') + '/.bitcoin/bitcoin.conf'
 config.PREFIX = b'TEST'
 config.RPCCONNECT = 'localhost'
@@ -382,7 +382,7 @@ def test_cancel ():
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_overburn ():
-    unsigned_tx_hex = burn.create(db, source_default, (1 * config.UNIT), test=True, overburn=True)  # Try to burn a whole ’nother BTC.
+    unsigned_tx_hex = burn.create(db, source_default, (1 * config.UNIT), test=True, overburn=True)  # Try to burn a whole 'nother BTC.
 
     destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
     tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)

@@ -14,12 +14,12 @@ ID = 60
 LENGTH = 11
 
 def create (db, source, quantity, test=False, overburn=False):
-    # Try to make sure that the burned funds won’t go to waste.
+    # Try to make sure that the burned funds won't go to waste.
     block_count = bitcoin.rpc('getblockcount', [])
     if block_count < config.BURN_START:
-        raise exceptions.UselessError('The proof‐of‐burn period has not yet begun.')
+        raise exceptions.UselessError('The proof-of-burn period has not yet begun.')
     elif block_count > config.BURN_END:
-        raise exceptions.UselessError('The proof‐of‐burn period has already ended.')
+        raise exceptions.UselessError('The proof-of-burn period has already ended.')
 
     # Check that a maximum of 1 BTC total is burned per address.
     burns = util.get_burns(db, address=source, validity='Valid')
@@ -66,7 +66,7 @@ def parse (db, tx, message=None):
     if validity == 'Valid':
         util.credit(db, tx['source'], 'XCP', earned)
 
-    # Add parsed transaction to message‐type–specific table.
+    # Add parsed transaction to message-type–specific table.
     # TODO: store sent in table
     burn_parse_cursor.execute('''INSERT INTO burns(
                         tx_index,

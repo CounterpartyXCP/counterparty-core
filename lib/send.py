@@ -1,6 +1,6 @@
 #! /usr/bin/python3
 
-"""Create and parse ‘send’‐type messages."""
+"""Create and parse 'send'-type messages."""
 
 import struct
 import logging
@@ -17,7 +17,7 @@ def create (db, source, destination, amount, asset, test=False):
 
     balances = util.get_balances(db, address=source, asset=asset)
     if not balances or balances[0]['amount'] < amount:
-        raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
+        raise exceptions.BalanceError('Insufficient funds. (Check that the database is up-to-date.)')
 
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
@@ -55,7 +55,7 @@ def parse (db, tx, message):
     if validity == 'Valid':
         util.credit(db, tx['destination'], asset, amount)
 
-    # Add parsed transaction to message‐type–specific table.
+    # Add parsed transaction to message-type–specific table.
     send_parse_cursor.execute('''INSERT INTO sends(
                         tx_index,
                         tx_hash,

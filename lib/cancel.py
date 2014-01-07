@@ -64,7 +64,7 @@ def parse (db, tx, message):
 
         logging.info('Cancel: {} ({})'.format(util.short(offer_hash), util.short(tx['tx_hash'])))
 
-    # Add parsed transaction to message‐type–specific table.
+    # Add parsed transaction to message-type–specific table.
     cancel_parse_cursor.execute('''INSERT INTO cancels(
                         tx_index,
                         tx_hash,

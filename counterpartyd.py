@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+
 import os
 import argparse
 import json
@@ -192,12 +193,12 @@ def format_feed (feed):
 
 
 if __name__ == '__main__':
-    # Parse command‐line arguments.
+    # Parse command-line arguments.
     parser = argparse.ArgumentParser(prog='counterpartyd', description='the reference implementation of the Counterparty protocol')
     parser.add_argument('-V', '--version', action='version', version="counterpartyd v%s" % config.VERSION)
 
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='sets log level to DEBUG instead of WARNING')
-    parser.add_argument('--force', action='store_true', help='don’t check whether Bitcoind is caught up')
+    parser.add_argument('--force', action='store_true', help='don\'t check whether Bitcoind is caught up')
     parser.add_argument('--testnet', action='store_true', help='use Bitcoin testnet addresses and block numbers')
     parser.add_argument('--testcoin', action='store_true', help='use the test Counterparty network on every blockchain')
 
@@ -206,10 +207,10 @@ if __name__ == '__main__':
     parser.add_argument('--config-file', help='the location of the configuration file')
     parser.add_argument('--log-file', help='the location of the log file')
 
-    parser.add_argument('--rpc-connect', help='the hostname of the Bitcoind JSON‐RPC server')
-    parser.add_argument('--rpc-port', type=int, help='the port used to communicate with Bitcoind over JSON‐RPC')
-    parser.add_argument('--rpc-user', help='the username used to communicate with Bitcoind over JSON‐RPC')
-    parser.add_argument('--rpc-password', help='the password used to communicate with Bitcoind over JSON‐RPC')
+    parser.add_argument('--rpc-connect', help='the hostname of the Bitcoind JSON-RPC server')
+    parser.add_argument('--rpc-port', type=int, help='the port used to communicate with Bitcoind over JSON-RPC')
+    parser.add_argument('--rpc-user', help='the username used to communicate with Bitcoind over JSON-RPC')
+    parser.add_argument('--rpc-password', help='the password used to communicate with Bitcoind over JSON-RPC')
 
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
@@ -228,8 +229,8 @@ if __name__ == '__main__':
     parser_order.add_argument('--give-quantity', metavar='GIVE_QUANTITY', required=True, help='the quantity of GIVE_ASSET that you are willing to give')
     parser_order.add_argument('--give-asset', metavar='GIVE_ASSET', required=True, help='the asset that you would like to buy')
     parser_order.add_argument('--expiration', metavar='EXPIRATION', type=int, required=True, help='the number of blocks for which the order should be valid')
-    parser_order.add_argument('--fee_required', metavar='FEE_REQUIRED', default=0, help='the miners’ fee required to be paid by orders for them to match this one; in BTC; required iff buying BTC (may be zero, though)')
-    parser_order.add_argument('--fee_provided', metavar='FEE_PROVIDED', default=(config.MIN_FEE / config.UNIT), help='the miners’ fee provided; in BTC; required iff selling BTC (should not be lower than is required for acceptance in a block)')
+    parser_order.add_argument('--fee_required', metavar='FEE_REQUIRED', default=0, help='the miners\' fee required to be paid by orders for them to match this one; in BTC; required iff buying BTC (may be zero, though)')
+    parser_order.add_argument('--fee_provided', metavar='FEE_PROVIDED', default=(config.MIN_FEE / config.UNIT), help='the miners\' fee provided; in BTC; required iff selling BTC (should not be lower than is required for acceptance in a block)')
 
     parser_btcpay= subparsers.add_parser('btcpay', help='create and broadcast a *BTCpay* message, to settle an Order Match for which you owe BTC')
     parser_btcpay.add_argument('--order-match-id', metavar='ORDER_MATCH_ID', required=True, help='the concatenation of the hashes of the two transactions which compose the order match')
@@ -238,7 +239,7 @@ if __name__ == '__main__':
     parser_issuance.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
     parser_issuance.add_argument('--transfer-asset-to', metavar='TRANSFER_DESTINATION', dest='transfer_destination', help='for transfer of ownership of asset issuance rights')
     parser_issuance.add_argument('--quantity', metavar='QUANTITY', required=True, help='the quantity of ASSET to be issued')
-    parser_issuance.add_argument('--asset', metavar='ASSET', required=True, help='the name of the asset to be issued (if it’s available)')
+    parser_issuance.add_argument('--asset', metavar='ASSET', required=True, help='the name of the asset to be issued (if it\'s available)')
     parser_issuance.add_argument('--divisible', action='store_true', help='whether or not the asset is divisible (must agree with previous issuances, if there are any)')
 
     parser_broadcast = subparsers.add_parser('broadcast', help='broadcast textual and numerical information to the network')
@@ -278,7 +279,7 @@ if __name__ == '__main__':
 
     parser_wallet = subparsers.add_parser('wallet', help='list the addresses in your Bitcoind wallet along with their balances in all Counterparty assets')
 
-    parser_market = subparsers.add_parser('market', help='fill the screen with an always up‐to‐date summary of the Counterparty market')
+    parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the Counterparty market')
     parser_market.add_argument('--give-asset', metavar='GIVE_ASSET', help='only show orders offering to sell GIVE_ASSET')
     parser_market.add_argument('--get-asset', metavar='GET_ASSET', help='only show orders offering to buy GET_ASSET')
 

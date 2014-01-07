@@ -23,7 +23,7 @@ def create (db, source, amount_per_share, asset, test=False):
     balances = util.get_balances(db, address=source, asset='XCP')
     if not balances or balances[0]['amount'] < amount:
         print(balances[0]['amount'], amount)
-        raise exceptions.BalanceError('Insufficient funds. (Check that the database is up‐to‐date.)')
+        raise exceptions.BalanceError('Insufficient funds. (Check that the database is up-to-date.)')
     if not issuances:
         raise exceptions.DividendError('No such asset: {}.'.format(asset))
     if not amount_per_share:
@@ -75,7 +75,7 @@ def parse (db, tx, message):
             amount = address_amount * amount_per_share
             util.credit(db, address, 'XCP', amount)
 
-    # Add parsed transaction to message‐type–specific table.
+    # Add parsed transaction to message-type–specific table.
     dividend_parse_cursor.execute('''INSERT INTO dividends(
                         tx_index,
                         tx_hash,

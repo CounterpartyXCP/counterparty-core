@@ -196,7 +196,7 @@ def get_inputs (source, total_btc_out, test=False):
             return inputs, total_btc_in
     return None, None
 
-# Replace test flag with fake bitcoind JSON‐RPC server.
+# Replace test flag with fake bitcoind JSON-RPC server.
 def transaction (source, destination, btc_amount, fee, data, test=False):
     # Validate addresses.
     for address in (source, destination):
@@ -212,7 +212,7 @@ def transaction (source, destination, btc_amount, fee, data, test=False):
         if not rpc('validateaddress', [source])['ismine']:
             raise exceptions.InvalidAddressError('Not one of your Bitcoin addresses:', source)
 
-    # Check that the destination output isn’t a dust output.
+    # Check that the destination output isn't a dust output.
     if destination:
         if not btc_amount >= config.DUST_SIZE:
             raise exceptions.TXConstructionError('Destination output is below the dust target value.')
