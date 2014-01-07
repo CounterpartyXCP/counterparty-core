@@ -146,15 +146,13 @@ def address (address):
 
 
 def format_order (order):
-    price = D(order['get_amount']) / D(order['give_amount'])
-
     give_remaining = util.devise(db, D(order['give_remaining']), order['give_asset'], 'output')
-    get_remaining = D(D(give_remaining) * price).quantize(D(10) ** -8).normalize()   # HACK
+    get_remaining = util.devise(db, D(give_remaining) * D(order['price']), order['get_asset'], 'output')
 
     give_asset = order['give_asset']
     get_asset = order['get_asset']
 
-    price = util.devise(db, get_remaining / D(give_remaining), 'price', 'output')
+    price = util.devise(db, D(get_remaining) / D(give_remaining), 'price', 'output')
     price_assets = get_asset + '/' + give_asset
 
     if order['fee_required']:
