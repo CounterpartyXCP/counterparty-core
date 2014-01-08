@@ -44,7 +44,7 @@ def rpc (method, params):
         "id": 0,
     }
 
-    response = connect(config.RPC, payload, headers)
+    response = connect(config.BITCOIND_RPC, payload, headers)
     if response == None:
         if config.TESTNET: network = 'testnet'
         else: network = 'mainnet'

@@ -10,7 +10,7 @@ from jsonrpc import JSONRPCResponseManager, dispatcher
 
 from . import (util, config)
 
-class reqthread ( threading.Thread):
+class reqthread ( threading.Thread ):
 
     def __init__ (self):
         threading.Thread.__init__(self)
@@ -75,12 +75,6 @@ class reqthread ( threading.Thread):
                 request.get_data(cache=False, as_text=True), dispatcher)
             return Response(response.json, mimetype='application/json')
 
-        try: # HACK for unit tests
-            if config.TESTNET:
-                run_simple('localhost', 14000, application)
-            else:
-                run_simple('localhost', 4000, application)
-        except:
-            run_simple('localhost', 9999, application)
+        run_simple('localhost', config.RPC_PORT, application)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

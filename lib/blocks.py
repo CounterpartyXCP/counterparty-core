@@ -319,6 +319,7 @@ def get_tx_info (tx):
     return source, destination, btc_amount, round(fee), data
 
 def purge (db, quiet=False):
+    # TODO: This is not thread‐safe!
     purge_cursor = db.cursor()
 
     # Delete all of the results of parsing from the database.

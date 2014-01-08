@@ -205,10 +205,12 @@ if __name__ == '__main__':
     parser.add_argument('--config-file', help='the location of the configuration file')
     parser.add_argument('--log-file', help='the location of the log file')
 
-    parser.add_argument('--rpc-connect', help='the hostname of the Bitcoind JSON-RPC server')
-    parser.add_argument('--rpc-port', type=int, help='the port used to communicate with Bitcoind over JSON-RPC')
-    parser.add_argument('--rpc-user', help='the username used to communicate with Bitcoind over JSON-RPC')
-    parser.add_argument('--rpc-password', help='the password used to communicate with Bitcoind over JSON-RPC')
+    parser.add_argument('--bitcoind-rpc-connect', help='the hostname of the Bitcoind JSON-RPC server')
+    parser.add_argument('--bitcoind-rpc-port', type=int, help='the port used to communicate with Bitcoind over JSON-RPC')
+    parser.add_argument('--bitcoind-rpc-user', help='the username used to communicate with Bitcoind over JSON-RPC')
+    parser.add_argument('--bitcoind-rpc-password', help='the password used to communicate with Bitcoind over JSON-RPC')
+
+    parser.add_argument('--rpc-port', type=int, help='port on which to provide the counterpartyd JSON-RPC API')
 
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
@@ -281,7 +283,7 @@ if __name__ == '__main__':
     parser_market.add_argument('--give-asset', metavar='GIVE_ASSET', help='only show orders offering to sell GIVE_ASSET')
     parser_market.add_argument('--get-asset', metavar='GET_ASSET', help='only show orders offering to buy GET_ASSET')
 
-    parser_purge = subparsers.add_parser('purge', help='reparse all transactions in the database')
+#    parser_purge = subparsers.add_parser('purge', help='reparse all transactions in the database')
 
     args = parser.parse_args()
 
@@ -318,43 +320,54 @@ if __name__ == '__main__':
     else:
         config.TESTCOIN = False
 
-    # RPC user
-    if args.rpc_user:
-        config.rpc_user = args.rpc_user
-    elif has_config and 'rpc-user' in configfile['Default']:
-        config.rpc_user = configfile['Default']['rpc-user']
+    # Bitcoind RPC user
+    if args.bitcoind_rpc_user:
+        config.BITCOIND_RPC_USER = args.bitcoind_rpc_user
+    elif has_config and 'bitcoind-rpc-user' in configfile['Default']:
+        config.BITCOIND_RPC_USER = configfile['Default']['bitcoind-rpc-user']
     else:
-        config.rpc_user = 'bitcoinrpc'
+        config.BITCOIND_RPC_USER = 'bitcoinrpc'
 
-    # RPC host
-    if args.rpc_connect:
-        config.rpc_connect = args.rpc_connect
-    elif has_config and 'rpc-connect' in configfile['Default']:
-        config.rpc_connect = configfile['Default']['rpc-connect']
+    # Bitcoind RPC host
+    if args.bitcoind_rpc_connect:
+        config.BITCOIND_RPC_CONNECT = args.bitcoind_rpc_connect
+    elif has_config and 'bitcoind-rpc-connect' in configfile['Default']:
+        config.BITCOIND_RPC_CONNECT = configfile['Default']['bitcoind-rpc-connect']
     else:
-        config.rpc_connect = 'localhost'
+        config.BITCOIND_RPC_CONNECT = 'localhost'
+
+    # Bitcoind RPC port
+    if args.bitcoind_rpc_port:
+        config.BITCOIND_RPC_PORT = args.bitcoind_rpc_port
+    elif has_config and 'bitcoind-rpc-port' in configfile['Default']:
+        config.BITCOIND_RPC_PORT = configfile['Default']['bitcoind-rpc-port']
+    else:
+        if config.TESTNET:
+            config.BITCOIND_RPC_PORT = '18332'
+        else:
+            config.BITCOIND_RPC_PORT = '8332'
+            
+    # Bitcoind RPC password
+    if args.bitcoind_rpc_password:
+        config.BITCOIND_RPC_PASSWORD = args.bitcoind_rpc_password
+    elif has_config and 'bitcoind-rpc-password' in configfile['Default']:
+        config.BITCOIND_RPC_PASSWORD = configfile['Default']['bitcoind-rpc-password']
+    else:
+        raise exceptions.ConfigurationError('RPC password not set. (Use configuration file or --bitcoind-rpc-password=PASSWORD)')
+
+    config.BITCOIND_RPC = 'http://' + config.BITCOIND_RPC_USER + ':' + config.BITCOIND_RPC_PASSWORD + '@' + config.BITCOIND_RPC_CONNECT + ':' + str(config.BITCOIND_RPC_PORT)
 
     # RPC port
     if args.rpc_port:
-        config.rpc_port = args.rpc_port
+        config.RPC_PORT = args.rpc_port
     elif has_config and 'rpc-port' in configfile['Default']:
-        config.rpc_port = configfile['Default']['rpc-port']
+        config.RPC_PORT = configfile['Default']['rpc-port']
     else:
         if config.TESTNET:
-            config.rpc_port = '18332'
+            config.RPC_PORT = '14000'
         else:
-            config.rpc_port = '8332'
-            
-    # RPC password
-    if args.rpc_password:
-        config.rpc_password = args.rpc_password
-    elif has_config and 'rpc-password' in configfile['Default']:
-        config.rpc_password = configfile['Default']['rpc-password']
-    else:
-        raise exceptions.ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
-
-    config.RPC = 'http://' + config.rpc_user + ':' + config.rpc_password + '@' + config.rpc_connect + ':' + str(config.rpc_port)
-
+            config.RPC_PORT = '4000'
+  
     # Log
     if args.log_file:
         config.LOG = args.log_file
@@ -584,8 +597,8 @@ if __name__ == '__main__':
         while True:
             market(args.give_asset, args.get_asset)
 
-    elif args.action == 'purge':
-        blocks.purge(db)
+#     elif args.action == 'purge':
+#         blocks.purge(db)
            
     elif args.action == 'help':
         parser.print_help()

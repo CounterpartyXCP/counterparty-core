@@ -25,8 +25,8 @@ from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, 
 # JSON-RPC Options
 CONFIGFILE = os.path.expanduser('~') + '/.bitcoin/bitcoin.conf'
 config.PREFIX = b'TEST'
-config.RPCCONNECT = 'localhost'
-config.RPCPORT = '18332' # Only run tests on testnet.
+config.BITCOIND_RPC_CONNECT = 'localhost'
+config.BITCOIND_RPC_PORT = '18332' # Only run tests on testnet.
 try:
     with open(CONFIGFILE, 'r') as configfile:
         for line in configfile.readlines():
@@ -36,15 +36,16 @@ try:
             if len(array) != 2:
                 continue
             key, value = array[:2]
-            if key == 'rpcuser': config.RPCUSER = value
-            elif key == 'rpcpassword': config.RPCPASSWORD = value
-            elif key == 'rpcconnect': config.RPCCONNECT = value
-            elif key == 'rpcport': config.RPCCONNECT = value
+            if key == 'rpcuser': config.BITCOIND_RPC_USER = value
+            elif key == 'rpcpassword': config.BITCOIND_RPC_PASSWORD = value
+            elif key == 'rpcconnect': config.BITCOIND_RPC_CONNECT = value
+            elif key == 'rpcport': config.BITCOIND_RPC_CONNECT = value
 except Exception:
     raise exceptions.BitcoinConfError('Put a (valid) copy of your \
 bitcoin.conf in ~/.bitcoin/bitcoin.conf')
     sys.exit(1)
-config.RPC = 'http://'+config.RPCUSER+':'+config.RPCPASSWORD+'@'+config.RPCCONNECT+':'+config.RPCPORT
+config.BITCOIND_RPC = 'http://'+config.BITCOIND_RPC_USER+':'+config.BITCOIND_RPC_PASSWORD+'@'+config.BITCOIND_RPC_CONNECT+':'+config.BITCOIND_RPC_PORT
+config.RPC_PORT = 9999
 
 config.DATABASE = CURR_DIR + '/counterparty.test.db'
 try: os.remove(config.DATABASE)
@@ -402,7 +403,7 @@ def test_json_rpc():
     thread.start()
     time.sleep(.1)
 
-    url = "http://localhost:9999/jsonrpc"
+    url = 'http://localhost:' + str(config.RPC_PORT) + '/jsonrpc'
     headers = {'content-type': 'application/json'}
 
     payloads = []
