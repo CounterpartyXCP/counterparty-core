@@ -45,6 +45,8 @@ except Exception:
 bitcoin.conf in ~/.bitcoin/bitcoin.conf')
     sys.exit(1)
 config.BITCOIND_RPC = 'http://'+config.BITCOIND_RPC_USER+':'+config.BITCOIND_RPC_PASSWORD+'@'+config.BITCOIND_RPC_CONNECT+':'+config.BITCOIND_RPC_PORT
+
+config.RPC_HOST = 'localhost'
 config.RPC_PORT = 9999
 
 config.DATABASE = CURR_DIR + '/counterparty.test.db'

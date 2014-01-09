@@ -210,6 +210,7 @@ if __name__ == '__main__':
     parser.add_argument('--bitcoind-rpc-user', help='the username used to communicate with Bitcoind over JSON-RPC')
     parser.add_argument('--bitcoind-rpc-password', help='the password used to communicate with Bitcoind over JSON-RPC')
 
+    parser.add_argument('--rpc-host', help='the host to provide the counterpartyd JSON-RPC API')
     parser.add_argument('--rpc-port', type=int, help='port on which to provide the counterpartyd JSON-RPC API')
 
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
@@ -356,6 +357,14 @@ if __name__ == '__main__':
         raise exceptions.ConfigurationError('RPC password not set. (Use configuration file or --bitcoind-rpc-password=PASSWORD)')
 
     config.BITCOIND_RPC = 'http://' + config.BITCOIND_RPC_USER + ':' + config.BITCOIND_RPC_PASSWORD + '@' + config.BITCOIND_RPC_CONNECT + ':' + str(config.BITCOIND_RPC_PORT)
+
+    # RPC host
+    if args.rpc_host:
+        config.RPC_HOST = args.rpc_host
+    elif has_config and 'rpc-host' in configfile['Default']:
+        config.RPC_HOST = configfile['Default']['rpc-host']
+    else:
+        config.RPC_HOST = 'localhost'
 
     # RPC port
     if args.rpc_port:
