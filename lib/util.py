@@ -291,7 +291,7 @@ def get_orders (db, validity=None, address=None, show_empty=True, show_expired=T
     cursor.close()
     return orders
 
-def get_order_matches (db, validity=None, is_mine=True, address=None, tx0_hash=None, tx1_hash=None):
+def get_order_matches (db, validity=None, is_mine=False, address=None, tx0_hash=None, tx1_hash=None):
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM order_matches ORDER BY tx1_index''')
     order_matches = []
