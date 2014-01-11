@@ -245,18 +245,23 @@ def transaction (source, destination, btc_amount, fee, data, test=False):
     
     return unsigned_tx_hex
 
-def transmit (unsigned_tx_hex, ask=True):
+def transmit (unsigned_tx_hex, ask=True, unsigned=False):
     # Confirm transaction.
     if ask:
         if config.TESTNET: print('Attention: TESTNET!') 
         if config.TESTCOIN: print('Attention: TESTCOIN!\n') 
-        if input('Confirm? (y/N) ') != 'y':
-            print('Transaction aborted.', file=sys.stderr)
-            sys.exit(1)
-    # Sign transaction.
-    result = rpc('signrawtransaction', [unsigned_tx_hex])
-    if result['complete']:
-        signed_tx_hex = result['hex']
-        return rpc('sendrawtransaction', [signed_tx_hex])
+        if not unsigned:
+            if input('Confirm? (y/N) ') != 'y':
+                print('Transaction aborted.', file=sys.stderr)
+                sys.exit(1)
+    if unsigned:
+        print(unsigned_tx_hex)
+        sys.exit(0)
+    else:
+        # Sign transaction.
+        result = rpc('signrawtransaction', [unsigned_tx_hex])
+        if result['complete']:
+            signed_tx_hex = result['hex']
+            return rpc('sendrawtransaction', [signed_tx_hex])
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
