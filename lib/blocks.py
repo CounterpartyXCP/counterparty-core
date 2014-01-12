@@ -287,11 +287,13 @@ def get_tx_info (tx):
         # Sum data chunks to get data. (Can mix OP_RETURN and multi‐sig.)
         asm = vout['scriptPubKey']['asm'].split(' ')
         if len(asm) == 2 and asm[0] == 'OP_RETURN':                                                 # OP_RETURN
-            data_chunk = binascii.unhexlify(bytes(asm[1], 'utf-8'))
+            try: data_chunk = binascii.unhexlify(bytes(asm[1], 'utf-8'))
+            except binascii.Error: continue
             data += data_chunk
         elif len(asm) >= 5 and asm[0] == '1' and asm[3] == '2' and asm[4] == 'OP_CHECKMULTISIG':    # Multi‐sig
-            data_pubkey = binascii.unhexlify(bytes(asm[2], 'utf-8'))
-            data_chunk_length = data_pubkey[0]  # No ord() necessary?!
+            try: data_pubkey = binascii.unhexlify(bytes(asm[2], 'utf-8'))
+            except binascii.Error: continue
+            data_chunk_length = data_pubkey[0]  # No ord() necessary.
             data_chunk = data_pubkey[1:data_chunk_length + 1]
             data += data_chunk
 
