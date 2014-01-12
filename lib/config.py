@@ -10,7 +10,8 @@ VERSION = 0.1
 DB_VERSION = 3
 
 # Bitcoin protocol
-DUST_SIZE = 5430
+# DUST_SIZE = 5430      # OP_RETURN
+DUST_SIZE = 5430 * 2    # Multi‐sig (TODO: This is just a guess.)
 MIN_FEE = 10000         # Counterparty transactions are all under 1KB in size.
 DATA_VALUE = 0
 
