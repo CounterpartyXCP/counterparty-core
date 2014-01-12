@@ -425,7 +425,7 @@ if __name__ == '__main__':
 
     # (more) Testnet
     if config.TESTNET:
-        config.ADDRESSVERSION = b'\x6F'
+        config.ADDRESSVERSION = b'\x6f'
         config.BLOCK_FIRST = 154908
         config.BURN_START = 154908
         config.BURN_END = 4017708    # Fifty years, at ten minutes per block.

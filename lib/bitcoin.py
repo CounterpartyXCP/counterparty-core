@@ -117,7 +117,7 @@ def op_push (i):
     else:
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
-def serialise (inputs, destination_output=None, data_output=None, change_output=None, multisig=False):
+def serialise (inputs, destination_output=None, data_output=None, change_output=None, multisig=False, source=None):
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
     # Number of inputs.
@@ -166,15 +166,22 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
         s += (value).to_bytes(8, byteorder='little')        # Value
 
         if multisig:
-            exodus_pubkey = binascii.unhexlify('04ad90e5b6bc86b3ec7fac2c5fbda7423fc8ef0d58df594c773fa05e2c281b2bfe877677c668bd13603944e34f4818ee03cadd81a88542b8b4d5431264180e2c28')
+            # Get source public key.
+            from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
+            from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec
+            private_key_wif = rpc('dumpprivkey', [source])
+            secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif)
+            public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
+            source_pubkey = public_pair_to_sec(public_pair, compressed=compressed)
+
+            # Get data (fake) public key.
             pad_length = 33 - 1 - len(data_chunk)
             assert pad_length >= 0
-            import random
             data_pubkey = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
 
             script = OP_1                                   # OP_1
-            script += op_push(len(exodus_pubkey))           # Push bytes of Exodus public key
-            script += exodus_pubkey                         # Exodus public key
+            script += op_push(len(source_pubkey))           # Push bytes of source public key
+            script += source_pubkey                         # Source public key
             script += op_push(len(data_pubkey))             # Push bytes of data chunk (fake) public key
             script += data_pubkey                           # Data chunk (fake) public key
             script += OP_2                                  # OP_2
@@ -282,7 +289,7 @@ def transaction (source, destination, btc_amount, fee, data, test=False, multisi
     else: change_output = None
 
     # Serialise inputs and outputs.
-    transaction = serialise(inputs, destination_output, data_output, change_output, multisig=multisig)
+    transaction = serialise(inputs, destination_output, data_output, change_output, multisig=multisig, source=source)
     unsigned_tx_hex = binascii.hexlify(transaction).decode('utf-8')
     
     return unsigned_tx_hex

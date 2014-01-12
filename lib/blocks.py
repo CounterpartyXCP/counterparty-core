@@ -401,7 +401,7 @@ def follow (db):
             follow_cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)''')
             block_index = follow_cursor.fetchone()['block_index'] + 1
         except Exception:
-            logging.warning('Status: no blocks found in database; starting from the beginning.')
+            logging.warning('Status: NEW DATABASE')
             block_index = config.BLOCK_FIRST
 
         # Get index of last transaction.
