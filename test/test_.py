@@ -137,13 +137,26 @@ def tx_insert (source, destination, btc_amount, fee, data):
     tx_insert_cursor.close()
     tx_index += 1
 
+
+
 def get_tx_data (tx_hex):
     """Accepts unsigned transactions."""
     tx = bitcoin.rpc('decoderawtransaction', [tx_hex])
 
     # Get destination output and data output.
-    destination, btc_amount, data = None, None, None
+    destination, btc_amount, data = None, None, b''
     for vout in tx['vout']:
+
+        # Sum data chunks to get data. (Can mix OP_RETURN and multi‐sig.)
+        asm = vout['scriptPubKey']['asm'].split(' ')
+        if asm[0] == 'OP_RETURN' and len(asm) == 2:                             # OP_RETURN
+            data_chunk = binascii.unhexlify(bytes(asm[1], 'utf-8'))
+            data += data_chunk
+        elif asm[0] == '1' and asm[3] == '2' and asm[4] == 'OP_CHECKMULTISIG':  # Multi‐sig
+            data_pubkey = binascii.unhexlify(bytes(asm[2], 'utf-8'))
+            data_chunk_length = data_pubkey[0]  # No ord() necessary?!
+            data_chunk = data_pubkey[1:data_chunk_length + 1]
+            data += data_chunk
 
         # Destination is the first output before the data.
         if not destination and not btc_amount and not data:
@@ -151,12 +164,7 @@ def get_tx_data (tx_hex):
                 address = vout['scriptPubKey']['addresses'][0]
                 if bitcoin.base58_decode(address, config.ADDRESSVERSION):  # If address is valid…
                     destination, btc_amount = address, round(D(vout['value']) * config.UNIT)
-
-        # Assume only one OP_RETURN output.
-        if not data:
-            asm = vout['scriptPubKey']['asm'].split(' ')
-            if asm[0] == 'OP_RETURN' and len(asm) == 2:
-                data = binascii.unhexlify(bytes(asm[1], 'utf-8'))
+                    continue
 
     return destination, btc_amount, data
 

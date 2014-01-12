@@ -280,9 +280,20 @@ def get_tx_info (tx):
     fee = D(0)
 
     # Get destination output and data output.
-    destination, btc_amount, data = None, None, None
+    destination, btc_amount, data = None, None, b''
     for vout in tx['vout']:
         fee -= D(vout['value']) * config.UNIT
+
+        # Sum data chunks to get data. (Can mix OP_RETURN and multi‐sig.)
+        asm = vout['scriptPubKey']['asm'].split(' ')
+        if asm[0] == 'OP_RETURN' and len(asm) == 2:                             # OP_RETURN
+            data_chunk = binascii.unhexlify(bytes(asm[1], 'utf-8'))
+            data += data_chunk
+        elif asm[0] == '1' and asm[3] == '2' and asm[4] == 'OP_CHECKMULTISIG':  # Multi‐sig
+            data_pubkey = binascii.unhexlify(bytes(asm[2], 'utf-8'))
+            data_chunk_length = data_pubkey[0]  # No ord() necessary?!
+            data_chunk = data_pubkey[1:data_chunk_length + 1]
+            data += data_chunk
 
         # Destination is the first output before the data.
         if not destination and not btc_amount and not data:
@@ -291,24 +302,19 @@ def get_tx_info (tx):
                 try:  # If address is valid…
                     bitcoin.base58_decode(address, config.ADDRESSVERSION)
                     destination, btc_amount = address, round(D(vout['value']) * config.UNIT)
+                    continue
                 except:
                     pass
 
-        # Assume only one OP_RETURN output.
-        if not data:
-            asm = vout['scriptPubKey']['asm'].split(' ')
-            if asm[0] == 'OP_RETURN' and len(asm) == 2:
-                data = binascii.unhexlify(bytes(asm[1], 'utf-8'))
-
     # Only look for source if data were found (or destination is UNSPENDABLE), for speed.
     if not data and destination != config.UNSPENDABLE:
-        return None, None, None, None, None
+        return b'', None, None, None, None
 
     # Collect all possible source addresses; ignore coinbase transactions.
     source_list = []
     for vin in tx['vin']:                                               # Loop through input transactions.
-        if 'coinbase' in vin: return None, None, None, None, None
-        vin_tx = bitcoin.rpc('getrawtransaction', [vin['txid'], 1])   # Get the full transaction data for this input transaction.
+        if 'coinbase' in vin: return b'', None, None, None, None
+        vin_tx = bitcoin.rpc('getrawtransaction', [vin['txid'], 1])     # Get the full transaction data for this input transaction.
         vout = vin_tx['vout'][vin['vout']]
         fee += D(vout['value']) * config.UNIT
         source_list.append(vout['scriptPubKey']['addresses'][0])        # Assume that the output was not not multi-sig.
@@ -408,6 +414,7 @@ def follow (db):
         # Get new blocks.
         block_count = bitcoin.rpc('getblockcount', [])
         while block_index <= block_count:
+            logging.info('Block: {}'.format(str(block_index)))
             block_hash = bitcoin.rpc('getblockhash', [block_index])
             block = bitcoin.rpc('getblock', [block_hash])
             block_time = block['time']
@@ -462,7 +469,6 @@ def follow (db):
                 # Parse the transactions in the block.
                 parse_block(db, block_index)
 
-                logging.info('Block: {}'.format(str(block_index)))
                 db.execute('RELEASE SAVEPOINT block;')
                 db.commit()
             except Exception as e:

@@ -20,6 +20,9 @@ OP_DUP = b'\x76'
 OP_HASH160 = b'\xa9'
 OP_EQUALVERIFY = b'\x88'
 OP_CHECKSIG = b'\xac'
+OP_1 = b'\x51'
+OP_2 = b'\x52'
+OP_CHECKMULTISIG = b'\xae'
 b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
 dhash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
@@ -114,7 +117,7 @@ def op_push (i):
     else:
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
-def serialise (inputs, destination_output=None, data_output=None, change_output=None):
+def serialise (inputs, destination_output=None, data_output=None, change_output=None, multisig=False):
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
     # Number of inputs.
@@ -134,42 +137,64 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
 
     # Number of outputs.
     n = 0
-    if data_output: n += 1
     if destination_output: n += 1
+    if data_output:
+        data_array, value = data_output
+        for data_chunk in data_array: n += 1
+    else:
+        data_array = []
     if change_output: n += 1
     s += var_int(n)
 
     # Destination output.
     if destination_output:
         address, value = destination_output
+        pubkeyhash = base58_decode(address, config.ADDRESSVERSION)
         s += value.to_bytes(8, byteorder='little')          # Value
         script = OP_DUP                                     # OP_DUP
         script += OP_HASH160                                # OP_HASH160
         script += op_push(20)                               # Push 0x14 bytes
-        script += base58_decode(address, config.ADDRESSVERSION)    # Address (pubKeyHash)
+        script += pubkeyhash                                # pubKeyHash
         script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
         script += OP_CHECKSIG                               # OP_CHECKSIG
         s += var_int(int(len(script)))                      # Script length
         s += script
 
     # Data output.
-    if data_output:
-        data, value = data_output
-        s += (0).to_bytes(8, byteorder='little')                # Value
-        script = OP_RETURN                                      # OP_RETURN
-        script += op_push(len(data))                            # Push bytes of data (NOTE: OP_SMALLDATA?)
-        script += data                                          # Data
-        s += var_int(int(len(script)))                          # Script length
+    for data_chunk in data_array:
+        data_array, value = data_output # DUPE
+        s += (value).to_bytes(8, byteorder='little')        # Value
+
+        if multisig:
+            exodus_pubkey = binascii.unhexlify('04ad90e5b6bc86b3ec7fac2c5fbda7423fc8ef0d58df594c773fa05e2c281b2bfe877677c668bd13603944e34f4818ee03cadd81a88542b8b4d5431264180e2c28')
+            pad_length = 33 - 1 - len(data_chunk)
+            assert pad_length >= 0
+            import random
+            data_pubkey = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
+
+            script = OP_1                                   # OP_1
+            script += op_push(len(exodus_pubkey))           # Push bytes of Exodus public key
+            script += exodus_pubkey                         # Exodus public key
+            script += op_push(len(data_pubkey))             # Push bytes of data chunk (fake) public key
+            script += data_pubkey                           # Data chunk (fake) public key
+            script += OP_2                                  # OP_2
+            script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
+        else:
+            script = OP_RETURN                              # OP_RETURN
+            script += op_push(len(data_chunk))              # Push bytes of data chunk (NOTE: OP_SMALLDATA?)
+            script += data_chunk                            # Data chunk
+        s += var_int(int(len(script)))                      # Script length
         s += script
 
     # Change output.
     if change_output:
         address, value = change_output
+        pubkeyhash = base58_decode(address, config.ADDRESSVERSION)
         s += value.to_bytes(8, byteorder='little')          # Value
         script = OP_DUP                                     # OP_DUP
         script += OP_HASH160                                # OP_HASH160
         script += op_push(20)                               # Push 0x14 bytes
-        script += base58_decode(address, config.ADDRESSVERSION)    # Address (pubKeyHash)
+        script += pubkeyhash                                # pubKeyHash
         script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
         script += OP_CHECKSIG                               # OP_CHECKSIG
         s += var_int(int(len(script)))                      # Script length
@@ -197,7 +222,9 @@ def get_inputs (source, total_btc_out, test=False):
     return None, None
 
 # Replace test flag with fake bitcoind JSON-RPC server.
-def transaction (source, destination, btc_amount, fee, data, test=False):
+def transaction (source, destination, btc_amount, fee, data, test=False, multisig=True):
+    if test: multisig = False   # TODO
+
     # Validate addresses.
     for address in (source, destination):
         if address:
@@ -219,11 +246,26 @@ def transaction (source, destination, btc_amount, fee, data, test=False):
     else:
         assert not btc_amount
 
+    # Divide data into chunks.
+    if data:
+        def chunks(l, n):
+            """ Yield successive n‐sized chunks from l.
+            """
+            for i in range(0, len(l), n): yield l[i:i+n]
+        if multisig:
+            data_array = list(chunks(data, 33 - 1))
+        else:
+            data_array = list(chunks(data, 80))
+            assert len(data_array) == 1 # Only one OP_RETURN output currently supported (messages should all be shorter than 80 bytes, at the moment).
+    else:
+        data_array = []
+
     # Calculate total BTC to be sent.
     total_btc_out = fee
-    total_btc_out += config.DATA_VALUE      # For data output.
-    if destination:
-        total_btc_out += btc_amount         # For destination output.
+    if multisig: data_value = config.DUST_SIZE
+    else: data_value = config.DATA_VALUE
+    for data_chunk in data_array: total_btc_out += data_value
+    if destination: total_btc_out += btc_amount
 
     # Construct inputs.
     inputs, total_btc_in = get_inputs(source, total_btc_out, test)
@@ -233,14 +275,14 @@ def transaction (source, destination, btc_amount, fee, data, test=False):
     # Construct outputs.
     if destination: destination_output = (destination, btc_amount)
     else: destination_output = None
-    if data: data_output = (data, config.DATA_VALUE)
+    if data: data_output = (data_array, data_value)
     else: data_output = None
     change_amount = total_btc_in - total_btc_out    # No check to make sure that the change output is above the dust target_value.
     if change_amount: change_output = (source, change_amount)
     else: change_output = None
 
     # Serialise inputs and outputs.
-    transaction = serialise(inputs, destination_output, data_output, change_output)
+    transaction = serialise(inputs, destination_output, data_output, change_output, multisig=multisig)
     unsigned_tx_hex = binascii.hexlify(transaction).decode('utf-8')
     
     return unsigned_tx_hex
