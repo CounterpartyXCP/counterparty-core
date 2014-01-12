@@ -262,7 +262,7 @@ def transaction (source, destination, btc_amount, fee, data, test=False, multisi
 
     # Calculate total BTC to be sent.
     total_btc_out = fee
-    if multisig: data_value = config.DUST_SIZE
+    if multisig: data_value = config.DUST_SIZE * 2  # This is just a guess.
     else: data_value = config.DATA_VALUE
     for data_chunk in data_array: total_btc_out += data_value
     if destination: total_btc_out += btc_amount
