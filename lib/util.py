@@ -5,6 +5,7 @@ from dateutil.tz import tzlocal
 import decimal
 D = decimal.Decimal
 import sys
+import logging
 
 from . import (config, exceptions, bitcoin)
 
@@ -130,6 +131,7 @@ def debit (db, address, asset, amount):
         validity = 'Invalid: insufficient funds'
 
     # Record debit.
+    logging.debug('Debit: {} of {} from {}'.format(devise(db, amount, asset, 'output'), asset, address))
     debit_cursor.execute('''INSERT INTO debits(
                         address,
                         asset,
@@ -165,6 +167,7 @@ def credit (db, address, asset, amount):
                        (old_balance + amount, address, asset)) 
 
     # Record credit.
+    logging.debug('Credit: {} of {} to {}'.format(devise(db, amount, asset, 'output'), asset, address))
     credit_cursor.execute('''INSERT INTO credits(
                         address,
                         asset,

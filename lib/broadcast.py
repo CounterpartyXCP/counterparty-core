@@ -166,10 +166,11 @@ def parse (db, tx, message):
                     util.credit(db, bear_address, 'XCP', bear_credit)
                     validity = 'Force-Liquidated Bull'
 
-                # Pay fee to feed.
-                util.credit(db, bet_match['feed_address'], 'XCP', fee)
+                if validity.startswith('Force-Liquidated'):
+                    # Pay fee to feed.
+                    util.credit(db, bet_match['feed_address'], 'XCP', fee)
 
-                logging.info('Contract Force-Liquidated: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), util.short(bet_match_id)))
+                    logging.info('Contract Force-Liquidated: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), util.short(bet_match_id)))
 
             # Settle.
             if validity == 'Valid' and timestamp >= bet_match['deadline']:

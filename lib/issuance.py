@@ -68,10 +68,6 @@ def parse (db, tx, message):
 
     if tx['destination'] and amount:
         validity = 'Invalid: cannot issue and transfer simultaneously'
-        
-    # Credit.
-    if validity == 'Valid' and amount:
-        util.credit(db, tx['source'], asset, amount)
 
     if tx['destination']:
         issuer = tx['destination']
@@ -101,6 +97,10 @@ def parse (db, tx, message):
                         transfer,
                         validity)
                   )
+        
+    # Credit.
+    if validity == 'Valid' and amount:
+        util.credit(db, tx['source'], asset, amount)
 
     # Log.
     if validity == 'Valid':
