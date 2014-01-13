@@ -33,7 +33,7 @@ def create (db, source, give_asset, give_amount, get_asset, get_amount, expirati
 def parse (db, tx, message):
     order_parse_cursor = db.cursor()
 
-    # Ask for forgiveness…
+    # Ask for forgiveness...
     validity = 'Valid'
 
     # Unpack message.

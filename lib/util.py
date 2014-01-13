@@ -43,7 +43,7 @@ def database_check (db):
 def short (string):
     if len(string) == 64: length = 8
     elif len(string) == 128: length = 16
-    short = string[:length] + '…' + string[-length:]
+    short = string[:length] + '...' + string[-length:]
     return short
 
 def isodt (epoch_time):
