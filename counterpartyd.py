@@ -500,7 +500,7 @@ if __name__ == '__main__':
     elif args.action == 'broadcast':
         value = util.devise(db, args.value, 'value', 'input')
         unsigned_tx_hex = broadcast.create(db, args.source, int(time.time()),
-                                           valuea, args.fee_multiplier,
+                                           value, args.fee_multiplier,
                                            args.text)
         json_print(bitcoin.transmit(unsigned_tx_hex, unsigned=args.unsigned))
 

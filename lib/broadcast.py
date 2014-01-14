@@ -49,6 +49,13 @@ def create (db, source, timestamp, value, fee_multiplier, text, test=False):
         elif timestamp <= last_broadcast['timestamp']:
             raise exceptions.UselessError('Feed timestamps must be monotonically increasing')
 
+    # Locking
+    if not text:
+        if value:
+            raise exceptions.BroadcastError('No value may be specified when locking a feed.')
+        elif fee_multiplier:
+            raise exceptions.BroadcastError('No fee multiplier may be specified when locking a feed.')
+
     if len(text) > 52:
         raise exceptions.BroadcastError('Text is greater than 52 characters in length.')
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
