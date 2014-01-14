@@ -148,7 +148,7 @@ def address (address):
 
 def format_order (order):
     give_remaining = util.devise(db, D(order['give_remaining']), order['give_asset'], 'output')
-    get_remaining = util.devise(db, D(give_remaining) * D(order['price']), order['get_asset'], 'output')
+    get_remaining = util.devise(db, round(D(order['give_remaining']) * D(order['price'])), order['get_asset'], 'output')
 
     give_asset = order['give_asset']
     get_asset = order['get_asset']
