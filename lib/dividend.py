@@ -36,7 +36,6 @@ def create (db, source, amount_per_share, asset, test=False):
 
 def parse (db, tx, message):
     dividend_parse_cursor = db.cursor()
-    # Ask for forgiveness…
     validity = 'Valid'
 
     # Unpack message.

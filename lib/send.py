@@ -26,8 +26,6 @@ def create (db, source, destination, amount, asset, test=False):
 
 def parse (db, tx, message):
     send_parse_cursor = db.cursor()
-
-    # Ask for forgiveness...
     validity = 'Valid'
 
     # Unpack message.

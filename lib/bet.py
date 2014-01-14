@@ -209,7 +209,7 @@ def match (db, tx):
 
         # If the odds agree, make the trade. The found order sets the odds,
         # and they trade as much as they can.
-        if 1 / tx0['odds'] <= tx1['odds']:
+        if round(1 / tx0['odds']) <= tx1['odds']:
             forward_amount = round(min(D(tx0['wager_remaining']), wager_remaining / D(tx1['odds'])))
             backward_amount = round(forward_amount / D(tx0['odds']))
 

@@ -25,6 +25,7 @@ from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
 def market (give_asset, get_asset):
+    # TODO: Regularly check if DB is up‐to‐date.
     os.system('cls' if os.name=='nt' else 'clear')
 
     # Open orders.
@@ -285,7 +286,7 @@ if __name__ == '__main__':
     parser_market.add_argument('--give-asset', metavar='GIVE_ASSET', help='only show orders offering to sell GIVE_ASSET')
     parser_market.add_argument('--get-asset', metavar='GET_ASSET', help='only show orders offering to buy GET_ASSET')
 
-#    parser_purge = subparsers.add_parser('purge', help='reparse all transactions in the database')
+    parser_purge = subparsers.add_parser('purge', help='reparse all transactions in the database (WARNING: not thread‐safe)')
 
     args = parser.parse_args()
 
@@ -420,7 +421,6 @@ if __name__ == '__main__':
     db = sqlite3.connect(config.DATABASE)
     db.row_factory = sqlite3.Row
     db.isolation_level = None
-
     # db.execute('pragma foreign_keys=ON')
 
     # (more) Testnet
@@ -449,7 +449,7 @@ if __name__ == '__main__':
     # Check that the database has caught up with bitcoind.
     if not args.force:
         util.bitcoind_check(db)
-        if args.action not in ('server',):
+        if args.action not in ('server', 'purge'):
             util.database_check(db)
 
     # Do something.
@@ -604,8 +604,8 @@ if __name__ == '__main__':
         while True:
             market(args.give_asset, args.get_asset)
 
-#     elif args.action == 'purge':
-#         blocks.purge(db)
+    elif args.action == 'purge':
+        blocks.purge(db)
            
     elif args.action == 'help':
         parser.print_help()

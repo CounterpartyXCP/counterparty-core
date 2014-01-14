@@ -32,8 +32,6 @@ def create (db, source, give_asset, give_amount, get_asset, get_amount, expirati
 
 def parse (db, tx, message):
     order_parse_cursor = db.cursor()
-
-    # Ask for forgiveness...
     validity = 'Valid'
 
     # Unpack message.
@@ -146,7 +144,7 @@ def match (db, tx):
 
         # If the prices agree, make the trade. The found order sets the price,
         # and they trade as much as they can.
-        if tx0['price'] <= 1 / tx1['price']:
+        if tx0['price'] <= round(1 / tx1['price']):
             forward_amount = round(min(D(tx0['give_remaining']), give_remaining / D(tx0['price'])))
             backward_amount = round(forward_amount * tx0['price'])
 
