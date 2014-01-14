@@ -62,7 +62,7 @@ def market (give_asset, get_asset):
     print('\n')
 
     # Feeds
-    broadcasts = util.get_broadcasts(db, validity='Valid', order_by='timestamp DESC')
+    broadcasts = util.get_broadcasts(db, validity='Valid', order_by='timestamp', order_dir='desc')
     table = PrettyTable(['Feed Address', 'Timestamp', 'Text', 'Value', 'Fee Multiplier'])
     seen_addresses = []
     for broadcast in broadcasts:
