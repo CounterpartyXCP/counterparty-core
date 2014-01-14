@@ -33,6 +33,11 @@ ID = 30
 LENGTH = 4 + 8 + 4 + 52
 
 def create (db, source, timestamp, value, fee_multiplier, text, test=False):
+    # Use a magic number to store the fee multplier as an integer.
+    fee_multiplier = round(D(fee_multiplier) * D(1e8))
+    if fee_multiplier > 4294967295:
+        raise exceptions.OverflowError('Fee multiplier must be less than or equal to 42.94967295.')
+
     if not source:
         raise exceptions.InputError('Null source address.')
     # Check previous broadcast in this feed.

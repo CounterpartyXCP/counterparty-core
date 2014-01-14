@@ -71,7 +71,7 @@ small = round(quantity / 2)
 expiration = 10
 fee_required = 900000
 fee_provided = 1000000
-fee_multiplier_default = round(D(.05) * D(1e8))
+fee_multiplier_default = .05
 
 # Each tx has a block_index equal to its tx_index
 

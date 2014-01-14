@@ -3,12 +3,15 @@
 import sqlite3
 import logging
 import threading
+import decimal
+D = decimal.Decimal
 
 from werkzeug.wrappers import Request, Response
 from werkzeug.serving import run_simple
 from jsonrpc import JSONRPCResponseManager, dispatcher
 
-from . import (util, config)
+from . import (config, util, bitcoin)
+from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel)
 
 class reqthread ( threading.Thread ):
 
@@ -66,6 +69,100 @@ class reqthread ( threading.Thread ):
         @dispatcher.add_method
         def get_burns(**kwargs):
             return util.get_burns(db, kwargs.get('validity', None), kwargs.get('address', None))
+
+        @dispatcher.add_method
+        def do_send(**kwargs):
+            source = kwargs.get('source')
+            destination = kwargs.get('destination')
+            quantity = kwargs.get('quantity')
+            asset = kwargs.get('asset')
+            unsigned = kwargs.get('unsigned', False)
+            unsigned_tx_hex = send.create(db, source, destination, quantity,
+                                          asset)
+            return bitcoin.transmit(unsigned_tx_hex, unsigned=args.unsigned)
+        @dispatcher.add_method
+        def do_order(**kwargs):
+            source = kwargs.get('source')
+            give_quantity = kwargs.get('give_quantity')
+            give_asset = kwargs.get('give_asset')
+            get_quantity = kwargs.get('get_quantity')
+            get_asset = kwargs.get('get_asset')
+            expiration = kwargs.get('expiration')
+            fee_required = kwargs.get('fee_required')
+            fee_provided = kwargs.get('fee_provided')
+            unsigned = kwargs.get('unsigned', False)
+            unsigned_tx_hex = order.create(db, source, give_asset,
+                                           give_quantity, get_asset,
+                                           get_quantity, expiration,
+                                           fee_required, fee_provided)
+            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+        @dispatcher.add_method
+        def do_btcpay(**kwargs):
+            order_match_id = kwargs.get('order_match_id')
+            unsigned = kwargs.get('unsigned', False)
+            unsigned_tx_hex = btcpay.create(db, order_match_id)
+            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+        @dispatcher.add_method
+        def do_issuance(**kwargs):
+            source = kwargs.get('source')
+            quantity = kwargs.get('quantity')
+            transfer_destination = kwargs.get('transfer_destination', None)
+            quantity = kwargs.get('quantity')
+            asset = kwargs.get('asset')
+            divisible = kwargs.get('divisible')
+            unsigned = kwargs.get('unsigned', False)
+            unsigned_tx_hex = issuance.create(db, source, transfer_destination,
+                                              asset, quantity, divisible)
+            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+        @dispatcher.add_method
+        def do_broadcast(**kwargs):
+            source = kwargs.get('source')
+            timestamp = kwargs.get('timestamp')
+            value = kwargs.get('value')
+            fee_multiplier = kwargs.get('fee_multiplier')
+            text = kwargs.get('text')
+            unsigned = kwargs.get('unsigned', False)
+            unsigned_tx_hex = broadcast.create(db, source, timestamp,
+                                               value, fee_multiplier, text)
+            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+        @dispatcher.add_method
+        def do_bet(**kwargs):
+            source = kwargs.get('source')
+            feed_address = kwargs.get('feed_address')
+            bet_type_id = util.BET_TYPE_ID[kwargs('bet_type')]
+            deadline = kwargs.get('deadline')
+            wager = kwargs.get('wager')
+            counterwager = kwargs.get('counterwager')
+            target_value = kwargs.get('target_value')
+            leverage = kwargs.get('leverage', 5040)
+            unsigned = kwargs.get('unsigned', False)
+            unsigned_tx_hex = bet.create(db, source, feed_address,
+                                         bet_type_id, deadline, wager,
+                                         counterwager, target_value,
+                                         leverage, expiration)
+            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+        @dispatcher.add_method
+        def do_dividend(**kwargs):
+            source = kwargs.get('source')
+            quantity_per_share = kwargs.get('quantity_per_share')
+            share_asset = kwargs.get('share_asset')
+            unsigned = kwargs.get('unsigned', False)
+            unsigned_tx_hex = dividend.create(db, source, quantity_per_share,
+                                              share_asset)
+            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+        @dispatcher.add_method
+        def do_burn(**kwargs):
+            source = kwargs.get('source')
+            quantity = kwargs.get('quantity')
+            unsigned = kwargs.get('unsigned', False)
+            unsigned_tx_hex = burn.create(db, source, quantity)
+            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+        @dispatcher.add_method
+        def do_cancel(**kwargs):
+            offer_hash = kwargs.get('offer_hash')
+            unsigned = kwargs.get('unsigned', False)
+            unsigned_tx_hex = cancel.create(db, offer_hash)
+            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
 
         @Request.application
         def application (request):

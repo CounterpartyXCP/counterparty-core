@@ -20,7 +20,7 @@ from datetime import datetime
 from threading import Thread
 
 from lib import (config, api, util, exceptions, bitcoin, blocks)
-from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, util)
+from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel)
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
@@ -498,13 +498,10 @@ if __name__ == '__main__':
         json_print(bitcoin.transmit(unsigned_tx_hex, unsigned=args.unsigned))
 
     elif args.action == 'broadcast':
-        # Use a magic number to store the fee multplier as an integer.
-        fee_multiplier = round(D(args.fee_multiplier) * D(1e8))
-        if fee_multiplier > 4294967295:
-            raise exceptions.OverflowError('Fee multiplier must be less than or equal to 42.94967295.')
         value = util.devise(db, args.value, 'value', 'input')
         unsigned_tx_hex = broadcast.create(db, args.source, int(time.time()),
-                                           value, fee_multiplier, args.text)
+                                           valuea, args.fee_multiplier,
+                                           args.text)
         json_print(bitcoin.transmit(unsigned_tx_hex, unsigned=args.unsigned))
 
     elif args.action == 'bet':
@@ -598,7 +595,7 @@ if __name__ == '__main__':
                     print()
         for asset in totals.keys():
             balance = totals[asset]
-            total_table.add_row([asset, balance])
+            total_table.add_row([asset, round(balance, 8)])
         print('TOTAL')
         print(str(total_table))
         print()
