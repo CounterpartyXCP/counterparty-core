@@ -58,13 +58,12 @@ def rpc (method, params):
 
     # Return result, with error handling.
     response_json = response.json()
-    result, error = response_json['result'], response_json['error']
-    if error == None:
-        return result
-    elif error['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
-        raise exceptions.BitcoindError('{} Is txindex enabled in Bitcoind?'.format(error))
+    if 'error' not in response_json.keys() or response_json['error'] == None:
+        return response_json['result']
+    elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
+        raise exceptions.BitcoindError('{} Is txindex enabled in Bitcoind?'.format(response_json['error']))
     else:
-        raise exceptions.BitcoindError('{}'.format(error))
+        raise exceptions.BitcoindError('{}'.format(response_json['error']))
 
 def base58_decode (s, version):
     # Convert the string to an integer
