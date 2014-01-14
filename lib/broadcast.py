@@ -56,11 +56,11 @@ def create (db, source, timestamp, value, fee_multiplier, text, test=False):
         elif fee_multiplier:
             raise exceptions.BroadcastError('No fee multiplier may be specified when locking a feed.')
 
-    if len(text) > 52:
-        raise exceptions.BroadcastError('Text is greater than 52 characters in length.')
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, timestamp, value, fee_multiplier,
                         text.encode('utf-8'))
+    if len(data) > 80:
+        raise exceptions.BroadcastError('Text is greater than 52 bytes.')
     return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test)
 
 def parse (db, tx, message):
