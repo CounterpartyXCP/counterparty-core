@@ -6,6 +6,7 @@ import decimal
 D = decimal.Decimal
 import sys
 import logging
+from operator import itemgetter
 
 from . import (config, exceptions, bitcoin)
 
@@ -40,10 +41,21 @@ def database_check (db):
         time.sleep(1)
     raise exceptions.DatabaseError('Counterparty database is behind Bitcoind. Is the counterpartyd server running?')
 
+def do_order_by(results, order_by, order_dir):
+    if not len(results) or not order_by: #empty results, or not ordering
+        return results
+    assert isinstance(results, list) and isinstance(results[0], dict)
+
+    if order_by not in results[0]:
+        raise KeyError("Specified order_by property '%s' does not exist in returned data" % order_by)
+    if order_dir not in ('asc', 'desc'):
+        raise Exception("Invalid order_dir: '%s'. Must be 'asc' or 'desc'" % order_dir)
+    return sorted(results, key=itemgetter(order_by), reverse=order_dir=='desc')
+
 def short (string):
     if len(string) == 64: length = 8
     elif len(string) == 128: length = 16
-    short = string[:length] + '…' + string[-length:]
+    short = string[:length] + '...' + string[-length:]
     return short
 
 def isodt (epoch_time):
@@ -225,7 +237,7 @@ def devise (db, quantity, asset, dest, divisible=None):
             raise exceptions.QuantityError('Fractional quantities of indivisible assets.')
         return round(quantity)
 
-def get_debits (db, address=None, asset=None):
+def get_debits (db, address=None, asset=None, order_by=None, order_dir='asc'):
     """This does not include BTC."""
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM debits''')
@@ -235,9 +247,9 @@ def get_debits (db, address=None, asset=None):
         if asset != None and debit['asset'] != asset: continue
         debits.append(dict(debit))
     cursor.close()
-    return debits
+    return do_order_by(debits, order_by, order_dir)
 
-def get_credits (db, address=None, asset=None):
+def get_credits (db, address=None, asset=None, order_by=None, order_dir='asc'):
     """This does not include BTC."""
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM credits''')
@@ -247,9 +259,9 @@ def get_credits (db, address=None, asset=None):
         if asset != None and credit['asset'] != asset: continue
         credits.append(dict(credit))
     cursor.close()
-    return credits
+    return do_order_by(credits, order_by, order_dir)
 
-def get_balances (db, address=None, asset=None):
+def get_balances (db, address=None, asset=None, order_by=None, order_dir='asc'):
     """This should never be used to check Bitcoin balances."""
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM balances''')
@@ -260,11 +272,11 @@ def get_balances (db, address=None, asset=None):
         if asset == 'BTC': raise Exception
         balances.append(dict(balance))
     cursor.close()
-    return balances
+    return do_order_by(balances, order_by, order_dir)
 
-def get_sends (db, validity=None, source=None, destination=None):
+def get_sends (db, validity=None, source=None, destination=None, order_by='tx_index', order_dir='asc'):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM sends ORDER BY tx_index''')
+    cursor.execute('''SELECT * FROM sends''')
     sends = []
     for send in cursor.fetchall():
         if validity and send['Validity'] != validity: continue
@@ -272,11 +284,11 @@ def get_sends (db, validity=None, source=None, destination=None):
         if destination and send['destination'] != destination: continue
         sends.append(dict(send))
     cursor.close()
-    return sends
+    return do_order_by(sends, order_by, order_dir)
 
-def get_orders (db, validity=None, address=None, show_empty=True, show_expired=True):
+def get_orders (db, validity=None, address=None, show_empty=True, show_expired=True, order_by='price', order_dir='asc'):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM orders ORDER BY price ASC, tx_index''')
+    cursor.execute('''SELECT * FROM orders''')
     block_count = bitcoin.rpc('getblockcount', [])
     orders = []
     for order in cursor.fetchall():
@@ -292,11 +304,11 @@ def get_orders (db, validity=None, address=None, show_empty=True, show_expired=T
 
         orders.append(dict(order))
     cursor.close()
-    return orders
+    return do_order_by(orders, order_by, order_dir)
 
-def get_order_matches (db, validity=None, is_mine=False, address=None, tx0_hash=None, tx1_hash=None):
+def get_order_matches (db, validity=None, is_mine=False, address=None, tx0_hash=None, tx1_hash=None, order_by='tx1_index', order_dir='asc'):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM order_matches ORDER BY tx1_index''')
+    cursor.execute('''SELECT * FROM order_matches''')
     order_matches = []
     for order_match in cursor.fetchall():
         if validity and order_match['validity'] != validity: continue
@@ -315,9 +327,9 @@ def get_order_matches (db, validity=None, is_mine=False, address=None, tx0_hash=
         if tx1_hash and tx1_hash != order_match['tx1_hash']: continue
         order_matches.append(dict(order_match))
     cursor.close()
-    return order_matches
+    return do_order_by(order_matches, order_by, order_dir)
 
-def get_btcpays (db, validity=None):
+def get_btcpays (db, validity=None, order_by='tx_index', order_dir='asc'):
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM btcpays ORDER BY tx_index''')
     btcpays = []
@@ -325,12 +337,11 @@ def get_btcpays (db, validity=None):
         if validity and btcpay['Validity'] != validity: continue
         btcpays.append(dict(btcpay))
     cursor.close()
-    return btcpays
+    return do_order_by(btcpays, order_by, order_dir)
 
-def get_issuances (db, validity=None, asset=None, issuer=None):
+def get_issuances (db, validity=None, asset=None, issuer=None, order_by='tx_index', order_dir='asc'):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM issuances \
-                      ORDER BY tx_index ASC''')
+    cursor.execute('''SELECT * FROM issuances''')
     issuances = []
     for issuance in cursor.fetchall():
         if validity and issuance['Validity'] != validity: continue
@@ -340,31 +351,22 @@ def get_issuances (db, validity=None, asset=None, issuer=None):
         if issuer and issuance['issuer'] != issuer: continue
         issuances.append(dict(issuance))
     cursor.close()
-    return issuances
+    return do_order_by(issuances, order_by, order_dir)
 
-def get_broadcasts (db, validity=None, source=None, order_by='tx_index ASC'):
+def get_broadcasts (db, validity=None, source=None, order_by='tx_index', order_dir='asc'):
     cursor = db.cursor()
-
-    if order_by == 'tx_index ASC':
-        cursor.execute('''SELECT * FROM broadcasts \
-                          ORDER BY tx_index ASC''')
-    elif order_by == 'timestamp DESC':
-        cursor.execute('''SELECT * FROM broadcasts \
-                          ORDER BY timestamp DESC''')
-    else:
-        raise Exception('Unknown scheme for ordering broadcasts.')
-
+    cursor.execute('''SELECT * FROM broadcasts''')
     broadcasts = []
     for broadcast in cursor.fetchall():
         if validity and broadcast['Validity'] != validity: continue
         if source and broadcast['source'] != source: continue
         broadcasts.append(dict(broadcast))
     cursor.close()
-    return broadcasts
+    return do_order_by(broadcasts, order_by, order_dir)
 
-def get_bets (db, validity=None, address=None, show_empty=True):
+def get_bets (db, validity=None, address=None, show_empty=True, order_by='odds', order_dir='desc'):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM bets ORDER BY odds DESC, tx_index''')
+    cursor.execute('''SELECT * FROM bets''')
     block_count = bitcoin.rpc('getblockcount', [])
     bets = []
     for bet in cursor.fetchall():
@@ -373,9 +375,9 @@ def get_bets (db, validity=None, address=None, show_empty=True):
         if address and bet['source'] != address: continue
         bets.append(dict(bet))
     cursor.close()
-    return bets
+    return do_order_by(bets, order_by, order_dir)
 
-def get_bet_matches (db, validity=None, address=None, tx0_hash=None, tx1_hash=None):
+def get_bet_matches (db, validity=None, address=None, tx0_hash=None, tx1_hash=None, order_by='tx1_index', order_dir='asc'):
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM bet_matches ORDER BY tx1_index''')
     bet_matches = []
@@ -388,11 +390,11 @@ def get_bet_matches (db, validity=None, address=None, tx0_hash=None, tx1_hash=No
         if tx1_hash and tx1_hash != bet_match['tx1_hash']: continue
         bet_matches.append(dict(bet_match))
     cursor.close()
-    return bet_matches
+    return do_order_by(bet_matches, order_by, order_dir)
 
-def get_dividends (db, validity=None, address=None, asset=None):
+def get_dividends (db, validity=None, address=None, asset=None, order_by='tx_index', order_dir='asc'):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM dividends ORDER BY tx_index''')
+    cursor.execute('''SELECT * FROM dividends''')
     dividends = []
     for dividend in cursor.fetchall():
         if validity and dividend['Validity'] != validity: continue
@@ -400,18 +402,18 @@ def get_dividends (db, validity=None, address=None, asset=None):
         if asset != None and dividend['asset'] != asset: continue
         dividends.append(dict(dividend))
     cursor.close()
-    return dividends
+    return do_order_by(dividends, order_by, order_dir)
 
-def get_burns (db, validity=True, address=None):
+def get_burns (db, validity=True, address=None, order_by='tx_index', order_dir='asc'):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM burns ORDER BY tx_index''')
+    cursor.execute('''SELECT * FROM burns''')
     burns = []
     for burn in cursor.fetchall():
         if validity and burn['Validity'] != validity: continue
         if address and burn['address'] != address: continue
         burns.append(dict(burn))
     cursor.close()
-    return burns
+    return do_order_by(burns, order_by, order_dir)
 
 def get_address (db, address):
     if not bitcoin.base58_decode(address, config.ADDRESSVERSION):

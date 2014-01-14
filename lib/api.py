@@ -10,65 +10,142 @@ from werkzeug.wrappers import Request, Response
 from werkzeug.serving import run_simple
 from jsonrpc import JSONRPCResponseManager, dispatcher
 
-from . import (config, util, bitcoin)
+from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel)
 
 class reqthread ( threading.Thread ):
 
     def __init__ (self):
         threading.Thread.__init__(self)
-
+        
     def run ( self ):
         logger = logging.getLogger('werkzeug')
         logger.setLevel(logging.WARNING)
-
+        
         db = sqlite3.connect(config.DATABASE)
         db.row_factory = sqlite3.Row
         db.isolation_level = None
 
         @dispatcher.add_method
         def get_address (**kwargs):
-            return util.get_address(db, kwargs.get('address', None))
+            try:
+                return util.get_address(db, kwargs.get('address', None))
+            except exceptions.InvalidAddressError:
+                return None
+        
         @dispatcher.add_method
         def get_debits (**kwargs):
-            return util.get_debits(db, kwargs.get('address', None), kwargs.get('asset', None))
+            return util.get_debits(db,
+                address=kwargs.get('address', None),
+                asset=kwargs.get('asset', None),
+                order_by=kwargs.get('order_by', None),
+                order_dir=kwargs.get('order_dir', None))
+        
         @dispatcher.add_method
         def get_credits (**kwargs):
-            return util.get_credits(db, kwargs.get('address', None), kwargs.get('asset', None))
+            return util.get_credits(db,
+                address=kwargs.get('address', None),
+                asset=kwargs.get('asset', None),
+                order_by=kwargs.get('order_by', None),
+                order_dir=kwargs.get('order_dir', None))
+        
         @dispatcher.add_method
         def get_balances (**kwargs):
-            return util.get_balances(db, kwargs.get('address', None), kwargs.get('asset', None))
+            return util.get_balances(db,
+                address=kwargs.get('address', None),
+                asset=kwargs.get('asset', None),
+                order_by=kwargs.get('order_by', None),
+                order_dir=kwargs.get('order_dir', None))
 
         @dispatcher.add_method
         def get_sends (**kwargs):
-            return util.get_sends(db, kwargs.get('validity', None), kwargs.get('source', None), kwargs.get('destination', None))
+            return util.get_sends(db, 
+                source=kwargs.get('source', None),
+                destination=kwargs.get('destination', None),
+                validity='Valid' if kwargs.get('is_valid', True) else None,
+                order_by=kwargs.get('order_by', None),
+                order_dir=kwargs.get('order_dir', None))
+        
         @dispatcher.add_method
         def get_orders (**kwargs):
-            return util.get_orders(db, kwargs.get('validity', None), kwargs.get('address', None), kwargs.get('show_empty', True), kwargs.get('show_expired', True))
+            return util.get_orders(db,
+                address=kwargs.get('address', None),
+                show_empty=kwargs.get('show_empty', True),
+                show_expired=kwargs.get('show_expired', True),
+                validity='Valid' if kwargs.get('is_valid', True) else None,
+                order_by=kwargs.get('order_by', None),
+                order_dir=kwargs.get('order_dir', None))
+        
         @dispatcher.add_method
         def get_order_matches (**kwargs):
-            return util.get_order_matches(db, kwargs.get('validity', None), kwargs.get('is_mine', False), kwargs.get('address', None), kwargs.get('tx0_hash', None), kwargs.get('tx1_hash', None))
+            return util.get_order_matches(db,
+                is_mine=kwargs.get('is_mine', False),
+                address=kwargs.get('address', None),
+                tx0_hash=kwargs.get('tx0_hash', None),
+                tx1_hash=kwargs.get('tx1_hash', None),
+                validity='Valid' if kwargs.get('is_valid', True) else None,
+                order_by=kwargs.get('order_by', None),
+                order_dir=kwargs.get('order_dir', None))
+
         @dispatcher.add_method
         def get_btcpays(**kwargs):
-            return util.get_btcpays(db, kwargs.get('validity', None))
+            return util.get_btcpays(db, 
+                validity='Valid' if kwargs.get('is_valid', True) else None,
+                order_by=kwargs.get('order_by', None),
+                order_dir=kwargs.get('order_dir', None))
+
         @dispatcher.add_method
         def get_issuances(**kwargs):
-            return util.get_issuances(db, kwargs.get('validity', None), kwargs.get('asset', None), kwargs.get('issuer', None))
+            return util.get_issuances(db,
+                asset=kwargs.get('asset', None),
+                issuer=kwargs.get('issuer', None),
+                validity='Valid' if kwargs.get('is_valid', True) else None,
+                order_by=kwargs.get('order_by', None),
+                order_dir=kwargs.get('order_dir', None))
+        
         @dispatcher.add_method
         def get_broadcasts(**kwargs):
-            return util.get_broadcasts(db, kwargs.get('validity', None), kwargs.get('source', None), kwargs.get('order_by', None))
+            return util.get_broadcasts(db,
+                source=kwargs.get('source', None),
+                validity='Valid' if kwargs.get('is_valid', True) else None,
+                order_by=kwargs.get('order_by', None),
+                order_dir=kwargs.get('order_dir', None))
+        
         @dispatcher.add_method
         def get_bets (**kwargs):
-            return util.get_bets(db, kwargs.get('validity', None), kwargs.get('address', None), kwargs.get('show_empty', True))
+            return util.get_bets(db,
+                address=kwargs.get('address', None),
+                show_empty=kwargs.get('show_empty', True),
+                validity='Valid' if kwargs.get('is_valid', True) else None,
+                order_by=kwargs.get('order_by', None),
+                order_dir=kwargs.get('order_dir', None))
+        
         @dispatcher.add_method
         def get_bet_matches (**kwargs):
-            return util.get_bet_matches(db, kwargs.get('validity', None), kwargs.get('address', None), kwargs.get('tx0_hash', None), kwargs.get('tx1_hash', None))
+            return util.get_bet_matches(db,
+                address=kwargs.get('address', None),
+                tx0_hash=kwargs.get('tx0_hash', None),
+                tx1_hash=kwargs.get('tx1_hash', None),
+                validity='Valid' if kwargs.get('is_valid', True) else None,
+                order_by=kwargs.get('order_by', None),
+                order_dir=kwargs.get('order_dir', None))
+        
         @dispatcher.add_method
         def get_dividends(**kwargs):
-            return util.get_dividends(db, kwargs.get('validity', None), kwargs.get('address', None), kwargs.get('asset', None))
+            return util.get_dividends(db,
+                address=kwargs.get('address', None),
+                asset=kwargs.get('asset', None),
+                validity='Valid' if kwargs.get('is_valid', True) else None,
+                order_by=kwargs.get('order_by', None),
+                order_dir=kwargs.get('order_dir', None))
+        
         @dispatcher.add_method
         def get_burns(**kwargs):
-            return util.get_burns(db, kwargs.get('validity', None), kwargs.get('address', None))
+            return util.get_burns(db,
+                address=kwargs.get('address', None),
+                validity='Valid' if kwargs.get('is_valid', True) else None,
+                order_by=kwargs.get('order_by', None),
+                order_dir=kwargs.get('order_dir', None))
 
         @dispatcher.add_method
         def do_send(**kwargs):

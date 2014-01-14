@@ -41,7 +41,7 @@ def create (db, source, timestamp, value, fee_multiplier, text, test=False):
     if not source:
         raise exceptions.InputError('Null source address.')
     # Check previous broadcast in this feed.
-    broadcasts = util.get_broadcasts(db, validity='Valid', source=source, order_by='tx_index ASC')
+    broadcasts = util.get_broadcasts(db, validity='Valid', source=source, order_by='tx_index', order_dir='asc')
     if broadcasts:
         last_broadcast = broadcasts[-1]
         if not last_broadcast['text']:
@@ -69,7 +69,7 @@ def parse (db, tx, message):
         validity = 'Invalid: could not unpack'
 
     # Check previous broadcast in this feed.
-    broadcasts = util.get_broadcasts(db, validity='Valid', source=tx['source'], order_by='tx_index ASC')
+    broadcasts = util.get_broadcasts(db, validity='Valid', source=tx['source'], order_by='tx_index', order_dir='asc')
     if broadcasts:
         last_broadcast = broadcasts[-1]
         if not last_broadcast['text']:
