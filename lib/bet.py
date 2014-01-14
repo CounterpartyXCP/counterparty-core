@@ -211,6 +211,7 @@ def match (db, tx):
         # and they trade as much as they can.
         if round(1 / tx0['odds']) <= tx1['odds']:
             forward_amount = round(min(D(tx0['wager_remaining']), wager_remaining / D(tx1['odds'])))
+            if not forward_amount: continue
             backward_amount = round(forward_amount / D(tx0['odds']))
 
             bet_match_id = tx0['tx_hash'] + tx1['tx_hash']

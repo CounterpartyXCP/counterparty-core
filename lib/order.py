@@ -146,6 +146,7 @@ def match (db, tx):
         # and they trade as much as they can.
         if tx0['price'] <= round(1 / tx1['price']):
             forward_amount = round(min(D(tx0['give_remaining']), give_remaining / D(tx0['price'])))
+            if not forward_amount: continue
             backward_amount = round(forward_amount * tx0['price'])
 
             forward_asset, backward_asset = tx1['get_asset'], tx1['give_asset']
