@@ -22,7 +22,6 @@ def create (db, source, amount_per_share, asset, test=False):
     amount = amount_per_share * round(D(util.devise(db, total_shares, 'XCP', 'output')))    # Hackish
     balances = util.get_balances(db, address=source, asset='XCP')
     if not balances or balances[0]['amount'] < amount:
-        print(balances[0]['amount'], amount)
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up-to-date.)')
     if not issuances:
         raise exceptions.DividendError('No such asset: {}.'.format(asset))
