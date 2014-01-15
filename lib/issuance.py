@@ -66,7 +66,10 @@ def parse (db, tx, message):
         elif not amount:
             validity = 'Invalid: cannot lock or transfer an unissued asset'
 
-    if tx['destination'] and amount:
+    if validity == 'Valid' and asset in ('BTC', 'XCP'):
+        validity = 'Invalid: cannot issue BTC or XCP'
+
+    if validity == 'Valid' and (tx['destination'] and amount):
         validity = 'Invalid: cannot issue and transfer simultaneously'
 
     if tx['destination']:
