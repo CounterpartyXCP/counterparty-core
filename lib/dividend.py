@@ -18,8 +18,14 @@ def create (db, source, amount_per_share, asset, test=False):
         raise exceptions.DividendError('Cannot send dividends to BTC or XCP.')
 
     issuances = util.get_issuances(db, validity='Valid', asset=asset)
-    total_shares = sum([issuance['amount'] for issuance in issuances])
-    amount = amount_per_share * round(D(util.devise(db, total_shares, 'XCP', 'output')))    # Hackish
+    if not issuances: raise exceptions.AssetError('No such asset: {}'.format(asset))
+    divisible = issuances[0]['divisible']
+    if divisible:
+        total_shares = sum([issuance['amount'] for issuance in issuances]) / config.UNIT
+    else:
+        total_shares = sum([issuance['amount'] for issuance in issuances])
+    amount = amount_per_share * total_shares
+
     balances = util.get_balances(db, address=source, asset='XCP')
     if not balances or balances[0]['amount'] < amount:
         raise exceptions.BalanceError('Insufficient funds. (Check that the database is up-to-date.)')
