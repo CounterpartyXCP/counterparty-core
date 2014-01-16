@@ -4,6 +4,7 @@ import apsw
 import logging
 import threading
 import decimal
+import time
 D = decimal.Decimal
 
 from werkzeug.wrappers import Request, Response
@@ -187,14 +188,14 @@ class reqthread ( threading.Thread ):
             return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
         
         @dispatcher.add_method
-        def do_issuance(source, transfer_destination, quantity, asset, divisible, unsigned=False):
+        def do_issuance(source, quantity, asset, divisible, transfer_destination=None, unsigned=False):
             unsigned_tx_hex = issuance.create(db, source, transfer_destination,
                                               asset, quantity, divisible)
             return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
         
         @dispatcher.add_method
-        def do_broadcast(source, timestamp, fee_multiplier, text, value=0, unsigned=False):
-            unsigned_tx_hex = broadcast.create(db, source, timestamp,
+        def do_broadcast(source, fee_multiplier, text, value=0, unsigned=False):
+            unsigned_tx_hex = broadcast.create(db, source, int(time.time()),
                                                value, fee_multiplier, text)
             return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
         

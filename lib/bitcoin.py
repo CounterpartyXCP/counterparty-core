@@ -295,13 +295,12 @@ def transaction (source, destination, btc_amount, fee, data, test=False, multisi
 
 def transmit (unsigned_tx_hex, ask=True, unsigned=False):
     # Confirm transaction.
-    if ask:
+    if ask and not unsigned:
         if config.TESTNET: print('Attention: TESTNET!') 
         if config.TESTCOIN: print('Attention: TESTCOIN!\n') 
-        if not unsigned:
-            if input('Confirm? (y/N) ') != 'y':
-                print('Transaction aborted.', file=sys.stderr)
-                sys.exit(1)
+        if input('Confirm? (y/N) ') != 'y':
+            print('Transaction aborted.', file=sys.stderr)
+            sys.exit(1)
     if unsigned:
         return unsigned_tx_hex
     else:
