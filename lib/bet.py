@@ -315,7 +315,7 @@ def expire (db, block_index):
     bet_expire_match_cursor.execute('''SELECT * FROM blocks \
                                   WHERE block_index<=?''', (block_index - 2016,)
                               )
-    bet_matches = util.get_bet_matches(db, validity='Valid')
+    bet_matches = util.get_bet_matches(db, validity='Valid', order_by='tx1_index', order_dir='asc')
     for old_block in bet_expire_match_cursor.fetchall():
         for bet_match in bet_matches:
             if bet_match['deadline'] < old_block['block_time']:

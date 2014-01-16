@@ -295,7 +295,7 @@ def transaction (source, destination, btc_amount, fee, data, test=False, multisi
 
 def transmit (unsigned_tx_hex, ask=True, unsigned=False):
     # Confirm transaction.
-    if ask:
+    if ask and not is_api:
         if config.TESTNET: print('Attention: TESTNET!') 
         if config.TESTCOIN: print('Attention: TESTCOIN!\n') 
         if not unsigned:
@@ -303,8 +303,7 @@ def transmit (unsigned_tx_hex, ask=True, unsigned=False):
                 print('Transaction aborted.', file=sys.stderr)
                 sys.exit(1)
     if unsigned:
-        print(unsigned_tx_hex)
-        sys.exit(0)
+        return unsigned_tx_hex
     else:
         # Sign transaction.
         result = rpc('signrawtransaction', [unsigned_tx_hex])

@@ -93,6 +93,9 @@ def initialise(db):
                         data BLOB,
                         supported BOOL DEFAULT 1)
                     ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                        transactions_block_index_idx ON transactions (block_index)
+                    ''')
 
     # Purge database of blocks, transactions from before BLOCK_FIRST.
     initialise_cursor.execute('''DELETE FROM blocks WHERE block_index<?''', (config.BLOCK_FIRST,))
@@ -126,6 +129,9 @@ def initialise(db):
                         amount INTEGER,
                         validity TEXT)
                    ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                        sends_block_index_idx ON sends (block_index)
+                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS orders(
                         tx_index INTEGER PRIMARY KEY,
@@ -143,6 +149,9 @@ def initialise(db):
                         fee_provided INTEGER,
                         validity TEXT)
                    ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                        orders_block_index_idx ON orders (block_index)
+                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS order_matches(
                         tx0_index INTEGER,
@@ -161,6 +170,9 @@ def initialise(db):
                         tx1_expiration INTEGER,
                         validity TEXT)
                    ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                        order_matches_block_index_idx ON order_matches (tx0_block_index, tx1_block_index)
+                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS btcpays(
                         tx_index INTEGER PRIMARY KEY,
@@ -170,6 +182,9 @@ def initialise(db):
                         order_match_id TEXT,
                         validity TEXT)
                    ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                        btcpays_block_index_idx ON btcpays (block_index)
+                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS issuances(
                         tx_index INTEGER PRIMARY KEY,
@@ -183,6 +198,9 @@ def initialise(db):
                         validity TEXT
                         )
                    ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                        issuances_idx ON issuances (block_index)
+                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS broadcasts(
                         tx_index INTEGER PRIMARY KEY,
@@ -195,6 +213,9 @@ def initialise(db):
                         text TEXT,
                         validity TEXT)
                    ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                        broadcasts_block_index_idx ON broadcasts (block_index)
+                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS bets(
                         tx_index INTEGER PRIMARY KEY,
@@ -214,6 +235,9 @@ def initialise(db):
                         fee_multiplier INTEGER,
                         validity TEXT)
                    ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                        bets_block_index_idx ON bets (block_index)
+                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS bet_matches(
                         tx0_index INTEGER,
@@ -238,6 +262,9 @@ def initialise(db):
                         fee_multiplier INTEGER,
                         validity TEXT)
                    ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                        bet_matches_block_index_idx ON bet_matches (tx0_block_index, tx1_block_index)
+                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS dividends(
                         tx_index INTEGER PRIMARY KEY,
@@ -248,6 +275,9 @@ def initialise(db):
                         amount_per_share INTEGER,
                         validity TEXT)
                    ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                        dividends_block_index_idx ON dividends (block_index)
+                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS burns(
                         tx_index INTEGER PRIMARY KEY,
@@ -258,6 +288,9 @@ def initialise(db):
                         earned INTEGER,
                         validity TEXT)
                    ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                        burns_block_index_idx ON burns (block_index)
+                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS cancels(
                         tx_index INTEGER PRIMARY KEY,
@@ -267,6 +300,9 @@ def initialise(db):
                         offer_hash TEXT,
                         validity TEXT)
                    ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                        cancels_block_index_idx ON cancels (block_index)
+                    ''')
 
     initialise_cursor.close()
 
@@ -333,6 +369,7 @@ def purge (db, quiet=False):
     # Delete all of the results of parsing from the database.
     # TODO: This is more than is necessary for reorgs. Rather, in that case, have every table have a block index column, and only delete the stuff required.
         # (What about table balances?)
+    # NOTE: dropping a table will also delete any indicies and triggers associated with it
     purge_cursor.execute('''DROP TABLE IF EXISTS debits''')
     purge_cursor.execute('''DROP TABLE IF EXISTS credits''')
     purge_cursor.execute('''DROP TABLE IF EXISTS balances''')

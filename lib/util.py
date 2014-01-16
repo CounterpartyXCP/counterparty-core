@@ -52,6 +52,35 @@ def do_order_by(results, order_by, order_dir):
         raise Exception("Invalid order_dir: '%s'. Must be 'asc' or 'desc'" % order_dir)
     return sorted(results, key=itemgetter(order_by), reverse=order_dir=='desc')
 
+def get_limit_to_blocks(start_block, end_block, col_names=['block_index',]):
+    if    (start_block is not None and not isinstance(start_block, int)) \
+       or (end_block is not None and not isinstance(end_block, int)):
+        raise ValueError("start_block and end_block must be either an integer, or None")
+    assert isinstance(col_names, list) and len(col_names) in [1, 2]
+    
+    if start_block is None and end_block is None:
+        return ''
+    elif len(col_names) == 1:
+        col_name = col_names[0]
+        if start_block and end_block:
+            block_limit_clause = " WHERE %s >= %s AND %s <= %s" % (col_name, start_block, col_name, end_block)
+        elif start_block:
+            block_limit_clause = " WHERE %s >= %s" % (col_name, start_block)
+        elif end_block:
+            block_limit_clause = " WHERE %s <= %s" % (col_name, end_block)
+    else: #length of 2
+        if start_block and end_block:
+            block_limit_clause = " WHERE (%s >= %s OR %s >= %s) AND (%s <= %s OR %s <= %s)" % (
+                col_name[0], start_block, col_name[1], start_block,
+                col_name[0], end_block, col_name[1], end_block)
+        elif start_block:
+            block_limit_clause = " WHERE %s >= %s OR %s >= %s" % (
+                col_name[0], start_block, col_name[1], start_block)
+        elif end_block:
+            block_limit_clause = " WHERE %s >= %s OR %s >= %s" % (
+                col_name[0], end_block, col_name[1], end_block)
+    return block_limit_clause
+
 def short (string):
     if len(string) == 64: length = 8
     elif len(string) == 128: length = 16
@@ -276,9 +305,10 @@ def get_balances (db, address=None, asset=None, order_by=None, order_dir='asc'):
     cursor.close()
     return do_order_by(balances, order_by, order_dir)
 
-def get_sends (db, validity=None, source=None, destination=None, order_by='tx_index', order_dir='asc'):
+def get_sends (db, validity=None, source=None, destination=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM sends''')
+    cursor.execute('''SELECT * FROM sends%s'''
+        % get_limit_to_blocks(start_block, end_block))
     sends = []
     for send in cursor.fetchall():
         if validity and send['Validity'] != validity: continue
@@ -288,9 +318,10 @@ def get_sends (db, validity=None, source=None, destination=None, order_by='tx_in
     cursor.close()
     return do_order_by(sends, order_by, order_dir)
 
-def get_orders (db, validity=None, address=None, show_empty=True, show_expired=True, order_by='price', order_dir='asc'):
+def get_orders (db, validity=None, address=None, show_empty=True, show_expired=True, order_by='price', order_dir='asc', start_block=None, end_block=None):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM orders''')
+    cursor.execute('''SELECT * FROM orders%s'''
+        % get_limit_to_blocks(start_block, end_block))
     block_count = bitcoin.rpc('getblockcount', [])
     orders = []
     for order in cursor.fetchall():
@@ -308,9 +339,11 @@ def get_orders (db, validity=None, address=None, show_empty=True, show_expired=T
     cursor.close()
     return do_order_by(orders, order_by, order_dir)
 
-def get_order_matches (db, validity=None, is_mine=False, address=None, tx0_hash=None, tx1_hash=None, order_by='tx1_index', order_dir='asc'):
+def get_order_matches (db, validity=None, is_mine=False, address=None, tx0_hash=None, tx1_hash=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM order_matches''')
+    cursor.execute('''SELECT * FROM order_matches%s'''
+        % get_limit_to_blocks(start_block, end_block,
+            col_names=['tx0_block_index', 'tx1_block_index']))
     order_matches = []
     for order_match in cursor.fetchall():
         if validity and order_match['validity'] != validity: continue
@@ -331,9 +364,10 @@ def get_order_matches (db, validity=None, is_mine=False, address=None, tx0_hash=
     cursor.close()
     return do_order_by(order_matches, order_by, order_dir)
 
-def get_btcpays (db, validity=None, order_by='tx_index', order_dir='asc'):
+def get_btcpays (db, validity=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM btcpays ORDER BY tx_index''')
+    cursor.execute('''SELECT * FROM btcpays%s'''
+        % get_limit_to_blocks(start_block, end_block))
     btcpays = []
     for btcpay in cursor.fetchall():
         if validity and btcpay['Validity'] != validity: continue
@@ -341,9 +375,10 @@ def get_btcpays (db, validity=None, order_by='tx_index', order_dir='asc'):
     cursor.close()
     return do_order_by(btcpays, order_by, order_dir)
 
-def get_issuances (db, validity=None, asset=None, issuer=None, order_by='tx_index', order_dir='asc'):
+def get_issuances (db, validity=None, asset=None, issuer=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM issuances''')
+    cursor.execute('''SELECT * FROM issuances%s'''
+         % get_limit_to_blocks(start_block, end_block))
     issuances = []
     for issuance in cursor.fetchall():
         if validity and issuance['Validity'] != validity: continue
@@ -355,9 +390,10 @@ def get_issuances (db, validity=None, asset=None, issuer=None, order_by='tx_inde
     cursor.close()
     return do_order_by(issuances, order_by, order_dir)
 
-def get_broadcasts (db, validity=None, source=None, order_by='tx_index', order_dir='asc'):
+def get_broadcasts (db, validity=None, source=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM broadcasts''')
+    cursor.execute('''SELECT * FROM broadcasts%s'''
+         % get_limit_to_blocks(start_block, end_block))
     broadcasts = []
     for broadcast in cursor.fetchall():
         if validity and broadcast['Validity'] != validity: continue
@@ -366,9 +402,10 @@ def get_broadcasts (db, validity=None, source=None, order_by='tx_index', order_d
     cursor.close()
     return do_order_by(broadcasts, order_by, order_dir)
 
-def get_bets (db, validity=None, address=None, show_empty=True, order_by='odds', order_dir='desc'):
+def get_bets (db, validity=None, address=None, show_empty=True, order_by='odds', order_dir='desc', start_block=None, end_block=None):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM bets''')
+    cursor.execute('''SELECT * FROM bets%s'''
+        % get_limit_to_blocks(start_block, end_block))
     block_count = bitcoin.rpc('getblockcount', [])
     bets = []
     for bet in cursor.fetchall():
@@ -379,9 +416,11 @@ def get_bets (db, validity=None, address=None, show_empty=True, order_by='odds',
     cursor.close()
     return do_order_by(bets, order_by, order_dir)
 
-def get_bet_matches (db, validity=None, address=None, tx0_hash=None, tx1_hash=None, order_by='tx1_index', order_dir='asc'):
+def get_bet_matches (db, validity=None, address=None, tx0_hash=None, tx1_hash=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM bet_matches ORDER BY tx1_index''')
+    cursor.execute('''SELECT * FROM bet_matches%s'''
+         % get_limit_to_blocks(start_block, end_block,
+             col_names=['tx0_block_index', 'tx1_block_index']))
     bet_matches = []
     for bet_match in cursor.fetchall():
         if validity and bet_match['validity'] != validity: continue
@@ -394,9 +433,10 @@ def get_bet_matches (db, validity=None, address=None, tx0_hash=None, tx1_hash=No
     cursor.close()
     return do_order_by(bet_matches, order_by, order_dir)
 
-def get_dividends (db, validity=None, address=None, asset=None, order_by='tx_index', order_dir='asc'):
+def get_dividends (db, validity=None, address=None, asset=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM dividends''')
+    cursor.execute('''SELECT * FROM dividends%s'''
+         % get_limit_to_blocks(start_block, end_block))
     dividends = []
     for dividend in cursor.fetchall():
         if validity and dividend['Validity'] != validity: continue
@@ -406,9 +446,10 @@ def get_dividends (db, validity=None, address=None, asset=None, order_by='tx_ind
     cursor.close()
     return do_order_by(dividends, order_by, order_dir)
 
-def get_burns (db, validity=True, address=None, order_by='tx_index', order_dir='asc'):
+def get_burns (db, validity=True, address=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM burns''')
+    cursor.execute('''SELECT * FROM burns%s'''
+         % get_limit_to_blocks(start_block, end_block))
     burns = []
     for burn in cursor.fetchall():
         if validity and burn['Validity'] != validity: continue
@@ -423,16 +464,16 @@ def get_address (db, address):
                                              address)
     address_dict = {}
     address_dict['balances'] = get_balances(db, address=address)
-    address_dict['burns'] = get_burns(db, validity='Valid', address=address)
-    address_dict['sends'] = get_sends(db, validity='Valid', source=address)
-    address_dict['orders'] = get_orders(db, validity='Valid', address=address)
-    address_dict['order_matches'] = get_order_matches(db, validity='Valid', address=address)
-    address_dict['btcpays'] = get_btcpays(db, validity='Valid')
-    address_dict['issuances'] = get_issuances(db, validity='Valid', issuer=address)
-    address_dict['broadcasts'] = get_broadcasts(db, validity='Valid', source=address)
-    address_dict['bets'] = get_bets(db, validity='Valid', address=address)
-    address_dict['bet_matches'] = get_bet_matches(db, validity='Valid', address=address)
-    address_dict['dividends'] = get_dividends(db, validity='Valid', address=address)
+    address_dict['burns'] = get_burns(db, validity='Valid', address=address, order_by='block_index', order_dir='asc')
+    address_dict['sends'] = get_sends(db, validity='Valid', source=address, order_by='block_index', order_dir='asc')
+    address_dict['orders'] = get_orders(db, validity='Valid', address=address, order_by='block_index', order_dir='asc')
+    address_dict['order_matches'] = get_order_matches(db, validity='Valid', address=address, order_by='tx0_block_index', order_dir='asc')
+    address_dict['btcpays'] = get_btcpays(db, validity='Valid', order_by='block_index', order_dir='asc')
+    address_dict['issuances'] = get_issuances(db, validity='Valid', issuer=address, order_by='block_index', order_dir='asc')
+    address_dict['broadcasts'] = get_broadcasts(db, validity='Valid', source=address, order_by='block_index', order_dir='asc')
+    address_dict['bets'] = get_bets(db, validity='Valid', address=address, order_by='block_index', order_dir='asc')
+    address_dict['bet_matches'] = get_bet_matches(db, validity='Valid', address=address, order_by='tx0_block_index', order_dir='asc')
+    address_dict['dividends'] = get_dividends(db, validity='Valid', address=address, order_by='block_index', order_dir='asc')
     return address_dict
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
