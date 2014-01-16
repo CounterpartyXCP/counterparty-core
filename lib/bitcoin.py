@@ -295,7 +295,7 @@ def transaction (source, destination, btc_amount, fee, data, test=False, multisi
 
 def transmit (unsigned_tx_hex, ask=True, unsigned=False):
     # Confirm transaction.
-    if ask and not is_api:
+    if ask:
         if config.TESTNET: print('Attention: TESTNET!') 
         if config.TESTCOIN: print('Attention: TESTCOIN!\n') 
         if not unsigned:

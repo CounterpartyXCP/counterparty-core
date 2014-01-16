@@ -53,10 +53,11 @@ def parse (db, tx, message):
 
         # Try to match.
         btcpay_parse_cursor.execute('''SELECT * FROM order_matches WHERE (tx0_hash=? AND tx1_hash=? AND validity=?)''', (tx0_hash, tx1_hash, 'Valid: awaiting BTC payment'))
-        order_match = btcpay_parse_cursor.fetchone()
-        assert not btcpay_parse_cursor.fetchone()
-        if not order_match:
+        order_matches = btcpay_parse_cursor.fetchall()
+        if not order_matches:
             validity = 'Invalid: No Such Order Match ID'
+        else:
+            order_match = order_matches[0]
 
     if validity == 'Valid':
         # Credit source address for the currency that he bought with the bitcoins.

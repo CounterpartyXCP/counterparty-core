@@ -132,7 +132,7 @@ def match (db, tx):
     # Get order in question.
     order_match_cursor.execute('''SELECT * FROM orders\
                       WHERE tx_index=?''', (tx['tx_index'],))
-    tx1 = order_match_cursor.fetchone()
+    tx1 = order_match_cursor.fetchall()[0]
 
     order_match_cursor.execute('''SELECT * FROM orders \
                       WHERE (give_asset=? AND get_asset=? AND validity=?) \
@@ -231,7 +231,7 @@ def expire (db, block_index):
     # Expire orders and give refunds for the amount give_remaining (if non-zero; if not BTC).
     order_expire_cursor.execute('''SELECT * FROM orders''')
     for order in order_expire_cursor.fetchall():
-        if order['Validity'] == 'Valid' and util.get_time_left(order, block_index=block_index) < 0:
+        if order['validity'] == 'Valid' and util.get_time_left(order, block_index=block_index) < 0:
             order_expire_cursor.execute('''UPDATE orders SET validity=? WHERE tx_hash=?''', ('Invalid: expired', order['tx_hash']))
             if order['give_asset'] != 'BTC':    # Can't credit BTC.
                 util.credit(db, order['source'], order['give_asset'], order['give_remaining'])

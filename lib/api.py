@@ -1,6 +1,6 @@
 #! /usr/bin/python3
 
-import sqlite3
+import apsw
 import logging
 import threading
 import decimal
@@ -22,9 +22,8 @@ class reqthread ( threading.Thread ):
         logger = logging.getLogger('werkzeug')
         logger.setLevel(logging.WARNING)
         
-        db = sqlite3.connect(config.DATABASE)
-        db.row_factory = sqlite3.Row
-        db.isolation_level = None
+        db = apsw.Connection(config.DATABASE)
+        db.setrowtrace(util.rowtracer)
 
         @dispatcher.add_method
         def get_address (address):

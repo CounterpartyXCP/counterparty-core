@@ -48,9 +48,8 @@ def parse (db, tx, message):
         # Find the offer.
         cancel_parse_cursor.execute('''SELECT * FROM (orders JOIN bets) \
                                        WHERE ((orders.tx_hash=? AND orders.source=? AND orders.validity=?) OR (bets.tx_hash=? AND bets.source=? AND bets.validity=?))''', (offer_hash, tx['source'], 'Valid', offer_hash, tx['source'], 'Valid'))
-        offer = cancel_parse_cursor.fetchone()
-        # assert not cancel_parse_cursor.fetchone() # TODO: Why am I getting multiple matches here?!
-        if not offer:
+        offers = cancel_parse_cursor.fetchall() # TODO: Why am I getting multiple matches here?!
+        if not offers:
             validity = 'Invalid: no valid offer with that hash from that address'
 
     if validity == 'Valid':

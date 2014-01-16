@@ -175,7 +175,7 @@ def match (db, tx):
     # Get bet in question.
     bet_match_cursor.execute('''SELECT * FROM bets\
                       WHERE tx_index=?''', (tx['tx_index'],))
-    tx1 = bet_match_cursor.fetchone()
+    tx1 = bet_match_cursor.fetchall()[0]
 
     # Get counterbet_type.
     if tx1['bet_type'] % 2: counterbet_type = tx1['bet_type'] - 1

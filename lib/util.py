@@ -1,4 +1,3 @@
-import sqlite3
 import time
 from datetime import datetime
 from dateutil.tz import tzlocal
@@ -16,6 +15,13 @@ b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
 BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
 
+def rowtracer(cursor, sql):
+    dictionary = {}
+    description = cursor.getdescription()
+    for i in range(len(description)):
+        dictionary[description[i][0]] = sql[i]
+    return dictionary
+
 def bitcoind_check (db):
     # Check blocktime of last block to see if Bitcoind is running behind.
     block_count = bitcoin.rpc('getblockcount', [])
@@ -32,7 +38,7 @@ def database_check (db):
     for i in range(TRIES):
         try:
             cursor.execute('''SELECT * FROM blocks ORDER BY block_index ASC''')
-        except sqlite3.OperationalError:
+        except Exception:   # TODO
             raise exceptions.DatabaseError('Counterparty database does not exist. Run the server command to create it.')
         last_block = cursor.fetchall()[-1]
         if last_block['block_index'] == bitcoin.rpc('getblockcount', []):
@@ -313,7 +319,7 @@ def get_sends (db, validity=None, source=None, destination=None, order_by='tx_in
         % get_limit_to_blocks(start_block, end_block))
     sends = []
     for send in cursor.fetchall():
-        if validity and send['Validity'] != validity: continue
+        if validity and send['validity'] != validity: continue
         if source and send['source'] != source: continue
         if destination and send['destination'] != destination: continue
         sends.append(dict(send))
@@ -327,7 +333,7 @@ def get_orders (db, validity=None, address=None, show_empty=True, show_expired=T
     block_count = bitcoin.rpc('getblockcount', [])
     orders = []
     for order in cursor.fetchall():
-        if validity and order['Validity'] != validity: continue
+        if validity and order['validity'] != validity: continue
         if not show_empty and not order['give_remaining']: continue
         if address and order['source'] != address: continue
 
@@ -372,7 +378,7 @@ def get_btcpays (db, validity=None, order_by='tx_index', order_dir='asc', start_
         % get_limit_to_blocks(start_block, end_block))
     btcpays = []
     for btcpay in cursor.fetchall():
-        if validity and btcpay['Validity'] != validity: continue
+        if validity and btcpay['validity'] != validity: continue
         btcpays.append(dict(btcpay))
     cursor.close()
     return do_order_by(btcpays, order_by, order_dir)
@@ -383,7 +389,7 @@ def get_issuances (db, validity=None, asset=None, issuer=None, order_by='tx_inde
          % get_limit_to_blocks(start_block, end_block))
     issuances = []
     for issuance in cursor.fetchall():
-        if validity and issuance['Validity'] != validity: continue
+        if validity and issuance['validity'] != validity: continue
         if asset != None and issuance['asset'] != asset:
             if not valid_asset_name(asset): raise exceptions.AssetError('Invalid asset name.')
             continue
@@ -398,7 +404,7 @@ def get_broadcasts (db, validity=None, source=None, order_by='tx_index', order_d
          % get_limit_to_blocks(start_block, end_block))
     broadcasts = []
     for broadcast in cursor.fetchall():
-        if validity and broadcast['Validity'] != validity: continue
+        if validity and broadcast['validity'] != validity: continue
         if source and broadcast['source'] != source: continue
         broadcasts.append(dict(broadcast))
     cursor.close()
@@ -411,7 +417,7 @@ def get_bets (db, validity=None, address=None, show_empty=True, order_by='odds',
     block_count = bitcoin.rpc('getblockcount', [])
     bets = []
     for bet in cursor.fetchall():
-        if validity and bet['Validity'] != validity: continue
+        if validity and bet['validity'] != validity: continue
         if not show_empty and not bet['wager_remaining']: continue
         if address and bet['source'] != address: continue
         bets.append(dict(bet))
@@ -441,7 +447,7 @@ def get_dividends (db, validity=None, address=None, asset=None, order_by='tx_ind
          % get_limit_to_blocks(start_block, end_block))
     dividends = []
     for dividend in cursor.fetchall():
-        if validity and dividend['Validity'] != validity: continue
+        if validity and dividend['validity'] != validity: continue
         if address and dividend['source'] != address: continue
         if asset != None and dividend['asset'] != asset: continue
         dividends.append(dict(dividend))
@@ -454,7 +460,7 @@ def get_burns (db, validity=True, address=None, order_by='tx_index', order_dir='
          % get_limit_to_blocks(start_block, end_block))
     burns = []
     for burn in cursor.fetchall():
-        if validity and burn['Validity'] != validity: continue
+        if validity and burn['validity'] != validity: continue
         if address and burn['address'] != address: continue
         burns.append(dict(burn))
     cursor.close()

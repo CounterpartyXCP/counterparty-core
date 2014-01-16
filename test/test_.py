@@ -4,7 +4,7 @@ import os
 import hashlib
 import binascii
 import time
-import sqlite3
+import apsw
 import appdirs
 import logging
 import decimal
@@ -52,9 +52,10 @@ config.RPC_PORT = 9999
 config.DATABASE = CURR_DIR + '/counterparty.test.db'
 try: os.remove(config.DATABASE)
 except: pass
-db = sqlite3.connect(config.DATABASE)
-db.isolation_level = None
-db.row_factory = sqlite3.Row
+
+db = apsw.Connection(config.DATABASE)
+db.setrowtrace(util.rowtracer)
+cursor = db.cursor()
 
 tx_index = 0
 
@@ -79,7 +80,6 @@ print('Run `test.py` with `py.test test.py`.')
 
 
 
-
 def check_balance():
     balances = util.get_balances(db)
     for balance in balances:
@@ -96,7 +96,7 @@ def parse_tx (tx_index, data, parse_func):
     parse_tx_cursor = db.cursor()
     parse_tx_cursor.execute('''SELECT * FROM transactions \
                       WHERE tx_index=?''', (tx_index,))
-    tx = parse_tx_cursor.fetchone()
+    tx = parse_tx_cursor.fetchall()[0]
     if data:
         message = data[len(config.PREFIX) + 4:]
     else:
@@ -104,7 +104,6 @@ def parse_tx (tx_index, data, parse_func):
 
     parse_func(db, tx, message)
     parse_tx_cursor.close()
-    db.commit()
 
     # After parsing every transaction, check that the credits, debits sum properly.
     check_balance()
@@ -174,6 +173,11 @@ def get_tx_data (tx_hex):
 
 def setup_function(function):
     global db
+    global cursor
+    cursor.execute('''BEGIN''')
+
+def teardown_function(function):
+    cursor.execute('''END''')
 
 # Logs.
 try: os.remove(CURR_DIR + '/log.new')
@@ -436,22 +440,27 @@ def test_json_rpc():
         assert response['id'] == 0
 
 def test_stop():
-    db.commit()
     logging.info('STOP TEST')
 
 
 def test_db():
-    with open(CURR_DIR + '/db.dump', 'r') as f:
+    GOOD = CURR_DIR + '/db.dump'
+    NEW = CURR_DIR + '/db.new.dump'
+
+    with open(GOOD, 'r') as f:
         good_data = f.readlines()
 
-    # Hack
-    with open(CURR_DIR + '/db.new.dump', 'w') as f:
-        f.write('\n'.join(list(db.iterdump())) + '\n')
-    with open(CURR_DIR + '/db.new.dump', 'r') as f:
-        new_data = f.readlines()
+    import io
+    output=io.StringIO()
+    shell=apsw.Shell(stdout=output, args=(config.DATABASE,))
+    shell.process_command(".dump")
+    with open(NEW, 'w') as f:
+        lines = output.getvalue().split('\n')[8:]
+        new_data = '\n'.join(lines)
+        f.writelines(new_data)
 
-    db_diff = list(difflib.unified_diff(good_data, new_data, n=0))
-    assert not len(db_diff)
+    import subprocess
+    assert not subprocess.call(['diff', GOOD, NEW])
 
 def test_output():
     with open(CURR_DIR + '/output.new.json', 'w') as output_new_file:

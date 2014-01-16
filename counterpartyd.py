@@ -8,7 +8,7 @@ import json
 import decimal
 D = decimal.Decimal
 
-import sqlite3
+import apsw
 import logging
 import appdirs
 import configparser
@@ -417,11 +417,8 @@ if __name__ == '__main__':
     else:
         config.DATABASE = os.path.join(config.data_dir, 'counterpartyd.' + str(config.DB_VERSION) + '.db')
 
-    # For create()s.
-    db = sqlite3.connect(config.DATABASE)
-    db.row_factory = sqlite3.Row
-    db.isolation_level = None
-    # db.execute('pragma foreign_keys=ON')
+    db = apsw.Connection(config.DATABASE)
+    db.setrowtrace(util.rowtracer)
 
     # (more) Testnet
     if config.TESTNET:
