@@ -18,6 +18,7 @@ DATA_VALUE = 0
 # Counterparty protocol
 TXTYPE_FORMAT = '>I'
 
-MAX_INT = 2**64 - 1
+# SQLite3
+MAX_INT = 2**63 - 1
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

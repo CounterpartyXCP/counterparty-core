@@ -36,6 +36,9 @@ def parse (db, tx, message):
         asset, amount = None, None
         validity = 'Invalid: could not unpack'
 
+    # For SQLite3
+    amount = min(amount, config.MAX_INT)
+
     # Check that it is not BTC that someone was trying to send.
     if validity == 'Valid':
         if asset == 'BTC':

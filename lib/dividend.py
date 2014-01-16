@@ -51,6 +51,9 @@ def parse (db, tx, message):
         amount_per_share, asset = None, None
         validity = 'Invalid: could not unpack'
 
+    # For SQLite3
+    amount_per_share = min(amount_per_share, config.MAX_INT)
+
     if validity == 'Valid':
         if not amount_per_share:
             validity = 'Invalid: zero amount per share.'

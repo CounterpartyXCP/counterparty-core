@@ -54,7 +54,7 @@ def parse (db, tx, message=None):
         already_burned = sum([burn['burned'] for burn in burns])
         ONE_BTC = 1 * config.UNIT
         max_burn = ONE_BTC - already_burned
-        if sent > max_burn: burned = max_burn   # TODO: exceeded maximum burn; earn what you can.
+        if sent > max_burn: burned = max_burn   # Exceeded maximum burn; earn what you can.
         else: burned = sent
 
         total_time = D(config.BURN_END - config.BURN_START)

@@ -48,6 +48,8 @@ def parse (db, tx, message):
         asset, amount, divisible = None, None, None
         validity = 'Invalid: could not unpack'
 
+    # For SQLite3
+    amount = min(amount, config.MAX_INT)
 
     if validity == 'Valid' and not util.valid_asset_name(asset):
         validity = 'Invalid: bad asset name'

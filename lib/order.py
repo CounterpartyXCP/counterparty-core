@@ -43,6 +43,13 @@ def parse (db, tx, message):
         give_asset, give_amount, get_asset, get_amount, expiration, fee_required = None, None, None, None, None, None
         validity = 'Invalid: could not unpack'
 
+    # For SQLite3
+    give_amount = min(give_amount, config.MAX_INT)
+    get_amount = min(get_amount, config.MAX_INT)
+    expiration = min(expiration, config.MAX_INT)
+    fee_required = min(fee_required, config.MAX_INT)
+
+
     if validity == 'Valid':
         if give_asset == get_asset:
             validity = 'Invalid: cannot trade an asset for itself.'

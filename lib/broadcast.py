@@ -75,6 +75,10 @@ def parse (db, tx, message):
         timestamp, value, fee_multiplier, text = None, None, None, None
         validity = 'Invalid: could not unpack'
 
+    # For SQLite3
+    timestamp = min(timestamp, config.MAX_INT)
+    value = min(value, config.MAX_INT)
+
     # Check previous broadcast in this feed.
     broadcasts = util.get_broadcasts(db, validity='Valid', source=tx['source'], order_by='tx_index', order_dir='asc')
     if broadcasts:

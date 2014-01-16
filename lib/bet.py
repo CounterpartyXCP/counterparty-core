@@ -78,6 +78,15 @@ def parse (db, tx, message):
          counterwager_amount, target_value, leverage,
          expiration) = None, None, None, None, None, None, None
         validity = 'Invalid: could not unpack'
+    
+    # For SQLite3
+    bet_type = min(bet_type, config.MAX_INT)
+    deadline = min(deadline, config.MAX_INT)
+    wager_amount = min(wager_amount, config.MAX_INT)
+    counterwager_amount = min(counterwager_amount, config.MAX_INT)
+    target_value = min(target_value, config.MAX_INT)
+    leverage = min(leverage, config.MAX_INT)
+    expiration = min(expiration, config.MAX_INT)
 
     # Look at feed to be bet on.
     feed_address = tx['destination']
