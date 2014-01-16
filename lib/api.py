@@ -27,217 +27,200 @@ class reqthread ( threading.Thread ):
         db.isolation_level = None
 
         @dispatcher.add_method
-        def get_address (**kwargs):
+        def get_address (address):
             try:
-                return util.get_address(db, kwargs.get('address', None))
+                return util.get_address(db,
+                    address=address)
             except exceptions.InvalidAddressError:
                 return None
         
         @dispatcher.add_method
-        def get_debits (**kwargs):
+        def get_debits (address=None, asset=None, order_by=None, order_dir=None):
             return util.get_debits(db,
-                address=kwargs.get('address', None),
-                asset=kwargs.get('asset', None),
-                order_by=kwargs.get('order_by', None),
-                order_dir=kwargs.get('order_dir', None))
+                address=address,
+                asset=asset,
+                order_by=order_by,
+                order_dir=order_dir)
         
         @dispatcher.add_method
-        def get_credits (**kwargs):
+        def get_credits (address=None, asset=None, order_by=None, order_dir=None):
             return util.get_credits(db,
-                address=kwargs.get('address', None),
-                asset=kwargs.get('asset', None),
-                order_by=kwargs.get('order_by', None),
-                order_dir=kwargs.get('order_dir', None))
+                address=address,
+                asset=asset,
+                order_by=order_by,
+                order_dir=order_dir)
         
         @dispatcher.add_method
-        def get_balances (**kwargs):
+        def get_balances (address=None, asset=None, order_by=None, order_dir=None):
             return util.get_balances(db,
-                address=kwargs.get('address', None),
-                asset=kwargs.get('asset', None),
-                order_by=kwargs.get('order_by', None),
-                order_dir=kwargs.get('order_dir', None))
+                address=address,
+                asset=asset,
+                order_by=order_by,
+                order_dir=order_dir)
 
         @dispatcher.add_method
-        def get_sends (**kwargs):
+        def get_sends (source=None, destination=None, is_valid=None, order_by=None, order_dir=None, start_block=None, end_block=None):
             return util.get_sends(db, 
-                source=kwargs.get('source', None),
-                destination=kwargs.get('destination', None),
-                validity='Valid' if kwargs.get('is_valid', True) else None,
-                order_by=kwargs.get('order_by', None),
-                order_dir=kwargs.get('order_dir', None))
+                source=source,
+                destination=destination,
+                validity='Valid' if bool(is_valid) else None,
+                order_by=order_by,
+                order_dir=order_dir,
+                start_block=start_block,
+                end_block=end_block)
         
         @dispatcher.add_method
-        def get_orders (**kwargs):
+        def get_orders (address=None, is_valid=True, show_empty=True, show_expired=True, order_by=None, order_dir=None, start_block=None, end_block=None):
             return util.get_orders(db,
-                address=kwargs.get('address', None),
-                show_empty=kwargs.get('show_empty', True),
-                show_expired=kwargs.get('show_expired', True),
-                validity='Valid' if kwargs.get('is_valid', True) else None,
-                order_by=kwargs.get('order_by', None),
-                order_dir=kwargs.get('order_dir', None))
+                address=address,
+                show_empty=show_empty,
+                show_expired=show_expired,
+                validity='Valid' if bool(is_valid) else None,
+                order_by=order_by,
+                order_dir=order_dir,
+                start_block=start_block,
+                end_block=end_block)
         
         @dispatcher.add_method
-        def get_order_matches (**kwargs):
+        def get_order_matches (address=None, is_valid=True, is_mine=False, tx0_hash=None, tx1_hash=None, order_by=None, order_dir=None, start_block=None, end_block=None):
             return util.get_order_matches(db,
-                is_mine=kwargs.get('is_mine', False),
-                address=kwargs.get('address', None),
-                tx0_hash=kwargs.get('tx0_hash', None),
-                tx1_hash=kwargs.get('tx1_hash', None),
-                validity='Valid' if kwargs.get('is_valid', True) else None,
-                order_by=kwargs.get('order_by', None),
-                order_dir=kwargs.get('order_dir', None))
+                is_mine=is_mine,
+                address=address,
+                tx0_hash=tx0_hash,
+                tx1_hash=tx1_hash,
+                validity='Valid' if bool(is_valid) else None,
+                order_by=order_by,
+                order_dir=order_dir,
+                start_block=start_block,
+                end_block=end_block)
 
         @dispatcher.add_method
-        def get_btcpays(**kwargs):
+        def get_btcpays(is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
             return util.get_btcpays(db, 
-                validity='Valid' if kwargs.get('is_valid', True) else None,
-                order_by=kwargs.get('order_by', None),
-                order_dir=kwargs.get('order_dir', None))
+                validity='Valid' if bool(is_valid) else None,
+                order_by=order_by,
+                order_dir=order_dir,
+                start_block=start_block,
+                end_block=end_block)
 
         @dispatcher.add_method
-        def get_issuances(**kwargs):
+        def get_issuances(asset=None, issuer=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
             return util.get_issuances(db,
-                asset=kwargs.get('asset', None),
-                issuer=kwargs.get('issuer', None),
-                validity='Valid' if kwargs.get('is_valid', True) else None,
-                order_by=kwargs.get('order_by', None),
-                order_dir=kwargs.get('order_dir', None))
+                asset=asset,
+                issuer=issuer,
+                validity='Valid' if bool(is_valid) else None,
+                order_by=order_by,
+                order_dir=order_dir,
+                start_block=start_block,
+                end_block=end_block)
         
         @dispatcher.add_method
-        def get_broadcasts(**kwargs):
+        def get_broadcasts(source=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
             return util.get_broadcasts(db,
-                source=kwargs.get('source', None),
-                validity='Valid' if kwargs.get('is_valid', True) else None,
-                order_by=kwargs.get('order_by', None),
-                order_dir=kwargs.get('order_dir', None))
+                source=source,
+                validity='Valid' if bool(is_valid) else None,
+                order_by=order_by,
+                order_dir=order_dir,
+                start_block=start_block,
+                end_block=end_block)
         
         @dispatcher.add_method
-        def get_bets (**kwargs):
+        def get_bets(address=None, show_empty=False, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
             return util.get_bets(db,
-                address=kwargs.get('address', None),
-                show_empty=kwargs.get('show_empty', True),
-                validity='Valid' if kwargs.get('is_valid', True) else None,
-                order_by=kwargs.get('order_by', None),
-                order_dir=kwargs.get('order_dir', None))
+                address=address,
+                show_empty=show_empty,
+                validity='Valid' if bool(is_valid) else None,
+                order_by=order_by,
+                order_dir=order_dir,
+                start_block=start_block,
+                end_block=end_block)
         
         @dispatcher.add_method
-        def get_bet_matches (**kwargs):
+        def get_bet_matches(address=None, is_valid=True, tx0_hash=None, tx1_hash=None, order_by=None, order_dir=None, start_block=None, end_block=None):
             return util.get_bet_matches(db,
-                address=kwargs.get('address', None),
-                tx0_hash=kwargs.get('tx0_hash', None),
-                tx1_hash=kwargs.get('tx1_hash', None),
-                validity='Valid' if kwargs.get('is_valid', True) else None,
-                order_by=kwargs.get('order_by', None),
-                order_dir=kwargs.get('order_dir', None))
+                address=address,
+                tx0_hash=tx0_hash,
+                tx1_hash=tx1_hash,
+                validity='Valid' if bool(is_valid) else None,
+                order_by=order_by,
+                order_dir=order_dir,
+                start_block=start_block,
+                end_block=end_block)
         
         @dispatcher.add_method
-        def get_dividends(**kwargs):
+        def get_dividends(address=None, asset=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
             return util.get_dividends(db,
-                address=kwargs.get('address', None),
-                asset=kwargs.get('asset', None),
-                validity='Valid' if kwargs.get('is_valid', True) else None,
-                order_by=kwargs.get('order_by', None),
-                order_dir=kwargs.get('order_dir', None))
+                address=address,
+                asset=asset,
+                validity='Valid' if bool(is_valid) else None,
+                order_by=order_by,
+                order_dir=order_dir,
+                start_block=start_block,
+                end_block=end_block)
         
         @dispatcher.add_method
-        def get_burns(**kwargs):
+        def get_burns(address=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
             return util.get_burns(db,
-                address=kwargs.get('address', None),
-                validity='Valid' if kwargs.get('is_valid', True) else None,
-                order_by=kwargs.get('order_by', None),
-                order_dir=kwargs.get('order_dir', None))
+                address=address,
+                validity='Valid' if bool(is_valid) else None,
+                order_by=order_by,
+                order_dir=order_dir,
+                start_block=start_block,
+                end_block=end_block)
 
         @dispatcher.add_method
-        def do_send(**kwargs):
-            source = kwargs.get('source')
-            destination = kwargs.get('destination')
-            quantity = kwargs.get('quantity')
-            asset = kwargs.get('asset')
-            unsigned = kwargs.get('unsigned', False)
-            unsigned_tx_hex = send.create(db, source, destination, quantity,
-                                          asset)
-            return bitcoin.transmit(unsigned_tx_hex, unsigned=args.unsigned)
+        def do_send(source, destination, quantity, asset, unsigned=False):
+            unsigned_tx_hex = send.create(db, source, destination, quantity, asset)
+            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+        
         @dispatcher.add_method
-        def do_order(**kwargs):
-            source = kwargs.get('source')
-            give_quantity = kwargs.get('give_quantity')
-            give_asset = kwargs.get('give_asset')
-            get_quantity = kwargs.get('get_quantity')
-            get_asset = kwargs.get('get_asset')
-            expiration = kwargs.get('expiration')
-            fee_required = kwargs.get('fee_required')
-            fee_provided = kwargs.get('fee_provided')
-            unsigned = kwargs.get('unsigned', False)
+        def do_order(source, give_quantity, give_asset, get_quantity, get_asset, expiration, fee_required=0,
+                     fee_provided=config.MIN_FEE / config.UNIT, unsigned=False):
             unsigned_tx_hex = order.create(db, source, give_asset,
                                            give_quantity, get_asset,
                                            get_quantity, expiration,
                                            fee_required, fee_provided)
             return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+        
         @dispatcher.add_method
-        def do_btcpay(**kwargs):
-            order_match_id = kwargs.get('order_match_id')
-            unsigned = kwargs.get('unsigned', False)
+        def do_btcpay(order_match_id, unsigned=False):
             unsigned_tx_hex = btcpay.create(db, order_match_id)
             return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+        
         @dispatcher.add_method
-        def do_issuance(**kwargs):
-            source = kwargs.get('source')
-            quantity = kwargs.get('quantity')
-            transfer_destination = kwargs.get('transfer_destination', None)
-            quantity = kwargs.get('quantity')
-            asset = kwargs.get('asset')
-            divisible = kwargs.get('divisible')
-            unsigned = kwargs.get('unsigned', False)
+        def do_issuance(source, transfer_destination, quantity, asset, divisible, unsigned=False):
             unsigned_tx_hex = issuance.create(db, source, transfer_destination,
                                               asset, quantity, divisible)
             return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+        
         @dispatcher.add_method
-        def do_broadcast(**kwargs):
-            source = kwargs.get('source')
-            timestamp = kwargs.get('timestamp')
-            value = kwargs.get('value')
-            fee_multiplier = kwargs.get('fee_multiplier')
-            text = kwargs.get('text')
-            unsigned = kwargs.get('unsigned', False)
+        def do_broadcast(source, timestamp, fee_multiplier, text, value=0, unsigned=False):
             unsigned_tx_hex = broadcast.create(db, source, timestamp,
                                                value, fee_multiplier, text)
             return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+        
         @dispatcher.add_method
-        def do_bet(**kwargs):
-            source = kwargs.get('source')
-            feed_address = kwargs.get('feed_address')
-            bet_type_id = util.BET_TYPE_ID[kwargs('bet_type')]
-            deadline = kwargs.get('deadline')
-            wager = kwargs.get('wager')
-            counterwager = kwargs.get('counterwager')
-            target_value = kwargs.get('target_value')
-            leverage = kwargs.get('leverage', 5040)
-            unsigned = kwargs.get('unsigned', False)
+        def do_bet(source, feed_address, bet_type, deadline, wager, counterwager, target_value=0.0, leverage=5040, unsigned=False):
+            bet_type_id = util.BET_TYPE_ID[bet_type]
             unsigned_tx_hex = bet.create(db, source, feed_address,
                                          bet_type_id, deadline, wager,
                                          counterwager, target_value,
                                          leverage, expiration)
             return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+        
         @dispatcher.add_method
-        def do_dividend(**kwargs):
-            source = kwargs.get('source')
-            quantity_per_share = kwargs.get('quantity_per_share')
-            share_asset = kwargs.get('share_asset')
-            unsigned = kwargs.get('unsigned', False)
+        def do_dividend(source, quantity_per_share, share_asset, unsigned=False):
             unsigned_tx_hex = dividend.create(db, source, quantity_per_share,
                                               share_asset)
             return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+        
         @dispatcher.add_method
-        def do_burn(**kwargs):
-            source = kwargs.get('source')
-            quantity = kwargs.get('quantity')
-            unsigned = kwargs.get('unsigned', False)
+        def do_burn(source, quantity, unsigned=False):
             unsigned_tx_hex = burn.create(db, source, quantity)
             return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+        
         @dispatcher.add_method
-        def do_cancel(**kwargs):
-            offer_hash = kwargs.get('offer_hash')
-            unsigned = kwargs.get('unsigned', False)
+        def do_cancel(offer_hash, unsigned=False):
             unsigned_tx_hex = cancel.create(db, offer_hash)
             return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
 
@@ -248,6 +231,6 @@ class reqthread ( threading.Thread ):
             return Response(response.json, mimetype='application/json')
 
         # util.database_check(db) # TODO Have this run regularly.
-        run_simple('localhost', config.RPC_PORT, application)
+        run_simple(config.RPC_HOST, config.RPC_PORT, application)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
