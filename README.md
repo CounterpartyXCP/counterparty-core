@@ -148,3 +148,4 @@ The following examples are abridged for parsimony.
 * Address
 
 	The `address` action displays the details of of all transactions involving the Counterparty address which is its argument.
+

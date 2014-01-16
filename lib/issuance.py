@@ -12,7 +12,6 @@ ID = 20
 LENGTH = 8 + 8 + 1
 
 def create (db, source, destination, asset, amount, divisible, test=False):
-
     if not util.valid_asset_name(asset):
         raise exceptions.AssetError('Bad asset name.')
 
@@ -32,9 +31,6 @@ def create (db, source, destination, asset, amount, divisible, test=False):
     if destination and amount:
         raise exceptions.IssuanceError('Cannot issue and transfer simultaneously.')
         
-    if amount > 256**8/2:   # Correct?!
-        raise exceptions.IssuanceError('Cannot issue amounts greater than 256^8/2 in indivisible units.')
-
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount, divisible)
@@ -51,6 +47,7 @@ def parse (db, tx, message):
     except Exception:
         asset, amount, divisible = None, None, None
         validity = 'Invalid: could not unpack'
+
 
     if validity == 'Valid' and not util.valid_asset_name(asset):
         validity = 'Invalid: bad asset name'
@@ -74,10 +71,6 @@ def parse (db, tx, message):
 
     if validity == 'Valid' and (tx['destination'] and amount):
         validity = 'Invalid: cannot issue and transfer simultaneously'
-
-    if validity == 'Valid' and amount > 256**8/2:   # Correct?!
-        validity = 'Invalid: amount greater than 256^8/2 in indivisible units'
-        amount = 0
 
     if tx['destination']:
         issuer = tx['destination']

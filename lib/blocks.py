@@ -76,20 +76,20 @@ def parse_block (db, block_index):
 def initialise(db):
     initialise_cursor = db.cursor()
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS blocks(
-                        block_index INTEGER PRIMARY KEY,
+                        block_index SQLITE3_UINT64 PRIMARY KEY,
                         block_hash TEXT UNIQUE,
-                        block_time INTEGER)
+                        block_time SQLITE3_UINT64)
                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS transactions(
-                        tx_index INTEGER PRIMARY KEY,
+                        tx_index SQLITE3_UINT64 PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
-                        block_index INTEGER,
-                        block_time INTEGER,
+                        block_index SQLITE3_UINT64,
+                        block_time SQLITE3_UINT64,
                         source TEXT,
                         destination TEXT,
-                        btc_amount INTEGER,
-                        fee INTEGER,
+                        btc_amount SQLITE3_UINT64,
+                        fee SQLITE3_UINT64,
                         data BLOB,
                         supported TEXT DEFAULT 'True')
                     ''')
@@ -101,82 +101,82 @@ def initialise(db):
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS debits(
                         address TEXT,
                         asset TEXT,
-                        amount INTEGER)
+                        amount SQLITE3_UINT64)
                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS credits(
                         address TEXT,
                         asset TEXT,
-                        amount INTEGER)
+                        amount SQLITE3_UINT64)
                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS balances(
                         address TEXT,
                         asset TEXT,
-                        amount INTEGER)
+                        amount SQLITE3_UINT64)
                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS sends(
-                        tx_index INTEGER PRIMARY KEY,
+                        tx_index SQLITE3_UINT64 PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
-                        block_index INTEGER,
+                        block_index SQLITE3_UINT64,
                         source TEXT,
                         destination TEXT,
                         asset TEXT,
-                        amount INTEGER,
+                        amount SQLITE3_UINT64,
                         validity TEXT)
                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS orders(
-                        tx_index INTEGER PRIMARY KEY,
+                        tx_index SQLITE3_UINT64 PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
-                        block_index INTEGER,
+                        block_index SQLITE3_UINT64,
                         source TEXT,
                         give_asset TEXT,
-                        give_amount INTEGER,
-                        give_remaining INTEGER,
+                        give_amount SQLITE3_UINT64,
+                        give_remaining SQLITE3_UINT64,
                         get_asset TEXT,
-                        get_amount INTEGER,
+                        get_amount SQLITE3_UINT64,
                         price REAL,
-                        expiration INTEGER,
-                        fee_required INTEGER,
-                        fee_provided INTEGER,
+                        expiration SQLITE3_UINT64,
+                        fee_required SQLITE3_UINT64,
+                        fee_provided SQLITE3_UINT64,
                         validity TEXT)
                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS order_matches(
-                        tx0_index INTEGER,
+                        tx0_index SQLITE3_UINT64,
                         tx0_hash TEXT,
                         tx0_address TEXT,
-                        tx1_index INTEGER,
+                        tx1_index SQLITE3_UINT64,
                         tx1_hash TEXT,
                         tx1_address TEXT,
-                        forward_asset INTEGER,
-                        forward_amount INTEGER,
-                        backward_asset INTEGER,
-                        backward_amount INTEGER,
-                        tx0_block_index INTEGER,
-                        tx1_block_index INTEGER,
-                        tx0_expiration INTEGER,
-                        tx1_expiration INTEGER,
+                        forward_asset SQLITE3_UINT64,
+                        forward_amount SQLITE3_UINT64,
+                        backward_asset SQLITE3_UINT64,
+                        backward_amount SQLITE3_UINT64,
+                        tx0_block_index SQLITE3_UINT64,
+                        tx1_block_index SQLITE3_UINT64,
+                        tx0_expiration SQLITE3_UINT64,
+                        tx1_expiration SQLITE3_UINT64,
                         validity TEXT)
                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS btcpays(
-                        tx_index INTEGER PRIMARY KEY,
+                        tx_index SQLITE3_UINT64 PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
-                        block_index INTEGER,
+                        block_index SQLITE3_UINT64,
                         source TEXT,
                         order_match_id TEXT,
                         validity TEXT)
                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS issuances(
-                        tx_index INTEGER PRIMARY KEY,
+                        tx_index SQLITE3_UINT64 PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
-                        block_index INTEGER,
+                        block_index SQLITE3_UINT64,
                         asset TEXT,
-                        amount INTEGER,
+                        amount SQLITE3_UINT64,
                         divisible BOOL,
                         issuer TEXT,
                         transfer BOOL,
@@ -185,84 +185,84 @@ def initialise(db):
                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS broadcasts(
-                        tx_index INTEGER PRIMARY KEY,
+                        tx_index SQLITE3_UINT64 PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
-                        block_index INTEGER,
+                        block_index SQLITE3_UINT64,
                         source TEXT,
-                        timestamp INTEGER,
+                        timestamp SQLITE3_UINT64,
                         value REAL,
-                        fee_multiplier INTEGER,
+                        fee_multiplier SQLITE3_UINT64,
                         text TEXT,
                         validity TEXT)
                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS bets(
-                        tx_index INTEGER PRIMARY KEY,
+                        tx_index SQLITE3_UINT64 PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
-                        block_index INTEGER,
+                        block_index SQLITE3_UINT64,
                         source TEXT,
                         feed_address TEXT,
-                        bet_type INTEGER,
-                        deadline INTEGER,
-                        wager_amount INTEGER,
-                        counterwager_amount INTEGER,
-                        wager_remaining INTEGER,
+                        bet_type SQLITE3_UINT64,
+                        deadline SQLITE3_UINT64,
+                        wager_amount SQLITE3_UINT64,
+                        counterwager_amount SQLITE3_UINT64,
+                        wager_remaining SQLITE3_UINT64,
                         odds REAL,
                         target_value REAL,
-                        leverage INTEGER,
-                        expiration INTEGER,
-                        fee_multiplier INTEGER,
+                        leverage SQLITE3_UINT64,
+                        expiration SQLITE3_UINT64,
+                        fee_multiplier SQLITE3_UINT64,
                         validity TEXT)
                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS bet_matches(
-                        tx0_index INTEGER,
+                        tx0_index SQLITE3_UINT64,
                         tx0_hash TEXT,
                         tx0_address TEXT,
-                        tx1_index INTEGER,
+                        tx1_index SQLITE3_UINT64,
                         tx1_hash TEXT,
                         tx1_address TEXT,
-                        tx0_bet_type INTEGER,
-                        tx1_bet_type INTEGER,
+                        tx0_bet_type SQLITE3_UINT64,
+                        tx1_bet_type SQLITE3_UINT64,
                         feed_address TEXT,
-                        initial_value INTEGER,
-                        deadline INTEGER,
+                        initial_value SQLITE3_UINT64,
+                        deadline SQLITE3_UINT64,
                         target_value REAL,
-                        leverage INTEGER,
-                        forward_amount INTEGER,
-                        backward_amount INTEGER,
-                        tx0_block_index INTEGER,
-                        tx1_block_index INTEGER,
-                        tx0_expiration INTEGER,
-                        tx1_expiration INTEGER,
-                        fee_multiplier INTEGER,
+                        leverage SQLITE3_UINT64,
+                        forward_amount SQLITE3_UINT64,
+                        backward_amount SQLITE3_UINT64,
+                        tx0_block_index SQLITE3_UINT64,
+                        tx1_block_index SQLITE3_UINT64,
+                        tx0_expiration SQLITE3_UINT64,
+                        tx1_expiration SQLITE3_UINT64,
+                        fee_multiplier SQLITE3_UINT64,
                         validity TEXT)
                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS dividends(
-                        tx_index INTEGER PRIMARY KEY,
+                        tx_index SQLITE3_UINT64 PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
-                        block_index INTEGER,
+                        block_index SQLITE3_UINT64,
                         source TEXT,
                         asset TEXT,
-                        amount_per_share INTEGER,
+                        amount_per_share SQLITE3_UINT64,
                         validity TEXT)
                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS burns(
-                        tx_index INTEGER PRIMARY KEY,
+                        tx_index SQLITE3_UINT64 PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
-                        block_index INTEGER,
+                        block_index SQLITE3_UINT64,
                         address TEXT,
-                        burned INTEGER,
-                        earned INTEGER,
+                        burned SQLITE3_UINT64,
+                        earned SQLITE3_UINT64,
                         validity TEXT)
                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS cancels(
-                        tx_index INTEGER PRIMARY KEY,
+                        tx_index SQLITE3_UINT64 PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
-                        block_index INTEGER,
+                        block_index SQLITE3_UINT64,
                         source TEXT,
                         offer_hash TEXT,
                         validity TEXT)

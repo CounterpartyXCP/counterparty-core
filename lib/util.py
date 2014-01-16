@@ -134,10 +134,12 @@ def debit (db, address, asset, amount):
         assert type(old_balance) == int
 
     if old_balance >= amount:
+        balance = round(old_balance - amount)
+        balance = min(balance, config.MAX_INT)
         debit_cursor.execute('''UPDATE balances \
                           SET amount=? \
                           WHERE (address=? and asset=?)''',
-                       (round(old_balance - amount), address, asset)) 
+                       (balance, address, asset)) 
         validity = 'Valid'
     else:
         validity = 'Invalid: insufficient funds'
@@ -174,9 +176,11 @@ def credit (db, address, asset, amount):
     else:
         old_balance = balances[0]['amount']
         assert type(old_balance) == int
+        balance = round(old_balance + amount)
+        balance = min(balance, config.MAX_INT)
         credit_cursor.execute('''UPDATE balances SET amount=? \
                           WHERE (address=? and asset=?)''',
-                       (old_balance + amount, address, asset)) 
+                       (balance, address, asset)) 
 
     # Record credit.
     logging.debug('Credit: {} of {} to {}'.format(devise(db, amount, asset, 'output'), asset, address))
