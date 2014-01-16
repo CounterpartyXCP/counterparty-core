@@ -442,7 +442,6 @@ def follow (db):
         except Exception:
             logging.warning('Status: NEW DATABASE')
             block_index = config.BLOCK_FIRST
-            block_index = 280553    # TODO
 
         # Get index of last transaction.
         try:
