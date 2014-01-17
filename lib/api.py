@@ -1,14 +1,17 @@
 #! /usr/bin/python3
 
-import apsw
+import sys
 import logging
 import threading
 import decimal
 import time
+import json
+import atexit
 D = decimal.Decimal
 
-from werkzeug.wrappers import Request, Response
-from werkzeug.serving import run_simple
+import apsw
+import cherrypy
+from cherrypy import wsgiserver
 from jsonrpc import JSONRPCResponseManager, dispatcher
 
 from . import (config, exceptions, util, bitcoin)
@@ -20,7 +23,7 @@ class reqthread ( threading.Thread ):
         threading.Thread.__init__(self)
         
     def run ( self ):
-        logger = logging.getLogger('werkzeug')
+        logger = logging.getLogger('api')
         logger.setLevel(logging.WARNING)
         
         db = apsw.Connection(config.DATABASE)
@@ -224,13 +227,20 @@ class reqthread ( threading.Thread ):
             unsigned_tx_hex = cancel.create(db, offer_hash)
             return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
 
-        @Request.application
-        def application (request):
-            response = JSONRPCResponseManager.handle(
-                request.get_data(cache=False, as_text=True), dispatcher)
-            return Response(response.json, mimetype='application/json')
+        class Root(object):
+            @cherrypy.expose
+            @cherrypy.tools.json_out()
+            def index(self):
+                try:
+                    data = cherrypy.request.body.read().decode('utf-8')
+                except ValueError:
+                    raise cherrypy.HTTPError(400, 'Invalid JSON document')
+                response = JSONRPCResponseManager.handle(data, dispatcher)
+                return response.json
 
-        # util.database_check(db) # TODO Have this run regularly.
-        run_simple(config.RPC_HOST, config.RPC_PORT, application)
+        application = cherrypy.Application(Root(), script_name="/jsonrpc/", config=None)
+        server = wsgiserver.CherryPyWSGIServer(
+                    (config.RPC_HOST, int(config.RPC_PORT)), application,)
+        server.start()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
