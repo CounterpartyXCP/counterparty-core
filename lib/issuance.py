@@ -27,7 +27,12 @@ def create (db, source, destination, asset, amount, divisible, test=False):
             raise exceptions.IssuanceError('Asset is locked.')
     elif not amount:
         raise exceptions.IssuanceError('Cannot lock or transfer an unissued asset.')
-        
+
+    # For SQLite3
+    total = sum([issuance['amount'] for issuance in issuances])
+    if total + amount > config.MAX_INT:
+        raise exception.IssuanceError('Maximum total quantity exceeded.')
+
     if destination and amount:
         raise exceptions.IssuanceError('Cannot issue and transfer simultaneously.')
         
@@ -48,9 +53,6 @@ def parse (db, tx, message):
         asset, amount, divisible = None, None, None
         validity = 'Invalid: could not unpack'
 
-    # For SQLite3
-    amount = min(amount, config.MAX_INT)
-
     if validity == 'Valid' and not util.valid_asset_name(asset):
         validity = 'Invalid: bad asset name'
 
@@ -67,6 +69,13 @@ def parse (db, tx, message):
                 validity = 'Invalid: asset is locked'
         elif not amount:
             validity = 'Invalid: cannot lock or transfer an unissued asset'
+
+    # For SQLite3
+    total = sum([issuance['amount'] for issuance in issuances])
+    if total + amount > config.MAX_INT:
+        amount = 0
+        if validity == 'Valid':
+            validity = 'Invalid: exceeded maximum total quantity'
 
     if validity == 'Valid' and asset in ('BTC', 'XCP'):
         validity = 'Invalid: cannot issue BTC or XCP'
