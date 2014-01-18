@@ -79,6 +79,9 @@ def initialise(db):
                         block_hash TEXT UNIQUE,
                         block_time INTEGER)
                    ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                        blocks_block_index_idx ON blocks (block_index)
+                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS transactions(
                         tx_index INTEGER PRIMARY KEY,
@@ -95,6 +98,12 @@ def initialise(db):
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
                         transactions_block_index_idx ON transactions (block_index)
                     ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                        transactions_tx_index_idx ON transactions (tx_index)
+                    ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                        transactions_tx_hash_idx ON transactions (tx_hash)
+                    ''')
 
     # Purge database of blocks, transactions from before BLOCK_FIRST.
     initialise_cursor.execute('''DELETE FROM blocks WHERE block_index<?''', (config.BLOCK_FIRST,))
@@ -105,18 +114,27 @@ def initialise(db):
                         asset TEXT,
                         amount INTEGER)
                    ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                        debits_address_idx ON debits (address)
+                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS credits(
                         address TEXT,
                         asset TEXT,
                         amount INTEGER)
                    ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                        credits_address_idx ON credits (address)
+                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS balances(
                         address TEXT,
                         asset TEXT,
                         amount INTEGER)
                    ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                        balances_address_idx ON balances (address)
+                    ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS sends(
                         tx_index INTEGER PRIMARY KEY,

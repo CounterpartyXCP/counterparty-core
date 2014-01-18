@@ -349,6 +349,11 @@ if __name__ == '__main__':
             config.BITCOIND_RPC_PORT = '18332'
         else:
             config.BITCOIND_RPC_PORT = '8332'
+    try:
+        int(config.BITCOIND_RPC_PORT)
+        assert int(config.BITCOIND_RPC_PORT) > 1 and int(config.BITCOIND_RPC_PORT) < 65535
+    except:
+        raise Exception("Please specific a valid port number bitcoind-rpc-port configuration parameter")
             
     # Bitcoind RPC password
     if args.bitcoind_rpc_password:
@@ -378,6 +383,11 @@ if __name__ == '__main__':
             config.RPC_PORT = '14000'
         else:
             config.RPC_PORT = '4000'
+    try:
+        int(config.RPC_PORT)
+        assert int(config.RPC_PORT) > 1 and int(config.RPC_PORT) < 65535
+    except:
+        raise Exception("Please specific a valid port number rpc-port configuration parameter")
   
     # Log
     if args.log_file:

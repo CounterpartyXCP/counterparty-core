@@ -13,7 +13,7 @@ The Counterparty protocol specification may be found at
 
 # Dependencies
 * [Python 3](http://python.org)
-* Python 3 packages: apsw, requests, appsdirs, prettytable, python-dateutil, json-rpc, werkzeug, pycoin (see [this link](https://github.com/xnova/counterpartyd_build/blob/master/dist/reqs.txt) for exact working versions)
+* Python 3 packages: apsw, requests, appdirs, prettytable, python-dateutil, json-rpc, cherrypy, pycoin (see [this link](https://github.com/xnova/counterpartyd_build/blob/master/dist/reqs.txt) for exact working versions)
 * Bitcoind
 
 # Installation
