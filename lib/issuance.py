@@ -31,7 +31,7 @@ def create (db, source, destination, asset, amount, divisible, test=False):
     # For SQLite3
     total = sum([issuance['amount'] for issuance in issuances])
     if total + amount > config.MAX_INT:
-        raise exception.IssuanceError('Maximum total quantity exceeded.')
+        raise exceptions.IssuanceError('Maximum total quantity exceeded.')
 
     if destination and amount:
         raise exceptions.IssuanceError('Cannot issue and transfer simultaneously.')

@@ -25,13 +25,16 @@ OP_2 = b'\x52'
 OP_CHECKMULTISIG = b'\xae'
 b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
+request_session = None
 dhash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
 
 def connect (host, payload, headers):
+    global request_session
+    if not request_session: request_session = requests.Session()
     TRIES = 12
     for i in range(TRIES):
         try:
-            response = requests.post(host, data=json.dumps(payload), headers=headers)
+            response = request_session.post(host, data=json.dumps(payload), headers=headers)
             return response
         except requests.exceptions.ConnectionError:
             print('Could not connect to Bitcoind. Sleeping for five seconds. (Try {}/{})'.format(i, TRIES), file=sys.stderr)

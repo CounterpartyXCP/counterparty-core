@@ -466,6 +466,18 @@ def get_burns (db, validity=True, address=None, order_by='tx_index', order_dir='
     cursor.close()
     return do_order_by(burns, order_by, order_dir)
 
+def get_cancels (db, validity=True, source=None, order_by=None, order_dir=None, start_block=None, end_block=None):
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM cancels%s'''
+         % get_limit_to_blocks(start_block, end_block))
+    cancels = []
+    for cancel in cursor.fetchall():
+        if validity and cancel['validity'] != validity: continue
+        if source and cancel['source'] != source: continue
+        cancels.append(dict(cancel))
+    cursor.close()
+    return do_order_by(cancels, order_by, order_dir)
+
 def get_address (db, address):
     if not bitcoin.base58_decode(address, config.ADDRESSVERSION):
         raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
