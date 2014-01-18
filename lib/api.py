@@ -172,6 +172,16 @@ class reqthread ( threading.Thread ):
                 end_block=end_block)
 
         @dispatcher.add_method
+        def get_cancels(source=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
+            return util.get_cancels(db,
+                source=source,
+                validity='Valid' if bool(is_valid) else None,
+                order_by=order_by,
+                order_dir=order_dir,
+                start_block=start_block,
+                end_block=end_block)
+
+        @dispatcher.add_method
         def do_send(source, destination, quantity, asset, unsigned=False):
             unsigned_tx_hex = send.create(db, source, destination, quantity, asset)
             return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
