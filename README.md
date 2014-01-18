@@ -25,9 +25,8 @@ In order for counterpartyd to function, it must be able to communicate with a
 running instance of Bitcoind or Bitcoin-Qt, which handles many Bitcoin‐specific
 matters on its behalf, including all wallet and private key management. For
 such interoperability, Bitcoind must be run with the following options:
-`-txindex=1` `-server=1` and, as desired, `-testnet=1`. This may require
-the setting of a JSON‐RPC password, which may be saved in Bitcoind’s
-configuration file.
+`-txindex=1` `-server=1`. This may require the setting of a JSON‐RPC password,
+which may be saved in Bitcoind’s configuration file.
 
 counterpartyd needs to know at least the JSON‐RPC password of the Bitcoind with
 which it is supposed to communicate. The simplest way to set this is to
@@ -48,8 +47,7 @@ files are not the same. A Bitcoind configuration file looks like this:
 However, a counterpartyd configuration file looks like this:
 
 	[Default]
-	rpc-password=PASSWORD
-	testnet = 1
+	bitcoind-rpc-password=PASSWORD
 
 Note the change in hyphenation between ‘rpcpassword’ and ‘rpc-password’.
 
