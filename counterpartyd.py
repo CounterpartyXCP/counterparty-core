@@ -154,8 +154,12 @@ def format_order (order):
     give_asset = order['give_asset']
     get_asset = order['get_asset']
 
-    price = util.devise(db, D(get_remaining) / D(give_remaining), 'price', 'output')
-    price_assets = get_asset + '/' + give_asset
+    if get_asset < give_asset:
+        price = util.devise(db, D(get_remaining) / D(give_remaining), 'price', 'output')
+        price_assets = get_asset + '/' + give_asset
+    else:
+        price = util.devise(db, D(give_remaining) / D(get_remaining), 'price', 'output')
+        price_assets = give_asset + '/' + get_asset
 
     if order['fee_required']:
         fee = str(order['fee_required'] / config.UNIT)
