@@ -134,6 +134,7 @@ def get_asset_id (asset):
     # Minimum of four letters long.
     if not n > 26**3:
         raise exceptions.AssetError('Invalid asset name.')
+
     return n
 
 def get_asset_name (asset_id):
@@ -143,6 +144,7 @@ def get_asset_name (asset_id):
     # Minimum of four letters long.
     if not asset_id > 26**3:
         raise exceptions.AssetError('Invalid asset name.')
+
     # Divide that integer into Base 26 string.
     res = []
     n = asset_id
@@ -150,7 +152,9 @@ def get_asset_name (asset_id):
         n, r = divmod (n, 26)
         res.append(b26_digits[r])
     asset = ''.join(res[::-1])
+
     if not valid_asset_name(asset): raise exceptions.AssetError('Invalid asset name.')
+
     return asset
 
 

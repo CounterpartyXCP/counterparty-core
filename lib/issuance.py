@@ -14,6 +14,8 @@ LENGTH = 8 + 8 + 1
 def create (db, source, destination, asset, amount, divisible, test=False):
     if not util.valid_asset_name(asset):
         raise exceptions.AssetError('Bad asset name.')
+    if asset in ('BTC', 'XCP'):
+            raise exceptions.IssuanceError('Cannot issue BTC or XCP.')
 
     # Valid re-issuance?
     issuances = util.get_issuances(db, validity='Valid', asset=asset)
@@ -112,6 +114,10 @@ def parse (db, tx, message):
                         validity)
                   )
         
+    # Debit fee.
+    if validity == 'Valid' and amount:
+        validity = util.debit(db, tx['source'], 'XCP', 1)
+
     # Credit.
     if validity == 'Valid' and amount:
         util.credit(db, tx['source'], asset, amount)

@@ -417,7 +417,7 @@ def test_json_rpc():
     thread.start()
     time.sleep(.1)
 
-    url = 'http://localhost:' + str(config.RPC_PORT) + '/jsonrpc'
+    url = 'http://localhost:' + str(config.RPC_PORT) + '/jsonrpc/'
     headers = {'content-type': 'application/json'}
 
     payloads = []
@@ -431,7 +431,7 @@ def test_json_rpc():
     for payload in payloads:
         response = requests.post(
             url, data=json.dumps(payload), headers=headers).json()
-        print(response['result'])   # TODO
+        response = json.loads(response) # Wierd
         try:
             output_new['rpc.' + payload['method']] = response['result']
         except:
@@ -478,9 +478,9 @@ def test_output():
 
 def test_log():
     with open(CURR_DIR + '/log', 'r') as f:
-        old_log = f.readlines()
+        old_log = f.readlines()[:-2]  # TODO: Ugly hack to avoid comparing timestamps.
     with open(CURR_DIR + '/log.new', 'r') as f:
-        new_log = f.readlines()
+        new_log = f.readlines()[:-2]  # TODO: Ugly hack to avoid comparing timestamps
 
     log_diff = list(difflib.unified_diff(old_log, new_log, n=0))
     print(log_diff)

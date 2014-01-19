@@ -12,10 +12,13 @@ CREATE TABLE balances(
                         address TEXT,
                         asset TEXT,
                         amount INTEGER);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',148461572600);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',148461572598);
 INSERT INTO balances VALUES('n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',50000000);
 INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',950000000);
 INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',100000);
+-- Triggers and indices on  balances
+CREATE INDEX balances_address_idx ON balances (address)
+                    ;
 
 -- Table  bet_matches
 DROP TABLE IF EXISTS bet_matches;
@@ -82,6 +85,9 @@ CREATE TABLE blocks(
                         block_index INTEGER PRIMARY KEY,
                         block_hash TEXT UNIQUE,
                         block_time INTEGER);
+-- Triggers and indices on  blocks
+CREATE INDEX blocks_block_index_idx ON blocks (block_index)
+                    ;
 
 -- Table  broadcasts
 DROP TABLE IF EXISTS broadcasts;
@@ -165,6 +171,9 @@ INSERT INTO credits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',184300000)
 INSERT INTO credits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',315700000);
 INSERT INTO credits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',25000000);
 INSERT INTO credits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',56999960100);
+-- Triggers and indices on  credits
+CREATE INDEX credits_address_idx ON credits (address)
+                    ;
 
 -- Table  debits
 DROP TABLE IF EXISTS debits;
@@ -174,6 +183,8 @@ CREATE TABLE debits(
                         amount INTEGER);
 INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',50000000);
 INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',105000000);
+INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',1);
+INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',1);
 INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',60);
 INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',50000000);
 INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',2500000);
@@ -188,6 +199,9 @@ INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',37500000);
 INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',650000000);
 INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',32500000);
 INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',50000000);
+-- Triggers and indices on  debits
+CREATE INDEX debits_address_idx ON debits (address)
+                    ;
 
 -- Table  dividends
 DROP TABLE IF EXISTS dividends;
@@ -324,6 +338,10 @@ INSERT INTO transactions VALUES(20,'83891d7fe85c33e52c8b4e5814c92fb6a3b946729920
 INSERT INTO transactions VALUES(21,'2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608',21,21,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mvCounterpartyXXXXXXXXXXXXXXW24Hef',100000000,10000,X'',1);
 -- Triggers and indices on  transactions
 CREATE INDEX transactions_block_index_idx ON transactions (block_index)
+                    ;
+CREATE INDEX transactions_tx_hash_idx ON transactions (tx_hash)
+                    ;
+CREATE INDEX transactions_tx_index_idx ON transactions (tx_index)
                     ;
 
 COMMIT TRANSACTION;
