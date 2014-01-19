@@ -207,8 +207,8 @@ class reqthread ( threading.Thread ):
             return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
         
         @dispatcher.add_method
-        def do_broadcast(source, fee_multiplier, text, value=0, unsigned=False):
-            unsigned_tx_hex = broadcast.create(db, source, int(time.time()),
+        def do_broadcast(source, fee_multiplier, text, timestamp, value=0, unsigned=False):
+            unsigned_tx_hex = broadcast.create(db, source, timestamp,
                                                value, fee_multiplier, text)
             return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
         

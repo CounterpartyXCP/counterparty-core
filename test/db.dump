@@ -12,7 +12,7 @@ CREATE TABLE balances(
                         address TEXT,
                         asset TEXT,
                         amount INTEGER);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',148461572598);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',148461572600);
 INSERT INTO balances VALUES('n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',50000000);
 INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',950000000);
 INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',100000);
@@ -183,8 +183,6 @@ CREATE TABLE debits(
                         amount INTEGER);
 INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',50000000);
 INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',105000000);
-INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',1);
-INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',1);
 INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',60);
 INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',50000000);
 INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',2500000);

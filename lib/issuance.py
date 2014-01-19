@@ -115,8 +115,9 @@ def parse (db, tx, message):
                   )
         
     # Debit fee.
-    if validity == 'Valid' and amount:
-        validity = util.debit(db, tx['source'], 'XCP', 1)
+    # TODO: Add amount destroyed to table.
+    if validity == 'Valid' and amount and tx['block_index'] > 281236:
+        validity = util.debit(db, tx['source'], 'XCP', 5)
 
     # Credit.
     if validity == 'Valid' and amount:
