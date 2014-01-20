@@ -598,7 +598,7 @@ An object that describes the history of a requested address:
 * **sends** (*list*): The sends performed with this address, as a list of :ref:`send objects <send-object>`.
 * **orders** (*list*): The orders of this address,  as a list of :ref:`order objects <order-object>`.
 * **order_matches** (*list*): All orders matchings to which this address was a party, as a list of :ref:`order match objects <order-match-object>`.
-* **btcpays** (*list*): The BTC pays on this address, as a list of :ref:`BTCPay objects <btc-pay-object>`.
+* **btcpays** (*list*): The BTC pays on this address, as a list of :ref:`BTCPay objects <btcpay-object>`.
 * **issuances** (*list*): The asset issuances performed by this address, as a list of :ref:`issuance objects <issuance-object>`.
 * **broadcasts** (*list*): The broadcasts performed by this address, as a list of :ref:`broadcast objects <broadcast-object>`.
 * **bets** (*list*): All bets made from this address, as a list of :ref:`bet objects <bet-object>`.
