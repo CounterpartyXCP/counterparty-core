@@ -38,16 +38,14 @@ class reqthread ( threading.Thread ):
                 return None
         
         @dispatcher.add_method
-        def get_balances (filters=[], order_by=None, order_dir=None):
-            if filters is None: filters=[]            
+        def get_balances (filters=None, order_by=None, order_dir=None):
             return util.get_balances(db,
                 filters=filters,
                 order_by=order_by,
                 order_dir=order_dir)
 
         @dispatcher.add_method
-        def get_bets(filters=[], is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
-            if filters is None: filters=[]            
+        def get_bets(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
             return util.get_bets(db,
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
@@ -57,8 +55,7 @@ class reqthread ( threading.Thread ):
                 end_block=end_block)
 
         @dispatcher.add_method
-        def get_bet_matches(filters=[], is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
-            if filters is None: filters=[]            
+        def get_bet_matches(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
             return util.get_bet_matches(db,
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
@@ -68,8 +65,7 @@ class reqthread ( threading.Thread ):
                 end_block=end_block)
 
         @dispatcher.add_method
-        def get_broadcasts(filters=[], is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
-            if filters is None: filters=[]            
+        def get_broadcasts(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
             return util.get_broadcasts(db,
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
@@ -79,8 +75,7 @@ class reqthread ( threading.Thread ):
                 end_block=end_block)
 
         @dispatcher.add_method
-        def get_btcpays(filters=[], is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
-            if filters is None: filters=[]            
+        def get_btcpays(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
             return util.get_btcpays(db, 
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
@@ -90,8 +85,7 @@ class reqthread ( threading.Thread ):
                 end_block=end_block)
 
         @dispatcher.add_method
-        def get_burns(filters=[], is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
-            if filters is None: filters=[]            
+        def get_burns(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
             return util.get_burns(db,
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
@@ -101,8 +95,7 @@ class reqthread ( threading.Thread ):
                 end_block=end_block)
 
         @dispatcher.add_method
-        def get_cancels(filters=[], is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
-            if filters is None: filters=[]            
+        def get_cancels(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
             return util.get_cancels(db,
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
@@ -112,24 +105,21 @@ class reqthread ( threading.Thread ):
                 end_block=end_block)
 
         @dispatcher.add_method
-        def get_credits (filters=[], order_by=None, order_dir=None):
-            if filters is None: filters=[]            
+        def get_credits (filters=None, order_by=None, order_dir=None):
             return util.get_credits(db,
                 filters=filters,
                 order_by=order_by,
                 order_dir=order_dir)
 
         @dispatcher.add_method
-        def get_debits (filters=[], order_by=None, order_dir=None):
-            if filters is None: filters=[]            
+        def get_debits (filters=None, order_by=None, order_dir=None):
             return util.get_debits(db,
                 filters=filters,
                 order_by=order_by,
                 order_dir=order_dir)
 
         @dispatcher.add_method
-        def get_dividends(filters=[], is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
-            if filters is None: filters=[]            
+        def get_dividends(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
             return util.get_dividends(db,
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
@@ -139,8 +129,7 @@ class reqthread ( threading.Thread ):
                 end_block=end_block)
 
         @dispatcher.add_method
-        def get_issuances(filters=[], is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
-            if filters is None: filters=[]            
+        def get_issuances(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
             return util.get_issuances(db,
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
@@ -150,8 +139,7 @@ class reqthread ( threading.Thread ):
                 end_block=end_block)
 
         @dispatcher.add_method
-        def get_orders (filters=[], is_valid=True, show_expired=True, order_by=None, order_dir=None, start_block=None, end_block=None):
-            if filters is None: filters=[]            
+        def get_orders (filters=None, is_valid=True, show_expired=True, order_by=None, order_dir=None, start_block=None, end_block=None):
             return util.get_orders(db,
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
@@ -162,8 +150,7 @@ class reqthread ( threading.Thread ):
                 end_block=end_block)
         
         @dispatcher.add_method
-        def get_order_matches (filters=[], is_valid=True, is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None):
-            if filters is None: filters=[]            
+        def get_order_matches (filters=None, is_valid=True, is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None):
             return util.get_order_matches(db,
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
@@ -174,8 +161,7 @@ class reqthread ( threading.Thread ):
                 end_block=end_block)
 
         @dispatcher.add_method
-        def get_sends (filters=[], is_valid=None, order_by=None, order_dir=None, start_block=None, end_block=None):
-            if filters is None: filters=[]            
+        def get_sends (filters=None, is_valid=None, order_by=None, order_dir=None, start_block=None, end_block=None):
             return util.get_sends(db, 
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
@@ -278,24 +264,25 @@ class reqthread ( threading.Thread ):
         application.log.access_log.propagate = False
         application.log.error_log.propagate = False
         
-        #set up a rotating log handler for this application
-        # Remove the default FileHandlers if present.
-        application.log.error_file = ""
-        application.log.access_file = ""
-        maxBytes = getattr(application.log, "rot_maxBytes", 10000000)
-        backupCount = getattr(application.log, "rot_backupCount", 1000)
-        # Make a new RotatingFileHandler for the error log.
-        fname = getattr(application.log, "rot_error_file", os.path.join(config.data_dir, "api.error.log"))
-        h = logging_handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
-        h.setLevel(logging.DEBUG)
-        h.setFormatter(cherrypy._cplogging.logfmt)
-        application.log.error_log.addHandler(h)
-        # Make a new RotatingFileHandler for the access log.
-        fname = getattr(application.log, "rot_access_file", os.path.join(config.data_dir, "api.access.log"))
-        h = logging_handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
-        h.setLevel(logging.DEBUG)
-        h.setFormatter(cherrypy._cplogging.logfmt)
-        application.log.access_log.addHandler(h)
+        if not util.is_testsuite_running(): #skip setting up logs when we are running the test suite
+            #set up a rotating log handler for this application
+            # Remove the default FileHandlers if present.
+            application.log.error_file = ""
+            application.log.access_file = ""
+            maxBytes = getattr(application.log, "rot_maxBytes", 10000000)
+            backupCount = getattr(application.log, "rot_backupCount", 1000)
+            # Make a new RotatingFileHandler for the error log.
+            fname = getattr(application.log, "rot_error_file", os.path.join(config.data_dir, "api.error.log"))
+            h = logging_handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
+            h.setLevel(logging.DEBUG)
+            h.setFormatter(cherrypy._cplogging.logfmt)
+            application.log.error_log.addHandler(h)
+            # Make a new RotatingFileHandler for the access log.
+            fname = getattr(application.log, "rot_access_file", os.path.join(config.data_dir, "api.access.log"))
+            h = logging_handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
+            h.setLevel(logging.DEBUG)
+            h.setFormatter(cherrypy._cplogging.logfmt)
+            application.log.access_log.addHandler(h)
 
         #start up the API listener/handler
         server = wsgiserver.CherryPyWSGIServer(
