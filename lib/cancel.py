@@ -23,7 +23,7 @@ def create (db, offer_hash, test=False):
         raise exceptions.Useless('No valid offer with that hash.')
 
     source = offer['source']
-    if not bitcoin.rpc('validateaddress', [source])['ismine']:
+    if not bitcoin.rpc('validateaddress', [source])['ismine'] and not test:
         raise exceptions.CancelError('That offer was not made by one of your addresses.')
 
     offer_hash_bytes = binascii.unhexlify(bytes(offer_hash, 'utf-8'))
