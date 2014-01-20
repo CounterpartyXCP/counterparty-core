@@ -25,7 +25,7 @@ from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, 
 
 # JSON-RPC Options
 CONFIGFILE = os.path.expanduser('~') + '/.bitcoin/bitcoin.conf'
-config.PREFIX = b'TEST'
+config.PREFIX = b'TESTXXXX'
 config.BITCOIND_RPC_CONNECT = 'localhost'
 config.BITCOIND_RPC_PORT = '18332' # Only run tests on testnet.
 try:
@@ -483,9 +483,9 @@ def test_output(sourceaddr):
 
 def test_log(sourceaddr):
     with open(CURR_DIR + '/log', 'r') as f:
-        old_log = f.readlines()[:-2]  # TODO: Ugly hack to avoid comparing timestamps.
+        old_log = f.readlines()
     with open(CURR_DIR + '/log.new', 'r') as f:
-        new_log = f.readlines()[:-2]  # TODO: Ugly hack to avoid comparing timestamps
+        new_log = f.readlines()
 
     log_diff = list(difflib.unified_diff(old_log, new_log, n=0))
     print(log_diff)

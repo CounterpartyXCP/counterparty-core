@@ -25,5 +25,4 @@ Broadcast: 'Unit Test' = 2.0 from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-
 Order: sell 0.5 BBBB for 0.5 XCP at 1.0000 XCP/BBBB in 10 blocks (ab897fbd...300a62e2)
 Cancel: ab897fbd...300a62e2 (83891d7f...b452d879)
 Burn: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 0.38 BTC for 569.999601 XCP (2f0fd1e8...6ff58608)
-::1 - - [18/Jan/2014:21:23:32] "POST /jsonrpc/ HTTP/1.1" 200 345 "" "python-requests/2.2.0 CPython/3.3.3 Linux/3.12.6-1-ARCH"
 STOP TEST
