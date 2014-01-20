@@ -176,19 +176,20 @@ def debit (db, address, asset, amount):
                           WHERE (address=? and asset=?)''',
                        (balance, address, asset)) 
         validity = 'Valid'
+
+        # Record debit.
+        logging.debug('Debit: {} of {} from {}'.format(devise(db, amount, asset, 'output'), asset, address))
+        debit_cursor.execute('''INSERT INTO debits(
+                            address,
+                            asset,
+                            amount) VALUES(?,?,?)''',
+                            (address,
+                            asset,
+                            amount)
+                      )
     else:
         validity = 'Invalid: insufficient funds'
 
-    # Record debit.
-    logging.debug('Debit: {} of {} from {}'.format(devise(db, amount, asset, 'output'), asset, address))
-    debit_cursor.execute('''INSERT INTO debits(
-                        address,
-                        asset,
-                        amount) VALUES(?,?,?)''',
-                        (address,
-                        asset,
-                        amount)
-                  )
     debit_cursor.close()
     return validity
 
