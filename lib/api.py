@@ -264,7 +264,7 @@ class reqthread ( threading.Thread ):
         application.log.access_log.propagate = False
         application.log.error_log.propagate = False
         
-        if not util.is_testsuite_running(): #skip setting up logs when we are running the test suite
+        if config.PREFIX != b'TESTXXXX':  #skip setting up logs when for the test suite
             #set up a rotating log handler for this application
             # Remove the default FileHandlers if present.
             application.log.error_file = ""

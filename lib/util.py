@@ -24,8 +24,6 @@ DO_FILTER_OPERATORS = {
     '>=': operator.ge,
 }
 
-is_testsuite_running = lambda: config.PREFIX == b'TEST' 
-
 def rowtracer(cursor, sql):
     dictionary = {}
     description = cursor.getdescription()
