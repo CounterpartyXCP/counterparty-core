@@ -218,6 +218,8 @@ if __name__ == '__main__':
 
     parser.add_argument('--rpc-host', help='the host to provide the counterpartyd JSON-RPC API')
     parser.add_argument('--rpc-port', type=int, help='port on which to provide the counterpartyd JSON-RPC API')
+    parser.add_argument('--rpc-user', help='required username to use the counterpartyd JSON-RPC API (via HTTP basic auth)')
+    parser.add_argument('--rpc-password', help='required password (for rpc-user) to use the counterpartyd JSON-RPC API (via HTTP basic auth)')
 
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
@@ -327,14 +329,6 @@ if __name__ == '__main__':
     else:
         config.TESTCOIN = False
 
-    # Bitcoind RPC user
-    if args.bitcoind_rpc_user:
-        config.BITCOIND_RPC_USER = args.bitcoind_rpc_user
-    elif has_config and 'bitcoind-rpc-user' in configfile['Default']:
-        config.BITCOIND_RPC_USER = configfile['Default']['bitcoind-rpc-user']
-    else:
-        config.BITCOIND_RPC_USER = 'bitcoinrpc'
-
     # Bitcoind RPC host
     if args.bitcoind_rpc_connect:
         config.BITCOIND_RPC_CONNECT = args.bitcoind_rpc_connect
@@ -359,13 +353,21 @@ if __name__ == '__main__':
     except:
         raise Exception("Please specific a valid port number bitcoind-rpc-port configuration parameter")
             
+    # Bitcoind RPC user
+    if args.bitcoind_rpc_user:
+        config.BITCOIND_RPC_USER = args.bitcoind_rpc_user
+    elif has_config and 'bitcoind-rpc-user' in configfile['Default']:
+        config.BITCOIND_RPC_USER = configfile['Default']['bitcoind-rpc-user']
+    else:
+        config.BITCOIND_RPC_USER = 'bitcoinrpc'
+
     # Bitcoind RPC password
     if args.bitcoind_rpc_password:
         config.BITCOIND_RPC_PASSWORD = args.bitcoind_rpc_password
     elif has_config and 'bitcoind-rpc-password' in configfile['Default']:
         config.BITCOIND_RPC_PASSWORD = configfile['Default']['bitcoind-rpc-password']
     else:
-        raise exceptions.ConfigurationError('RPC password not set. (Use configuration file or --bitcoind-rpc-password=PASSWORD)')
+        raise exceptions.ConfigurationError('bitcoind RPC password not set. (Use configuration file or --bitcoind-rpc-password=PASSWORD)')
 
     config.BITCOIND_RPC = 'http://' + config.BITCOIND_RPC_USER + ':' + config.BITCOIND_RPC_PASSWORD + '@' + config.BITCOIND_RPC_CONNECT + ':' + str(config.BITCOIND_RPC_PORT)
 
@@ -392,7 +394,23 @@ if __name__ == '__main__':
         assert int(config.RPC_PORT) > 1 and int(config.RPC_PORT) < 65535
     except:
         raise Exception("Please specific a valid port number rpc-port configuration parameter")
-  
+
+    # RPC user
+    if args.rpc_user:
+        config.RPC_USER = args.rpc_user
+    elif has_config and 'rpc-user' in configfile['Default']:
+        config.RPC_USER = configfile['Default']['rpc-user']
+    else:
+        config.RPC_USER = 'rpc'
+
+    # RPC password
+    if args.rpc_password:
+        config.RPC_PASSWORD = args.rpc_password
+    elif has_config and 'rpc-password' in configfile['Default']:
+        config.RPC_PASSWORD = configfile['Default']['rpc-password']
+    else:
+        raise exceptions.ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
+
     # Log
     if args.log_file:
         config.LOG = args.log_file

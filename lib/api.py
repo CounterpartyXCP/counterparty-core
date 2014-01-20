@@ -261,10 +261,15 @@ class reqthread ( threading.Thread ):
             'log.error_log.propagate': False,
             'log.access_log.propagate': False,
             "server.logToScreen" : False
-        })        
+        })
+        checkpassword = cherrypy.lib.auth_basic.checkpassword_dict(
+            {config.RPC_USER: config.RPC_PASSWORD})
         app_config = {
             '/': { 
                 'tools.trailing_slash.on': False,
+                'tools.auth_basic.on': True,
+                'tools.auth_basic.realm': 'counterpartyd',
+                'tools.auth_basic.checkpassword': checkpassword,
             },
         }
         application = cherrypy.Application(Root(), script_name="/jsonrpc/", config=app_config)
