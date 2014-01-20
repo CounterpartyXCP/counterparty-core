@@ -109,6 +109,7 @@ def initialise(db):
     initialise_cursor.execute('''DELETE FROM blocks WHERE block_index<?''', (config.BLOCK_FIRST,))
     initialise_cursor.execute('''DELETE FROM transactions WHERE block_index<?''', (config.BLOCK_FIRST,))
 
+    # NOTE: Only valid debits listed
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS debits(
                         address TEXT,
                         asset TEXT,
@@ -118,6 +119,7 @@ def initialise(db):
                         debits_address_idx ON debits (address)
                     ''')
 
+    # NOTE: Only valid credits listed
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS credits(
                         address TEXT,
                         asset TEXT,
