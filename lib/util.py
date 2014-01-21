@@ -56,7 +56,7 @@ def database_check (db):
         time.sleep(1)
     raise exceptions.DatabaseError('Counterparty database is behind Bitcoind. Is the counterpartyd server running?')
 
-def do_filter(results, filters):
+def do_filter(results, filters, filterop):
     """Filter results based on a filter data structure (as used by the API)"""
     if not len(results) or not filters: #empty results, or not filtering
         return results
@@ -68,6 +68,8 @@ def do_filter(results, filters):
         for field in required_fields: #should have all fields
             if field not in filter:
                 raise Exception("A specified filter is missing the '%s' field" % field)
+        if filterop not in ('and', 'or'):
+            raise Exception("Invalid filterop setting. Must be either 'and' or 'or'.")
         if filter['op'] not in DO_FILTER_OPERATORS.keys():
             raise Exception("A specified filter op is invalid or not recognized: '%s'" % filter['op'])
         if filter['field'] == 'block_index':
@@ -81,9 +83,15 @@ def do_filter(results, filters):
             raise Exception("Value specified for filter field '%s' does not match the data type of that field (value: %s, field: %s)" % (
                 filter['field'], type(filter['value']), type(results[0][filter['field']])))
     #filter data
-    for filter in filters:
-        results = [e for e in results if DO_FILTER_OPERATORS[filter['op']](e[filter['field']], filter['value'])]
-    return results
+    if filterop == 'and':
+        for filter in filters:
+            results = [e for e in results if DO_FILTER_OPERATORS[filter['op']](e[filter['field']], filter['value'])]
+        return results
+    else: #or
+        combined_results = []
+        for filter in filters:
+            combined_results += [e for e in results if DO_FILTER_OPERATORS[filter['op']](e[filter['field']], filter['value'])]
+        return combined_results
 
 def do_order_by(results, order_by, order_dir):
     if not len(results) or not order_by: #empty results, or not ordering
@@ -319,7 +327,7 @@ def devise (db, quantity, asset, dest, divisible=None):
             raise exceptions.QuantityError('Fractional quantities of indivisible assets.')
         return round(quantity)
 
-def get_debits (db, address=None, asset=None, filters=None, order_by=None, order_dir='asc'):
+def get_debits (db, address=None, asset=None, filters=None, order_by=None, order_dir='asc', filterop='and'):
     """This does not include BTC."""
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,] 
@@ -327,11 +335,11 @@ def get_debits (db, address=None, asset=None, filters=None, order_by=None, order
     if asset: filters.append({'field': 'asset', 'op': '==', 'value': asset})
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM debits''')
-    results = do_filter(cursor.fetchall(), filters)
+    results = do_filter(cursor.fetchall(), filters, filterop)
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_credits (db, address=None, asset=None, filters=None, order_by=None, order_dir='asc'):
+def get_credits (db, address=None, asset=None, filters=None, order_by=None, order_dir='asc', filterop='and'):
     """This does not include BTC."""
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,] 
@@ -339,11 +347,11 @@ def get_credits (db, address=None, asset=None, filters=None, order_by=None, orde
     if asset: filters.append({'field': 'asset', 'op': '==', 'value': asset})
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM credits''')
-    results = do_filter(cursor.fetchall(), filters)
+    results = do_filter(cursor.fetchall(), filters, filterop)
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_balances (db, address=None, asset=None, filters=None, order_by=None, order_dir='asc'):
+def get_balances (db, address=None, asset=None, filters=None, order_by=None, order_dir='asc', filterop='and'):
     """This should never be used to check Bitcoin balances."""
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,] 
@@ -351,11 +359,11 @@ def get_balances (db, address=None, asset=None, filters=None, order_by=None, ord
     if asset: filters.append({'field': 'asset', 'op': '==', 'value': asset})
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM balances''')
-    results = do_filter(cursor.fetchall(), filters)
+    results = do_filter(cursor.fetchall(), filters, filterop)
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_sends (db, validity=None, source=None, destination=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None):
+def get_sends (db, validity=None, source=None, destination=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,] 
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
@@ -364,11 +372,11 @@ def get_sends (db, validity=None, source=None, destination=None, filters=None, o
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM sends%s'''
         % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters)
+    results = do_filter(cursor.fetchall(), filters, filterop)
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_orders (db, validity=None, source=None, show_empty=True, show_expired=True, filters=None, order_by='price', order_dir='asc', start_block=None, end_block=None):
+def get_orders (db, validity=None, source=None, show_empty=True, show_expired=True, filters=None, order_by='price', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     def filter_expired(e):
         #Ignore BTC orders one block early. (This is why we need show_expired.)
         #function returns True if the element is NOT expired
@@ -384,12 +392,12 @@ def get_orders (db, validity=None, source=None, show_empty=True, show_expired=Tr
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM orders%s'''
         % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters)
+    results = do_filter(cursor.fetchall(), filters, filterop)
     cursor.close()
     if not show_expired: results = [e for e in results if filter_expired(r)]
     return do_order_by(results, order_by, order_dir)
 
-def get_order_matches (db, validity=None, is_mine=False, address=None, tx0_hash=None, tx1_hash=None, filters=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None):
+def get_order_matches (db, validity=None, is_mine=False, address=None, tx0_hash=None, tx1_hash=None, filters=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     def filter_is_mine(e):
         if (    (not bitcoin.rpc('validateaddress', [e['tx0_address']])['ismine'] or 
                  e['forward_asset'] != 'BTC')
@@ -406,24 +414,24 @@ def get_order_matches (db, validity=None, is_mine=False, address=None, tx0_hash=
     cursor.execute('''SELECT * FROM order_matches%s'''
         % get_limit_to_blocks(start_block, end_block,
             col_names=['tx0_block_index', 'tx1_block_index']))
-    results = do_filter(cursor.fetchall(), filters)
+    results = do_filter(cursor.fetchall(), filters, filterop)
     cursor.close()
     if is_mine: results = [e for e in results if filter_is_mine(e)]
     if address: results = [e for e in results if e['tx0_address'] == address or e['tx1_address'] == address]
     return do_order_by(results, order_by, order_dir)
 
-def get_btcpays (db, validity=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None):
+def get_btcpays (db, validity=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,] 
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM btcpays%s'''
         % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters)
+    results = do_filter(cursor.fetchall(), filters, filterop)
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_issuances (db, validity=None, asset=None, issuer=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None):
+def get_issuances (db, validity=None, asset=None, issuer=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,] 
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
@@ -432,11 +440,11 @@ def get_issuances (db, validity=None, asset=None, issuer=None, filters=None, ord
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM issuances%s'''
          % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters)
+    results = do_filter(cursor.fetchall(), filters, filterop)
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_broadcasts (db, validity=None, source=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None):
+def get_broadcasts (db, validity=None, source=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,] 
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
@@ -444,11 +452,11 @@ def get_broadcasts (db, validity=None, source=None, filters=None, order_by='tx_i
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM broadcasts%s'''
          % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters)
+    results = do_filter(cursor.fetchall(), filters, filterop)
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_bets (db, validity=None, source=None, show_empty=True, filters=None, order_by='odds', order_dir='desc', start_block=None, end_block=None):
+def get_bets (db, validity=None, source=None, show_empty=True, filters=None, order_by='odds', order_dir='desc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,] 
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
@@ -457,11 +465,11 @@ def get_bets (db, validity=None, source=None, show_empty=True, filters=None, ord
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM bets%s'''
         % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters)
+    results = do_filter(cursor.fetchall(), filters, filterop)
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_bet_matches (db, validity=None, address=None, tx0_hash=None, tx1_hash=None, filters=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None):
+def get_bet_matches (db, validity=None, address=None, tx0_hash=None, tx1_hash=None, filters=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,] 
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
@@ -471,12 +479,12 @@ def get_bet_matches (db, validity=None, address=None, tx0_hash=None, tx1_hash=No
     cursor.execute('''SELECT * FROM bet_matches%s'''
          % get_limit_to_blocks(start_block, end_block,
              col_names=['tx0_block_index', 'tx1_block_index']))
-    results = do_filter(cursor.fetchall(), filters)
+    results = do_filter(cursor.fetchall(), filters, filterop)
     cursor.close()
     if address: results = [e for e in results if e['tx0_address'] == address or e['tx1_address'] == address]
     return do_order_by(results, order_by, order_dir)
 
-def get_dividends (db, validity=None, source=None, asset=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None):
+def get_dividends (db, validity=None, source=None, asset=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,] 
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
@@ -485,11 +493,11 @@ def get_dividends (db, validity=None, source=None, asset=None, filters=None, ord
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM dividends%s'''
          % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters)
+    results = do_filter(cursor.fetchall(), filters, filterop)
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_burns (db, validity=True, address=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None):
+def get_burns (db, validity=True, address=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,] 
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
@@ -497,11 +505,11 @@ def get_burns (db, validity=True, address=None, filters=None, order_by='tx_index
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM burns%s'''
          % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters)
+    results = do_filter(cursor.fetchall(), filters, filterop)
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_cancels (db, validity=True, source=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None):
+def get_cancels (db, validity=True, source=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,] 
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
@@ -509,7 +517,7 @@ def get_cancels (db, validity=True, source=None, filters=None, order_by=None, or
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM cancels%s'''
          % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters)
+    results = do_filter(cursor.fetchall(), filters, filterop)
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 

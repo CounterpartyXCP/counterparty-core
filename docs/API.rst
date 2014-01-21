@@ -42,7 +42,20 @@ Python Example
     #Fetch all balances for all assets for a specific address, using keyword-based arguments
     payload = {
       "method": "get_balances",
-      "params": {"filters": {'field': 'address', 'op': '==', 'value': sourceaddr}},
+      "params": {"filters": {'field': 'address', 'op': '==', 'value': "14qqz8xpzzEtj6zLs3M1iASP7T4mj687yq"}},
+      "jsonrpc": "2.0",
+      "id": 0,
+    }
+    response = requests.post(
+      url, data=json.dumps(payload), headers=headers, auth=auth).json()
+    print("GET_BALANCES RESULT: ", response)
+
+    #Fetch all balances for all assets for both of two addresses, using keyword-based arguments
+    payload = {
+      "method": "get_balances",
+      "params": {"filters": [{'field': 'address', 'op': '==', 'value': "14qqz8xpzzEtj6zLs3M1iASP7T4mj687yq"},
+                             {'field': 'address', 'op': '==', 'value': "1bLockjTFXuSENM8fGdfNUaWqiM4GPe7V"}],
+                             "filterop": "or"},
       "jsonrpc": "2.0",
       "id": 0,
     }
@@ -135,7 +148,7 @@ Filtering Read API results
 The Counterparty API aims to be as simple and flexible as possible. To this end, it includes a straightforward
 way to filter the results of most :ref:`Read API functions <read_api>` to get the data you want, and only that.
 
-For each Read API function that supports it, a ``filter`` parameter exists. To apply a filter to a specific data field,
+For each Read API function that supports it, a ``filters`` parameter exists. To apply a filter to a specific data field,
 specify an object (e.g. dict in Python) as this parameter, with the following members:
 
 - field: The field to filter on. Must be a valid field in the type of object being returned
@@ -143,7 +156,11 @@ specify an object (e.g. dict in Python) as this parameter, with the following me
 - value: The value that the field will be compared against. Must be the same data type as the field is
   (e.g. if the field is a string, the value must be a string too)
 
-If you want to filter by multiple fields, then you can specify a list of filter objects.
+If you want to filter by multiple fields, then you can specify a list of filter objects. To this end, API functions
+that take ``filters`` also take a ``filterop`` parameter, which determines how the filters are combined when multiple
+filters are specified. It defaults to ``"and"``, meaning that filters are ANDed togeher (and that any match
+must satisfy all of them). You can also specify ``"or"`` as an alternative setting, which would mean that
+filters are ORed together, and that any match must satisfy only one of them.
 
 To disable filtering, you can just not specify the filter argument (if using keyword-based arguments), or,
 if using positional arguments, just pass ``null`` or ``[]`` (empty list) for the parameter.
@@ -178,12 +195,12 @@ get_address
 get_balances
 ^^^^^^^^^^^^^^
 
-.. py:function:: get_balances(filter=[], order_by=null, order_dir=null)
+.. py:function:: get_balances(filters=[], order_by=null, order_dir=null, filterop="and")
 
    Gets the current address balances, optionally filtered by an address and/or asset ID. This list does not
    include any BTC balances.
 
-   :param list/dict filter: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
+   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
    :param string order_by: If sorted results are desired, specify the name of a :ref:`balance object <balance-object>` attribute to order the results by (e.g. ``amount``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.
    :return: A list of one or more :ref:`balance objects <balance-object>` if any matching records were found, otherwise ``[]`` (empty list).
@@ -194,16 +211,17 @@ get_balances
 get_bets
 ^^^^^^^^^^^^^^
 
-.. py:function:: get_bets(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=None, end_block=None)
+.. py:function:: get_bets(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=None, end_block=None, filterop="and")
 
    Gets a listing of bets.
 
-   :param list/dict filter: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
+   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
    :param boolean is_valid: Set to ``true`` to only return valid bets. Set to ``false`` to return all bets (including invalid attempts).
    :param string order_by: If sorted results are desired, specify the name of a :ref:`bet object <bet-object>` attribute to order the results by (e.g. ``wager_amount``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
    :param integer start_block: If specified, only results from the specified block index on will be returned  
    :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
+   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
    :return: A list of one or more :ref:`bet objects <bet-object>` if any matching records were found, otherwise ``[]`` (empty list).
 
 
@@ -212,16 +230,17 @@ get_bets
 get_bet_matches
 ^^^^^^^^^^^^^^^^^^^
 
-.. py:function:: get_bet_matches(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=None, end_block=None)
+.. py:function:: get_bet_matches(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=None, end_block=None, filterop="and")
 
    Gets a listing of order matches.
 
-   :param list/dict filter: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
+   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
    :param boolean is_valid: Set to ``true`` to only return valid bet matches. Set to ``false`` to return all bet matches (including invalid attempts).
    :param string order_by: If sorted results are desired, specify the name of a :ref:`bet match object <bet-match-object>` attribute to order the results by (e.g. ``deadline``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
    :param integer start_block: If specified, only results from the specified block index on will be returned  
    :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
+   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
    :return: A list of one or more :ref:`bet match objects <bet-match-object>` if any matching records were found, otherwise ``[]`` (empty list).
 
 
@@ -230,16 +249,17 @@ get_bet_matches
 get_broadcasts
 ^^^^^^^^^^^^^^
 
-.. py:function:: get_broadcasts(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=None, end_block=None)
+.. py:function:: get_broadcasts(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=None, end_block=None, filterop="and")
 
    Gets a listing of broadcasts.
 
-   :param list/dict filter: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
+   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
    :param boolean is_valid: Set to ``true`` to only return valid broadcasts. Set to ``false`` to return all broadcasts (including invalid attempts).
    :param string order_by: If sorted results are desired, specify the name of a :ref:`broadcast object <broadcast-object>` attribute to order the results by (e.g. ``fee_multiplier``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
    :param integer start_block: If specified, only results from the specified block index on will be returned  
    :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
+   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
    :return: A list of one or more :ref:`broadcast objects <broadcast-object>` if any matching records were found, otherwise ``[]`` (empty list).
 
 
@@ -248,16 +268,17 @@ get_broadcasts
 get_btcpays
 ^^^^^^^^^^^^^^
 
-.. py:function:: get_btcpays(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=None, end_block=None)
+.. py:function:: get_btcpays(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=None, end_block=None, filterop="and")
 
    Gets a listing of BTCPay records.
 
-   :param list/dict filter: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
+   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
    :param boolean is_valid: Set to ``true`` to only return valid BTCPays. Set to ``false`` to return all BTCPays (including invalid attempts).
    :param string order_by: If sorted results are desired, specify the name of a :ref:`BTCPay object <btcpay-object>` attribute to order the results by (e.g. ``block_index``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
    :param integer start_block: If specified, only results from the specified block index on will be returned  
    :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
+   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
    :return: A list of one or more :ref:`BTCPay objects <btcpay-object>` if any matching records were found, otherwise ``[]`` (empty list).
 
 
@@ -266,16 +287,17 @@ get_btcpays
 get_burns
 ^^^^^^^^^^^^^^
 
-.. py:function:: get_burns(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=None, end_block=None)
+.. py:function:: get_burns(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=None, end_block=None, filterop="and")
 
    Gets a listing of burns.
 
-   :param list/dict filter: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
+   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
    :param boolean is_valid: Set to ``true`` to only return valid dividend issuances. Set to ``false`` to return all dividend issuances (including invalid attempts).
    :param string order_by: If sorted results are desired, specify the name of a :ref:`burn object <burn-object>` attribute to order the results by (e.g. ``tx_hash``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
    :param integer start_block: If specified, only results from the specified block index on will be returned  
    :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
+   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
    :return: A list of one or more :ref:`burn objects <burn-object>` if any matching records were found, otherwise ``[]`` (empty list).
 
 
@@ -284,16 +306,17 @@ get_burns
 get_cancels
 ^^^^^^^^^^^^^^
 
-.. py:function:: get_cancels(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=None, end_block=None)
+.. py:function:: get_cancels(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=None, end_block=None, filterop="and")
 
    Gets a listing of canceled orders or bets.
 
-   :param list/dict filter: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
+   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
    :param boolean is_valid: Set to ``true`` to only return valid dividend issuances. Set to ``false`` to return all dividend issuances (including invalid attempts).
    :param string order_by: If sorted results are desired, specify the name of a :ref:`cancel object <cancel-object>` attribute to order the results by (e.g. ``source``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
    :param integer start_block: If specified, only results from the specified block index on will be returned  
    :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
+   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
    :return: A list of one or more :ref:`cancel objects <cancel-object>` if any matching records were found, otherwise ``[]`` (empty list).
 
 
@@ -302,14 +325,15 @@ get_cancels
 get_credits
 ^^^^^^^^^^^^^^
 
-.. py:function:: get_credits(filters=[], order_by=null, order_dir=null)
+.. py:function:: get_credits(filters=[], order_by=null, order_dir=null, filterop="and")
 
    Gets a sorted history of address credits, optionally filtered to an address and/or asset. This list does not
    include any BTC credits.
 
-   :param list/dict filter: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
+   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
    :param string order_by: If sorted results are desired, specify the name of a :ref:`debit/credit object <debit-credit-object>` attribute to order the results by (e.g. ``tx_hash``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
+   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
    :return: A list of one or more :ref:`debit/credit objects <debit-credit-object>` if any matching records were found, otherwise ``[]`` (empty list).
 
 
@@ -318,14 +342,15 @@ get_credits
 get_debits
 ^^^^^^^^^^^^^^
 
-.. py:function:: get_debits(filters=[], order_by=null, order_dir=null)
+.. py:function:: get_debits(filters=[], order_by=null, order_dir=null, filterop="and")
 
    Gets a sorted history of address debits, optionally filtered to an address and/or asset. This list does not
    include any BTC debits.
 
-   :param list/dict filter: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
+   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
    :param string order_by: If sorted results are desired, specify the name of a :ref:`debit/credit object <debit-credit-object>` attribute to order the results by (e.g. ``tx_hash``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
+   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
    :return: A list of one or more :ref:`debit/credit objects <debit-credit-object>` if any matching records were found, otherwise ``[]`` (empty list).
    
 
@@ -334,16 +359,17 @@ get_debits
 get_dividends
 ^^^^^^^^^^^^^^
 
-.. py:function:: get_dividends(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=None, end_block=None)
+.. py:function:: get_dividends(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=None, end_block=None, filterop="and")
 
    Gets a listing of dividends.
 
-   :param list/dict filter: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
+   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
    :param boolean is_valid: Set to ``true`` to only return valid dividend issuances. Set to ``false`` to return all dividend issuances (including invalid attempts).
    :param string order_by: If sorted results are desired, specify the name of a :ref:`dividend object <dividend-object>` attribute to order the results by (e.g. ``amount_per_share``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
    :param integer start_block: If specified, only results from the specified block index on will be returned  
    :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
+   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
    :return: A list of one or more :ref:`dividend objects <dividend-object>` if any matching records were found, otherwise ``[]`` (empty list).
 
 
@@ -352,16 +378,17 @@ get_dividends
 get_issuances
 ^^^^^^^^^^^^^^
 
-.. py:function:: get_issuances(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=None, end_block=None)
+.. py:function:: get_issuances(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=None, end_block=None, filterop="and")
 
    Gets a listing of asset issuances.
 
-   :param list/dict filter: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
+   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
    :param boolean is_valid: Set to ``true`` to only return valid issuances. Set to ``false`` to return all issuances (including invalid attempts).
    :param string order_by: If sorted results are desired, specify the name of an :ref:`issuance object <issuance-object>` attribute to order the results by (e.g. ``transfer``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
    :param integer start_block: If specified, only results from the specified block index on will be returned  
    :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
+   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
    :return: A list of one or more :ref:`issuance objects <issuance-object>` if any matching records were found, otherwise ``[]`` (empty list).
 
 
@@ -370,17 +397,18 @@ get_issuances
 get_orders
 ^^^^^^^^^^^^^^
 
-.. py:function:: get_orders(filters=[], is_valid=true, show_expired=true, order_by=null, order_dir=null, start_block=None, end_block=None)
+.. py:function:: get_orders(filters=[], is_valid=true, show_expired=true, order_by=null, order_dir=null, start_block=None, end_block=None, filterop="and")
 
    Gets a listing of orders (ordered by price, lowest to highest, and then by transaction ID).
 
-   :param list/dict filter: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
+   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
    :param boolean is_valid: Set to ``true`` to only return valid orders. Set to ``false`` to return all orders (including invalid attempts).
    :param boolean show_expired: Set to ``true`` to include expired orders in the results.
    :param string order_by: If sorted results are desired, specify the name of an :ref:`order object <order-object>` attribute to order the results by (e.g. ``get_asset``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
    :param integer start_block: If specified, only results from the specified block index on will be returned  
    :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
+   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
    :return: A list of one or more :ref:`order objects <order-object>` if any matching records were found, otherwise ``[]`` (empty list).
 
 
@@ -389,17 +417,18 @@ get_orders
 get_order_matches
 ^^^^^^^^^^^^^^^^^^^
 
-.. py:function:: get_order_matches(filters=[], is_valid=true, is_mine=false, order_by=null, order_dir=null, start_block=None, end_block=None)
+.. py:function:: get_order_matches(filters=[], is_valid=true, is_mine=false, order_by=null, order_dir=null, start_block=None, end_block=None, filterop="and")
 
    Gets a listing of order matches.
 
-   :param list/dict filter: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
+   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
    :param boolean is_valid: Set to ``true`` to only return valid order matches. Set to ``false`` to return all order matches (including invalid attempts).
    :param boolean is_mine: Set to ``true`` to include results where either the ``tx0_address`` or ``tx1_address`` exist in the linked ``bitcoind`` wallet.
    :param string order_by: If sorted results are desired, specify the name of an :ref:`order match object <order-match-object>` attribute to order the results by (e.g. ``forward_asset``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
    :param integer start_block: If specified, only results from the specified block index on will be returned  
    :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
+   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
    :return: A list of one or more :ref:`order match objects <order-match-object>` if any matching records were found, otherwise ``[]`` (empty list).
 
 
@@ -408,16 +437,17 @@ get_order_matches
 get_sends
 ^^^^^^^^^^^^^^
 
-.. py:function:: get_sends(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=None, end_block=None)
+.. py:function:: get_sends(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=None, end_block=None, filterop="and")
 
    Gets an optionally filtered listing of past sends.
 
-   :param list/dict filter: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
+   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
    :param boolean is_valid: Set to ``true`` to only return valid sends. Set to ``false`` to return all sends (including invalid attempts).
    :param string order_by: If sorted results are desired, specify the name of a :ref:`send object <send-object>` attribute to order the results by (e.g. ``asset``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.
    :param integer start_block: If specified, only results from the specified block index on will be returned  
    :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
+   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
    :return: A list of one or more :ref:`send objects <send-object>` if any matching records were found, otherwise ``[]`` (empty list).
 
 

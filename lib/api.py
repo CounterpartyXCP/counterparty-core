@@ -6,7 +6,6 @@ import threading
 import decimal
 import time
 import json
-import atexit
 import logging
 from logging import handlers as logging_handlers
 D = decimal.Decimal
@@ -38,108 +37,119 @@ class reqthread ( threading.Thread ):
                 return None
         
         @dispatcher.add_method
-        def get_balances (filters=None, order_by=None, order_dir=None):
+        def get_balances (filters=None, order_by=None, order_dir=None, filterop="and"):
             return util.get_balances(db,
                 filters=filters,
                 order_by=order_by,
-                order_dir=order_dir)
+                order_dir=order_dir,
+                filterop=filterop)
 
         @dispatcher.add_method
-        def get_bets(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
+        def get_bets(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_bets(db,
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
-                end_block=end_block)
+                end_block=end_block,
+                filterop=filterop)
 
         @dispatcher.add_method
-        def get_bet_matches(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
+        def get_bet_matches(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_bet_matches(db,
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
-                end_block=end_block)
+                end_block=end_block,
+                filterop=filterop)
 
         @dispatcher.add_method
-        def get_broadcasts(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
+        def get_broadcasts(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_broadcasts(db,
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
-                end_block=end_block)
+                end_block=end_block,
+                filterop=filterop)
 
         @dispatcher.add_method
-        def get_btcpays(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
+        def get_btcpays(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_btcpays(db, 
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
-                end_block=end_block)
+                end_block=end_block,
+                filterop=filterop)
 
         @dispatcher.add_method
-        def get_burns(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
+        def get_burns(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_burns(db,
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
-                end_block=end_block)
+                end_block=end_block,
+                filterop=filterop)
 
         @dispatcher.add_method
-        def get_cancels(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
+        def get_cancels(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_cancels(db,
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
-                end_block=end_block)
+                end_block=end_block,
+                filterop=filterop)
 
         @dispatcher.add_method
-        def get_credits (filters=None, order_by=None, order_dir=None):
+        def get_credits (filters=None, order_by=None, order_dir=None, filterop="and"):
             return util.get_credits(db,
                 filters=filters,
                 order_by=order_by,
-                order_dir=order_dir)
+                order_dir=order_dir,
+                filterop=filterop)
 
         @dispatcher.add_method
-        def get_debits (filters=None, order_by=None, order_dir=None):
+        def get_debits (filters=None, order_by=None, order_dir=None, filterop="and"):
             return util.get_debits(db,
                 filters=filters,
                 order_by=order_by,
-                order_dir=order_dir)
+                order_dir=order_dir,
+                filterop=filterop)
 
         @dispatcher.add_method
-        def get_dividends(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
+        def get_dividends(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_dividends(db,
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
-                end_block=end_block)
+                end_block=end_block,
+                filterop=filterop)
 
         @dispatcher.add_method
-        def get_issuances(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
+        def get_issuances(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_issuances(db,
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
-                end_block=end_block)
+                end_block=end_block,
+                filterop=filterop)
 
         @dispatcher.add_method
-        def get_orders (filters=None, is_valid=True, show_expired=True, order_by=None, order_dir=None, start_block=None, end_block=None):
+        def get_orders (filters=None, is_valid=True, show_expired=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_orders(db,
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
@@ -147,10 +157,11 @@ class reqthread ( threading.Thread ):
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
-                end_block=end_block)
+                end_block=end_block,
+                filterop=filterop)
         
         @dispatcher.add_method
-        def get_order_matches (filters=None, is_valid=True, is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None):
+        def get_order_matches (filters=None, is_valid=True, is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_order_matches(db,
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
@@ -158,17 +169,19 @@ class reqthread ( threading.Thread ):
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
-                end_block=end_block)
+                end_block=end_block,
+                filterop=filterop)
 
         @dispatcher.add_method
-        def get_sends (filters=None, is_valid=None, order_by=None, order_dir=None, start_block=None, end_block=None):
+        def get_sends (filters=None, is_valid=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_sends(db, 
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
-                end_block=end_block)
+                end_block=end_block,
+                filterop=filterop)
 
         ######################
         #WRITE/ACTION API
