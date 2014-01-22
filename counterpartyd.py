@@ -26,7 +26,7 @@ json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
 
 def market (give_asset, get_asset):
-    # TODO: Regularly check if DB is up‐to‐date.
+    # TODO: Regularly check if DB is up‐to‐date. (Just use API?!)
     os.system('cls' if os.name=='nt' else 'clear')
 
     # Open orders.
