@@ -162,7 +162,7 @@ def format_order (order):
     else:
         fee = str(order['fee_provided'] / config.UNIT)
 
-    return [give_remaining, give_asset, get_remaining, get_asset, price, price_assets, fee, util.get_time_left(order), util.short(order['tx_hash'])]
+    return [D(give_remaining), give_asset, D(get_remaining), get_asset, price, price_assets, fee, util.get_time_left(order), util.short(order['tx_hash'])]
 
 def format_bet (bet):
     odds = D(bet['counterwager_amount']) / D(bet['wager_amount'])
