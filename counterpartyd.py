@@ -222,7 +222,6 @@ if __name__ == '__main__':
     parser.add_argument('--rpc-user', help='required username to use the counterpartyd JSON-RPC API (via HTTP basic auth)')
     parser.add_argument('--rpc-password', help='required password (for rpc-user) to use the counterpartyd JSON-RPC API (via HTTP basic auth)')
 
-    #parser.add_argument('--zeromq-enable', action='store_true', default=False, help='specify to enable the realtime event publisher')
     parser.add_argument('--zeromq-host', help='the host to provide the realtime event publisher')
     parser.add_argument('--zeromq-port', type=int, help='port on which to provide the realtime event publisher')
 
@@ -415,14 +414,6 @@ if __name__ == '__main__':
         config.RPC_PASSWORD = configfile['Default']['rpc-password']
     else:
         raise exceptions.ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
-
-    # zeromq-enable
-    #if args.zeromq_enable:
-    #    config.ZEROMQ_ENABLE = args.zeromq_enable
-    #elif has_config and 'zeromq-enable' in configfile['Default']:
-    #    config.ZEROMQ_ENABLE = configfile['Default'].getboolean('zeromq-enable')
-    #else:
-    #    config.ZEROMQ_ENABLE = False
 
     # zeromq host
     if args.zeromq_host:
