@@ -234,7 +234,7 @@ def debit (db, address, asset, amount):
                        (balance, address, asset)) 
         validity = 'Valid'
         config.zeromq_publisher.push_to_subscribers('debit', {
-            'address': address, 'asset': asset, 'amount': balance })
+            'address': address, 'asset': asset, 'amount': amount, 'balance': balance })
 
         # Record debit *only if valid*.
         logging.debug('Debit: {} of {} from {}'.format(devise(db, amount, asset, 'output'), asset, address))
@@ -278,7 +278,7 @@ def credit (db, address, asset, amount):
                           WHERE (address=? and asset=?)''',
                        (balance, address, asset)) 
         config.zeromq_publisher.push_to_subscribers('credit', {
-            'address': address, 'asset': asset, 'amount': balance })
+            'address': address, 'asset': asset, 'amount': amount, 'balance': balance })
 
     # Record credit.
     logging.debug('Credit: {} of {} to {}'.format(devise(db, amount, asset, 'output'), asset, address))
