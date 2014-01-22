@@ -77,36 +77,24 @@ def parse (db, tx, message):
                 validity = 'Invalid: insufficient funds.'
 
     # Add parsed transaction to message-type–specific table.
-    order_parse_cursor.execute('''INSERT INTO orders(
-                        tx_index,
-                        tx_hash,
-                        block_index,
-                        source,
-                        give_asset,
-                        give_amount,
-                        give_remaining,
-                        get_asset,
-                        get_amount,
-                        price,
-                        expiration,
-                        fee_required,
-                        fee_provided,
-                        validity) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-                        (tx['tx_index'],
-                        tx['tx_hash'],
-                        tx['block_index'],
-                        tx['source'],
-                        give_asset,
-                        give_amount,
-                        give_amount,
-                        get_asset,
-                        get_amount,
-                        float(price),
-                        expiration,
-                        fee_required,
-                        tx['fee'],
-                        validity)
-                  )
+    element_data = {
+        'tx_index': tx['tx_index'],
+        'tx_hash': tx['tx_hash'],
+        'block_index': tx['block_index'],
+        'source': tx['source'],
+        'give_asset': give_asset,
+        'give_amount': give_amount,
+        'give_remaining': give_amount,
+        'get_asset': get_asset,
+        'get_amount': get_amount,
+        'price': float(price),
+        'expiration': expiration,
+        'fee_required': fee_required,
+        'fee_provided': tx['fee'],
+        'validity': validity,
+    }
+    order_parse_cursor.execute(*util.get_insert_sql('orders', element_data))
+    config.zeromq_publisher.push_to_subscribers('new_order', element_data)
 
     if validity == 'Valid':
 
@@ -192,38 +180,25 @@ def match (db, tx):
                            tx1['tx_hash']))
 
             # Record order match.
-            order_match_cursor.execute('''INSERT into order_matches(
-                                tx0_index,
-                                tx0_hash,
-                                tx0_address,
-                                tx1_index,
-                                tx1_hash,
-                                tx1_address,
-                                forward_asset,
-                                forward_amount,
-                                backward_asset,
-                                backward_amount,
-                                tx0_block_index,
-                                tx1_block_index,
-                                tx0_expiration,
-                                tx1_expiration,
-                                validity) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-                                (tx0['tx_index'],
-                                tx0['tx_hash'],
-                                tx0['source'],
-                                tx1['tx_index'],
-                                tx1['tx_hash'],
-                                tx1['source'],
-                                forward_asset,
-                                forward_amount,
-                                backward_asset,
-                                backward_amount,
-                                tx0['block_index'],
-                                tx1['block_index'],
-                                tx0['expiration'],
-                                tx1['expiration'],
-                                validity)
-                          )
+            element_data = {
+                'tx0_index': tx0['tx_index'],
+                'tx0_hash': tx0['tx_hash'],
+                'tx0_address': tx0['source'],
+                'tx1_index': tx1['tx_index'],
+                'tx1_hash': tx1['tx_hash'],
+                'tx1_address': tx1['source'],
+                'forward_asset': forward_asset,
+                'forward_amount': forward_amount,
+                'backward_asset': backward_asset, 
+                'backward_amount': backward_amount,
+                'tx0_block_index': tx0['block_index'],
+                'tx1_block_index': tx1['block_index'],
+                'tx0_expiration': tx0['expiration'],
+                'tx1_expiration': tx1['expiration'],
+                'validity': validity,
+            }
+            order_match_cursor.execute(*util.get_insert_sql('order_matches', element_data))
+            config.zeromq_publisher.push_to_subscribers('new_order_match', element_data)
     order_match_cursor.close()
 
 def expire (db, block_index):

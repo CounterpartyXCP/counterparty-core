@@ -75,21 +75,16 @@ def parse (db, tx, message):
         logging.info('BTC Payment for Order Match: {} ({})'.format(util.short(order_match_id), util.short(tx['tx_hash'])))
 
     # Add parsed transaction to message-type–specific table.
-    btcpay_parse_cursor.execute('''INSERT INTO btcpays(
-                        tx_index,
-                        tx_hash,
-                        block_index,
-                        source,
-                        order_match_id,
-                        validity) VALUES(?,?,?,?,?,?)''',
-                        (tx['tx_index'],
-                        tx['tx_hash'],
-                        tx['block_index'],
-                        tx['source'],
-                        order_match_id,
-                        validity)
-                  )
-
+    element_data = {
+        'tx_index': tx['tx_index'],
+        'tx_hash': tx['tx_hash'],
+        'block_index': tx['block_index'],
+        'source': tx['source'],
+        'order_match_id': order_match_id,
+        'validity': validity,
+    }
+    btcpay_parse_cursor.execute(*util.get_insert_sql('btcpays', element_data))
+    config.zeromq_publisher.push_to_subscribers('new_btcpay', element_data)
     btcpay_parse_cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

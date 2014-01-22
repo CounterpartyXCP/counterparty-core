@@ -122,41 +122,27 @@ def parse (db, tx, message):
         odds = 0
 
     # Add parsed transaction to message-type–specific table.
-    bet_parse_cursor.execute('''INSERT INTO bets(
-                        tx_index,
-                        tx_hash,
-                        block_index,
-                        source,
-                        feed_address,
-                        bet_type,
-                        deadline,
-                        wager_amount,
-                        counterwager_amount,
-                        wager_remaining,
-                        odds,
-                        target_value,
-                        leverage,
-                        expiration,
-                        fee_multiplier,
-                        validity) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-                        (tx['tx_index'],
-                        tx['tx_hash'],
-                        tx['block_index'],
-                        tx['source'],
-                        feed_address,
-                        bet_type,
-                        deadline,
-                        wager_amount,
-                        counterwager_amount,
-                        wager_amount,
-                        odds,
-                        target_value,
-                        leverage,
-                        expiration,
-                        fee_multiplier,
-                        validity)
-                  )
-
+    element_data = {
+        'tx_index': tx['tx_index'],
+        'tx_hash': tx['tx_hash'],
+        'block_index': tx['block_index'],
+        'source': tx['source'],
+        'feed_address': feed_address,
+        'bet_type': bet_type,
+        'deadline': deadline,
+        'wager_amount': wager_amount,
+        'counterwager_amount': counterwager_amount,
+        'wager_remaining': wager_amount,
+        'odds': odds,
+        'target_value': target_value,
+        'leverage': leverage,
+        'expiration': expiration,
+        'fee_multiplier': fee_multiplier,
+        'validity': validity,
+    }
+    bet_parse_cursor.execute(*util.get_insert_sql('bets', element_data))
+    config.zeromq_publisher.push_to_subscribers('new_bet', element_data)
+    
     # Log.
     if validity == 'Valid':
         placeholder = ''
@@ -251,52 +237,32 @@ def match (db, tx):
             # Get last value of feed.
             initial_value = util.get_broadcasts(db, validity='Valid', source=tx1['feed_address'])[-1]['value']
 
-            # Record order fulfillment.
-            bet_match_cursor.execute('''INSERT into bet_matches(
-                                tx0_index,
-                                tx0_hash,
-                                tx0_address,
-                                tx1_index,
-                                tx1_hash,
-                                tx1_address,
-                                tx0_bet_type,
-                                tx1_bet_type,
-                                feed_address,
-                                initial_value,
-                                deadline,
-                                target_value,
-                                leverage,
-                                forward_amount,
-                                backward_amount,
-                                tx0_block_index,
-                                tx1_block_index,
-                                tx0_expiration,
-                                tx1_expiration,
-                                fee_multiplier,
-                                validity) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-                                (tx0['tx_index'],
-                                tx0['tx_hash'],
-                                tx0['source'],
-                                tx1['tx_index'],
-                                tx1['tx_hash'],
-                                tx1['source'],
-                                tx0['bet_type'],
-                                tx1['bet_type'],
-                                tx1['feed_address'],
-                                initial_value,
-                                tx1['deadline'],
-                                tx1['target_value'],
-                                tx1['leverage'],
-                                forward_amount,
-                                backward_amount,
-                                tx0['block_index'],
-                                tx1['block_index'],
-                                tx0['expiration'],
-                                tx1['expiration'],
-                                fee_multiplier,
-                                'Valid')
-                          )
-
+            # Record bet fulfillment.
+            element_data = {
+                'tx0_index': tx0['tx_index'],
+                'tx0_hash': tx0['tx_hash'],
+                'tx0_address': tx0['source'],
+                'tx1_index': tx1['tx_index'],
+                'tx1_hash': tx1['tx_hash'],
+                'tx1_address': tx1['source'],
+                'tx0_bet_type': tx0['bet_type'],
+                'tx1_bet_type': tx1['bet_type'],
+                'feed_address': tx1['feed_address'],
+                'initial_value': initial_value,
+                'deadline': tx1['deadline'],
+                'target_value': tx1['target_value'],
+                'leverage': tx1['leverage'],
+                'forward_amount': forward_amount,
+                'backward_amount': backward_amount,
+                'tx0_block_index': tx0['block_index'],
+                'tx1_block_index': tx1['block_index'],
+                'tx0_expiration': tx0['expiration'],
+                'tx1_expiration': tx1['expiration'],
+                'fee_multiplier': fee_multiplier,
+                'validity': 'Valid',
+            }
+            bet_match_cursor.execute(*util.get_insert_sql('bet_matches', element_data))
+            config.zeromq_publisher.push_to_subscribers('new_bet_match', element_data)
     bet_match_cursor.close()
 
 def expire (db, block_index):

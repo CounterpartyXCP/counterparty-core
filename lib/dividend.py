@@ -83,22 +83,17 @@ def parse (db, tx, message):
             util.credit(db, address, 'XCP', amount)
 
     # Add parsed transaction to message-type–specific table.
-    dividend_parse_cursor.execute('''INSERT INTO dividends(
-                        tx_index,
-                        tx_hash,
-                        block_index,
-                        source,
-                        asset,
-                        amount_per_share,
-                        validity) VALUES(?,?,?,?,?,?,?)''',
-                        (tx['tx_index'],
-                        tx['tx_hash'],
-                        tx['block_index'],
-                        tx['source'],
-                        asset,
-                        amount_per_share,
-                        validity)
-                  )
+    element_data = {
+        'tx_index': tx['tx_index'],
+        'tx_hash': tx['tx_hash'],
+        'block_index': tx['block_index'],
+        'source': tx['source'],
+        'asset': asset,
+        'amount_per_share': amount_per_share,
+        'validity': validity,
+    }
+    dividend_parse_cursor.execute(*util.get_insert_sql('dividends', element_data))
+    config.zeromq_publisher.push_to_subscribers('new_dividend', element_data)
     if validity == 'Valid':
         logging.info('Dividend: {} paid {} per share of asset {} ({})'.format(tx['source'], util.devise(db, amount_per_share, 'XCP', 'output'), asset, util.short(tx['tx_hash'])))
 

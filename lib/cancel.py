@@ -64,21 +64,16 @@ def parse (db, tx, message):
         logging.info('Cancel: {} ({})'.format(util.short(offer_hash), util.short(tx['tx_hash'])))
 
     # Add parsed transaction to message-type–specific table.
-    cancel_parse_cursor.execute('''INSERT INTO cancels(
-                        tx_index,
-                        tx_hash,
-                        block_index,
-                        source,
-                        offer_hash,
-                        validity) VALUES(?,?,?,?,?,?)''',
-                        (tx['tx_index'],
-                        tx['tx_hash'],
-                        tx['block_index'],
-                        tx['source'],
-                        offer_hash,
-                        validity)
-                  )
-
+    element_data = {
+        'tx_index': tx['tx_index'],
+        'tx_hash': tx['tx_hash'],
+        'block_index': tx['block_index'],
+        'source': tx['source'],
+        'offer_hash': offer_hash,
+        'validity': validity,
+    }
+    cancel_parse_cursor.execute(*util.get_insert_sql('cancels', element_data))
+    config.zeromq_publisher.push_to_subscribers('new_cancel', element_data)
     cancel_parse_cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

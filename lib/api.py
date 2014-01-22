@@ -18,12 +18,12 @@ from jsonrpc import JSONRPCResponseManager, dispatcher
 from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel)
 
-class reqthread ( threading.Thread ):
+class APIServer(threading.Thread):
 
     def __init__ (self):
         threading.Thread.__init__(self)
         
-    def run ( self ):
+    def run (self):
         db = apsw.Connection(config.DATABASE)
         db.setrowtrace(util.rowtracer)
 
@@ -300,6 +300,7 @@ class reqthread ( threading.Thread ):
         #start up the API listener/handler
         server = wsgiserver.CherryPyWSGIServer(
             (config.RPC_HOST, int(config.RPC_PORT)), application)
+        #logging.debug("Initializing API interface...")
         try:
             server.start()
         except OSError:

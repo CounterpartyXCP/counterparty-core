@@ -57,24 +57,19 @@ def parse (db, tx, message):
         util.credit(db, tx['destination'], asset, amount)
 
     # Add parsed transaction to message-type–specific table.
-    send_parse_cursor.execute('''INSERT INTO sends(
-                        tx_index,
-                        tx_hash,
-                        block_index,
-                        source,
-                        destination,
-                        asset,
-                        amount,
-                        validity) VALUES(?,?,?,?,?,?,?,?)''',
-                        (tx['tx_index'],
-                        tx['tx_hash'],
-                        tx['block_index'],
-                        tx['source'],
-                        tx['destination'],
-                        asset,
-                        amount,
-                        validity)
-                  )
+    element_data = {
+        'tx_index': tx['tx_index'],
+        'tx_hash': tx['tx_hash'],
+        'block_index': tx['block_index'],
+        'source': tx['source'],
+        'destination': tx['destination'],
+        'asset': asset,
+        'amount': amount,
+        'validity': validity,
+    }
+    send_parse_cursor.execute(*util.get_insert_sql('sends', element_data))
+    config.zeromq_publisher.push_to_subscribers('new_send', element_data)
+
     if validity == 'Valid':
         amount = util.devise(db, amount, asset, 'output')
         logging.info('Send: {} of asset {} from {} to {} ({})'.format(amount, asset, tx['source'], tx['destination'], util.short(tx['tx_hash'])))

@@ -68,22 +68,17 @@ def parse (db, tx, message=None):
 
     # Add parsed transaction to message-type–specific table.
     # TODO: store sent in table
-    burn_parse_cursor.execute('''INSERT INTO burns(
-                        tx_index,
-                        tx_hash,
-                        block_index,
-                        address,
-                        burned,
-                        earned,
-                        validity) VALUES(?,?,?,?,?,?,?)''',
-                        (tx['tx_index'],
-                        tx['tx_hash'],
-                        tx['block_index'],
-                        tx['source'],
-                        burned,
-                        earned,
-                        validity)
-                  )
+    element_data = {
+        'tx_index': tx['tx_index'],
+        'tx_hash': tx['tx_hash'],
+        'block_index': tx['block_index'],
+        'address': tx['source'],
+        'burned': burned,
+        'earned': earned,
+        'validity': validity,
+    }
+    burn_parse_cursor.execute(*util.get_insert_sql('burns', element_data))
+    config.zeromq_publisher.push_to_subscribers('new_burn', element_data)
     
     if validity == 'Valid':
         logging.info('Burn: {} burned {} BTC for {} XCP ({})'.format(tx['source'], util.devise(db, burned, 'BTC', 'output'), util.devise(db, earned, 'XCP', 'output'), util.short(tx['tx_hash'])))

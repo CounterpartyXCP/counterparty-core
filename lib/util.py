@@ -31,6 +31,13 @@ def rowtracer(cursor, sql):
         dictionary[description[i][0]] = sql[i]
     return dictionary
 
+def get_insert_sql(table_name, element_data):
+    """Takes a mapping of element data and a table name, and produces an INSERT statement suitable for a sqlite3 cursor.execute() operation"""
+    #NOTE: keys() and values() return in the same order if dict is not modified: http://docs.python.org/2/library/stdtypes.html#dict.items
+    k, v = (element_data.keys(), element_data.values())
+    return [ "INSERT INTO %s(%s) VALUES(%s)" % (
+        table_name, ','.join(k), ','.join(['?' for i in range(len(v))])), v ]
+
 def bitcoind_check (db):
     # Check blocktime of last block to see if Bitcoind is running behind.
     block_count = bitcoin.rpc('getblockcount', [])
@@ -226,17 +233,19 @@ def debit (db, address, asset, amount):
                           WHERE (address=? and asset=?)''',
                        (balance, address, asset)) 
         validity = 'Valid'
+        config.zeromq_publisher.push_to_subscribers('debit', {
+            'address': address, 'asset': asset, 'amount': balance })
 
         # Record debit *only if valid*.
         logging.debug('Debit: {} of {} from {}'.format(devise(db, amount, asset, 'output'), asset, address))
-        debit_cursor.execute('''INSERT INTO debits(
-                            address,
-                            asset,
-                            amount) VALUES(?,?,?)''',
-                            (address,
-                            asset,
-                            amount)
-                      )
+        element_data = {
+            'address': address,
+            'asset': asset,
+            'amount': amount,
+        }
+        debit_cursor.execute(*get_insert_sql('debits', element_data))
+        config.zeromq_publisher.push_to_subscribers('debit', element_data)
+        
     else:
         validity = 'Invalid: insufficient funds'
 
@@ -251,14 +260,15 @@ def credit (db, address, asset, amount):
     balances = get_balances(db, address=address, asset=asset)
     if len(balances) != 1:
         assert balances == []
-        credit_cursor.execute('''INSERT INTO balances(
-                            address,
-                            asset,
-                            amount) VALUES(?,?,?)''',
-                            (address,
-                            asset,
-                            amount)
-                      )
+        
+        #update balances table with new balance
+        element_data = {
+            'address': address,
+            'asset': asset,
+            'amount': amount,
+        }
+        credit_cursor.execute(*get_insert_sql('balances', element_data))
+        config.zeromq_publisher.push_to_subscribers('credit', element_data)
     else:
         old_balance = balances[0]['amount']
         assert type(old_balance) == int
@@ -267,6 +277,8 @@ def credit (db, address, asset, amount):
         credit_cursor.execute('''UPDATE balances SET amount=? \
                           WHERE (address=? and asset=?)''',
                        (balance, address, asset)) 
+        config.zeromq_publisher.push_to_subscribers('credit', {
+            'address': address, 'asset': asset, 'amount': balance })
 
     # Record credit.
     logging.debug('Credit: {} of {} to {}'.format(devise(db, amount, asset, 'output'), asset, address))

@@ -19,10 +19,11 @@ import dateutil.parser
 from datetime import datetime
 from threading import Thread
 
-from lib import (config, api, util, exceptions, bitcoin, blocks)
+from lib import (config, api, zeromq, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel)
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
+
 
 def market (give_asset, get_asset):
     # TODO: Regularly check if DB is up‐to‐date.
@@ -221,6 +222,10 @@ if __name__ == '__main__':
     parser.add_argument('--rpc-user', help='required username to use the counterpartyd JSON-RPC API (via HTTP basic auth)')
     parser.add_argument('--rpc-password', help='required password (for rpc-user) to use the counterpartyd JSON-RPC API (via HTTP basic auth)')
 
+    #parser.add_argument('--zeromq-enable', action='store_true', default=False, help='specify to enable the realtime event publisher')
+    parser.add_argument('--zeromq-host', help='the host to provide the realtime event publisher')
+    parser.add_argument('--zeromq-port', type=int, help='port on which to provide the realtime event publisher')
+
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
     parser_server = subparsers.add_parser('server', help='run the server')
@@ -410,6 +415,37 @@ if __name__ == '__main__':
         config.RPC_PASSWORD = configfile['Default']['rpc-password']
     else:
         raise exceptions.ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
+
+    # zeromq-enable
+    #if args.zeromq_enable:
+    #    config.ZEROMQ_ENABLE = args.zeromq_enable
+    #elif has_config and 'zeromq-enable' in configfile['Default']:
+    #    config.ZEROMQ_ENABLE = configfile['Default'].getboolean('zeromq-enable')
+    #else:
+    #    config.ZEROMQ_ENABLE = False
+
+    # zeromq host
+    if args.zeromq_host:
+        config.ZEROMQ_HOST = args.zeromq_host
+    elif has_config and 'zeromq-host' in configfile['Default']:
+        config.ZEROMQ_HOST = configfile['Default']['zeromq-host']
+    else:
+        config.ZEROMQ_HOST = '127.0.0.1'
+    if config.ZEROMQ_HOST.lower() == 'localhost':
+        config.ZEROMQ_HOST = '127.0.0.1' #zeromq doesn't like "localhost"
+
+    # zeromq port
+    if args.zeromq_port:
+        config.ZEROMQ_PORT = args.zeromq_port
+    elif has_config and 'zeromq-port' in configfile['Default']:
+        config.ZEROMQ_PORT = configfile['Default']['zeromq-port']
+    else:
+        config.ZEROMQ_PORT = '4001'
+    try:
+        int(config.ZEROMQ_PORT)
+        assert int(config.ZEROMQ_PORT) > 1 and int(config.ZEROMQ_PORT) < 65535
+    except:
+        raise Exception("Please specific a valid port number zeromq-port configuration parameter")
 
     # Log
     if args.log_file:
@@ -640,9 +676,14 @@ if __name__ == '__main__':
         parser.print_help()
 
     elif args.action == 'server':
-        thread=api.reqthread()
-        thread.daemon = True
-        thread.start()
+        api_server = api.APIServer()
+        api_server.daemon = True
+        api_server.start()
+
+        #throw a reference into config so that other modules can reference the thread to put messages into the queue
+        config.zeromq_publisher = zeromq.ZeroMQPublisher()
+        config.zeromq_publisher.daemon = True
+        config.zeromq_publisher.start()
 
         blocks.follow(db)
 
