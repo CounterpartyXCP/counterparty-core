@@ -53,12 +53,16 @@ def parse (db, tx, message):
     if validity == 'Valid':
         if give_asset == get_asset:
             validity = 'Invalid: cannot trade an asset for itself.'
+
     if validity == 'Valid':
         if not give_amount or not get_amount:
             validity = 'Invalid: zero give or zero get.'
 
-    elif get_asset not in ('BTC', 'XCP') and not util.get_issuances(db, validity='Valid', asset=get_asset):
+    if validity == 'Valid' and get_asset not in ('BTC', 'XCP') and not util.get_issuances(db, validity='Valid', asset=get_asset):
         validity = 'Invalid: bad get asset'
+
+    if validity == 'Valid' and give_asset not in ('BTC', 'XCP') and not util.get_issuances(db, validity='Valid', asset=give_asset):
+        validity = 'Invalid: bad give asset'
 
     if validity == 'Valid':
         give_amount = give_amount
