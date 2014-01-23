@@ -14,6 +14,8 @@ LENGTH = 8 + 8 + 1
 def create (db, source, destination, asset, amount, divisible, test=False):
     if not util.valid_asset_name(asset):
         raise exceptions.AssetError('Bad asset name.')
+    if asset in ('BTC', 'XCP'):
+            raise exceptions.IssuanceError('Cannot issue BTC or XCP.')
 
     # Valid re-issuance?
     issuances = util.get_issuances(db, validity='Valid', asset=asset)
@@ -91,27 +93,25 @@ def parse (db, tx, message):
         transfer = False
 
     # Add parsed transaction to message-type–specific table.
-    issuance_parse_cursor.execute('''INSERT INTO issuances(
-                        tx_index,
-                        tx_hash,
-                        block_index,
-                        asset,
-                        amount,
-                        divisible,
-                        issuer,
-                        transfer,
-                        validity) VALUES(?,?,?,?,?,?,?,?,?)''',
-                        (tx['tx_index'],
-                        tx['tx_hash'],
-                        tx['block_index'],
-                        asset,
-                        amount,
-                        divisible,
-                        issuer,
-                        transfer,
-                        validity)
-                  )
+    element_data = {
+        'tx_index': tx['tx_index'],
+        'tx_hash': tx['tx_hash'],
+        'block_index': tx['block_index'],
+        'asset': asset,
+        'amount': amount,
+        'divisible': divisible,
+        'issuer': issuer,
+        'transfer': transfer,
+        'validity': validity,
+    }
+    issuance_parse_cursor.execute(*util.get_insert_sql('issuances', element_data))
+    config.zeromq_publisher.push_to_subscribers('new_issuance', element_data)
         
+    # Debit fee.
+    # TODO: Add amount destroyed to table.
+    if validity == 'Valid' and amount and tx['block_index'] > 281236:
+        validity = util.debit(db, tx['source'], 'XCP', 5)
+
     # Credit.
     if validity == 'Valid' and amount:
         util.credit(db, tx['source'], asset, amount)

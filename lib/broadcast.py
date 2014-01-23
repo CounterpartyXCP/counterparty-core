@@ -89,26 +89,19 @@ def parse (db, tx, message):
             validity = 'Invalid: feed timestamps must be monotonically increasing'
 
     # Add parsed transaction to message-type–specific table.
-    broadcast_parse_cursor.execute('''INSERT INTO broadcasts(
-                        tx_index,
-                        tx_hash,
-                        block_index,
-                        source,
-                        timestamp,
-                        value,
-                        fee_multiplier,
-                        text,
-                        validity) VALUES(?,?,?,?,?,?,?,?,?)''',
-                        (tx['tx_index'],
-                        tx['tx_hash'],
-                        tx['block_index'],
-                        tx['source'],
-                        timestamp,
-                        value,
-                        fee_multiplier,
-                        text,
-                        validity)
-                  )
+    element_data = {
+        'tx_index': tx['tx_index'],
+        'tx_hash': tx['tx_hash'],
+        'block_index': tx['block_index'],
+        'source': tx['source'],
+        'timestamp': timestamp,
+        'value': value,
+        'fee_multiplier': fee_multiplier,
+        'text': text,
+        'validity': validity,
+    }
+    broadcast_parse_cursor.execute(*util.get_insert_sql('broadcasts', element_data))
+    config.zeromq_publisher.push_to_subscribers('new_broadcast', element_data)
 
     # Log.
     if validity == 'Valid':

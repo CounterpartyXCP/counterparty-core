@@ -1,12 +1,13 @@
 #! /usr/bin/python3
 
 import sys
-import logging
+import os
 import threading
 import decimal
 import time
 import json
-import atexit
+import logging
+from logging import handlers as logging_handlers
 D = decimal.Decimal
 
 import apsw
@@ -17,201 +18,173 @@ from jsonrpc import JSONRPCResponseManager, dispatcher
 from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel)
 
-class reqthread ( threading.Thread ):
+class APIServer(threading.Thread):
 
     def __init__ (self):
         threading.Thread.__init__(self)
         
-    def run ( self ):
-        logger = logging.getLogger('api')
-        logger.setLevel(logging.WARNING)
-        
+    def run (self):
         db = apsw.Connection(config.DATABASE)
         db.setrowtrace(util.rowtracer)
 
+        ######################
+        #READ API
         @dispatcher.add_method
         def get_address (address):
             try:
-                return util.get_address(db,
-                    address=address)
+                return util.get_address(db, address=address)
             except exceptions.InvalidAddressError:
                 return None
         
         @dispatcher.add_method
-        def get_debits (address=None, asset=None, order_by=None, order_dir=None):
-            return util.get_debits(db,
-                address=address,
-                asset=asset,
-                order_by=order_by,
-                order_dir=order_dir)
-        
-        @dispatcher.add_method
-        def get_credits (address=None, asset=None, order_by=None, order_dir=None):
-            return util.get_credits(db,
-                address=address,
-                asset=asset,
-                order_by=order_by,
-                order_dir=order_dir)
-        
-        @dispatcher.add_method
-        def get_balances (address=None, asset=None, order_by=None, order_dir=None):
+        def get_balances (filters=None, order_by=None, order_dir=None, filterop="and"):
             return util.get_balances(db,
-                address=address,
-                asset=asset,
+                filters=filters,
                 order_by=order_by,
-                order_dir=order_dir)
+                order_dir=order_dir,
+                filterop=filterop)
 
         @dispatcher.add_method
-        def get_sends (source=None, destination=None, is_valid=None, order_by=None, order_dir=None, start_block=None, end_block=None):
-            return util.get_sends(db, 
-                source=source,
-                destination=destination,
-                validity='Valid' if bool(is_valid) else None,
-                order_by=order_by,
-                order_dir=order_dir,
-                start_block=start_block,
-                end_block=end_block)
-        
-        @dispatcher.add_method
-        def get_orders (address=None, is_valid=True, show_empty=True, show_expired=True, order_by=None, order_dir=None, start_block=None, end_block=None):
-            return util.get_orders(db,
-                address=address,
-                show_empty=show_empty,
-                show_expired=show_expired,
-                validity='Valid' if bool(is_valid) else None,
-                order_by=order_by,
-                order_dir=order_dir,
-                start_block=start_block,
-                end_block=end_block)
-        
-        @dispatcher.add_method
-        def get_order_matches (address=None, is_valid=True, is_mine=False, tx0_hash=None, tx1_hash=None, order_by=None, order_dir=None, start_block=None, end_block=None):
-            return util.get_order_matches(db,
-                is_mine=is_mine,
-                address=address,
-                tx0_hash=tx0_hash,
-                tx1_hash=tx1_hash,
-                validity='Valid' if bool(is_valid) else None,
-                order_by=order_by,
-                order_dir=order_dir,
-                start_block=start_block,
-                end_block=end_block)
-
-        @dispatcher.add_method
-        def get_btcpays(is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
-            return util.get_btcpays(db, 
-                validity='Valid' if bool(is_valid) else None,
-                order_by=order_by,
-                order_dir=order_dir,
-                start_block=start_block,
-                end_block=end_block)
-
-        @dispatcher.add_method
-        def get_issuances(asset=None, issuer=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
-            return util.get_issuances(db,
-                asset=asset,
-                issuer=issuer,
-                validity='Valid' if bool(is_valid) else None,
-                order_by=order_by,
-                order_dir=order_dir,
-                start_block=start_block,
-                end_block=end_block)
-        
-        @dispatcher.add_method
-        def get_broadcasts(source=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
-            return util.get_broadcasts(db,
-                source=source,
-                validity='Valid' if bool(is_valid) else None,
-                order_by=order_by,
-                order_dir=order_dir,
-                start_block=start_block,
-                end_block=end_block)
-        
-        @dispatcher.add_method
-        def get_bets(address=None, show_empty=False, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
+        def get_bets(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_bets(db,
-                address=address,
-                show_empty=show_empty,
+                filters=filters,
                 validity='Valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
-                end_block=end_block)
-        
+                end_block=end_block,
+                filterop=filterop)
+
         @dispatcher.add_method
-        def get_bet_matches(address=None, is_valid=True, tx0_hash=None, tx1_hash=None, order_by=None, order_dir=None, start_block=None, end_block=None):
+        def get_bet_matches(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_bet_matches(db,
-                address=address,
-                tx0_hash=tx0_hash,
-                tx1_hash=tx1_hash,
+                filters=filters,
                 validity='Valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
-                end_block=end_block)
-        
+                end_block=end_block,
+                filterop=filterop)
+
         @dispatcher.add_method
-        def get_dividends(address=None, asset=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
-            return util.get_dividends(db,
-                address=address,
-                asset=asset,
+        def get_broadcasts(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+            return util.get_broadcasts(db,
+                filters=filters,
                 validity='Valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
-                end_block=end_block)
-        
+                end_block=end_block,
+                filterop=filterop)
+
         @dispatcher.add_method
-        def get_burns(address=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
+        def get_btcpays(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+            return util.get_btcpays(db, 
+                filters=filters,
+                validity='Valid' if bool(is_valid) else None,
+                order_by=order_by,
+                order_dir=order_dir,
+                start_block=start_block,
+                end_block=end_block,
+                filterop=filterop)
+
+        @dispatcher.add_method
+        def get_burns(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_burns(db,
-                address=address,
+                filters=filters,
                 validity='Valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
-                end_block=end_block)
+                end_block=end_block,
+                filterop=filterop)
 
         @dispatcher.add_method
-        def get_cancels(source=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None):
+        def get_cancels(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_cancels(db,
-                source=source,
+                filters=filters,
                 validity='Valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
-                end_block=end_block)
+                end_block=end_block,
+                filterop=filterop)
 
         @dispatcher.add_method
-        def do_send(source, destination, quantity, asset, unsigned=False):
-            unsigned_tx_hex = send.create(db, source, destination, quantity, asset)
-            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+        def get_credits (filters=None, order_by=None, order_dir=None, filterop="and"):
+            return util.get_credits(db,
+                filters=filters,
+                order_by=order_by,
+                order_dir=order_dir,
+                filterop=filterop)
+
+        @dispatcher.add_method
+        def get_debits (filters=None, order_by=None, order_dir=None, filterop="and"):
+            return util.get_debits(db,
+                filters=filters,
+                order_by=order_by,
+                order_dir=order_dir,
+                filterop=filterop)
+
+        @dispatcher.add_method
+        def get_dividends(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+            return util.get_dividends(db,
+                filters=filters,
+                validity='Valid' if bool(is_valid) else None,
+                order_by=order_by,
+                order_dir=order_dir,
+                start_block=start_block,
+                end_block=end_block,
+                filterop=filterop)
+
+        @dispatcher.add_method
+        def get_issuances(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+            return util.get_issuances(db,
+                filters=filters,
+                validity='Valid' if bool(is_valid) else None,
+                order_by=order_by,
+                order_dir=order_dir,
+                start_block=start_block,
+                end_block=end_block,
+                filterop=filterop)
+
+        @dispatcher.add_method
+        def get_orders (filters=None, is_valid=True, show_expired=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+            return util.get_orders(db,
+                filters=filters,
+                validity='Valid' if bool(is_valid) else None,
+                show_expired=show_expired,
+                order_by=order_by,
+                order_dir=order_dir,
+                start_block=start_block,
+                end_block=end_block,
+                filterop=filterop)
         
         @dispatcher.add_method
-        def do_order(source, give_quantity, give_asset, get_quantity, get_asset, expiration, fee_required=0,
-                     fee_provided=config.MIN_FEE / config.UNIT, unsigned=False):
-            unsigned_tx_hex = order.create(db, source, give_asset,
-                                           give_quantity, get_asset,
-                                           get_quantity, expiration,
-                                           fee_required, fee_provided)
-            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
-        
+        def get_order_matches (filters=None, is_valid=True, is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+            return util.get_order_matches(db,
+                filters=filters,
+                validity='Valid' if bool(is_valid) else None,
+                is_mine=is_mine,
+                order_by=order_by,
+                order_dir=order_dir,
+                start_block=start_block,
+                end_block=end_block,
+                filterop=filterop)
+
         @dispatcher.add_method
-        def do_btcpay(order_match_id, unsigned=False):
-            unsigned_tx_hex = btcpay.create(db, order_match_id)
-            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
-        
-        @dispatcher.add_method
-        def do_issuance(source, quantity, asset, divisible, transfer_destination=None, unsigned=False):
-            unsigned_tx_hex = issuance.create(db, source, transfer_destination,
-                                              asset, quantity, divisible)
-            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
-        
-        @dispatcher.add_method
-        def do_broadcast(source, fee_multiplier, text, value=0, unsigned=False):
-            unsigned_tx_hex = broadcast.create(db, source, int(time.time()),
-                                               value, fee_multiplier, text)
-            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
-        
+        def get_sends (filters=None, is_valid=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+            return util.get_sends(db, 
+                filters=filters,
+                validity='Valid' if bool(is_valid) else None,
+                order_by=order_by,
+                order_dir=order_dir,
+                start_block=start_block,
+                end_block=end_block,
+                filterop=filterop)
+
+        ######################
+        #WRITE/ACTION API
         @dispatcher.add_method
         def do_bet(source, feed_address, bet_type, deadline, wager, counterwager, target_value=0.0, leverage=5040, unsigned=False):
             bet_type_id = util.BET_TYPE_ID[bet_type]
@@ -220,13 +193,18 @@ class reqthread ( threading.Thread ):
                                          counterwager, target_value,
                                          leverage, expiration)
             return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
-        
+
         @dispatcher.add_method
-        def do_dividend(source, quantity_per_share, share_asset, unsigned=False):
-            unsigned_tx_hex = dividend.create(db, source, quantity_per_share,
-                                              share_asset)
+        def do_broadcast(source, fee_multiplier, text, timestamp, value=0, unsigned=False):
+            unsigned_tx_hex = broadcast.create(db, source, timestamp,
+                                               value, fee_multiplier, text)
             return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
-        
+
+        @dispatcher.add_method
+        def do_btcpay(order_match_id, unsigned=False):
+            unsigned_tx_hex = btcpay.create(db, order_match_id)
+            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+
         @dispatcher.add_method
         def do_burn(source, quantity, unsigned=False):
             unsigned_tx_hex = burn.create(db, source, quantity)
@@ -237,6 +215,34 @@ class reqthread ( threading.Thread ):
             unsigned_tx_hex = cancel.create(db, offer_hash)
             return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
 
+        @dispatcher.add_method
+        def do_dividend(source, quantity_per_share, share_asset, unsigned=False):
+            unsigned_tx_hex = dividend.create(db, source, quantity_per_share,
+                                              share_asset)
+            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+
+        @dispatcher.add_method
+        def do_issuance(source, quantity, asset, divisible, transfer_destination=None, unsigned=False):
+            unsigned_tx_hex = issuance.create(db, source, transfer_destination,
+                                              asset, quantity, divisible)
+            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+        
+        @dispatcher.add_method
+        def do_order(source, give_quantity, give_asset, get_quantity, get_asset, expiration, fee_required=0,
+                     fee_provided=config.MIN_FEE / config.UNIT, unsigned=False):
+            unsigned_tx_hex = order.create(db, source, give_asset,
+                                           give_quantity, get_asset,
+                                           get_quantity, expiration,
+                                           fee_required, fee_provided)
+            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+
+        @dispatcher.add_method
+        def do_send(source, destination, quantity, asset, unsigned=False):
+            unsigned_tx_hex = send.create(db, source, destination, quantity, asset)
+            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+        
+
+        
         class Root(object):
             @cherrypy.expose
             @cherrypy.tools.json_out()
@@ -248,9 +254,57 @@ class reqthread ( threading.Thread ):
                 response = JSONRPCResponseManager.handle(data, dispatcher)
                 return response.json
 
-        application = cherrypy.Application(Root(), script_name="/jsonrpc/", config=None)
+        cherrypy.config.update({
+            'log.screen': False,
+            "environment": "embedded",
+            'log.error_log.propagate': False,
+            'log.access_log.propagate': False,
+            "server.logToScreen" : False
+        })
+        checkpassword = cherrypy.lib.auth_basic.checkpassword_dict(
+            {config.RPC_USER: config.RPC_PASSWORD})
+        app_config = {
+            '/': { 
+                'tools.trailing_slash.on': False,
+                'tools.auth_basic.on': True,
+                'tools.auth_basic.realm': 'counterpartyd',
+                'tools.auth_basic.checkpassword': checkpassword,
+            },
+        }
+        application = cherrypy.Application(Root(), script_name="/jsonrpc/", config=app_config)
+        
+        #disable logging of the access and error logs to the screen
+        application.log.access_log.propagate = False
+        application.log.error_log.propagate = False
+        
+        if config.PREFIX != b'TESTXXXX':  #skip setting up logs when for the test suite
+            #set up a rotating log handler for this application
+            # Remove the default FileHandlers if present.
+            application.log.error_file = ""
+            application.log.access_file = ""
+            maxBytes = getattr(application.log, "rot_maxBytes", 10000000)
+            backupCount = getattr(application.log, "rot_backupCount", 1000)
+            # Make a new RotatingFileHandler for the error log.
+            fname = getattr(application.log, "rot_error_file", os.path.join(config.data_dir, "api.error.log"))
+            h = logging_handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
+            h.setLevel(logging.DEBUG)
+            h.setFormatter(cherrypy._cplogging.logfmt)
+            application.log.error_log.addHandler(h)
+            # Make a new RotatingFileHandler for the access log.
+            fname = getattr(application.log, "rot_access_file", os.path.join(config.data_dir, "api.access.log"))
+            h = logging_handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
+            h.setLevel(logging.DEBUG)
+            h.setFormatter(cherrypy._cplogging.logfmt)
+            application.log.access_log.addHandler(h)
+
+        #start up the API listener/handler
         server = wsgiserver.CherryPyWSGIServer(
-                    (config.RPC_HOST, int(config.RPC_PORT)), application,)
-        server.start()
+            (config.RPC_HOST, int(config.RPC_PORT)), application)
+        #logging.debug("Initializing API interface...")
+        try:
+            server.start()
+        except OSError:
+            raise Exception("Cannot start the API subsystem. Is counterpartyd"
+                " already running, or is something else listening on port %s?" % config.RPC_PORT)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

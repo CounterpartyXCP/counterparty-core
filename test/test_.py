@@ -1,6 +1,7 @@
 #! /usr/bin/python3
 
 import os
+import sys
 import hashlib
 import binascii
 import time
@@ -14,17 +15,17 @@ import json
 import inspect
 from threading import Thread
 import requests
+from requests.auth import HTTPBasicAuth
 
-import os
-import sys
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
-from lib import (config, api, util, exceptions, bitcoin, blocks)
+
+from lib import (config, api, zeromq, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, util)
 
 # JSON-RPC Options
 CONFIGFILE = os.path.expanduser('~') + '/.bitcoin/bitcoin.conf'
-config.PREFIX = b'TEST'
+config.PREFIX = b'TESTXXXX'
 config.BITCOIND_RPC_CONNECT = 'localhost'
 config.BITCOIND_RPC_PORT = '18332' # Only run tests on testnet.
 try:
@@ -39,7 +40,7 @@ try:
             if key == 'rpcuser': config.BITCOIND_RPC_USER = value
             elif key == 'rpcpassword': config.BITCOIND_RPC_PASSWORD = value
             elif key == 'rpcconnect': config.BITCOIND_RPC_CONNECT = value
-            elif key == 'rpcport': config.BITCOIND_RPC_CONNECT = value
+            elif key == 'rpcport': config.BITCOIND_RPC_PORT = value
 except Exception:
     raise exceptions.BitcoinConfError('Put a (valid) copy of your \
 bitcoin.conf in ~/.bitcoin/bitcoin.conf')
@@ -48,14 +49,22 @@ config.BITCOIND_RPC = 'http://'+config.BITCOIND_RPC_USER+':'+config.BITCOIND_RPC
 
 config.RPC_HOST = 'localhost'
 config.RPC_PORT = 9999
+config.RPC_USER = 'rpcuser'
+config.RPC_PASSWORD = 'rpcpass'
 
 config.DATABASE = CURR_DIR + '/counterparty.test.db'
 try: os.remove(config.DATABASE)
 except: pass
 
+#Connect to test DB
 db = apsw.Connection(config.DATABASE)
 db.setrowtrace(util.rowtracer)
 cursor = db.cursor()
+
+#Set up zeromq publisher
+config.zeromq_publisher = zeromq.ZeroMQPublisher()
+config.zeromq_publisher.daemon = True
+config.zeromq_publisher.start()
 
 tx_index = 0
 
@@ -73,6 +82,7 @@ expiration = 10
 fee_required = 900000
 fee_provided = 1000000
 fee_multiplier_default = .05
+
 
 # Each tx has a block_index equal to its tx_index
 
@@ -412,27 +422,27 @@ def test_get_address():
         output_new['get_address_' + field] = get_address[field]
 
 def test_json_rpc():
-    thread=api.reqthread()
+    thread = api.APIServer()
     thread.daemon = True
     thread.start()
     time.sleep(.1)
 
     url = 'http://localhost:' + str(config.RPC_PORT) + '/jsonrpc/'
     headers = {'content-type': 'application/json'}
+    auth = HTTPBasicAuth(config.RPC_USER, config.RPC_PASSWORD)
 
     payloads = []
     payloads.append({
         "method": "get_balances",
-        "params": {"address": source_default, "asset": None},
+        "params": {"filters": {'field': 'address', 'op': '==', 'value': source_default}},
         "jsonrpc": "2.0",
         "id": 0,
     })
 
     for payload in payloads:
         response = requests.post(
-            url, data=json.dumps(payload), headers=headers).json()
-        response = json.loads(response)
-        print(response['result'])   # TODO
+            url, data=json.dumps(payload), headers=headers, auth=auth).json()
+        response = json.loads(response) # Wierd
         try:
             output_new['rpc.' + payload['method']] = response['result']
         except:
@@ -485,7 +495,7 @@ def test_log():
 
     log_diff = list(difflib.unified_diff(old_log, new_log, n=0))
     print(log_diff)
-    # assert not len(log_diff) # TODO: (this is fixed in develop branch)
+    assert not len(log_diff)
 
 def test_base58_decode():
     """

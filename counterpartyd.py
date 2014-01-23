@@ -19,13 +19,14 @@ import dateutil.parser
 from datetime import datetime
 from threading import Thread
 
-from lib import (config, api, util, exceptions, bitcoin, blocks)
+from lib import (config, api, zeromq, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel)
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
+
 def market (give_asset, get_asset):
-    # TODO: Regularly check if DB is up‐to‐date.
+    # TODO: Regularly check if DB is up‐to‐date. (Just use API?!)
     os.system('cls' if os.name=='nt' else 'clear')
 
     # Open orders.
@@ -154,8 +155,12 @@ def format_order (order):
     give_asset = order['give_asset']
     get_asset = order['get_asset']
 
-    price = util.devise(db, D(get_remaining) / D(give_remaining), 'price', 'output')
-    price_assets = get_asset + '/' + give_asset
+    if get_asset < give_asset:
+        price = util.devise(db, D(get_remaining) / D(give_remaining), 'price', 'output')
+        price_assets = get_asset + '/' + give_asset
+    else:
+        price = util.devise(db, D(give_remaining) / D(get_remaining), 'price', 'output')
+        price_assets = give_asset + '/' + get_asset
 
     if order['fee_required']:
         fee = str(order['fee_required'] / config.UNIT)
@@ -214,6 +219,11 @@ if __name__ == '__main__':
 
     parser.add_argument('--rpc-host', help='the host to provide the counterpartyd JSON-RPC API')
     parser.add_argument('--rpc-port', type=int, help='port on which to provide the counterpartyd JSON-RPC API')
+    parser.add_argument('--rpc-user', help='required username to use the counterpartyd JSON-RPC API (via HTTP basic auth)')
+    parser.add_argument('--rpc-password', help='required password (for rpc-user) to use the counterpartyd JSON-RPC API (via HTTP basic auth)')
+
+    parser.add_argument('--zeromq-host', help='the host to provide the realtime event publisher')
+    parser.add_argument('--zeromq-port', type=int, help='port on which to provide the realtime event publisher')
 
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
@@ -323,14 +333,6 @@ if __name__ == '__main__':
     else:
         config.TESTCOIN = False
 
-    # Bitcoind RPC user
-    if args.bitcoind_rpc_user:
-        config.BITCOIND_RPC_USER = args.bitcoind_rpc_user
-    elif has_config and 'bitcoind-rpc-user' in configfile['Default']:
-        config.BITCOIND_RPC_USER = configfile['Default']['bitcoind-rpc-user']
-    else:
-        config.BITCOIND_RPC_USER = 'bitcoinrpc'
-
     # Bitcoind RPC host
     if args.bitcoind_rpc_connect:
         config.BITCOIND_RPC_CONNECT = args.bitcoind_rpc_connect
@@ -355,13 +357,21 @@ if __name__ == '__main__':
     except:
         raise Exception("Please specific a valid port number bitcoind-rpc-port configuration parameter")
             
+    # Bitcoind RPC user
+    if args.bitcoind_rpc_user:
+        config.BITCOIND_RPC_USER = args.bitcoind_rpc_user
+    elif has_config and 'bitcoind-rpc-user' in configfile['Default']:
+        config.BITCOIND_RPC_USER = configfile['Default']['bitcoind-rpc-user']
+    else:
+        config.BITCOIND_RPC_USER = 'bitcoinrpc'
+
     # Bitcoind RPC password
     if args.bitcoind_rpc_password:
         config.BITCOIND_RPC_PASSWORD = args.bitcoind_rpc_password
     elif has_config and 'bitcoind-rpc-password' in configfile['Default']:
         config.BITCOIND_RPC_PASSWORD = configfile['Default']['bitcoind-rpc-password']
     else:
-        raise exceptions.ConfigurationError('RPC password not set. (Use configuration file or --bitcoind-rpc-password=PASSWORD)')
+        raise exceptions.ConfigurationError('bitcoind RPC password not set. (Use configuration file or --bitcoind-rpc-password=PASSWORD)')
 
     config.BITCOIND_RPC = 'http://' + config.BITCOIND_RPC_USER + ':' + config.BITCOIND_RPC_PASSWORD + '@' + config.BITCOIND_RPC_CONNECT + ':' + str(config.BITCOIND_RPC_PORT)
 
@@ -388,7 +398,46 @@ if __name__ == '__main__':
         assert int(config.RPC_PORT) > 1 and int(config.RPC_PORT) < 65535
     except:
         raise Exception("Please specific a valid port number rpc-port configuration parameter")
-  
+
+    # RPC user
+    if args.rpc_user:
+        config.RPC_USER = args.rpc_user
+    elif has_config and 'rpc-user' in configfile['Default']:
+        config.RPC_USER = configfile['Default']['rpc-user']
+    else:
+        config.RPC_USER = 'rpc'
+
+    # RPC password
+    if args.rpc_password:
+        config.RPC_PASSWORD = args.rpc_password
+    elif has_config and 'rpc-password' in configfile['Default']:
+        config.RPC_PASSWORD = configfile['Default']['rpc-password']
+    else:
+        raise exceptions.ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
+
+    # zeromq host
+    if args.zeromq_host:
+        config.ZEROMQ_HOST = args.zeromq_host
+    elif has_config and 'zeromq-host' in configfile['Default']:
+        config.ZEROMQ_HOST = configfile['Default']['zeromq-host']
+    else:
+        config.ZEROMQ_HOST = '127.0.0.1'
+    if config.ZEROMQ_HOST.lower() == 'localhost':
+        config.ZEROMQ_HOST = '127.0.0.1' #zeromq doesn't like "localhost"
+
+    # zeromq port
+    if args.zeromq_port:
+        config.ZEROMQ_PORT = args.zeromq_port
+    elif has_config and 'zeromq-port' in configfile['Default']:
+        config.ZEROMQ_PORT = configfile['Default']['zeromq-port']
+    else:
+        config.ZEROMQ_PORT = '4001'
+    try:
+        int(config.ZEROMQ_PORT)
+        assert int(config.ZEROMQ_PORT) > 1 and int(config.ZEROMQ_PORT) < 65535
+    except:
+        raise Exception("Please specific a valid port number zeromq-port configuration parameter")
+
     # Log
     if args.log_file:
         config.LOG = args.log_file
@@ -618,9 +667,14 @@ if __name__ == '__main__':
         parser.print_help()
 
     elif args.action == 'server':
-        thread=api.reqthread()
-        thread.daemon = True
-        thread.start()
+        api_server = api.APIServer()
+        api_server.daemon = True
+        api_server.start()
+
+        #throw a reference into config so that other modules can reference the thread to put messages into the queue
+        config.zeromq_publisher = zeromq.ZeroMQPublisher()
+        config.zeromq_publisher.daemon = True
+        config.zeromq_publisher.start()
 
         blocks.follow(db)
 
