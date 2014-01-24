@@ -242,11 +242,17 @@ class APIServer(threading.Thread):
             return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
         
 
-        
-        class Root(object):
+        class API(object):
             @cherrypy.expose
             @cherrypy.tools.json_out()
             def index(self):
+                cherrypy.response.headers["Access-Control-Allow-Origin"] = '*' 
+                cherrypy.response.headers["Access-Control-Allow-Methods"] = 'POST, GET, OPTIONS'
+                cherrypy.response.headers["Access-Control-Allow-Headers"] = 'Origin, X-Requested-With, Content-Type, Accept'
+    
+                if cherrypy.request.method == "OPTIONS": #web client will send us this before making a request
+                    return
+
                 try:
                     data = cherrypy.request.body.read().decode('utf-8')
                 except ValueError:
@@ -271,7 +277,7 @@ class APIServer(threading.Thread):
                 'tools.auth_basic.checkpassword': checkpassword,
             },
         }
-        application = cherrypy.Application(Root(), script_name="/jsonrpc/", config=app_config)
+        application = cherrypy.Application(API(), script_name="/jsonrpc/", config=app_config)
         
         #disable logging of the access and error logs to the screen
         application.log.access_log.propagate = False
