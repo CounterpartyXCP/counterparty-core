@@ -183,6 +183,26 @@ class APIServer(threading.Thread):
                 end_block=end_block,
                 filterop=filterop)
 
+        @dispatcher.add_method
+        def get_asset_info(asset):
+            #gets some useful info for the given asset
+            issuances = util.get_issuances(db,
+                filters={'field': 'asset', 'op': '==', 'value': asset},
+                validity='Valid',
+                order_by='block_index',
+                order_dir='asc')
+            if not issuances:
+                return None #asset not found, most likely
+            
+            #get the last issurance message for this asset, which should reflect the current owner and if
+            # its divisible (and if it was locked, for that matter)
+            owner = issuances[-1]['issuer']
+            divisible = issuances[-1]['divisible']
+            locked = not issuances[-1]['amount'] and not issuances[-1]['transfer']
+            total_issued = sum([e['amount'] for e in issuances])
+            return {'owner': owner, 'divisible': divisible, 'locked': locked, 'total_issued': total_issued}
+
+
         ######################
         #WRITE/ACTION API
         @dispatcher.add_method

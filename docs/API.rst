@@ -450,6 +450,22 @@ get_sends
    :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
    :return: A list of one or more :ref:`send objects <send-object>` if any matching records were found, otherwise ``[]`` (empty list).
 
+.. _get_asset_info:
+
+_get_asset_info
+^^^^^^^^^^^^^^
+
+.. py:function:: _get_asset_info(asset)
+
+   Gets information on an issued asset.
+
+   :param string asset: The :ref:`asset <assets>` for which to retrieve information.
+   :return: ``null`` if the asset was not found. Otherwise, an object with the following parameters:
+     - **owner** (*string*): The address that currently owns the asset (i.e. has issuance rights to it) 
+     - **divisible** (*boolean*): Whether the asset is divisible or not
+     - **locked** (*boolean*): Whether the asset is locked (future issuances prohibited)
+     - **total_issued** (*integer*): The :ref:`quantity <amounts>` of the asset issued, in total
+
 
 .. _action_api:
 
