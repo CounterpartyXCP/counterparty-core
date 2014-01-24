@@ -37,7 +37,7 @@ def connect (host, payload, headers):
             response = request_session.post(host, data=json.dumps(payload), headers=headers)
             return response
         except requests.exceptions.ConnectionError:
-            print('Could not connect to Bitcoind. Sleeping for five seconds. (Try {}/{})'.format(i, TRIES), file=sys.stderr)
+            print('Could not connect to Bitcoind. Sleeping for five seconds. (Try {}/{})'.format(i+1, TRIES), file=sys.stderr)
             time.sleep(5)
     return None
 

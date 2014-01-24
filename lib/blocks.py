@@ -388,6 +388,7 @@ def purge (db, quiet=False):
     # Delete all of the results of parsing from the database.
     # TODO: This is more than is necessary for reorgs. Rather, in that case, have every table have a block index column, and only delete the stuff required.
         # (What about table balances?)
+            # Have ‘balance‐as‐of‐block‐N’?!
     # NOTE: dropping a table will also delete any indicies and triggers associated with it
     purge_cursor.execute('''DROP TABLE IF EXISTS debits''')
     purge_cursor.execute('''DROP TABLE IF EXISTS credits''')
@@ -412,6 +413,7 @@ def purge (db, quiet=False):
     initialise(db)
     purge_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
     for block in purge_cursor.fetchall():
+        logging.info('Block (re‐parse): {}'.format(str(block_index)))
         parse_block(db, block['block_index'])
     if quiet:
         log.setLevel(logging.INFO)
@@ -447,12 +449,16 @@ def reorg (db):
     return block_index
 
 def follow (db):
+    # TODO: This is not thread‐safe!
     follow_cursor = db.cursor()
 
     logging.info('Status: RESTART')
     initialise(db)
 
     while True:
+
+        # TODO: Check DB_VERSION
+        # purge if old
 
         # Get index of last block.
         try:

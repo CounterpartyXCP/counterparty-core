@@ -282,14 +282,13 @@ def credit (db, address, asset, amount):
 
     # Record credit.
     logging.debug('Credit: {} of {} to {}'.format(devise(db, amount, asset, 'output'), asset, address))
-    credit_cursor.execute('''INSERT INTO credits(
-                        address,
-                        asset,
-                        amount) VALUES(?,?,?)''',
-                        (address,
-                        asset,
-                        amount)
-                  )
+    element_data = { 
+        'address': address,
+        'asset': asset,
+        'amount': amount
+    }
+    credit_cursor.execute(*get_insert_sql('credits', element_data))
+    config.zeromq_publisher.push_to_subscribers('credit', element_data)
     credit_cursor.close()
 
 def devise (db, quantity, asset, dest, divisible=None):
@@ -400,13 +399,13 @@ def get_orders (db, validity=None, source=None, show_empty=True, show_expired=Tr
     if filters and not isinstance(filters, list): filters = [filters,] 
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
     if source: filters.append({'field': 'source', 'op': '==', 'value': source})
-    if not show_empty: filters.append({'field': 'give_remaining', 'op': '==', 'value': 0})
+    if not show_empty: filters.append({'field': 'give_remaining', 'op': '!=', 'value': 0})
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM orders%s'''
         % get_limit_to_blocks(start_block, end_block))
     results = do_filter(cursor.fetchall(), filters, filterop)
     cursor.close()
-    if not show_expired: results = [e for e in results if filter_expired(r)]
+    if not show_expired: results = [e for e in results if filter_expired(e)]
     return do_order_by(results, order_by, order_dir)
 
 def get_order_matches (db, validity=None, is_mine=False, address=None, tx0_hash=None, tx1_hash=None, filters=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
