@@ -282,14 +282,13 @@ def credit (db, address, asset, amount):
 
     # Record credit.
     logging.debug('Credit: {} of {} to {}'.format(devise(db, amount, asset, 'output'), asset, address))
-    credit_cursor.execute('''INSERT INTO credits(
-                        address,
-                        asset,
-                        amount) VALUES(?,?,?)''',
-                        (address,
-                        asset,
-                        amount)
-                  )
+    element_data = { 
+        'address': address,
+        'asset': asset,
+        'amount': amount
+    }
+    credit_cursor.execute(*get_insert_sql('credits', element_data))
+    config.zeromq_publisher.push_to_subscribers('credit', element_data)
     credit_cursor.close()
 
 def devise (db, quantity, asset, dest, divisible=None):
