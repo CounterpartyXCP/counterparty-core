@@ -661,6 +661,9 @@ if __name__ == '__main__':
             market(args.give_asset, args.get_asset)
 
     elif args.action == 'purge':
+        config.zeromq_publisher = zeromq.ZeroMQPublisher()
+        config.zeromq_publisher.daemon = True
+        config.zeromq_publisher.start()
         blocks.purge(db)
            
     elif args.action == 'help':
