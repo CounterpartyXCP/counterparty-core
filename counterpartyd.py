@@ -205,7 +205,7 @@ if __name__ == '__main__':
     parser.add_argument('--force', action='store_true', help='don\'t check whether Bitcoind is caught up')
     parser.add_argument('--testnet', action='store_true', help='use Bitcoin testnet addresses and block numbers')
     parser.add_argument('--testcoin', action='store_true', help='use the test Counterparty network on every blockchain')
-    parser.add_argument('--unsigned', action='store_true', help='print out unsigned hex of transaction; do not sign or broadcast')
+    parser.add_argument('--unsigned', action='store_true', default=False, help='print out unsigned hex of transaction; do not sign or broadcast')
 
     parser.add_argument('--data-dir', help='the directory in which to keep the database, config file and log file, by default')
     parser.add_argument('--database-file', help='the location of the SQLite3 database')
@@ -512,8 +512,8 @@ if __name__ == '__main__':
     if args.action == 'send':
         quantity = util.devise(db, args.quantity, args.asset, 'input')
         unsigned_tx_hex = send.create(db, args.source, args.destination,
-                                      quantity, args.asset)
-        json_print(bitcoin.transmit(unsigned_tx_hex, unsigned=args.unsigned))
+                                      quantity, args.asset, unsigned=args.unsigned)
+        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'order':
         # Fee argument is either fee_required or fee_provided, as necessary.
@@ -538,27 +538,27 @@ if __name__ == '__main__':
         get_quantity = util.devise(db, args.get_quantity, args.get_asset, 'input')
         unsigned_tx_hex = order.create(db, args.source, args.give_asset, give_quantity,
                                 args.get_asset, get_quantity,
-                                args.expiration, fee_required, fee_provided)
-        json_print(bitcoin.transmit(unsigned_tx_hex, unsigned=args.unsigned))
+                                args.expiration, fee_required, fee_provided, unsigned=args.unsigned)
+        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'btcpay':
-        unsigned_tx_hex = btcpay.create(db, args.order_match_id)
-        json_print(bitcoin.transmit(unsigned_tx_hex, unsigned=args.unsigned))
+        unsigned_tx_hex = btcpay.create(db, args.order_match_id, unsigned=args.unsigned)
+        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'issuance':
         quantity = util.devise(db, args.quantity, None, 'input',
                                divisible=args.divisible)
         unsigned_tx_hex = issuance.create(db, args.source,
                                           args.transfer_destination,
-                                          args.asset, quantity, args.divisible)
-        json_print(bitcoin.transmit(unsigned_tx_hex, unsigned=args.unsigned))
+                                          args.asset, quantity, args.divisible, unsigned=args.unsigned)
+        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'broadcast':
         value = util.devise(db, args.value, 'value', 'input')
         unsigned_tx_hex = broadcast.create(db, args.source, int(time.time()),
                                            value, args.fee_multiplier,
-                                           args.text)
-        json_print(bitcoin.transmit(unsigned_tx_hex, unsigned=args.unsigned))
+                                           args.text, unsigned=args.unsigned)
+        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'bet':
         deadline = round(datetime.timestamp(dateutil.parser.parse(args.deadline)))
@@ -570,23 +570,23 @@ if __name__ == '__main__':
         unsigned_tx_hex = bet.create(db, args.source, args.feed_address,
                                      util.BET_TYPE_ID[args.bet_type], deadline,
                                      wager, counterwager, target_value,
-                                     leverage, args.expiration)
-        json_print(bitcoin.transmit(unsigned_tx_hex, unsigned=args.unsigned))
+                                     leverage, args.expiration, unsigned=args.unsigned)
+        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'dividend':
         quantity_per_share = util.devise(db, args.quantity_per_share, 'XCP', 'input')
         unsigned_tx_hex = dividend.create(db, args.source, quantity_per_share,
-                                   args.share_asset)
-        json_print(bitcoin.transmit(unsigned_tx_hex, unsigned=args.unsigned))
+                                   args.share_asset, unsigned=args.unsigned)
+        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'burn':
         quantity = util.devise(db, args.quantity, 'BTC', 'input')
-        unsigned_tx_hex = burn.create(db, args.source, quantity)
-        json_print(bitcoin.transmit(unsigned_tx_hex, unsigned=args.unsigned))
+        unsigned_tx_hex = burn.create(db, args.source, quantity, unsigned=args.unsigned)
+        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'cancel':
-        unsigned_tx_hex = cancel.create(db, args.offer_hash)
-        json_print(bitcoin.transmit(unsigned_tx_hex, unsigned=args.unsigned))
+        unsigned_tx_hex = cancel.create(db, args.offer_hash, unsigned=args.unsigned)
+        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'address':
         try:
@@ -661,6 +661,9 @@ if __name__ == '__main__':
             market(args.give_asset, args.get_asset)
 
     elif args.action == 'purge':
+        config.zeromq_publisher = zeromq.ZeroMQPublisher()
+        config.zeromq_publisher.daemon = True
+        config.zeromq_publisher.start()
         blocks.purge(db)
            
     elif args.action == 'help':

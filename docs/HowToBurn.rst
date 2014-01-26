@@ -11,7 +11,8 @@ Using counterpartyd
 ----------------------
 
 ``counterpartyd`` is the preferred way to "burn" BTC to generate XCP. To burn BTC, configure ``bitcoind`` and
-install ``counterpartyd`` using the instructions from the earlier sections of this document (either from source, or via the installer).
+install ``counterpartyd`` using the instructions from `here <http://counterpartyd-build.readthedocs.org/en/latest/>`__
+(either build from source and run, or run via the installer).
 
 Once done, you can open up a command prompt, then, just run the command like::
 

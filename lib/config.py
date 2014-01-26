@@ -6,7 +6,7 @@ import hashlib
 UNIT = 100000000        # The same across currencies.
 
 # Versions
-VERSION = 0.1
+VERSION = 0.2
 DB_VERSION = 4
 
 # Bitcoin protocol
@@ -17,6 +17,8 @@ DATA_VALUE = 0
 
 # Counterparty protocol
 TXTYPE_FORMAT = '>I'
+
+ISSUANCE_FEE = 5
 
 # SQLite3
 MAX_INT = 2**63 - 1

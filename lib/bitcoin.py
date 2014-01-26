@@ -3,6 +3,7 @@ Craft, sign and broadcast Bitcoin transactions.
 Interface with Bitcoind.
 """
 
+import os
 import sys
 import binascii
 import json
@@ -119,7 +120,8 @@ def op_push (i):
     else:
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
-def serialise (inputs, destination_output=None, data_output=None, change_output=None, multisig=False, source=None):
+def serialise (inputs, destination_output=None, data_output=None, change_output=None, multisig=False, source=None, unsigned=False):
+    assert not (multisig and unsigned is True)
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
     # Number of inputs.
@@ -169,12 +171,16 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
 
         if multisig:
             # Get source public key.
-            from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
-            from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec
-            private_key_wif = rpc('dumpprivkey', [source])
-            secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif)
-            public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
-            source_pubkey = public_pair_to_sec(public_pair, compressed=compressed)
+            if unsigned:
+                assert isinstance(unsigned, str)
+                source_pubkey = unsigned
+            else:
+                from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
+                from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec
+                private_key_wif = rpc('dumpprivkey', [source])
+                secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif)
+                public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
+                source_pubkey = public_pair_to_sec(public_pair, compressed=compressed)
 
             # Get data (fake) public key.
             pad_length = 33 - 1 - len(data_chunk)
@@ -212,12 +218,37 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
     s += (0).to_bytes(4, byteorder='little')                # LockTime
     return s
 
-def get_inputs (source, total_btc_out, test=False):
+def get_inputs (source, total_btc_out, test=False, unsigned=False):
     """List unspent inputs for source."""
-    if not test:
+    if not test and not unsigned:
         listunspent = rpc('listunspent', [])
+    elif unsigned and not test:
+        #since the address is probably not in our wallet, consult blockchain to ensure that the address has the minimum balance
+        try:
+            r = requests.get("http://blockchain.info/unspent?active=" + source)
+            # ^any other services that provide this?? (blockexplorer.com doesn't...)
+            if r.status_code == 500 and r.text.lower() == "no free outputs to spend":
+                return None, None
+            elif r.status_code != 200:
+                raise Exception("Bad status code returned from blockchain.info: %s" % r.status_code)
+            unspent_outputs = r.json()['unspent_outputs']
+        except requests.exceptions.RequestException as e:
+            raise Exception("Problem getting unspent transactions from blockchain.info: " % e)
+        
+        #take the returned data to a format compatible with bitcoind's output
+        listunspent = []
+        for o in unspent_outputs:
+            listunspent.append({
+                'address': source,
+                'txid': o['tx_hash'],
+                'vout': o['tx_output_n'],
+                'account': "",
+                'scriptPubKey': o['script'],
+                'amount': o['value'] / float(config.UNIT),
+                'confirmations': o['confirmations']
+            })
     else:
-        import os
+        assert test and not unsigned
         CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
         with open(CURR_DIR + '/../test/listunspent.test.json', 'r') as listunspent_test_file:   # HACK
             listunspent = json.load(listunspent_test_file)
@@ -231,8 +262,12 @@ def get_inputs (source, total_btc_out, test=False):
     return None, None
 
 # Replace test flag with fake bitcoind JSON-RPC server.
-def transaction (source, destination, btc_amount, fee, data, test=False, multisig=True):
+def transaction (source, destination, btc_amount, fee, data, test=False, multisig=True, unsigned=False):
     if test: multisig = False   # TODO
+    
+    #NB: if unsigned is True (instead of false or a public key string) and multisig is specified, then disable multisig and use OP_RETURN
+    if unsigned is True and multisig:
+        multisig = False
 
     # Validate addresses.
     for address in (source, destination):
@@ -244,7 +279,7 @@ def transaction (source, destination, btc_amount, fee, data, test=False, multisi
                                           address)
 
     # Check that the source is in wallet.
-    if not test:
+    if not test and not unsigned:
         if not rpc('validateaddress', [source])['ismine']:
             raise exceptions.InvalidAddressError('Not one of your Bitcoin addresses:', source)
 
@@ -277,7 +312,7 @@ def transaction (source, destination, btc_amount, fee, data, test=False, multisi
     if destination: total_btc_out += btc_amount
 
     # Construct inputs.
-    inputs, total_btc_in = get_inputs(source, total_btc_out, test)
+    inputs, total_btc_in = get_inputs(source, total_btc_out, test=test, unsigned=unsigned)
     if not inputs:
         raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need {} BTC.)'.format(source, total_btc_out / config.UNIT))
 
@@ -291,9 +326,8 @@ def transaction (source, destination, btc_amount, fee, data, test=False, multisi
     else: change_output = None
 
     # Serialise inputs and outputs.
-    transaction = serialise(inputs, destination_output, data_output, change_output, multisig=multisig, source=source)
+    transaction = serialise(inputs, destination_output, data_output, change_output, multisig=multisig, source=source, unsigned=unsigned)
     unsigned_tx_hex = binascii.hexlify(transaction).decode('utf-8')
-    
     return unsigned_tx_hex
 
 def transmit (unsigned_tx_hex, ask=True, unsigned=False):

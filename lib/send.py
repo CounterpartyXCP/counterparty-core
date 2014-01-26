@@ -24,14 +24,14 @@ def validate (db, source, destination, amount, asset):
 
     return problems
 
-def create (db, source, destination, amount, asset, test=False):
+def create (db, source, destination, amount, asset, test=False, unsigned=False):
     problems = validate(db, source, destination, amount, asset)
     if problems: raise exceptions.SendError(problems)
 
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount)
-    return bitcoin.transaction(source, destination, config.DUST_SIZE, config.MIN_FEE, data, test)
+    return bitcoin.transaction(source, destination, config.DUST_SIZE, config.MIN_FEE, data, test=test, unsigned=unsigned)
 
 def parse (db, tx, message):
     send_parse_cursor = db.cursor()

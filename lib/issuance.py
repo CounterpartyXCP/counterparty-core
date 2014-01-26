@@ -19,6 +19,10 @@ def validate (db, source, destination, asset, amount, divisible):
     if asset in ('BTC', 'XCP'):
         problems.append('cannot issue BTC or XCP')
 
+    balances = util.get_balances(db, address=source, asset='XCP')
+    if not balances or balances[0]['amount'] < config.ISSUANCE_FEE:
+        problems.append('insufficient funds')
+
     # Valid re-issuance?
     issuances = util.get_issuances(db, validity='Valid', asset=asset)
     if issuances:
@@ -34,6 +38,7 @@ def validate (db, source, destination, asset, amount, divisible):
 
     # For SQLite3
     total = sum([issuance['amount'] for issuance in issuances])
+    assert isinstance(amount, int)
     if total + amount > config.MAX_INT:
         problems.append('maximum total quantity exceeded')
 
@@ -42,14 +47,14 @@ def validate (db, source, destination, asset, amount, divisible):
  
     return problems
 
-def create (db, source, destination, asset, amount, divisible, test=False):
+def create (db, source, destination, asset, amount, divisible, test=False, unsigned=False):
     problems = validate(db, source, destination, asset, amount, divisible)
     if problems: raise exceptions.IssuanceError(problems)
 
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount, divisible)
-    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test)
+    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test=test, unsigned=unsigned)
 
 def parse (db, tx, message):
     issuance_parse_cursor = db.cursor()
@@ -95,7 +100,7 @@ def parse (db, tx, message):
         # Debit fee.
         # TODO: Add amount destroyed to table.
         if amount and tx['block_index'] > 281236:
-            util.debit(db, tx['source'], 'XCP', 5)
+            util.debit(db, tx['source'], 'XCP', config.ISSUANCE_FEE)
 
         # Credit.
         if validity == 'Valid' and amount:

@@ -183,6 +183,26 @@ class APIServer(threading.Thread):
                 end_block=end_block,
                 filterop=filterop)
 
+        @dispatcher.add_method
+        def get_asset_info(asset):
+            #gets some useful info for the given asset
+            issuances = util.get_issuances(db,
+                filters={'field': 'asset', 'op': '==', 'value': asset},
+                validity='Valid',
+                order_by='block_index',
+                order_dir='asc')
+            if not issuances:
+                return None #asset not found, most likely
+            
+            #get the last issurance message for this asset, which should reflect the current owner and if
+            # its divisible (and if it was locked, for that matter)
+            owner = issuances[-1]['issuer']
+            divisible = issuances[-1]['divisible']
+            locked = not issuances[-1]['amount'] and not issuances[-1]['transfer']
+            total_issued = sum([e['amount'] for e in issuances])
+            return {'owner': owner, 'divisible': divisible, 'locked': locked, 'total_issued': total_issued}
+
+
         ######################
         #WRITE/ACTION API
         @dispatcher.add_method
@@ -191,41 +211,45 @@ class APIServer(threading.Thread):
             unsigned_tx_hex = bet.create(db, source, feed_address,
                                          bet_type_id, deadline, wager,
                                          counterwager, target_value,
-                                         leverage, expiration)
-            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+                                         leverage, expiration, unsigned=unsigned)
+            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
 
         @dispatcher.add_method
         def do_broadcast(source, fee_multiplier, text, timestamp, value=0, unsigned=False):
             unsigned_tx_hex = broadcast.create(db, source, timestamp,
-                                               value, fee_multiplier, text)
-            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+                                               value, fee_multiplier, text, unsigned=unsigned)
+            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
 
         @dispatcher.add_method
         def do_btcpay(order_match_id, unsigned=False):
-            unsigned_tx_hex = btcpay.create(db, order_match_id)
-            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+            unsigned_tx_hex = btcpay.create(db, order_match_id, unsigned=unsigned)
+            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
 
         @dispatcher.add_method
         def do_burn(source, quantity, unsigned=False):
-            unsigned_tx_hex = burn.create(db, source, quantity)
-            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+            unsigned_tx_hex = burn.create(db, source, quantity, unsigned=unsigned)
+            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)            
         
         @dispatcher.add_method
         def do_cancel(offer_hash, unsigned=False):
-            unsigned_tx_hex = cancel.create(db, offer_hash)
-            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+            unsigned_tx_hex = cancel.create(db, offer_hash, unsigned=unsigned)
+            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)            
 
         @dispatcher.add_method
         def do_dividend(source, quantity_per_share, share_asset, unsigned=False):
             unsigned_tx_hex = dividend.create(db, source, quantity_per_share,
-                                              share_asset)
-            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+                                              share_asset, unsigned=unsigned)
+            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)            
 
         @dispatcher.add_method
         def do_issuance(source, quantity, asset, divisible, transfer_destination=None, unsigned=False):
+            try:
+                quantity = int(quantity)
+            except ValueError:
+                raise Exception("Invalid quantity")
             unsigned_tx_hex = issuance.create(db, source, transfer_destination,
-                                              asset, quantity, divisible)
-            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+                asset, quantity, divisible, unsigned=unsigned)
+            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)            
         
         @dispatcher.add_method
         def do_order(source, give_quantity, give_asset, get_quantity, get_asset, expiration, fee_required=0,
@@ -233,20 +257,27 @@ class APIServer(threading.Thread):
             unsigned_tx_hex = order.create(db, source, give_asset,
                                            give_quantity, get_asset,
                                            get_quantity, expiration,
-                                           fee_required, fee_provided)
-            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+                                           fee_required, fee_provided,
+                                           unsigned=unsigned)
+            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)            
 
         @dispatcher.add_method
         def do_send(source, destination, quantity, asset, unsigned=False):
-            unsigned_tx_hex = send.create(db, source, destination, quantity, asset)
-            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+            unsigned_tx_hex = send.create(db, source, destination, quantity, asset, unsigned=unsigned)
+            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)            
         
 
-        
-        class Root(object):
+        class API(object):
             @cherrypy.expose
             @cherrypy.tools.json_out()
             def index(self):
+                cherrypy.response.headers["Access-Control-Allow-Origin"] = '*' 
+                cherrypy.response.headers["Access-Control-Allow-Methods"] = 'POST, GET, OPTIONS'
+                cherrypy.response.headers["Access-Control-Allow-Headers"] = 'Origin, X-Requested-With, Content-Type, Accept'
+    
+                if cherrypy.request.method == "OPTIONS": #web client will send us this before making a request
+                    return
+
                 try:
                     data = cherrypy.request.body.read().decode('utf-8')
                 except ValueError:
@@ -271,7 +302,7 @@ class APIServer(threading.Thread):
                 'tools.auth_basic.checkpassword': checkpassword,
             },
         }
-        application = cherrypy.Application(Root(), script_name="/jsonrpc/", config=app_config)
+        application = cherrypy.Application(API(), script_name="/jsonrpc/", config=app_config)
         
         #disable logging of the access and error logs to the screen
         application.log.access_log.propagate = False
