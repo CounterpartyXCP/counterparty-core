@@ -336,7 +336,7 @@ if __name__ == '__main__':
     # Bitcoind RPC host
     if args.bitcoind_rpc_connect:
         config.BITCOIND_RPC_CONNECT = args.bitcoind_rpc_connect
-    elif has_config and 'bitcoind-rpc-connect' in configfile['Default']:
+    elif has_config and 'bitcoind-rpc-connect' in configfile['Default'] and configfile['Default']['bitcoind-rpc-connect']:
         config.BITCOIND_RPC_CONNECT = configfile['Default']['bitcoind-rpc-connect']
     else:
         config.BITCOIND_RPC_CONNECT = 'localhost'
@@ -344,7 +344,7 @@ if __name__ == '__main__':
     # Bitcoind RPC port
     if args.bitcoind_rpc_port:
         config.BITCOIND_RPC_PORT = args.bitcoind_rpc_port
-    elif has_config and 'bitcoind-rpc-port' in configfile['Default']:
+    elif has_config and 'bitcoind-rpc-port' in configfile['Default'] and configfile['Default']['bitcoind-rpc-port']:
         config.BITCOIND_RPC_PORT = configfile['Default']['bitcoind-rpc-port']
     else:
         if config.TESTNET:
@@ -360,7 +360,7 @@ if __name__ == '__main__':
     # Bitcoind RPC user
     if args.bitcoind_rpc_user:
         config.BITCOIND_RPC_USER = args.bitcoind_rpc_user
-    elif has_config and 'bitcoind-rpc-user' in configfile['Default']:
+    elif has_config and 'bitcoind-rpc-user' in configfile['Default'] and configfile['Default']['bitcoind-rpc-user']:
         config.BITCOIND_RPC_USER = configfile['Default']['bitcoind-rpc-user']
     else:
         config.BITCOIND_RPC_USER = 'bitcoinrpc'
@@ -368,7 +368,7 @@ if __name__ == '__main__':
     # Bitcoind RPC password
     if args.bitcoind_rpc_password:
         config.BITCOIND_RPC_PASSWORD = args.bitcoind_rpc_password
-    elif has_config and 'bitcoind-rpc-password' in configfile['Default']:
+    elif has_config and 'bitcoind-rpc-password' in configfile['Default'] and configfile['Default']['bitcoind-rpc-password']:
         config.BITCOIND_RPC_PASSWORD = configfile['Default']['bitcoind-rpc-password']
     else:
         raise exceptions.ConfigurationError('bitcoind RPC password not set. (Use configuration file or --bitcoind-rpc-password=PASSWORD)')
@@ -378,7 +378,7 @@ if __name__ == '__main__':
     # RPC host
     if args.rpc_host:
         config.RPC_HOST = args.rpc_host
-    elif has_config and 'rpc-host' in configfile['Default']:
+    elif has_config and 'rpc-host' in configfile['Default'] and configfile['Default']['rpc-host']:
         config.RPC_HOST = configfile['Default']['rpc-host']
     else:
         config.RPC_HOST = 'localhost'
@@ -386,7 +386,7 @@ if __name__ == '__main__':
     # RPC port
     if args.rpc_port:
         config.RPC_PORT = args.rpc_port
-    elif has_config and 'rpc-port' in configfile['Default']:
+    elif has_config and 'rpc-port' in configfile['Default'] and configfile['Default']['rpc-port']:
         config.RPC_PORT = configfile['Default']['rpc-port']
     else:
         if config.TESTNET:
@@ -402,7 +402,7 @@ if __name__ == '__main__':
     # RPC user
     if args.rpc_user:
         config.RPC_USER = args.rpc_user
-    elif has_config and 'rpc-user' in configfile['Default']:
+    elif has_config and 'rpc-user' in configfile['Default'] and configfile['Default']['rpc-user']:
         config.RPC_USER = configfile['Default']['rpc-user']
     else:
         config.RPC_USER = 'rpc'
@@ -410,7 +410,7 @@ if __name__ == '__main__':
     # RPC password
     if args.rpc_password:
         config.RPC_PASSWORD = args.rpc_password
-    elif has_config and 'rpc-password' in configfile['Default']:
+    elif has_config and 'rpc-password' in configfile['Default'] and configfile['Default']['rpc-password']:
         config.RPC_PASSWORD = configfile['Default']['rpc-password']
     else:
         raise exceptions.ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
@@ -418,7 +418,7 @@ if __name__ == '__main__':
     # zeromq host
     if args.zeromq_host:
         config.ZEROMQ_HOST = args.zeromq_host
-    elif has_config and 'zeromq-host' in configfile['Default']:
+    elif has_config and 'zeromq-host' in configfile['Default'] and configfile['Default']['zeromq-host']:
         config.ZEROMQ_HOST = configfile['Default']['zeromq-host']
     else:
         config.ZEROMQ_HOST = '127.0.0.1'
@@ -428,7 +428,7 @@ if __name__ == '__main__':
     # zeromq port
     if args.zeromq_port:
         config.ZEROMQ_PORT = args.zeromq_port
-    elif has_config and 'zeromq-port' in configfile['Default']:
+    elif has_config and 'zeromq-port' in configfile['Default'] and configfile['Default']['zeromq-port']:
         config.ZEROMQ_PORT = configfile['Default']['zeromq-port']
     else:
         config.ZEROMQ_PORT = '4001'
