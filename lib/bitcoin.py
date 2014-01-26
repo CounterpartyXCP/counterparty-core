@@ -233,6 +233,7 @@ def get_inputs (source, total_btc_out, test=False):
 # Replace test flag with fake bitcoind JSON-RPC server.
 def transaction (source, destination, btc_amount, fee, data, test=False, multisig=True):
     if test: multisig = False   # TODO
+    if config.PREFIX != b'TESTXXXX': multisig = False
 
     # Validate addresses.
     for address in (source, destination):
