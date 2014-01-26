@@ -121,6 +121,7 @@ def op_push (i):
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
 def serialise (inputs, destination_output=None, data_output=None, change_output=None, multisig=False, source=None, unsigned=False):
+    assert not (multisig and unsigned is True)
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
     # Number of inputs.
@@ -170,17 +171,16 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
 
         if multisig:
             # Get source public key.
-            
-            #TODO: DO NOT SIGN HERE IF unsigned == True
             if unsigned:
-                raise Exception("gotta fix this")
-            
-            from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
-            from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec
-            private_key_wif = rpc('dumpprivkey', [source])
-            secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif)
-            public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
-            source_pubkey = public_pair_to_sec(public_pair, compressed=compressed)
+                assert isinstance(unsigned, str)
+                source_pubkey = unsigned
+            else:
+                from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
+                from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec
+                private_key_wif = rpc('dumpprivkey', [source])
+                secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif)
+                public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
+                source_pubkey = public_pair_to_sec(public_pair, compressed=compressed)
 
             # Get data (fake) public key.
             pad_length = 33 - 1 - len(data_chunk)
@@ -264,6 +264,10 @@ def get_inputs (source, total_btc_out, test=False, unsigned=False):
 # Replace test flag with fake bitcoind JSON-RPC server.
 def transaction (source, destination, btc_amount, fee, data, test=False, multisig=True, unsigned=False):
     if test: multisig = False   # TODO
+    
+    #NB: if unsigned is True (instead of false or a public key string) and multisig is specified, then disable multisig and use OP_RETURN
+    if unsigned is True and multisig:
+        multisig = False
 
     # Validate addresses.
     for address in (source, destination):
