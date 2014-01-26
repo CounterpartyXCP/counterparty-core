@@ -13,7 +13,7 @@ FORMAT = '>11s'
 ID = 60
 LENGTH = 11
 
-def create (db, source, quantity, test=False, overburn=False):
+def create (db, source, quantity, test=False, overburn=False, unsigned=False):
     # Try to make sure that the burned funds won't go to waste.
     block_count = bitcoin.rpc('getblockcount', [])
     if block_count < config.BURN_START:
@@ -27,7 +27,7 @@ def create (db, source, quantity, test=False, overburn=False):
     if quantity > (1 * config.UNIT - already_burned) and not overburn:
         raise exceptions.UselessError('A maximum of 1 BTC may be burned per address.')
         
-    return bitcoin.transaction(source, config.UNSPENDABLE, quantity, config.MIN_FEE, None, test)
+    return bitcoin.transaction(source, config.UNSPENDABLE, quantity, config.MIN_FEE, None, test=test, unsigned=unsigned)
 
 def parse (db, tx, message=None):
     burn_parse_cursor = db.cursor()

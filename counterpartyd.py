@@ -513,7 +513,7 @@ if __name__ == '__main__':
         quantity = util.devise(db, args.quantity, args.asset, 'input')
         unsigned_tx_hex = send.create(db, args.source, args.destination,
                                       quantity, args.asset)
-        json_print(bitcoin.transmit(unsigned_tx_hex, unsigned=args.unsigned))
+        json_print(unsigned_tx_hex if args.unsigned else bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'order':
         # Fee argument is either fee_required or fee_provided, as necessary.
@@ -539,11 +539,11 @@ if __name__ == '__main__':
         unsigned_tx_hex = order.create(db, args.source, args.give_asset, give_quantity,
                                 args.get_asset, get_quantity,
                                 args.expiration, fee_required, fee_provided)
-        json_print(bitcoin.transmit(unsigned_tx_hex, unsigned=args.unsigned))
+        json_print(unsigned_tx_hex if args.unsigned else bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'btcpay':
         unsigned_tx_hex = btcpay.create(db, args.order_match_id)
-        json_print(bitcoin.transmit(unsigned_tx_hex, unsigned=args.unsigned))
+        json_print(unsigned_tx_hex if args.unsigned else bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'issuance':
         quantity = util.devise(db, args.quantity, None, 'input',
@@ -551,14 +551,14 @@ if __name__ == '__main__':
         unsigned_tx_hex = issuance.create(db, args.source,
                                           args.transfer_destination,
                                           args.asset, quantity, args.divisible)
-        json_print(bitcoin.transmit(unsigned_tx_hex, unsigned=args.unsigned))
+        json_print(unsigned_tx_hex if args.unsigned else bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'broadcast':
         value = util.devise(db, args.value, 'value', 'input')
         unsigned_tx_hex = broadcast.create(db, args.source, int(time.time()),
                                            value, args.fee_multiplier,
                                            args.text)
-        json_print(bitcoin.transmit(unsigned_tx_hex, unsigned=args.unsigned))
+        json_print(unsigned_tx_hex if args.unsigned else bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'bet':
         deadline = round(datetime.timestamp(dateutil.parser.parse(args.deadline)))
@@ -571,22 +571,22 @@ if __name__ == '__main__':
                                      util.BET_TYPE_ID[args.bet_type], deadline,
                                      wager, counterwager, target_value,
                                      leverage, args.expiration)
-        json_print(bitcoin.transmit(unsigned_tx_hex, unsigned=args.unsigned))
+        json_print(unsigned_tx_hex if args.unsigned else bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'dividend':
         quantity_per_share = util.devise(db, args.quantity_per_share, 'XCP', 'input')
         unsigned_tx_hex = dividend.create(db, args.source, quantity_per_share,
                                    args.share_asset)
-        json_print(bitcoin.transmit(unsigned_tx_hex, unsigned=args.unsigned))
+        json_print(unsigned_tx_hex if args.unsigned else bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'burn':
         quantity = util.devise(db, args.quantity, 'BTC', 'input')
         unsigned_tx_hex = burn.create(db, args.source, quantity)
-        json_print(bitcoin.transmit(unsigned_tx_hex, unsigned=args.unsigned))
+        json_print(unsigned_tx_hex if args.unsigned else bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'cancel':
         unsigned_tx_hex = cancel.create(db, args.offer_hash)
-        json_print(bitcoin.transmit(unsigned_tx_hex, unsigned=args.unsigned))
+        json_print(unsigned_tx_hex if args.unsigned else bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'address':
         try:

@@ -28,7 +28,7 @@ def get_fee_multiplier (db, feed_address):
     return last_broadcast['fee_multiplier']
 
 def create (db, source, feed_address, bet_type, deadline, wager_amount,
-            counterwager_amount, target_value, leverage, expiration, test=False):
+            counterwager_amount, target_value, leverage, expiration, test=False, unsigned=False):
 
     # Look at feed to be bet on.
     broadcasts = util.get_broadcasts(db, validity='Valid', source=feed_address)
@@ -62,7 +62,7 @@ def create (db, source, feed_address, bet_type, deadline, wager_amount,
                         wager_amount, counterwager_amount, target_value,
                         leverage, expiration)
     return bitcoin.transaction(source, feed_address, config.DUST_SIZE,
-                               config.MIN_FEE, data, test)
+                               config.MIN_FEE, data, test=test, unsigned=unsigned)
 
 def parse (db, tx, message):
     bet_parse_cursor = db.cursor()

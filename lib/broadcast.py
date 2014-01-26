@@ -32,7 +32,7 @@ FORMAT = '>IdI52p'
 ID = 30
 LENGTH = 4 + 8 + 4 + 52
 
-def create (db, source, timestamp, value, fee_multiplier, text, test=False):
+def create (db, source, timestamp, value, fee_multiplier, text, test=False, unsigned=False):
     # Use a magic number to store the fee multplier as an integer.
     fee_multiplier = round(D(fee_multiplier) * D(1e8))
     if fee_multiplier > 4294967295:
@@ -61,7 +61,7 @@ def create (db, source, timestamp, value, fee_multiplier, text, test=False):
                         text.encode('utf-8'))
     if len(data) > 80:
         raise exceptions.BroadcastError('Text is greater than 52 bytes.')
-    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test)
+    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test=test, unsigned=unsigned)
 
 def parse (db, tx, message):
     broadcast_parse_cursor = db.cursor()

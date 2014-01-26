@@ -11,7 +11,7 @@ FORMAT = '>QQ?'
 ID = 20
 LENGTH = 8 + 8 + 1
 
-def create (db, source, destination, asset, amount, divisible, test=False):
+def create (db, source, destination, asset, amount, divisible, test=False, unsigned=False):
     if not util.valid_asset_name(asset):
         raise exceptions.AssetError('Bad asset name.')
     if asset in ('BTC', 'XCP'):
@@ -32,6 +32,7 @@ def create (db, source, destination, asset, amount, divisible, test=False):
 
     # For SQLite3
     total = sum([issuance['amount'] for issuance in issuances])
+    assert isinstance(amount, int)
     if total + amount > config.MAX_INT:
         raise exceptions.IssuanceError('Maximum total quantity exceeded.')
 
@@ -41,7 +42,7 @@ def create (db, source, destination, asset, amount, divisible, test=False):
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount, divisible)
-    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test)
+    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test=test, unsigned=unsigned)
 
 def parse (db, tx, message):
     issuance_parse_cursor = db.cursor()

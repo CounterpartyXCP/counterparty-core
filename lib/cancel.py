@@ -14,7 +14,7 @@ FORMAT = '>32s'
 ID = 70
 LENGTH = 32
 
-def create (db, offer_hash, test=False):
+def create (db, offer_hash, test=False, unsigned=False):
     offer = None
     for offer in util.get_orders(db, validity='Valid') + util.get_bets(db, validity='Valid'):
         if offer_hash == offer['tx_hash']:
@@ -29,7 +29,7 @@ def create (db, offer_hash, test=False):
     offer_hash_bytes = binascii.unhexlify(bytes(offer_hash, 'utf-8'))
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, offer_hash_bytes)
-    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test)
+    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test=test, unsigned=unsigned)
 
 def parse (db, tx, message):
     cancel_parse_cursor = db.cursor()

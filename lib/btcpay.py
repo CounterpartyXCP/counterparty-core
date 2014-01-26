@@ -10,7 +10,7 @@ FORMAT = '>32s32s'
 ID = 11
 LENGTH = 32 + 32
 
-def create (db, order_match_id, test=False):
+def create (db, order_match_id, test=False, unsigned=False):
     tx0_hash, tx1_hash = order_match_id[:64], order_match_id[64:] # UTF-8 encoding means that the indices are doubled.
     tx0_hash_bytes, tx1_hash_bytes = binascii.unhexlify(bytes(tx0_hash, 'utf-8')), binascii.unhexlify(bytes(tx1_hash, 'utf-8'))
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
@@ -34,7 +34,7 @@ def create (db, order_match_id, test=False):
         destination = order_match['tx1_address']
         btc_amount = order_match['forward_amount']
 
-    return bitcoin.transaction(source, destination, btc_amount, config.MIN_FEE, data, test)
+    return bitcoin.transaction(source, destination, btc_amount, config.MIN_FEE, data, test=test, unsigned=unsigned)
 
 def parse (db, tx, message):
     btcpay_parse_cursor = db.cursor()
