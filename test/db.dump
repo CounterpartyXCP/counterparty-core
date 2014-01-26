@@ -12,7 +12,7 @@ CREATE TABLE balances(
                         address TEXT,
                         asset TEXT,
                         amount INTEGER);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',148461572600);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',148460772600);
 INSERT INTO balances VALUES('n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',50000000);
 INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',950000000);
 INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',100000);
@@ -165,6 +165,7 @@ INSERT INTO credits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',100000000)
 INSERT INTO credits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',1000000000);
 INSERT INTO credits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',100000);
 INSERT INTO credits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',60);
+INSERT INTO credits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',0);
 INSERT INTO credits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',62250000);
 INSERT INTO credits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',3112500);
 INSERT INTO credits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',184300000);
@@ -184,6 +185,7 @@ CREATE TABLE debits(
 INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',50000000);
 INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',105000000);
 INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',60);
+INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',800000);
 INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',50000000);
 INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',2500000);
 INSERT INTO debits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',25000000);
@@ -212,7 +214,7 @@ CREATE TABLE dividends(
                         amount_per_share INTEGER,
                         validity TEXT);
 INSERT INTO dividends VALUES(7,'ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879',7,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',6,'Valid');
-INSERT INTO dividends VALUES(8,'beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a',8,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',8,'Invalid: dividend too small');
+INSERT INTO dividends VALUES(8,'beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a',8,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',8,'Valid');
 -- Triggers and indices on  dividends
 CREATE INDEX dividends_block_index_idx ON dividends (block_index)
                     ;

@@ -10,19 +10,27 @@ FORMAT = '>32s32s'
 ID = 11
 LENGTH = 32 + 32
 
-def create (db, order_match_id, test=False):
-    tx0_hash, tx1_hash = order_match_id[:64], order_match_id[64:] # UTF-8 encoding means that the indices are doubled.
-    tx0_hash_bytes, tx1_hash_bytes = binascii.unhexlify(bytes(tx0_hash, 'utf-8')), binascii.unhexlify(bytes(tx1_hash, 'utf-8'))
-    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
-    data += struct.pack(FORMAT, tx0_hash_bytes, tx1_hash_bytes)
+def validate (db, tx0_hash, tx1_hash):
+    order_match_id = tx0_hash + tx1_hash
+    problems = []
 
     order_matches = util.get_order_matches(db, validity='Valid: awaiting BTC payment', tx0_hash=tx0_hash, tx1_hash=tx1_hash)
     if len(order_matches) == 0:
-        raise exceptions.InvalidOrderMatchError('Invalid Order Match ID:', order_match_id)
+        problems.append('invalid order match ID, {}'.format(order_match_id))
+        order_match = None
     elif len(order_matches) > 1:
-        raise Exception
+        assert False
     else:
         order_match = order_matches[0]
+
+    return order_match, problems
+
+def create (db, order_match_id, test=False):
+    tx0_hash, tx1_hash = order_match_id[:64], order_match_id[64:] # UTF-8 encoding means that the indices are doubled.
+
+    # Try to match.
+    order_match, problems = validate(db, tx0_hash, tx1_hash)
+    if problems: raise exceptions.BTCPayError(problems)
 
     # Figure out to which address the BTC are being paid.
     if order_match['backward_asset'] == 'BTC':
@@ -34,30 +42,28 @@ def create (db, order_match_id, test=False):
         destination = order_match['tx1_address']
         btc_amount = order_match['forward_amount']
 
+    tx0_hash_bytes, tx1_hash_bytes = binascii.unhexlify(bytes(tx0_hash, 'utf-8')), binascii.unhexlify(bytes(tx1_hash, 'utf-8'))
+    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
+    data += struct.pack(FORMAT, tx0_hash_bytes, tx1_hash_bytes)
     return bitcoin.transaction(source, destination, btc_amount, config.MIN_FEE, data, test)
 
 def parse (db, tx, message):
     btcpay_parse_cursor = db.cursor()
-    validity = 'Valid'
 
     # Unpack message.
     try:
         tx0_hash_bytes, tx1_hash_bytes = struct.unpack(FORMAT, message)
         tx0_hash, tx1_hash = binascii.hexlify(tx0_hash_bytes).decode('utf-8'), binascii.hexlify(tx1_hash_bytes).decode('utf-8')
+        validity = 'Valid'
     except Exception:
         tx0_hash, tx1_hash = None, None
         validity = 'Invalid: could not unpack'
 
     if validity == 'Valid':
-        order_match_id = tx0_hash + tx1_hash
-
         # Try to match.
-        btcpay_parse_cursor.execute('''SELECT * FROM order_matches WHERE (tx0_hash=? AND tx1_hash=? AND validity=?)''', (tx0_hash, tx1_hash, 'Valid: awaiting BTC payment'))
-        order_matches = btcpay_parse_cursor.fetchall()
-        if not order_matches:
-            validity = 'Invalid: No Such Order Match ID'
-        else:
-            order_match = order_matches[0]
+        order_match, problems = validate(db, tx0_hash, tx1_hash)
+        if problems: validity = 'Invalid: ' + ';'.join(problems)
+        order_match_id = tx0_hash + tx1_hash
 
     if validity == 'Valid':
         # Credit source address for the currency that he bought with the bitcoins.
@@ -85,6 +91,7 @@ def parse (db, tx, message):
     }
     btcpay_parse_cursor.execute(*util.get_insert_sql('btcpays', element_data))
     config.zeromq_publisher.push_to_subscribers('new_btcpay', element_data)
+
     btcpay_parse_cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

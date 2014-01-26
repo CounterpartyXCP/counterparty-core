@@ -22,40 +22,50 @@ ID = 40
 LENGTH = 2 + 4 + 8 + 8 + 8 + 4 + 4
 
 def get_fee_multiplier (db, feed_address):
-    # Get fee_multiplier from the last broadcast from the feed_address address.
+    '''Get fee_multiplier from the last broadcast from the feed_address address.
+    '''
     broadcasts = util.get_broadcasts(db, source=feed_address)
     last_broadcast = broadcasts[-1]
     return last_broadcast['fee_multiplier']
 
-def create (db, source, feed_address, bet_type, deadline, wager_amount,
-            counterwager_amount, target_value, leverage, expiration, test=False):
+def validate (db, source, feed_address, bet_type, deadline, wager_amount,
+              counterwager_amount, target_value, leverage, expiration):
+    problems = []
 
     # Look at feed to be bet on.
     broadcasts = util.get_broadcasts(db, validity='Valid', source=feed_address)
     if not broadcasts:
-        raise exceptions.FeedError('That feed doesn\'t exist.')
+        problems.append('feed doesn’t exist')
     elif not broadcasts[-1]['text']:
-        raise exceptions.FeedError('That feed is locked.')
+        problems.append('feed is locked')
     elif broadcasts[-1]['timestamp'] >= deadline:
-        raise exceptions.FeedError('Deadline is in that feed\'s past.')
+        problems.append('deadline in that feed’s past')
 
     # Check for sufficient funds.
     fee_multiplier = get_fee_multiplier(db, feed_address)
     balances = util.get_balances(db, address=source, asset='XCP')
     if not balances or balances[0]['amount'] < wager_amount * (1 + fee_multiplier / 1e8):
-        raise exceptions.BalanceError('Insufficient funds to both make wager and pay feed fee (in XCP). (Check that the database is up-to-date.)')
+        problems.append('insufficient funds to both make wager and pay feed fee (in XCP)')
 
     # Valid leverage level?
     if leverage != 5040 and bet_type in (2,3):   # Equal, NotEqual
-        raise exceptions.UselessError('Leverage cannot be used with bet types Equal and NotEqual.')
+        problems.append('leverage cannot be used with bet types Equal and NotEqual')
     if leverage < 5040:
-        raise exceptions.UselessError('Leverage level too low (less than 5040, which is 1:1).')
+        problems.append('leverage level too low (less than 5040, which is 1:1)')
 
     if not wager_amount or not counterwager_amount:
-        raise exceptions.UselessError('Zero wager or counterwager')
+        problems.append('zero wager or counterwager')
 
     if target_value and bet_type in (0,1):   # BullCFD, BearCFD
-        raise exceptions.UselessError('CFDs have no target value.')
+        problems.append('CFDs have no target value')
+
+    return problems
+
+def create (db, source, feed_address, bet_type, deadline, wager_amount,
+            counterwager_amount, target_value, leverage, expiration, test=False):
+    problems = validate(db, source, feed_address, bet_type, deadline, wager_amount,
+                        counterwager_amount, target_value, leverage, expiration)
+    if problems: raise exceptions.BetError(problems)
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, bet_type, deadline, 
@@ -66,13 +76,13 @@ def create (db, source, feed_address, bet_type, deadline, wager_amount,
 
 def parse (db, tx, message):
     bet_parse_cursor = db.cursor()
-    validity = 'Valid'
 
     # Unpack message.
     try:
         (bet_type, deadline, wager_amount,
          counterwager_amount, target_value, leverage,
          expiration) = struct.unpack(FORMAT, message)
+        validity = 'Valid'
     except Exception:
         (bet_type, deadline, wager_amount,
          counterwager_amount, target_value, leverage,
@@ -88,37 +98,24 @@ def parse (db, tx, message):
     leverage = min(leverage, config.MAX_INT)
     expiration = min(expiration, config.MAX_INT)
 
-    # Look at feed to be bet on.
-    feed_address = tx['destination']
-    if validity == 'Valid':
-        broadcasts = util.get_broadcasts(db, validity='Valid', source=feed_address)
-        if not broadcasts:
-            validity = 'Invalid: no such feed'
-        elif not broadcasts[-1]['text']:
-            validity = 'Invalid: locked feed'
-        elif broadcasts[-1]['timestamp'] >= deadline:
-            validity = 'Invalid: deadline is in that feed\'s past'
-
-    # Leverage < 5040 is allowed.
-
-    if validity == 'Valid':
-        if not wager_amount or not counterwager_amount:
-            validity = 'Invalid: zero wager or zero counterwager.'
-
-    if validity == 'Valid' and leverage != 5040 and bet_type in (2,3):   # Equal, NotEqual
-        validity  = 'Invalid: leverage used with an inappropriate bet type.'
-
     # Debit amount wagered and fee.
+    if validity == 'Valid':
+        feed_address = tx['destination']
+        problems = validate(db, tx['source'], feed_address, bet_type, deadline, wager_amount,
+                            counterwager_amount, target_value, leverage, expiration)
+        if problems: validity = 'Invalid: ' + ';'.join(problems)
+
     if validity == 'Valid':
         fee_multiplier = get_fee_multiplier(db, feed_address)
         fee = round(wager_amount * fee_multiplier / 1e8)
-        validity = util.debit(db, tx['source'], 'XCP', wager_amount)
-        validity = util.debit(db, tx['source'], 'XCP', fee)
+        util.debit(db, tx['source'], 'XCP', wager_amount)
+        util.debit(db, tx['source'], 'XCP', fee)
 
         wager_amount = round(wager_amount)
         counterwager_amount = round(counterwager_amount)
         odds = wager_amount / counterwager_amount
     else:
+        fee_multiplier = 0
         odds = 0
 
     # Add parsed transaction to message-type–specific table.

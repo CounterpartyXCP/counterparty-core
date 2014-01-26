@@ -14,43 +14,49 @@ FORMAT = '>32s'
 ID = 70
 LENGTH = 32
 
-def create (db, offer_hash, test=False):
-    offer = None
+def validate (db, offer_hash, source=None, test=False):
+    problems = []
+
     for offer in util.get_orders(db, validity='Valid') + util.get_bets(db, validity='Valid'):
         if offer_hash == offer['tx_hash']:
-            break
-    if not offer:
-        raise exceptions.Useless('No valid offer with that hash.')
+            if source == offer['source']:
+                return source, offer, problems
+            else:
+                if bitcoin.rpc('validateaddress', [offer['source']])['ismine'] or test:
+                    source = offer['source']
+                else:
+                    problems.append('offer was not made by one of your addresses')
+                return source, offer, problems
+                
+    problems.append('no valid offer with that hash')
+    return None, None, problems
 
-    source = offer['source']
-    if not bitcoin.rpc('validateaddress', [source])['ismine'] and not test:
-        raise exceptions.CancelError('That offer was not made by one of your addresses.')
+
+def create (db, offer_hash, test=False):
+    source, offer, problems = validate(db, offer_hash, test=test)
+    if problems: raise exceptions.CancelError(problems)
 
     offer_hash_bytes = binascii.unhexlify(bytes(offer_hash, 'utf-8'))
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, offer_hash_bytes)
     return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test)
 
-def parse (db, tx, message):
+def parse (db, tx, message, test=False):
     cancel_parse_cursor = db.cursor()
-    validity = 'Valid'
 
     # Unpack message.
     try:
         offer_hash_bytes = struct.unpack(FORMAT, message)[0]
         offer_hash = binascii.hexlify(offer_hash_bytes).decode('utf-8')
+        validity = 'Valid'
     except Exception:
         offer_hash = None
         validity = 'Invalid: could not unpack'
 
-
     if validity == 'Valid':
-        # Find the offer.
-        cancel_parse_cursor.execute('''SELECT * FROM (orders JOIN bets) \
-                                       WHERE ((orders.tx_hash=? AND orders.source=? AND orders.validity=?) OR (bets.tx_hash=? AND bets.source=? AND bets.validity=?))''', (offer_hash, tx['source'], 'Valid', offer_hash, tx['source'], 'Valid'))
-        offers = cancel_parse_cursor.fetchall() # TODO: Why am I getting multiple matches here?!
-        if not offers:
-            validity = 'Invalid: no valid offer with that hash from that address'
+        if validity == 'Valid':
+            source, offer, problems = validate(db, offer_hash, source=tx['source'], test=False)
+            if problems: validity = 'Invalid: ' + ';'.join(problems)
 
     if validity == 'Valid':
         # Cancel the offer. (This in very inelegant.)
@@ -74,6 +80,7 @@ def parse (db, tx, message):
     }
     cancel_parse_cursor.execute(*util.get_insert_sql('cancels', element_data))
     config.zeromq_publisher.push_to_subscribers('new_cancel', element_data)
+
     cancel_parse_cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

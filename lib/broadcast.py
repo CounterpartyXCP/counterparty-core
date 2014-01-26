@@ -17,7 +17,7 @@ written, for example, such that a price of 1 XCP means one outcome, 2 XCP means
 another, etc., which schema should be described in the 'text' field.
 
 fee_multipilier: .05 XCP means 5%. It may be greater than 1, however; but
-because it is stored as a four-byte integer, it may not be greater than about
+because it is stored as a four‐byte integer, it may not be greater than about
 42.
 """
 
@@ -32,29 +32,38 @@ FORMAT = '>IdI52p'
 ID = 30
 LENGTH = 4 + 8 + 4 + 52
 
-def create (db, source, timestamp, value, fee_multiplier, text, test=False):
-    # Use a magic number to store the fee multplier as an integer.
-    fee_multiplier = round(D(fee_multiplier) * D(1e8))
+def validate (db, source, timestamp, value, fee_multiplier, text):
+    problems = []
+
     if fee_multiplier > 4294967295:
-        raise exceptions.OverflowError('Fee multiplier must be less than or equal to 42.94967295.')
+        problems.append('fee multiplier greater than 42.94967295')
 
     if not source:
-        raise exceptions.InputError('Null source address.')
+        problems.append('null source address')
     # Check previous broadcast in this feed.
     broadcasts = util.get_broadcasts(db, validity='Valid', source=source, order_by='tx_index', order_dir='asc')
     if broadcasts:
         last_broadcast = broadcasts[-1]
         if not last_broadcast['text']:
-            raise exceptions.UselessError('Locked feed')
+            problems.append('locked feed')
         elif timestamp <= last_broadcast['timestamp']:
-            raise exceptions.UselessError('Feed timestamps must be monotonically increasing')
+            problems.append('feed timestamps not monotonically increasing')
 
     # Locking
     if not text:
         if value:
-            raise exceptions.BroadcastError('No value may be specified when locking a feed.')
+            problems.append('value specified when locking feed')
         elif fee_multiplier:
-            raise exceptions.BroadcastError('No fee multiplier may be specified when locking a feed.')
+            problems.append('fee multiplier specified when locking feed')
+
+    return problems
+
+def create (db, source, timestamp, value, fee_multiplier, text, test=False):
+    # Use a magic number to store the fee multplier as an integer.
+    fee_multiplier = round(D(fee_multiplier) * D(1e8))
+
+    problems = validate(db, source, timestamp, value, fee_multiplier, text)
+    if problems: raise exceptions.BroadcastError(problems)
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, timestamp, value, fee_multiplier,
@@ -65,12 +74,12 @@ def create (db, source, timestamp, value, fee_multiplier, text, test=False):
 
 def parse (db, tx, message):
     broadcast_parse_cursor = db.cursor()
-    validity = 'Valid'
 
     # Unpack message.
     try:
         timestamp, value, fee_multiplier, text = struct.unpack(FORMAT, message)
         text = text.decode('utf-8')
+        validity = 'Valid'
     except Exception:
         timestamp, value, fee_multiplier, text = None, None, None, None
         validity = 'Invalid: could not unpack'
@@ -79,14 +88,19 @@ def parse (db, tx, message):
     timestamp = min(timestamp, config.MAX_INT)
     value = min(value, config.MAX_INT)
 
-    # Check previous broadcast in this feed.
-    broadcasts = util.get_broadcasts(db, validity='Valid', source=tx['source'], order_by='tx_index', order_dir='asc')
-    if broadcasts:
-        last_broadcast = broadcasts[-1]
-        if not last_broadcast['text']:
-            validity = 'Invalid: locked feed'
-        elif not timestamp > last_broadcast['timestamp']:
-            validity = 'Invalid: feed timestamps must be monotonically increasing'
+    if validity == 'Valid':
+        problems = validate(db, tx['source'], timestamp, value, fee_multiplier, text)
+        if problems: validity = 'Invalid: ' + ';'.join(problems)
+
+    # Log.
+    if validity == 'Valid':
+        if not text:
+            logging.info('Broadcast: {} locked his feed.'.format(tx['source'], util.short(tx['tx_hash'])))
+        else:
+            if not value: infix = '\'' + text + '\''
+            else: infix = '\'' + text + '\'' + ' = ' + str(value)
+            suffix = ' from ' + tx['source'] + ' at ' + util.isodt(timestamp) + ' with a fee multiplier of {}'.format(util.devise(db, fee_multiplier, 'fee_multiplier', 'output')) + ' (' + util.short(tx['tx_hash']) + ')'
+            logging.info('Broadcast: {}'.format(infix + suffix))
 
     # Add parsed transaction to message-type–specific table.
     element_data = {
@@ -102,16 +116,6 @@ def parse (db, tx, message):
     }
     broadcast_parse_cursor.execute(*util.get_insert_sql('broadcasts', element_data))
     config.zeromq_publisher.push_to_subscribers('new_broadcast', element_data)
-
-    # Log.
-    if validity == 'Valid':
-        if not text:
-            logging.info('Broadcast: {} locked his feed.'.format(tx['source'], util.short(tx['tx_hash'])))
-        else:
-            if not value: infix = '\'' + text + '\''
-            else: infix = '\'' + text + '\'' + ' = ' + str(value)
-            suffix = ' from ' + tx['source'] + ' at ' + util.isodt(timestamp) + ' with a fee multiplier of {}'.format(util.devise(db, fee_multiplier, 'fee_multiplier', 'output')) + ' (' + util.short(tx['tx_hash']) + ')'
-            logging.info('Broadcast: {}'.format(infix + suffix))
 
     # Null values are special.
     if not value:

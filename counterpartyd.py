@@ -530,7 +530,7 @@ if __name__ == '__main__':
         else:
             fee_provided = util.devise(db, args.fee_provided, 'XCP', 'input')
             if fee_provided != config.MIN_FEE or args.fee_required != 0:
-                raise exceptions.UselessError('No fee should be required or provided (explicitly) if not buying or selling BTC.')
+                raise exceptions.InputError('No fee should be required or provided (explicitly) if not buying or selling BTC.')
             fee_required = 0
             fee_provided = config.MIN_FEE
 

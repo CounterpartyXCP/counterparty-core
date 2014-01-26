@@ -11,33 +11,41 @@ FORMAT = '>QQ?'
 ID = 20
 LENGTH = 8 + 8 + 1
 
-def create (db, source, destination, asset, amount, divisible, test=False):
+def validate (db, source, destination, asset, amount, divisible):
+    problems = []
+
     if not util.valid_asset_name(asset):
-        raise exceptions.AssetError('Bad asset name.')
+        problems.append('bad asset name')
     if asset in ('BTC', 'XCP'):
-            raise exceptions.IssuanceError('Cannot issue BTC or XCP.')
+        problems.append('cannot issue BTC or XCP')
 
     # Valid re-issuance?
     issuances = util.get_issuances(db, validity='Valid', asset=asset)
     if issuances:
         last_issuance = issuances[-1]
         if last_issuance['issuer'] != source:
-            raise exceptions.IssuanceError('Asset exists and was not issued by this address.')
+            problems.append('asset exists and was not issued by this address')
         elif last_issuance['divisible'] != divisible:
-            raise exceptions.IssuanceError('Asset exists with a different divisibility.')
+            problems.append('asset exists with a different divisibility')
         elif not last_issuance['amount'] and not last_issuance['transfer']:
-            raise exceptions.IssuanceError('Asset is locked.')
+            problems.append('asset is locked')
     elif not amount:
-        raise exceptions.IssuanceError('Cannot lock or transfer an unissued asset.')
+        problems.append('cannot lock or transfer an unissued asset')
 
     # For SQLite3
     total = sum([issuance['amount'] for issuance in issuances])
     if total + amount > config.MAX_INT:
-        raise exceptions.IssuanceError('Maximum total quantity exceeded.')
+        problems.append('maximum total quantity exceeded')
 
     if destination and amount:
-        raise exceptions.IssuanceError('Cannot issue and transfer simultaneously.')
-        
+        problems.append('cannot issue and transfer simultaneously')
+ 
+    return problems
+
+def create (db, source, destination, asset, amount, divisible, test=False):
+    problems = validate(db, source, destination, asset, amount, divisible)
+    if problems: raise exceptions.IssuanceError(problems)
+
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount, divisible)
@@ -45,45 +53,21 @@ def create (db, source, destination, asset, amount, divisible, test=False):
 
 def parse (db, tx, message):
     issuance_parse_cursor = db.cursor()
-    validity = 'Valid'
 
     # Unpack message.
     try:
         asset_id, amount, divisible = struct.unpack(FORMAT, message)
         asset = util.get_asset_name(asset_id)
+        validity = 'Valid'
     except Exception:
         asset, amount, divisible = None, None, None
         validity = 'Invalid: could not unpack'
 
-    if validity == 'Valid' and not util.valid_asset_name(asset):
-        validity = 'Invalid: bad asset name'
-
-    # Valid re-issuance?
     if validity == 'Valid':
-        issuances = util.get_issuances(db, validity='Valid', asset=asset)
-        if issuances:
-            last_issuance = issuances[-1]
-            if last_issuance['issuer'] != tx['source']:
-                validity = 'Invalid: asset already exists and was not issued by this address'
-            elif last_issuance['divisible'] != divisible:
-                validity = 'Invalid: asset exists with a different divisibility'
-            elif not last_issuance['amount'] and not last_issuance['transfer']:
-                validity = 'Invalid: asset is locked'
-        elif not amount:
-            validity = 'Invalid: cannot lock or transfer an unissued asset'
-
-    # For SQLite3
-    total = sum([issuance['amount'] for issuance in issuances])
-    if total + amount > config.MAX_INT:
-        amount = 0
-        if validity == 'Valid':
-            validity = 'Invalid: exceeded maximum total quantity'
-
-    if validity == 'Valid' and asset in ('BTC', 'XCP'):
-        validity = 'Invalid: cannot issue BTC or XCP'
-
-    if validity == 'Valid' and (tx['destination'] and amount):
-        validity = 'Invalid: cannot issue and transfer simultaneously'
+        problems = validate(db, tx['source'], tx['destination'], asset, amount, divisible)
+        if problems: validity = 'Invalid: ' + ';'.join(problems)
+        if 'maximum total quantity exceeded' in problems:
+            amount = 0
 
     if tx['destination']:
         issuer = tx['destination']
@@ -107,17 +91,17 @@ def parse (db, tx, message):
     issuance_parse_cursor.execute(*util.get_insert_sql('issuances', element_data))
     config.zeromq_publisher.push_to_subscribers('new_issuance', element_data)
         
-    # Debit fee.
-    # TODO: Add amount destroyed to table.
-    if validity == 'Valid' and amount and tx['block_index'] > 281236:
-        validity = util.debit(db, tx['source'], 'XCP', 5)
-
-    # Credit.
-    if validity == 'Valid' and amount:
-        util.credit(db, tx['source'], asset, amount)
-
-    # Log.
     if validity == 'Valid':
+        # Debit fee.
+        # TODO: Add amount destroyed to table.
+        if amount and tx['block_index'] > 281236:
+            util.debit(db, tx['source'], 'XCP', 5)
+
+        # Credit.
+        if validity == 'Valid' and amount:
+            util.credit(db, tx['source'], asset, amount)
+
+        # Log.
         if tx['destination']:
             logging.info('Issuance: {} transfered asset {} to {} ({})'.format(tx['source'], asset, tx['destination'], util.short(tx['tx_hash'])))
         elif not amount:

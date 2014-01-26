@@ -15,22 +15,10 @@ class InputError(Exception):
 
 class BitcoindError (Exception):
     pass
-class DatabaseError (Exception):
-    pass
-
 class BitcoindRPCError (BitcoindError):
     pass
 
-class DividendError (Exception):
-    pass
-class BroadcastError (Exception):
-    pass
-class FeedError (Exception):
-    pass
-class IssuanceError (Exception):
-    pass
-
-class UselessError (Exception):
+class DatabaseError (Exception):
     pass
 
 class FeeError (Exception):
@@ -47,9 +35,25 @@ class InvalidAddressError (Exception):
 class VersionByteError (InvalidAddressError):
     pass
 
-class CancelError (Exception):
+class MessageError (Exception):
     pass
-class InvalidOrderMatchError (Exception):
+class BurnError (MessageError):
+    pass
+class SendError (MessageError):
+    pass
+class OrderError (MessageError):
+    pass
+class BroadcastError (MessageError):
+    pass
+class BetError (MessageError):
+    pass
+class IssuanceError (MessageError):
+    pass
+class DividendError (MessageError):
+    pass
+class BTCPayError (MessageError):
+    pass
+class CancelError (MessageError):
     pass
 
 class Base26Error (Exception):
@@ -60,4 +64,5 @@ class InvalidBase58Error (Base58Error):
     pass
 class Base58ChecksumError (Base58Error):
     pass
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

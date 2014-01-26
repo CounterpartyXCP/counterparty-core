@@ -225,32 +225,29 @@ def debit (db, address, asset, amount):
         old_balance = balances[0]['amount']
         assert type(old_balance) == int
 
-    if old_balance >= amount:
-        balance = round(old_balance - amount)
-        balance = min(balance, config.MAX_INT)
-        debit_cursor.execute('''UPDATE balances \
-                          SET amount=? \
-                          WHERE (address=? and asset=?)''',
-                       (balance, address, asset)) 
-        validity = 'Valid'
-        config.zeromq_publisher.push_to_subscribers('debit', {
-            'address': address, 'asset': asset, 'amount': amount, 'balance': balance })
+    if old_balance < amount:
+        raise exceptions.BalanceError('Insufficient funds.')
 
-        # Record debit *only if valid*.
-        logging.debug('Debit: {} of {} from {}'.format(devise(db, amount, asset, 'output'), asset, address))
-        element_data = {
-            'address': address,
-            'asset': asset,
-            'amount': amount,
-        }
-        debit_cursor.execute(*get_insert_sql('debits', element_data))
-        config.zeromq_publisher.push_to_subscribers('debit', element_data)
-        
-    else:
-        validity = 'Invalid: insufficient funds'
+    balance = round(old_balance - amount)
+    balance = min(balance, config.MAX_INT)
+    debit_cursor.execute('''UPDATE balances \
+                      SET amount=? \
+                      WHERE (address=? and asset=?)''',
+                   (balance, address, asset)) 
+    config.zeromq_publisher.push_to_subscribers('debit', {
+        'address': address, 'asset': asset, 'amount': amount, 'balance': balance })
+
+    # Record debit *only if valid*.
+    logging.debug('Debit: {} of {} from {}'.format(devise(db, amount, asset, 'output'), asset, address))
+    element_data = {
+        'address': address,
+        'asset': asset,
+        'amount': amount,
+    }
+    debit_cursor.execute(*get_insert_sql('debits', element_data))
+    config.zeromq_publisher.push_to_subscribers('debit', element_data)
 
     debit_cursor.close()
-    return validity
 
 def credit (db, address, asset, amount):
     credit_cursor = db.cursor()
