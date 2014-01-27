@@ -12,7 +12,7 @@ CREATE TABLE balances(
                         address TEXT,
                         asset TEXT,
                         amount INTEGER);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',148460772600);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',148460812500);
 INSERT INTO balances VALUES('n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',50000000);
 INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',950000000);
 INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',100000);
@@ -134,7 +134,7 @@ CREATE TABLE burns(
                         earned INTEGER,
                         validity TEXT);
 INSERT INTO burns VALUES(0,'6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d',0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',62000000,93000000000,'Valid');
-INSERT INTO burns VALUES(21,'2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608',21,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',38000000,56999960100,'Valid');
+INSERT INTO burns VALUES(21,'2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608',21,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',38000000,57000000000,'Valid');
 -- Triggers and indices on  burns
 CREATE INDEX burns_block_index_idx ON burns (block_index)
                     ;
@@ -171,7 +171,7 @@ INSERT INTO credits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',3112500);
 INSERT INTO credits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',184300000);
 INSERT INTO credits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',315700000);
 INSERT INTO credits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',25000000);
-INSERT INTO credits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',56999960100);
+INSERT INTO credits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',57000000000);
 -- Triggers and indices on  credits
 CREATE INDEX credits_address_idx ON credits (address)
                     ;

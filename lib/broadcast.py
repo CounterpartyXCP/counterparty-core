@@ -58,7 +58,7 @@ def validate (db, source, timestamp, value, fee_multiplier, text):
 
     return problems
 
-def create (db, source, timestamp, value, fee_multiplier, text, test=False, unsigned=False):
+def create (db, source, timestamp, value, fee_multiplier, text, unsigned=False):
     # Use a magic number to store the fee multplier as an integer.
     fee_multiplier = round(D(fee_multiplier) * D(1e8))
 
@@ -70,7 +70,7 @@ def create (db, source, timestamp, value, fee_multiplier, text, test=False, unsi
                         text.encode('utf-8'))
     if len(data) > 80:
         raise exceptions.BroadcastError('Text is greater than 52 bytes.')
-    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test=test, unsigned=unsigned)
+    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, unsigned=unsigned)
 
 def parse (db, tx, message):
     broadcast_parse_cursor = db.cursor()

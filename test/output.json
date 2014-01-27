@@ -2,7 +2,7 @@
     "get_address_balances": [
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "amount": 148460772600, 
+            "amount": 148460812500, 
             "asset": "XCP"
         }, 
         {
@@ -188,7 +188,7 @@
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "block_index": 21, 
             "burned": 38000000, 
-            "earned": 56999960100, 
+            "earned": 57000000000, 
             "tx_hash": "2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608", 
             "tx_index": 21, 
             "validity": "Valid"
@@ -306,7 +306,7 @@
     "rpc.get_balances": [
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "amount": 148460772600, 
+            "amount": 148460812500, 
             "asset": "XCP"
         }, 
         {

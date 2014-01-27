@@ -51,6 +51,9 @@ def rpc (method, params):
         "id": 0,
     }
 
+    print('\n\n')  # TODO
+    print(payload)  # TODO
+
     response = connect(config.BITCOIND_RPC, payload, headers)
     if response == None:
         if config.TESTNET: network = 'testnet'
@@ -62,6 +65,8 @@ def rpc (method, params):
 
     # Return result, with error handling.
     response_json = response.json()
+    print(response_json['result'])  # TODO
+    print('\n\n')  # TODO
     if 'error' not in response_json.keys() or response_json['error'] == None:
         return response_json['result']
     elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
@@ -263,6 +268,7 @@ def get_inputs (source, total_btc_out, test=False, unsigned=False):
 
 # Replace test flag with fake bitcoind JSON-RPC server.
 def transaction (source, destination, btc_amount, fee, data, test=False, multisig=True, unsigned=False):
+    if config.PREFIX == config.TEST_PREFIX: test = True
     if test: multisig = False   # TODO
     
     #NB: if unsigned is True (instead of false or a public key string) and multisig is specified, then disable multisig and use OP_RETURN
