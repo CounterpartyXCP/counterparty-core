@@ -163,6 +163,12 @@ output_new = {}
 with open(CURR_DIR + '/output.json', 'r') as output_file:
     output = json.load(output_file)
 
+'''
+# Fake RPC responses
+try: os.remove(CURR_DIR + '/rpc.new')
+except: pass
+'''
+
 # TODO: replace inspect.stack()[0][3] with inspect.currentframe().f_code.co_name?
 
 def test_start ():

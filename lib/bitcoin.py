@@ -51,8 +51,13 @@ def rpc (method, params):
         "id": 0,
     }
 
-    print('\n\n')  # TODO
-    print(payload)  # TODO
+    '''
+    if config.PREFIX == config.TEST_PREFIX:
+        CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
+        CURR_DIR += '/../test/'
+        open(CURR_DIR + '/rpc.new', 'a') as f
+        f.write(payload)
+    '''
 
     response = connect(config.BITCOIND_RPC, payload, headers)
     if response == None:
@@ -63,10 +68,14 @@ def rpc (method, params):
     if response.status_code == 401:
         raise exceptions.BitcoindRPCError('Bitcoind RPC: unauthorized')
 
+    '''
+    if config.PREFIX == config.TEST_PREFIX:
+        print(response)  # TODO
+        f.close()
+    '''
+
     # Return result, with error handling.
     response_json = response.json()
-    print(response_json['result'])  # TODO
-    print('\n\n')  # TODO
     if 'error' not in response_json.keys() or response_json['error'] == None:
         return response_json['result']
     elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
