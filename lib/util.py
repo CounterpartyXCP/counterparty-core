@@ -234,8 +234,6 @@ def debit (db, address, asset, amount):
                       SET amount=? \
                       WHERE (address=? and asset=?)''',
                    (balance, address, asset)) 
-    config.zeromq_publisher.push_to_subscribers('debit', {
-        'address': address, 'asset': asset, 'amount': amount, 'balance': balance })
 
     # Record debit *only if valid*.
     logging.debug('Debit: {} of {} from {}'.format(devise(db, amount, asset, 'output'), asset, address))
@@ -245,8 +243,8 @@ def debit (db, address, asset, amount):
         'amount': amount,
     }
     debit_cursor.execute(*get_insert_sql('debits', element_data))
-    config.zeromq_publisher.push_to_subscribers('debit', element_data)
-
+    config.zeromq_publisher.push_to_subscribers('debit', {
+        'address': address, 'asset': asset, 'amount': amount, 'balance': balance })
     debit_cursor.close()
 
 def credit (db, address, asset, amount):
@@ -265,7 +263,8 @@ def credit (db, address, asset, amount):
             'amount': amount,
         }
         credit_cursor.execute(*get_insert_sql('balances', element_data))
-        config.zeromq_publisher.push_to_subscribers('credit', element_data)
+        config.zeromq_publisher.push_to_subscribers('credit', {
+            'address': address, 'asset': asset, 'amount': amount, 'balance': amount })
     else:
         old_balance = balances[0]['amount']
         assert type(old_balance) == int
@@ -285,7 +284,6 @@ def credit (db, address, asset, amount):
         'amount': amount
     }
     credit_cursor.execute(*get_insert_sql('credits', element_data))
-    config.zeromq_publisher.push_to_subscribers('credit', element_data)
     credit_cursor.close()
 
 def devise (db, quantity, asset, dest, divisible=None):
