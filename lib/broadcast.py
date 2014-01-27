@@ -84,11 +84,11 @@ def parse (db, tx, message):
         timestamp, value, fee_multiplier, text = None, None, None, None
         validity = 'Invalid: could not unpack'
 
-    # For SQLite3
-    timestamp = min(timestamp, config.MAX_INT)
-    value = min(value, config.MAX_INT)
-
     if validity == 'Valid':
+        # For SQLite3
+        timestamp = min(timestamp, config.MAX_INT)
+        value = min(value, config.MAX_INT)
+
         problems = validate(db, tx['source'], timestamp, value, fee_multiplier, text)
         if problems: validity = 'Invalid: ' + ';'.join(problems)
 

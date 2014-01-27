@@ -42,7 +42,7 @@ try:
             elif key == 'rpcconnect': config.BITCOIND_RPC_CONNECT = value
             elif key == 'rpcport': config.BITCOIND_RPC_PORT = value
 except Exception:
-    raise exceptions.BitcoinConfError('Put a (valid) copy of your \
+    raise Exception('Put a (valid) copy of your \
 bitcoin.conf in ~/.bitcoin/bitcoin.conf')
     sys.exit(1)
 config.BITCOIND_RPC = 'http://'+config.BITCOIND_RPC_USER+':'+config.BITCOIND_RPC_PASSWORD+'@'+config.BITCOIND_RPC_CONNECT+':'+config.BITCOIND_RPC_PORT
@@ -108,7 +108,7 @@ def parse_tx (tx_index, data, parse_func):
                       WHERE tx_index=?''', (tx_index,))
     tx = parse_tx_cursor.fetchall()[0]
     if data:
-        message = data[len(config.PREFIX) + 4:]
+        message = data[4:]
     else:
         message = None
 
@@ -174,6 +174,14 @@ def get_tx_data (tx_hex):
                 if bitcoin.base58_decode(address, config.ADDRESSVERSION):  # If address is valid...
                     destination, btc_amount = address, round(D(vout['value']) * config.UNIT)
                     continue
+
+    # Check for, and strip away, prefix (except for burns).
+    if destination == config.UNSPENDABLE:
+        pass
+    elif data[:len(config.PREFIX)] == config.PREFIX:
+        data = data[len(config.PREFIX):]
+    else:
+        return None, None, b''
 
     return destination, btc_amount, data
 

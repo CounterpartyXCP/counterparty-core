@@ -40,12 +40,8 @@ def parse_block (db, block_index):
             continue
 
         # Everything else.
-        if tx['data'][:len(config.PREFIX)] == config.PREFIX:
-            post_prefix = tx['data'][len(config.PREFIX):]
-        else:
-            continue
-        message_type_id = struct.unpack(config.TXTYPE_FORMAT, post_prefix[:4])[0]
-        message = post_prefix[4:]
+        message_type_id = struct.unpack(config.TXTYPE_FORMAT, tx['data'][:4])[0]
+        message = tx['data'][4:]
         if message_type_id == send.ID and len(message) == send.LENGTH:
             send.parse(db, tx, message)
         elif message_type_id == order.ID and len(message) == order.LENGTH:
@@ -362,6 +358,14 @@ def get_tx_info (tx):
                     continue
                 except:
                     pass
+
+    # Check for, and strip away, prefix (except for burns).
+    if destination == config.UNSPENDABLE:
+        pass
+    elif data[:len(config.PREFIX)] == config.PREFIX:
+        data = data[len(config.PREFIX):]
+    else:
+        return b'', None, None, None, None
 
     # Only look for source if data were found (or destination is UNSPENDABLE), for speed.
     if not data and destination != config.UNSPENDABLE:

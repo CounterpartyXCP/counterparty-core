@@ -19,12 +19,13 @@ def validate (db, source, amount_per_share, asset):
     if asset in ('BTC', 'XCP'):
         problems.append('cannot send dividends to BTC or XCP')
 
+    if not amount_per_share:
+        problems.append('zero amount per share')
+
     issuances = util.get_issuances(db, validity='Valid', asset=asset)
     if not issuances:
         problems.append('no such asset, {}.'.format(asset))
-
-    if not amount_per_share:
-        problems.append('zero amount per share')
+        return None, problems
 
     divisible = issuances[0]['divisible']
     if divisible:
@@ -32,6 +33,7 @@ def validate (db, source, amount_per_share, asset):
     else:
         total_shares = sum([issuance['amount'] for issuance in issuances])
     amount = round(amount_per_share * total_shares)
+
     if not amount: problems.append('dividend too small')
 
     balances = util.get_balances(db, address=source, asset='XCP')
@@ -62,10 +64,10 @@ def parse (db, tx, message):
         amount_per_share, asset = None, None
         validity = 'Invalid: could not unpack'
 
-    # For SQLite3
-    amount_per_share = min(amount_per_share, config.MAX_INT)
-
     if validity == 'Valid':
+        # For SQLite3
+        amount_per_share = min(amount_per_share, config.MAX_INT)
+
         if asset in ('BTC', 'XCP'):
             validity = 'Invalid: cannot send dividends to BTC or XCP'
         elif not util.valid_asset_name(asset):

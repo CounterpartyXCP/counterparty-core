@@ -45,10 +45,10 @@ def parse (db, tx, message):
         asset, amount = None, None
         validity = 'Invalid: Could not unpack.'
 
-    # For SQLite3
-    amount = min(amount, config.MAX_INT)
-
     if validity == 'Valid':
+        # For SQLite3
+        amount = min(amount, config.MAX_INT)
+
         problems = validate(db, tx['source'], tx['destination'], amount, asset)
         if problems: validity = 'Invalid: ' + ';'.join(problems)
 
