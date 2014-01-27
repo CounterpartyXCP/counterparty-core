@@ -253,7 +253,7 @@ def credit (db, address, asset, amount):
     assert type(amount) == int
 
     balances = get_balances(db, address=address, asset=asset)
-    if len(balances) != 1:
+    if len(balances) == 0:
         assert balances == []
         
         #update balances table with new balance
@@ -265,6 +265,8 @@ def credit (db, address, asset, amount):
         credit_cursor.execute(*get_insert_sql('balances', element_data))
         config.zeromq_publisher.push_to_subscribers('credit', {
             'address': address, 'asset': asset, 'amount': amount, 'balance': amount })
+    elif len(balances) > 1:
+        raise Exception
     else:
         old_balance = balances[0]['amount']
         assert type(old_balance) == int

@@ -178,7 +178,7 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
                 from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
                 from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec
                 private_key_wif = rpc('dumpprivkey', [source])
-                secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif)
+                secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif, is_test=config.TESTNET)
                 public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
                 source_pubkey = public_pair_to_sec(public_pair, compressed=compressed)
 
