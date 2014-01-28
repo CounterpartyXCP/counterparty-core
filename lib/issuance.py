@@ -100,11 +100,11 @@ def parse (db, tx, message):
         # Debit fee.
         # TODO: Add amount destroyed to table.
         if amount and tx['block_index'] > 281236:
-            util.debit(db, tx['source'], 'XCP', config.ISSUANCE_FEE)
+            util.debit(db, tx['block_index'], tx['source'], 'XCP', config.ISSUANCE_FEE)
 
         # Credit.
         if validity == 'Valid' and amount:
-            util.credit(db, tx['source'], asset, amount)
+            util.credit(db, tx['block_index'], tx['source'], asset, amount)
 
         # Log.
         if tx['destination']:

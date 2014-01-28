@@ -65,7 +65,7 @@ def parse (db, tx, message):
     if validity == 'Valid':
         price = D(get_amount) / D(give_amount)
         if give_asset != 'BTC':  # No need (or way) to debit BTC.
-            util.debit(db, tx['source'], give_asset, give_amount)
+            util.debit(db, tx['block_index'], tx['source'], give_asset, give_amount)
     else:
         price = 0
 
@@ -151,9 +151,9 @@ def match (db, tx):
             else:
                 validity = 'Valid'
                 # Credit.
-                util.credit(db, tx1['source'], tx1['get_asset'],
+                util.credit(db, tx['block_index'], tx1['source'], tx1['get_asset'],
                                     forward_amount)
-                util.credit(db, tx0['source'], tx0['get_asset'],
+                util.credit(db, tx['block_index'], tx0['source'], tx0['get_asset'],
                                     backward_amount)
 
             # Debit the order, even if it involves giving bitcoins, and so one
@@ -202,7 +202,7 @@ def expire (db, block_index):
         if order['validity'] == 'Valid' and util.get_time_left(order, block_index=block_index) < 0:
             order_expire_cursor.execute('''UPDATE orders SET validity=? WHERE tx_hash=?''', ('Invalid: expired', order['tx_hash']))
             if order['give_asset'] != 'BTC':    # Can't credit BTC.
-                util.credit(db, order['source'], order['give_asset'], order['give_remaining'])
+                util.credit(db, block_index, order['source'], order['give_asset'], order['give_remaining'])
             logging.info('Expired order: {}'.format(util.short(order['tx_hash'])))
 
     # Expire order_matches for BTC with no BTC.
@@ -212,11 +212,11 @@ def expire (db, block_index):
         if order_match['validity'] == 'Valid: awaiting BTC payment' and util.get_order_match_time_left(order_match, block_index=block_index) < 0:
             order_expire_cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Invalid: expired awaiting BTC payment', order_match['tx0_hash'], order_match['tx1_hash']))
             if order_match['forward_asset'] == 'BTC':
-                util.credit(db, order_match['tx1_address'],
+                util.credit(db, block_index, order_match['tx1_address'],
                                     order_match['backward_asset'],
                                     order_match['backward_amount'])
             elif order_match['backward_asset'] == 'BTC':
-                util.credit(db, order_match['tx0_address'],
+                util.credit(db, block_index, order_match['tx0_address'],
                                     order_match['forward_asset'],
                                     order_match['forward_amount'])
             logging.info('Expired Order Match awaiting BTC payment: {}'.format(util.short(order_match['tx0_hash'] + order_match['tx1_hash'])))

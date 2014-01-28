@@ -71,12 +71,12 @@ def parse (db, tx, message):
         if order_match['tx0_address'] == tx['source'] and tx['btc_amount'] >= order_match['forward_amount']:
             btcpay_parse_cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Valid', tx0_hash, tx1_hash))
             if order_match['backward_asset'] != 'BTC':
-                util.credit(db, tx['source'], order_match['backward_asset'], order_match['backward_amount'])
+                util.credit(db, tx['block_index'], tx['source'], order_match['backward_asset'], order_match['backward_amount'])
             validity = 'Paid'
         if order_match['tx1_address'] == tx['source'] and tx['btc_amount'] >= order_match['backward_amount']:
             btcpay_parse_cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Valid', tx0_hash, tx1_hash))
             if order_match['forward_asset'] != 'BTC':
-                util.credit(db, tx['source'], order_match['forward_asset'], order_match['forward_amount'])
+                util.credit(db, tx['block_index'], tx['source'], order_match['forward_asset'], order_match['forward_amount'])
             validity = 'Paid'
         logging.info('BTC Payment for Order Match: {} ({})'.format(util.short(order_match_id), util.short(tx['tx_hash'])))
 

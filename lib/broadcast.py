@@ -171,27 +171,27 @@ def parse (db, tx, message):
                 if bull_credit >= total_escrow:
                     bull_credit = total_escrow
                     bear_credit = 0
-                    util.credit(db, bull_address, 'XCP', bull_credit)
+                    util.credit(db, tx['block_index'], bull_address, 'XCP', bull_credit)
                     validity = 'Force-Liquidated Bear'
                 elif bull_credit <= 0:
                     bull_credit = 0
                     bear_credit = total_escrow
-                    util.credit(db, bear_address, 'XCP', bear_credit)
+                    util.credit(db, tx['block_index'], bear_address, 'XCP', bear_credit)
                     validity = 'Force-Liquidated Bull'
 
                 if validity.startswith('Force-Liquidated'):
                     # Pay fee to feed.
-                    util.credit(db, bet_match['feed_address'], 'XCP', fee)
+                    util.credit(db, tx['block_index'], bet_match['feed_address'], 'XCP', fee)
 
                     logging.info('Contract Force-Liquidated: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), util.short(bet_match_id)))
 
             # Settle.
             if validity == 'Valid' and timestamp >= bet_match['deadline']:
-                util.credit(db, bull_address, 'XCP', bull_credit)
-                util.credit(db, bear_address, 'XCP', bear_credit)
+                util.credit(db, tx['block_index'], bull_address, 'XCP', bull_credit)
+                util.credit(db, tx['block_index'], bear_address, 'XCP', bear_credit)
 
                 # Pay fee to feed.
-                util.credit(db, bet_match['feed_address'], 'XCP', fee)
+                util.credit(db, tx['block_index'], bet_match['feed_address'], 'XCP', fee)
 
                 validity = 'Settled (CFD)'
                 logging.info('Contract Settled: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), util.short(bet_match_id)))
@@ -210,15 +210,15 @@ def parse (db, tx, message):
             # Decide who won, and credit appropriately.
             if value == bet_match['target_value']:
                 winner = 'Equal'
-                util.credit(db, equal_address, 'XCP', total_escrow)
+                util.credit(db, tx['block_index'], equal_address, 'XCP', total_escrow)
                 validity = 'Settled for Equal'
             else:
                 winner = 'NotEqual'
-                util.credit(db, notequal_address, 'XCP', total_escrow)
+                util.credit(db, tx['block_index'], notequal_address, 'XCP', total_escrow)
                 validity = 'Settled for NotEqual'
 
             # Pay fee to feed.
-            util.credit(db, bet_match['feed_address'], 'XCP', fee)
+            util.credit(db, tx['block_index'], bet_match['feed_address'], 'XCP', fee)
 
             logging.info('Contract Settled: {} won the pot of {} XCP; {} XCP credited to the feed address ({})'.format(winner, util.devise(db, total_escrow, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), util.short(bet_match_id)))
 

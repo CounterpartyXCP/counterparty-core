@@ -113,8 +113,8 @@ def parse (db, tx, message):
     if validity == 'Valid':
         fee_multiplier = get_fee_multiplier(db, feed_address)
         fee = round(wager_amount * fee_multiplier / 1e8)
-        util.debit(db, tx['source'], 'XCP', wager_amount)
-        util.debit(db, tx['source'], 'XCP', fee)
+        util.debit(db, tx['block_index'], tx['source'], 'XCP', wager_amount)
+        util.debit(db, tx['block_index'], tx['source'], 'XCP', fee)
 
         wager_amount = round(wager_amount)
         counterwager_amount = round(counterwager_amount)
@@ -274,7 +274,7 @@ def expire (db, block_index):
     for bet in bet_expire_cursor.fetchall():
         if bet['validity'] == 'Valid' and util.get_time_left(bet, block_index=block_index) < 0:
             bet_expire_cursor.execute('''UPDATE bets SET validity=? WHERE tx_hash=?''', ('Invalid: expired', bet['tx_hash']))
-            util.credit(db, bet['source'], 'XCP', round(bet['wager_remaining'] * (1 + bet['fee_multiplier'] / 1e8)))
+            util.credit(db, block_index, bet['source'], 'XCP', round(bet['wager_remaining'] * (1 + bet['fee_multiplier'] / 1e8)))
             logging.info('Expired bet: {}'.format(util.short(bet['tx_hash'])))
     bet_expire_cursor.close()
 
@@ -291,9 +291,9 @@ def expire (db, block_index):
                                               SET validity=? \
                                               WHERE (tx0_hash=? AND tx1_hash=?)''', ('Invalid: expired awaiting broadcast', bet_match['tx0_hash'], bet_match['tx1_hash'])
                                              )
-                util.credit(db, bet_match['tx0_address'], 'XCP',
+                util.credit(db, block_index, bet_match['tx0_address'], 'XCP',
                             round(bet_match['forward_amount'] * (1 + bet_match['fee_multiplier'] / 1e8)))
-                util.credit(db, bet_match['tx1_address'], 'XCP',
+                util.credit(db, block_index, bet_match['tx1_address'], 'XCP',
                             round(bet_match['backward_amount'] * (1 + bet_match['fee_multiplier'] / 1e8)))
                 logging.info('Expired Bet Match: {}'.format(util.short(bet_match['tx0_hash'] + bet_match['tx1_hash'])))
 

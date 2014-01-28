@@ -53,8 +53,8 @@ def parse (db, tx, message):
         if problems: validity = 'Invalid: ' + ';'.join(problems)
 
     if validity == 'Valid':
-        util.debit(db, tx['source'], asset, amount)
-        util.credit(db, tx['destination'], asset, amount)
+        util.debit(db, tx['block_index'], tx['source'], asset, amount)
+        util.credit(db, tx['block_index'], tx['destination'], asset, amount)
         logging.info('Send: {} of asset {} from {} to {} ({})'.format(util.devise(db, amount, asset, 'output'), asset, tx['source'], tx['destination'], util.short(tx['tx_hash'])))
 
     # Add parsed transaction to message-type–specific table.

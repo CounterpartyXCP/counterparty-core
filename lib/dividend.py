@@ -79,7 +79,7 @@ def parse (db, tx, message):
 
     if validity == 'Valid':
         # Debit.
-        util.debit(db, tx['source'], 'XCP', amount)
+        util.debit(db, tx['block_index'], tx['source'], 'XCP', amount)
 
         # Credit.
         balances = util.get_balances(db, asset=asset)
@@ -87,7 +87,7 @@ def parse (db, tx, message):
             address, address_amount = balance['address'], balance['amount']
             address_amount = round(D(address_amount) / config.UNIT)
             amount = address_amount * amount_per_share
-            util.credit(db, address, 'XCP', amount)
+            util.credit(db, tx['block_index'], address, 'XCP', amount)
 
     # Add parsed transaction to message-type–specific table.
     element_data = {

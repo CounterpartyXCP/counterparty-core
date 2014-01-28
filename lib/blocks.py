@@ -109,6 +109,7 @@ def initialise(db):
 
     # NOTE: Only valid debits listed
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS debits(
+                        block_index INTEGER,
                         address TEXT,
                         asset TEXT,
                         amount INTEGER)
@@ -119,6 +120,7 @@ def initialise(db):
 
     # NOTE: Only valid credits listed
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS credits(
+                        block_index INTEGER,
                         address TEXT,
                         asset TEXT,
                         amount INTEGER)
@@ -393,8 +395,7 @@ def purge (db, quiet=False):
 
     # Delete all of the results of parsing from the database.
     # TODO: This is more than is necessary for reorgs. Rather, in that case, have every table have a block index column, and only delete the stuff required.
-        # (What about table balances?)
-            # Have ‘balance‐as‐of‐block‐N’?!
+        # Re‐calculate every balance by summing historical credits, debits.
     # NOTE: dropping a table will also delete any indicies and triggers associated with it
     purge_cursor.execute('''DROP TABLE IF EXISTS debits''')
     purge_cursor.execute('''DROP TABLE IF EXISTS credits''')

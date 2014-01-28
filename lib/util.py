@@ -212,7 +212,7 @@ def get_asset_name (asset_id):
     return asset
 
 
-def debit (db, address, asset, amount):
+def debit (db, block_index, address, asset, amount):
     debit_cursor = db.cursor()
     assert asset != 'BTC' # Never BTC.
     assert type(amount) == int
@@ -220,11 +220,8 @@ def debit (db, address, asset, amount):
         raise exceptions.BalanceError('Cannot debit bitcoins from a Counterparty address!')
 
     balances = get_balances(db, address=address, asset=asset)
-    if not len(balances) == 1:
-        old_balance = 0
-    else:
-        old_balance = balances[0]['amount']
-        assert type(old_balance) == int
+    if not len(balances) == 1: old_balance = 0
+    else: old_balance = balances[0]['amount']
 
     if old_balance < amount:
         raise exceptions.BalanceError('Insufficient funds.')
@@ -239,6 +236,7 @@ def debit (db, address, asset, amount):
     # Record debit *only if valid*.
     logging.debug('Debit: {} of {} from {}'.format(devise(db, amount, asset, 'output'), asset, address))
     element_data = {
+        'block_index': block_index,
         'address': address,
         'asset': asset,
         'amount': amount,
@@ -248,7 +246,7 @@ def debit (db, address, asset, amount):
         'address': address, 'asset': asset, 'amount': amount, 'balance': balance })
     debit_cursor.close()
 
-def credit (db, address, asset, amount):
+def credit (db, block_index, address, asset, amount):
     credit_cursor = db.cursor()
     assert asset != 'BTC' # Never BTC.
     assert type(amount) == int
@@ -282,6 +280,7 @@ def credit (db, address, asset, amount):
     # Record credit.
     logging.debug('Credit: {} of {} to {}'.format(devise(db, amount, asset, 'output'), asset, address))
     element_data = { 
+        'block_index': block_index,
         'address': address,
         'asset': asset,
         'amount': amount
