@@ -9,7 +9,7 @@ UNITTEST_PREFIX = b'TESTXXXX'
 
 # Versions
 VERSION = 0.2
-DB_VERSION = 5
+DB_VERSION = 6
 
 # Bitcoin protocol
 # DUST_SIZE = 5430      # OP_RETURN

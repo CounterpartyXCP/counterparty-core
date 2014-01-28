@@ -16,6 +16,7 @@ from . import (config, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel)
 
 def parse_tx (db, tx):
+    parse_tx_cursor = db.cursor()
     # Burns.
     if tx['destination'] == config.UNSPENDABLE:
         burn.parse(db, tx)
@@ -42,11 +43,12 @@ def parse_tx (db, tx):
         cancel.parse(db, tx, message)
     else:
         # Mark transaction as of unsupported type.
-        parse_block_cursor.execute('''UPDATE transactions \
+        parse_tx_cursor.execute('''UPDATE transactions \
                           SET supported=? \
                           WHERE tx_hash=?''',
                        (False, tx['tx_hash']))
         logging.info('Unsupported: message type {}; transaction hash {}'.format(message_type_id, tx['tx_hash']))
+    parse_tx_cursor.close()
 
 def parse_block (db, block_index):
     """This is a separate function from follow() so that changing the parsing
@@ -389,43 +391,86 @@ def get_tx_info (tx):
 
     return source, destination, btc_amount, round(fee), data
 
-def purge (db, quiet=False):
+def reparse (db, quiet=False):
     # TODO: This is not thread‐safe!
-    purge_cursor = db.cursor()
+    logging.warning('Status: Reparsing all transactions.')
 
-    # Delete all of the results of parsing from the database.
-    # TODO: This is more than is necessary for reorgs. Rather, in that case, have every table have a block index column, and only delete the stuff required.
-        # Re‐calculate every balance by summing historical credits, debits.
+    reparse_cursor = db.cursor()
+
+    # Delete all of the results of parsing.
     # NOTE: dropping a table will also delete any indicies and triggers associated with it
-    purge_cursor.execute('''DROP TABLE IF EXISTS debits''')
-    purge_cursor.execute('''DROP TABLE IF EXISTS credits''')
-    purge_cursor.execute('''DROP TABLE IF EXISTS balances''')
-    purge_cursor.execute('''DROP TABLE IF EXISTS sends''')
-    purge_cursor.execute('''DROP TABLE IF EXISTS orders''')
-    purge_cursor.execute('''DROP TABLE IF EXISTS order_matches''')
-    purge_cursor.execute('''DROP TABLE IF EXISTS btcpays''')
-    purge_cursor.execute('''DROP TABLE IF EXISTS issuances''')
-    purge_cursor.execute('''DROP TABLE IF EXISTS broadcasts''')
-    purge_cursor.execute('''DROP TABLE IF EXISTS bets''')
-    purge_cursor.execute('''DROP TABLE IF EXISTS bet_matches''')
-    purge_cursor.execute('''DROP TABLE IF EXISTS dividends''')
-    purge_cursor.execute('''DROP TABLE IF EXISTS burns''')
-    purge_cursor.execute('''DROP TABLE IF EXISTS cancels''')
+    reparse_cursor.execute('''DROP TABLE IF EXISTS debits''')
+    reparse_cursor.execute('''DROP TABLE IF EXISTS credits''')
+    reparse_cursor.execute('''DROP TABLE IF EXISTS balances''')
+    reparse_cursor.execute('''DROP TABLE IF EXISTS sends''')
+    reparse_cursor.execute('''DROP TABLE IF EXISTS orders''')
+    reparse_cursor.execute('''DROP TABLE IF EXISTS order_matches''')
+    reparse_cursor.execute('''DROP TABLE IF EXISTS btcpays''')
+    reparse_cursor.execute('''DROP TABLE IF EXISTS issuances''')
+    reparse_cursor.execute('''DROP TABLE IF EXISTS broadcasts''')
+    reparse_cursor.execute('''DROP TABLE IF EXISTS bets''')
+    reparse_cursor.execute('''DROP TABLE IF EXISTS bet_matches''')
+    reparse_cursor.execute('''DROP TABLE IF EXISTS dividends''')
+    reparse_cursor.execute('''DROP TABLE IF EXISTS burns''')
+    reparse_cursor.execute('''DROP TABLE IF EXISTS cancels''')
 
-    # Reparse everything up to the deleted blocks, transactions.
-    # TODO: Also more than necessary for reorgs.
+    # Reparse all blocks, transactions.
     if quiet:
         log = logging.getLogger('')
         log.setLevel(logging.WARNING)
     initialise(db)
-    purge_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
-    for block in purge_cursor.fetchall():
+    reparse_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
+    for block in reparse_cursor.fetchall():
         logging.info('Block (re‐parse): {}'.format(str(block['block_index'])))
         parse_block(db, block['block_index'])
     if quiet:
         log.setLevel(logging.INFO)
 
-    purge_cursor.close()
+    reparse_cursor.close()
+    return
+
+def rollback (db, block_index):
+    """Rollback database to state at end of block number block_index.
+    """
+
+    # TODO: This is not thread‐safe!
+    logging.warning('Status: Rolling back DB to block {}.'.format(block_index - 1))
+
+    rollback_cursor = db.cursor()
+
+    # Delete everything execpt for balances after block_index.
+    rollback_cursor.execute('''DELETE FROM blocks WHERE block_index > {}'''.format(block_index))
+    rollback_cursor.execute('''DELETE FROM transactions WHERE block_index > {}'''.format(block_index))
+    rollback_cursor.execute('''DELETE FROM debits WHERE block_index > {}'''.format(block_index))
+    rollback_cursor.execute('''DELETE FROM credits WHERE block_index > {}'''.format(block_index))
+    rollback_cursor.execute('''DELETE FROM sends WHERE block_index > {}'''.format(block_index))
+    rollback_cursor.execute('''DELETE FROM orders WHERE block_index > {}'''.format(block_index))
+    rollback_cursor.execute('''DELETE FROM order_matches WHERE tx1_block_index > {}'''.format(block_index))
+    rollback_cursor.execute('''DELETE FROM btcpays WHERE block_index > {}'''.format(block_index))
+    rollback_cursor.execute('''DELETE FROM issuances WHERE block_index > {}'''.format(block_index))
+    rollback_cursor.execute('''DELETE FROM broadcasts WHERE block_index > {}'''.format(block_index))
+    rollback_cursor.execute('''DELETE FROM bets WHERE block_index > {}'''.format(block_index))
+    rollback_cursor.execute('''DELETE FROM bet_matches WHERE tx1_block_index > {}'''.format(block_index))
+    rollback_cursor.execute('''DELETE FROM dividends WHERE block_index > {}'''.format(block_index))
+    rollback_cursor.execute('''DELETE FROM burns WHERE block_index > {}'''.format(block_index))
+    rollback_cursor.execute('''DELETE FROM cancels WHERE block_index > {}'''.format(block_index))
+
+    # Re‐calculate every balance by summing historical credits, debits.
+    rollback_cursor.execute('''SELECT * FROM balances''')
+    for balance in rollback_cursor.fetchall():
+        new_amount = 0
+        credits = util.get_credits(db, address=balance['address'], asset=balance['asset'], end_block=(block_index-1))
+        for credit in credits: new_amount += credit['amount']
+        debits = util.get_debits(db, address=balance['address'], asset=balance['asset'], end_block=(block_index-1))
+        for debit in debits: new_amount -= debit['amount']
+        rollback_cursor.execute('''UPDATE balances
+                                   SET amount=? \
+                                   WHERE (address=? and asset=?)''',
+                             (new_amount, balance['address'], balance['asset']))
+
+    # TODO: Unexpire expired things.
+
+    rollback_cursor.close()
     return
 
 def reorg (db):
@@ -445,11 +490,12 @@ def reorg (db):
 
     if not reorg_necessary: return last_block_index + 1
 
-    # Delete blocks and transactions back as far as necessary.
-    reorg_cursor.execute('''DELETE FROM blocks WHERE block_index>=?''', (block_index,))
-    reorg_cursor.execute('''DELETE FROM transactions WHERE block_index>=?''', (block_index,))
-
-    # Re-parse all transactions that are still there.
+    # TODO: Incomplete and untested.
+    # # Rollback the DB.
+    # rollback(db, block_index - 1)
+    # TODO: Temporary—should be a rollback.
+    reorg_cursor.execute('''DELETE FROM blocks WHERE block_index > {}'''.format(block_index - 1))
+    rorge_cursor.execute('''DELETE FROM transactions WHERE block_index > {}'''.format(block_index - 1))
     purge(db, quiet=True)
 
     reorg_cursor.close()

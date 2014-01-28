@@ -335,26 +335,28 @@ def devise (db, quantity, asset, dest, divisible=None):
             raise exceptions.QuantityError('Fractional quantities of indivisible assets.')
         return round(quantity)
 
-def get_debits (db, address=None, asset=None, filters=None, order_by=None, order_dir='asc', filterop='and'):
+def get_debits (db, address=None, asset=None, filters=None, order_by=None, order_dir='asc', start_block=None, end_block=None, filterop='and'):
     """This does not include BTC."""
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,] 
     if address: filters.append({'field': 'address', 'op': '==', 'value': address})
     if asset: filters.append({'field': 'asset', 'op': '==', 'value': asset})
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM debits''')
+    cursor.execute('''SELECT * FROM debits%s'''
+        % get_limit_to_blocks(start_block, end_block))
     results = do_filter(cursor.fetchall(), filters, filterop)
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_credits (db, address=None, asset=None, filters=None, order_by=None, order_dir='asc', filterop='and'):
+def get_credits (db, address=None, asset=None, filters=None, order_by=None, order_dir='asc', start_block=None, end_block=None, filterop='and'):
     """This does not include BTC."""
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,] 
     if address: filters.append({'field': 'address', 'op': '==', 'value': address})
     if asset: filters.append({'field': 'asset', 'op': '==', 'value': asset})
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM credits''')
+    cursor.execute('''SELECT * FROM credits%s'''
+        % get_limit_to_blocks(start_block, end_block))
     results = do_filter(cursor.fetchall(), filters, filterop)
     cursor.close()
     return do_order_by(results, order_by, order_dir)

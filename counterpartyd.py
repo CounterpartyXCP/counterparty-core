@@ -227,7 +227,7 @@ if __name__ == '__main__':
 
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
-    parser_server = subparsers.add_parser('server', help='run the server')
+    parser_server = subparsers.add_parser('server', help='run the server (WARNING: not thread‐safe)')
 
     parser_send = subparsers.add_parser('send', help='create and broadcast a *send* message')
     parser_send.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
@@ -296,7 +296,10 @@ if __name__ == '__main__':
     parser_market.add_argument('--give-asset', metavar='GIVE_ASSET', help='only show orders offering to sell GIVE_ASSET')
     parser_market.add_argument('--get-asset', metavar='GET_ASSET', help='only show orders offering to buy GET_ASSET')
 
-    parser_purge = subparsers.add_parser('purge', help='reparse all transactions in the database (WARNING: not thread‐safe)')
+    parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database (WARNING: not thread‐safe)')
+
+    parser_rollback = subparsers.add_parser('rollback', help='rollback database (WARNING: not thread‐safe)')
+    parser_rollback.add_argument('--block_index', metavar='block_index', required=True, help='the index of the last known good block')
 
     args = parser.parse_args()
 
@@ -505,7 +508,7 @@ if __name__ == '__main__':
     # Check that the database has caught up with bitcoind.
     if not args.force:
         util.bitcoind_check(db)
-        if args.action not in ('server', 'purge'):
+        if args.action not in ('server', 'reparse', 'rollback'):
             util.database_check(db)
 
     # Do something.
@@ -660,12 +663,15 @@ if __name__ == '__main__':
         while True:
             market(args.give_asset, args.get_asset)
 
-    elif args.action == 'purge':
+    elif args.action == 'reparse':
         config.zeromq_publisher = zeromq.ZeroMQPublisher()
         config.zeromq_publisher.daemon = True
         config.zeromq_publisher.start()
-        blocks.purge(db)
+        blocks.reparse(db)
            
+    elif args.action == 'rollback':
+        blocks.rollback(db, args.block_index)
+
     elif args.action == 'help':
         parser.print_help()
 
