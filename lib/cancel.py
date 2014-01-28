@@ -22,7 +22,7 @@ def validate (db, offer_hash, source=None):
             if source == offer['source']:
                 return source, offer, problems
             else:
-                if bitcoin.rpc('validateaddress', [offer['source']])['ismine'] or config.PREFIX == config.TEST_PREFIX:
+                if bitcoin.rpc('validateaddress', [offer['source']])['ismine'] or config.PREFIX == config.UNITTEST_PREFIX:
                     source = offer['source']
                 else:
                     problems.append('offer was not made by one of your addresses')

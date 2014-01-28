@@ -21,7 +21,7 @@ def validate (db, source, destination, quantity, overburn=False):
         problems.append('wrong destination address')
 
     # Try to make sure that the burned funds won't go to waste.
-    if config.PREFIX != config.TEST_PREFIX:    # For test suite.
+    if config.PREFIX != config.UNITTEST_PREFIX:    # For test suite.
         block_count = bitcoin.rpc('getblockcount', [])
         if block_count < config.BURN_START:
             problems.append('too early')
@@ -71,7 +71,7 @@ def parse (db, tx, message=None):
         earned = round(burned * multiplier)
 
         # For test suite.
-        if config.PREFIX == config.TEST_PREFIX:
+        if config.PREFIX == config.UNITTEST_PREFIX:
             earned = 1500 * burned
 
         # Credit source address with earned XCP.

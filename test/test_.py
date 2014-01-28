@@ -25,7 +25,7 @@ from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, 
 
 # JSON-RPC Options
 CONFIGFILE = os.path.expanduser('~') + '/.bitcoin/bitcoin.conf'
-config.PREFIX = config.TEST_PREFIX
+config.PREFIX = config.UNITTEST_PREFIX
 config.BITCOIND_RPC_CONNECT = 'localhost'
 config.BITCOIND_RPC_PORT = '18332' # Only run tests on testnet.
 try:

@@ -56,7 +56,7 @@ def rpc (method, params):
     }
 
     '''
-    if config.PREFIX == config.TEST_PREFIX:
+    if config.PREFIX == config.UNITTEST_PREFIX:
         CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
         CURR_DIR += '/../test/'
         open(CURR_DIR + '/rpc.new', 'a') as f
@@ -73,7 +73,7 @@ def rpc (method, params):
         raise exceptions.BitcoindRPCError('Bitcoind RPC: unauthorized')
 
     '''
-    if config.PREFIX == config.TEST_PREFIX:
+    if config.PREFIX == config.UNITTEST_PREFIX:
         print(response)  # TODO
         f.close()
     '''
@@ -296,7 +296,7 @@ def get_inputs (source, total_btc_out, test=False, unsigned=False):
 
 # Replace test flag with fake bitcoind JSON-RPC server.
 def transaction (source, destination, btc_amount, fee, data, test=False, multisig=True, unsigned=False):
-    if config.PREFIX == config.TEST_PREFIX: test = True
+    if config.PREFIX == config.UNITTEST_PREFIX: test = True
     
     #NB: if unsigned is True (instead of false or a public key string) and multisig is specified, then disable multisig and use OP_RETURN
     if unsigned is True and multisig:

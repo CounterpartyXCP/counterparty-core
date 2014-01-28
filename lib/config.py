@@ -5,7 +5,7 @@ import hashlib
 # Units
 UNIT = 100000000        # The same across currencies.
 
-TEST_PREFIX = b'TESTXXXX'
+UNITTEST_PREFIX = b'TESTXXXX'
 
 # Versions
 VERSION = 0.2
