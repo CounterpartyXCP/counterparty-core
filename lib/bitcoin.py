@@ -12,6 +12,10 @@ import requests
 import re
 import time
 
+from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
+from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec
+from pycoin.scripts import bitcoin_utils 
+
 from . import (config, exceptions)
 
 # Constants
@@ -147,8 +151,19 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
         s += binascii.unhexlify(bytes(txin['txid'], 'utf-8'))[::-1]         # TxOutHash
         s += txin['vout'].to_bytes(4, byteorder='little')   # TxOutIndex
 
-        # No signature.
-        script = b''
+        if not unsigned:
+            # No signature.
+            script = b''
+        else:
+            #pubkeyhash = base58_decode(source, config.ADDRESSVERSION)
+            #script = OP_DUP                                     # OP_DUP
+            #script += OP_HASH160                                # OP_HASH160
+            #script += op_push(20)                               # Push 0x14 bytes
+            #script += pubkeyhash                                # pubKeyHash
+            #script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
+            #script += OP_CHECKSIG                               # OP_CHECKSIG
+            script = str.encode(txin['scriptPubKey'])
+            
         s += var_int(int(len(script)))                      # Script length
         s += script                                         # Script
         s += b'\xff' * 4                                    # Sequence
@@ -187,10 +202,9 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
             # Get source public key.
             if unsigned:
                 assert isinstance(unsigned, str)
-                source_pubkey = unsigned
+                pubkeypair = bitcoin_utils.parse_as_public_pair(unsigned)
+                source_pubkey = public_pair_to_sec(pubkeypair, compressed=True)
             else:
-                from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
-                from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec
                 private_key_wif = rpc('dumpprivkey', [source])
                 if private_key_wif[0] == 'c': testnet = True
                 secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif, is_test=testnet)
@@ -253,6 +267,9 @@ def get_inputs (source, total_btc_out, test=False, unsigned=False):
         #take the returned data to a format compatible with bitcoind's output
         listunspent = []
         for o in unspent_outputs:
+            #blockchain.info lists the txhash in some weird reversed string notation with character pairs fipped...fun
+            o['tx_hash'] = o['tx_hash'][::-1] #reverse string
+            o['tx_hash'] = ''.join([o['tx_hash'][i:i+2][::-1] for i in range(0, len(o['tx_hash']), 2)]) #flip the character pairs within the string
             listunspent.append({
                 'address': source,
                 'txid': o['tx_hash'],
