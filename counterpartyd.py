@@ -8,10 +8,10 @@ import json
 import decimal
 D = decimal.Decimal
 
-import apsw
 import logging
 import appdirs
 import configparser
+import requests
 from prettytable import PrettyTable
 
 import time
@@ -82,12 +82,21 @@ def market (give_asset, get_asset):
 
 
 def address (address):
-    address = util.get_address(db, address=address)
+    def get_btc_balance(address):
+        r = requests.get("https://blockchain.info/q/addressbalance/" + address)
+        # ^any other services that provide this?? (blockexplorer.com doesn't...)
+        try:
+            assert r.status_code == 200
+            return int(r.text) / float(config.UNIT)
+        except:
+            return "???"
+    
+    address_data = util.get_address(db, address=address)
 
     # Balances.
-    balances = address['balances']
+    balances = address_data['balances']
     table = PrettyTable(['Asset', 'Amount'])
-    table.add_row(['BTC', '???'])  # BTC
+    table.add_row(['BTC', get_btc_balance(address)])  # BTC
     for balance in balances:
         asset = balance['asset']
         amount = util.devise(db, balance['amount'], balance['asset'], 'output')
@@ -97,7 +106,7 @@ def address (address):
     print('\n')
 
     # Burns.
-    burns = address['burns']
+    burns = address_data['burns']
     table = PrettyTable(['Block Index', 'Burned', 'Earned', 'Tx Hash'])
     for burn in burns:
         burned = util.devise(db, burn['burned'], 'BTC', 'output')
@@ -108,7 +117,7 @@ def address (address):
     print('\n')
 
     # Sends.
-    sends = address['sends']
+    sends = address_data['sends']
     table = PrettyTable(['Amount', 'Asset', 'Source', 'Destination', 'Tx Hash'])
     for send in sends:
         amount = util.devise(db, send['amount'], send['asset'], 'output')
@@ -120,7 +129,7 @@ def address (address):
 
     """
     # Orders.
-    orders = address['orders']
+    orders = address_data['orders']
     json_print(orders)
     table = PrettyTable(['Amount', 'Asset', 'Source', 'Destination', 'Tx Hash'])
     for order in orders:
@@ -134,7 +143,7 @@ def address (address):
 
     """
     # order_matches.
-    order_matches = address['order_matches']
+    order_matches = address_data['order_matches']
     json_print(order_matches)
     table = PrettyTable(['Give', 'Get', 'Source', 'Destination', 'Tx Hash'])
     for order_match in order_matches:
@@ -479,8 +488,7 @@ if __name__ == '__main__':
     else:
         config.DATABASE = os.path.join(config.data_dir, 'counterpartyd.' + str(config.DB_VERSION) + '.db')
 
-    db = apsw.Connection(config.DATABASE)
-    db.setrowtrace(util.rowtracer)
+    db = util.connect_to_db()
 
     # (more) Testnet
     if config.TESTNET:
@@ -684,7 +692,12 @@ if __name__ == '__main__':
         config.zeromq_publisher = zeromq.ZeroMQPublisher()
         config.zeromq_publisher.daemon = True
         config.zeromq_publisher.start()
-
+        
+        #wait until the realtime event feed subsystem has fully initialized to start processing blocks
+        # (so we don't miss any events, especially new_db_init)
+        while not config.zeromq_publisher.active:
+            time.sleep(.25) 
+        
         blocks.follow(db)
 
     else:
