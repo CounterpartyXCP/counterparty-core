@@ -84,6 +84,8 @@ def rpc (method, params):
         return response_json['result']
     elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
         raise exceptions.BitcoindError('{} Is txindex enabled in Bitcoind?'.format(response_json['error']))
+    # elif config.PREFIX == config.UNITTEST_PREFIX:
+    #     print(method)
     else:
         raise exceptions.BitcoindError('{}'.format(response_json['error']))
 
@@ -205,7 +207,10 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
                 pubkeypair = bitcoin_utils.parse_as_public_pair(unsigned)
                 source_pubkey = public_pair_to_sec(pubkeypair, compressed=True)
             else:
-                private_key_wif = rpc('dumpprivkey', [source])
+                if config.PREFIX == config.UNITTEST_PREFIX:
+                    private_key_wif = 'cPdUqd5EbBWsjcG9xiL1hz8bEyGFiz4SW99maU9JgpL9TEcxUf3j'
+                else:
+                    private_key_wif = rpc('dumpprivkey', [source])
                 if private_key_wif[0] == 'c': testnet = True
                 else: testnet = False
                 secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif, is_test=testnet)
@@ -248,11 +253,11 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
     s += (0).to_bytes(4, byteorder='little')                # LockTime
     return s
 
-def get_inputs (source, total_btc_out, test=False, unsigned=False):
+def get_inputs (source, total_btc_out, unittest=False, unsigned=False):
     """List unspent inputs for source."""
-    if not test and not unsigned:
+    if not unittest and not unsigned:
         listunspent = rpc('listunspent', [])
-    elif unsigned and not test:
+    elif unsigned and not unittest:
         #since the address is probably not in our wallet, consult blockchain to ensure that the address has the minimum balance
         try:
             r = requests.get("http://blockchain.info/unspent?active=" + source)
@@ -281,7 +286,7 @@ def get_inputs (source, total_btc_out, test=False, unsigned=False):
                 'confirmations': o['confirmations']
             })
     else:
-        assert test and not unsigned
+        assert unittest and not unsigned
         CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
         with open(CURR_DIR + '/../test/listunspent.test.json', 'r') as listunspent_test_file:   # HACK
             listunspent = json.load(listunspent_test_file)
@@ -294,10 +299,10 @@ def get_inputs (source, total_btc_out, test=False, unsigned=False):
             return inputs, total_btc_in
     return None, None
 
-# Replace test flag with fake bitcoind JSON-RPC server.
-def transaction (source, destination, btc_amount, fee, data, test=False, multisig=True, unsigned=False):
-    if config.PREFIX == config.UNITTEST_PREFIX: test = True
-    
+# Replace unittest flag with fake bitcoind JSON-RPC server.
+def transaction (source, destination, btc_amount, fee, data, unittest=False, multisig=True, unsigned=False):
+    if config.PREFIX == config.UNITTEST_PREFIX: unittest = True
+
     #NB: if unsigned is True (instead of false or a public key string) and multisig is specified, then disable multisig and use OP_RETURN
     if unsigned is True and multisig:
         multisig = False
@@ -312,7 +317,7 @@ def transaction (source, destination, btc_amount, fee, data, test=False, multisi
                                           address)
 
     # Check that the source is in wallet.
-    if not test and not unsigned:
+    if not unittest and not unsigned:
         if not rpc('validateaddress', [source])['ismine']:
             raise exceptions.InvalidAddressError('Not one of your Bitcoin addresses:', source)
 
@@ -345,7 +350,7 @@ def transaction (source, destination, btc_amount, fee, data, test=False, multisi
     if destination: total_btc_out += btc_amount
 
     # Construct inputs.
-    inputs, total_btc_in = get_inputs(source, total_btc_out, test=test, unsigned=unsigned)
+    inputs, total_btc_in = get_inputs(source, total_btc_out, unittest=unittest, unsigned=unsigned)
     if not inputs:
         raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need {} BTC.)'.format(source, total_btc_out / config.UNIT))
 

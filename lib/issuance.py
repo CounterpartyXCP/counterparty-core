@@ -11,7 +11,7 @@ FORMAT = '>QQ?'
 ID = 20
 LENGTH = 8 + 8 + 1
 
-def validate (db, source, destination, asset, amount, divisible):
+def validate (db, source, destination, asset, amount, divisible, block_index=None):
     problems = []
 
     if not util.valid_asset_name(asset):
@@ -20,7 +20,7 @@ def validate (db, source, destination, asset, amount, divisible):
         problems.append('cannot issue BTC or XCP')
 
     balances = util.get_balances(db, address=source, asset='XCP')
-    if not balances or balances[0]['amount'] < config.ISSUANCE_FEE:
+    if (block_index and block_index > 281236) and (not balances or balances[0]['amount'] < config.ISSUANCE_FEE):
         problems.append('insufficient funds')
 
     # Valid re-issuance?
@@ -69,7 +69,7 @@ def parse (db, tx, message):
         validity = 'Invalid: could not unpack'
 
     if validity == 'Valid':
-        problems = validate(db, tx['source'], tx['destination'], asset, amount, divisible)
+        problems = validate(db, tx['source'], tx['destination'], asset, amount, divisible, block_index=tx['block_index'])
         if problems: validity = 'Invalid: ' + ';'.join(problems)
         if 'maximum total quantity exceeded' in problems:
             amount = 0

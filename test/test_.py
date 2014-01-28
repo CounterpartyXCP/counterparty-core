@@ -90,18 +90,6 @@ print('Run `test.py` with `py.test test.py`.')
 
 
 
-def check_balance():
-    balances = util.get_balances(db)
-    for balance in balances:
-        amount = 0
-        debits = util.get_debits(db, address=balance['address'], asset=balance['asset'])
-        for debit in debits:
-            amount -= debit['amount']
-        credits = util.get_credits(db, address=balance['address'], asset=balance['asset'])
-        for credit in credits:
-            amount += credit['amount']
-        assert amount == balance['amount']
-
 def parse_hex (unsigned_tx_hex):
     
     tx = bitcoin.rpc('decoderawtransaction', [unsigned_tx_hex])
@@ -136,7 +124,16 @@ def parse_hex (unsigned_tx_hex):
     blocks.parse_tx(db, tx)
 
     # After parsing every transaction, check that the credits, debits sum properly.
-    check_balance()
+    balances = util.get_balances(db)
+    for balance in balances:
+        amount = 0
+        debits = util.get_debits(db, address=balance['address'], asset=balance['asset'])
+        for debit in debits:
+            amount -= debit['amount']
+        credits = util.get_credits(db, address=balance['address'], asset=balance['asset'])
+        for credit in credits:
+            amount += credit['amount']
+        assert amount == balance['amount']
 
     tx_index += 1
     parse_hex_cursor.close()
