@@ -5,9 +5,11 @@ import hashlib
 # Units
 UNIT = 100000000        # The same across currencies.
 
+TEST_PREFIX = b'TESTXXXX'
+
 # Versions
 VERSION = 0.2
-DB_VERSION = 4
+DB_VERSION = 5
 
 # Bitcoin protocol
 # DUST_SIZE = 5430      # OP_RETURN

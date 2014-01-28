@@ -24,14 +24,14 @@ def validate (db, source, destination, amount, asset):
 
     return problems
 
-def create (db, source, destination, amount, asset, test=False, unsigned=False):
+def create (db, source, destination, amount, asset, unsigned=False):
     problems = validate(db, source, destination, amount, asset)
     if problems: raise exceptions.SendError(problems)
 
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount)
-    return bitcoin.transaction(source, destination, config.DUST_SIZE, config.MIN_FEE, data, test=test, unsigned=unsigned)
+    return bitcoin.transaction(source, destination, config.DUST_SIZE, config.MIN_FEE, data, unsigned=unsigned)
 
 def parse (db, tx, message):
     send_parse_cursor = db.cursor()
@@ -45,10 +45,10 @@ def parse (db, tx, message):
         asset, amount = None, None
         validity = 'Invalid: Could not unpack.'
 
-    # For SQLite3
-    amount = min(amount, config.MAX_INT)
-
     if validity == 'Valid':
+        # For SQLite3
+        amount = min(amount, config.MAX_INT)
+
         problems = validate(db, tx['source'], tx['destination'], amount, asset)
         if problems: validity = 'Invalid: ' + ';'.join(problems)
 

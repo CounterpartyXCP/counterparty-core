@@ -28,7 +28,7 @@ def validate (db, source, give_asset, give_amount, get_asset, get_amount, expira
 
     return problems
 
-def create (db, source, give_asset, give_amount, get_asset, get_amount, expiration, fee_required, fee_provided, test=False, unsigned=False):
+def create (db, source, give_asset, give_amount, get_asset, get_amount, expiration, fee_required, fee_provided, unsigned=False):
     problems = validate(db, source, give_asset, give_amount, get_asset, get_amount, expiration)
     if problems: raise exceptions.OrderError(problems)
 
@@ -37,7 +37,7 @@ def create (db, source, give_asset, give_amount, get_asset, get_amount, expirati
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, give_id, give_amount, get_id, get_amount,
                         expiration, fee_required)
-    return bitcoin.transaction(source, None, None, fee_provided, data, test=test, unsigned=unsigned)
+    return bitcoin.transaction(source, None, None, fee_provided, data, unsigned=unsigned)
 
 def parse (db, tx, message):
     order_parse_cursor = db.cursor()
@@ -52,13 +52,13 @@ def parse (db, tx, message):
         give_asset, give_amount, get_asset, get_amount, expiration, fee_required = None, None, None, None, None, None
         validity = 'Invalid: could not unpack'
 
-    # For SQLite3
-    give_amount = min(give_amount, config.MAX_INT)
-    get_amount = min(get_amount, config.MAX_INT)
-    expiration = min(expiration, config.MAX_INT)
-    fee_required = min(fee_required, config.MAX_INT)
-
     if validity == 'Valid':
+        # For SQLite3
+        give_amount = min(give_amount, config.MAX_INT)
+        get_amount = min(get_amount, config.MAX_INT)
+        expiration = min(expiration, config.MAX_INT)
+        fee_required = min(fee_required, config.MAX_INT)
+
         problems = validate(db, tx['source'], give_asset, give_amount, get_asset, get_amount, expiration)
         if problems: validity = 'Invalid: ' + ';'.join(problems)
 

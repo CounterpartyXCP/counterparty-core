@@ -47,14 +47,14 @@ def validate (db, source, destination, asset, amount, divisible):
  
     return problems
 
-def create (db, source, destination, asset, amount, divisible, test=False, unsigned=False):
+def create (db, source, destination, asset, amount, divisible, unsigned=False):
     problems = validate(db, source, destination, asset, amount, divisible)
     if problems: raise exceptions.IssuanceError(problems)
 
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount, divisible)
-    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test=test, unsigned=unsigned)
+    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, unsigned=unsigned)
 
 def parse (db, tx, message):
     issuance_parse_cursor = db.cursor()

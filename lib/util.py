@@ -86,8 +86,9 @@ def do_filter(results, filters, filterop):
         if type(filter['value']) not in (str, int, float, bool):
             raise Exception("Value specified for filter field '%s' is not one of the supported value types (str, int, float, bool)" % (
                 filter['field']))
-        if type(filter['value']) != type(results[0][filter['field']]):
-            raise Exception("Value specified for filter field '%s' does not match the data type of that field (value: %s, field: %s)" % (
+        if results[0][filter['field']] != None and filter['value'] != None and type(filter['value']) != type(results[0][filter['field']]):
+            # field is None when it does not matter.
+            raise Exception("Value specified for filter field '%s' does not match the data type of that field (value: %s, field: %s) and neither is None" % (
                 filter['field'], type(filter['value']), type(results[0][filter['field']])))
     #filter data
     if filterop == 'and':

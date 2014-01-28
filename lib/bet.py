@@ -25,8 +25,13 @@ def get_fee_multiplier (db, feed_address):
     '''Get fee_multiplier from the last broadcast from the feed_address address.
     '''
     broadcasts = util.get_broadcasts(db, source=feed_address)
-    last_broadcast = broadcasts[-1]
-    return last_broadcast['fee_multiplier']
+    if broadcasts:
+        last_broadcast = broadcasts[-1]
+        fee_multiplier = last_broadcast['fee_multiplier']
+        if fee_multiplier: return fee_multiplier
+        else: return 0
+    else:
+        return 0
 
 def validate (db, source, feed_address, bet_type, deadline, wager_amount,
               counterwager_amount, target_value, leverage, expiration):
@@ -62,7 +67,7 @@ def validate (db, source, feed_address, bet_type, deadline, wager_amount,
     return problems
 
 def create (db, source, feed_address, bet_type, deadline, wager_amount,
-            counterwager_amount, target_value, leverage, expiration, test=False, unsigned=False):
+            counterwager_amount, target_value, leverage, expiration, unsigned=False):
     problems = validate(db, source, feed_address, bet_type, deadline, wager_amount,
                         counterwager_amount, target_value, leverage, expiration)
     if problems: raise exceptions.BetError(problems)
@@ -72,7 +77,7 @@ def create (db, source, feed_address, bet_type, deadline, wager_amount,
                         wager_amount, counterwager_amount, target_value,
                         leverage, expiration)
     return bitcoin.transaction(source, feed_address, config.DUST_SIZE,
-                               config.MIN_FEE, data, test=test, unsigned=unsigned)
+                               config.MIN_FEE, data, unsigned=unsigned)
 
 def parse (db, tx, message):
     bet_parse_cursor = db.cursor()
@@ -88,18 +93,18 @@ def parse (db, tx, message):
          counterwager_amount, target_value, leverage,
          expiration) = None, None, None, None, None, None, None
         validity = 'Invalid: could not unpack'
-    
-    # For SQLite3
-    bet_type = min(bet_type, config.MAX_INT)
-    deadline = min(deadline, config.MAX_INT)
-    wager_amount = min(wager_amount, config.MAX_INT)
-    counterwager_amount = min(counterwager_amount, config.MAX_INT)
-    target_value = min(target_value, config.MAX_INT)
-    leverage = min(leverage, config.MAX_INT)
-    expiration = min(expiration, config.MAX_INT)
 
     # Debit amount wagered and fee.
     if validity == 'Valid':
+        # For SQLite3
+        bet_type = min(bet_type, config.MAX_INT)
+        deadline = min(deadline, config.MAX_INT)
+        wager_amount = min(wager_amount, config.MAX_INT)
+        counterwager_amount = min(counterwager_amount, config.MAX_INT)
+        target_value = min(target_value, config.MAX_INT)
+        leverage = min(leverage, config.MAX_INT)
+        expiration = min(expiration, config.MAX_INT)
+
         feed_address = tx['destination']
         problems = validate(db, tx['source'], feed_address, bet_type, deadline, wager_amount,
                             counterwager_amount, target_value, leverage, expiration)

@@ -58,7 +58,7 @@ def validate (db, source, timestamp, value, fee_multiplier, text):
 
     return problems
 
-def create (db, source, timestamp, value, fee_multiplier, text, test=False, unsigned=False):
+def create (db, source, timestamp, value, fee_multiplier, text, unsigned=False):
     # Use a magic number to store the fee multplier as an integer.
     fee_multiplier = round(D(fee_multiplier) * D(1e8))
 
@@ -70,7 +70,7 @@ def create (db, source, timestamp, value, fee_multiplier, text, test=False, unsi
                         text.encode('utf-8'))
     if len(data) > 80:
         raise exceptions.BroadcastError('Text is greater than 52 bytes.')
-    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test=test, unsigned=unsigned)
+    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, unsigned=unsigned)
 
 def parse (db, tx, message):
     broadcast_parse_cursor = db.cursor()
@@ -84,11 +84,11 @@ def parse (db, tx, message):
         timestamp, value, fee_multiplier, text = None, None, None, None
         validity = 'Invalid: could not unpack'
 
-    # For SQLite3
-    timestamp = min(timestamp, config.MAX_INT)
-    value = min(value, config.MAX_INT)
-
     if validity == 'Valid':
+        # For SQLite3
+        timestamp = min(timestamp, config.MAX_INT)
+        value = min(value, config.MAX_INT)
+
         problems = validate(db, tx['source'], timestamp, value, fee_multiplier, text)
         if problems: validity = 'Invalid: ' + ';'.join(problems)
 

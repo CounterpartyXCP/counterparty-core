@@ -14,7 +14,7 @@ FORMAT = '>32s'
 ID = 70
 LENGTH = 32
 
-def validate (db, offer_hash, source=None, test=False):
+def validate (db, offer_hash, source=None):
     problems = []
 
     for offer in util.get_orders(db, validity='Valid') + util.get_bets(db, validity='Valid'):
@@ -22,7 +22,7 @@ def validate (db, offer_hash, source=None, test=False):
             if source == offer['source']:
                 return source, offer, problems
             else:
-                if bitcoin.rpc('validateaddress', [offer['source']])['ismine'] or test:
+                if bitcoin.rpc('validateaddress', [offer['source']])['ismine'] or config.PREFIX == config.TEST_PREFIX:
                     source = offer['source']
                 else:
                     problems.append('offer was not made by one of your addresses')
@@ -32,16 +32,16 @@ def validate (db, offer_hash, source=None, test=False):
     return None, None, problems
 
 
-def create (db, offer_hash, test=False, unsigned=False):
-    source, offer, problems = validate(db, offer_hash, test=test)
+def create (db, offer_hash, unsigned=False):
+    source, offer, problems = validate(db, offer_hash)
     if problems: raise exceptions.CancelError(problems)
 
     offer_hash_bytes = binascii.unhexlify(bytes(offer_hash, 'utf-8'))
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, offer_hash_bytes)
-    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test=test, unsigned=unsigned)
+    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, unsigned=unsigned)
 
-def parse (db, tx, message, test=False):
+def parse (db, tx, message):
     cancel_parse_cursor = db.cursor()
 
     # Unpack message.
@@ -55,7 +55,7 @@ def parse (db, tx, message, test=False):
 
     if validity == 'Valid':
         if validity == 'Valid':
-            source, offer, problems = validate(db, offer_hash, source=tx['source'], test=False)
+            source, offer, problems = validate(db, offer_hash, source=tx['source'])
             if problems: validity = 'Invalid: ' + ';'.join(problems)
 
     if validity == 'Valid':

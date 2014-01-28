@@ -21,15 +21,16 @@ def validate (db, source, destination, quantity, overburn=False):
         problems.append('wrong destination address')
 
     # Try to make sure that the burned funds won't go to waste.
-    block_count = bitcoin.rpc('getblockcount', [])
-    if block_count < config.BURN_START:
-        problems.append('too early')
-    elif block_count > config.BURN_END:
-        problems.append('too late')
+    if config.PREFIX != config.TEST_PREFIX:    # For test suite.
+        block_count = bitcoin.rpc('getblockcount', [])
+        if block_count < config.BURN_START:
+            problems.append('too early')
+        elif block_count > config.BURN_END:
+            problems.append('too late')
 
     return problems
 
-def create (db, source, quantity, test=False, overburn=False, unsigned=False):
+def create (db, source, quantity, overburn=False, unsigned=False):
     destination = config.UNSPENDABLE
     problems = validate(db, source, destination, quantity, overburn)
     if problems: raise exceptions.BurnError(problems)
@@ -40,7 +41,7 @@ def create (db, source, quantity, test=False, overburn=False, unsigned=False):
     if quantity > (1 * config.UNIT - already_burned) and not overburn:
         raise exceptions.BurnError('1 BTC may be burned per address')
 
-    return bitcoin.transaction(source, destination, quantity, config.MIN_FEE, None, test=test, unsigned=unsigned)
+    return bitcoin.transaction(source, destination, quantity, config.MIN_FEE, None, unsigned=unsigned)
 
 def parse (db, tx, message=None):
     burn_parse_cursor = db.cursor()
@@ -69,11 +70,18 @@ def parse (db, tx, message=None):
         multiplier = 1000 * (1 + D(.5) * (partial_time / total_time))
         earned = round(burned * multiplier)
 
+        # For test suite.
+        if config.PREFIX == config.TEST_PREFIX:
+            earned = 1500 * burned
+
         # Credit source address with earned XCP.
         util.credit(db, tx['source'], 'XCP', earned)
 
         # Log.
         logging.info('Burn: {} burned {} BTC for {} XCP ({})'.format(tx['source'], util.devise(db, burned, 'BTC', 'output'), util.devise(db, earned, 'XCP', 'output'), util.short(tx['tx_hash'])))
+    else:
+        burned = 0
+        earned = 0
 
     # Add parsed transaction to message-type–specific table.
     # TODO: store sent in table

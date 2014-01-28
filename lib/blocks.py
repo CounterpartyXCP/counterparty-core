@@ -15,6 +15,39 @@ import logging
 from . import (config, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel)
 
+def parse_tx (db, tx):
+    # Burns.
+    if tx['destination'] == config.UNSPENDABLE:
+        burn.parse(db, tx)
+        return
+
+    # Everything else.
+    message_type_id = struct.unpack(config.TXTYPE_FORMAT, tx['data'][:4])[0]
+    message = tx['data'][4:]
+    if message_type_id == send.ID and len(message) == send.LENGTH:
+        send.parse(db, tx, message)
+    elif message_type_id == order.ID and len(message) == order.LENGTH:
+        order.parse(db, tx, message)
+    elif message_type_id == btcpay.ID and len(message) == btcpay.LENGTH:
+        btcpay.parse(db, tx, message)
+    elif message_type_id == issuance.ID and len(message) == issuance.LENGTH:
+        issuance.parse(db, tx, message)
+    elif message_type_id == broadcast.ID and len(message) == broadcast.LENGTH:
+        broadcast.parse(db, tx, message)
+    elif message_type_id == bet.ID and len(message) == bet.LENGTH:
+        bet.parse(db, tx, message)
+    elif message_type_id == dividend.ID and len(message) == dividend.LENGTH:
+        dividend.parse(db, tx, message)
+    elif message_type_id == cancel.ID and len(message) == cancel.LENGTH:
+        cancel.parse(db, tx, message)
+    else:
+        # Mark transaction as of unsupported type.
+        parse_block_cursor.execute('''UPDATE transactions \
+                          SET supported=? \
+                          WHERE tx_hash=?''',
+                       (False, tx['tx_hash']))
+        logging.info('Unsupported: message type {}; transaction hash {}'.format(message_type_id, tx['tx_hash']))
+
 def parse_block (db, block_index):
     """This is a separate function from follow() so that changing the parsing
     rules doesn't require a full database rebuild. If parsing rules are changed
@@ -33,42 +66,7 @@ def parse_block (db, block_index):
                    (block_index,))
     transactions = parse_block_cursor.fetchall()   
     for tx in transactions:
-
-        # Burns.
-        if tx['destination'] == config.UNSPENDABLE:
-            burn.parse(db, tx)
-            continue
-
-        # Everything else.
-        if tx['data'][:len(config.PREFIX)] == config.PREFIX:
-            post_prefix = tx['data'][len(config.PREFIX):]
-        else:
-            continue
-        message_type_id = struct.unpack(config.TXTYPE_FORMAT, post_prefix[:4])[0]
-        message = post_prefix[4:]
-        if message_type_id == send.ID and len(message) == send.LENGTH:
-            send.parse(db, tx, message)
-        elif message_type_id == order.ID and len(message) == order.LENGTH:
-            order.parse(db, tx, message)
-        elif message_type_id == btcpay.ID and len(message) == btcpay.LENGTH:
-            btcpay.parse(db, tx, message)
-        elif message_type_id == issuance.ID and len(message) == issuance.LENGTH:
-            issuance.parse(db, tx, message)
-        elif message_type_id == broadcast.ID and len(message) == broadcast.LENGTH:
-            broadcast.parse(db, tx, message)
-        elif message_type_id == bet.ID and len(message) == bet.LENGTH:
-            bet.parse(db, tx, message)
-        elif message_type_id == dividend.ID and len(message) == dividend.LENGTH:
-            dividend.parse(db, tx, message)
-        elif message_type_id == cancel.ID and len(message) == cancel.LENGTH:
-            cancel.parse(db, tx, message)
-        else:
-            # Mark transaction as of unsupported type.
-            parse_block_cursor.execute('''UPDATE transactions \
-                              SET supported=? \
-                              WHERE tx_hash=?''',
-                           (False, tx['tx_hash']))
-            logging.info('Unsupported: message type {}; transaction hash {}'.format(message_type_id, tx['tx_hash']))
+        parse_tx(db, tx)
 
     parse_block_cursor.close()
 
@@ -362,6 +360,14 @@ def get_tx_info (tx):
                     continue
                 except:
                     pass
+
+    # Check for, and strip away, prefix (except for burns).
+    if destination == config.UNSPENDABLE:
+        pass
+    elif data[:len(config.PREFIX)] == config.PREFIX:
+        data = data[len(config.PREFIX):]
+    else:
+        return b'', None, None, None, None
 
     # Only look for source if data were found (or destination is UNSPENDABLE), for speed.
     if not data and destination != config.UNSPENDABLE:
