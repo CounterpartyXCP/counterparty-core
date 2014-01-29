@@ -117,7 +117,7 @@ def parse (db, tx, message):
 
         wager_amount = round(wager_amount)
         counterwager_amount = round(counterwager_amount)
-        odds = wager_amount / counterwager_amount
+        odds = D(wager_amount) / D(counterwager_amount)
     else:
         odds = 0
 
@@ -133,7 +133,7 @@ def parse (db, tx, message):
         'wager_amount': wager_amount,
         'counterwager_amount': counterwager_amount,
         'wager_remaining': wager_amount,
-        'odds': odds,
+        'odds': float(odds),
         'target_value': target_value,
         'leverage': leverage,
         'expiration': expiration,
@@ -204,7 +204,7 @@ def match (db, tx):
 
         # If the odds agree, make the trade. The found order sets the odds,
         # and they trade as much as they can.
-        if round(1 / tx0['odds']) <= tx1['odds']:
+        if round(1 / tx0['odds'], 10) <= round(tx1['odds'], 10):
             forward_amount = round(min(D(tx0['wager_remaining']), wager_remaining / D(tx1['odds'])))
             if not forward_amount: continue
             backward_amount = round(forward_amount / D(tx0['odds']))

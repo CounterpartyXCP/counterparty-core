@@ -143,7 +143,7 @@ def match (db, tx):
 
         # If the prices agree, make the trade. The found order sets the price,
         # and they trade as much as they can.
-        if tx0['price'] <= round(1 / tx1['price']):
+        if round(tx0['price'], 10) <= round(1 / tx1['price'], 10):
             forward_amount = round(min(D(tx0['give_remaining']), give_remaining / D(tx0['price'])))
             if not forward_amount: continue
             backward_amount = round(forward_amount * tx0['price'])
