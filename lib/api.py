@@ -24,8 +24,7 @@ class APIServer(threading.Thread):
         threading.Thread.__init__(self)
         
     def run (self):
-        db = apsw.Connection(config.DATABASE)
-        db.setrowtrace(util.rowtracer)
+        db = util.connect_to_db()
 
         ######################
         #READ API

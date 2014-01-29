@@ -528,6 +528,12 @@ def follow (db):
         except Exception:
             logging.warning('Status: NEW DATABASE')
             block_index = config.BLOCK_FIRST
+            
+            #in the case of this, send out an initialize message to our zmq feed, any attached services
+            # (such as counterwalletd) can then get this and clear our their data as well, so they don't get
+            # duplicated data in the event of a new DB version
+            config.zeromq_publisher.push_to_subscribers('new_db_init', {})
+
 
         # Get index of last transaction.
         try:

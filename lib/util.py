@@ -7,6 +7,7 @@ import sys
 import logging
 import operator
 from operator import itemgetter
+import apsw
 
 from . import (config, exceptions, bitcoin)
 
@@ -25,11 +26,18 @@ DO_FILTER_OPERATORS = {
 }
 
 def rowtracer(cursor, sql):
+    """Converts fetched SQL data into dict-style"""
     dictionary = {}
     description = cursor.getdescription()
     for i in range(len(description)):
         dictionary[description[i][0]] = sql[i]
     return dictionary
+
+def connect_to_db():
+    """Connects to the SQLite database, returning a db Connection object"""
+    db = apsw.Connection(config.DATABASE)
+    db.setrowtrace(rowtracer)
+    return db
 
 def get_insert_sql(table_name, element_data):
     """Takes a mapping of element data and a table name, and produces an INSERT statement suitable for a sqlite3 cursor.execute() operation"""
@@ -39,7 +47,7 @@ def get_insert_sql(table_name, element_data):
         table_name, ','.join(k), ','.join(['?' for i in range(len(v))])), v ]
 
 def bitcoind_check (db):
-    # Check blocktime of last block to see if Bitcoind is running behind.
+    """Checks blocktime of last block to see if Bitcoind is running behind."""
     block_count = bitcoin.rpc('getblockcount', [])
     block_hash = bitcoin.rpc('getblockhash', [block_count])
     block = bitcoin.rpc('getblock', [block_hash])
@@ -48,7 +56,7 @@ def bitcoind_check (db):
         raise exceptions.BitcoindError('Bitcoind is running about {} seconds behind.'.format(round(time_behind)))
 
 def database_check (db):
-    # Check Counterparty database to see if the counterpartyd server has caught up with Bitcoind.
+    """Checks Counterparty database to see if the counterpartyd server has caught up with Bitcoind."""
     cursor = db.cursor()
     TRIES = 7
     for i in range(TRIES):
@@ -64,7 +72,7 @@ def database_check (db):
     raise exceptions.DatabaseError('Counterparty database is behind Bitcoind. Is the counterpartyd server running?')
 
 def do_filter(results, filters, filterop):
-    """Filter results based on a filter data structure (as used by the API)"""
+    """Filters results based on a filter data structure (as used by the API)"""
     if not len(results) or not filters: #empty results, or not filtering
         return results
     if isinstance(filters, dict): #single filter entry, convert to a one entry list
@@ -243,7 +251,7 @@ def debit (db, block_index, address, asset, amount):
     }
     debit_cursor.execute(*get_insert_sql('debits', element_data))
     config.zeromq_publisher.push_to_subscribers('debit', {
-        'address': address, 'asset': asset, 'amount': amount, 'balance': balance })
+        'address': address, 'asset': asset, 'amount': amount, 'balance': balance, 'block_index': block_index })
     debit_cursor.close()
 
 def credit (db, block_index, address, asset, amount):
@@ -263,7 +271,7 @@ def credit (db, block_index, address, asset, amount):
         }
         credit_cursor.execute(*get_insert_sql('balances', element_data))
         config.zeromq_publisher.push_to_subscribers('credit', {
-            'address': address, 'asset': asset, 'amount': amount, 'balance': amount })
+            'address': address, 'asset': asset, 'amount': amount, 'balance': amount, 'block_index': block_index })
     elif len(balances) > 1:
         raise Exception
     else:
@@ -275,7 +283,7 @@ def credit (db, block_index, address, asset, amount):
                           WHERE (address=? and asset=?)''',
                        (balance, address, asset)) 
         config.zeromq_publisher.push_to_subscribers('credit', {
-            'address': address, 'asset': asset, 'amount': amount, 'balance': balance })
+            'address': address, 'asset': asset, 'amount': amount, 'balance': balance, 'block_index': block_index })
 
     # Record credit.
     logging.debug('Credit: {} of {} to {}'.format(devise(db, amount, asset, 'output'), asset, address))
