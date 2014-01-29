@@ -8,6 +8,7 @@ import json
 import decimal
 D = decimal.Decimal
 
+import sys
 import logging
 import appdirs
 import configparser
@@ -708,11 +709,14 @@ if __name__ == '__main__':
         
         #wait until the realtime event feed subsystem has fully initialized to start processing blocks
         # (so we don't miss any events, especially new_db_init)
-        # TODO: This prevents multiple server processes from running on the same machine (because of the port conflict), even if they use different database files.
-        while not config.zeromq_publisher.active:
-            time.sleep(.25) 
-        
-        blocks.follow(db)
+        TRIES = 12
+        for i in range(TRIES):
+            if config.zeromq_publisher.active:
+                blocks.follow(db)
+                exit(0)
+            else:
+                print('ØMQ publisher not active. Sleeping for 0.25 seconds. (Try {}/{})'.format(i+1, TRIES), file=sys.stderr)
+                time.sleep(.25) 
 
     else:
         parser.print_help()
