@@ -439,11 +439,12 @@ def rollback (db, block_index):
     """
 
     # TODO: This is not thread‐safe!
-    logging.warning('Status: Rolling back DB to block {}.'.format(block_index - 1))
+    logging.warning('Status: Rolling back database to block {}.'.format(block_index))
 
     rollback_cursor = db.cursor()
 
     # Delete everything execpt for balances after block_index.
+    logging.warning('Status: Deleting new blocks.')
     rollback_cursor.execute('''DELETE FROM blocks WHERE block_index > {}'''.format(block_index))
     rollback_cursor.execute('''DELETE FROM transactions WHERE block_index > {}'''.format(block_index))
     rollback_cursor.execute('''DELETE FROM debits WHERE block_index > {}'''.format(block_index))
@@ -463,6 +464,7 @@ def rollback (db, block_index):
     # Re‐calculate every balance by summing historical credits, debits.
     rollback_cursor.execute('''SELECT * FROM balances''')
     for balance in rollback_cursor.fetchall():
+        logging.debug('Status: Re‐calculating balance of {} in {}.'.format(balance['address'], balance['asset']))
         new_amount = 0
         credits = util.get_credits(db, address=balance['address'], asset=balance['asset'], end_block=(block_index-1))
         for credit in credits: new_amount += credit['amount']
@@ -573,6 +575,7 @@ def follow (db):
                         continue
                     # Get the important details about each transaction.
                     tx = bitcoin.rpc('getrawtransaction', [tx_hash, 1])
+                    logging.debug('Status: examining transaction {}'.format(tx_hash))
                     source, destination, btc_amount, fee, data = get_tx_info(tx)
                     if source and (data or destination == config.UNSPENDABLE):
                         follow_cursor.execute('''INSERT INTO transactions(

@@ -308,7 +308,7 @@ if __name__ == '__main__':
     parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database (WARNING: not thread‐safe)')
 
     parser_rollback = subparsers.add_parser('rollback', help='rollback database (WARNING: not thread‐safe)')
-    parser_rollback.add_argument('--block_index', metavar='block_index', required=True, help='the index of the last known good block')
+    parser_rollback.add_argument('block_index', metavar='block_index', type=int, help='the index of the last known good block')
 
     args = parser.parse_args()
 
@@ -472,7 +472,7 @@ if __name__ == '__main__':
 
     # Log also to stderr.
     console = logging.StreamHandler()
-    console.setLevel(logging.INFO)
+    console.setLevel(logging.DEBUG if args.verbose else logging.INFO)
     formatter = logging.Formatter('%(message)s')
     console.setFormatter(formatter)
     logging.getLogger('').addHandler(console)
@@ -708,6 +708,7 @@ if __name__ == '__main__':
         
         #wait until the realtime event feed subsystem has fully initialized to start processing blocks
         # (so we don't miss any events, especially new_db_init)
+        # TODO: This prevents multiple server processes from running on the same machine (because of the port conflict), even if they use different database files.
         while not config.zeromq_publisher.active:
             time.sleep(.25) 
         

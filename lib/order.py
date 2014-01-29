@@ -63,7 +63,7 @@ def parse (db, tx, message):
         if problems: validity = 'Invalid: ' + ';'.join(problems)
 
     if validity == 'Valid':
-        price = D(get_amount) / D(give_amount)
+        price = D(get_amount) / D(give_amount)   # TODO: precision?!
         if give_asset != 'BTC':  # No need (or way) to debit BTC.
             util.debit(db, tx['block_index'], tx['source'], give_asset, give_amount)
     else:
@@ -132,7 +132,7 @@ def match (db, tx):
 
         # If the prices agree, make the trade. The found order sets the price,
         # and they trade as much as they can.
-        if tx0['price'] <= round(1 / tx1['price']):
+        if round(tx0['price'], 10) <= round(1 / tx1['price'], 10):  # TODO: precision?!
             forward_amount = round(min(D(tx0['give_remaining']), give_remaining / D(tx0['price'])))
             if not forward_amount: continue
             backward_amount = round(forward_amount * tx0['price'])
