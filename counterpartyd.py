@@ -484,18 +484,31 @@ if __name__ == '__main__':
 
     # (more) Testnet
     if config.TESTNET:
-        config.ADDRESSVERSION = b'\x6f'
-        config.BLOCK_FIRST = 154908
-        config.BURN_START = 154908
-        config.BURN_END = 4017708    # Fifty years, at ten minutes per block.
-        config.UNSPENDABLE = 'mvCounterpartyXXXXXXXXXXXXXXW24Hef'
-
+        if config.TESTCOIN:
+            config.ADDRESSVERSION = b'\x6f'
+            config.BLOCK_FIRST = 154908
+            config.BURN_START = 154908
+            config.BURN_END = 4017708   # Fifty years, at ten minutes per block.
+            config.UNSPENDABLE = 'mvCounterpartyXXXXXXXXXXXXXXW24Hef'
+        else:
+            config.ADDRESSVERSION = b'\x6f'
+            config.BLOCK_FIRST = 154908
+            config.BURN_START = 154908
+            config.BURN_END = 4017708   # Fifty years, at ten minutes per block.
+            config.UNSPENDABLE = 'mvCounterpartyXXXXXXXXXXXXXXW24Hef'
     else:
-        config.ADDRESSVERSION = b'\x00'
-        config.BLOCK_FIRST = 278270
-        config.BURN_START = 278310
-        config.BURN_END = 283810
-        config.UNSPENDABLE = '1CounterpartyXXXXXXXXXXXXXXXUWLpVr'
+        if config.TESTCOIN:
+            config.ADDRESSVERSION = b'\x00'
+            config.BLOCK_FIRST = 278270
+            config.BURN_START = 278310
+            config.BURN_END = 2500000   # A long time.
+            config.UNSPENDABLE = '1CounterpartyXXXXXXXXXXXXXXXUWLpVr'
+        else:
+            config.ADDRESSVERSION = b'\x00'
+            config.BLOCK_FIRST = 278270
+            config.BURN_START = 278310
+            config.BURN_END = 283810
+            config.UNSPENDABLE = '1CounterpartyXXXXXXXXXXXXXXXUWLpVr'
 
     if config.TESTCOIN:
         config.PREFIX = b'XX'                   # 2 bytes (possibly accidentally created)

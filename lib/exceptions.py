@@ -12,6 +12,8 @@ class OverflowError(Exception):
 
 class InputError(Exception):
     pass
+class UnpackException(Exception):
+    pass
 
 class BitcoindError (Exception):
     pass

@@ -69,8 +69,8 @@ def rpc (method, params):
         else: network = 'mainnet'
         raise exceptions.BitcoindRPCError('Cannot communicate with Bitcoind. (counterpartyd is set to run on {}, is Bitcoind?)'.format(network))
 
-    if response.status_code == 401:
-        raise exceptions.BitcoindRPCError('Bitcoind RPC: unauthorized')
+    if response.status_code != 200:
+        raise exceptions.BitcoindRPCError(str(response.status_code) + ' ' + response.reason)
 
     '''
     if config.PREFIX == config.UNITTEST_PREFIX:

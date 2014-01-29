@@ -12,7 +12,7 @@ import decimal
 D = decimal.Decimal
 import logging
 
-from . import (config, util, bitcoin)
+from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel)
 
 def parse_tx (db, tx):
@@ -22,8 +22,12 @@ def parse_tx (db, tx):
         burn.parse(db, tx)
         return
 
-    # Everything else.
-    message_type_id = struct.unpack(config.TXTYPE_FORMAT, tx['data'][:4])[0]
+    try:
+        message_type_id = struct.unpack(config.TXTYPE_FORMAT, tx['data'][:4])[0]
+    except:
+        # Mark transaction as of unsupported type.
+        message_type_id = None
+
     message = tx['data'][4:]
     if message_type_id == send.ID and len(message) == send.LENGTH:
         send.parse(db, tx, message)
@@ -42,12 +46,13 @@ def parse_tx (db, tx):
     elif message_type_id == cancel.ID and len(message) == cancel.LENGTH:
         cancel.parse(db, tx, message)
     else:
-        # Mark transaction as of unsupported type.
         parse_tx_cursor.execute('''UPDATE transactions \
                           SET supported=? \
                           WHERE tx_hash=?''',
                        (False, tx['tx_hash']))
-        logging.info('Unsupported: message type {}; transaction hash {}'.format(message_type_id, tx['tx_hash']))
+        logging.info('Unsupported transaction: hash {}; data {}'.format(tx['tx_hash'], tx['data']))
+
+
     parse_tx_cursor.close()
 
 def parse_block (db, block_index):
@@ -477,7 +482,10 @@ def reorg (db):
     # Detect blockchain reorganisation.
     reorg_cursor = db.cursor()
     reorg_cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)''')
-    last_block_index = reorg_cursor.fetchall()[0]['block_index']
+    try:
+        last_block_index = reorg_cursor.fetchall()[0]['block_index']
+    except IndexError:
+        raise exceptions.DatabaseError('No blocks found.')
     reorg_necessary = False
     for block_index in range(last_block_index - 6, last_block_index + 1):
         block_hash_see = bitcoin.rpc('getblockhash', [block_index])
