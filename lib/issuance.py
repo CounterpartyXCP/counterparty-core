@@ -19,10 +19,6 @@ def validate (db, source, destination, asset, amount, divisible, block_index=Non
     if asset in ('BTC', 'XCP'):
         problems.append('cannot issue BTC or XCP')
 
-    balances = util.get_balances(db, address=source, asset='XCP')
-    if (block_index and block_index > 281236) and (not balances or balances[0]['amount'] < config.ISSUANCE_FEE):
-        problems.append('insufficient funds')
-
     # Valid re-issuance?
     issuances = util.get_issuances(db, validity='Valid', asset=asset)
     if issuances:
@@ -35,6 +31,10 @@ def validate (db, source, destination, asset, amount, divisible, block_index=Non
             problems.append('asset is locked')
     elif not amount:
         problems.append('cannot lock or transfer an unissued asset')
+
+    balances = util.get_balances(db, address=source, asset='XCP')
+    if (block_index and block_index > 281236) and (not balances or balances[0]['amount'] < config.ISSUANCE_FEE):
+        problems.append('insufficient funds')
 
     # For SQLite3
     total = sum([issuance['amount'] for issuance in issuances])
