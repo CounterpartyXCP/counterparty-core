@@ -397,85 +397,86 @@ def get_tx_info (tx):
     return source, destination, btc_amount, round(fee), data
 
 def reparse (db, quiet=False):
+    """Reparse all transactions (atomically).
+    """
     # TODO: This is not thread‐safe!
     logging.warning('Status: Reparsing all transactions.')
-
     reparse_cursor = db.cursor()
 
-    # Delete all of the results of parsing.
-    # NOTE: dropping a table will also delete any indicies and triggers associated with it
-    reparse_cursor.execute('''DROP TABLE IF EXISTS debits''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS credits''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS balances''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS sends''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS orders''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS order_matches''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS btcpays''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS issuances''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS broadcasts''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS bets''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS bet_matches''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS dividends''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS burns''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS cancels''')
+    with db:
+        # Delete all of the results of parsing.
+        reparse_cursor.execute('''DROP TABLE IF EXISTS debits''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS credits''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS balances''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS sends''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS orders''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS order_matches''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS btcpays''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS issuances''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS broadcasts''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS bets''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS bet_matches''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS dividends''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS burns''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS cancels''')
 
-    # Reparse all blocks, transactions.
-    if quiet:
-        log = logging.getLogger('')
-        log.setLevel(logging.WARNING)
-    initialise(db)
-    reparse_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
-    for block in reparse_cursor.fetchall():
-        logging.info('Block (re‐parse): {}'.format(str(block['block_index'])))
-        parse_block(db, block['block_index'])
-    if quiet:
-        log.setLevel(logging.INFO)
+        # Reparse all blocks, transactions.
+        if quiet:
+            log = logging.getLogger('')
+            log.setLevel(logging.WARNING)
+        initialise(db)
+        reparse_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
+        for block in reparse_cursor.fetchall():
+            logging.info('Block (re‐parse): {}'.format(str(block['block_index'])))
+            parse_block(db, block['block_index'])
+        if quiet:
+            log.setLevel(logging.INFO)
 
     reparse_cursor.close()
     return
 
 def rollback (db, block_index):
-    """Rollback database to state at end of block number block_index.
+    """Rollback database to state at end of block number block_index (atomically).
     """
 
     # TODO: This is not thread‐safe!
     logging.warning('Status: Rolling back database to block {}.'.format(block_index))
-
     rollback_cursor = db.cursor()
 
-    # Delete everything execpt for balances after block_index.
-    logging.warning('Status: Deleting new blocks.')
-    rollback_cursor.execute('''DELETE FROM blocks WHERE block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM transactions WHERE block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM debits WHERE block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM credits WHERE block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM sends WHERE block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM orders WHERE block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM order_matches WHERE tx1_block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM btcpays WHERE block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM issuances WHERE block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM broadcasts WHERE block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM bets WHERE block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM bet_matches WHERE tx1_block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM dividends WHERE block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM burns WHERE block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM cancels WHERE block_index > {}'''.format(block_index))
+    with db:
+        # Delete everything execpt for balances after block_index.
+        logging.warning('Status: Deleting new blocks.')
+        rollback_cursor.execute('''DELETE FROM blocks WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM transactions WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM debits WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM credits WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM sends WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM orders WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM order_matches WHERE tx1_block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM btcpays WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM issuances WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM broadcasts WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM bets WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM bet_matches WHERE tx1_block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM dividends WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM burns WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM cancels WHERE block_index > {}'''.format(block_index))
 
-    # Re‐calculate every balance by summing historical credits, debits.
-    rollback_cursor.execute('''SELECT * FROM balances''')
-    for balance in rollback_cursor.fetchall():
-        logging.debug('Status: Re‐calculating balance of {} in {}.'.format(balance['address'], balance['asset']))
-        new_amount = 0
-        credits = util.get_credits(db, address=balance['address'], asset=balance['asset'], end_block=(block_index-1))
-        for credit in credits: new_amount += credit['amount']
-        debits = util.get_debits(db, address=balance['address'], asset=balance['asset'], end_block=(block_index-1))
-        for debit in debits: new_amount -= debit['amount']
-        rollback_cursor.execute('''UPDATE balances
-                                   SET amount=? \
-                                   WHERE (address=? and asset=?)''',
-                             (new_amount, balance['address'], balance['asset']))
+        # Re‐calculate every balance by summing historical credits, debits.
+        rollback_cursor.execute('''SELECT * FROM balances''')
+        for balance in rollback_cursor.fetchall():
+            logging.debug('Status: Re‐calculating balance of {} in {}.'.format(balance['address'], balance['asset']))
+            new_amount = 0
+            credits = util.get_credits(db, address=balance['address'], asset=balance['asset'], end_block=(block_index-1))
+            for credit in credits: new_amount += credit['amount']
+            debits = util.get_debits(db, address=balance['address'], asset=balance['asset'], end_block=(block_index-1))
+            for debit in debits: new_amount -= debit['amount']
+            rollback_cursor.execute('''UPDATE balances
+                                       SET amount=? \
+                                       WHERE (address=? and asset=?)''',
+                                 (new_amount, balance['address'], balance['asset']))
 
-    # TODO: Unexpire expired things.
+        # TODO: Unexpire expired things.
 
     rollback_cursor.close()
     return
@@ -520,14 +521,19 @@ def follow (db):
 
     while True:
 
-        # TODO: Check DB_VERSION
-        # purge if old
+        # Reparse all transactions if minor version changes.
+        minor_version = follow_cursor.execute('PRAGMA user_version').fetchall()[0]['user_version']
+        if minor_version != config.DB_VERSION_MINOR:
+            logging.info('Status: Database and client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.DB_VERSION_MINOR))
+            reparse(db, quiet=False)
+            minor_version = follow_cursor.execute('PRAGMA user_version = {}'.format(int(config.DB_VERSION_MINOR))).fetchall()[0]
+            logging.info('Status: Database minor version number updated.')
 
         # Get index of last block.
         try:
             follow_cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)''')
             block_index = follow_cursor.fetchall()[0]['block_index'] + 1
-        except Exception:
+        except IndexError:
             logging.warning('Status: NEW DATABASE')
             block_index = config.BLOCK_FIRST
             
@@ -535,7 +541,6 @@ def follow (db):
             # (such as counterwalletd) can then get this and clear our their data as well, so they don't get
             # duplicated data in the event of a new DB version
             config.zeromq_publisher.push_to_subscribers('new_db_init', {})
-
 
         # Get index of last transaction.
         try:
@@ -553,7 +558,7 @@ def follow (db):
             block_time = block['time']
             tx_hash_list = block['tx']
 
-            # Get and parse transactions in this block, atomically.
+            # Get and parse transactions in this block (atomically).
             with db:
                 # List the block.
                 follow_cursor.execute('''INSERT INTO blocks(

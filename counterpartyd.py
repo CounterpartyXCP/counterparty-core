@@ -483,11 +483,11 @@ if __name__ == '__main__':
 
     # Database
     if config.TESTNET:
-        config.DB_VERSION = str(config.DB_VERSION) + '.testnet'
+        config.DB_VERSION = str(config.DB_VERSION_MAJOR) + '.testnet'
     if args.database_file:
         config.DATABASE = args.database_file
     else:
-        config.DATABASE = os.path.join(config.data_dir, 'counterpartyd.' + str(config.DB_VERSION) + '.db')
+        config.DATABASE = os.path.join(config.data_dir, 'counterpartyd.' + str(config.DB_VERSION_MAJOR) + '.db')
 
     db = util.connect_to_db()
 
