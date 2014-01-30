@@ -19,6 +19,8 @@ class BitcoindError (Exception):
     pass
 class BitcoindRPCError (BitcoindError):
     pass
+class ZeroMQError (Exception):
+    pass
 
 class DatabaseError (Exception):
     pass

@@ -717,6 +717,7 @@ if __name__ == '__main__':
             else:
                 print('ØMQ publisher not active. Sleeping for 0.25 seconds. (Try {}/{})'.format(i+1, TRIES), file=sys.stderr)
                 time.sleep(.25) 
+        raise exceptions.ZeroMQError('Timeout.')
 
     else:
         parser.print_help()
