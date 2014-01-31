@@ -7,8 +7,9 @@ import logging
 from . import (util, config, exceptions, bitcoin, util)
 
 FORMAT = '>32s32s'
-ID = 11
 LENGTH = 32 + 32
+ID = 11
+
 
 def validate (db, tx0_hash, tx1_hash):
     order_match_id = tx0_hash + tx1_hash
@@ -52,6 +53,7 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
+        assert len(message) == LENGTH
         tx0_hash_bytes, tx1_hash_bytes = struct.unpack(FORMAT, message)
         tx0_hash, tx1_hash = binascii.hexlify(tx0_hash_bytes).decode('utf-8'), binascii.hexlify(tx1_hash_bytes).decode('utf-8')
         validity = 'Valid'

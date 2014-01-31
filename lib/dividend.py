@@ -10,8 +10,9 @@ D = decimal.Decimal
 from . import (util, config, exceptions, bitcoin, util)
 
 FORMAT = '>QQ'
-ID = 50
 LENGTH = 8 + 8
+ID = 50
+
 
 def validate (db, source, amount_per_share, asset):
     problems = []
@@ -57,6 +58,7 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
+        assert len(message) == LENGTH
         amount_per_share, asset_id = struct.unpack(FORMAT, message)
         asset = util.get_asset_name(asset_id)
         validity = 'Valid'

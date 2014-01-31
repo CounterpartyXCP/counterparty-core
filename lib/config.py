@@ -10,7 +10,7 @@ UNITTEST_PREFIX = b'TESTXXXX'
 # Versions
 VERSION = 0.2
 DB_VERSION_MAJOR = 6         # Major version changes the blocks or transactions table.
-DB_VERSION_MINOR = 0         # Minor version changes just the parsing.
+DB_VERSION_MINOR = 1         # Minor version changes just the parsing.
 DB_VERSION = str(DB_VERSION_MAJOR) + '.' + str(DB_VERSION_MINOR)
 
 # Bitcoin protocol

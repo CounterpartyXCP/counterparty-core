@@ -29,8 +29,9 @@ import logging
 from . import (util, exceptions, config, bitcoin)
 
 FORMAT = '>IdI52p'
-ID = 30
 LENGTH = 4 + 8 + 4 + 52
+ID = 30
+
 
 def validate (db, source, timestamp, value, fee_multiplier, text):
     problems = []
@@ -77,6 +78,7 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
+        assert len(message) == LENGTH
         timestamp, value, fee_multiplier, text = struct.unpack(FORMAT, message)
         text = text.decode('utf-8')
         validity = 'Valid'

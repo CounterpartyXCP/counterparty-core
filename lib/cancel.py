@@ -11,8 +11,9 @@ import logging
 from . import (util, config, exceptions, bitcoin, util)
 
 FORMAT = '>32s'
-ID = 70
 LENGTH = 32
+ID = 70
+
 
 def validate (db, offer_hash, source=None):
     problems = []
@@ -46,6 +47,7 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
+        assert len(message) == LENGTH
         offer_hash_bytes = struct.unpack(FORMAT, message)[0]
         offer_hash = binascii.hexlify(offer_hash_bytes).decode('utf-8')
         validity = 'Valid'

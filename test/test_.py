@@ -211,14 +211,14 @@ def test_btcpay ():
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_issuance_divisible ():
-    unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBB', quantity * 10, True)
+    unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBB', quantity * 10, True, False, 0, 0.0, '')
 
     parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
-def test_issuance_indivisible ():
-    unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBC', round(quantity / 1000), False)
+def test_issuance_indivisible_callable ():
+    unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBC', round(quantity / 1000), False, True, 1391135956, 15, 'foobar')
 
     parse_hex(unsigned_tx_hex)
 
@@ -389,16 +389,17 @@ def test_db():
 def test_output():
     with open(CURR_DIR + '/output.new.json', 'w') as output_new_file:
         json.dump(output_new, output_new_file, sort_keys=True, indent=4)
+
     for key in output_new.keys():
         try:
             assert output[key] == output_new[key]
-        except Exception:
+        except Exception as e:
             print('Key:', key)
             print('Old output:')
             print(output[key])
             print('New output:')
             print(output_new[key])
-            raise Exception
+            raise e
 
 def test_log():
     with open(CURR_DIR + '/log', 'r') as f:

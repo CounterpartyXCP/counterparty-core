@@ -9,11 +9,10 @@ import logging
 
 from . import (util, config, exceptions, bitcoin, util)
 
-FORMAT = '>11s'
 ID = 60
-LENGTH = 11
 
-def validate (db, source, destination, quantity, overburn=False):
+
+def validate (db, source, destination, quantity, block_index=None, overburn=False):
     problems = []
 
     # Check destination address.
@@ -22,17 +21,17 @@ def validate (db, source, destination, quantity, overburn=False):
 
     # Try to make sure that the burned funds won't go to waste.
     if config.PREFIX != config.UNITTEST_PREFIX:    # For test suite.
-        block_count = bitcoin.rpc('getblockcount', [])
-        if block_count < config.BURN_START:
+        if not block_index: block_index = bitcoin.rpc('getblockcount', [])  # For creates.
+        if block_index < config.BURN_START:
             problems.append('too early')
-        elif block_count > config.BURN_END:
+        elif block_index > config.BURN_END:
             problems.append('too late')
 
     return problems
 
 def create (db, source, quantity, overburn=False, unsigned=False):
     destination = config.UNSPENDABLE
-    problems = validate(db, source, destination, quantity, overburn)
+    problems = validate(db, source, destination, quantity, None, overburn=overburn)
     if problems: raise exceptions.BurnError(problems)
 
     # Check that a maximum of 1 BTC total is burned per address.
@@ -48,7 +47,7 @@ def parse (db, tx, message=None):
     validity = 'Valid'
 
     if validity == 'Valid':
-        problems = validate(db, tx['source'], tx['destination'], tx['btc_amount'], overburn=False)
+        problems = validate(db, tx['source'], tx['destination'], tx['btc_amount'], tx['block_index'], overburn=False)
         if problems: validity = 'Invalid: ' + ';'.join(problems)
 
         if tx['btc_amount'] != None:

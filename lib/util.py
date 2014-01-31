@@ -63,7 +63,7 @@ def database_check (db):
         try:
             cursor.execute('''SELECT * FROM blocks ORDER BY block_index ASC''')
         except Exception:   # TODO
-            raise exceptions.DatabaseError('Counterparty database does not exist. Run the server command to create it.')
+            raise exceptions.DatabaseError('Counterparty database does not exist. Run server to create it.')
         last_block = cursor.fetchall()[-1]
         if last_block['block_index'] == bitcoin.rpc('getblockcount', []):
             cursor.close()
@@ -254,7 +254,7 @@ def debit (db, block_index, address, asset, amount):
         'address': address, 'asset': asset, 'amount': amount, 'balance': balance, 'block_index': block_index })
     debit_cursor.close()
 
-def credit (db, block_index, address, asset, amount):
+def credit (db, block_index, address, asset, amount, divisible=None):
     credit_cursor = db.cursor()
     assert asset != 'BTC' # Never BTC.
     assert type(amount) == int
@@ -286,7 +286,7 @@ def credit (db, block_index, address, asset, amount):
             'address': address, 'asset': asset, 'amount': amount, 'balance': balance, 'block_index': block_index })
 
     # Record credit.
-    logging.debug('Credit: {} of {} to {}'.format(devise(db, amount, asset, 'output'), asset, address))
+    logging.debug('Credit: {} of {} to {}'.format(devise(db, amount, asset, 'output', divisible=divisible), asset, address))
     element_data = { 
         'block_index': block_index,
         'address': address,
@@ -455,6 +455,8 @@ def get_issuances (db, validity=None, asset=None, issuer=None, filters=None, ord
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
     if asset: filters.append({'field': 'asset', 'op': '==', 'value': asset})
     if issuer: filters.append({'field': 'issuer', 'op': '==', 'value': issuer})
+    # TODO: callable, call_date (range?), call_price (range?)
+    # TODO: Description search
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM issuances%s'''
          % get_limit_to_blocks(start_block, end_block))

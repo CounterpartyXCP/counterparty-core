@@ -190,16 +190,14 @@ class APIServer(threading.Thread):
                 validity='Valid',
                 order_by='block_index',
                 order_dir='asc')
-            if not issuances:
-                return None #asset not found, most likely
+            if not issuances: return None #asset not found, most likely
+            else: last_issuance = issuances[-1]
             
             #get the last issurance message for this asset, which should reflect the current owner and if
             # its divisible (and if it was locked, for that matter)
-            owner = issuances[-1]['issuer']
-            divisible = issuances[-1]['divisible']
-            locked = not issuances[-1]['amount'] and not issuances[-1]['transfer']
+            locked = not last_issuance['amount'] and not last_issuance['transfer']
             total_issued = sum([e['amount'] for e in issuances])
-            return {'owner': owner, 'divisible': divisible, 'locked': locked, 'total_issued': total_issued}
+            return {'owner': last_issuance['issuer'], 'divisible': last_issuance['divisible'], 'locked': locked, 'total_issued': total_issued, 'callable': last_issuance['callable'], 'call_date': util.isodt(last_issuance['call_date']), 'call_price': last_issuance['call_price'], 'description': last_issuance['description']}
 
 
         ######################

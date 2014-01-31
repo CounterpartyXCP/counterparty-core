@@ -242,74 +242,78 @@ if __name__ == '__main__':
     parser_send = subparsers.add_parser('send', help='create and broadcast a *send* message')
     parser_send.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
     parser_send.add_argument('--to', metavar='DESTINATION', dest='destination', required=True, help='the destination address')
-    parser_send.add_argument('--quantity', metavar='QUANTITY', required=True, help='the quantity of ASSET to send')
-    parser_send.add_argument('--asset', metavar='ASSET', dest='asset', required=True, help='the ASSET of which you would like to send QUANTITY')
+    parser_send.add_argument('--quantity', required=True, help='the quantity of ASSET to send')
+    parser_send.add_argument('--asset', required=True, help='the ASSET of which you would like to send QUANTITY')
 
     parser_order = subparsers.add_parser('order', help='create and broadcast an *order* message')
     parser_order.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
-    parser_order.add_argument('--get-quantity', metavar='GET_QUANTITY', required=True, help='the quantity of GET_ASSET that you would like to receive')
-    parser_order.add_argument('--get-asset', metavar='GET_ASSET', required=True, help='the asset that you would like to sell')
-    parser_order.add_argument('--give-quantity', metavar='GIVE_QUANTITY', required=True, help='the quantity of GIVE_ASSET that you are willing to give')
-    parser_order.add_argument('--give-asset', metavar='GIVE_ASSET', required=True, help='the asset that you would like to buy')
-    parser_order.add_argument('--expiration', metavar='EXPIRATION', type=int, required=True, help='the number of blocks for which the order should be valid')
-    parser_order.add_argument('--fee_required', metavar='FEE_REQUIRED', default=0, help='the miners\' fee required to be paid by orders for them to match this one; in BTC; required iff buying BTC (may be zero, though)')
-    parser_order.add_argument('--fee_provided', metavar='FEE_PROVIDED', default=(config.MIN_FEE / config.UNIT), help='the miners\' fee provided; in BTC; required iff selling BTC (should not be lower than is required for acceptance in a block)')
+    parser_order.add_argument('--get-quantity', required=True, help='the quantity of GET_ASSET that you would like to receive')
+    parser_order.add_argument('--get-asset', required=True, help='the asset that you would like to sell')
+    parser_order.add_argument('--give-quantity', required=True, help='the quantity of GIVE_ASSET that you are willing to give')
+    parser_order.add_argument('--give-asset', required=True, help='the asset that you would like to buy')
+    parser_order.add_argument('--expiration', type=int, required=True, help='the number of blocks for which the order should be valid')
+    parser_order.add_argument('--fee_required', default=0, help='the miners\' fee required to be paid by orders for them to match this one; in BTC; required iff buying BTC (may be zero, though)')
+    parser_order.add_argument('--fee_provided', default=(config.MIN_FEE / config.UNIT), help='the miners\' fee provided; in BTC; required iff selling BTC (should not be lower than is required for acceptance in a block)')
 
     parser_btcpay= subparsers.add_parser('btcpay', help='create and broadcast a *BTCpay* message, to settle an Order Match for which you owe BTC')
-    parser_btcpay.add_argument('--order-match-id', metavar='ORDER_MATCH_ID', required=True, help='the concatenation of the hashes of the two transactions which compose the order match')
+    parser_btcpay.add_argument('--order-match-id', required=True, help='the concatenation of the hashes of the two transactions which compose the order match')
 
     parser_issuance = subparsers.add_parser('issuance', help='issue a new asset, issue more of an existing asset or transfer the ownership of an asset')
     parser_issuance.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
     parser_issuance.add_argument('--transfer-asset-to', metavar='TRANSFER_DESTINATION', dest='transfer_destination', help='for transfer of ownership of asset issuance rights')
-    parser_issuance.add_argument('--quantity', metavar='QUANTITY', required=True, help='the quantity of ASSET to be issued')
-    parser_issuance.add_argument('--asset', metavar='ASSET', required=True, help='the name of the asset to be issued (if it\'s available)')
-    parser_issuance.add_argument('--divisible', action='store_true', help='whether or not the asset is divisible (must agree with previous issuances, if there are any)')
+    parser_issuance.add_argument('--quantity', required=True, help='the quantity of ASSET to be issued')
+    parser_issuance.add_argument('--asset', required=True, help='the name of the asset to be issued (if it\'s available)')
+    parser_issuance.add_argument('--divisible', action='store_true', help='whether or not the asset is divisible (must agree with previous issuances)')
+    parser_issuance.add_argument('--callable', dest='callable_', action='store_true', help='whether or not the asset is callable (must agree with previous issuances)')
+    parser_issuance.add_argument('--call-date', help='the date from which a callable asset may be called back (must agree with previous issuances)')
+    parser_issuance.add_argument('--call-price', help='the price at which a callable asset may be called back (must agree with previous issuances)')
+    parser_issuance.add_argument('--description', help='a description of the asset')
 
     parser_broadcast = subparsers.add_parser('broadcast', help='broadcast textual and numerical information to the network')
     parser_broadcast.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
-    parser_broadcast.add_argument('--text', metavar='TEXT', required=True, help='the textual part of the broadcast')
-    parser_broadcast.add_argument('--value', metavar='VALUE', type=float, default=0, help='numerical value of the broadcast')
-    parser_broadcast.add_argument('--fee-multiplier', metavar='FEE_MULTIPLIER', required=True, help='how much of every bet on this feed should go to its operator; a fraction of 1, (i.e. .05 is five percent)')
+    parser_broadcast.add_argument('--text', required=True, help='the textual part of the broadcast')
+    parser_broadcast.add_argument('--value', type=float, default=0, help='numerical value of the broadcast')
+    parser_broadcast.add_argument('--fee-multiplier', required=True, help='how much of every bet on this feed should go to its operator; a fraction of 1, (i.e. .05 is five percent)')
 
     parser_order = subparsers.add_parser('bet', help='offer to make a bet on the value of a feed')
     parser_order.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
-    parser_order.add_argument('--feed-address', metavar='FEED_ADDRESS', required=True, help='the address which publishes the feed to bet on')
-    parser_order.add_argument('--bet-type', metavar='BET_TYPE', choices=list(util.BET_TYPE_NAME.values()), required=True, help='choices: {}'.format(list(util.BET_TYPE_NAME.values())))
-    parser_order.add_argument('--deadline', metavar='DEADLINE', required=True, help='the date and time at which the bet should be decided/settled')
-    parser_order.add_argument('--wager', metavar='WAGER_QUANTITY', required=True, help='the quantity of XCP to wager')
-    parser_order.add_argument('--counterwager', metavar='COUNTERWAGER_QUANTITY', required=True, help='the minimum quantity of XCP to be wagered by the user to bet against you, if he were to accept the whole thing')
-    parser_order.add_argument('--target-value', metavar='TARGET_VALUE', default=0.0, help='target value for Equal/NotEqual bet')
-    parser_order.add_argument('--leverage', metavar='LEVERAGE', type=int, default=5040, help='leverage, as a fraction of 5040')
-    parser_order.add_argument('--expiration', metavar='EXPIRATION', type=int, required=True, help='the number of blocks for which the bet should be valid')
+    parser_order.add_argument('--feed-address', required=True, help='the address which publishes the feed to bet on')
+    parser_order.add_argument('--bet-type', choices=list(util.BET_TYPE_NAME.values()), required=True, help='choices: {}'.format(list(util.BET_TYPE_NAME.values())))
+    parser_order.add_argument('--deadline', required=True, help='the date and time at which the bet should be decided/settled')
+    parser_order.add_argument('--wager', required=True, help='the quantity of XCP to wager')
+    parser_order.add_argument('--counterwager', required=True, help='the minimum quantity of XCP to be wagered by the user to bet against you, if he were to accept the whole thing')
+    parser_order.add_argument('--target-value', default=0.0, help='target value for Equal/NotEqual bet')
+    parser_order.add_argument('--leverage', type=int, default=5040, help='leverage, as a fraction of 5040')
+    parser_order.add_argument('--expiration', type=int, required=True, help='the number of blocks for which the bet should be valid')
 
     parser_dividend = subparsers.add_parser('dividend', help='pay dividends to the holders of an asset (in proportion to their stake in it)')
     parser_dividend.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
-    parser_dividend.add_argument('--quantity-per-share', metavar='QUANTITY_PER_SHARE', required=True, help='the quantity of XCP to be paid per unit (satoshi) held of SHARE_ASSET')
-    parser_dividend.add_argument('--share-asset', metavar='SHARE_ASSET', required=True, help='the asset to which pay dividends')
+    parser_dividend.add_argument('--quantity-per-share', required=True, help='the quantity of XCP to be paid per unit (satoshi) held of SHARE_ASSET')
+    parser_dividend.add_argument('--share-asset', required=True, help='the asset to which pay dividends')
 
     parser_burn = subparsers.add_parser('burn', help='destroy bitcoins to earn XCP, during an initial period of time')
     parser_burn.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
-    parser_burn.add_argument('--quantity', metavar='QUANTITY', required=True, help='quantity of BTC to be destroyed')
+    parser_burn.add_argument('--quantity', required=True, help='quantity of BTC to be destroyed')
 
     parser_cancel= subparsers.add_parser('cancel', help='cancel an open order or bet you created')
-    parser_cancel.add_argument('--offer-hash', metavar='OFFER_HASH', required=True, help='the transaction hash of the order or bet')
+    parser_cancel.add_argument('--offer-hash', required=True, help='the transaction hash of the order or bet')
 
     parser_address = subparsers.add_parser('address', help='display the history of a Counterparty address')
-    parser_address.add_argument('address', metavar='ADDRESS', help='the address you are interested in')
+    parser_address.add_argument('address', help='the address you are interested in')
 
     parser_asset = subparsers.add_parser('asset', help='display the basic properties of a Counterparty asset')
-    parser_asset.add_argument('asset', metavar='ASSET', help='the asset you are interested in')
+    parser_asset.add_argument('asset', help='the asset you are interested in')
 
     parser_wallet = subparsers.add_parser('wallet', help='list the addresses in your Bitcoind wallet along with their balances in all Counterparty assets')
 
     parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the Counterparty market')
-    parser_market.add_argument('--give-asset', metavar='GIVE_ASSET', help='only show orders offering to sell GIVE_ASSET')
-    parser_market.add_argument('--get-asset', metavar='GET_ASSET', help='only show orders offering to buy GET_ASSET')
+    parser_market.add_argument('--give-asset', help='only show orders offering to sell GIVE_ASSET')
+    parser_market.add_argument('--get-asset', help='only show orders offering to buy GET_ASSET')
 
     parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database (WARNING: not thread‐safe)')
 
     parser_rollback = subparsers.add_parser('rollback', help='rollback database (WARNING: not thread‐safe)')
-    parser_rollback.add_argument('block_index', metavar='block_index', type=int, help='the index of the last known good block')
+    parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
 
     args = parser.parse_args()
 
@@ -483,7 +487,7 @@ if __name__ == '__main__':
 
     # Database
     if config.TESTNET:
-        config.DB_VERSION = str(config.DB_VERSION_MAJOR) + '.testnet'
+        config.DB_VERSION_MAJOR = str(config.DB_VERSION_MAJOR) + '.testnet'
     if args.database_file:
         config.DATABASE = args.database_file
     else:
@@ -573,9 +577,20 @@ if __name__ == '__main__':
     elif args.action == 'issuance':
         quantity = util.devise(db, args.quantity, None, 'input',
                                divisible=args.divisible)
+        if not args.description: args.description = ''
+        if args.callable_:
+            if not args.call_date:
+                parser.error('must specify call date of callable asset', )
+            if not args.call_price:
+                parser.error('must specify call price of callable asset')
+            call_date = round(datetime.timestamp(dateutil.parser.parse(args.call_date)))
+            call_price = float(args.call_price)
+        else:
+            call_date, call_price = 0, 0
+        
         unsigned_tx_hex = issuance.create(db, args.source,
                                           args.transfer_destination,
-                                          args.asset, quantity, args.divisible, unsigned=args.unsigned)
+                                          args.asset, quantity, args.divisible, args.callable_, call_date, call_price, args.description, unsigned=args.unsigned)
         print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'broadcast':
@@ -622,28 +637,45 @@ if __name__ == '__main__':
         address(args.address)
 
     elif args.action == 'asset':
+        # TODO: Use API
         if args.asset == 'XCP':
             burns = util.get_burns(db, validity='Valid', address=None)
             total = sum([burn['earned'] for burn in burns])
             total = util.devise(db, total, args.asset, 'output')
             divisible = True
             issuer = None
+            callable_ = None
+            call_date = None
+            call_price = None
+            description = None
         elif args.asset == 'BTC':
             total = None
             divisible = True
             issuer = None
+            callable_ = None
+            call_date = None
+            call_price = None
+            description = None
         else:
             issuances = util.get_issuances(db, validity='Valid', asset=args.asset)
             total = sum([issuance['amount'] for issuance in issuances])
             total = util.devise(db, total, args.asset, 'output')
             divisible = bool(issuances[-1]['divisible'])
             issuer = issuances[-1]['issuer'] # Issuer of last issuance.
+            callable_ = None
+            call_date = issuances[-1]['call_date']
+            call_price = issuances[-1]['call_price']
+            description = issuances[-1]['description']
 
         print('Asset Name:', args.asset)
         print('Asset ID:', util.get_asset_id(args.asset))
         print('Total Issued:', total)
         print('Divisible:', divisible)
         print('Issuer:', issuer)
+        print('Callable:', callable_)
+        print('Call Date:', util.isodt(call_date))
+        print('Call Price:', str(call_price) + ' XCP')
+        print('Description:', description)
 
     elif args.action == 'wallet':
         total_table = PrettyTable(['Asset', 'Balance'])

@@ -37,13 +37,18 @@ class ZeroMQPublisher(threading.Thread):
     def push_to_subscribers(self, msg_event, msg):
         assert isinstance(msg, dict)
         msg['_EVENT'] = msg_event #_EVENT is a reserved field
+        msg['_TIME'] = time.time() #UNIX time
+
+        # NOTE: This isn’t very useful, and it’s a bit slow. (It can be done on the other end.)
+        """
         if 'block_index' in msg:
             #we can provide a timestamp - use the block time as the timestamp
             block_hash = bitcoin.rpc('getblockhash', [msg['block_index'],])
             block = bitcoin.rpc('getblock', [block_hash,])
             msg['_BLOCKTIME'] = block['time'] #UNIX time
         else:
-            msg['_BLOCKTIME'] = None #unknown
+            # msg['_BLOCKTIME'] = None #unknown
+        """
         self.queue.put(msg)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

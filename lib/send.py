@@ -8,8 +8,9 @@ import logging
 from . import (util, config, exceptions, bitcoin, util)
 
 FORMAT = '>QQ'
-ID = 0
 LENGTH = 8 + 8
+ID = 0
+
 
 def validate (db, source, destination, amount, asset):
     problems = []
@@ -38,6 +39,7 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
+        assert len(message) == LENGTH
         asset_id, amount = struct.unpack(FORMAT, message)
         asset = util.get_asset_name(asset_id)
         validity = 'Valid'

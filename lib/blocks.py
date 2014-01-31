@@ -29,27 +29,27 @@ def parse_tx (db, tx):
         message_type_id = None
 
     message = tx['data'][4:]
-    if message_type_id == send.ID and len(message) == send.LENGTH:
+    if message_type_id == send.ID:
         send.parse(db, tx, message)
-    elif message_type_id == order.ID and len(message) == order.LENGTH:
+    elif message_type_id == order.ID:
         order.parse(db, tx, message)
-    elif message_type_id == btcpay.ID and len(message) == btcpay.LENGTH:
+    elif message_type_id == btcpay.ID:
         btcpay.parse(db, tx, message)
-    elif message_type_id == issuance.ID and len(message) == issuance.LENGTH:
+    elif message_type_id == issuance.ID:
         issuance.parse(db, tx, message)
-    elif message_type_id == broadcast.ID and len(message) == broadcast.LENGTH:
+    elif message_type_id == broadcast.ID:
         broadcast.parse(db, tx, message)
-    elif message_type_id == bet.ID and len(message) == bet.LENGTH:
+    elif message_type_id == bet.ID:
         bet.parse(db, tx, message)
-    elif message_type_id == dividend.ID and len(message) == dividend.LENGTH:
+    elif message_type_id == dividend.ID:
         dividend.parse(db, tx, message)
-    elif message_type_id == cancel.ID and len(message) == cancel.LENGTH:
+    elif message_type_id == cancel.ID:
         cancel.parse(db, tx, message)
     else:
         parse_tx_cursor.execute('''UPDATE transactions \
-                          SET supported=? \
-                          WHERE tx_hash=?''',
-                       (False, tx['tx_hash']))
+                                   SET supported=? \
+                                   WHERE tx_hash=?''',
+                                (False, tx['tx_hash']))
         logging.info('Unsupported transaction: hash {}; data {}'.format(tx['tx_hash'], tx['data']))
 
 
@@ -69,8 +69,8 @@ def parse_block (db, block_index):
 
     # Parse transactions, sorting them by type.
     parse_block_cursor.execute('''SELECT * FROM transactions \
-                      WHERE block_index=? ORDER BY tx_index''',
-                   (block_index,))
+                                  WHERE block_index=? ORDER BY tx_index''',
+                               (block_index,))
     transactions = parse_block_cursor.fetchall()   
     for tx in transactions:
         parse_tx(db, tx)
@@ -221,6 +221,11 @@ def initialise(db):
                         divisible BOOL,
                         issuer TEXT,
                         transfer BOOL,
+                        callable BOOL,
+                        call_price REAL,
+                        call_date INTEGER,
+                        description TEXT,
+                        fee_paid INTEGER,
                         validity TEXT
                         )
                    ''')
@@ -526,7 +531,7 @@ def follow (db):
         if minor_version != config.DB_VERSION_MINOR:
             logging.info('Status: Database and client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.DB_VERSION_MINOR))
             reparse(db, quiet=False)
-            minor_version = follow_cursor.execute('PRAGMA user_version = {}'.format(int(config.DB_VERSION_MINOR))).fetchall()[0]
+            minor_version = follow_cursor.execute('PRAGMA user_version = {}'.format(int(config.DB_VERSION_MINOR)))
             logging.info('Status: Database minor version number updated.')
 
         # Get index of last block.

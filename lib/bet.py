@@ -18,8 +18,9 @@ import logging
 from . import (util, config, bitcoin, exceptions, util)
 
 FORMAT = '>HIQQdII'
-ID = 40
 LENGTH = 2 + 4 + 8 + 8 + 8 + 4 + 4
+ID = 40
+
 
 def get_fee_multiplier (db, feed_address):
     '''Get fee_multiplier from the last broadcast from the feed_address address.
@@ -84,6 +85,7 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
+        assert len(message) == LENGTH
         (bet_type, deadline, wager_amount,
          counterwager_amount, target_value, leverage,
          expiration) = struct.unpack(FORMAT, message)
