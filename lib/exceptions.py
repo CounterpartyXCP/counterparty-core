@@ -1,18 +1,13 @@
 #! /usr/bin/python3
 
-class TryoutError (Exception):
-    pass
-
 class ConfigurationError (Exception):
     pass
-class TXConstructionError(Exception):
-    pass
-class OverflowError(Exception):
+class DatabaseError (Exception):
     pass
 
-class InputError(Exception):
+class TransactionError(Exception):
     pass
-class UnpackException(Exception):
+class InputError(Exception):
     pass
 
 class BitcoindError (Exception):
@@ -22,14 +17,9 @@ class BitcoindRPCError (BitcoindError):
 class ZeroMQError (Exception):
     pass
 
-class DatabaseError (Exception):
-    pass
-
 class FeeError (Exception):
     pass
 class BalanceError (Exception):
-    pass
-class AssetError (Exception):
     pass
 class QuantityError(Exception):
     pass
@@ -37,6 +27,17 @@ class QuantityError(Exception):
 class InvalidAddressError (Exception):
     pass
 class VersionByteError (InvalidAddressError):
+    pass
+class Base58Error (InvalidAddressError):
+    pass
+class InvalidBase58Error (Base58Error):
+    pass
+class Base58ChecksumError (Base58Error):
+    pass
+
+class AssetError (Exception):
+    pass
+class Base26Error (AssetError):
     pass
 
 class MessageError (Exception):
@@ -58,15 +59,6 @@ class DividendError (MessageError):
 class BTCPayError (MessageError):
     pass
 class CancelError (MessageError):
-    pass
-
-class Base26Error (Exception):
-    pass
-class Base58Error (Exception):
-    pass
-class InvalidBase58Error (Base58Error):
-    pass
-class Base58ChecksumError (Base58Error):
     pass
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

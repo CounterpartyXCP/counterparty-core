@@ -255,9 +255,11 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
 
 def get_inputs (source, total_btc_out, unittest=False, unsigned=False):
     """List unspent inputs for source."""
-    if not unittest and not unsigned:
+    if not unittest and (not unsigned or rpc('validateaddress', [source])['ismine']):
         listunspent = rpc('listunspent', [])
     elif unsigned and not unittest:
+        if config.TESTNET: raise exceptions.TransactionError('Blockchain.info does not support testnet.')
+
         #since the address is probably not in our wallet, consult blockchain to ensure that the address has the minimum balance
         try:
             r = requests.get("http://blockchain.info/unspent?active=" + source)
@@ -324,7 +326,7 @@ def transaction (source, destination, btc_amount, fee, data, unittest=False, mul
     # Check that the destination output isn't a dust output.
     if destination:
         if not btc_amount >= config.DUST_SIZE:
-            raise exceptions.TXConstructionError('Destination output is below the dust target value.')
+            raise exceptions.TransactionError('Destination output is below the dust target value.')
     else:
         assert not btc_amount
 
