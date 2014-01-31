@@ -13,7 +13,7 @@ D = decimal.Decimal
 import logging
 
 from . import (config, exceptions, util, bitcoin)
-from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel)
+from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 
 def parse_tx (db, tx):
     parse_tx_cursor = db.cursor()
@@ -45,6 +45,8 @@ def parse_tx (db, tx):
         dividend.parse(db, tx, message)
     elif message_type_id == cancel.ID:
         cancel.parse(db, tx, message)
+    elif message_type_id == callback.ID:
+        callback.parse(db, tx, message)
     else:
         parse_tx_cursor.execute('''UPDATE transactions \
                                    SET supported=? \
@@ -222,8 +224,8 @@ def initialise(db):
                         issuer TEXT,
                         transfer BOOL,
                         callable BOOL,
-                        call_price REAL,
                         call_date INTEGER,
+                        call_price REAL,
                         description TEXT,
                         fee_paid INTEGER,
                         validity TEXT
@@ -331,8 +333,23 @@ def initialise(db):
                         offer_hash TEXT,
                         validity TEXT)
                    ''')
+
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
                         cancels_block_index_idx ON cancels (block_index)
+                    ''')
+
+    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS callbacks(
+                        tx_index INTEGER PRIMARY KEY,
+                        tx_hash TEXT UNIQUE,
+                        block_index INTEGER,
+                        source TEXT,
+                        fraction_per_share TEXT,
+                        asset TEXT,
+                        validity TEXT)
+                   ''')
+
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                        callbacks_block_index_idx ON callbacks (block_index)
                     ''')
 
     initialise_cursor.close()
@@ -424,6 +441,7 @@ def reparse (db, quiet=False):
         reparse_cursor.execute('''DROP TABLE IF EXISTS dividends''')
         reparse_cursor.execute('''DROP TABLE IF EXISTS burns''')
         reparse_cursor.execute('''DROP TABLE IF EXISTS cancels''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS callbacks''')
 
         # Reparse all blocks, transactions.
         if quiet:

@@ -28,6 +28,7 @@ def validate (db, source, amount_per_share, asset):
         problems.append('no such asset, {}.'.format(asset))
         return None, problems
 
+    # This is different from the way callbacks are done.
     divisible = issuances[0]['divisible']
     if divisible:
         total_shares = sum([issuance['amount'] for issuance in issuances]) / config.UNIT
@@ -70,12 +71,6 @@ def parse (db, tx, message):
         # For SQLite3
         amount_per_share = min(amount_per_share, config.MAX_INT)
 
-        if asset in ('BTC', 'XCP'):
-            validity = 'Invalid: cannot send dividends to BTC or XCP'
-        elif not util.valid_asset_name(asset):
-            validity = 'Invalid: bad Asset ID'
-
-    if validity == 'Valid':
         amount, problems = validate(db, tx['source'], amount_per_share, asset)
         if problems: validity = 'Invalid: ' + ';'.join(problems)
 
@@ -84,10 +79,13 @@ def parse (db, tx, message):
         util.debit(db, tx['block_index'], tx['source'], 'XCP', amount)
 
         # Credit.
+        issuances = util.get_issuances(db, validity='Valid', asset=asset)
+        divisible = issuances[0]['divisible']
         balances = util.get_balances(db, asset=asset)
         for balance in balances:
             address, address_amount = balance['address'], balance['amount']
-            address_amount = round(D(address_amount) / config.UNIT)
+            if divisible:   # Pay per output unit.
+                address_amount = round(D(address_amount) / config.UNIT)
             amount = address_amount * amount_per_share
             util.credit(db, tx['block_index'], address, 'XCP', amount)
 

@@ -71,6 +71,7 @@ def parse (db, tx, message):
         if (tx['block_index'] > 283271 or config.PREFIX == config.UNITTEST_PREFIX) and len(message) == LENGTH_2:
             asset_id, amount, divisible, callable_, call_date, call_price, description = struct.unpack(FORMAT_2, message)
             description = description.decode('utf-8')
+            call_price = round(call_price, 6) # TODO: arbitrary
         else:
             asset_id, amount, divisible = struct.unpack(FORMAT_1, message)
             callable_, call_date, call_price, description = None, None, None, ''
@@ -118,6 +119,7 @@ def parse (db, tx, message):
         'transfer': transfer,
         'callable': callable_,
         'call_date': call_date,
+        'call_price': call_price,
         'description': description,
         'fee_paid': fee_paid,
         'validity': validity,

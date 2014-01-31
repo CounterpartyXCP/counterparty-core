@@ -60,5 +60,7 @@ class BTCPayError (MessageError):
     pass
 class CancelError (MessageError):
     pass
+class CallbackError (MessageError):
+    pass
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

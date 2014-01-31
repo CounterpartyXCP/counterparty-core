@@ -21,7 +21,7 @@ from datetime import datetime
 from threading import Thread
 
 from lib import (config, api, zeromq, util, exceptions, bitcoin, blocks)
-from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel)
+from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
@@ -743,6 +743,7 @@ if __name__ == '__main__':
         TRIES = 12
         for i in range(TRIES):
             if config.zeromq_publisher.active:
+                if i > 0: print('Successfully connected.', file=sys.stderr)
                 blocks.follow(db)
                 exit(0)
             else:

@@ -40,6 +40,7 @@ def connect (host, payload, headers):
     for i in range(TRIES):
         try:
             response = request_session.post(host, data=json.dumps(payload), headers=headers)
+            if i > 0: print('Successfully connected.', file=sys.stderr)
             return response
         except requests.exceptions.ConnectionError:
             print('Could not connect to Bitcoind. Sleeping for five seconds. (Try {}/{})'.format(i+1, TRIES), file=sys.stderr)
@@ -306,6 +307,7 @@ def transaction (source, destination, btc_amount, fee, data, unittest=False, mul
     if config.PREFIX == config.UNITTEST_PREFIX: unittest = True
 
     #NB: if unsigned is True (instead of false or a public key string) and multisig is specified, then disable multisig and use OP_RETURN
+    # TODO: Why? This is sometimes very surprising!
     if unsigned is True and multisig:
         multisig = False
 
@@ -372,6 +374,7 @@ def transaction (source, destination, btc_amount, fee, data, unittest=False, mul
 
 def transmit (unsigned_tx_hex, ask=True, unsigned=False):
     # Confirm transaction.
+    print('Unsigned transaction hex:', unsigned_tx_hex)
     if ask and not unsigned:
         if config.TESTNET: print('Attention: TESTNET!') 
         if config.TESTCOIN: print('Attention: TESTCOIN!\n') 

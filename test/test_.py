@@ -21,7 +21,7 @@ CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.ex
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
 from lib import (config, api, zeromq, util, exceptions, bitcoin, blocks)
-from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, util)
+from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 
 # JSON-RPC Options
 CONFIGFILE = os.path.expanduser('~') + '/.bitcoin/bitcoin.conf'
@@ -151,7 +151,7 @@ def teardown_function(function):
 # Logs.
 try: os.remove(CURR_DIR + '/log.new')
 except: pass
-logging.basicConfig(filename=CURR_DIR + '/log.new', level=logging.INFO, format='%(message)s')
+logging.basicConfig(filename=CURR_DIR + '/log.new', level=logging.DEBUG, format='%(message)s')
 requests_log = logging.getLogger("requests")
 requests_log.setLevel(logging.WARNING)
 
@@ -218,7 +218,7 @@ def test_issuance_divisible ():
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_issuance_indivisible_callable ():
-    unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBC', round(quantity / 1000), False, True, 1391135956, 15, 'foobar')
+    unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBC', round(quantity / 1000), False, True, 1288855692, 0.015, 'foobar')
 
     parse_hex(unsigned_tx_hex)
 
@@ -324,6 +324,20 @@ def test_cancel ():
 
 def test_overburn ():
     unsigned_tx_hex = burn.create(db, source_default, (1 * config.UNIT), overburn=True)  # Try to burn a whole 'nother BTC.
+
+    parse_hex(unsigned_tx_hex)
+
+    output_new[inspect.stack()[0][3]] = unsigned_tx_hex
+
+def test_send_callable ():
+    unsigned_tx_hex = send.create(db, source_default, destination_default, 10000, 'BBBC')
+
+    parse_hex(unsigned_tx_hex)
+
+    output_new[inspect.stack()[0][3]] = unsigned_tx_hex
+
+def test_callback ():
+    unsigned_tx_hex = callback.create(db, source_default, .3, 'BBBC')
 
     parse_hex(unsigned_tx_hex)
 

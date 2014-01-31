@@ -242,7 +242,7 @@ def debit (db, block_index, address, asset, amount):
                    (balance, address, asset)) 
 
     # Record debit *only if valid*.
-    logging.debug('Debit: {} of {} from {}'.format(devise(db, amount, asset, 'output'), asset, address))
+    logging.debug('Debit: {} {} from {}'.format(devise(db, amount, asset, 'output'), asset, address))
     element_data = {
         'block_index': block_index,
         'address': address,
@@ -286,7 +286,7 @@ def credit (db, block_index, address, asset, amount, divisible=None):
             'address': address, 'asset': asset, 'amount': amount, 'balance': balance, 'block_index': block_index })
 
     # Record credit.
-    logging.debug('Credit: {} of {} to {}'.format(devise(db, amount, asset, 'output', divisible=divisible), asset, address))
+    logging.debug('Credit: {} {} to {}'.format(devise(db, amount, asset, 'output', divisible=divisible), asset, address))
     element_data = { 
         'block_index': block_index,
         'address': address,
