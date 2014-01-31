@@ -240,13 +240,13 @@ if __name__ == '__main__':
     parser_server = subparsers.add_parser('server', help='run the server (WARNING: not thread‐safe)')
 
     parser_send = subparsers.add_parser('send', help='create and broadcast a *send* message')
-    parser_send.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
-    parser_send.add_argument('--to', metavar='DESTINATION', dest='destination', required=True, help='the destination address')
+    parser_send.add_argument('--source', required=True, help='the source address')
+    parser_send.add_argument('--destination', required=True, help='the destination address')
     parser_send.add_argument('--quantity', required=True, help='the quantity of ASSET to send')
     parser_send.add_argument('--asset', required=True, help='the ASSET of which you would like to send QUANTITY')
 
     parser_order = subparsers.add_parser('order', help='create and broadcast an *order* message')
-    parser_order.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
+    parser_order.add_argument('--source', required=True, help='the source address')
     parser_order.add_argument('--get-quantity', required=True, help='the quantity of GET_ASSET that you would like to receive')
     parser_order.add_argument('--get-asset', required=True, help='the asset that you would like to sell')
     parser_order.add_argument('--give-quantity', required=True, help='the quantity of GIVE_ASSET that you are willing to give')
@@ -259,24 +259,24 @@ if __name__ == '__main__':
     parser_btcpay.add_argument('--order-match-id', required=True, help='the concatenation of the hashes of the two transactions which compose the order match')
 
     parser_issuance = subparsers.add_parser('issuance', help='issue a new asset, issue more of an existing asset or transfer the ownership of an asset')
-    parser_issuance.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
-    parser_issuance.add_argument('--transfer-asset-to', metavar='TRANSFER_DESTINATION', dest='transfer_destination', help='for transfer of ownership of asset issuance rights')
+    parser_issuance.add_argument('--source', required=True, help='the source address')
+    parser_issuance.add_argument('--transfer-destination', help='for transfer of ownership of asset issuance rights')
     parser_issuance.add_argument('--quantity', required=True, help='the quantity of ASSET to be issued')
     parser_issuance.add_argument('--asset', required=True, help='the name of the asset to be issued (if it\'s available)')
     parser_issuance.add_argument('--divisible', action='store_true', help='whether or not the asset is divisible (must agree with previous issuances)')
     parser_issuance.add_argument('--callable', dest='callable_', action='store_true', help='whether or not the asset is callable (must agree with previous issuances)')
     parser_issuance.add_argument('--call-date', help='the date from which a callable asset may be called back (must agree with previous issuances)')
     parser_issuance.add_argument('--call-price', help='the price at which a callable asset may be called back (must agree with previous issuances)')
-    parser_issuance.add_argument('--description', help='a description of the asset')
+    parser_issuance.add_argument('--description', required=True, help='a description of the asset')
 
     parser_broadcast = subparsers.add_parser('broadcast', help='broadcast textual and numerical information to the network')
-    parser_broadcast.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
+    parser_broadcast.add_argument('--source', required=True, help='the source address')
     parser_broadcast.add_argument('--text', required=True, help='the textual part of the broadcast')
     parser_broadcast.add_argument('--value', type=float, default=0, help='numerical value of the broadcast')
     parser_broadcast.add_argument('--fee-multiplier', required=True, help='how much of every bet on this feed should go to its operator; a fraction of 1, (i.e. .05 is five percent)')
 
     parser_order = subparsers.add_parser('bet', help='offer to make a bet on the value of a feed')
-    parser_order.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
+    parser_order.add_argument('--source', required=True, help='the source address')
     parser_order.add_argument('--feed-address', required=True, help='the address which publishes the feed to bet on')
     parser_order.add_argument('--bet-type', choices=list(util.BET_TYPE_NAME.values()), required=True, help='choices: {}'.format(list(util.BET_TYPE_NAME.values())))
     parser_order.add_argument('--deadline', required=True, help='the date and time at which the bet should be decided/settled')
@@ -287,12 +287,12 @@ if __name__ == '__main__':
     parser_order.add_argument('--expiration', type=int, required=True, help='the number of blocks for which the bet should be valid')
 
     parser_dividend = subparsers.add_parser('dividend', help='pay dividends to the holders of an asset (in proportion to their stake in it)')
-    parser_dividend.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
+    parser_dividend.add_argument('--source', required=True, help='the source address')
     parser_dividend.add_argument('--quantity-per-share', required=True, help='the quantity of XCP to be paid per unit (satoshi) held of SHARE_ASSET')
     parser_dividend.add_argument('--share-asset', required=True, help='the asset to which pay dividends')
 
     parser_burn = subparsers.add_parser('burn', help='destroy bitcoins to earn XCP, during an initial period of time')
-    parser_burn.add_argument('--from', metavar='SOURCE', dest='source', required=True, help='the source address')
+    parser_burn.add_argument('--source', required=True, help='the source address')
     parser_burn.add_argument('--quantity', required=True, help='quantity of BTC to be destroyed')
 
     parser_cancel= subparsers.add_parser('cancel', help='cancel an open order or bet you created')
@@ -577,7 +577,6 @@ if __name__ == '__main__':
     elif args.action == 'issuance':
         quantity = util.devise(db, args.quantity, None, 'input',
                                divisible=args.divisible)
-        if not args.description: args.description = ''
         if args.callable_:
             if not args.call_date:
                 parser.error('must specify call date of callable asset', )

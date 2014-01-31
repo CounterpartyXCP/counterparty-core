@@ -90,32 +90,32 @@ The following examples are abridged for parsimony.
 
 * Burn
 
-	`burn --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity=.5`
+	`burn --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity=.5`
 
 * Send divisible or indivisible assets
 
 	```
-	send --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity=3 --asset=BBBC
+	send --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity=3 --asset=BBBC
 	--to=n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7
 	```
 
 * Buy BTC for XCP
 	
 	```
-	order --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=BTC
+	order --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=BTC
 	--give-quantity=20 --give-asset=XCP --expiration=10 --fee_required=.001
 	```
 
 * Buy BBBC for BTC
 
 	```
-	order --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=BBBC
+	order --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=BBBC
 	--give-quantity=20 --give-asset=BTC --expiration=10 --fee_provided.001
 	```
 
 * Buy XCP for BBBC
 	```
-	order --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=XCP
+	order --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=XCP
 	--give-quantity=20 --give-asset=BBBC --expiration=10
 	```
 
@@ -123,9 +123,9 @@ The following examples are abridged for parsimony.
 
 * Issue
 
-	`issuance --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity=100 --asset='BBBC'`
+	`issuance --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity=100 --asset='BBBC'`
 
-	`issuance --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity=100 --asset='BBBQ' --divisible`
+	`issuance --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity=100 --asset='BBBQ' --divisible`
 
 * Broadcast
 
