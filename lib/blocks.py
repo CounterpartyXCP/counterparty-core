@@ -512,7 +512,7 @@ def reorg (db):
     # TODO: Temporary—should be a rollback.
     reorg_cursor.execute('''DELETE FROM blocks WHERE block_index > {}'''.format(block_index - 1))
     reorg_cursor.execute('''DELETE FROM transactions WHERE block_index > {}'''.format(block_index - 1))
-    purge(db, quiet=True)
+    reparse(db, quiet=True)
 
     reorg_cursor.close()
     return block_index
