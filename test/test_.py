@@ -446,14 +446,6 @@ expire order matches
 expire bet matches
 cancelling bets, orders
 
-get_time_left
-get_order_match_time_left
-get_asset
-get_asset_name
-
-debit
-credit
-
 bet_match
 order_match
 get_tx_info

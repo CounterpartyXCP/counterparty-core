@@ -167,14 +167,15 @@ def last_block (db):
     cursor.close()
     return block_index
 
-def get_time_left (unmatched, block_index=None):
+def get_time_left (db, unmatched, block_index=None):
     """order or bet"""
     """zero time left means it expires *this* block; that is, expire when strictly less than 0"""
-    if not block_index: block_index = bitcoin.rpc('getblockcount', [])
+    if not block_index: block_index = last_block(db)
     return unmatched['block_index'] + unmatched['expiration'] - block_index
-def get_order_match_time_left (matched, block_index=None):
+
+def get_match_time_left (db, matched, block_index=None):
     """order_match or bet_match"""
-    if not block_index: block_index = bitcoin.rpc('getblockcount', [])
+    if not block_index: block_index = last_block(db)
     tx0_time_left = matched['tx0_block_index'] + matched['tx0_expiration'] - block_index
     tx1_time_left = matched['tx1_block_index'] + matched['tx1_expiration'] - block_index
     return min(tx0_time_left, tx1_time_left)
@@ -403,7 +404,7 @@ def get_orders (db, validity=None, source=None, show_empty=True, show_expired=Tr
     def filter_expired(e):
         #Ignore BTC orders one block early. (This is why we need show_expired.)
         #function returns True if the element is NOT expired
-        time_left = get_time_left(e)
+        time_left = get_time_left(db, e)
         if e['give_asset'] == 'BTC': time_left -= 1
         return False if time_left < 0 else True
 

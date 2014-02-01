@@ -58,7 +58,7 @@ def market (give_asset, get_asset):
     awaiting_btcs = util.get_order_matches(db, validity='Valid: awaiting BTC payment', is_mine=True)
     table = PrettyTable(['Matched Order ID', 'Time Left'])
     for order_match in awaiting_btcs:
-        order_match = format_order_match(order_match)
+        order_match = format_order_match(db, order_match)
         table.add_row(order_match)
     print('Order Matches Awaiting BTC Payment')
     print(str(table))
@@ -192,9 +192,9 @@ def format_bet (bet):
 
     return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], util.isodt(bet['deadline']), target_value, leverage, str(wager_remaining / config.UNIT) + ' XCP', str(counterwager_remaining / config.UNIT) + ' XCP', util.devise(db, odds, 'odds', 'output'), util.get_time_left(bet), util.short(bet['tx_hash'])]
 
-def format_order_match (order_match):
+def format_order_match (db, order_match):
     order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']
-    order_match_time_left = util.get_order_match_time_left(order_match)
+    order_match_time_left = util.get_match_time_left(db, order_match)
     return [order_match_id, order_match_time_left]
 
 def format_feed (feed):
