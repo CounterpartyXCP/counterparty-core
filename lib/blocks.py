@@ -429,8 +429,6 @@ def reparse (db, quiet=False):
     logging.warning('Status: Reparsing all transactions.')
     reparse_cursor = db.cursor()
 
-    heaps = init_heaps(db)
-
     with db:
         # Delete all of the results of parsing.
         reparse_cursor.execute('''DROP TABLE IF EXISTS debits''')
@@ -454,6 +452,7 @@ def reparse (db, quiet=False):
             log = logging.getLogger('')
             log.setLevel(logging.WARNING)
         initialise(db)
+        heaps = init_heaps(db)
         reparse_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
         for block in reparse_cursor.fetchall():
             logging.info('Block (re‐parse): {}'.format(str(block['block_index'])))
@@ -567,6 +566,7 @@ def follow (db):
 
     logging.info('Status: RESTART')
     initialise(db)
+    heaps = init_heaps(db)
 
     while True:
 
@@ -589,8 +589,6 @@ def follow (db):
             # (such as counterwalletd) can then get this and clear our their data as well, so they don't get
             # duplicated data in the event of a new DB version
 
-
-        heaps = init_heaps(db)
 
         # Get index of last transaction.
         try:
