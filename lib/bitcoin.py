@@ -14,7 +14,7 @@ import time
 
 from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
 from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec
-from pycoin.scripts import bitcoin_utils 
+from pycoin.scripts import bitcoin_utils
 
 from . import (config, exceptions)
 
@@ -166,7 +166,7 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
             #script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
             #script += OP_CHECKSIG                               # OP_CHECKSIG
             script = str.encode(txin['scriptPubKey'])
-            
+
         s += var_int(int(len(script)))                      # Script length
         s += script                                         # Script
         s += b'\xff' * 4                                    # Sequence
@@ -272,7 +272,7 @@ def get_inputs (source, total_btc_out, unittest=False, unsigned=False):
             unspent_outputs = r.json()['unspent_outputs']
         except requests.exceptions.RequestException as e:
             raise Exception("Problem getting unspent transactions from blockchain.info: " % e)
-        
+
         #take the returned data to a format compatible with bitcoind's output
         listunspent = []
         for o in unspent_outputs:
@@ -295,7 +295,7 @@ def get_inputs (source, total_btc_out, unittest=False, unsigned=False):
             listunspent = json.load(listunspent_test_file)
     unspent = [coin for coin in listunspent if coin['address'] == source]
     inputs, total_btc_in = [], 0
-    for coin in unspent:                                                      
+    for coin in unspent:
         inputs.append(coin)
         total_btc_in += round(coin['amount'] * config.UNIT)
         if total_btc_in >= total_btc_out:
@@ -376,8 +376,8 @@ def transmit (unsigned_tx_hex, ask=True, unsigned=False):
     # Confirm transaction.
     print('Unsigned transaction:', unsigned_tx_hex)
     if ask and not unsigned:
-        if config.TESTNET: print('Attention: TESTNET!') 
-        if config.TESTCOIN: print('Attention: TESTCOIN!\n') 
+        if config.TESTNET: print('Attention: TESTNET!')
+        if config.TESTCOIN: print('Attention: TESTCOIN!\n')
         if input('Confirm? (y/N) ') != 'y':
             print('Transaction aborted.', file=sys.stderr)
             sys.exit(1)

@@ -117,7 +117,7 @@ def parse (db, tx, message):
         'validity': validity,
     }
     broadcast_parse_cursor.execute(*util.get_insert_sql('broadcasts', element_data))
-    config.zeromq_publisher.push_to_subscribers('new_broadcast', element_data)
+
 
     # Null values are special.
     if not value:
@@ -164,7 +164,7 @@ def parse (db, tx, message):
 
             leverage = D(bet_match['leverage']) / 5040
             initial_value = bet_match['initial_value']
-                
+
             bear_credit = round(bear_escrow - D(value - initial_value) * leverage * config.UNIT)
             bull_credit = total_escrow - bear_credit
 
@@ -232,5 +232,5 @@ def parse (db, tx, message):
         broadcast_bet_match_cursor.close()
 
     broadcast_parse_cursor.close()
-       
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

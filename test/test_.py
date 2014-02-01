@@ -20,7 +20,7 @@ from requests.auth import HTTPBasicAuth
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
-from lib import (config, api, zeromq, util, exceptions, bitcoin, blocks)
+from lib import (config, api, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 
 # JSON-RPC Options
@@ -61,11 +61,6 @@ except: pass
 db = apsw.Connection(config.DATABASE)
 db.setrowtrace(util.rowtracer)
 cursor = db.cursor()
-
-#Set up zeromq publisher
-config.zeromq_publisher = zeromq.ZeroMQPublisher()
-config.zeromq_publisher.daemon = True
-config.zeromq_publisher.start()
 
 tx_index = 0
 

@@ -75,7 +75,7 @@ def do_filter(results, filters, filterop):
     if not len(results) or not filters: #empty results, or not filtering
         return results
     if isinstance(filters, dict): #single filter entry, convert to a one entry list
-        filters = [filters,] 
+        filters = [filters,]
     #validate filter(s)
     required_fields = ['field', 'op', 'value']
     for filter in filters:
@@ -124,7 +124,7 @@ def get_limit_to_blocks(start_block, end_block, col_names=['block_index',]):
        or (end_block is not None and not isinstance(end_block, int)):
         raise ValueError("start_block and end_block must be either an integer, or None")
     assert isinstance(col_names, list) and len(col_names) in [1, 2]
-    
+
     if start_block is None and end_block is None:
         return ''
     elif len(col_names) == 1:
@@ -201,7 +201,7 @@ def get_asset_id (asset):
             raise exceptions.InvalidBase26Error('Not an uppercase ASCII character:', c)
         digit = b26_digits.index(c)
         n += digit
-    
+
     if get_asset_name(n) != asset:
         raise exceptions.AssetError('Invalid asset name.')
 
@@ -250,7 +250,7 @@ def debit (db, block_index, address, asset, amount):
     debit_cursor.execute('''UPDATE balances \
                       SET amount=? \
                       WHERE (address=? and asset=?)''',
-                   (balance, address, asset)) 
+                   (balance, address, asset))
 
     # Record debit *only if valid*.
     logging.debug('Debit: {} {} from {}'.format(devise(db, amount, asset, 'output'), asset, address))
@@ -261,8 +261,6 @@ def debit (db, block_index, address, asset, amount):
         'amount': amount,
     }
     debit_cursor.execute(*get_insert_sql('debits', element_data))
-    config.zeromq_publisher.push_to_subscribers('debit', {
-        'address': address, 'asset': asset, 'amount': amount, 'balance': balance, 'block_index': block_index })
     debit_cursor.close()
 
 def credit (db, block_index, address, asset, amount, divisible=None):
@@ -273,7 +271,7 @@ def credit (db, block_index, address, asset, amount, divisible=None):
     balances = get_balances(db, address=address, asset=asset)
     if len(balances) == 0:
         assert balances == []
-        
+
         #update balances table with new balance
         element_data = {
             'address': address,
@@ -281,8 +279,6 @@ def credit (db, block_index, address, asset, amount, divisible=None):
             'amount': amount,
         }
         credit_cursor.execute(*get_insert_sql('balances', element_data))
-        config.zeromq_publisher.push_to_subscribers('credit', {
-            'address': address, 'asset': asset, 'amount': amount, 'balance': amount, 'block_index': block_index })
     elif len(balances) > 1:
         raise Exception
     else:
@@ -292,13 +288,11 @@ def credit (db, block_index, address, asset, amount, divisible=None):
         balance = min(balance, config.MAX_INT)
         credit_cursor.execute('''UPDATE balances SET amount=? \
                           WHERE (address=? and asset=?)''',
-                       (balance, address, asset)) 
-        config.zeromq_publisher.push_to_subscribers('credit', {
-            'address': address, 'asset': asset, 'amount': amount, 'balance': balance, 'block_index': block_index })
+                       (balance, address, asset))
 
     # Record credit.
     logging.debug('Credit: {} {} to {}'.format(devise(db, amount, asset, 'output', divisible=divisible), asset, address))
-    element_data = { 
+    element_data = {
         'block_index': block_index,
         'address': address,
         'asset': asset,
@@ -357,7 +351,7 @@ def devise (db, quantity, asset, dest, divisible=None):
 def get_debits (db, address=None, asset=None, filters=None, order_by=None, order_dir='asc', start_block=None, end_block=None, filterop='and'):
     """This does not include BTC."""
     if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,] 
+    if filters and not isinstance(filters, list): filters = [filters,]
     if address: filters.append({'field': 'address', 'op': '==', 'value': address})
     if asset: filters.append({'field': 'asset', 'op': '==', 'value': asset})
     cursor = db.cursor()
@@ -370,7 +364,7 @@ def get_debits (db, address=None, asset=None, filters=None, order_by=None, order
 def get_credits (db, address=None, asset=None, filters=None, order_by=None, order_dir='asc', start_block=None, end_block=None, filterop='and'):
     """This does not include BTC."""
     if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,] 
+    if filters and not isinstance(filters, list): filters = [filters,]
     if address: filters.append({'field': 'address', 'op': '==', 'value': address})
     if asset: filters.append({'field': 'asset', 'op': '==', 'value': asset})
     cursor = db.cursor()
@@ -383,7 +377,7 @@ def get_credits (db, address=None, asset=None, filters=None, order_by=None, orde
 def get_balances (db, address=None, asset=None, filters=None, order_by=None, order_dir='asc', filterop='and'):
     """This should never be used to check Bitcoin balances."""
     if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,] 
+    if filters and not isinstance(filters, list): filters = [filters,]
     if address: filters.append({'field': 'address', 'op': '==', 'value': address})
     if asset: filters.append({'field': 'asset', 'op': '==', 'value': asset})
     cursor = db.cursor()
@@ -394,7 +388,7 @@ def get_balances (db, address=None, asset=None, filters=None, order_by=None, ord
 
 def get_sends (db, validity=None, source=None, destination=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,] 
+    if filters and not isinstance(filters, list): filters = [filters,]
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
     if source: filters.append({'field': 'source', 'op': '==', 'value': source})
     if destination: filters.append({'field': 'destination', 'op': '==', 'value': destination})
@@ -414,7 +408,7 @@ def get_orders (db, validity=None, source=None, show_empty=True, show_expired=Tr
         return False if time_left < 0 else True
 
     if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,] 
+    if filters and not isinstance(filters, list): filters = [filters,]
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
     if source: filters.append({'field': 'source', 'op': '==', 'value': source})
     if not show_empty: filters.append({'field': 'give_remaining', 'op': '!=', 'value': 0})
@@ -428,14 +422,14 @@ def get_orders (db, validity=None, source=None, show_empty=True, show_expired=Tr
 
 def get_order_matches (db, validity=None, is_mine=False, address=None, tx0_hash=None, tx1_hash=None, filters=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     def filter_is_mine(e):
-        if (    (not bitcoin.rpc('validateaddress', [e['tx0_address']])['ismine'] or 
+        if (    (not bitcoin.rpc('validateaddress', [e['tx0_address']])['ismine'] or
                  e['forward_asset'] != 'BTC')
             and (not bitcoin.rpc('validateaddress', [e['tx1_address']])['ismine'] or
                  e['backward_asset'] != 'BTC')):
             return False #is not mine
         return True #is mine
     if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,] 
+    if filters and not isinstance(filters, list): filters = [filters,]
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
     if tx0_hash: filters.append({'field': 'tx0_hash', 'op': '==', 'value': tx0_hash})
     if tx1_hash: filters.append({'field': 'tx1_hash', 'op': '==', 'value': tx1_hash})
@@ -451,7 +445,7 @@ def get_order_matches (db, validity=None, is_mine=False, address=None, tx0_hash=
 
 def get_btcpays (db, validity=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,] 
+    if filters and not isinstance(filters, list): filters = [filters,]
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM btcpays%s'''
@@ -462,7 +456,7 @@ def get_btcpays (db, validity=None, filters=None, order_by='tx_index', order_dir
 
 def get_issuances (db, validity=None, asset=None, issuer=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,] 
+    if filters and not isinstance(filters, list): filters = [filters,]
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
     if asset: filters.append({'field': 'asset', 'op': '==', 'value': asset})
     if issuer: filters.append({'field': 'issuer', 'op': '==', 'value': issuer})
@@ -477,7 +471,7 @@ def get_issuances (db, validity=None, asset=None, issuer=None, filters=None, ord
 
 def get_broadcasts (db, validity=None, source=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,] 
+    if filters and not isinstance(filters, list): filters = [filters,]
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
     if source: filters.append({'field': 'source', 'op': '==', 'value': source})
     cursor = db.cursor()
@@ -489,7 +483,7 @@ def get_broadcasts (db, validity=None, source=None, filters=None, order_by='tx_i
 
 def get_bets (db, validity=None, source=None, show_empty=True, filters=None, order_by='odds', order_dir='desc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,] 
+    if filters and not isinstance(filters, list): filters = [filters,]
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
     if source: filters.append({'field': 'source', 'op': '==', 'value': source})
     if not show_empty: filters.append({'field': 'wager_remaining', 'op': '==', 'value': 0})
@@ -502,7 +496,7 @@ def get_bets (db, validity=None, source=None, show_empty=True, filters=None, ord
 
 def get_bet_matches (db, validity=None, address=None, tx0_hash=None, tx1_hash=None, filters=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,] 
+    if filters and not isinstance(filters, list): filters = [filters,]
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
     if tx0_hash: filters.append({'field': 'tx0_hash', 'op': '==', 'value': tx0_hash})
     if tx1_hash: filters.append({'field': 'tx1_hash', 'op': '==', 'value': tx1_hash})
@@ -517,7 +511,7 @@ def get_bet_matches (db, validity=None, address=None, tx0_hash=None, tx1_hash=No
 
 def get_dividends (db, validity=None, source=None, asset=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,] 
+    if filters and not isinstance(filters, list): filters = [filters,]
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
     if source: filters.append({'field': 'source', 'op': '==', 'value': source})
     if asset: filters.append({'field': 'asset', 'op': '==', 'value': asset})
@@ -530,7 +524,7 @@ def get_dividends (db, validity=None, source=None, asset=None, filters=None, ord
 
 def get_burns (db, validity=True, address=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,] 
+    if filters and not isinstance(filters, list): filters = [filters,]
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
     if address: filters.append({'field': 'address', 'op': '==', 'value': address})
     cursor = db.cursor()
@@ -542,7 +536,7 @@ def get_burns (db, validity=True, address=None, filters=None, order_by='tx_index
 
 def get_cancels (db, validity=True, source=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,] 
+    if filters and not isinstance(filters, list): filters = [filters,]
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
     if source: filters.append({'field': 'source', 'op': '==', 'value': source})
     cursor = db.cursor()

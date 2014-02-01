@@ -75,7 +75,7 @@ def create (db, source, feed_address, bet_type, deadline, wager_amount,
     if problems: raise exceptions.BetError(problems)
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
-    data += struct.pack(FORMAT, bet_type, deadline, 
+    data += struct.pack(FORMAT, bet_type, deadline,
                         wager_amount, counterwager_amount, target_value,
                         leverage, expiration)
     return bitcoin.transaction(source, feed_address, config.DUST_SIZE,
@@ -148,8 +148,8 @@ def parse (db, tx, message, bet_heap, bet_match_heap):
     bet_parse_cursor.execute(*util.get_insert_sql('bets', element_data))
     if validity == 'Valid':
         heapq.heappush(bet_heap, (tx['block_index'] + expiration, tx['tx_index']))
-    config.zeromq_publisher.push_to_subscribers('new_bet', element_data)
-    
+
+
     # Log.
     if validity == 'Valid':
         placeholder = ''
@@ -270,7 +270,7 @@ def match (db, tx, bet_heap, bet_match_heap):
             }
             bet_match_cursor.execute(*util.get_insert_sql('bet_matches', element_data))
             heapq.heappush(bet_match_heap, (tx1['deadline'], tx0['tx_index'], tx1['tx_index']))
-            config.zeromq_publisher.push_to_subscribers('new_bet_match', element_data)
+
     bet_match_cursor.close()
 
 def expire (db, block_index, block_time, bet_heap, bet_match_heap):

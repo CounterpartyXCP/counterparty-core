@@ -92,7 +92,7 @@ def parse (db, tx, message, order_heap, order_match_heap):
     order_parse_cursor.execute(*util.get_insert_sql('orders', element_data))
     if validity == 'Valid':
         heapq.heappush(order_heap, (tx['block_index'] + expiration, tx['tx_index']))
-    config.zeromq_publisher.push_to_subscribers('new_order', element_data)
+
 
     if validity == 'Valid':
 
@@ -187,7 +187,7 @@ def match (db, tx, order_heap, order_match_heap):
                 'tx1_address': tx1['source'],
                 'forward_asset': forward_asset,
                 'forward_amount': forward_amount,
-                'backward_asset': backward_asset, 
+                'backward_asset': backward_asset,
                 'backward_amount': backward_amount,
                 'tx0_block_index': tx0['block_index'],
                 'tx1_block_index': tx1['block_index'],
@@ -198,7 +198,7 @@ def match (db, tx, order_heap, order_match_heap):
             order_match_cursor.execute(*util.get_insert_sql('order_matches', element_data))
             if validity == 'Valid: awaiting BTC payment':
                 heapq.heappush(order_match_heap, (min(tx0['block_index'] + tx0['expiration'], tx0['block_index'] + tx0['expiration']), tx0['tx_index'], tx1['tx_index']))
-            config.zeromq_publisher.push_to_subscribers('new_order_match', element_data)
+
     order_match_cursor.close()
 
 def expire (db, block_index, order_heap, order_match_heap):

@@ -94,7 +94,7 @@ def parse (db, tx, message=None):
         'validity': validity,
     }
     burn_parse_cursor.execute(*util.get_insert_sql('burns', element_data))
-    config.zeromq_publisher.push_to_subscribers('new_burn', element_data)
+
 
     burn_parse_cursor.close()
 

@@ -28,7 +28,7 @@ def validate (db, offer_hash, source=None):
                 else:
                     problems.append('offer was not made by one of your addresses')
                 return source, offer, problems
-                
+
     problems.append('no valid offer with that hash')
     return None, None, problems
 
@@ -81,7 +81,7 @@ def parse (db, tx, message):
         'validity': validity,
     }
     cancel_parse_cursor.execute(*util.get_insert_sql('cancels', element_data))
-    config.zeromq_publisher.push_to_subscribers('new_cancel', element_data)
+
 
     cancel_parse_cursor.close()
 

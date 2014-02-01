@@ -49,7 +49,7 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
 
     if destination and amount:
         problems.append('cannot issue and transfer simultaneously')
- 
+
     return problems
 
 def create (db, source, destination, asset, amount, divisible, callable_, call_date, call_price, description, unsigned=False):
@@ -96,7 +96,7 @@ def parse (db, tx, message):
     else:
         issuer = tx['source']
         transfer = False
- 
+
     fee_paid = None
     if validity == 'Valid':
         # Debit fee.
@@ -128,7 +128,7 @@ def parse (db, tx, message):
         'validity': validity,
     }
     issuance_parse_cursor.execute(*util.get_insert_sql('issuances', element_data))
-    config.zeromq_publisher.push_to_subscribers('new_issuance', element_data)
+
 
     if validity == 'Valid':
         # Log.

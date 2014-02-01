@@ -116,7 +116,7 @@ def parse (db, tx, message):
         'validity': validity,
     }
     callback_parse_cursor.execute(*util.get_insert_sql('callbacks', element_data))
-    config.zeromq_publisher.push_to_subscribers('new_callback', element_data)
+
 
     if validity == 'Valid':
         decimal.getcontext().prec = 9   # TODO: also arbitrary

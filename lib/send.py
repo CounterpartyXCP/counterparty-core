@@ -71,7 +71,7 @@ def parse (db, tx, message):
         'validity': validity,
     }
     send_parse_cursor.execute(*util.get_insert_sql('sends', element_data))
-    config.zeromq_publisher.push_to_subscribers('new_send', element_data)
+
 
     send_parse_cursor.close()
 

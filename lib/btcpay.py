@@ -92,7 +92,7 @@ def parse (db, tx, message):
         'validity': validity,
     }
     btcpay_parse_cursor.execute(*util.get_insert_sql('btcpays', element_data))
-    config.zeromq_publisher.push_to_subscribers('new_btcpay', element_data)
+
 
     btcpay_parse_cursor.close()
 
