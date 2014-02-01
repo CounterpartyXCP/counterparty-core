@@ -24,6 +24,7 @@ TXTYPE_FORMAT = '>I'
 
 ISSUANCE_FEE = 5
 TWO_WEEKS = 2 * 7 * 24 * 3600
+MAX_EXPIRATION = 4 * 2016   # Two months
 
 # SQLite3
 MAX_INT = 2**63 - 1

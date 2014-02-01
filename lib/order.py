@@ -27,6 +27,8 @@ def validate (db, source, give_asset, give_amount, get_asset, get_amount, expira
         problems.append('no such asset to give, {}.'.format(give_asset))
     if get_asset not in ('BTC', 'XCP') and not util.get_issuances(db, validity='Valid', asset=get_asset):
         problems.append('no such asset to get, {}.'.format(get_asset))
+    if expiration > config.MAX_EXPIRATION:
+        problems.append('maximum expiration time exceeded')
 
     return problems
 

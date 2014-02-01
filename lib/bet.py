@@ -66,6 +66,9 @@ def validate (db, source, feed_address, bet_type, deadline, wager_amount,
     if target_value and bet_type in (0,1):   # BullCFD, BearCFD
         problems.append('CFDs have no target value')
 
+    if expiration > config.MAX_EXPIRATION:
+        problems.append('maximum expiration time exceeded')
+
     return problems
 
 def create (db, source, feed_address, bet_type, deadline, wager_amount,
