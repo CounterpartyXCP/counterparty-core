@@ -63,10 +63,8 @@ Burn: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 0.38 BTC for 570.0 XCP (2f0fd1e8
 Debit: 10000 BBBC from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Credit: 10000 BBBC to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7
 Send: 10000 of asset BBBC from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 (7cb7c454...da7839ba)
-Debit: 450.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Credit: 30000 BBBC to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Debit: 27000 BBBC from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Credit: 405.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Debit: 45.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Credit: 3000 BBBC to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Debit: 3000 BBBC from n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7
 Credit: 45.0 XCP to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7
 Callback: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc called back 30.0% of asset BBBC (8f11b05d...3aa37034)
