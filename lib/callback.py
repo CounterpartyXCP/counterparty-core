@@ -31,13 +31,16 @@ def validate (db, source, fraction_per_share, asset, block_time):
         last_issuance = issuances[-1]
         if block_time == None: block_time = time.time()
 
+        if last_issuance['issuer'] != source:
+            problems.append('not asset owner')
+            return None, None, None, problems
+
         if not last_issuance['callable']:
             problems.append('uncallable asset')
             return None, None, None, problems
         elif last_issuance['call_date'] > block_time: problems.append('before call date')
 
-        call_price = last_issuance['call_price']
-        print(call_price)
+        call_price = round(last_issuance['call_price'], 6)  # TODO: arbitrary
         divisible = last_issuance['divisible']
 
     if not divisible:   # Pay per output unit.
@@ -79,7 +82,7 @@ def parse (db, tx, message):
         fraction_per_share, asset_id = struct.unpack(FORMAT, message)
         asset = util.get_asset_name(asset_id)
         validity = 'Valid'
-    except Exception:
+    except struct.error as e:
         fraction_per_share, asset = None, None
         validity = 'Invalid: could not unpack'
 
@@ -115,7 +118,8 @@ def parse (db, tx, message):
     config.zeromq_publisher.push_to_subscribers('new_callback', element_data)
 
     if validity == 'Valid':
-        logging.info('Callback: {} called back {}% of asset {} ({})'.format(tx['source'], fraction_per_share * 100, asset, util.short(tx['tx_hash'])))
+        decimal.getcontext().prec = 9   # TODO: also arbitrary
+        logging.info('Callback: {} called back {}% of asset {} ({})'.format(tx['source'], float(D(fraction_per_share) * D(100)), asset, util.short(tx['tx_hash'])))
 
     callback_parse_cursor.close()
 

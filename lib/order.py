@@ -50,7 +50,7 @@ def parse (db, tx, message):
         give_asset = util.get_asset_name(give_id)
         get_asset = util.get_asset_name(get_id)
         validity = 'Valid'
-    except Exception:
+    except struct.error as e:
         give_asset, give_amount, get_asset, get_amount, expiration, fee_required = None, None, None, None, None, None
         validity = 'Invalid: could not unpack'
 

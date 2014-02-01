@@ -484,6 +484,7 @@ def rollback (db, block_index):
         rollback_cursor.execute('''DELETE FROM dividends WHERE block_index > {}'''.format(block_index))
         rollback_cursor.execute('''DELETE FROM burns WHERE block_index > {}'''.format(block_index))
         rollback_cursor.execute('''DELETE FROM cancels WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM callbacks WHERE block_index > {}'''.format(block_index))
 
         # Re‐calculate every balance by summing historical credits, debits.
         rollback_cursor.execute('''SELECT * FROM balances''')
@@ -569,7 +570,7 @@ def follow (db):
         try:
             follow_cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)''')
             tx_index = follow_cursor.fetchall()[0]['tx_index'] + 1
-        except Exception:
+        except Exception:   # TODO
             tx_index = 0
 
         # Get new blocks.

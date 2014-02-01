@@ -75,7 +75,7 @@ def rpc (method, params):
 
     '''
     if config.PREFIX == config.UNITTEST_PREFIX:
-        print(response)  # TODO
+        print(response)
         f.close()
     '''
 
@@ -316,7 +316,7 @@ def transaction (source, destination, btc_amount, fee, data, unittest=False, mul
         if address:
             try:
                 base58_decode(address, config.ADDRESSVERSION)
-            except Exception:
+            except Exception:   # TODO
                 raise exceptions.InvalidAddressError('Invalid Bitcoin address:',
                                           address)
 
@@ -374,7 +374,7 @@ def transaction (source, destination, btc_amount, fee, data, unittest=False, mul
 
 def transmit (unsigned_tx_hex, ask=True, unsigned=False):
     # Confirm transaction.
-    print('Unsigned transaction hex:', unsigned_tx_hex)
+    print('Unsigned transaction:', unsigned_tx_hex)
     if ask and not unsigned:
         if config.TESTNET: print('Attention: TESTNET!') 
         if config.TESTCOIN: print('Attention: TESTCOIN!\n') 

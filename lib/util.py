@@ -192,8 +192,10 @@ def get_asset_id (asset):
             raise exceptions.InvalidBase26Error('Not an uppercase ASCII character:', c)
         digit = b26_digits.index(c)
         n += digit
+    
+    if get_asset_name(n) != asset:
+        raise exceptions.AssetError('Invalid asset name.')
 
-    # Minimum of four letters long.
     if not n > 26**3:
         raise exceptions.AssetError('Invalid asset name.')
 
@@ -203,7 +205,6 @@ def get_asset_name (asset_id):
     if asset_id == 0: return 'BTC'
     elif asset_id == 1: return 'XCP'
 
-    # Minimum of four letters long.
     if not asset_id > 26**3:
         raise exceptions.AssetError('Invalid asset name.')
 
@@ -215,7 +216,8 @@ def get_asset_name (asset_id):
         res.append(b26_digits[r])
     asset = ''.join(res[::-1])
 
-    if not valid_asset_name(asset): raise exceptions.AssetError('Invalid asset name.')
+    if not valid_asset_name(asset):
+        raise exceptions.AssetError('Invalid asset name.')
 
     return asset
 

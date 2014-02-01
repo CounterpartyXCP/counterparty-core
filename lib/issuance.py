@@ -68,16 +68,19 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
-        if (tx['block_index'] > 283271 or config.PREFIX == config.UNITTEST_PREFIX) and len(message) == LENGTH_2:
+        if (tx['block_index'] > 283271 or config.TESTNET) and len(message) == LENGTH_2:
             asset_id, amount, divisible, callable_, call_date, call_price, description = struct.unpack(FORMAT_2, message)
-            description = description.decode('utf-8')
             call_price = round(call_price, 6) # TODO: arbitrary
+            try:
+                description = description.decode('utf-8')
+            except UnicodeDecodeError:
+                description = ''
         else:
             asset_id, amount, divisible = struct.unpack(FORMAT_1, message)
             callable_, call_date, call_price, description = None, None, None, ''
         asset = util.get_asset_name(asset_id)
         validity = 'Valid'
-    except Exception:
+    except struct.error:
         asset, amount, divisible, callable_, call_date, call_price, description = None, None, None, None, None, None, None
         validity = 'Invalid: could not unpack'
 
@@ -140,7 +143,7 @@ def parse (db, tx, message):
             else:
                 divisibility = 'indivisible'
                 unit = 1
-            if callable_ and (tx['block_index'] > 283271 or config.PREFIX == config.UNITTEST_PREFIX) and len(message) == LENGTH_2:
+            if callable_ and (tx['block_index'] > 283271 or config.TESTNET) and len(message) == LENGTH_2:
                 callability = 'callable from {} for {} XCP/{}'.format(util.isodt(call_date), call_price, asset)
             else:
                 callability = 'uncallable'

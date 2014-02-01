@@ -90,7 +90,7 @@ def parse (db, tx, message):
          counterwager_amount, target_value, leverage,
          expiration) = struct.unpack(FORMAT, message)
         validity = 'Valid'
-    except Exception:
+    except struct.error as e:
         (bet_type, deadline, wager_amount,
          counterwager_amount, target_value, leverage,
          expiration) = None, None, None, None, None, None, None

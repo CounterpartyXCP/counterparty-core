@@ -82,7 +82,7 @@ def parse (db, tx, message):
         timestamp, value, fee_multiplier, text = struct.unpack(FORMAT, message)
         text = text.decode('utf-8')
         validity = 'Valid'
-    except Exception:
+    except struct.error as e:
         timestamp, value, fee_multiplier, text = None, None, None, None
         validity = 'Invalid: could not unpack'
 

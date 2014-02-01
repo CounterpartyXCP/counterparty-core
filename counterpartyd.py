@@ -288,8 +288,8 @@ if __name__ == '__main__':
 
     parser_dividend = subparsers.add_parser('dividend', help='pay dividends to the holders of an asset (in proportion to their stake in it)')
     parser_dividend.add_argument('--source', required=True, help='the source address')
-    parser_dividend.add_argument('--quantity-per-share', required=True, help='the quantity of XCP to be paid per unit (satoshi) held of SHARE_ASSET')
-    parser_dividend.add_argument('--share-asset', required=True, help='the asset to which pay dividends')
+    parser_dividend.add_argument('--quantity-per-share', required=True, help='the quantity of XCP to be paid per unit (satoshi) held of ASSET')
+    parser_dividend.add_argument('--asset', required=True, help='the asset to which pay dividends')
 
     parser_burn = subparsers.add_parser('burn', help='destroy bitcoins to earn XCP, during an initial period of time')
     parser_burn.add_argument('--source', required=True, help='the source address')
@@ -297,6 +297,11 @@ if __name__ == '__main__':
 
     parser_cancel= subparsers.add_parser('cancel', help='cancel an open order or bet you created')
     parser_cancel.add_argument('--offer-hash', required=True, help='the transaction hash of the order or bet')
+
+    parser_callback = subparsers.add_parser('callback', help='callback a fraction of an asset')
+    parser_callback.add_argument('--source', required=True, help='the source address')
+    parser_callback.add_argument('--fraction-per-share', required=True, help='the fraction of ASSET to call back')
+    parser_callback.add_argument('--asset', required=True, help='the asset to callback')
 
     parser_address = subparsers.add_parser('address', help='display the history of a Counterparty address')
     parser_address.add_argument('address', help='the address you are interested in')
@@ -615,7 +620,7 @@ if __name__ == '__main__':
     elif args.action == 'dividend':
         quantity_per_share = util.devise(db, args.quantity_per_share, 'XCP', 'input')
         unsigned_tx_hex = dividend.create(db, args.source, quantity_per_share,
-                                   args.share_asset, unsigned=args.unsigned)
+                                   args.asset, unsigned=args.unsigned)
         print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'burn':
@@ -625,6 +630,11 @@ if __name__ == '__main__':
 
     elif args.action == 'cancel':
         unsigned_tx_hex = cancel.create(db, args.offer_hash, unsigned=args.unsigned)
+        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
+
+    elif args.action == 'callback':
+        unsigned_tx_hex = callback.create(db, args.source, float(args.fraction_per_share),
+                                   args.asset, unsigned=args.unsigned)
         print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'address':

@@ -63,7 +63,7 @@ def parse (db, tx, message):
         amount_per_share, asset_id = struct.unpack(FORMAT, message)
         asset = util.get_asset_name(asset_id)
         validity = 'Valid'
-    except Exception:
+    except struct.error as e:
         amount_per_share, asset = None, None
         validity = 'Invalid: could not unpack'
 

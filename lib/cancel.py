@@ -51,7 +51,7 @@ def parse (db, tx, message):
         offer_hash_bytes = struct.unpack(FORMAT, message)[0]
         offer_hash = binascii.hexlify(offer_hash_bytes).decode('utf-8')
         validity = 'Valid'
-    except Exception:
+    except struct.error as e:
         offer_hash = None
         validity = 'Invalid: could not unpack'
 
