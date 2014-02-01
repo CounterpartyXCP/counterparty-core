@@ -6,7 +6,6 @@ import struct
 import logging
 import decimal
 D = decimal.Decimal
-import time
 
 from . import (util, config, exceptions, bitcoin, util)
 
@@ -29,7 +28,12 @@ def validate (db, source, fraction_per_share, asset, block_time):
         return None, None, None, problems
     else:
         last_issuance = issuances[-1]
-        if block_time == None: block_time = time.time()
+        if block_time == None:
+            if config.PREFIX == config.UNITTEST_PREFIX:
+                import time
+                block_time = time.time()
+            else:
+                block_time = util.last_block(db)['block_time']
 
         if last_issuance['issuer'] != source:
             problems.append('not asset owner')

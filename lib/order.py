@@ -16,9 +16,6 @@ ID = 10
 def validate (db, source, give_asset, give_amount, get_asset, get_amount, expiration):
     problems = []
 
-    balances = util.get_balances(db, address=source, asset=give_asset)
-    if give_asset != 'BTC' and (not balances or balances[0]['amount'] < give_amount):
-        problems.append('insufficient funds')
     if give_asset == get_asset:
         problems.append('trading an asset for itself')
     if not give_amount or not get_amount:
@@ -33,6 +30,10 @@ def validate (db, source, give_asset, give_amount, get_asset, get_amount, expira
     return problems
 
 def create (db, source, give_asset, give_amount, get_asset, get_amount, expiration, fee_required, fee_provided, unsigned=False):
+    balances = util.get_balances(db, address=source, asset=give_asset)
+    if give_asset != 'BTC' and (not balances or balances[0]['amount'] < give_amount):
+        raise exceptions.OrderError('insufficient funds')
+
     problems = validate(db, source, give_asset, give_amount, get_asset, get_amount, expiration)
     if problems: raise exceptions.OrderError(problems)
 
@@ -57,7 +58,17 @@ def parse (db, tx, message, order_heap, order_match_heap):
         give_asset, give_amount, get_asset, get_amount, expiration, fee_required = None, None, None, None, None, None
         validity = 'Invalid: could not unpack'
 
+    price = 0
     if validity == 'Valid':
+        try: price = D(get_amount) / D(give_amount)   # TODO: precision?!
+        except: pass
+        # Overorder
+        balances = util.get_balances(db, address=tx['source'], asset=give_asset)
+        if give_asset != 'BTC':
+            if not balances:  give_amount = 0
+            elif balances[0]['amount'] < give_amount:
+                give_amount = min(balances[0]['amount'], give_amount)
+                get_amount = round(price * D(give_amount))
         # For SQLite3
         give_amount = min(give_amount, config.MAX_INT)
         get_amount = min(get_amount, config.MAX_INT)
@@ -68,11 +79,8 @@ def parse (db, tx, message, order_heap, order_match_heap):
         if problems: validity = 'Invalid: ' + ';'.join(problems)
 
     if validity == 'Valid':
-        price = D(get_amount) / D(give_amount)   # TODO: precision?!
         if give_asset != 'BTC':  # No need (or way) to debit BTC.
             util.debit(db, tx['block_index'], tx['source'], give_asset, give_amount)
-    else:
-        price = 0
 
     # Add parsed transaction to message-type–specific table.
     element_data = {

@@ -48,12 +48,6 @@ def validate (db, source, feed_address, bet_type, deadline, wager_amount,
     elif broadcasts[-1]['timestamp'] >= deadline:
         problems.append('deadline in that feed’s past')
 
-    # Check for sufficient funds.
-    fee_multiplier = get_fee_multiplier(db, feed_address)
-    balances = util.get_balances(db, address=source, asset='XCP')
-    if not balances or balances[0]['amount'] < wager_amount * (1 + fee_multiplier / 1e8):
-        problems.append('insufficient funds to both make wager and pay feed fee (in XCP)')
-
     # Valid leverage level?
     if leverage != 5040 and bet_type in (2,3):   # Equal, NotEqual
         problems.append('leverage cannot be used with bet types Equal and NotEqual')
@@ -73,6 +67,13 @@ def validate (db, source, feed_address, bet_type, deadline, wager_amount,
 
 def create (db, source, feed_address, bet_type, deadline, wager_amount,
             counterwager_amount, target_value, leverage, expiration, unsigned=False):
+
+    # Check for sufficient funds.
+    fee_multiplier = get_fee_multiplier(db, feed_address)
+    balances = util.get_balances(db, address=source, asset='XCP')
+    if not balances or balances[0]['amount']/(1 + fee_multiplier / 1e8) < wager_amount :
+        raise exceptions.BetError('insufficient funds to both make wager and pay feed fee (in XCP)')
+
     problems = validate(db, source, feed_address, bet_type, deadline, wager_amount,
                         counterwager_amount, target_value, leverage, expiration)
     if problems: raise exceptions.BetError(problems)
@@ -101,7 +102,17 @@ def parse (db, tx, message, bet_heap, bet_match_heap):
         validity = 'Invalid: could not unpack'
 
     # Debit amount wagered and fee.
+    fee_multiplier = 0
+    odds = 0
     if validity == 'Valid':
+        try: odds = D(wager_amount) / D(counterwager_amount)   # TODO: precision?!
+        except: pass
+        # Overbet
+        balances = util.get_balances(db, address=tx['source'], asset='XCP')
+        if not balances: wager_amount = 0
+        elif balances[0]['amount']/(1 + fee_multiplier / 1e8) < wager_amount:
+            wager_amount = min(round(balances[0]['amount']/(1 + fee_multiplier / 1e8)), wager_amount)
+            counterwager_amount = round(D(wager_amount) / odds)
         # For SQLite3
         bet_type = min(bet_type, config.MAX_INT)
         deadline = min(deadline, config.MAX_INT)
@@ -124,10 +135,6 @@ def parse (db, tx, message, bet_heap, bet_match_heap):
 
         wager_amount = round(wager_amount)
         counterwager_amount = round(counterwager_amount)
-        odds = D(wager_amount) / D(counterwager_amount)   # TODO: precision?!
-    else:
-        fee_multiplier = 0
-        odds = 0
 
     # Add parsed transaction to message-type–specific table.
     element_data = {

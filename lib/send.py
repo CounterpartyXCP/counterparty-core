@@ -19,13 +19,13 @@ def validate (db, source, destination, amount, asset):
     if not util.valid_asset_name(asset): problems.append('bad asset ID')
     if not amount: problems.append('zero quantity')
 
-    balances = util.get_balances(db, address=source, asset=asset)
-    if not balances or balances[0]['amount'] < amount:
-        problems.append('insufficient funds')
-
     return problems
 
 def create (db, source, destination, amount, asset, unsigned=False):
+    balances = util.get_balances(db, address=source, asset=asset)
+    if not balances or balances[0]['amount'] < amount:
+        raise exceptions.SendError('insufficient funds')
+
     problems = validate(db, source, destination, amount, asset)
     if problems: raise exceptions.SendError(problems)
 
@@ -48,9 +48,13 @@ def parse (db, tx, message):
         validity = 'Invalid: Could not unpack.'
 
     if validity == 'Valid':
+        # Oversend
+        balances = util.get_balances(db, address=tx['source'], asset=asset)
+        if not balances:  amount = 0
+        elif balances[0]['amount'] < amount:
+            amount = min(balances[0]['amount'], amount)
         # For SQLite3
         amount = min(amount, config.MAX_INT)
-
         problems = validate(db, tx['source'], tx['destination'], amount, asset)
         if problems: validity = 'Invalid: ' + ';'.join(problems)
 
