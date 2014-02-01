@@ -272,9 +272,10 @@ def match (db, tx):
 def expire (db, block_index):
     # Expire bets and give refunds for the amount wager_remaining.
     bet_expire_cursor = db.cursor()
-    bet_expire_cursor.execute('''SELECT * FROM bets''')
+    bet_expire_cursor.execute('''SELECT * FROM bets
+                                 WHERE validity = ?''', ('Valid',))
     for bet in bet_expire_cursor.fetchall():
-        if bet['validity'] == 'Valid' and util.get_time_left(bet, block_index=block_index) < 0:
+        if util.get_time_left(bet, block_index=block_index) < 0:
             bet_expire_cursor.execute('''UPDATE bets SET validity=? WHERE tx_hash=?''', ('Invalid: expired', bet['tx_hash']))
             util.credit(db, block_index, bet['source'], 'XCP', round(bet['wager_remaining'] * (1 + bet['fee_multiplier'] / 1e8)))
             logging.info('Expired bet: {}'.format(util.short(bet['tx_hash'])))
@@ -283,8 +284,9 @@ def expire (db, block_index):
     # Expire bet matches whose deadline was passed 2016 blocks ago.
     bet_expire_match_cursor = db.cursor()
     bet_expire_match_cursor.execute('''SELECT * FROM blocks \
-                                  WHERE block_index<=?''', (block_index - 2016,)
-                              )
+                                       WHERE block_index<=?''',
+                                    (block_index - 2016,)
+                                   )
     bet_matches = util.get_bet_matches(db, validity='Valid', order_by='tx1_index', order_dir='asc')
     for old_block in bet_expire_match_cursor.fetchall():
         for bet_match in bet_matches:

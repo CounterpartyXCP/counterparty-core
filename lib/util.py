@@ -28,9 +28,8 @@ DO_FILTER_OPERATORS = {
 def rowtracer(cursor, sql):
     """Converts fetched SQL data into dict-style"""
     dictionary = {}
-    description = cursor.getdescription()
-    for i in range(len(description)):
-        dictionary[description[i][0]] = sql[i]
+    for index, (name, type_) in enumerate(cursor.getdescription()):
+        dictionary[name] = sql[index]
     return dictionary
 
 def connect_to_db():
