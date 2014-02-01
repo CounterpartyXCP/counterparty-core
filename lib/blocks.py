@@ -515,7 +515,7 @@ def reorg (db):
     # Detect blockchain reorganisation.
     reorg_cursor = db.cursor()
     reorg_cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)''')
-    last_block_index = util.last_block(db)
+    last_block_index = util.last_block(db)['block_index']
     reorg_necessary = False
     for block_index in range(last_block_index - 6, last_block_index + 1):
         block_hash_see = bitcoin.rpc('getblockhash', [block_index])
@@ -580,9 +580,8 @@ def follow (db):
 
         # Get index of last block.
         try:
-            follow_cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)''')
-            block_index = follow_cursor.fetchall()[0]['block_index'] + 1
-        except IndexError:
+            block_index = util.last_block(db)['block_index'] + 1
+        except exceptions.DatabaseError:
             logging.warning('Status: NEW DATABASE')
             block_index = config.BLOCK_FIRST
 

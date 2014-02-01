@@ -713,6 +713,7 @@ if __name__ == '__main__':
         api_server = api.APIServer()
         api_server.daemon = True
         api_server.start()
+        blocks.follow(db)
 
     else:
         parser.print_help()

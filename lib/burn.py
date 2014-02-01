@@ -21,7 +21,7 @@ def validate (db, source, destination, quantity, block_index=None, overburn=Fals
 
     # Try to make sure that the burned funds won't go to waste.
     if config.PREFIX != config.UNITTEST_PREFIX:    # For test suite.
-        if not block_index: block_index = bitcoin.rpc('getblockcount', [])  # For creates.
+        if not block_index: block_index = util.last_block(db)['block_index']
         if block_index < config.BURN_START:
             problems.append('too early')
         elif block_index > config.BURN_END:
