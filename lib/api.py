@@ -268,8 +268,8 @@ class APIServer(threading.Thread):
 
         class API(object):
             @cherrypy.expose
-            @cherrypy.tools.json_out()
             def index(self):
+                cherrypy.response.headers["Content-Type"] = "application/json"
                 cherrypy.response.headers["Access-Control-Allow-Origin"] = '*' 
                 cherrypy.response.headers["Access-Control-Allow-Methods"] = 'POST, GET, OPTIONS'
                 cherrypy.response.headers["Access-Control-Allow-Headers"] = 'Origin, X-Requested-With, Content-Type, Accept'
@@ -282,7 +282,7 @@ class APIServer(threading.Thread):
                 except ValueError:
                     raise cherrypy.HTTPError(400, 'Invalid JSON document')
                 response = JSONRPCResponseManager.handle(data, dispatcher)
-                return response.json
+                return response.json.encode()
 
         cherrypy.config.update({
             'log.screen': False,
