@@ -122,7 +122,8 @@ def parse_hex (unsigned_tx_hex):
     parse_hex_cursor.execute('''SELECT * FROM transactions \
                                 WHERE tx_index=?''', (tx_index,))                         
     tx = parse_hex_cursor.fetchall()[0]                  
-    blocks.parse_tx(db, tx)
+    heaps = blocks.init_heaps(db)
+    blocks.parse_tx(db, tx, heaps)
 
     # After parsing every transaction, check that the credits, debits sum properly.
     balances = util.get_balances(db)

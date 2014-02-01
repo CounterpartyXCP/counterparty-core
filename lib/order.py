@@ -4,6 +4,7 @@ import struct
 import decimal
 D = decimal.Decimal
 import logging
+import heapq
 
 from . import (util, config, exceptions, bitcoin, util)
 
@@ -40,7 +41,7 @@ def create (db, source, give_asset, give_amount, get_asset, get_amount, expirati
                         expiration, fee_required)
     return bitcoin.transaction(source, None, None, fee_provided, data, unsigned=unsigned)
 
-def parse (db, tx, message):
+def parse (db, tx, message, order_heap, order_match_heap):
     order_parse_cursor = db.cursor()
 
     # Unpack message.
@@ -89,6 +90,8 @@ def parse (db, tx, message):
         'validity': validity,
     }
     order_parse_cursor.execute(*util.get_insert_sql('orders', element_data))
+    if validity == 'Valid':
+        heapq.heappush(order_heap, (tx['block_index'] + expiration, tx['tx_index']))
     config.zeromq_publisher.push_to_subscribers('new_order', element_data)
 
     if validity == 'Valid':
@@ -104,11 +107,11 @@ def parse (db, tx, message):
             fee_text = ''
         display_price = util.devise(db, D(get_amount) / D(give_amount), 'price', dest='output')
         logging.info('Order: sell {} {} for {} {} at {} {}/{} in {} blocks {}({})'.format(give_amount, give_asset, get_amount, get_asset, display_price, get_asset, give_asset, expiration, fee_text, util.short(tx['tx_hash'])))
-        match(db, tx)
+        match(db, tx, order_heap, order_match_heap)
 
     order_parse_cursor.close()
 
-def match (db, tx):
+def match (db, tx, order_heap, order_match_heap):
 
     order_match_cursor = db.cursor()
 
@@ -193,36 +196,58 @@ def match (db, tx):
                 'validity': validity,
             }
             order_match_cursor.execute(*util.get_insert_sql('order_matches', element_data))
+            if validity == 'Valid: awaiting BTC payment':
+                heapq.heappush(order_match_heap, (min(tx0['block_index'] + tx0['expiration'], tx0['block_index'] + tx0['expiration']), tx0['tx_index'], tx1['tx_index']))
             config.zeromq_publisher.push_to_subscribers('new_order_match', element_data)
     order_match_cursor.close()
 
-def expire (db, block_index):
-    order_expire_cursor = db.cursor()
+def expire (db, block_index, order_heap, order_match_heap):
     # Expire orders and give refunds for the amount give_remaining (if non-zero; if not BTC).
-    order_expire_cursor.execute('''SELECT * FROM orders''')
-    for order in order_expire_cursor.fetchall():
-        if order['validity'] == 'Valid' and util.get_time_left(order, block_index=block_index) < 0:
-            order_expire_cursor.execute('''UPDATE orders SET validity=? WHERE tx_hash=?''', ('Invalid: expired', order['tx_hash']))
-            if order['give_asset'] != 'BTC':    # Can't credit BTC.
-                util.credit(db, block_index, order['source'], order['give_asset'], order['give_remaining'])
-            logging.info('Expired order: {}'.format(util.short(order['tx_hash'])))
+    while True:
+        try: expire_block_index, tx_index = order_heap[0]
+        except IndexError: break
+
+        if expire_block_index >= block_index:
+            break
+        else:
+            heapq.heappop(order_heap)
+            order_expire_cursor = db.cursor()
+
+            order_expire_cursor.execute('''SELECT * FROM orders WHERE tx_index=?''', (tx_index,))
+            order = order_expire_cursor.fetchall()[0]
+            if order['validity'] == 'Valid':
+                if order['give_asset'] != 'BTC':    # Can't credit BTC.
+                    util.credit(db, block_index, order['source'], order['give_asset'], order['give_remaining'])
+                order_expire_cursor.execute('''UPDATE orders SET validity=? WHERE (validity = ? AND tx_index=?)''', ('Invalid: expired', 'Valid', tx_index))
+
+                logging.info('Expired order: {}'.format(util.short(order['tx_hash'])))
+            order_expire_cursor.close()
 
     # Expire order_matches for BTC with no BTC.
-    order_expire_cursor.execute('''SELECT * FROM order_matches''')
-    order_matches = order_expire_cursor.fetchall()
-    for order_match in order_matches:
-        if order_match['validity'] == 'Valid: awaiting BTC payment' and util.get_order_match_time_left(order_match, block_index=block_index) < 0:
-            order_expire_cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Invalid: expired awaiting BTC payment', order_match['tx0_hash'], order_match['tx1_hash']))
-            if order_match['forward_asset'] == 'BTC':
-                util.credit(db, block_index, order_match['tx1_address'],
-                                    order_match['backward_asset'],
-                                    order_match['backward_amount'])
-            elif order_match['backward_asset'] == 'BTC':
-                util.credit(db, block_index, order_match['tx0_address'],
-                                    order_match['forward_asset'],
-                                    order_match['forward_amount'])
-            logging.info('Expired Order Match awaiting BTC payment: {}'.format(util.short(order_match['tx0_hash'] + order_match['tx1_hash'])))
+    cursor = db.cursor()
+    while True:
+        try: expire_block_index, tx0_index, tx1_index = order_match_heap[0]
+        except IndexError: break
 
-    order_expire_cursor.close()
+        if expire_block_index >= block_index:
+            break
+        else:
+            heapq.heappop(order_match_heap)
+            cursor.execute('''SELECT * FROM order_matches WHERE (tx0_index=? AND tx1_index=?)''', (tx0_index, tx1_index))
+            order_match = cursor.fetchall()[0]
+
+            if order_match['validity'] == 'Valid: awaiting BTC payment':
+                cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Invalid: expired awaiting BTC payment', order_match['tx0_hash'], order_match['tx1_hash']))
+                if order_match['forward_asset'] == 'BTC':
+                    util.credit(db, block_index, order_match['tx1_address'],
+                                        order_match['backward_asset'],
+                                        order_match['backward_amount'])
+                elif order_match['backward_asset'] == 'BTC':
+                    util.credit(db, block_index, order_match['tx0_address'],
+                                        order_match['forward_asset'],
+                                        order_match['forward_amount'])
+                logging.info('Expired Order Match awaiting BTC payment: {}'.format(util.short(order_match['tx0_hash'] + order_match['tx1_hash'])))
+
+    cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

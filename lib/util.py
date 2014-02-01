@@ -157,6 +157,16 @@ def short (string):
 def isodt (epoch_time):
     return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
 
+def last_block (db):
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)''')
+    try:
+        block_index = cursor.fetchall()[0]['block_index']
+    except IndexError:
+        raise exceptions.DatabaseError('No blocks found.')
+    cursor.close()
+    return block_index
+
 def get_time_left (unmatched, block_index=None):
     """order or bet"""
     """zero time left means it expires *this* block; that is, expire when strictly less than 0"""

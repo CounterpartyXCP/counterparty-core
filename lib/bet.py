@@ -14,6 +14,7 @@ import struct
 import decimal
 D = decimal.Decimal
 import logging
+import heapq
 
 from . import (util, config, bitcoin, exceptions, util)
 
@@ -80,7 +81,7 @@ def create (db, source, feed_address, bet_type, deadline, wager_amount,
     return bitcoin.transaction(source, feed_address, config.DUST_SIZE,
                                config.MIN_FEE, data, unsigned=unsigned)
 
-def parse (db, tx, message):
+def parse (db, tx, message, bet_heap, bet_match_heap):
     bet_parse_cursor = db.cursor()
 
     # Unpack message.
@@ -145,6 +146,8 @@ def parse (db, tx, message):
         'validity': validity,
     }
     bet_parse_cursor.execute(*util.get_insert_sql('bets', element_data))
+    if validity == 'Valid':
+        heapq.heappush(bet_heap, (tx['block_index'] + expiration, tx['tx_index']))
     config.zeromq_publisher.push_to_subscribers('new_bet', element_data)
     
     # Log.
@@ -155,11 +158,11 @@ def parse (db, tx, message):
         if leverage:
             placeholder += ', leveraged {}x'.format(util.devise(db, leverage / 5040, 'leverage', 'output'))
         logging.info('Bet: {} on {} at {} for {} XCP against {} XCP in {} blocks{} for a fee of {} XCP ({})'.format(util.BET_TYPE_NAME[bet_type], feed_address, util.isodt(deadline), wager_amount / config.UNIT, counterwager_amount / config.UNIT, expiration, placeholder, util.devise(db, fee, 'XCP', 'output'), util.short(tx['tx_hash'])))
-        match(db, tx)
+        match(db, tx, bet_heap, bet_match_heap)
 
     bet_parse_cursor.close()
 
-def match (db, tx):
+def match (db, tx, bet_heap, bet_match_heap):
     bet_match_cursor = db.cursor()
 
     # Get bet in question.
@@ -266,41 +269,56 @@ def match (db, tx):
                 'validity': 'Valid',
             }
             bet_match_cursor.execute(*util.get_insert_sql('bet_matches', element_data))
+            heapq.heappush(bet_match_heap, (tx1['deadline'], tx0['tx_index'], tx1['tx_index']))
             config.zeromq_publisher.push_to_subscribers('new_bet_match', element_data)
     bet_match_cursor.close()
 
-def expire (db, block_index):
+def expire (db, block_index, block_time, bet_heap, bet_match_heap):
     # Expire bets and give refunds for the amount wager_remaining.
-    bet_expire_cursor = db.cursor()
-    bet_expire_cursor.execute('''SELECT * FROM bets
-                                 WHERE validity = ?''', ('Valid',))
-    for bet in bet_expire_cursor.fetchall():
-        if util.get_time_left(bet, block_index=block_index) < 0:
-            bet_expire_cursor.execute('''UPDATE bets SET validity=? WHERE tx_hash=?''', ('Invalid: expired', bet['tx_hash']))
-            util.credit(db, block_index, bet['source'], 'XCP', round(bet['wager_remaining'] * (1 + bet['fee_multiplier'] / 1e8)))
-            logging.info('Expired bet: {}'.format(util.short(bet['tx_hash'])))
-    bet_expire_cursor.close()
+    while True:
+        try: expire_block_index, tx_index = bet_heap[0]
+        except IndexError: break
 
-    # Expire bet matches whose deadline was passed 2016 blocks ago.
-    bet_expire_match_cursor = db.cursor()
-    bet_expire_match_cursor.execute('''SELECT * FROM blocks \
-                                       WHERE block_index<=?''',
-                                    (block_index - 2016,)
-                                   )
-    bet_matches = util.get_bet_matches(db, validity='Valid', order_by='tx1_index', order_dir='asc')
-    for old_block in bet_expire_match_cursor.fetchall():
-        for bet_match in bet_matches:
-            if bet_match['deadline'] < old_block['block_time']:
-                bet_expire_match_cursor.execute('''UPDATE bet_matches \
-                                              SET validity=? \
-                                              WHERE (tx0_hash=? AND tx1_hash=?)''', ('Invalid: expired awaiting broadcast', bet_match['tx0_hash'], bet_match['tx1_hash'])
-                                             )
-                util.credit(db, block_index, bet_match['tx0_address'], 'XCP',
-                            round(bet_match['forward_amount'] * (1 + bet_match['fee_multiplier'] / 1e8)))
-                util.credit(db, block_index, bet_match['tx1_address'], 'XCP',
-                            round(bet_match['backward_amount'] * (1 + bet_match['fee_multiplier'] / 1e8)))
-                logging.info('Expired Bet Match: {}'.format(util.short(bet_match['tx0_hash'] + bet_match['tx1_hash'])))
+        if expire_block_index >= block_index: break
+        else:
+            print('foo')
+            heapq.heappop(bet_heap)
+            cursor = db.cursor()
 
-    bet_expire_match_cursor.close()
+            cursor.execute('''SELECT * FROM bets WHERE tx_index=?''', (tx_index,))
+            bet = cursor.fetchall()[0]
+            if bet['validity'] == 'Valid':
+                util.credit(db, block_index, bet['source'], 'XCP', round(bet['wager_remaining'] * (1 + bet['fee_multiplier'] / 1e8)))
+                cursor.execute('''UPDATE bets SET validity=? WHERE (validity = ? AND tx_index=?)''', ('Invalid: expired', 'Valid', tx_index))
+
+                logging.info('Expired bet: {}'.format(util.short(bet['tx_hash'])))
+            cursor.close()
+
+    # Expire bet matches whose deadline is more than two weeks before the current block time.
+    cursor = db.cursor()
+    while True:
+        try: deadline, tx0_index, tx1_index = bet_match_heap[0]
+        except IndexError: break
+
+        if deadline >= block_time + config.TWO_WEEKS:
+            break
+        else:
+            heapq.heappop(bet_match_heap)
+
+            # Get details of bet in question.
+            cursor.execute('''SELECT * FROM bet_matches WHERE (validity = ? AND tx0_index = ? AND tx1_index = ?)''', ('Valid', tx0_index, tx1_index))
+            bet_match = cursor.fetchall()[0]
+
+            util.credit(db, block_index, bet_match['tx0_address'], 'XCP',
+                        round(bet_match['forward_amount'] * (1 + bet_match['fee_multiplier'] / 1e8)))
+            util.credit(db, block_index, bet_match['tx1_address'], 'XCP',
+                        round(bet_match['backward_amount'] * (1 + bet_match['fee_multiplier'] / 1e8)))
+            cursor.execute('''UPDATE bet_matches \
+                              SET validity=? \
+                              WHERE (tx0_index=? AND tx1_index=?)''', ('Invalid: expired awaiting broadcast', tx0_index, tx1_index)
+                          )
+
+            logging.info('Expired Bet Match: {}'.format(util.short(bet_match['tx0_hash'] + bet_match['tx1_hash'])))
+    cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
