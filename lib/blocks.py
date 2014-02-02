@@ -569,15 +569,6 @@ def follow (db):
     heaps = init_heaps(db)
 
     while True:
-
-        # Reparse all transactions if minor version changes.
-        minor_version = follow_cursor.execute('PRAGMA user_version').fetchall()[0]['user_version']
-        if minor_version != config.DB_VERSION_MINOR:
-            logging.info('Status: Database and client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.DB_VERSION_MINOR))
-            reparse(db, quiet=False)
-            minor_version = follow_cursor.execute('PRAGMA user_version = {}'.format(int(config.DB_VERSION_MINOR)))
-            logging.info('Status: Database minor version number updated.')
-
         # Get index of last block.
         try:
             block_index = util.last_block(db)['block_index'] + 1
@@ -589,6 +580,14 @@ def follow (db):
             # (such as counterwalletd) can then get this and clear our their data as well, so they don't get
             # duplicated data in the event of a new DB version
 
+        # Reparse all transactions if minor version changes.
+        if block_index != config.BLOCK_FIRST:
+            minor_version = follow_cursor.execute('PRAGMA user_version').fetchall()[0]['user_version']
+            if minor_version != config.DB_VERSION_MINOR:
+                logging.info('Status: Database and client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.DB_VERSION_MINOR))
+                reparse(db, quiet=False)
+                minor_version = follow_cursor.execute('PRAGMA user_version = {}'.format(int(config.DB_VERSION_MINOR)))
+                logging.info('Status: Database minor version number updated.')
 
         # Get index of last transaction.
         try:
