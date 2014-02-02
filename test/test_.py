@@ -365,8 +365,9 @@ def test_json_rpc():
 
     for payload in payloads:
         response = requests.post(
-            url, data=json.dumps(payload), headers=headers, auth=auth).json()
-        response = json.loads(response) # Wierd
+                url, data=json.dumps(payload), headers=headers, auth=auth)
+        response = json.loads(response.text)    # WTF
+        response = json.loads(response)         # WTF
         try:
             output_new['rpc.' + payload['method']] = response['result']
         except:

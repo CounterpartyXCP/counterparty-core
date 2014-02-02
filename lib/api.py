@@ -158,7 +158,7 @@ class APIServer(threading.Thread):
                 start_block=start_block,
                 end_block=end_block,
                 filterop=filterop)
-
+        
         @dispatcher.add_method
         def get_order_matches (filters=None, is_valid=True, is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_order_matches(db,
@@ -268,7 +268,8 @@ class APIServer(threading.Thread):
             @cherrypy.expose
             @cherrypy.tools.json_out()
             def index(self):
-                cherrypy.response.headers["Access-Control-Allow-Origin"] = '*'
+                cherrypy.response.headers["Content-Type"] = "application/json"
+                cherrypy.response.headers["Access-Control-Allow-Origin"] = '*' 
                 cherrypy.response.headers["Access-Control-Allow-Methods"] = 'POST, GET, OPTIONS'
                 cherrypy.response.headers["Access-Control-Allow-Headers"] = 'Origin, X-Requested-With, Content-Type, Accept'
 
