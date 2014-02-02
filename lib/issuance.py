@@ -17,8 +17,6 @@ ID = 20
 def validate (db, source, destination, asset, amount, divisible, callable_, call_date, call_price, description, block_index=None):
     problems = []
 
-    if not util.valid_asset_name(asset):
-        problems.append('bad asset name')
     if asset in ('BTC', 'XCP'):
         problems.append('cannot issue BTC or XCP')
 
@@ -78,7 +76,10 @@ def parse (db, tx, message):
         else:
             asset_id, amount, divisible = struct.unpack(FORMAT_1, message)
             callable_, call_date, call_price, description = None, None, None, ''
-        asset = util.get_asset_name(asset_id)
+        try:
+            asset = util.get_asset_name(asset_id)
+        except:
+            validity = 'Invalid: bad asset name'
         validity = 'Valid'
     except struct.error:
         asset, amount, divisible, callable_, call_date, call_price, description = None, None, None, None, None, None, None

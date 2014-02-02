@@ -37,7 +37,9 @@ class Base58ChecksumError (Base58Error):
 
 class AssetError (Exception):
     pass
-class Base26Error (AssetError):
+class AssetNameError (AssetError):
+    pass
+class AssetIDError (AssetError):
     pass
 
 class MessageError (Exception):

@@ -9,7 +9,7 @@ import operator
 from operator import itemgetter
 import apsw
 
-from . import (config, exceptions, bitcoin)
+from . import (config, exceptions, bitcoin, checksum)
 
 b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
@@ -176,34 +176,28 @@ def get_match_time_left (db, matched, block_index=None):
     tx1_time_left = matched['tx1_block_index'] + matched['tx1_expiration'] - block_index
     return min(tx0_time_left, tx1_time_left)
 
-def valid_asset_name (asset_name):
-    if asset_name in ('BTC', 'XCP'): return True
-    if len(asset_name) < 4: return False
-    for c in asset_name:
-        if c not in b26_digits:
-            return False
-    return True
-
 def get_asset_id (asset):
-    if not valid_asset_name(asset): raise exceptions.AssetError('Invalid asset name.')
+    # Special cases.
     if asset == 'BTC': return 0
     elif asset == 'XCP': return 1
 
+    # Checksum
+    if not checksum.verify(asset):
+        raise exceptions.AssetNameError('invalid checksum')
+    else:
+        asset = asset[:-1]  # Strip checksum character.
+
     # Convert the Base 26 string to an integer.
     n = 0
-    s = asset
-    for c in s:
+    for c in asset:
         n *= 26
         if c not in b26_digits:
-            raise exceptions.InvalidBase26Error('Not an uppercase ASCII character:', c)
+            raise exceptions.AssetNameError('invalid character:', c)
         digit = b26_digits.index(c)
         n += digit
 
-    if get_asset_name(n) != asset:
-        raise exceptions.AssetError('Invalid asset name.')
-
     if not n > 26**3:
-        raise exceptions.AssetError('Invalid asset name.')
+        raise exceptions.AssetNameError('too short')
 
     return n
 
@@ -212,7 +206,7 @@ def get_asset_name (asset_id):
     elif asset_id == 1: return 'XCP'
 
     if not asset_id > 26**3:
-        raise exceptions.AssetError('Invalid asset name.')
+        raise exceptions.AssetIDError('too low')
 
     # Divide that integer into Base 26 string.
     res = []
@@ -220,12 +214,9 @@ def get_asset_name (asset_id):
     while n > 0:
         n, r = divmod (n, 26)
         res.append(b26_digits[r])
-    asset = ''.join(res[::-1])
+    asset_name = ''.join(res[::-1])
 
-    if not valid_asset_name(asset):
-        raise exceptions.AssetError('Invalid asset name.')
-
-    return asset
+    return asset_name + checksum.compute(asset_name)
 
 
 def debit (db, block_index, address, asset, amount):

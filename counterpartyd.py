@@ -20,7 +20,7 @@ import dateutil.parser
 from datetime import datetime
 from threading import Thread
 
-from lib import (config, api, util, exceptions, bitcoin, blocks)
+from lib import (config, api, util, exceptions, bitcoin, blocks, checksum)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
@@ -254,6 +254,9 @@ if __name__ == '__main__':
 
     parser_rollback = subparsers.add_parser('rollback', help='rollback database (WARNING: not thread‐safe)')
     parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
+
+    parser_checksum = subparsers.add_parser('checksum', help='create an asset name from a base string')
+    parser_checksum.add_argument('string', help='base string of the desired asset name')
 
     args = parser.parse_args()
 
@@ -588,8 +591,10 @@ if __name__ == '__main__':
             call_price = issuances[-1]['call_price']
             description = issuances[-1]['description']
 
+        asset_id = util.get_asset_id(args.asset)
+
         print('Asset Name:', args.asset)
-        print('Asset ID:', util.get_asset_id(args.asset))
+        print('Asset ID:', asset_id)
         print('Total Issued:', total)
         print('Divisible:', divisible)
         print('Issuer:', issuer)
@@ -643,14 +648,17 @@ if __name__ == '__main__':
     elif args.action == 'rollback':
         blocks.rollback(db, args.block_index)
 
-    elif args.action == 'help':
-        parser.print_help()
+    elif args.action == 'checksum':
+        print('Asset name:', args.string + checksum.compute(args.string))
 
     elif args.action == 'server':
         api_server = api.APIServer()
         api_server.daemon = True
         api_server.start()
         blocks.follow(db)
+
+    elif args.action == 'help':
+        parser.print_help()
 
     else:
         parser.print_help()

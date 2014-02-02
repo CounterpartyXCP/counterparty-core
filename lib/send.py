@@ -16,7 +16,6 @@ def validate (db, source, destination, amount, asset):
     problems = []
 
     if asset == 'BTC': problems.append('cannot send bitcoins')
-    if not util.valid_asset_name(asset): problems.append('bad asset ID')
     if not amount: problems.append('zero quantity')
 
     return problems

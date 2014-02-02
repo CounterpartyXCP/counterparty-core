@@ -208,28 +208,28 @@ def test_btcpay ():
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_issuance_divisible ():
-    unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBB', quantity * 10, True, False, 0, 0.0, '')
+    unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBBE', quantity * 10, True, False, 0, 0.0, '')
 
     parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_issuance_indivisible_callable ():
-    unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBC', round(quantity / 1000), False, True, 1288855692, 0.015, 'foobar')
+    unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBCD', round(quantity / 1000), False, True, 1288855692, 0.015, 'foobar')
 
     parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_dividend_divisible ():
-    unsigned_tx_hex = dividend.create(db, source_default, 6, 'BBBB')
+    unsigned_tx_hex = dividend.create(db, source_default, 6, 'BBBBE')
 
     parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_dividend_indivisible ():
-    unsigned_tx_hex = dividend.create(db, source_default, 8, 'BBBC')
+    unsigned_tx_hex = dividend.create(db, source_default, 8, 'BBBCD')
 
     parse_hex(unsigned_tx_hex)
 
@@ -306,7 +306,7 @@ def test_broadcast_equal ():
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_order_to_be_cancelled ():
-    unsigned_tx_hex = order.create(db, source_default, 'BBBB', small, 'XCP', small, expiration, 0, config.MIN_FEE)
+    unsigned_tx_hex = order.create(db, source_default, 'BBBBE', small, 'XCP', small, expiration, 0, config.MIN_FEE)
 
     parse_hex(unsigned_tx_hex)
 
@@ -327,14 +327,14 @@ def test_overburn ():
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_send_callable ():
-    unsigned_tx_hex = send.create(db, source_default, destination_default, 10000, 'BBBC')
+    unsigned_tx_hex = send.create(db, source_default, destination_default, 10000, 'BBBCD')
 
     parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_callback ():
-    unsigned_tx_hex = callback.create(db, source_default, .3, 'BBBC')
+    unsigned_tx_hex = callback.create(db, source_default, .3, 'BBBCD')
 
     parse_hex(unsigned_tx_hex)
 

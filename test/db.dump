@@ -14,9 +14,9 @@ CREATE TABLE balances(
                         amount INTEGER);
 INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',145431612500);
 INSERT INTO balances VALUES('n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',4550000000);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',950000000);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',93000);
-INSERT INTO balances VALUES('n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',7000);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBBE',950000000);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBCD',93000);
+INSERT INTO balances VALUES('n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBCD',7000);
 -- Triggers and indices on  balances
 CREATE INDEX balances_address_idx ON balances (address)
                     ;
@@ -151,7 +151,7 @@ CREATE TABLE callbacks(
                         fraction_per_share TEXT,
                         asset TEXT,
                         validity TEXT);
-INSERT INTO callbacks VALUES(23,'8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034',23,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','0.3','BBBC','Valid');
+INSERT INTO callbacks VALUES(23,'8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034',23,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','0.3','BBBCD','Valid');
 -- Triggers and indices on  callbacks
 CREATE INDEX callbacks_block_index_idx ON callbacks (block_index)
                     ;
@@ -180,8 +180,8 @@ CREATE TABLE credits(
 INSERT INTO credits VALUES(0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',93000000000);
 INSERT INTO credits VALUES(1,'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',50000000);
 INSERT INTO credits VALUES(4,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',100000000);
-INSERT INTO credits VALUES(5,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',1000000000);
-INSERT INTO credits VALUES(6,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',100000);
+INSERT INTO credits VALUES(5,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBBE',1000000000);
+INSERT INTO credits VALUES(6,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBCD',100000);
 INSERT INTO credits VALUES(7,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',60);
 INSERT INTO credits VALUES(8,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',800000);
 INSERT INTO credits VALUES(16,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',62250000);
@@ -192,8 +192,8 @@ INSERT INTO credits VALUES(17,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',2500000
 INSERT INTO credits VALUES(18,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',1400000000);
 INSERT INTO credits VALUES(18,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',70000000);
 INSERT INTO credits VALUES(21,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',57000000000);
-INSERT INTO credits VALUES(22,'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',10000);
-INSERT INTO credits VALUES(23,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',3000);
+INSERT INTO credits VALUES(22,'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBCD',10000);
+INSERT INTO credits VALUES(23,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBCD',3000);
 INSERT INTO credits VALUES(23,'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',4500000000);
 -- Triggers and indices on  credits
 CREATE INDEX credits_address_idx ON credits (address)
@@ -222,10 +222,10 @@ INSERT INTO debits VALUES(14,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',75000000
 INSERT INTO debits VALUES(14,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',37500000);
 INSERT INTO debits VALUES(15,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',650000000);
 INSERT INTO debits VALUES(15,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',32500000);
-INSERT INTO debits VALUES(19,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',50000000);
-INSERT INTO debits VALUES(22,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',10000);
+INSERT INTO debits VALUES(19,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBBE',50000000);
+INSERT INTO debits VALUES(22,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBCD',10000);
 INSERT INTO debits VALUES(23,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',4500000000);
-INSERT INTO debits VALUES(23,'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',3000);
+INSERT INTO debits VALUES(23,'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBCD',3000);
 -- Triggers and indices on  debits
 CREATE INDEX debits_address_idx ON debits (address)
                     ;
@@ -240,8 +240,8 @@ CREATE TABLE dividends(
                         asset TEXT,
                         amount_per_share INTEGER,
                         validity TEXT);
-INSERT INTO dividends VALUES(7,'ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879',7,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',6,'Valid');
-INSERT INTO dividends VALUES(8,'beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a',8,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',8,'Valid');
+INSERT INTO dividends VALUES(7,'ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879',7,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBBE',6,'Valid');
+INSERT INTO dividends VALUES(8,'beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a',8,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBCD',8,'Valid');
 -- Triggers and indices on  dividends
 CREATE INDEX dividends_block_index_idx ON dividends (block_index)
                     ;
@@ -264,8 +264,8 @@ CREATE TABLE issuances(
                         fee_paid INTEGER,
                         validity TEXT
                         );
-INSERT INTO issuances VALUES(5,'e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db',5,'BBBB',1000000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'',0,'Valid');
-INSERT INTO issuances VALUES(6,'67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6',6,'BBBC',100000,0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1,1288855692,0.015,'foobar',0,'Valid');
+INSERT INTO issuances VALUES(5,'e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db',5,'BBBBE',1000000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'',0,'Valid');
+INSERT INTO issuances VALUES(6,'67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6',6,'BBBCD',100000,0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1,1288855692,0.015,'foobar',0,'Valid');
 -- Triggers and indices on  issuances
 CREATE INDEX issuances_idx ON issuances (block_index)
                     ;
@@ -312,7 +312,7 @@ CREATE TABLE orders(
                         validity TEXT);
 INSERT INTO orders VALUES(2,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986',2,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BTC',50000000,0,'XCP',100000000,0,10,0,1000000,'Valid');
 INSERT INTO orders VALUES(3,'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5',3,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',105000000,5000000,'BTC',50000000,0,10,900000,10000,'Valid');
-INSERT INTO orders VALUES(19,'ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2',19,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',50000000,50000000,'XCP',50000000,50000000,10,0,10000,'Invalid: cancelled');
+INSERT INTO orders VALUES(19,'ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2',19,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBBE',50000000,50000000,'XCP',50000000,50000000,10,0,10000,'Invalid: cancelled');
 -- Triggers and indices on  orders
 CREATE INDEX orders_block_index_idx ON orders (block_index)
                     ;
@@ -329,7 +329,7 @@ CREATE TABLE sends(
                         amount INTEGER,
                         validity TEXT);
 INSERT INTO sends VALUES(1,'4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a',1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',50000000,'Valid');
-INSERT INTO sends VALUES(22,'7cb7c4547cf2653590d7a9ace60cc623d25148adfbc88a89aeb0ef88da7839ba',22,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',10000,'Valid');
+INSERT INTO sends VALUES(22,'7cb7c4547cf2653590d7a9ace60cc623d25148adfbc88a89aeb0ef88da7839ba',22,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBCD',10000,'Valid');
 -- Triggers and indices on  sends
 CREATE INDEX sends_block_index_idx ON sends (block_index)
                     ;
