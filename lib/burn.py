@@ -61,13 +61,12 @@ def parse (db, tx, message=None):
         partial_time = D(config.BURN_END - tx['block_index'])
         multiplier = 1000 * (1 + D(.5) * (partial_time / total_time))
         earned = round(burned * multiplier)
+
+        # Credit source address with earned XCP.
+        util.credit(db, tx['source'], 'XCP', earned)
     else:                                                                       
         burned = 0
         earned = 0
-
-    # Credit source address with earned XCP.
-    if validity == 'Valid':
-        util.credit(db, tx['source'], 'XCP', earned)
 
     # Add parsed transaction to message-type–specific table.
     # TODO: store sent in table
