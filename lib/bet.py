@@ -169,9 +169,9 @@ def match (db, tx):
 
     feed_address = tx1['feed_address']
     bet_match_cursor.execute('''SELECT * FROM bets\
-                      WHERE (feed_address=? AND block_index>=? AND validity=? AND bet_type=?) \
+                      WHERE (feed_address=? AND validity=? AND bet_type=?) \
                       ORDER BY odds DESC, tx_index''',
-                   (tx1['feed_address'], tx1['block_index'] - tx1['expiration'], 'Valid', counterbet_type))
+                   (tx1['feed_address'], 'Valid', counterbet_type))
     wager_remaining = D(tx1['wager_remaining'])
     bet_matches = bet_match_cursor.fetchall()
     for tx0 in bet_matches:
