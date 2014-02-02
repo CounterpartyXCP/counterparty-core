@@ -291,7 +291,6 @@ def expire (db, block_index, block_time, bet_heap, bet_match_heap):
 
         if expire_block_index >= block_index: break
         else:
-            print('foo')
             heapq.heappop(bet_heap)
             cursor = db.cursor()
 

@@ -40,7 +40,7 @@ def connect_to_db():
 
 def get_insert_sql(table_name, element_data):
     """Takes a mapping of element data and a table name, and produces an INSERT statement suitable for a sqlite3 cursor.execute() operation"""
-    #NOTE: keys() and values() return in the same order if dict is not modified: http://docs.python.org/2/library/stdtypes.html#dict.items
+    #NOTE: keys() and values() return in the same order if dict is not modified: http://docs.python.org/3/library/stdtypes.html#dict.items
     k, v = (element_data.keys(), element_data.values())
     return [ "INSERT INTO %s(%s) VALUES(%s)" % (
         table_name, ','.join(k), ','.join(['?' for i in range(len(v))])), v ]
@@ -147,7 +147,7 @@ def get_limit_to_blocks(start_block, end_block, col_names=['block_index',]):
 def short (string):
     if len(string) == 64: length = 8
     elif len(string) == 128: length = 16
-    short = string[:length] + '...' + string[-length:]
+    short = string[:length] + '…' + string[-length:]
     return short
 
 def isodt (epoch_time):
