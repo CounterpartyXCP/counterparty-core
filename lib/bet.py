@@ -178,9 +178,10 @@ def match (db, tx, bet_heap, bet_match_heap):
     else: counterbet_type = tx1['bet_type'] + 1
 
     feed_address = tx1['feed_address']
+
     bet_match_cursor.execute('''SELECT * FROM bets\
-                             WHERE (feed_address=? AND block_index>=? AND validity=? AND bet_type=?)''',
-                             (tx1['feed_address'], tx1['block_index'] - tx1['expiration'], 'Valid', counterbet_type))
+                             WHERE (feed_address=? AND validity=? AND bet_type=?)''',
+                             (tx1['feed_address'], 'Valid', counterbet_type))
     wager_remaining = tx1['wager_remaining']
     counterwager_remaining = tx1['counterwager_remaining']
     bet_matches = bet_match_cursor.fetchall()
@@ -222,7 +223,6 @@ def match (db, tx, bet_heap, bet_match_heap):
             forward_amount = int(min(D(tx0['wager_remaining']), D(wager_remaining) / tx1_odds))
             if not forward_amount: continue
             backward_amount = round(D(forward_amount) / tx0_odds)
-
             bet_match_id = tx0['tx_hash'] + tx1['tx_hash']
 
             # Log.
