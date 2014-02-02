@@ -255,11 +255,11 @@ if __name__ == '__main__':
     parser_issuance.add_argument('--callable', dest='callable_', action='store_true', help='whether or not the asset is callable (must agree with previous issuances)')
     parser_issuance.add_argument('--call-date', help='the date from which a callable asset may be called back (must agree with previous issuances)')
     parser_issuance.add_argument('--call-price', help='the price at which a callable asset may be called back (must agree with previous issuances)')
-    parser_issuance.add_argument('--description', required=True, help='a description of the asset')
+    parser_issuance.add_argument('--description', type=str, required=True, help='a description of the asset')
 
     parser_broadcast = subparsers.add_parser('broadcast', help='broadcast textual and numerical information to the network')
     parser_broadcast.add_argument('--source', required=True, help='the source address')
-    parser_broadcast.add_argument('--text', required=True, help='the textual part of the broadcast')
+    parser_broadcast.add_argument('--text', type=str, required=True, help='the textual part of the broadcast')
     parser_broadcast.add_argument('--value', type=float, default=0, help='numerical value of the broadcast')
     parser_broadcast.add_argument('--fee-multiplier', required=True, help='how much of every bet on this feed should go to its operator; a fraction of 1, (i.e. .05 is five percent)')
 
