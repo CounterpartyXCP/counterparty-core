@@ -396,7 +396,6 @@ def get_sends (db, validity=None, source=None, destination=None, filters=None, o
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-# TODO: not ordering by price anymore (need to implement proper ordering)
 def get_orders (db, validity=None, source=None, show_empty=True, show_expired=True, filters=None, order_by=None, order_dir='asc', start_block=None, end_block=None, filterop='and'):
     def filter_expired(e):
         #Ignore BTC orders one block early. (This is why we need show_expired.)
@@ -459,7 +458,7 @@ def get_issuances (db, validity=None, asset=None, issuer=None, filters=None, ord
     if asset: filters.append({'field': 'asset', 'op': '==', 'value': asset})
     if issuer: filters.append({'field': 'issuer', 'op': '==', 'value': issuer})
     # TODO: callable, call_date (range?), call_price (range?)
-    # TODO: Description search
+    # TODO: description search
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM issuances%s'''
          % get_limit_to_blocks(start_block, end_block))
@@ -479,7 +478,6 @@ def get_broadcasts (db, validity=None, source=None, filters=None, order_by='tx_i
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-# TODO: not ordering by price anymore (need to implement proper ordering)
 def get_bets (db, validity=None, source=None, show_empty=True, filters=None, order_by=None, order_dir='desc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]

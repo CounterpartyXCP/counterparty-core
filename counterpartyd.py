@@ -75,7 +75,7 @@ def market (give_asset, get_asset):
     print(str(table))
 
 
-def address (address):
+def balances (address):
     def get_btc_balance(address):
         r = requests.get("https://blockchain.info/q/addressbalance/" + address)
         # ^any other services that provide this?? (blockexplorer.com doesn't...)
@@ -97,59 +97,6 @@ def address (address):
         table.add_row([asset, amount])
     print('Balances')
     print(str(table))
-    print('\n')
-
-    # Burns.
-    burns = address_data['burns']
-    table = PrettyTable(['Block Index', 'Burned', 'Earned', 'Tx Hash'])
-    for burn in burns:
-        burned = util.devise(db, burn['burned'], 'BTC', 'output')
-        earned = util.devise(db, burn['earned'], 'BTC', 'output')
-        table.add_row([burn['block_index'], burned + ' BTC', earned + ' XCP', util.short(burn['tx_hash'])])
-    print('Burns')
-    print(str(table))
-    print('\n')
-
-    # Sends.
-    sends = address_data['sends']
-    table = PrettyTable(['Amount', 'Asset', 'Source', 'Destination', 'Tx Hash'])
-    for send in sends:
-        amount = util.devise(db, send['amount'], send['asset'], 'output')
-        asset = send['asset']
-        table.add_row([amount, asset, send['source'], send['destination'], util.short(send['tx_hash'])])
-    print('Sends')
-    print(str(table))
-    print('\n')
-
-    """
-    # Orders.
-    orders = address_data['orders']
-    json_print(orders)
-    table = PrettyTable(['Amount', 'Asset', 'Source', 'Destination', 'Tx Hash'])
-    for order in orders:
-        amount = util.devise(db, order['amount'], order['asset'], 'output')
-        asset = order['asset']
-        table.add_row([amount, asset, order['source'], order['destination'], util.short(order['tx_hash'])])
-    print('orders')
-    print(str(table))
-    print('\n')
-    """
-
-    """
-    # order_matches.
-    order_matches = address_data['order_matches']
-    json_print(order_matches)
-    table = PrettyTable(['Give', 'Get', 'Source', 'Destination', 'Tx Hash'])
-    for order_match in order_matches:
-        amount = util.devise(db, order_match['amount'], order['asset'], 'output')
-        asset = order_match['asset']
-        table.add_row([amount, asset, order_match['source'], order_match['destination'], util.short(order_match['tx_hash'])])
-    print('order_matches')
-    print(str(table))
-    print('\n')
-    """
-    # TODO
-
 
 def format_order (order):
     give_amount = util.devise(db, D(order['give_amount']), order['give_asset'], 'output')
@@ -291,7 +238,7 @@ if __name__ == '__main__':
     parser_callback.add_argument('--fraction-per-share', required=True, help='the fraction of ASSET to call back')
     parser_callback.add_argument('--asset', required=True, help='the asset to callback')
 
-    parser_address = subparsers.add_parser('address', help='display the history of a Counterparty address')
+    parser_address = subparsers.add_parser('balances', help='display the balances of a Counterparty address')
     parser_address.add_argument('address', help='the address you are interested in')
 
     parser_asset = subparsers.add_parser('asset', help='display the basic properties of a Counterparty asset')
@@ -602,13 +549,13 @@ if __name__ == '__main__':
                                    args.asset, unsigned=args.unsigned)
         print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
-    elif args.action == 'address':
+    elif args.action == 'balances':
         try:
             bitcoin.base58_decode(args.address, config.ADDRESSVERSION)
         except Exception:
             raise exceptions.InvalidAddressError('Invalid Bitcoin address:',
                                                   args.address)
-        address(args.address)
+        balances(args.address)
 
     elif args.action == 'asset':
         # TODO: Use API
