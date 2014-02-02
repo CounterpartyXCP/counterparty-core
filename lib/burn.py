@@ -48,12 +48,13 @@ def parse (db, tx, message=None):
     elif tx['block_index'] > config.BURN_END:
         validity = 'Invalid: too late'
 
+    ONE_BTC = 1 * config.UNIT
+    burns = util.get_burns(db, validity='Valid', address=tx['source'])
+    already_burned = sum([burn['burned'] for burn in burns])
+    max_burn = ONE_BTC - already_burned
+
     # Calculate quantity of XPC earned. (Maximum 1 BTC in total, ever.)
     if validity == 'Valid':
-        burns = util.get_burns(db, validity='Valid', address=tx['source'])
-        already_burned = sum([burn['burned'] for burn in burns])
-        ONE_BTC = 1 * config.UNIT
-        max_burn = ONE_BTC - already_burned
         if sent > max_burn: burned = max_burn   # Exceeded maximum burn; earn what you can.
         else: burned = sent
 
@@ -65,6 +66,15 @@ def parse (db, tx, message=None):
     # Credit source address with earned XCP.
     if validity == 'Valid':
         util.credit(db, tx['source'], 'XCP', earned)
+    else:
+        # invalid attempt at burn
+        earned = 0
+
+        # a certain amount was burned but not earned
+        if sent > max_burn:
+            burned = max_burn
+        else:
+            burned = sent
 
     # Add parsed transaction to message-type–specific table.
     # TODO: store sent in table
