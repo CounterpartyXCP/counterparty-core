@@ -61,7 +61,7 @@ def validate (db, source, timestamp, value, fee_multiplier, text):
 
 def create (db, source, timestamp, value, fee_multiplier, text, unsigned=False):
     # Use a magic number to store the fee multplier as an integer.
-    fee_multiplier = round(D(fee_multiplier) * D(1e8))
+    fee_multiplier = int(D(fee_multiplier) * D(1e8))
 
     problems = validate(db, source, timestamp, value, fee_multiplier, text)
     if problems: raise exceptions.BroadcastError(problems)
@@ -137,7 +137,7 @@ def parse (db, tx, message):
         # Calculate total funds held in escrow and total fee to be paid if
         # the bet match is settled.
         total_escrow = bet_match['forward_amount'] + bet_match['backward_amount']
-        fee_fraction = bet_match['fee_multiplier'] / 1e8
+        fee_fraction = D(bet_match['fee_multiplier']) / D(1e8)
         fee = round(total_escrow * fee_fraction)
 
         # Get known bet match type IDs.
@@ -165,8 +165,10 @@ def parse (db, tx, message):
             leverage = D(bet_match['leverage']) / 5040
             initial_value = bet_match['initial_value']
 
-            bear_credit = round(bear_escrow - D(value - initial_value) * leverage * config.UNIT)
-            bull_credit = total_escrow - bear_credit
+            bear_credit = D(bear_escrow) - (D(value) - D(initial_value)) * D(leverage) * D(config.UNIT)
+            bull_credit = D(total_escrow) - bear_credit
+            bear_credit = round(bear_credit)
+            bull_credit = round(bull_credit)
 
             if bet_match['validity'] == 'Valid':
                 # Liquidate, as necessary.

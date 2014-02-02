@@ -27,17 +27,12 @@ json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
 
 def market (give_asset, get_asset):
-    # TODO: Regularly check if DB is up‐to‐date. (Just use API?!)
-    os.system('cls' if os.name=='nt' else 'clear')
-
     # Open orders.
     orders = util.get_orders(db, validity='Valid', show_expired=False, show_empty=False)
-    table = PrettyTable(['Give Quantity', 'Give Asset', 'Get Quantity', 'Get Asset', 'Price', 'Price Assets', 'Fee', 'Time Left', 'Tx Hash'])
+    table = PrettyTable(['Give Quantity', 'Give Asset', 'Price', 'Price Assets', 'Fee', 'Time Left', 'Tx Hash'])
     for order in orders:
-        if give_asset and order['give_asset'] != give_asset:
-            continue
-        if get_asset and order['get_asset'] != get_asset:
-            continue
+        if give_asset and order['give_asset'] != give_asset: continue
+        if get_asset and order['get_asset'] != get_asset: continue
         order = format_order(order)
         table.add_row(order)
     print('Open Orders')
@@ -46,7 +41,7 @@ def market (give_asset, get_asset):
 
     # Open bets.
     bets = util.get_bets(db, validity='Valid', show_empty=False)
-    table = PrettyTable(['Bet Type', 'Feed Address', 'Deadline', 'Target Value', 'Leverage', 'Wager', 'Counterwager', 'Odds', 'Time Left', 'Tx Hash'])
+    table = PrettyTable(['Bet Type', 'Feed Address', 'Deadline', 'Target Value', 'Leverage', 'Wager', 'Odds', 'Time Left', 'Tx Hash'])
     for bet in bets:
         bet = format_bet(bet)
         table.add_row(bet)
@@ -78,8 +73,6 @@ def market (give_asset, get_asset):
             continue
     print('Feeds')
     print(str(table))
-
-    time.sleep(30)
 
 
 def address (address):
@@ -159,17 +152,18 @@ def address (address):
 
 
 def format_order (order):
+    give_amount = util.devise(db, D(order['give_amount']), order['give_asset'], 'output')
+    get_amount = util.devise(db, D(order['get_amount']), order['get_asset'], 'output')
     give_remaining = util.devise(db, D(order['give_remaining']), order['give_asset'], 'output')
-    get_remaining = util.devise(db, round(D(order['give_remaining']) * D(order['price'])), order['get_asset'], 'output')
-
+    get_remaining = util.devise(db, D(order['get_remaining']), order['get_asset'], 'output')
     give_asset = order['give_asset']
     get_asset = order['get_asset']
 
     if get_asset < give_asset:
-        price = util.devise(db, D(get_remaining) / D(give_remaining), 'price', 'output')
+        price = util.devise(db, D(order['get_amount']) / D(order['give_amount']), 'price', 'output')
         price_assets = get_asset + '/' + give_asset
     else:
-        price = util.devise(db, D(give_remaining) / D(get_remaining), 'price', 'output')
+        price = util.devise(db, D(order['give_amount']) / D(order['get_amount']), 'price', 'output')
         price_assets = give_asset + '/' + get_asset
 
     if order['fee_required']:
@@ -177,20 +171,17 @@ def format_order (order):
     else:
         fee = str(order['fee_provided'] / config.UNIT)
 
-    return [D(give_remaining), give_asset, D(get_remaining), get_asset, price, price_assets, fee, util.get_time_left(db, order), util.short(order['tx_hash'])]
+    return [D(give_remaining), give_asset, price, price_assets, fee, util.get_time_left(db, order), util.short(order['tx_hash'])]
 
 def format_bet (bet):
     odds = D(bet['counterwager_amount']) / D(bet['wager_amount'])
-
-    wager_remaining = D(bet['wager_remaining'])
-    counterwager_remaining = round(wager_remaining * odds)
 
     if not bet['target_value']: target_value = None
     else: target_value = bet['target_value']
     if not bet['leverage']: leverage = None
     else: leverage = util.devise(db, D(bet['leverage']) / 5040, 'leverage', 'output')
 
-    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], util.isodt(bet['deadline']), target_value, leverage, str(wager_remaining / config.UNIT) + ' XCP', str(counterwager_remaining / config.UNIT) + ' XCP', util.devise(db, odds, 'odds', 'output'), util.get_time_left(bet), util.short(bet['tx_hash'])]
+    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], util.isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.devise(db, odds, 'odds', 'output'), util.get_time_left(bet), util.short(bet['tx_hash'])]
 
 def format_order_match (db, order_match):
     order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']
@@ -697,8 +688,7 @@ if __name__ == '__main__':
         print()
 
     elif args.action == 'market':
-        while True:
-            market(args.give_asset, args.get_asset)
+        market(args.give_asset, args.get_asset)
 
     elif args.action == 'reparse':
         blocks.reparse(db)

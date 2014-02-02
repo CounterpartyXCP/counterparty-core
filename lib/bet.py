@@ -63,6 +63,10 @@ def validate (db, source, feed_address, bet_type, deadline, wager_amount,
     if expiration > config.MAX_EXPIRATION:
         problems.append('maximum expiration time exceeded')
 
+    # For SQLite3
+    if wager_amount > config.MAX_INT or counterwager_amount > config.MAX_INT or bet_type > config.MAX_INT or deadline > config.MAX_INT or leverage > config.MAX_INT:
+        problems.append('maximum integer size exceeded')
+
     return problems
 
 def create (db, source, feed_address, bet_type, deadline, wager_amount,
@@ -105,22 +109,15 @@ def parse (db, tx, message, bet_heap, bet_match_heap):
     fee_multiplier = 0
     odds = 0
     if validity == 'Valid':
-        try: odds = D(wager_amount) / D(counterwager_amount)   # TODO: precision?!
+        try: odds = D(wager_amount) / D(counterwager_amount)
         except: pass
+
         # Overbet
         balances = util.get_balances(db, address=tx['source'], asset='XCP')
         if not balances: wager_amount = 0
         elif balances[0]['amount']/(1 + fee_multiplier / 1e8) < wager_amount:
             wager_amount = min(round(balances[0]['amount']/(1 + fee_multiplier / 1e8)), wager_amount)
-            counterwager_amount = round(D(wager_amount) / odds)
-        # For SQLite3
-        bet_type = min(bet_type, config.MAX_INT)
-        deadline = min(deadline, config.MAX_INT)
-        wager_amount = min(wager_amount, config.MAX_INT)
-        counterwager_amount = min(counterwager_amount, config.MAX_INT)
-        target_value = min(target_value, config.MAX_INT)
-        leverage = min(leverage, config.MAX_INT)
-        expiration = min(expiration, config.MAX_INT)
+            counterwager_amount = int(D(wager_amount) / odds)
 
         feed_address = tx['destination']
         problems = validate(db, tx['source'], feed_address, bet_type, deadline, wager_amount,
@@ -129,12 +126,9 @@ def parse (db, tx, message, bet_heap, bet_match_heap):
 
     if validity == 'Valid':
         fee_multiplier = get_fee_multiplier(db, feed_address)
-        fee = round(wager_amount * fee_multiplier / 1e8)
+        fee = round(wager_amount * fee_multiplier / 1e8)    # round?!
         util.debit(db, tx['block_index'], tx['source'], 'XCP', wager_amount)
         util.debit(db, tx['block_index'], tx['source'], 'XCP', fee)
-
-        wager_amount = round(wager_amount)
-        counterwager_amount = round(counterwager_amount)
 
     # Add parsed transaction to message-type–specific table.
     element_data = {
@@ -146,9 +140,9 @@ def parse (db, tx, message, bet_heap, bet_match_heap):
         'bet_type': bet_type,
         'deadline': deadline,
         'wager_amount': wager_amount,
-        'counterwager_amount': counterwager_amount,
         'wager_remaining': wager_amount,
-        'odds': float(odds),
+        'counterwager_amount': counterwager_amount,
+        'counterwager_remaining': counterwager_amount,
         'target_value': target_value,
         'leverage': leverage,
         'expiration': expiration,
@@ -159,7 +153,6 @@ def parse (db, tx, message, bet_heap, bet_match_heap):
     if validity == 'Valid':
         heapq.heappush(bet_heap, (tx['block_index'] + expiration, tx['tx_index']))
 
-
     # Log.
     if validity == 'Valid':
         placeholder = ''
@@ -167,7 +160,7 @@ def parse (db, tx, message, bet_heap, bet_match_heap):
             placeholder = ' that ' + str(util.devise(db, target_value, 'value', 'output'))
         if leverage:
             placeholder += ', leveraged {}x'.format(util.devise(db, leverage / 5040, 'leverage', 'output'))
-        logging.info('Bet: {} on {} at {} for {} XCP against {} XCP in {} blocks{} for a fee of {} XCP ({})'.format(util.BET_TYPE_NAME[bet_type], feed_address, util.isodt(deadline), wager_amount / config.UNIT, counterwager_amount / config.UNIT, expiration, placeholder, util.devise(db, fee, 'XCP', 'output'), util.short(tx['tx_hash'])))
+        logging.info('Bet: {} on {} at {} for {} XCP against {} XCP at {} odds in {} blocks{} for a fee of {} XCP ({})'.format(util.BET_TYPE_NAME[bet_type], feed_address, util.isodt(deadline), wager_amount / config.UNIT, counterwager_amount / config.UNIT, util.devise(db, odds, 'odds', dest='output'), expiration, placeholder, util.devise(db, fee, 'XCP', 'output'), util.short(tx['tx_hash'])))
         match(db, tx, bet_heap, bet_match_heap)
 
     bet_parse_cursor.close()
@@ -177,7 +170,7 @@ def match (db, tx, bet_heap, bet_match_heap):
 
     # Get bet in question.
     bet_match_cursor.execute('''SELECT * FROM bets\
-                      WHERE tx_index=?''', (tx['tx_index'],))
+                                WHERE tx_index=?''', (tx['tx_index'],))
     tx1 = bet_match_cursor.fetchall()[0]
 
     # Get counterbet_type.
@@ -186,11 +179,13 @@ def match (db, tx, bet_heap, bet_match_heap):
 
     feed_address = tx1['feed_address']
     bet_match_cursor.execute('''SELECT * FROM bets\
-                      WHERE (feed_address=? AND block_index>=? AND validity=? AND bet_type=?) \
-                      ORDER BY odds DESC, tx_index''',
-                   (tx1['feed_address'], tx1['block_index'] - tx1['expiration'], 'Valid', counterbet_type))
-    wager_remaining = D(tx1['wager_remaining'])
+                             WHERE (feed_address=? AND block_index>=? AND validity=? AND bet_type=?)''',
+                             (tx1['feed_address'], tx1['block_index'] - tx1['expiration'], 'Valid', counterbet_type))
+    wager_remaining = tx1['wager_remaining']
+    counterwager_remaining = tx1['counterwager_remaining']
     bet_matches = bet_match_cursor.fetchall()
+    sorted(bet_matches, key=lambda x: x['tx_index'])                                        # Sort by tx index second.
+    sorted(bet_matches, key=lambda x: D(x['wager_amount']) / D(x['counterwager_amount']))   # Sort by price first.
     for tx0 in bet_matches:
 
         # Bet types must be opposite.
@@ -221,10 +216,12 @@ def match (db, tx, bet_heap, bet_match_heap):
 
         # If the odds agree, make the trade. The found order sets the odds,
         # and they trade as much as they can.
-        if round(1 / tx0['odds'], 10) <= round(tx1['odds'], 10):  # TODO: precision?!
-            forward_amount = round(min(D(tx0['wager_remaining']), wager_remaining / D(tx1['odds'])))
+        tx0_odds = D(tx0['wager_amount']) / D(tx0['counterwager_amount'])
+        tx1_odds = D(tx1['wager_amount']) / D(tx1['counterwager_amount'])
+        if D(1) / tx0_odds <= tx1_odds:
+            forward_amount = int(min(D(tx0['wager_remaining']), D(wager_remaining) / tx1_odds))
             if not forward_amount: continue
-            backward_amount = round(forward_amount / D(tx0['odds']))
+            backward_amount = round(D(forward_amount) / tx0_odds)
 
             bet_match_id = tx0['tx_hash'] + tx1['tx_hash']
 
@@ -237,18 +234,23 @@ def match (db, tx, bet_heap, bet_match_heap):
             logging.info('Bet Match: {} for {} XCP against {} for {} XCP on {} at {}{} ({})'.format(util.BET_TYPE_NAME[tx0['bet_type']], util.devise(db, forward_amount, 'XCP', 'output'), util.BET_TYPE_NAME[tx1['bet_type']], util.devise(db, backward_amount, 'XCP', 'output'), tx1['feed_address'], util.isodt(tx1['deadline']), placeholder, util.short(bet_match_id)))
 
             # Debit the order.
-            wager_remaining = round(wager_remaining - backward_amount)
+            wager_remaining = wager_remaining - backward_amount
+            counterwager_remaining = counterwager_remaining - forward_amount  # This may indeed be negative!
 
             # Update wager_remaining.
             bet_match_cursor.execute('''UPDATE bets \
-                              set wager_remaining=? \
-                              where tx_hash=?''',
-                          (tx0['wager_remaining'] - forward_amount,
-                           tx0['tx_hash']))
+                                        SET wager_remaining = ?, \
+                                            counterwager_remaining = ? \
+                                        WHERE tx_hash = ?''',
+                                     (tx0['wager_remaining'] - forward_amount,
+                                      tx0['counterwager_remaining'] - backward_amount,
+                                      tx0['tx_hash']))
             bet_match_cursor.execute('''UPDATE bets \
-                              SET wager_remaining=? \
-                              WHERE tx_hash=?''',
+                              SET wager_remaining = ?, \
+                                  counterwager_remaining = ? \
+                              WHERE tx_hash = ?''',
                           (wager_remaining,
+                           counterwager_remaining,
                            tx1['tx_hash']))
 
             # Get last value of feed.

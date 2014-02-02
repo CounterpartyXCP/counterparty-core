@@ -396,7 +396,8 @@ def get_sends (db, validity=None, source=None, destination=None, filters=None, o
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_orders (db, validity=None, source=None, show_empty=True, show_expired=True, filters=None, order_by='price', order_dir='asc', start_block=None, end_block=None, filterop='and'):
+# TODO: not ordering by price anymore (need to implement proper ordering)
+def get_orders (db, validity=None, source=None, show_empty=True, show_expired=True, filters=None, order_by=None, order_dir='asc', start_block=None, end_block=None, filterop='and'):
     def filter_expired(e):
         #Ignore BTC orders one block early. (This is why we need show_expired.)
         #function returns True if the element is NOT expired
@@ -478,7 +479,8 @@ def get_broadcasts (db, validity=None, source=None, filters=None, order_by='tx_i
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_bets (db, validity=None, source=None, show_empty=True, filters=None, order_by='odds', order_dir='desc', start_block=None, end_block=None, filterop='and'):
+# TODO: not ordering by price anymore (need to implement proper ordering)
+def get_bets (db, validity=None, source=None, show_empty=True, filters=None, order_by=None, order_dir='desc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
