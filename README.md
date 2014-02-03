@@ -152,6 +152,7 @@ The following examples are abridged for parsimony.
 	It is capable of filtering orders by assets to be bought and sold.
 	
 	Example:
+	
 	To filter the market to only show offers to sell (give) BTC:
 	```
 	market --give-asset=BTC
@@ -160,6 +161,11 @@ The following examples are abridged for parsimony.
 	To filter the market to only show offers to buy (get) BTC:
 	```
 	market --get-asset=BTC
+	```
+	
+	To filter the market to only show offers to sell BTC for XCP:
+	```
+	market --give-asset=BTC --get-asset=XCP
 	```
 
 * Asset
