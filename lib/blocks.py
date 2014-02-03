@@ -31,7 +31,7 @@ def parse_block (db, block_index):
     parse_block_cursor.execute('''SELECT * FROM transactions \
                       WHERE block_index=? ORDER BY tx_index''',
                    (block_index,))
-    transactions = parse_block_cursor.fetchall()   
+    transactions = parse_block_cursor.fetchall()
     for tx in transactions:
 
         # Burns.

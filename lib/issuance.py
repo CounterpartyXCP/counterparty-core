@@ -37,7 +37,7 @@ def create (db, source, destination, asset, amount, divisible, test=False):
 
     if destination and amount:
         raise exceptions.IssuanceError('Cannot issue and transfer simultaneously.')
-        
+
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount, divisible)
@@ -106,7 +106,7 @@ def parse (db, tx, message):
     }
     issuance_parse_cursor.execute(*util.get_insert_sql('issuances', element_data))
     config.zeromq_publisher.push_to_subscribers('new_issuance', element_data)
-        
+
     # Debit fee.
     # TODO: Add amount destroyed to table.
     if validity == 'Valid' and amount and tx['block_index'] > 281236:

@@ -58,7 +58,7 @@ def create (db, source, feed_address, bet_type, deadline, wager_amount,
         raise exceptions.UselessError('CFDs have no target value.')
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
-    data += struct.pack(FORMAT, bet_type, deadline, 
+    data += struct.pack(FORMAT, bet_type, deadline,
                         wager_amount, counterwager_amount, target_value,
                         leverage, expiration)
     return bitcoin.transaction(source, feed_address, config.DUST_SIZE,
@@ -78,7 +78,7 @@ def parse (db, tx, message):
          counterwager_amount, target_value, leverage,
          expiration) = None, None, None, None, None, None, None
         validity = 'Invalid: could not unpack'
-    
+
     # For SQLite3
     bet_type = min(bet_type, config.MAX_INT)
     deadline = min(deadline, config.MAX_INT)
@@ -142,7 +142,7 @@ def parse (db, tx, message):
     }
     bet_parse_cursor.execute(*util.get_insert_sql('bets', element_data))
     config.zeromq_publisher.push_to_subscribers('new_bet', element_data)
-    
+
     # Log.
     if validity == 'Valid':
         placeholder = ''

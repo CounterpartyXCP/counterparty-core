@@ -193,7 +193,7 @@ def match (db, tx):
                 'tx1_address': tx1['source'],
                 'forward_asset': forward_asset,
                 'forward_amount': forward_amount,
-                'backward_asset': backward_asset, 
+                'backward_asset': backward_asset,
                 'backward_amount': backward_amount,
                 'tx0_block_index': tx0['block_index'],
                 'tx1_block_index': tx1['block_index'],
