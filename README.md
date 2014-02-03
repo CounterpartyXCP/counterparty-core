@@ -128,16 +128,45 @@ The following examples are abridged for parsimony.
 	`issuance --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity=100 --asset='BBBQ' --divisible`
 
 * Broadcast
+	```
+	broadcast --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --text="Bitcoin price feed" --value=825.22
+	--fee-multiplier=0.001
+	```
+
+	Note: for some users counterpartyd has trouble parsing spaces in the --text argument. One workaround is to
+		add an additional set of quotes. For example, --text='"Bitcoin price feed"'
 
 * Bet
 
 * Cancel
+	```
+	cancel --offer-hash=092f15d36786136c4d868c33356ec3c9b5a0c77de54ed0e96a8dbdd8af160c23
+	```
 
 * Dividend
 
 * Market
 
-	The `market` action prints out tables of open orders, open bets, feeds, and order matches currently awaiting Bitcoin payments from one of your addresses. It is capable of filtering orders by assets to be bought and sold.
+	The `market` action prints out tables of open orders, open bets, feeds, and order matches currently awaiting 	        Bitcoin payments from one of your addresses. 
+	
+	It is capable of filtering orders by assets to be bought and sold.
+	
+	Example:
+	
+	To filter the market to only show offers to sell (give) BTC:
+	```
+	market --give-asset=BTC
+	```
+	
+	To filter the market to only show offers to buy (get) BTC:
+	```
+	market --get-asset=BTC
+	```
+	
+	To filter the market to only show offers to sell BTC for XCP:
+	```
+	market --give-asset=BTC --get-asset=XCP
+	```
 
 * Asset
 
