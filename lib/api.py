@@ -314,13 +314,13 @@ class APIServer(threading.Thread):
             maxBytes = getattr(application.log, "rot_maxBytes", 10000000)
             backupCount = getattr(application.log, "rot_backupCount", 1000)
             # Make a new RotatingFileHandler for the error log.
-            fname = getattr(application.log, "rot_error_file", os.path.join(config.data_dir, "api.error.log"))
+            fname = getattr(application.log, "rot_error_file", os.path.join(config.DATA_DIR, "api.error.log"))
             h = logging_handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
             h.setLevel(logging.DEBUG)
             h.setFormatter(cherrypy._cplogging.logfmt)
             application.log.error_log.addHandler(h)
             # Make a new RotatingFileHandler for the access log.
-            fname = getattr(application.log, "rot_access_file", os.path.join(config.data_dir, "api.access.log"))
+            fname = getattr(application.log, "rot_access_file", os.path.join(config.DATA_DIR, "api.access.log"))
             h = logging_handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
             h.setLevel(logging.DEBUG)
             h.setFormatter(cherrypy._cplogging.logfmt)
