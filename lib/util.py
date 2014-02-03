@@ -343,13 +343,13 @@ def devise (db, quantity, asset, dest, divisible=None):
 
     if divisible:
         if dest == 'output':
-            quantity = D(quantity / config.UNIT).quantize(EIGHT)
+            quantity = D(quantity / D(config.UNIT)).quantize(EIGHT)
             if quantity == quantity.to_integral():
                 return str(float(quantity))  # For divisible assets, display the decimal point.
             else:
                 return str(quantity.quantize(EIGHT).normalize())
         elif dest == 'input':
-            quantity = D(quantity * config.UNIT).quantize(EIGHT)
+            quantity = D(quantity * D(config.UNIT)).quantize(EIGHT)
             if quantity == quantity.to_integral():
                 return int(quantity)
             else:

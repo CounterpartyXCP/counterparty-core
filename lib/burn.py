@@ -74,12 +74,11 @@ def parse (db, tx, message=None):
         if config.PREFIX == config.UNITTEST_PREFIX:
             earned = 1500 * burned
 
+        logging.info('Burn: {} burned {} BTC for {} XCP ({})'.format(tx['source'], util.devise(db, burned, 'BTC', 'output'), util.devise(db, earned, 'XCP', 'output'), util.short(tx['tx_hash'])))
+
         # Credit source address with earned XCP.
         util.credit(db, tx['block_index'], tx['source'], 'XCP', earned)
-
-        # Log.
-        logging.info('Burn: {} burned {} BTC for {} XCP ({})'.format(tx['source'], util.devise(db, burned, 'BTC', 'output'), util.devise(db, earned, 'XCP', 'output'), util.short(tx['tx_hash'])))
-    else:
+    else:                                                                       
         burned = 0
         earned = 0
 
