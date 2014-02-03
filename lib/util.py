@@ -5,6 +5,8 @@ import decimal
 D = decimal.Decimal
 import sys
 import logging
+import copy
+import unicodedata
 import operator
 from operator import itemgetter
 import apsw
@@ -24,6 +26,22 @@ DO_FILTER_OPERATORS = {
     '<=': operator.le,
     '>=': operator.ge,
 }
+
+class SanitizedStreamHandler(logging.StreamHandler):
+    """cleans up stdout data for window's cmd.exe (which has broken unicode support out of the box)"""
+    def emit(self, record):
+        # If the message doesn't need to be rendered we take a shortcut.
+        if record.levelno < self.level:
+            return
+        # Make sure the message is a string.
+        message = record.msg
+        #Sanitize and clean up the message
+        message = unicodedata.normalize('NFKD', message).encode('ascii', 'ignore').decode()
+        # Copy the original record so we don't break other handlers.
+        record = copy.copy(record)
+        record.msg = message
+        # Use the built-in stream handler to handle output.
+        logging.StreamHandler.emit(self, record)
 
 def rowtracer(cursor, sql):
     """Converts fetched SQL data into dict-style"""
