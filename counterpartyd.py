@@ -217,8 +217,9 @@ def market (give_asset, get_asset):
         order = format_order(order)
         table.add_row(order)
     print('Open Orders')
+    table = table.get_string(sortby='Price')
     if os.name == 'nt':
-        table = windows(table.get_string(sortby='Price'))
+        table = windows(table)
     print(table)
     print('\n')
 
