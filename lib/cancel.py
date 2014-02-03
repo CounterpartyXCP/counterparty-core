@@ -32,7 +32,7 @@ def create (db, offer_hash, test=False):
     return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test)
 
 def parse (db, tx, message):
-    cancel_parse_cursor = db.cursor()
+    cursor = db.cursor()
     validity = 'Valid'
 
     # Unpack message.
@@ -43,25 +43,36 @@ def parse (db, tx, message):
         offer_hash = None
         validity = 'Invalid: could not unpack'
 
-
     if validity == 'Valid':
-        # Find the offer.
-        cancel_parse_cursor.execute('''SELECT * FROM (orders JOIN bets) \
-                                       WHERE ((orders.tx_hash=? AND orders.source=? AND orders.validity=?) OR (bets.tx_hash=? AND bets.source=? AND bets.validity=?))''', (offer_hash, tx['source'], 'Valid', offer_hash, tx['source'], 'Valid'))
-        offers = cancel_parse_cursor.fetchall() # TODO: Why am I getting multiple matches here?!
-        if not offers:
+        # Find offer.
+        cursor.execute('''SELECT * FROM orders \
+                          WHERE (tx_hash=? AND source=? AND validity=?)''', (offer_hash, tx['source'], 'Valid'))
+        orders = cursor.fetchall()
+        cursor.execute('''SELECT * FROM bets \
+                          WHERE (tx_hash=? AND source=? AND validity=?)''', (offer_hash, tx['source'], 'Valid'))
+        bets = cursor.fetchall()
+
+        # Cancel if order.
+        if orders:
+            order = orders[0]
+            cursor.execute('''UPDATE orders \
+                                           SET validity=? \
+                                           WHERE tx_hash=?''', ('Invalid: cancelled', order['tx_hash']))
+            util.credit(db, tx['source'], order['give_asset'], order['give_remaining'])
+        # Cancel if bet.
+        elif bets:
+            bet = bets[0]
+            cursor.execute('''UPDATE bets \
+                                           SET validity=? \
+                                           WHERE tx_hash=?''', ('Invalid: cancelled', bet['tx_hash']))
+            util.credit(db, tx['source'], 'XCP', bet['wager_remaining'])
+            util.credit(db, tx['source'], 'XCP', bet['fee'])
+        # If neither order or bet, mark as invalid.
+        else:
             validity = 'Invalid: no valid offer with that hash from that address'
 
     if validity == 'Valid':
-        # Cancel the offer. (This in very inelegant.)
-        cancel_parse_cursor.execute('''UPDATE orders \
-                                       SET validity=? \
-                                       WHERE (tx_hash=? AND source=? AND validity=?)''', ('Invalid: cancelled', offer_hash, tx['source'], 'Valid'))
-        cancel_parse_cursor.execute('''UPDATE bets \
-                                       SET validity=? \
-                                       WHERE (tx_hash=? AND source=? AND validity=?)''', ('Invalid: cancelled', offer_hash, tx['source'], 'Valid'))
-
-        logging.info('Cancel: {} ({})'.format(util.short(offer_hash), util.short(tx['tx_hash'])))
+        logging.info('Cancel: {} ({})'.format(offer_hash, tx['tx_hash']))
 
     # Add parsed transaction to message-type–specific table.
     element_data = {
@@ -72,8 +83,8 @@ def parse (db, tx, message):
         'offer_hash': offer_hash,
         'validity': validity,
     }
-    cancel_parse_cursor.execute(*util.get_insert_sql('cancels', element_data))
+    cursor.execute(*util.get_insert_sql('cancels', element_data))
     config.zeromq_publisher.push_to_subscribers('new_cancel', element_data)
-    cancel_parse_cursor.close()
+    cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
