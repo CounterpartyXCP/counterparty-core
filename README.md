@@ -147,7 +147,20 @@ The following examples are abridged for parsimony.
 
 * Market
 
-	The `market` action prints out tables of open orders, open bets, feeds, and order matches currently awaiting Bitcoin payments from one of your addresses. It is capable of filtering orders by assets to be bought and sold.
+	The `market` action prints out tables of open orders, open bets, feeds, and order matches currently awaiting 	        Bitcoin payments from one of your addresses. 
+	
+	It is capable of filtering orders by assets to be bought and sold.
+	
+	Example:
+	To filter the market to only show offers to sell (give) BTC:
+	```
+	market --give-asset=BTC
+	```
+	
+	To filter the market to only show offers to buy (get) BTC:
+	```
+	market --get-asset=BTC
+	```
 
 * Asset
 
