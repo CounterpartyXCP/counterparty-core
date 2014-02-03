@@ -311,7 +311,7 @@ def expire (db, block_index, block_time, bet_heap, bet_match_heap):
         try: deadline, tx0_index, tx1_index = bet_match_heap[0]
         except IndexError: break
 
-        if deadline >= block_time + config.TWO_WEEKS:
+        if block_time <= deadline + config.TWO_WEEKS:
             break
         else:
             heapq.heappop(bet_match_heap)
