@@ -225,7 +225,7 @@ def get_inputs (source, total_btc_out, test=False):
             listunspent = json.load(listunspent_test_file)
     unspent = [coin for coin in listunspent if coin['address'] == source]
     inputs, total_btc_in = [], 0
-    for coin in unspent:                                                      
+    for coin in unspent:
         inputs.append(coin)
         total_btc_in += round(coin['amount'] * config.UNIT)
         if total_btc_in >= total_btc_out:
@@ -294,14 +294,14 @@ def transaction (source, destination, btc_amount, fee, data, test=False, multisi
     # Serialise inputs and outputs.
     transaction = serialise(inputs, destination_output, data_output, change_output, multisig=multisig, source=source)
     unsigned_tx_hex = binascii.hexlify(transaction).decode('utf-8')
-    
+
     return unsigned_tx_hex
 
 def transmit (unsigned_tx_hex, ask=True, unsigned=False):
     # Confirm transaction.
     if ask and not unsigned:
-        if config.TESTNET: print('Attention: TESTNET!') 
-        if config.TESTCOIN: print('Attention: TESTCOIN!\n') 
+        if config.TESTNET: print('Attention: TESTNET!')
+        if config.TESTCOIN: print('Attention: TESTCOIN!\n')
         if input('Confirm? (y/N) ') != 'y':
             print('Transaction aborted.', file=sys.stderr)
             sys.exit(1)

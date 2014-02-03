@@ -26,7 +26,7 @@ def create (db, source, quantity, test=False, overburn=False):
     already_burned = sum([burn['burned'] for burn in burns])
     if quantity > (1 * config.UNIT - already_burned) and not overburn:
         raise exceptions.UselessError('A maximum of 1 BTC may be burned per address.')
-        
+
     return bitcoin.transaction(source, config.UNSPENDABLE, quantity, config.MIN_FEE, None, test)
 
 def parse (db, tx, message=None):
@@ -43,7 +43,7 @@ def parse (db, tx, message=None):
         sent = 0
 
     # Check that the burn was done at the right time.
-    if tx['block_index'] < config.BURN_START: 
+    if tx['block_index'] < config.BURN_START:
         validity = 'Invalid: too early'
     elif tx['block_index'] > config.BURN_END:
         validity = 'Invalid: too late'
@@ -64,7 +64,7 @@ def parse (db, tx, message=None):
 
         # Credit source address with earned XCP.
         util.credit(db, tx['source'], 'XCP', earned)
-    else:                                                                       
+    else:
         burned = 0
         earned = 0
 
@@ -81,7 +81,7 @@ def parse (db, tx, message=None):
     }
     burn_parse_cursor.execute(*util.get_insert_sql('burns', element_data))
     config.zeromq_publisher.push_to_subscribers('new_burn', element_data)
-    
+
     if validity == 'Valid':
         logging.info('Burn: {} burned {} BTC for {} XCP ({})'.format(tx['source'], util.devise(db, burned, 'BTC', 'output'), util.devise(db, earned, 'XCP', 'output'), util.short(tx['tx_hash'])))
 

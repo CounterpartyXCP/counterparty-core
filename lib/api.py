@@ -22,7 +22,7 @@ class APIServer(threading.Thread):
 
     def __init__ (self):
         threading.Thread.__init__(self)
-        
+
     def run (self):
         db = apsw.Connection(config.DATABASE)
         db.setrowtrace(util.rowtracer)
@@ -35,7 +35,7 @@ class APIServer(threading.Thread):
                 return util.get_address(db, address=address)
             except exceptions.InvalidAddressError:
                 return None
-        
+
         @dispatcher.add_method
         def get_balances (filters=None, order_by=None, order_dir=None, filterop="and"):
             return util.get_balances(db,
@@ -79,7 +79,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_btcpays(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            return util.get_btcpays(db, 
+            return util.get_btcpays(db,
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
                 order_by=order_by,
@@ -159,7 +159,7 @@ class APIServer(threading.Thread):
                 start_block=start_block,
                 end_block=end_block,
                 filterop=filterop)
-        
+
         @dispatcher.add_method
         def get_order_matches (filters=None, is_valid=True, is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_order_matches(db,
@@ -174,7 +174,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_sends (filters=None, is_valid=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            return util.get_sends(db, 
+            return util.get_sends(db,
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
                 order_by=order_by,
@@ -209,7 +209,7 @@ class APIServer(threading.Thread):
         def do_burn(source, quantity, unsigned=False):
             unsigned_tx_hex = burn.create(db, source, quantity)
             return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
-        
+
         @dispatcher.add_method
         def do_cancel(offer_hash, unsigned=False):
             unsigned_tx_hex = cancel.create(db, offer_hash)
@@ -226,7 +226,7 @@ class APIServer(threading.Thread):
             unsigned_tx_hex = issuance.create(db, source, transfer_destination,
                                               asset, quantity, divisible)
             return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
-        
+
         @dispatcher.add_method
         def do_order(source, give_quantity, give_asset, get_quantity, get_asset, expiration, fee_required=0,
                      fee_provided=config.MIN_FEE / config.UNIT, unsigned=False):
@@ -240,9 +240,9 @@ class APIServer(threading.Thread):
         def do_send(source, destination, quantity, asset, unsigned=False):
             unsigned_tx_hex = send.create(db, source, destination, quantity, asset)
             return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
-        
 
-        
+
+
         class Root(object):
             @cherrypy.expose
             @cherrypy.tools.json_out()
@@ -264,7 +264,7 @@ class APIServer(threading.Thread):
         checkpassword = cherrypy.lib.auth_basic.checkpassword_dict(
             {config.RPC_USER: config.RPC_PASSWORD})
         app_config = {
-            '/': { 
+            '/': {
                 'tools.trailing_slash.on': False,
                 'tools.auth_basic.on': True,
                 'tools.auth_basic.realm': 'counterpartyd',
@@ -272,11 +272,11 @@ class APIServer(threading.Thread):
             },
         }
         application = cherrypy.Application(Root(), script_name="/jsonrpc/", config=app_config)
-        
+
         #disable logging of the access and error logs to the screen
         application.log.access_log.propagate = False
         application.log.error_log.propagate = False
-        
+
         if config.PREFIX != b'TESTXXXX':  #skip setting up logs when for the test suite
             #set up a rotating log handler for this application
             # Remove the default FileHandlers if present.
