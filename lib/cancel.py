@@ -11,37 +11,54 @@ import logging
 from . import (util, config, exceptions, bitcoin, util)
 
 FORMAT = '>32s'
-ID = 70
 LENGTH = 32
+ID = 70
 
-def create (db, offer_hash, test=False):
-    offer = None
+
+def validate (db, offer_hash, source=None):
+    problems = []
+
     for offer in util.get_orders(db, validity='Valid') + util.get_bets(db, validity='Valid'):
         if offer_hash == offer['tx_hash']:
-            break
-    if not offer:
-        raise exceptions.Useless('No valid offer with that hash.')
+            if source == offer['source']:
+                return source, offer, problems
+            else:
+                if bitcoin.rpc('validateaddress', [offer['source']])['ismine'] or config.PREFIX == config.UNITTEST_PREFIX:
+                    source = offer['source']
+                else:
+                    problems.append('offer was not made by one of your addresses')
+                return source, offer, problems
 
-    source = offer['source']
-    if not bitcoin.rpc('validateaddress', [source])['ismine'] and not test:
-        raise exceptions.CancelError('That offer was not made by one of your addresses.')
+    problems.append('no valid offer with that hash')
+    return None, None, problems
+
+
+def create (db, offer_hash, unsigned=False):
+    source, offer, problems = validate(db, offer_hash)
+    if problems: raise exceptions.CancelError(problems)
 
     offer_hash_bytes = binascii.unhexlify(bytes(offer_hash, 'utf-8'))
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, offer_hash_bytes)
-    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test)
+    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, unsigned=unsigned)
 
 def parse (db, tx, message):
     cursor = db.cursor()
-    validity = 'Valid'
 
     # Unpack message.
     try:
+        assert len(message) == LENGTH
         offer_hash_bytes = struct.unpack(FORMAT, message)[0]
         offer_hash = binascii.hexlify(offer_hash_bytes).decode('utf-8')
-    except Exception:
+        validity = 'Valid'
+    except struct.error as e:
         offer_hash = None
         validity = 'Invalid: could not unpack'
+
+    if validity == 'Valid':
+        if validity == 'Valid':
+            source, offer, problems = validate(db, offer_hash, source=tx['source'])
+            if problems: validity = 'Invalid: ' + ';'.join(problems)
 
     if validity == 'Valid':
         # Find offer.
@@ -58,15 +75,15 @@ def parse (db, tx, message):
             cursor.execute('''UPDATE orders \
                                            SET validity=? \
                                            WHERE tx_hash=?''', ('Invalid: cancelled', order['tx_hash']))
-            util.credit(db, tx['source'], order['give_asset'], order['give_remaining'])
+            util.credit(db, tx['block_index'], tx['source'], order['give_asset'], order['give_remaining'])
         # Cancel if bet.
         elif bets:
             bet = bets[0]
             cursor.execute('''UPDATE bets \
                                            SET validity=? \
                                            WHERE tx_hash=?''', ('Invalid: cancelled', bet['tx_hash']))
-            util.credit(db, tx['source'], 'XCP', bet['wager_remaining'])
-            util.credit(db, tx['source'], 'XCP', bet['fee'])
+            util.credit(db, tx['block_index'], tx['source'], 'XCP', bet['wager_remaining'])
+            util.credit(db, tx['block_index'], tx['source'], 'XCP', bet['fee'])
         # If neither order or bet, mark as invalid.
         else:
             validity = 'Invalid: no valid offer with that hash from that address'
@@ -84,7 +101,8 @@ def parse (db, tx, message):
         'validity': validity,
     }
     cursor.execute(*util.get_insert_sql('cancels', element_data))
-    config.zeromq_publisher.push_to_subscribers('new_cancel', element_data)
+
+
     cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
