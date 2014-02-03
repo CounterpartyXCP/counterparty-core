@@ -25,15 +25,6 @@ from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, 
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
-def print_ (foo):
-    try:
-        foo = foo.get_string()
-    except:
-        pass
-    if os.name == 'nt':
-        print(foo.encode('utf-8').decode('latin-1'))
-    else:
-        print(foo)
 
 def market (give_asset, get_asset):
     # Open orders.
@@ -44,10 +35,9 @@ def market (give_asset, get_asset):
         if get_asset and order['get_asset'] != get_asset: continue
         order = format_order(order)
         table.add_row(order)
-    print_('Open Orders')
-    table = table.get_string(sortby='Price')
-    print_(table)
-    print_('\n')
+    print('Open Orders')
+    print(str(table.get_string(sortby='Price')))
+    print('\n')
 
     # Open bets.
     bets = util.get_bets(db, validity='Valid', show_empty=False)
@@ -55,9 +45,9 @@ def market (give_asset, get_asset):
     for bet in bets:
         bet = format_bet(bet)
         table.add_row(bet)
-    print_('Open Bets')
-    print_(table)
-    print_('\n')
+    print('Open Bets')
+    print(str(table))
+    print('\n')
 
     # Matched orders awaiting BTC payments from you.
     awaiting_btcs = util.get_order_matches(db, validity='Valid: awaiting BTC payment', is_mine=True)
@@ -65,9 +55,9 @@ def market (give_asset, get_asset):
     for order_match in awaiting_btcs:
         order_match = format_order_match(db, order_match)
         table.add_row(order_match)
-    print_('Order Matches Awaiting BTC Payment')
-    print_(table)
-    print_('\n')
+    print('Order Matches Awaiting BTC Payment')
+    print(str(table))
+    print('\n')
 
     # Feeds
     broadcasts = util.get_broadcasts(db, validity='Valid', order_by='timestamp', order_dir='desc')
@@ -81,8 +71,8 @@ def market (give_asset, get_asset):
             seen_addresses.append(broadcast['source'])
         else:
             continue
-    print_('Feeds')
-    print_(table)
+    print('Feeds')
+    print(str(table))
 
 
 def balances (address):
@@ -105,8 +95,8 @@ def balances (address):
         asset = balance['asset']
         amount = util.devise(db, balance['amount'], balance['asset'], 'output')
         table.add_row([asset, amount])
-    print_('Balances')
-    print_(table)
+    print('Balances')
+    print(str(table))
 
 def format_order (order):
     give_amount = util.devise(db, D(order['give_amount']), order['give_asset'], 'output')
@@ -138,7 +128,7 @@ def format_bet (bet):
     if not bet['leverage']: leverage = None
     else: leverage = util.devise(db, D(bet['leverage']) / 5040, 'leverage', 'output')
 
-    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], util.isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.devise(db, odds, 'odds', 'output'), util.get_time_left(db, bet), util.short(bet['tx_hash'])]
+    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], util.isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.devise(db, odds, 'odds', 'output'), util.get_time_left(bet), util.short(bet['tx_hash'])]
 
 def format_order_match (db, order_match):
     order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']
@@ -472,7 +462,7 @@ if __name__ == '__main__':
         quantity = util.devise(db, args.quantity, args.asset, 'input')
         unsigned_tx_hex = send.create(db, args.source, args.destination,
                                       quantity, args.asset, unsigned=args.unsigned)
-        print_(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
+        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'order':
         # Fee argument is either fee_required or fee_provided, as necessary.
@@ -498,11 +488,11 @@ if __name__ == '__main__':
         unsigned_tx_hex = order.create(db, args.source, args.give_asset, give_quantity,
                                 args.get_asset, get_quantity,
                                 args.expiration, fee_required, fee_provided, unsigned=args.unsigned)
-        print_(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
+        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'btcpay':
         unsigned_tx_hex = btcpay.create(db, args.order_match_id, unsigned=args.unsigned)
-        print_(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
+        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'issuance':
         quantity = util.devise(db, args.quantity, None, 'input',
@@ -520,14 +510,14 @@ if __name__ == '__main__':
         unsigned_tx_hex = issuance.create(db, args.source,
                                           args.transfer_destination,
                                           args.asset, quantity, args.divisible, args.callable_, call_date, call_price, args.description, unsigned=args.unsigned)
-        print_(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
+        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'broadcast':
         value = util.devise(db, args.value, 'value', 'input')
         unsigned_tx_hex = broadcast.create(db, args.source, int(time.time()),
                                            value, args.fee_multiplier,
                                            args.text, unsigned=args.unsigned)
-        print_(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
+        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'bet':
         deadline = round(datetime.timestamp(dateutil.parser.parse(args.deadline)))
@@ -540,27 +530,27 @@ if __name__ == '__main__':
                                      util.BET_TYPE_ID[args.bet_type], deadline,
                                      wager, counterwager, target_value,
                                      leverage, args.expiration, unsigned=args.unsigned)
-        print_(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
+        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'dividend':
         quantity_per_share = util.devise(db, args.quantity_per_share, 'XCP', 'input')
         unsigned_tx_hex = dividend.create(db, args.source, quantity_per_share,
                                    args.asset, unsigned=args.unsigned)
-        print_(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
+        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'burn':
         quantity = util.devise(db, args.quantity, 'BTC', 'input')
         unsigned_tx_hex = burn.create(db, args.source, quantity, unsigned=args.unsigned)
-        print_(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
+        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'cancel':
         unsigned_tx_hex = cancel.create(db, args.offer_hash, unsigned=args.unsigned)
-        print_(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
+        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'callback':
         unsigned_tx_hex = callback.create(db, args.source, float(args.fraction_per_share),
                                    args.asset, unsigned=args.unsigned)
-        print_(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
+        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'balances':
         try:
@@ -603,21 +593,21 @@ if __name__ == '__main__':
 
         asset_id = util.get_asset_id(args.asset)
 
-        print_('Asset Name:', args.asset)
-        print_('Asset ID:', asset_id)
-        print_('Total Issued:', total)
-        print_('Divisible:', divisible)
-        print_('Issuer:', issuer)
-        print_('Callable:', callable_)
-        print_('Call Date:', util.isodt(call_date))
-        print_('Call Price:', str(call_price) + ' XCP')
-        print_('Description:', description)
+        print('Asset Name:', args.asset)
+        print('Asset ID:', asset_id)
+        print('Total Issued:', total)
+        print('Divisible:', divisible)
+        print('Issuer:', issuer)
+        print('Callable:', callable_)
+        print('Call Date:', util.isodt(call_date))
+        print('Call Price:', str(call_price) + ' XCP')
+        print('Description:', description)
 
     elif args.action == 'wallet':
         total_table = PrettyTable(['Asset', 'Balance'])
         totals = {}
 
-        print_()
+        print()
         for group in bitcoin.rpc('listaddressgroupings', []):
             for bunch in group:
                 address, btc_balance = bunch[:2]
@@ -639,15 +629,15 @@ if __name__ == '__main__':
                         table.add_row([asset, balance])
                         empty = False
                 if not empty:
-                    print_(address)
-                    print_(table)
-                    print_()
+                    print(address)
+                    print(str(table))
+                    print()
         for asset in totals.keys():
             balance = totals[asset]
             total_table.add_row([asset, round(balance, 8)])
-        print_('TOTAL')
-        print_(str(total_table))
-        print_()
+        print('TOTAL')
+        print(str(total_table))
+        print()
 
     elif args.action == 'market':
         market(args.give_asset, args.get_asset)
@@ -659,7 +649,7 @@ if __name__ == '__main__':
         blocks.rollback(db, args.block_index)
 
     elif args.action == 'checksum':
-        print_('Asset name:', args.string + checksum.compute(args.string))
+        print('Asset name:', args.string + checksum.compute(args.string))
 
     elif args.action == 'server':
         api_server = api.APIServer()
