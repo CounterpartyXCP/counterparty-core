@@ -128,10 +128,20 @@ The following examples are abridged for parsimony.
 	`issuance --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity=100 --asset='BBBQ' --divisible`
 
 * Broadcast
+	```
+	broadcast --from=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --text="Bitcoin price feed" --value=825.22
+	--fee-multiplier=0.001
+	```
+
+	Note: for some users counterpartyd has trouble parsing spaces in the --text argument. One workaround is to
+		add an additional set of quotes. For example, --text='"Bitcoin price feed"'
 
 * Bet
 
 * Cancel
+	```
+	cancel --offer-hash=092f15d36786136c4d868c33356ec3c9b5a0c77de54ed0e96a8dbdd8af160c23
+	```
 
 * Dividend
 
