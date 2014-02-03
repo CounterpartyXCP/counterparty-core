@@ -491,6 +491,9 @@ def rollback (db, block_index):
         rollback_cursor.execute('''DELETE FROM cancels WHERE block_index > {}'''.format(block_index))
         rollback_cursor.execute('''DELETE FROM callbacks WHERE block_index > {}'''.format(block_index))
 
+        # Re‐initialise heaps.
+        heaps = init_heaps(db)
+
         # Re‐calculate every balance by summing historical credits, debits.
         rollback_cursor.execute('''SELECT * FROM balances''')
         for balance in rollback_cursor.fetchall():

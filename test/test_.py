@@ -6,8 +6,6 @@ import hashlib
 import binascii
 import time
 import apsw
-import appdirs
-import logging
 import decimal
 D = decimal.Decimal
 import difflib
@@ -16,59 +14,28 @@ import inspect
 from threading import Thread
 import requests
 from requests.auth import HTTPBasicAuth
+import logging
 
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
 from lib import (config, api, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
+import counterpartyd
 
-# JSON-RPC Options
-CONFIGFILE = os.path.expanduser('~') + '/.bitcoin/bitcoin.conf'
-config.PREFIX = config.UNITTEST_PREFIX
-config.TESTNET = True
-config.BITCOIND_RPC_CONNECT = 'localhost'
-config.BITCOIND_RPC_PORT = '18332' # Only run tests on testnet.
-try:
-    with open(CONFIGFILE, 'r') as configfile:
-        for line in configfile.readlines():
-            if line.startswith('#'):
-                continue
-            array = line.replace('\n', '').split('=')
-            if len(array) != 2:
-                continue
-            key, value = array[:2]
-            if key == 'rpcuser': config.BITCOIND_RPC_USER = value
-            elif key == 'rpcpassword': config.BITCOIND_RPC_PASSWORD = value
-            elif key == 'rpcconnect': config.BITCOIND_RPC_CONNECT = value
-            elif key == 'rpcport': config.BITCOIND_RPC_PORT = value
-except Exception:
-    raise Exception('Put a (valid) copy of your \
-bitcoin.conf in ~/.bitcoin/bitcoin.conf')
-    sys.exit(1)
-config.BITCOIND_RPC = 'http://'+config.BITCOIND_RPC_USER+':'+config.BITCOIND_RPC_PASSWORD+'@'+config.BITCOIND_RPC_CONNECT+':'+config.BITCOIND_RPC_PORT
+# config.BLOCK_FIRST = 0
+# config.BURN_START = 0
+# config.BURN_END = 9999999
+counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'counterparty.unittest.db', testnet=True, testcoin=False, unittest=True)
 
-config.RPC_HOST = 'localhost'
-config.RPC_PORT = 9999
-config.RPC_USER = 'rpcuser'
-config.RPC_PASSWORD = 'rpcpass'
-
-config.DATABASE = CURR_DIR + '/counterparty.test.db'
+# Connect to database.
 try: os.remove(config.DATABASE)
 except: pass
-
-#Connect to test DB
-db = apsw.Connection(config.DATABASE)
-db.setrowtrace(util.rowtracer)
+db = util.connect_to_db()
 cursor = db.cursor()
 
+# Each tx has a block_index equal to its tx_index
 tx_index = 0
-
-config.BLOCK_FIRST = 0
-config.BURN_START = 0
-config.BURN_END = 9999999
-config.ADDRESSVERSION = b'\x6F' # testnet
-config.UNSPENDABLE = 'mvCounterpartyXXXXXXXXXXXXXXW24Hef'
 
 source_default = 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'
 destination_default = 'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7'
@@ -78,11 +45,6 @@ expiration = 10
 fee_required = 900000
 fee_provided = 1000000
 fee_multiplier_default = .05
-
-
-# Each tx has a block_index equal to its tx_index
-
-print('Run `test.py` with `py.test test.py`.')
 
 
 

@@ -2,7 +2,6 @@ import sys
 import os
 import hashlib
 
-# Units
 UNIT = 100000000        # The same across currencies.
 
 UNITTEST_PREFIX = b'TESTXXXX'
@@ -28,5 +27,3 @@ MAX_EXPIRATION = 4 * 2016   # Two months
 
 # SQLite3
 MAX_INT = 2**63 - 1
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
