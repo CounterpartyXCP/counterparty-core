@@ -24,18 +24,11 @@ from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, 
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
-def print_(foo):
-    try:
-        foo = foo.get_string()
-    except:
-        pass
-    if os.name == 'nt':
-        print(foo.encode('utf-8').decode('latin-1'))
-    else:
-        print(foo)
-
 
 def market (give_asset, get_asset):
+    # TODO: Regularly check if DB is up‐to‐date. (Just use API?!)
+    os.system('cls' if os.name=='nt' else 'clear')
+
     # Open orders.
     orders = util.get_orders(db, validity='Valid', show_expired=False, show_empty=False)
     table = PrettyTable(['Give Quantity', 'Give Asset', 'Get Quantity', 'Get Asset', 'Price', 'Price Assets', 'Fee', 'Time Left', 'Tx Hash'])
@@ -46,9 +39,9 @@ def market (give_asset, get_asset):
             continue
         order = format_order(order)
         table.add_row(order)
-    print_('Open Orders')
-    print_(str(table.get_string(sortby='Price')))
-    print_('\n')
+    print('Open Orders')
+    print(str(table.get_string(sortby='Price')))
+    print('\n')
 
     # Open bets.
     bets = util.get_bets(db, validity='Valid', show_empty=False)
@@ -56,9 +49,9 @@ def market (give_asset, get_asset):
     for bet in bets:
         bet = format_bet(bet)
         table.add_row(bet)
-    print_('Open Bets')
-    print_(str(table))
-    print_('\n')
+    print('Open Bets')
+    print(str(table))
+    print('\n')
 
     # Matched orders awaiting BTC payments from you.
     awaiting_btcs = util.get_order_matches(db, validity='Valid: awaiting BTC payment', is_mine=True)
@@ -66,9 +59,9 @@ def market (give_asset, get_asset):
     for order_match in awaiting_btcs:
         order_match = format_order_match(order_match)
         table.add_row(order_match)
-    print_('Order Matches Awaiting BTC Payment')
-    print_(str(table))
-    print_('\n')
+    print('Order Matches Awaiting BTC Payment')
+    print(str(table))
+    print('\n')
 
     # Feeds
     broadcasts = util.get_broadcasts(db, validity='Valid', order_by='timestamp', order_dir='desc')
@@ -82,8 +75,8 @@ def market (give_asset, get_asset):
             seen_addresses.append(broadcast['source'])
         else:
             continue
-    print_('Feeds')
-    print_(str(table))
+    print('Feeds')
+    print(str(table))
 
     time.sleep(30)
 
@@ -99,9 +92,9 @@ def address (address):
         asset = balance['asset']
         amount = util.devise(db, balance['amount'], balance['asset'], 'output')
         table.add_row([asset, amount])
-    print_('Balances')
-    print_(str(table))
-    print_('\n')
+    print('Balances')
+    print(str(table))
+    print('\n')
 
     # Burns.
     burns = address['burns']
@@ -110,9 +103,9 @@ def address (address):
         burned = util.devise(db, burn['burned'], 'BTC', 'output')
         earned = util.devise(db, burn['earned'], 'BTC', 'output')
         table.add_row([burn['block_index'], burned + ' BTC', earned + ' XCP', util.short(burn['tx_hash'])])
-    print_('Burns')
-    print_(str(table))
-    print_('\n')
+    print('Burns')
+    print(str(table))
+    print('\n')
 
     # Sends.
     sends = address['sends']
@@ -121,9 +114,9 @@ def address (address):
         amount = util.devise(db, send['amount'], send['asset'], 'output')
         asset = send['asset']
         table.add_row([amount, asset, send['source'], send['destination'], util.short(send['tx_hash'])])
-    print_('Sends')
-    print_(str(table))
-    print_('\n')
+    print('Sends')
+    print(str(table))
+    print('\n')
 
     """
     # Orders.
@@ -134,9 +127,9 @@ def address (address):
         amount = util.devise(db, order['amount'], order['asset'], 'output')
         asset = order['asset']
         table.add_row([amount, asset, order['source'], order['destination'], util.short(order['tx_hash'])])
-    print_('orders')
-    print_(str(table))
-    print_('\n')
+    print('orders')
+    print(str(table))
+    print('\n')
     """
 
     """
@@ -148,9 +141,9 @@ def address (address):
         amount = util.devise(db, order_match['amount'], order['asset'], 'output')
         asset = order_match['asset']
         table.add_row([amount, asset, order_match['source'], order_match['destination'], util.short(order_match['tx_hash'])])
-    print_('order_matches')
-    print_(str(table))
-    print_('\n')
+    print('order_matches')
+    print(str(table))
+    print('\n')
     """
     # TODO
 
@@ -212,7 +205,7 @@ if __name__ == '__main__':
     parser.add_argument('--force', action='store_true', help='don\'t check whether Bitcoind is caught up')
     parser.add_argument('--testnet', action='store_true', help='use Bitcoin testnet addresses and block numbers')
     parser.add_argument('--testcoin', action='store_true', help='use the test Counterparty network on every blockchain')
-    parser.add_argument('--unsigned', action='store_true', help='print_ out unsigned hex of transaction; do not sign or broadcast')
+    parser.add_argument('--unsigned', action='store_true', help='print out unsigned hex of transaction; do not sign or broadcast')
 
     parser.add_argument('--data-dir', help='the directory in which to keep the database, config file and log file, by default')
     parser.add_argument('--database-file', help='the location of the SQLite3 database')
@@ -621,17 +614,17 @@ if __name__ == '__main__':
             divisible = bool(issuances[-1]['divisible'])
             issuer = issuances[-1]['issuer'] # Issuer of last issuance.
 
-        print_('Asset Name:', args.asset)
-        print_('Asset ID:', util.get_asset_id(args.asset))
-        print_('Total Issued:', total)
-        print_('Divisible:', divisible)
-        print_('Issuer:', issuer)
+        print('Asset Name:', args.asset)
+        print('Asset ID:', util.get_asset_id(args.asset))
+        print('Total Issued:', total)
+        print('Divisible:', divisible)
+        print('Issuer:', issuer)
 
     elif args.action == 'wallet':
         total_table = PrettyTable(['Asset', 'Balance'])
         totals = {}
 
-        print_()
+        print()
         for group in bitcoin.rpc('listaddressgroupings', []):
             for bunch in group:
                 address, btc_balance = bunch[:2]
@@ -653,18 +646,19 @@ if __name__ == '__main__':
                         table.add_row([asset, balance])
                         empty = False
                 if not empty:
-                    print_(address)
-                    print_(str(table))
-                    print_()
+                    print(address)
+                    print(str(table))
+                    print()
         for asset in totals.keys():
             balance = totals[asset]
             total_table.add_row([asset, round(balance, 8)])
-        print_('TOTAL')
-        print_(str(total_table))
-        print_()
+        print('TOTAL')
+        print(str(total_table))
+        print()
 
     elif args.action == 'market':
-        market(args.give_asset, args.get_asset)
+        while True:
+            market(args.give_asset, args.get_asset)
 
     elif args.action == 'purge':
         config.zeromq_publisher = zeromq.ZeroMQPublisher()
