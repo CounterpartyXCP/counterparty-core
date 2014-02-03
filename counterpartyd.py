@@ -472,7 +472,7 @@ if __name__ == '__main__':
                         datefmt='%Y-%m-%d-T%H:%M:%S%z')
 
     # Log also to stderr.
-    console = logging.StreamHandler()
+    console = util.SanitizedStreamHandler() if os.name == 'nt' else logging.StreamHandler()
     console.setLevel(logging.DEBUG if args.verbose else logging.INFO)
     formatter = logging.Formatter('%(message)s')
     console.setFormatter(formatter)
