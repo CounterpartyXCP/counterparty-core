@@ -105,7 +105,6 @@ def parse (db, tx, message, bet_heap, bet_match_heap):
          expiration) = None, None, None, None, None, None, None
         validity = 'Invalid: could not unpack'
 
-    # Debit amount wagered and fee.
     fee_multiplier = 0
     odds = 0
     if validity == 'Valid':
@@ -124,6 +123,7 @@ def parse (db, tx, message, bet_heap, bet_match_heap):
                             counterwager_amount, target_value, leverage, expiration)
         if problems: validity = 'Invalid: ' + ';'.join(problems)
 
+    # Debit amount wagered and fee.
     if validity == 'Valid':
         fee_multiplier = get_fee_multiplier(db, feed_address)
         fee = round(wager_amount * fee_multiplier / 1e8)    # round?!
