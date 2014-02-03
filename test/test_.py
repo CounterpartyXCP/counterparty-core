@@ -49,7 +49,7 @@ fee_multiplier_default = .05
 
 
 def parse_hex (unsigned_tx_hex):
-    
+
     tx = bitcoin.rpc('decoderawtransaction', [unsigned_tx_hex])
     source, destination, btc_amount, fee, data = blocks.get_tx_info(tx)
 
@@ -77,8 +77,8 @@ def parse_hex (unsigned_tx_hex):
                          data)
                   )
     parse_hex_cursor.execute('''SELECT * FROM transactions \
-                                WHERE tx_index=?''', (tx_index,))                         
-    tx = parse_hex_cursor.fetchall()[0]                  
+                                WHERE tx_index=?''', (tx_index,))
+    tx = parse_hex_cursor.fetchall()[0]
     heaps = blocks.init_heaps(db)
     blocks.parse_tx(db, tx, heaps)
 
