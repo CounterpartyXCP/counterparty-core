@@ -3,6 +3,7 @@ Craft, sign and broadcast Bitcoin transactions.
 Interface with Bitcoind.
 """
 
+import os
 import sys
 import binascii
 import json
@@ -219,7 +220,6 @@ def get_inputs (source, total_btc_out, test=False):
     if not test:
         listunspent = rpc('listunspent', [])
     else:
-        import os
         CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
         with open(CURR_DIR + '/../test/listunspent.test.json', 'r') as listunspent_test_file:   # HACK
             listunspent = json.load(listunspent_test_file)
