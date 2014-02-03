@@ -80,7 +80,7 @@ def parse (db, tx, message):
             if order_match['forward_asset'] != 'BTC':
                 util.credit(db, tx['block_index'], tx['source'], order_match['forward_asset'], order_match['forward_amount'])
             validity = 'Paid'
-        logging.info('BTC Payment for Order Match: {} ({})'.format(util.short(order_match_id), util.short(tx['tx_hash'])))
+        logging.info('BTC Payment for Order Match: {} ({})'.format(order_match_id, tx['tx_hash']))
 
     # Add parsed transaction to message-type–specific table.
     element_data = {

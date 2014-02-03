@@ -103,7 +103,7 @@ def parse (db, tx, message):
 
 
     if validity == 'Valid':
-        logging.info('Dividend: {} paid {} per share of asset {} ({})'.format(tx['source'], util.devise(db, amount_per_share, 'XCP', 'output'), asset, util.short(tx['tx_hash'])))
+        logging.info('Dividend: {} paid {} per share of asset {} ({})'.format(tx['source'], util.devise(db, amount_per_share, 'XCP', 'output'), asset, tx['tx_hash']))
 
     dividend_parse_cursor.close()
 

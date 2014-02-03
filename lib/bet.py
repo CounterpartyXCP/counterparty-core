@@ -160,7 +160,7 @@ def parse (db, tx, message, bet_heap, bet_match_heap):
             placeholder = ' that ' + str(util.devise(db, target_value, 'value', 'output'))
         if leverage:
             placeholder += ', leveraged {}x'.format(util.devise(db, leverage / 5040, 'leverage', 'output'))
-        logging.info('Bet: {} on {} at {} for {} XCP against {} XCP at {} odds in {} blocks{} for a fee of {} XCP ({})'.format(util.BET_TYPE_NAME[bet_type], feed_address, util.isodt(deadline), wager_amount / config.UNIT, counterwager_amount / config.UNIT, util.devise(db, odds, 'odds', dest='output'), expiration, placeholder, util.devise(db, fee, 'XCP', 'output'), util.short(tx['tx_hash'])))
+        logging.info('Bet: {} on {} at {} for {} XCP against {} XCP at {} odds in {} blocks{} for a fee of {} XCP ({})'.format(util.BET_TYPE_NAME[bet_type], feed_address, util.isodt(deadline), wager_amount / config.UNIT, counterwager_amount / config.UNIT, util.devise(db, odds, 'odds', dest='output'), expiration, placeholder, util.devise(db, fee, 'XCP', 'output'), tx['tx_hash']))
         match(db, tx, bet_heap, bet_match_heap)
 
     bet_parse_cursor.close()
@@ -231,7 +231,7 @@ def match (db, tx, bet_heap, bet_match_heap):
                 placeholder = ' that ' + str(util.devise(db, target_value, 'value', 'output'))
             if leverage:
                 placeholder += ', leveraged {}x'.format(util.devise(db, leverage / 5040, 'leverage', 'output'))
-            logging.info('Bet Match: {} for {} XCP against {} for {} XCP on {} at {}{} ({})'.format(util.BET_TYPE_NAME[tx0['bet_type']], util.devise(db, forward_amount, 'XCP', 'output'), util.BET_TYPE_NAME[tx1['bet_type']], util.devise(db, backward_amount, 'XCP', 'output'), tx1['feed_address'], util.isodt(tx1['deadline']), placeholder, util.short(bet_match_id)))
+            logging.info('Bet Match: {} for {} XCP against {} for {} XCP on {} at {}{} ({})'.format(util.BET_TYPE_NAME[tx0['bet_type']], util.devise(db, forward_amount, 'XCP', 'output'), util.BET_TYPE_NAME[tx1['bet_type']], util.devise(db, backward_amount, 'XCP', 'output'), tx1['feed_address'], util.isodt(tx1['deadline']), placeholder, bet_match_id))
 
             # Debit the order.
             wager_remaining = wager_remaining - backward_amount
@@ -302,7 +302,7 @@ def expire (db, block_index, block_time, bet_heap, bet_match_heap):
                 util.credit(db, block_index, bet['source'], 'XCP', round(bet['wager_remaining'] * (1 + bet['fee_multiplier'] / 1e8)))
                 cursor.execute('''UPDATE bets SET validity=? WHERE (validity = ? AND tx_index=?)''', ('Invalid: expired', 'Valid', tx_index))
 
-                logging.info('Expired bet: {}'.format(util.short(bet['tx_hash'])))
+                logging.info('Expired bet: {}'.format(bet['tx_hash']))
             cursor.close()
 
     # Expire bet matches whose deadline is more than two weeks before the current block time.
@@ -329,7 +329,7 @@ def expire (db, block_index, block_time, bet_heap, bet_match_heap):
                               WHERE (tx0_index=? AND tx1_index=?)''', ('Invalid: expired awaiting broadcast', tx0_index, tx1_index)
                           )
 
-            logging.info('Expired Bet Match: {}'.format(util.short(bet_match['tx0_hash'] + bet_match['tx1_hash'])))
+            logging.info('Expired Bet Match: {}'.format(bet_match['tx0_hash'] + bet_match['tx1_hash']))
     cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

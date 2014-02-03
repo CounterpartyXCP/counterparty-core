@@ -134,9 +134,9 @@ def parse (db, tx, message):
     if validity == 'Valid':
         # Log.
         if tx['destination']:
-            logging.info('Issuance: {} transfered asset {} to {} ({})'.format(tx['source'], asset, tx['destination'], util.short(tx['tx_hash'])))
+            logging.info('Issuance: {} transfered asset {} to {} ({})'.format(tx['source'], asset, tx['destination'], tx['tx_hash']))
         elif not amount:
-            logging.info('Issuance: {} locked asset {} ({})'.format(tx['source'], asset, util.short(tx['tx_hash'])))
+            logging.info('Issuance: {} locked asset {} ({})'.format(tx['source'], asset, tx['tx_hash']))
         else:
             if divisible:
                 divisibility = 'divisible'
@@ -148,7 +148,7 @@ def parse (db, tx, message):
                 callability = 'callable from {} for {} XCP/{}'.format(util.isodt(call_date), call_price, asset)
             else:
                 callability = 'uncallable'
-            logging.info('Issuance: {} created {} of {} asset {}, which is {}, with description ‘{}’ ({})'.format(tx['source'], util.devise(db, amount, None, 'output', divisible=divisible), divisibility, asset, callability, description, util.short(tx['tx_hash'])))
+            logging.info('Issuance: {} created {} of {} asset {}, which is {}, with description ‘{}’ ({})'.format(tx['source'], util.devise(db, amount, None, 'output', divisible=divisible), divisibility, asset, callability, description, tx['tx_hash']))
 
     issuance_parse_cursor.close()
 

@@ -77,7 +77,7 @@ def parse (db, tx, message=None):
         util.credit(db, tx['block_index'], tx['source'], 'XCP', earned)
 
         # Log.
-        logging.info('Burn: {} burned {} BTC for {} XCP ({})'.format(tx['source'], util.devise(db, burned, 'BTC', 'output'), util.devise(db, earned, 'XCP', 'output'), util.short(tx['tx_hash'])))
+        logging.info('Burn: {} burned {} BTC for {} XCP ({})'.format(tx['source'], util.devise(db, burned, 'BTC', 'output'), util.devise(db, earned, 'XCP', 'output'), tx['tx_hash']))
     else:
         burned = 0
         earned = 0

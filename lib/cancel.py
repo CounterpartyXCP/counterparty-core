@@ -69,7 +69,7 @@ def parse (db, tx, message):
                                        SET validity=? \
                                        WHERE (tx_hash=? AND source=? AND validity=?)''', ('Invalid: cancelled', offer_hash, tx['source'], 'Valid'))
 
-        logging.info('Cancel: {} ({})'.format(util.short(offer_hash), util.short(tx['tx_hash'])))
+        logging.info('Cancel: {} ({})'.format(offer_hash, tx['tx_hash']))
 
     # Add parsed transaction to message-type–specific table.
     element_data = {

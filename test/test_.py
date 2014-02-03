@@ -460,7 +460,6 @@ transaction
 
 """
 Too small:
-util.short()
 util.isodt()
 util.devise()
 bet.get_fee_multiplier()

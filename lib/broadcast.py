@@ -97,11 +97,11 @@ def parse (db, tx, message):
     # Log.
     if validity == 'Valid':
         if not text:
-            logging.info('Broadcast: {} locked his feed.'.format(tx['source'], util.short(tx['tx_hash'])))
+            logging.info('Broadcast: {} locked his feed.'.format(tx['source'], tx['tx_hash']))
         else:
             if not value: infix = '‘{}’'.format(text)
             else: infix = '‘{}’ = {}'.format(text, value)
-            suffix = ' from ' + tx['source'] + ' at ' + util.isodt(timestamp) + ' with a fee multiplier of {}'.format(util.devise(db, fee_multiplier, 'fee_multiplier', 'output')) + ' (' + util.short(tx['tx_hash']) + ')'
+            suffix = ' from ' + tx['source'] + ' at ' + util.isodt(timestamp) + ' with a fee multiplier of {}'.format(util.devise(db, fee_multiplier, 'fee_multiplier', 'output')) + ' (' + tx['tx_hash'] + ')'
             logging.info('Broadcast: {}'.format(infix + suffix))
 
     # Add parsed transaction to message-type–specific table.
@@ -187,7 +187,7 @@ def parse (db, tx, message):
                     # Pay fee to feed.
                     util.credit(db, tx['block_index'], bet_match['feed_address'], 'XCP', fee)
 
-                    logging.info('Contract Force‐Liquidated: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), util.short(bet_match_id)))
+                    logging.info('Contract Force‐Liquidated: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), bet_match_id))
 
             # Settle.
             if validity == 'Valid' and timestamp >= bet_match['deadline']:
@@ -198,7 +198,7 @@ def parse (db, tx, message):
                 util.credit(db, tx['block_index'], bet_match['feed_address'], 'XCP', fee)
 
                 validity = 'Settled (CFD)'
-                logging.info('Contract Settled: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), util.short(bet_match_id)))
+                logging.info('Contract Settled: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), bet_match_id))
 
         # Equal[/NotEqual] bet.
         if validity == 'Valid' and  bet_match_type_id == equal_type_id and timestamp >= bet_match['deadline']:
@@ -224,7 +224,7 @@ def parse (db, tx, message):
             # Pay fee to feed.
             util.credit(db, tx['block_index'], bet_match['feed_address'], 'XCP', fee)
 
-            logging.info('Contract Settled: {} won the pot of {} XCP; {} XCP credited to the feed address ({})'.format(winner, util.devise(db, total_escrow, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), util.short(bet_match_id)))
+            logging.info('Contract Settled: {} won the pot of {} XCP; {} XCP credited to the feed address ({})'.format(winner, util.devise(db, total_escrow, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), bet_match_id))
 
         # Update the bet match's status.
         broadcast_bet_match_cursor.execute('''UPDATE bet_matches \

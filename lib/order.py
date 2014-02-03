@@ -113,7 +113,7 @@ def parse (db, tx, message, order_heap, order_match_heap):
             fee_text = 'with a required fee of ' + str(fee_required / config.UNIT) + ' BTC '
         else:
             fee_text = ''
-        logging.info('Order: sell {} {} for {} {} at {} {}/{} in {} blocks {}({})'.format(give_amount, give_asset, get_amount, get_asset, util.devise(db, price, 'price', dest='output'), get_asset, give_asset, expiration, fee_text, util.short(tx['tx_hash'])))
+        logging.info('Order: sell {} {} for {} {} at {} {}/{} in {} blocks {}({})'.format(give_amount, give_asset, get_amount, get_asset, util.devise(db, price, 'price', dest='output'), get_asset, give_asset, expiration, fee_text, tx['tx_hash']))
         match(db, tx, order_heap, order_match_heap)
 
     order_parse_cursor.close()
@@ -159,7 +159,7 @@ def match (db, tx, order_heap, order_match_heap):
             forward_print = D(util.devise(db, forward_amount, forward_asset, 'output'))
             backward_print = D(util.devise(db, backward_amount, backward_asset, 'output'))
 
-            logging.info('Order Match: {} {} for {} {} at {} {}/{} ({})'.format(forward_print, forward_asset, backward_print, backward_asset, util.devise(db, tx0_price, 'price', 'output'), backward_asset, forward_asset, util.short(order_match_id)))
+            logging.info('Order Match: {} {} for {} {} at {} {}/{} ({})'.format(forward_print, forward_asset, backward_print, backward_asset, util.devise(db, tx0_price, 'price', 'output'), backward_asset, forward_asset, order_match_id))
 
             if 'BTC' in (tx1['give_asset'], tx1['get_asset']):
                 validity = 'Valid: awaiting BTC payment'
@@ -236,7 +236,7 @@ def expire (db, block_index, order_heap, order_match_heap):
                     util.credit(db, block_index, order['source'], order['give_asset'], order['give_remaining'])
                 order_expire_cursor.execute('''UPDATE orders SET validity=? WHERE (validity = ? AND tx_index=?)''', ('Invalid: expired', 'Valid', tx_index))
 
-                logging.info('Expired order: {}'.format(util.short(order['tx_hash'])))
+                logging.info('Expired order: {}'.format(order['tx_hash']))
             order_expire_cursor.close()
 
     # Expire order_matches for BTC with no BTC.
@@ -262,7 +262,7 @@ def expire (db, block_index, order_heap, order_match_heap):
                     util.credit(db, block_index, order_match['tx0_address'],
                                         order_match['forward_asset'],
                                         order_match['forward_amount'])
-                logging.info('Expired Order Match awaiting BTC payment: {}'.format(util.short(order_match['tx0_hash'] + order_match['tx1_hash'])))
+                logging.info('Expired Order Match awaiting BTC payment: {}'.format(order_match['tx0_hash'] + order_match['tx1_hash']))
 
     cursor.close()
 

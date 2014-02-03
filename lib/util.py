@@ -162,12 +162,6 @@ def get_limit_to_blocks(start_block, end_block, col_names=['block_index',]):
                 col_name[0], end_block, col_name[1], end_block)
     return block_limit_clause
 
-def short (string):
-    if len(string) == 64: length = 8
-    elif len(string) == 128: length = 16
-    short = string[:length] + '…' + string[-length:]
-    return short
-
 def isodt (epoch_time):
     return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
 

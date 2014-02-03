@@ -1,71 +1,71 @@
 START TEST
 Credit: 930.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Burn: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 0.62 BTC for 930.0 XCP (6e340b9c…17afa01d)
+Burn: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 0.62 BTC for 930.0 XCP (6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d)
 Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Credit: 0.5 XCP to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7
-Send: 0.5 of asset XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 (4bf5122f…7785459a)
-Order: sell 0.5 BTC for 1.0 XCP at 2.0000 XCP/BTC in 10 blocks with a provided fee of 0.01 BTC (dbc1b4c9…6457d986)
+Send: 0.5 of asset XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 (4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a)
+Order: sell 0.5 BTC for 1.0 XCP at 2.0000 XCP/BTC in 10 blocks with a provided fee of 0.01 BTC (dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986)
 Debit: 1.05 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Order: sell 1.05 XCP for 0.5 BTC at 0.4762 BTC/XCP in 10 blocks with a required fee of 0.009 BTC (084fed08…adff29c5)
-Order Match: 0.5 BTC for 1.0 XCP at 2.0000 XCP/BTC (dbc1b4c900ffe48d…11b65a9aadff29c5)
+Order: sell 1.05 XCP for 0.5 BTC at 0.4762 BTC/XCP in 10 blocks with a required fee of 0.009 BTC (084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5)
+Order Match: 0.5 BTC for 1.0 XCP at 2.0000 XCP/BTC (dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5)
 Credit: 1.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-BTC Payment for Order Match: dbc1b4c900ffe48d…11b65a9aadff29c5 (e52d9c50…81c89e71)
+BTC Payment for Order Match: dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5 (e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71)
 Credit: 10.0 BBBBE to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 10.0 of divisible asset BBBBE, which is uncallable, with description ‘’ (e77b9a9a…5ab743db)
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 10.0 of divisible asset BBBBE, which is uncallable, with description ‘’ (e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db)
 Credit: 100000 BBBCD to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 100000 of indivisible asset BBBCD, which is callable from 2010-11-04T03:28:12-04:00 for 0.015 XCP/BBBCD, with description ‘foobar’ (67586e98…08c5ecf6)
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 100000 of indivisible asset BBBCD, which is callable from 2010-11-04T03:28:12-04:00 for 0.015 XCP/BBBCD, with description ‘foobar’ (67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6)
 Debit: 6E-7 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Credit: 6E-7 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 6E-8 per share of asset BBBBE (ca358758…005ee879)
+Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 6E-8 per share of asset BBBBE (ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879)
 Debit: 0.008 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Credit: 0.008 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 8E-8 per share of asset BBBCD (beead779…8dc1829a)
-Broadcast: ‘Unit Test’ = 100.0 from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:33:20-05:00 with a fee multiplier of 0.0500 (2b4c342f…651c3cb9)
+Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 8E-8 per share of asset BBBCD (beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a)
+Broadcast: ‘Unit Test’ = 100.0 from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:33:20-05:00 with a fee multiplier of 0.0500 (2b4c342f5433ebe591a1da77e013d1b72475562d48578dca8b84bac6651c3cb9)
 Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Debit: 0.025 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Bet: BullCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 0.5 XCP against 0.25 XCP at 2.0000 odds in 10 blocks, leveraged 3.0000x for a fee of 0.025 XCP (01ba4719…daca546b)
+Bet: BullCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 0.5 XCP against 0.25 XCP at 2.0000 odds in 10 blocks, leveraged 3.0000x for a fee of 0.025 XCP (01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b)
 Debit: 0.25 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Debit: 0.0125 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Bet: BearCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 0.25 XCP against 0.415 XCP at 0.6024 odds in 10 blocks, leveraged 3.0000x for a fee of 0.0125 XCP (e7cf46a0…4b7cc3a6)
-Bet Match: BullCFD for 0.415 XCP against BearCFD for 0.2075 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00, leveraged 3.0000x (01ba4719c80b6fe9…14add3314b7cc3a6)
+Bet: BearCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 0.25 XCP against 0.415 XCP at 0.6024 odds in 10 blocks, leveraged 3.0000x for a fee of 0.0125 XCP (e7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6)
+Bet Match: BullCFD for 0.415 XCP against BearCFD for 0.2075 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00, leveraged 3.0000x (01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546be7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6)
 Debit: 1.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Debit: 0.075 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Bet: BullCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 1.5 XCP against 3.5 XCP at 0.4286 odds in 10 blocks, leveraged 1.0000x for a fee of 0.075 XCP (ef6cbd21…9b44c977)
+Bet: BullCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 1.5 XCP against 3.5 XCP at 0.4286 odds in 10 blocks, leveraged 1.0000x for a fee of 0.075 XCP (ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c977)
 Debit: 3.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Debit: 0.175 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Bet: BearCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 3.5 XCP against 1.5 XCP at 2.3333 odds in 10 blocks, leveraged 1.0000x for a fee of 0.175 XCP (9d1e0e2d…113599c4)
-Bet Match: BullCFD for 1.5 XCP against BearCFD for 3.5 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00, leveraged 1.0000x (ef6cbd2161eaea79…f30eba2e113599c4)
+Bet: BearCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 for 3.5 XCP against 1.5 XCP at 2.3333 odds in 10 blocks, leveraged 1.0000x for a fee of 0.175 XCP (9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4)
+Bet Match: BullCFD for 1.5 XCP against BearCFD for 3.5 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00, leveraged 1.0000x (ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c9779d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4)
 Debit: 7.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Debit: 0.375 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Bet: Equal on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 for 7.5 XCP against 6.5 XCP at 1.1538 odds in 10 blocks that 1.0000, leveraged 1.0000x for a fee of 0.375 XCP (4d7b3ef7…9a0d0f47)
+Bet: Equal on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 for 7.5 XCP against 6.5 XCP at 1.1538 odds in 10 blocks that 1.0000, leveraged 1.0000x for a fee of 0.375 XCP (4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47)
 Debit: 6.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Debit: 0.325 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Bet: NotEqual on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 for 6.5 XCP against 7.5 XCP at 0.8667 odds in 10 blocks that 1.0000, leveraged 1.0000x for a fee of 0.325 XCP (dc0e9c36…e30f8cb8)
-Bet Match: Equal for 7.5 XCP against NotEqual for 6.5 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 that 1.0000, leveraged 1.0000x (4d7b3ef7300acf70…923ad9bde30f8cb8)
-Broadcast: ‘Unit Test’ = 99.86166 from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:34:10-05:00 with a fee multiplier of 0.0500 (c555eab4…89b88ee3)
+Bet: NotEqual on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 for 6.5 XCP against 7.5 XCP at 0.8667 odds in 10 blocks that 1.0000, leveraged 1.0000x for a fee of 0.325 XCP (dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8)
+Bet Match: Equal for 7.5 XCP against NotEqual for 6.5 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 that 1.0000, leveraged 1.0000x (4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8)
+Broadcast: ‘Unit Test’ = 99.86166 from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:34:10-05:00 with a fee multiplier of 0.0500 (c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee3)
 Credit: 0.6225 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Credit: 0.031125 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Contract Force‐Liquidated: 0.0 XCP credited to the bull, 0.6225 XCP credited to the bear, and 0.031125 XCP credited to the feed address (01ba4719c80b6fe9…14add3314b7cc3a6)
-Broadcast: ‘Unit Test’ = 100.343 from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:01-05:00 with a fee multiplier of 0.0500 (4a64a107…1d4ea80a)
+Contract Force‐Liquidated: 0.0 XCP credited to the bull, 0.6225 XCP credited to the bear, and 0.031125 XCP credited to the feed address (01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546be7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6)
+Broadcast: ‘Unit Test’ = 100.343 from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:01-05:00 with a fee multiplier of 0.0500 (4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a)
 Credit: 1.843 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Credit: 3.157 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Credit: 0.25 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Contract Settled: 1.843 XCP credited to the bull, 3.157 XCP credited to the bear, and 0.25 XCP credited to the feed address (ef6cbd2161eaea79…f30eba2e113599c4)
-Broadcast: ‘Unit Test’ = 2.0 from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:41-05:00 with a fee multiplier of 0.0500 (f299791c…e91e750c)
+Contract Settled: 1.843 XCP credited to the bull, 3.157 XCP credited to the bear, and 0.25 XCP credited to the feed address (ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c9779d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4)
+Broadcast: ‘Unit Test’ = 2.0 from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:41-05:00 with a fee multiplier of 0.0500 (f299791cddd3d6664f6670842812ef6053eb6501bd6282a476bbbf3ee91e750c)
 Credit: 14.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Credit: 0.7 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Contract Settled: NotEqual won the pot of 14.0 XCP; 0.7 XCP credited to the feed address (4d7b3ef7300acf70…923ad9bde30f8cb8)
+Contract Settled: NotEqual won the pot of 14.0 XCP; 0.7 XCP credited to the feed address (4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8)
 Debit: 0.5 BBBBE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Order: sell 0.5 BBBBE for 0.5 XCP at 1.0000 XCP/BBBBE in 10 blocks (ab897fbd…300a62e2)
-Cancel: ab897fbd…300a62e2 (83891d7f…b452d879)
+Order: sell 0.5 BBBBE for 0.5 XCP at 1.0000 XCP/BBBBE in 10 blocks (ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2)
+Cancel: ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2 (83891d7fe85c33e52c8b4e5814c92fb6a3b9467299200538a6babaa8b452d879)
 Credit: 570.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Burn: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 0.38 BTC for 570.0 XCP (2f0fd1e8…6ff58608)
+Burn: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 0.38 BTC for 570.0 XCP (2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608)
 Debit: 10000 BBBCD from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Credit: 10000 BBBCD to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7
-Send: 10000 of asset BBBCD from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 (7cb7c454…da7839ba)
+Send: 10000 of asset BBBCD from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 (7cb7c4547cf2653590d7a9ace60cc623d25148adfbc88a89aeb0ef88da7839ba)
 Debit: 45.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Credit: 3000 BBBCD to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Debit: 3000 BBBCD from n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7
 Credit: 45.0 XCP to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7
-Callback: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc called back 30.0% of asset BBBCD (8f11b05d…3aa37034)
+Callback: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc called back 30.0% of asset BBBCD (8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034)
 STOP TEST
