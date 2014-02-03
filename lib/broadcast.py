@@ -99,8 +99,8 @@ def parse (db, tx, message):
         if not text:
             logging.info('Broadcast: {} locked his feed.'.format(tx['source'], util.short(tx['tx_hash'])))
         else:
-            if not value: infix = '\'' + text + '\''
-            else: infix = '\'' + text + '\'' + ' = ' + str(value)
+            if not value: infix = '‘{}’'.format(text)
+            else: infix = '‘{}’ = {}'.format(text, value)
             suffix = ' from ' + tx['source'] + ' at ' + util.isodt(timestamp) + ' with a fee multiplier of {}'.format(util.devise(db, fee_multiplier, 'fee_multiplier', 'output')) + ' (' + util.short(tx['tx_hash']) + ')'
             logging.info('Broadcast: {}'.format(infix + suffix))
 
@@ -176,18 +176,18 @@ def parse (db, tx, message):
                     bull_credit = total_escrow
                     bear_credit = 0
                     util.credit(db, tx['block_index'], bull_address, 'XCP', bull_credit)
-                    validity = 'Force-Liquidated Bear'
+                    validity = 'Force‐Liquidated Bear'
                 elif bull_credit <= 0:
                     bull_credit = 0
                     bear_credit = total_escrow
                     util.credit(db, tx['block_index'], bear_address, 'XCP', bear_credit)
-                    validity = 'Force-Liquidated Bull'
+                    validity = 'Force‐Liquidated Bull'
 
-                if validity.startswith('Force-Liquidated'):
+                if validity.startswith('Force‐Liquidated'):
                     # Pay fee to feed.
                     util.credit(db, tx['block_index'], bet_match['feed_address'], 'XCP', fee)
 
-                    logging.info('Contract Force-Liquidated: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), util.short(bet_match_id)))
+                    logging.info('Contract Force‐Liquidated: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), util.short(bet_match_id)))
 
             # Settle.
             if validity == 'Valid' and timestamp >= bet_match['deadline']:

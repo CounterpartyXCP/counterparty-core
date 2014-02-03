@@ -14,6 +14,7 @@ import appdirs
 import configparser
 import requests
 from prettytable import PrettyTable
+import unicodedata
 
 import time
 import dateutil.parser
@@ -24,7 +25,7 @@ from lib import (config, api, util, exceptions, bitcoin, blocks, checksum)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
-
+windows = lambda x: unicodedata.normalize('NFKD', x).encode('ascii', 'ignore').decode()
 
 def market (give_asset, get_asset):
     # Open orders.
@@ -36,7 +37,9 @@ def market (give_asset, get_asset):
         order = format_order(order)
         table.add_row(order)
     print('Open Orders')
-    print(str(table.get_string(sortby='Price')))
+    if os.name == 'nt':
+        table = windows(table.get_string(sortby='Price'))
+    print(table)
     print('\n')
 
     # Open bets.
@@ -46,7 +49,8 @@ def market (give_asset, get_asset):
         bet = format_bet(bet)
         table.add_row(bet)
     print('Open Bets')
-    print(str(table))
+    if os.name == 'nt': table = windows(table.get_string())
+    print(table)
     print('\n')
 
     # Matched orders awaiting BTC payments from you.
@@ -56,7 +60,8 @@ def market (give_asset, get_asset):
         order_match = format_order_match(db, order_match)
         table.add_row(order_match)
     print('Order Matches Awaiting BTC Payment')
-    print(str(table))
+    if os.name == 'nt': table = windows(table.get_string())
+    print(table)
     print('\n')
 
     # Feeds
@@ -72,7 +77,8 @@ def market (give_asset, get_asset):
         else:
             continue
     print('Feeds')
-    print(str(table))
+    if os.name == 'nt': table = windows(table.get_string())
+    print(table)
 
 
 def balances (address):
@@ -96,7 +102,7 @@ def balances (address):
         amount = util.devise(db, balance['amount'], balance['asset'], 'output')
         table.add_row([asset, amount])
     print('Balances')
-    print(str(table))
+    print(table.get_string())
 
 def format_order (order):
     give_amount = util.devise(db, D(order['give_amount']), order['give_asset'], 'output')
@@ -592,6 +598,7 @@ if __name__ == '__main__':
             description = issuances[-1]['description']
 
         asset_id = util.get_asset_id(args.asset)
+        if os.name == 'nt': description = windows(description)
 
         print('Asset Name:', args.asset)
         print('Asset ID:', asset_id)
@@ -630,13 +637,13 @@ if __name__ == '__main__':
                         empty = False
                 if not empty:
                     print(address)
-                    print(str(table))
+                    print(table.get_string())
                     print()
         for asset in totals.keys():
             balance = totals[asset]
             total_table.add_row([asset, round(balance, 8)])
         print('TOTAL')
-        print(str(total_table))
+        print(total_table.get_string())
         print()
 
     elif args.action == 'market':

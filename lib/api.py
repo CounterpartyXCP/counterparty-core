@@ -329,7 +329,7 @@ class APIServer(threading.Thread):
         #start up the API listener/handler
         server = wsgiserver.CherryPyWSGIServer(
             (config.RPC_HOST, int(config.RPC_PORT)), application)
-        #logging.debug("Initializing API interface...")
+        #logging.debug("Initializing API interface…")
         try:
             server.start()
         except OSError:
