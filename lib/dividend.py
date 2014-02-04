@@ -10,8 +10,9 @@ D = decimal.Decimal
 from . import (util, config, exceptions, bitcoin, util)
 
 FORMAT = '>QQ'
-ID = 50
 LENGTH = 8 + 8
+ID = 50
+
 
 def validate (db, source, amount_per_share, asset):
     problems = []
@@ -27,6 +28,7 @@ def validate (db, source, amount_per_share, asset):
         problems.append('no such asset, {}.'.format(asset))
         return None, problems
 
+    # This is different from the way callbacks are done.
     divisible = issuances[0]['divisible']
     if divisible:
         total_shares = sum([issuance['amount'] for issuance in issuances]) / config.UNIT
@@ -57,10 +59,11 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
+        assert len(message) == LENGTH
         amount_per_share, asset_id = struct.unpack(FORMAT, message)
         asset = util.get_asset_name(asset_id)
         validity = 'Valid'
-    except Exception:
+    except struct.error as e:
         amount_per_share, asset = None, None
         validity = 'Invalid: could not unpack'
 
@@ -68,12 +71,6 @@ def parse (db, tx, message):
         # For SQLite3
         amount_per_share = min(amount_per_share, config.MAX_INT)
 
-        if asset in ('BTC', 'XCP'):
-            validity = 'Invalid: cannot send dividends to BTC or XCP'
-        elif not util.valid_asset_name(asset):
-            validity = 'Invalid: bad Asset ID'
-
-    if validity == 'Valid':
         amount, problems = validate(db, tx['source'], amount_per_share, asset)
         if problems: validity = 'Invalid: ' + ';'.join(problems)
 
@@ -82,10 +79,13 @@ def parse (db, tx, message):
         util.debit(db, tx['block_index'], tx['source'], 'XCP', amount)
 
         # Credit.
+        issuances = util.get_issuances(db, validity='Valid', asset=asset)
+        divisible = issuances[0]['divisible']
         balances = util.get_balances(db, asset=asset)
         for balance in balances:
             address, address_amount = balance['address'], balance['amount']
-            address_amount = round(D(address_amount) / config.UNIT)
+            if divisible:   # Pay per output unit.
+                address_amount = round(D(address_amount) / config.UNIT)
             amount = address_amount * amount_per_share
             util.credit(db, tx['block_index'], address, 'XCP', amount)
 
@@ -100,10 +100,10 @@ def parse (db, tx, message):
         'validity': validity,
     }
     dividend_parse_cursor.execute(*util.get_insert_sql('dividends', element_data))
-    config.zeromq_publisher.push_to_subscribers('new_dividend', element_data)
+
 
     if validity == 'Valid':
-        logging.info('Dividend: {} paid {} per share of asset {} ({})'.format(tx['source'], util.devise(db, amount_per_share, 'XCP', 'output'), asset, util.short(tx['tx_hash'])))
+        logging.info('Dividend: {} paid {} per share of asset {} ({})'.format(tx['source'], util.devise(db, amount_per_share, 'XCP', 'output'), asset, tx['tx_hash']))
 
     dividend_parse_cursor.close()
 

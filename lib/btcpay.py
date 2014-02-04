@@ -7,8 +7,9 @@ import logging
 from . import (util, config, exceptions, bitcoin, util)
 
 FORMAT = '>32s32s'
-ID = 11
 LENGTH = 32 + 32
+ID = 11
+
 
 def validate (db, tx0_hash, tx1_hash):
     order_match_id = tx0_hash + tx1_hash
@@ -52,10 +53,11 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
+        assert len(message) == LENGTH
         tx0_hash_bytes, tx1_hash_bytes = struct.unpack(FORMAT, message)
         tx0_hash, tx1_hash = binascii.hexlify(tx0_hash_bytes).decode('utf-8'), binascii.hexlify(tx1_hash_bytes).decode('utf-8')
         validity = 'Valid'
-    except Exception:
+    except struct.error as e:
         tx0_hash, tx1_hash = None, None
         validity = 'Invalid: could not unpack'
 
@@ -78,7 +80,7 @@ def parse (db, tx, message):
             if order_match['forward_asset'] != 'BTC':
                 util.credit(db, tx['block_index'], tx['source'], order_match['forward_asset'], order_match['forward_amount'])
             validity = 'Paid'
-        logging.info('BTC Payment for Order Match: {} ({})'.format(util.short(order_match_id), util.short(tx['tx_hash'])))
+        logging.info('BTC Payment for Order Match: {} ({})'.format(order_match_id, tx['tx_hash']))
 
     # Add parsed transaction to message-type–specific table.
     element_data = {
@@ -90,7 +92,7 @@ def parse (db, tx, message):
         'validity': validity,
     }
     btcpay_parse_cursor.execute(*util.get_insert_sql('btcpays', element_data))
-    config.zeromq_publisher.push_to_subscribers('new_btcpay', element_data)
+
 
     btcpay_parse_cursor.close()
 

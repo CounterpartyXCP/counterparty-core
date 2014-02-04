@@ -11,11 +11,14 @@ import struct
 import decimal
 D = decimal.Decimal
 import logging
+import heapq
 
 from . import (config, exceptions, util, bitcoin)
-from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel)
+from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 
-def parse_tx (db, tx):
+def parse_tx (db, tx, heaps):
+    order_heap, order_match_heap, bet_heap, bet_match_heap = heaps
+
     parse_tx_cursor = db.cursor()
     # Burns.
     if tx['destination'] == config.UNSPENDABLE:
@@ -29,33 +32,35 @@ def parse_tx (db, tx):
         message_type_id = None
 
     message = tx['data'][4:]
-    if message_type_id == send.ID and len(message) == send.LENGTH:
+    if message_type_id == send.ID:
         send.parse(db, tx, message)
-    elif message_type_id == order.ID and len(message) == order.LENGTH:
-        order.parse(db, tx, message)
-    elif message_type_id == btcpay.ID and len(message) == btcpay.LENGTH:
+    elif message_type_id == order.ID:
+        order.parse(db, tx, message, order_heap, order_match_heap)
+    elif message_type_id == btcpay.ID:
         btcpay.parse(db, tx, message)
-    elif message_type_id == issuance.ID and len(message) == issuance.LENGTH:
+    elif message_type_id == issuance.ID:
         issuance.parse(db, tx, message)
-    elif message_type_id == broadcast.ID and len(message) == broadcast.LENGTH:
+    elif message_type_id == broadcast.ID:
         broadcast.parse(db, tx, message)
-    elif message_type_id == bet.ID and len(message) == bet.LENGTH:
-        bet.parse(db, tx, message)
-    elif message_type_id == dividend.ID and len(message) == dividend.LENGTH:
+    elif message_type_id == bet.ID:
+        bet.parse(db, tx, message, bet_heap, bet_match_heap)
+    elif message_type_id == dividend.ID:
         dividend.parse(db, tx, message)
-    elif message_type_id == cancel.ID and len(message) == cancel.LENGTH:
+    elif message_type_id == cancel.ID:
         cancel.parse(db, tx, message)
+    elif message_type_id == callback.ID:
+        callback.parse(db, tx, message)
     else:
         parse_tx_cursor.execute('''UPDATE transactions \
-                          SET supported=? \
-                          WHERE tx_hash=?''',
-                       (False, tx['tx_hash']))
+                                   SET supported=? \
+                                   WHERE tx_hash=?''',
+                                (False, tx['tx_hash']))
         logging.info('Unsupported transaction: hash {}; data {}'.format(tx['tx_hash'], tx['data']))
 
 
     parse_tx_cursor.close()
 
-def parse_block (db, block_index):
+def parse_block (db, block_index, block_time, heaps):
     """This is a separate function from follow() so that changing the parsing
     rules doesn't require a full database rebuild. If parsing rules are changed
     (but not data identification), then just restart `counterparty.py follow`.
@@ -64,16 +69,17 @@ def parse_block (db, block_index):
     parse_block_cursor = db.cursor()
 
     # Expire orders and bets.
-    order.expire(db, block_index)
-    bet.expire(db, block_index)
+    order_heap, order_match_heap, bet_heap, bet_match_heap = heaps
+    order.expire(db, block_index, order_heap, order_match_heap)
+    bet.expire(db, block_index, block_time, bet_heap, bet_match_heap)
 
     # Parse transactions, sorting them by type.
     parse_block_cursor.execute('''SELECT * FROM transactions \
-                      WHERE block_index=? ORDER BY tx_index''',
-                   (block_index,))
-    transactions = parse_block_cursor.fetchall()   
+                                  WHERE block_index=? ORDER BY tx_index''',
+                               (block_index,))
+    transactions = parse_block_cursor.fetchall()
     for tx in transactions:
-        parse_tx(db, tx)
+        parse_tx(db, tx, heaps)
 
     parse_block_cursor.close()
 
@@ -169,7 +175,7 @@ def initialise(db):
                         give_remaining INTEGER,
                         get_asset TEXT,
                         get_amount INTEGER,
-                        price REAL,
+                        get_remaining INTEGER,
                         expiration INTEGER,
                         fee_required INTEGER,
                         fee_provided INTEGER,
@@ -221,6 +227,11 @@ def initialise(db):
                         divisible BOOL,
                         issuer TEXT,
                         transfer BOOL,
+                        callable BOOL,
+                        call_date INTEGER,
+                        call_price REAL,
+                        description TEXT,
+                        fee_paid INTEGER,
                         validity TEXT
                         )
                    ''')
@@ -252,9 +263,9 @@ def initialise(db):
                         bet_type INTEGER,
                         deadline INTEGER,
                         wager_amount INTEGER,
-                        counterwager_amount INTEGER,
                         wager_remaining INTEGER,
-                        odds REAL,
+                        counterwager_amount INTEGER,
+                        counterwager_remaining INTEGER,
                         target_value REAL,
                         leverage INTEGER,
                         expiration INTEGER,
@@ -326,8 +337,23 @@ def initialise(db):
                         offer_hash TEXT,
                         validity TEXT)
                    ''')
+
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
                         cancels_block_index_idx ON cancels (block_index)
+                    ''')
+
+    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS callbacks(
+                        tx_index INTEGER PRIMARY KEY,
+                        tx_hash TEXT UNIQUE,
+                        block_index INTEGER,
+                        source TEXT,
+                        fraction_per_share TEXT,
+                        asset TEXT,
+                        validity TEXT)
+                   ''')
+
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                        callbacks_block_index_idx ON callbacks (block_index)
                     ''')
 
     initialise_cursor.close()
@@ -397,99 +423,103 @@ def get_tx_info (tx):
     return source, destination, btc_amount, round(fee), data
 
 def reparse (db, quiet=False):
+    """Reparse all transactions (atomically).
+    """
     # TODO: This is not thread‐safe!
     logging.warning('Status: Reparsing all transactions.')
-
     reparse_cursor = db.cursor()
 
-    # Delete all of the results of parsing.
-    # NOTE: dropping a table will also delete any indicies and triggers associated with it
-    reparse_cursor.execute('''DROP TABLE IF EXISTS debits''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS credits''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS balances''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS sends''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS orders''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS order_matches''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS btcpays''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS issuances''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS broadcasts''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS bets''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS bet_matches''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS dividends''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS burns''')
-    reparse_cursor.execute('''DROP TABLE IF EXISTS cancels''')
+    with db:
+        # Delete all of the results of parsing.
+        reparse_cursor.execute('''DROP TABLE IF EXISTS debits''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS credits''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS balances''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS sends''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS orders''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS order_matches''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS btcpays''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS issuances''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS broadcasts''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS bets''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS bet_matches''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS dividends''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS burns''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS cancels''')
+        reparse_cursor.execute('''DROP TABLE IF EXISTS callbacks''')
 
-    # Reparse all blocks, transactions.
-    if quiet:
-        log = logging.getLogger('')
-        log.setLevel(logging.WARNING)
-    initialise(db)
-    reparse_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
-    for block in reparse_cursor.fetchall():
-        logging.info('Block (re‐parse): {}'.format(str(block['block_index'])))
-        parse_block(db, block['block_index'])
-    if quiet:
-        log.setLevel(logging.INFO)
+        # Reparse all blocks, transactions.
+        if quiet:
+            log = logging.getLogger('')
+            log.setLevel(logging.WARNING)
+        initialise(db)
+        heaps = init_heaps(db)
+        reparse_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
+        for block in reparse_cursor.fetchall():
+            logging.info('Block (re‐parse): {}'.format(str(block['block_index'])))
+            parse_block(db, block['block_index'], block['block_time'], heaps)
+        if quiet:
+            log.setLevel(logging.INFO)
 
     reparse_cursor.close()
     return
 
 def rollback (db, block_index):
-    """Rollback database to state at end of block number block_index.
+    """Rollback database to state at end of block number block_index (atomically).
     """
 
     # TODO: This is not thread‐safe!
     logging.warning('Status: Rolling back database to block {}.'.format(block_index))
-
     rollback_cursor = db.cursor()
 
-    # Delete everything execpt for balances after block_index.
-    logging.warning('Status: Deleting new blocks.')
-    rollback_cursor.execute('''DELETE FROM blocks WHERE block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM transactions WHERE block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM debits WHERE block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM credits WHERE block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM sends WHERE block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM orders WHERE block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM order_matches WHERE tx1_block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM btcpays WHERE block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM issuances WHERE block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM broadcasts WHERE block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM bets WHERE block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM bet_matches WHERE tx1_block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM dividends WHERE block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM burns WHERE block_index > {}'''.format(block_index))
-    rollback_cursor.execute('''DELETE FROM cancels WHERE block_index > {}'''.format(block_index))
+    with db:
+        # Delete everything execpt for balances after block_index.
+        logging.warning('Status: Deleting new blocks.')
+        rollback_cursor.execute('''DELETE FROM blocks WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM transactions WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM debits WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM credits WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM sends WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM orders WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM order_matches WHERE tx1_block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM btcpays WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM issuances WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM broadcasts WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM bets WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM bet_matches WHERE tx1_block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM dividends WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM burns WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM cancels WHERE block_index > {}'''.format(block_index))
+        rollback_cursor.execute('''DELETE FROM callbacks WHERE block_index > {}'''.format(block_index))
 
-    # Re‐calculate every balance by summing historical credits, debits.
-    rollback_cursor.execute('''SELECT * FROM balances''')
-    for balance in rollback_cursor.fetchall():
-        logging.debug('Status: Re‐calculating balance of {} in {}.'.format(balance['address'], balance['asset']))
-        new_amount = 0
-        credits = util.get_credits(db, address=balance['address'], asset=balance['asset'], end_block=(block_index-1))
-        for credit in credits: new_amount += credit['amount']
-        debits = util.get_debits(db, address=balance['address'], asset=balance['asset'], end_block=(block_index-1))
-        for debit in debits: new_amount -= debit['amount']
-        rollback_cursor.execute('''UPDATE balances
-                                   SET amount=? \
-                                   WHERE (address=? and asset=?)''',
-                             (new_amount, balance['address'], balance['asset']))
+        # Re‐initialise heaps.
+        heaps = init_heaps(db)
 
-    # TODO: Unexpire expired things.
+        # Re‐calculate every balance by summing historical credits, debits.
+        rollback_cursor.execute('''SELECT * FROM balances''')
+        for balance in rollback_cursor.fetchall():
+            logging.debug('Status: Re‐calculating balance of {} in {}.'.format(balance['address'], balance['asset']))
+            new_amount = 0
+            credits = util.get_credits(db, address=balance['address'], asset=balance['asset'], end_block=(block_index-1))
+            for credit in credits: new_amount += credit['amount']
+            debits = util.get_debits(db, address=balance['address'], asset=balance['asset'], end_block=(block_index-1))
+            for debit in debits: new_amount -= debit['amount']
+            rollback_cursor.execute('''UPDATE balances
+                                       SET amount=? \
+                                       WHERE (address=? and asset=?)''',
+                                 (new_amount, balance['address'], balance['asset']))
+
+        # TODO: Unexpire expired things.
 
     rollback_cursor.close()
     return
 
 def reorg (db):
-    # Detect blockchain reorganisation.
+    # Detect blockchain reorganisation of up to 10 blocks.
     reorg_cursor = db.cursor()
     reorg_cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)''')
-    try:
-        last_block_index = reorg_cursor.fetchall()[0]['block_index']
-    except IndexError:
-        raise exceptions.DatabaseError('No blocks found.')
+    last_block_index = util.last_block(db)['block_index']
     reorg_necessary = False
-    for block_index in range(last_block_index - 6, last_block_index + 1):
+    for block_index in range(last_block_index - 10, last_block_index + 1):
         block_hash_see = bitcoin.rpc('getblockhash', [block_index])
         reorg_cursor.execute('''SELECT * FROM blocks WHERE block_index=?''', (block_index,))
         block_hash_have = reorg_cursor.fetchall()[0]['block_hash']
@@ -506,10 +536,32 @@ def reorg (db):
     # TODO: Temporary—should be a rollback.
     reorg_cursor.execute('''DELETE FROM blocks WHERE block_index > {}'''.format(block_index - 1))
     reorg_cursor.execute('''DELETE FROM transactions WHERE block_index > {}'''.format(block_index - 1))
-    purge(db, quiet=True)
+    reparse(db, quiet=True)
 
     reorg_cursor.close()
     return block_index
+
+def init_heaps (db):
+    cursor = db.cursor()
+
+    cursor.execute('''SELECT * FROM orders WHERE validity = ?''', ('Valid',))
+    order_heap = [(order['block_index'] + order['expiration'], order['tx_index']) for order in cursor.fetchall()]
+    heapq.heapify(order_heap)
+
+    cursor.execute('''SELECT * FROM order_matches WHERE validity = ?''', ('Valid',))
+    order_match_heap = [(min(order_match['tx0_block_index'] + order_match['tx0_expiration'], order_match['tx1_block_index'] + order_match['tx1_expiration']), order_match['tx0_index'], order_match['tx1_index']) for order_match in cursor.fetchall()]
+    heapq.heapify(order_match_heap)
+
+    cursor.execute('''SELECT * FROM bets WHERE validity = ?''', ('Valid',))
+    bet_heap = [(bet['block_index'] + bet['expiration'], bet['tx_index']) for bet in cursor.fetchall()]
+    heapq.heapify(bet_heap)
+
+    cursor.execute('''SELECT * FROM bet_matches WHERE validity = ?''', ('Valid',))
+    bet_match_heap = [(bet_match['deadline'], bet_match['tx0_index'], bet_match['tx1_index']) for bet_match in cursor.fetchall()]
+    heapq.heapify(bet_match_heap)
+
+    return (order_heap, order_match_heap, bet_heap, bet_match_heap)
+    cursor.close()
 
 def follow (db):
     # TODO: This is not thread‐safe!
@@ -517,31 +569,34 @@ def follow (db):
 
     logging.info('Status: RESTART')
     initialise(db)
+    heaps = init_heaps(db)
 
     while True:
-
-        # TODO: Check DB_VERSION
-        # purge if old
-
         # Get index of last block.
         try:
-            follow_cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)''')
-            block_index = follow_cursor.fetchall()[0]['block_index'] + 1
-        except Exception:
+            block_index = util.last_block(db)['block_index'] + 1
+        except exceptions.DatabaseError:
             logging.warning('Status: NEW DATABASE')
             block_index = config.BLOCK_FIRST
-            
+
             #in the case of this, send out an initialize message to our zmq feed, any attached services
             # (such as counterwalletd) can then get this and clear our their data as well, so they don't get
             # duplicated data in the event of a new DB version
-            config.zeromq_publisher.push_to_subscribers('new_db_init', {})
 
+        # Reparse all transactions if minor version changes.
+        if block_index != config.BLOCK_FIRST:
+            minor_version = follow_cursor.execute('PRAGMA user_version').fetchall()[0]['user_version']
+            if minor_version != config.DB_VERSION_MINOR:
+                logging.info('Status: Database and client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.DB_VERSION_MINOR))
+                reparse(db, quiet=False)
+                minor_version = follow_cursor.execute('PRAGMA user_version = {}'.format(int(config.DB_VERSION_MINOR)))
+                logging.info('Status: Database minor version number updated.')
 
         # Get index of last transaction.
         try:
             follow_cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)''')
             tx_index = follow_cursor.fetchall()[0]['tx_index'] + 1
-        except Exception:
+        except Exception:   # TODO
             tx_index = 0
 
         # Get new blocks.
@@ -553,7 +608,7 @@ def follow (db):
             block_time = block['time']
             tx_hash_list = block['tx']
 
-            # Get and parse transactions in this block, atomically.
+            # Get and parse transactions in this block (atomically).
             with db:
                 # List the block.
                 follow_cursor.execute('''INSERT INTO blocks(
@@ -601,7 +656,7 @@ def follow (db):
                         tx_index += 1
 
                 # Parse the transactions in the block.
-                parse_block(db, block_index)
+                parse_block(db, block_index, block_time, heaps)
 
             # Increment block index.
             block_count = bitcoin.rpc('getblockcount', [])

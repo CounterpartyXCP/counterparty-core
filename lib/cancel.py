@@ -11,8 +11,9 @@ import logging
 from . import (util, config, exceptions, bitcoin, util)
 
 FORMAT = '>32s'
-ID = 70
 LENGTH = 32
+ID = 70
+
 
 def validate (db, offer_hash, source=None):
     problems = []
@@ -27,7 +28,7 @@ def validate (db, offer_hash, source=None):
                 else:
                     problems.append('offer was not made by one of your addresses')
                 return source, offer, problems
-                
+
     problems.append('no valid offer with that hash')
     return None, None, problems
 
@@ -42,14 +43,15 @@ def create (db, offer_hash, unsigned=False):
     return bitcoin.transaction(source, None, None, config.MIN_FEE, data, unsigned=unsigned)
 
 def parse (db, tx, message):
-    cancel_parse_cursor = db.cursor()
+    cursor = db.cursor()
 
     # Unpack message.
     try:
+        assert len(message) == LENGTH
         offer_hash_bytes = struct.unpack(FORMAT, message)[0]
         offer_hash = binascii.hexlify(offer_hash_bytes).decode('utf-8')
         validity = 'Valid'
-    except Exception:
+    except struct.error as e:
         offer_hash = None
         validity = 'Invalid: could not unpack'
 
@@ -59,15 +61,35 @@ def parse (db, tx, message):
             if problems: validity = 'Invalid: ' + ';'.join(problems)
 
     if validity == 'Valid':
-        # Cancel the offer. (This in very inelegant.)
-        cancel_parse_cursor.execute('''UPDATE orders \
-                                       SET validity=? \
-                                       WHERE (tx_hash=? AND source=? AND validity=?)''', ('Invalid: cancelled', offer_hash, tx['source'], 'Valid'))
-        cancel_parse_cursor.execute('''UPDATE bets \
-                                       SET validity=? \
-                                       WHERE (tx_hash=? AND source=? AND validity=?)''', ('Invalid: cancelled', offer_hash, tx['source'], 'Valid'))
+        # Find offer.
+        cursor.execute('''SELECT * FROM orders \
+                          WHERE (tx_hash=? AND source=? AND validity=?)''', (offer_hash, tx['source'], 'Valid'))
+        orders = cursor.fetchall()
+        cursor.execute('''SELECT * FROM bets \
+                          WHERE (tx_hash=? AND source=? AND validity=?)''', (offer_hash, tx['source'], 'Valid'))
+        bets = cursor.fetchall()
 
-        logging.info('Cancel: {} ({})'.format(util.short(offer_hash), util.short(tx['tx_hash'])))
+        # Cancel if order.
+        if orders:
+            order = orders[0]
+            cursor.execute('''UPDATE orders \
+                                           SET validity=? \
+                                           WHERE tx_hash=?''', ('Invalid: cancelled', order['tx_hash']))
+            util.credit(db, tx['block_index'], tx['source'], order['give_asset'], order['give_remaining'])
+        # Cancel if bet.
+        elif bets:
+            bet = bets[0]
+            cursor.execute('''UPDATE bets \
+                                           SET validity=? \
+                                           WHERE tx_hash=?''', ('Invalid: cancelled', bet['tx_hash']))
+            util.credit(db, tx['block_index'], tx['source'], 'XCP', bet['wager_remaining'])
+            util.credit(db, tx['block_index'], tx['source'], 'XCP', bet['fee'])
+        # If neither order or bet, mark as invalid.
+        else:
+            validity = 'Invalid: no valid offer with that hash from that address'
+
+    if validity == 'Valid':
+        logging.info('Cancel: {} ({})'.format(offer_hash, tx['tx_hash']))
 
     # Add parsed transaction to message-type–specific table.
     element_data = {
@@ -78,9 +100,9 @@ def parse (db, tx, message):
         'offer_hash': offer_hash,
         'validity': validity,
     }
-    cancel_parse_cursor.execute(*util.get_insert_sql('cancels', element_data))
-    config.zeromq_publisher.push_to_subscribers('new_cancel', element_data)
+    cursor.execute(*util.get_insert_sql('cancels', element_data))
 
-    cancel_parse_cursor.close()
+
+    cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

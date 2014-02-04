@@ -6,8 +6,6 @@ import hashlib
 import binascii
 import time
 import apsw
-import appdirs
-import logging
 import decimal
 D = decimal.Decimal
 import difflib
@@ -16,63 +14,28 @@ import inspect
 from threading import Thread
 import requests
 from requests.auth import HTTPBasicAuth
+import logging
 
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
-from lib import (config, api, zeromq, util, exceptions, bitcoin, blocks)
-from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, util)
+from lib import (config, api, util, exceptions, bitcoin, blocks)
+from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
+import counterpartyd
 
-# JSON-RPC Options
-CONFIGFILE = os.path.expanduser('~') + '/.bitcoin/bitcoin.conf'
-config.PREFIX = config.UNITTEST_PREFIX
-config.BITCOIND_RPC_CONNECT = 'localhost'
-config.BITCOIND_RPC_PORT = '18332' # Only run tests on testnet.
-try:
-    with open(CONFIGFILE, 'r') as configfile:
-        for line in configfile.readlines():
-            if line.startswith('#'):
-                continue
-            array = line.replace('\n', '').split('=')
-            if len(array) != 2:
-                continue
-            key, value = array[:2]
-            if key == 'rpcuser': config.BITCOIND_RPC_USER = value
-            elif key == 'rpcpassword': config.BITCOIND_RPC_PASSWORD = value
-            elif key == 'rpcconnect': config.BITCOIND_RPC_CONNECT = value
-            elif key == 'rpcport': config.BITCOIND_RPC_PORT = value
-except Exception:
-    raise Exception('Put a (valid) copy of your \
-bitcoin.conf in ~/.bitcoin/bitcoin.conf')
-    sys.exit(1)
-config.BITCOIND_RPC = 'http://'+config.BITCOIND_RPC_USER+':'+config.BITCOIND_RPC_PASSWORD+'@'+config.BITCOIND_RPC_CONNECT+':'+config.BITCOIND_RPC_PORT
+# config.BLOCK_FIRST = 0
+# config.BURN_START = 0
+# config.BURN_END = 9999999
+counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/counterparty.unittest.db', testnet=True, testcoin=False, unittest=True)
 
-config.RPC_HOST = 'localhost'
-config.RPC_PORT = 9999
-config.RPC_USER = 'rpcuser'
-config.RPC_PASSWORD = 'rpcpass'
-
-config.DATABASE = CURR_DIR + '/counterparty.test.db'
+# Connect to database.
 try: os.remove(config.DATABASE)
 except: pass
-
-#Connect to test DB
-db = apsw.Connection(config.DATABASE)
-db.setrowtrace(util.rowtracer)
+db = util.connect_to_db()
 cursor = db.cursor()
 
-#Set up zeromq publisher
-config.zeromq_publisher = zeromq.ZeroMQPublisher()
-config.zeromq_publisher.daemon = True
-config.zeromq_publisher.start()
-
+# Each tx has a block_index equal to its tx_index
 tx_index = 0
-
-config.BLOCK_FIRST = 0
-config.BURN_START = 0
-config.BURN_END = 9999999
-config.ADDRESSVERSION = b'\x6F' # testnet
-config.UNSPENDABLE = 'mvCounterpartyXXXXXXXXXXXXXXW24Hef'
 
 source_default = 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'
 destination_default = 'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7'
@@ -84,14 +47,9 @@ fee_provided = 1000000
 fee_multiplier_default = .05
 
 
-# Each tx has a block_index equal to its tx_index
-
-print('Run `test.py` with `py.test test.py`.')
-
-
 
 def parse_hex (unsigned_tx_hex):
-    
+
     tx = bitcoin.rpc('decoderawtransaction', [unsigned_tx_hex])
     source, destination, btc_amount, fee, data = blocks.get_tx_info(tx)
 
@@ -119,9 +77,10 @@ def parse_hex (unsigned_tx_hex):
                          data)
                   )
     parse_hex_cursor.execute('''SELECT * FROM transactions \
-                                WHERE tx_index=?''', (tx_index,))                         
-    tx = parse_hex_cursor.fetchall()[0]                  
-    blocks.parse_tx(db, tx)
+                                WHERE tx_index=?''', (tx_index,))
+    tx = parse_hex_cursor.fetchall()[0]
+    heaps = blocks.init_heaps(db)
+    blocks.parse_tx(db, tx, heaps)
 
     # After parsing every transaction, check that the credits, debits sum properly.
     balances = util.get_balances(db)
@@ -151,7 +110,7 @@ def teardown_function(function):
 # Logs.
 try: os.remove(CURR_DIR + '/log.new')
 except: pass
-logging.basicConfig(filename=CURR_DIR + '/log.new', level=logging.INFO, format='%(message)s')
+logging.basicConfig(filename=CURR_DIR + '/log.new', level=logging.DEBUG, format='%(message)s')
 requests_log = logging.getLogger("requests")
 requests_log.setLevel(logging.WARNING)
 
@@ -211,28 +170,28 @@ def test_btcpay ():
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_issuance_divisible ():
-    unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBB', quantity * 10, True)
+    unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBBE', quantity * 10, True, False, 0, 0.0, '')
 
     parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
-def test_issuance_indivisible ():
-    unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBC', round(quantity / 1000), False)
+def test_issuance_indivisible_callable ():
+    unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBCD', round(quantity / 1000), False, True, 1288855692, 0.015, 'foobar')
 
     parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_dividend_divisible ():
-    unsigned_tx_hex = dividend.create(db, source_default, 6, 'BBBB')
+    unsigned_tx_hex = dividend.create(db, source_default, 6, 'BBBBE')
 
     parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_dividend_indivisible ():
-    unsigned_tx_hex = dividend.create(db, source_default, 8, 'BBBC')
+    unsigned_tx_hex = dividend.create(db, source_default, 8, 'BBBCD')
 
     parse_hex(unsigned_tx_hex)
 
@@ -309,7 +268,7 @@ def test_broadcast_equal ():
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_order_to_be_cancelled ():
-    unsigned_tx_hex = order.create(db, source_default, 'BBBB', small, 'XCP', small, expiration, 0, config.MIN_FEE)
+    unsigned_tx_hex = order.create(db, source_default, 'BBBBE', small, 'XCP', small, expiration, 0, config.MIN_FEE)
 
     parse_hex(unsigned_tx_hex)
 
@@ -324,6 +283,20 @@ def test_cancel ():
 
 def test_overburn ():
     unsigned_tx_hex = burn.create(db, source_default, (1 * config.UNIT), overburn=True)  # Try to burn a whole 'nother BTC.
+
+    parse_hex(unsigned_tx_hex)
+
+    output_new[inspect.stack()[0][3]] = unsigned_tx_hex
+
+def test_send_callable ():
+    unsigned_tx_hex = send.create(db, source_default, destination_default, 10000, 'BBBCD')
+
+    parse_hex(unsigned_tx_hex)
+
+    output_new[inspect.stack()[0][3]] = unsigned_tx_hex
+
+def test_callback ():
+    unsigned_tx_hex = callback.create(db, source_default, .3, 'BBBCD')
 
     parse_hex(unsigned_tx_hex)
 
@@ -354,8 +327,9 @@ def test_json_rpc():
 
     for payload in payloads:
         response = requests.post(
-            url, data=json.dumps(payload), headers=headers, auth=auth).json()
-        response = json.loads(response) # Wierd
+                url, data=json.dumps(payload), headers=headers, auth=auth)
+        response = json.loads(response.text)    # WTF
+        response = json.loads(response)         # WTF
         try:
             output_new['rpc.' + payload['method']] = response['result']
         except:
@@ -389,16 +363,17 @@ def test_db():
 def test_output():
     with open(CURR_DIR + '/output.new.json', 'w') as output_new_file:
         json.dump(output_new, output_new_file, sort_keys=True, indent=4)
+
     for key in output_new.keys():
         try:
             assert output[key] == output_new[key]
-        except Exception:
+        except Exception as e:
             print('Key:', key)
             print('Old output:')
             print(output[key])
             print('New output:')
             print(output_new[key])
-            raise Exception
+            raise e
 
 def test_log():
     with open(CURR_DIR + '/log', 'r') as f:
@@ -434,14 +409,6 @@ expire order matches
 expire bet matches
 cancelling bets, orders
 
-get_time_left
-get_order_match_time_left
-get_asset
-get_asset_name
-
-debit
-credit
-
 bet_match
 order_match
 get_tx_info
@@ -455,7 +422,6 @@ transaction
 
 """
 Too small:
-util.short()
 util.isodt()
 util.devise()
 bet.get_fee_multiplier()

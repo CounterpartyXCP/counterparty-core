@@ -14,7 +14,7 @@ import time
 
 from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
 from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec
-from pycoin.scripts import bitcoin_utils 
+from pycoin.scripts import bitcoin_utils
 
 from . import (config, exceptions)
 
@@ -40,6 +40,7 @@ def connect (host, payload, headers):
     for i in range(TRIES):
         try:
             response = request_session.post(host, data=json.dumps(payload), headers=headers)
+            if i > 0: print('Successfully connected.', file=sys.stderr)
             return response
         except requests.exceptions.ConnectionError:
             print('Could not connect to Bitcoind. Sleeping for five seconds. (Try {}/{})'.format(i+1, TRIES), file=sys.stderr)
@@ -69,12 +70,12 @@ def rpc (method, params):
         else: network = 'mainnet'
         raise exceptions.BitcoindRPCError('Cannot communicate with Bitcoind. (counterpartyd is set to run on {}, is Bitcoind?)'.format(network))
 
-    if response.status_code != 200:
+    if response.status_code not in (200, 500):
         raise exceptions.BitcoindRPCError(str(response.status_code) + ' ' + response.reason)
 
     '''
     if config.PREFIX == config.UNITTEST_PREFIX:
-        print(response)  # TODO
+        print(response)
         f.close()
     '''
 
@@ -165,7 +166,7 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
             #script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
             #script += OP_CHECKSIG                               # OP_CHECKSIG
             script = str.encode(txin['scriptPubKey'])
-            
+
         s += var_int(int(len(script)))                      # Script length
         s += script                                         # Script
         s += b'\xff' * 4                                    # Sequence
@@ -255,9 +256,11 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
 
 def get_inputs (source, total_btc_out, unittest=False, unsigned=False):
     """List unspent inputs for source."""
-    if not unittest and not unsigned:
+    if not unittest and (not unsigned or rpc('validateaddress', [source])['ismine']):
         listunspent = rpc('listunspent', [])
     elif unsigned and not unittest:
+        if config.TESTNET: raise exceptions.TransactionError('Blockchain.info does not support testnet.')
+
         #since the address is probably not in our wallet, consult blockchain to ensure that the address has the minimum balance
         try:
             r = requests.get("http://blockchain.info/unspent?active=" + source)
@@ -269,7 +272,7 @@ def get_inputs (source, total_btc_out, unittest=False, unsigned=False):
             unspent_outputs = r.json()['unspent_outputs']
         except requests.exceptions.RequestException as e:
             raise Exception("Problem getting unspent transactions from blockchain.info: " % e)
-        
+
         #take the returned data to a format compatible with bitcoind's output
         listunspent = []
         for o in unspent_outputs:
@@ -292,7 +295,7 @@ def get_inputs (source, total_btc_out, unittest=False, unsigned=False):
             listunspent = json.load(listunspent_test_file)
     unspent = [coin for coin in listunspent if coin['address'] == source]
     inputs, total_btc_in = [], 0
-    for coin in unspent:                                                      
+    for coin in unspent:
         inputs.append(coin)
         total_btc_in += round(coin['amount'] * config.UNIT)
         if total_btc_in >= total_btc_out:
@@ -304,6 +307,7 @@ def transaction (source, destination, btc_amount, fee, data, unittest=False, mul
     if config.PREFIX == config.UNITTEST_PREFIX: unittest = True
 
     #NB: if unsigned is True (instead of false or a public key string) and multisig is specified, then disable multisig and use OP_RETURN
+    # TODO: Why? This is sometimes very surprising!
     if unsigned is True and multisig:
         multisig = False
 
@@ -312,7 +316,7 @@ def transaction (source, destination, btc_amount, fee, data, unittest=False, mul
         if address:
             try:
                 base58_decode(address, config.ADDRESSVERSION)
-            except Exception:
+            except Exception:   # TODO
                 raise exceptions.InvalidAddressError('Invalid Bitcoin address:',
                                           address)
 
@@ -324,7 +328,7 @@ def transaction (source, destination, btc_amount, fee, data, unittest=False, mul
     # Check that the destination output isn't a dust output.
     if destination:
         if not btc_amount >= config.DUST_SIZE:
-            raise exceptions.TXConstructionError('Destination output is below the dust target value.')
+            raise exceptions.TransactionError('Destination output is below the dust target value.')
     else:
         assert not btc_amount
 
@@ -370,9 +374,11 @@ def transaction (source, destination, btc_amount, fee, data, unittest=False, mul
 
 def transmit (unsigned_tx_hex, ask=True, unsigned=False):
     # Confirm transaction.
+    if not unsigned:
+        print('Transaction (unsigned):', unsigned_tx_hex)
     if ask and not unsigned:
-        if config.TESTNET: print('Attention: TESTNET!') 
-        if config.TESTCOIN: print('Attention: TESTCOIN!\n') 
+        if config.TESTNET: print('Attention: TESTNET!')
+        if config.TESTCOIN: print('Attention: TESTCOIN!\n')
         if input('Confirm? (y/N) ') != 'y':
             print('Transaction aborted.', file=sys.stderr)
             sys.exit(1)

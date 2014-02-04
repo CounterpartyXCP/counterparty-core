@@ -29,8 +29,9 @@ import logging
 from . import (util, exceptions, config, bitcoin)
 
 FORMAT = '>IdI52p'
-ID = 30
 LENGTH = 4 + 8 + 4 + 52
+ID = 30
+
 
 def validate (db, source, timestamp, value, fee_multiplier, text):
     problems = []
@@ -60,7 +61,7 @@ def validate (db, source, timestamp, value, fee_multiplier, text):
 
 def create (db, source, timestamp, value, fee_multiplier, text, unsigned=False):
     # Use a magic number to store the fee multplier as an integer.
-    fee_multiplier = round(D(fee_multiplier) * D(1e8))
+    fee_multiplier = int(D(fee_multiplier) * D(1e8))
 
     problems = validate(db, source, timestamp, value, fee_multiplier, text)
     if problems: raise exceptions.BroadcastError(problems)
@@ -77,10 +78,11 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
+        assert len(message) == LENGTH
         timestamp, value, fee_multiplier, text = struct.unpack(FORMAT, message)
         text = text.decode('utf-8')
         validity = 'Valid'
-    except Exception:
+    except struct.error as e:
         timestamp, value, fee_multiplier, text = None, None, None, None
         validity = 'Invalid: could not unpack'
 
@@ -95,11 +97,11 @@ def parse (db, tx, message):
     # Log.
     if validity == 'Valid':
         if not text:
-            logging.info('Broadcast: {} locked his feed.'.format(tx['source'], util.short(tx['tx_hash'])))
+            logging.info('Broadcast: {} locked his feed.'.format(tx['source'], tx['tx_hash']))
         else:
-            if not value: infix = '\'' + text + '\''
-            else: infix = '\'' + text + '\'' + ' = ' + str(value)
-            suffix = ' from ' + tx['source'] + ' at ' + util.isodt(timestamp) + ' with a fee multiplier of {}'.format(util.devise(db, fee_multiplier, 'fee_multiplier', 'output')) + ' (' + util.short(tx['tx_hash']) + ')'
+            if not value: infix = '‘{}’'.format(text)
+            else: infix = '‘{}’ = {}'.format(text, value)
+            suffix = ' from ' + tx['source'] + ' at ' + util.isodt(timestamp) + ' with a fee multiplier of {}'.format(util.devise(db, fee_multiplier, 'fee_multiplier', 'output')) + ' (' + tx['tx_hash'] + ')'
             logging.info('Broadcast: {}'.format(infix + suffix))
 
     # Add parsed transaction to message-type–specific table.
@@ -115,7 +117,7 @@ def parse (db, tx, message):
         'validity': validity,
     }
     broadcast_parse_cursor.execute(*util.get_insert_sql('broadcasts', element_data))
-    config.zeromq_publisher.push_to_subscribers('new_broadcast', element_data)
+
 
     # Null values are special.
     if not value:
@@ -135,7 +137,7 @@ def parse (db, tx, message):
         # Calculate total funds held in escrow and total fee to be paid if
         # the bet match is settled.
         total_escrow = bet_match['forward_amount'] + bet_match['backward_amount']
-        fee_fraction = bet_match['fee_multiplier'] / 1e8
+        fee_fraction = D(bet_match['fee_multiplier']) / D(1e8)
         fee = round(total_escrow * fee_fraction)
 
         # Get known bet match type IDs.
@@ -162,9 +164,11 @@ def parse (db, tx, message):
 
             leverage = D(bet_match['leverage']) / 5040
             initial_value = bet_match['initial_value']
-                
-            bear_credit = round(bear_escrow - D(value - initial_value) * leverage * config.UNIT)
-            bull_credit = total_escrow - bear_credit
+
+            bear_credit = D(bear_escrow) - (D(value) - D(initial_value)) * D(leverage) * D(config.UNIT)
+            bull_credit = D(total_escrow) - bear_credit
+            bear_credit = round(bear_credit)
+            bull_credit = round(bull_credit)
 
             if bet_match['validity'] == 'Valid':
                 # Liquidate, as necessary.
@@ -172,18 +176,18 @@ def parse (db, tx, message):
                     bull_credit = total_escrow
                     bear_credit = 0
                     util.credit(db, tx['block_index'], bull_address, 'XCP', bull_credit)
-                    validity = 'Force-Liquidated Bear'
+                    validity = 'Force‐Liquidated Bear'
                 elif bull_credit <= 0:
                     bull_credit = 0
                     bear_credit = total_escrow
                     util.credit(db, tx['block_index'], bear_address, 'XCP', bear_credit)
-                    validity = 'Force-Liquidated Bull'
+                    validity = 'Force‐Liquidated Bull'
 
-                if validity.startswith('Force-Liquidated'):
+                if validity.startswith('Force‐Liquidated'):
                     # Pay fee to feed.
                     util.credit(db, tx['block_index'], bet_match['feed_address'], 'XCP', fee)
 
-                    logging.info('Contract Force-Liquidated: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), util.short(bet_match_id)))
+                    logging.info('Contract Force‐Liquidated: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), bet_match_id))
 
             # Settle.
             if validity == 'Valid' and timestamp >= bet_match['deadline']:
@@ -194,7 +198,7 @@ def parse (db, tx, message):
                 util.credit(db, tx['block_index'], bet_match['feed_address'], 'XCP', fee)
 
                 validity = 'Settled (CFD)'
-                logging.info('Contract Settled: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), util.short(bet_match_id)))
+                logging.info('Contract Settled: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), bet_match_id))
 
         # Equal[/NotEqual] bet.
         if validity == 'Valid' and  bet_match_type_id == equal_type_id and timestamp >= bet_match['deadline']:
@@ -220,7 +224,7 @@ def parse (db, tx, message):
             # Pay fee to feed.
             util.credit(db, tx['block_index'], bet_match['feed_address'], 'XCP', fee)
 
-            logging.info('Contract Settled: {} won the pot of {} XCP; {} XCP credited to the feed address ({})'.format(winner, util.devise(db, total_escrow, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), util.short(bet_match_id)))
+            logging.info('Contract Settled: {} won the pot of {} XCP; {} XCP credited to the feed address ({})'.format(winner, util.devise(db, total_escrow, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), bet_match_id))
 
         # Update the bet match's status.
         broadcast_bet_match_cursor.execute('''UPDATE bet_matches \
@@ -230,5 +234,5 @@ def parse (db, tx, message):
         broadcast_bet_match_cursor.close()
 
     broadcast_parse_cursor.close()
-       
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

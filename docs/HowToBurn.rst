@@ -16,18 +16,18 @@ install ``counterpartyd`` using the instructions from `here <http://counterparty
 
 Once done, you can open up a command prompt, then, just run the command like::
 
-    counterpartyd burn --from=<ADDRESS> --quantity=<QUANTITY>
+    counterpartyd burn --source=<ADDRESS> --quantity=<QUANTITY>
     #under Linux
     
-    C:\python33\python.exe C:\counterpartyd_build\run.py burn --from=<ADDRESS> --quantity=<QUANTITY>
+    C:\python33\python.exe C:\counterpartyd_build\run.py burn --source=<ADDRESS> --quantity=<QUANTITY>
     #under Windows
     
 Full examples::
 
-    counterpartyd burn --from=1J6Sb7BbhCQKRTwmt8yKxXAAQByeNsED7P --quantity=0.5
+    counterpartyd burn --source=1J6Sb7BbhCQKRTwmt8yKxXAAQByeNsED7P --quantity=0.5
     #under Linux
     
-    C:\python33\python.exe C:\counterpartyd_build\run.py burn --from=1J6Sb7BbhCQKRTwmt8yKxXAAQByeNsED7P --quantity=0.005
+    C:\python33\python.exe C:\counterpartyd_build\run.py burn --source=1J6Sb7BbhCQKRTwmt8yKxXAAQByeNsED7P --quantity=0.005
     #under Windows
  
 
