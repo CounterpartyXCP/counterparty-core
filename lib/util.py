@@ -193,6 +193,8 @@ def get_asset_id (asset):
     if asset == 'BTC': return 0
     elif asset == 'XCP': return 1
 
+    if asset[0] == 'A': raise exceptions.AssetNameError('starts with ‘A’')
+
     # Checksum
     if not checksum.verify(asset):
         raise exceptions.AssetNameError('invalid checksum')
