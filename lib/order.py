@@ -107,13 +107,17 @@ def parse (db, tx, message, order_heap, order_match_heap):
         give_amount = util.devise(db, give_amount, give_asset, 'output')
         get_amount = util.devise(db, get_amount, get_asset, 'output')
 
-        if give_asset == 'BTC':
-            fee_text = 'with a provided fee of ' + str(tx['fee'] / config.UNIT) + ' BTC '
-        elif get_asset == 'BTC':
-            fee_text = 'with a required fee of ' + str(fee_required / config.UNIT) + ' BTC '
+        # Consistent ordering for currency pairs. (Partial DUPE.)
+        if get_asset < give_asset:
+            price = util.devise(db, D(get_amount) / D(give_amount), 'price', 'output')
+            price_assets = get_asset + '/' + give_asset
+            action = 'sell'
         else:
-            fee_text = ''
-        logging.info('Order: sell {} {} for {} {} at {} {}/{} in {} blocks {}({})'.format(give_amount, give_asset, get_amount, get_asset, util.devise(db, price, 'price', dest='output'), get_asset, give_asset, expiration, fee_text, tx['tx_hash']))
+            price = util.devise(db, D(give_amount) / D(get_amount), 'price', 'output')
+            price_assets = give_asset + '/' + get_asset
+            action = 'buy'
+
+        logging.info('Order: {} {} {} at {} {} in {} blocks, with a provided fee of {} BTC and a required fee of {} BTC ({})'.format(action, give_amount, give_asset, price, price_assets, expiration, str(tx['fee'] / config.UNIT), str(fee_required / config.UNIT), tx['tx_hash']))
         match(db, tx, order_heap, order_match_heap)
 
     order_parse_cursor.close()
@@ -159,7 +163,17 @@ def match (db, tx, order_heap, order_match_heap):
             forward_print = D(util.devise(db, forward_amount, forward_asset, 'output'))
             backward_print = D(util.devise(db, backward_amount, backward_asset, 'output'))
 
-            logging.info('Order Match: {} {} for {} {} at {} {}/{} ({})'.format(forward_print, forward_asset, backward_print, backward_asset, util.devise(db, tx0_price, 'price', 'output'), backward_asset, forward_asset, order_match_id))
+            # Consistent ordering for currency pairs. (Partial DUPE.)
+            if forward_asset < backward_asset:
+                price = util.devise(db, D(forward_amount) / D(backward_amount), 'price', 'output')
+                price_assets = forward_asset + '/' + backward_asset
+                foobar = '{} {} for {} {}'.format(forward_print, forward_asset, backward_print, backward_asset)
+            else:
+                price = util.devise(db, D(backward_amount) / D(forward_amount), 'price', 'output')
+                price_assets = backward_asset + '/' + forward_asset
+                foobar = '{} {} for {} {}'.format(backward_print, backward_asset, forward_print, forward_asset)
+
+            logging.info('Order Match: {} at {} {} ({})'.format(foobar, price, price_assets, order_match_id))
 
             if 'BTC' in (tx1['give_asset'], tx1['get_asset']):
                 validity = 'Valid: awaiting BTC payment'
