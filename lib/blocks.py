@@ -514,12 +514,12 @@ def rollback (db, block_index):
     return
 
 def reorg (db):
-    # Detect blockchain reorganisation.
+    # Detect blockchain reorganisation of up to 10 blocks.
     reorg_cursor = db.cursor()
     reorg_cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)''')
     last_block_index = util.last_block(db)['block_index']
     reorg_necessary = False
-    for block_index in range(last_block_index - 6, last_block_index + 1):
+    for block_index in range(last_block_index - 10, last_block_index + 1):
         block_hash_see = bitcoin.rpc('getblockhash', [block_index])
         reorg_cursor.execute('''SELECT * FROM blocks WHERE block_index=?''', (block_index,))
         block_hash_have = reorg_cursor.fetchall()[0]['block_hash']

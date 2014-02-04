@@ -210,7 +210,7 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
 def market (give_asset, get_asset):
     # Open orders.
     orders = util.get_orders(db, validity='Valid', show_expired=False, show_empty=False)
-    table = PrettyTable(['Give Quantity', 'Give Asset', 'Price', 'Price Assets', 'Fee', 'Time Left', 'Tx Hash'])
+    table = PrettyTable(['Give Quantity', 'Give Asset', 'Price', 'Price Assets', 'Fee (BTC)', 'Time Left', 'Tx Hash'])
     for order in orders:
         if give_asset and order['give_asset'] != give_asset: continue
         if get_asset and order['get_asset'] != get_asset: continue
@@ -250,6 +250,10 @@ def market (give_asset, get_asset):
     table = PrettyTable(['Feed Address', 'Timestamp', 'Text', 'Value', 'Fee Multiplier'])
     seen_addresses = []
     for broadcast in broadcasts:
+        # Only show feeds with broadcasts in the last two weeks.
+        last_block_time = util.last_block(db)['block_time']
+        if broadcast['timestamp'] + config.TWO_WEEKS < last_block_time:
+            continue
         # Always show only the latest broadcast from a feed address.
         if broadcast['source'] not in seen_addresses:
             feed = format_feed(broadcast)
@@ -295,10 +299,10 @@ def format_order (order):
 
     if get_asset < give_asset:
         price = util.devise(db, D(order['get_amount']) / D(order['give_amount']), 'price', 'output')
-        price_assets = get_asset + '/' + give_asset
+        price_assets = get_asset + '/' + give_asset + ' ask'
     else:
         price = util.devise(db, D(order['give_amount']) / D(order['get_amount']), 'price', 'output')
-        price_assets = give_asset + '/' + get_asset
+        price_assets = give_asset + '/' + get_asset + ' bid'
 
     if order['fee_required']:
         fee = str(order['fee_required'] / config.UNIT)
