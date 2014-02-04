@@ -264,6 +264,37 @@ def expire (db, block_index, order_heap, order_match_heap):
                                         order_match['forward_amount'])
                 logging.info('Expired Order Match awaiting BTC payment: {}'.format(order_match['tx0_hash'] + order_match['tx1_hash']))
 
+                # If tx0 is still good, replenish give, get remaining.
+                cursor.execute('''SELECT * FROM orders \
+                                  WHERE tx_index = ?''',
+                               (order_match['tx0_index'],))
+                tx0_order = cursor.fetchall()[0]
+                tx0_order_time_left = util.get_time_left(db, tx0_order)
+                if tx0_order_time_left:
+                    cursor.execute('''UPDATE orders \
+                                      SET give_remaining = ?, \
+                                          get_remaining = ? \
+                                      WHERE tx_hash = ?''', (tx0_order['give_remaining'] + order_match['forward_amount'],
+                                                             tx0_order['get_remaining'] + order_match['backward_amount'],
+                                                             order_match['tx0_hash']))
+                   
+                # If tx1 is still good, replenish give, get remaining.
+                cursor.execute('''SELECT * FROM orders \
+                                  WHERE tx_index = ?''',
+                               (order_match['tx1_index'],))
+                tx1_order = cursor.fetchall()[0]
+                tx1_order_time_left = util.get_time_left(db, tx1_order)
+                if tx1_order_time_left:
+                    cursor.execute('''UPDATE orders \
+                                      SET give_remaining = ?, \
+                                          get_remaining = ? \
+                                      WHERE tx_hash = ?''', (tx1_order['give_remaining'] + order_match['backward_amount'],
+                                                             tx1_order['get_remaining'] + order_match['forward_amount'],
+                                                             order_match['tx1_hash']))
+
+                # Sanity check: one of the two must have expired.
+                assert tx0_order_time_left or tx1_order_time_left
+
     cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

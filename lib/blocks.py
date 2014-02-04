@@ -460,6 +460,10 @@ def reparse (db, quiet=False):
         if quiet:
             log.setLevel(logging.INFO)
 
+        # Update minor version number.
+        minor_version = reparse_cursor.execute('PRAGMA user_version = {}'.format(int(config.DB_VERSION_MINOR)))
+        logging.info('Status: Database minor version number updated.')
+
     reparse_cursor.close()
     return
 
@@ -589,8 +593,6 @@ def follow (db):
             if minor_version != config.DB_VERSION_MINOR:
                 logging.info('Status: Database and client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.DB_VERSION_MINOR))
                 reparse(db, quiet=False)
-                minor_version = follow_cursor.execute('PRAGMA user_version = {}'.format(int(config.DB_VERSION_MINOR)))
-                logging.info('Status: Database minor version number updated.')
 
         # Get index of last transaction.
         try:

@@ -637,6 +637,7 @@ if __name__ == '__main__':
         totals = {}
 
         print()
+        # TODO: This should be burns minus issuance fees (so it won’t depend on escrowed funds).
         for group in bitcoin.rpc('listaddressgroupings', []):
             for bunch in group:
                 address, btc_balance = bunch[:2]
