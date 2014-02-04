@@ -213,7 +213,7 @@ def match (db, tx, order_heap, order_match_heap):
 
             order_match_cursor.execute(*util.get_insert_sql('order_matches', element_data))
             if validity == 'Valid: awaiting BTC payment':
-                heapq.heappush(order_match_heap, (min(tx0['block_index'] + tx0['expiration'], tx0['block_index'] + tx0['expiration']), tx0['tx_index'], tx1['tx_index']))
+                heapq.heappush(order_match_heap, (min(tx0['block_index'] + tx0['expiration'], tx1['block_index'] + tx1['expiration']), tx0['tx_index'], tx1['tx_index']))
 
     order_match_cursor.close()
 

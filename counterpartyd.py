@@ -240,7 +240,7 @@ def market (give_asset, get_asset):
     for order_match in awaiting_btcs:
         order_match = format_order_match(db, order_match)
         table.add_row(order_match)
-    print('Order Matches Awaiting BTC Payment')
+    print('Order Matches Awaiting BTC Payment from You')
     if os.name == 'nt': table = windows(table.get_string())
     print(table)
     print('\n')
