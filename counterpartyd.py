@@ -624,8 +624,8 @@ if __name__ == '__main__':
         print('Divisible:', divisible)
         print('Issuer:', issuer)
         print('Callable:', callable_)
-        print('Call Date:', util.isodt(call_date))
-        print('Call Price:', str(call_price) + ' XCP')
+        print('Call Date:', util.isodt(call_date) if call_date else call_date)
+        print('Call Price:', str(call_price) + ' XCP' if call_price else call_price)
         print('Description:', description)
 
     elif args.action == 'wallet':
