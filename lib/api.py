@@ -197,7 +197,7 @@ class APIServer(threading.Thread):
             # its divisible (and if it was locked, for that matter)
             locked = not last_issuance['amount'] and not last_issuance['transfer']
             total_issued = sum([e['amount'] for e in issuances])
-            return {'owner': last_issuance['issuer'], 'divisible': last_issuance['divisible'], 'locked': locked, 'total_issued': total_issued, 'callable': last_issuance['callable'], 'call_date': util.isodt(last_issuance['call_date']), 'call_price': last_issuance['call_price'], 'description': last_issuance['description']}
+            return {'owner': last_issuance['issuer'], 'divisible': last_issuance['divisible'], 'locked': locked, 'total_issued': total_issued, 'callable': last_issuance['callable'], 'call_date': util.isodt(last_issuance['call_date']) if last_issuance['call_date'] else None, 'call_price': last_issuance['call_price'], 'description': last_issuance['description']}
 
 
         ######################
