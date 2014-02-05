@@ -36,6 +36,10 @@ class APIServer(threading.Thread):
                 return None
 
         @dispatcher.add_method
+        def xcp_supply ():
+            return util.xcp_supply(db)
+
+        @dispatcher.add_method
         def get_balances (filters=None, order_by=None, order_dir=None, filterop="and"):
             return util.get_balances(db,
                 filters=filters,
