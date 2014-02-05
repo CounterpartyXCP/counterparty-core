@@ -83,14 +83,16 @@ def parse_hex (unsigned_tx_hex):
     blocks.parse_tx(db, tx, heaps)
 
     # After parsing every transaction, check that the credits, debits sum properly.
-    balances = util.get_balances(db)
-    for balance in balances:
+    cursor.execute('''SELECT * FROM balances''')
+    for balance in cursor.fetchall():
         amount = 0
-        debits = util.get_debits(db, address=balance['address'], asset=balance['asset'])
-        for debit in debits:
+        cursor.execute('''SELECT * FROM debits \
+                          WHERE (address = ? AND asset = ?)''', (balance['address'], balance['asset']))
+        for debit in cursor.fetchall():
             amount -= debit['amount']
-        credits = util.get_credits(db, address=balance['address'], asset=balance['asset'])
-        for credit in credits:
+        cursor.execute('''SELECT * FROM credits \
+                          WHERE (address = ? AND asset = ?)''', (balance['address'], balance['asset']))
+        for credit in cursor.fetchall():
             amount += credit['amount']
         assert amount == balance['amount']
 
