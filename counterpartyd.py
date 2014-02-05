@@ -309,7 +309,7 @@ def format_order (order):
     else:
         fee = str(order['fee_provided'] / config.UNIT)
 
-    return [D(give_remaining), give_asset, price, price_assets, fee, util.last_block(db)['block_index'] - order['expire_index'], order['tx_hash']]
+    return [D(give_remaining), give_asset, price, price_assets, fee, order['expire_index'] - util.last_block(db)['block_index'], order['tx_hash']]
 
 def format_bet (bet):
     odds = D(bet['counterwager_amount']) / D(bet['wager_amount'])
@@ -319,11 +319,11 @@ def format_bet (bet):
     if not bet['leverage']: leverage = None
     else: leverage = util.devise(db, D(bet['leverage']) / 5040, 'leverage', 'output')
 
-    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], util.isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.devise(db, odds, 'odds', 'output'), util.last_block(db)['block_index'] - bet['expire_index'], bet['tx_hash']]
+    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], util.isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.devise(db, odds, 'odds', 'output'), bet['expire_index'] - util.last_block(db)['block_index'], bet['tx_hash']]
 
 def format_order_match (db, order_match):
     order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']
-    order_match_time_left = util.last_block(db)['block_index'] - order_match['match_expire_index']
+    order_match_time_left = order_match['match_expire_index'] - util.last_block(db)['block_index']
     return [order_match_id, order_match_time_left]
 
 def format_feed (feed):
