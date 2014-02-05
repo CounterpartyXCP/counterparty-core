@@ -470,34 +470,40 @@ def get_tx_info (tx):
 
     return source, destination, btc_amount, round(fee), data
 
-def reparse (db, quiet=False):
-    """Reparse all transactions (atomically).
+def reparse (db, block_index=None, quiet=False):
+    """Reparse all transactions (atomically). If block_index is set, rollback
+    to the end of that block.
     """
     # TODO: This is not thread‐safe!
     logging.warning('Status: Reparsing all transactions.')
-    reparse_cursor = db.cursor()
+    cursor = db.cursor()
+
+    # For rollbacks, just delete new blocks and then reparse what’s left.
+    if block_index:
+        cursor.execute('''DELETE FROM blocks WHERE block_index > {}'''.format(block_index))
+        cursor.execute('''DELETE FROM transactions WHERE block_index > {}'''.format(block_index))
 
     with db:
         # Delete all of the results of parsing.
-        reparse_cursor.execute('''DROP TABLE IF EXISTS debits''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS credits''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS balances''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS sends''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS orders''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS order_matches''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS btcpays''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS issuances''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS broadcasts''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS bets''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS bet_matches''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS dividends''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS burns''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS cancels''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS callbacks''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS order_expirations''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS bet_expirations''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS order_match_expirations''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS bet_match_expirations''')
+        cursor.execute('''DROP TABLE IF EXISTS debits''')
+        cursor.execute('''DROP TABLE IF EXISTS credits''')
+        cursor.execute('''DROP TABLE IF EXISTS balances''')
+        cursor.execute('''DROP TABLE IF EXISTS sends''')
+        cursor.execute('''DROP TABLE IF EXISTS orders''')
+        cursor.execute('''DROP TABLE IF EXISTS order_matches''')
+        cursor.execute('''DROP TABLE IF EXISTS btcpays''')
+        cursor.execute('''DROP TABLE IF EXISTS issuances''')
+        cursor.execute('''DROP TABLE IF EXISTS broadcasts''')
+        cursor.execute('''DROP TABLE IF EXISTS bets''')
+        cursor.execute('''DROP TABLE IF EXISTS bet_matches''')
+        cursor.execute('''DROP TABLE IF EXISTS dividends''')
+        cursor.execute('''DROP TABLE IF EXISTS burns''')
+        cursor.execute('''DROP TABLE IF EXISTS cancels''')
+        cursor.execute('''DROP TABLE IF EXISTS callbacks''')
+        cursor.execute('''DROP TABLE IF EXISTS order_expirations''')
+        cursor.execute('''DROP TABLE IF EXISTS bet_expirations''')
+        cursor.execute('''DROP TABLE IF EXISTS order_match_expirations''')
+        cursor.execute('''DROP TABLE IF EXISTS bet_match_expirations''')
 
         # Reparse all blocks, transactions.
         if quiet:
@@ -505,88 +511,16 @@ def reparse (db, quiet=False):
             log.setLevel(logging.WARNING)
         initialise(db)
         heaps = init_heaps(db)
-        reparse_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
-        for block in reparse_cursor.fetchall():
+        cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
+        for block in cursor.fetchall():
             logging.info('Block (re‐parse): {}'.format(str(block['block_index'])))
             parse_block(db, block['block_index'], block['block_time'], heaps)
         if quiet:
             log.setLevel(logging.INFO)
 
         # Update minor version number.
-        minor_version = reparse_cursor.execute('PRAGMA user_version = {}'.format(int(config.DB_VERSION_MINOR)))
+        minor_version = cursor.execute('PRAGMA user_version = {}'.format(int(config.DB_VERSION_MINOR)))
         logging.info('Status: Database minor version number updated.')
-
-    reparse_cursor.close()
-    return
-
-def rollback (db, block_index):
-    """Rollback database to state at end of block number block_index (atomically).
-    """
-
-    # TODO: This is not thread‐safe!
-    logging.warning('Status: Rolling back database to block {}.'.format(block_index))
-    cursor = db.cursor()
-
-    with db:
-        # Delete everything execpt for balances after block_index.
-        logging.debug('Status: Deleting new blocks.')
-        cursor.execute('''DELETE FROM blocks WHERE block_index > {}'''.format(block_index))
-        cursor.execute('''DELETE FROM transactions WHERE block_index > {}'''.format(block_index))
-        cursor.execute('''DELETE FROM debits WHERE block_index > {}'''.format(block_index))
-        cursor.execute('''DELETE FROM credits WHERE block_index > {}'''.format(block_index))
-        cursor.execute('''DELETE FROM sends WHERE block_index > {}'''.format(block_index))
-        cursor.execute('''DELETE FROM orders WHERE block_index > {}'''.format(block_index))
-        cursor.execute('''DELETE FROM order_matches WHERE tx1_block_index > {}'''.format(block_index))
-        cursor.execute('''DELETE FROM btcpays WHERE block_index > {}'''.format(block_index))
-        cursor.execute('''DELETE FROM issuances WHERE block_index > {}'''.format(block_index))
-        cursor.execute('''DELETE FROM broadcasts WHERE block_index > {}'''.format(block_index))
-        cursor.execute('''DELETE FROM bets WHERE block_index > {}'''.format(block_index))
-        cursor.execute('''DELETE FROM bet_matches WHERE tx1_block_index > {}'''.format(block_index))
-        cursor.execute('''DELETE FROM dividends WHERE block_index > {}'''.format(block_index))
-        cursor.execute('''DELETE FROM burns WHERE block_index > {}'''.format(block_index))
-        cursor.execute('''DELETE FROM cancels WHERE block_index > {}'''.format(block_index))
-        cursor.execute('''DELETE FROM callbacks WHERE block_index > {}'''.format(block_index))
-
-        # Re‐initialise heaps.
-        heaps = init_heaps(db)
-
-        # Re‐calculate every balance by summing historical credits, debits.
-        logging.debug('Status: Re‐calculating balances.')
-        cursor.execute('''SELECT * FROM balances''')
-        # TODO: Parallelise?!
-        for balance in cursor.fetchall():
-            new_amount = 0
-            cursor.execute('''SELECT * FROM credits \
-                              WHERE (address = ? AND asset = ? and block_index <= ?)''', (balance['address'], balance['asset'], (block_index)))
-            for credit in cursor.fetchall(): new_amount += credit['amount']
-            cursor.execute('''SELECT * FROM debits \
-                              WHERE (address = ? AND asset = ? and block_index <= ?)''', (balance['address'], balance['asset'], (block_index)))
-            for debit in cursor.fetchall(): new_amount -= debit['amount']
-            cursor.execute('''UPDATE balances SET amount=? WHERE (address=? and asset=?)''',
-                                 (new_amount, balance['address'], balance['asset']))
-
-        # Unexpire.
-        logging.debug('Status: Unexpiring.')
-        # Orders
-        cursor.execute('''SELECT * FROM order_expirations WHERE block_index > {}'''.format(block_index))
-        for order_expiration in cursor.fetchall():
-            cursor.execute('''UPDATE orders SET validity = ? WHERE tx_index = ?''', ('Valid', order_expiration['order_index']))
-            cursor.execute('''DELETE FROM order_expirations WHERE order_index = {}'''.format(order_expiration['order_index']))
-        # Bets 
-        cursor.execute('''SELECT * FROM bet_expirations WHERE block_index > {}'''.format(block_index))
-        for bet_expiration in cursor.fetchall():
-            cursor.execute('''UPDATE bets SET validity = ? WHERE tx_index = ?''', ('Valid', bet_expiration['bet_index']))
-            cursor.execute('''DELETE FROM bet_expirations WHERE bet_index = {}'''.format(bet_expiration['bet_index']))
-        # Order Matches
-        cursor.execute('''SELECT * FROM order_match_expirations WHERE block_index > {}'''.format(block_index))
-        for order_match_expiration in cursor.fetchall():
-            cursor.execute('''UPDATE order_matches SET validity = ? WHERE id = ?''', ('Valid: awaiting BTC payment', order_match_expiration['order_match_id']))
-            cursor.execute('''DELETE FROM order_match_expirations WHERE order_match_id = {}'''.format(order_expiration['order_match_id']))
-        # Bet Matches
-        cursor.execute('''SELECT * FROM bet_match_expirations WHERE block_index > {}'''.format(block_index))
-        for bet_match_expiration in cursor.fetchall():
-            cursor.execute('''UPDATE bet_matches SET validity = ? WHERE id = ?''', ('Valid', bet_match_expiration['bet_match_id']))
-            cursor.execute('''DELETE FROM bet_match_expirations WHERE bet_match_id = {}'''.format(bet_expiration['bet_match_id']))
 
     cursor.close()
     return
@@ -608,9 +542,8 @@ def reorg (db):
 
     if not reorg_necessary: return last_block_index + 1
 
-    # TODO: Untested.
     # Rollback the DB.
-    rollback(db, block_index - 1)
+    reparse(db, block_index=block_index-1, quiet=True)
 
     reorg_cursor.close()
     return block_index

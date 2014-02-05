@@ -26,7 +26,7 @@ import counterpartyd
 # config.BLOCK_FIRST = 0
 # config.BURN_START = 0
 # config.BURN_END = 9999999
-counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/counterparty.unittest.db', testnet=True, testcoin=False, unittest=True)
+counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/counterpartyd.unittest.db', testnet=True, testcoin=False, unittest=True)
 
 # Connect to database.
 try: os.remove(config.DATABASE)

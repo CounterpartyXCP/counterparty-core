@@ -676,7 +676,7 @@ if __name__ == '__main__':
         blocks.reparse(db)
 
     elif args.action == 'rollback':
-        blocks.rollback(db, args.block_index)
+        blocks.reparse(db, block_index=args.block_index)
 
     elif args.action == 'checksum':
         print('Asset name:', args.string + checksum.compute(args.string))
