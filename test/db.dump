@@ -14,7 +14,7 @@ CREATE TABLE balances(
                         amount INTEGER);
 INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',149931572600);
 INSERT INTO balances VALUES('n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',50000000);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',950000000);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',1000000000);
 INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',100000);
 -- Triggers and indices on  balances
 CREATE INDEX balances_address_idx ON balances (address)
@@ -173,6 +173,7 @@ INSERT INTO credits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',315700000)
 INSERT INTO credits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',25000000);
 INSERT INTO credits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',1400000000);
 INSERT INTO credits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',70000000);
+INSERT INTO credits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',50000000);
 INSERT INTO credits VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',56999960100);
 -- Triggers and indices on  credits
 CREATE INDEX credits_address_idx ON credits (address)

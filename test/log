@@ -25,6 +25,6 @@ Contract Settled: 1.843 XCP credited to the bull, 3.157 XCP credited to the bear
 Broadcast: 'Unit Test' = 2.0 from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:41-05:00 with a fee multiplier of 0.0500 (f299791c...e91e750c)
 Contract Settled: NotEqual won the pot of 14.0 XCP; 0.7 XCP credited to the feed address (4d7b3ef7300acf70...923ad9bde30f8cb8)
 Order: sell 0.5 BBBB for 0.5 XCP at 1.0000 XCP/BBBB in 10 blocks (ab897fbd...300a62e2)
-Cancel: ab897fbd...300a62e2 (83891d7f...b452d879)
+Cancel: ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2 (83891d7fe85c33e52c8b4e5814c92fb6a3b9467299200538a6babaa8b452d879)
 Burn: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 0.38 BTC for 569.999601 XCP (2f0fd1e8...6ff58608)
 STOP TEST

@@ -58,7 +58,8 @@ def parse (db, tx, message):
             cursor.execute('''UPDATE orders \
                                            SET validity=? \
                                            WHERE tx_hash=?''', ('Invalid: cancelled', order['tx_hash']))
-            util.credit(db, tx['source'], order['give_asset'], order['give_remaining'])
+            if order['give_asset'] != 'BTC':
+                util.credit(db, tx['source'], order['give_asset'], order['give_remaining'])
         # Cancel if bet.
         elif bets:
             bet = bets[0]
