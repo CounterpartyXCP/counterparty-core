@@ -96,6 +96,7 @@ def parse (db, tx, message, order_heap, order_match_heap):
         'get_amount': get_amount,
         'get_remaining': get_amount,
         'expiration': expiration,
+        'expire_index': tx['tx_index'] + expiration,
         'fee_required': fee_required,
         'fee_provided': tx['fee'],
         'validity': validity,
@@ -225,6 +226,7 @@ def match (db, tx, order_heap, order_match_heap):
                 'tx1_block_index': tx1['block_index'],
                 'tx0_expiration': tx0['expiration'],
                 'tx1_expiration': tx1['expiration'],
+                'match_expire_index': min(tx0['expire_index'], tx1['expire_index']),
                 'validity': validity,
             }
 
@@ -302,7 +304,7 @@ def expire (db, block_index, order_heap, order_match_heap):
                                   WHERE tx_index = ?''',
                                (order_match['tx0_index'],))
                 tx0_order = cursor.fetchall()[0]
-                tx0_order_time_left = util.get_time_left(db, tx0_order)
+                tx0_order_time_left = tx0_order['expire_index'] - block_index
                 if tx0_order_time_left:
                     cursor.execute('''UPDATE orders \
                                       SET give_remaining = ?, \
@@ -316,7 +318,7 @@ def expire (db, block_index, order_heap, order_match_heap):
                                   WHERE tx_index = ?''',
                                (order_match['tx1_index'],))
                 tx1_order = cursor.fetchall()[0]
-                tx1_order_time_left = util.get_time_left(db, tx1_order)
+                tx1_order_time_left = tx1_order['expire_index'] - block_index
                 if tx1_order_time_left:
                     cursor.execute('''UPDATE orders \
                                       SET give_remaining = ?, \

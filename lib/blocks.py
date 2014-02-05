@@ -169,48 +169,55 @@ def initialise(db):
                         sends_block_index_idx ON sends (block_index)
                     ''')
 
+    # Orders
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS orders(
-                        tx_index INTEGER PRIMARY KEY,
-                        tx_hash TEXT UNIQUE,
-                        block_index INTEGER,
-                        source TEXT,
-                        give_asset TEXT,
-                        give_amount INTEGER,
-                        give_remaining INTEGER,
-                        get_asset TEXT,
-                        get_amount INTEGER,
-                        get_remaining INTEGER,
-                        expiration INTEGER,
-                        fee_required INTEGER,
-                        fee_provided INTEGER,
-                        validity TEXT)
-                   ''')
+                                 tx_index INTEGER PRIMARY KEY,
+                                 tx_hash TEXT UNIQUE,
+                                 block_index INTEGER,
+                                 source TEXT,
+                                 give_asset TEXT,
+                                 give_amount INTEGER,
+                                 give_remaining INTEGER,
+                                 get_asset TEXT,
+                                 get_amount INTEGER,
+                                 get_remaining INTEGER,
+                                 expiration INTEGER,
+                                 expire_index INTEGER,
+                                 fee_required INTEGER,
+                                 fee_provided INTEGER,
+                                 validity TEXT)
+                              ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        orders_block_index_idx ON orders (block_index)
-                    ''')
+                                 block_index_idx ON orders (block_index)
+                              ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                                 expire_index_idx ON orders (expire_index)
+                              ''')
 
+    # Order Matches
     # TODO: id field is largely unused.
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS order_matches(
-                        id TEXT PRIMARY KEY,
-                        tx0_index INTEGER,
-                        tx0_hash TEXT,
-                        tx0_address TEXT,
-                        tx1_index INTEGER,
-                        tx1_hash TEXT,
-                        tx1_address TEXT,
-                        forward_asset INTEGER,
-                        forward_amount INTEGER,
-                        backward_asset INTEGER,
-                        backward_amount INTEGER,
-                        tx0_block_index INTEGER,
-                        tx1_block_index INTEGER,
-                        tx0_expiration INTEGER,
-                        tx1_expiration INTEGER,
-                        validity TEXT)
-                   ''')
+                                 id TEXT PRIMARY KEY,
+                                 tx0_index INTEGER,
+                                 tx0_hash TEXT,
+                                 tx0_address TEXT,
+                                 tx1_index INTEGER,
+                                 tx1_hash TEXT,
+                                 tx1_address TEXT,
+                                 forward_asset INTEGER,
+                                 forward_amount INTEGER,
+                                 backward_asset INTEGER,
+                                 backward_amount INTEGER,
+                                 tx0_block_index INTEGER,
+                                 tx1_block_index INTEGER,
+                                 tx0_expiration INTEGER,
+                                 tx1_expiration INTEGER,
+                                 match_expire_index INTEGER,
+                                 validity TEXT)
+                              ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        order_matches_block_index_idx ON order_matches (tx0_block_index, tx1_block_index)
-                    ''')
+                                 match_expire_index_idx ON order_matches (match_expire_index)
+                              ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS btcpays(
                         tx_index INTEGER PRIMARY KEY,
@@ -260,56 +267,63 @@ def initialise(db):
                         broadcasts_block_index_idx ON broadcasts (block_index)
                     ''')
 
+    # Bets.
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS bets(
-                        tx_index INTEGER PRIMARY KEY,
-                        tx_hash TEXT UNIQUE,
-                        block_index INTEGER,
-                        source TEXT,
-                        feed_address TEXT,
-                        bet_type INTEGER,
-                        deadline INTEGER,
-                        wager_amount INTEGER,
-                        wager_remaining INTEGER,
-                        counterwager_amount INTEGER,
-                        counterwager_remaining INTEGER,
-                        target_value REAL,
-                        leverage INTEGER,
-                        expiration INTEGER,
-                        fee_multiplier INTEGER,
-                        validity TEXT)
-                   ''')
+                                 tx_index INTEGER PRIMARY KEY,
+                                 tx_hash TEXT UNIQUE,
+                                 block_index INTEGER,
+                                 source TEXT,
+                                 feed_address TEXT,
+                                 bet_type INTEGER,
+                                 deadline INTEGER,
+                                 wager_amount INTEGER,
+                                 wager_remaining INTEGER,
+                                 counterwager_amount INTEGER,
+                                 counterwager_remaining INTEGER,
+                                 target_value REAL,
+                                 leverage INTEGER,
+                                 expiration INTEGER,
+                                 expire_index INTEGER,
+                                 fee_multiplier INTEGER,
+                                 validity TEXT)
+                              ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        bets_block_index_idx ON bets (block_index)
-                    ''')
+                                 block_index_idx ON bets (block_index)
+                              ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                                 expire_index_idx ON bets (expire_index)
+                              ''')
 
+    # Bet Matches
     # TODO: id field is largely unused.
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS bet_matches(
-                        id TEXT PRIMARY KEY,
-                        tx0_index INTEGER,
-                        tx0_hash TEXT,
-                        tx0_address TEXT,
-                        tx1_index INTEGER,
-                        tx1_hash TEXT,
-                        tx1_address TEXT,
-                        tx0_bet_type INTEGER,
-                        tx1_bet_type INTEGER,
-                        feed_address TEXT,
-                        initial_value INTEGER,
-                        deadline INTEGER,
-                        target_value REAL,
-                        leverage INTEGER,
-                        forward_amount INTEGER,
-                        backward_amount INTEGER,
-                        tx0_block_index INTEGER,
-                        tx1_block_index INTEGER,
-                        tx0_expiration INTEGER,
-                        tx1_expiration INTEGER,
-                        fee_multiplier INTEGER,
-                        validity TEXT)
-                   ''')
+                                 id TEXT PRIMARY KEY,
+                                 tx0_index INTEGER,
+                                 tx0_hash TEXT,
+                                 tx0_address TEXT,
+                                 tx1_index INTEGER,
+                                 tx1_hash TEXT,
+                                 tx1_address TEXT,
+                                 tx0_bet_type INTEGER,
+                                 tx1_bet_type INTEGER,
+                                 feed_address TEXT,
+                                 initial_value INTEGER,
+                                 deadline INTEGER,
+                                 target_value REAL,
+                                 leverage INTEGER,
+                                 forward_amount INTEGER,
+                                 backward_amount INTEGER,
+                                 tx0_block_index INTEGER,
+                                 tx1_block_index INTEGER,
+                                 tx0_expiration INTEGER,
+                                 tx1_expiration INTEGER,
+                                 match_expire_index INTEGER,
+                                 fee_multiplier INTEGER,
+                                 validity TEXT)
+                              ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        bet_matches_block_index_idx ON bet_matches (tx0_block_index, tx1_block_index)
-                    ''')
+                                 match_expire_index_idx ON bet_matches (match_expire_index)
+                              ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS dividends(
                         tx_index INTEGER PRIMARY KEY,
@@ -575,6 +589,14 @@ def follow (db):
     follow_cursor = db.cursor()
 
     logging.info('Status: RESTART')
+
+    # Reparse all transactions if minor version changes.
+    minor_version = follow_cursor.execute('PRAGMA user_version').fetchall()[0]['user_version']
+    if minor_version != config.DB_VERSION_MINOR:
+        logging.info('Status: Database and client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.DB_VERSION_MINOR))
+        reparse(db, quiet=False)
+
+    # Initialise.
     initialise(db)
     heaps = init_heaps(db)
 
@@ -589,13 +611,6 @@ def follow (db):
             #in the case of this, send out an initialize message to our zmq feed, any attached services
             # (such as counterwalletd) can then get this and clear our their data as well, so they don't get
             # duplicated data in the event of a new DB version
-
-        # Reparse all transactions if minor version changes.
-        if block_index != config.BLOCK_FIRST:
-            minor_version = follow_cursor.execute('PRAGMA user_version').fetchall()[0]['user_version']
-            if minor_version != config.DB_VERSION_MINOR:
-                logging.info('Status: Database and client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.DB_VERSION_MINOR))
-                reparse(db, quiet=False)
 
         # Get index of last transaction.
         try:

@@ -11,11 +11,14 @@ LENGTH = 32 + 32
 ID = 11
 
 
-def validate (db, tx0_hash, tx1_hash):
-    order_match_id = tx0_hash + tx1_hash
+def validate (db, order_match_id):
     problems = []
 
-    order_matches = util.get_order_matches(db, validity='Valid: awaiting BTC payment', tx0_hash=tx0_hash, tx1_hash=tx1_hash)
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM order_matches \
+                      WHERE (validity = ? AND id = ?)''', ('Valid: awaiting BTC payment', order_match_id))
+    order_matches = cursor.fetchall()
+    cursor.close()
     if len(order_matches) == 0:
         problems.append('invalid order match ID, {}'.format(order_match_id))
         order_match = None
@@ -30,7 +33,7 @@ def create (db, order_match_id, unsigned=False):
     tx0_hash, tx1_hash = order_match_id[:64], order_match_id[64:] # UTF-8 encoding means that the indices are doubled.
 
     # Try to match.
-    order_match, problems = validate(db, tx0_hash, tx1_hash)
+    order_match, problems = validate(db, order_match_id)
     if problems: raise exceptions.BTCPayError(problems)
 
     # Figure out to which address the BTC are being paid.
@@ -56,6 +59,7 @@ def parse (db, tx, message):
         assert len(message) == LENGTH
         tx0_hash_bytes, tx1_hash_bytes = struct.unpack(FORMAT, message)
         tx0_hash, tx1_hash = binascii.hexlify(tx0_hash_bytes).decode('utf-8'), binascii.hexlify(tx1_hash_bytes).decode('utf-8')
+        order_match_id = tx0_hash + tx1_hash
         validity = 'Valid'
     except struct.error as e:
         tx0_hash, tx1_hash = None, None
@@ -63,9 +67,8 @@ def parse (db, tx, message):
 
     if validity == 'Valid':
         # Try to match.
-        order_match, problems = validate(db, tx0_hash, tx1_hash)
+        order_match, problems = validate(db, order_match_id)
         if problems: validity = 'Invalid: ' + ';'.join(problems)
-        order_match_id = tx0_hash + tx1_hash
 
     if validity == 'Valid':
         # Credit source address for the currency that he bought with the bitcoins.

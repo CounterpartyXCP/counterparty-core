@@ -39,63 +39,59 @@ CREATE TABLE bet_match_expirations(
 -- Table  bet_matches
 DROP TABLE IF EXISTS bet_matches;
 CREATE TABLE bet_matches(
-                        id TEXT PRIMARY KEY,
-                        tx0_index INTEGER,
-                        tx0_hash TEXT,
-                        tx0_address TEXT,
-                        tx1_index INTEGER,
-                        tx1_hash TEXT,
-                        tx1_address TEXT,
-                        tx0_bet_type INTEGER,
-                        tx1_bet_type INTEGER,
-                        feed_address TEXT,
-                        initial_value INTEGER,
-                        deadline INTEGER,
-                        target_value REAL,
-                        leverage INTEGER,
-                        forward_amount INTEGER,
-                        backward_amount INTEGER,
-                        tx0_block_index INTEGER,
-                        tx1_block_index INTEGER,
-                        tx0_expiration INTEGER,
-                        tx1_expiration INTEGER,
-                        fee_multiplier INTEGER,
-                        validity TEXT);
-INSERT INTO bet_matches VALUES('01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546be7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6',10,'01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',11,'e7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000100,0.0,15120,41500000,20750000,10,11,10,10,5000000,'Force‐Liquidated Bull');
-INSERT INTO bet_matches VALUES('ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c9779d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4',12,'ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c977','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',13,'9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000100,0.0,5040,150000000,350000000,12,13,10,10,5000000,'Settled (CFD)');
-INSERT INTO bet_matches VALUES('4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8',14,'4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',15,'dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',2,3,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000200,1.0,5040,750000000,650000000,14,15,10,10,5000000,'Settled for NotEqual');
--- Triggers and indices on  bet_matches
-CREATE INDEX bet_matches_block_index_idx ON bet_matches (tx0_block_index, tx1_block_index)
-                    ;
+                                 id TEXT PRIMARY KEY,
+                                 tx0_index INTEGER,
+                                 tx0_hash TEXT,
+                                 tx0_address TEXT,
+                                 tx1_index INTEGER,
+                                 tx1_hash TEXT,
+                                 tx1_address TEXT,
+                                 tx0_bet_type INTEGER,
+                                 tx1_bet_type INTEGER,
+                                 feed_address TEXT,
+                                 initial_value INTEGER,
+                                 deadline INTEGER,
+                                 target_value REAL,
+                                 leverage INTEGER,
+                                 forward_amount INTEGER,
+                                 backward_amount INTEGER,
+                                 tx0_block_index INTEGER,
+                                 tx1_block_index INTEGER,
+                                 tx0_expiration INTEGER,
+                                 tx1_expiration INTEGER,
+                                 match_expire_index INTEGER,
+                                 fee_multiplier INTEGER,
+                                 validity TEXT);
+INSERT INTO bet_matches VALUES('01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546be7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6',10,'01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',11,'e7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000100,0.0,15120,41500000,20750000,10,11,10,10,20,5000000,'Force‐Liquidated Bull');
+INSERT INTO bet_matches VALUES('ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c9779d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4',12,'ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c977','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',13,'9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000100,0.0,5040,150000000,350000000,12,13,10,10,22,5000000,'Settled (CFD)');
+INSERT INTO bet_matches VALUES('4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8',14,'4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',15,'dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',2,3,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000200,1.0,5040,750000000,650000000,14,15,10,10,24,5000000,'Settled for NotEqual');
 
 -- Table  bets
 DROP TABLE IF EXISTS bets;
 CREATE TABLE bets(
-                        tx_index INTEGER PRIMARY KEY,
-                        tx_hash TEXT UNIQUE,
-                        block_index INTEGER,
-                        source TEXT,
-                        feed_address TEXT,
-                        bet_type INTEGER,
-                        deadline INTEGER,
-                        wager_amount INTEGER,
-                        wager_remaining INTEGER,
-                        counterwager_amount INTEGER,
-                        counterwager_remaining INTEGER,
-                        target_value REAL,
-                        leverage INTEGER,
-                        expiration INTEGER,
-                        fee_multiplier INTEGER,
-                        validity TEXT);
-INSERT INTO bets VALUES(10,'01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b',10,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1388000100,50000000,8500000,25000000,4250000,0.0,15120,10,5000000,'Valid');
-INSERT INTO bets VALUES(11,'e7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6',11,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,1388000100,25000000,4250000,41500000,0,0.0,15120,10,5000000,'Valid');
-INSERT INTO bets VALUES(12,'ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c977',12,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1388000100,150000000,0,350000000,0,0.0,5040,10,5000000,'Valid');
-INSERT INTO bets VALUES(13,'9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4',13,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,1388000100,350000000,0,150000000,0,0.0,5040,10,5000000,'Valid');
-INSERT INTO bets VALUES(14,'4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47',14,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',2,1388000200,750000000,0,650000000,0,1.0,5040,10,5000000,'Valid');
-INSERT INTO bets VALUES(15,'dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8',15,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,1388000200,650000000,0,750000000,0,1.0,5040,10,5000000,'Valid');
--- Triggers and indices on  bets
-CREATE INDEX bets_block_index_idx ON bets (block_index)
-                    ;
+                                 tx_index INTEGER PRIMARY KEY,
+                                 tx_hash TEXT UNIQUE,
+                                 block_index INTEGER,
+                                 source TEXT,
+                                 feed_address TEXT,
+                                 bet_type INTEGER,
+                                 deadline INTEGER,
+                                 wager_amount INTEGER,
+                                 wager_remaining INTEGER,
+                                 counterwager_amount INTEGER,
+                                 counterwager_remaining INTEGER,
+                                 target_value REAL,
+                                 leverage INTEGER,
+                                 expiration INTEGER,
+                                 expire_index INTEGER,
+                                 fee_multiplier INTEGER,
+                                 validity TEXT);
+INSERT INTO bets VALUES(10,'01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b',10,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1388000100,50000000,8500000,25000000,4250000,0.0,15120,10,20,5000000,'Valid');
+INSERT INTO bets VALUES(11,'e7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6',11,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,1388000100,25000000,4250000,41500000,0,0.0,15120,10,21,5000000,'Valid');
+INSERT INTO bets VALUES(12,'ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c977',12,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1388000100,150000000,0,350000000,0,0.0,5040,10,22,5000000,'Valid');
+INSERT INTO bets VALUES(13,'9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4',13,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,1388000100,350000000,0,150000000,0,0.0,5040,10,23,5000000,'Valid');
+INSERT INTO bets VALUES(14,'4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47',14,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',2,1388000200,750000000,0,650000000,0,1.0,5040,10,24,5000000,'Valid');
+INSERT INTO bets VALUES(15,'dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8',15,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,1388000200,650000000,0,750000000,0,1.0,5040,10,25,5000000,'Valid');
 
 -- Table  blocks
 DROP TABLE IF EXISTS blocks;
@@ -168,9 +164,6 @@ CREATE TABLE callbacks(
                                  asset TEXT,
                                  validity TEXT);
 INSERT INTO callbacks VALUES(23,'8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034',23,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','0.3','BBBCD','Valid');
--- Triggers and indices on  callbacks
-CREATE INDEX block_index_idx ON callbacks (block_index)
-                              ;
 
 -- Table  cancels
 DROP TABLE IF EXISTS cancels;
@@ -303,50 +296,54 @@ CREATE TABLE order_match_expirations(
 -- Table  order_matches
 DROP TABLE IF EXISTS order_matches;
 CREATE TABLE order_matches(
-                        id TEXT PRIMARY KEY,
-                        tx0_index INTEGER,
-                        tx0_hash TEXT,
-                        tx0_address TEXT,
-                        tx1_index INTEGER,
-                        tx1_hash TEXT,
-                        tx1_address TEXT,
-                        forward_asset INTEGER,
-                        forward_amount INTEGER,
-                        backward_asset INTEGER,
-                        backward_amount INTEGER,
-                        tx0_block_index INTEGER,
-                        tx1_block_index INTEGER,
-                        tx0_expiration INTEGER,
-                        tx1_expiration INTEGER,
-                        validity TEXT);
-INSERT INTO order_matches VALUES('dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5',2,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BTC',50000000,'XCP',100000000,2,3,10,10,'Valid');
+                                 id TEXT PRIMARY KEY,
+                                 tx0_index INTEGER,
+                                 tx0_hash TEXT,
+                                 tx0_address TEXT,
+                                 tx1_index INTEGER,
+                                 tx1_hash TEXT,
+                                 tx1_address TEXT,
+                                 forward_asset INTEGER,
+                                 forward_amount INTEGER,
+                                 backward_asset INTEGER,
+                                 backward_amount INTEGER,
+                                 tx0_block_index INTEGER,
+                                 tx1_block_index INTEGER,
+                                 tx0_expiration INTEGER,
+                                 tx1_expiration INTEGER,
+                                 match_expire_index INTEGER,
+                                 validity TEXT);
+INSERT INTO order_matches VALUES('dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5',2,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BTC',50000000,'XCP',100000000,2,3,10,10,12,'Valid');
 -- Triggers and indices on  order_matches
-CREATE INDEX order_matches_block_index_idx ON order_matches (tx0_block_index, tx1_block_index)
-                    ;
+CREATE INDEX match_expire_index_idx ON order_matches (match_expire_index)
+                              ;
 
 -- Table  orders
 DROP TABLE IF EXISTS orders;
 CREATE TABLE orders(
-                        tx_index INTEGER PRIMARY KEY,
-                        tx_hash TEXT UNIQUE,
-                        block_index INTEGER,
-                        source TEXT,
-                        give_asset TEXT,
-                        give_amount INTEGER,
-                        give_remaining INTEGER,
-                        get_asset TEXT,
-                        get_amount INTEGER,
-                        get_remaining INTEGER,
-                        expiration INTEGER,
-                        fee_required INTEGER,
-                        fee_provided INTEGER,
-                        validity TEXT);
-INSERT INTO orders VALUES(2,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986',2,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BTC',50000000,0,'XCP',100000000,0,10,0,1000000,'Valid');
-INSERT INTO orders VALUES(3,'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5',3,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',105000000,5000000,'BTC',50000000,0,10,900000,10000,'Valid');
-INSERT INTO orders VALUES(19,'ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2',19,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBBE',50000000,50000000,'XCP',50000000,50000000,10,0,10000,'Invalid: cancelled');
+                                 tx_index INTEGER PRIMARY KEY,
+                                 tx_hash TEXT UNIQUE,
+                                 block_index INTEGER,
+                                 source TEXT,
+                                 give_asset TEXT,
+                                 give_amount INTEGER,
+                                 give_remaining INTEGER,
+                                 get_asset TEXT,
+                                 get_amount INTEGER,
+                                 get_remaining INTEGER,
+                                 expiration INTEGER,
+                                 expire_index INTEGER,
+                                 fee_required INTEGER,
+                                 fee_provided INTEGER,
+                                 validity TEXT);
+INSERT INTO orders VALUES(2,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986',2,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BTC',50000000,0,'XCP',100000000,0,10,12,0,1000000,'Valid');
+INSERT INTO orders VALUES(3,'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5',3,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',105000000,5000000,'BTC',50000000,0,10,13,900000,10000,'Valid');
+INSERT INTO orders VALUES(19,'ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2',19,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBBE',50000000,50000000,'XCP',50000000,50000000,10,29,0,10000,'Invalid: cancelled');
 -- Triggers and indices on  orders
-CREATE INDEX orders_block_index_idx ON orders (block_index)
-                    ;
+CREATE INDEX block_index_idx ON orders (block_index)
+                              ;
+CREATE INDEX expire_index_idx ON orders (expire_index)
+                              ;
 
 -- Table  sends
 DROP TABLE IF EXISTS sends;

@@ -146,6 +146,7 @@ def parse (db, tx, message, bet_heap, bet_match_heap):
         'target_value': target_value,
         'leverage': leverage,
         'expiration': expiration,
+        'expire_index': tx['tx_index'] + expiration,
         'fee_multiplier': fee_multiplier,
         'validity': validity,
     }
@@ -279,6 +280,7 @@ def match (db, tx, bet_heap, bet_match_heap):
                 'tx0_expiration': tx0['expiration'],
                 'tx1_expiration': tx1['expiration'],
                 'fee_multiplier': fee_multiplier,
+                'match_expire_index': min(tx0['expire_index'], tx1['expire_index']),
                 'validity': 'Valid',
             }
             bet_match_cursor.execute(*util.get_insert_sql('bet_matches', element_data))
