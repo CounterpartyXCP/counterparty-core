@@ -11,14 +11,11 @@ import struct
 import decimal
 D = decimal.Decimal
 import logging
-import heapq
 
 from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 
-def parse_tx (db, tx, heaps):
-    order_heap, order_match_heap, bet_heap, bet_match_heap = heaps
-
+def parse_tx (db, tx):
     parse_tx_cursor = db.cursor()
     # Burns.
     if tx['destination'] == config.UNSPENDABLE:
@@ -35,7 +32,7 @@ def parse_tx (db, tx, heaps):
     if message_type_id == send.ID:
         send.parse(db, tx, message)
     elif message_type_id == order.ID:
-        order.parse(db, tx, message, order_heap, order_match_heap)
+        order.parse(db, tx, message)
     elif message_type_id == btcpay.ID:
         btcpay.parse(db, tx, message)
     elif message_type_id == issuance.ID:
@@ -43,7 +40,7 @@ def parse_tx (db, tx, heaps):
     elif message_type_id == broadcast.ID:
         broadcast.parse(db, tx, message)
     elif message_type_id == bet.ID:
-        bet.parse(db, tx, message, bet_heap, bet_match_heap)
+        bet.parse(db, tx, message)
     elif message_type_id == dividend.ID:
         dividend.parse(db, tx, message)
     elif message_type_id == cancel.ID:
@@ -60,7 +57,7 @@ def parse_tx (db, tx, heaps):
 
     parse_tx_cursor.close()
 
-def parse_block (db, block_index, block_time, heaps):
+def parse_block (db, block_index, block_time):
     """This is a separate function from follow() so that changing the parsing
     rules doesn't require a full database rebuild. If parsing rules are changed
     (but not data identification), then just restart `counterparty.py follow`.
@@ -69,9 +66,8 @@ def parse_block (db, block_index, block_time, heaps):
     parse_block_cursor = db.cursor()
 
     # Expire orders and bets.
-    order_heap, order_match_heap, bet_heap, bet_match_heap = heaps
-    order.expire(db, block_index, order_heap, order_match_heap)
-    bet.expire(db, block_index, block_time, bet_heap, bet_match_heap)
+    order.expire(db, block_index)
+    bet.expire(db, block_index, block_time)
 
     # Parse transactions, sorting them by type.
     parse_block_cursor.execute('''SELECT * FROM transactions \
@@ -79,7 +75,7 @@ def parse_block (db, block_index, block_time, heaps):
                                (block_index,))
     transactions = parse_block_cursor.fetchall()
     for tx in transactions:
-        parse_tx(db, tx, heaps)
+        parse_tx(db, tx)
 
     parse_block_cursor.close()
 
@@ -524,11 +520,10 @@ def reparse (db, block_index=None, quiet=False):
             log = logging.getLogger('')
             log.setLevel(logging.WARNING)
         initialise(db)
-        heaps = init_heaps(db)
         cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
         for block in cursor.fetchall():
             logging.info('Block (re‐parse): {}'.format(str(block['block_index'])))
-            parse_block(db, block['block_index'], block['block_time'], heaps)
+            parse_block(db, block['block_index'], block['block_time'])
         if quiet:
             log.setLevel(logging.INFO)
 
@@ -562,28 +557,6 @@ def reorg (db):
     reorg_cursor.close()
     return block_index
 
-def init_heaps (db):
-    cursor = db.cursor()
-
-    cursor.execute('''SELECT * FROM orders WHERE validity = ?''', ('Valid',))
-    order_heap = [(order['block_index'] + order['expiration'], order['tx_index']) for order in cursor.fetchall()]
-    heapq.heapify(order_heap)
-
-    cursor.execute('''SELECT * FROM order_matches WHERE validity = ?''', ('Valid',))
-    order_match_heap = [(min(order_match['tx0_block_index'] + order_match['tx0_expiration'], order_match['tx1_block_index'] + order_match['tx1_expiration']), order_match['tx0_index'], order_match['tx1_index']) for order_match in cursor.fetchall()]
-    heapq.heapify(order_match_heap)
-
-    cursor.execute('''SELECT * FROM bets WHERE validity = ?''', ('Valid',))
-    bet_heap = [(bet['block_index'] + bet['expiration'], bet['tx_index']) for bet in cursor.fetchall()]
-    heapq.heapify(bet_heap)
-
-    cursor.execute('''SELECT * FROM bet_matches WHERE validity = ?''', ('Valid',))
-    bet_match_heap = [(bet_match['deadline'], bet_match['tx0_index'], bet_match['tx1_index']) for bet_match in cursor.fetchall()]
-    heapq.heapify(bet_match_heap)
-
-    return (order_heap, order_match_heap, bet_heap, bet_match_heap)
-    cursor.close()
-
 def follow (db):
     # TODO: This is not thread‐safe!
     follow_cursor = db.cursor()
@@ -598,7 +571,6 @@ def follow (db):
 
     # Initialise.
     initialise(db)
-    heaps = init_heaps(db)
 
     while True:
         # Get index of last block.
@@ -676,7 +648,7 @@ def follow (db):
                         tx_index += 1
 
                 # Parse the transactions in the block.
-                parse_block(db, block_index, block_time, heaps)
+                parse_block(db, block_index, block_time)
 
             # Increment block index.
             block_count = bitcoin.rpc('getblockcount', [])
