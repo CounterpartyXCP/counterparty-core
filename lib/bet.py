@@ -258,6 +258,7 @@ def match (db, tx, bet_heap, bet_match_heap):
 
             # Record bet fulfillment.
             element_data = {
+                'id': tx0['tx_hash'] + tx['tx_hash'],
                 'tx0_index': tx0['tx_index'],
                 'tx0_hash': tx0['tx_hash'],
                 'tx0_address': tx0['source'],
@@ -302,6 +303,14 @@ def expire (db, block_index, block_time, bet_heap, bet_match_heap):
                 util.credit(db, block_index, bet['source'], 'XCP', round(bet['wager_remaining'] * (1 + bet['fee_multiplier'] / 1e8)))
                 cursor.execute('''UPDATE bets SET validity=? WHERE (validity = ? AND tx_index=?)''', ('Invalid: expired', 'Valid', tx_index))
 
+                # Record bet expiration.
+                element_data = {
+                    'bet_index': bet['tx_index'],
+                    'bet_hash': bet['tx_hash'],
+                    'block_index': block_index
+                }
+                cursor.execute(*util.get_insert_sql('bet_expirations', element_data))
+
                 logging.info('Expired bet: {}'.format(bet['tx_hash']))
             cursor.close()
 
@@ -328,6 +337,13 @@ def expire (db, block_index, block_time, bet_heap, bet_match_heap):
                               SET validity=? \
                               WHERE (tx0_index=? AND tx1_index=?)''', ('Invalid: expired awaiting broadcast', tx0_index, tx1_index)
                           )
+
+            # Record bet match expiration.
+            element_data = {
+                'block_index': block_index,
+                'bet_match_id': bet_match['tx0_hash'] + bet_match['tx1_hash']
+            }
+            cursor.execute(*util.get_insert_sql('bet_match_expirations', element_data))
 
             logging.info('Expired Bet Match: {}'.format(bet_match['tx0_hash'] + bet_match['tx1_hash']))
     cursor.close()

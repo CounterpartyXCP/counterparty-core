@@ -53,6 +53,9 @@ def rowtracer(cursor, sql):
 def connect_to_db():
     """Connects to the SQLite database, returning a db Connection object"""
     db = apsw.Connection(config.DATABASE)
+    cursor = db.cursor()
+    cursor.execute('''PRAGMA count_changes = OFF''')
+    cursor.close()
     db.setrowtrace(rowtracer)
     return db
 
@@ -84,6 +87,7 @@ def database_check (db):
         time.sleep(1)
     raise exceptions.DatabaseError('Counterparty database is behind Bitcoind. Is the counterpartyd server running?')
 
+# TODO: Doesn’t use DB indexes at all!
 def do_filter(results, filters, filterop):
     """Filters results based on a filter data structure (as used by the API)"""
     if not len(results) or not filters: #empty results, or not filtering

@@ -208,6 +208,7 @@ def match (db, tx, order_heap, order_match_heap):
 
             # Record order match.
             element_data = {
+                'id': tx0['tx_hash'] + tx['tx_hash'],
                 'tx0_index': tx0['tx_index'],
                 'tx0_hash': tx0['tx_hash'],
                 'tx0_address': tx0['source'],
@@ -241,17 +242,25 @@ def expire (db, block_index, order_heap, order_match_heap):
             break
         else:
             heapq.heappop(order_heap)
-            order_expire_cursor = db.cursor()
+            cursor = db.cursor()
 
-            order_expire_cursor.execute('''SELECT * FROM orders WHERE tx_index=?''', (tx_index,))
-            order = order_expire_cursor.fetchall()[0]
+            cursor.execute('''SELECT * FROM orders WHERE tx_index=?''', (tx_index,))
+            order = cursor.fetchall()[0]
             if order['validity'] == 'Valid':
                 if order['give_asset'] != 'BTC':    # Can't credit BTC.
                     util.credit(db, block_index, order['source'], order['give_asset'], order['give_remaining'])
-                order_expire_cursor.execute('''UPDATE orders SET validity=? WHERE (validity = ? AND tx_index=?)''', ('Invalid: expired', 'Valid', tx_index))
+                cursor.execute('''UPDATE orders SET validity=? WHERE (validity = ? AND tx_index=?)''', ('Invalid: expired', 'Valid', tx_index))
+
+                # Record offer expiration.
+                element_data = {
+                    'order_index': order['tx_index'],
+                    'order_hash': order['tx_hash'],
+                    'block_index': block_index
+                }
+                cursor.execute(*util.get_insert_sql('order_expirations', element_data))
 
                 logging.info('Expired order: {}'.format(order['tx_hash']))
-            order_expire_cursor.close()
+            cursor.close()
 
     # Expire order_matches for BTC with no BTC.
     cursor = db.cursor()
@@ -276,6 +285,14 @@ def expire (db, block_index, order_heap, order_match_heap):
                     util.credit(db, block_index, order_match['tx0_address'],
                                         order_match['forward_asset'],
                                         order_match['forward_amount'])
+
+                # Record order match expiration.
+                element_data = {
+                    'block_index': block_index,
+                    'order_match_id': order_match['tx0_hash'] + order_match['tx1_hash']
+                }
+                cursor.execute(*util.get_insert_sql('order_match_expirations', element_data))
+
                 logging.info('Expired Order Match awaiting BTC payment: {}'.format(order_match['tx0_hash'] + order_match['tx1_hash']))
 
                 # If tx0 is still good, replenish give, get remaining.
