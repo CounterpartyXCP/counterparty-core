@@ -244,7 +244,9 @@ def debit (db, block_index, address, asset, amount):
     if asset == 'BTC':
         raise exceptions.BalanceError('Cannot debit bitcoins from a Counterparty address!')
 
-    balances = get_balances(db, address=address, asset=asset)
+    debit_cursor.execute('''SELECT * FROM balances \
+                            WHERE (address = ? AND asset = ?)''', (address, asset))
+    balances = debit_cursor.fetchall()
     if not len(balances) == 1: old_balance = 0
     else: old_balance = balances[0]['amount']
 
@@ -274,7 +276,9 @@ def credit (db, block_index, address, asset, amount, divisible=None):
     assert asset != 'BTC' # Never BTC.
     assert type(amount) == int
 
-    balances = get_balances(db, address=address, asset=asset)
+    credit_cursor.execute('''SELECT * FROM balances \
+                             WHERE (address = ? AND asset = ?)''', (address, asset))
+    balances = credit_cursor.fetchall()
     if len(balances) == 0:
         assert balances == []
 
@@ -330,7 +334,11 @@ def devise (db, quantity, asset, dest, divisible=None):
         if asset in ('BTC', 'XCP'):
             divisible = True
         else:
-            issuances = get_issuances(db, validity='Valid', asset=asset)
+            cursor = db.cursor()
+            cursor.execute('''SELECT * FROM issuances \
+                              WHERE (validity = ? AND asset = ?)''', ('Valid', asset))
+            issuances = cursor.fetchall()
+            cursor.close()
             if not issuances: raise exceptions.AssetError('No such asset: {}'.format(asset))
             divisible = issuances[0]['divisible']
 

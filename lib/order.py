@@ -67,7 +67,9 @@ def parse (db, tx, message, order_heap, order_match_heap):
         except: pass
 
         # Overorder
-        balances = util.get_balances(db, address=tx['source'], asset=give_asset)
+        order_parse_cursor.execute('''SELECT * FROM balances \
+                                      WHERE (address = ? AND asset = ?)''', (tx['source'], give_asset))
+        balances = order_parse_cursor.fetchall()
         if give_asset != 'BTC':
             if not balances:  give_amount = 0
             elif balances[0]['amount'] < give_amount:

@@ -48,7 +48,9 @@ def parse (db, tx, message):
 
     if validity == 'Valid':
         # Oversend
-        balances = util.get_balances(db, address=tx['source'], asset=asset)
+        send_parse_cursor.execute('''SELECT * FROM balances \
+                                     WHERE (address = ? AND asset = ?)''', (tx['source'], asset))
+        balances = send_parse_cursor.fetchall()
         if not balances:  amount = 0
         elif balances[0]['amount'] < amount:
             amount = min(balances[0]['amount'], amount)

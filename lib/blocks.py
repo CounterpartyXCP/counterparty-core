@@ -120,7 +120,7 @@ def initialise(db):
     initialise_cursor.execute('''DELETE FROM blocks WHERE block_index<?''', (config.BLOCK_FIRST,))
     initialise_cursor.execute('''DELETE FROM transactions WHERE block_index<?''', (config.BLOCK_FIRST,))
 
-    # NOTE: Only valid debits listed
+    # (Valid) debits
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS debits(
                         block_index INTEGER,
                         address TEXT,
@@ -131,7 +131,7 @@ def initialise(db):
                         debits_address_idx ON debits (address)
                     ''')
 
-    # NOTE: Only valid credits listed
+    # (Valid) credits
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS credits(
                         block_index INTEGER,
                         address TEXT,
@@ -142,14 +142,18 @@ def initialise(db):
                         credits_address_idx ON credits (address)
                     ''')
 
+    # Balances
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS balances(
-                        address TEXT,
-                        asset TEXT,
-                        amount INTEGER)
-                   ''')
+                                 address TEXT,
+                                 asset TEXT,
+                                 amount INTEGER)
+                              ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        balances_address_idx ON balances (address)
-                    ''')
+                                 address_idx ON balances (address)
+                              ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                                 asset_idx ON balances (asset)
+                              ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS sends(
                         tx_index INTEGER PRIMARY KEY,
@@ -329,6 +333,9 @@ def initialise(db):
                         earned INTEGER,
                         validity TEXT)
                    ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                                 validity_idx ON burns (validity)
+                              ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  address_idx ON burns (address)
                               ''')
@@ -522,7 +529,7 @@ def rollback (db, block_index):
 
     with db:
         # Delete everything execpt for balances after block_index.
-        logging.warning('Status: Deleting new blocks.')
+        logging.debug('Status: Deleting new blocks.')
         cursor.execute('''DELETE FROM blocks WHERE block_index > {}'''.format(block_index))
         cursor.execute('''DELETE FROM transactions WHERE block_index > {}'''.format(block_index))
         cursor.execute('''DELETE FROM debits WHERE block_index > {}'''.format(block_index))
@@ -544,40 +551,41 @@ def rollback (db, block_index):
         heaps = init_heaps(db)
 
         # Re‐calculate every balance by summing historical credits, debits.
-        logging.warning('Status: Re‐calculating balances.')
+        logging.debug('Status: Re‐calculating balances.')
         cursor.execute('''SELECT * FROM balances''')
         # TODO: Parallelise?!
         for balance in cursor.fetchall():
-            logging.debug('Status: Re‐calculating balance of {} in {}.'.format(balance['address'], balance['asset']))
             new_amount = 0
-            credits = util.get_credits(db, address=balance['address'], asset=balance['asset'], end_block=(block_index-1))
-            for credit in credits: new_amount += credit['amount']
-            debits = util.get_debits(db, address=balance['address'], asset=balance['asset'], end_block=(block_index-1))
-            for debit in debits: new_amount -= debit['amount']
+            cursor.execute('''SELECT * FROM credits \
+                              WHERE (address = ? AND asset = ? and block_index <= ?)''', (balance['address'], balance['asset'], (block_index)))
+            for credit in cursor.fetchall(): new_amount += credit['amount']
+            cursor.execute('''SELECT * FROM debits \
+                              WHERE (address = ? AND asset = ? and block_index <= ?)''', (balance['address'], balance['asset'], (block_index)))
+            for debit in cursor.fetchall(): new_amount -= debit['amount']
             cursor.execute('''UPDATE balances SET amount=? WHERE (address=? and asset=?)''',
                                  (new_amount, balance['address'], balance['asset']))
 
         # Unexpire.
-        logging.warning('Status: Unexpiring.')
+        logging.debug('Status: Unexpiring.')
         # Orders
         cursor.execute('''SELECT * FROM order_expirations WHERE block_index > {}'''.format(block_index))
         for order_expiration in cursor.fetchall():
-            cursor.execute('''UPDATE orders SET validity = {} WHERE tx_index = {}'''.format('Valid', order_expiration['order_index']))
+            cursor.execute('''UPDATE orders SET validity = ? WHERE tx_index = ?''', ('Valid', order_expiration['order_index']))
             cursor.execute('''DELETE FROM order_expirations WHERE order_index = {}'''.format(order_expiration['order_index']))
         # Bets 
         cursor.execute('''SELECT * FROM bet_expirations WHERE block_index > {}'''.format(block_index))
         for bet_expiration in cursor.fetchall():
-            cursor.execute('''UPDATE bets SET validity = {} WHERE tx_index = {}'''.format('Valid', bet_expiration['bet_index']))
+            cursor.execute('''UPDATE bets SET validity = ? WHERE tx_index = ?''', ('Valid', bet_expiration['bet_index']))
             cursor.execute('''DELETE FROM bet_expirations WHERE bet_index = {}'''.format(bet_expiration['bet_index']))
         # Order Matches
         cursor.execute('''SELECT * FROM order_match_expirations WHERE block_index > {}'''.format(block_index))
         for order_match_expiration in cursor.fetchall():
-            cursor.execute('''UPDATE order_matches SET validity = {} WHERE id = {}'''.format('Valid: awaiting BTC payment', order_match_expiration['order_match_id']))
+            cursor.execute('''UPDATE order_matches SET validity = ? WHERE id = ?''', ('Valid: awaiting BTC payment', order_match_expiration['order_match_id']))
             cursor.execute('''DELETE FROM order_match_expirations WHERE order_match_id = {}'''.format(order_expiration['order_match_id']))
         # Bet Matches
         cursor.execute('''SELECT * FROM bet_match_expirations WHERE block_index > {}'''.format(block_index))
         for bet_match_expiration in cursor.fetchall():
-            cursor.execute('''UPDATE bet_matches SET validity = {} WHERE id = {}'''.format('Valid', bet_match_expiration['bet_match_id']))
+            cursor.execute('''UPDATE bet_matches SET validity = ? WHERE id = ?''', ('Valid', bet_match_expiration['bet_match_id']))
             cursor.execute('''DELETE FROM bet_match_expirations WHERE bet_match_id = {}'''.format(bet_expiration['bet_match_id']))
 
     cursor.close()
