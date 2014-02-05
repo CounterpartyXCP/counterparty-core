@@ -11,22 +11,23 @@ Using counterpartyd
 ----------------------
 
 ``counterpartyd`` is the preferred way to "burn" BTC to generate XCP. To burn BTC, configure ``bitcoind`` and
-install ``counterpartyd`` using the instructions from the earlier sections of this document (either from source, or via the installer).
+install ``counterpartyd`` using the instructions from `here <http://counterpartyd-build.readthedocs.org/en/latest/>`__
+(either build from source and run, or run via the installer).
 
 Once done, you can open up a command prompt, then, just run the command like::
 
-    counterpartyd burn --from=<ADDRESS> --quantity=<QUANTITY>
+    counterpartyd burn --source=<ADDRESS> --quantity=<QUANTITY>
     #under Linux
     
-    C:\python33\python.exe C:\counterpartyd_build\run.py burn --from=<ADDRESS> --quantity=<QUANTITY>
+    C:\python33\python.exe C:\counterpartyd_build\run.py burn --source=<ADDRESS> --quantity=<QUANTITY>
     #under Windows
     
 Full examples::
 
-    counterpartyd burn --from=1J6Sb7BbhCQKRTwmt8yKxXAAQByeNsED7P --quantity=0.5
+    counterpartyd burn --source=1J6Sb7BbhCQKRTwmt8yKxXAAQByeNsED7P --quantity=0.5
     #under Linux
     
-    C:\python33\python.exe C:\counterpartyd_build\run.py burn --from=1J6Sb7BbhCQKRTwmt8yKxXAAQByeNsED7P --quantity=0.005
+    C:\python33\python.exe C:\counterpartyd_build\run.py burn --source=1J6Sb7BbhCQKRTwmt8yKxXAAQByeNsED7P --quantity=0.005
     #under Windows
  
 

@@ -6,8 +6,6 @@ import hashlib
 import binascii
 import time
 import apsw
-import appdirs
-import logging
 import decimal
 D = decimal.Decimal
 import difflib
@@ -16,63 +14,28 @@ import inspect
 from threading import Thread
 import requests
 from requests.auth import HTTPBasicAuth
+import logging
 
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
-from lib import (config, api, zeromq, util, exceptions, bitcoin, blocks)
-from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, util)
+from lib import (config, api, util, exceptions, bitcoin, blocks)
+from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
+import counterpartyd
 
-# JSON-RPC Options
-CONFIGFILE = os.path.expanduser('~') + '/.bitcoin/bitcoin.conf'
-config.PREFIX = b'TESTXXXX'
-config.BITCOIND_RPC_CONNECT = 'localhost'
-config.BITCOIND_RPC_PORT = '18332' # Only run tests on testnet.
-try:
-    with open(CONFIGFILE, 'r') as configfile:
-        for line in configfile.readlines():
-            if line.startswith('#'):
-                continue
-            array = line.replace('\n', '').split('=')
-            if len(array) != 2:
-                continue
-            key, value = array[:2]
-            if key == 'rpcuser': config.BITCOIND_RPC_USER = value
-            elif key == 'rpcpassword': config.BITCOIND_RPC_PASSWORD = value
-            elif key == 'rpcconnect': config.BITCOIND_RPC_CONNECT = value
-            elif key == 'rpcport': config.BITCOIND_RPC_PORT = value
-except Exception:
-    raise exceptions.BitcoinConfError('Put a (valid) copy of your \
-bitcoin.conf in ~/.bitcoin/bitcoin.conf')
-    sys.exit(1)
-config.BITCOIND_RPC = 'http://'+config.BITCOIND_RPC_USER+':'+config.BITCOIND_RPC_PASSWORD+'@'+config.BITCOIND_RPC_CONNECT+':'+config.BITCOIND_RPC_PORT
+# config.BLOCK_FIRST = 0
+# config.BURN_START = 0
+# config.BURN_END = 9999999
+counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/counterpartyd.unittest.db', testnet=True, testcoin=False, unittest=True)
 
-config.RPC_HOST = 'localhost'
-config.RPC_PORT = 9999
-config.RPC_USER = 'rpcuser'
-config.RPC_PASSWORD = 'rpcpass'
-
-config.DATABASE = CURR_DIR + '/counterparty.test.db'
+# Connect to database.
 try: os.remove(config.DATABASE)
 except: pass
-
-#Connect to test DB
-db = apsw.Connection(config.DATABASE)
-db.setrowtrace(util.rowtracer)
+db = util.connect_to_db()
 cursor = db.cursor()
 
-#Set up zeromq publisher
-config.zeromq_publisher = zeromq.ZeroMQPublisher()
-config.zeromq_publisher.daemon = True
-config.zeromq_publisher.start()
-
+# Each tx has a block_index equal to its tx_index
 tx_index = 0
-
-config.BLOCK_FIRST = 0
-config.BURN_START = 0
-config.BURN_END = 9999999
-config.ADDRESSVERSION = b'\x6F' # testnet
-config.UNSPENDABLE = 'mvCounterpartyXXXXXXXXXXXXXXW24Hef'
 
 source_default = 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'
 destination_default = 'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7'
@@ -84,46 +47,16 @@ fee_provided = 1000000
 fee_multiplier_default = .05
 
 
-# Each tx has a block_index equal to its tx_index
 
-print('Run `test.py` with `py.test test.py`.')
+def parse_hex (unsigned_tx_hex):
 
+    tx = bitcoin.rpc('decoderawtransaction', [unsigned_tx_hex])
+    source, destination, btc_amount, fee, data = blocks.get_tx_info(tx)
 
-
-def check_balance():
-    balances = util.get_balances(db)
-    for balance in balances:
-        amount = 0
-        debits = util.get_debits(db, address=balance['address'], asset=balance['asset'])
-        for debit in debits:
-            amount -= debit['amount']
-        credits = util.get_credits(db, address=balance['address'], asset=balance['asset'])
-        for credit in credits:
-            amount += credit['amount']
-        assert amount == balance['amount']
-
-def parse_tx (tx_index, data, parse_func):
-    parse_tx_cursor = db.cursor()
-    parse_tx_cursor.execute('''SELECT * FROM transactions \
-                      WHERE tx_index=?''', (tx_index,))
-    tx = parse_tx_cursor.fetchall()[0]
-    if data:
-        message = data[len(config.PREFIX) + 4:]
-    else:
-        message = None
-
-    parse_func(db, tx, message)
-    parse_tx_cursor.close()
-
-    # After parsing every transaction, check that the credits, debits sum properly.
-    check_balance()
-
-def tx_insert (source, destination, btc_amount, fee, data):
-    
-    tx_insert_cursor = db.cursor()
+    parse_hex_cursor = db.cursor()
     tx_hash = hashlib.sha256(chr(tx_index).encode('utf-8')).hexdigest()
     global tx_index
-    tx_insert_cursor.execute('''INSERT INTO transactions(
+    parse_hex_cursor.execute('''INSERT INTO transactions(
                         tx_index,
                         tx_hash,
                         block_index,
@@ -143,41 +76,28 @@ def tx_insert (source, destination, btc_amount, fee, data):
                          fee,
                          data)
                   )
-    tx_insert_cursor.close()
+    parse_hex_cursor.execute('''SELECT * FROM transactions \
+                                WHERE tx_index=?''', (tx_index,))
+    tx = parse_hex_cursor.fetchall()[0]
+    heaps = blocks.init_heaps(db)
+    blocks.parse_tx(db, tx, heaps)
+
+    # After parsing every transaction, check that the credits, debits sum properly.
+    cursor.execute('''SELECT * FROM balances''')
+    for balance in cursor.fetchall():
+        amount = 0
+        cursor.execute('''SELECT * FROM debits \
+                          WHERE (address = ? AND asset = ?)''', (balance['address'], balance['asset']))
+        for debit in cursor.fetchall():
+            amount -= debit['amount']
+        cursor.execute('''SELECT * FROM credits \
+                          WHERE (address = ? AND asset = ?)''', (balance['address'], balance['asset']))
+        for credit in cursor.fetchall():
+            amount += credit['amount']
+        assert amount == balance['amount']
+
     tx_index += 1
-
-
-
-def get_tx_data (tx_hex):
-    """Accepts unsigned transactions."""
-    tx = bitcoin.rpc('decoderawtransaction', [tx_hex])
-
-    # Get destination output and data output.
-    destination, btc_amount, data = None, None, b''
-    for vout in tx['vout']:
-
-        # Sum data chunks to get data. (Can mix OP_RETURN and multi-sig.)
-        asm = vout['scriptPubKey']['asm'].split(' ')
-        if asm[0] == 'OP_RETURN' and len(asm) == 2:                             # OP_RETURN
-            data_chunk = binascii.unhexlify(bytes(asm[1], 'utf-8'))
-            data += data_chunk
-        elif asm[0] == '1' and asm[3] == '2' and asm[4] == 'OP_CHECKMULTISIG':  # Multi-sig
-            data_pubkey = binascii.unhexlify(bytes(asm[2], 'utf-8'))
-            data_chunk_length = data_pubkey[0]  # No ord() necessary?!
-            data_chunk = data_pubkey[1:data_chunk_length + 1]
-            data += data_chunk
-
-        # Destination is the first output before the data.
-        if not destination and not btc_amount and not data:
-            if 'addresses' in vout['scriptPubKey']:
-                address = vout['scriptPubKey']['addresses'][0]
-                if bitcoin.base58_decode(address, config.ADDRESSVERSION):  # If address is valid...
-                    destination, btc_amount = address, round(D(vout['value']) * config.UNIT)
-                    continue
-
-    return destination, btc_amount, data
-
-
+    parse_hex_cursor.close()
 
 
 
@@ -192,7 +112,7 @@ def teardown_function(function):
 # Logs.
 try: os.remove(CURR_DIR + '/log.new')
 except: pass
-logging.basicConfig(filename=CURR_DIR + '/log.new', level=logging.INFO, format='%(message)s')
+logging.basicConfig(filename=CURR_DIR + '/log.new', level=logging.DEBUG, format='%(message)s')
 requests_log = logging.getLogger("requests")
 requests_log.setLevel(logging.WARNING)
 
@@ -200,6 +120,12 @@ requests_log.setLevel(logging.WARNING)
 output_new = {}
 with open(CURR_DIR + '/output.json', 'r') as output_file:
     output = json.load(output_file)
+
+'''
+# Fake RPC responses
+try: os.remove(CURR_DIR + '/rpc.new')
+except: pass
+'''
 
 # TODO: replace inspect.stack()[0][3] with inspect.currentframe().f_code.co_name?
 
@@ -210,209 +136,171 @@ def test_initialise ():
     blocks.initialise(db)
 
 def test_burn ():
-    unsigned_tx_hex = burn.create(db, source_default, int(.62 * quantity), test=True)
+    unsigned_tx_hex = burn.create(db, source_default, int(.62 * quantity))
 
-    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
-
-    parse_tx(tx_index - 1, data, burn.parse)
+    parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_send ():
-    unsigned_tx_hex = send.create(db, source_default, destination_default, small, 'XCP', test=True)
+    unsigned_tx_hex = send.create(db, source_default, destination_default, small, 'XCP')
 
-    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
-
-    parse_tx(tx_index - 1, data, send.parse)
+    parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_order_buy_xcp ():
-    unsigned_tx_hex = order.create(db, source_default, 'BTC', small, 'XCP', small * 2, expiration, 0, fee_provided, test=True)
+    unsigned_tx_hex = order.create(db, source_default, 'BTC', small, 'XCP', small * 2, expiration, 0, fee_provided)
 
-    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, fee_provided, data)
-
-    parse_tx(tx_index - 1, data, order.parse)
+    parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_order_sell_xcp ():
-    unsigned_tx_hex = order.create(db, source_default, 'XCP', round(small * 2.1), 'BTC', small, expiration, fee_required, 0, test=True)
+    unsigned_tx_hex = order.create(db, source_default, 'XCP', round(small * 2.1), 'BTC', small, expiration, fee_required, config.MIN_FEE)
 
-    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
-
-    parse_tx(tx_index - 1, data, order.parse)
+    parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_btcpay ():
     order_match_id = 'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5'
-    unsigned_tx_hex = btcpay.create(db, order_match_id, test=True)
+    unsigned_tx_hex = btcpay.create(db, order_match_id)
 
-    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
-    parse_tx(tx_index - 1, data, btcpay.parse)
+    parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_issuance_divisible ():
-    unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBB', quantity * 10, True, test=True)
+    unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBBE', quantity * 10, True, False, 0, 0.0, '')
 
-    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
-
-    parse_tx(tx_index - 1, data, issuance.parse)
+    parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
-def test_issuance_indivisible ():
-    unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBC', round(quantity / 1000), False, test=True)
+def test_issuance_indivisible_callable ():
+    unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBCD', round(quantity / 1000), False, True, 1288855692, 0.015, 'foobar')
 
-    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
-    parse_tx(tx_index - 1, data, issuance.parse)
+    parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_dividend_divisible ():
-    unsigned_tx_hex = dividend.create(db, source_default, 6, 'BBBB', test=True)
+    unsigned_tx_hex = dividend.create(db, source_default, 6, 'BBBBE')
 
-    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
-    parse_tx(tx_index - 1, data, dividend.parse)
+    parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_dividend_indivisible ():
-    unsigned_tx_hex = dividend.create(db, source_default, 8, 'BBBC', test=True)
+    unsigned_tx_hex = dividend.create(db, source_default, 8, 'BBBCD')
 
-    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
-    parse_tx(tx_index - 1, data, dividend.parse)
+    parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_broadcast_initial ():
-    unsigned_tx_hex = broadcast.create(db, source_default, 1388000000, 100, fee_multiplier_default, 'Unit Test', test=True)
+    unsigned_tx_hex = broadcast.create(db, source_default, 1388000000, 100, fee_multiplier_default, 'Unit Test')
 
-    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
-    parse_tx(tx_index - 1, data, broadcast.parse)
+    parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_bet_bullcfd_to_be_liquidated ():
-    unsigned_tx_hex = bet.create(db, source_default, source_default, 0, 1388000100, small, round(small / 2), 0.0, 15120, expiration, test=True)
+    unsigned_tx_hex = bet.create(db, source_default, source_default, 0, 1388000100, small, round(small / 2), 0.0, 15120, expiration)
 
-    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
-    parse_tx(tx_index - 1, data, bet.parse)
+    parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_bet_bearcfd_to_be_liquidated ():
-    unsigned_tx_hex = bet.create(db, source_default, source_default, 1, 1388000100, round(small / 2), round(small * .83), 0.0, 15120, expiration, test=True)
+    unsigned_tx_hex = bet.create(db, source_default, source_default, 1, 1388000100, round(small / 2), round(small * .83), 0.0, 15120, expiration)
 
-    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
-    parse_tx(tx_index - 1, data, bet.parse)
+    parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_bet_bullcfd_to_be_settled ():
-    unsigned_tx_hex = bet.create(db, source_default, source_default, 0, 1388000100, small * 3, small * 7, 0.0, 5040, expiration, test=True)
+    unsigned_tx_hex = bet.create(db, source_default, source_default, 0, 1388000100, small * 3, small * 7, 0.0, 5040, expiration)
 
-    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
-    parse_tx(tx_index - 1, data, bet.parse)
+    parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_bet_bearcfd_to_be_settled ():
-    unsigned_tx_hex = bet.create(db, source_default, source_default, 1, 1388000100, small * 7, small * 3, 0.0, 5040, expiration, test=True)
+    unsigned_tx_hex = bet.create(db, source_default, source_default, 1, 1388000100, small * 7, small * 3, 0.0, 5040, expiration)
 
-    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
-    parse_tx(tx_index - 1, data, bet.parse)
+    parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_bet_equal ():
-    unsigned_tx_hex = bet.create(db, source_default, source_default, 2, 1388000200, small * 15, small * 13, 1, 5040, expiration, test=True)
+    unsigned_tx_hex = bet.create(db, source_default, source_default, 2, 1388000200, small * 15, small * 13, 1, 5040, expiration)
 
-    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
-    parse_tx(tx_index - 1, data, bet.parse)
+    parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_bet_notequal ():
-    unsigned_tx_hex = bet.create(db, source_default, source_default, 3, 1388000200, small * 13, small * 15, 1, 5040, expiration, test=True)
+    unsigned_tx_hex = bet.create(db, source_default, source_default, 3, 1388000200, small * 13, small * 15, 1, 5040, expiration)
 
-    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
-    parse_tx(tx_index - 1, data, bet.parse)
+    parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_broadcast_liquidate ():
-    unsigned_tx_hex = broadcast.create(db, source_default, 1388000050, round(100 - (.415/3) - .00001, 5), fee_multiplier_default, 'Unit Test', test=True)
+    unsigned_tx_hex = broadcast.create(db, source_default, 1388000050, round(100 - (.415/3) - .00001, 5), fee_multiplier_default, 'Unit Test')
 
-    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
-    parse_tx(tx_index - 1, data, broadcast.parse)
+    parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_broadcast_settle ():
-    unsigned_tx_hex = broadcast.create(db, source_default, 1388000101, 100.343, fee_multiplier_default, 'Unit Test', test=True)
+    unsigned_tx_hex = broadcast.create(db, source_default, 1388000101, 100.343, fee_multiplier_default, 'Unit Test')
 
-    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
-    parse_tx(tx_index - 1, data, broadcast.parse)
+    parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_broadcast_equal ():
-    unsigned_tx_hex = broadcast.create(db, source_default, 1388000201, 2, fee_multiplier_default, 'Unit Test', test=True)
+    unsigned_tx_hex = broadcast.create(db, source_default, 1388000201, 2, fee_multiplier_default, 'Unit Test')
 
-    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
-    parse_tx(tx_index - 1, data, broadcast.parse)
+    parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_order_to_be_cancelled ():
-    unsigned_tx_hex = order.create(db, source_default, 'BBBB', small, 'XCP', small, expiration, 0, 0, test=True)
+    unsigned_tx_hex = order.create(db, source_default, 'BBBBE', small, 'XCP', small, expiration, 0, config.MIN_FEE)
 
-    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, fee_provided, data)
-
-    parse_tx(tx_index - 1, data, order.parse)
+    parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_cancel ():
-    unsigned_tx_hex = cancel.create(db, 'ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2', test=True)
+    unsigned_tx_hex = cancel.create(db, 'ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2')
 
-    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, fee_provided, data)
-
-    parse_tx(tx_index - 1, data, cancel.parse)
+    parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_overburn ():
-    unsigned_tx_hex = burn.create(db, source_default, (1 * config.UNIT), test=True, overburn=True)  # Try to burn a whole 'nother BTC.
+    unsigned_tx_hex = burn.create(db, source_default, (1 * config.UNIT), overburn=True)  # Try to burn a whole 'nother BTC.
 
-    destination, btc_amount, data = get_tx_data(unsigned_tx_hex)
-    tx_insert(source_default, destination, btc_amount, config.MIN_FEE, data)
+    parse_hex(unsigned_tx_hex)
 
-    parse_tx(tx_index - 1, data, burn.parse)
+    output_new[inspect.stack()[0][3]] = unsigned_tx_hex
+
+def test_send_callable ():
+    unsigned_tx_hex = send.create(db, source_default, destination_default, 10000, 'BBBCD')
+
+    parse_hex(unsigned_tx_hex)
+
+    output_new[inspect.stack()[0][3]] = unsigned_tx_hex
+
+def test_callback ():
+    unsigned_tx_hex = callback.create(db, source_default, .3, 'BBBCD')
+
+    parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
@@ -441,8 +329,7 @@ def test_json_rpc():
 
     for payload in payloads:
         response = requests.post(
-            url, data=json.dumps(payload), headers=headers, auth=auth).json()
-        response = json.loads(response) # Wierd
+                url, data=json.dumps(payload), headers=headers, auth=auth).json()
         try:
             output_new['rpc.' + payload['method']] = response['result']
         except:
@@ -476,16 +363,17 @@ def test_db():
 def test_output():
     with open(CURR_DIR + '/output.new.json', 'w') as output_new_file:
         json.dump(output_new, output_new_file, sort_keys=True, indent=4)
+
     for key in output_new.keys():
         try:
             assert output[key] == output_new[key]
-        except Exception:
+        except Exception as e:
             print('Key:', key)
             print('Old output:')
             print(output[key])
             print('New output:')
             print(output_new[key])
-            raise Exception
+            raise e
 
 def test_log():
     with open(CURR_DIR + '/log', 'r') as f:
@@ -521,14 +409,6 @@ expire order matches
 expire bet matches
 cancelling bets, orders
 
-get_time_left
-get_order_match_time_left
-get_asset
-get_asset_name
-
-debit
-credit
-
 bet_match
 order_match
 get_tx_info
@@ -542,7 +422,6 @@ transaction
 
 """
 Too small:
-util.short()
 util.isodt()
 util.devise()
 bet.get_fee_multiplier()

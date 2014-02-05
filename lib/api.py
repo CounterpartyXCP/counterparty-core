@@ -22,10 +22,9 @@ class APIServer(threading.Thread):
 
     def __init__ (self):
         threading.Thread.__init__(self)
-        
+
     def run (self):
-        db = apsw.Connection(config.DATABASE)
-        db.setrowtrace(util.rowtracer)
+        db = util.connect_to_db()
 
         ######################
         #READ API
@@ -35,7 +34,11 @@ class APIServer(threading.Thread):
                 return util.get_address(db, address=address)
             except exceptions.InvalidAddressError:
                 return None
-        
+
+        @dispatcher.add_method
+        def xcp_supply ():
+            return util.xcp_supply(db)
+
         @dispatcher.add_method
         def get_balances (filters=None, order_by=None, order_dir=None, filterop="and"):
             return util.get_balances(db,
@@ -79,7 +82,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_btcpays(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            return util.get_btcpays(db, 
+            return util.get_btcpays(db,
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
                 order_by=order_by,
@@ -159,7 +162,7 @@ class APIServer(threading.Thread):
                 start_block=start_block,
                 end_block=end_block,
                 filterop=filterop)
-        
+
         @dispatcher.add_method
         def get_order_matches (filters=None, is_valid=True, is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_order_matches(db,
@@ -174,7 +177,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_sends (filters=None, is_valid=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            return util.get_sends(db, 
+            return util.get_sends(db,
                 filters=filters,
                 validity='Valid' if bool(is_valid) else None,
                 order_by=order_by,
@@ -182,6 +185,24 @@ class APIServer(threading.Thread):
                 start_block=start_block,
                 end_block=end_block,
                 filterop=filterop)
+
+        @dispatcher.add_method
+        def get_asset_info(asset):
+            #gets some useful info for the given asset
+            issuances = util.get_issuances(db,
+                filters={'field': 'asset', 'op': '==', 'value': asset},
+                validity='Valid',
+                order_by='block_index',
+                order_dir='asc')
+            if not issuances: return None #asset not found, most likely
+            else: last_issuance = issuances[-1]
+
+            #get the last issurance message for this asset, which should reflect the current owner and if
+            # its divisible (and if it was locked, for that matter)
+            locked = not last_issuance['amount'] and not last_issuance['transfer']
+            total_issued = sum([e['amount'] for e in issuances])
+            return {'owner': last_issuance['issuer'], 'divisible': last_issuance['divisible'], 'locked': locked, 'total_issued': total_issued, 'callable': last_issuance['callable'], 'call_date': util.isodt(last_issuance['call_date']) if last_issuance['call_date'] else None, 'call_price': last_issuance['call_price'], 'description': last_issuance['description']}
+
 
         ######################
         #WRITE/ACTION API
@@ -191,68 +212,79 @@ class APIServer(threading.Thread):
             unsigned_tx_hex = bet.create(db, source, feed_address,
                                          bet_type_id, deadline, wager,
                                          counterwager, target_value,
-                                         leverage, expiration)
-            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+                                         leverage, expiration, unsigned=unsigned)
+            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
 
         @dispatcher.add_method
         def do_broadcast(source, fee_multiplier, text, timestamp, value=0, unsigned=False):
             unsigned_tx_hex = broadcast.create(db, source, timestamp,
-                                               value, fee_multiplier, text)
-            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+                                               value, fee_multiplier, text, unsigned=unsigned)
+            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
 
         @dispatcher.add_method
         def do_btcpay(order_match_id, unsigned=False):
-            unsigned_tx_hex = btcpay.create(db, order_match_id)
-            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+            unsigned_tx_hex = btcpay.create(db, order_match_id, unsigned=unsigned)
+            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
 
         @dispatcher.add_method
         def do_burn(source, quantity, unsigned=False):
-            unsigned_tx_hex = burn.create(db, source, quantity)
-            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
-        
+            unsigned_tx_hex = burn.create(db, source, quantity, unsigned=unsigned)
+            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
+
         @dispatcher.add_method
         def do_cancel(offer_hash, unsigned=False):
-            unsigned_tx_hex = cancel.create(db, offer_hash)
-            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+            unsigned_tx_hex = cancel.create(db, offer_hash, unsigned=unsigned)
+            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
 
         @dispatcher.add_method
         def do_dividend(source, quantity_per_share, share_asset, unsigned=False):
             unsigned_tx_hex = dividend.create(db, source, quantity_per_share,
-                                              share_asset)
-            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+                                              share_asset, unsigned=unsigned)
+            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
 
         @dispatcher.add_method
         def do_issuance(source, quantity, asset, divisible, transfer_destination=None, unsigned=False):
+            try:
+                quantity = int(quantity)
+            except ValueError:
+                raise Exception("Invalid quantity")
             unsigned_tx_hex = issuance.create(db, source, transfer_destination,
-                                              asset, quantity, divisible)
-            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
-        
+                asset, quantity, divisible, unsigned=unsigned)
+            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
+
         @dispatcher.add_method
         def do_order(source, give_quantity, give_asset, get_quantity, get_asset, expiration, fee_required=0,
                      fee_provided=config.MIN_FEE / config.UNIT, unsigned=False):
             unsigned_tx_hex = order.create(db, source, give_asset,
                                            give_quantity, get_asset,
                                            get_quantity, expiration,
-                                           fee_required, fee_provided)
-            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
+                                           fee_required, fee_provided,
+                                           unsigned=unsigned)
+            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
 
         @dispatcher.add_method
         def do_send(source, destination, quantity, asset, unsigned=False):
-            unsigned_tx_hex = send.create(db, source, destination, quantity, asset)
-            return bitcoin.transmit(unsigned_tx_hex, unsigned=unsigned, ask=False)
-        
+            unsigned_tx_hex = send.create(db, source, destination, quantity, asset, unsigned=unsigned)
+            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
 
-        
-        class Root(object):
+
+        class API(object):
             @cherrypy.expose
-            @cherrypy.tools.json_out()
             def index(self):
+                cherrypy.response.headers["Content-Type"] = "application/json"
+                cherrypy.response.headers["Access-Control-Allow-Origin"] = '*'
+                cherrypy.response.headers["Access-Control-Allow-Methods"] = 'POST, GET, OPTIONS'
+                cherrypy.response.headers["Access-Control-Allow-Headers"] = 'Origin, X-Requested-With, Content-Type, Accept'
+
+                if cherrypy.request.method == "OPTIONS": #web client will send us this before making a request
+                    return
+
                 try:
                     data = cherrypy.request.body.read().decode('utf-8')
                 except ValueError:
                     raise cherrypy.HTTPError(400, 'Invalid JSON document')
                 response = JSONRPCResponseManager.handle(data, dispatcher)
-                return response.json
+                return response.json.encode()
 
         cherrypy.config.update({
             'log.screen': False,
@@ -264,20 +296,20 @@ class APIServer(threading.Thread):
         checkpassword = cherrypy.lib.auth_basic.checkpassword_dict(
             {config.RPC_USER: config.RPC_PASSWORD})
         app_config = {
-            '/': { 
+            '/': {
                 'tools.trailing_slash.on': False,
                 'tools.auth_basic.on': True,
                 'tools.auth_basic.realm': 'counterpartyd',
                 'tools.auth_basic.checkpassword': checkpassword,
             },
         }
-        application = cherrypy.Application(Root(), script_name="/jsonrpc/", config=app_config)
-        
+        application = cherrypy.Application(API(), script_name="/jsonrpc/", config=app_config)
+
         #disable logging of the access and error logs to the screen
         application.log.access_log.propagate = False
         application.log.error_log.propagate = False
-        
-        if config.PREFIX != b'TESTXXXX':  #skip setting up logs when for the test suite
+
+        if config.PREFIX != config.UNITTEST_PREFIX:  #skip setting up logs when for the test suite
             #set up a rotating log handler for this application
             # Remove the default FileHandlers if present.
             application.log.error_file = ""
@@ -285,13 +317,13 @@ class APIServer(threading.Thread):
             maxBytes = getattr(application.log, "rot_maxBytes", 10000000)
             backupCount = getattr(application.log, "rot_backupCount", 1000)
             # Make a new RotatingFileHandler for the error log.
-            fname = getattr(application.log, "rot_error_file", os.path.join(config.data_dir, "api.error.log"))
+            fname = getattr(application.log, "rot_error_file", os.path.join(config.DATA_DIR, "api.error.log"))
             h = logging_handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
             h.setLevel(logging.DEBUG)
             h.setFormatter(cherrypy._cplogging.logfmt)
             application.log.error_log.addHandler(h)
             # Make a new RotatingFileHandler for the access log.
-            fname = getattr(application.log, "rot_access_file", os.path.join(config.data_dir, "api.access.log"))
+            fname = getattr(application.log, "rot_access_file", os.path.join(config.DATA_DIR, "api.access.log"))
             h = logging_handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
             h.setLevel(logging.DEBUG)
             h.setFormatter(cherrypy._cplogging.logfmt)
@@ -300,7 +332,7 @@ class APIServer(threading.Thread):
         #start up the API listener/handler
         server = wsgiserver.CherryPyWSGIServer(
             (config.RPC_HOST, int(config.RPC_PORT)), application)
-        #logging.debug("Initializing API interface...")
+        #logging.debug("Initializing API interface…")
         try:
             server.start()
         except OSError:

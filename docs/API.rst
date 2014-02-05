@@ -450,6 +450,22 @@ get_sends
    :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
    :return: A list of one or more :ref:`send objects <send-object>` if any matching records were found, otherwise ``[]`` (empty list).
 
+.. _get_asset_info:
+
+_get_asset_info
+^^^^^^^^^^^^^^
+
+.. py:function:: _get_asset_info(asset)
+
+   Gets information on an issued asset.
+
+   :param string asset: The :ref:`asset <assets>` for which to retrieve information.
+   :return: ``null`` if the asset was not found. Otherwise, an object with the following parameters:
+     - **owner** (*string*): The address that currently owns the asset (i.e. has issuance rights to it) 
+     - **divisible** (*boolean*): Whether the asset is divisible or not
+     - **locked** (*boolean*): Whether the asset is locked (future issuances prohibited)
+     - **total_issued** (*integer*): The :ref:`quantity <amounts>` of the asset issued, in total
+
 
 .. _action_api:
 
@@ -473,8 +489,8 @@ do_bet
    :param integer counterwager: The minimum :ref:`quantity <amounts>` of XCP to be wagered against, for the bets to match.
    :param float target_value: Target value for Equal/NotEqual bet
    :param integer leverage: Leverage, as a fraction of 5040
-   :param boolean unsigned: If set to ``true``, just return the unsigned raw transaction (as hex) instead of actually processing it.
-   :return: If unsigned is set to ``false``, the hash of the transaction on success. If unsigend is set to ``true``, the unsigned raw transaction is returned (see the line above).
+   :param boolean unsigned: To sign and publish the transaction (i.e. ``source`` must be an address in the local wallet), set this parameter to ``false``. Otherwise, set to ``true`` to return the unsigned OP_RETURN raw transaction, hex encoded. Or, to get an unsigned multisig transaction, specify the public key string instead of ``true``. 
+   :return: If ``unsigned`` is set to ``false``, the transaction is signed and committed, and the hash of the transaction is returned on success. Otherwise, the raw transaction (be it OP_RETURN or multisig) is returned as a hex encoded string.
 
 
 .. _do_broadcast:
@@ -491,8 +507,8 @@ do_broadcast
    :param string text: The textual part of the broadcast.
    :param integer timestamp: The timestamp of the broadcast, in Unix time.
    :param float value: Numerical value of the broadcast.
-   :param boolean unsigned: If set to ``true``, just return the unsigned raw transaction (as hex) instead of actually processing it.
-   :return: If unsigned is set to ``false``, the hash of the transaction on success. If unsigend is set to ``true``, the unsigned raw transaction is returned (see the line above).
+   :param boolean unsigned: To sign and publish the transaction (i.e. ``source`` must be an address in the local wallet), set this parameter to ``false``. Otherwise, set to ``true`` to return the unsigned OP_RETURN raw transaction, hex encoded. Or, to get an unsigned multisig transaction, specify the public key string instead of ``true``. 
+   :return: If ``unsigned`` is set to ``false``, the transaction is signed and committed, and the hash of the transaction is returned on success. Otherwise, the raw transaction (be it OP_RETURN or multisig) is returned as a hex encoded string.
 
 
 .. _do_btcpay:
@@ -505,8 +521,8 @@ do_btcpay
    Create and (optionally) broadcast a BTCpay message, to settle an Order Match for which you owe BTC. 
 
    :param string order_match_id: The concatenation of the hashes of the two transactions which compose the order match.
-   :param boolean unsigned: If set to ``true``, just return the unsigned raw transaction (as hex) instead of actually processing it.
-   :return: If unsigned is set to ``false``, the hash of the transaction on success. If unsigend is set to ``true``, the unsigned raw transaction is returned (see the line above).
+   :param boolean unsigned: To sign and publish the transaction (i.e. the address in the specified ``order_match_id`` of the participant that is paying BTC must be in the local wallet), set this parameter to ``false``. Otherwise, set to ``true`` to return the unsigned OP_RETURN raw transaction, hex encoded. Or, to get an unsigned multisig transaction, specify the public key string instead of ``true``. 
+   :return: If ``unsigned`` is set to ``false``, the transaction is signed and committed, and the hash of the transaction is returned on success. Otherwise, the raw transaction (be it OP_RETURN or multisig) is returned as a hex encoded string.
 
 
 .. _do_burn:
@@ -520,8 +536,8 @@ do_burn
 
    :param string source: The address with the BTC to burn.
    :param integer quantity: The :ref:`amount <amounts>` of BTC to burn (1 BTC maximum burn per address).
-   :param boolean unsigned: If set to ``true``, just return the unsigned raw transaction (as hex) instead of actually processing it.
-   :return: If unsigned is set to ``false``, the hash of the transaction on success. If unsigend is set to ``true``, the unsigned raw transaction is returned (see the line above).
+   :param boolean unsigned: To sign and publish the transaction (i.e. ``source`` must be an address in the local wallet), set this parameter to ``false``. Otherwise, set to ``true`` to return the unsigned OP_RETURN raw transaction, hex encoded. Or, to get an unsigned multisig transaction, specify the public key string instead of ``true``. 
+   :return: If ``unsigned`` is set to ``false``, the transaction is signed and committed, and the hash of the transaction is returned on success. Otherwise, the raw transaction (be it OP_RETURN or multisig) is returned as a hex encoded string.
 
 
 .. _do_cancel:
@@ -534,8 +550,8 @@ do_cancel
    Cancel an open order or bet you created.
 
    :param string offer_hash: The transaction hash of the order or bet.
-   :param boolean unsigned: If set to ``true``, just return the unsigned raw transaction (as hex) instead of actually processing it.
-   :return: If unsigned is set to ``false``, the hash of the transaction on success. If unsigend is set to ``true``, the unsigned raw transaction is returned (see the line above).
+   :param boolean unsigned: To sign and publish the transaction (i.e. the source address for the specified ``offer_hash`` must be in the local wallet), set this parameter to ``false``. Otherwise, set to ``true`` to return the unsigned OP_RETURN raw transaction, hex encoded. Or, to get an unsigned multisig transaction, specify the public key string instead of ``true``. 
+   :return: If ``unsigned`` is set to ``false``, the transaction is signed and committed, and the hash of the transaction is returned on success. Otherwise, the raw transaction (be it OP_RETURN or multisig) is returned as a hex encoded string.
 
 
 .. _do_dividend:
@@ -550,8 +566,8 @@ do_dividend
    :param string source: The address that will be issuing the dividend (must have the ownership of the asset which the dividend is being issued on).
    :param string share_asset: The :ref:`asset <assets>` that the dividends are being rewarded on.
    :param integer quantity_per_share: The :ref:`amount <amounts>` of XCP rewarded per share of the asset.
-   :param boolean unsigned: If set to ``true``, just return the unsigned raw transaction (as hex) instead of actually processing it.
-   :return: If unsigned is set to ``false``, the hash of the transaction on success. If unsigend is set to ``true``, the unsigned raw transaction is returned (see the line above).
+   :param boolean unsigned: To sign and publish the transaction (i.e. ``source`` must be an address in the local wallet), set this parameter to ``false``. Otherwise, set to ``true`` to return the unsigned OP_RETURN raw transaction, hex encoded. Or, to get an unsigned multisig transaction, specify the public key string instead of ``true``. 
+   :return: If ``unsigned`` is set to ``false``, the transaction is signed and committed, and the hash of the transaction is returned on success. Otherwise, the raw transaction (be it OP_RETURN or multisig) is returned as a hex encoded string.
 
 
 .. _do_issuance:
@@ -568,8 +584,8 @@ do_issuance
    :param string asset: The :ref:`asset <assets>` to issue or transfer.
    :param boolean divisible: Whether this asset is divisible or not (if a transfer, this value must match the value specified when the asset was originally issued).
    :param string transfer_destination: The address to receive the asset (only used when *transferring* assets -- leave set to ``null`` if issuing an asset).
-   :param boolean unsigned: If set to ``true``, just return the unsigned raw transaction (as hex) instead of actually processing it.
-   :return: If unsigned is set to ``false``, the hash of the transaction on success. If unsigend is set to ``true``, the unsigned raw transaction is returned (see the line above).
+   :param boolean unsigned: To sign and publish the transaction (i.e. ``source`` must be an address in the local wallet), set this parameter to ``false``. Otherwise, set to ``true`` to return the unsigned OP_RETURN raw transaction, hex encoded. Or, to get an unsigned multisig transaction, specify the public key string instead of ``true``. 
+   :return: If ``unsigned`` is set to ``false``, the transaction is signed and committed, and the hash of the transaction is returned on success. Otherwise, the raw transaction (be it OP_RETURN or multisig) is returned as a hex encoded string.
 
 
 .. _do_order:
@@ -589,8 +605,8 @@ do_order
    :param integer expiration: The number of blocks for which the order should be valid.
    :param integer fee_required: The miners' fee required to be paid by orders for them to match this one; in BTC; required only if buying BTC (may be zero, though).
    :param integer fee_provided: The miners' fee provided; in BTC; required only if selling BTC (should not be lower than is required for acceptance in a block)
-   :param boolean unsigned: If set to ``true``, just return the unsigned raw transaction (as hex) instead of actually processing it.
-   :return: If unsigned is set to ``false``, the hash of the transaction on success. If unsigend is set to ``true``, the unsigned raw transaction is returned (see the line above).
+   :param boolean unsigned: To sign and publish the transaction (i.e. ``source`` must be an address in the local wallet), set this parameter to ``false``. Otherwise, set to ``true`` to return the unsigned OP_RETURN raw transaction, hex encoded. Or, to get an unsigned multisig transaction, specify the public key string instead of ``true``. 
+   :return: If ``unsigned`` is set to ``false``, the transaction is signed and committed, and the hash of the transaction is returned on success. Otherwise, the raw transaction (be it OP_RETURN or multisig) is returned as a hex encoded string.
 
 
 .. _do_send:
@@ -606,8 +622,8 @@ do_send
    :param string destination: The address to receive the asset.
    :param integer quantity: The :ref:`quantity <amounts>` of the asset to send.
    :param string asset: The :ref:`asset <assets>` to send.
-   :param boolean unsigned: If set to ``true``, just return the unsigned raw transaction (as hex) instead of actually processing it.
-   :return: If unsigned is set to ``false``, the hash of the transaction on success. If unsigend is set to ``true``, the unsigned raw transaction is returned (see the line above).
+   :param boolean unsigned: To sign and publish the transaction (i.e. ``source`` must be an address in the local wallet), set this parameter to ``false``. Otherwise, set to ``true`` to return the unsigned OP_RETURN raw transaction, hex encoded. Or, to get an unsigned multisig transaction, specify the public key string instead of ``true``. 
+   :return: If ``unsigned`` is set to ``false``, the transaction is signed and committed, and the hash of the transaction is returned on success. Otherwise, the raw transaction (be it OP_RETURN or multisig) is returned as a hex encoded string.
 
    
 Objects

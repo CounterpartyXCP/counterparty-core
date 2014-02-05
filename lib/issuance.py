@@ -7,83 +7,97 @@ D = decimal.Decimal
 
 from . import (config, util, exceptions, bitcoin, util)
 
-FORMAT = '>QQ?'
+FORMAT_1 = '>QQ?'
+LENGTH_1 = 8 + 8 + 1
+FORMAT_2 = '>QQ??If42p'
+LENGTH_2 = 8 + 8 + 1 + 1 + 4 + 4 + 42
 ID = 20
-LENGTH = 8 + 8 + 1
 
-def create (db, source, destination, asset, amount, divisible, test=False):
-    if not util.valid_asset_name(asset):
-        raise exceptions.AssetError('Bad asset name.')
+
+def validate (db, source, destination, asset, amount, divisible, callable_, call_date, call_price, description, block_index=None):
+    problems = []
+
     if asset in ('BTC', 'XCP'):
-            raise exceptions.IssuanceError('Cannot issue BTC or XCP.')
+        problems.append('cannot issue BTC or XCP')
 
     # Valid re-issuance?
-    issuances = util.get_issuances(db, validity='Valid', asset=asset)
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM issuances \
+                      WHERE (validity = ? AND asset = ?)''', ('Valid', asset))
+    issuances = cursor.fetchall()
+    cursor.close()
     if issuances:
         last_issuance = issuances[-1]
         if last_issuance['issuer'] != source:
-            raise exceptions.IssuanceError('Asset exists and was not issued by this address.')
+            problems.append('asset exists and was not issued by this address')
         elif last_issuance['divisible'] != divisible:
-            raise exceptions.IssuanceError('Asset exists with a different divisibility.')
+            problems.append('asset exists with a different divisibility')
+        elif last_issuance['callable'] != callable_ or last_issuance['call_date'] != call_date or last_issuance['call_price'] != call_price:
+            problems.append('asset exists with a different callability, call date or call price')
         elif not last_issuance['amount'] and not last_issuance['transfer']:
-            raise exceptions.IssuanceError('Asset is locked.')
+            problems.append('asset is locked')
     elif not amount:
-        raise exceptions.IssuanceError('Cannot lock or transfer an unissued asset.')
+        problems.append('cannot lock or transfer an unissued asset')
+
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM balances \
+                      WHERE (address = ? AND asset = ?)''', (source, 'XCP'))
+    balances = cursor.fetchall()
+    cursor.close()
+    if (block_index and block_index > 281236) and (not balances or balances[0]['amount'] < config.ISSUANCE_FEE):
+        problems.append('insufficient funds')
 
     # For SQLite3
     total = sum([issuance['amount'] for issuance in issuances])
+    assert isinstance(amount, int)
     if total + amount > config.MAX_INT:
-        raise exceptions.IssuanceError('Maximum total quantity exceeded.')
+        problems.append('maximum total quantity exceeded')
 
     if destination and amount:
-        raise exceptions.IssuanceError('Cannot issue and transfer simultaneously.')
-        
+        problems.append('cannot issue and transfer simultaneously')
+
+    return problems
+
+def create (db, source, destination, asset, amount, divisible, callable_, call_date, call_price, description, unsigned=False):
+    problems = validate(db, source, destination, asset, amount, divisible, callable_, call_date, call_price, description)
+    if problems: raise exceptions.IssuanceError(problems)
+
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
-    data += struct.pack(FORMAT, asset_id, amount, divisible)
-    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, test)
+    data += struct.pack(FORMAT_2, asset_id, amount, divisible, callable_, call_date, call_price, description.encode('utf-8'))
+    if len(data) > 80:
+        raise exceptions.IssuanceError('Description is greater than 52 bytes.')
+    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, unsigned=unsigned)
 
 def parse (db, tx, message):
     issuance_parse_cursor = db.cursor()
-    validity = 'Valid'
 
     # Unpack message.
     try:
-        asset_id, amount, divisible = struct.unpack(FORMAT, message)
-        asset = util.get_asset_name(asset_id)
-    except Exception:
-        asset, amount, divisible = None, None, None
+        if (tx['block_index'] > 283271 or config.TESTNET) and len(message) == LENGTH_2:
+            asset_id, amount, divisible, callable_, call_date, call_price, description = struct.unpack(FORMAT_2, message)
+            call_price = round(call_price, 6) # TODO: arbitrary
+            try:
+                description = description.decode('utf-8')
+            except UnicodeDecodeError:
+                description = ''
+        else:
+            asset_id, amount, divisible = struct.unpack(FORMAT_1, message)
+            callable_, call_date, call_price, description = None, None, None, ''
+        try:
+            asset = util.get_asset_name(asset_id)
+        except:
+            validity = 'Invalid: bad asset name'
+        validity = 'Valid'
+    except struct.error:
+        asset, amount, divisible, callable_, call_date, call_price, description = None, None, None, None, None, None, None
         validity = 'Invalid: could not unpack'
 
-    if validity == 'Valid' and not util.valid_asset_name(asset):
-        validity = 'Invalid: bad asset name'
-
-    # Valid re-issuance?
     if validity == 'Valid':
-        issuances = util.get_issuances(db, validity='Valid', asset=asset)
-        if issuances:
-            last_issuance = issuances[-1]
-            if last_issuance['issuer'] != tx['source']:
-                validity = 'Invalid: asset already exists and was not issued by this address'
-            elif last_issuance['divisible'] != divisible:
-                validity = 'Invalid: asset exists with a different divisibility'
-            elif not last_issuance['amount'] and not last_issuance['transfer']:
-                validity = 'Invalid: asset is locked'
-        elif not amount:
-            validity = 'Invalid: cannot lock or transfer an unissued asset'
-
-    # For SQLite3
-    total = sum([issuance['amount'] for issuance in issuances])
-    if total + amount > config.MAX_INT:
-        amount = 0
-        if validity == 'Valid':
-            validity = 'Invalid: exceeded maximum total quantity'
-
-    if validity == 'Valid' and asset in ('BTC', 'XCP'):
-        validity = 'Invalid: cannot issue BTC or XCP'
-
-    if validity == 'Valid' and (tx['destination'] and amount):
-        validity = 'Invalid: cannot issue and transfer simultaneously'
+        problems = validate(db, tx['source'], tx['destination'], asset, amount, divisible, callable_, call_date, call_price, description, block_index=tx['block_index'])
+        if problems: validity = 'Invalid: ' + ';'.join(problems)
+        if 'maximum total quantity exceeded' in problems:
+            amount = 0
 
     if tx['destination']:
         issuer = tx['destination']
@@ -91,6 +105,19 @@ def parse (db, tx, message):
     else:
         issuer = tx['source']
         transfer = False
+
+    fee_paid = None
+    if validity == 'Valid':
+        # Debit fee.
+        if amount and tx['block_index'] > 281236:
+            util.debit(db, tx['block_index'], tx['source'], 'XCP', config.ISSUANCE_FEE)
+            fee_paid = config.ISSUANCE_FEE
+        else:
+            fee_paid = 0
+
+        # Credit.
+        if validity == 'Valid' and amount:
+            util.credit(db, tx['block_index'], tx['source'], asset, amount, divisible=divisible)
 
     # Add parsed transaction to message-type–specific table.
     element_data = {
@@ -102,26 +129,22 @@ def parse (db, tx, message):
         'divisible': divisible,
         'issuer': issuer,
         'transfer': transfer,
+        'callable': callable_,
+        'call_date': call_date,
+        'call_price': call_price,
+        'description': description,
+        'fee_paid': fee_paid,
         'validity': validity,
     }
     issuance_parse_cursor.execute(*util.get_insert_sql('issuances', element_data))
-    config.zeromq_publisher.push_to_subscribers('new_issuance', element_data)
-        
-    # Debit fee.
-    # TODO: Add amount destroyed to table.
-    if validity == 'Valid' and amount and tx['block_index'] > 281236:
-        validity = util.debit(db, tx['source'], 'XCP', 5)
 
-    # Credit.
-    if validity == 'Valid' and amount:
-        util.credit(db, tx['source'], asset, amount)
 
-    # Log.
     if validity == 'Valid':
+        # Log.
         if tx['destination']:
-            logging.info('Issuance: {} transfered asset {} to {} ({})'.format(tx['source'], asset, tx['destination'], util.short(tx['tx_hash'])))
+            logging.info('Issuance: {} transfered asset {} to {} ({})'.format(tx['source'], asset, tx['destination'], tx['tx_hash']))
         elif not amount:
-            logging.info('Issuance: {} locked asset {} ({})'.format(tx['source'], asset, util.short(tx['tx_hash'])))
+            logging.info('Issuance: {} locked asset {} ({})'.format(tx['source'], asset, tx['tx_hash']))
         else:
             if divisible:
                 divisibility = 'divisible'
@@ -129,7 +152,11 @@ def parse (db, tx, message):
             else:
                 divisibility = 'indivisible'
                 unit = 1
-            logging.info('Issuance: {} created {} of {} asset {} ({})'.format(tx['source'], util.devise(db, amount, None, 'output', divisible=divisible), divisibility, asset, util.short(tx['tx_hash'])))
+            if callable_ and (tx['block_index'] > 283271 or config.TESTNET) and len(message) == LENGTH_2:
+                callability = 'callable from {} for {} XCP/{}'.format(util.isodt(call_date), call_price, asset)
+            else:
+                callability = 'uncallable'
+            logging.info('Issuance: {} created {} of {} asset {}, which is {}, with description ‘{}’ ({})'.format(tx['source'], util.devise(db, amount, None, 'output', divisible=divisible), divisibility, asset, callability, description, tx['tx_hash']))
 
     issuance_parse_cursor.close()
 
