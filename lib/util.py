@@ -78,7 +78,7 @@ def bitcoind_check (db):
 def database_check (db):
     """Checks Counterparty database to see if the counterpartyd server has caught up with Bitcoind."""
     cursor = db.cursor()
-    TRIES = 7
+    TRIES = 14
     for i in range(TRIES):
         block_index = last_block(db)['block_index']
         if block_index == bitcoin.rpc('getblockcount', []):
@@ -168,6 +168,22 @@ def get_limit_to_blocks(start_block, end_block, col_names=['block_index',]):
 
 def isodt (epoch_time):
     return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
+
+def xcp_supply (db):
+    cursor = db.cursor()
+
+    # Add burns.
+    cursor.execute('''SELECT * FROM burns \
+                      WHERE validity = ?''', ('Valid',))
+    burn_total = sum([burn['earned'] for burn in cursor.fetchall()])
+
+    # Subtract issuance fees.
+    cursor.execute('''SELECT * FROM issuances\
+                      WHERE validity = ?''', ('Valid',))
+    fee_total = sum([issuance['fee_paid'] for issuance in cursor.fetchall()])
+
+    cursor.close()
+    return burn_total - fee_total
 
 def last_block (db):
     cursor = db.cursor()

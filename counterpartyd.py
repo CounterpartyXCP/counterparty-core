@@ -591,9 +591,7 @@ if __name__ == '__main__':
     elif args.action == 'asset':
         # TODO: Use API
         if args.asset == 'XCP':
-            burns = util.get_burns(db, validity='Valid', address=None)
-            total = sum([burn['earned'] for burn in burns])
-            total = util.devise(db, total, args.asset, 'output')
+            total = util.devise(db, util.xcp_supply(db), args.asset, 'output')
             divisible = True
             issuer = None
             callable_ = None
