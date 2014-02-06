@@ -25,7 +25,7 @@ import logging
 import configparser
 
 # Units
-from lib import (config, api, util, exceptions, bitcoin, blocks, checksum)
+from lib import (config, api, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
@@ -210,7 +210,7 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
 def market (give_asset, get_asset):
     # Open orders.
     orders = util.get_orders(db, validity='Valid', show_expired=False, show_empty=False)
-    table = PrettyTable(['Give Quantity', 'Give Asset', 'Price', 'Price Assets', 'Fee (BTC)', 'Time Left', 'Tx Hash'])
+    table = PrettyTable(['Give Quantity', 'Give Asset', 'Price', 'Price Assets', 'Provided BTC Fee', 'Required BTC Fee', 'Time Left', 'Tx Hash'])
     for order in orders:
         if give_asset and order['give_asset'] != give_asset: continue
         if get_asset and order['get_asset'] != get_asset: continue
@@ -304,12 +304,7 @@ def format_order (order):
         price = util.devise(db, D(order['give_amount']) / D(order['get_amount']), 'price', 'output')
         price_assets = give_asset + '/' + get_asset + ' bid'
 
-    if order['fee_required']:
-        fee = str(order['fee_required'] / config.UNIT)
-    else:
-        fee = str(order['fee_provided'] / config.UNIT)
-
-    return [D(give_remaining), give_asset, price, price_assets, fee, util.last_block(db)['block_index'] - order['expire_index'], order['tx_hash']]
+    return [D(give_remaining), give_asset, price, price_assets, str(order['fee_required'] / config.UNIT), str(order['fee_provided'] / config.UNIT), order['expire_index'] - util.last_block(db)['block_index'], order['tx_hash']]
 
 def format_bet (bet):
     odds = D(bet['counterwager_amount']) / D(bet['wager_amount'])
@@ -319,11 +314,11 @@ def format_bet (bet):
     if not bet['leverage']: leverage = None
     else: leverage = util.devise(db, D(bet['leverage']) / 5040, 'leverage', 'output')
 
-    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], util.isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.devise(db, odds, 'odds', 'output'), util.last_block(db)['block_index'] - bet['expire_index'], bet['tx_hash']]
+    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], util.isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.devise(db, odds, 'odds', 'output'), bet['expire_index'] - util.last_block(db)['block_index'], bet['tx_hash']]
 
 def format_order_match (db, order_match):
     order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']
-    order_match_time_left = util.last_block(db)['block_index'] - order_match['match_expire_index']
+    order_match_time_left = order_match['match_expire_index'] - util.last_block(db)['block_index']
     return [order_match_id, order_match_time_left]
 
 def format_feed (feed):
@@ -446,8 +441,10 @@ if __name__ == '__main__':
     parser_rollback = subparsers.add_parser('rollback', help='rollback database (WARNING: not thread‐safe)')
     parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
 
+    """
     parser_checksum = subparsers.add_parser('checksum', help='create an asset name from a base string')
     parser_checksum.add_argument('string', help='base string of the desired asset name')
+    """
 
     args = parser.parse_args()
 
@@ -676,8 +673,8 @@ if __name__ == '__main__':
     elif args.action == 'rollback':
         blocks.reparse(db, block_index=args.block_index)
 
-    elif args.action == 'checksum':
-        print('Asset name:', args.string + checksum.compute(args.string))
+    # elif args.action == 'checksum':
+        # print('Asset name:', args.string + checksum.compute(args.string))
 
     elif args.action == 'server':
         api_server = api.APIServer()

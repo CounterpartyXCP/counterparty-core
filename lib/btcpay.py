@@ -20,7 +20,7 @@ def validate (db, order_match_id):
     order_matches = cursor.fetchall()
     cursor.close()
     if len(order_matches) == 0:
-        problems.append('invalid order match ID, {}'.format(order_match_id))
+        problems.append('no such order match ID')
         order_match = None
     elif len(order_matches) > 1:
         assert False
