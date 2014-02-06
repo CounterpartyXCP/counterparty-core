@@ -186,8 +186,9 @@ def match (db, tx, bet_heap, bet_match_heap):
     wager_remaining = tx1['wager_remaining']
     counterwager_remaining = tx1['counterwager_remaining']
     bet_matches = bet_match_cursor.fetchall()
-    sorted(bet_matches, key=lambda x: x['tx_index'])                                        # Sort by tx index second.
-    sorted(bet_matches, key=lambda x: D(x['wager_amount']) / D(x['counterwager_amount']))   # Sort by price first.
+    if tx['block_index'] > 284473:  # For backwards‐compatibility (no sorting before this block).
+        sorted(bet_matches, key=lambda x: x['tx_index'])                                        # Sort by tx index second.
+        sorted(bet_matches, key=lambda x: D(x['wager_amount']) / D(x['counterwager_amount']))   # Sort by price first.
     for tx0 in bet_matches:
 
         # Bet types must be opposite.

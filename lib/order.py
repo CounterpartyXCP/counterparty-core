@@ -139,8 +139,9 @@ def match (db, tx, order_heap, order_match_heap):
     give_remaining = tx1['give_remaining']
     get_remaining = tx1['get_remaining']
     order_matches = order_match_cursor.fetchall()
-    sorted(order_matches, key=lambda x: x['tx_index'])                              # Sort by tx index second.
-    sorted(order_matches, key=lambda x: D(x['get_amount']) / D(x['give_amount']))   # Sort by price first.
+    if tx['block_index'] > 284473:  # For backwards‐compatibility (no sorting before this block).
+        order_matches = sorted(order_matches, key=lambda x: x['tx_index'])                              # Sort by tx index second.
+        order_matches = sorted(order_matches, key=lambda x: D(x['get_amount']) / D(x['give_amount']))   # Sort by price first.
     for tx0 in order_matches:
 
         # Check whether fee conditions are satisfied.
