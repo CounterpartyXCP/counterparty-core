@@ -449,7 +449,7 @@ if __name__ == '__main__':
 
     parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the Counterparty market')
     parser_market.add_argument('-gv','--give-asset', help='only show orders offering to sell GIVE_ASSET')
-    parser_market.add_argument('-ga','-get-asset', help='only show orders offering to buy GET_ASSET')
+    parser_market.add_argument('-gt','-get-asset', help='only show orders offering to buy GET_ASSET')
     parser_market.add_argument('-d','--depth', action="store_true", help='show both sides of the market.')
 
     parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database (WARNING: not thread‐safe)')
