@@ -84,7 +84,7 @@ def parse (db, tx, message):
                                            SET validity=? \
                                            WHERE tx_hash=?''', ('Invalid: cancelled', bet['tx_hash']))
             util.credit(db, tx['block_index'], tx['source'], 'XCP', bet['wager_remaining'])
-            util.credit(db, tx['block_index'], tx['source'], 'XCP', bet['fee'])
+            util.credit(db, tx['block_index'], tx['source'], 'XCP', round(bet['wager_amount'] * bet['fee_multiplier'] / 1e8))
         # If neither order or bet, mark as invalid.
         else:
             validity = 'Invalid: no valid offer with that hash from that address'
