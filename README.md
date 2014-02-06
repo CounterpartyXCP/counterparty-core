@@ -1,5 +1,6 @@
 # Changelog
-* *v0.3*
+* *v0.3.01*
+* v0.3
 * v0.2
 * v0.1—initial release
 
@@ -149,7 +150,7 @@ The following examples are abridged for parsimony.
 
 * Market
 
-	The `market` action prints out tables of open orders, open bets, feeds, and order matches currently awaiting 	        Bitcoin payments from one of your addresses. 
+	The `market` action prints out tables of open orders, open bets, feeds, and order matches currently awaiting Bitcoin payments from one of your addresses. 
 	
 	It is capable of filtering orders by assets to be bought and sold.
 	
@@ -168,6 +169,10 @@ The following examples are abridged for parsimony.
 	To filter the market to only show offers to sell BTC for XCP:
 	```
 	market --give-asset=BTC --get-asset=XCP
+	```
+	This can also be done with the -depth flag, to show both sides of the order book.
+	```
+	market --gv BTC -gt XCP -d
 	```
 
 * Asset
