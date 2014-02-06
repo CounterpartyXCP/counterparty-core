@@ -210,7 +210,7 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
 def market (give_asset, get_asset):
     # Open orders.
     orders = util.get_orders(db, validity='Valid', show_expired=False, show_empty=False)
-    table = PrettyTable(['Give Quantity', 'Give Asset', 'Price', 'Price Assets', 'Fee (BTC)', 'Time Left', 'Tx Hash'])
+    table = PrettyTable(['Give Quantity', 'Give Asset', 'Price', 'Price Assets', 'Provided BTC Fee', 'Required BTC Fee', 'Time Left', 'Tx Hash'])
     for order in orders:
         if give_asset and order['give_asset'] != give_asset: continue
         if get_asset and order['get_asset'] != get_asset: continue
@@ -304,12 +304,7 @@ def format_order (order):
         price = util.devise(db, D(order['give_amount']) / D(order['get_amount']), 'price', 'output')
         price_assets = give_asset + '/' + get_asset + ' bid'
 
-    if order['fee_required']:
-        fee = str(order['fee_required'] / config.UNIT)
-    else:
-        fee = str(order['fee_provided'] / config.UNIT)
-
-    return [D(give_remaining), give_asset, price, price_assets, fee, order['expire_index'] - util.last_block(db)['block_index'], order['tx_hash']]
+    return [D(give_remaining), give_asset, price, price_assets, str(order['fee_required'] / config.UNIT), str(order['fee_provided'] / config.UNIT), order['expire_index'] - util.last_block(db)['block_index'], order['tx_hash']]
 
 def format_bet (bet):
     odds = D(bet['counterwager_amount']) / D(bet['wager_amount'])
