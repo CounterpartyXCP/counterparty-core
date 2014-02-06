@@ -10,16 +10,16 @@ Order: sell 1.05 XCP at 0.4762 BTC/XCP in 10 blocks, with a provided fee of 0.00
 Order Match: 0.5 BTC for 1.0 XCP at 0.5000 BTC/XCP (dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5)
 Credit: 1.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 BTC Payment for Order Match: dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5 (e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71)
-Credit: 10.0 BBBBE to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 10.0 of divisible asset BBBBE, which is uncallable, with description ‘’ (e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db)
-Credit: 100000 BBBCD to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 100000 of indivisible asset BBBCD, which is callable from 2010-11-04T03:28:12-04:00 for 0.015 XCP/BBBCD, with description ‘foobar’ (67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6)
+Credit: 10.0 BBBB to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 10.0 of divisible asset BBBB, which is uncallable, with description ‘’ (e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db)
+Credit: 100000 BBBC to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 100000 of indivisible asset BBBC, which is callable from 2010-11-04T03:28:12-04:00 for 0.015 XCP/BBBC, with description ‘foobar’ (67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6)
 Debit: 6E-7 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Credit: 6E-7 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 6E-8 per share of asset BBBBE (ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879)
+Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 6E-8 per share of asset BBBB (ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879)
 Debit: 0.008 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Credit: 0.008 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 8E-8 per share of asset BBBCD (beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a)
+Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 8E-8 per share of asset BBBC (beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a)
 Broadcast: ‘Unit Test’ = 100.0 from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:33:20-05:00 with a fee multiplier of 0.0500 (2b4c342f5433ebe591a1da77e013d1b72475562d48578dca8b84bac6651c3cb9)
 Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Debit: 0.025 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
@@ -55,18 +55,18 @@ Broadcast: ‘Unit Test’ = 2.0 from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013
 Credit: 14.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Credit: 0.7 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Contract Settled: NotEqual won the pot of 14.0 XCP; 0.7 XCP credited to the feed address (4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8)
-Debit: 0.5 BBBBE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Order: buy 0.5 BBBBE at 1.0000 BBBBE/XCP in 10 blocks, with a provided fee of 0.0001 BTC and a required fee of 0.0 BTC (ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2)
-Credit: 0.5 BBBBE to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Debit: 0.5 BBBB from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Order: buy 0.5 BBBB at 1.0000 BBBB/XCP in 10 blocks, with a provided fee of 0.0001 BTC and a required fee of 0.0 BTC (ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2)
+Credit: 0.5 BBBB to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Cancel: ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2 (83891d7fe85c33e52c8b4e5814c92fb6a3b9467299200538a6babaa8b452d879)
 Credit: 570.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Burn: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 0.38 BTC for 570.0 XCP (2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608)
-Debit: 10000 BBBCD from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Credit: 10000 BBBCD to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7
-Send: 10000 of asset BBBCD from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 (7cb7c4547cf2653590d7a9ace60cc623d25148adfbc88a89aeb0ef88da7839ba)
+Debit: 10000 BBBC from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Credit: 10000 BBBC to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7
+Send: 10000 of asset BBBC from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 (7cb7c4547cf2653590d7a9ace60cc623d25148adfbc88a89aeb0ef88da7839ba)
 Debit: 45.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Credit: 3000 BBBCD to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Debit: 3000 BBBCD from n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7
+Credit: 3000 BBBC to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+Debit: 3000 BBBC from n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7
 Credit: 45.0 XCP to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7
-Callback: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc called back 30.0% of asset BBBCD (8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034)
+Callback: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc called back 30.0% of asset BBBC (8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034)
 STOP TEST

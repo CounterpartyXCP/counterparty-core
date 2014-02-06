@@ -11,7 +11,7 @@ import operator
 from operator import itemgetter
 import apsw
 
-from . import (config, exceptions, bitcoin, checksum)
+from . import (config, exceptions, bitcoin)
 
 b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
@@ -203,10 +203,12 @@ def get_asset_id (asset):
     if asset[0] == 'A': raise exceptions.AssetNameError('starts with ‘A’')
 
     # Checksum
+    """
     if not checksum.verify(asset):
         raise exceptions.AssetNameError('invalid checksum')
     else:
         asset = asset[:-1]  # Strip checksum character.
+    """
 
     # Convert the Base 26 string to an integer.
     n = 0
@@ -237,7 +239,10 @@ def get_asset_name (asset_id):
         res.append(b26_digits[r])
     asset_name = ''.join(res[::-1])
 
+    """
     return asset_name + checksum.compute(asset_name)
+    """
+    return asset_name
 
 
 def debit (db, block_index, address, asset, amount):
