@@ -130,7 +130,7 @@ def parse (db, tx, message):
         util.debit(db, tx['block_index'], tx['source'], 'XCP', fee)
 
     # Add parsed transaction to message-type–specific table.
-    element_data = {
+    bindings = {
         'tx_index': tx['tx_index'],
         'tx_hash': tx['tx_hash'],
         'block_index': tx['block_index'],
@@ -149,7 +149,8 @@ def parse (db, tx, message):
         'fee_multiplier': fee_multiplier,
         'validity': validity,
     }
-    bet_parse_cursor.execute(*util.get_insert_sql('bets', element_data))
+    sql='insert into bets values(:tx_index, :tx_hash, :block_index, :source, :feed_address, :bet_type, :deadline, :wager_amount, :wager_remaining, :counterwager_amount, :counterwager_remaining, :target_value, :leverage, :expiration, :expire_index, :fee_multiplier, :validity)'
+    bet_parse_cursor.execute(sql, bindings)
 
     # Log.
     if validity == 'Valid':
@@ -256,7 +257,7 @@ def match (db, tx):
             initial_value = util.get_broadcasts(db, validity='Valid', source=tx1['feed_address'])[-1]['value']
 
             # Record bet fulfillment.
-            element_data = {
+            bindings = {
                 'id': tx0['tx_hash'] + tx['tx_hash'],
                 'tx0_index': tx0['tx_index'],
                 'tx0_hash': tx0['tx_hash'],
@@ -277,11 +278,12 @@ def match (db, tx):
                 'tx1_block_index': tx1['block_index'],
                 'tx0_expiration': tx0['expiration'],
                 'tx1_expiration': tx1['expiration'],
-                'fee_multiplier': fee_multiplier,
                 'match_expire_index': min(tx0['expire_index'], tx1['expire_index']),
+                'fee_multiplier': fee_multiplier,
                 'validity': 'Valid',
             }
-            bet_match_cursor.execute(*util.get_insert_sql('bet_matches', element_data))
+            sql='insert into bet_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :tx0_bet_type, :tx1_bet_type, :feed_address, :initial_value, :deadline, :target_value, :leverage, :forward_amount, :backward_amount, :tx0_block_index, :tx1_block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :fee_multiplier, :validity)'
+            bet_match_cursor.execute(sql, bindings)
 
     bet_match_cursor.close()
 
@@ -296,12 +298,13 @@ def expire (db, block_index, block_time):
         util.credit(db, block_index, bet['source'], 'XCP', round(bet['wager_remaining'] * (1 + bet['fee_multiplier'] / 1e8)))
 
         # Record bet expiration.
-        element_data = {
+        bindings = {
             'bet_index': bet['tx_index'],
             'bet_hash': bet['tx_hash'],
             'block_index': block_index
         }
-        cursor.execute(*util.get_insert_sql('bet_expirations', element_data))
+        sql='insert into bet_expirations values(:bet_index, :bet_hash, :block_index)'
+        cursor.execute(sql, bindings)
 
         logging.info('Expired bet: {}'.format(bet['tx_hash']))
 
@@ -319,11 +322,12 @@ def expire (db, block_index, block_time):
                       )
 
         # Record bet match expiration.
-        element_data = {
+        bindings = {
             'block_index': block_index,
             'bet_match_id': bet_match['tx0_hash'] + bet_match['tx1_hash']
         }
-        cursor.execute(*util.get_insert_sql('bet_match_expirations', element_data))
+        sql='insert into bet_match_expirations values(:block_index, :bet_match_id)'
+        cursor.execute(sql, bindings)
 
         logging.info('Expired Bet Match: {}'.format(bet_match['tx0_hash'] + bet_match['tx1_hash']))
 

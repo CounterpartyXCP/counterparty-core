@@ -52,7 +52,7 @@ def create (db, order_match_id, unsigned=False):
     return bitcoin.transaction(source, destination, btc_amount, config.MIN_FEE, data, unsigned=unsigned)
 
 def parse (db, tx, message):
-    btcpay_parse_cursor = db.cursor()
+    cursor = db.cursor()
 
     # Unpack message.
     try:
@@ -74,19 +74,19 @@ def parse (db, tx, message):
         # Credit source address for the currency that he bought with the bitcoins.
         # BTC must be paid all at once and come from the 'correct' address.
         if order_match['tx0_address'] == tx['source'] and tx['btc_amount'] >= order_match['forward_amount']:
-            btcpay_parse_cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Valid', tx0_hash, tx1_hash))
+            cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Valid', tx0_hash, tx1_hash))
             if order_match['backward_asset'] != 'BTC':
                 util.credit(db, tx['block_index'], tx['source'], order_match['backward_asset'], order_match['backward_amount'])
             validity = 'Paid'
         if order_match['tx1_address'] == tx['source'] and tx['btc_amount'] >= order_match['backward_amount']:
-            btcpay_parse_cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Valid', tx0_hash, tx1_hash))
+            cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('Valid', tx0_hash, tx1_hash))
             if order_match['forward_asset'] != 'BTC':
                 util.credit(db, tx['block_index'], tx['source'], order_match['forward_asset'], order_match['forward_amount'])
             validity = 'Paid'
         logging.info('BTC Payment for Order Match: {} ({})'.format(order_match_id, tx['tx_hash']))
 
     # Add parsed transaction to message-type–specific table.
-    element_data = {
+    bindings = {
         'tx_index': tx['tx_index'],
         'tx_hash': tx['tx_hash'],
         'block_index': tx['block_index'],
@@ -94,9 +94,10 @@ def parse (db, tx, message):
         'order_match_id': order_match_id,
         'validity': validity,
     }
-    btcpay_parse_cursor.execute(*util.get_insert_sql('btcpays', element_data))
+    sql='insert into btcpays values(:tx_index, :tx_hash, :block_index, :source, :order_match_id, :validity)'
+    cursor.execute(sql, bindings)
 
 
-    btcpay_parse_cursor.close()
+    cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

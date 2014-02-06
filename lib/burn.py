@@ -86,7 +86,7 @@ def parse (db, tx, message=None):
 
     # Add parsed transaction to message-type–specific table.
     # TODO: store sent in table
-    element_data = {
+    bindings = {
         'tx_index': tx['tx_index'],
         'tx_hash': tx['tx_hash'],
         'block_index': tx['block_index'],
@@ -95,7 +95,8 @@ def parse (db, tx, message=None):
         'earned': earned,
         'validity': validity,
     }
-    burn_parse_cursor.execute(*util.get_insert_sql('burns', element_data))
+    sql='insert into burns values(:tx_index, :tx_hash, :block_index, :address, :burned, :earned, :validity)'
+    burn_parse_cursor.execute(sql, bindings)
 
 
     burn_parse_cursor.close()

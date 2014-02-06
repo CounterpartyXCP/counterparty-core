@@ -34,7 +34,7 @@ def create (db, source, destination, amount, asset, unsigned=False):
     return bitcoin.transaction(source, destination, config.DUST_SIZE, config.MIN_FEE, data, unsigned=unsigned)
 
 def parse (db, tx, message):
-    send_parse_cursor = db.cursor()
+    cursor = db.cursor()
 
     # Unpack message.
     try:
@@ -48,9 +48,9 @@ def parse (db, tx, message):
 
     if validity == 'Valid':
         # Oversend
-        send_parse_cursor.execute('''SELECT * FROM balances \
+        cursor.execute('''SELECT * FROM balances \
                                      WHERE (address = ? AND asset = ?)''', (tx['source'], asset))
-        balances = send_parse_cursor.fetchall()
+        balances = cursor.fetchall()
         if not balances:  amount = 0
         elif balances[0]['amount'] < amount:
             amount = min(balances[0]['amount'], amount)
@@ -65,7 +65,7 @@ def parse (db, tx, message):
         logging.info('Send: {} of asset {} from {} to {} ({})'.format(util.devise(db, amount, asset, 'output'), asset, tx['source'], tx['destination'], tx['tx_hash']))
 
     # Add parsed transaction to message-type–specific table.
-    element_data = {
+    bindings = {
         'tx_index': tx['tx_index'],
         'tx_hash': tx['tx_hash'],
         'block_index': tx['block_index'],
@@ -75,9 +75,10 @@ def parse (db, tx, message):
         'amount': amount,
         'validity': validity,
     }
-    send_parse_cursor.execute(*util.get_insert_sql('sends', element_data))
+    sql='insert into sends values(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :amount, :validity)'
+    cursor.execute(sql, bindings)
 
 
-    send_parse_cursor.close()
+    cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

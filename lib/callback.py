@@ -110,16 +110,17 @@ def parse (db, tx, message):
             util.credit(db, tx['block_index'], output['address'], 'XCP', int(call_price * output['callback_amount']))
 
     # Add parsed transaction to message-type–specific table.
-    element_data = {
+    bindings = {
         'tx_index': tx['tx_index'],
         'tx_hash': tx['tx_hash'],
         'block_index': tx['block_index'],
         'source': tx['source'],
-        'asset': asset,
         'fraction_per_share': fraction_per_share,
+        'asset': asset,
         'validity': validity,
     }
-    callback_parse_cursor.execute(*util.get_insert_sql('callbacks', element_data))
+    sql='insert into callbacks values(:tx_index, :tx_hash, :block_index, :source, :fraction_per_share, :asset, :validity)'
+    callback_parse_cursor.execute(sql, bindings)
 
 
     if validity == 'Valid':

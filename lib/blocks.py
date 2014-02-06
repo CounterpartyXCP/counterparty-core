@@ -490,8 +490,8 @@ def reparse (db, block_index=None, quiet=False):
 
     # For rollbacks, just delete new blocks and then reparse what’s left.
     if block_index:
-        cursor.execute('''DELETE FROM blocks WHERE block_index > {}'''.format(block_index))
-        cursor.execute('''DELETE FROM transactions WHERE block_index > {}'''.format(block_index))
+        cursor.execute('''DELETE FROM blocks WHERE block_index > ?''', (block_index,))
+        cursor.execute('''DELETE FROM transactions WHERE block_index > ?''', (block_index,))
 
     with db:
         # Delete all of the results of parsing.
@@ -528,7 +528,7 @@ def reparse (db, block_index=None, quiet=False):
             log.setLevel(logging.INFO)
 
         # Update minor version number.
-        minor_version = cursor.execute('PRAGMA user_version = {}'.format(int(config.DB_VERSION_MINOR)))
+        minor_version = cursor.execute('PRAGMA user_version = {}'.format(int(config.DB_VERSION_MINOR))) # Syntax?!
         logging.info('Status: Database minor version number updated.')
 
     cursor.close()
