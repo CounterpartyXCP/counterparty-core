@@ -440,22 +440,22 @@ if __name__ == '__main__':
     parser_callback.add_argument('-a','--asset', required=True, help='the asset to callback')
 
     parser_address = subparsers.add_parser('balances', help='display the balances of a Counterparty address')
-    parser_address.add_argument('-a','address', help='the address you are interested in')
+    parser_address.add_argument('-a','--address', help='the address you are interested in')
 
     parser_asset = subparsers.add_parser('asset', help='display the basic properties of a Counterparty asset')
-    parser_asset.add_argument('-a','asset', help='the asset you are interested in')
+    parser_asset.add_argument('-a','--asset', help='the asset you are interested in')
 
     parser_wallet = subparsers.add_parser('wallet', help='list the addresses in your Bitcoind wallet along with their balances in all Counterparty assets')
 
     parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the Counterparty market')
     parser_market.add_argument('-gv','--give-asset', help='only show orders offering to sell GIVE_ASSET')
-    parser_market.add_argument('-gt','-get-asset', help='only show orders offering to buy GET_ASSET')
+    parser_market.add_argument('-gt','--get-asset', help='only show orders offering to buy GET_ASSET')
     parser_market.add_argument('-d','--depth', action="store_true", help='show both sides of the market.')
 
     parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database (WARNING: not thread‐safe)')
 
     parser_rollback = subparsers.add_parser('rollback', help='rollback database (WARNING: not thread‐safe)')
-    parser_rollback.add_argument('-bi','block_index', type=int, help='the index of the last known good block')
+    parser_rollback.add_argument('-bi','--block_index', type=int, help='the index of the last known good block')
 
     parser_checksum = subparsers.add_parser('checksum', help='create an asset name from a base string')
     parser_checksum.add_argument('string', help='base string of the desired asset name')
