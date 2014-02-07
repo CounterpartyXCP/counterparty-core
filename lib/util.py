@@ -32,6 +32,11 @@ def rowtracer(cursor, sql):
         dictionary[name] = sql[index]
     return dictionary
 
+def exectracer(cursor, sql, bindings):
+    # if 'INSERT' in sql or 'UPDATE' in sql:
+    #     print(sql, bindings)
+    return True
+
 def connect_to_db():
     """Connects to the SQLite database, returning a db Connection object"""
     db = apsw.Connection(config.DATABASE)
@@ -39,14 +44,8 @@ def connect_to_db():
     cursor.execute('''PRAGMA count_changes = OFF''')
     cursor.close()
     db.setrowtrace(rowtracer)
+    db.setexectrace(exectracer)
     return db
-
-def get_insert_sql(table_name, element_data):
-    """Takes a mapping of element data and a table name, and produces an INSERT statement suitable for a sqlite3 cursor.execute() operation"""
-    #NOTE: keys() and values() return in the same order if dict is not modified: http://docs.python.org/3/library/stdtypes.html#dict.items
-    k, v = (element_data.keys(), element_data.values())
-    return [ "INSERT INTO %s(%s) VALUES(%s)" % (
-        table_name, ','.join(k), ','.join(['?' for i in range(len(v))])), v ]
 
 def bitcoind_check (db):
     """Checks blocktime of last block to see if Bitcoind is running behind."""
@@ -252,13 +251,15 @@ def debit (db, block_index, address, asset, amount):
 
     # Record debit *only if valid*.
     logging.debug('Debit: {} {} from {}'.format(devise(db, amount, asset, 'output'), asset, address))
-    element_data = {
+    bindings = {
         'block_index': block_index,
         'address': address,
         'asset': asset,
         'amount': amount,
     }
-    debit_cursor.execute(*get_insert_sql('debits', element_data))
+    sql='insert into debits values(:block_index, :address, :asset, :amount)'
+    debit_cursor.execute(sql, bindings)
+
     debit_cursor.close()
 
 def credit (db, block_index, address, asset, amount, divisible=None):
@@ -273,12 +274,13 @@ def credit (db, block_index, address, asset, amount, divisible=None):
         assert balances == []
 
         #update balances table with new balance
-        element_data = {
+        bindings = {
             'address': address,
             'asset': asset,
             'amount': amount,
         }
-        credit_cursor.execute(*get_insert_sql('balances', element_data))
+        sql='insert into balances values(:address, :asset, :amount)'
+        credit_cursor.execute(sql, bindings)
     elif len(balances) > 1:
         raise Exception
     else:
@@ -292,24 +294,25 @@ def credit (db, block_index, address, asset, amount, divisible=None):
 
     # Record credit.
     logging.debug('Credit: {} {} to {}'.format(devise(db, amount, asset, 'output', divisible=divisible), asset, address))
-    element_data = {
+    bindings = {
         'block_index': block_index,
         'address': address,
         'asset': asset,
         'amount': amount
     }
-    credit_cursor.execute(*get_insert_sql('credits', element_data))
+    sql='insert into credits values(:block_index, :address, :asset, :amount)'
+    credit_cursor.execute(sql, bindings)
     credit_cursor.close()
 
 def devise (db, quantity, asset, dest, divisible=None):
-    FOUR = D(10) ** -4
+    SIX = D(10) ** -6
     EIGHT = D(10) ** -8
 
     quantity = D(quantity)
 
     if asset in ('leverage', 'price', 'odds', 'value'):
         if dest == 'output':
-            return quantity.quantize(FOUR)
+            return quantity.quantize(SIX)
         elif dest == 'input':
             # Hackish
             if asset == 'leverage':
@@ -318,7 +321,7 @@ def devise (db, quantity, asset, dest, divisible=None):
                 return float(quantity)
 
     if asset in ('fee_multiplier',):
-        return D(quantity / D(1e8)).quantize(FOUR)
+        return D(quantity / D(1e8)).quantize(SIX)
 
     if divisible == None:
         if asset in ('BTC', 'XCP'):

@@ -83,7 +83,7 @@ def parse (db, tx, message):
             util.debit(db, tx['block_index'], tx['source'], give_asset, give_amount)
 
     # Add parsed transaction to message-type–specific table.
-    element_data = {
+    bindings = {
         'tx_index': tx['tx_index'],
         'tx_hash': tx['tx_hash'],
         'block_index': tx['block_index'],
@@ -100,7 +100,8 @@ def parse (db, tx, message):
         'fee_provided': tx['fee'],
         'validity': validity,
     }
-    order_parse_cursor.execute(*util.get_insert_sql('orders', element_data))
+    sql='insert into orders values(:tx_index, :tx_hash, :block_index, :source, :give_asset, :give_amount, :give_remaining, :get_asset, :get_amount, :get_remaining, :expiration, :expire_index, :fee_required, :fee_provided, :validity)'
+    order_parse_cursor.execute(sql, bindings)
 
     # Log.
     if validity == 'Valid':
@@ -123,19 +124,19 @@ def parse (db, tx, message):
     order_parse_cursor.close()
 
 def match (db, tx):
-    order_match_cursor = db.cursor()
+    cursor = db.cursor()
 
     # Get order in question.
-    order_match_cursor.execute('''SELECT * FROM orders\
+    cursor.execute('''SELECT * FROM orders\
                                   WHERE tx_index=?''', (tx['tx_index'],))
-    tx1 = order_match_cursor.fetchall()[0]
+    tx1 = cursor.fetchall()[0]
 
-    order_match_cursor.execute('''SELECT * FROM orders \
+    cursor.execute('''SELECT * FROM orders \
                                   WHERE (give_asset=? AND get_asset=? AND validity=?)''',
                                (tx1['get_asset'], tx1['give_asset'], 'Valid'))
     give_remaining = tx1['give_remaining']
     get_remaining = tx1['get_remaining']
-    order_matches = order_match_cursor.fetchall()
+    order_matches = cursor.fetchall()
     if tx['block_index'] > 284500:  # For backwards‐compatibility (no sorting before this block).
         order_matches = sorted(order_matches, key=lambda x: x['tx_index'])                              # Sort by tx index second.
         order_matches = sorted(order_matches, key=lambda x: D(x['get_amount']) / D(x['give_amount']))   # Sort by price first.
@@ -192,14 +193,14 @@ def match (db, tx):
             get_remaining = get_remaining - forward_amount  # This may indeed be negative!
 
             # Update give_remaining, get_remaining.
-            order_match_cursor.execute('''UPDATE orders \
+            cursor.execute('''UPDATE orders \
                               SET give_remaining = ?, \
                                    get_remaining = ? \
                               WHERE tx_hash = ?''',
                           (tx0['give_remaining'] - forward_amount,
                            tx0['get_remaining'] - backward_amount,
                            tx0['tx_hash']))
-            order_match_cursor.execute('''UPDATE orders \
+            cursor.execute('''UPDATE orders \
                               SET give_remaining = ?, \
                                    get_remaining = ? \
                               WHERE tx_hash = ?''',
@@ -208,7 +209,7 @@ def match (db, tx):
                            tx1['tx_hash']))
 
             # Record order match.
-            element_data = {
+            bindings = {
                 'id': tx0['tx_hash'] + tx['tx_hash'],
                 'tx0_index': tx0['tx_index'],
                 'tx0_hash': tx0['tx_hash'],
@@ -227,10 +228,10 @@ def match (db, tx):
                 'match_expire_index': min(tx0['expire_index'], tx1['expire_index']),
                 'validity': validity,
             }
+            sql='insert into order_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :forward_asset, :forward_amount, :backward_asset, :backward_amount, :tx0_block_index, :tx1_block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :validity)'
+            cursor.execute(sql, bindings)
 
-            order_match_cursor.execute(*util.get_insert_sql('order_matches', element_data))
-
-    order_match_cursor.close()
+    cursor.close()
 
 def expire (db, block_index):
     cursor = db.cursor()
@@ -239,18 +240,18 @@ def expire (db, block_index):
     cursor.execute('''SELECT * FROM orders \
                       WHERE (validity = ? AND expire_index < ?)''', ('Valid', block_index))
     for order in cursor.fetchall():
-        print(order['expire_index'], block_index)   # TODO
         cursor.execute('''UPDATE orders SET validity=? WHERE tx_index=?''', ('Invalid: expired', order['tx_index']))
         if order['give_asset'] != 'BTC':    # Can't credit BTC.
             util.credit(db, block_index, order['source'], order['give_asset'], order['give_remaining'])
 
         # Record offer expiration.
-        element_data = {
+        bindings = {
             'order_index': order['tx_index'],
             'order_hash': order['tx_hash'],
             'block_index': block_index
         }
-        cursor.execute(*util.get_insert_sql('order_expirations', element_data))
+        sql='insert into order_expirations values(:order_index, :order_hash, :block_index)'
+        cursor.execute(sql, bindings)
 
         logging.info('Expired order: {}'.format(order['tx_hash']))
 
@@ -268,12 +269,15 @@ def expire (db, block_index):
                         order_match['forward_asset'],
                         order_match['forward_amount'])
 
+        order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']
+
         # Record order match expiration.
-        element_data = {
-            'block_index': block_index,
-            'order_match_id': order_match['tx0_hash'] + order_match['tx1_hash']
+        bindings = {
+            'order_match_id': order_match_id,
+            'block_index': block_index
         }
-        cursor.execute(*util.get_insert_sql('order_match_expirations', element_data))
+        sql='insert into order_match_expirations values(:order_match_id, :block_index)'
+        cursor.execute(sql, bindings)
 
         logging.info('Expired Order Match awaiting BTC payment: {}'.format(order_match['id']))
 

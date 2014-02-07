@@ -120,7 +120,7 @@ def parse (db, tx, message):
             util.credit(db, tx['block_index'], tx['source'], asset, amount, divisible=divisible)
 
     # Add parsed transaction to message-type–specific table.
-    element_data = {
+    bindings= {
         'tx_index': tx['tx_index'],
         'tx_hash': tx['tx_hash'],
         'block_index': tx['block_index'],
@@ -136,7 +136,8 @@ def parse (db, tx, message):
         'fee_paid': fee_paid,
         'validity': validity,
     }
-    issuance_parse_cursor.execute(*util.get_insert_sql('issuances', element_data))
+    sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :amount, :divisible, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :validity)'
+    issuance_parse_cursor.execute(sql, bindings)
 
 
     if validity == 'Valid':
