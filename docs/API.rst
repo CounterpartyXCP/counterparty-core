@@ -9,12 +9,10 @@ Interacting with the API
 Overview
 ----------
 
-``counterpartyd`` features a full-fledged JSON RPC-based API, which allows
+``counterpartyd`` features a full-fledged JSON RPC 2.0-based API, which allows
 third-party applications to perform functions on the Counterparty network
 without having to deal with the low‐level details of the protocol such as
 transaction encoding and state management.
-
-Please see the scripts in the ``examples`` subdirectory.
 
 
 Connecting to the API
@@ -22,7 +20,7 @@ Connecting to the API
 
 By default, ``counterpartyd`` will listen on port ``4000`` (if on mainnet) or port ``14000`` (on testnet) for API
 requests. API requests are made via a HTTP POST request to ``/jsonrpc/``, with JSON-encoded
-data passed as the POST body. For more information on JSON RPC, please see the `JSON RPC specification <http://json-rpc.org/wiki/specification>`__.
+data passed as the POST body. For more information on JSON RPC, please see the `JSON RPC 2.0 specification <http://www.jsonrpc.org/specification>`__.
 
 .. _examples:
 

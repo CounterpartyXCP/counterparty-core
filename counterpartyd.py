@@ -27,9 +27,10 @@ import configparser
 # Units
 from lib import (config, api, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
+if os.name == 'nt':
+    from lib import util_windows
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
-windows = lambda x: unicodedata.normalize('NFKD', x).encode('ascii', 'ignore').decode()
 
 def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=None,
                  bitcoind_rpc_user=None, bitcoind_rpc_password=None, rpc_host=None, rpc_port=None,
@@ -218,8 +219,6 @@ def market (give_asset, get_asset):
         table.add_row(order)
     print('Open Orders')
     table = table.get_string(sortby='Price')
-    if os.name == 'nt':
-        table = windows(table)
     print(table)
     print('\n')
 
@@ -230,7 +229,6 @@ def market (give_asset, get_asset):
         bet = format_bet(bet)
         table.add_row(bet)
     print('Open Bets')
-    if os.name == 'nt': table = windows(table.get_string())
     print(table)
     print('\n')
 
@@ -241,7 +239,6 @@ def market (give_asset, get_asset):
         order_match = format_order_match(db, order_match)
         table.add_row(order_match)
     print('Order Matches Awaiting BTC Payment from You')
-    if os.name == 'nt': table = windows(table.get_string())
     print(table)
     print('\n')
 
@@ -262,7 +259,6 @@ def market (give_asset, get_asset):
         else:
             continue
     print('Feeds')
-    if os.name == 'nt': table = windows(table.get_string())
     print(table)
 
 
@@ -331,6 +327,10 @@ def format_feed (feed):
 
 
 if __name__ == '__main__':
+    if os.name == 'nt':
+        #patch up cmd.exe's "challenged" (i.e. broken/non-existent) UTF-8 logging
+        util_windows.fix_win32_unicode()
+    
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(prog='counterpartyd', description='the reference implementation of the Counterparty protocol')
     parser.add_argument('-V', '--version', action='version', version="counterpartyd v%s" % config.VERSION)
@@ -456,20 +456,26 @@ if __name__ == '__main__':
     # Database
     db = util.connect_to_db()
 
-    # Logging (to file and stderr).
-    if args.verbose:
-        log_level = logging.DEBUG
-    else:
-        log_level = logging.INFO
-
-    logging.basicConfig(filename=config.LOG, level=log_level,
-                        format='%(asctime)s %(message)s',
-                        datefmt='%Y-%m-%d-T%H:%M:%S%z')
-    console = util.SanitizedStreamHandler() if os.name == 'nt' else logging.StreamHandler()
+    # Logging (to file and console).
+    logger = logging.getLogger() #get root logger
+    logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
+    #Console logging
+    console = logging.StreamHandler()
     console.setLevel(logging.DEBUG if args.verbose else logging.INFO)
     formatter = logging.Formatter('%(message)s')
     console.setFormatter(formatter)
-    logging.getLogger('').addHandler(console)
+    logger.addHandler(console)
+    #File logging (rotated)
+    max_log_size = 2 * 1024 * 1024 #max log size of 2 MB before rotation (make configurable later)
+    if os.name == 'nt':
+        fileh = util_windows.SanitizedRotatingFileHandler(config.LOG, maxBytes=max_log_size, backupCount=5)
+    else:
+        fileh = logging.handlers.RotatingFileHandler(config.LOG, maxBytes=max_log_size, backupCount=5)
+    fileh.setLevel(logging.DEBUG if args.verbose else logging.INFO)
+    formatter = logging.Formatter('%(asctime)s %(message)s', '%Y-%m-%d-T%H:%M:%S%z')
+    fileh.setFormatter(formatter)
+    logger.addHandler(fileh)
+    #API requests logging (don't show on console in normal operation)
     requests_log = logging.getLogger("requests")
     requests_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
 
@@ -615,8 +621,6 @@ if __name__ == '__main__':
             description = issuances[-1]['description']
 
         asset_id = util.get_asset_id(args.asset)
-        if os.name == 'nt': description = windows(description)
-
         print('Asset Name:', args.asset)
         print('Asset ID:', asset_id)
         print('Total Issued:', total)

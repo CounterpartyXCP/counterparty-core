@@ -430,13 +430,13 @@ def get_tx_info (tx):
     for vout in tx['vout']:
         fee -= D(vout['value']) * config.UNIT
 
-        # Sum data chunks to get data. (Can mix OP_RETURN and multi‐sig.)
+        # Sum data chunks to get data. (Can mix OP_RETURN and multi-sig.)
         asm = vout['scriptPubKey']['asm'].split(' ')
         if len(asm) == 2 and asm[0] == 'OP_RETURN':                                                 # OP_RETURN
             try: data_chunk = binascii.unhexlify(bytes(asm[1], 'utf-8'))
             except binascii.Error: continue
             data += data_chunk
-        elif len(asm) >= 5 and asm[0] == '1' and asm[3] == '2' and asm[4] == 'OP_CHECKMULTISIG':    # Multi‐sig
+        elif len(asm) >= 5 and asm[0] == '1' and asm[3] == '2' and asm[4] == 'OP_CHECKMULTISIG':    # Multi-sig
             try: data_pubkey = binascii.unhexlify(bytes(asm[2], 'utf-8'))
             except binascii.Error: continue
             data_chunk_length = data_pubkey[0]  # No ord() necessary.
@@ -484,7 +484,7 @@ def reparse (db, block_index=None, quiet=False):
     """Reparse all transactions (atomically). If block_index is set, rollback
     to the end of that block.
     """
-    # TODO: This is not thread‐safe!
+    # TODO: This is not thread-safe!
     logging.warning('Status: Reparsing all transactions.')
     cursor = db.cursor()
 
@@ -522,7 +522,7 @@ def reparse (db, block_index=None, quiet=False):
         initialise(db)
         cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
         for block in cursor.fetchall():
-            logging.info('Block (re‐parse): {}'.format(str(block['block_index'])))
+            logging.info('Block (re-parse): {}'.format(str(block['block_index'])))
             parse_block(db, block['block_index'], block['block_time'])
         if quiet:
             log.setLevel(logging.INFO)
@@ -558,7 +558,7 @@ def reorg (db):
     return block_index
 
 def follow (db):
-    # TODO: This is not thread‐safe!
+    # TODO: This is not thread-safe!
     follow_cursor = db.cursor()
 
     logging.info('Status: RESTART')
