@@ -25,11 +25,12 @@ import logging
 import configparser
 
 # Units
-from lib import (config, api, util, exceptions, bitcoin, blocks, checksum)
+from lib import (config, api, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
+if os.name == 'nt':
+    from lib import util_windows
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
-windows = lambda x: unicodedata.normalize('NFKD', x).encode('ascii', 'ignore').decode()
 
 def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=None,
                  bitcoind_rpc_user=None, bitcoind_rpc_password=None, rpc_host=None, rpc_port=None,
@@ -210,7 +211,7 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
 def market (give_asset, get_asset):
     # Open orders.
     orders = util.get_orders(db, validity='Valid', show_expired=False, show_empty=False)
-    table = PrettyTable(['Give Quantity', 'Give Asset', 'Price', 'Price Assets', 'Fee (BTC)', 'Time Left', 'Tx Hash'])
+    table = PrettyTable(['Give Quantity', 'Give Asset', 'Price', 'Price Assets', 'Required BTC Fee', 'Provided BTC Fee', 'Time Left', 'Tx Hash'])
     for order in orders:
         if give_asset and order['give_asset'] != give_asset: continue
         if get_asset and order['get_asset'] != get_asset: continue
@@ -218,8 +219,6 @@ def market (give_asset, get_asset):
         table.add_row(order)
     print('Open Orders')
     table = table.get_string(sortby='Price')
-    if os.name == 'nt':
-        table = windows(table)
     print(table)
     print('\n')
 
@@ -230,7 +229,6 @@ def market (give_asset, get_asset):
         bet = format_bet(bet)
         table.add_row(bet)
     print('Open Bets')
-    if os.name == 'nt': table = windows(table.get_string())
     print(table)
     print('\n')
 
@@ -241,7 +239,6 @@ def market (give_asset, get_asset):
         order_match = format_order_match(db, order_match)
         table.add_row(order_match)
     print('Order Matches Awaiting BTC Payment from You')
-    if os.name == 'nt': table = windows(table.get_string())
     print(table)
     print('\n')
 
@@ -262,7 +259,6 @@ def market (give_asset, get_asset):
         else:
             continue
     print('Feeds')
-    if os.name == 'nt': table = windows(table.get_string())
     print(table)
 
 
@@ -304,12 +300,7 @@ def format_order (order):
         price = util.devise(db, D(order['give_amount']) / D(order['get_amount']), 'price', 'output')
         price_assets = give_asset + '/' + get_asset + ' bid'
 
-    if order['fee_required']:
-        fee = str(order['fee_required'] / config.UNIT)
-    else:
-        fee = str(order['fee_provided'] / config.UNIT)
-
-    return [D(give_remaining), give_asset, price, price_assets, fee, util.get_time_left(db, order), order['tx_hash']]
+    return [D(give_remaining), give_asset, price, price_assets, str(order['fee_required'] / config.UNIT), str(order['fee_provided'] / config.UNIT), order['expire_index'] - util.last_block(db)['block_index'], order['tx_hash']]
 
 def format_bet (bet):
     odds = D(bet['counterwager_amount']) / D(bet['wager_amount'])
@@ -319,11 +310,11 @@ def format_bet (bet):
     if not bet['leverage']: leverage = None
     else: leverage = util.devise(db, D(bet['leverage']) / 5040, 'leverage', 'output')
 
-    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], util.isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.devise(db, odds, 'odds', 'output'), util.get_time_left(db, bet), bet['tx_hash']]
+    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], util.isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.devise(db, odds, 'odds', 'output'), bet['expire_index'] - util.last_block(db)['block_index'], bet['tx_hash']]
 
 def format_order_match (db, order_match):
     order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']
-    order_match_time_left = util.get_match_time_left(db, order_match)
+    order_match_time_left = order_match['match_expire_index'] - util.last_block(db)['block_index']
     return [order_match_id, order_match_time_left]
 
 def format_feed (feed):
@@ -336,6 +327,10 @@ def format_feed (feed):
 
 
 if __name__ == '__main__':
+    if os.name == 'nt':
+        #patch up cmd.exe's "challenged" (i.e. broken/non-existent) UTF-8 logging
+        util_windows.fix_win32_unicode()
+    
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(prog='counterpartyd', description='the reference implementation of the Counterparty protocol')
     parser.add_argument('-V', '--version', action='version', version="counterpartyd v%s" % config.VERSION)
@@ -446,8 +441,10 @@ if __name__ == '__main__':
     parser_rollback = subparsers.add_parser('rollback', help='rollback database (WARNING: not thread‐safe)')
     parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
 
+    """
     parser_checksum = subparsers.add_parser('checksum', help='create an asset name from a base string')
     parser_checksum.add_argument('string', help='base string of the desired asset name')
+    """
 
     args = parser.parse_args()
 
@@ -459,20 +456,26 @@ if __name__ == '__main__':
     # Database
     db = util.connect_to_db()
 
-    # Logging (to file and stderr).
-    if args.verbose:
-        log_level = logging.DEBUG
-    else:
-        log_level = logging.INFO
-
-    logging.basicConfig(filename=config.LOG, level=log_level,
-                        format='%(asctime)s %(message)s',
-                        datefmt='%Y-%m-%d-T%H:%M:%S%z')
-    console = util.SanitizedStreamHandler() if os.name == 'nt' else logging.StreamHandler()
+    # Logging (to file and console).
+    logger = logging.getLogger() #get root logger
+    logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
+    #Console logging
+    console = logging.StreamHandler()
     console.setLevel(logging.DEBUG if args.verbose else logging.INFO)
     formatter = logging.Formatter('%(message)s')
     console.setFormatter(formatter)
-    logging.getLogger('').addHandler(console)
+    logger.addHandler(console)
+    #File logging (rotated)
+    max_log_size = 2 * 1024 * 1024 #max log size of 2 MB before rotation (make configurable later)
+    if os.name == 'nt':
+        fileh = util_windows.SanitizedRotatingFileHandler(config.LOG, maxBytes=max_log_size, backupCount=5)
+    else:
+        fileh = logging.handlers.RotatingFileHandler(config.LOG, maxBytes=max_log_size, backupCount=5)
+    fileh.setLevel(logging.DEBUG if args.verbose else logging.INFO)
+    formatter = logging.Formatter('%(asctime)s %(message)s', '%Y-%m-%d-T%H:%M:%S%z')
+    fileh.setFormatter(formatter)
+    logger.addHandler(fileh)
+    #API requests logging (don't show on console in normal operation)
     requests_log = logging.getLogger("requests")
     requests_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
 
@@ -591,9 +594,7 @@ if __name__ == '__main__':
     elif args.action == 'asset':
         # TODO: Use API
         if args.asset == 'XCP':
-            burns = util.get_burns(db, validity='Valid', address=None)
-            total = sum([burn['earned'] for burn in burns])
-            total = util.devise(db, total, args.asset, 'output')
+            total = util.devise(db, util.xcp_supply(db), args.asset, 'output')
             divisible = True
             issuer = None
             callable_ = None
@@ -620,8 +621,6 @@ if __name__ == '__main__':
             description = issuances[-1]['description']
 
         asset_id = util.get_asset_id(args.asset)
-        if os.name == 'nt': description = windows(description)
-
         print('Asset Name:', args.asset)
         print('Asset ID:', asset_id)
         print('Total Issued:', total)
@@ -637,6 +636,7 @@ if __name__ == '__main__':
         totals = {}
 
         print()
+        # TODO: This should be burns minus issuance fees (so it won’t depend on escrowed funds).
         for group in bitcoin.rpc('listaddressgroupings', []):
             for bunch in group:
                 address, btc_balance = bunch[:2]
@@ -675,10 +675,10 @@ if __name__ == '__main__':
         blocks.reparse(db)
 
     elif args.action == 'rollback':
-        blocks.rollback(db, args.block_index)
+        blocks.reparse(db, block_index=args.block_index)
 
-    elif args.action == 'checksum':
-        print('Asset name:', args.string + checksum.compute(args.string))
+    # elif args.action == 'checksum':
+        # print('Asset name:', args.string + checksum.compute(args.string))
 
     elif args.action == 'server':
         api_server = api.APIServer()

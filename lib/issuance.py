@@ -21,7 +21,11 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
         problems.append('cannot issue BTC or XCP')
 
     # Valid re-issuance?
-    issuances = util.get_issuances(db, validity='Valid', asset=asset)
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM issuances \
+                      WHERE (validity = ? AND asset = ?)''', ('Valid', asset))
+    issuances = cursor.fetchall()
+    cursor.close()
     if issuances:
         last_issuance = issuances[-1]
         if last_issuance['issuer'] != source:
@@ -35,7 +39,11 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
     elif not amount:
         problems.append('cannot lock or transfer an unissued asset')
 
-    balances = util.get_balances(db, address=source, asset='XCP')
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM balances \
+                      WHERE (address = ? AND asset = ?)''', (source, 'XCP'))
+    balances = cursor.fetchall()
+    cursor.close()
     if (block_index and block_index > 281236) and (not balances or balances[0]['amount'] < config.ISSUANCE_FEE):
         problems.append('insufficient funds')
 
@@ -112,7 +120,7 @@ def parse (db, tx, message):
             util.credit(db, tx['block_index'], tx['source'], asset, amount, divisible=divisible)
 
     # Add parsed transaction to message-type–specific table.
-    element_data = {
+    bindings= {
         'tx_index': tx['tx_index'],
         'tx_hash': tx['tx_hash'],
         'block_index': tx['block_index'],
@@ -128,7 +136,8 @@ def parse (db, tx, message):
         'fee_paid': fee_paid,
         'validity': validity,
     }
-    issuance_parse_cursor.execute(*util.get_insert_sql('issuances', element_data))
+    sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :amount, :divisible, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :validity)'
+    issuance_parse_cursor.execute(sql, bindings)
 
 
     if validity == 'Valid':

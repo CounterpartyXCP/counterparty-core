@@ -75,7 +75,8 @@ def parse (db, tx, message):
             cursor.execute('''UPDATE orders \
                                            SET validity=? \
                                            WHERE tx_hash=?''', ('Invalid: cancelled', order['tx_hash']))
-            util.credit(db, tx['block_index'], tx['source'], order['give_asset'], order['give_remaining'])
+            if order['give_asset'] != 'BTC':
+                util.credit(db, tx['block_index'], tx['source'], order['give_asset'], order['give_remaining'])
         # Cancel if bet.
         elif bets:
             bet = bets[0]
@@ -83,7 +84,7 @@ def parse (db, tx, message):
                                            SET validity=? \
                                            WHERE tx_hash=?''', ('Invalid: cancelled', bet['tx_hash']))
             util.credit(db, tx['block_index'], tx['source'], 'XCP', bet['wager_remaining'])
-            util.credit(db, tx['block_index'], tx['source'], 'XCP', bet['fee'])
+            util.credit(db, tx['block_index'], tx['source'], 'XCP', round(bet['wager_amount'] * bet['fee_multiplier'] / 1e8))
         # If neither order or bet, mark as invalid.
         else:
             validity = 'Invalid: no valid offer with that hash from that address'
@@ -92,7 +93,7 @@ def parse (db, tx, message):
         logging.info('Cancel: {} ({})'.format(offer_hash, tx['tx_hash']))
 
     # Add parsed transaction to message-type–specific table.
-    element_data = {
+    bindings = {
         'tx_index': tx['tx_index'],
         'tx_hash': tx['tx_hash'],
         'block_index': tx['block_index'],
@@ -100,7 +101,8 @@ def parse (db, tx, message):
         'offer_hash': offer_hash,
         'validity': validity,
     }
-    cursor.execute(*util.get_insert_sql('cancels', element_data))
+    sql='insert into cancels values(:tx_index, :tx_hash, :block_index, :source, :offer_hash, :validity)'
+    cursor.execute(sql, bindings)
 
 
     cursor.close()

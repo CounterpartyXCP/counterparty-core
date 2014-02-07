@@ -90,7 +90,7 @@ def parse (db, tx, message):
             util.credit(db, tx['block_index'], address, 'XCP', amount)
 
     # Add parsed transaction to message-type–specific table.
-    element_data = {
+    bindings = {
         'tx_index': tx['tx_index'],
         'tx_hash': tx['tx_hash'],
         'block_index': tx['block_index'],
@@ -99,8 +99,8 @@ def parse (db, tx, message):
         'amount_per_share': amount_per_share,
         'validity': validity,
     }
-    dividend_parse_cursor.execute(*util.get_insert_sql('dividends', element_data))
-
+    sql='insert into dividends values(:tx_index, :tx_hash, :block_index, :source, :asset, :amount_per_share, :validity)'
+    dividend_parse_cursor.execute(sql, bindings)
 
     if validity == 'Valid':
         logging.info('Dividend: {} paid {} per share of asset {} ({})'.format(tx['source'], util.devise(db, amount_per_share, 'XCP', 'output'), asset, tx['tx_hash']))

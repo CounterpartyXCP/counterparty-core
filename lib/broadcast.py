@@ -105,7 +105,7 @@ def parse (db, tx, message):
             logging.info('Broadcast: {}'.format(infix + suffix))
 
     # Add parsed transaction to message-type–specific table.
-    element_data = {
+    bindings = {
         'tx_index': tx['tx_index'],
         'tx_hash': tx['tx_hash'],
         'block_index': tx['block_index'],
@@ -116,7 +116,8 @@ def parse (db, tx, message):
         'text': text,
         'validity': validity,
     }
-    broadcast_parse_cursor.execute(*util.get_insert_sql('broadcasts', element_data))
+    sql='insert into broadcasts values(:tx_index, :tx_hash, :block_index, :source, :timestamp, :value, :fee_multiplier, :text, :validity)'
+    broadcast_parse_cursor.execute(sql, bindings)
 
 
     # Null values are special.

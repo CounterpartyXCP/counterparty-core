@@ -5,13 +5,11 @@ import decimal
 D = decimal.Decimal
 import sys
 import logging
-import copy
-import unicodedata
 import operator
 from operator import itemgetter
 import apsw
 
-from . import (config, exceptions, bitcoin, checksum)
+from . import (config, exceptions, bitcoin)
 
 b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
@@ -26,23 +24,7 @@ DO_FILTER_OPERATORS = {
     '<=': operator.le,
     '>=': operator.ge,
 }
-
-class SanitizedStreamHandler(logging.StreamHandler):
-    """cleans up stdout data for window's cmd.exe (which has broken unicode support out of the box)"""
-    def emit(self, record):
-        # If the message doesn't need to be rendered we take a shortcut.
-        if record.levelno < self.level:
-            return
-        # Make sure the message is a string.
-        message = record.msg
-        #Sanitize and clean up the message
-        message = unicodedata.normalize('NFKD', message).encode('ascii', 'ignore').decode()
-        # Copy the original record so we don't break other handlers.
-        record = copy.copy(record)
-        record.msg = message
-        # Use the built-in stream handler to handle output.
-        logging.StreamHandler.emit(self, record)
-
+        
 def rowtracer(cursor, sql):
     """Converts fetched SQL data into dict-style"""
     dictionary = {}
@@ -50,18 +32,20 @@ def rowtracer(cursor, sql):
         dictionary[name] = sql[index]
     return dictionary
 
+def exectracer(cursor, sql, bindings):
+    # if 'INSERT' in sql or 'UPDATE' in sql:
+    #     print(sql, bindings)
+    return True
+
 def connect_to_db():
     """Connects to the SQLite database, returning a db Connection object"""
     db = apsw.Connection(config.DATABASE)
+    cursor = db.cursor()
+    cursor.execute('''PRAGMA count_changes = OFF''')
+    cursor.close()
     db.setrowtrace(rowtracer)
+    db.setexectrace(exectracer)
     return db
-
-def get_insert_sql(table_name, element_data):
-    """Takes a mapping of element data and a table name, and produces an INSERT statement suitable for a sqlite3 cursor.execute() operation"""
-    #NOTE: keys() and values() return in the same order if dict is not modified: http://docs.python.org/3/library/stdtypes.html#dict.items
-    k, v = (element_data.keys(), element_data.values())
-    return [ "INSERT INTO %s(%s) VALUES(%s)" % (
-        table_name, ','.join(k), ','.join(['?' for i in range(len(v))])), v ]
 
 def bitcoind_check (db):
     """Checks blocktime of last block to see if Bitcoind is running behind."""
@@ -75,7 +59,7 @@ def bitcoind_check (db):
 def database_check (db):
     """Checks Counterparty database to see if the counterpartyd server has caught up with Bitcoind."""
     cursor = db.cursor()
-    TRIES = 7
+    TRIES = 14
     for i in range(TRIES):
         block_index = last_block(db)['block_index']
         if block_index == bitcoin.rpc('getblockcount', []):
@@ -84,6 +68,7 @@ def database_check (db):
         time.sleep(1)
     raise exceptions.DatabaseError('Counterparty database is behind Bitcoind. Is the counterpartyd server running?')
 
+# TODO: Doesn’t use DB indexes at all!
 def do_filter(results, filters, filterop):
     """Filters results based on a filter data structure (as used by the API)"""
     if not len(results) or not filters: #empty results, or not filtering
@@ -165,6 +150,22 @@ def get_limit_to_blocks(start_block, end_block, col_names=['block_index',]):
 def isodt (epoch_time):
     return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
 
+def xcp_supply (db):
+    cursor = db.cursor()
+
+    # Add burns.
+    cursor.execute('''SELECT * FROM burns \
+                      WHERE validity = ?''', ('Valid',))
+    burn_total = sum([burn['earned'] for burn in cursor.fetchall()])
+
+    # Subtract issuance fees.
+    cursor.execute('''SELECT * FROM issuances\
+                      WHERE validity = ?''', ('Valid',))
+    fee_total = sum([issuance['fee_paid'] for issuance in cursor.fetchall()])
+
+    cursor.close()
+    return burn_total - fee_total
+
 def last_block (db):
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)''')
@@ -175,19 +176,6 @@ def last_block (db):
     cursor.close()
     return last_block
 
-def get_time_left (db, unmatched, block_index=None):
-    """order or bet"""
-    """zero time left means it expires *this* block; that is, expire when strictly less than 0"""
-    if not block_index: block_index = last_block(db)['block_index']
-    return unmatched['block_index'] + unmatched['expiration'] - block_index
-
-def get_match_time_left (db, matched, block_index=None):
-    """order_match or bet_match"""
-    if not block_index: block_index = last_block(db)['block_index']
-    tx0_time_left = matched['tx0_block_index'] + matched['tx0_expiration'] - block_index
-    tx1_time_left = matched['tx1_block_index'] + matched['tx1_expiration'] - block_index
-    return min(tx0_time_left, tx1_time_left)
-
 def get_asset_id (asset):
     # Special cases.
     if asset == 'BTC': return 0
@@ -196,10 +184,12 @@ def get_asset_id (asset):
     if asset[0] == 'A': raise exceptions.AssetNameError('starts with ‘A’')
 
     # Checksum
+    """
     if not checksum.verify(asset):
         raise exceptions.AssetNameError('invalid checksum')
     else:
         asset = asset[:-1]  # Strip checksum character.
+    """
 
     # Convert the Base 26 string to an integer.
     n = 0
@@ -230,7 +220,10 @@ def get_asset_name (asset_id):
         res.append(b26_digits[r])
     asset_name = ''.join(res[::-1])
 
+    """
     return asset_name + checksum.compute(asset_name)
+    """
+    return asset_name
 
 
 def debit (db, block_index, address, asset, amount):
@@ -240,7 +233,9 @@ def debit (db, block_index, address, asset, amount):
     if asset == 'BTC':
         raise exceptions.BalanceError('Cannot debit bitcoins from a Counterparty address!')
 
-    balances = get_balances(db, address=address, asset=asset)
+    debit_cursor.execute('''SELECT * FROM balances \
+                            WHERE (address = ? AND asset = ?)''', (address, asset))
+    balances = debit_cursor.fetchall()
     if not len(balances) == 1: old_balance = 0
     else: old_balance = balances[0]['amount']
 
@@ -256,13 +251,15 @@ def debit (db, block_index, address, asset, amount):
 
     # Record debit *only if valid*.
     logging.debug('Debit: {} {} from {}'.format(devise(db, amount, asset, 'output'), asset, address))
-    element_data = {
+    bindings = {
         'block_index': block_index,
         'address': address,
         'asset': asset,
         'amount': amount,
     }
-    debit_cursor.execute(*get_insert_sql('debits', element_data))
+    sql='insert into debits values(:block_index, :address, :asset, :amount)'
+    debit_cursor.execute(sql, bindings)
+
     debit_cursor.close()
 
 def credit (db, block_index, address, asset, amount, divisible=None):
@@ -270,17 +267,20 @@ def credit (db, block_index, address, asset, amount, divisible=None):
     assert asset != 'BTC' # Never BTC.
     assert type(amount) == int
 
-    balances = get_balances(db, address=address, asset=asset)
+    credit_cursor.execute('''SELECT * FROM balances \
+                             WHERE (address = ? AND asset = ?)''', (address, asset))
+    balances = credit_cursor.fetchall()
     if len(balances) == 0:
         assert balances == []
 
         #update balances table with new balance
-        element_data = {
+        bindings = {
             'address': address,
             'asset': asset,
             'amount': amount,
         }
-        credit_cursor.execute(*get_insert_sql('balances', element_data))
+        sql='insert into balances values(:address, :asset, :amount)'
+        credit_cursor.execute(sql, bindings)
     elif len(balances) > 1:
         raise Exception
     else:
@@ -294,24 +294,25 @@ def credit (db, block_index, address, asset, amount, divisible=None):
 
     # Record credit.
     logging.debug('Credit: {} {} to {}'.format(devise(db, amount, asset, 'output', divisible=divisible), asset, address))
-    element_data = {
+    bindings = {
         'block_index': block_index,
         'address': address,
         'asset': asset,
         'amount': amount
     }
-    credit_cursor.execute(*get_insert_sql('credits', element_data))
+    sql='insert into credits values(:block_index, :address, :asset, :amount)'
+    credit_cursor.execute(sql, bindings)
     credit_cursor.close()
 
 def devise (db, quantity, asset, dest, divisible=None):
-    FOUR = D(10) ** -4
+    SIX = D(10) ** -6
     EIGHT = D(10) ** -8
 
     quantity = D(quantity)
 
     if asset in ('leverage', 'price', 'odds', 'value'):
         if dest == 'output':
-            return quantity.quantize(FOUR)
+            return quantity.quantize(SIX)
         elif dest == 'input':
             # Hackish
             if asset == 'leverage':
@@ -320,13 +321,17 @@ def devise (db, quantity, asset, dest, divisible=None):
                 return float(quantity)
 
     if asset in ('fee_multiplier',):
-        return D(quantity / D(1e8)).quantize(FOUR)
+        return D(quantity / D(1e8)).quantize(SIX)
 
     if divisible == None:
         if asset in ('BTC', 'XCP'):
             divisible = True
         else:
-            issuances = get_issuances(db, validity='Valid', asset=asset)
+            cursor = db.cursor()
+            cursor.execute('''SELECT * FROM issuances \
+                              WHERE (validity = ? AND asset = ?)''', ('Valid', asset))
+            issuances = cursor.fetchall()
+            cursor.close()
             if not issuances: raise exceptions.AssetError('No such asset: {}'.format(asset))
             divisible = issuances[0]['divisible']
 
@@ -405,7 +410,7 @@ def get_orders (db, validity=None, source=None, show_empty=True, show_expired=Tr
     def filter_expired(e):
         #Ignore BTC orders one block early. (This is why we need show_expired.)
         #function returns True if the element is NOT expired
-        time_left = get_time_left(db, e)
+        time_left = e['expire_index'] - last_block(db)['block_index']
         if e['give_asset'] == 'BTC': time_left -= 1
         return False if time_left < 0 else True
 
@@ -565,5 +570,5 @@ def get_address (db, address):
     address_dict['bet_matches'] = get_bet_matches(db, validity='Valid', address=address, order_by='tx0_block_index', order_dir='asc')
     address_dict['dividends'] = get_dividends(db, validity='Valid', source=address, order_by='block_index', order_dir='asc')
     return address_dict
-
+    
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

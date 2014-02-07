@@ -2,7 +2,7 @@ env
 *.pyc
 docs/_build/*
 
-test/counterparty.test.db
+test/counterpartyd.unittest.db
 test/db.new.dump
 test/log.new
 test/output.new.json

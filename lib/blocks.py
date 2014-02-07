@@ -11,14 +11,11 @@ import struct
 import decimal
 D = decimal.Decimal
 import logging
-import heapq
 
 from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 
-def parse_tx (db, tx, heaps):
-    order_heap, order_match_heap, bet_heap, bet_match_heap = heaps
-
+def parse_tx (db, tx):
     parse_tx_cursor = db.cursor()
     # Burns.
     if tx['destination'] == config.UNSPENDABLE:
@@ -35,7 +32,7 @@ def parse_tx (db, tx, heaps):
     if message_type_id == send.ID:
         send.parse(db, tx, message)
     elif message_type_id == order.ID:
-        order.parse(db, tx, message, order_heap, order_match_heap)
+        order.parse(db, tx, message)
     elif message_type_id == btcpay.ID:
         btcpay.parse(db, tx, message)
     elif message_type_id == issuance.ID:
@@ -43,7 +40,7 @@ def parse_tx (db, tx, heaps):
     elif message_type_id == broadcast.ID:
         broadcast.parse(db, tx, message)
     elif message_type_id == bet.ID:
-        bet.parse(db, tx, message, bet_heap, bet_match_heap)
+        bet.parse(db, tx, message)
     elif message_type_id == dividend.ID:
         dividend.parse(db, tx, message)
     elif message_type_id == cancel.ID:
@@ -60,7 +57,7 @@ def parse_tx (db, tx, heaps):
 
     parse_tx_cursor.close()
 
-def parse_block (db, block_index, block_time, heaps):
+def parse_block (db, block_index, block_time):
     """This is a separate function from follow() so that changing the parsing
     rules doesn't require a full database rebuild. If parsing rules are changed
     (but not data identification), then just restart `counterparty.py follow`.
@@ -69,9 +66,8 @@ def parse_block (db, block_index, block_time, heaps):
     parse_block_cursor = db.cursor()
 
     # Expire orders and bets.
-    order_heap, order_match_heap, bet_heap, bet_match_heap = heaps
-    order.expire(db, block_index, order_heap, order_match_heap)
-    bet.expire(db, block_index, block_time, bet_heap, bet_match_heap)
+    order.expire(db, block_index)
+    bet.expire(db, block_index, block_time)
 
     # Parse transactions, sorting them by type.
     parse_block_cursor.execute('''SELECT * FROM transactions \
@@ -79,7 +75,7 @@ def parse_block (db, block_index, block_time, heaps):
                                (block_index,))
     transactions = parse_block_cursor.fetchall()
     for tx in transactions:
-        parse_tx(db, tx, heaps)
+        parse_tx(db, tx)
 
     parse_block_cursor.close()
 
@@ -120,7 +116,7 @@ def initialise(db):
     initialise_cursor.execute('''DELETE FROM blocks WHERE block_index<?''', (config.BLOCK_FIRST,))
     initialise_cursor.execute('''DELETE FROM transactions WHERE block_index<?''', (config.BLOCK_FIRST,))
 
-    # NOTE: Only valid debits listed
+    # (Valid) debits
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS debits(
                         block_index INTEGER,
                         address TEXT,
@@ -131,7 +127,7 @@ def initialise(db):
                         debits_address_idx ON debits (address)
                     ''')
 
-    # NOTE: Only valid credits listed
+    # (Valid) credits
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS credits(
                         block_index INTEGER,
                         address TEXT,
@@ -142,14 +138,18 @@ def initialise(db):
                         credits_address_idx ON credits (address)
                     ''')
 
+    # Balances
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS balances(
-                        address TEXT,
-                        asset TEXT,
-                        amount INTEGER)
-                   ''')
+                                 address TEXT,
+                                 asset TEXT,
+                                 amount INTEGER)
+                              ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        balances_address_idx ON balances (address)
-                    ''')
+                                 address_idx ON balances (address)
+                              ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                                 asset_idx ON balances (asset)
+                              ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS sends(
                         tx_index INTEGER PRIMARY KEY,
@@ -165,46 +165,55 @@ def initialise(db):
                         sends_block_index_idx ON sends (block_index)
                     ''')
 
+    # Orders
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS orders(
-                        tx_index INTEGER PRIMARY KEY,
-                        tx_hash TEXT UNIQUE,
-                        block_index INTEGER,
-                        source TEXT,
-                        give_asset TEXT,
-                        give_amount INTEGER,
-                        give_remaining INTEGER,
-                        get_asset TEXT,
-                        get_amount INTEGER,
-                        get_remaining INTEGER,
-                        expiration INTEGER,
-                        fee_required INTEGER,
-                        fee_provided INTEGER,
-                        validity TEXT)
-                   ''')
+                                 tx_index INTEGER PRIMARY KEY,
+                                 tx_hash TEXT UNIQUE,
+                                 block_index INTEGER,
+                                 source TEXT,
+                                 give_asset TEXT,
+                                 give_amount INTEGER,
+                                 give_remaining INTEGER,
+                                 get_asset TEXT,
+                                 get_amount INTEGER,
+                                 get_remaining INTEGER,
+                                 expiration INTEGER,
+                                 expire_index INTEGER,
+                                 fee_required INTEGER,
+                                 fee_provided INTEGER,
+                                 validity TEXT)
+                              ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        orders_block_index_idx ON orders (block_index)
-                    ''')
+                                 block_index_idx ON orders (block_index)
+                              ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                                 expire_index_idx ON orders (expire_index)
+                              ''')
 
+    # Order Matches
+    # TODO: id field is largely unused.
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS order_matches(
-                        tx0_index INTEGER,
-                        tx0_hash TEXT,
-                        tx0_address TEXT,
-                        tx1_index INTEGER,
-                        tx1_hash TEXT,
-                        tx1_address TEXT,
-                        forward_asset INTEGER,
-                        forward_amount INTEGER,
-                        backward_asset INTEGER,
-                        backward_amount INTEGER,
-                        tx0_block_index INTEGER,
-                        tx1_block_index INTEGER,
-                        tx0_expiration INTEGER,
-                        tx1_expiration INTEGER,
-                        validity TEXT)
-                   ''')
+                                 id TEXT PRIMARY KEY,
+                                 tx0_index INTEGER,
+                                 tx0_hash TEXT,
+                                 tx0_address TEXT,
+                                 tx1_index INTEGER,
+                                 tx1_hash TEXT,
+                                 tx1_address TEXT,
+                                 forward_asset TEXT,
+                                 forward_amount INTEGER,
+                                 backward_asset TEXT,
+                                 backward_amount INTEGER,
+                                 tx0_block_index INTEGER,
+                                 tx1_block_index INTEGER,
+                                 tx0_expiration INTEGER,
+                                 tx1_expiration INTEGER,
+                                 match_expire_index INTEGER,
+                                 validity TEXT)
+                              ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        order_matches_block_index_idx ON order_matches (tx0_block_index, tx1_block_index)
-                    ''')
+                                 match_expire_index_idx ON order_matches (match_expire_index)
+                              ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS btcpays(
                         tx_index INTEGER PRIMARY KEY,
@@ -254,54 +263,63 @@ def initialise(db):
                         broadcasts_block_index_idx ON broadcasts (block_index)
                     ''')
 
+    # Bets.
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS bets(
-                        tx_index INTEGER PRIMARY KEY,
-                        tx_hash TEXT UNIQUE,
-                        block_index INTEGER,
-                        source TEXT,
-                        feed_address TEXT,
-                        bet_type INTEGER,
-                        deadline INTEGER,
-                        wager_amount INTEGER,
-                        wager_remaining INTEGER,
-                        counterwager_amount INTEGER,
-                        counterwager_remaining INTEGER,
-                        target_value REAL,
-                        leverage INTEGER,
-                        expiration INTEGER,
-                        fee_multiplier INTEGER,
-                        validity TEXT)
-                   ''')
+                                 tx_index INTEGER PRIMARY KEY,
+                                 tx_hash TEXT UNIQUE,
+                                 block_index INTEGER,
+                                 source TEXT,
+                                 feed_address TEXT,
+                                 bet_type INTEGER,
+                                 deadline INTEGER,
+                                 wager_amount INTEGER,
+                                 wager_remaining INTEGER,
+                                 counterwager_amount INTEGER,
+                                 counterwager_remaining INTEGER,
+                                 target_value REAL,
+                                 leverage INTEGER,
+                                 expiration INTEGER,
+                                 expire_index INTEGER,
+                                 fee_multiplier INTEGER,
+                                 validity TEXT)
+                              ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        bets_block_index_idx ON bets (block_index)
-                    ''')
+                                 block_index_idx ON bets (block_index)
+                              ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                                 expire_index_idx ON bets (expire_index)
+                              ''')
 
+    # Bet Matches
+    # TODO: id field is largely unused.
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS bet_matches(
-                        tx0_index INTEGER,
-                        tx0_hash TEXT,
-                        tx0_address TEXT,
-                        tx1_index INTEGER,
-                        tx1_hash TEXT,
-                        tx1_address TEXT,
-                        tx0_bet_type INTEGER,
-                        tx1_bet_type INTEGER,
-                        feed_address TEXT,
-                        initial_value INTEGER,
-                        deadline INTEGER,
-                        target_value REAL,
-                        leverage INTEGER,
-                        forward_amount INTEGER,
-                        backward_amount INTEGER,
-                        tx0_block_index INTEGER,
-                        tx1_block_index INTEGER,
-                        tx0_expiration INTEGER,
-                        tx1_expiration INTEGER,
-                        fee_multiplier INTEGER,
-                        validity TEXT)
-                   ''')
+                                 id TEXT PRIMARY KEY,
+                                 tx0_index INTEGER,
+                                 tx0_hash TEXT,
+                                 tx0_address TEXT,
+                                 tx1_index INTEGER,
+                                 tx1_hash TEXT,
+                                 tx1_address TEXT,
+                                 tx0_bet_type INTEGER,
+                                 tx1_bet_type INTEGER,
+                                 feed_address TEXT,
+                                 initial_value INTEGER,
+                                 deadline INTEGER,
+                                 target_value REAL,
+                                 leverage INTEGER,
+                                 forward_amount INTEGER,
+                                 backward_amount INTEGER,
+                                 tx0_block_index INTEGER,
+                                 tx1_block_index INTEGER,
+                                 tx0_expiration INTEGER,
+                                 tx1_expiration INTEGER,
+                                 match_expire_index INTEGER,
+                                 fee_multiplier INTEGER,
+                                 validity TEXT)
+                              ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        bet_matches_block_index_idx ON bet_matches (tx0_block_index, tx1_block_index)
-                    ''')
+                                 match_expire_index_idx ON bet_matches (match_expire_index)
+                              ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS dividends(
                         tx_index INTEGER PRIMARY KEY,
@@ -326,8 +344,11 @@ def initialise(db):
                         validity TEXT)
                    ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        burns_block_index_idx ON burns (block_index)
-                    ''')
+                                 validity_idx ON burns (validity)
+                              ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                                 address_idx ON burns (address)
+                              ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS cancels(
                         tx_index INTEGER PRIMARY KEY,
@@ -337,24 +358,61 @@ def initialise(db):
                         offer_hash TEXT,
                         validity TEXT)
                    ''')
-
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
                         cancels_block_index_idx ON cancels (block_index)
                     ''')
 
+    # Callbacks
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS callbacks(
-                        tx_index INTEGER PRIMARY KEY,
-                        tx_hash TEXT UNIQUE,
-                        block_index INTEGER,
-                        source TEXT,
-                        fraction_per_share TEXT,
-                        asset TEXT,
-                        validity TEXT)
-                   ''')
-
+                                 tx_index INTEGER PRIMARY KEY,
+                                 tx_hash TEXT UNIQUE,
+                                 block_index INTEGER,
+                                 source TEXT,
+                                 fraction_per_share TEXT,
+                                 asset TEXT,
+                                 validity TEXT)
+                              ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        callbacks_block_index_idx ON callbacks (block_index)
-                    ''')
+                                 block_index_idx ON callbacks (block_index)
+                              ''')
+
+    # Order Expirations
+    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS order_expirations(
+                                 order_index INTEGER PRIMARY KEY,
+                                 order_hash TEXT UNIQUE,
+                                 block_index INTEGER)
+                              ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                                 block_index_idx ON order_expirations (block_index)
+                              ''')
+
+    # Bet Expirations
+    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS bet_expirations(
+                                 bet_index INTEGER PRIMARY KEY,
+                                 bet_hash TEXT UNIQUE,
+                                 block_index INTEGER)
+                              ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                                 block_index_idx ON bet_expirations (block_index)
+                              ''')
+
+    # Order Match Expirations
+    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS order_match_expirations(
+                                 order_match_id TEXT PRIMARY KEY,
+                                 block_index INTEGER)
+                              ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                                 block_index_idx ON order_match_expirations (block_index)
+                              ''')
+
+    # Bet Match Expirations
+    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS bet_match_expirations(
+                                 bet_match_id TEXT PRIMARY KEY,
+                                 block_index INTEGER)
+                              ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                                 block_index_idx ON bet_match_expirations (block_index)
+                              ''')
 
     initialise_cursor.close()
 
@@ -372,13 +430,13 @@ def get_tx_info (tx):
     for vout in tx['vout']:
         fee -= D(vout['value']) * config.UNIT
 
-        # Sum data chunks to get data. (Can mix OP_RETURN and multi‐sig.)
+        # Sum data chunks to get data. (Can mix OP_RETURN and multi-sig.)
         asm = vout['scriptPubKey']['asm'].split(' ')
         if len(asm) == 2 and asm[0] == 'OP_RETURN':                                                 # OP_RETURN
             try: data_chunk = binascii.unhexlify(bytes(asm[1], 'utf-8'))
             except binascii.Error: continue
             data += data_chunk
-        elif len(asm) >= 5 and asm[0] == '1' and asm[3] == '2' and asm[4] == 'OP_CHECKMULTISIG':    # Multi‐sig
+        elif len(asm) >= 5 and asm[0] == '1' and asm[3] == '2' and asm[4] == 'OP_CHECKMULTISIG':    # Multi-sig
             try: data_pubkey = binascii.unhexlify(bytes(asm[2], 'utf-8'))
             except binascii.Error: continue
             data_chunk_length = data_pubkey[0]  # No ord() necessary.
@@ -422,99 +480,62 @@ def get_tx_info (tx):
 
     return source, destination, btc_amount, round(fee), data
 
-def reparse (db, quiet=False):
-    """Reparse all transactions (atomically).
+def reparse (db, block_index=None, quiet=False):
+    """Reparse all transactions (atomically). If block_index is set, rollback
+    to the end of that block.
     """
-    # TODO: This is not thread‐safe!
+    # TODO: This is not thread-safe!
     logging.warning('Status: Reparsing all transactions.')
-    reparse_cursor = db.cursor()
+    cursor = db.cursor()
+
+    # For rollbacks, just delete new blocks and then reparse what’s left.
+    if block_index:
+        cursor.execute('''DELETE FROM blocks WHERE block_index > ?''', (block_index,))
+        cursor.execute('''DELETE FROM transactions WHERE block_index > ?''', (block_index,))
 
     with db:
         # Delete all of the results of parsing.
-        reparse_cursor.execute('''DROP TABLE IF EXISTS debits''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS credits''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS balances''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS sends''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS orders''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS order_matches''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS btcpays''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS issuances''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS broadcasts''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS bets''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS bet_matches''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS dividends''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS burns''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS cancels''')
-        reparse_cursor.execute('''DROP TABLE IF EXISTS callbacks''')
+        cursor.execute('''DROP TABLE IF EXISTS debits''')
+        cursor.execute('''DROP TABLE IF EXISTS credits''')
+        cursor.execute('''DROP TABLE IF EXISTS balances''')
+        cursor.execute('''DROP TABLE IF EXISTS sends''')
+        cursor.execute('''DROP TABLE IF EXISTS orders''')
+        cursor.execute('''DROP TABLE IF EXISTS order_matches''')
+        cursor.execute('''DROP TABLE IF EXISTS btcpays''')
+        cursor.execute('''DROP TABLE IF EXISTS issuances''')
+        cursor.execute('''DROP TABLE IF EXISTS broadcasts''')
+        cursor.execute('''DROP TABLE IF EXISTS bets''')
+        cursor.execute('''DROP TABLE IF EXISTS bet_matches''')
+        cursor.execute('''DROP TABLE IF EXISTS dividends''')
+        cursor.execute('''DROP TABLE IF EXISTS burns''')
+        cursor.execute('''DROP TABLE IF EXISTS cancels''')
+        cursor.execute('''DROP TABLE IF EXISTS callbacks''')
+        cursor.execute('''DROP TABLE IF EXISTS order_expirations''')
+        cursor.execute('''DROP TABLE IF EXISTS bet_expirations''')
+        cursor.execute('''DROP TABLE IF EXISTS order_match_expirations''')
+        cursor.execute('''DROP TABLE IF EXISTS bet_match_expirations''')
 
         # Reparse all blocks, transactions.
         if quiet:
             log = logging.getLogger('')
             log.setLevel(logging.WARNING)
         initialise(db)
-        heaps = init_heaps(db)
-        reparse_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
-        for block in reparse_cursor.fetchall():
-            logging.info('Block (re‐parse): {}'.format(str(block['block_index'])))
-            parse_block(db, block['block_index'], block['block_time'], heaps)
+        cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
+        for block in cursor.fetchall():
+            logging.info('Block (re-parse): {}'.format(str(block['block_index'])))
+            parse_block(db, block['block_index'], block['block_time'])
         if quiet:
             log.setLevel(logging.INFO)
 
-    reparse_cursor.close()
-    return
+        # Update minor version number.
+        minor_version = cursor.execute('PRAGMA user_version = {}'.format(int(config.DB_VERSION_MINOR))) # Syntax?!
+        logging.info('Status: Database minor version number updated.')
 
-def rollback (db, block_index):
-    """Rollback database to state at end of block number block_index (atomically).
-    """
-
-    # TODO: This is not thread‐safe!
-    logging.warning('Status: Rolling back database to block {}.'.format(block_index))
-    rollback_cursor = db.cursor()
-
-    with db:
-        # Delete everything execpt for balances after block_index.
-        logging.warning('Status: Deleting new blocks.')
-        rollback_cursor.execute('''DELETE FROM blocks WHERE block_index > {}'''.format(block_index))
-        rollback_cursor.execute('''DELETE FROM transactions WHERE block_index > {}'''.format(block_index))
-        rollback_cursor.execute('''DELETE FROM debits WHERE block_index > {}'''.format(block_index))
-        rollback_cursor.execute('''DELETE FROM credits WHERE block_index > {}'''.format(block_index))
-        rollback_cursor.execute('''DELETE FROM sends WHERE block_index > {}'''.format(block_index))
-        rollback_cursor.execute('''DELETE FROM orders WHERE block_index > {}'''.format(block_index))
-        rollback_cursor.execute('''DELETE FROM order_matches WHERE tx1_block_index > {}'''.format(block_index))
-        rollback_cursor.execute('''DELETE FROM btcpays WHERE block_index > {}'''.format(block_index))
-        rollback_cursor.execute('''DELETE FROM issuances WHERE block_index > {}'''.format(block_index))
-        rollback_cursor.execute('''DELETE FROM broadcasts WHERE block_index > {}'''.format(block_index))
-        rollback_cursor.execute('''DELETE FROM bets WHERE block_index > {}'''.format(block_index))
-        rollback_cursor.execute('''DELETE FROM bet_matches WHERE tx1_block_index > {}'''.format(block_index))
-        rollback_cursor.execute('''DELETE FROM dividends WHERE block_index > {}'''.format(block_index))
-        rollback_cursor.execute('''DELETE FROM burns WHERE block_index > {}'''.format(block_index))
-        rollback_cursor.execute('''DELETE FROM cancels WHERE block_index > {}'''.format(block_index))
-        rollback_cursor.execute('''DELETE FROM callbacks WHERE block_index > {}'''.format(block_index))
-
-        # Re‐initialise heaps.
-        heaps = init_heaps(db)
-
-        # Re‐calculate every balance by summing historical credits, debits.
-        rollback_cursor.execute('''SELECT * FROM balances''')
-        for balance in rollback_cursor.fetchall():
-            logging.debug('Status: Re‐calculating balance of {} in {}.'.format(balance['address'], balance['asset']))
-            new_amount = 0
-            credits = util.get_credits(db, address=balance['address'], asset=balance['asset'], end_block=(block_index-1))
-            for credit in credits: new_amount += credit['amount']
-            debits = util.get_debits(db, address=balance['address'], asset=balance['asset'], end_block=(block_index-1))
-            for debit in debits: new_amount -= debit['amount']
-            rollback_cursor.execute('''UPDATE balances
-                                       SET amount=? \
-                                       WHERE (address=? and asset=?)''',
-                                 (new_amount, balance['address'], balance['asset']))
-
-        # TODO: Unexpire expired things.
-
-    rollback_cursor.close()
+    cursor.close()
     return
 
 def reorg (db):
-    # Detect blockchain reorganisation of up to 10 blocks.
+    # Detect blockchain reorganisation up to 10 blocks length.
     reorg_cursor = db.cursor()
     reorg_cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)''')
     last_block_index = util.last_block(db)['block_index']
@@ -530,46 +551,26 @@ def reorg (db):
 
     if not reorg_necessary: return last_block_index + 1
 
-    # TODO: Incomplete and untested.
-    # # Rollback the DB.
-    # rollback(db, block_index - 1)
-    # TODO: Temporary—should be a rollback.
-    reorg_cursor.execute('''DELETE FROM blocks WHERE block_index > {}'''.format(block_index - 1))
-    reorg_cursor.execute('''DELETE FROM transactions WHERE block_index > {}'''.format(block_index - 1))
-    reparse(db, quiet=True)
+    # Rollback the DB.
+    reparse(db, block_index=block_index-1, quiet=True)
 
     reorg_cursor.close()
     return block_index
 
-def init_heaps (db):
-    cursor = db.cursor()
-
-    cursor.execute('''SELECT * FROM orders WHERE validity = ?''', ('Valid',))
-    order_heap = [(order['block_index'] + order['expiration'], order['tx_index']) for order in cursor.fetchall()]
-    heapq.heapify(order_heap)
-
-    cursor.execute('''SELECT * FROM order_matches WHERE validity = ?''', ('Valid',))
-    order_match_heap = [(min(order_match['tx0_block_index'] + order_match['tx0_expiration'], order_match['tx1_block_index'] + order_match['tx1_expiration']), order_match['tx0_index'], order_match['tx1_index']) for order_match in cursor.fetchall()]
-    heapq.heapify(order_match_heap)
-
-    cursor.execute('''SELECT * FROM bets WHERE validity = ?''', ('Valid',))
-    bet_heap = [(bet['block_index'] + bet['expiration'], bet['tx_index']) for bet in cursor.fetchall()]
-    heapq.heapify(bet_heap)
-
-    cursor.execute('''SELECT * FROM bet_matches WHERE validity = ?''', ('Valid',))
-    bet_match_heap = [(bet_match['deadline'], bet_match['tx0_index'], bet_match['tx1_index']) for bet_match in cursor.fetchall()]
-    heapq.heapify(bet_match_heap)
-
-    return (order_heap, order_match_heap, bet_heap, bet_match_heap)
-    cursor.close()
-
 def follow (db):
-    # TODO: This is not thread‐safe!
+    # TODO: This is not thread-safe!
     follow_cursor = db.cursor()
 
     logging.info('Status: RESTART')
+
+    # Reparse all transactions if minor version changes.
+    minor_version = follow_cursor.execute('PRAGMA user_version').fetchall()[0]['user_version']
+    if minor_version != config.DB_VERSION_MINOR:
+        logging.info('Status: Database and client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.DB_VERSION_MINOR))
+        reparse(db, quiet=False)
+
+    # Initialise.
     initialise(db)
-    heaps = init_heaps(db)
 
     while True:
         # Get index of last block.
@@ -582,15 +583,6 @@ def follow (db):
             #in the case of this, send out an initialize message to our zmq feed, any attached services
             # (such as counterwalletd) can then get this and clear our their data as well, so they don't get
             # duplicated data in the event of a new DB version
-
-        # Reparse all transactions if minor version changes.
-        if block_index != config.BLOCK_FIRST:
-            minor_version = follow_cursor.execute('PRAGMA user_version').fetchall()[0]['user_version']
-            if minor_version != config.DB_VERSION_MINOR:
-                logging.info('Status: Database and client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.DB_VERSION_MINOR))
-                reparse(db, quiet=False)
-                minor_version = follow_cursor.execute('PRAGMA user_version = {}'.format(int(config.DB_VERSION_MINOR)))
-                logging.info('Status: Database minor version number updated.')
 
         # Get index of last transaction.
         try:
@@ -656,7 +648,7 @@ def follow (db):
                         tx_index += 1
 
                 # Parse the transactions in the block.
-                parse_block(db, block_index, block_time, heaps)
+                parse_block(db, block_index, block_time)
 
             # Increment block index.
             block_count = bitcoin.rpc('getblockcount', [])

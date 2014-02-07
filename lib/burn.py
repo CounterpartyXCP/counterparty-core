@@ -57,7 +57,9 @@ def parse (db, tx, message=None):
 
     if validity == 'Valid':
         # Calculate quantity of XPC earned. (Maximum 1 BTC in total, ever.)
-        burns = util.get_burns(db, validity='Valid', address=tx['source'])
+        cursor = db.cursor()
+        cursor.execute('''SELECT * FROM burns WHERE (validity = ? AND address = ?)''', ('Valid', tx['source']))
+        burns = cursor.fetchall()
         already_burned = sum([burn['burned'] for burn in burns])
         ONE_BTC = 1 * config.UNIT
         max_burn = ONE_BTC - already_burned
@@ -84,7 +86,7 @@ def parse (db, tx, message=None):
 
     # Add parsed transaction to message-type–specific table.
     # TODO: store sent in table
-    element_data = {
+    bindings = {
         'tx_index': tx['tx_index'],
         'tx_hash': tx['tx_hash'],
         'block_index': tx['block_index'],
@@ -93,7 +95,8 @@ def parse (db, tx, message=None):
         'earned': earned,
         'validity': validity,
     }
-    burn_parse_cursor.execute(*util.get_insert_sql('burns', element_data))
+    sql='insert into burns values(:tx_index, :tx_hash, :block_index, :address, :burned, :earned, :validity)'
+    burn_parse_cursor.execute(sql, bindings)
 
 
     burn_parse_cursor.close()

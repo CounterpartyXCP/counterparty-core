@@ -26,7 +26,7 @@ import counterpartyd
 # config.BLOCK_FIRST = 0
 # config.BURN_START = 0
 # config.BURN_END = 9999999
-counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/counterparty.unittest.db', testnet=True, testcoin=False, unittest=True)
+counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/counterpartyd.unittest.db', testnet=True, testcoin=False, unittest=True)
 
 # Connect to database.
 try: os.remove(config.DATABASE)
@@ -79,18 +79,19 @@ def parse_hex (unsigned_tx_hex):
     parse_hex_cursor.execute('''SELECT * FROM transactions \
                                 WHERE tx_index=?''', (tx_index,))
     tx = parse_hex_cursor.fetchall()[0]
-    heaps = blocks.init_heaps(db)
-    blocks.parse_tx(db, tx, heaps)
+    blocks.parse_tx(db, tx)
 
     # After parsing every transaction, check that the credits, debits sum properly.
-    balances = util.get_balances(db)
-    for balance in balances:
+    cursor.execute('''SELECT * FROM balances''')
+    for balance in cursor.fetchall():
         amount = 0
-        debits = util.get_debits(db, address=balance['address'], asset=balance['asset'])
-        for debit in debits:
+        cursor.execute('''SELECT * FROM debits \
+                          WHERE (address = ? AND asset = ?)''', (balance['address'], balance['asset']))
+        for debit in cursor.fetchall():
             amount -= debit['amount']
-        credits = util.get_credits(db, address=balance['address'], asset=balance['asset'])
-        for credit in credits:
+        cursor.execute('''SELECT * FROM credits \
+                          WHERE (address = ? AND asset = ?)''', (balance['address'], balance['asset']))
+        for credit in cursor.fetchall():
             amount += credit['amount']
         assert amount == balance['amount']
 
@@ -170,28 +171,28 @@ def test_btcpay ():
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_issuance_divisible ():
-    unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBBE', quantity * 10, True, False, 0, 0.0, '')
+    unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBB', quantity * 10, True, False, 0, 0.0, '')
 
     parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_issuance_indivisible_callable ():
-    unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBCD', round(quantity / 1000), False, True, 1288855692, 0.015, 'foobar')
+    unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBC', round(quantity / 1000), False, True, 1288855692, 0.015, 'foobar')
 
     parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_dividend_divisible ():
-    unsigned_tx_hex = dividend.create(db, source_default, 6, 'BBBBE')
+    unsigned_tx_hex = dividend.create(db, source_default, 6, 'BBBB')
 
     parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_dividend_indivisible ():
-    unsigned_tx_hex = dividend.create(db, source_default, 8, 'BBBCD')
+    unsigned_tx_hex = dividend.create(db, source_default, 8, 'BBBC')
 
     parse_hex(unsigned_tx_hex)
 
@@ -268,7 +269,7 @@ def test_broadcast_equal ():
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_order_to_be_cancelled ():
-    unsigned_tx_hex = order.create(db, source_default, 'BBBBE', small, 'XCP', small, expiration, 0, config.MIN_FEE)
+    unsigned_tx_hex = order.create(db, source_default, 'BBBB', small, 'XCP', small, expiration, 0, config.MIN_FEE)
 
     parse_hex(unsigned_tx_hex)
 
@@ -289,14 +290,14 @@ def test_overburn ():
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_send_callable ():
-    unsigned_tx_hex = send.create(db, source_default, destination_default, 10000, 'BBBCD')
+    unsigned_tx_hex = send.create(db, source_default, destination_default, 10000, 'BBBC')
 
     parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_callback ():
-    unsigned_tx_hex = callback.create(db, source_default, .3, 'BBBCD')
+    unsigned_tx_hex = callback.create(db, source_default, .3, 'BBBC')
 
     parse_hex(unsigned_tx_hex)
 
@@ -327,9 +328,7 @@ def test_json_rpc():
 
     for payload in payloads:
         response = requests.post(
-                url, data=json.dumps(payload), headers=headers, auth=auth)
-        response = json.loads(response.text)    # WTF
-        response = json.loads(response)         # WTF
+                url, data=json.dumps(payload), headers=headers, auth=auth).json()
         try:
             output_new['rpc.' + payload['method']] = response['result']
         except:
