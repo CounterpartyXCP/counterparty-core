@@ -210,7 +210,7 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
 def market (give_asset, get_asset):
     # Open orders.
     orders = util.get_orders(db, validity='Valid', show_expired=False, show_empty=False)
-    table = PrettyTable(['Give Quantity', 'Give Asset', 'Price', 'Price Assets', 'Provided BTC Fee', 'Required BTC Fee', 'Time Left', 'Tx Hash'])
+    table = PrettyTable(['Give Quantity', 'Give Asset', 'Price', 'Price Assets', 'Required BTC Fee', 'Provided BTC Fee', 'Time Left', 'Tx Hash'])
     for order in orders:
         if give_asset and order['give_asset'] != give_asset: continue
         if get_asset and order['get_asset'] != get_asset: continue
