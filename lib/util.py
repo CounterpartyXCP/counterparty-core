@@ -305,14 +305,14 @@ def credit (db, block_index, address, asset, amount, divisible=None):
     credit_cursor.close()
 
 def devise (db, quantity, asset, dest, divisible=None):
-    FOUR = D(10) ** -4
+    SIX = D(10) ** -6
     EIGHT = D(10) ** -8
 
     quantity = D(quantity)
 
     if asset in ('leverage', 'price', 'odds', 'value'):
         if dest == 'output':
-            return quantity.quantize(FOUR)
+            return quantity.quantize(SIX)
         elif dest == 'input':
             # Hackish
             if asset == 'leverage':
@@ -321,7 +321,7 @@ def devise (db, quantity, asset, dest, divisible=None):
                 return float(quantity)
 
     if asset in ('fee_multiplier',):
-        return D(quantity / D(1e8)).quantize(FOUR)
+        return D(quantity / D(1e8)).quantize(SIX)
 
     if divisible == None:
         if asset in ('BTC', 'XCP'):

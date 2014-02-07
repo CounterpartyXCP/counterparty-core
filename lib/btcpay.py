@@ -13,19 +13,24 @@ ID = 11
 
 def validate (db, order_match_id):
     problems = []
+    order_match = None
 
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM order_matches \
-                      WHERE (validity = ? AND id = ?)''', ('Valid: awaiting BTC payment', order_match_id))
+                      WHERE id = ?''', (order_match_id,))
     order_matches = cursor.fetchall()
     cursor.close()
     if len(order_matches) == 0:
-        problems.append('no such order match ID')
-        order_match = None
+        problems.append('no such order match')
     elif len(order_matches) > 1:
         assert False
     else:
         order_match = order_matches[0]
+        if order_match['validity'] != 'Valid: awaiting BTC payment':
+            if order_match['validity'] == 'Invalid: expired awaiting BTC payment':
+                problems.append('expired order match')
+            else:
+                problems.append('invalid order match')
 
     return order_match, problems
 
@@ -68,7 +73,9 @@ def parse (db, tx, message):
     if validity == 'Valid':
         # Try to match.
         order_match, problems = validate(db, order_match_id)
-        if problems: validity = 'Invalid: ' + ';'.join(problems)
+        if problems:
+            order_match = None
+            validity = 'Invalid: ' + ';'.join(problems)
 
     if validity == 'Valid':
         # Credit source address for the currency that he bought with the bitcoins.
