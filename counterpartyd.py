@@ -209,6 +209,17 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
             config.UNSPENDABLE = '1CounterpartyXXXXXXXXXXXXXXXUWLpVr'
 
 def market (give_asset, get_asset):
+
+    # Matched orders awaiting BTC payments from you.
+    awaiting_btcs = util.get_order_matches(db, validity='Valid: awaiting BTC payment', is_mine=True)
+    table = PrettyTable(['Matched Order ID', 'Time Left'])
+    for order_match in awaiting_btcs:
+        order_match = format_order_match(db, order_match)
+        table.add_row(order_match)
+    print('Order Matches Awaiting BTC Payment from You')
+    print(table)
+    print('\n')
+
     # Open orders.
     orders = util.get_orders(db, validity='Valid', show_expired=False, show_empty=False)
     table = PrettyTable(['Give Quantity', 'Give Asset', 'Price', 'Price Assets', 'Required BTC Fee', 'Provided BTC Fee', 'Time Left', 'Tx Hash'])
@@ -229,16 +240,6 @@ def market (give_asset, get_asset):
         bet = format_bet(bet)
         table.add_row(bet)
     print('Open Bets')
-    print(table)
-    print('\n')
-
-    # Matched orders awaiting BTC payments from you.
-    awaiting_btcs = util.get_order_matches(db, validity='Valid: awaiting BTC payment', is_mine=True)
-    table = PrettyTable(['Matched Order ID', 'Time Left'])
-    for order_match in awaiting_btcs:
-        order_match = format_order_match(db, order_match)
-        table.add_row(order_match)
-    print('Order Matches Awaiting BTC Payment from You')
     print(table)
     print('\n')
 

@@ -33,8 +33,14 @@ def rowtracer(cursor, sql):
     return dictionary
 
 def exectracer(cursor, sql, bindings):
-    # if 'INSERT' in sql or 'UPDATE' in sql:
-    #     print(sql, bindings)
+    # This means that all changes to database must use a very simple syntax.
+        # Need sanity checks here.
+    sql = sql.lower()
+    if 'insert' in sql or 'update' in sql:
+        array = sql.split('(')[0].split(' ')
+        command, table = array[0], array[2]
+        dictionary = {'command': command, 'table': table, 'bindings': bindings}
+        # print(dictionary)
     return True
 
 def connect_to_db():

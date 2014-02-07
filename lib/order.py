@@ -112,13 +112,13 @@ def parse (db, tx, message):
         if get_asset < give_asset:
             price = util.devise(db, D(get_amount) / D(give_amount), 'price', 'output')
             price_assets = get_asset + '/' + give_asset
-            action = 'sell'
+            action = 'sell {} {}'.format(give_amount, give_asset)
         else:
             price = util.devise(db, D(give_amount) / D(get_amount), 'price', 'output')
             price_assets = give_asset + '/' + get_asset
-            action = 'buy'
+            action = 'buy {} {}'.format(get_amount, get_asset)
 
-        logging.info('Order: {} {} {} at {} {} in {} blocks, with a provided fee of {} BTC and a required fee of {} BTC ({})'.format(action, give_amount, give_asset, price, price_assets, expiration, str(tx['fee'] / config.UNIT), str(fee_required / config.UNIT), tx['tx_hash']))
+        logging.info('Order: {} at {} {} in {} blocks, with a provided fee of {} BTC and a required fee of {} BTC ({})'.format(action, price, price_assets, expiration, str(tx['fee'] / config.UNIT), str(fee_required / config.UNIT), tx['tx_hash']))
         match(db, tx)
 
     order_parse_cursor.close()
