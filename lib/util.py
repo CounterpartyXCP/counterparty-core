@@ -26,6 +26,10 @@ DO_FILTER_OPERATORS = {
     '>=': operator.ge,
 }
 
+def price (numerator, denominator):
+    numerator = D(numerator)
+    denominator = D(denominator)
+    return D(numerator / denominator)
 
 def log (db, command, category, bindings):
 
@@ -501,7 +505,9 @@ def credit (db, block_index, address, asset, amount):
 def devise (db, quantity, asset, dest, divisible=None):
     quantity = D(quantity)
 
+    # For output only.
     def norm(num, places):
+        num = round(num, places)
         fmt = '{:.' + str(places) + 'f}'
         num = fmt.format(num)
         return num.rstrip('0')+'0' if num.rstrip('0')[-1] == '.' else num.rstrip('0')

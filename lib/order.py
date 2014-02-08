@@ -135,9 +135,14 @@ def match (db, tx):
 
         # If the prices agree, make the trade. The found order sets the price,
         # and they trade as much as they can.
-        tx0_price = D(tx0['get_amount']) / D(tx0['give_amount'])
-        tx1_price = D(tx1['get_amount']) / D(tx1['give_amount'])
-        if tx0_price <= D(1) / tx1_price:
+        tx0_price = util.price(tx0['get_amount'], tx0['give_amount'])
+        tx1_price = util.price(tx1['get_amount'], tx1['give_amount'])
+        tx1_inverse_price = util.price(tx1['give_amount'], tx1['get_amount'])
+
+        # NOTE: Old protocol.
+        if tx['block_index'] < 286000: tx1_inverse_price = D(1) / tx1_price
+
+        if tx0_price <= tx1_inverse_price:
             forward_amount = int(min(tx0['give_remaining'], D(give_remaining) / tx0_price))
             if not forward_amount: continue
             backward_amount = round(forward_amount * tx0_price)
