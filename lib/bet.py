@@ -38,7 +38,7 @@ def validate (db, source, feed_address, bet_type, deadline, wager_amount,
     problems = []
 
     # Look at feed to be bet on.
-    broadcasts = util.get_broadcasts(db, validity='Valid', source=feed_address)
+    broadcasts = util.get_broadcasts(db, validity='valid', source=feed_address)
     if not broadcasts:
         problems.append('feed doesn’t exist')
     elif not broadcasts[-1]['text']:
@@ -96,16 +96,16 @@ def parse (db, tx, message):
         (bet_type, deadline, wager_amount,
          counterwager_amount, target_value, leverage,
          expiration) = struct.unpack(FORMAT, message)
-        validity = 'Valid'
+        validity = 'valid'
     except struct.error as e:
         (bet_type, deadline, wager_amount,
          counterwager_amount, target_value, leverage,
          expiration) = None, None, None, None, None, None, None
-        validity = 'Invalid: could not unpack'
+        validity = 'invalid: could not unpack'
 
     fee_multiplier = 0
     odds = 0
-    if validity == 'Valid':
+    if validity == 'valid':
         try: odds = D(wager_amount) / D(counterwager_amount)
         except: pass
 
@@ -119,10 +119,10 @@ def parse (db, tx, message):
         feed_address = tx['destination']
         problems = validate(db, tx['source'], feed_address, bet_type, deadline, wager_amount,
                             counterwager_amount, target_value, leverage, expiration)
-        if problems: validity = 'Invalid: ' + ';'.join(problems)
+        if problems: validity = 'invalid: ' + ';'.join(problems)
 
     # Debit amount wagered and fee.
-    if validity == 'Valid':
+    if validity == 'valid':
         fee_multiplier = get_fee_multiplier(db, feed_address)
         fee = round(wager_amount * fee_multiplier / 1e8)    # round?!
         util.debit(db, tx['block_index'], tx['source'], 'XCP', wager_amount)
@@ -172,7 +172,7 @@ def match (db, tx):
 
     bet_match_cursor.execute('''SELECT * FROM bets\
                              WHERE (feed_address=? AND validity=? AND bet_type=?)''',
-                             (tx1['feed_address'], 'Valid', counterbet_type))
+                             (tx1['feed_address'], 'valid', counterbet_type))
     wager_remaining = tx1['wager_remaining']
     counterwager_remaining = tx1['counterwager_remaining']
     bet_matches = bet_match_cursor.fetchall()
@@ -238,7 +238,7 @@ def match (db, tx):
                            tx1['tx_hash']))
 
             # Get last value of feed.
-            initial_value = util.get_broadcasts(db, validity='Valid', source=tx1['feed_address'])[-1]['value']
+            initial_value = util.get_broadcasts(db, validity='valid', source=tx1['feed_address'])[-1]['value']
 
             # Record bet fulfillment.
             bindings = {
@@ -264,7 +264,7 @@ def match (db, tx):
                 'tx1_expiration': tx1['expiration'],
                 'match_expire_index': min(tx0['expire_index'], tx1['expire_index']),
                 'fee_multiplier': fee_multiplier,
-                'validity': 'Valid',
+                'validity': 'valid',
             }
             sql='insert into bet_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :tx0_bet_type, :tx1_bet_type, :feed_address, :initial_value, :deadline, :target_value, :leverage, :forward_amount, :backward_amount, :tx0_block_index, :tx1_block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :fee_multiplier, :validity)'
             bet_match_cursor.execute(sql, bindings)
@@ -276,9 +276,9 @@ def expire (db, block_index, block_time):
 
     # Expire bets and give refunds for the amount wager_remaining.
     cursor.execute('''SELECT * FROM bets \
-                      WHERE (validity = ? AND expire_index < ?)''', ('Valid', block_index))
+                      WHERE (validity = ? AND expire_index < ?)''', ('valid', block_index))
     for bet in cursor.fetchall():
-        cursor.execute('''UPDATE bets SET validity=? WHERE tx_index=?''', ('Invalid: expired', bet['tx_index']))
+        cursor.execute('''UPDATE bets SET validity=? WHERE tx_index=?''', ('invalid: expired', bet['tx_index']))
         util.credit(db, block_index, bet['source'], 'XCP', round(bet['wager_remaining'] * (1 + bet['fee_multiplier'] / 1e8)))
 
         # Record bet expiration.
@@ -292,7 +292,7 @@ def expire (db, block_index, block_time):
 
     # Expire bet matches whose deadline is more than two weeks before the current block time.
     cursor.execute('''SELECT * FROM bet_matches \
-                      WHERE (validity = ? AND deadline < ?)''', ('Valid', block_time - config.TWO_WEEKS))
+                      WHERE (validity = ? AND deadline < ?)''', ('valid', block_time - config.TWO_WEEKS))
     for bet_match in cursor.fetchall():
         util.credit(db, block_index, bet_match['tx0_address'], 'XCP',
                     round(bet_match['forward_amount'] * (1 + bet_match['fee_multiplier'] / 1e8)))
@@ -300,7 +300,7 @@ def expire (db, block_index, block_time):
                     round(bet_match['backward_amount'] * (1 + bet_match['fee_multiplier'] / 1e8)))
         cursor.execute('''UPDATE bet_matches \
                           SET validity=? \
-                          WHERE id = ?''', ('Invalid: expired awaiting broadcast', bet_match['id'])
+                          WHERE id = ?''', ('invalid: expired awaiting broadcast', bet_match['id'])
                       )
 
         # Record bet match expiration.

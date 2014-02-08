@@ -40,12 +40,12 @@ def parse (db, tx, message):
         assert len(message) == LENGTH
         asset_id, amount = struct.unpack(FORMAT, message)
         asset = util.get_asset_name(asset_id)
-        validity = 'Valid'
+        validity = 'valid'
     except struct.error as e:
         asset, amount = None, None
-        validity = 'Invalid: Could not unpack.'
+        validity = 'invalid: Could not unpack.'
 
-    if validity == 'Valid':
+    if validity == 'valid':
         # Oversend
         cursor.execute('''SELECT * FROM balances \
                                      WHERE (address = ? AND asset = ?)''', (tx['source'], asset))
@@ -56,9 +56,9 @@ def parse (db, tx, message):
         # For SQLite3
         amount = min(amount, config.MAX_INT)
         problems = validate(db, tx['source'], tx['destination'], amount, asset)
-        if problems: validity = 'Invalid: ' + ';'.join(problems)
+        if problems: validity = 'invalid: ' + ';'.join(problems)
 
-    if validity == 'Valid':
+    if validity == 'valid':
         util.debit(db, tx['block_index'], tx['source'], asset, amount)
         util.credit(db, tx['block_index'], tx['destination'], asset, amount)
 

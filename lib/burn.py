@@ -34,7 +34,7 @@ def create (db, source, quantity, overburn=False, unsigned=False):
     if problems: raise exceptions.BurnError(problems)
 
     # Check that a maximum of 1 BTC total is burned per address.
-    burns = util.get_burns(db, source=source, validity='Valid')
+    burns = util.get_burns(db, source=source, validity='valid')
     already_burned = sum([burn['burned'] for burn in burns])
     if quantity > (1 * config.UNIT - already_burned) and not overburn:
         raise exceptions.BurnError('1 BTC may be burned per address')
@@ -43,21 +43,21 @@ def create (db, source, quantity, overburn=False, unsigned=False):
 
 def parse (db, tx, message=None):
     burn_parse_cursor = db.cursor()
-    validity = 'Valid'
+    validity = 'valid'
 
-    if validity == 'Valid':
+    if validity == 'valid':
         problems = validate(db, tx['source'], tx['destination'], tx['btc_amount'], tx['block_index'], overburn=False)
-        if problems: validity = 'Invalid: ' + ';'.join(problems)
+        if problems: validity = 'invalid: ' + ';'.join(problems)
 
         if tx['btc_amount'] != None:
             sent = tx['btc_amount']
         else:
             sent = 0
 
-    if validity == 'Valid':
+    if validity == 'valid':
         # Calculate quantity of XPC earned. (Maximum 1 BTC in total, ever.)
         cursor = db.cursor()
-        cursor.execute('''SELECT * FROM burns WHERE (validity = ? AND source = ?)''', ('Valid', tx['source']))
+        cursor.execute('''SELECT * FROM burns WHERE (validity = ? AND source = ?)''', ('valid', tx['source']))
         burns = cursor.fetchall()
         already_burned = sum([burn['burned'] for burn in burns])
         ONE_BTC = 1 * config.UNIT

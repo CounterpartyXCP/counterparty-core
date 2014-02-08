@@ -22,7 +22,7 @@ def validate (db, source, fraction_per_share, asset, block_time):
     elif fraction_per_share <= 0:
         problems.append('fraction per share less than or equal to zero')
 
-    issuances = util.get_issuances(db, validity='Valid', asset=asset)
+    issuances = util.get_issuances(db, validity='valid', asset=asset)
     if not issuances:
         problems.append('no such asset, {}.'.format(asset))
         return None, None, None, problems
@@ -86,18 +86,18 @@ def parse (db, tx, message):
         assert len(message) == LENGTH
         fraction_per_share, asset_id = struct.unpack(FORMAT, message)
         asset = util.get_asset_name(asset_id)
-        validity = 'Valid'
+        validity = 'valid'
     except struct.error as e:
         fraction_per_share, asset = None, None
-        validity = 'Invalid: could not unpack'
+        validity = 'invalid: could not unpack'
 
-    if validity == 'Valid':
+    if validity == 'valid':
         block_hash = bitcoin.rpc('getblockhash', [tx['block_index'],])  # TODO: Use block time of last block in DB instead?
         block = bitcoin.rpc('getblock', [block_hash,])
         call_price, callback_total, outputs, problems = validate(db, tx['source'], fraction_per_share, asset, block['time'])
-        if problems: validity = 'Invalid: ' + ';'.join(problems)
+        if problems: validity = 'invalid: ' + ';'.join(problems)
 
-    if validity == 'Valid':
+    if validity == 'valid':
         # Issuer.
         assert call_price * callback_total == int(call_price * callback_total)
         util.debit(db, tx['block_index'], tx['source'], 'XCP', int(call_price * callback_total))

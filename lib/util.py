@@ -124,7 +124,7 @@ def exectracer(cursor, sql, bindings):
             logging.info('Order Match: {} at {} {} ({}) [{}]'.format(foobar, price, price_assets, bindings['id'], bindings['validity']))
 
         elif table == 'btcpays':
-            logging.info('BTC Payment for Order Match: {} ({}) [{}]'.format(bindings['order_match_id'], bindings['tx_hash'], bindings['validity']))
+            logging.info('BTC Payment: Order Match ID {} ({}) [{}]'.format(bindings['order_match_id'], bindings['tx_hash'], bindings['validity']))
 
         elif table == 'issuances':
             if bindings['transfer']:
@@ -194,7 +194,7 @@ def exectracer(cursor, sql, bindings):
             logging.info('Expired order: {}'.format(bindings['order_hash']))
 
         elif table == 'order_match_expirations':
-            logging.info('Expired Order Match awaiting BTC payment: {}'.format(bindings['order_match_id']))
+            logging.info('Expired Order Match awaiting payment: {}'.format(bindings['order_match_id']))
 
         elif table == 'bet_expirations':
             logging.info('Expired bet: {}'.format(bindings['bet_hash']))
@@ -321,12 +321,12 @@ def xcp_supply (db):
 
     # Add burns.
     cursor.execute('''SELECT * FROM burns \
-                      WHERE validity = ?''', ('Valid',))
+                      WHERE validity = ?''', ('valid',))
     burn_total = sum([burn['earned'] for burn in cursor.fetchall()])
 
     # Subtract issuance fees.
     cursor.execute('''SELECT * FROM issuances\
-                      WHERE validity = ?''', ('Valid',))
+                      WHERE validity = ?''', ('valid',))
     fee_total = sum([issuance['fee_paid'] for issuance in cursor.fetchall()])
 
     cursor.close()
@@ -495,7 +495,7 @@ def devise (db, quantity, asset, dest, divisible=None):
         else:
             cursor = db.cursor()
             cursor.execute('''SELECT * FROM issuances \
-                              WHERE (validity = ? AND asset = ?)''', ('Valid', asset))
+                              WHERE (validity = ? AND asset = ?)''', ('valid', asset))
             issuances = cursor.fetchall()
             cursor.close()
             if not issuances: raise exceptions.AssetError('No such asset: {}'.format(asset))
@@ -724,16 +724,16 @@ def get_address (db, address):
                                              address)
     address_dict = {}
     address_dict['balances'] = get_balances(db, address=address)
-    address_dict['burns'] = get_burns(db, validity='Valid', source=address, order_by='block_index', order_dir='asc')
-    address_dict['sends'] = get_sends(db, validity='Valid', source=address, order_by='block_index', order_dir='asc')
-    address_dict['orders'] = get_orders(db, validity='Valid', source=address, order_by='block_index', order_dir='asc')
-    address_dict['order_matches'] = get_order_matches(db, validity='Valid', address=address, order_by='tx0_block_index', order_dir='asc')
-    address_dict['btcpays'] = get_btcpays(db, validity='Valid', order_by='block_index', order_dir='asc')
-    address_dict['issuances'] = get_issuances(db, validity='Valid', issuer=address, order_by='block_index', order_dir='asc')
-    address_dict['broadcasts'] = get_broadcasts(db, validity='Valid', source=address, order_by='block_index', order_dir='asc')
-    address_dict['bets'] = get_bets(db, validity='Valid', source=address, order_by='block_index', order_dir='asc')
-    address_dict['bet_matches'] = get_bet_matches(db, validity='Valid', address=address, order_by='tx0_block_index', order_dir='asc')
-    address_dict['dividends'] = get_dividends(db, validity='Valid', source=address, order_by='block_index', order_dir='asc')
+    address_dict['burns'] = get_burns(db, validity='valid', source=address, order_by='block_index', order_dir='asc')
+    address_dict['sends'] = get_sends(db, validity='valid', source=address, order_by='block_index', order_dir='asc')
+    address_dict['orders'] = get_orders(db, validity='valid', source=address, order_by='block_index', order_dir='asc')
+    address_dict['order_matches'] = get_order_matches(db, validity='valid', address=address, order_by='tx0_block_index', order_dir='asc')
+    address_dict['btcpays'] = get_btcpays(db, validity='valid', order_by='block_index', order_dir='asc')
+    address_dict['issuances'] = get_issuances(db, validity='valid', issuer=address, order_by='block_index', order_dir='asc')
+    address_dict['broadcasts'] = get_broadcasts(db, validity='valid', source=address, order_by='block_index', order_dir='asc')
+    address_dict['bets'] = get_bets(db, validity='valid', source=address, order_by='block_index', order_dir='asc')
+    address_dict['bet_matches'] = get_bet_matches(db, validity='valid', address=address, order_by='tx0_block_index', order_dir='asc')
+    address_dict['dividends'] = get_dividends(db, validity='valid', source=address, order_by='block_index', order_dir='asc')
     return address_dict
     
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

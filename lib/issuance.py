@@ -22,7 +22,7 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
     # Valid re-issuance?
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM issuances \
-                      WHERE (validity = ? AND asset = ?)''', ('Valid', asset))
+                      WHERE (validity = ? AND asset = ?)''', ('valid', asset))
     issuances = cursor.fetchall()
     cursor.close()
     if issuances:
@@ -86,15 +86,15 @@ def parse (db, tx, message):
         try:
             asset = util.get_asset_name(asset_id)
         except:
-            validity = 'Invalid: bad asset name'
-        validity = 'Valid'
+            validity = 'invalid: bad asset name'
+        validity = 'valid'
     except struct.error:
         asset, amount, divisible, callable_, call_date, call_price, description = None, None, None, None, None, None, None
-        validity = 'Invalid: could not unpack'
+        validity = 'invalid: could not unpack'
 
-    if validity == 'Valid':
+    if validity == 'valid':
         problems = validate(db, tx['source'], tx['destination'], asset, amount, divisible, callable_, call_date, call_price, description, block_index=tx['block_index'])
-        if problems: validity = 'Invalid: ' + ';'.join(problems)
+        if problems: validity = 'invalid: ' + ';'.join(problems)
         if 'maximum total quantity exceeded' in problems:
             amount = 0
 
@@ -106,7 +106,7 @@ def parse (db, tx, message):
         transfer = False
 
     fee_paid = None
-    if validity == 'Valid':
+    if validity == 'valid':
         # Debit fee.
         if amount and tx['block_index'] > 281236:
             util.debit(db, tx['block_index'], tx['source'], 'XCP', config.ISSUANCE_FEE)
@@ -135,7 +135,7 @@ def parse (db, tx, message):
     issuance_parse_cursor.execute(sql, bindings)
 
     # Credit.
-    if validity == 'Valid' and amount:
+    if validity == 'valid' and amount:
         util.credit(db, tx['block_index'], tx['source'], asset, amount)
 
     issuance_parse_cursor.close()

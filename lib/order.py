@@ -17,10 +17,10 @@ def validate (db, source, give_asset, give_amount, get_asset, get_amount, expira
         problems.append('trading an asset for itself')
     if not give_amount or not get_amount:
         problems.append('zero give or zero get')
-    if give_asset not in ('BTC', 'XCP') and not util.get_issuances(db, validity='Valid', asset=give_asset):
-        problems.append('no such asset to give, {}.'.format(give_asset))
-    if get_asset not in ('BTC', 'XCP') and not util.get_issuances(db, validity='Valid', asset=get_asset):
-        problems.append('no such asset to get, {}.'.format(get_asset))
+    if give_asset not in ('BTC', 'XCP') and not util.get_issuances(db, validity='valid', asset=give_asset):
+        problems.append('no such asset to give ({})'.format(give_asset))
+    if get_asset not in ('BTC', 'XCP') and not util.get_issuances(db, validity='valid', asset=get_asset):
+        problems.append('no such asset to get ({})'.format(get_asset))
     if expiration > config.MAX_EXPIRATION:
         problems.append('maximum expiration time exceeded')
 
@@ -54,13 +54,13 @@ def parse (db, tx, message):
         give_id, give_amount, get_id, get_amount, expiration, fee_required = struct.unpack(FORMAT, message)
         give_asset = util.get_asset_name(give_id)
         get_asset = util.get_asset_name(get_id)
-        validity = 'Valid'
+        validity = 'valid'
     except struct.error as e:
         give_asset, give_amount, get_asset, get_amount, expiration, fee_required = None, None, None, None, None, None
-        validity = 'Invalid: could not unpack'
+        validity = 'invalid: could not unpack'
 
     price = 0
-    if validity == 'Valid':
+    if validity == 'valid':
         try: price = D(get_amount) / D(give_amount)
         except: pass
 
@@ -75,9 +75,9 @@ def parse (db, tx, message):
                 get_amount = int(price * D(give_amount))
 
         problems = validate(db, tx['source'], give_asset, give_amount, get_asset, get_amount, expiration, fee_required)
-        if problems: validity = 'Invalid: ' + ';'.join(problems)
+        if problems: validity = 'invalid: ' + ';'.join(problems)
 
-    if validity == 'Valid':
+    if validity == 'valid':
         if give_asset != 'BTC':  # No need (or way) to debit BTC.
             util.debit(db, tx['block_index'], tx['source'], give_asset, give_amount)
 
@@ -117,7 +117,7 @@ def match (db, tx):
 
     cursor.execute('''SELECT * FROM orders \
                                   WHERE (give_asset=? AND get_asset=? AND validity=?)''',
-                               (tx1['get_asset'], tx1['give_asset'], 'Valid'))
+                               (tx1['get_asset'], tx1['give_asset'], 'valid'))
     give_remaining = tx1['give_remaining']
     get_remaining = tx1['get_remaining']
     order_matches = cursor.fetchall()
@@ -146,9 +146,9 @@ def match (db, tx):
             order_match_id = tx0['tx_hash'] + tx1['tx_hash']
 
             if 'BTC' in (tx1['give_asset'], tx1['get_asset']):
-                validity = 'Valid: awaiting BTC payment'
+                validity = 'pending'
             else:
-                validity = 'Valid'
+                validity = 'valid'
                 # Credit.
                 util.credit(db, tx['block_index'], tx1['source'], tx1['get_asset'],
                                     forward_amount)
@@ -206,9 +206,9 @@ def expire (db, block_index):
 
     # Expire orders and give refunds for the amount give_remaining (if non-zero; if not BTC).
     cursor.execute('''SELECT * FROM orders \
-                      WHERE (validity = ? AND expire_index < ?)''', ('Valid', block_index))
+                      WHERE (validity = ? AND expire_index < ?)''', ('valid', block_index))
     for order in cursor.fetchall():
-        cursor.execute('''UPDATE orders SET validity=? WHERE tx_index=?''', ('Invalid: expired', order['tx_index']))
+        cursor.execute('''UPDATE orders SET validity=? WHERE tx_index=?''', ('invalid: expired', order['tx_index']))
         if order['give_asset'] != 'BTC':    # Can't credit BTC.
             util.credit(db, block_index, order['source'], order['give_asset'], order['give_remaining'])
 
@@ -223,9 +223,9 @@ def expire (db, block_index):
 
     # Expire order_matches for BTC with no BTC.
     cursor.execute('''SELECT * FROM order_matches \
-                      WHERE (validity = ? and match_expire_index < ?)''', ('Valid: awaiting BTC payment', block_index))
+                      WHERE (validity = ? and match_expire_index < ?)''', ('pending', block_index))
     for order_match in cursor.fetchall():
-        cursor.execute('''UPDATE order_matches SET validity=? WHERE id = ?''', ('Invalid: expired awaiting BTC payment', order_match['id']))
+        cursor.execute('''UPDATE order_matches SET validity=? WHERE id = ?''', ('invalid: expired awaiting payment', order_match['id']))
         if order_match['forward_asset'] == 'BTC':
             util.credit(db, block_index, order_match['tx1_address'],
                         order_match['backward_asset'],

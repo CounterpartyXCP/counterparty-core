@@ -86,12 +86,12 @@ CREATE TABLE bets(
                                  expire_index INTEGER,
                                  fee_multiplier INTEGER,
                                  validity TEXT);
-INSERT INTO bets VALUES(10,'01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b',10,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1388000100,50000000,8500000,25000000,4250000,0.0,15120,10,20,5000000,'Valid');
-INSERT INTO bets VALUES(11,'e7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6',11,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,1388000100,25000000,4250000,41500000,0,0.0,15120,10,21,5000000,'Valid');
-INSERT INTO bets VALUES(12,'ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c977',12,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1388000100,150000000,0,350000000,0,0.0,5040,10,22,5000000,'Valid');
-INSERT INTO bets VALUES(13,'9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4',13,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,1388000100,350000000,0,150000000,0,0.0,5040,10,23,5000000,'Valid');
-INSERT INTO bets VALUES(14,'4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47',14,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',2,1388000200,750000000,0,650000000,0,1.0,5040,10,24,5000000,'Valid');
-INSERT INTO bets VALUES(15,'dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8',15,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,1388000200,650000000,0,750000000,0,1.0,5040,10,25,5000000,'Valid');
+INSERT INTO bets VALUES(10,'01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b',10,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1388000100,50000000,8500000,25000000,4250000,0.0,15120,10,20,5000000,'valid');
+INSERT INTO bets VALUES(11,'e7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6',11,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,1388000100,25000000,4250000,41500000,0,0.0,15120,10,21,5000000,'valid');
+INSERT INTO bets VALUES(12,'ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c977',12,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1388000100,150000000,0,350000000,0,0.0,5040,10,22,5000000,'valid');
+INSERT INTO bets VALUES(13,'9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4',13,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1,1388000100,350000000,0,150000000,0,0.0,5040,10,23,5000000,'valid');
+INSERT INTO bets VALUES(14,'4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47',14,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',2,1388000200,750000000,0,650000000,0,1.0,5040,10,24,5000000,'valid');
+INSERT INTO bets VALUES(15,'dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8',15,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,1388000200,650000000,0,750000000,0,1.0,5040,10,25,5000000,'valid');
 
 -- Table  blocks
 DROP TABLE IF EXISTS blocks;
@@ -115,10 +115,10 @@ CREATE TABLE broadcasts(
                         fee_multiplier INTEGER,
                         text TEXT,
                         validity TEXT);
-INSERT INTO broadcasts VALUES(9,'2b4c342f5433ebe591a1da77e013d1b72475562d48578dca8b84bac6651c3cb9',9,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1388000000,100.0,5000000,'Unit Test','Valid');
-INSERT INTO broadcasts VALUES(16,'c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee3',16,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1388000050,99.86166,5000000,'Unit Test','Valid');
-INSERT INTO broadcasts VALUES(17,'4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a',17,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1388000101,100.343,5000000,'Unit Test','Valid');
-INSERT INTO broadcasts VALUES(18,'f299791cddd3d6664f6670842812ef6053eb6501bd6282a476bbbf3ee91e750c',18,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1388000201,2.0,5000000,'Unit Test','Valid');
+INSERT INTO broadcasts VALUES(9,'2b4c342f5433ebe591a1da77e013d1b72475562d48578dca8b84bac6651c3cb9',9,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1388000000,100.0,5000000,'Unit Test','valid');
+INSERT INTO broadcasts VALUES(16,'c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee3',16,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1388000050,99.86166,5000000,'Unit Test','valid');
+INSERT INTO broadcasts VALUES(17,'4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a',17,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1388000101,100.343,5000000,'Unit Test','valid');
+INSERT INTO broadcasts VALUES(18,'f299791cddd3d6664f6670842812ef6053eb6501bd6282a476bbbf3ee91e750c',18,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1388000201,2.0,5000000,'Unit Test','valid');
 -- Triggers and indices on  broadcasts
 CREATE INDEX broadcasts_block_index_idx ON broadcasts (block_index)
                     ;
@@ -132,7 +132,7 @@ CREATE TABLE btcpays(
                         source TEXT,
                         order_match_id TEXT,
                         validity TEXT);
-INSERT INTO btcpays VALUES(4,'e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71',4,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5','Paid');
+INSERT INTO btcpays VALUES(4,'e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71',4,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5','valid');
 -- Triggers and indices on  btcpays
 CREATE INDEX btcpays_block_index_idx ON btcpays (block_index)
                     ;
@@ -147,8 +147,8 @@ CREATE TABLE burns(
                         burned INTEGER,
                         earned INTEGER,
                         validity TEXT);
-INSERT INTO burns VALUES(0,'6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d',0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',62000000,93000000000,'Valid');
-INSERT INTO burns VALUES(21,'2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608',21,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',38000000,57000000000,'Valid');
+INSERT INTO burns VALUES(0,'6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d',0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',62000000,93000000000,'valid');
+INSERT INTO burns VALUES(21,'2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608',21,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',38000000,57000000000,'valid');
 -- Triggers and indices on  burns
 CREATE INDEX validity_idx ON burns (validity)
                               ;
@@ -163,7 +163,7 @@ CREATE TABLE callbacks(
                                  fraction_per_share TEXT,
                                  asset TEXT,
                                  validity TEXT);
-INSERT INTO callbacks VALUES(23,'8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034',23,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','0.3','BBBC','Valid');
+INSERT INTO callbacks VALUES(23,'8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034',23,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','0.3','BBBC','valid');
 
 -- Table  cancels
 DROP TABLE IF EXISTS cancels;
@@ -174,7 +174,7 @@ CREATE TABLE cancels(
                         source TEXT,
                         offer_hash TEXT,
                         validity TEXT);
-INSERT INTO cancels VALUES(20,'83891d7fe85c33e52c8b4e5814c92fb6a3b9467299200538a6babaa8b452d879',20,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2','Valid');
+INSERT INTO cancels VALUES(20,'83891d7fe85c33e52c8b4e5814c92fb6a3b9467299200538a6babaa8b452d879',20,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2','valid');
 -- Triggers and indices on  cancels
 CREATE INDEX cancels_block_index_idx ON cancels (block_index)
                     ;
@@ -250,8 +250,8 @@ CREATE TABLE dividends(
                         asset TEXT,
                         amount_per_share INTEGER,
                         validity TEXT);
-INSERT INTO dividends VALUES(7,'ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879',7,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',6,'Valid');
-INSERT INTO dividends VALUES(8,'beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a',8,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',8,'Valid');
+INSERT INTO dividends VALUES(7,'ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879',7,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',6,'valid');
+INSERT INTO dividends VALUES(8,'beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a',8,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',8,'valid');
 -- Triggers and indices on  dividends
 CREATE INDEX dividends_block_index_idx ON dividends (block_index)
                     ;
@@ -274,8 +274,8 @@ CREATE TABLE issuances(
                         fee_paid INTEGER,
                         validity TEXT
                         );
-INSERT INTO issuances VALUES(5,'e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db',5,'BBBB',1000000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'',0,'Valid');
-INSERT INTO issuances VALUES(6,'67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6',6,'BBBC',100000,0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1,1288855692,0.015,'foobar',0,'Valid');
+INSERT INTO issuances VALUES(5,'e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db',5,'BBBB',1000000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'',0,'valid');
+INSERT INTO issuances VALUES(6,'67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6',6,'BBBC',100000,0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1,1288855692,0.015,'foobar',0,'valid');
 -- Triggers and indices on  issuances
 CREATE INDEX issuances_idx ON issuances (block_index)
                     ;
@@ -313,7 +313,7 @@ CREATE TABLE order_matches(
                                  tx1_expiration INTEGER,
                                  match_expire_index INTEGER,
                                  validity TEXT);
-INSERT INTO order_matches VALUES('dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5',2,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BTC',50000000,'XCP',100000000,2,3,10,10,12,'Valid');
+INSERT INTO order_matches VALUES('dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5',2,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BTC',50000000,'XCP',100000000,2,3,10,10,12,'valid');
 -- Triggers and indices on  order_matches
 CREATE INDEX match_expire_index_idx ON order_matches (match_expire_index)
                               ;
@@ -336,9 +336,9 @@ CREATE TABLE orders(
                                  fee_required INTEGER,
                                  fee_provided INTEGER,
                                  validity TEXT);
-INSERT INTO orders VALUES(2,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986',2,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BTC',50000000,0,'XCP',100000000,0,10,12,0,1000000,'Valid');
-INSERT INTO orders VALUES(3,'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5',3,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',105000000,5000000,'BTC',50000000,0,10,13,900000,10000,'Valid');
-INSERT INTO orders VALUES(19,'ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2',19,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',50000000,50000000,'XCP',50000000,50000000,10,29,0,10000,'Invalid: cancelled');
+INSERT INTO orders VALUES(2,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986',2,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BTC',50000000,0,'XCP',100000000,0,10,12,0,1000000,'valid');
+INSERT INTO orders VALUES(3,'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5',3,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',105000000,5000000,'BTC',50000000,0,10,13,900000,10000,'valid');
+INSERT INTO orders VALUES(19,'ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2',19,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',50000000,50000000,'XCP',50000000,50000000,10,29,0,10000,'invalid: cancelled');
 -- Triggers and indices on  orders
 CREATE INDEX block_index_idx ON orders (block_index)
                               ;
@@ -356,8 +356,8 @@ CREATE TABLE sends(
                         asset TEXT,
                         amount INTEGER,
                         validity TEXT);
-INSERT INTO sends VALUES(1,'4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a',1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',50000000,'Valid');
-INSERT INTO sends VALUES(22,'7cb7c4547cf2653590d7a9ace60cc623d25148adfbc88a89aeb0ef88da7839ba',22,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',10000,'Valid');
+INSERT INTO sends VALUES(1,'4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a',1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',50000000,'valid');
+INSERT INTO sends VALUES(22,'7cb7c4547cf2653590d7a9ace60cc623d25148adfbc88a89aeb0ef88da7839ba',22,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',10000,'valid');
 -- Triggers and indices on  sends
 CREATE INDEX sends_block_index_idx ON sends (block_index)
                     ;
