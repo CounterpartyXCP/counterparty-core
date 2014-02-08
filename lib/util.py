@@ -8,6 +8,7 @@ import logging
 import operator
 from operator import itemgetter
 import apsw
+import collections
 
 from . import (config, exceptions, bitcoin)
 
@@ -24,29 +25,9 @@ DO_FILTER_OPERATORS = {
     '<=': operator.le,
     '>=': operator.ge,
 }
-        
-def rowtracer(cursor, sql):
-    """Converts fetched SQL data into dict-style"""
-    dictionary = {}
-    for index, (name, type_) in enumerate(cursor.getdescription()):
-        dictionary[name] = sql[index]
-    return dictionary
 
-def exectracer(cursor, sql, bindings):
-    # This means that all changes to database must use a very simple syntax.
-        # Need sanity checks here.
 
-    sql = sql.lower()
-    if not 'insert' in sql or 'update' in sql: return True
-
-    # Alter database.
-    array = sql.split('(')[0].split(' ')
-    command, table = array[0], array[2]
-    dictionary = {'command': command, 'table': table, 'bindings': bindings}
-    # print(dictionary)
-
-    # Log.
-    db = cursor.getconnection()
+def log (db, command, category, bindings):
 
     def output (amount, asset):
         try:
@@ -61,16 +42,16 @@ def exectracer(cursor, sql, bindings):
 
     if command == 'insert':
 
-        if table == 'credits':
+        if category == 'credits':
             logging.debug('Credit: {} to {}'.format(output(bindings['amount'], bindings['asset']), bindings['address']))
 
-        elif table == 'debits':
+        elif category == 'debits':
             logging.debug('Debit: {} from {}'.format(output(bindings['amount'], bindings['asset']), bindings['address']))
 
-        elif table == 'sends':
+        elif category == 'sends':
             logging.info('Send: {} from {} to {} ({}) [{}]'.format(output(bindings['amount'], bindings['asset']), bindings['source'], bindings['destination'], bindings['tx_hash'], bindings['validity']))
 
-        elif table == 'orders':
+        elif category == 'orders':
             give_asset = bindings['give_asset']
             get_asset = bindings['get_asset']
 
@@ -95,7 +76,7 @@ def exectracer(cursor, sql, bindings):
 
             logging.info('Order: {} at {} {} in {} blocks, with a provided fee of {} BTC and a required fee of {} BTC ({}) [{}]'.format(action, price, price_assets, bindings['expiration'], bindings['fee_provided'] / config.UNIT, bindings['fee_required'] / config.UNIT, bindings['tx_hash'], bindings['validity']))
 
-        elif table == 'order_matches':
+        elif category == 'order_matches':
             forward_amount = bindings['forward_amount']
             backward_amount = bindings['backward_amount']
             forward_asset = bindings['forward_asset']
@@ -123,10 +104,10 @@ def exectracer(cursor, sql, bindings):
 
             logging.info('Order Match: {} at {} {} ({}) [{}]'.format(foobar, price, price_assets, bindings['id'], bindings['validity']))
 
-        elif table == 'btcpays':
+        elif category == 'btcpays':
             logging.info('BTC Payment: Order Match ID {} ({}) [{}]'.format(bindings['order_match_id'], bindings['tx_hash'], bindings['validity']))
 
-        elif table == 'issuances':
+        elif category == 'issuances':
             if bindings['transfer']:
                 logging.info('Issuance: {} transferred asset {} to {} ({}) [{}]'.format(bindings['source'], bindings['asset'], bindings['issuer'], bindings['tx_hash'], bindings['validity']))
             elif not bindings['amount']:
@@ -146,9 +127,9 @@ def exectracer(cursor, sql, bindings):
                     amount = devise(db, bindings['amount'], None, dest='output', divisible=bindings['divisible'])
                 except:
                     amount = '?'
-                logging.info('Issuance: {} created {} of asset {}, which is {} and {}, with description ‘{}’ ({}) [{}]'.format(bindings['issuer'], amount, bindings['issuer'], divisibility, callability, bindings['description'], bindings['tx_hash'], bindings['validity']))
+                logging.info('Issuance: {} created {} of asset {}, which is {} and {}, with description ‘{}’ ({}) [{}]'.format(bindings['issuer'], amount, bindings['asset'], divisibility, callability, bindings['description'], bindings['tx_hash'], bindings['validity']))
 
-        elif table == 'broadcasts':
+        elif category == 'broadcasts':
             if not bindings['text']:
                 logging.info('Broadcast: {} locked his feed ({}) [{}]'.format(bindings['source'], bindings['tx_hash'], bindings['validity']))
             else:
@@ -157,7 +138,7 @@ def exectracer(cursor, sql, bindings):
                 suffix = ' from ' + bindings['source'] + ' at ' + isodt(bindings['timestamp']) + ' with a fee of {}%'.format(output(D(bindings['fee_multiplier']) * D(100), 'fee_multiplier')) + ' (' + bindings['tx_hash'] + ')' + ' [{}]'.format(bindings['validity'])
                 logging.info('Broadcast: {}'.format(infix + suffix))
 
-        elif table == 'bets':
+        elif category == 'bets':
             placeholder = ''
             if bindings['target_value']:    # 0.0 is not a valid target value.
                 placeholder = ' that ' + str(output(bindings['target_value'], 'value'))
@@ -169,7 +150,7 @@ def exectracer(cursor, sql, bindings):
 
             logging.info('Bet: {} on {} at {} for {} against {} at {} odds in {} blocks{} for a fee of {} ({}) [{}]'.format(BET_TYPE_NAME[bindings['bet_type']], bindings['feed_address'], isodt(bindings['deadline']), output(bindings['wager_amount'], 'XCP'), output(bindings['counterwager_amount'], 'XCP'), output(odds, 'odds'), bindings['expiration'], placeholder, output(fee, 'XCP'), bindings['tx_hash'], bindings['validity']))
 
-        elif table == 'bet_matches':
+        elif category == 'bet_matches':
             placeholder = ''
             if bindings['target_value']:    # 0 is not a valid target value.
                 placeholder = ' that ' + str(output(bindings['target_value'], 'value'))
@@ -177,30 +158,79 @@ def exectracer(cursor, sql, bindings):
                 placeholder += ', leveraged {}x'.format(output(bindings['leverage'] / 5040, 'leverage'))
             logging.info('Bet Match: {} for {} against {} for {} on {} at {}{} ({}) [{}]'.format(BET_TYPE_NAME[bindings['tx0_bet_type']], output(bindings['forward_amount'], 'XCP'), BET_TYPE_NAME[bindings['tx1_bet_type']], output(bindings['backward_amount'], 'XCP'), bindings['feed_address'], isodt(bindings['deadline']), placeholder, bindings['id'], bindings['validity']))
 
-        elif table == 'dividends':
+        elif category == 'dividends':
             logging.info('Dividend: {} paid {} per share of {} ({}) [{}]'.format(bindings['source'], output(bindings['amount_per_share'], 'XCP'), bindings['asset'], bindings['tx_hash'], bindings['validity']))
 
-        elif table == 'burns':
+        elif category == 'burns':
             logging.info('Burn: {} burned {} for {} ({}) [{}]'.format(bindings['source'], output(bindings['burned'], 'BTC'), output(bindings['earned'], 'XCP'), bindings['tx_hash'], bindings['validity']))
 
-        elif table == 'cancels':
+        elif category == 'cancels':
             logging.info('Cancel: {} ({}) [{}]'.format(bindings['offer_hash'], bindings['tx_hash'], bindings['validity']))
 
-        elif table == 'callbacks':
+        elif category == 'callbacks':
             decimal.getcontext().prec = 9   # TODO: also arbitrary
             logging.info('Callback: {} called back {}% of {} ({}) [{}]'.format(bindings['source'], float(D(bindings['fraction_per_share']) * D(100)), bindings['asset'], bindings['tx_hash'], bindings['validity']))
 
-        elif table == 'order_expirations':
+        elif category == 'order_expirations':
             logging.info('Expired order: {}'.format(bindings['order_hash']))
 
-        elif table == 'order_match_expirations':
+        elif category == 'order_match_expirations':
             logging.info('Expired Order Match awaiting payment: {}'.format(bindings['order_match_id']))
 
-        elif table == 'bet_expirations':
+        elif category == 'bet_expirations':
             logging.info('Expired bet: {}'.format(bindings['bet_hash']))
 
-        elif table == 'bet_match_expirations':
+        elif category == 'bet_match_expirations':
             logging.info('Expired Bet Match: {}'.format(bindings['bet_match_id']))
+        
+def rowtracer(cursor, sql):
+    """Converts fetched SQL data into dict-style"""
+    dictionary = {}
+    for index, (name, type_) in enumerate(cursor.getdescription()):
+        dictionary[name] = sql[index]
+    return dictionary
+
+def exectracer(cursor, sql, bindings):
+    # This means that all changes to database must use a very simple syntax.
+        # TODO: Need sanity checks here.
+    sql = sql.lower()
+    if not 'insert' in sql or 'update' in sql: return True
+
+    db = cursor.getconnection()
+
+    # Alter database.
+    array = sql.split('(')[0].split(' ')
+    command, category = array[0], array[2]
+    dictionary = {'command': command, 'category': category, 'bindings': bindings}
+
+    # Skip blocks, transactions.
+    if 'blocks' in sql or 'transactions' in sql: return True
+
+    # Record alteration in database.
+    if not category in ('balances', 'messages'):
+        cursor = db.cursor()
+
+        # Get last idx.
+        cursor.execute('''SELECT * FROM messages WHERE idx = (SELECT MAX(idx) from messages)''')
+        try:
+            idx = cursor.fetchall()[0]['idx'] + 1
+        except IndexError:
+            idx = 0
+
+        # Get current block.
+        try:
+            block_index = bindings['block_index']
+        except KeyError:
+            block_index = bindings['tx1_block_index']
+
+        bindings_string = str(collections.OrderedDict(sorted(bindings.items())))
+        cursor.execute('insert into messages values(:idx, :block_index, :command, :category, :bindings)', (idx, block_index, command, category, bindings_string))
+
+        idx += 1
+        cursor.close()
+
+    # Log.
+    log(db, command, category, bindings)
 
     return True
 

@@ -414,6 +414,18 @@ def initialise(db):
                                  block_index_idx ON bet_match_expirations (block_index)
                               ''')
 
+    # Messages
+    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS messages(
+                                 idx INTEGER PRIMARY KEY,
+                                 block_index INTEGER,
+                                 command TEXT,
+                                 category TEXT,
+                                 bindings TEXT)
+                              ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                                 block_index_idx ON messages (block_index)
+                              ''')
+
     initialise_cursor.close()
 
 def get_tx_info (tx):
@@ -514,6 +526,7 @@ def reparse (db, block_index=None, quiet=False):
         cursor.execute('''DROP TABLE IF EXISTS bet_expirations''')
         cursor.execute('''DROP TABLE IF EXISTS order_match_expirations''')
         cursor.execute('''DROP TABLE IF EXISTS bet_match_expirations''')
+        cursor.execute('''DROP TABLE IF EXISTS messages''')
 
         # Reparse all blocks, transactions.
         if quiet:
