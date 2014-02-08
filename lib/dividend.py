@@ -3,7 +3,6 @@
 """Pay out dividends."""
 
 import struct
-import logging
 import decimal
 D = decimal.Decimal
 
@@ -23,7 +22,7 @@ def validate (db, source, amount_per_share, asset):
     if not amount_per_share:
         problems.append('zero amount per share')
 
-    issuances = util.get_issuances(db, validity='Valid', asset=asset)
+    issuances = util.get_issuances(db, validity='valid', asset=asset)
     if not issuances:
         problems.append('no such asset, {}.'.format(asset))
         return None, problems
@@ -62,24 +61,24 @@ def parse (db, tx, message):
         assert len(message) == LENGTH
         amount_per_share, asset_id = struct.unpack(FORMAT, message)
         asset = util.get_asset_name(asset_id)
-        validity = 'Valid'
+        validity = 'valid'
     except struct.error as e:
         amount_per_share, asset = None, None
-        validity = 'Invalid: could not unpack'
+        validity = 'invalid: could not unpack'
 
-    if validity == 'Valid':
+    if validity == 'valid':
         # For SQLite3
         amount_per_share = min(amount_per_share, config.MAX_INT)
 
         amount, problems = validate(db, tx['source'], amount_per_share, asset)
-        if problems: validity = 'Invalid: ' + ';'.join(problems)
+        if problems: validity = 'invalid: ' + ';'.join(problems)
 
-    if validity == 'Valid':
+    if validity == 'valid':
         # Debit.
         util.debit(db, tx['block_index'], tx['source'], 'XCP', amount)
 
         # Credit.
-        issuances = util.get_issuances(db, validity='Valid', asset=asset)
+        issuances = util.get_issuances(db, validity='valid', asset=asset)
         divisible = issuances[0]['divisible']
         balances = util.get_balances(db, asset=asset)
         for balance in balances:
@@ -101,9 +100,6 @@ def parse (db, tx, message):
     }
     sql='insert into dividends values(:tx_index, :tx_hash, :block_index, :source, :asset, :amount_per_share, :validity)'
     dividend_parse_cursor.execute(sql, bindings)
-
-    if validity == 'Valid':
-        logging.info('Dividend: {} paid {} per share of asset {} ({})'.format(tx['source'], util.devise(db, amount_per_share, 'XCP', 'output'), asset, tx['tx_hash']))
 
     dividend_parse_cursor.close()
 

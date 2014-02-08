@@ -3,7 +3,6 @@
 """Create and parse 'send'-type messages."""
 
 import struct
-import logging
 
 from . import (util, config, exceptions, bitcoin, util)
 
@@ -15,12 +14,16 @@ ID = 0
 def validate (db, source, destination, amount, asset):
     problems = []
 
-    if asset == 'BTC': problems.append('cannot send bitcoins')
+    if asset == 'BTC': problems.append('cannot send bitcoins')  # Only for parsing.
     if not amount: problems.append('zero quantity')
 
     return problems
 
 def create (db, source, destination, amount, asset, unsigned=False):
+    # Just send BTC.
+    if asset == 'BTC':
+        return bitcoin.transaction(source, destination, amount, config.MIN_FEE, None, unsigned=unsigned)
+
     balances = util.get_balances(db, address=source, asset=asset)
     if not balances or balances[0]['amount'] < amount:
         raise exceptions.SendError('insufficient funds')
@@ -41,12 +44,12 @@ def parse (db, tx, message):
         assert len(message) == LENGTH
         asset_id, amount = struct.unpack(FORMAT, message)
         asset = util.get_asset_name(asset_id)
-        validity = 'Valid'
+        validity = 'valid'
     except struct.error as e:
         asset, amount = None, None
-        validity = 'Invalid: Could not unpack.'
+        validity = 'invalid: Could not unpack.'
 
-    if validity == 'Valid':
+    if validity == 'valid':
         # Oversend
         cursor.execute('''SELECT * FROM balances \
                                      WHERE (address = ? AND asset = ?)''', (tx['source'], asset))
@@ -57,12 +60,11 @@ def parse (db, tx, message):
         # For SQLite3
         amount = min(amount, config.MAX_INT)
         problems = validate(db, tx['source'], tx['destination'], amount, asset)
-        if problems: validity = 'Invalid: ' + ';'.join(problems)
+        if problems: validity = 'invalid: ' + ';'.join(problems)
 
-    if validity == 'Valid':
+    if validity == 'valid':
         util.debit(db, tx['block_index'], tx['source'], asset, amount)
         util.credit(db, tx['block_index'], tx['destination'], asset, amount)
-        logging.info('Send: {} of asset {} from {} to {} ({})'.format(util.devise(db, amount, asset, 'output'), asset, tx['source'], tx['destination'], tx['tx_hash']))
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

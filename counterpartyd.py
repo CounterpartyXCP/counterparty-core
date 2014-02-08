@@ -8,6 +8,11 @@ import json
 import decimal
 D = decimal.Decimal
 
+# Breaks compatibility?!?!
+# decimal.DefaultContext.prec = 28
+# decimal.setcontext(decimal.BasicContext)
+# decimal.getcontext().traps[decimal.Inexact] = 1
+
 import sys
 import logging
 import requests
@@ -209,8 +214,19 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
             config.UNSPENDABLE = '1CounterpartyXXXXXXXXXXXXXXXUWLpVr'
 
 def market (give_asset, get_asset):
+
+    # Your Pending Orders Matches.
+    awaiting_btcs = util.get_order_matches(db, validity='pending', is_mine=True)
+    table = PrettyTable(['Matched Order ID', 'Time Left'])
+    for order_match in awaiting_btcs:
+        order_match = format_order_match(db, order_match)
+        table.add_row(order_match)
+    print('Your Pending Order Matches')
+    print(table)
+    print('\n')
+
     # Open orders.
-    orders = util.get_orders(db, validity='Valid', show_expired=False, show_empty=False)
+    orders = util.get_orders(db, validity='valid', show_expired=False, show_empty=False)
     table = PrettyTable(['Give Quantity', 'Give Asset', 'Price', 'Price Assets', 'Required BTC Fee', 'Provided BTC Fee', 'Time Left', 'Tx Hash'])
     for order in orders:
         if give_asset and order['give_asset'] != give_asset: continue
@@ -223,7 +239,7 @@ def market (give_asset, get_asset):
     print('\n')
 
     # Open bets.
-    bets = util.get_bets(db, validity='Valid', show_empty=False)
+    bets = util.get_bets(db, validity='valid', show_empty=False)
     table = PrettyTable(['Bet Type', 'Feed Address', 'Deadline', 'Target Value', 'Leverage', 'Wager', 'Odds', 'Time Left', 'Tx Hash'])
     for bet in bets:
         bet = format_bet(bet)
@@ -232,18 +248,8 @@ def market (give_asset, get_asset):
     print(table)
     print('\n')
 
-    # Matched orders awaiting BTC payments from you.
-    awaiting_btcs = util.get_order_matches(db, validity='Valid: awaiting BTC payment', is_mine=True)
-    table = PrettyTable(['Matched Order ID', 'Time Left'])
-    for order_match in awaiting_btcs:
-        order_match = format_order_match(db, order_match)
-        table.add_row(order_match)
-    print('Order Matches Awaiting BTC Payment from You')
-    print(table)
-    print('\n')
-
     # Feeds
-    broadcasts = util.get_broadcasts(db, validity='Valid', order_by='timestamp', order_dir='desc')
+    broadcasts = util.get_broadcasts(db, validity='valid', order_by='timestamp', order_dir='desc')
     table = PrettyTable(['Feed Address', 'Timestamp', 'Text', 'Value', 'Fee Multiplier'])
     seen_addresses = []
     for broadcast in broadcasts:
@@ -610,7 +616,7 @@ if __name__ == '__main__':
             call_price = None
             description = None
         else:
-            issuances = util.get_issuances(db, validity='Valid', asset=args.asset)
+            issuances = util.get_issuances(db, validity='valid', asset=args.asset)
             total = sum([issuance['amount'] for issuance in issuances])
             total = util.devise(db, total, args.asset, 'output')
             divisible = bool(issuances[-1]['divisible'])

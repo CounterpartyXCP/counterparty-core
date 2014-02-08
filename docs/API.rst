@@ -685,7 +685,7 @@ An object that describes a specific bet:
 * **leverage** (*integer*): Leverage, as a fraction of 5040
 * **expiration** (*integer*): The number of blocks for which the bet should be valid
 * **fee_multiplier** (*integer*): 
-* **validity** (*string*): Set to "Valid" if a valid bet. Any other setting signifies an invalid/improper bet
+* **validity** (*string*): Set to "valid" if a valid bet. Any other setting signifies an invalid/improper bet
 
 
 .. _bet-match-object:
@@ -715,7 +715,7 @@ An object that describes a specific occurance of two bets being matched (either 
 * **forward_amount** (*integer*): The :ref:`amount <amounts>` of XCP bet in the initial bet
 * **backward_amount** (*integer*): The :ref:`amount <amounts>` of XCP bet in the matching bet
 * **fee_multiplier** (*integer*): 
-* **validity** (*string*): Set to "Valid" if a valid order match. Any other setting signifies an invalid/improper order match
+* **validity** (*string*): Set to "valid" if a valid order match. Any other setting signifies an invalid/improper order match
 
 
 .. _broadcast-object:
@@ -733,7 +733,7 @@ An object that describes a specific occurance of a broadcast event (i.e. creatin
 * **value** (*float*): The numerical value of the broadcast
 * **fee_multiplier** (*float*): How much of every bet on this feed should go to its operator; a fraction of 1, (i.e. .05 is five percent)
 * **text** (*string*): The textual component of the broadcast
-* **validity** (*string*): Set to "Valid" if a valid broadcast. Any other setting signifies an invalid/improper broadcast
+* **validity** (*string*): Set to "valid" if a valid broadcast. Any other setting signifies an invalid/improper broadcast
 
 
 .. _btcpay-object:
@@ -748,7 +748,7 @@ An object that matches a request to settle an Order Match for which BTC is owed:
 * **block_index** (*integer*): The block index (block number in the block chain)
 * **source** (*string*):
 * **order_match_id** (*string*):
-* **validity** (*string*): Set to "Valid" if valid
+* **validity** (*string*): Set to "valid" if valid
 
 
 .. _burn-object:
@@ -764,7 +764,7 @@ An object that describes an instance of a specific burn:
 * **address** (*string*): The address the burn was performed from
 * **burned** (*integer*): The :ref:`amount <amounts>` of BTC burned
 * **earned** (*integer*): The :ref:`amount <amounts>` of XPC actually earned from the burn (takes into account any bonus amounts, 1 BTC limitation, etc)
-* **validity** (*string*): Set to "Valid" if a valid burn. Any other setting signifies an invalid/improper burn
+* **validity** (*string*): Set to "valid" if a valid burn. Any other setting signifies an invalid/improper burn
 
 
 .. _cancel-object:
@@ -779,7 +779,7 @@ An object that describes a cancellation of a (previously) open order or bet:
 * **block_index** (*integer*): The block index (block number in the block chain)
 * **source** (*string*): The address with the open order or bet that was cancelled
 * **offer_hash** (*string*): The transaction hash of the order or bet cancelled
-* **validity** (*string*): Set to "Valid" if a valid burn. Any other setting signifies an invalid/improper burn
+* **validity** (*string*): Set to "valid" if a valid burn. Any other setting signifies an invalid/improper burn
 
 
 .. _debit-credit-object:
@@ -810,7 +810,7 @@ An object that describes an issuance of dividends on a specific user defined ass
 * **source** (*string*): The address that issued the dividend
 * **asset** (*string*): The :ref:`asset <assets>` that the dividends are being rewarded on 
 * **amount_per_share** (*integer*): The :ref:`amount <amounts>` of XCP rewarded per share of the asset
-* **validity** (*string*): Set to "Valid" if a valid burn. Any other setting signifies an invalid/improper burn
+* **validity** (*string*): Set to "valid" if a valid burn. Any other setting signifies an invalid/improper burn
 
 
 .. _issuance-object:
@@ -828,7 +828,7 @@ An object that describes a specific occurance of a user defined asset being issu
 * **divisible** (*boolean*): Whether or not the asset is divisible (must agree with previous issuances of the asset, if there are any)
 * **issuer** (*string*): 
 * **transfer** (*boolean*): Whether or not this objects marks the transfer of ownership rights for the specified quantity of this asset
-* **validity** (*string*): Set to "Valid" if a valid issuance. Any other setting signifies an invalid/improper issuance
+* **validity** (*string*): Set to "valid" if a valid issuance. Any other setting signifies an invalid/improper issuance
 
 
 .. _order-object:
@@ -874,7 +874,7 @@ An object that describes a specific occurance of two orders being matched (eithe
 * **forward_amount** (*integer*): The :ref:`amount <amounts>` of the specified forward asset
 * **backward_asset** (*string*): The :ref:`asset <assets>` exchanged FROM the second order to the first order
 * **backward_amount** (*integer*): The :ref:`amount <amounts>` of the specified backward asset
-* **validity** (*string*): Set to "Valid" if a valid order match. Any other setting signifies an invalid/improper order match
+* **validity** (*string*): Set to "valid" if a valid order match. Any other setting signifies an invalid/improper order match
 
 
 .. _send-object:
@@ -891,4 +891,4 @@ An object that describes a specific send (e.g. "simple send", of XCP, or a user 
 * **destination** (*string*): The destination address of the send
 * **asset** (*string*): The :ref:`asset <assets>` being sent
 * **amount** (*integer*): The :ref:`amount <amounts>` of the specified asset sent
-* **validity** (*string*): Set to "Valid" if a valid send. Any other setting signifies an invalid/improper send
+* **validity** (*string*): Set to "valid" if a valid send. Any other setting signifies an invalid/improper send

@@ -3,7 +3,6 @@
 import struct
 import decimal
 D = decimal.Decimal
-import logging
 
 from . import (util, config, exceptions, bitcoin, util)
 
@@ -18,10 +17,10 @@ def validate (db, source, give_asset, give_amount, get_asset, get_amount, expira
         problems.append('trading an asset for itself')
     if not give_amount or not get_amount:
         problems.append('zero give or zero get')
-    if give_asset not in ('BTC', 'XCP') and not util.get_issuances(db, validity='Valid', asset=give_asset):
-        problems.append('no such asset to give, {}.'.format(give_asset))
-    if get_asset not in ('BTC', 'XCP') and not util.get_issuances(db, validity='Valid', asset=get_asset):
-        problems.append('no such asset to get, {}.'.format(get_asset))
+    if give_asset not in ('BTC', 'XCP') and not util.get_issuances(db, validity='valid', asset=give_asset):
+        problems.append('no such asset to give ({})'.format(give_asset))
+    if get_asset not in ('BTC', 'XCP') and not util.get_issuances(db, validity='valid', asset=get_asset):
+        problems.append('no such asset to get ({})'.format(get_asset))
     if expiration > config.MAX_EXPIRATION:
         problems.append('maximum expiration time exceeded')
 
@@ -55,13 +54,13 @@ def parse (db, tx, message):
         give_id, give_amount, get_id, get_amount, expiration, fee_required = struct.unpack(FORMAT, message)
         give_asset = util.get_asset_name(give_id)
         get_asset = util.get_asset_name(get_id)
-        validity = 'Valid'
+        validity = 'valid'
     except struct.error as e:
         give_asset, give_amount, get_asset, get_amount, expiration, fee_required = None, None, None, None, None, None
-        validity = 'Invalid: could not unpack'
+        validity = 'invalid: could not unpack'
 
     price = 0
-    if validity == 'Valid':
+    if validity == 'valid':
         try: price = D(get_amount) / D(give_amount)
         except: pass
 
@@ -76,9 +75,9 @@ def parse (db, tx, message):
                 get_amount = int(price * D(give_amount))
 
         problems = validate(db, tx['source'], give_asset, give_amount, get_asset, get_amount, expiration, fee_required)
-        if problems: validity = 'Invalid: ' + ';'.join(problems)
+        if problems: validity = 'invalid: ' + ';'.join(problems)
 
-    if validity == 'Valid':
+    if validity == 'valid':
         if give_asset != 'BTC':  # No need (or way) to debit BTC.
             util.debit(db, tx['block_index'], tx['source'], give_asset, give_amount)
 
@@ -103,23 +102,8 @@ def parse (db, tx, message):
     sql='insert into orders values(:tx_index, :tx_hash, :block_index, :source, :give_asset, :give_amount, :give_remaining, :get_asset, :get_amount, :get_remaining, :expiration, :expire_index, :fee_required, :fee_provided, :validity)'
     order_parse_cursor.execute(sql, bindings)
 
-    # Log.
-    if validity == 'Valid':
-        give_amount = util.devise(db, give_amount, give_asset, 'output')
-        get_amount = util.devise(db, get_amount, get_asset, 'output')
-
-        # Consistent ordering for currency pairs. (Partial DUPE.)
-        if get_asset < give_asset:
-            price = util.devise(db, D(get_amount) / D(give_amount), 'price', 'output')
-            price_assets = get_asset + '/' + give_asset
-            action = 'sell'
-        else:
-            price = util.devise(db, D(give_amount) / D(get_amount), 'price', 'output')
-            price_assets = give_asset + '/' + get_asset
-            action = 'buy'
-
-        logging.info('Order: {} {} {} at {} {} in {} blocks, with a provided fee of {} BTC and a required fee of {} BTC ({})'.format(action, give_amount, give_asset, price, price_assets, expiration, str(tx['fee'] / config.UNIT), str(fee_required / config.UNIT), tx['tx_hash']))
-        match(db, tx)
+    # Match.
+    match(db, tx)
 
     order_parse_cursor.close()
 
@@ -133,7 +117,7 @@ def match (db, tx):
 
     cursor.execute('''SELECT * FROM orders \
                                   WHERE (give_asset=? AND get_asset=? AND validity=?)''',
-                               (tx1['get_asset'], tx1['give_asset'], 'Valid'))
+                               (tx1['get_asset'], tx1['give_asset'], 'valid'))
     give_remaining = tx1['give_remaining']
     get_remaining = tx1['get_remaining']
     order_matches = cursor.fetchall()
@@ -151,9 +135,14 @@ def match (db, tx):
 
         # If the prices agree, make the trade. The found order sets the price,
         # and they trade as much as they can.
-        tx0_price = D(tx0['get_amount']) / D(tx0['give_amount'])
-        tx1_price = D(tx1['get_amount']) / D(tx1['give_amount'])
-        if tx0_price <= D(1) / tx1_price:
+        tx0_price = util.price(tx0['get_amount'], tx0['give_amount'])
+        tx1_price = util.price(tx1['get_amount'], tx1['give_amount'])
+        tx1_inverse_price = util.price(tx1['give_amount'], tx1['get_amount'])
+
+        # NOTE: Old protocol.
+        if tx['block_index'] < 286000: tx1_inverse_price = D(1) / tx1_price
+
+        if tx0_price <= tx1_inverse_price:
             forward_amount = int(min(tx0['give_remaining'], D(give_remaining) / tx0_price))
             if not forward_amount: continue
             backward_amount = round(forward_amount * tx0_price)
@@ -161,26 +150,10 @@ def match (db, tx):
             forward_asset, backward_asset = tx1['get_asset'], tx1['give_asset']
             order_match_id = tx0['tx_hash'] + tx1['tx_hash']
 
-            # This can't be gotten rid of!
-            forward_print = D(util.devise(db, forward_amount, forward_asset, 'output'))
-            backward_print = D(util.devise(db, backward_amount, backward_asset, 'output'))
-
-            # Consistent ordering for currency pairs. (Partial DUPE.)
-            if forward_asset < backward_asset:
-                price = util.devise(db, D(forward_amount) / D(backward_amount), 'price', 'output')
-                price_assets = forward_asset + '/' + backward_asset
-                foobar = '{} {} for {} {}'.format(forward_print, forward_asset, backward_print, backward_asset)
-            else:
-                price = util.devise(db, D(backward_amount) / D(forward_amount), 'price', 'output')
-                price_assets = backward_asset + '/' + forward_asset
-                foobar = '{} {} for {} {}'.format(backward_print, backward_asset, forward_print, forward_asset)
-
-            logging.info('Order Match: {} at {} {} ({})'.format(foobar, price, price_assets, order_match_id))
-
             if 'BTC' in (tx1['give_asset'], tx1['get_asset']):
-                validity = 'Valid: awaiting BTC payment'
+                validity = 'pending'
             else:
-                validity = 'Valid'
+                validity = 'valid'
                 # Credit.
                 util.credit(db, tx['block_index'], tx1['source'], tx1['get_asset'],
                                     forward_amount)
@@ -238,9 +211,9 @@ def expire (db, block_index):
 
     # Expire orders and give refunds for the amount give_remaining (if non-zero; if not BTC).
     cursor.execute('''SELECT * FROM orders \
-                      WHERE (validity = ? AND expire_index < ?)''', ('Valid', block_index))
+                      WHERE (validity = ? AND expire_index < ?)''', ('valid', block_index))
     for order in cursor.fetchall():
-        cursor.execute('''UPDATE orders SET validity=? WHERE tx_index=?''', ('Invalid: expired', order['tx_index']))
+        cursor.execute('''UPDATE orders SET validity=? WHERE tx_index=?''', ('invalid: expired', order['tx_index']))
         if order['give_asset'] != 'BTC':    # Can't credit BTC.
             util.credit(db, block_index, order['source'], order['give_asset'], order['give_remaining'])
 
@@ -253,13 +226,11 @@ def expire (db, block_index):
         sql='insert into order_expirations values(:order_index, :order_hash, :block_index)'
         cursor.execute(sql, bindings)
 
-        logging.info('Expired order: {}'.format(order['tx_hash']))
-
     # Expire order_matches for BTC with no BTC.
     cursor.execute('''SELECT * FROM order_matches \
-                      WHERE (validity = ? and match_expire_index < ?)''', ('Valid: awaiting BTC payment', block_index))
+                      WHERE (validity = ? and match_expire_index < ?)''', ('pending', block_index))
     for order_match in cursor.fetchall():
-        cursor.execute('''UPDATE order_matches SET validity=? WHERE id = ?''', ('Invalid: expired awaiting BTC payment', order_match['id']))
+        cursor.execute('''UPDATE order_matches SET validity=? WHERE id = ?''', ('invalid: expired awaiting payment', order_match['id']))
         if order_match['forward_asset'] == 'BTC':
             util.credit(db, block_index, order_match['tx1_address'],
                         order_match['backward_asset'],
@@ -278,8 +249,6 @@ def expire (db, block_index):
         }
         sql='insert into order_match_expirations values(:order_match_id, :block_index)'
         cursor.execute(sql, bindings)
-
-        logging.info('Expired Order Match awaiting BTC payment: {}'.format(order_match['id']))
 
         # If tx0 is still good, replenish give, get remaining.
         cursor.execute('''SELECT * FROM orders \

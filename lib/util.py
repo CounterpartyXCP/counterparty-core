@@ -8,6 +8,7 @@ import logging
 import operator
 from operator import itemgetter
 import apsw
+import collections
 
 from . import (config, exceptions, bitcoin)
 
@@ -24,6 +25,167 @@ DO_FILTER_OPERATORS = {
     '<=': operator.le,
     '>=': operator.ge,
 }
+
+def price (numerator, denominator):
+    numerator = D(numerator)
+    denominator = D(denominator)
+    return D(numerator / denominator)
+
+def log (db, command, category, bindings):
+
+    def output (amount, asset):
+        try:
+            if asset not in ('price', 'fee_multiplier', 'odds', 'leverage'):
+                return str(devise(db, amount, asset, 'output')) + ' ' + asset
+            else:
+                return str(devise(db, amount, asset, 'output'))
+        except exceptions.AssetError:
+            return '<AssetError>'
+        except decimal.DivisionByZero:
+            return '<DivisionByZero>'
+
+    if command == 'insert':
+
+        if category == 'credits':
+            logging.debug('Credit: {} to {}'.format(output(bindings['amount'], bindings['asset']), bindings['address']))
+
+        elif category == 'debits':
+            logging.debug('Debit: {} from {}'.format(output(bindings['amount'], bindings['asset']), bindings['address']))
+
+        elif category == 'sends':
+            logging.info('Send: {} from {} to {} ({}) [{}]'.format(output(bindings['amount'], bindings['asset']), bindings['source'], bindings['destination'], bindings['tx_hash'], bindings['validity']))
+
+        elif category == 'orders':
+            give_asset = bindings['give_asset']
+            get_asset = bindings['get_asset']
+
+            give_amount = output(bindings['give_amount'], bindings['give_asset']).split(' ')[0]
+            get_amount = output(bindings['get_amount'], bindings['get_asset']).split(' ')[0]
+
+            # Consistent ordering for currency pairs. (Partial DUPE.)
+            if get_asset < give_asset:
+                try:
+                    price = output(D(get_amount) / D(give_amount), 'price')
+                except (decimal.DivisionByZero, decimal.InvalidOperation):
+                    price = '??'
+                price_assets = get_asset + '/' + give_asset
+                action = 'sell {} {}'.format(give_amount, give_asset)
+            else:
+                try:
+                    price = output(D(give_amount) / D(get_amount), 'price')
+                except (decimal.DivisionByZero, decimal.InvalidOperation):
+                    price = '??'
+                price_assets = give_asset + '/' + get_asset
+                action = 'buy {} {}'.format(get_amount, get_asset)
+
+            logging.info('Order: {} at {} {} in {} blocks, with a provided fee of {} BTC and a required fee of {} BTC ({}) [{}]'.format(action, price, price_assets, bindings['expiration'], bindings['fee_provided'] / config.UNIT, bindings['fee_required'] / config.UNIT, bindings['tx_hash'], bindings['validity']))
+
+        elif category == 'order_matches':
+            forward_amount = bindings['forward_amount']
+            backward_amount = bindings['backward_amount']
+            forward_asset = bindings['forward_asset']
+            backward_asset = bindings['backward_asset']
+
+            # This can't be gotten rid of!
+            forward_print = output(forward_amount, forward_asset)
+            backward_print = output(backward_amount, backward_asset)
+
+            # Consistent ordering for currency pairs. (Partial DUPE.)
+            if forward_asset < backward_asset:
+                try:
+                    price = output(D(forward_amount) / D(backward_amount), 'price')
+                except (decimal.DivisionByZero, decimal.InvalidOperation):
+                    price = None
+                price_assets = forward_asset + '/' + backward_asset
+                foobar = '{} for {}'.format(forward_print, backward_print)
+            else:
+                try:
+                    price = output(D(backward_amount) / D(forward_amount), 'price')
+                except (decimal.DivisionByZero, decimal.InvalidOperation):
+                    price = None
+                price_assets = backward_asset + '/' + forward_asset
+                foobar = '{} for {}'.format(backward_print, forward_print)
+
+            logging.info('Order Match: {} at {} {} ({}) [{}]'.format(foobar, price, price_assets, bindings['id'], bindings['validity']))
+
+        elif category == 'btcpays':
+            logging.info('BTC Payment: Order Match ID {} ({}) [{}]'.format(bindings['order_match_id'], bindings['tx_hash'], bindings['validity']))
+
+        elif category == 'issuances':
+            if bindings['transfer']:
+                logging.info('Issuance: {} transferred asset {} to {} ({}) [{}]'.format(bindings['source'], bindings['asset'], bindings['issuer'], bindings['tx_hash'], bindings['validity']))
+            elif not bindings['amount']:
+                logging.info('Issuance: {} locked asset {} ({}) [{}]'.format(bindings['issuer'], bindings['asset'], bindings['tx_hash'], bindings['validity']))
+            else:
+                if bindings['divisible']:
+                    divisibility = 'divisible'
+                    unit = config.UNIT
+                else:
+                    divisibility = 'indivisible'
+                    unit = 1
+                if bindings['callable'] and (bindings['block_index'] > 283271 or config.TESTNET):
+                    callability = 'callable from {} for {} XCP/{}'.format(isodt(bindings['call_date']), bindings['call_price'], bindings['asset'])
+                else:
+                    callability = 'uncallable'
+                try:
+                    amount = devise(db, bindings['amount'], None, dest='output', divisible=bindings['divisible'])
+                except:
+                    amount = '?'
+                logging.info('Issuance: {} created {} of asset {}, which is {} and {}, with description ‘{}’ ({}) [{}]'.format(bindings['issuer'], amount, bindings['asset'], divisibility, callability, bindings['description'], bindings['tx_hash'], bindings['validity']))
+
+        elif category == 'broadcasts':
+            if not bindings['text']:
+                logging.info('Broadcast: {} locked his feed ({}) [{}]'.format(bindings['source'], bindings['tx_hash'], bindings['validity']))
+            else:
+                if not bindings['value']: infix = '‘{}’'.format(bindings['text'])
+                else: infix = '‘{}’ = {}'.format(bindings['text'], bindings['value'])
+                suffix = ' from ' + bindings['source'] + ' at ' + isodt(bindings['timestamp']) + ' with a fee of {}%'.format(output(D(bindings['fee_multiplier']) * D(100), 'fee_multiplier')) + ' (' + bindings['tx_hash'] + ')' + ' [{}]'.format(bindings['validity'])
+                logging.info('Broadcast: {}'.format(infix + suffix))
+
+        elif category == 'bets':
+            placeholder = ''
+            if bindings['target_value']:    # 0.0 is not a valid target value.
+                placeholder = ' that ' + str(output(bindings['target_value'], 'value'))
+            if bindings['leverage']:
+                placeholder += ', leveraged {}x'.format(output(bindings['leverage']/ 5040, 'leverage'))
+            odds = D(bindings['wager_amount']) / D(bindings['counterwager_amount'])
+
+            fee = round(bindings['wager_amount'] * bindings['fee_multiplier'] / 1e8)    # round?!
+
+            logging.info('Bet: {} on {} at {} for {} against {} at {} odds in {} blocks{} for a fee of {} ({}) [{}]'.format(BET_TYPE_NAME[bindings['bet_type']], bindings['feed_address'], isodt(bindings['deadline']), output(bindings['wager_amount'], 'XCP'), output(bindings['counterwager_amount'], 'XCP'), output(odds, 'odds'), bindings['expiration'], placeholder, output(fee, 'XCP'), bindings['tx_hash'], bindings['validity']))
+
+        elif category == 'bet_matches':
+            placeholder = ''
+            if bindings['target_value']:    # 0 is not a valid target value.
+                placeholder = ' that ' + str(output(bindings['target_value'], 'value'))
+            if bindings['leverage']:
+                placeholder += ', leveraged {}x'.format(output(bindings['leverage'] / 5040, 'leverage'))
+            logging.info('Bet Match: {} for {} against {} for {} on {} at {}{} ({}) [{}]'.format(BET_TYPE_NAME[bindings['tx0_bet_type']], output(bindings['forward_amount'], 'XCP'), BET_TYPE_NAME[bindings['tx1_bet_type']], output(bindings['backward_amount'], 'XCP'), bindings['feed_address'], isodt(bindings['deadline']), placeholder, bindings['id'], bindings['validity']))
+
+        elif category == 'dividends':
+            logging.info('Dividend: {} paid {} per share of {} ({}) [{}]'.format(bindings['source'], output(bindings['amount_per_share'], 'XCP'), bindings['asset'], bindings['tx_hash'], bindings['validity']))
+
+        elif category == 'burns':
+            logging.info('Burn: {} burned {} for {} ({}) [{}]'.format(bindings['source'], output(bindings['burned'], 'BTC'), output(bindings['earned'], 'XCP'), bindings['tx_hash'], bindings['validity']))
+
+        elif category == 'cancels':
+            logging.info('Cancel: {} ({}) [{}]'.format(bindings['offer_hash'], bindings['tx_hash'], bindings['validity']))
+
+        elif category == 'callbacks':
+            decimal.getcontext().prec = 9   # TODO: also arbitrary
+            logging.info('Callback: {} called back {}% of {} ({}) [{}]'.format(bindings['source'], float(D(bindings['fraction_per_share']) * D(100)), bindings['asset'], bindings['tx_hash'], bindings['validity']))
+
+        elif category == 'order_expirations':
+            logging.info('Expired order: {}'.format(bindings['order_hash']))
+
+        elif category == 'order_match_expirations':
+            logging.info('Expired Order Match awaiting payment: {}'.format(bindings['order_match_id']))
+
+        elif category == 'bet_expirations':
+            logging.info('Expired bet: {}'.format(bindings['bet_hash']))
+
+        elif category == 'bet_match_expirations':
+            logging.info('Expired Bet Match: {}'.format(bindings['bet_match_id']))
         
 def rowtracer(cursor, sql):
     """Converts fetched SQL data into dict-style"""
@@ -33,8 +195,47 @@ def rowtracer(cursor, sql):
     return dictionary
 
 def exectracer(cursor, sql, bindings):
-    # if 'INSERT' in sql or 'UPDATE' in sql:
-    #     print(sql, bindings)
+    # This means that all changes to database must use a very simple syntax.
+        # TODO: Need sanity checks here.
+    sql = sql.lower()
+    if not 'insert' in sql or 'update' in sql: return True
+
+    db = cursor.getconnection()
+
+    # Alter database.
+    array = sql.split('(')[0].split(' ')
+    command, category = array[0], array[2]
+    dictionary = {'command': command, 'category': category, 'bindings': bindings}
+
+    # Skip blocks, transactions.
+    if 'blocks' in sql or 'transactions' in sql: return True
+
+    # Record alteration in database.
+    if not category in ('balances', 'messages'):
+        cursor = db.cursor()
+
+        # Get last idx.
+        cursor.execute('''SELECT * FROM messages WHERE idx = (SELECT MAX(idx) from messages)''')
+        try:
+            idx = cursor.fetchall()[0]['idx'] + 1
+        except IndexError:
+            idx = 0
+
+        # Get current block.
+        try:
+            block_index = bindings['block_index']
+        except KeyError:
+            block_index = bindings['tx1_block_index']
+
+        bindings_string = str(collections.OrderedDict(sorted(bindings.items())))
+        cursor.execute('insert into messages values(:idx, :block_index, :command, :category, :bindings)', (idx, block_index, command, category, bindings_string))
+
+        idx += 1
+        cursor.close()
+
+    # Log.
+    log(db, command, category, bindings)
+
     return True
 
 def connect_to_db():
@@ -68,7 +269,6 @@ def database_check (db):
         time.sleep(1)
     raise exceptions.DatabaseError('Counterparty database is behind Bitcoind. Is the counterpartyd server running?')
 
-# TODO: Doesn’t use DB indexes at all!
 def do_filter(results, filters, filterop):
     """Filters results based on a filter data structure (as used by the API)"""
     if not len(results) or not filters: #empty results, or not filtering
@@ -155,12 +355,12 @@ def xcp_supply (db):
 
     # Add burns.
     cursor.execute('''SELECT * FROM burns \
-                      WHERE validity = ?''', ('Valid',))
+                      WHERE validity = ?''', ('valid',))
     burn_total = sum([burn['earned'] for burn in cursor.fetchall()])
 
     # Subtract issuance fees.
     cursor.execute('''SELECT * FROM issuances\
-                      WHERE validity = ?''', ('Valid',))
+                      WHERE validity = ?''', ('valid',))
     fee_total = sum([issuance['fee_paid'] for issuance in cursor.fetchall()])
 
     cursor.close()
@@ -249,8 +449,7 @@ def debit (db, block_index, address, asset, amount):
                       WHERE (address=? and asset=?)''',
                    (balance, address, asset))
 
-    # Record debit *only if valid*.
-    logging.debug('Debit: {} {} from {}'.format(devise(db, amount, asset, 'output'), asset, address))
+    # Record debit.
     bindings = {
         'block_index': block_index,
         'address': address,
@@ -262,7 +461,7 @@ def debit (db, block_index, address, asset, amount):
 
     debit_cursor.close()
 
-def credit (db, block_index, address, asset, amount, divisible=None):
+def credit (db, block_index, address, asset, amount):
     credit_cursor = db.cursor()
     assert asset != 'BTC' # Never BTC.
     assert type(amount) == int
@@ -293,7 +492,6 @@ def credit (db, block_index, address, asset, amount, divisible=None):
                        (balance, address, asset))
 
     # Record credit.
-    logging.debug('Credit: {} {} to {}'.format(devise(db, amount, asset, 'output', divisible=divisible), asset, address))
     bindings = {
         'block_index': block_index,
         'address': address,
@@ -305,14 +503,18 @@ def credit (db, block_index, address, asset, amount, divisible=None):
     credit_cursor.close()
 
 def devise (db, quantity, asset, dest, divisible=None):
-    SIX = D(10) ** -6
-    EIGHT = D(10) ** -8
-
     quantity = D(quantity)
+
+    # For output only.
+    def norm(num, places):
+        num = round(num, places)
+        fmt = '{:.' + str(places) + 'f}'
+        num = fmt.format(num)
+        return num.rstrip('0')+'0' if num.rstrip('0')[-1] == '.' else num.rstrip('0')
 
     if asset in ('leverage', 'price', 'odds', 'value'):
         if dest == 'output':
-            return quantity.quantize(SIX)
+            return norm(quantity, 6)
         elif dest == 'input':
             # Hackish
             if asset == 'leverage':
@@ -321,7 +523,7 @@ def devise (db, quantity, asset, dest, divisible=None):
                 return float(quantity)
 
     if asset in ('fee_multiplier',):
-        return D(quantity / D(1e8)).quantize(SIX)
+        return norm(quantity / D(1e8), 6)
 
     if divisible == None:
         if asset in ('BTC', 'XCP'):
@@ -329,7 +531,7 @@ def devise (db, quantity, asset, dest, divisible=None):
         else:
             cursor = db.cursor()
             cursor.execute('''SELECT * FROM issuances \
-                              WHERE (validity = ? AND asset = ?)''', ('Valid', asset))
+                              WHERE (validity = ? AND asset = ?)''', ('valid', asset))
             issuances = cursor.fetchall()
             cursor.close()
             if not issuances: raise exceptions.AssetError('No such asset: {}'.format(asset))
@@ -337,19 +539,19 @@ def devise (db, quantity, asset, dest, divisible=None):
 
     if divisible:
         if dest == 'output':
-            quantity = D(quantity / D(config.UNIT)).quantize(EIGHT)
+            quantity /= D(config.UNIT)
             if quantity == quantity.to_integral():
-                return str(float(quantity))  # For divisible assets, display the decimal point.
+                return str(quantity) + '.0'  # For divisible assets, display the decimal point.
             else:
-                return str(quantity.quantize(EIGHT).normalize())
+                return norm(quantity, 8)
         elif dest == 'input':
-            quantity = D(quantity * D(config.UNIT)).quantize(EIGHT)
+            quantity *= D(config.UNIT)
             if quantity == quantity.to_integral():
                 return int(quantity)
             else:
                 raise exceptions.QuantityError('Divisible assets have only eight decimal places of precision.')
         else:
-            return quantity.quantize(EIGHT)
+            return quantity
     else:
         if quantity != round(quantity):
             raise exceptions.QuantityError('Fractional quantities of indivisible assets.')
@@ -529,11 +731,11 @@ def get_dividends (db, validity=None, source=None, asset=None, filters=None, ord
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_burns (db, validity=True, address=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
+def get_burns (db, validity=True, source=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
-    if address: filters.append({'field': 'address', 'op': '==', 'value': address})
+    if source: filters.append({'field': 'source', 'op': '==', 'value': source})
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM burns%s'''
          % get_limit_to_blocks(start_block, end_block))
@@ -559,16 +761,16 @@ def get_address (db, address):
                                              address)
     address_dict = {}
     address_dict['balances'] = get_balances(db, address=address)
-    address_dict['burns'] = get_burns(db, validity='Valid', address=address, order_by='block_index', order_dir='asc')
-    address_dict['sends'] = get_sends(db, validity='Valid', source=address, order_by='block_index', order_dir='asc')
-    address_dict['orders'] = get_orders(db, validity='Valid', source=address, order_by='block_index', order_dir='asc')
-    address_dict['order_matches'] = get_order_matches(db, validity='Valid', address=address, order_by='tx0_block_index', order_dir='asc')
-    address_dict['btcpays'] = get_btcpays(db, validity='Valid', order_by='block_index', order_dir='asc')
-    address_dict['issuances'] = get_issuances(db, validity='Valid', issuer=address, order_by='block_index', order_dir='asc')
-    address_dict['broadcasts'] = get_broadcasts(db, validity='Valid', source=address, order_by='block_index', order_dir='asc')
-    address_dict['bets'] = get_bets(db, validity='Valid', source=address, order_by='block_index', order_dir='asc')
-    address_dict['bet_matches'] = get_bet_matches(db, validity='Valid', address=address, order_by='tx0_block_index', order_dir='asc')
-    address_dict['dividends'] = get_dividends(db, validity='Valid', source=address, order_by='block_index', order_dir='asc')
+    address_dict['burns'] = get_burns(db, validity='valid', source=address, order_by='block_index', order_dir='asc')
+    address_dict['sends'] = get_sends(db, validity='valid', source=address, order_by='block_index', order_dir='asc')
+    address_dict['orders'] = get_orders(db, validity='valid', source=address, order_by='block_index', order_dir='asc')
+    address_dict['order_matches'] = get_order_matches(db, validity='valid', address=address, order_by='tx0_block_index', order_dir='asc')
+    address_dict['btcpays'] = get_btcpays(db, validity='valid', order_by='block_index', order_dir='asc')
+    address_dict['issuances'] = get_issuances(db, validity='valid', issuer=address, order_by='block_index', order_dir='asc')
+    address_dict['broadcasts'] = get_broadcasts(db, validity='valid', source=address, order_by='block_index', order_dir='asc')
+    address_dict['bets'] = get_bets(db, validity='valid', source=address, order_by='block_index', order_dir='asc')
+    address_dict['bet_matches'] = get_bet_matches(db, validity='valid', address=address, order_by='tx0_block_index', order_dir='asc')
+    address_dict['dividends'] = get_dividends(db, validity='valid', source=address, order_by='block_index', order_dir='asc')
     return address_dict
     
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
