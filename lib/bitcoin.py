@@ -11,6 +11,7 @@ import hashlib
 import requests
 import re
 import time
+import getpass
 
 from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
 from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec
@@ -90,7 +91,7 @@ def rpc (method, params):
         address = params[0]
         if rpc('validateaddress', [address])['ismine']:
             print('Wallet locked.')
-            passphrase = input('Enter your Bitcoind[‐Qt] wallet passhrase: ')
+            passphrase = getpass.getpass('Enter your Bitcoind[‐Qt] wallet passhrase: ')
             print('Unlocking wallet for 60 seconds.')
             rpc('walletpassphrase', [passphrase, 60])
             return rpc(method, params)  # This shouldn’t recurse.

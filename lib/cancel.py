@@ -6,7 +6,6 @@ offer_hash is the hash of either a bet or an order.
 
 import binascii
 import struct
-import logging
 
 from . import (util, config, exceptions, bitcoin, util)
 
@@ -88,9 +87,6 @@ def parse (db, tx, message):
         # If neither order or bet, mark as invalid.
         else:
             validity = 'Invalid: no valid offer with that hash from that address'
-
-    if validity == 'Valid':
-        logging.info('Cancel: {} ({})'.format(offer_hash, tx['tx_hash']))
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

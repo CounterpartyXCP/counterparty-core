@@ -13,7 +13,6 @@ All wagers are in XCP.
 import struct
 import decimal
 D = decimal.Decimal
-import logging
 
 from . import (util, config, bitcoin, exceptions, util)
 
@@ -152,15 +151,8 @@ def parse (db, tx, message):
     sql='insert into bets values(:tx_index, :tx_hash, :block_index, :source, :feed_address, :bet_type, :deadline, :wager_amount, :wager_remaining, :counterwager_amount, :counterwager_remaining, :target_value, :leverage, :expiration, :expire_index, :fee_multiplier, :validity)'
     bet_parse_cursor.execute(sql, bindings)
 
-    # Log.
-    if validity == 'Valid':
-        placeholder = ''
-        if target_value:    # 0.0 is not a valid target value.
-            placeholder = ' that ' + str(util.devise(db, target_value, 'value', 'output'))
-        if leverage:
-            placeholder += ', leveraged {}x'.format(util.devise(db, leverage / 5040, 'leverage', 'output'))
-        logging.info('Bet: {} on {} at {} for {} XCP against {} XCP at {} odds in {} blocks{} for a fee of {} XCP ({})'.format(util.BET_TYPE_NAME[bet_type], feed_address, util.isodt(deadline), wager_amount / config.UNIT, counterwager_amount / config.UNIT, util.devise(db, odds, 'odds', dest='output'), expiration, placeholder, util.devise(db, fee, 'XCP', 'output'), tx['tx_hash']))
-        match(db, tx)
+    # Match.
+    match(db, tx)
 
     bet_parse_cursor.close()
 
@@ -224,14 +216,6 @@ def match (db, tx):
             if not forward_amount: continue
             backward_amount = round(D(forward_amount) / tx0_odds)
             bet_match_id = tx0['tx_hash'] + tx1['tx_hash']
-
-            # Log.
-            placeholder = ''
-            if target_value:    # 0 is not a valid target value.
-                placeholder = ' that ' + str(util.devise(db, target_value, 'value', 'output'))
-            if leverage:
-                placeholder += ', leveraged {}x'.format(util.devise(db, leverage / 5040, 'leverage', 'output'))
-            logging.info('Bet Match: {} for {} XCP against {} for {} XCP on {} at {}{} ({})'.format(util.BET_TYPE_NAME[tx0['bet_type']], util.devise(db, forward_amount, 'XCP', 'output'), util.BET_TYPE_NAME[tx1['bet_type']], util.devise(db, backward_amount, 'XCP', 'output'), tx1['feed_address'], util.isodt(tx1['deadline']), placeholder, bet_match_id))
 
             # Debit the order.
             wager_remaining = wager_remaining - backward_amount
@@ -306,8 +290,6 @@ def expire (db, block_index, block_time):
         sql='insert into bet_expirations values(:bet_index, :bet_hash, :block_index)'
         cursor.execute(sql, bindings)
 
-        logging.info('Expired bet: {}'.format(bet['tx_hash']))
-
     # Expire bet matches whose deadline is more than two weeks before the current block time.
     cursor.execute('''SELECT * FROM bet_matches \
                       WHERE (validity = ? AND deadline < ?)''', ('Valid', block_time - config.TWO_WEEKS))
@@ -328,8 +310,6 @@ def expire (db, block_index, block_time):
         }
         sql='insert into bet_match_expirations values(:block_index, :bet_match_id)'
         cursor.execute(sql, bindings)
-
-        logging.info('Expired Bet Match: {}'.format(bet_match['tx0_hash'] + bet_match['tx1_hash']))
 
     cursor.close()
 

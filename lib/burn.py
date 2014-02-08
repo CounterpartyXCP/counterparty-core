@@ -5,7 +5,6 @@
 import struct
 import decimal
 D = decimal.Decimal
-import logging
 
 from . import (util, config, exceptions, bitcoin, util)
 
@@ -35,7 +34,7 @@ def create (db, source, quantity, overburn=False, unsigned=False):
     if problems: raise exceptions.BurnError(problems)
 
     # Check that a maximum of 1 BTC total is burned per address.
-    burns = util.get_burns(db, address=source, validity='Valid')
+    burns = util.get_burns(db, source=source, validity='Valid')
     already_burned = sum([burn['burned'] for burn in burns])
     if quantity > (1 * config.UNIT - already_burned) and not overburn:
         raise exceptions.BurnError('1 BTC may be burned per address')
@@ -58,7 +57,7 @@ def parse (db, tx, message=None):
     if validity == 'Valid':
         # Calculate quantity of XPC earned. (Maximum 1 BTC in total, ever.)
         cursor = db.cursor()
-        cursor.execute('''SELECT * FROM burns WHERE (validity = ? AND address = ?)''', ('Valid', tx['source']))
+        cursor.execute('''SELECT * FROM burns WHERE (validity = ? AND source = ?)''', ('Valid', tx['source']))
         burns = cursor.fetchall()
         already_burned = sum([burn['burned'] for burn in burns])
         ONE_BTC = 1 * config.UNIT
@@ -77,9 +76,6 @@ def parse (db, tx, message=None):
 
         # Credit source address with earned XCP.
         util.credit(db, tx['block_index'], tx['source'], 'XCP', earned)
-
-        # Log.
-        logging.info('Burn: {} burned {} BTC for {} XCP ({})'.format(tx['source'], util.devise(db, burned, 'BTC', 'output'), util.devise(db, earned, 'XCP', 'output'), tx['tx_hash']))
     else:
         burned = 0
         earned = 0
@@ -90,12 +86,12 @@ def parse (db, tx, message=None):
         'tx_index': tx['tx_index'],
         'tx_hash': tx['tx_hash'],
         'block_index': tx['block_index'],
-        'address': tx['source'],
+        'source': tx['source'],
         'burned': burned,
         'earned': earned,
         'validity': validity,
     }
-    sql='insert into burns values(:tx_index, :tx_hash, :block_index, :address, :burned, :earned, :validity)'
+    sql='insert into burns values(:tx_index, :tx_hash, :block_index, :source, :burned, :earned, :validity)'
     burn_parse_cursor.execute(sql, bindings)
 
 

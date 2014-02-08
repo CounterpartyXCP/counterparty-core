@@ -3,7 +3,6 @@
 import struct
 import decimal
 D = decimal.Decimal
-import logging
 
 from . import (util, config, exceptions, bitcoin, util)
 
@@ -103,23 +102,8 @@ def parse (db, tx, message):
     sql='insert into orders values(:tx_index, :tx_hash, :block_index, :source, :give_asset, :give_amount, :give_remaining, :get_asset, :get_amount, :get_remaining, :expiration, :expire_index, :fee_required, :fee_provided, :validity)'
     order_parse_cursor.execute(sql, bindings)
 
-    # Log.
-    if validity == 'Valid':
-        give_amount = util.devise(db, give_amount, give_asset, 'output')
-        get_amount = util.devise(db, get_amount, get_asset, 'output')
-
-        # Consistent ordering for currency pairs. (Partial DUPE.)
-        if get_asset < give_asset:
-            price = util.devise(db, D(get_amount) / D(give_amount), 'price', 'output')
-            price_assets = get_asset + '/' + give_asset
-            action = 'sell {} {}'.format(give_amount, give_asset)
-        else:
-            price = util.devise(db, D(give_amount) / D(get_amount), 'price', 'output')
-            price_assets = give_asset + '/' + get_asset
-            action = 'buy {} {}'.format(get_amount, get_asset)
-
-        logging.info('Order: {} at {} {} in {} blocks, with a provided fee of {} BTC and a required fee of {} BTC ({})'.format(action, price, price_assets, expiration, str(tx['fee'] / config.UNIT), str(fee_required / config.UNIT), tx['tx_hash']))
-        match(db, tx)
+    # Match.
+    match(db, tx)
 
     order_parse_cursor.close()
 
@@ -160,22 +144,6 @@ def match (db, tx):
 
             forward_asset, backward_asset = tx1['get_asset'], tx1['give_asset']
             order_match_id = tx0['tx_hash'] + tx1['tx_hash']
-
-            # This can't be gotten rid of!
-            forward_print = D(util.devise(db, forward_amount, forward_asset, 'output'))
-            backward_print = D(util.devise(db, backward_amount, backward_asset, 'output'))
-
-            # Consistent ordering for currency pairs. (Partial DUPE.)
-            if forward_asset < backward_asset:
-                price = util.devise(db, D(forward_amount) / D(backward_amount), 'price', 'output')
-                price_assets = forward_asset + '/' + backward_asset
-                foobar = '{} {} for {} {}'.format(forward_print, forward_asset, backward_print, backward_asset)
-            else:
-                price = util.devise(db, D(backward_amount) / D(forward_amount), 'price', 'output')
-                price_assets = backward_asset + '/' + forward_asset
-                foobar = '{} {} for {} {}'.format(backward_print, backward_asset, forward_print, forward_asset)
-
-            logging.info('Order Match: {} at {} {} ({})'.format(foobar, price, price_assets, order_match_id))
 
             if 'BTC' in (tx1['give_asset'], tx1['get_asset']):
                 validity = 'Valid: awaiting BTC payment'
@@ -253,8 +221,6 @@ def expire (db, block_index):
         sql='insert into order_expirations values(:order_index, :order_hash, :block_index)'
         cursor.execute(sql, bindings)
 
-        logging.info('Expired order: {}'.format(order['tx_hash']))
-
     # Expire order_matches for BTC with no BTC.
     cursor.execute('''SELECT * FROM order_matches \
                       WHERE (validity = ? and match_expire_index < ?)''', ('Valid: awaiting BTC payment', block_index))
@@ -278,8 +244,6 @@ def expire (db, block_index):
         }
         sql='insert into order_match_expirations values(:order_match_id, :block_index)'
         cursor.execute(sql, bindings)
-
-        logging.info('Expired Order Match awaiting BTC payment: {}'.format(order_match['id']))
 
         # If tx0 is still good, replenish give, get remaining.
         cursor.execute('''SELECT * FROM orders \

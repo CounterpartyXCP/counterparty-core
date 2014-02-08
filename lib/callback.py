@@ -122,11 +122,6 @@ def parse (db, tx, message):
     sql='insert into callbacks values(:tx_index, :tx_hash, :block_index, :source, :fraction_per_share, :asset, :validity)'
     callback_parse_cursor.execute(sql, bindings)
 
-
-    if validity == 'Valid':
-        decimal.getcontext().prec = 9   # TODO: also arbitrary
-        logging.info('Callback: {} called back {}% of asset {} ({})'.format(tx['source'], float(D(fraction_per_share) * D(100)), asset, tx['tx_hash']))
-
     callback_parse_cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

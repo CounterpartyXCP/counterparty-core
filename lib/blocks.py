@@ -338,7 +338,7 @@ def initialise(db):
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
-                        address TEXT,
+                        source TEXT,
                         burned INTEGER,
                         earned INTEGER,
                         validity TEXT)

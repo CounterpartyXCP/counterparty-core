@@ -2,7 +2,6 @@
 
 import binascii
 import struct
-import logging
 
 from . import (util, config, exceptions, bitcoin, util)
 
@@ -90,7 +89,6 @@ def parse (db, tx, message):
             if order_match['forward_asset'] != 'BTC':
                 util.credit(db, tx['block_index'], tx['source'], order_match['forward_asset'], order_match['forward_amount'])
             validity = 'Paid'
-        logging.info('BTC Payment for Order Match: {} ({})'.format(order_match_id, tx['tx_hash']))
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

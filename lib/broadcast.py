@@ -94,16 +94,6 @@ def parse (db, tx, message):
         problems = validate(db, tx['source'], timestamp, value, fee_multiplier, text)
         if problems: validity = 'Invalid: ' + ';'.join(problems)
 
-    # Log.
-    if validity == 'Valid':
-        if not text:
-            logging.info('Broadcast: {} locked his feed.'.format(tx['source'], tx['tx_hash']))
-        else:
-            if not value: infix = '‘{}’'.format(text)
-            else: infix = '‘{}’ = {}'.format(text, value)
-            suffix = ' from ' + tx['source'] + ' at ' + util.isodt(timestamp) + ' with a fee multiplier of {}'.format(util.devise(db, fee_multiplier, 'fee_multiplier', 'output')) + ' (' + tx['tx_hash'] + ')'
-            logging.info('Broadcast: {}'.format(infix + suffix))
-
     # Add parsed transaction to message-type–specific table.
     bindings = {
         'tx_index': tx['tx_index'],

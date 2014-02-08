@@ -1,7 +1,6 @@
 #! /usr/bin/python3
 
 import struct
-import logging
 import decimal
 D = decimal.Decimal
 
@@ -115,10 +114,6 @@ def parse (db, tx, message):
         else:
             fee_paid = 0
 
-        # Credit.
-        if validity == 'Valid' and amount:
-            util.credit(db, tx['block_index'], tx['source'], asset, amount, divisible=divisible)
-
     # Add parsed transaction to message-type–specific table.
     bindings= {
         'tx_index': tx['tx_index'],
@@ -139,25 +134,9 @@ def parse (db, tx, message):
     sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :amount, :divisible, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :validity)'
     issuance_parse_cursor.execute(sql, bindings)
 
-
-    if validity == 'Valid':
-        # Log.
-        if tx['destination']:
-            logging.info('Issuance: {} transfered asset {} to {} ({})'.format(tx['source'], asset, tx['destination'], tx['tx_hash']))
-        elif not amount:
-            logging.info('Issuance: {} locked asset {} ({})'.format(tx['source'], asset, tx['tx_hash']))
-        else:
-            if divisible:
-                divisibility = 'divisible'
-                unit = config.UNIT
-            else:
-                divisibility = 'indivisible'
-                unit = 1
-            if callable_ and (tx['block_index'] > 283271 or config.TESTNET) and len(message) == LENGTH_2:
-                callability = 'callable from {} for {} XCP/{}'.format(util.isodt(call_date), call_price, asset)
-            else:
-                callability = 'uncallable'
-            logging.info('Issuance: {} created {} of {} asset {}, which is {}, with description ‘{}’ ({})'.format(tx['source'], util.devise(db, amount, None, 'output', divisible=divisible), divisibility, asset, callability, description, tx['tx_hash']))
+    # Credit.
+    if validity == 'Valid' and amount:
+        util.credit(db, tx['block_index'], tx['source'], asset, amount)
 
     issuance_parse_cursor.close()
 

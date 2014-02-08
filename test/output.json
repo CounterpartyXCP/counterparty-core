@@ -182,19 +182,19 @@
     "get_address_btcpays": [], 
     "get_address_burns": [
         {
-            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "block_index": 0, 
             "burned": 62000000, 
             "earned": 93000000000, 
+            "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "tx_hash": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d", 
             "tx_index": 0, 
             "validity": "Valid"
         }, 
         {
-            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "block_index": 21, 
             "burned": 38000000, 
             "earned": 57000000000, 
+            "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "tx_hash": "2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608", 
             "tx_index": 21, 
             "validity": "Valid"

@@ -3,7 +3,6 @@
 """Create and parse 'send'-type messages."""
 
 import struct
-import logging
 
 from . import (util, config, exceptions, bitcoin, util)
 
@@ -62,7 +61,6 @@ def parse (db, tx, message):
     if validity == 'Valid':
         util.debit(db, tx['block_index'], tx['source'], asset, amount)
         util.credit(db, tx['block_index'], tx['destination'], asset, amount)
-        logging.info('Send: {} of asset {} from {} to {} ({})'.format(util.devise(db, amount, asset, 'output'), asset, tx['source'], tx['destination'], tx['tx_hash']))
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

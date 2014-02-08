@@ -3,7 +3,6 @@
 """Pay out dividends."""
 
 import struct
-import logging
 import decimal
 D = decimal.Decimal
 
@@ -101,9 +100,6 @@ def parse (db, tx, message):
     }
     sql='insert into dividends values(:tx_index, :tx_hash, :block_index, :source, :asset, :amount_per_share, :validity)'
     dividend_parse_cursor.execute(sql, bindings)
-
-    if validity == 'Valid':
-        logging.info('Dividend: {} paid {} per share of asset {} ({})'.format(tx['source'], util.devise(db, amount_per_share, 'XCP', 'output'), asset, tx['tx_hash']))
 
     dividend_parse_cursor.close()
 
