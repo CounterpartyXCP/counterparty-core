@@ -539,6 +539,7 @@ def devise (db, quantity, asset, dest, divisible=None):
             else:
                 return norm(quantity, 8)
         elif dest == 'input':
+            quantity *= D(config.UNIT)
             if quantity == quantity.to_integral():
                 return int(quantity)
             else:
