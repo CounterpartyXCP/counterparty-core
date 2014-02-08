@@ -14,12 +14,16 @@ ID = 0
 def validate (db, source, destination, amount, asset):
     problems = []
 
-    if asset == 'BTC': problems.append('cannot send bitcoins')
+    if asset == 'BTC': problems.append('cannot send bitcoins')  # Only for parsing.
     if not amount: problems.append('zero quantity')
 
     return problems
 
 def create (db, source, destination, amount, asset, unsigned=False):
+    # Just send BTC.
+    if asset == 'BTC':
+        return bitcoin.transaction(source, destination, amount, config.MIN_FEE, None, unsigned=unsigned)
+
     balances = util.get_balances(db, address=source, asset=asset)
     if not balances or balances[0]['amount'] < amount:
         raise exceptions.SendError('insufficient funds')
