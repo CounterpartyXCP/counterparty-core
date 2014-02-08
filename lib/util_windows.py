@@ -107,6 +107,7 @@ def fix_win32_unicode():
                     self.mode = 'w'
                     self.encoding = 'utf-8'
                     self.name = name
+                    self.errors = ''
                     self.flush()
 
                 def isatty(self):
