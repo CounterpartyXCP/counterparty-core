@@ -54,12 +54,10 @@ def exectracer(cursor, sql, bindings):
                 return str(devise(db, amount, asset, 'output')) + ' ' + asset
             else:
                 return str(devise(db, amount, asset, 'output'))
-        except decimal.InvalidOperation:
-            return '? ???'
-        except decimal.DivisionByZero:
-            return '? ???'
         except exceptions.AssetError:
-            return '? ???'
+            return '<AssetError>'
+        except decimal.DivisionByZero:
+            return '<DivisionByZero>'
 
     if command == 'insert':
 
@@ -67,7 +65,6 @@ def exectracer(cursor, sql, bindings):
             logging.debug('Credit: {} to {}'.format(output(bindings['amount'], bindings['asset']), bindings['address']))
 
         elif table == 'debits':
-
             logging.debug('Debit: {} from {}'.format(output(bindings['amount'], bindings['asset']), bindings['address']))
 
         elif table == 'sends':
@@ -145,7 +142,11 @@ def exectracer(cursor, sql, bindings):
                     callability = 'callable from {} for {} XCP/{}'.format(isodt(bindings['call_date']), bindings['call_price'], bindings['asset'])
                 else:
                     callability = 'uncallable'
-                logging.info('Issuance: {} created {} of asset {}, which is {} and {}, with description ‘{}’ ({}) [{}]'.format(bindings['issuer'], devise(db, bindings['amount'], None, dest='output', divisible=bindings['divisible']), bindings['issuer'], divisibility, callability, bindings['description'], bindings['tx_hash'], bindings['validity']))
+                try:
+                    amount = devise(db, bindings['amount'], None, dest='output', divisible=bindings['divisible'])
+                except:
+                    amount = '?'
+                logging.info('Issuance: {} created {} of asset {}, which is {} and {}, with description ‘{}’ ({}) [{}]'.format(bindings['issuer'], amount, bindings['issuer'], divisibility, callability, bindings['description'], bindings['tx_hash'], bindings['validity']))
 
         elif table == 'broadcasts':
             if not bindings['text']:
@@ -234,7 +235,6 @@ def database_check (db):
         time.sleep(1)
     raise exceptions.DatabaseError('Counterparty database is behind Bitcoind. Is the counterpartyd server running?')
 
-# TODO: Doesn’t use DB indexes at all!
 def do_filter(results, filters, filterop):
     """Filters results based on a filter data structure (as used by the API)"""
     if not len(results) or not filters: #empty results, or not filtering
@@ -469,14 +469,16 @@ def credit (db, block_index, address, asset, amount):
     credit_cursor.close()
 
 def devise (db, quantity, asset, dest, divisible=None):
-    SIX = D(10) ** -6
-    EIGHT = D(10) ** -8
-
     quantity = D(quantity)
+
+    def norm(num, places):
+        fmt = '{:.' + str(places) + 'f}'
+        num = fmt.format(num)
+        return num.rstrip('0')+'0' if num.rstrip('0')[-1] == '.' else num.rstrip('0')
 
     if asset in ('leverage', 'price', 'odds', 'value'):
         if dest == 'output':
-            return quantity.quantize(SIX)
+            return norm(quantity, 6)
         elif dest == 'input':
             # Hackish
             if asset == 'leverage':
@@ -485,7 +487,7 @@ def devise (db, quantity, asset, dest, divisible=None):
                 return float(quantity)
 
     if asset in ('fee_multiplier',):
-        return D(quantity / D(1e8)).quantize(SIX)
+        return norm(quantity / D(1e8), 6)
 
     if divisible == None:
         if asset in ('BTC', 'XCP'):
@@ -501,19 +503,18 @@ def devise (db, quantity, asset, dest, divisible=None):
 
     if divisible:
         if dest == 'output':
-            quantity = D(quantity / D(config.UNIT)).quantize(EIGHT)
+            quantity /= D(config.UNIT)
             if quantity == quantity.to_integral():
-                return str(float(quantity))  # For divisible assets, display the decimal point.
+                return str(quantity) + '.0'  # For divisible assets, display the decimal point.
             else:
-                return str(quantity.quantize(EIGHT).normalize())
+                return norm(quantity, 8)
         elif dest == 'input':
-            quantity = D(quantity * D(config.UNIT)).quantize(EIGHT)
             if quantity == quantity.to_integral():
                 return int(quantity)
             else:
                 raise exceptions.QuantityError('Divisible assets have only eight decimal places of precision.')
         else:
-            return quantity.quantize(EIGHT)
+            return quantity
     else:
         if quantity != round(quantity):
             raise exceptions.QuantityError('Fractional quantities of indivisible assets.')

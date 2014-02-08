@@ -8,6 +8,11 @@ import json
 import decimal
 D = decimal.Decimal
 
+# Breaks compatibility?!?!
+# decimal.DefaultContext.prec = 28
+# decimal.setcontext(decimal.BasicContext)
+# decimal.getcontext().traps[decimal.Inexact] = 1
+
 import sys
 import logging
 import requests
