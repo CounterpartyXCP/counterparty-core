@@ -143,6 +143,7 @@ The following examples are abridged for parsimony.
 		add an additional set of quotes. For example, --text='"Bitcoin price feed"'
 
 * Bet
+	
 	Equal/Not Equal Bet:
 	
 	Example: Bet on Super Bowl Feed. Denver vs. Seattle. Feed value of 1 means Seattle Wins. Feed value of 2 means 	        	Denver Wins. This command places a 1 XCP bet on the Super Bowl Feed for Seattle to win, paying out 2 to         	1. The bet will expire in 100 blocks and the settlement value of the bet is based on the first feed 	                update after the deadline timestamp of February 3, 2014 1:39 PM US Eastern Standard Time (UTC-0500)
