@@ -216,9 +216,14 @@ def match (db, tx):
 
         # If the odds agree, make the trade. The found order sets the odds,
         # and they trade as much as they can.
-        tx0_odds = D(tx0['wager_amount']) / D(tx0['counterwager_amount'])
-        tx1_odds = D(tx1['wager_amount']) / D(tx1['counterwager_amount'])
-        if D(1) / tx0_odds <= tx1_odds:
+        tx0_odds = util.price(tx0['wager_amount'], tx0['counterwager_amount'])
+        tx0_inverse_odds = util.price(tx0['counterwager_amount'], tx0['wager_amount'])
+        tx1_odds = util.price(tx1['wager_amount'], tx1['counterwager_amount'])
+
+        # NOTE: Old protocol.
+        if tx['block_index'] < 286000: tx0_inverse_odds = D(1) / tx0_odds
+
+        if tx0_inverse_odds <= tx1_odds:
             forward_amount = int(min(D(tx0['wager_remaining']), D(wager_remaining) / tx1_odds))
             if not forward_amount: continue
             backward_amount = round(D(forward_amount) / tx0_odds)

@@ -24,7 +24,12 @@ DO_FILTER_OPERATORS = {
     '<=': operator.le,
     '>=': operator.ge,
 }
-        
+
+def price (numerator, denominator):
+    numerator = D(numerator)
+    denominator = D(denominator)
+    return D(numerator / denominator)
+       
 def rowtracer(cursor, sql):
     """Converts fetched SQL data into dict-style"""
     dictionary = {}
