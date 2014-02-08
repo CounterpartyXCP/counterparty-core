@@ -503,8 +503,6 @@ def credit (db, block_index, address, asset, amount):
     credit_cursor.close()
 
 def devise (db, quantity, asset, dest, divisible=None):
-    quantity = D(quantity)
-
     # For output only.
     def norm(num, places):
         num = round(num, places)
@@ -523,7 +521,7 @@ def devise (db, quantity, asset, dest, divisible=None):
                 return float(quantity)
 
     if asset in ('fee_multiplier',):
-        return norm(quantity / D(1e8), 6)
+        return norm(D(quantity) / D(1e8), 6)
 
     if divisible == None:
         if asset in ('BTC', 'XCP'):
@@ -539,13 +537,13 @@ def devise (db, quantity, asset, dest, divisible=None):
 
     if divisible:
         if dest == 'output':
-            quantity /= D(config.UNIT)
+            quantity = D(quantity) / D(config.UNIT)
             if quantity == quantity.to_integral():
                 return str(quantity) + '.0'  # For divisible assets, display the decimal point.
             else:
                 return norm(quantity, 8)
         elif dest == 'input':
-            quantity *= D(config.UNIT)
+            quantity = D(quantity) * D(config.UNIT)
             if quantity == quantity.to_integral():
                 return int(quantity)
             else:

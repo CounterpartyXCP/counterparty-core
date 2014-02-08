@@ -379,8 +379,8 @@ if __name__ == '__main__':
     parser_order.add_argument('--give-quantity', required=True, help='the quantity of GIVE_ASSET that you are willing to give')
     parser_order.add_argument('--give-asset', required=True, help='the asset that you would like to sell')
     parser_order.add_argument('--expiration', type=int, required=True, help='the number of blocks for which the order should be valid')
-    parser_order.add_argument('--fee_required', default=0, help='the miners\' fee required to be paid by orders for them to match this one; in BTC; required iff buying BTC (may be zero, though)')
-    parser_order.add_argument('--fee_provided', default=(config.MIN_FEE / config.UNIT), help='the miners\' fee provided; in BTC; required iff selling BTC (should not be lower than is required for acceptance in a block)')
+    parser_order.add_argument('--fee_required', default=D(0), help='the miners\' fee required to be paid by orders for them to match this one; in BTC; required iff buying BTC (may be zero, though)')
+    parser_order.add_argument('--fee_provided', default=(D(config.MIN_FEE) / D(config.UNIT)), help='the miners\' fee provided; in BTC; required iff selling BTC (should not be lower than is required for acceptance in a block)')
 
     parser_btcpay= subparsers.add_parser('btcpay', help='create and broadcast a *BTCpay* message, to settle an Order Match for which you owe BTC')
     parser_btcpay.add_argument('--order-match-id', required=True, help='the concatenation of the hashes of the two transactions which compose the order match')
