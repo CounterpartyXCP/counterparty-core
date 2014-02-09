@@ -503,18 +503,18 @@ if __name__ == '__main__':
     elif args.action == 'order':
         # Fee argument is either fee_required or fee_provided, as necessary.
         if args.give_asset == 'BTC':
-            if args.fee_required != 0:
+            if args.fee_required != D(0):
                 raise exceptions.FeeError('When selling BTC, do not specify a fee required.')
             fee_required = args.fee_required
             fee_provided = util.devise(db, args.fee_provided, 'BTC', 'input')
         elif args.get_asset == 'BTC':
             fee_required = util.devise(db, args.fee_required, 'BTC', 'input')
-            if args.fee_provided != config.MIN_FEE / config.UNIT:
+            if args.fee_provided != D(config.MIN_FEE) / D(config.UNIT):
                 raise exceptions.FeeError('When buying BTC, do not specify a fee provided.')
             fee_provided = util.devise(db, args.fee_provided, 'BTC', 'input')
         else:
             fee_provided = util.devise(db, args.fee_provided, 'XCP', 'input')
-            if fee_provided != config.MIN_FEE or args.fee_required != 0:
+            if fee_provided != D(config.MIN_FEE) or args.fee_required != D(0):
                 raise exceptions.InputError('No fee should be required or provided (explicitly) if not buying or selling BTC.')
             fee_required = 0
             fee_provided = config.MIN_FEE
