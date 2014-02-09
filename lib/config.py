@@ -7,7 +7,7 @@ UNIT = 100000000        # The same across currencies.
 UNITTEST_PREFIX = b'TESTXXXX'
 
 # Versions
-VERSION = 0.4
+VERSION = '0.4.1'
 DB_VERSION_MAJOR = 6        # Major version changes the blocks or transactions table.
 DB_VERSION_MINOR = 10        # Minor version changes just the parsing.
 DB_VERSION = str(DB_VERSION_MAJOR) + '.' + str(DB_VERSION_MINOR)

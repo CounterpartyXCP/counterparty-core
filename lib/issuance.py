@@ -44,8 +44,14 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
                       WHERE (address = ? AND asset = ?)''', (source, 'XCP'))
     balances = cursor.fetchall()
     cursor.close()
-    if (block_index and block_index > 281236) and (not balances or balances[0]['amount'] < config.ISSUANCE_FEE):
-        problems.append('insufficient funds')
+    if block_index:
+        fee = 0
+        if block_index >= 286000:
+            fee = config.ISSUANCE_FEE * config.UNIT
+        elif block_index > 281236:
+            fee = config.ISSUANCE_FEE
+        if not balances or balances[0]['amount'] < fee:
+            problems.append('insufficient funds')
 
     # For SQLite3
     total = sum([issuance['amount'] for issuance in issuances])
@@ -109,11 +115,14 @@ def parse (db, tx, message):
     fee_paid = None
     if validity == 'Valid':
         # Debit fee.
-        if amount and tx['block_index'] > 281236:
-            util.debit(db, tx['block_index'], tx['source'], 'XCP', config.ISSUANCE_FEE)
-            fee_paid = config.ISSUANCE_FEE
-        else:
-            fee_paid = 0
+        fee = 0
+        if amount:
+            if tx['block_index'] >= 286000:
+                fee = config.ISSUANCE_FEE * config.UNIT
+            elif tx['block_index'] > 281236:
+                fee = config.ISSUANCE_FEE
+            if fee:
+                util.debit(db, tx['block_index'], tx['source'], 'XCP', fee)
 
         # Credit.
         if validity == 'Valid' and amount:
@@ -133,7 +142,7 @@ def parse (db, tx, message):
         'call_date': call_date,
         'call_price': call_price,
         'description': description,
-        'fee_paid': fee_paid,
+        'fee_paid': fee,
         'validity': validity,
     }
     issuance_parse_cursor.execute(*util.get_insert_sql('issuances', element_data))
