@@ -97,9 +97,10 @@ def parse (db, tx, message):
         'expire_index': tx['block_index'] + expiration,
         'fee_required': fee_required,
         'fee_provided': tx['fee'],
+        'fee_remaining': tx['fee'],
         'validity': validity,
     }
-    sql='insert into orders values(:tx_index, :tx_hash, :block_index, :source, :give_asset, :give_amount, :give_remaining, :get_asset, :get_amount, :get_remaining, :expiration, :expire_index, :fee_required, :fee_provided, :validity)'
+    sql='insert into orders values(:tx_index, :tx_hash, :block_index, :source, :give_asset, :give_amount, :give_remaining, :get_asset, :get_amount, :get_remaining, :expiration, :expire_index, :fee_required, :fee_provided, :fee_remaining, :validity)'
     order_parse_cursor.execute(sql, bindings)
 
     # Match.
@@ -112,23 +113,26 @@ def match (db, tx):
 
     # Get order in question.
     cursor.execute('''SELECT * FROM orders\
-                                  WHERE tx_index=?''', (tx['tx_index'],))
+                      WHERE tx_index=?''', (tx['tx_index'],))
     tx1 = cursor.fetchall()[0]
 
     cursor.execute('''SELECT * FROM orders \
-                                  WHERE (give_asset=? AND get_asset=? AND validity=?)''',
-                               (tx1['get_asset'], tx1['give_asset'], 'valid'))
+                      WHERE (give_asset=? AND get_asset=? AND validity=?)''',
+                   (tx1['get_asset'], tx1['give_asset'], 'valid'))
     give_remaining = tx1['give_remaining']
     get_remaining = tx1['get_remaining']
     order_matches = cursor.fetchall()
     if tx['block_index'] > 284500:  # For backwards‐compatibility (no sorting before this block).
         order_matches = sorted(order_matches, key=lambda x: x['tx_index'])                              # Sort by tx index second.
         order_matches = sorted(order_matches, key=lambda x: D(x['get_amount']) / D(x['give_amount']))   # Sort by price first.
+
+    # Get fee remaining.
+    tx1_fee_remaining = tx1['fee_remaining']
+
     for tx0 in order_matches:
 
-        # Check whether fee conditions are satisfied.
-        if tx1['get_asset'] == 'BTC' and tx0['fee_provided'] < tx1['fee_required']: continue
-        elif tx1['give_asset'] == 'BTC' and tx1['fee_provided'] < tx0['fee_required']: continue
+        # Get fee remaining.
+        tx0_fee_remaining = tx0['fee_remaining']
 
         # Make sure that that both orders still have funds remaining [to be sold].
         if tx0['give_remaining'] <= 0 or give_remaining <= 0: continue
@@ -146,6 +150,20 @@ def match (db, tx):
             forward_amount = int(min(tx0['give_remaining'], D(give_remaining) / tx0_price))
             if not forward_amount: continue
             backward_amount = round(forward_amount * tx0_price)
+
+            # Check and update fee remainings.
+            if tx1['block_index'] >= 286500: # Deduct fee_required from fee_remaining, if possible (else don’t match).
+                if tx1['get_asset'] == 'BTC':
+                    if tx0_fee_remaining < tx1['fee_required']: continue
+                    else: tx0_fee_remaining -= tx1['fee_required']
+                elif tx1['give_asset'] == 'BTC':
+                    if tx1_fee_remaining < tx0['fee_required']: continue
+                    else: tx1_fee_remaining -= tx1['fee_required']
+            else:   # Don’t deduct.
+                if tx1['get_asset'] == 'BTC':
+                    if tx0_fee_remaining < tx1['fee_required']: continue
+                elif tx1['give_asset'] == 'BTC':
+                    if tx1_fee_remaining < tx0['fee_required']: continue
 
             forward_asset, backward_asset = tx1['get_asset'], tx1['give_asset']
             order_match_id = tx0['tx_hash'] + tx1['tx_hash']
@@ -168,17 +186,21 @@ def match (db, tx):
             # Update give_remaining, get_remaining.
             cursor.execute('''UPDATE orders \
                               SET give_remaining = ?, \
-                                   get_remaining = ? \
+                                   get_remaining = ?, \
+                                   fee_remaining = ? \
                               WHERE tx_hash = ?''',
                           (tx0['give_remaining'] - forward_amount,
                            tx0['get_remaining'] - backward_amount,
+                           tx0_fee_remaining,
                            tx0['tx_hash']))
             cursor.execute('''UPDATE orders \
                               SET give_remaining = ?, \
-                                   get_remaining = ? \
+                                   get_remaining = ?, \
+                                   fee_remaining = ? \
                               WHERE tx_hash = ?''',
                           (give_remaining,
                            get_remaining,
+                           tx1_fee_remaining,
                            tx1['tx_hash']))
 
             # Record order match.

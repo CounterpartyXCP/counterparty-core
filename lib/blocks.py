@@ -181,6 +181,7 @@ def initialise(db):
                                  expire_index INTEGER,
                                  fee_required INTEGER,
                                  fee_provided INTEGER,
+                                 fee_remaining INTEGER,
                                  validity TEXT)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
