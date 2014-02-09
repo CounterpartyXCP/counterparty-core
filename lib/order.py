@@ -203,6 +203,11 @@ def match (db, tx):
                            tx1_fee_remaining,
                            tx1['tx_hash']))
 
+            if tx1['block_index'] >= 286500:
+                match_expire_index = tx1['block_index'] + 10
+            else:
+                match_expire_index = min(tx0['expire_index'], tx1['expire_index'])
+
             # Record order match.
             bindings = {
                 'id': tx0['tx_hash'] + tx['tx_hash'],
@@ -220,7 +225,7 @@ def match (db, tx):
                 'tx1_block_index': tx1['block_index'],
                 'tx0_expiration': tx0['expiration'],
                 'tx1_expiration': tx1['expiration'],
-                'match_expire_index': min(tx0['expire_index'], tx1['expire_index']),
+                'match_expire_index': match_expire_index,
                 'validity': validity,
             }
             sql='insert into order_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :forward_asset, :forward_amount, :backward_asset, :backward_amount, :tx0_block_index, :tx1_block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :validity)'
