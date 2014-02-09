@@ -21,7 +21,6 @@ import unicodedata
 
 import time
 import dateutil.parser
-import datetime
 import calendar
 from threading import Thread
 
@@ -539,7 +538,7 @@ if __name__ == '__main__':
                 parser.error('must specify call date of callable asset', )
             if not args.call_price:
                 parser.error('must specify call price of callable asset')
-            call_date = round(datetime.timestamp(dateutil.parser.parse(args.call_date)))
+            call_date = calendar.timegm(dateutil.parser.parse(args.call_date).utctimetuple())
             call_price = float(args.call_price)
         else:
             call_date, call_price = 0, 0
