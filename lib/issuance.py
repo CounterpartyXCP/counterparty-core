@@ -111,7 +111,7 @@ def parse (db, tx, message):
         issuer = tx['source']
         transfer = False
 
-    fee_paid = None
+    fee = 0
     if validity == 'valid':
         # Debit fee.
         fee = 0
