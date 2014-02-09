@@ -95,9 +95,9 @@ def parse (db, tx, message):
             # Update order match.
             bindings = {
                 'validity': 'valid',
-                'id': order_match_id
+                'order_match_id': order_match_id
             }
-            sql='update order_matches set validity = :validity where id = :id'
+            sql='update order_matches set validity = :validity where id = :order_match_id'
             cursor.execute(sql, bindings)
 
 

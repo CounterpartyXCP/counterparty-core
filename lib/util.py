@@ -44,7 +44,19 @@ def log (db, command, category, bindings):
         except decimal.DivisionByZero:
             return '<DivisionByZero>'
 
-    if command == 'insert':
+    if command == 'update':
+        if category == 'order':
+            logging.debug('Database: set validity of order {} to {}.'.format(bindings['tx_hash'], bindings['validity']))
+        elif category == 'bet':
+            logging.debug('Database: set validity of bet {} to {}.'.format(bindings['tx_hash'], bindings['validity']))
+        elif category == 'order_matches':
+            logging.debug('Database: set validity of order_match {} to {}.'.format(bindings['order_match_id'], bindings['validity']))
+        elif category == 'bet_matches':
+            logging.debug('Database: set validity of bet_match {} to {}.'.format(bindings['bet_match_id'], bindings['validity']))
+        # TODO: elif category == 'balances':
+            # logging.debug('Database: set balance of {} in {} to {}.'.format(bindings['address'], bindings['asset'], output(bindings['amount'], bindings['asset']).split(' ')[0]))
+
+    elif command == 'insert':  # TODO
 
         if category == 'credits':
             logging.debug('Credit: {} to {}'.format(output(bindings['amount'], bindings['asset']), bindings['address']))
@@ -198,13 +210,17 @@ def exectracer(cursor, sql, bindings):
     # This means that all changes to database must use a very simple syntax.
         # TODO: Need sanity checks here.
     sql = sql.lower()
-    if not 'insert' in sql or 'update' in sql: return True
+
+    # Parse SQL.
+    array = sql.split('(')[0].split(' ')
+    if 'insert' in sql:
+        command, category = array[0], array[2]
+    elif 'update' in sql:
+        command, category = array[0], array[1]
+    else:
+        return True
 
     db = cursor.getconnection()
-
-    # Alter database.
-    array = sql.split('(')[0].split(' ')
-    command, category = array[0], array[2]
     dictionary = {'command': command, 'category': category, 'bindings': bindings}
 
     # Skip blocks, transactions.
@@ -222,10 +238,14 @@ def exectracer(cursor, sql, bindings):
             message_index = 0
 
         # Get current block.
+        # Hackish
         try:
             block_index = bindings['block_index']
         except KeyError:
-            block_index = bindings['tx1_block_index']
+            try:
+                block_index = bindings['tx1_block_index']
+            except KeyError:
+                block_index = last_block(db)['block_index']
 
         bindings_string = str(collections.OrderedDict(sorted(bindings.items())))
         cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings)', (message_index, block_index, command, category, bindings_string))

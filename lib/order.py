@@ -272,9 +272,9 @@ def expire (db, block_index):
         # Update validity of order match.
         bindings = {
             'validity': 'invalid: expired awaiting payment',
-            'id': order_match['id']
+            'order_match_id': order_match['id']
         }
-        sql='update order_matches set validity = :validity where id = :id'
+        sql='update order_matches set validity = :validity where id = :order_match_id'
         cursor.execute(sql, bindings)
 
         if order_match['forward_asset'] == 'BTC':

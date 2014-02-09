@@ -320,9 +320,9 @@ def expire (db, block_index, block_time):
         # Update validity of bet match.
         bindings = {
             'validity': 'invalid: expired awaiting broadcast',
-            'id': bet_match['id']
+            'bet_match_id': bet_match['id']
         }
-        sql='update bet_matches set validity = :validity where id = :id'
+        sql='update bet_matches set validity = :validity where id = :bet_match_id'
         cursor.execute(sql, bindings)
 
         # Record bet match expiration.

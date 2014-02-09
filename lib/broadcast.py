@@ -220,10 +220,9 @@ def parse (db, tx, message):
         # Update the bet match's status.
         bindings = {
             'validity': validity,
-            'tx0_hash': bet_match['tx0_hash'],
-            'tx1_hash': bet_match['tx1_hash']
+            'bet_match_id': bet_match['tx0_hash'] + bet_match['tx1_hash']
         }
-        sql='update bet_matches set validity = :validity where (tx0_hash = :tx0_hash and tx1_hash = :tx1_hash)'
+        sql='update bet_matches set validity = :validity where id = :bet_match_id'
         broadcast_parse_cursor.execute(sql, bindings)
 
         broadcast_bet_match_cursor.close()
