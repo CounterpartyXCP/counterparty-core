@@ -96,10 +96,12 @@ def parse (db, tx, message):
         'tx_hash': tx['tx_hash'],
         'block_index': tx['block_index'],
         'source': tx['source'],
+        'destination': tx['destination'],
+        'btc_amount': tx['btc_amount'],
         'order_match_id': order_match_id,
         'validity': validity,
     }
-    sql='insert into btcpays values(:tx_index, :tx_hash, :block_index, :source, :order_match_id, :validity)'
+    sql='insert into btcpays values(:tx_index, :tx_hash, :block_index, :source, :destination, :btc_amount, :order_match_id, :validity)'
     cursor.execute(sql, bindings)
 
 

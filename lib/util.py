@@ -109,7 +109,7 @@ def log (db, command, category, bindings):
             logging.info('Order Match: {} at {} {} ({}) [{}]'.format(foobar, price, price_assets, bindings['id'], bindings['validity']))
 
         elif category == 'btcpays':
-            logging.info('BTC Payment: Order Match ID {} ({}) [{}]'.format(bindings['order_match_id'], bindings['tx_hash'], bindings['validity']))
+            logging.info('BTC Payment: {} paid {} to {} for order match {} ({}) [{}]'.format(bindings['source'], output(bindings['btc_amount'], 'BTC'), bindings['destination'], bindings['order_match_id'], bindings['tx_hash'], bindings['validity']))
 
         elif category == 'issuances':
             if bindings['transfer']:

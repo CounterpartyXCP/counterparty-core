@@ -215,17 +215,20 @@ def initialise(db):
                                  match_expire_index_idx ON order_matches (match_expire_index)
                               ''')
 
+    # BTCpays
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS btcpays(
-                        tx_index INTEGER PRIMARY KEY,
-                        tx_hash TEXT UNIQUE,
-                        block_index INTEGER,
-                        source TEXT,
-                        order_match_id TEXT,
-                        validity TEXT)
-                   ''')
+                                 tx_index INTEGER PRIMARY KEY,
+                                 tx_hash TEXT UNIQUE,
+                                 block_index INTEGER,
+                                 source TEXT,
+                                 destination TEXT,
+                                 btc_amount INTEGER,
+                                 order_match_id TEXT,
+                                 validity TEXT)
+                              ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        btcpays_block_index_idx ON btcpays (block_index)
-                    ''')
+                                 block_index_idx ON btcpays (block_index)
+                              ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS issuances(
                         tx_index INTEGER PRIMARY KEY,

@@ -126,16 +126,15 @@ CREATE INDEX broadcasts_block_index_idx ON broadcasts (block_index)
 -- Table  btcpays
 DROP TABLE IF EXISTS btcpays;
 CREATE TABLE btcpays(
-                        tx_index INTEGER PRIMARY KEY,
-                        tx_hash TEXT UNIQUE,
-                        block_index INTEGER,
-                        source TEXT,
-                        order_match_id TEXT,
-                        validity TEXT);
-INSERT INTO btcpays VALUES(4,'e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71',4,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5','valid');
--- Triggers and indices on  btcpays
-CREATE INDEX btcpays_block_index_idx ON btcpays (block_index)
-                    ;
+                                 tx_index INTEGER PRIMARY KEY,
+                                 tx_hash TEXT UNIQUE,
+                                 block_index INTEGER,
+                                 source TEXT,
+                                 destination TEXT,
+                                 btc_amount INTEGER,
+                                 order_match_id TEXT,
+                                 validity TEXT);
+INSERT INTO btcpays VALUES(4,'e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71',4,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',50000000,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5','valid');
 
 -- Table  burns
 DROP TABLE IF EXISTS burns;
@@ -298,7 +297,7 @@ INSERT INTO messages VALUES(6,3,'insert','debits','OrderedDict([(''address'', ''
 INSERT INTO messages VALUES(7,3,'insert','orders','OrderedDict([(''block_index'', 3), (''expiration'', 10), (''expire_index'', 13), (''fee_provided'', 10000), (''fee_required'', 900000), (''get_amount'', 50000000), (''get_asset'', ''BTC''), (''get_remaining'', 50000000), (''give_amount'', 105000000), (''give_asset'', ''XCP''), (''give_remaining'', 105000000), (''source'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''tx_hash'', ''084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5''), (''tx_index'', 3), (''validity'', ''valid'')])');
 INSERT INTO messages VALUES(8,3,'insert','order_matches','OrderedDict([(''backward_amount'', 100000000), (''backward_asset'', ''XCP''), (''forward_amount'', 50000000), (''forward_asset'', ''BTC''), (''id'', ''dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5''), (''match_expire_index'', 12), (''tx0_address'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''tx0_block_index'', 2), (''tx0_expiration'', 10), (''tx0_hash'', ''dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986''), (''tx0_index'', 2), (''tx1_address'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''tx1_block_index'', 3), (''tx1_expiration'', 10), (''tx1_hash'', ''084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5''), (''tx1_index'', 3), (''validity'', ''pending'')])');
 INSERT INTO messages VALUES(9,4,'insert','credits','OrderedDict([(''address'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''amount'', 100000000), (''asset'', ''XCP''), (''block_index'', 4)])');
-INSERT INTO messages VALUES(10,4,'insert','btcpays','OrderedDict([(''block_index'', 4), (''order_match_id'', ''dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5''), (''source'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''tx_hash'', ''e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71''), (''tx_index'', 4), (''validity'', ''valid'')])');
+INSERT INTO messages VALUES(10,4,'insert','btcpays','OrderedDict([(''block_index'', 4), (''btc_amount'', 50000000), (''destination'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''order_match_id'', ''dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5''), (''source'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''tx_hash'', ''e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71''), (''tx_index'', 4), (''validity'', ''valid'')])');
 INSERT INTO messages VALUES(11,5,'insert','issuances','OrderedDict([(''amount'', 1000000000), (''asset'', ''BBBB''), (''block_index'', 5), (''call_date'', 0), (''call_price'', 0.0), (''callable'', False), (''description'', ''''), (''divisible'', True), (''fee_paid'', 0), (''issuer'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''transfer'', False), (''tx_hash'', ''e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db''), (''tx_index'', 5), (''validity'', ''valid'')])');
 INSERT INTO messages VALUES(12,5,'insert','credits','OrderedDict([(''address'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''amount'', 1000000000), (''asset'', ''BBBB''), (''block_index'', 5)])');
 INSERT INTO messages VALUES(13,6,'insert','issuances','OrderedDict([(''amount'', 100000), (''asset'', ''BBBC''), (''block_index'', 6), (''call_date'', 1288855692), (''call_price'', 0.015), (''callable'', True), (''description'', ''foobar''), (''divisible'', False), (''fee_paid'', 0), (''issuer'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''transfer'', False), (''tx_hash'', ''67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6''), (''tx_index'', 6), (''validity'', ''valid'')])');

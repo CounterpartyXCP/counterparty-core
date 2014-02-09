@@ -9,7 +9,7 @@ Debit: 1.05 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Order: sell 1.05 XCP at 0.47619 BTC/XCP in 10 blocks, with a provided fee of 0.0001 BTC and a required fee of 0.009 BTC (084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5) [valid]
 Order Match: 0.5 BTC for 1.0 XCP at 0.5 BTC/XCP (dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5) [pending]
 Credit: 1.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-BTC Payment: Order Match ID dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5 (e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71) [valid]
+BTC Payment: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 0.5 BTC to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc for order match dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5 (e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71) [valid]
 Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 10.0 of asset BBBB, which is divisible and uncallable, with description ‘’ (e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db) [valid]
 Credit: 10.0 BBBB to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 100000 of asset BBBC, which is indivisible and callable from 2010-11-04T03:28:12-04:00 for 0.015 XCP/BBBC, with description ‘foobar’ (67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6) [valid]
