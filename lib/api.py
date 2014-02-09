@@ -253,13 +253,13 @@ class APIServer(threading.Thread):
             return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
 
         @dispatcher.add_method
-        def do_issuance(source, quantity, asset, divisible, transfer_destination=None, unsigned=False):
+        def do_issuance(source, quantity, asset, divisible, description, callable=False, call_date=None, call_price=None, transfer_destination=None, unsigned=False):
             try:
                 quantity = int(quantity)
             except ValueError:
                 raise Exception("Invalid quantity")
             unsigned_tx_hex = issuance.create(db, source, transfer_destination,
-                asset, quantity, divisible, unsigned=unsigned)
+                asset, quantity, divisible, callable, call_date, call_price, description, unsigned=unsigned)
             return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
 
         @dispatcher.add_method

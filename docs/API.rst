@@ -574,6 +574,7 @@ do_issuance
 ^^^^^^^^^^^^^^
 
 .. py:function:: do_issuance(source, quantity, asset, divisible, transfer_destination=null, unsigned=False)
+.. py:function:: do_issuance(source, quantity, asset, divisible, description, callable=False, call_date=None, call_price=None, transfer_destination=None, unsigned=False):
 
    Issue a new asset, issue more of an existing asset or transfer the ownership of an asset.
 
@@ -581,6 +582,10 @@ do_issuance
    :param integer quantity: The :ref:`quantity <amounts>` of the asset to issue (set to 0 if *transferring* an asset).
    :param string asset: The :ref:`asset <assets>` to issue or transfer.
    :param boolean divisible: Whether this asset is divisible or not (if a transfer, this value must match the value specified when the asset was originally issued).
+   :param boolean callable: Whether the asset is callable or not.
+   :param integer call_date: The timestamp at which the asset may be called back, in Unix time. Only valid for callable assets.
+   :param integer call_price: The :ref:`price <amounts>` at which the asset may be called back, on the specified call_date. Only valid for callable assets.
+   :param boolean description: A textual description for the asset. 52 bytes max.
    :param string transfer_destination: The address to receive the asset (only used when *transferring* assets -- leave set to ``null`` if issuing an asset).
    :param boolean unsigned: To sign and publish the transaction (i.e. ``source`` must be an address in the local wallet), set this parameter to ``false``. Otherwise, set to ``true`` to return the unsigned OP_RETURN raw transaction, hex encoded. Or, to get an unsigned multisig transaction, specify the public key string instead of ``true``. 
    :return: If ``unsigned`` is set to ``false``, the transaction is signed and committed, and the hash of the transaction is returned on success. Otherwise, the raw transaction (be it OP_RETURN or multisig) is returned as a hex encoded string.
