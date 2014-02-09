@@ -282,7 +282,7 @@ CREATE INDEX issuances_idx ON issuances (block_index)
 -- Table  messages
 DROP TABLE IF EXISTS messages;
 CREATE TABLE messages(
-                                 idx INTEGER PRIMARY KEY,
+                                 message_index INTEGER PRIMARY KEY,
                                  block_index INTEGER,
                                  command TEXT,
                                  category TEXT,
