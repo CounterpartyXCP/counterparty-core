@@ -73,7 +73,7 @@ def parse (db, tx, message):
             order = orders[0]
             cursor.execute('''UPDATE orders \
                                            SET validity=? \
-                                           WHERE tx_hash=?''', ('invalid: cancelled', order['tx_hash']))
+                                           WHERE tx_hash=?''', ('cancelled', order['tx_hash']))
             if order['give_asset'] != 'BTC':
                 util.credit(db, tx['block_index'], tx['source'], order['give_asset'], order['give_remaining'])
         # Cancel if bet.
@@ -81,7 +81,7 @@ def parse (db, tx, message):
             bet = bets[0]
             cursor.execute('''UPDATE bets \
                                            SET validity=? \
-                                           WHERE tx_hash=?''', ('invalid: cancelled', bet['tx_hash']))
+                                           WHERE tx_hash=?''', ('cancelled', bet['tx_hash']))
             util.credit(db, tx['block_index'], tx['source'], 'XCP', bet['wager_remaining'])
             util.credit(db, tx['block_index'], tx['source'], 'XCP', round(bet['wager_amount'] * bet['fee_multiplier'] / 1e8))
         # If neither order or bet, mark as invalid.
