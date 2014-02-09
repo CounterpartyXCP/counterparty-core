@@ -112,10 +112,9 @@ def parse (db, tx, message):
         issuer = tx['source']
         transfer = False
 
-    fee_paid = None
+    fee = 0
     if validity == 'Valid':
         # Debit fee.
-        fee = 0
         if amount:
             if tx['block_index'] >= 286000:
                 fee = config.ISSUANCE_FEE * config.UNIT
