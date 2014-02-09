@@ -16,10 +16,10 @@ Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 100000 of asset BBBC, which
 Credit: 100000 BBBC to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Debit: 0.0000006 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Credit: 0.0000006 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 0.00000006 XCP per share of BBBB (ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879) [valid]
+Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 0.00000006 XCP per unit of BBBB (ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879) [valid]
 Debit: 0.008 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Credit: 0.008 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 0.00000008 XCP per share of BBBC (beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a) [valid]
+Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 0.00000008 XCP per unit of BBBC (beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a) [valid]
 Broadcast: ‘Unit Test’ = 100.0 from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:33:20-05:00 with a fee of 5.0% (2b4c342f5433ebe591a1da77e013d1b72475562d48578dca8b84bac6651c3cb9) [valid]
 Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Debit: 0.025 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc

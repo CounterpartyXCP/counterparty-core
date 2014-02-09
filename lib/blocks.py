@@ -330,7 +330,7 @@ def initialise(db):
                         block_index INTEGER,
                         source TEXT,
                         asset TEXT,
-                        amount_per_share INTEGER,
+                        amount_per_unit INTEGER,
                         validity TEXT)
                    ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -371,7 +371,7 @@ def initialise(db):
                                  tx_hash TEXT UNIQUE,
                                  block_index INTEGER,
                                  source TEXT,
-                                 fraction_per_share TEXT,
+                                 fraction TEXT,
                                  asset TEXT,
                                  validity TEXT)
                               ''')

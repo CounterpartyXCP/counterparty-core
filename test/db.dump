@@ -159,7 +159,7 @@ CREATE TABLE callbacks(
                                  tx_hash TEXT UNIQUE,
                                  block_index INTEGER,
                                  source TEXT,
-                                 fraction_per_share TEXT,
+                                 fraction TEXT,
                                  asset TEXT,
                                  validity TEXT);
 INSERT INTO callbacks VALUES(23,'8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034',23,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','0.3','BBBC','valid');
@@ -247,7 +247,7 @@ CREATE TABLE dividends(
                         block_index INTEGER,
                         source TEXT,
                         asset TEXT,
-                        amount_per_share INTEGER,
+                        amount_per_unit INTEGER,
                         validity TEXT);
 INSERT INTO dividends VALUES(7,'ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879',7,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',6,'valid');
 INSERT INTO dividends VALUES(8,'beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a',8,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',8,'valid');
@@ -304,10 +304,10 @@ INSERT INTO messages VALUES(13,6,'insert','issuances','OrderedDict([(''amount'',
 INSERT INTO messages VALUES(14,6,'insert','credits','OrderedDict([(''address'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''amount'', 100000), (''asset'', ''BBBC''), (''block_index'', 6)])');
 INSERT INTO messages VALUES(15,7,'insert','debits','OrderedDict([(''address'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''amount'', 60), (''asset'', ''XCP''), (''block_index'', 7)])');
 INSERT INTO messages VALUES(16,7,'insert','credits','OrderedDict([(''address'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''amount'', 60), (''asset'', ''XCP''), (''block_index'', 7)])');
-INSERT INTO messages VALUES(17,7,'insert','dividends','OrderedDict([(''amount_per_share'', 6), (''asset'', ''BBBB''), (''block_index'', 7), (''source'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''tx_hash'', ''ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879''), (''tx_index'', 7), (''validity'', ''valid'')])');
+INSERT INTO messages VALUES(17,7,'insert','dividends','OrderedDict([(''amount_per_unit'', 6), (''asset'', ''BBBB''), (''block_index'', 7), (''source'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''tx_hash'', ''ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879''), (''tx_index'', 7), (''validity'', ''valid'')])');
 INSERT INTO messages VALUES(18,8,'insert','debits','OrderedDict([(''address'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''amount'', 800000), (''asset'', ''XCP''), (''block_index'', 8)])');
 INSERT INTO messages VALUES(19,8,'insert','credits','OrderedDict([(''address'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''amount'', 800000), (''asset'', ''XCP''), (''block_index'', 8)])');
-INSERT INTO messages VALUES(20,8,'insert','dividends','OrderedDict([(''amount_per_share'', 8), (''asset'', ''BBBC''), (''block_index'', 8), (''source'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''tx_hash'', ''beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a''), (''tx_index'', 8), (''validity'', ''valid'')])');
+INSERT INTO messages VALUES(20,8,'insert','dividends','OrderedDict([(''amount_per_unit'', 8), (''asset'', ''BBBC''), (''block_index'', 8), (''source'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''tx_hash'', ''beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a''), (''tx_index'', 8), (''validity'', ''valid'')])');
 INSERT INTO messages VALUES(21,9,'insert','broadcasts','OrderedDict([(''block_index'', 9), (''fee_multiplier'', 5000000), (''source'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''text'', ''Unit Test''), (''timestamp'', 1388000000), (''tx_hash'', ''2b4c342f5433ebe591a1da77e013d1b72475562d48578dca8b84bac6651c3cb9''), (''tx_index'', 9), (''validity'', ''valid''), (''value'', 100.0)])');
 INSERT INTO messages VALUES(22,10,'insert','debits','OrderedDict([(''address'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''amount'', 50000000), (''asset'', ''XCP''), (''block_index'', 10)])');
 INSERT INTO messages VALUES(23,10,'insert','debits','OrderedDict([(''address'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''amount'', 2500000), (''asset'', ''XCP''), (''block_index'', 10)])');
@@ -353,7 +353,7 @@ INSERT INTO messages VALUES(62,23,'insert','debits','OrderedDict([(''address'', 
 INSERT INTO messages VALUES(63,23,'insert','credits','OrderedDict([(''address'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''amount'', 3000), (''asset'', ''BBBC''), (''block_index'', 23)])');
 INSERT INTO messages VALUES(64,23,'insert','debits','OrderedDict([(''address'', ''n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7''), (''amount'', 3000), (''asset'', ''BBBC''), (''block_index'', 23)])');
 INSERT INTO messages VALUES(65,23,'insert','credits','OrderedDict([(''address'', ''n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7''), (''amount'', 4500000000), (''asset'', ''XCP''), (''block_index'', 23)])');
-INSERT INTO messages VALUES(66,23,'insert','callbacks','OrderedDict([(''asset'', ''BBBC''), (''block_index'', 23), (''fraction_per_share'', 0.3), (''source'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''tx_hash'', ''8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034''), (''tx_index'', 23), (''validity'', ''valid'')])');
+INSERT INTO messages VALUES(66,23,'insert','callbacks','OrderedDict([(''asset'', ''BBBC''), (''block_index'', 23), (''fraction'', 0.3), (''source'', ''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc''), (''tx_hash'', ''8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034''), (''tx_index'', 23), (''validity'', ''valid'')])');
 
 -- Table  order_expirations
 DROP TABLE IF EXISTS order_expirations;

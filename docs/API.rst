@@ -363,7 +363,7 @@ get_dividends
 
    :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
    :param boolean is_valid: Set to ``true`` to only return valid dividend issuances. Set to ``false`` to return all dividend issuances (including invalid attempts).
-   :param string order_by: If sorted results are desired, specify the name of a :ref:`dividend object <dividend-object>` attribute to order the results by (e.g. ``amount_per_share``). If left blank, the list of results will be returned unordered. 
+   :param string order_by: If sorted results are desired, specify the name of a :ref:`dividend object <dividend-object>` attribute to order the results by (e.g. ``amount_per_unit``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
    :param integer start_block: If specified, only results from the specified block index on will be returned  
    :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
@@ -557,13 +557,13 @@ do_cancel
 do_dividend
 ^^^^^^^^^^^^^^
 
-.. py:function:: do_dividend(source, quantity_per_share, share_asset, unsigned=False)
+.. py:function:: do_dividend(source, quantity_per_unit, share_asset, unsigned=False)
 
    Issue a dividend on a specific user defined asset.
 
    :param string source: The address that will be issuing the dividend (must have the ownership of the asset which the dividend is being issued on).
    :param string share_asset: The :ref:`asset <assets>` that the dividends are being rewarded on.
-   :param integer quantity_per_share: The :ref:`amount <amounts>` of XCP rewarded per share of the asset.
+   :param integer quantity_per_unit: The :ref:`amount <amounts>` of XCP rewarded per whole unit of the asset.
    :param boolean unsigned: To sign and publish the transaction (i.e. ``source`` must be an address in the local wallet), set this parameter to ``false``. Otherwise, set to ``true`` to return the unsigned OP_RETURN raw transaction, hex encoded. Or, to get an unsigned multisig transaction, specify the public key string instead of ``true``. 
    :return: If ``unsigned`` is set to ``false``, the transaction is signed and committed, and the hash of the transaction is returned on success. Otherwise, the raw transaction (be it OP_RETURN or multisig) is returned as a hex encoded string.
 
@@ -809,7 +809,7 @@ An object that describes an issuance of dividends on a specific user defined ass
 * **block_index** (*integer*): The block index (block number in the block chain)
 * **source** (*string*): The address that issued the dividend
 * **asset** (*string*): The :ref:`asset <assets>` that the dividends are being rewarded on 
-* **amount_per_share** (*integer*): The :ref:`amount <amounts>` of XCP rewarded per share of the asset
+* **amount_per_unit** (*integer*): The :ref:`amount <amounts>` of XCP rewarded per whole unit of the asset
 * **validity** (*string*): Set to "valid" if a valid burn. Any other setting signifies an invalid/improper burn
 
 

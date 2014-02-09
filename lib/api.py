@@ -237,8 +237,8 @@ class APIServer(threading.Thread):
             return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
 
         @dispatcher.add_method
-        def do_dividend(source, quantity_per_share, share_asset, unsigned=False):
-            unsigned_tx_hex = dividend.create(db, source, quantity_per_share,
+        def do_dividend(source, quantity_per_unit, share_asset, unsigned=False):
+            unsigned_tx_hex = dividend.create(db, source, quantity_per_unit,
                                               share_asset, unsigned=unsigned)
             return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
 

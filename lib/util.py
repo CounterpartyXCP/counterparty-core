@@ -163,7 +163,7 @@ def log (db, command, category, bindings):
             logging.info('Bet Match: {} for {} against {} for {} on {} at {}{} ({}) [{}]'.format(BET_TYPE_NAME[bindings['tx0_bet_type']], output(bindings['forward_amount'], 'XCP'), BET_TYPE_NAME[bindings['tx1_bet_type']], output(bindings['backward_amount'], 'XCP'), bindings['feed_address'], isodt(bindings['deadline']), placeholder, bindings['id'], bindings['validity']))
 
         elif category == 'dividends':
-            logging.info('Dividend: {} paid {} per share of {} ({}) [{}]'.format(bindings['source'], output(bindings['amount_per_share'], 'XCP'), bindings['asset'], bindings['tx_hash'], bindings['validity']))
+            logging.info('Dividend: {} paid {} per unit of {} ({}) [{}]'.format(bindings['source'], output(bindings['amount_per_unit'], 'XCP'), bindings['asset'], bindings['tx_hash'], bindings['validity']))
 
         elif category == 'burns':
             logging.info('Burn: {} burned {} for {} ({}) [{}]'.format(bindings['source'], output(bindings['burned'], 'BTC'), output(bindings['earned'], 'XCP'), bindings['tx_hash'], bindings['validity']))
@@ -173,7 +173,7 @@ def log (db, command, category, bindings):
 
         elif category == 'callbacks':
             decimal.getcontext().prec = 9   # TODO: also arbitrary
-            logging.info('Callback: {} called back {}% of {} ({}) [{}]'.format(bindings['source'], float(D(bindings['fraction_per_share']) * D(100)), bindings['asset'], bindings['tx_hash'], bindings['validity']))
+            logging.info('Callback: {} called back {}% of {} ({}) [{}]'.format(bindings['source'], float(D(bindings['fraction']) * D(100)), bindings['asset'], bindings['tx_hash'], bindings['validity']))
 
         elif category == 'order_expirations':
             logging.info('Expired order: {}'.format(bindings['order_hash']))

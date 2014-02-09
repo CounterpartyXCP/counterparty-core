@@ -213,7 +213,7 @@
     ], 
     "get_address_dividends": [
         {
-            "amount_per_share": 6, 
+            "amount_per_unit": 6, 
             "asset": "BBBB", 
             "block_index": 7, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
@@ -222,7 +222,7 @@
             "validity": "valid"
         }, 
         {
-            "amount_per_share": 8, 
+            "amount_per_unit": 8, 
             "asset": "BBBC", 
             "block_index": 8, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 

@@ -14,13 +14,13 @@ LENGTH = 8 + 8
 ID = 21
 
 
-def validate (db, source, fraction_per_share, asset, block_time):
+def validate (db, source, fraction, asset, block_time):
     problems = []
 
-    if fraction_per_share > 1:
-        problems.append('fraction per share greater than one')
-    elif fraction_per_share <= 0:
-        problems.append('fraction per share less than or equal to zero')
+    if fraction > 1:
+        problems.append('fraction greater than one')
+    elif fraction <= 0:
+        problems.append('fraction less than or equal to zero')
 
     issuances = util.get_issuances(db, validity='valid', asset=asset)
     if not issuances:
@@ -55,9 +55,9 @@ def validate (db, source, fraction_per_share, asset, block_time):
     for balance in balances:
         address, address_amount = balance['address'], balance['amount']
         if address == source: continue
-        callback_amount = int(address_amount * fraction_per_share)   # Round down.
+        callback_amount = int(address_amount * fraction)   # Round down.
         fraction_actual = callback_amount / address_amount
-        outputs.append({'address': address, 'shares': address_amount, 'callback_amount': callback_amount, 'fraction_actual': fraction_actual})
+        outputs.append({'address': address, 'callback_amount': callback_amount, 'fraction_actual': fraction_actual})
 
     callback_total = sum([output['callback_amount'] for output in outputs])
     if not callback_total: problems.append('nothing called back')
@@ -68,14 +68,14 @@ def validate (db, source, fraction_per_share, asset, block_time):
 
     return call_price, callback_total, outputs, problems
 
-def create (db, source, fraction_per_share, asset, unsigned=False):
-    call_price, callback_total, outputs, problems = validate(db, source, fraction_per_share, asset, None)
+def create (db, source, fraction, asset, unsigned=False):
+    call_price, callback_total, outputs, problems = validate(db, source, fraction, asset, None)
     if problems: raise exceptions.CallbackError(problems)
     print('Total amount to be called back:', util.devise(db, callback_total, asset, 'output'), asset)
 
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
-    data += struct.pack(FORMAT, fraction_per_share, asset_id)
+    data += struct.pack(FORMAT, fraction, asset_id)
     return bitcoin.transaction(source, None, None, config.MIN_FEE, data, unsigned=unsigned)
 
 def parse (db, tx, message):
@@ -84,17 +84,17 @@ def parse (db, tx, message):
     # Unpack message.
     try:
         assert len(message) == LENGTH
-        fraction_per_share, asset_id = struct.unpack(FORMAT, message)
+        fraction, asset_id = struct.unpack(FORMAT, message)
         asset = util.get_asset_name(asset_id)
         validity = 'valid'
     except struct.error as e:
-        fraction_per_share, asset = None, None
+        fraction, asset = None, None
         validity = 'invalid: could not unpack'
 
     if validity == 'valid':
         block_hash = bitcoin.rpc('getblockhash', [tx['block_index'],])  # TODO: Use block time of last block in DB instead?
         block = bitcoin.rpc('getblock', [block_hash,])
-        call_price, callback_total, outputs, problems = validate(db, tx['source'], fraction_per_share, asset, block['time'])
+        call_price, callback_total, outputs, problems = validate(db, tx['source'], fraction, asset, block['time'])
         if problems: validity = 'invalid: ' + ';'.join(problems)
 
     if validity == 'valid':
@@ -115,11 +115,11 @@ def parse (db, tx, message):
         'tx_hash': tx['tx_hash'],
         'block_index': tx['block_index'],
         'source': tx['source'],
-        'fraction_per_share': fraction_per_share,
+        'fraction': fraction,
         'asset': asset,
         'validity': validity,
     }
-    sql='insert into callbacks values(:tx_index, :tx_hash, :block_index, :source, :fraction_per_share, :asset, :validity)'
+    sql='insert into callbacks values(:tx_index, :tx_hash, :block_index, :source, :fraction, :asset, :validity)'
     callback_parse_cursor.execute(sql, bindings)
 
     callback_parse_cursor.close()
