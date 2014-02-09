@@ -218,10 +218,14 @@ def parse (db, tx, message):
             logging.info('Contract Settled: {} won the pot of {} XCP; {} XCP credited to the feed address ({})'.format(winner, util.devise(db, total_escrow, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), bet_match_id))
 
         # Update the bet match's status.
-        broadcast_bet_match_cursor.execute('''UPDATE bet_matches \
-                          SET validity=? \
-                          WHERE (tx0_hash=? and tx1_hash=?)''',
-                      (validity, bet_match['tx0_hash'], bet_match['tx1_hash']))
+        bindings = {
+            'validity': validity,
+            'tx0_hash': bet_match['tx0_hash'],
+            'tx1_hash': bet_match['tx1_hash']
+        }
+        sql='update bet_matches set validity = :validity where (tx0_hash = :tx0_hash and tx1_hash = :tx1_hash)'
+        broadcast_parse_cursor.execute(sql, bindings)
+
         broadcast_bet_match_cursor.close()
 
     broadcast_parse_cursor.close()
