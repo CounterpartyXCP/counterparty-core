@@ -214,12 +214,12 @@ def exectracer(cursor, sql, bindings):
     if not category in ('balances', 'messages'):
         cursor = db.cursor()
 
-        # Get last idx.
-        cursor.execute('''SELECT * FROM messages WHERE idx = (SELECT MAX(idx) from messages)''')
+        # Get last message index.
+        cursor.execute('''SELECT * FROM messages WHERE message_index = (SELECT MAX(message_index) from messages)''')
         try:
-            idx = cursor.fetchall()[0]['idx'] + 1
+            message_index = cursor.fetchall()[0]['message_index'] + 1
         except IndexError:
-            idx = 0
+            message_index = 0
 
         # Get current block.
         try:
@@ -228,9 +228,9 @@ def exectracer(cursor, sql, bindings):
             block_index = bindings['tx1_block_index']
 
         bindings_string = str(collections.OrderedDict(sorted(bindings.items())))
-        cursor.execute('insert into messages values(:idx, :block_index, :command, :category, :bindings)', (idx, block_index, command, category, bindings_string))
+        cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings)', (message_index, block_index, command, category, bindings_string))
 
-        idx += 1
+        message_index += 1
         cursor.close()
 
     # Log.

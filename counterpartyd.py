@@ -691,9 +691,6 @@ if __name__ == '__main__':
         api_server.start()
         blocks.follow(db)
 
-    elif args.action == 'help':
-        parser.print_help()
-
     else:
         parser.print_help()
 

@@ -28,6 +28,16 @@ class APIServer(threading.Thread):
 
         ######################
         #READ API
+        # TODO: Move all of these functions from util.py here (and use native SQLite queries internally).
+
+        @dispatcher.add_method
+        def get_messages (block_index):
+            cursor = db.cursor()
+            cursor.execute('select * from messages where block_index = ? order by message_index asc', (block_index,))
+            messages = cursor.fetchall()
+            cursor.close()
+            return messages
+
         @dispatcher.add_method
         def get_address (address):
             try:

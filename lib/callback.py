@@ -3,7 +3,6 @@
 """Callback a callable asset."""
 
 import struct
-import logging
 import decimal
 D = decimal.Decimal
 

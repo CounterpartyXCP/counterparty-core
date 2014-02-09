@@ -419,7 +419,7 @@ def initialise(db):
 
     # Messages
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS messages(
-                                 idx INTEGER PRIMARY KEY,
+                                 message_index INTEGER PRIMARY KEY,
                                  block_index INTEGER,
                                  command TEXT,
                                  category TEXT,
