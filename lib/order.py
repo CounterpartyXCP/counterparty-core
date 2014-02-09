@@ -119,8 +119,8 @@ def match (db, tx):
     cursor.execute('''SELECT * FROM orders \
                       WHERE (give_asset=? AND get_asset=? AND validity=?)''',
                    (tx1['get_asset'], tx1['give_asset'], 'valid'))
-    give_remaining = tx1['give_remaining']
-    get_remaining = tx1['get_remaining']
+    tx1_give_remaining = tx1['give_remaining']
+    tx1_get_remaining = tx1['get_remaining']
     order_matches = cursor.fetchall()
     if tx['block_index'] > 284500:  # For backwards‐compatibility (no sorting before this block).
         order_matches = sorted(order_matches, key=lambda x: x['tx_index'])                              # Sort by tx index second.
@@ -135,7 +135,7 @@ def match (db, tx):
         tx0_fee_remaining = tx0['fee_remaining']
 
         # Make sure that that both orders still have funds remaining [to be sold].
-        if tx0['give_remaining'] <= 0 or give_remaining <= 0: continue
+        if tx0['give_remaining'] <= 0 or tx1_give_remaining <= 0: continue
 
         # If the prices agree, make the trade. The found order sets the price,
         # and they trade as much as they can.
@@ -147,7 +147,7 @@ def match (db, tx):
         if tx['block_index'] < 286000: tx1_inverse_price = D(1) / tx1_price
 
         if tx0_price <= tx1_inverse_price:
-            forward_amount = int(min(tx0['give_remaining'], D(give_remaining) / tx0_price))
+            forward_amount = int(min(tx0['give_remaining'], D(tx1_give_remaining) / tx0_price))
             if not forward_amount: continue
             backward_amount = round(forward_amount * tx0_price)
 
@@ -180,29 +180,32 @@ def match (db, tx):
 
             # Debit the order, even if it involves giving bitcoins, and so one
             # can't debit the sending account.
-            give_remaining = give_remaining - backward_amount
-            get_remaining = get_remaining - forward_amount  # This may indeed be negative!
+            tx0_give_remaining = tx0['give_remaining'] - forward_amount
+            tx0_get_remaining = tx0['get_remaining'] - backward_amount
+            tx1_give_remaining = tx1_give_remaining - backward_amount
+            tx1_get_remaining = tx1_get_remaining - forward_amount  # This may indeed be negative!
 
             # Update give_remaining, get_remaining.
-            cursor.execute('''UPDATE orders \
-                              SET give_remaining = ?, \
-                                   get_remaining = ?, \
-                                   fee_remaining = ? \
-                              WHERE tx_hash = ?''',
-                          (tx0['give_remaining'] - forward_amount,
-                           tx0['get_remaining'] - backward_amount,
-                           tx0_fee_remaining,
-                           tx0['tx_hash']))
-            cursor.execute('''UPDATE orders \
-                              SET give_remaining = ?, \
-                                   get_remaining = ?, \
-                                   fee_remaining = ? \
-                              WHERE tx_hash = ?''',
-                          (give_remaining,
-                           get_remaining,
-                           tx1_fee_remaining,
-                           tx1['tx_hash']))
+            # tx0
+            bindings = {
+                'give_remaining': tx0_give_remaining,
+                'get_remaining': tx0_get_remaining,
+                'fee_remaining': tx0_fee_remaining,
+                'tx_index': tx0['tx_index']
+            }
+            sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_remaining = :fee_remaining where tx_index = :tx_index'
+            cursor.execute(sql, bindings)
+            # tx1
+            bindings = {
+                'give_remaining': tx1_give_remaining,
+                'get_remaining': tx1_get_remaining,
+                'fee_remaining': tx1_fee_remaining,
+                'tx_index': tx1['tx_index']
+            }
+            sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_remaining = :fee_remaining where tx_index = :tx_index'
+            cursor.execute(sql, bindings)
 
+            # Calculate when the match will expire.
             if tx1['block_index'] >= 286500:
                 match_expire_index = tx1['block_index'] + 10
             else:
@@ -240,7 +243,15 @@ def expire (db, block_index):
     cursor.execute('''SELECT * FROM orders \
                       WHERE (validity = ? AND expire_index < ?)''', ('valid', block_index))
     for order in cursor.fetchall():
-        cursor.execute('''UPDATE orders SET validity=? WHERE tx_index=?''', ('invalid: expired', order['tx_index']))
+
+        # Update validity of order.
+        bindings = {
+            'validity': 'invalid: expired',
+            'tx_index': order['tx_index']
+        }
+        sql='update orders set validity = :validity where tx_index = :tx_index'
+        cursor.execute(sql, bindings)
+
         if order['give_asset'] != 'BTC':    # Can't credit BTC.
             util.credit(db, block_index, order['source'], order['give_asset'], order['give_remaining'])
 
@@ -257,7 +268,15 @@ def expire (db, block_index):
     cursor.execute('''SELECT * FROM order_matches \
                       WHERE (validity = ? and match_expire_index < ?)''', ('pending', block_index))
     for order_match in cursor.fetchall():
-        cursor.execute('''UPDATE order_matches SET validity=? WHERE id = ?''', ('invalid: expired awaiting payment', order_match['id']))
+        
+        # Update validity of order match.
+        bindings = {
+            'validity': 'invalid: expired awaiting payment',
+            'id': order_match['id']
+        }
+        sql='update order_matches set validity = :validity where id = :id'
+        cursor.execute(sql, bindings)
+
         if order_match['forward_asset'] == 'BTC':
             util.credit(db, block_index, order_match['tx1_address'],
                         order_match['backward_asset'],
@@ -284,13 +303,15 @@ def expire (db, block_index):
         tx0_order = cursor.fetchall()[0]
         tx0_order_time_left = tx0_order['expire_index'] - block_index
         if tx0_order_time_left:
-            cursor.execute('''UPDATE orders \
-                              SET give_remaining = ?, \
-                                  get_remaining = ? \
-                              WHERE tx_index = ?''', (tx0_order['give_remaining'] + order_match['forward_amount'],
-                                                     tx0_order['get_remaining'] + order_match['backward_amount'],
-                                                     order_match['tx0_index']))
-           
+            # Reset tx0.
+            bindings = {
+                'give_remaining': tx0_order['give_remaining'] + order_match['forward_amount'],
+                'get_remaining': tx0_order['get_remaining'] + order_match['backward_amount'],
+                'tx_index': order_match['tx0_index']
+            }
+            sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining where tx_index = :tx_index'
+            cursor.execute(sql, bindings)
+
         # If tx1 is still good, replenish give, get remaining.
         cursor.execute('''SELECT * FROM orders \
                           WHERE tx_index = ?''',
@@ -298,12 +319,14 @@ def expire (db, block_index):
         tx1_order = cursor.fetchall()[0]
         tx1_order_time_left = tx1_order['expire_index'] - block_index
         if tx1_order_time_left:
-            cursor.execute('''UPDATE orders \
-                              SET give_remaining = ?, \
-                                  get_remaining = ? \
-                              WHERE tx_index = ?''', (tx1_order['give_remaining'] + order_match['backward_amount'],
-                                                     tx1_order['get_remaining'] + order_match['forward_amount'],
-                                                     order_match['tx1_index']))
+            # Reset tx1.
+            bindings = {
+                'give_remaining': tx1_order['give_remaining'] + order_match['backward_amount'],
+                'get_remaining': tx1_order['get_remaining'] + order_match['forward_amount'],
+                'tx_index': order_match['tx1_index']
+            }
+            sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining where tx_index = :tx_index'
+            cursor.execute(sql, bindings)
 
         # Sanity check: one of the two must have expired.
         assert tx0_order_time_left or tx1_order_time_left

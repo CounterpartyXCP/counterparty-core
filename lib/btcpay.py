@@ -77,18 +77,29 @@ def parse (db, tx, message):
             validity = 'invalid: ' + ';'.join(problems)
 
     if validity == 'valid':
+        update = False
         # Credit source address for the currency that he bought with the bitcoins.
         # BTC must be paid all at once and come from the 'correct' address.
         if order_match['tx0_address'] == tx['source'] and tx['btc_amount'] >= order_match['forward_amount']:
-            cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('valid', tx0_hash, tx1_hash))
+            update = True
             if order_match['backward_asset'] != 'BTC':
                 util.credit(db, tx['block_index'], tx['source'], order_match['backward_asset'], order_match['backward_amount'])
             validity = 'valid'
         if order_match['tx1_address'] == tx['source'] and tx['btc_amount'] >= order_match['backward_amount']:
-            cursor.execute('''UPDATE order_matches SET validity=? WHERE (tx0_hash=? AND tx1_hash=?)''', ('valid', tx0_hash, tx1_hash))
+            update = True
             if order_match['forward_asset'] != 'BTC':
                 util.credit(db, tx['block_index'], tx['source'], order_match['forward_asset'], order_match['forward_amount'])
             validity = 'valid'
+
+        if update:
+            # Update order match.
+            bindings = {
+                'validity': 'valid',
+                'id': order_match_id
+            }
+            sql='update order_matches set validity = :validity where id = :id'
+            cursor.execute(sql, bindings)
+
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

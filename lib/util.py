@@ -444,10 +444,14 @@ def debit (db, block_index, address, asset, amount):
 
     balance = round(old_balance - amount)
     balance = min(balance, config.MAX_INT)
-    debit_cursor.execute('''UPDATE balances \
-                      SET amount=? \
-                      WHERE (address=? and asset=?)''',
-                   (balance, address, asset))
+
+    bindings = {
+        'amount': balance,
+        'address': address,
+        'asset': asset
+    }
+    sql='update balances set amount = :amount where (address = :address and asset = :asset)'
+    debit_cursor.execute(sql, bindings)
 
     # Record debit.
     bindings = {
@@ -487,9 +491,14 @@ def credit (db, block_index, address, asset, amount):
         assert type(old_balance) == int
         balance = round(old_balance + amount)
         balance = min(balance, config.MAX_INT)
-        credit_cursor.execute('''UPDATE balances SET amount=? \
-                          WHERE (address=? and asset=?)''',
-                       (balance, address, asset))
+
+        bindings = {
+            'amount': balance,
+            'address': address,
+            'asset': asset
+        }
+        sql='update balances set amount = :amount where (address = :address and asset = :asset)'
+        credit_cursor.execute(sql, bindings)
 
     # Record credit.
     bindings = {
