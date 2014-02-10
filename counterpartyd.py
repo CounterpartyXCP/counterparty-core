@@ -378,8 +378,8 @@ if __name__ == '__main__':
     parser_order.add_argument('--give-quantity', required=True, help='the quantity of GIVE_ASSET that you are willing to give')
     parser_order.add_argument('--give-asset', required=True, help='the asset that you would like to sell')
     parser_order.add_argument('--expiration', type=int, required=True, help='the number of blocks for which the order should be valid')
-    parser_order.add_argument('--fee_required', default=D(0), help='the miners\' fee required to be paid by orders for them to match this one; in BTC; required iff buying BTC (may be zero, though)')
-    parser_order.add_argument('--fee_provided', default=(D(config.MIN_FEE) / D(config.UNIT)), help='the miners\' fee provided; in BTC; required iff selling BTC (should not be lower than is required for acceptance in a block)')
+    parser_order.add_argument('--fee-required', default=D(config.FEE_REQUIRED_DEFAULT), help='the miners’ fee required for an order to match this one, as a fraction of the BTC to be bought')
+    parser_order.add_argument('--fee-provided', default=D(config.FEE_PROVIDED_DEFAULT), help='the miners’ fee provided, as a fraction of the BTC to be sold')
 
     parser_btcpay= subparsers.add_parser('btcpay', help='create and broadcast a *BTCpay* message, to settle an Order Match for which you owe BTC')
     parser_btcpay.add_argument('--order-match-id', required=True, help='the concatenation of the hashes of the two transactions which compose the order match')
@@ -501,26 +501,26 @@ if __name__ == '__main__':
         print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'order':
+        fee_required, fee_provided = D(args.fee_required), D(args.fee_provided)
+        give_quantity, get_quantity = D(args.give_quantity), D(args.get_quantity)
+
         # Fee argument is either fee_required or fee_provided, as necessary.
         if args.give_asset == 'BTC':
-            if args.fee_required != D(0):
-                raise exceptions.FeeError('When selling BTC, do not specify a fee required.')
-            fee_required = args.fee_required
-            fee_provided = util.devise(db, args.fee_provided, 'BTC', 'input')
+            fee_required = 0
+            fee_provided = util.devise(db, fee_provided, 'fraction', 'input')
+            fee_provided = round(D(fee_provided) * D(give_quantity) * D(config.UNIT))
+            if fee_provided < config.MIN_FEE:
+                raise exceptions.InputError('Fee provided less than minimum necessary for acceptance in a block.')
         elif args.get_asset == 'BTC':
-            fee_required = util.devise(db, args.fee_required, 'BTC', 'input')
-            if args.fee_provided != D(config.MIN_FEE) / D(config.UNIT):
-                raise exceptions.FeeError('When buying BTC, do not specify a fee provided.')
-            fee_provided = util.devise(db, args.fee_provided, 'BTC', 'input')
+            fee_provided = config.MIN_FEE
+            fee_required = util.devise(db, fee_required, 'fraction', 'input')
+            fee_required = round(D(fee_required) * D(get_quantity) * D(config.UNIT))
         else:
-            fee_provided = util.devise(db, args.fee_provided, 'XCP', 'input')
-            if fee_provided != D(config.MIN_FEE) or args.fee_required != D(0):
-                raise exceptions.InputError('No fee should be required or provided (explicitly) if not buying or selling BTC.')
             fee_required = 0
             fee_provided = config.MIN_FEE
 
-        give_quantity = util.devise(db, args.give_quantity, args.give_asset, 'input')
-        get_quantity = util.devise(db, args.get_quantity, args.get_asset, 'input')
+        give_quantity = util.devise(db, give_quantity, args.give_asset, 'input')
+        get_quantity = util.devise(db, get_quantity, args.get_asset, 'input')
         unsigned_tx_hex = order.create(db, args.source, args.give_asset, give_quantity,
                                 args.get_asset, get_quantity,
                                 args.expiration, fee_required, fee_provided, unsigned=args.unsigned)
@@ -551,7 +551,7 @@ if __name__ == '__main__':
     elif args.action == 'broadcast':
         value = util.devise(db, args.value, 'value', 'input')
         unsigned_tx_hex = broadcast.create(db, args.source, int(time.time()),
-                                           value, args.fee_multiplier,
+                                           value, util.devise(db, args.fee_multiplier, 'fracton', 'input'),
                                            args.text, unsigned=args.unsigned)
         print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
@@ -584,7 +584,7 @@ if __name__ == '__main__':
         print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'callback':
-        unsigned_tx_hex = callback.create(db, args.source, float(args.fraction),
+        unsigned_tx_hex = callback.create(db, args.source, util.devise(db, args.fraction, 'fraction', 'input'),
                                    args.asset, unsigned=args.unsigned)
         print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 

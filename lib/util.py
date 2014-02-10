@@ -564,7 +564,7 @@ def devise (db, quantity, asset, dest, divisible=None):
         num = fmt.format(num)
         return num.rstrip('0')+'0' if num.rstrip('0')[-1] == '.' else num.rstrip('0')
 
-    if asset in ('leverage', 'price', 'odds', 'value'):
+    if asset in ('leverage', 'price', 'odds', 'value', 'fraction'):
         if dest == 'output':
             return norm(quantity, 6)
         elif dest == 'input':
@@ -572,7 +572,7 @@ def devise (db, quantity, asset, dest, divisible=None):
             if asset == 'leverage':
                 return round(quantity)
             else:
-                return float(quantity)
+                return float(quantity)  # TODO: Float?!
 
     if asset in ('fee_multiplier',):
         return norm(D(quantity) / D(1e8), 6)

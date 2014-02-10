@@ -27,3 +27,7 @@ MAX_EXPIRATION = 4 * 2016   # Two months
 
 # SQLite3
 MAX_INT = 2**63 - 1
+
+# Order fees
+FEE_REQUIRED_DEFAULT = .01   # 1%
+FEE_PROVIDED_DEFAULT = .01   # 1%
