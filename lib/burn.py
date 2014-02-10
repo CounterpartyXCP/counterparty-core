@@ -75,7 +75,7 @@ def parse (db, tx, message=None):
             earned = 1500 * burned
 
         # Credit source address with earned XCP.
-        util.credit(db, tx['block_index'], tx['source'], 'XCP', earned)
+        util.credit(db, tx['block_index'], tx['source'], 'XCP', earned, event=tx['tx_hash'])
     else:
         burned = 0
         earned = 0

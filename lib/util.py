@@ -9,6 +9,7 @@ import operator
 from operator import itemgetter
 import apsw
 import collections
+import inspect
 
 from . import (config, exceptions, bitcoin)
 
@@ -59,10 +60,10 @@ def log (db, command, category, bindings):
     elif command == 'insert':  # TODO
 
         if category == 'credits':
-            logging.debug('Credit: {} to {}'.format(output(bindings['amount'], bindings['asset']), bindings['address']))
+            logging.debug('Credit: {} to {} #{}# <{}>'.format(output(bindings['amount'], bindings['asset']), bindings['address'], bindings['calling_function'], bindings['event']))
 
         elif category == 'debits':
-            logging.debug('Debit: {} from {}'.format(output(bindings['amount'], bindings['asset']), bindings['address']))
+            logging.debug('Debit: {} from {} #{}# <{}>'.format(output(bindings['amount'], bindings['asset']), bindings['address'], bindings['calling_function'], bindings['event']))
 
         elif category == 'sends':
             logging.info('Send: {} from {} to {} ({}) [{}]'.format(output(bindings['amount'], bindings['asset']), bindings['source'], bindings['destination'], bindings['tx_hash'], bindings['validity']))
@@ -245,7 +246,10 @@ def exectracer(cursor, sql, bindings):
             try:
                 block_index = bindings['tx1_block_index']
             except KeyError:
-                block_index = last_block(db)['block_index']
+                try:
+                    block_index = last_block(db)['block_index']
+                except exceptions.DatabaseError:    # No blocks found.
+                    block_index = 0
 
         bindings_string = str(collections.OrderedDict(sorted(bindings.items())))
         cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings)', (message_index, block_index, command, category, bindings_string))
@@ -446,7 +450,14 @@ def get_asset_name (asset_id):
     return asset_name
 
 
-def debit (db, block_index, address, asset, amount):
+def debit (db, block_index, address, asset, amount, event=None):
+
+    # Get calling function.
+    parent = inspect.stack()[1]
+    frame, filename, lineno, function, code_context, index = parent
+    parent_name = inspect.getmodulename(filename)
+    calling_function = (parent_name + '.' + function)
+
     debit_cursor = db.cursor()
     assert asset != 'BTC' # Never BTC.
     assert type(amount) == int
@@ -479,13 +490,21 @@ def debit (db, block_index, address, asset, amount):
         'address': address,
         'asset': asset,
         'amount': amount,
+        'calling_function': calling_function,
+        'event': event
     }
-    sql='insert into debits values(:block_index, :address, :asset, :amount)'
+    sql='insert into debits values(:block_index, :address, :asset, :amount, :calling_function, :event)'
     debit_cursor.execute(sql, bindings)
 
     debit_cursor.close()
 
-def credit (db, block_index, address, asset, amount):
+def credit (db, block_index, address, asset, amount, event=None):
+    # Get calling function. DUPE
+    parent = inspect.stack()[1]
+    frame, filename, lineno, function, code_context, index = parent
+    parent_name = inspect.getmodulename(filename)
+    calling_function = (parent_name + '.' + function)
+
     credit_cursor = db.cursor()
     assert asset != 'BTC' # Never BTC.
     assert type(amount) == int
@@ -525,16 +544,22 @@ def credit (db, block_index, address, asset, amount):
         'block_index': block_index,
         'address': address,
         'asset': asset,
-        'amount': amount
+        'amount': amount,
+        'calling_function': calling_function,
+        'event': event
     }
-    sql='insert into credits values(:block_index, :address, :asset, :amount)'
+    sql='insert into credits values(:block_index, :address, :asset, :amount, :calling_function, :event)'
     credit_cursor.execute(sql, bindings)
     credit_cursor.close()
 
 def devise (db, quantity, asset, dest, divisible=None):
     # For output only.
     def norm(num, places):
-        num = round(num, places)
+
+        # Round only if necessary.
+        try: num = round(num, places)
+        except decimal.InvalidOperation: pass
+
         fmt = '{:.' + str(places) + 'f}'
         num = fmt.format(num)
         return num.rstrip('0')+'0' if num.rstrip('0')[-1] == '.' else num.rstrip('0')

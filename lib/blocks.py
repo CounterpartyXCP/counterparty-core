@@ -121,7 +121,9 @@ def initialise(db):
                         block_index INTEGER,
                         address TEXT,
                         asset TEXT,
-                        amount INTEGER)
+                        amount INTEGER,
+                        calling_function TEXT,
+                        event TEXT)
                    ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
                         debits_address_idx ON debits (address)
@@ -132,7 +134,9 @@ def initialise(db):
                         block_index INTEGER,
                         address TEXT,
                         asset TEXT,
-                        amount INTEGER)
+                        amount INTEGER,
+                        calling_function TEXT,
+                        event TEXT)
                    ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
                         credits_address_idx ON credits (address)

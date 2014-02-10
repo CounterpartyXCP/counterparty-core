@@ -63,8 +63,8 @@ def parse (db, tx, message):
         if problems: validity = 'invalid: ' + ';'.join(problems)
 
     if validity == 'valid':
-        util.debit(db, tx['block_index'], tx['source'], asset, amount)
-        util.credit(db, tx['block_index'], tx['destination'], asset, amount)
+        util.debit(db, tx['block_index'], tx['source'], asset, amount, event=tx['tx_hash'])
+        util.credit(db, tx['block_index'], tx['destination'], asset, amount, event=tx['tx_hash'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {
