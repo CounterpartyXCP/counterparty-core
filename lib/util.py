@@ -4,6 +4,7 @@ from dateutil.tz import tzlocal
 import decimal
 D = decimal.Decimal
 import sys
+import json
 import logging
 import operator
 from operator import itemgetter
@@ -247,8 +248,9 @@ def exectracer(cursor, sql, bindings):
             except KeyError:
                 block_index = 0 # TODO
 
-        bindings_string = str(collections.OrderedDict(sorted(bindings.items())))
-        cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings)', (message_index, block_index, command, category, bindings_string))
+        bindings_string = json.dumps(collections.OrderedDict(sorted(bindings.items())))
+        cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings)',
+                       (message_index, block_index, command, category, bindings_string))
 
         message_index += 1
         cursor.close()
