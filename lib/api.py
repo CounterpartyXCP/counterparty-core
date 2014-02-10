@@ -31,7 +31,7 @@ class APIServer(threading.Thread):
         # TODO: Move all of these functions from util.py here (and use native SQLite queries internally).
 
         @dispatcher.add_method
-        def get_messages (block_index):
+        def get_messages(block_index):
             cursor = db.cursor()
             cursor.execute('select * from messages where block_index = ? order by message_index asc', (block_index,))
             messages = cursor.fetchall()
@@ -39,18 +39,18 @@ class APIServer(threading.Thread):
             return messages
 
         @dispatcher.add_method
-        def get_address (address):
+        def get_address(address):
             try:
                 return util.get_address(db, address=address)
             except exceptions.InvalidAddressError:
                 return None
 
         @dispatcher.add_method
-        def xcp_supply ():
+        def xcp_supply():
             return util.xcp_supply(db)
 
         @dispatcher.add_method
-        def get_balances (filters=None, order_by=None, order_dir=None, filterop="and"):
+        def get_balances(filters=None, order_by=None, order_dir=None, filterop="and"):
             return util.get_balances(db,
                 filters=filters,
                 order_by=order_by,
@@ -186,7 +186,7 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_sends (filters=None, is_valid=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_sends (filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_sends(db,
                 filters=filters,
                 validity='valid' if bool(is_valid) else None,
@@ -211,7 +211,36 @@ class APIServer(threading.Thread):
             # its divisible (and if it was locked, for that matter)
             locked = not last_issuance['amount'] and not last_issuance['transfer']
             total_issued = sum([e['amount'] for e in issuances])
-            return {'owner': last_issuance['issuer'], 'divisible': last_issuance['divisible'], 'locked': locked, 'total_issued': total_issued, 'callable': last_issuance['callable'], 'call_date': util.isodt(last_issuance['call_date']) if last_issuance['call_date'] else None, 'call_price': last_issuance['call_price'], 'description': last_issuance['description']}
+            return {'owner': last_issuance['issuer'],
+                    'divisible': last_issuance['divisible'],
+                    'locked': locked,
+                    'total_issued': total_issued,
+                    'callable': last_issuance['callable'],
+                    'call_date': util.isodt(last_issuance['call_date']) if last_issuance['call_date'] else None,
+                    'call_price': last_issuance['call_price'],
+                    'description': last_issuance['description']}
+
+        @dispatcher.add_method
+        def get_running_info():
+            try:
+                util.database_check(db)
+            except:
+                caught_up = False
+            else:
+                caught_up = True
+
+            try:
+                last_block = util.last_block(db)
+            except:
+                last_block = {'block_index': None, 'block_hash': None, 'block_time': None}
+                
+            return {
+                'db_caught_up': caught_up,
+                'last_block': last_block,
+                'counterpartyd_version': config.VERSION,
+                'db_version_major': config.DB_VERSION_MAJOR,
+                'db_version_minor': config.DB_VERSION_MINOR,
+            }
 
 
         ######################
