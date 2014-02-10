@@ -185,7 +185,6 @@ def log (db, command, category, bindings):
             logging.info('Cancel: {} ({}) [{}]'.format(bindings['offer_hash'], bindings['tx_hash'], bindings['validity']))
 
         elif category == 'callbacks':
-            decimal.getcontext().prec = 9   # TODO: also arbitrary
             logging.info('Callback: {} called back {}% of {} ({}) [{}]'.format(bindings['source'], float(D(bindings['fraction']) * D(100)), bindings['asset'], bindings['tx_hash'], bindings['validity']))
 
         elif category == 'order_expirations':
@@ -246,10 +245,7 @@ def exectracer(cursor, sql, bindings):
             try:
                 block_index = bindings['tx1_block_index']
             except KeyError:
-                try:
-                    block_index = last_block(db)['block_index']
-                except exceptions.DatabaseError:    # No blocks found.
-                    block_index = 0
+                block_index = 0 # TODO
 
         bindings_string = str(collections.OrderedDict(sorted(bindings.items())))
         cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings)', (message_index, block_index, command, category, bindings_string))
@@ -555,10 +551,8 @@ def credit (db, block_index, address, asset, amount, event=None):
 def devise (db, quantity, asset, dest, divisible=None):
     # For output only.
     def norm(num, places):
-
         # Round only if necessary.
-        try: num = round(num, places)
-        except decimal.InvalidOperation: pass
+        num = round(num, places)
 
         fmt = '{:.' + str(places) + 'f}'
         num = fmt.format(num)

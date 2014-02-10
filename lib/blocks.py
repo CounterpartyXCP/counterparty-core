@@ -508,12 +508,12 @@ def reparse (db, block_index=None, quiet=False):
     logging.warning('Status: Reparsing all transactions.')
     cursor = db.cursor()
 
-    # For rollbacks, just delete new blocks and then reparse what’s left.
-    if block_index:
-        cursor.execute('''DELETE FROM blocks WHERE block_index > ?''', (block_index,))
-        cursor.execute('''DELETE FROM transactions WHERE block_index > ?''', (block_index,))
-
     with db:
+        # For rollbacks, just delete new blocks and then reparse what’s left.
+        if block_index:
+            cursor.execute('''DELETE FROM blocks WHERE block_index > ?''', (block_index,))
+            cursor.execute('''DELETE FROM transactions WHERE block_index > ?''', (block_index,))
+
         # Delete all of the results of parsing.
         cursor.execute('''DROP TABLE IF EXISTS debits''')
         cursor.execute('''DROP TABLE IF EXISTS credits''')
