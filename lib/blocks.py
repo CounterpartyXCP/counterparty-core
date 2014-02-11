@@ -388,6 +388,7 @@ def initialise(db):
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS order_expirations(
                                  order_index INTEGER PRIMARY KEY,
                                  order_hash TEXT UNIQUE,
+                                 source TEXT,
                                  block_index INTEGER)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -398,6 +399,7 @@ def initialise(db):
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS bet_expirations(
                                  bet_index INTEGER PRIMARY KEY,
                                  bet_hash TEXT UNIQUE,
+                                 source TEXT,
                                  block_index INTEGER)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -407,6 +409,8 @@ def initialise(db):
     # Order Match Expirations
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS order_match_expirations(
                                  order_match_id TEXT PRIMARY KEY,
+                                 tx0_address TEXT,
+                                 tx1_address TEXT,
                                  block_index INTEGER)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -416,6 +420,8 @@ def initialise(db):
     # Bet Match Expirations
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS bet_match_expirations(
                                  bet_match_id TEXT PRIMARY KEY,
+                                 tx0_address TEXT,
+                                 tx1_address TEXT,
                                  block_index INTEGER)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS

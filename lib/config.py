@@ -11,7 +11,7 @@ CLIENT_VERSION_MAJOR = 4
 CLIENT_VERSION_MINOR = 3
 CLIENT_VERSION = float(str(CLIENT_VERSION_MAJOR) + '.' + str(CLIENT_VERSION_MINOR))
 DB_VERSION_MAJOR = 6        # Major version changes the blocks or transactions table.
-DB_VERSION_MINOR = 15       # Minor version changes just the parsing.
+DB_VERSION_MINOR = 16       # Minor version changes just the parsing.
 DB_VERSION = float(str(DB_VERSION_MAJOR) + '.' + str(DB_VERSION_MINOR))
 
 # Bitcoin protocol

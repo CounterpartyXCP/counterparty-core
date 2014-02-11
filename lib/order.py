@@ -265,9 +265,10 @@ def expire (db, block_index):
         bindings = {
             'order_index': order['tx_index'],
             'order_hash': order['tx_hash'],
+            'source': order['source'],
             'block_index': block_index
         }
-        sql='insert into order_expirations values(:order_index, :order_hash, :block_index)'
+        sql='insert into order_expirations values(:order_index, :order_hash, :source, :block_index)'
         cursor.execute(sql, bindings)
 
     # Expire order_matches for BTC with no BTC.
@@ -297,9 +298,11 @@ def expire (db, block_index):
         # Record order match expiration.
         bindings = {
             'order_match_id': order_match_id,
+            'tx0_address': order_match['tx0_address'],
+            'tx1_address': order_match['tx1_address'],
             'block_index': block_index
         }
-        sql='insert into order_match_expirations values(:order_match_id, :block_index)'
+        sql='insert into order_match_expirations values(:order_match_id, :tx0_address, :tx1_address, :block_index)'
         cursor.execute(sql, bindings)
 
         # If tx0 is still good, replenish give, get remaining.

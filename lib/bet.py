@@ -308,9 +308,10 @@ def expire (db, block_index, block_time):
         bindings = {
             'bet_index': bet['tx_index'],
             'bet_hash': bet['tx_hash'],
+            'source': bet['source'],
             'block_index': block_index
         }
-        sql='insert into bet_expirations values(:bet_index, :bet_hash, :block_index)'
+        sql='insert into bet_expirations values(:bet_index, :bet_hash, :source, :block_index)'
         cursor.execute(sql, bindings)
 
     # Expire bet matches whose deadline is more than two weeks before the current block time.
@@ -333,9 +334,11 @@ def expire (db, block_index, block_time):
         # Record bet match expiration.
         bindings = {
             'block_index': block_index,
+            'tx0_address': bet_match['tx0_address'],
+            'tx1_address': bet_match['tx1_address'],
             'bet_match_id': bet_match['tx0_hash'] + bet_match['tx1_hash']
         }
-        sql='insert into bet_match_expirations values(:block_index, :bet_match_id)'
+        sql='insert into bet_match_expirations values(:block_index, :tx0_address, :tx1_address, :bet_match_id)'
         cursor.execute(sql, bindings)
 
     cursor.close()
