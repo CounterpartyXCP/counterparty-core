@@ -218,8 +218,12 @@ def match (db, tx):
 
         if tx0_inverse_odds <= tx1_odds:
             forward_amount = int(min(D(tx0['wager_remaining']), D(tx1_wager_remaining) / tx1_odds))
-            if not forward_amount: continue
             backward_amount = round(D(forward_amount) / tx0_odds)
+
+            if not forward_amount: continue
+            if tx1['block_index'] >= 286500:    # Protocol change.
+                if not backward_amount: continue
+
             bet_match_id = tx0['tx_hash'] + tx1['tx_hash']
 
             # Debit the order.

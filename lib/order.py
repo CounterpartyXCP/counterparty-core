@@ -148,8 +148,11 @@ def match (db, tx):
 
         if tx0_price <= tx1_inverse_price:
             forward_amount = int(min(tx0['give_remaining'], D(tx1_give_remaining) / tx0_price))
-            if not forward_amount: continue
             backward_amount = round(forward_amount * tx0_price)
+
+            if not forward_amount: continue
+            if tx1['block_index'] >= 286500:    # Protocol change.
+                if not backward_amount: continue
 
             # Check and update fee remainings.
             if tx1['block_index'] >= 286500: # Deduct fee_required from fee_remaining, if possible (else don’t match).
