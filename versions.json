@@ -2,14 +2,9 @@
 	"minimum_client_version": 4.2,
 	"protocol_changes": [
 		{
-			"block_index": 286000,
-			"minimum_database_version": 6.13,
-			"description": "foobar"
-		},
-		{
-			"block_index": 286500,
-			"minimum_database_version": 6.14,
-			"description": "bazqux"
+			"block_index": 285306,
+			"minimum_database_version": 6.15,
+			"description": "issuances fees regression"
 		}
 	]
 }
