@@ -293,7 +293,7 @@ def versions_check (db):
             if config.DB_VERSION < protocol_change['minimum_database_version']:
                 raise exceptions.DatabaseVersionError('Please upgrade counterpartyd to the latest version.')
 
-    logging.info('Status: Version checks passed.')
+    logging.debug('Status: Version checks passed.')
     return
 
 def bitcoind_check (db):
