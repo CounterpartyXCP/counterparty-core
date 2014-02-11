@@ -244,7 +244,6 @@ def expire (db, block_index):
     cursor.execute('''SELECT * FROM orders \
                       WHERE (validity = ? AND expire_index < ?)''', ('Valid', block_index))
     for order in cursor.fetchall():
-        print(order['expire_index'], block_index)   # TODO
         cursor.execute('''UPDATE orders SET validity=? WHERE tx_index=?''', ('Invalid: expired', order['tx_index']))
         if order['give_asset'] != 'BTC':    # Can't credit BTC.
             util.credit(db, block_index, order['source'], order['give_asset'], order['give_remaining'])
