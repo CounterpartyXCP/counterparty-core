@@ -4,12 +4,12 @@
 		{
 			"block_index": 286000,
 			"minimum_database_version": 6.13,
-			"description": 'foobar'
+			"description": "foobar"
 		},
 		{
 			"block_index": 286500,
 			"minimum_database_version": 6.14,
-			"description": 'bazqux'
+			"description": "bazqux"
 		}
 	]
 }
