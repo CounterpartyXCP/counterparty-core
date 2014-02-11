@@ -481,6 +481,9 @@ if __name__ == '__main__':
 
     if args.action == None: args.action = 'server'
 
+    # Check versions.
+    util.versions_check(db)
+
     # Check that bitcoind is running, communicable, and caught up with the blockchain.
     # Check that the database has caught up with bitcoind.
     if not args.force:

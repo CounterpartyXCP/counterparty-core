@@ -11,6 +11,7 @@ from operator import itemgetter
 import apsw
 import collections
 import inspect
+import requests
 
 from . import (config, exceptions, bitcoin)
 
@@ -269,6 +270,28 @@ def connect_to_db():
     db.setrowtrace(rowtracer)
     db.setexectrace(exectracer)
     return db
+
+def versions_check (db):
+    # host = 'https://raw2.github.com/PhantomPhreak/counterpartyd/master/versions.json'
+    host = 'https://raw2.github.com/PhantomPhreak/counterpartyd/develop/versions.json'      # TODO
+    response = requests.get(host)
+    text = response.text.replace('\'', '\"')    # TODO caching issues?!
+    versions = json.loads(text)
+
+    # Check client version (for important UI changes).
+    if config.CLIENT_VERSION < versions['minimum_client_version']:
+        raise exceptions.ClientVersionError('Please upgrade counterpartyd to the latest version.')
+
+    # Check the database version when past the block at which the protocol change
+    # comes into effect.
+    block_index = last_block(db)['block_index']
+    for protocol_change in versions['protocol_changes']:
+        if block_index >= protocol_change['block_index']:
+            if config.DB_VERSION < protocol_change['minimum_database_version']:
+                raise exceptions.DatabaseVersionError('Please upgrade counterpartyd to the latest version.')
+
+    logging.info('Status: Version checks passed.')
+    return
 
 def bitcoind_check (db):
     """Checks blocktime of last block to see if Bitcoind is running behind."""
