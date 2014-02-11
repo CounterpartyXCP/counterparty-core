@@ -49,7 +49,7 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
             fee = config.ISSUANCE_FEE * config.UNIT
         elif block_index > 281236:
             fee = config.ISSUANCE_FEE
-        if not balances or balances[0]['amount'] < fee:
+        if fee and (not balances or balances[0]['amount'] < fee):
             problems.append('insufficient funds')
 
     # For SQLite3
