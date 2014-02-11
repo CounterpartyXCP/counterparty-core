@@ -237,7 +237,7 @@ class APIServer(threading.Thread):
             return {
                 'db_caught_up': caught_up,
                 'last_block': last_block,
-                'counterpartyd_version': config.VERSION,
+                'counterpartyd_version': config.CLIENT_VERSION,
                 'db_version_major': config.DB_VERSION_MAJOR,
                 'db_version_minor': config.DB_VERSION_MINOR,
             }

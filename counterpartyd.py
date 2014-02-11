@@ -333,7 +333,7 @@ if __name__ == '__main__':
     
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(prog='counterpartyd', description='the reference implementation of the Counterparty protocol')
-    parser.add_argument('-V', '--version', action='version', version="counterpartyd v%s" % config.VERSION)
+    parser.add_argument('-V', '--version', action='version', version="counterpartyd v%s" % config.CLIENT_VERSION)
 
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='sets log level to DEBUG instead of WARNING')
     parser.add_argument('--force', action='store_true', help='don\'t check whether Bitcoind is caught up')
