@@ -86,7 +86,7 @@ def rpc (method, params):
         return response_json['result']
     elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
         raise exceptions.BitcoindError('{} Is txindex enabled in Bitcoind?'.format(response_json['error']))
-    elif response_json['error']['code'] == -4:   # Unknown private key (locked wallet?)
+    elif not config.HEADLESS and response_json['error']['code'] == -4:   # Unknown private key (locked wallet?)
         # If address in wallet, attempt to unlock.
         address = params[0]
         if rpc('validateaddress', [address])['ismine']:
@@ -388,7 +388,7 @@ def transmit (unsigned_tx_hex, ask=True, unsigned=False):
     # Confirm transaction.
     if not unsigned:
         print('Transaction (unsigned):', unsigned_tx_hex)
-    if ask and not unsigned:
+    if ask and not unsigned and not config.HEADLESS:    # Over‐complicated
         if config.TESTNET: print('Attention: TESTNET!')
         if config.TESTCOIN: print('Attention: TESTCOIN!\n')
         if input('Confirm? (y/N) ') != 'y':
