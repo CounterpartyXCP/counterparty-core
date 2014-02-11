@@ -1,0 +1,36 @@
+
+body {
+  padding-top: 50px;
+}
+
+#content {
+  padding: 40px 15px;
+  text-align: center;
+}
+
+#assets, #commands {
+    padding-top: 40px;
+}
+
+table.assets-list th {
+    text-align: center;
+}
+
+table.assets-list td.asset-name {
+    text-align: left;
+}
+
+table.assets-list td.amount {
+    text-align: right;
+}
+
+table.assets-list td.address {
+    background-color: #DDD !important;
+}
+
+form {
+    padding: 40px;
+}
+div.loading {
+    text-align:center;
+}

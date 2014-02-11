@@ -27,6 +27,9 @@ import configparser
 # Units
 from lib import (config, api, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
+
+from lib import gui
+
 if os.name == 'nt':
     from lib import util_windows
 
@@ -34,7 +37,8 @@ json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
 def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=None,
                  bitcoind_rpc_user=None, bitcoind_rpc_password=None, rpc_host=None, rpc_port=None,
-                 rpc_user=None, rpc_password=None, log_file=None, database_file=None, testnet=False, testcoin=False, unittest=False):
+                 rpc_user=None, rpc_password=None, gui_host=None, gui_port=None, gui_user=None,
+                 gui_password=None, log_file=None, database_file=None, testnet=False, testcoin=False, unittest=False):
 
     # Unittests always run on testnet.
     if unittest and not testnet:
@@ -151,6 +155,38 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
         config.RPC_PASSWORD = configfile['Default']['rpc-password']
     else:
         raise exceptions.ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
+
+    #GUI host:
+    if gui_host:
+        config.GUI_HOST = gui_host
+    elif has_config and 'gui-host' in configfile['Default'] and configfile['Default']['gui-host']:
+        config.GUI_HOST = configfile['Default']['gui-host']
+    else:
+        config.GUI_HOST = config.RPC_HOST
+
+    #GUI port:
+    if gui_port:
+        config.GUI_PORT = gui_port
+    elif has_config and 'gui-port' in configfile['Default'] and configfile['Default']['gui-port']:
+        config.GUI_PORT = configfile['Default']['gui-port']
+    else:
+        config.GUI_PORT = 8080
+
+    # GUI user
+    if gui_user:
+        config.GUI_USER = gui_user
+    elif has_config and 'gui-user' in configfile['Default'] and configfile['Default']['gui-user']:
+        config.GUI_USER = configfile['Default']['gui-user']
+    else:
+        config.GUI_USER = config.RPC_USER
+
+    # GUI password
+    if gui_password:
+        config.GUI_PASSWORD = gui_password
+    elif has_config and 'gui-password' in configfile['Default'] and configfile['Default']['gui-password']:
+        config.GUI_PASSWORD = configfile['Default']['gui-password']
+    else:
+        config.GUI_PASSWORD = config.RPC_PASSWORD
 
     # Log
     if log_file:
@@ -356,6 +392,12 @@ if __name__ == '__main__':
     parser.add_argument('--rpc-user', help='required username to use the counterpartyd JSON-RPC API (via HTTP basic auth)')
     parser.add_argument('--rpc-password', help='required password (for rpc-user) to use the counterpartyd JSON-RPC API (via HTTP basic auth)')
 
+    parser.add_argument('--activate-gui', action='store_true', help='run GUI web server')
+    parser.add_argument('--gui-host', help='the host to provide the counterpartyd GUI')
+    parser.add_argument('--gui-port', type=int, help='port on which to provide the counterpartyd GUI')
+    parser.add_argument('--gui-user', help='required username to use the counterpartyd GUI (via HTTP basic auth)')
+    parser.add_argument('--gui-password', help='required password (for gui-user) to use the counterpartyd GUI (via HTTP basic auth)')
+
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
     parser_server = subparsers.add_parser('server', help='run the server (WARNING: not thread‐safe)')
@@ -451,7 +493,9 @@ if __name__ == '__main__':
     # Configuration
     set_options(data_dir=args.data_dir, bitcoind_rpc_connect=args.bitcoind_rpc_connect, bitcoind_rpc_port=args.bitcoind_rpc_port,
                  bitcoind_rpc_user=args.bitcoind_rpc_user, bitcoind_rpc_password=args.bitcoind_rpc_password, rpc_host=args.rpc_host, rpc_port=args.rpc_port,
-                 rpc_user=args.rpc_user, rpc_password=args.rpc_password, log_file=args.log_file, database_file=args.database_file, testnet=args.testnet, testcoin=args.testcoin, unittest=False)
+                 rpc_user=args.rpc_user, rpc_password=args.rpc_password, gui_host=args.gui_host, gui_port=args.gui_port, gui_user=args.gui_user, 
+                 gui_password=args.gui_password, log_file=args.log_file, database_file=args.database_file, testnet=args.testnet, 
+                 testcoin=args.testcoin, unittest=False)
 
     # Database
     db = util.connect_to_db()
@@ -684,6 +728,12 @@ if __name__ == '__main__':
         api_server = api.APIServer()
         api_server.daemon = True
         api_server.start()
+
+        if args.activate_gui:
+            gui_server = gui.XCPGUI()
+            gui_server.daemon = True
+            gui_server.start()
+
         blocks.follow(db)
 
     elif args.action == 'help':
