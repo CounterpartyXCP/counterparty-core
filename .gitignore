@@ -1,8 +1,16 @@
 env
-*.pyc
 docs/_build/*
 
 test/counterpartyd.unittest.db
 test/db.new.dump
 test/log.new
 test/output.new.json
+
+# precompiled python
+*.pyc
+
+# mac
+.DS_Store
+
+# happened during https://github.com/PhantomPhreak/counterpartyd/pull/34
+._.DS_Store
