@@ -154,11 +154,13 @@ def match (db, tx):
             # Check and update fee remainings.
             if tx1['block_index'] >= 286500: # Deduct fee_required from fee_remaining, if possible (else don’t match).
                 if tx1['get_asset'] == 'BTC':
-                    if tx0_fee_remaining < tx1['fee_required']: continue
-                    else: tx0_fee_remaining -= tx1['fee_required']
+                    fee = int(D(tx1['fee_required']) * D(forward_amount) / D(tx0_give_remaining))
+                    if tx0_fee_remaining < fee: continue
+                    else: tx0_fee_remaining -= fee
                 elif tx1['give_asset'] == 'BTC':
-                    if tx1_fee_remaining < tx0['fee_required']: continue
-                    else: tx1_fee_remaining -= tx1['fee_required']
+                    fee = int(D(tx0['fee_required']) * D(backward_amount) / D(tx1_give_remaining))
+                    if tx1_fee_remaining < fee: continue
+                    else: tx1_fee_remaining -= fee 
             else:   # Don’t deduct.
                 if tx1['get_asset'] == 'BTC':
                     if tx0_fee_remaining < tx1['fee_required']: continue
@@ -180,10 +182,11 @@ def match (db, tx):
 
             # Debit the order, even if it involves giving bitcoins, and so one
             # can't debit the sending account.
+            # Get remainings may be negative.
             tx0_give_remaining = tx0['give_remaining'] - forward_amount
             tx0_get_remaining = tx0['get_remaining'] - backward_amount
             tx1_give_remaining = tx1_give_remaining - backward_amount
-            tx1_get_remaining = tx1_get_remaining - forward_amount  # This may indeed be negative!
+            tx1_get_remaining = tx1_get_remaining - forward_amount
 
             # Update give_remaining, get_remaining.
             # tx0

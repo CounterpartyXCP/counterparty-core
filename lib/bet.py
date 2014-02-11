@@ -223,10 +223,11 @@ def match (db, tx):
             bet_match_id = tx0['tx_hash'] + tx1['tx_hash']
 
             # Debit the order.
+            # Counterwager remainings may be negative.
             tx0_wager_remaining = tx0['wager_remaining'] - forward_amount
             tx0_counterwager_remaining = tx0['counterwager_remaining'] - backward_amount
             tx1_wager_remaining = tx1_wager_remaining - backward_amount
-            tx1_counterwager_remaining = tx1_counterwager_remaining - forward_amount  # This may indeed be negative!
+            tx1_counterwager_remaining = tx1_counterwager_remaining - forward_amount
 
             # tx0
             bindings = {
