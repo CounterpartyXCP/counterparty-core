@@ -828,22 +828,117 @@ def get_cancels (db, validity=True, source=None, filters=None, order_by=None, or
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_address (db, address):
+def get_callbacks (db, validity=True, source=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
+    if filters is None: filters = list()
+    if filters and not isinstance(filters, list): filters = [filters,]
+    if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
+    if source: filters.append({'field': 'source', 'op': '==', 'value': source})
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM callbacks%s'''
+         % get_limit_to_blocks(start_block, end_block))
+    results = do_filter(cursor.fetchall(), filters, filterop)
+    cursor.close()
+    return do_order_by(results, order_by, order_dir)
+
+def get_bet_expirations (db, source=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
+    if filters is None: filters = list()
+    if filters and not isinstance(filters, list): filters = [filters,]
+    if source: filters.append({'field': 'source', 'op': '==', 'value': source})
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM bet_expirations%s'''
+         % get_limit_to_blocks(start_block, end_block))
+    results = do_filter(cursor.fetchall(), filters, filterop)
+    cursor.close()
+    return do_order_by(results, order_by, order_dir)
+
+def get_order_expirations (db, source=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
+    if filters is None: filters = list()
+    if filters and not isinstance(filters, list): filters = [filters,]
+    if source: filters.append({'field': 'source', 'op': '==', 'value': source})
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM order_expirations%s'''
+         % get_limit_to_blocks(start_block, end_block))
+    results = do_filter(cursor.fetchall(), filters, filterop)
+    cursor.close()
+    return do_order_by(results, order_by, order_dir)
+
+def get_bet_match_expirations (db, address=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
+    if filters is None: filters = list()
+    if filters and not isinstance(filters, list): filters = [filters,]
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM bet_match_expirations%s'''
+         % get_limit_to_blocks(start_block, end_block))
+    results = do_filter(cursor.fetchall(), filters, filterop)
+    cursor.close()
+    if address: results = [e for e in results if e['tx0_address'] == address or e['tx1_address'] == address]
+    return do_order_by(results, order_by, order_dir)
+
+def get_order_match_expirations (db, address=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
+    if filters is None: filters = list()
+    if filters and not isinstance(filters, list): filters = [filters,]
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM order_match_expirations%s'''
+         % get_limit_to_blocks(start_block, end_block))
+    results = do_filter(cursor.fetchall(), filters, filterop)
+    cursor.close()
+    if address: results = [e for e in results if e['tx0_address'] == address or e['tx1_address'] == address]
+    return do_order_by(results, order_by, order_dir)
+
+def get_address (db, address, start_block=None, end_block=None):
     if not bitcoin.base58_decode(address, config.ADDRESSVERSION):
         raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
                                              address)
     address_dict = {}
     address_dict['balances'] = get_balances(db, address=address)
-    address_dict['burns'] = get_burns(db, validity='valid', source=address, order_by='block_index', order_dir='asc')
-    address_dict['sends'] = get_sends(db, validity='valid', source=address, order_by='block_index', order_dir='asc')
-    address_dict['orders'] = get_orders(db, validity='valid', source=address, order_by='block_index', order_dir='asc')
-    address_dict['order_matches'] = get_order_matches(db, validity='valid', address=address, order_by='tx0_block_index', order_dir='asc')
-    address_dict['btcpays'] = get_btcpays(db, validity='valid', order_by='block_index', order_dir='asc')
-    address_dict['issuances'] = get_issuances(db, validity='valid', issuer=address, order_by='block_index', order_dir='asc')
-    address_dict['broadcasts'] = get_broadcasts(db, validity='valid', source=address, order_by='block_index', order_dir='asc')
-    address_dict['bets'] = get_bets(db, validity='valid', source=address, order_by='block_index', order_dir='asc')
-    address_dict['bet_matches'] = get_bet_matches(db, validity='valid', address=address, order_by='tx0_block_index', order_dir='asc')
-    address_dict['dividends'] = get_dividends(db, validity='valid', source=address, order_by='block_index', order_dir='asc')
+    
+    address_dict['burns'] = get_burns(db, validity='valid', source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+    
+    address_dict['sends'] = get_sends(db, validity='valid', source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+    
+    address_dict['orders'] = get_orders(db, validity='valid', source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+    
+    address_dict['order_matches'] = get_order_matches(db, validity='valid', address=address,
+        order_by='tx0_block_index', order_dir='asc', start_block=start_block, end_block=end_block)
+    
+    address_dict['btcpays'] = get_btcpays(db, validity='valid', order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+    
+    address_dict['issuances'] = get_issuances(db, validity='valid', issuer=address,
+        order_by='block_index', order_dir='asc', start_block=start_block, end_block=end_block)
+    
+    address_dict['broadcasts'] = get_broadcasts(db, validity='valid', source=address,
+        order_by='block_index', order_dir='asc', start_block=start_block, end_block=end_block)
+    
+    address_dict['bets'] = get_bets(db, validity='valid', source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+    
+    address_dict['bet_matches'] = get_bet_matches(db, validity='valid', address=address,
+        order_by='tx0_block_index', order_dir='asc', start_block=start_block, end_block=end_block)
+    
+    address_dict['dividends'] = get_dividends(db, validity='valid', source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['cancels'] = get_cancels(db, validity='valid', source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['callbacks'] = get_callbacks(db, validity='valid', source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['bet_expirations'] = get_bet_expirations(db, source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['order_expirations'] = get_order_expirations(db, source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['bet_match_expirations'] = get_bet_match_expirations(db, address=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['order_match_expirations'] = get_order_match_expirations(db, address=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
     return address_dict
     
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

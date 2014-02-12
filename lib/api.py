@@ -39,9 +39,9 @@ class APIServer(threading.Thread):
             return messages
 
         @dispatcher.add_method
-        def get_address(address):
+        def get_address(address, start_block=None, end_block=None):
             try:
-                return util.get_address(db, address=address)
+                return util.get_address(db, address=address, start_block=start_block, end_block=end_block)
             except exceptions.InvalidAddressError:
                 return None
 
@@ -220,6 +220,18 @@ class APIServer(threading.Thread):
                     'call_price': last_issuance['call_price'],
                     'description': last_issuance['description']}
 
+        @dispatcher.add_method
+        def get_block_info(block_index):
+            assert isinstance(block_index, int) 
+            cursor = db.cursor()
+            cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,))
+            try:
+                block = cursor.fetchall()[0]
+            except IndexError:
+                raise exceptions.DatabaseError('No blocks found.')
+            cursor.close()
+            return block
+            
         @dispatcher.add_method
         def get_running_info():
             try:
