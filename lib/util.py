@@ -273,12 +273,11 @@ def connect_to_db():
 
 def versions_check (db):
     try:
-        # host = 'https://raw2.github.com/PhantomPhreak/counterpartyd/master/versions.json'
-        host = 'https://raw2.github.com/PhantomPhreak/counterpartyd/develop/versions.json'      # TODO
-        response = requests.get(host, headers={'cache-control': 'private, max-age=0, no-cache'})    # TODO: Are these headers correct?
+        host = 'https://raw2.github.com/PhantomPhreak/counterpartyd/master/versions.json'
+        response = requests.get(host, headers={'cache-control': 'no-cache'})
         versions = json.loads(response.text)
     except Exception as e:
-        raise e('Unable to check client, database versions. How’s your Internet access?')
+        raise exceptions.DatabaseVersionError('Unable to check client, database versions. How’s your Internet access?')
  
     # Check client version (for important UI changes).
     if config.CLIENT_VERSION < versions['minimum_client_version']:
