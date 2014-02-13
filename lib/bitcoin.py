@@ -11,6 +11,7 @@ import hashlib
 import requests
 import re
 import time
+import getpass
 
 from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
 from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec
@@ -85,6 +86,17 @@ def rpc (method, params):
         return response_json['result']
     elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
         raise exceptions.BitcoindError('{} Is txindex enabled in Bitcoind?'.format(response_json['error']))
+    elif not config.HEADLESS and response_json['error']['code'] == -4:   # Unknown private key (locked wallet?)
+        # If address in wallet, attempt to unlock.
+        address = params[0]
+        if rpc('validateaddress', [address])['ismine']:
+            print('Wallet locked.')
+            passphrase = getpass.getpass('Enter your Bitcoind[‐Qt] wallet passhrase: ')
+            print('Unlocking wallet for 60 seconds.')
+            rpc('walletpassphrase', [passphrase, 60])
+            return rpc(method, params)  # This shouldn’t recurse.
+        else:   # When will this happen?
+            raise exceptions.BitcoindError('Source address not in wallet.')
     # elif config.PREFIX == config.UNITTEST_PREFIX:
     #     print(method)
     else:
@@ -376,7 +388,7 @@ def transmit (unsigned_tx_hex, ask=True, unsigned=False):
     # Confirm transaction.
     if not unsigned:
         print('Transaction (unsigned):', unsigned_tx_hex)
-    if ask and not unsigned:
+    if ask and not unsigned and not config.HEADLESS:    # Over‐complicated
         if config.TESTNET: print('Attention: TESTNET!')
         if config.TESTCOIN: print('Attention: TESTCOIN!\n')
         if input('Confirm? (y/N) ') != 'y':

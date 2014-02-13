@@ -42,7 +42,7 @@ def validate (db, source, timestamp, value, fee_multiplier, text):
     if not source:
         problems.append('null source address')
     # Check previous broadcast in this feed.
-    broadcasts = util.get_broadcasts(db, validity='Valid', source=source, order_by='tx_index', order_dir='asc')
+    broadcasts = util.get_broadcasts(db, validity='valid', source=source, order_by='tx_index', order_dir='asc')
     if broadcasts:
         last_broadcast = broadcasts[-1]
         if not last_broadcast['text']:
@@ -81,31 +81,21 @@ def parse (db, tx, message):
         assert len(message) == LENGTH
         timestamp, value, fee_multiplier, text = struct.unpack(FORMAT, message)
         text = text.decode('utf-8')
-        validity = 'Valid'
+        validity = 'valid'
     except struct.error as e:
         timestamp, value, fee_multiplier, text = None, None, None, None
-        validity = 'Invalid: could not unpack'
+        validity = 'invalid: could not unpack'
 
-    if validity == 'Valid':
+    if validity == 'valid':
         # For SQLite3
         timestamp = min(timestamp, config.MAX_INT)
         value = min(value, config.MAX_INT)
 
         problems = validate(db, tx['source'], timestamp, value, fee_multiplier, text)
-        if problems: validity = 'Invalid: ' + ';'.join(problems)
-
-    # Log.
-    if validity == 'Valid':
-        if not text:
-            logging.info('Broadcast: {} locked his feed.'.format(tx['source'], tx['tx_hash']))
-        else:
-            if not value: infix = '‘{}’'.format(text)
-            else: infix = '‘{}’ = {}'.format(text, value)
-            suffix = ' from ' + tx['source'] + ' at ' + util.isodt(timestamp) + ' with a fee multiplier of {}'.format(util.devise(db, fee_multiplier, 'fee_multiplier', 'output')) + ' (' + tx['tx_hash'] + ')'
-            logging.info('Broadcast: {}'.format(infix + suffix))
+        if problems: validity = 'invalid: ' + ';'.join(problems)
 
     # Add parsed transaction to message-type–specific table.
-    element_data = {
+    bindings = {
         'tx_index': tx['tx_index'],
         'tx_hash': tx['tx_hash'],
         'block_index': tx['block_index'],
@@ -116,7 +106,8 @@ def parse (db, tx, message):
         'text': text,
         'validity': validity,
     }
-    broadcast_parse_cursor.execute(*util.get_insert_sql('broadcasts', element_data))
+    sql='insert into broadcasts values(:tx_index, :tx_hash, :block_index, :source, :timestamp, :value, :fee_multiplier, :text, :validity)'
+    broadcast_parse_cursor.execute(sql, bindings)
 
 
     # Null values are special.
@@ -128,10 +119,10 @@ def parse (db, tx, message):
     broadcast_parse_cursor.execute('''SELECT * FROM bet_matches \
                                       WHERE (validity=? AND feed_address=?)
                                       ORDER BY tx1_index ASC, tx0_index ASC''',
-                                   ('Valid', tx['source']))
+                                   ('valid', tx['source']))
     for bet_match in broadcast_parse_cursor.fetchall():
         broadcast_bet_match_cursor = db.cursor()
-        validity = 'Valid'
+        validity = 'valid'
         bet_match_id = bet_match['tx0_hash'] + bet_match['tx1_hash']
 
         # Calculate total funds held in escrow and total fee to be paid if
@@ -148,7 +139,7 @@ def parse (db, tx, message):
         bet_match_type_id = bet_match['tx0_bet_type'] + bet_match['tx1_bet_type']
 
         # Contract for difference, with determinate settlement date.
-        if validity == 'Valid' and bet_match_type_id == cfd_type_id:
+        if validity == 'valid' and bet_match_type_id == cfd_type_id:
 
             # Recognise tx0, tx1 as the bull, bear (in the right direction).
             if bet_match['tx0_bet_type'] < bet_match['tx1_bet_type']:
@@ -170,7 +161,7 @@ def parse (db, tx, message):
             bear_credit = round(bear_credit)
             bull_credit = round(bull_credit)
 
-            if bet_match['validity'] == 'Valid':
+            if bet_match['validity'] == 'valid':
                 # Liquidate, as necessary.
                 if bull_credit >= total_escrow:
                     bull_credit = total_escrow
@@ -190,7 +181,7 @@ def parse (db, tx, message):
                     logging.info('Contract Force‐Liquidated: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), bet_match_id))
 
             # Settle.
-            if validity == 'Valid' and timestamp >= bet_match['deadline']:
+            if validity == 'valid' and timestamp >= bet_match['deadline']:
                 util.credit(db, tx['block_index'], bull_address, 'XCP', bull_credit)
                 util.credit(db, tx['block_index'], bear_address, 'XCP', bear_credit)
 
@@ -201,7 +192,7 @@ def parse (db, tx, message):
                 logging.info('Contract Settled: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), bet_match_id))
 
         # Equal[/NotEqual] bet.
-        if validity == 'Valid' and  bet_match_type_id == equal_type_id and timestamp >= bet_match['deadline']:
+        if validity == 'valid' and  bet_match_type_id == equal_type_id and timestamp >= bet_match['deadline']:
 
             # Recognise tx0, tx1 as the bull, bear (in the right direction).
             if bet_match['tx0_bet_type'] < bet_match['tx1_bet_type']:
@@ -227,10 +218,13 @@ def parse (db, tx, message):
             logging.info('Contract Settled: {} won the pot of {} XCP; {} XCP credited to the feed address ({})'.format(winner, util.devise(db, total_escrow, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), bet_match_id))
 
         # Update the bet match's status.
-        broadcast_bet_match_cursor.execute('''UPDATE bet_matches \
-                          SET validity=? \
-                          WHERE (tx0_hash=? and tx1_hash=?)''',
-                      (validity, bet_match['tx0_hash'], bet_match['tx1_hash']))
+        bindings = {
+            'validity': validity,
+            'bet_match_id': bet_match['tx0_hash'] + bet_match['tx1_hash']
+        }
+        sql='update bet_matches set validity = :validity where id = :bet_match_id'
+        broadcast_parse_cursor.execute(sql, bindings)
+
         broadcast_bet_match_cursor.close()
 
     broadcast_parse_cursor.close()

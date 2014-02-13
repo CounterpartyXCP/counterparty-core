@@ -6,7 +6,6 @@ offer_hash is the hash of either a bet or an order.
 
 import binascii
 import struct
-import logging
 
 from . import (util, config, exceptions, bitcoin, util)
 
@@ -18,7 +17,7 @@ ID = 70
 def validate (db, offer_hash, source=None):
     problems = []
 
-    for offer in util.get_orders(db, validity='Valid') + util.get_bets(db, validity='Valid'):
+    for offer in util.get_orders(db, validity='valid') + util.get_bets(db, validity='valid'):
         if offer_hash == offer['tx_hash']:
             if source == offer['source']:
                 return source, offer, problems
@@ -50,50 +49,59 @@ def parse (db, tx, message):
         assert len(message) == LENGTH
         offer_hash_bytes = struct.unpack(FORMAT, message)[0]
         offer_hash = binascii.hexlify(offer_hash_bytes).decode('utf-8')
-        validity = 'Valid'
+        validity = 'valid'
     except struct.error as e:
         offer_hash = None
-        validity = 'Invalid: could not unpack'
+        validity = 'invalid: could not unpack'
 
-    if validity == 'Valid':
-        if validity == 'Valid':
+    if validity == 'valid':
+        if validity == 'valid':
             source, offer, problems = validate(db, offer_hash, source=tx['source'])
-            if problems: validity = 'Invalid: ' + ';'.join(problems)
+            if problems: validity = 'invalid: ' + ';'.join(problems)
 
-    if validity == 'Valid':
+    if validity == 'valid':
         # Find offer.
         cursor.execute('''SELECT * FROM orders \
-                          WHERE (tx_hash=? AND source=? AND validity=?)''', (offer_hash, tx['source'], 'Valid'))
+                          WHERE (tx_hash=? AND source=? AND validity=?)''', (offer_hash, tx['source'], 'valid'))
         orders = cursor.fetchall()
         cursor.execute('''SELECT * FROM bets \
-                          WHERE (tx_hash=? AND source=? AND validity=?)''', (offer_hash, tx['source'], 'Valid'))
+                          WHERE (tx_hash=? AND source=? AND validity=?)''', (offer_hash, tx['source'], 'valid'))
         bets = cursor.fetchall()
 
         # Cancel if order.
         if orders:
             order = orders[0]
-            cursor.execute('''UPDATE orders \
-                                           SET validity=? \
-                                           WHERE tx_hash=?''', ('Invalid: cancelled', order['tx_hash']))
+
+            # Update validity of order.
+            bindings = {
+                'validity': 'cancelled',
+                'tx_hash': order['tx_hash']
+            }
+            sql='update orders set validity = :validity where tx_hash = :tx_hash'
+            cursor.execute(sql, bindings)
+
             if order['give_asset'] != 'BTC':
                 util.credit(db, tx['block_index'], tx['source'], order['give_asset'], order['give_remaining'])
         # Cancel if bet.
         elif bets:
             bet = bets[0]
-            cursor.execute('''UPDATE bets \
-                                           SET validity=? \
-                                           WHERE tx_hash=?''', ('Invalid: cancelled', bet['tx_hash']))
+
+            # Update validity of bet.
+            bindings = {
+                'validity': 'cancelled',
+                'tx_hash': bet['tx_hash']
+            }
+            sql='update bets set validity = :validity where tx_hash = :tx_hash'
+            cursor.execute(sql, bindings)
+
             util.credit(db, tx['block_index'], tx['source'], 'XCP', bet['wager_remaining'])
             util.credit(db, tx['block_index'], tx['source'], 'XCP', round(bet['wager_amount'] * bet['fee_multiplier'] / 1e8))
         # If neither order or bet, mark as invalid.
         else:
-            validity = 'Invalid: no valid offer with that hash from that address'
-
-    if validity == 'Valid':
-        logging.info('Cancel: {} ({})'.format(offer_hash, tx['tx_hash']))
+            validity = 'invalid: no valid offer with that hash from that address'
 
     # Add parsed transaction to message-type–specific table.
-    element_data = {
+    bindings = {
         'tx_index': tx['tx_index'],
         'tx_hash': tx['tx_hash'],
         'block_index': tx['block_index'],
@@ -101,7 +109,8 @@ def parse (db, tx, message):
         'offer_hash': offer_hash,
         'validity': validity,
     }
-    cursor.execute(*util.get_insert_sql('cancels', element_data))
+    sql='insert into cancels values(:tx_index, :tx_hash, :block_index, :source, :offer_hash, :validity)'
+    cursor.execute(sql, bindings)
 
 
     cursor.close()

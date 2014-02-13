@@ -16,7 +16,6 @@ import unicodedata
 
 import time
 import dateutil.parser
-import datetime
 import calendar
 from threading import Thread
 
@@ -34,7 +33,7 @@ json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
 def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=None,
                  bitcoind_rpc_user=None, bitcoind_rpc_password=None, rpc_host=None, rpc_port=None,
-                 rpc_user=None, rpc_password=None, log_file=None, database_file=None, testnet=False, testcoin=False, unittest=False):
+                 rpc_user=None, rpc_password=None, log_file=None, database_file=None, testnet=False, testcoin=False, unittest=False, headless=False):
 
     # Unittests always run on testnet.
     if unittest and not testnet:
@@ -208,9 +207,23 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
             config.BURN_END = 283810
             config.UNSPENDABLE = '1CounterpartyXXXXXXXXXXXXXXXUWLpVr'
 
+    # Headless operation
+    config.HEADLESS = headless
+
 def market (give_asset, get_asset):
+
+    # Your Pending Orders Matches.
+    awaiting_btcs = util.get_order_matches(db, validity='pending', is_mine=True)
+    table = PrettyTable(['Matched Order ID', 'Time Left'])
+    for order_match in awaiting_btcs:
+        order_match = format_order_match(db, order_match)
+        table.add_row(order_match)
+    print('Your Pending Order Matches')
+    print(table)
+    print('\n')
+
     # Open orders.
-    orders = util.get_orders(db, validity='Valid', show_expired=False, show_empty=False)
+    orders = util.get_orders(db, validity='valid', show_expired=False, show_empty=False)
     table = PrettyTable(['Give Quantity', 'Give Asset', 'Price', 'Price Assets', 'Required BTC Fee', 'Provided BTC Fee', 'Time Left', 'Tx Hash'])
     for order in orders:
         if give_asset and order['give_asset'] != give_asset: continue
@@ -223,7 +236,7 @@ def market (give_asset, get_asset):
     print('\n')
 
     # Open bets.
-    bets = util.get_bets(db, validity='Valid', show_empty=False)
+    bets = util.get_bets(db, validity='valid', show_empty=False)
     table = PrettyTable(['Bet Type', 'Feed Address', 'Deadline', 'Target Value', 'Leverage', 'Wager', 'Odds', 'Time Left', 'Tx Hash'])
     for bet in bets:
         bet = format_bet(bet)
@@ -232,18 +245,8 @@ def market (give_asset, get_asset):
     print(table)
     print('\n')
 
-    # Matched orders awaiting BTC payments from you.
-    awaiting_btcs = util.get_order_matches(db, validity='Valid: awaiting BTC payment', is_mine=True)
-    table = PrettyTable(['Matched Order ID', 'Time Left'])
-    for order_match in awaiting_btcs:
-        order_match = format_order_match(db, order_match)
-        table.add_row(order_match)
-    print('Order Matches Awaiting BTC Payment from You')
-    print(table)
-    print('\n')
-
     # Feeds
-    broadcasts = util.get_broadcasts(db, validity='Valid', order_by='timestamp', order_dir='desc')
+    broadcasts = util.get_broadcasts(db, validity='valid', order_by='timestamp', order_dir='desc')
     table = PrettyTable(['Feed Address', 'Timestamp', 'Text', 'Value', 'Fee Multiplier'])
     seen_addresses = []
     for broadcast in broadcasts:
@@ -333,13 +336,14 @@ if __name__ == '__main__':
     
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(prog='counterpartyd', description='the reference implementation of the Counterparty protocol')
-    parser.add_argument('-V', '--version', action='version', version="counterpartyd v%s" % config.VERSION)
+    parser.add_argument('-V', '--version', action='version', version="counterpartyd v%s" % config.CLIENT_VERSION)
 
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='sets log level to DEBUG instead of WARNING')
     parser.add_argument('--force', action='store_true', help='don\'t check whether Bitcoind is caught up')
     parser.add_argument('--testnet', action='store_true', help='use Bitcoin testnet addresses and block numbers')
     parser.add_argument('--testcoin', action='store_true', help='use the test Counterparty network on every blockchain')
     parser.add_argument('--unsigned', action='store_true', default=False, help='print out unsigned hex of transaction; do not sign or broadcast')
+    parser.add_argument('--headless', action='store_true', default=False, help='assume headless operation, e.g. don’t ask for wallet passhrase')
 
     parser.add_argument('--data-dir', help='the directory in which to keep the database, config file and log file, by default')
     parser.add_argument('--database-file', help='the location of the SQLite3 database')
@@ -373,8 +377,8 @@ if __name__ == '__main__':
     parser_order.add_argument('--give-quantity', required=True, help='the quantity of GIVE_ASSET that you are willing to give')
     parser_order.add_argument('--give-asset', required=True, help='the asset that you would like to sell')
     parser_order.add_argument('--expiration', type=int, required=True, help='the number of blocks for which the order should be valid')
-    parser_order.add_argument('--fee_required', default=0, help='the miners\' fee required to be paid by orders for them to match this one; in BTC; required iff buying BTC (may be zero, though)')
-    parser_order.add_argument('--fee_provided', default=(config.MIN_FEE / config.UNIT), help='the miners\' fee provided; in BTC; required iff selling BTC (should not be lower than is required for acceptance in a block)')
+    parser_order.add_argument('--fee-required', default=D(config.FEE_REQUIRED_DEFAULT), help='the miners’ fee required for an order to match this one, as a fraction of the BTC to be bought')
+    parser_order.add_argument('--fee-provided', default=D(config.FEE_PROVIDED_DEFAULT), help='the miners’ fee provided, as a fraction of the BTC to be sold')
 
     parser_btcpay= subparsers.add_parser('btcpay', help='create and broadcast a *BTCpay* message, to settle an Order Match for which you owe BTC')
     parser_btcpay.add_argument('--order-match-id', required=True, help='the concatenation of the hashes of the two transactions which compose the order match')
@@ -387,7 +391,7 @@ if __name__ == '__main__':
     parser_issuance.add_argument('--divisible', action='store_true', help='whether or not the asset is divisible (must agree with previous issuances)')
     parser_issuance.add_argument('--callable', dest='callable_', action='store_true', help='whether or not the asset is callable (must agree with previous issuances)')
     parser_issuance.add_argument('--call-date', help='the date from which a callable asset may be called back (must agree with previous issuances)')
-    parser_issuance.add_argument('--call-price', help='the price at which a callable asset may be called back (must agree with previous issuances)')
+    parser_issuance.add_argument('--call-price', help='the price, in XCP per whole unit, at which a callable asset may be called back (must agree with previous issuances)')
     parser_issuance.add_argument('--description', type=str, required=True, help='a description of the asset')
 
     parser_broadcast = subparsers.add_parser('broadcast', help='broadcast textual and numerical information to the network')
@@ -409,7 +413,7 @@ if __name__ == '__main__':
 
     parser_dividend = subparsers.add_parser('dividend', help='pay dividends to the holders of an asset (in proportion to their stake in it)')
     parser_dividend.add_argument('--source', required=True, help='the source address')
-    parser_dividend.add_argument('--quantity-per-share', required=True, help='the quantity of XCP to be paid per unit (satoshi) held of ASSET')
+    parser_dividend.add_argument('--quantity-per-unit', required=True, help='the quantity of XCP to be paid per whole unit held of ASSET')
     parser_dividend.add_argument('--asset', required=True, help='the asset to which pay dividends')
 
     parser_burn = subparsers.add_parser('burn', help='destroy bitcoins to earn XCP, during an initial period of time')
@@ -421,7 +425,7 @@ if __name__ == '__main__':
 
     parser_callback = subparsers.add_parser('callback', help='callback a fraction of an asset')
     parser_callback.add_argument('--source', required=True, help='the source address')
-    parser_callback.add_argument('--fraction-per-share', required=True, help='the fraction of ASSET to call back')
+    parser_callback.add_argument('--fraction', required=True, help='the fraction of ASSET to call back')
     parser_callback.add_argument('--asset', required=True, help='the asset to callback')
 
     parser_address = subparsers.add_parser('balances', help='display the balances of a Counterparty address')
@@ -451,7 +455,7 @@ if __name__ == '__main__':
     # Configuration
     set_options(data_dir=args.data_dir, bitcoind_rpc_connect=args.bitcoind_rpc_connect, bitcoind_rpc_port=args.bitcoind_rpc_port,
                  bitcoind_rpc_user=args.bitcoind_rpc_user, bitcoind_rpc_password=args.bitcoind_rpc_password, rpc_host=args.rpc_host, rpc_port=args.rpc_port,
-                 rpc_user=args.rpc_user, rpc_password=args.rpc_password, log_file=args.log_file, database_file=args.database_file, testnet=args.testnet, testcoin=args.testcoin, unittest=False)
+                 rpc_user=args.rpc_user, rpc_password=args.rpc_password, log_file=args.log_file, database_file=args.database_file, testnet=args.testnet, testcoin=args.testcoin, unittest=False, headless=args.headless)
 
     # Database
     db = util.connect_to_db()
@@ -481,6 +485,9 @@ if __name__ == '__main__':
 
     if args.action == None: args.action = 'server'
 
+    # Check versions.
+    util.versions_check(db)
+
     # Check that bitcoind is running, communicable, and caught up with the blockchain.
     # Check that the database has caught up with bitcoind.
     if not args.force:
@@ -496,26 +503,26 @@ if __name__ == '__main__':
         print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'order':
+        fee_required, fee_provided = D(args.fee_required), D(args.fee_provided)
+        give_quantity, get_quantity = D(args.give_quantity), D(args.get_quantity)
+
         # Fee argument is either fee_required or fee_provided, as necessary.
         if args.give_asset == 'BTC':
-            if args.fee_required != 0:
-                raise exceptions.FeeError('When selling BTC, do not specify a fee required.')
-            fee_required = args.fee_required
-            fee_provided = util.devise(db, args.fee_provided, 'BTC', 'input')
+            fee_required = 0
+            fee_provided = util.devise(db, fee_provided, 'fraction', 'input')
+            fee_provided = round(D(fee_provided) * D(give_quantity) * D(config.UNIT))
+            if fee_provided < config.MIN_FEE:
+                raise exceptions.InputError('Fee provided less than minimum necessary for acceptance in a block.')
         elif args.get_asset == 'BTC':
-            fee_required = util.devise(db, args.fee_required, 'BTC', 'input')
-            if args.fee_provided != config.MIN_FEE / config.UNIT:
-                raise exceptions.FeeError('When buying BTC, do not specify a fee provided.')
-            fee_provided = util.devise(db, args.fee_provided, 'BTC', 'input')
+            fee_provided = config.MIN_FEE
+            fee_required = util.devise(db, fee_required, 'fraction', 'input')
+            fee_required = round(D(fee_required) * D(get_quantity) * D(config.UNIT))
         else:
-            fee_provided = util.devise(db, args.fee_provided, 'XCP', 'input')
-            if fee_provided != config.MIN_FEE or args.fee_required != 0:
-                raise exceptions.InputError('No fee should be required or provided (explicitly) if not buying or selling BTC.')
             fee_required = 0
             fee_provided = config.MIN_FEE
 
-        give_quantity = util.devise(db, args.give_quantity, args.give_asset, 'input')
-        get_quantity = util.devise(db, args.get_quantity, args.get_asset, 'input')
+        give_quantity = util.devise(db, give_quantity, args.give_asset, 'input')
+        get_quantity = util.devise(db, get_quantity, args.get_asset, 'input')
         unsigned_tx_hex = order.create(db, args.source, args.give_asset, give_quantity,
                                 args.get_asset, get_quantity,
                                 args.expiration, fee_required, fee_provided, unsigned=args.unsigned)
@@ -533,7 +540,7 @@ if __name__ == '__main__':
                 parser.error('must specify call date of callable asset', )
             if not args.call_price:
                 parser.error('must specify call price of callable asset')
-            call_date = round(datetime.timestamp(dateutil.parser.parse(args.call_date)))
+            call_date = calendar.timegm(dateutil.parser.parse(args.call_date).utctimetuple())
             call_price = float(args.call_price)
         else:
             call_date, call_price = 0, 0
@@ -546,7 +553,7 @@ if __name__ == '__main__':
     elif args.action == 'broadcast':
         value = util.devise(db, args.value, 'value', 'input')
         unsigned_tx_hex = broadcast.create(db, args.source, int(time.time()),
-                                           value, args.fee_multiplier,
+                                           value, util.devise(db, args.fee_multiplier, 'fracton', 'input'),
                                            args.text, unsigned=args.unsigned)
         print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
@@ -564,8 +571,8 @@ if __name__ == '__main__':
         print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'dividend':
-        quantity_per_share = util.devise(db, args.quantity_per_share, 'XCP', 'input')
-        unsigned_tx_hex = dividend.create(db, args.source, quantity_per_share,
+        quantity_per_unit = util.devise(db, args.quantity_per_unit, 'XCP', 'input')
+        unsigned_tx_hex = dividend.create(db, args.source, quantity_per_unit,
                                    args.asset, unsigned=args.unsigned)
         print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
@@ -579,7 +586,7 @@ if __name__ == '__main__':
         print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'callback':
-        unsigned_tx_hex = callback.create(db, args.source, float(args.fraction_per_share),
+        unsigned_tx_hex = callback.create(db, args.source, util.devise(db, args.fraction, 'fraction', 'input'),
                                    args.asset, unsigned=args.unsigned)
         print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
@@ -610,7 +617,7 @@ if __name__ == '__main__':
             call_price = None
             description = None
         else:
-            issuances = util.get_issuances(db, validity='Valid', asset=args.asset)
+            issuances = util.get_issuances(db, validity='valid', asset=args.asset)
             total = sum([issuance['amount'] for issuance in issuances])
             total = util.devise(db, total, args.asset, 'output')
             divisible = bool(issuances[-1]['divisible'])
@@ -685,9 +692,6 @@ if __name__ == '__main__':
         api_server.daemon = True
         api_server.start()
         blocks.follow(db)
-
-    elif args.action == 'help':
-        parser.print_help()
 
     else:
         parser.print_help()

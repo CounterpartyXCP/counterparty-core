@@ -1,7 +1,6 @@
 #! /usr/bin/python3
 
 import struct
-import logging
 import decimal
 D = decimal.Decimal
 
@@ -23,7 +22,7 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
     # Valid re-issuance?
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM issuances \
-                      WHERE (validity = ? AND asset = ?)''', ('Valid', asset))
+                      WHERE (validity = ? AND asset = ?)''', ('valid', asset))
     issuances = cursor.fetchall()
     cursor.close()
     if issuances:
@@ -93,15 +92,15 @@ def parse (db, tx, message):
         try:
             asset = util.get_asset_name(asset_id)
         except:
-            validity = 'Invalid: bad asset name'
-        validity = 'Valid'
+            validity = 'invalid: bad asset name'
+        validity = 'valid'
     except struct.error:
         asset, amount, divisible, callable_, call_date, call_price, description = None, None, None, None, None, None, None
-        validity = 'Invalid: could not unpack'
+        validity = 'invalid: could not unpack'
 
-    if validity == 'Valid':
+    if validity == 'valid':
         problems = validate(db, tx['source'], tx['destination'], asset, amount, divisible, callable_, call_date, call_price, description, block_index=tx['block_index'])
-        if problems: validity = 'Invalid: ' + ';'.join(problems)
+        if problems: validity = 'invalid: ' + ';'.join(problems)
         if 'maximum total quantity exceeded' in problems:
             amount = 0
 
@@ -113,8 +112,9 @@ def parse (db, tx, message):
         transfer = False
 
     fee = 0
-    if validity == 'Valid':
+    if validity == 'valid':
         # Debit fee.
+        fee = 0
         if amount:
             if tx['block_index'] >= 286000:
                 fee = config.ISSUANCE_FEE * config.UNIT
@@ -123,12 +123,8 @@ def parse (db, tx, message):
             if fee:
                 util.debit(db, tx['block_index'], tx['source'], 'XCP', fee)
 
-        # Credit.
-        if validity == 'Valid' and amount:
-            util.credit(db, tx['block_index'], tx['source'], asset, amount, divisible=divisible)
-
     # Add parsed transaction to message-type–specific table.
-    element_data = {
+    bindings= {
         'tx_index': tx['tx_index'],
         'tx_hash': tx['tx_hash'],
         'block_index': tx['block_index'],
@@ -144,27 +140,12 @@ def parse (db, tx, message):
         'fee_paid': fee,
         'validity': validity,
     }
-    issuance_parse_cursor.execute(*util.get_insert_sql('issuances', element_data))
+    sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :amount, :divisible, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :validity)'
+    issuance_parse_cursor.execute(sql, bindings)
 
-
-    if validity == 'Valid':
-        # Log.
-        if tx['destination']:
-            logging.info('Issuance: {} transfered asset {} to {} ({})'.format(tx['source'], asset, tx['destination'], tx['tx_hash']))
-        elif not amount:
-            logging.info('Issuance: {} locked asset {} ({})'.format(tx['source'], asset, tx['tx_hash']))
-        else:
-            if divisible:
-                divisibility = 'divisible'
-                unit = config.UNIT
-            else:
-                divisibility = 'indivisible'
-                unit = 1
-            if callable_ and (tx['block_index'] > 283271 or config.TESTNET) and len(message) == LENGTH_2:
-                callability = 'callable from {} for {} XCP/{}'.format(util.isodt(call_date), call_price, asset)
-            else:
-                callability = 'uncallable'
-            logging.info('Issuance: {} created {} of {} asset {}, which is {}, with description ‘{}’ ({})'.format(tx['source'], util.devise(db, amount, None, 'output', divisible=divisible), divisibility, asset, callability, description, tx['tx_hash']))
+    # Credit.
+    if validity == 'valid' and amount:
+        util.credit(db, tx['block_index'], tx['source'], asset, amount)
 
     issuance_parse_cursor.close()
 

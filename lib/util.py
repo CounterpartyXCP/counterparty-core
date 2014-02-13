@@ -4,10 +4,14 @@ from dateutil.tz import tzlocal
 import decimal
 D = decimal.Decimal
 import sys
+import json
 import logging
 import operator
 from operator import itemgetter
 import apsw
+import collections
+import inspect
+import requests
 
 from . import (config, exceptions, bitcoin)
 
@@ -29,13 +33,233 @@ def price (numerator, denominator):
     numerator = D(numerator)
     denominator = D(denominator)
     return D(numerator / denominator)
-       
+
+def log (db, command, category, bindings):
+
+    def output (amount, asset):
+        try:
+            if asset not in ('price', 'fee_multiplier', 'odds', 'leverage'):
+                return str(devise(db, amount, asset, 'output')) + ' ' + asset
+            else:
+                return str(devise(db, amount, asset, 'output'))
+        except exceptions.AssetError:
+            return '<AssetError>'
+        except decimal.DivisionByZero:
+            return '<DivisionByZero>'
+
+    if command == 'update':
+        if category == 'order':
+            logging.debug('Database: set validity of order {} to {}.'.format(bindings['tx_hash'], bindings['validity']))
+        elif category == 'bet':
+            logging.debug('Database: set validity of bet {} to {}.'.format(bindings['tx_hash'], bindings['validity']))
+        elif category == 'order_matches':
+            logging.debug('Database: set validity of order_match {} to {}.'.format(bindings['order_match_id'], bindings['validity']))
+        elif category == 'bet_matches':
+            logging.debug('Database: set validity of bet_match {} to {}.'.format(bindings['bet_match_id'], bindings['validity']))
+        # TODO: elif category == 'balances':
+            # logging.debug('Database: set balance of {} in {} to {}.'.format(bindings['address'], bindings['asset'], output(bindings['amount'], bindings['asset']).split(' ')[0]))
+
+    elif command == 'insert':  # TODO
+
+        if category == 'credits':
+            logging.debug('Credit: {} to {} #{}# <{}>'.format(output(bindings['amount'], bindings['asset']), bindings['address'], bindings['calling_function'], bindings['event']))
+
+        elif category == 'debits':
+            logging.debug('Debit: {} from {} #{}# <{}>'.format(output(bindings['amount'], bindings['asset']), bindings['address'], bindings['calling_function'], bindings['event']))
+
+        elif category == 'sends':
+            logging.info('Send: {} from {} to {} ({}) [{}]'.format(output(bindings['amount'], bindings['asset']), bindings['source'], bindings['destination'], bindings['tx_hash'], bindings['validity']))
+
+        elif category == 'orders':
+            give_asset = bindings['give_asset']
+            get_asset = bindings['get_asset']
+
+            give_amount = output(bindings['give_amount'], bindings['give_asset']).split(' ')[0]
+            get_amount = output(bindings['get_amount'], bindings['get_asset']).split(' ')[0]
+
+            # Consistent ordering for currency pairs. (Partial DUPE.)
+            if get_asset < give_asset:
+                try:
+                    price = output(D(get_amount) / D(give_amount), 'price')
+                except (decimal.DivisionByZero, decimal.InvalidOperation):
+                    price = '??'
+                price_assets = get_asset + '/' + give_asset
+                action = 'sell {} {}'.format(give_amount, give_asset)
+            else:
+                try:
+                    price = output(D(give_amount) / D(get_amount), 'price')
+                except (decimal.DivisionByZero, decimal.InvalidOperation):
+                    price = '??'
+                price_assets = give_asset + '/' + get_asset
+                action = 'buy {} {}'.format(get_amount, get_asset)
+
+            logging.info('Order: {} at {} {} in {} blocks, with a provided fee of {} BTC and a required fee of {} BTC ({}) [{}]'.format(action, price, price_assets, bindings['expiration'], bindings['fee_provided'] / config.UNIT, bindings['fee_required'] / config.UNIT, bindings['tx_hash'], bindings['validity']))
+
+        elif category == 'order_matches':
+            forward_amount = bindings['forward_amount']
+            backward_amount = bindings['backward_amount']
+            forward_asset = bindings['forward_asset']
+            backward_asset = bindings['backward_asset']
+
+            # This can't be gotten rid of!
+            forward_print = output(forward_amount, forward_asset)
+            backward_print = output(backward_amount, backward_asset)
+
+            # Consistent ordering for currency pairs. (Partial DUPE.)
+            if forward_asset < backward_asset:
+                try:
+                    price = output(D(forward_amount) / D(backward_amount), 'price')
+                except (decimal.DivisionByZero, decimal.InvalidOperation):
+                    price = None
+                price_assets = forward_asset + '/' + backward_asset
+                foobar = '{} for {}'.format(forward_print, backward_print)
+            else:
+                try:
+                    price = output(D(backward_amount) / D(forward_amount), 'price')
+                except (decimal.DivisionByZero, decimal.InvalidOperation):
+                    price = None
+                price_assets = backward_asset + '/' + forward_asset
+                foobar = '{} for {}'.format(backward_print, forward_print)
+
+            logging.info('Order Match: {} at {} {} ({}) [{}]'.format(foobar, price, price_assets, bindings['id'], bindings['validity']))
+
+        elif category == 'btcpays':
+            logging.info('BTC Payment: {} paid {} to {} for order match {} ({}) [{}]'.format(bindings['source'], output(bindings['btc_amount'], 'BTC'), bindings['destination'], bindings['order_match_id'], bindings['tx_hash'], bindings['validity']))
+
+        elif category == 'issuances':
+            if bindings['transfer']:
+                logging.info('Issuance: {} transferred asset {} to {} ({}) [{}]'.format(bindings['source'], bindings['asset'], bindings['issuer'], bindings['tx_hash'], bindings['validity']))
+            elif not bindings['amount']:
+                logging.info('Issuance: {} locked asset {} ({}) [{}]'.format(bindings['issuer'], bindings['asset'], bindings['tx_hash'], bindings['validity']))
+            else:
+                if bindings['divisible']:
+                    divisibility = 'divisible'
+                    unit = config.UNIT
+                else:
+                    divisibility = 'indivisible'
+                    unit = 1
+                if bindings['callable'] and (bindings['block_index'] > 283271 or config.TESTNET):
+                    callability = 'callable from {} for {} XCP/{}'.format(isodt(bindings['call_date']), bindings['call_price'], bindings['asset'])
+                else:
+                    callability = 'uncallable'
+                try:
+                    amount = devise(db, bindings['amount'], None, dest='output', divisible=bindings['divisible'])
+                except:
+                    amount = '?'
+                logging.info('Issuance: {} created {} of asset {}, which is {} and {}, with description ‘{}’ ({}) [{}]'.format(bindings['issuer'], amount, bindings['asset'], divisibility, callability, bindings['description'], bindings['tx_hash'], bindings['validity']))
+
+        elif category == 'broadcasts':
+            if not bindings['text']:
+                logging.info('Broadcast: {} locked his feed ({}) [{}]'.format(bindings['source'], bindings['tx_hash'], bindings['validity']))
+            else:
+                if not bindings['value']: infix = '‘{}’'.format(bindings['text'])
+                else: infix = '‘{}’ = {}'.format(bindings['text'], bindings['value'])
+                suffix = ' from ' + bindings['source'] + ' at ' + isodt(bindings['timestamp']) + ' with a fee of {}%'.format(output(D(bindings['fee_multiplier']) * D(100), 'fee_multiplier')) + ' (' + bindings['tx_hash'] + ')' + ' [{}]'.format(bindings['validity'])
+                logging.info('Broadcast: {}'.format(infix + suffix))
+
+        elif category == 'bets':
+            placeholder = ''
+            if bindings['target_value']:    # 0.0 is not a valid target value.
+                placeholder = ' that ' + str(output(bindings['target_value'], 'value'))
+            if bindings['leverage']:
+                placeholder += ', leveraged {}x'.format(output(bindings['leverage']/ 5040, 'leverage'))
+            odds = D(bindings['wager_amount']) / D(bindings['counterwager_amount'])
+
+            fee = round(bindings['wager_amount'] * bindings['fee_multiplier'] / 1e8)    # round?!
+
+            logging.info('Bet: {} on {} at {} for {} against {} at {} odds in {} blocks{} for a fee of {} ({}) [{}]'.format(BET_TYPE_NAME[bindings['bet_type']], bindings['feed_address'], isodt(bindings['deadline']), output(bindings['wager_amount'], 'XCP'), output(bindings['counterwager_amount'], 'XCP'), output(odds, 'odds'), bindings['expiration'], placeholder, output(fee, 'XCP'), bindings['tx_hash'], bindings['validity']))
+
+        elif category == 'bet_matches':
+            placeholder = ''
+            if bindings['target_value']:    # 0 is not a valid target value.
+                placeholder = ' that ' + str(output(bindings['target_value'], 'value'))
+            if bindings['leverage']:
+                placeholder += ', leveraged {}x'.format(output(bindings['leverage'] / 5040, 'leverage'))
+            logging.info('Bet Match: {} for {} against {} for {} on {} at {}{} ({}) [{}]'.format(BET_TYPE_NAME[bindings['tx0_bet_type']], output(bindings['forward_amount'], 'XCP'), BET_TYPE_NAME[bindings['tx1_bet_type']], output(bindings['backward_amount'], 'XCP'), bindings['feed_address'], isodt(bindings['deadline']), placeholder, bindings['id'], bindings['validity']))
+
+        elif category == 'dividends':
+            logging.info('Dividend: {} paid {} per unit of {} ({}) [{}]'.format(bindings['source'], output(bindings['amount_per_unit'], 'XCP'), bindings['asset'], bindings['tx_hash'], bindings['validity']))
+
+        elif category == 'burns':
+            logging.info('Burn: {} burned {} for {} ({}) [{}]'.format(bindings['source'], output(bindings['burned'], 'BTC'), output(bindings['earned'], 'XCP'), bindings['tx_hash'], bindings['validity']))
+
+        elif category == 'cancels':
+            logging.info('Cancel: {} ({}) [{}]'.format(bindings['offer_hash'], bindings['tx_hash'], bindings['validity']))
+
+        elif category == 'callbacks':
+            logging.info('Callback: {} called back {}% of {} ({}) [{}]'.format(bindings['source'], float(D(bindings['fraction']) * D(100)), bindings['asset'], bindings['tx_hash'], bindings['validity']))
+
+        elif category == 'order_expirations':
+            logging.info('Expired order: {}'.format(bindings['order_hash']))
+
+        elif category == 'order_match_expirations':
+            logging.info('Expired Order Match awaiting payment: {}'.format(bindings['order_match_id']))
+
+        elif category == 'bet_expirations':
+            logging.info('Expired bet: {}'.format(bindings['bet_hash']))
+
+        elif category == 'bet_match_expirations':
+            logging.info('Expired Bet Match: {}'.format(bindings['bet_match_id']))
+        
 def rowtracer(cursor, sql):
     """Converts fetched SQL data into dict-style"""
     dictionary = {}
     for index, (name, type_) in enumerate(cursor.getdescription()):
         dictionary[name] = sql[index]
     return dictionary
+
+def exectracer(cursor, sql, bindings):
+    # This means that all changes to database must use a very simple syntax.
+        # TODO: Need sanity checks here.
+    sql = sql.lower()
+
+    # Parse SQL.
+    array = sql.split('(')[0].split(' ')
+    if 'insert' in sql:
+        command, category = array[0], array[2]
+    elif 'update' in sql:
+        command, category = array[0], array[1]
+    else:
+        return True
+
+    db = cursor.getconnection()
+    dictionary = {'command': command, 'category': category, 'bindings': bindings}
+
+    # Skip blocks, transactions.
+    if 'blocks' in sql or 'transactions' in sql: return True
+
+    # Record alteration in database.
+    if not category in ('balances', 'messages'):
+        cursor = db.cursor()
+
+        # Get last message index.
+        cursor.execute('''SELECT * FROM messages WHERE message_index = (SELECT MAX(message_index) from messages)''')
+        try:
+            message_index = cursor.fetchall()[0]['message_index'] + 1
+        except IndexError:
+            message_index = 0
+
+        # Get current block.
+        # Hackish
+        try:
+            block_index = bindings['block_index']
+        except KeyError:
+            try:
+                block_index = bindings['tx1_block_index']
+            except KeyError:
+                block_index = 0 # TODO
+
+        bindings_string = json.dumps(collections.OrderedDict(sorted(bindings.items())))
+        cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings)',
+                       (message_index, block_index, command, category, bindings_string))
+
+        message_index += 1
+        cursor.close()
+
+    # Log.
+    log(db, command, category, bindings)
+
+    return True
 
 def connect_to_db():
     """Connects to the SQLite database, returning a db Connection object"""
@@ -44,14 +268,36 @@ def connect_to_db():
     cursor.execute('''PRAGMA count_changes = OFF''')
     cursor.close()
     db.setrowtrace(rowtracer)
+    db.setexectrace(exectracer)
     return db
 
-def get_insert_sql(table_name, element_data):
-    """Takes a mapping of element data and a table name, and produces an INSERT statement suitable for a sqlite3 cursor.execute() operation"""
-    #NOTE: keys() and values() return in the same order if dict is not modified: http://docs.python.org/3/library/stdtypes.html#dict.items
-    k, v = (element_data.keys(), element_data.values())
-    return [ "INSERT INTO %s(%s) VALUES(%s)" % (
-        table_name, ','.join(k), ','.join(['?' for i in range(len(v))])), v ]
+def versions_check (db):
+    try:
+        # host = 'https://raw2.github.com/PhantomPhreak/counterpartyd/master/versions.json'
+        host = 'https://raw2.github.com/PhantomPhreak/counterpartyd/develop/versions.json'      # TODO
+        response = requests.get(host, headers={'cache-control': 'private, max-age=0, no-cache'})    # TODO: Are these headers correct?
+        versions = json.loads(response.text)
+    except Exception as e:
+        raise e('Unable to check client, database versions. How’s your Internet access?')
+ 
+    # Check client version (for important UI changes).
+    if config.CLIENT_VERSION < versions['minimum_client_version']:
+        raise exceptions.ClientVersionError('Please upgrade counterpartyd to the latest version.')
+
+    # Check the database version when past the block at which the protocol change
+    # comes into effect.
+    try:
+        block_index = last_block(db)['block_index']
+    except apsw.SQLError:
+        logging.debug('Status: Version checks passed.') # DUPE
+        return
+    for protocol_change in versions['protocol_changes']:
+        if block_index >= protocol_change['block_index']:
+            if config.DB_VERSION < protocol_change['minimum_database_version']:
+                raise exceptions.DatabaseVersionError('Please upgrade counterpartyd to the latest version.')
+
+    logging.debug('Status: Version checks passed.')
+    return
 
 def bitcoind_check (db):
     """Checks blocktime of last block to see if Bitcoind is running behind."""
@@ -71,10 +317,10 @@ def database_check (db):
         if block_index == bitcoin.rpc('getblockcount', []):
             cursor.close()
             return
+        print('Database not up to date. Sleeping for one second. (Try {}/{})'.format(i+1, TRIES), file=sys.stderr)
         time.sleep(1)
     raise exceptions.DatabaseError('Counterparty database is behind Bitcoind. Is the counterpartyd server running?')
 
-# TODO: Doesn’t use DB indexes at all!
 def do_filter(results, filters, filterop):
     """Filters results based on a filter data structure (as used by the API)"""
     if not len(results) or not filters: #empty results, or not filtering
@@ -161,12 +407,12 @@ def xcp_supply (db):
 
     # Add burns.
     cursor.execute('''SELECT * FROM burns \
-                      WHERE validity = ?''', ('Valid',))
+                      WHERE validity = ?''', ('valid',))
     burn_total = sum([burn['earned'] for burn in cursor.fetchall()])
 
     # Subtract issuance fees.
     cursor.execute('''SELECT * FROM issuances\
-                      WHERE validity = ?''', ('Valid',))
+                      WHERE validity = ?''', ('valid',))
     fee_total = sum([issuance['fee_paid'] for issuance in cursor.fetchall()])
 
     cursor.close()
@@ -232,7 +478,14 @@ def get_asset_name (asset_id):
     return asset_name
 
 
-def debit (db, block_index, address, asset, amount):
+def debit (db, block_index, address, asset, amount, event=None):
+
+    # Get calling function.
+    parent = inspect.stack()[1]
+    frame, filename, lineno, function, code_context, index = parent
+    parent_name = inspect.getmodulename(filename)
+    calling_function = (parent_name + '.' + function)
+
     debit_cursor = db.cursor()
     assert asset != 'BTC' # Never BTC.
     assert type(amount) == int
@@ -250,23 +503,36 @@ def debit (db, block_index, address, asset, amount):
 
     balance = round(old_balance - amount)
     balance = min(balance, config.MAX_INT)
-    debit_cursor.execute('''UPDATE balances \
-                      SET amount=? \
-                      WHERE (address=? and asset=?)''',
-                   (balance, address, asset))
 
-    # Record debit *only if valid*.
-    logging.debug('Debit: {} {} from {}'.format(devise(db, amount, asset, 'output'), asset, address))
-    element_data = {
+    bindings = {
+        'amount': balance,
+        'address': address,
+        'asset': asset
+    }
+    sql='update balances set amount = :amount where (address = :address and asset = :asset)'
+    debit_cursor.execute(sql, bindings)
+
+    # Record debit.
+    bindings = {
         'block_index': block_index,
         'address': address,
         'asset': asset,
         'amount': amount,
+        'calling_function': calling_function,
+        'event': event
     }
-    debit_cursor.execute(*get_insert_sql('debits', element_data))
+    sql='insert into debits values(:block_index, :address, :asset, :amount, :calling_function, :event)'
+    debit_cursor.execute(sql, bindings)
+
     debit_cursor.close()
 
-def credit (db, block_index, address, asset, amount, divisible=None):
+def credit (db, block_index, address, asset, amount, event=None):
+    # Get calling function. DUPE
+    parent = inspect.stack()[1]
+    frame, filename, lineno, function, code_context, index = parent
+    parent_name = inspect.getmodulename(filename)
+    calling_function = (parent_name + '.' + function)
+
     credit_cursor = db.cursor()
     assert asset != 'BTC' # Never BTC.
     assert type(amount) == int
@@ -278,12 +544,13 @@ def credit (db, block_index, address, asset, amount, divisible=None):
         assert balances == []
 
         #update balances table with new balance
-        element_data = {
+        bindings = {
             'address': address,
             'asset': asset,
             'amount': amount,
         }
-        credit_cursor.execute(*get_insert_sql('balances', element_data))
+        sql='insert into balances values(:address, :asset, :amount)'
+        credit_cursor.execute(sql, bindings)
     elif len(balances) > 1:
         raise Exception
     else:
@@ -291,39 +558,50 @@ def credit (db, block_index, address, asset, amount, divisible=None):
         assert type(old_balance) == int
         balance = round(old_balance + amount)
         balance = min(balance, config.MAX_INT)
-        credit_cursor.execute('''UPDATE balances SET amount=? \
-                          WHERE (address=? and asset=?)''',
-                       (balance, address, asset))
+
+        bindings = {
+            'amount': balance,
+            'address': address,
+            'asset': asset
+        }
+        sql='update balances set amount = :amount where (address = :address and asset = :asset)'
+        credit_cursor.execute(sql, bindings)
 
     # Record credit.
-    logging.debug('Credit: {} {} to {}'.format(devise(db, amount, asset, 'output', divisible=divisible), asset, address))
-    element_data = {
+    bindings = {
         'block_index': block_index,
         'address': address,
         'asset': asset,
-        'amount': amount
+        'amount': amount,
+        'calling_function': calling_function,
+        'event': event
     }
-    credit_cursor.execute(*get_insert_sql('credits', element_data))
+    sql='insert into credits values(:block_index, :address, :asset, :amount, :calling_function, :event)'
+    credit_cursor.execute(sql, bindings)
     credit_cursor.close()
 
 def devise (db, quantity, asset, dest, divisible=None):
-    FOUR = D(10) ** -4
-    EIGHT = D(10) ** -8
+    # For output only.
+    def norm(num, places):
+        # Round only if necessary.
+        num = round(num, places)
 
-    quantity = D(quantity)
+        fmt = '{:.' + str(places) + 'f}'
+        num = fmt.format(num)
+        return num.rstrip('0')+'0' if num.rstrip('0')[-1] == '.' else num.rstrip('0')
 
-    if asset in ('leverage', 'price', 'odds', 'value'):
+    if asset in ('leverage', 'price', 'odds', 'value', 'fraction'):
         if dest == 'output':
-            return quantity.quantize(FOUR)
+            return norm(quantity, 6)
         elif dest == 'input':
             # Hackish
             if asset == 'leverage':
                 return round(quantity)
             else:
-                return float(quantity)
+                return float(quantity)  # TODO: Float?!
 
     if asset in ('fee_multiplier',):
-        return D(quantity / D(1e8)).quantize(FOUR)
+        return norm(D(quantity) / D(1e8), 6)
 
     if divisible == None:
         if asset in ('BTC', 'XCP'):
@@ -331,7 +609,7 @@ def devise (db, quantity, asset, dest, divisible=None):
         else:
             cursor = db.cursor()
             cursor.execute('''SELECT * FROM issuances \
-                              WHERE (validity = ? AND asset = ?)''', ('Valid', asset))
+                              WHERE (validity = ? AND asset = ?)''', ('valid', asset))
             issuances = cursor.fetchall()
             cursor.close()
             if not issuances: raise exceptions.AssetError('No such asset: {}'.format(asset))
@@ -339,19 +617,19 @@ def devise (db, quantity, asset, dest, divisible=None):
 
     if divisible:
         if dest == 'output':
-            quantity = D(quantity / D(config.UNIT)).quantize(EIGHT)
+            quantity = D(quantity) / D(config.UNIT)
             if quantity == quantity.to_integral():
-                return str(float(quantity))  # For divisible assets, display the decimal point.
+                return str(quantity) + '.0'  # For divisible assets, display the decimal point.
             else:
-                return str(quantity.quantize(EIGHT).normalize())
+                return norm(quantity, 8)
         elif dest == 'input':
-            quantity = D(quantity * D(config.UNIT)).quantize(EIGHT)
+            quantity = D(quantity) * D(config.UNIT)
             if quantity == quantity.to_integral():
                 return int(quantity)
             else:
                 raise exceptions.QuantityError('Divisible assets have only eight decimal places of precision.')
         else:
-            return quantity.quantize(EIGHT)
+            return quantity
     else:
         if quantity != round(quantity):
             raise exceptions.QuantityError('Fractional quantities of indivisible assets.')
@@ -531,11 +809,11 @@ def get_dividends (db, validity=None, source=None, asset=None, filters=None, ord
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_burns (db, validity=True, address=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
+def get_burns (db, validity=True, source=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
     if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
-    if address: filters.append({'field': 'address', 'op': '==', 'value': address})
+    if source: filters.append({'field': 'source', 'op': '==', 'value': source})
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM burns%s'''
          % get_limit_to_blocks(start_block, end_block))
@@ -555,22 +833,124 @@ def get_cancels (db, validity=True, source=None, filters=None, order_by=None, or
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_address (db, address):
+def get_callbacks (db, validity=True, source=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
+    if filters is None: filters = list()
+    if filters and not isinstance(filters, list): filters = [filters,]
+    if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
+    if source: filters.append({'field': 'source', 'op': '==', 'value': source})
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM callbacks%s'''
+         % get_limit_to_blocks(start_block, end_block))
+    results = do_filter(cursor.fetchall(), filters, filterop)
+    cursor.close()
+    return do_order_by(results, order_by, order_dir)
+
+def get_bet_expirations (db, source=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
+    if filters is None: filters = list()
+    if filters and not isinstance(filters, list): filters = [filters,]
+    if source: filters.append({'field': 'source', 'op': '==', 'value': source})
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM bet_expirations%s'''
+         % get_limit_to_blocks(start_block, end_block))
+    results = do_filter(cursor.fetchall(), filters, filterop)
+    cursor.close()
+    return do_order_by(results, order_by, order_dir)
+
+def get_order_expirations (db, source=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
+    if filters is None: filters = list()
+    if filters and not isinstance(filters, list): filters = [filters,]
+    if source: filters.append({'field': 'source', 'op': '==', 'value': source})
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM order_expirations%s'''
+         % get_limit_to_blocks(start_block, end_block))
+    results = do_filter(cursor.fetchall(), filters, filterop)
+    cursor.close()
+    return do_order_by(results, order_by, order_dir)
+
+def get_bet_match_expirations (db, address=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
+    if filters is None: filters = list()
+    if filters and not isinstance(filters, list): filters = [filters,]
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM bet_match_expirations%s'''
+         % get_limit_to_blocks(start_block, end_block))
+    results = do_filter(cursor.fetchall(), filters, filterop)
+    cursor.close()
+    if address: results = [e for e in results if e['tx0_address'] == address or e['tx1_address'] == address]
+    return do_order_by(results, order_by, order_dir)
+
+def get_order_match_expirations (db, address=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
+    if filters is None: filters = list()
+    if filters and not isinstance(filters, list): filters = [filters,]
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM order_match_expirations%s'''
+         % get_limit_to_blocks(start_block, end_block))
+    results = do_filter(cursor.fetchall(), filters, filterop)
+    cursor.close()
+    if address: results = [e for e in results if e['tx0_address'] == address or e['tx1_address'] == address]
+    return do_order_by(results, order_by, order_dir)
+
+def get_address (db, address, start_block=None, end_block=None):
     if not bitcoin.base58_decode(address, config.ADDRESSVERSION):
         raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
                                              address)
     address_dict = {}
     address_dict['balances'] = get_balances(db, address=address)
-    address_dict['burns'] = get_burns(db, validity='Valid', address=address, order_by='block_index', order_dir='asc')
-    address_dict['sends'] = get_sends(db, validity='Valid', source=address, order_by='block_index', order_dir='asc')
-    address_dict['orders'] = get_orders(db, validity='Valid', source=address, order_by='block_index', order_dir='asc')
-    address_dict['order_matches'] = get_order_matches(db, validity='Valid', address=address, order_by='tx0_block_index', order_dir='asc')
-    address_dict['btcpays'] = get_btcpays(db, validity='Valid', order_by='block_index', order_dir='asc')
-    address_dict['issuances'] = get_issuances(db, validity='Valid', issuer=address, order_by='block_index', order_dir='asc')
-    address_dict['broadcasts'] = get_broadcasts(db, validity='Valid', source=address, order_by='block_index', order_dir='asc')
-    address_dict['bets'] = get_bets(db, validity='Valid', source=address, order_by='block_index', order_dir='asc')
-    address_dict['bet_matches'] = get_bet_matches(db, validity='Valid', address=address, order_by='tx0_block_index', order_dir='asc')
-    address_dict['dividends'] = get_dividends(db, validity='Valid', source=address, order_by='block_index', order_dir='asc')
+    
+    address_dict['debits'] = get_debits(db, address=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['credits'] = get_credits(db, address=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['burns'] = get_burns(db, validity='valid', source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+    
+    address_dict['sends'] = get_sends(db, validity='valid', source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block, filterop='or')
+    #^ with filterop == 'or', we get all sends where this address was the source OR destination 
+    
+    address_dict['orders'] = get_orders(db, validity='valid', source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+    
+    address_dict['order_matches'] = get_order_matches(db, validity='valid', address=address,
+        order_by='tx0_block_index', order_dir='asc', start_block=start_block, end_block=end_block)
+    
+    address_dict['btcpays'] = get_btcpays(db, validity='valid', order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+    
+    address_dict['issuances'] = get_issuances(db, validity='valid', issuer=address,
+        order_by='block_index', order_dir='asc', start_block=start_block, end_block=end_block)
+    
+    address_dict['broadcasts'] = get_broadcasts(db, validity='valid', source=address,
+        order_by='block_index', order_dir='asc', start_block=start_block, end_block=end_block)
+    
+    address_dict['bets'] = get_bets(db, validity='valid', source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+    
+    address_dict['bet_matches'] = get_bet_matches(db, validity='valid', address=address,
+        order_by='tx0_block_index', order_dir='asc', start_block=start_block, end_block=end_block)
+    
+    address_dict['dividends'] = get_dividends(db, validity='valid', source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['cancels'] = get_cancels(db, validity='valid', source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['callbacks'] = get_callbacks(db, validity='valid', source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['bet_expirations'] = get_bet_expirations(db, source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['order_expirations'] = get_order_expirations(db, source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['bet_match_expirations'] = get_bet_match_expirations(db, address=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['order_match_expirations'] = get_order_match_expirations(db, address=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
     return address_dict
     
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

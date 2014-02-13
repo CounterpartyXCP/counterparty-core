@@ -4,6 +4,12 @@ class ConfigurationError (Exception):
     pass
 class DatabaseError (Exception):
     pass
+class VersionError (Exception):
+    pass
+class ClientVersionError (VersionError):
+    pass
+class DatabaseVersionError (VersionError):
+    pass
 
 class TransactionError(Exception):
     pass

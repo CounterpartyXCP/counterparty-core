@@ -121,7 +121,9 @@ def initialise(db):
                         block_index INTEGER,
                         address TEXT,
                         asset TEXT,
-                        amount INTEGER)
+                        amount INTEGER,
+                        calling_function TEXT,
+                        event TEXT)
                    ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
                         debits_address_idx ON debits (address)
@@ -132,7 +134,9 @@ def initialise(db):
                         block_index INTEGER,
                         address TEXT,
                         asset TEXT,
-                        amount INTEGER)
+                        amount INTEGER,
+                        calling_function TEXT,
+                        event TEXT)
                    ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
                         credits_address_idx ON credits (address)
@@ -181,6 +185,7 @@ def initialise(db):
                                  expire_index INTEGER,
                                  fee_required INTEGER,
                                  fee_provided INTEGER,
+                                 fee_remaining INTEGER,
                                  validity TEXT)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -215,17 +220,20 @@ def initialise(db):
                                  match_expire_index_idx ON order_matches (match_expire_index)
                               ''')
 
+    # BTCpays
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS btcpays(
-                        tx_index INTEGER PRIMARY KEY,
-                        tx_hash TEXT UNIQUE,
-                        block_index INTEGER,
-                        source TEXT,
-                        order_match_id TEXT,
-                        validity TEXT)
-                   ''')
+                                 tx_index INTEGER PRIMARY KEY,
+                                 tx_hash TEXT UNIQUE,
+                                 block_index INTEGER,
+                                 source TEXT,
+                                 destination TEXT,
+                                 btc_amount INTEGER,
+                                 order_match_id TEXT,
+                                 validity TEXT)
+                              ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        btcpays_block_index_idx ON btcpays (block_index)
-                    ''')
+                                 block_index_idx ON btcpays (block_index)
+                              ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS issuances(
                         tx_index INTEGER PRIMARY KEY,
@@ -327,7 +335,7 @@ def initialise(db):
                         block_index INTEGER,
                         source TEXT,
                         asset TEXT,
-                        amount_per_share INTEGER,
+                        amount_per_unit INTEGER,
                         validity TEXT)
                    ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -338,7 +346,7 @@ def initialise(db):
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
-                        address TEXT,
+                        source TEXT,
                         burned INTEGER,
                         earned INTEGER,
                         validity TEXT)
@@ -368,7 +376,7 @@ def initialise(db):
                                  tx_hash TEXT UNIQUE,
                                  block_index INTEGER,
                                  source TEXT,
-                                 fraction_per_share TEXT,
+                                 fraction TEXT,
                                  asset TEXT,
                                  validity TEXT)
                               ''')
@@ -380,6 +388,7 @@ def initialise(db):
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS order_expirations(
                                  order_index INTEGER PRIMARY KEY,
                                  order_hash TEXT UNIQUE,
+                                 source TEXT,
                                  block_index INTEGER)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -390,6 +399,7 @@ def initialise(db):
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS bet_expirations(
                                  bet_index INTEGER PRIMARY KEY,
                                  bet_hash TEXT UNIQUE,
+                                 source TEXT,
                                  block_index INTEGER)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -399,6 +409,8 @@ def initialise(db):
     # Order Match Expirations
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS order_match_expirations(
                                  order_match_id TEXT PRIMARY KEY,
+                                 tx0_address TEXT,
+                                 tx1_address TEXT,
                                  block_index INTEGER)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -408,10 +420,24 @@ def initialise(db):
     # Bet Match Expirations
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS bet_match_expirations(
                                  bet_match_id TEXT PRIMARY KEY,
+                                 tx0_address TEXT,
+                                 tx1_address TEXT,
                                  block_index INTEGER)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  block_index_idx ON bet_match_expirations (block_index)
+                              ''')
+
+    # Messages
+    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS messages(
+                                 message_index INTEGER PRIMARY KEY,
+                                 block_index INTEGER,
+                                 command TEXT,
+                                 category TEXT,
+                                 bindings TEXT)
+                              ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                                 block_index_idx ON messages (block_index)
                               ''')
 
     initialise_cursor.close()
@@ -488,12 +514,12 @@ def reparse (db, block_index=None, quiet=False):
     logging.warning('Status: Reparsing all transactions.')
     cursor = db.cursor()
 
-    # For rollbacks, just delete new blocks and then reparse what’s left.
-    if block_index:
-        cursor.execute('''DELETE FROM blocks WHERE block_index > {}'''.format(block_index))
-        cursor.execute('''DELETE FROM transactions WHERE block_index > {}'''.format(block_index))
-
     with db:
+        # For rollbacks, just delete new blocks and then reparse what’s left.
+        if block_index:
+            cursor.execute('''DELETE FROM blocks WHERE block_index > ?''', (block_index,))
+            cursor.execute('''DELETE FROM transactions WHERE block_index > ?''', (block_index,))
+
         # Delete all of the results of parsing.
         cursor.execute('''DROP TABLE IF EXISTS debits''')
         cursor.execute('''DROP TABLE IF EXISTS credits''')
@@ -514,6 +540,7 @@ def reparse (db, block_index=None, quiet=False):
         cursor.execute('''DROP TABLE IF EXISTS bet_expirations''')
         cursor.execute('''DROP TABLE IF EXISTS order_match_expirations''')
         cursor.execute('''DROP TABLE IF EXISTS bet_match_expirations''')
+        cursor.execute('''DROP TABLE IF EXISTS messages''')
 
         # Reparse all blocks, transactions.
         if quiet:
@@ -528,7 +555,7 @@ def reparse (db, block_index=None, quiet=False):
             log.setLevel(logging.INFO)
 
         # Update minor version number.
-        minor_version = cursor.execute('PRAGMA user_version = {}'.format(int(config.DB_VERSION_MINOR)))
+        minor_version = cursor.execute('PRAGMA user_version = {}'.format(int(config.DB_VERSION_MINOR))) # Syntax?!
         logging.info('Status: Database minor version number updated.')
 
     cursor.close()
