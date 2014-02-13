@@ -79,7 +79,7 @@ def parse (db, tx, message):
 
     if validity == 'valid':
         if give_asset != 'BTC':  # No need (or way) to debit BTC.
-            util.debit(db, tx['block_index'], tx['source'], give_asset, give_amount)
+            util.debit(db, tx['block_index'], tx['source'], give_asset, give_amount, event=tx['tx_hash'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {
@@ -179,9 +179,9 @@ def match (db, tx):
                 validity = 'valid'
                 # Credit.
                 util.credit(db, tx['block_index'], tx1['source'], tx1['get_asset'],
-                                    forward_amount)
+                                    forward_amount, event=order_match_id)
                 util.credit(db, tx['block_index'], tx0['source'], tx0['get_asset'],
-                                    backward_amount)
+                                    backward_amount, event=order_match_id)
 
             # Debit the order, even if it involves giving bitcoins, and so one
             # can't debit the sending account.
@@ -259,7 +259,7 @@ def expire (db, block_index):
         cursor.execute(sql, bindings)
 
         if order['give_asset'] != 'BTC':    # Can't credit BTC.
-            util.credit(db, block_index, order['source'], order['give_asset'], order['give_remaining'])
+            util.credit(db, block_index, order['source'], order['give_asset'], order['give_remaining'], event=order['tx_hash'])
 
         # Record offer expiration.
         bindings = {
@@ -284,15 +284,6 @@ def expire (db, block_index):
         sql='update order_matches set validity = :validity where id = :order_match_id'
         cursor.execute(sql, bindings)
 
-        if order_match['forward_asset'] == 'BTC':
-            util.credit(db, block_index, order_match['tx1_address'],
-                        order_match['backward_asset'],
-                        order_match['backward_amount'])
-        elif order_match['backward_asset'] == 'BTC':
-            util.credit(db, block_index, order_match['tx0_address'],
-                        order_match['forward_asset'],
-                        order_match['forward_amount'])
-
         order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']
 
         # Record order match expiration.
@@ -311,8 +302,7 @@ def expire (db, block_index):
                        (order_match['tx0_index'],))
         tx0_order = cursor.fetchall()[0]
         tx0_order_time_left = tx0_order['expire_index'] - block_index
-        if tx0_order_time_left:
-            # Reset tx0.
+        if tx0_order_time_left >= 0:
             bindings = {
                 'give_remaining': tx0_order['give_remaining'] + order_match['forward_amount'],
                 'get_remaining': tx0_order['get_remaining'] + order_match['backward_amount'],
@@ -320,6 +310,11 @@ def expire (db, block_index):
             }
             sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining where tx_index = :tx_index'
             cursor.execute(sql, bindings)
+        # If tx0 is expired, credit address directly.
+        elif order_match['forward_asset'] != 'BTC':
+            util.credit(db, block_index, order_match['tx0_address'],
+                        order_match['forward_asset'],
+                        order_match['forward_amount'], event=order_match['id'])
 
         # If tx1 is still good, replenish give, get remaining.
         cursor.execute('''SELECT * FROM orders \
@@ -327,8 +322,7 @@ def expire (db, block_index):
                        (order_match['tx1_index'],))
         tx1_order = cursor.fetchall()[0]
         tx1_order_time_left = tx1_order['expire_index'] - block_index
-        if tx1_order_time_left:
-            # Reset tx1.
+        if tx1_order_time_left >= 0:
             bindings = {
                 'give_remaining': tx1_order['give_remaining'] + order_match['backward_amount'],
                 'get_remaining': tx1_order['get_remaining'] + order_match['forward_amount'],
@@ -336,9 +330,16 @@ def expire (db, block_index):
             }
             sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining where tx_index = :tx_index'
             cursor.execute(sql, bindings)
+        # If tx1 is expired, credit address directly.
+        elif order_match['backward_asset'] != 'BTC':
+            util.credit(db, block_index, order_match['tx1_address'],
+                        order_match['backward_asset'],
+                        order_match['backward_amount'], event=order_match['id'])
 
-        # Sanity check: one of the two must have expired.
-        assert tx0_order_time_left or tx1_order_time_left
+        # Protocol change.
+        if block_index < 286500:
+            # Sanity check: one of the two must have expired.
+            assert tx0_order_time_left or tx1_order_time_left
 
     cursor.close()
 

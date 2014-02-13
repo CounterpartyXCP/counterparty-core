@@ -313,6 +313,7 @@ def database_check (db):
         if block_index == bitcoin.rpc('getblockcount', []):
             cursor.close()
             return
+        print('Database not up to date. Sleeping for one second. (Try {}/{})'.format(i+1, TRIES), file=sys.stderr)
         time.sleep(1)
     raise exceptions.DatabaseError('Counterparty database is behind Bitcoind. Is the counterpartyd server running?')
 
