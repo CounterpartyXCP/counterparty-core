@@ -5,8 +5,8 @@
 			"block_index": 285306,
 			"minimum_database_version": 6.15,
 			"description": "issuances fees regression"
-		}
-		{,
+		},
+		{
 			"block_index": 0,
 			"minimum_database_version": 6.17,
 			"description": "double credits on order match expirations"
