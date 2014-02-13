@@ -91,9 +91,8 @@ def parse (db, tx, message):
         validity = 'invalid: could not unpack'
 
     if validity == 'valid':
-        block_hash = bitcoin.rpc('getblockhash', [tx['block_index'],])  # TODO: Use block time of last block in DB instead?
-        block = bitcoin.rpc('getblock', [block_hash,])
-        call_price, callback_total, outputs, problems = validate(db, tx['source'], fraction, asset, block['time'])
+        block = util.last_block(db)
+        call_price, callback_total, outputs, problems = validate(db, tx['source'], fraction, asset, block['block_time'])
         if problems: validity = 'invalid: ' + ';'.join(problems)
 
     if validity == 'valid':
