@@ -31,23 +31,11 @@ class APIServer(threading.Thread):
         # TODO: Move all of these functions from util.py here (and use native SQLite queries internally).
 
         @dispatcher.add_method
-        def get_messages(block_index):
-            cursor = db.cursor()
-            cursor.execute('select * from messages where block_index = ? order by message_index asc', (block_index,))
-            messages = cursor.fetchall()
-            cursor.close()
-            return messages
-
-        @dispatcher.add_method
         def get_address(address, start_block=None, end_block=None):
             try:
                 return util.get_address(db, address=address, start_block=start_block, end_block=end_block)
             except exceptions.InvalidAddressError:
                 return None
-
-        @dispatcher.add_method
-        def xcp_supply():
-            return util.xcp_supply(db)
 
         @dispatcher.add_method
         def get_balances(filters=None, order_by=None, order_dir=None, filterop="and"):
@@ -195,6 +183,18 @@ class APIServer(threading.Thread):
                 start_block=start_block,
                 end_block=end_block,
                 filterop=filterop)
+
+        @dispatcher.add_method
+        def get_messages(block_index):
+            cursor = db.cursor()
+            cursor.execute('select * from messages where block_index = ? order by message_index asc', (block_index,))
+            messages = cursor.fetchall()
+            cursor.close()
+            return messages
+
+        @dispatcher.add_method
+        def xcp_supply():
+            return util.xcp_supply(db)
 
         @dispatcher.add_method
         def get_asset_info(asset):

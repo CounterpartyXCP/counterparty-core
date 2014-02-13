@@ -896,11 +896,18 @@ def get_address (db, address, start_block=None, end_block=None):
     address_dict = {}
     address_dict['balances'] = get_balances(db, address=address)
     
+    address_dict['debits'] = get_debits(db, address=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['credits'] = get_credits(db, address=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
     address_dict['burns'] = get_burns(db, validity='valid', source=address, order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)
     
     address_dict['sends'] = get_sends(db, validity='valid', source=address, order_by='block_index',
-        order_dir='asc', start_block=start_block, end_block=end_block)
+        order_dir='asc', start_block=start_block, end_block=end_block, filterop='or')
+    #^ with filterop == 'or', we get all sends where this address was the source OR destination 
     
     address_dict['orders'] = get_orders(db, validity='valid', source=address, order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)

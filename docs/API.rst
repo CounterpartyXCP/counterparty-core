@@ -450,10 +450,10 @@ get_sends
 
 .. _get_asset_info:
 
-_get_asset_info
+get_asset_info
 ^^^^^^^^^^^^^^
 
-.. py:function:: _get_asset_info(asset)
+.. py:function:: get_asset_info(asset)
 
    Gets information on an issued asset.
 
@@ -463,6 +463,64 @@ _get_asset_info
      - **divisible** (*boolean*): Whether the asset is divisible or not
      - **locked** (*boolean*): Whether the asset is locked (future issuances prohibited)
      - **total_issued** (*integer*): The :ref:`quantity <amounts>` of the asset issued, in total
+
+
+.. _get_messages:
+
+get_messages
+^^^^^^^^^^^^^^
+
+.. py:function:: get_messages(block_index)
+
+   Return message feed activity for the specified block index. The message feed essentially tracks all counterpartyd
+   database actions and allows for lower-level state tracking for applications that hook into it.
+   
+   :param integer block_index: The block index for which to retrieve activity. 
+   :return: A list of one or more :ref:`message <message-object>` if there was any activity in the block, otherwise ``[]`` (empty list).
+
+.. _xcp_supply:
+
+xcp_supply
+^^^^^^^^^^^^^^
+
+.. py:function:: xcp_supply(asset)
+
+   Gets the current total amount of XCP in existance (i.e. amount created via proof-of-burn, minus amount
+   destroyed via asset issuances, etc).
+   
+   :return:  The :ref:`quantity <amounts>` of XCP currently in existance.
+   
+
+.. _get_block_info:
+
+get_block_info
+^^^^^^^^^^^^^^
+
+.. py:function:: get_block_info(block_index)
+
+   Gets some basic information on a specific block.
+   
+   :param integer block_index: The block index for which to retrieve information.
+   :return: If the block was found, an object with the following parameters:
+     - **block_index** (*integer*): The block index (i.e. block height). Should match what was specified for the *block_index* input parameter). 
+     - **block_hash** (*string*): The block hash identifier
+     - **block_time** (*integer*): A UNIX timestamp of when the block was processed by the network 
+
+.. _get_running_info:
+
+get_running_info
+^^^^^^^^^^^^^^
+
+.. py:function:: get_running_info()
+
+   Gets some operational parameters for counterpartyd.
+   
+   :return: An object with the following parameters:
+     - **db_caught_up** (*boolean*): ``true`` if counterpartyd block processing is caught up with the Bitcoin blockchain, ``false`` otherwise.  
+     - **last_block** (*integer*): The index (height) of the last block processed by counterpartyd
+     - **counterpartyd_version** (*float*): The counterpartyd program version, expressed as a float, such as 0.5
+     - **db_version_major** (*integer*): The major version of the current counterpartyd database
+     - **db_version_minor** (*integer*): The minor version of the current counterpartyd database
 
 
 .. _action_api:
@@ -642,7 +700,9 @@ Address History Object
 
 An object that describes the history of a requested address:
 
-* **balances** (*list*): Contains the balances for this address, as a list of :ref:`balance objects <balance-object>`.
+* **balances** (*list*): Contains the current balances for this address, as a list of :ref:`balance objects <balance-object>`.
+* **credits** (*list*): Credits made to asset balances for this address, as a list of :ref:`debit/credit objects <debit-credit-object>`.
+* **debits** (*list*): Debits made to asset balances for this address, as a list of :ref:`debit/credit objects <debit-credit-object>`.
 * **burns** (*list*): Contains the burns performed with this address, as a list of :ref:`burn objects <burn-object>`.
 * **sends** (*list*): The sends performed with this address, as a list of :ref:`send objects <send-object>`.
 * **orders** (*list*): The orders of this address,  as a list of :ref:`order objects <order-object>`.
@@ -654,6 +714,11 @@ An object that describes the history of a requested address:
 * **bet_matches** (*list*): The bets matchings to which this address was a party, as a list of :ref:`bet match objects <bet-match-object>`.
 * **dividends** (*list*): All dividends rewarded from this address, as a list of :ref:`dividend objects <dividend-object>`.
 * **cancels** (*list*): All cancels from this address, as a list of :ref:`cancel objects <cancel-object>`.
+* **cancels** (*list*): All asset callbacks issued from this address, as a list of :ref:`callback objects <callback-object>`.
+* **bet_expirations** (*list*): All expirations of bets issued from this address, as a list of :ref:`bet expiration objects <bet-expiration-object>`.
+* **order_expirations** (*list*): All expirations of orders issued from this address, as a list of :ref:`bet expiration objects <order-expiration-object>`.
+* **bet_match_expirations** (*list*): All expirations of bet matches issued from this address, as a list of :ref:`bet expiration objects <bet-match-expiration-object>`.
+* **order_match_expirations** (*list*): All expirations of order matches issued from this address, as a list of :ref:`bet expiration objects <order-match-expiration-object>`.
 
 
 .. _balance-object:
@@ -849,9 +914,10 @@ An object that describes a specific order:
 * **source** (*string*): The address that made the order
 * **give_asset** (*string*): The :ref:`asset <assets>` being offered
 * **give_amount** (*integer*): The :ref:`amount <amounts>` of the specified asset being offered
-* **give_remaining** (*integer*):
+* **give_remaining** (*integer*): The :ref:`amount <amounts>` of the specified give asset remaining for the order
 * **get_asset** (*string*): The :ref:`asset <assets>` desired in exchange
 * **get_amount** (*integer*): The :ref:`amount <amounts>` of the specified asset desired in exchange
+* **get_remaining** (*integer*): The :ref:`amount <amounts>` of the specified get asset remaining for the order
 * **price** (*float*): The given exchange rate (as an exchange ratio desired from the asset offered to the asset desired)
 * **expiration** (*integer*): The number of blocks over which the order should be valid
 * **fee_provided** (*integer*): The miners' fee provided; in BTC; required only if selling BTC (should not be lower than is required for acceptance in a block)
@@ -897,3 +963,89 @@ An object that describes a specific send (e.g. "simple send", of XCP, or a user 
 * **asset** (*string*): The :ref:`asset <assets>` being sent
 * **amount** (*integer*): The :ref:`amount <amounts>` of the specified asset sent
 * **validity** (*string*): Set to "valid" if a valid send. Any other setting signifies an invalid/improper send
+
+
+.. _message-object:
+
+Message Object
+^^^^^^^^^^^^^^^^^^^^^^^
+
+An object that describes a specific event in the counterpartyd message feed (which can be used by 3rd party applications
+to track state changes to the counterpartyd database on a block-by-block basis).
+
+* **message_index** (*integer*): The message index (i.e. transaction index)
+* **block_index** (*integer*): The block index (block number in the block chain) this event occurred on
+* **category** (*string*): A string denoting the entity that the message relates to, e.g. "credits", "burns", "debits".
+  The category matches the relevant table name in counterpartyd (see blocks.py for more info).
+* **command** (*string*): The operation done to the table noted in **category**. This is either "insert", or "update". 
+* **bindings** (*string*): A JSON-encoded object containing the message data. The properties in this object match the
+  columns in the table referred to by **category**.
+
+  
+.. _callback-object:
+
+Callback Object
+^^^^^^^^^^^^^^^^^^^^^^^
+
+An object that describes a specific asset callback (i.e. the exercising of a call option on an asset owned by the source address).
+
+* **tx_index** (*integer*): The transaction index
+* **tx_hash** (*string*): The transaction hash
+* **block_index** (*integer*): The block index (block number in the block chain)
+* **source** (*string*): The source address of the call back (should be the current owner of the asset)
+* **fraction** (*integer*): The :ref:`amount <amounts>` of the specified asset called back
+* **asset** (*string*): The :ref:`asset <assets>` being called back
+* **validity** (*string*): Set to "valid" if a valid send. Any other setting signifies an invalid/improper send
+
+
+.. _bet-expiration-object:
+
+Bet Expiration Object
+^^^^^^^^^^^^^^^^^^^^^^^
+
+An object that describes the expiration of a bet created by the source address.
+
+* **bet_index** (*integer*): The transaction index of the bet expiring
+* **bet_hash** (*string*): The transaction hash of the bet expiriing
+* **block_index** (*integer*): The block index (block number in the block chain) when this expiration occurred
+* **source** (*string*): The source address that created the bet
+
+
+.. _order-expiration-object:
+
+Order Expiration Object
+^^^^^^^^^^^^^^^^^^^^^^^
+
+An object that describes the expiration of an order created by the source address.
+
+* **order_index** (*integer*): The transaction index of the order expiring
+* **order_hash** (*string*): The transaction hash of the order expiriing
+* **block_index** (*integer*): The block index (block number in the block chain) when this expiration occurred
+* **source** (*string*): The source address that created the order
+
+
+.. _bet-match-expiration-object:
+
+Bet Match Expiration Object
+^^^^^^^^^^^^^^^^^^^^^^^
+
+An object that describes the expiration of a bet match.
+
+* **bet_match_id** (*integer*): The transaction index of the bet match ID (e.g. the concatenation of the tx0 and tx1 hashes)
+* **tx0_address** (*string*): The tx0 (first) address for the bet match
+* **tx1_address** (*string*): The tx1 (second) address for the bet match
+* **block_index** (*integer*): The block index (block number in the block chain) when this expiration occurred
+
+
+.. _order-match-expiration-object:
+
+Order Match Expiration Object
+^^^^^^^^^^^^^^^^^^^^^^^
+
+An object that describes the expiration of an order match.
+
+* **order_match_id** (*integer*): The transaction index of the order match ID (e.g. the concatenation of the tx0 and tx1 hashes)
+* **tx0_address** (*string*): The tx0 (first) address for the order match
+* **tx1_address** (*string*): The tx1 (second) address for the order match
+* **block_index** (*integer*): The block index (block number in the block chain) when this expiration occurred
+  
