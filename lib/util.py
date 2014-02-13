@@ -286,7 +286,11 @@ def versions_check (db):
 
     # Check the database version when past the block at which the protocol change
     # comes into effect.
-    block_index = last_block(db)['block_index']
+    try:
+        block_index = last_block(db)['block_index']
+    except apsw.SQLError:
+        logging.debug('Status: Version checks passed.') # DUPE
+        return
     for protocol_change in versions['protocol_changes']:
         if block_index >= protocol_change['block_index']:
             if config.DB_VERSION < protocol_change['minimum_database_version']:
