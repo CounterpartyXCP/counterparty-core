@@ -27,11 +27,14 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
     cursor.close()
     if issuances:
         last_issuance = issuances[-1]
+        if call_date is None: call_date = 0
+        if call_price is None: call_price = 0
+        
         if last_issuance['issuer'] != source:
             problems.append('asset exists and was not issued by this address')
-        elif last_issuance['divisible'] != divisible:
+        elif bool(last_issuance['divisible']) != bool(divisible):
             problems.append('asset exists with a different divisibility')
-        elif last_issuance['callable'] != callable_ or last_issuance['call_date'] != call_date or last_issuance['call_price'] != call_price:
+        elif bool(last_issuance['callable']) != bool(callable_) or last_issuance['call_date'] != call_date or last_issuance['call_price'] != call_price:
             problems.append('asset exists with a different callability, call date or call price')
         elif not last_issuance['amount'] and not last_issuance['transfer']:
             problems.append('asset is locked')
@@ -69,7 +72,7 @@ def create (db, source, destination, asset, amount, divisible, callable_, call_d
 
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
-    data += struct.pack(FORMAT_2, asset_id, amount, divisible, callable_, call_date, call_price, description.encode('utf-8'))
+    data += struct.pack(FORMAT_2, asset_id, amount, divisible, callable_, call_date or 0, call_price or 0, description.encode('utf-8'))
     if len(data) > 80:
         raise exceptions.IssuanceError('Description is greater than 52 bytes.')
     return bitcoin.transaction(source, None, None, config.MIN_FEE, data, unsigned=unsigned)
@@ -88,7 +91,7 @@ def parse (db, tx, message):
                 description = ''
         else:
             asset_id, amount, divisible = struct.unpack(FORMAT_1, message)
-            callable_, call_date, call_price, description = None, None, None, ''
+            callable_, call_date, call_price, description = False, 0, 0, ''
         try:
             asset = util.get_asset_name(asset_id)
         except:
