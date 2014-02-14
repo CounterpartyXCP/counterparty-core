@@ -24,7 +24,7 @@ class APIServer(threading.Thread):
         threading.Thread.__init__(self)
 
     def run (self):
-        db = util.connect_to_db()
+        db = util.connect_to_db(flags='SQLITE_OPEN_READONLY')
 
         ######################
         #READ API

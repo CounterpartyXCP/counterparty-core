@@ -262,9 +262,15 @@ def exectracer(cursor, sql, bindings):
 
     return True
 
-def connect_to_db():
+def connect_to_db(flags=None):
     """Connects to the SQLite database, returning a db Connection object"""
-    db = apsw.Connection(config.DATABASE)
+
+    if flags == None:
+        db = apsw.Connection(config.DATABASE)
+    elif flags == 'SQLITE_OPEN_READONLY':
+        db = apsw.Connection(config.DATABASE, flags=0x00000001)
+    else: raise Exception # TODO
+
     cursor = db.cursor()
     cursor.execute('''PRAGMA count_changes = OFF''')
     cursor.close()
