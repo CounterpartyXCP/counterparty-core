@@ -198,6 +198,18 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_asset_info(asset):
+            if asset in ['BTC', 'XCP']:
+                return {
+                    'owner': None,
+                    'divisible': True,
+                    'locked': False,
+                    'total_issued': util.xcp_supply(db) if asset == 'XCP' else None,
+                    'callable': False,
+                    'call_date': None,
+                    'call_price': None,
+                    'description': ''
+                }
+            
             #gets some useful info for the given asset
             issuances = util.get_issuances(db,
                 filters={'field': 'asset', 'op': '==', 'value': asset},
@@ -254,6 +266,25 @@ class APIServer(threading.Thread):
                 'db_version_minor': config.DB_VERSION_MINOR,
             }
 
+        @dispatcher.add_method
+        def get_asset_names():
+            cursor = db.cursor()
+            names = [row['asset'] for row in cursor.execute("SELECT DISTINCT asset FROM issuances WHERE validity = 'valid' ORDER BY asset ASC")]
+            cursor.close()
+            return names
+
+        @dispatcher.add_method
+        def get_element_counts():
+            counts = {}
+            cursor = db.cursor()
+            for element in ['transactions', 'blocks', 'debits', 'credits', 'balances', 'sends', 'orders',
+                'order_matches', 'btcpays', 'issuances', 'broadcasts', 'bets', 'bet_matches', 'dividends',
+                'burns', 'cancels', 'callbacks', 'order_expirations', 'bet_expirations', 'order_match_expirations',
+                'bet_match_expirations', 'messages']:
+                cursor.execute("SELECT COUNT(*) AS count FROM %s" % element)
+                counts[element] = cursor.fetchall()[0]['count']
+            cursor.close()
+            return counts
 
         ######################
         #WRITE/ACTION API
@@ -294,7 +325,7 @@ class APIServer(threading.Thread):
             return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
 
         @dispatcher.add_method
-        def do_issuance(source, quantity, asset, divisible, description, callable=False, call_date=None, call_price=None, transfer_destination=None, unsigned=False):
+        def do_issuance(source, quantity, asset, divisible, description, callable=None, call_date=None, call_price=None, transfer_destination=None, unsigned=False):
             try:
                 quantity = int(quantity)
             except ValueError:

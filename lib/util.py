@@ -356,7 +356,13 @@ def do_filter(results, filters, filterop):
     else: #or
         combined_results = []
         for filter in filters:
+            if filter['field'] == 'validity': continue #don't filter validity as an OR requirement
             combined_results += [e for e in results if DO_FILTER_OPERATORS[filter['op']](e[filter['field']], filter['value'])]
+        
+        validity_filter = next((f for f in filters if f['field'] == 'validity'), None)
+        if validity_filter: #filter out invalid results as an AND requirement
+            combined_results = [e for e in combined_results if DO_FILTER_OPERATORS[validity_filter['op']](
+                e[validity_filter['field']], validity_filter['value'])]
         return combined_results
 
 def do_order_by(results, order_by, order_dir):
@@ -389,14 +395,14 @@ def get_limit_to_blocks(start_block, end_block, col_names=['block_index',]):
     else: #length of 2
         if start_block and end_block:
             block_limit_clause = " WHERE (%s >= %s OR %s >= %s) AND (%s <= %s OR %s <= %s)" % (
-                col_name[0], start_block, col_name[1], start_block,
-                col_name[0], end_block, col_name[1], end_block)
+                col_names[0], start_block, col_names[1], start_block,
+                col_names[0], end_block, col_names[1], end_block)
         elif start_block:
             block_limit_clause = " WHERE %s >= %s OR %s >= %s" % (
-                col_name[0], start_block, col_name[1], start_block)
+                col_names[0], start_block, col_names[1], start_block)
         elif end_block:
             block_limit_clause = " WHERE %s >= %s OR %s >= %s" % (
-                col_name[0], end_block, col_name[1], end_block)
+                col_names[0], end_block, col_names[1], end_block)
     return block_limit_clause
 
 def isodt (epoch_time):
@@ -892,7 +898,7 @@ def get_address (db, address, start_block=None, end_block=None):
     address_dict['burns'] = get_burns(db, validity='valid', source=address, order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)
     
-    address_dict['sends'] = get_sends(db, validity='valid', source=address, order_by='block_index',
+    address_dict['sends'] = get_sends(db, validity='valid', source=address, destination=address, order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block, filterop='or')
     #^ with filterop == 'or', we get all sends where this address was the source OR destination 
     
@@ -902,7 +908,9 @@ def get_address (db, address, start_block=None, end_block=None):
     address_dict['order_matches'] = get_order_matches(db, validity='valid', address=address,
         order_by='tx0_block_index', order_dir='asc', start_block=start_block, end_block=end_block)
     
-    address_dict['btcpays'] = get_btcpays(db, validity='valid', order_by='block_index',
+    address_dict['btcpays'] = get_btcpays(db,
+        filters=[{'field': 'source', 'op': '==', 'value': address}, {'field': 'destination', 'op': '==', 'value': address}],
+        filterop='or', validity='valid', order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)
     
     address_dict['issuances'] = get_issuances(db, validity='valid', issuer=address,
