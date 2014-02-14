@@ -12,14 +12,17 @@ ID = 10
 
 def validate (db, source, give_asset, give_amount, get_asset, get_amount, expiration, fee_required):
     problems = []
+    cursor = db.cursor()
 
     if give_asset == get_asset:
         problems.append('trading an asset for itself')
     if not give_amount or not get_amount:
         problems.append('zero give or zero get')
-    if give_asset not in ('BTC', 'XCP') and not util.get_issuances(db, validity='valid', asset=give_asset):
+    cursor.execute('select * from issuances where (validity = ? and asset = ?)', ('valid', give_asset))
+    if give_asset not in ('BTC', 'XCP') and not cursor.fetchall():
         problems.append('no such asset to give ({})'.format(give_asset))
-    if get_asset not in ('BTC', 'XCP') and not util.get_issuances(db, validity='valid', asset=get_asset):
+    cursor.execute('select * from issuances where (validity = ? and asset = ?)', ('valid', get_asset))
+    if get_asset not in ('BTC', 'XCP') and not cursor.fetchall():
         problems.append('no such asset to get ({})'.format(get_asset))
     if expiration > config.MAX_EXPIRATION:
         problems.append('maximum expiration time exceeded')
@@ -28,6 +31,7 @@ def validate (db, source, give_asset, give_amount, get_asset, get_amount, expira
     if give_amount > config.MAX_INT or get_amount > config.MAX_INT or fee_required > config.MAX_INT:
         problems.append('maximum integer size exceeded')
 
+    cursor.close()
     return problems
 
 def create (db, source, give_asset, give_amount, get_asset, get_amount, expiration, fee_required, fee_provided, unsigned=False):

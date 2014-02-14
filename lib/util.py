@@ -36,6 +36,7 @@ def price (numerator, denominator):
 
 def log (db, command, category, bindings):
 
+    # Slow?!
     def output (amount, asset):
         try:
             if asset not in ('price', 'fee_multiplier', 'odds', 'leverage'):
@@ -62,10 +63,10 @@ def log (db, command, category, bindings):
     elif command == 'insert':  # TODO
 
         if category == 'credits':
-            logging.debug('Credit: {} to {} #{}# <{}>'.format(output(bindings['amount'], bindings['asset']), bindings['address'], bindings['calling_function'], bindings['event']))
+            logging.debug('Credit: {} to {} #{}# <{}>'.format(output(bindings['amount'], bindings['asset']), bindings['address'], bindings['action'], bindings['event']))
 
         elif category == 'debits':
-            logging.debug('Debit: {} from {} #{}# <{}>'.format(output(bindings['amount'], bindings['asset']), bindings['address'], bindings['calling_function'], bindings['event']))
+            logging.debug('Debit: {} from {} #{}# <{}>'.format(output(bindings['amount'], bindings['asset']), bindings['address'], bindings['action'], bindings['event']))
 
         elif category == 'sends':
             logging.info('Send: {} from {} to {} ({}) [{}]'.format(output(bindings['amount'], bindings['asset']), bindings['source'], bindings['destination'], bindings['tx_hash'], bindings['validity']))
@@ -477,14 +478,7 @@ def get_asset_name (asset_id):
     return asset_name
 
 
-def debit (db, block_index, address, asset, amount, event=None):
-
-    # Get calling function.
-    parent = inspect.stack()[1]
-    frame, filename, lineno, function, code_context, index = parent
-    parent_name = inspect.getmodulename(filename)
-    calling_function = (parent_name + '.' + function)
-
+def debit (db, block_index, address, asset, amount, action=None, event=None):
     debit_cursor = db.cursor()
     assert asset != 'BTC' # Never BTC.
     assert type(amount) == int
@@ -517,21 +511,15 @@ def debit (db, block_index, address, asset, amount, event=None):
         'address': address,
         'asset': asset,
         'amount': amount,
-        'calling_function': calling_function,
+        'action': action,
         'event': event
     }
-    sql='insert into debits values(:block_index, :address, :asset, :amount, :calling_function, :event)'
+    sql='insert into debits values(:block_index, :address, :asset, :amount, :action, :event)'
     debit_cursor.execute(sql, bindings)
 
     debit_cursor.close()
 
-def credit (db, block_index, address, asset, amount, event=None):
-    # Get calling function. DUPE
-    parent = inspect.stack()[1]
-    frame, filename, lineno, function, code_context, index = parent
-    parent_name = inspect.getmodulename(filename)
-    calling_function = (parent_name + '.' + function)
-
+def credit (db, block_index, address, asset, amount, action=None, event=None):
     credit_cursor = db.cursor()
     assert asset != 'BTC' # Never BTC.
     assert type(amount) == int
@@ -572,10 +560,10 @@ def credit (db, block_index, address, asset, amount, event=None):
         'address': address,
         'asset': asset,
         'amount': amount,
-        'calling_function': calling_function,
+        'action': action,
         'event': event
     }
-    sql='insert into credits values(:block_index, :address, :asset, :amount, :calling_function, :event)'
+    sql='insert into credits values(:block_index, :address, :asset, :amount, :action, :event)'
     credit_cursor.execute(sql, bindings)
     credit_cursor.close()
 

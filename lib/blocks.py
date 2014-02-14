@@ -122,7 +122,7 @@ def initialise(db):
                         address TEXT,
                         asset TEXT,
                         amount INTEGER,
-                        calling_function TEXT,
+                        action TEXT,
                         event TEXT)
                    ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -149,10 +149,7 @@ def initialise(db):
                                  amount INTEGER)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                                 address_idx ON balances (address)
-                              ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                                 asset_idx ON balances (asset)
+                                 address_asset_idx ON balances (address, asset)
                               ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS sends(
@@ -192,7 +189,10 @@ def initialise(db):
                                  block_index_idx ON orders (block_index)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                                 expire_index_idx ON orders (expire_index)
+                                 expire_idx ON orders (validity, expire_index)
+                              ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                                 give_get_valid_idx ON orders (give_asset, get_asset, validity)
                               ''')
 
     # Order Matches
@@ -217,7 +217,7 @@ def initialise(db):
                                  validity TEXT)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                                 match_expire_index_idx ON order_matches (match_expire_index)
+                                 match_expire_idx ON order_matches (validity, match_expire_index)
                               ''')
 
     # BTCpays
@@ -254,6 +254,9 @@ def initialise(db):
                    ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
                         issuances_idx ON issuances (block_index)
+                    ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                        valid_asset_idx ON issuances (validity, asset)
                     ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS broadcasts(
@@ -295,7 +298,10 @@ def initialise(db):
                                  block_index_idx ON bets (block_index)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                                 expire_index_idx ON bets (expire_index)
+                                 expire_idx ON bets (validity, expire_index)
+                              ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                                 feed_valid_bettype_idx ON bets (feed_address, validity, bet_type)
                               ''')
 
     # Bet Matches
@@ -326,7 +332,10 @@ def initialise(db):
                                  validity TEXT)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                                 match_expire_index_idx ON bet_matches (match_expire_index)
+                                 match_expire_idx ON bet_matches (validity, match_expire_index)
+                              ''')
+    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+                                 valid_feed_idx ON bet_matches (validity, feed_address)
                               ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS dividends(
@@ -355,7 +364,7 @@ def initialise(db):
                                  validity_idx ON burns (validity)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                                 address_idx ON burns (address)
+                                 address_idx ON burns (source)
                               ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS cancels(
