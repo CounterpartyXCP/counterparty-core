@@ -919,7 +919,9 @@ def get_address (db, address, start_block=None, end_block=None):
     address_dict['order_matches'] = get_order_matches(db, validity='valid', address=address,
         order_by='tx0_block_index', order_dir='asc', start_block=start_block, end_block=end_block)
     
-    address_dict['btcpays'] = get_btcpays(db, validity='valid', order_by='block_index',
+    address_dict['btcpays'] = get_btcpays(db,
+        filters=[{'field': 'source', 'op': '==', 'value': address}, {'field': 'destination', 'op': '==', 'value': address}],
+        filterop='or', validity='valid', order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)
     
     address_dict['issuances'] = get_issuances(db, validity='valid', issuer=address,
