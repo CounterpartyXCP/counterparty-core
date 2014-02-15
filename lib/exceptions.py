@@ -16,6 +16,9 @@ class TransactionError(Exception):
 class InputError(Exception):
     pass
 
+class RPCError (Exception):
+    pass
+
 class BitcoindError (Exception):
     pass
 class BitcoindRPCError (BitcoindError):

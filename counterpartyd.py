@@ -151,6 +151,8 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
     else:
         raise exceptions.ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
 
+    config.RPC = 'http://' + config.RPC_USER + ':' + config.RPC_PASSWORD + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT)
+
     # Log
     if log_file:
         config.LOG = log_file
@@ -209,61 +211,6 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
 
     # Headless operation
     config.HEADLESS = headless
-
-def market (give_asset, get_asset):
-
-    # Your Pending Orders Matches.
-    awaiting_btcs = util.get_order_matches(db, validity='pending', is_mine=True)
-    table = PrettyTable(['Matched Order ID', 'Time Left'])
-    for order_match in awaiting_btcs:
-        order_match = format_order_match(db, order_match)
-        table.add_row(order_match)
-    print('Your Pending Order Matches')
-    print(table)
-    print('\n')
-
-    # Open orders.
-    orders = util.get_orders(db, validity='valid', show_expired=False, show_empty=False)
-    table = PrettyTable(['Give Quantity', 'Give Asset', 'Price', 'Price Assets', 'Required BTC Fee', 'Provided BTC Fee', 'Time Left', 'Tx Hash'])
-    for order in orders:
-        if give_asset and order['give_asset'] != give_asset: continue
-        if get_asset and order['get_asset'] != get_asset: continue
-        order = format_order(order)
-        table.add_row(order)
-    print('Open Orders')
-    table = table.get_string(sortby='Price')
-    print(table)
-    print('\n')
-
-    # Open bets.
-    bets = util.get_bets(db, validity='valid', show_empty=False)
-    table = PrettyTable(['Bet Type', 'Feed Address', 'Deadline', 'Target Value', 'Leverage', 'Wager', 'Odds', 'Time Left', 'Tx Hash'])
-    for bet in bets:
-        bet = format_bet(bet)
-        table.add_row(bet)
-    print('Open Bets')
-    print(table)
-    print('\n')
-
-    # Feeds
-    broadcasts = util.get_broadcasts(db, validity='valid', order_by='timestamp', order_dir='desc')
-    table = PrettyTable(['Feed Address', 'Timestamp', 'Text', 'Value', 'Fee Multiplier'])
-    seen_addresses = []
-    for broadcast in broadcasts:
-        # Only show feeds with broadcasts in the last two weeks.
-        last_block_time = util.last_block(db)['block_time']
-        if broadcast['timestamp'] + config.TWO_WEEKS < last_block_time:
-            continue
-        # Always show only the latest broadcast from a feed address.
-        if broadcast['source'] not in seen_addresses:
-            feed = format_feed(broadcast)
-            table.add_row(feed)
-            seen_addresses.append(broadcast['source'])
-        else:
-            continue
-    print('Feeds')
-    print(table)
-
 
 def balances (address):
     def get_btc_balance(address):
@@ -436,9 +383,7 @@ if __name__ == '__main__':
 
     parser_wallet = subparsers.add_parser('wallet', help='list the addresses in your Bitcoind wallet along with their balances in all Counterparty assets')
 
-    parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the Counterparty market')
-    parser_market.add_argument('--give-asset', help='only show orders offering to sell GIVE_ASSET')
-    parser_market.add_argument('--get-asset', help='only show orders offering to buy GET_ASSET')
+    parser_pending= subparsers.add_parser('pending', help='list pending order matches awaiting BTCpayment from you')
 
     parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database (WARNING: not thread‐safe)')
 
@@ -491,9 +436,9 @@ if __name__ == '__main__':
     # Check that bitcoind is running, communicable, and caught up with the blockchain.
     # Check that the database has caught up with bitcoind.
     if not args.force:
-        util.bitcoind_check(db)
+        bitcoin.bitcoind_check(db)
         if args.action not in ('server', 'reparse', 'rollback'):
-            util.database_check(db)
+            util.database_check(db, bitcoin.rpc('getblockcount', []))
 
     # Do something.
     if args.action == 'send':
@@ -599,51 +544,28 @@ if __name__ == '__main__':
         balances(args.address)
 
     elif args.action == 'asset':
-        # TODO: Use API
-        if args.asset == 'XCP':
-            total = util.devise(db, util.xcp_supply(db), args.asset, 'output')
-            divisible = True
-            issuer = None
-            callable_ = None
-            call_date = None
-            call_price = None
-            description = None
-        elif args.asset == 'BTC':
-            total = None
-            divisible = True
-            issuer = None
-            callable_ = None
-            call_date = None
-            call_price = None
-            description = None
-        else:
-            issuances = util.get_issuances(db, validity='valid', asset=args.asset)
-            total = sum([issuance['amount'] for issuance in issuances])
-            total = util.devise(db, total, args.asset, 'output')
-            divisible = bool(issuances[-1]['divisible'])
-            issuer = issuances[-1]['issuer'] # Issuer of last issuance.
-            callable_ = None
-            call_date = issuances[-1]['call_date']
-            call_price = issuances[-1]['call_price']
-            description = issuances[-1]['description']
-
+        results = util.api('get_asset_info', [args.asset])
         asset_id = util.get_asset_id(args.asset)
+        divisible = results['divisible']
+        total_issued = util.devise(db, results['total_issued'], args.asset, dest='output')
+        call_date = util.isodt(results['call_date']) if results['call_date'] else results['call_date']
+        call_price = str(results['call_price']) + ' XCP' if results['call_price'] else results['call_price']
+
         print('Asset Name:', args.asset)
         print('Asset ID:', asset_id)
-        print('Total Issued:', total)
         print('Divisible:', divisible)
-        print('Issuer:', issuer)
-        print('Callable:', callable_)
-        print('Call Date:', util.isodt(call_date) if call_date else call_date)
-        print('Call Price:', str(call_price) + ' XCP' if call_price else call_price)
-        print('Description:', description)
+        print('Total Issued:', total_issued)
+        print('Issuer:', results['issuer'])
+        print('Callable:', results['callable'])
+        print('Call Date:', call_date)
+        print('Call Price:', call_price)
+        print('Description:', '‘' + results['description'] + '’')
 
     elif args.action == 'wallet':
         total_table = PrettyTable(['Asset', 'Balance'])
         totals = {}
 
         print()
-        # TODO: This should be burns minus issuance fees (so it won’t depend on escrowed funds).
         for group in bitcoin.rpc('listaddressgroupings', []):
             for bunch in group:
                 address, btc_balance = bunch[:2]
@@ -675,8 +597,13 @@ if __name__ == '__main__':
         print(total_table.get_string())
         print()
 
-    elif args.action == 'market':
-        market(args.give_asset, args.get_asset)
+    elif args.action == 'pending':
+        awaiting_btcs = util.get_order_matches(db, validity='pending', is_mine=True)
+        table = PrettyTable(['Matched Order ID', 'Time Left'])
+        for order_match in awaiting_btcs:
+            order_match = format_order_match(db, order_match)
+            table.add_row(order_match)
+        print(table)
 
     elif args.action == 'reparse':
         blocks.reparse(db)

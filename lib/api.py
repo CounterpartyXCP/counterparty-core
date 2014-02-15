@@ -207,7 +207,8 @@ class APIServer(threading.Thread):
                     'callable': False,
                     'call_date': None,
                     'call_price': None,
-                    'description': ''
+                    'description': '',
+                    'issuer': None
                 }
             
             #gets some useful info for the given asset
@@ -230,7 +231,8 @@ class APIServer(threading.Thread):
                     'callable': last_issuance['callable'],
                     'call_date': util.isodt(last_issuance['call_date']) if last_issuance['call_date'] else None,
                     'call_price': last_issuance['call_price'],
-                    'description': last_issuance['description']}
+                    'description': last_issuance['description'],
+                    'issuer': last_issuance['issuer']}
 
         @dispatcher.add_method
         def get_block_info(block_index):

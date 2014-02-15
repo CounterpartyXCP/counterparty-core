@@ -13,7 +13,7 @@ import collections
 import inspect
 import requests
 
-from . import (config, exceptions, bitcoin)
+from . import (config, exceptions)
 
 b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
@@ -28,6 +28,29 @@ DO_FILTER_OPERATORS = {
     '<=': operator.le,
     '>=': operator.ge,
 }
+
+def api (method, params):
+    headers = {'content-type': 'application/json'}
+    payload = {
+        "method": method,
+        "params": params,
+        "jsonrpc": "2.0",
+        "id": 0,
+    }
+    response = requests.post(config.RPC, data=json.dumps(payload), headers=headers)
+    if response == None:
+        raise exceptions.RPCError('Cannot communicate with counterpartyd server.')
+    elif response.status_code != 200:
+        if response.status_code == 500:
+            raise exceptions.RPCError('Malformed API call.')
+        else:
+            raise exceptions.RPCError(str(response.status_code) + ' ' + response.reason)
+
+    response_json = response.json()
+    if 'error' not in response_json.keys() or response_json['error'] == None:
+        return response_json['result']
+    else:
+        raise exceptions.RPCError('{}'.format(response_json['error']))
 
 def price (numerator, denominator):
     numerator = D(numerator)
@@ -272,10 +295,22 @@ def connect_to_db(flags=None):
     else: raise Exception # TODO
 
     cursor = db.cursor()
+
+    # For speed.
     cursor.execute('''PRAGMA count_changes = OFF''')
+
+    # Integrity check
+    time.sleep(.001)    # Hack
+    cursor.execute('''PRAGMA integrity_check''')
+    rows = cursor.fetchall()
+    if not (len(rows) == 1 and rows[0][0] == 'ok'):
+        raise exceptions.DatabaseError('Integrity check failed.')
+
     cursor.close()
+
     db.setrowtrace(rowtracer)
     db.setexectrace(exectracer)
+
     return db
 
 def versions_check (db):
@@ -305,22 +340,13 @@ def versions_check (db):
     logging.debug('Status: Version checks passed.')
     return
 
-def bitcoind_check (db):
-    """Checks blocktime of last block to see if Bitcoind is running behind."""
-    block_count = bitcoin.rpc('getblockcount', [])
-    block_hash = bitcoin.rpc('getblockhash', [block_count])
-    block = bitcoin.rpc('getblock', [block_hash])
-    time_behind = time.time() - block['time']   # How reliable is the block time?!
-    if time_behind > 60 * 60 * 2:   # Two hours.
-        raise exceptions.BitcoindError('Bitcoind is running about {} seconds behind.'.format(round(time_behind)))
-
-def database_check (db):
+def database_check (db, blockcount):
     """Checks Counterparty database to see if the counterpartyd server has caught up with Bitcoind."""
     cursor = db.cursor()
     TRIES = 14
     for i in range(TRIES):
         block_index = last_block(db)['block_index']
-        if block_index == bitcoin.rpc('getblockcount', []):
+        if block_index == blockcount:
             cursor.close()
             return
         print('Database not up to date. Sleeping for one second. (Try {}/{})'.format(i+1, TRIES), file=sys.stderr)
@@ -707,6 +733,7 @@ def get_orders (db, validity=None, source=None, show_empty=True, show_expired=Tr
     return do_order_by(results, order_by, order_dir)
 
 def get_order_matches (db, validity=None, is_mine=False, address=None, tx0_hash=None, tx1_hash=None, filters=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
+    from . import bitcoin   # HACK
     def filter_is_mine(e):
         if (    (not bitcoin.rpc('validateaddress', [e['tx0_address']])['ismine'] or
                  e['forward_asset'] != 'BTC')
@@ -889,6 +916,7 @@ def get_order_match_expirations (db, address=None, filters=None, order_by=None, 
     return do_order_by(results, order_by, order_dir)
 
 def get_address (db, address, start_block=None, end_block=None):
+    from . import bitcoin   # HACK
     if not bitcoin.base58_decode(address, config.ADDRESSVERSION):
         raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
                                              address)

@@ -31,8 +31,18 @@ OP_2 = b'\x52'
 OP_CHECKMULTISIG = b'\xae'
 b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
-request_session = None
 dhash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
+
+request_session = None
+
+def bitcoind_check (db):
+    """Checks blocktime of last block to see if Bitcoind is running behind."""
+    block_count = rpc('getblockcount', [])
+    block_hash = rpc('getblockhash', [block_count])
+    block = rpc('getblock', [block_hash])
+    time_behind = time.time() - block['time']   # How reliable is the block time?!
+    if time_behind > 60 * 60 * 2:   # Two hours.
+        raise exceptions.BitcoindError('Bitcoind is running about {} seconds behind.'.format(round(time_behind)))
 
 def connect (host, payload, headers):
     global request_session
@@ -70,8 +80,7 @@ def rpc (method, params):
         if config.TESTNET: network = 'testnet'
         else: network = 'mainnet'
         raise exceptions.BitcoindRPCError('Cannot communicate with Bitcoind. (counterpartyd is set to run on {}, is Bitcoind?)'.format(network))
-
-    if response.status_code not in (200, 500):
+    elif response.status_code not in (200, 500):
         raise exceptions.BitcoindRPCError(str(response.status_code) + ' ' + response.reason)
 
     '''
