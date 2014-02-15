@@ -300,9 +300,9 @@ class APIServer(threading.Thread):
             return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
 
         @dispatcher.add_method
-        def do_broadcast(source, fee_multiplier, text, timestamp, value=0, unsigned=False):
+        def do_broadcast(source, fee_fraction, text, timestamp, value=0, unsigned=False):
             unsigned_tx_hex = broadcast.create(db, source, timestamp,
-                                               value, fee_multiplier, text, unsigned=unsigned)
+                                               value, fee_fraction, text, unsigned=unsigned)
             return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
 
         @dispatcher.add_method

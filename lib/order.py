@@ -10,12 +10,22 @@ FORMAT = '>QQQQHQ'
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8
 ID = 10
 
-def validate (db, source, give_asset, give_amount, get_asset, get_amount, expiration, fee_required):
+def validate (db, source, give_asset, give_amount, get_asset, get_amount, expiration, fee_required, block_index):
     problems = []
     cursor = db.cursor()
 
+    if not block_index:
+        if config.PREFIX == config.UNITTEST_PREFIX:
+            block_index = 0
+        else:
+            block_index = util.last_block(db)['block_index']
+
     if give_asset == get_asset:
         problems.append('trading an asset for itself')
+    elif block_index >= 287000: # Protocol change
+        if ('BTC' == give_asset and 'XCP' != get_asset) or ('BTC' == get_asset and 'XCP' != give_asset):
+            problems.append('BTC may only be traded for XCP.')
+
     if not give_amount or not get_amount:
         problems.append('zero give or zero get')
     cursor.execute('select * from issuances where (validity = ? and asset = ?)', ('valid', give_asset))
@@ -39,7 +49,7 @@ def create (db, source, give_asset, give_amount, get_asset, get_amount, expirati
     if give_asset != 'BTC' and (not balances or balances[0]['amount'] < give_amount):
         raise exceptions.OrderError('insufficient funds')
 
-    problems = validate(db, source, give_asset, give_amount, get_asset, get_amount, expiration, fee_required)
+    problems = validate(db, source, give_asset, give_amount, get_asset, get_amount, expiration, fee_required, None)
     if problems: raise exceptions.OrderError(problems)
 
     give_id = util.get_asset_id(give_asset)
@@ -78,7 +88,7 @@ def parse (db, tx, message):
                 give_amount = min(balances[0]['amount'], give_amount)
                 get_amount = int(price * D(give_amount))
 
-        problems = validate(db, tx['source'], give_asset, give_amount, get_asset, get_amount, expiration, fee_required)
+        problems = validate(db, tx['source'], give_asset, give_amount, get_asset, get_amount, expiration, fee_required, tx['block_index'])
         if problems: validity = 'invalid: ' + ';'.join(problems)
 
     if validity == 'valid':

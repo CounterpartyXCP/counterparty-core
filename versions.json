@@ -11,5 +11,10 @@
 			"minimum_database_version": 6.17,
 			"description": "double credits on order match expirations"
 		}
+		{
+			"block_index": 287000,
+			"minimum_database_version": 6.19,
+			"description": "forbid trading BTC for user‐created assets"
+		}
 	]
 }

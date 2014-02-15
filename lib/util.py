@@ -54,7 +54,7 @@ def log (db, command, category, bindings):
     # Slow?!
     def output (amount, asset):
         try:
-            if asset not in ('fee_multiplier', 'leverage'):
+            if asset not in ('fraction', 'leverage'):
                 return str(devise(db, amount, asset, 'output')) + ' ' + asset
             else:
                 return str(devise(db, amount, asset, 'output'))
@@ -98,7 +98,7 @@ def log (db, command, category, bindings):
         elif category == 'issuances':
             if bindings['transfer']:
                 logging.info('Issuance: {} transferred asset {} to {} ({}) [{}]'.format(bindings['source'], bindings['asset'], bindings['issuer'], bindings['tx_hash'], bindings['validity']))
-            elif not bindings['amount']:
+            elif bindings['locked']:
                 logging.info('Issuance: {} locked asset {} ({}) [{}]'.format(bindings['issuer'], bindings['asset'], bindings['tx_hash'], bindings['validity']))
             else:
                 if bindings['divisible']:
@@ -118,12 +118,12 @@ def log (db, command, category, bindings):
                 logging.info('Issuance: {} created {} of asset {}, which is {} and {}, with description ‘{}’ ({}) [{}]'.format(bindings['issuer'], amount, bindings['asset'], divisibility, callability, bindings['description'], bindings['tx_hash'], bindings['validity']))
 
         elif category == 'broadcasts':
-            if not bindings['text']:
+            if bindings['locked']:
                 logging.info('Broadcast: {} locked his feed ({}) [{}]'.format(bindings['source'], bindings['tx_hash'], bindings['validity']))
             else:
                 if not bindings['value']: infix = '‘{}’'.format(bindings['text'])
                 else: infix = '‘{}’ = {}'.format(bindings['text'], bindings['value'])
-                suffix = ' from ' + bindings['source'] + ' at ' + isodt(bindings['timestamp']) + ' with a fee of {}%'.format(output(D(bindings['fee_multiplier']) * D(100), 'fee_multiplier')) + ' (' + bindings['tx_hash'] + ')' + ' [{}]'.format(bindings['validity'])
+                suffix = ' from ' + bindings['source'] + ' at ' + isodt(bindings['timestamp']) + ' with a fee of {}%'.format(output(D(bindings['fee_fraction_int'] / 1e8) * D(100), 'fraction')) + ' (' + bindings['tx_hash'] + ')' + ' [{}]'.format(bindings['validity'])
                 logging.info('Broadcast: {}'.format(infix + suffix))
 
         elif category == 'bets':
@@ -133,7 +133,7 @@ def log (db, command, category, bindings):
             if bindings['leverage']:
                 placeholder += ', leveraged {}x'.format(output(bindings['leverage']/ 5040, 'leverage'))
 
-            fee = round(bindings['wager_amount'] * bindings['fee_multiplier'] / 1e8)    # round?!
+            fee = round(bindings['wager_amount'] * bindings['fee_fraction_int'] / 1e8)    # round?!
 
             logging.info('Bet: {} on {} at {} for {} against {} in {} blocks{} for a fee of {} ({}) [{}]'.format(BET_TYPE_NAME[bindings['bet_type']], bindings['feed_address'], isodt(bindings['deadline']), output(bindings['wager_amount'], 'XCP'), output(bindings['counterwager_amount'], 'XCP'), bindings['expiration'], placeholder, output(fee, 'XCP'), bindings['tx_hash'], bindings['validity']))
 
@@ -471,7 +471,7 @@ def devise (db, quantity, asset, dest, divisible=None):
             else:
                 return float(quantity)  # TODO: Float?!
 
-    if asset in ('fee_multiplier',):
+    if asset in ('fraction',):
         return norm(D(quantity) / D(1e8), 6)
 
     if divisible == None:

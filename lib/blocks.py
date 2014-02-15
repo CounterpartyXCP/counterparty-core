@@ -249,6 +249,7 @@ def initialise(db):
                         call_price REAL,
                         description TEXT,
                         fee_paid INTEGER,
+                        locked BOOL,
                         validity TEXT
                         )
                    ''')
@@ -259,20 +260,22 @@ def initialise(db):
                         valid_asset_idx ON issuances (validity, asset)
                     ''')
 
+    # Broadcasts
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS broadcasts(
-                        tx_index INTEGER PRIMARY KEY,
-                        tx_hash TEXT UNIQUE,
-                        block_index INTEGER,
-                        source TEXT,
-                        timestamp INTEGER,
-                        value REAL,
-                        fee_multiplier INTEGER,
-                        text TEXT,
-                        validity TEXT)
-                   ''')
+                                 tx_index INTEGER PRIMARY KEY,
+                                 tx_hash TEXT UNIQUE,
+                                 block_index INTEGER,
+                                 source TEXT,
+                                 timestamp INTEGER,
+                                 value REAL,
+                                 fee_fraction_int INTEGER,
+                                 text TEXT,
+                                 locked BOOL,
+                                 validity TEXT)
+                              ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        broadcasts_block_index_idx ON broadcasts (block_index)
-                    ''')
+                                 block_index_idx ON broadcasts (block_index)
+                              ''')
 
     # Bets.
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS bets(
@@ -291,7 +294,7 @@ def initialise(db):
                                  leverage INTEGER,
                                  expiration INTEGER,
                                  expire_index INTEGER,
-                                 fee_multiplier INTEGER,
+                                 fee_fraction_int INTEGER,
                                  validity TEXT)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -328,7 +331,7 @@ def initialise(db):
                                  tx0_expiration INTEGER,
                                  tx1_expiration INTEGER,
                                  match_expire_index INTEGER,
-                                 fee_multiplier INTEGER,
+                                 fee_fraction_int INTEGER,
                                  validity TEXT)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS

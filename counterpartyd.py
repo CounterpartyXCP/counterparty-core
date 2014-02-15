@@ -293,8 +293,8 @@ if __name__ == '__main__':
     parser_issuance = subparsers.add_parser('issuance', help='issue a new asset, issue more of an existing asset or transfer the ownership of an asset')
     parser_issuance.add_argument('--source', required=True, help='the source address')
     parser_issuance.add_argument('--transfer-destination', help='for transfer of ownership of asset issuance rights')
-    parser_issuance.add_argument('--quantity', required=True, help='the quantity of ASSET to be issued')
-    parser_issuance.add_argument('--asset', required=True, help='the name of the asset to be issued (if it\'s available)')
+    parser_issuance.add_argument('--quantity', default=0, help='the quantity of ASSET to be issued')
+    parser_issuance.add_argument('--asset', required=True, help='the name of the asset to be issued (if it’s available)')
     parser_issuance.add_argument('--divisible', action='store_true', help='whether or not the asset is divisible (must agree with previous issuances)')
     parser_issuance.add_argument('--callable', dest='callable_', action='store_true', help='whether or not the asset is callable (must agree with previous issuances)')
     parser_issuance.add_argument('--call-date', help='the date from which a callable asset may be called back (must agree with previous issuances)')
@@ -303,9 +303,9 @@ if __name__ == '__main__':
 
     parser_broadcast = subparsers.add_parser('broadcast', help='broadcast textual and numerical information to the network')
     parser_broadcast.add_argument('--source', required=True, help='the source address')
-    parser_broadcast.add_argument('--text', type=str, required=True, help='the textual part of the broadcast')
-    parser_broadcast.add_argument('--value', type=float, default=0, help='numerical value of the broadcast')
-    parser_broadcast.add_argument('--fee-multiplier', required=True, help='how much of every bet on this feed should go to its operator; a fraction of 1, (i.e. .05 is five percent)')
+    parser_broadcast.add_argument('--text', type=str, required=True, help='the textual part of the broadcast (set to ‘LOCK’ to lock feed)')
+    parser_broadcast.add_argument('--value', type=float, default=-1, help='numerical value of the broadcast')
+    parser_broadcast.add_argument('--fee-fraction', default=0, help='the fraction of bets on this feed that go to its operator')
 
     parser_bet = subparsers.add_parser('bet', help='offer to make a bet on the value of a feed')
     parser_bet.add_argument('--source', required=True, help='the source address')
@@ -452,14 +452,19 @@ if __name__ == '__main__':
 
         unsigned_tx_hex = issuance.create(db, args.source,
                                           args.transfer_destination,
-                                          args.asset, quantity, args.divisible, args.callable_, call_date, call_price, args.description, unsigned=args.unsigned)
+                                          args.asset, quantity, args.divisible,
+                                          args.callable_, call_date,
+                                          call_price, args.description,
+                                          unsigned=args.unsigned)
         print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'broadcast':
         value = util.devise(db, args.value, 'value', 'input')
+        fee_fraction = util.devise(db, args.fee_fraction, 'fracton', 'input')
+
         unsigned_tx_hex = broadcast.create(db, args.source, int(time.time()),
-                                           value, util.devise(db, args.fee_multiplier, 'fracton', 'input'),
-                                           args.text, unsigned=args.unsigned)
+                                           value, fee_fraction, args.text,
+                                           unsigned=args.unsigned)
         print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'bet':

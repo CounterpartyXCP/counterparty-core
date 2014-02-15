@@ -1,5 +1,9 @@
 #! /usr/bin/python3
 
+"""
+Allow simultaneous lock and transfer.
+"""
+
 import struct
 import decimal
 D = decimal.Decimal
@@ -36,10 +40,12 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
             problems.append('asset exists with a different divisibility')
         elif bool(last_issuance['callable']) != bool(callable_) or last_issuance['call_date'] != call_date or last_issuance['call_price'] != call_price:
             problems.append('asset exists with a different callability, call date or call price')
-        elif not last_issuance['amount'] and not last_issuance['transfer']:
-            problems.append('asset is locked')
-    elif not amount:
-        problems.append('cannot lock or transfer an unissued asset')
+        elif last_issuance['locked']:
+            problems.append('locked asset')
+    elif description.lower() == 'lock':
+        problems.append('cannot lock a nonexistent asset')
+    elif destination:
+        problems.append('cannot transfer a nonexistent asset')
 
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM balances \
@@ -110,6 +116,7 @@ def parse (db, tx, message):
     if tx['destination']:
         issuer = tx['destination']
         transfer = True
+        amount = 0
     else:
         issuer = tx['source']
         transfer = False
@@ -126,6 +133,13 @@ def parse (db, tx, message):
             if fee:
                 util.debit(db, tx['block_index'], tx['source'], 'XCP', fee)
 
+    # Lock?
+    if description and description.lower() == 'lock':
+        lock = True
+        timestamp, valuerint, fee_fraction_int = None, None, None, None
+    else:
+        lock = False
+
     # Add parsed transaction to message-type–specific table.
     bindings= {
         'tx_index': tx['tx_index'],
@@ -141,9 +155,10 @@ def parse (db, tx, message):
         'call_price': call_price,
         'description': description,
         'fee_paid': fee,
+        'locked': lock,
         'validity': validity,
     }
-    sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :amount, :divisible, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :validity)'
+    sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :amount, :divisible, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :lock, :validity)'
     issuance_parse_cursor.execute(sql, bindings)
 
     # Credit.
