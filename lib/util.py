@@ -20,14 +20,6 @@ b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 # Obsolete in Python 3.4, with enum module.
 BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
 BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
-DO_FILTER_OPERATORS = {
-    '==': operator.eq,
-    '!=': operator.ne,
-    '<': operator.lt,
-    '>': operator.gt,
-    '<=': operator.le,
-    '>=': operator.ge,
-}
 
 def api (method, params):
     headers = {'content-type': 'application/json'}
@@ -62,7 +54,7 @@ def log (db, command, category, bindings):
     # Slow?!
     def output (amount, asset):
         try:
-            if asset not in ('price', 'fee_multiplier', 'odds', 'leverage'):
+            if asset not in ('fee_multiplier', 'leverage'):
                 return str(devise(db, amount, asset, 'output')) + ' ' + asset
             else:
                 return str(devise(db, amount, asset, 'output'))
@@ -136,15 +128,14 @@ def log (db, command, category, bindings):
 
         elif category == 'bets':
             placeholder = ''
-            if bindings['target_value']:    # 0.0 is not a valid target value.
+            if bindings['target_value']:    # 0.0 is not a valid target value.  # TODO
                 placeholder = ' that ' + str(output(bindings['target_value'], 'value'))
             if bindings['leverage']:
                 placeholder += ', leveraged {}x'.format(output(bindings['leverage']/ 5040, 'leverage'))
-            odds = D(bindings['wager_amount']) / D(bindings['counterwager_amount'])
 
             fee = round(bindings['wager_amount'] * bindings['fee_multiplier'] / 1e8)    # round?!
 
-            logging.info('Bet: {} on {} at {} for {} against {} at {} odds in {} blocks{} for a fee of {} ({}) [{}]'.format(BET_TYPE_NAME[bindings['bet_type']], bindings['feed_address'], isodt(bindings['deadline']), output(bindings['wager_amount'], 'XCP'), output(bindings['counterwager_amount'], 'XCP'), output(odds, 'odds'), bindings['expiration'], placeholder, output(fee, 'XCP'), bindings['tx_hash'], bindings['validity']))
+            logging.info('Bet: {} on {} at {} for {} against {} in {} blocks{} for a fee of {} ({}) [{}]'.format(BET_TYPE_NAME[bindings['bet_type']], bindings['feed_address'], isodt(bindings['deadline']), output(bindings['wager_amount'], 'XCP'), output(bindings['counterwager_amount'], 'XCP'), bindings['expiration'], placeholder, output(fee, 'XCP'), bindings['tx_hash'], bindings['validity']))
 
         elif category == 'bet_matches':
             placeholder = ''
@@ -306,108 +297,9 @@ def database_check (db, blockcount):
         time.sleep(1)
     raise exceptions.DatabaseError('Counterparty database is behind Bitcoind. Is the counterpartyd server running?')
 
-def do_filter(results, filters, filterop):
-    """Filters results based on a filter data structure (as used by the API)"""
-    if not len(results) or not filters: #empty results, or not filtering
-        return results
-    if isinstance(filters, dict): #single filter entry, convert to a one entry list
-        filters = [filters,]
-    #validate filter(s)
-    required_fields = ['field', 'op', 'value']
-    for filter in filters:
-        for field in required_fields: #should have all fields
-            if field not in filter:
-                raise Exception("A specified filter is missing the '%s' field" % field)
-        if filterop not in ('and', 'or'):
-            raise Exception("Invalid filterop setting. Must be either 'and' or 'or'.")
-        if filter['op'] not in DO_FILTER_OPERATORS.keys():
-            raise Exception("A specified filter op is invalid or not recognized: '%s'" % filter['op'])
-        if filter['field'] == 'block_index':
-            raise Exception("For performance reasons, please use the start_block and end_block API arguments to do block_index filtering")
-        if filter['field'] not in results[0]:
-            raise Exception("A specified filter field is invalid or not recognized for the given object type: '%s'" % filter['field'])
-        if type(filter['value']) not in (str, int, float, bool):
-            raise Exception("Value specified for filter field '%s' is not one of the supported value types (str, int, float, bool)" % (
-                filter['field']))
-        if results[0][filter['field']] != None and filter['value'] != None and type(filter['value']) != type(results[0][filter['field']]):
-            # field is None when it does not matter.
-            raise Exception("Value specified for filter field '%s' does not match the data type of that field (value: %s, field: %s) and neither is None" % (
-                filter['field'], type(filter['value']), type(results[0][filter['field']])))
-    #filter data
-    if filterop == 'and':
-        for filter in filters:
-            results = [e for e in results if DO_FILTER_OPERATORS[filter['op']](e[filter['field']], filter['value'])]
-        return results
-    else: #or
-        combined_results = []
-        for filter in filters:
-            if filter['field'] == 'validity': continue #don't filter validity as an OR requirement
-            combined_results += [e for e in results if DO_FILTER_OPERATORS[filter['op']](e[filter['field']], filter['value'])]
-        
-        validity_filter = next((f for f in filters if f['field'] == 'validity'), None)
-        if validity_filter: #filter out invalid results as an AND requirement
-            combined_results = [e for e in combined_results if DO_FILTER_OPERATORS[validity_filter['op']](
-                e[validity_filter['field']], validity_filter['value'])]
-        return combined_results
-
-def do_order_by(results, order_by, order_dir):
-    if not len(results) or not order_by: #empty results, or not ordering
-        return results
-    assert isinstance(results, list) and isinstance(results[0], dict)
-
-    if order_by not in results[0]:
-        raise KeyError("Specified order_by property '%s' does not exist in returned data" % order_by)
-    if order_dir not in ('asc', 'desc'):
-        raise Exception("Invalid order_dir: '%s'. Must be 'asc' or 'desc'" % order_dir)
-    return sorted(results, key=itemgetter(order_by), reverse=order_dir=='desc')
-
-def get_limit_to_blocks(start_block, end_block, col_names=['block_index',]):
-    if    (start_block is not None and not isinstance(start_block, int)) \
-       or (end_block is not None and not isinstance(end_block, int)):
-        raise ValueError("start_block and end_block must be either an integer, or None")
-    assert isinstance(col_names, list) and len(col_names) in [1, 2]
-
-    if start_block is None and end_block is None:
-        return ''
-    elif len(col_names) == 1:
-        col_name = col_names[0]
-        if start_block and end_block:
-            block_limit_clause = " WHERE %s >= %s AND %s <= %s" % (col_name, start_block, col_name, end_block)
-        elif start_block:
-            block_limit_clause = " WHERE %s >= %s" % (col_name, start_block)
-        elif end_block:
-            block_limit_clause = " WHERE %s <= %s" % (col_name, end_block)
-    else: #length of 2
-        if start_block and end_block:
-            block_limit_clause = " WHERE (%s >= %s OR %s >= %s) AND (%s <= %s OR %s <= %s)" % (
-                col_names[0], start_block, col_names[1], start_block,
-                col_names[0], end_block, col_names[1], end_block)
-        elif start_block:
-            block_limit_clause = " WHERE %s >= %s OR %s >= %s" % (
-                col_names[0], start_block, col_names[1], start_block)
-        elif end_block:
-            block_limit_clause = " WHERE %s >= %s OR %s >= %s" % (
-                col_names[0], end_block, col_names[1], end_block)
-    return block_limit_clause
 
 def isodt (epoch_time):
     return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
-
-def xcp_supply (db):
-    cursor = db.cursor()
-
-    # Add burns.
-    cursor.execute('''SELECT * FROM burns \
-                      WHERE validity = ?''', ('valid',))
-    burn_total = sum([burn['earned'] for burn in cursor.fetchall()])
-
-    # Subtract issuance fees.
-    cursor.execute('''SELECT * FROM issuances\
-                      WHERE validity = ?''', ('valid',))
-    fee_total = sum([issuance['fee_paid'] for issuance in cursor.fetchall()])
-
-    cursor.close()
-    return burn_total - fee_total
 
 def last_block (db):
     cursor = db.cursor()
@@ -559,6 +451,7 @@ def credit (db, block_index, address, asset, amount, action=None, event=None):
     credit_cursor.close()
 
 def devise (db, quantity, asset, dest, divisible=None):
+
     # For output only.
     def norm(num, places):
         # Round only if necessary.
@@ -568,7 +461,7 @@ def devise (db, quantity, asset, dest, divisible=None):
         num = fmt.format(num)
         return num.rstrip('0')+'0' if num.rstrip('0')[-1] == '.' else num.rstrip('0')
 
-    if asset in ('leverage', 'price', 'odds', 'value', 'fraction'):
+    if asset in ('leverage', 'value', 'fraction'):
         if dest == 'output':
             return norm(quantity, 6)
         elif dest == 'input':
@@ -612,6 +505,122 @@ def devise (db, quantity, asset, dest, divisible=None):
         if quantity != round(quantity):
             raise exceptions.QuantityError('Fractional quantities of indivisible assets.')
         return round(quantity)
+
+
+
+
+
+
+
+DO_FILTER_OPERATORS = {
+    '==': operator.eq,
+    '!=': operator.ne,
+    '<': operator.lt,
+    '>': operator.gt,
+    '<=': operator.le,
+    '>=': operator.ge,
+}
+
+def do_filter(results, filters, filterop):
+    """Filters results based on a filter data structure (as used by the API)"""
+    if not len(results) or not filters: #empty results, or not filtering
+        return results
+    if isinstance(filters, dict): #single filter entry, convert to a one entry list
+        filters = [filters,]
+    #validate filter(s)
+    required_fields = ['field', 'op', 'value']
+    for filter in filters:
+        for field in required_fields: #should have all fields
+            if field not in filter:
+                raise Exception("A specified filter is missing the '%s' field" % field)
+        if filterop not in ('and', 'or'):
+            raise Exception("Invalid filterop setting. Must be either 'and' or 'or'.")
+        if filter['op'] not in DO_FILTER_OPERATORS.keys():
+            raise Exception("A specified filter op is invalid or not recognized: '%s'" % filter['op'])
+        if filter['field'] == 'block_index':
+            raise Exception("For performance reasons, please use the start_block and end_block API arguments to do block_index filtering")
+        if filter['field'] not in results[0]:
+            raise Exception("A specified filter field is invalid or not recognized for the given object type: '%s'" % filter['field'])
+        if type(filter['value']) not in (str, int, float, bool):
+            raise Exception("Value specified for filter field '%s' is not one of the supported value types (str, int, float, bool)" % (
+                filter['field']))
+        if results[0][filter['field']] != None and filter['value'] != None and type(filter['value']) != type(results[0][filter['field']]):
+            # field is None when it does not matter.
+            raise Exception("Value specified for filter field '%s' does not match the data type of that field (value: %s, field: %s) and neither is None" % (
+                filter['field'], type(filter['value']), type(results[0][filter['field']])))
+    #filter data
+    if filterop == 'and':
+        for filter in filters:
+            results = [e for e in results if DO_FILTER_OPERATORS[filter['op']](e[filter['field']], filter['value'])]
+        return results
+    else: #or
+        combined_results = []
+        for filter in filters:
+            if filter['field'] == 'validity': continue #don't filter validity as an OR requirement
+            combined_results += [e for e in results if DO_FILTER_OPERATORS[filter['op']](e[filter['field']], filter['value'])]
+        
+        validity_filter = next((f for f in filters if f['field'] == 'validity'), None)
+        if validity_filter: #filter out invalid results as an AND requirement
+            combined_results = [e for e in combined_results if DO_FILTER_OPERATORS[validity_filter['op']](
+                e[validity_filter['field']], validity_filter['value'])]
+        return combined_results
+
+def do_order_by(results, order_by, order_dir):
+    if not len(results) or not order_by: #empty results, or not ordering
+        return results
+    assert isinstance(results, list) and isinstance(results[0], dict)
+
+    if order_by not in results[0]:
+        raise KeyError("Specified order_by property '%s' does not exist in returned data" % order_by)
+    if order_dir not in ('asc', 'desc'):
+        raise Exception("Invalid order_dir: '%s'. Must be 'asc' or 'desc'" % order_dir)
+    return sorted(results, key=itemgetter(order_by), reverse=order_dir=='desc')
+
+def get_limit_to_blocks(start_block, end_block, col_names=['block_index',]):
+    if    (start_block is not None and not isinstance(start_block, int)) \
+       or (end_block is not None and not isinstance(end_block, int)):
+        raise ValueError("start_block and end_block must be either an integer, or None")
+    assert isinstance(col_names, list) and len(col_names) in [1, 2]
+
+    if start_block is None and end_block is None:
+        return ''
+    elif len(col_names) == 1:
+        col_name = col_names[0]
+        if start_block and end_block:
+            block_limit_clause = " WHERE %s >= %s AND %s <= %s" % (col_name, start_block, col_name, end_block)
+        elif start_block:
+            block_limit_clause = " WHERE %s >= %s" % (col_name, start_block)
+        elif end_block:
+            block_limit_clause = " WHERE %s <= %s" % (col_name, end_block)
+    else: #length of 2
+        if start_block and end_block:
+            block_limit_clause = " WHERE (%s >= %s OR %s >= %s) AND (%s <= %s OR %s <= %s)" % (
+                col_names[0], start_block, col_names[1], start_block,
+                col_names[0], end_block, col_names[1], end_block)
+        elif start_block:
+            block_limit_clause = " WHERE %s >= %s OR %s >= %s" % (
+                col_names[0], start_block, col_names[1], start_block)
+        elif end_block:
+            block_limit_clause = " WHERE %s >= %s OR %s >= %s" % (
+                col_names[0], end_block, col_names[1], end_block)
+    return block_limit_clause
+
+
+def xcp_supply (db):
+    cursor = db.cursor()
+
+    # Add burns.
+    cursor.execute('''SELECT * FROM burns \
+                      WHERE validity = ?''', ('valid',))
+    burn_total = sum([burn['earned'] for burn in cursor.fetchall()])
+
+    # Subtract issuance fees.
+    cursor.execute('''SELECT * FROM issuances\
+                      WHERE validity = ?''', ('valid',))
+    fee_total = sum([issuance['fee_paid'] for issuance in cursor.fetchall()])
+
+    cursor.close()
+    return burn_total - fee_total
 
 def get_debits (db, address=None, asset=None, filters=None, order_by=None, order_dir='asc', start_block=None, end_block=None, filterop='and'):
     """This does not include BTC."""

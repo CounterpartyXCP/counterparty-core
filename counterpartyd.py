@@ -235,46 +235,6 @@ def balances (address):
     print('Balances')
     print(table.get_string())
 
-def format_order (order):
-    give_amount = util.devise(db, D(order['give_amount']), order['give_asset'], 'output')
-    get_amount = util.devise(db, D(order['get_amount']), order['get_asset'], 'output')
-    give_remaining = util.devise(db, D(order['give_remaining']), order['give_asset'], 'output')
-    get_remaining = util.devise(db, D(order['get_remaining']), order['get_asset'], 'output')
-    give_asset = order['give_asset']
-    get_asset = order['get_asset']
-
-    if get_asset < give_asset:
-        price = util.devise(db, D(order['get_amount']) / D(order['give_amount']), 'price', 'output')
-        price_assets = get_asset + '/' + give_asset + ' ask'
-    else:
-        price = util.devise(db, D(order['give_amount']) / D(order['get_amount']), 'price', 'output')
-        price_assets = give_asset + '/' + get_asset + ' bid'
-
-    return [D(give_remaining), give_asset, price, price_assets, str(order['fee_required'] / config.UNIT), str(order['fee_provided'] / config.UNIT), order['expire_index'] - util.last_block(db)['block_index'], order['tx_hash']]
-
-def format_bet (bet):
-    odds = D(bet['counterwager_amount']) / D(bet['wager_amount'])
-
-    if not bet['target_value']: target_value = None
-    else: target_value = bet['target_value']
-    if not bet['leverage']: leverage = None
-    else: leverage = util.devise(db, D(bet['leverage']) / 5040, 'leverage', 'output')
-
-    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], util.isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.devise(db, odds, 'odds', 'output'), bet['expire_index'] - util.last_block(db)['block_index'], bet['tx_hash']]
-
-def format_order_match (db, order_match):
-    order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']
-    order_match_time_left = order_match['match_expire_index'] - util.last_block(db)['block_index']
-    return [order_match_id, order_match_time_left]
-
-def format_feed (feed):
-    timestamp = util.isodt(feed['timestamp'])
-    if not feed['text']:
-        text = '<Locked>'
-    else:
-        text = feed['text']
-    return [feed['source'], timestamp, text, feed['value'], D(feed['fee_multiplier']) / D(1e8)]
-
 
 if __name__ == '__main__':
     if os.name == 'nt':
