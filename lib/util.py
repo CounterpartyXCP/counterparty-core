@@ -95,57 +95,10 @@ def log (db, command, category, bindings):
             logging.info('Send: {} from {} to {} ({}) [{}]'.format(output(bindings['amount'], bindings['asset']), bindings['source'], bindings['destination'], bindings['tx_hash'], bindings['validity']))
 
         elif category == 'orders':
-            give_asset = bindings['give_asset']
-            get_asset = bindings['get_asset']
-
-            give_amount = output(bindings['give_amount'], bindings['give_asset']).split(' ')[0]
-            get_amount = output(bindings['get_amount'], bindings['get_asset']).split(' ')[0]
-
-            # Consistent ordering for currency pairs. (Partial DUPE.)
-            if get_asset < give_asset:
-                try:
-                    price = output(D(get_amount) / D(give_amount), 'price')
-                except (decimal.DivisionByZero, decimal.InvalidOperation):
-                    price = '??'
-                price_assets = get_asset + '/' + give_asset
-                action = 'sell {} {}'.format(give_amount, give_asset)
-            else:
-                try:
-                    price = output(D(give_amount) / D(get_amount), 'price')
-                except (decimal.DivisionByZero, decimal.InvalidOperation):
-                    price = '??'
-                price_assets = give_asset + '/' + get_asset
-                action = 'buy {} {}'.format(get_amount, get_asset)
-
-            logging.info('Order: {} at {} {} in {} blocks, with a provided fee of {} BTC and a required fee of {} BTC ({}) [{}]'.format(action, price, price_assets, bindings['expiration'], bindings['fee_provided'] / config.UNIT, bindings['fee_required'] / config.UNIT, bindings['tx_hash'], bindings['validity']))
+            logging.info('Order: give {} for {} in {} blocks, with a provided fee of {} BTC and a required fee of {} BTC ({}) [{}]'.format(output(bindings['give_amount'], bindings['give_asset']), output(bindings['get_amount'], bindings['get_asset']), bindings['expiration'], bindings['fee_provided'] / config.UNIT, bindings['fee_required'] / config.UNIT, bindings['tx_hash'], bindings['validity']))
 
         elif category == 'order_matches':
-            forward_amount = bindings['forward_amount']
-            backward_amount = bindings['backward_amount']
-            forward_asset = bindings['forward_asset']
-            backward_asset = bindings['backward_asset']
-
-            # This can't be gotten rid of!
-            forward_print = output(forward_amount, forward_asset)
-            backward_print = output(backward_amount, backward_asset)
-
-            # Consistent ordering for currency pairs. (Partial DUPE.)
-            if forward_asset < backward_asset:
-                try:
-                    price = output(D(forward_amount) / D(backward_amount), 'price')
-                except (decimal.DivisionByZero, decimal.InvalidOperation):
-                    price = None
-                price_assets = forward_asset + '/' + backward_asset
-                foobar = '{} for {}'.format(forward_print, backward_print)
-            else:
-                try:
-                    price = output(D(backward_amount) / D(forward_amount), 'price')
-                except (decimal.DivisionByZero, decimal.InvalidOperation):
-                    price = None
-                price_assets = backward_asset + '/' + forward_asset
-                foobar = '{} for {}'.format(backward_print, forward_print)
-
-            logging.info('Order Match: {} at {} {} ({}) [{}]'.format(foobar, price, price_assets, bindings['id'], bindings['validity']))
+            logging.info('Order Match: {} for {} ({}) [{}]'.format(output(bindings['forward_amount'], bindings['forward_asset']), output(bindings['backward_amount'], bindings['backward_asset']), bindings['id'], bindings['validity']))
 
         elif category == 'btcpays':
             logging.info('BTC Payment: {} paid {} to {} for order match {} ({}) [{}]'.format(bindings['source'], output(bindings['btc_amount'], 'BTC'), bindings['destination'], bindings['order_match_id'], bindings['tx_hash'], bindings['validity']))

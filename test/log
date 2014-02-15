@@ -4,10 +4,10 @@ Burn: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 0.62 BTC for 930.0 XCP (6e340b9c
 Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a>
 Credit: 0.5 XCP to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 #None# <4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a>
 Send: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 (4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a) [valid]
-Order: buy 1.0 XCP at 0.5 BTC/XCP in 10 blocks, with a provided fee of 0.01 BTC and a required fee of 0.0 BTC (dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986) [valid]
+Order: give 0.5 BTC for 1.0 XCP in 10 blocks, with a provided fee of 0.01 BTC and a required fee of 0.0 BTC (dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986) [valid]
 Debit: 1.05 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5>
-Order: sell 1.05 XCP at 0.47619 BTC/XCP in 10 blocks, with a provided fee of 0.0001 BTC and a required fee of 0.009 BTC (084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5) [valid]
-Order Match: 0.5 BTC for 1.0 XCP at 0.5 BTC/XCP (dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5) [pending]
+Order: give 1.05 XCP for 0.5 BTC in 10 blocks, with a provided fee of 0.0001 BTC and a required fee of 0.009 BTC (084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5) [valid]
+Order Match: 0.5 BTC for 1.0 XCP (dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5) [pending]
 Credit: 1.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Database: set validity of order_match dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5 to valid.
 BTC Payment: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 0.5 BTC to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc for order match dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5 (e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71) [valid]
@@ -63,7 +63,7 @@ Credit: 0.7 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Contract Settled: NotEqual won the pot of 14.0 XCP; 0.7 XCP credited to the feed address (4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8)
 Database: set validity of bet_match 4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8 to Settled for NotEqual.
 Debit: 0.5 BBBB from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2>
-Order: buy 0.5 XCP at 1.0 BBBB/XCP in 10 blocks, with a provided fee of 0.0001 BTC and a required fee of 0.0 BTC (ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2) [valid]
+Order: give 0.5 BBBB for 0.5 XCP in 10 blocks, with a provided fee of 0.0001 BTC and a required fee of 0.0 BTC (ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2) [valid]
 Credit: 0.5 BBBB to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Cancel: ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2 (83891d7fe85c33e52c8b4e5814c92fb6a3b9467299200538a6babaa8b452d879) [valid]
 Credit: 570.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608>
