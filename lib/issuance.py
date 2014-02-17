@@ -62,6 +62,8 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
             problems.append('insufficient funds')
 
     # For SQLite3
+    call_date = min(call_date, config.MAX_INT)
+    call_price = min(call_price, config.MAX_INT)
     total = sum([issuance['amount'] for issuance in issuances])
     assert isinstance(amount, int)
     if total + amount > config.MAX_INT:
