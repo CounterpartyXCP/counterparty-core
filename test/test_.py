@@ -308,6 +308,7 @@ def test_get_address():
     for field in get_address:
         output_new['get_address_' + field] = get_address[field]
 
+"""
 def test_json_rpc():
     thread = api.APIServer()
     thread.daemon = True
@@ -335,6 +336,7 @@ def test_json_rpc():
             output_new['rpc.' + payload['method']] = response['error']
         assert response['jsonrpc'] == '2.0'
         assert response['id'] == 0
+"""
 
 def test_stop():
     logging.info('STOP TEST')

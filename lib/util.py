@@ -244,7 +244,7 @@ def connect_to_db(flags=None):
     cursor.execute('''PRAGMA count_changes = OFF''')
 
     # Integrity check
-    time.sleep(.001)    # Hack
+    time.sleep(.1)    # Hack
     cursor.execute('''PRAGMA integrity_check''')
     rows = cursor.fetchall()
     if not (len(rows) == 1 and rows[0][0] == 'ok'):
@@ -293,7 +293,7 @@ def database_check (db, blockcount):
         if block_index == blockcount:
             cursor.close()
             return
-        print('Database not up to date. Sleeping for one second. (Try {}/{})'.format(i+1, TRIES), file=sys.stderr)
+        print('Database not up‐to‐date. Sleeping for one second. (Try {}/{})'.format(i+1, TRIES), file=sys.stderr)
         time.sleep(1)
     raise exceptions.DatabaseError('Counterparty database is behind Bitcoind. Is the counterpartyd server running?')
 

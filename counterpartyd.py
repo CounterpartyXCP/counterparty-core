@@ -284,8 +284,8 @@ if __name__ == '__main__':
     parser_order.add_argument('--give-quantity', required=True, help='the quantity of GIVE_ASSET that you are willing to give')
     parser_order.add_argument('--give-asset', required=True, help='the asset that you would like to sell')
     parser_order.add_argument('--expiration', type=int, required=True, help='the number of blocks for which the order should be valid')
-    parser_order.add_argument('--fee-required', default=D(config.FEE_REQUIRED_DEFAULT), help='the miners’ fee required for an order to match this one, as a fraction of the BTC to be bought')
-    parser_order.add_argument('--fee-provided', default=D(config.FEE_PROVIDED_DEFAULT), help='the miners’ fee provided, as a fraction of the BTC to be sold')
+    parser_order.add_argument('--fee-fraction-required', default=D(config.FEE_FRACTION_REQUIRED_DEFAULT), help='the miners’ fee required for an order to match this one, as a fraction of the BTC to be bought')
+    parser_order.add_argument('--fee-fraction-provided', default=D(config.FEE_FRACTION_PROVIDED_DEFAULT), help='the miners’ fee provided, as a fraction of the BTC to be sold')
 
     parser_btcpay= subparsers.add_parser('btcpay', help='create and broadcast a *BTCpay* message, to settle an Order Match for which you owe BTC')
     parser_btcpay.add_argument('--order-match-id', required=True, help='the concatenation of the hashes of the two transactions which compose the order match')
@@ -408,20 +408,20 @@ if __name__ == '__main__':
         print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
 
     elif args.action == 'order':
-        fee_required, fee_provided = D(args.fee_required), D(args.fee_provided)
-        give_quantity, get_quantity = D(args.give_quantity), D(args.get_quantity)
+        fee_required, fee_fraction_provided = D(args.fee_fraction_required), D(args.fee_fraction_provided)
+        give_quantity, get_fraction_quantity = D(args.give_quantity), D(args.get_quantity)
 
         # Fee argument is either fee_required or fee_provided, as necessary.
         if args.give_asset == 'BTC':
             fee_required = 0
-            fee_provided = util.devise(db, fee_provided, 'fraction', 'input')
-            fee_provided = round(D(fee_provided) * D(give_quantity) * D(config.UNIT))
+            fee_fraction_provided = util.devise(db, fee_fraction_provided, 'fraction', 'input')
+            fee_provided = round(D(fee_fraction_provided) * D(give_quantity) * D(config.UNIT))
             if fee_provided < config.MIN_FEE:
                 raise exceptions.InputError('Fee provided less than minimum necessary for acceptance in a block.')
         elif args.get_asset == 'BTC':
             fee_provided = config.MIN_FEE
-            fee_required = util.devise(db, fee_required, 'fraction', 'input')
-            fee_required = round(D(fee_required) * D(get_quantity) * D(config.UNIT))
+            fee_fraction_required = util.devise(db, fee_fraction_required, 'fraction', 'input')
+            fee_required = round(D(fee_fraction_required) * D(get_quantity) * D(config.UNIT))
         else:
             fee_required = 0
             fee_provided = config.MIN_FEE
