@@ -11,7 +11,6 @@ D = decimal.Decimal
 import difflib
 import json
 import inspect
-from threading import Thread
 import requests
 from requests.auth import HTTPBasicAuth
 import logging
@@ -26,7 +25,7 @@ import counterpartyd
 # config.BLOCK_FIRST = 0
 # config.BURN_START = 0
 # config.BURN_END = 9999999
-counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/counterpartyd.unittest.db', testnet=True, testcoin=False, unittest=True)
+counterpartyd.set_options(database_file=CURR_DIR+'/counterpartyd.unittest.db', testnet=True, testcoin=False, unittest=True)
 
 # Connect to database.
 try: os.remove(config.DATABASE)
@@ -308,12 +307,12 @@ def test_get_address():
     for field in get_address:
         output_new['get_address_' + field] = get_address[field]
 
-"""
 def test_json_rpc():
-    thread = api.APIServer()
-    thread.daemon = True
-    thread.start()
-    time.sleep(.1)
+
+    api_server = api.APIServer()
+    api_server.daemon = True
+    api_server.start()
+    time.sleep(1)
 
     url = 'http://localhost:' + str(config.RPC_PORT) + '/jsonrpc/'
     headers = {'content-type': 'application/json'}
@@ -328,15 +327,13 @@ def test_json_rpc():
     })
 
     for payload in payloads:
-        response = requests.post(
-                url, data=json.dumps(payload), headers=headers, auth=auth).json()
+        response = requests.post(url, data=json.dumps(payload), headers=headers, auth=auth).json()
         try:
             output_new['rpc.' + payload['method']] = response['result']
         except:
             output_new['rpc.' + payload['method']] = response['error']
         assert response['jsonrpc'] == '2.0'
         assert response['id'] == 0
-"""
 
 def test_stop():
     logging.info('STOP TEST')
