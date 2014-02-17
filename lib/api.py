@@ -15,7 +15,7 @@ import cherrypy
 from cherrypy import wsgiserver
 from jsonrpc import JSONRPCResponseManager, dispatcher
 
-from . import (config, exceptions, util, bitcoin)
+from . import (config, bitcoin, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel)
 
 class APIServer(threading.Thread):
@@ -249,7 +249,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_running_info():
             try:
-                util.database_check(db)
+                util.database_check(db, bitcoin.rpc('getblockcount', []))
             except:
                 caught_up = False
             else:
@@ -264,6 +264,7 @@ class APIServer(threading.Thread):
                 'db_caught_up': caught_up,
                 'last_block': last_block,
                 'counterpartyd_version': config.CLIENT_VERSION,
+                'running_testnet': config.TESTNET,
                 'db_version_major': config.DB_VERSION_MAJOR,
                 'db_version_minor': config.DB_VERSION_MINOR,
             }
