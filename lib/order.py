@@ -22,9 +22,6 @@ def validate (db, source, give_asset, give_amount, get_asset, get_amount, expira
 
     if give_asset == get_asset:
         problems.append('trading an asset for itself')
-    elif block_index >= 287000: # Protocol change
-        if ('BTC' == give_asset and 'XCP' != get_asset) or ('BTC' == get_asset and 'XCP' != give_asset):
-            problems.append('BTC may only be traded for XCP.')
 
     if not give_amount or not get_amount:
         problems.append('zero give or zero get')
