@@ -215,7 +215,7 @@ def exectracer(cursor, sql, bindings):
             try:
                 block_index = bindings['tx1_block_index']
             except KeyError:
-                block_index = 0 # TODO
+                block_index = last_block(db)['block_index'] + 1   # TODO: Double‐check that this is correct.
 
         bindings_string = json.dumps(collections.OrderedDict(sorted(bindings.items())))
         cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings)',

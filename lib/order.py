@@ -15,10 +15,7 @@ def validate (db, source, give_asset, give_amount, get_asset, get_amount, expira
     cursor = db.cursor()
 
     if not block_index:
-        if config.PREFIX == config.UNITTEST_PREFIX:
-            block_index = 0
-        else:
-            block_index = util.last_block(db)['block_index']
+        block_index = util.last_block(db)['block_index']
 
     if give_asset == get_asset:
         problems.append('trading an asset for itself')

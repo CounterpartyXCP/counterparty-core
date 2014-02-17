@@ -19,12 +19,11 @@ def validate (db, source, destination, quantity, block_index=None, overburn=Fals
         problems.append('wrong destination address')
 
     # Try to make sure that the burned funds won't go to waste.
-    if config.PREFIX != config.UNITTEST_PREFIX:    # For test suite.
-        if not block_index: block_index = util.last_block(db)['block_index']
-        if block_index < config.BURN_START:
-            problems.append('too early')
-        elif block_index > config.BURN_END:
-            problems.append('too late')
+    if not block_index: block_index = util.last_block(db)['block_index']
+    if block_index < config.BURN_START - 1:
+        problems.append('too early')
+    elif block_index > config.BURN_END:
+        problems.append('too late')
 
     return problems
 
@@ -69,10 +68,6 @@ def parse (db, tx, message=None):
         partial_time = D(config.BURN_END - tx['block_index'])
         multiplier = 1000 * (1 + D(.5) * (partial_time / total_time))
         earned = round(burned * multiplier)
-
-        # For test suite.
-        if config.PREFIX == config.UNITTEST_PREFIX:
-            earned = 1500 * burned
 
         # Credit source address with earned XCP.
         util.credit(db, tx['block_index'], tx['source'], 'XCP', earned, event=tx['tx_hash'])

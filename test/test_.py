@@ -52,10 +52,23 @@ def parse_hex (unsigned_tx_hex):
     tx = bitcoin.rpc('decoderawtransaction', [unsigned_tx_hex])
     source, destination, btc_amount, fee, data = blocks.get_tx_info(tx)
 
-    parse_hex_cursor = db.cursor()
+    cursor = db.cursor()
     tx_hash = hashlib.sha256(chr(tx_index).encode('utf-8')).hexdigest()
     global tx_index
-    parse_hex_cursor.execute('''INSERT INTO transactions(
+    block_index = config.BURN_START + tx_index
+    block_hash = hashlib.sha512(chr(block_index).encode('utf-8')).hexdigest()
+    block_time = block_index * 10000000
+
+    cursor.execute('''INSERT INTO blocks(
+                        block_index,
+                        block_hash,
+                        block_time) VALUES(?,?,?)''',
+                        (block_index,
+                        block_hash,
+                        block_time)
+                  )
+
+    cursor.execute('''INSERT INTO transactions(
                         tx_index,
                         tx_hash,
                         block_index,
@@ -67,7 +80,7 @@ def parse_hex (unsigned_tx_hex):
                         data) VALUES(?,?,?,?,?,?,?,?,?)''',
                         (tx_index,
                          tx_hash,
-                         tx_index,
+                         block_index,
                          tx_index,
                          source,
                          destination,
@@ -75,9 +88,10 @@ def parse_hex (unsigned_tx_hex):
                          fee,
                          data)
                   )
-    parse_hex_cursor.execute('''SELECT * FROM transactions \
+
+    cursor.execute('''SELECT * FROM transactions \
                                 WHERE tx_index=?''', (tx_index,))
-    tx = parse_hex_cursor.fetchall()[0]
+    tx = cursor.fetchall()[0]
     blocks.parse_tx(db, tx)
 
     # After parsing every transaction, check that the credits, debits sum properly.
@@ -95,7 +109,7 @@ def parse_hex (unsigned_tx_hex):
         assert amount == balance['amount']
 
     tx_index += 1
-    parse_hex_cursor.close()
+    cursor.close()
 
 
 
@@ -132,6 +146,18 @@ def test_start ():
 
 def test_initialise ():
     blocks.initialise(db)
+
+    # First block (for burn.create sanity check).
+    cursor = db.cursor()
+    cursor.execute('''INSERT INTO blocks(
+                        block_index,
+                        block_hash,
+                        block_time) VALUES(?,?,?)''',
+                        (config.BURN_START - 1,
+                        'foobar',
+                        1337)
+                  )
+    cursor.close()
 
 def test_burn ():
     unsigned_tx_hex = burn.create(db, source_default, int(.62 * quantity))
@@ -177,7 +203,7 @@ def test_issuance_divisible ():
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_issuance_indivisible_callable ():
-    unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBC', round(quantity / 1000), False, True, 1288855692, 0.015, 'foobar')
+    unsigned_tx_hex = issuance.create(db, source_default, None, 'BBBC', round(quantity / 1000), False, True, 17, 0.015, 'foobar')
 
     parse_hex(unsigned_tx_hex)
 

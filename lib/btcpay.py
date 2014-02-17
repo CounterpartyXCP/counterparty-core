@@ -51,10 +51,9 @@ def create (db, order_match_id, unsigned=False):
         btc_amount = order_match['forward_amount']
 
     # Warn if down to the wire.
-    if not config.PREFIX == config.UNITTEST_PREFIX:
-        time_left = order_match['match_expire_index'] - util.last_block(db)['block_index']
-        if time_left < 4:
-            print('WARNING: Only {} blocks until that order match expires. The payment might not make into the blockchain in time.'.format(time_left))
+    time_left = order_match['match_expire_index'] - util.last_block(db)['block_index']
+    if time_left < 4:
+        print('WARNING: Only {} blocks until that order match expires. The payment might not make into the blockchain in time.'.format(time_left))
 
     tx0_hash_bytes, tx1_hash_bytes = binascii.unhexlify(bytes(tx0_hash, 'utf-8')), binascii.unhexlify(bytes(tx1_hash, 'utf-8'))
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)

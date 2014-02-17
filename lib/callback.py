@@ -28,15 +28,7 @@ def validate (db, source, fraction, asset, block_time):
     else:
         last_issuance = issuances[-1]
         if block_time == None:
-            if config.PREFIX == config.UNITTEST_PREFIX:
-                import time
-                block_time = time.time()
-            else:
-                # Hack
-                if config.PREFIX == config.UNITTEST_PREFIX:
-                    block_time = 1391421600 
-                else:
-                    block_time = util.last_block(db)['block_time']
+            block_time = util.last_block(db)['block_time']
 
         if last_issuance['issuer'] != source:
             problems.append('not asset owner')
@@ -95,11 +87,8 @@ def parse (db, tx, message):
         validity = 'invalid: could not unpack'
 
     if validity == 'valid':
-        if config.PREFIX == config.UNITTEST_PREFIX:
-            block_time = 1391421600 
-        else:
-            block = util.last_block(db)
-            block_time = block['block_time']
+        block = util.last_block(db)
+        block_time = block['block_time']
         call_price, callback_total, outputs, problems = validate(db, tx['source'], fraction, asset, block_time)
         if problems: validity = 'invalid: ' + ';'.join(problems)
 
