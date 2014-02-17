@@ -162,8 +162,7 @@ def op_push (i):
     else:
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
-def serialise (inputs, destination_output=None, data_output=None, change_output=None, multisig=False, source=None, unsigned=False):
-    assert not (multisig and unsigned is True)
+def serialise (inputs, multisig, destination_output=None, data_output=None, change_output=None, source=None, unsigned=False):
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
     # Number of inputs.
@@ -324,13 +323,8 @@ def get_inputs (source, total_btc_out, unittest=False, unsigned=False):
     return None, None
 
 # Replace unittest flag with fake bitcoind JSON-RPC server.
-def transaction (source, destination, btc_amount, fee, data, unittest=False, multisig=True, unsigned=False):
+def transaction (source, destination, btc_amount, fee, data, unittest=False, multisig=config.MULTISIG, unsigned=False):
     if config.PREFIX == config.UNITTEST_PREFIX: unittest = True
-
-    #NB: if unsigned is True (instead of false or a public key string) and multisig is specified, then disable multisig and use OP_RETURN
-    # TODO: Why? This is sometimes very surprising!
-    if unsigned is True and multisig:
-        multisig = False
 
     # Validate addresses.
     for address in (source, destination):
@@ -389,7 +383,7 @@ def transaction (source, destination, btc_amount, fee, data, unittest=False, mul
     else: change_output = None
 
     # Serialise inputs and outputs.
-    transaction = serialise(inputs, destination_output, data_output, change_output, multisig=multisig, source=source, unsigned=unsigned)
+    transaction = serialise(inputs, multisig, destination_output, data_output, change_output, source=source, unsigned=unsigned)
     unsigned_tx_hex = binascii.hexlify(transaction).decode('utf-8')
     return unsigned_tx_hex
 

@@ -15,6 +15,7 @@ DB_VERSION_MINOR = 19       # Minor version changes just the parsing.
 DB_VERSION = float(str(DB_VERSION_MAJOR) + '.' + str(DB_VERSION_MINOR))
 
 # Bitcoin protocol
+MULTISIG = True
 # DUST_SIZE = 5430      # OP_RETURN
 DUST_SIZE = 5430 * 2    # Multi‐sig (TODO: This is just a guess.)
 MIN_FEE = 10000         # Counterparty transactions are all under 1KB in size.
