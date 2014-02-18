@@ -91,8 +91,15 @@ def parse (db, tx, message):
         validity = 'invalid: could not unpack'
 
     if validity == 'valid':
-        block = util.last_block(db)
-        call_price, callback_total, outputs, problems = validate(db, tx['source'], fraction, asset, block['block_time'])
+        # HACK
+        if config.PREFIX == config.UNITTEST_PREFIX:
+            block_time = 9999999999999
+        else:   # Wrong
+            block_index = tx['block_index']
+            callback_parse_cursor.execute('select * from blocks where block_index = ?', (block_index,))
+            block = callback_parse_cursor.fetchall()[0]
+            block_time = block['block_time']
+        call_price, callback_total, outputs, problems = validate(db, tx['source'], fraction, asset, block_time)
         if problems: validity = 'invalid: ' + ';'.join(problems)
 
     if validity == 'valid':
