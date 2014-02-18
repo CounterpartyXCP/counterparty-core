@@ -292,66 +292,59 @@ class APIServer(threading.Thread):
         ######################
         #WRITE/ACTION API
         @dispatcher.add_method
-        def do_bet(source, feed_address, bet_type, deadline, wager, counterwager, target_value=0.0, leverage=5040, unsigned=False):
+        def create_bet(source, feed_address, bet_type, deadline, wager, counterwager, target_value=0.0, leverage=5040):
             bet_type_id = util.BET_TYPE_ID[bet_type]
-            unsigned_tx_hex = bet.create(db, source, feed_address,
-                                         bet_type_id, deadline, wager,
-                                         counterwager, target_value,
-                                         leverage, expiration, unsigned=unsigned)
-            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
+            return bet.create(db, source, feed_address,
+                              bet_type_id, deadline, wager,
+                              counterwager, target_value,
+                              leverage, expiration)
 
         @dispatcher.add_method
-        def do_broadcast(source, fee_fraction, text, timestamp, value=0, unsigned=False):
-            unsigned_tx_hex = broadcast.create(db, source, timestamp,
-                                               value, fee_fraction, text, unsigned=unsigned)
-            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
+        def create_broadcast(source, fee_fraction, text, timestamp, value=0):
+            return broadcast.create(db, source, timestamp,
+                                    value, fee_fraction, text)
 
         @dispatcher.add_method
-        def do_btcpay(order_match_id, unsigned=False):
-            unsigned_tx_hex = btcpay.create(db, order_match_id, unsigned=unsigned)
-            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
+        def create_btcpay(order_match_id):
+            return btcpay.create(db, order_match_id)
 
         @dispatcher.add_method
-        def do_burn(source, quantity, unsigned=False):
-            unsigned_tx_hex = burn.create(db, source, quantity, unsigned=unsigned)
-            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
+        def create_burn(source, quantity):
+            return burn.create(db, source, quantity)
 
         @dispatcher.add_method
-        def do_cancel(offer_hash, unsigned=False):
-            unsigned_tx_hex = cancel.create(db, offer_hash, unsigned=unsigned)
-            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
+        def create_cancel(offer_hash):
+            return cancel.create(db, offer_hash)
 
         @dispatcher.add_method
-        def do_dividend(source, quantity_per_unit, share_asset, unsigned=False):
-            unsigned_tx_hex = dividend.create(db, source, quantity_per_unit,
-                                              share_asset, unsigned=unsigned)
-            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
+        def create_dividend(source, quantity_per_unit, share_asset):
+            return dividend.create(db, source, quantity_per_unit,
+                                   share_asset)
 
         @dispatcher.add_method
-        def do_issuance(source, quantity, asset, divisible, description, callable=None, call_date=None, call_price=None, transfer_destination=None, unsigned=False):
+        def create_issuance(source, quantity, asset, divisible, description, callable_=None, call_date=None, call_price=None, transfer_destination=None):
             try:
                 quantity = int(quantity)
             except ValueError:
                 raise Exception("Invalid quantity")
-            unsigned_tx_hex = issuance.create(db, source, transfer_destination,
-                asset, quantity, divisible, callable, call_date, call_price, description, unsigned=unsigned)
-            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
+            return issuance.create(db, source, transfer_destination,
+                                   asset, quantity, divisible, callable_,
+                                   call_date, call_price, description)
 
         @dispatcher.add_method
-        def do_order(source, give_quantity, give_asset, get_quantity, get_asset, expiration, fee_required=0,
-                     fee_provided=config.MIN_FEE / config.UNIT, unsigned=False):
-            unsigned_tx_hex = order.create(db, source, give_asset,
-                                           give_quantity, get_asset,
-                                           get_quantity, expiration,
-                                           fee_required, fee_provided,
-                                           unsigned=unsigned)
-            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
+        def create_order(source, give_quantity, give_asset, get_quantity, get_asset, expiration, fee_required, fee_provided):
+            return order.create(db, source, give_asset,
+                                give_quantity, get_asset,
+                                get_quantity, expiration,
+                                fee_required, fee_provided)
 
         @dispatcher.add_method
-        def do_send(source, destination, quantity, asset, unsigned=False):
-            unsigned_tx_hex = send.create(db, source, destination, quantity, asset, unsigned=unsigned)
-            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
+        def create_send(source, destination, quantity, asset):
+            return send.create(db, source, destination, quantity, asset)
 
+        @dispatcher.add_method
+        def transmit(unsigned_tx_hex):
+            return bitcoin.transmit(unsigned_tx_hex)
 
         class API(object):
             @cherrypy.expose

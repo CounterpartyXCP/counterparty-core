@@ -31,9 +31,30 @@ if os.name == 'nt':
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
+
+def cli(method, params, unsigned):
+
+    # Unlock wallet, as necessary.
+    bitcoin.wallet_unlock()
+
+    # Get unsigned transaction serialisation.
+    unsigned_tx_hex = util.api(method, params)
+    print('Transaction (unsigned):', unsigned_tx_hex)
+
+    # Ask to sign and broadcast.
+    if not unsigned:
+        if config.TESTNET: print('Attention: TESTNET!')
+        if config.TESTCOIN: print('Attention: TESTCOIN!\n')
+        if input('Sign and broadcast? (y/N) ') == 'y':
+            print(bitcoin.transmit(unsigned_tx_hex))
+        else:
+            print('Transaction aborted.', file=sys.stderr)
+            sys.exit(1)
+
+
 def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=None,
                  bitcoind_rpc_user=None, bitcoind_rpc_password=None, rpc_host=None, rpc_port=None,
-                 rpc_user=None, rpc_password=None, log_file=None, database_file=None, testnet=False, testcoin=False, unittest=False, headless=False):
+                 rpc_user=None, rpc_password=None, log_file=None, database_file=None, testnet=False, testcoin=False, unittest=False):
 
     # Unittests always run on testnet.
     if unittest and not testnet:
@@ -209,9 +230,6 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
             config.BURN_END = 283810
             config.UNSPENDABLE = '1CounterpartyXXXXXXXXXXXXXXXUWLpVr'
 
-    # Headless operation
-    config.HEADLESS = headless
-
 def balances (address):
     def get_btc_balance(address):
         r = requests.get("https://blockchain.info/q/addressbalance/" + address)
@@ -250,7 +268,6 @@ if __name__ == '__main__':
     parser.add_argument('--testnet', action='store_true', help='use Bitcoin testnet addresses and block numbers')
     parser.add_argument('--testcoin', action='store_true', help='use the test Counterparty network on every blockchain')
     parser.add_argument('--unsigned', action='store_true', default=False, help='print out unsigned hex of transaction; do not sign or broadcast')
-    parser.add_argument('--headless', action='store_true', default=False, help='assume headless operation, e.g. don’t ask for wallet passhrase')
 
     parser.add_argument('--data-dir', help='the directory in which to keep the database, config file and log file, by default')
     parser.add_argument('--database-file', help='the location of the SQLite3 database')
@@ -360,7 +377,7 @@ if __name__ == '__main__':
     # Configuration
     set_options(data_dir=args.data_dir, bitcoind_rpc_connect=args.bitcoind_rpc_connect, bitcoind_rpc_port=args.bitcoind_rpc_port,
                  bitcoind_rpc_user=args.bitcoind_rpc_user, bitcoind_rpc_password=args.bitcoind_rpc_password, rpc_host=args.rpc_host, rpc_port=args.rpc_port,
-                 rpc_user=args.rpc_user, rpc_password=args.rpc_password, log_file=args.log_file, database_file=args.database_file, testnet=args.testnet, testcoin=args.testcoin, unittest=False, headless=args.headless)
+                 rpc_user=args.rpc_user, rpc_password=args.rpc_password, log_file=args.log_file, database_file=args.database_file, testnet=args.testnet, testcoin=args.testcoin, unittest=False)
 
     # Database
     db = util.connect_to_db()
@@ -403,9 +420,9 @@ if __name__ == '__main__':
     # Do something.
     if args.action == 'send':
         quantity = util.devise(db, args.quantity, args.asset, 'input')
-        unsigned_tx_hex = send.create(db, args.source, args.destination,
-                                      quantity, args.asset, unsigned=args.unsigned)
-        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
+        cli('create_send', [args.source, args.destination, quantity,
+                           args.asset],
+           args.unsigned)
 
     elif args.action == 'order':
         fee_required, fee_fraction_provided = D(args.fee_fraction_required), D(args.fee_fraction_provided)
@@ -428,14 +445,14 @@ if __name__ == '__main__':
 
         give_quantity = util.devise(db, give_quantity, args.give_asset, 'input')
         get_quantity = util.devise(db, get_quantity, args.get_asset, 'input')
-        unsigned_tx_hex = order.create(db, args.source, args.give_asset, give_quantity,
-                                args.get_asset, get_quantity,
-                                args.expiration, fee_required, fee_provided, unsigned=args.unsigned)
-        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
+
+        cli('create_order', [args.source, args.give_asset, give_quantity,
+                            args.get_asset, get_quantity, args.expiration,
+                            fee_required, fee_provided],
+           args.unsigned)
 
     elif args.action == 'btcpay':
-        unsigned_tx_hex = btcpay.create(db, args.order_match_id, unsigned=args.unsigned)
-        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
+        cli('create_btcpay', [args.order_match_id], args.unsigned)
 
     elif args.action == 'issuance':
         quantity = util.devise(db, args.quantity, None, 'input',
@@ -450,22 +467,19 @@ if __name__ == '__main__':
         else:
             call_date, call_price = 0, 0
 
-        unsigned_tx_hex = issuance.create(db, args.source,
-                                          args.transfer_destination,
-                                          args.asset, quantity, args.divisible,
-                                          args.callable_, call_date,
-                                          call_price, args.description,
-                                          unsigned=args.unsigned)
-        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
+        cli('create_issuance', [args.source, args.transfer_destination,
+                               args.asset, quantity, args.divisible,
+                               args.callable_, call_date,
+                               call_price, args.description],
+           args.unsigned)
 
     elif args.action == 'broadcast':
         value = util.devise(db, args.value, 'value', 'input')
         fee_fraction = util.devise(db, args.fee_fraction, 'fraction', 'input')
 
-        unsigned_tx_hex = broadcast.create(db, args.source, int(time.time()),
-                                           value, fee_fraction, args.text,
-                                           unsigned=args.unsigned)
-        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
+        cli('create_broadcast', [args.source, int(time.time()),
+                                value, fee_fraction, args.text],
+           args.unsigned)
 
     elif args.action == 'bet':
         deadline = calendar.timegm(dateutil.parser.parse(args.deadline).utctimetuple())
@@ -474,31 +488,28 @@ if __name__ == '__main__':
         target_value = util.devise(db, args.target_value, 'value', 'input')
         leverage = util.devise(db, args.leverage, 'leverage', 'input')
 
-        unsigned_tx_hex = bet.create(db, args.source, args.feed_address,
-                                     util.BET_TYPE_ID[args.bet_type], deadline,
-                                     wager, counterwager, target_value,
-                                     leverage, args.expiration, unsigned=args.unsigned)
-        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
+        cli('create_bet', [args.source, args.feed_address,
+                          util.BET_TYPE_ID[args.bet_type], deadline,
+                          wager, counterwager, target_value,
+                          leverage, args.expiration],
+           args.unsigned)
 
     elif args.action == 'dividend':
         quantity_per_unit = util.devise(db, args.quantity_per_unit, 'XCP', 'input')
-        unsigned_tx_hex = dividend.create(db, args.source, quantity_per_unit,
-                                   args.asset, unsigned=args.unsigned)
-        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
+        cli('create_dividend', [args.source, quantity_per_unit, args.asset],
+           args.unsigned)
 
     elif args.action == 'burn':
         quantity = util.devise(db, args.quantity, 'BTC', 'input')
-        unsigned_tx_hex = burn.create(db, args.source, quantity, unsigned=args.unsigned)
-        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
+        cli('create_burn', [args.source, quantity], args.unsigned)
 
     elif args.action == 'cancel':
-        unsigned_tx_hex = cancel.create(db, args.offer_hash, unsigned=args.unsigned)
-        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
+        cli('create_cancel', [args.offer_hash], args.unsigned)
 
     elif args.action == 'callback':
-        unsigned_tx_hex = callback.create(db, args.source, util.devise(db, args.fraction, 'fraction', 'input'),
-                                   args.asset, unsigned=args.unsigned)
-        print(unsigned_tx_hex) if args.unsigned else json_print(bitcoin.transmit(unsigned_tx_hex))
+        cli('create_callback', [args.source, util.devise(db, args.fraction,
+                                'fraction', 'input'), args.asset],
+           args.unsigned)
 
     elif args.action == 'balances':
         try:

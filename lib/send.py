@@ -19,11 +19,11 @@ def validate (db, source, destination, amount, asset):
 
     return problems
 
-def create (db, source, destination, amount, asset, unsigned=False):
+def create (db, source, destination, amount, asset):
 
     # Just send BTC?
     if asset == 'BTC':
-        return bitcoin.transaction(source, destination, amount, config.MIN_FEE, None, unsigned=unsigned)
+        return bitcoin.transaction(source, destination, amount, config.MIN_FEE, None)
 
     balances = util.get_balances(db, address=source, asset=asset)
     if not balances or balances[0]['amount'] < amount:
@@ -36,7 +36,7 @@ def create (db, source, destination, amount, asset, unsigned=False):
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount)
 
-    return bitcoin.transaction(source, destination, None, config.MIN_FEE, data, unsigned=unsigned)
+    return bitcoin.transaction(source, destination, None, config.MIN_FEE, data)
 
 def parse (db, tx, message):
     cursor = db.cursor()

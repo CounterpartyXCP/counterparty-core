@@ -63,7 +63,7 @@ def validate (db, source, fraction, asset, block_time):
 
     return call_price, callback_total, outputs, problems
 
-def create (db, source, fraction, asset, unsigned=False):
+def create (db, source, fraction, asset):
     call_price, callback_total, outputs, problems = validate(db, source, fraction, asset, None)
     if problems: raise exceptions.CallbackError(problems)
     print('Total amount to be called back:', util.devise(db, callback_total, asset, 'output'), asset)
@@ -71,7 +71,7 @@ def create (db, source, fraction, asset, unsigned=False):
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, fraction, asset_id)
-    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, unsigned=unsigned)
+    return bitcoin.transaction(source, None, None, config.MIN_FEE, data)
 
 def parse (db, tx, message):
     callback_parse_cursor = db.cursor()

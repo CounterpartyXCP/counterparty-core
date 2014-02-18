@@ -27,7 +27,7 @@ def validate (db, source, destination, quantity, block_index=None, overburn=Fals
 
     return problems
 
-def create (db, source, quantity, overburn=False, unsigned=False):
+def create (db, source, quantity, overburn=False):
     destination = config.UNSPENDABLE
     problems = validate(db, source, destination, quantity, None, overburn=overburn)
     if problems: raise exceptions.BurnError(problems)
@@ -38,7 +38,7 @@ def create (db, source, quantity, overburn=False, unsigned=False):
     if quantity > (1 * config.UNIT - already_burned) and not overburn:
         raise exceptions.BurnError('1 BTC may be burned per address')
 
-    return bitcoin.transaction(source, destination, quantity, config.MIN_FEE, None, unsigned=unsigned)
+    return bitcoin.transaction(source, destination, quantity, config.MIN_FEE, None)
 
 def parse (db, tx, message=None):
     burn_parse_cursor = db.cursor()

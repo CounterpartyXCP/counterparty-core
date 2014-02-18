@@ -68,7 +68,7 @@ def validate (db, source, feed_address, bet_type, deadline, wager_amount,
     return problems
 
 def create (db, source, feed_address, bet_type, deadline, wager_amount,
-            counterwager_amount, target_value, leverage, expiration, unsigned=False):
+            counterwager_amount, target_value, leverage, expiration):
 
     # Check for sufficient funds.
     fee_fraction = get_fee_fraction(db, feed_address)
@@ -85,7 +85,7 @@ def create (db, source, feed_address, bet_type, deadline, wager_amount,
                         wager_amount, counterwager_amount, target_value,
                         leverage, expiration)
     return bitcoin.transaction(source, feed_address, None, config.MIN_FEE,
-                               data, unsigned=unsigned)
+                               data)
 
 def parse (db, tx, message):
     bet_parse_cursor = db.cursor()

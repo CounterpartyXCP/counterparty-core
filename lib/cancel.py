@@ -32,14 +32,14 @@ def validate (db, offer_hash, source=None):
     return None, None, problems
 
 
-def create (db, offer_hash, unsigned=False):
+def create (db, offer_hash):
     source, offer, problems = validate(db, offer_hash)
     if problems: raise exceptions.CancelError(problems)
 
     offer_hash_bytes = binascii.unhexlify(bytes(offer_hash, 'utf-8'))
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, offer_hash_bytes)
-    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, unsigned=unsigned)
+    return bitcoin.transaction(source, None, None, config.MIN_FEE, data)
 
 def parse (db, tx, message):
     cursor = db.cursor()
