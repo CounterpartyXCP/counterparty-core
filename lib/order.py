@@ -119,8 +119,10 @@ def match (db, tx):
     cursor.execute('''SELECT * FROM orders \
                       WHERE (give_asset=? AND get_asset=? AND validity=?)''',
                    (tx1['get_asset'], tx1['give_asset'], 'valid'))
+
     tx1_give_remaining = tx1['give_remaining']
     tx1_get_remaining = tx1['get_remaining']
+
     order_matches = cursor.fetchall()
     if tx['block_index'] > 284500:  # For backwards‐compatibility (no sorting before this block).
         order_matches = sorted(order_matches, key=lambda x: x['tx_index'])                              # Sort by tx index second.
@@ -130,12 +132,14 @@ def match (db, tx):
     tx1_fee_remaining = tx1['fee_remaining']
 
     for tx0 in order_matches:
+        tx0_give_remaining = tx0['give_remaining']
+        tx0_get_remaining = tx0['get_remaining']
 
         # Get fee remaining.
         tx0_fee_remaining = tx0['fee_remaining']
 
         # Make sure that that both orders still have funds remaining [to be sold].
-        if tx0['give_remaining'] <= 0 or tx1_give_remaining <= 0: continue
+        if tx0_give_remaining <= 0 or tx1_give_remaining <= 0: continue
 
         # If the prices agree, make the trade. The found order sets the price,
         # and they trade as much as they can.
@@ -147,7 +151,7 @@ def match (db, tx):
         if tx['block_index'] < 286000: tx1_inverse_price = D(1) / tx1_price
 
         if tx0_price <= tx1_inverse_price:
-            forward_amount = int(min(tx0['give_remaining'], D(tx1_give_remaining) / tx0_price))
+            forward_amount = int(min(tx0_give_remaining, D(tx1_give_remaining) / tx0_price))
             backward_amount = round(forward_amount * tx0_price)
 
             if not forward_amount: continue
@@ -186,10 +190,10 @@ def match (db, tx):
             # Debit the order, even if it involves giving bitcoins, and so one
             # can't debit the sending account.
             # Get remainings may be negative.
-            tx0_give_remaining = tx0['give_remaining'] - forward_amount
-            tx0_get_remaining = tx0['get_remaining'] - backward_amount
-            tx1_give_remaining = tx1_give_remaining - backward_amount
-            tx1_get_remaining = tx1_get_remaining - forward_amount
+            tx0_give_remaining -= forward_amount
+            tx0_get_remaining -= backward_amount
+            tx1_give_remaining -= backward_amount
+            tx1_get_remaining -= forward_amount
 
             # Update give_remaining, get_remaining.
             # tx0
