@@ -8,7 +8,7 @@ UNITTEST_PREFIX = b'TESTXXXX'
 
 # Versions
 CLIENT_VERSION_MAJOR = 5
-CLIENT_VERSION_MINOR = 1
+CLIENT_VERSION_MINOR = 2
 CLIENT_VERSION = float(str(CLIENT_VERSION_MAJOR) + '.' + str(CLIENT_VERSION_MINOR))
 DB_VERSION_MAJOR = 6        # Major version changes the blocks or transactions table.
 DB_VERSION_MINOR = 19       # Minor version changes just the parsing.
