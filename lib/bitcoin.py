@@ -196,6 +196,7 @@ def serialise (inputs, multisig, destination_output=None, data_output=None, chan
     if destination_output: n += 1
     if data_output:
         data_array, value = data_output
+        assert type(value) == int
         for data_chunk in data_array: n += 1
     else:
         data_array = []
@@ -205,6 +206,7 @@ def serialise (inputs, multisig, destination_output=None, data_output=None, chan
     # Destination output.
     if destination_output:
         address, value = destination_output
+        assert type(value) == int
         pubkeyhash = base58_decode(address, config.ADDRESSVERSION)
         s += value.to_bytes(8, byteorder='little')          # Value
         script = OP_DUP                                     # OP_DUP
@@ -219,7 +221,8 @@ def serialise (inputs, multisig, destination_output=None, data_output=None, chan
     # Data output.
     for data_chunk in data_array:
         data_array, value = data_output # DUPE
-        s += (value).to_bytes(8, byteorder='little')        # Value
+        assert type(value) == int
+        s += value.to_bytes(8, byteorder='little')        # Value
 
         if multisig:
             # Get source public key.
@@ -260,6 +263,7 @@ def serialise (inputs, multisig, destination_output=None, data_output=None, chan
     # Change output.
     if change_output:
         address, value = change_output
+        assert type(value) == int
         pubkeyhash = base58_decode(address, config.ADDRESSVERSION)
         s += value.to_bytes(8, byteorder='little')          # Value
         script = OP_DUP                                     # OP_DUP
@@ -342,7 +346,14 @@ def transaction (source, destination, btc_amount, fee, data, unittest=False, mul
 
     # Check that the destination output isn't a dust output.
     if destination:
-        if not btc_amount >= config.DUST_SIZE:
+        try:
+            if multisig:
+                if btc_amount == None: btc_amount = config.MULTISIG_DUST_SIZE
+                assert btc_amount >= config.MULTISIG_DUST_SIZE
+            else:
+                if btc_amount == None: btc_amount = config.REGULAR_DUST_SIZE
+                assert btc_amount >= config.REGULAR_DUST_SIZE
+        except AssertionError:
             raise exceptions.TransactionError('Destination output is below the dust target value.')
     else:
         assert not btc_amount
@@ -363,8 +374,8 @@ def transaction (source, destination, btc_amount, fee, data, unittest=False, mul
 
     # Calculate total BTC to be sent.
     total_btc_out = fee
-    if multisig: data_value = config.DUST_SIZE
-    else: data_value = config.DATA_VALUE
+    if multisig: data_value = config.MULTISIG_DUST_SIZE
+    else: data_value = config.OP_RETURN_VALUE
     for data_chunk in data_array: total_btc_out += data_value
     if destination: total_btc_out += btc_amount
 

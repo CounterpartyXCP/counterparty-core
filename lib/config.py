@@ -16,10 +16,10 @@ DB_VERSION = float(str(DB_VERSION_MAJOR) + '.' + str(DB_VERSION_MINOR))
 
 # Bitcoin protocol
 MULTISIG = True
-# DUST_SIZE = 5430      # OP_RETURN
-DUST_SIZE = 5430 * 2    # Multi‐sig (TODO: This is just a guess.)
-MIN_FEE = 10000         # Counterparty transactions are all under 1KB in size.
-DATA_VALUE = 0
+REGULAR_DUST_SIZE = 5430        # TODO: This is just a guess. I got it down to 5530 satoshis.
+OP_RETURN_VALUE = 0
+MULTISIG_DUST_SIZE = 5430 * 2   # TODO: This is just a guess. I did it down to 1.4x. (Used for regular outputs in multi‐sig transactions, too.)
+MIN_FEE = 10000                 # Counterparty transactions are all under 1KB in size.
 
 # Counterparty protocol
 TXTYPE_FORMAT = '>I'

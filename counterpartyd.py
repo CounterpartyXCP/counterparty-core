@@ -460,7 +460,7 @@ if __name__ == '__main__':
 
     elif args.action == 'broadcast':
         value = util.devise(db, args.value, 'value', 'input')
-        fee_fraction = util.devise(db, args.fee_fraction, 'fracton', 'input')
+        fee_fraction = util.devise(db, args.fee_fraction, 'fraction', 'input')
 
         unsigned_tx_hex = broadcast.create(db, args.source, int(time.time()),
                                            value, fee_fraction, args.text,

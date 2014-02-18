@@ -84,8 +84,8 @@ def create (db, source, feed_address, bet_type, deadline, wager_amount,
     data += struct.pack(FORMAT, bet_type, deadline,
                         wager_amount, counterwager_amount, target_value,
                         leverage, expiration)
-    return bitcoin.transaction(source, feed_address, config.DUST_SIZE,
-                               config.MIN_FEE, data, unsigned=unsigned)
+    return bitcoin.transaction(source, feed_address, None, config.MIN_FEE,
+                               data, unsigned=unsigned)
 
 def parse (db, tx, message):
     bet_parse_cursor = db.cursor()

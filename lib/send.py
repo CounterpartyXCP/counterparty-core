@@ -20,7 +20,8 @@ def validate (db, source, destination, amount, asset):
     return problems
 
 def create (db, source, destination, amount, asset, unsigned=False):
-    # Just send BTC.
+
+    # Just send BTC?
     if asset == 'BTC':
         return bitcoin.transaction(source, destination, amount, config.MIN_FEE, None, unsigned=unsigned)
 
@@ -34,7 +35,8 @@ def create (db, source, destination, amount, asset, unsigned=False):
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount)
-    return bitcoin.transaction(source, destination, config.DUST_SIZE, config.MIN_FEE, data, unsigned=unsigned)
+
+    return bitcoin.transaction(source, destination, None, config.MIN_FEE, data, unsigned=unsigned)
 
 def parse (db, tx, message):
     cursor = db.cursor()
