@@ -169,11 +169,11 @@ def match (db, tx):
             # Check and update fee remainings.
             if tx1['block_index'] >= 286500: # Deduct fee_required from fee_remaining, if possible (else don’t match).
                 if tx1['get_asset'] == 'BTC':
-                    fee = int(D(tx1['fee_required']) * D(forward_amount) / D(tx0_give_remaining))
+                    fee = int(D(tx1['fee_required']) * D(forward_amount) / D(tx1_get_remaining))
                     if tx0_fee_remaining < fee: continue
                     else: tx0_fee_remaining -= fee
                 elif tx1['give_asset'] == 'BTC':
-                    fee = int(D(tx0['fee_required']) * D(backward_amount) / D(tx1_give_remaining))
+                    fee = int(D(tx0['fee_required']) * D(backward_amount) / D(tx0_get_remaining))
                     if tx1_fee_remaining < fee: continue
                     else: tx1_fee_remaining -= fee 
             else:   # Don’t deduct.
