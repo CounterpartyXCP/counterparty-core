@@ -25,6 +25,7 @@ def create (db, source, destination, amount, asset):
     if asset == 'BTC':
         return bitcoin.transaction(source, destination, amount, config.MIN_FEE, None)
 
+    # Only for outgoing (incoming will overburn).
     balances = util.get_balances(db, address=source, asset=asset)
     if not balances or balances[0]['amount'] < amount:
         raise exceptions.SendError('insufficient funds')

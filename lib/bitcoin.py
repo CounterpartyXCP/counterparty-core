@@ -170,7 +170,7 @@ def op_push (i):
     else:
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
-def serialise (inputs, multisig, destination_output=None, data_output=None, change_output=None, source=None, sign=False):
+def serialise (inputs, multisig, destination_output=None, data_output=None, change_output=None, source=None, signature=None):
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
     # Number of inputs.
@@ -182,7 +182,7 @@ def serialise (inputs, multisig, destination_output=None, data_output=None, chan
         s += binascii.unhexlify(bytes(txin['txid'], 'utf-8'))[::-1]         # TxOutHash
         s += txin['vout'].to_bytes(4, byteorder='little')   # TxOutIndex
 
-        if not sign:
+        if not signature:
             # No signature.
             script = b''
         else:
@@ -204,7 +204,6 @@ def serialise (inputs, multisig, destination_output=None, data_output=None, chan
     if destination_output: n += 1
     if data_output:
         data_array, value = data_output
-        assert type(value) == int
         for data_chunk in data_array: n += 1
     else:
         data_array = []
@@ -214,7 +213,6 @@ def serialise (inputs, multisig, destination_output=None, data_output=None, chan
     # Destination output.
     if destination_output:
         address, value = destination_output
-        assert type(value) == int
         pubkeyhash = base58_decode(address, config.ADDRESSVERSION)
         s += value.to_bytes(8, byteorder='little')          # Value
         script = OP_DUP                                     # OP_DUP
@@ -229,14 +227,12 @@ def serialise (inputs, multisig, destination_output=None, data_output=None, chan
     # Data output.
     for data_chunk in data_array:
         data_array, value = data_output # DUPE
-        assert type(value) == int
         s += value.to_bytes(8, byteorder='little')        # Value
 
         if multisig:
             # Get source public key.
-            if not sign:
-                assert isinstance(sign, str)
-                pubkeypair = bitcoin_utils.parse_as_public_pair(sign)
+            if isinstance(signature, str):
+                pubkeypair = bitcoin_utils.parse_as_public_pair(signature)
                 source_pubkey = public_pair_to_sec(pubkeypair, compressed=True)
             else:
                 if config.PREFIX == config.UNITTEST_PREFIX:
@@ -271,7 +267,6 @@ def serialise (inputs, multisig, destination_output=None, data_output=None, chan
     # Change output.
     if change_output:
         address, value = change_output
-        assert type(value) == int
         pubkeyhash = base58_decode(address, config.ADDRESSVERSION)
         s += value.to_bytes(8, byteorder='little')          # Value
         script = OP_DUP                                     # OP_DUP
@@ -355,15 +350,14 @@ def transaction (source, destination, btc_amount, fee, data, unittest=False, mul
 
     # Check that the destination output isn't a dust output.
     if destination:
-        try:
-            if multisig:
-                if btc_amount == None: btc_amount = config.MULTISIG_DUST_SIZE
-                assert btc_amount >= config.MULTISIG_DUST_SIZE
-            else:
-                if btc_amount == None: btc_amount = config.REGULAR_DUST_SIZE
-                assert btc_amount >= config.REGULAR_DUST_SIZE
-        except AssertionError:
-            raise exceptions.TransactionError('Destination output is below the dust target value.')
+        if multisig:
+            if btc_amount == None: btc_amount = config.MULTISIG_DUST_SIZE
+            if not btc_amount >= config.MULTISIG_DUST_SIZE:
+                raise exceptions.TransactionError('Destination output is below the dust target value.')
+        else:
+            if btc_amount == None: btc_amount = config.REGULAR_DUST_SIZE
+            if not btc_amount >= config.REGULAR_DUST_SIZE:
+                raise exceptions.TransactionError('Destination output is below the dust target value.')
     else:
         assert not btc_amount
 
@@ -403,7 +397,7 @@ def transaction (source, destination, btc_amount, fee, data, unittest=False, mul
     else: change_output = None
 
     # Serialise inputs and outputs.
-    transaction = serialise(inputs, multisig, destination_output, data_output, change_output, source=source, sign=False)
+    transaction = serialise(inputs, multisig, destination_output, data_output, change_output, source=source, signature=None)
     unsigned_tx_hex = binascii.hexlify(transaction).decode('utf-8')
     return unsigned_tx_hex
 

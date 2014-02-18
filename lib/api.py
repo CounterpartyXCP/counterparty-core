@@ -292,7 +292,7 @@ class APIServer(threading.Thread):
         ######################
         #WRITE/ACTION API
         @dispatcher.add_method
-        def create_bet(source, feed_address, bet_type, deadline, wager, counterwager, target_value=0.0, leverage=5040):
+        def create_bet(source, feed_address, bet_type, deadline, wager, counterwager, expiration, target_value=0.0, leverage=5040):
             bet_type_id = util.BET_TYPE_ID[bet_type]
             return bet.create(db, source, feed_address,
                               bet_type_id, deadline, wager,
@@ -300,7 +300,7 @@ class APIServer(threading.Thread):
                               leverage, expiration)
 
         @dispatcher.add_method
-        def create_broadcast(source, fee_fraction, text, timestamp, value=0):
+        def create_broadcast(source, fee_fraction, text, timestamp, value=-1):
             return broadcast.create(db, source, timestamp,
                                     value, fee_fraction, text)
 
@@ -317,9 +317,13 @@ class APIServer(threading.Thread):
             return cancel.create(db, offer_hash)
 
         @dispatcher.add_method
-        def create_dividend(source, quantity_per_unit, share_asset):
+        def create_callback(source, fraction, asset):
+            return callback.create(db, source, fraction, asset)
+
+        @dispatcher.add_method
+        def create_dividend(source, quantity_per_unit, asset):
             return dividend.create(db, source, quantity_per_unit,
-                                   share_asset)
+                                   asset)
 
         @dispatcher.add_method
         def create_issuance(source, quantity, asset, divisible, description, callable_=None, call_date=None, call_price=None, transfer_destination=None):
@@ -341,7 +345,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def create_send(source, destination, quantity, asset):
             return send.create(db, source, destination, quantity, asset)
-
+                
         @dispatcher.add_method
         def transmit(unsigned_tx_hex):
             return bitcoin.transmit(unsigned_tx_hex)

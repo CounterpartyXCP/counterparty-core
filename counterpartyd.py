@@ -407,26 +407,31 @@ if __name__ == '__main__':
 
     if args.action == None: args.action = 'server'
 
+
+    # TODO
     # Check versions.
     util.versions_check(db)
-
     # Check that bitcoind is running, communicable, and caught up with the blockchain.
     # Check that the database has caught up with bitcoind.
     if not args.force:
         bitcoin.bitcoind_check(db)
         if args.action not in ('server', 'reparse', 'rollback'):
             util.database_check(db, bitcoin.rpc('getblockcount', []))
+    # TODO
 
     # Do something.
+
+
+    # MESSAGE CREATION
     if args.action == 'send':
         quantity = util.devise(db, args.quantity, args.asset, 'input')
         cli('create_send', [args.source, args.destination, quantity,
                            args.asset],
-           args.unsigned)
+            args.unsigned)
 
     elif args.action == 'order':
         fee_required, fee_fraction_provided = D(args.fee_fraction_required), D(args.fee_fraction_provided)
-        give_quantity, get_fraction_quantity = D(args.give_quantity), D(args.get_quantity)
+        give_quantity, get_quantity = D(args.give_quantity), D(args.get_quantity)
 
         # Fee argument is either fee_required or fee_provided, as necessary.
         if args.give_asset == 'BTC':
@@ -446,8 +451,8 @@ if __name__ == '__main__':
         give_quantity = util.devise(db, give_quantity, args.give_asset, 'input')
         get_quantity = util.devise(db, get_quantity, args.get_asset, 'input')
 
-        cli('create_order', [args.source, args.give_asset, give_quantity,
-                            args.get_asset, get_quantity, args.expiration,
+        cli('create_order', [args.source, give_quantity, args.give_asset,
+                            get_quantity, args.get_asset, args.expiration,
                             fee_required, fee_provided],
            args.unsigned)
 
@@ -477,8 +482,8 @@ if __name__ == '__main__':
         value = util.devise(db, args.value, 'value', 'input')
         fee_fraction = util.devise(db, args.fee_fraction, 'fraction', 'input')
 
-        cli('create_broadcast', [args.source, int(time.time()),
-                                value, fee_fraction, args.text],
+        cli('create_broadcast', [args.source, fee_fraction, args.text,
+                                 int(time.time()), value],
            args.unsigned)
 
     elif args.action == 'bet':
@@ -490,8 +495,8 @@ if __name__ == '__main__':
 
         cli('create_bet', [args.source, args.feed_address,
                           util.BET_TYPE_ID[args.bet_type], deadline,
-                          wager, counterwager, target_value,
-                          leverage, args.expiration],
+                          wager, counterwager, args.expiration, target_value,
+                          leverage],
            args.unsigned)
 
     elif args.action == 'dividend':
@@ -511,6 +516,8 @@ if __name__ == '__main__':
                                 'fraction', 'input'), args.asset],
            args.unsigned)
 
+
+    # VIEWING (temporary)
     elif args.action == 'balances':
         try:
             bitcoin.base58_decode(args.address, config.ADDRESSVERSION)
@@ -581,20 +588,20 @@ if __name__ == '__main__':
             table.add_row(order_match)
         print(table)
 
+
+    # PARSING
     elif args.action == 'reparse':
         blocks.reparse(db)
 
     elif args.action == 'rollback':
         blocks.reparse(db, block_index=args.block_index)
 
-    # elif args.action == 'checksum':
-        # print('Asset name:', args.string + checksum.compute(args.string))
-
     elif args.action == 'server':
         api_server = api.APIServer()
         api_server.daemon = True
         api_server.start()
         blocks.follow(db)
+
 
     else:
         parser.print_help()
