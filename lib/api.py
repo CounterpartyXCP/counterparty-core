@@ -225,10 +225,10 @@ class APIServer(threading.Thread):
             locked = not last_issuance['amount'] and not last_issuance['transfer']
             total_issued = sum([e['amount'] for e in issuances])
             return {'owner': last_issuance['issuer'],
-                    'divisible': last_issuance['divisible'],
+                    'divisible': bool(last_issuance['divisible']),
                     'locked': locked,
                     'total_issued': total_issued,
-                    'callable': last_issuance['callable'],
+                    'callable': bool(last_issuance['callable']),
                     'call_date': util.isodt(last_issuance['call_date']) if last_issuance['call_date'] else None,
                     'call_price': last_issuance['call_price'],
                     'description': last_issuance['description'],
@@ -248,8 +248,10 @@ class APIServer(threading.Thread):
             
         @dispatcher.add_method
         def get_running_info():
+            latestBlockIndex = bitcoin.rpc('getblockcount', [])
+            
             try:
-                util.database_check(db, bitcoin.rpc('getblockcount', []))
+                util.database_check(db, latestBlockIndex)
             except:
                 caught_up = False
             else:
@@ -262,6 +264,7 @@ class APIServer(threading.Thread):
                 
             return {
                 'db_caught_up': caught_up,
+                'bitcoin_block_count': latestBlockIndex,
                 'last_block': last_block,
                 'counterpartyd_version': config.CLIENT_VERSION,
                 'running_testnet': config.TESTNET,
@@ -339,12 +342,13 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def do_order(source, give_quantity, give_asset, get_quantity, get_asset, expiration, fee_required=0,
-                     fee_provided=config.MIN_FEE / config.UNIT, unsigned=False):
+                     fee_provided=config.MIN_FEE, unsigned=False):
             unsigned_tx_hex = order.create(db, source, give_asset,
                                            give_quantity, get_asset,
                                            get_quantity, expiration,
                                            fee_required, fee_provided,
                                            unsigned=unsigned)
+            
             return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
 
         @dispatcher.add_method
