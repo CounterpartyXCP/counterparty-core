@@ -511,7 +511,9 @@ def get_tx_info (tx):
         vin_tx = bitcoin.rpc('getrawtransaction', [vin['txid'], 1])     # Get the full transaction data for this input transaction.
         vout = vin_tx['vout'][vin['vout']]
         fee += D(vout['value']) * config.UNIT
-        source_list.append(vout['scriptPubKey']['addresses'][0])        # Assume that the output was not not multi-sig.
+        addresses = vout['scriptPubKey']['addresses']
+        if len(addresses) != 1: return b'', None, None, None, None      # NOTE: Disallow multi‐sig inputs.
+        source_list.append(addresses[0])
     # Require that all possible source addresses be the same.
     if all(x == source_list[0] for x in source_list): source = source_list[0]
     else: source = None

@@ -1,5 +1,5 @@
 {
-	"minimum_client_version": 5.3,
+	"minimum_client_version": 6.0,
 	"protocol_changes": [
 		{
 			"block_index": 285306,
@@ -10,6 +10,11 @@
 			"block_index": 0,
 			"minimum_database_version": 6.17,
 			"description": "double credits on order match expirations"
+		},
+		{
+			"block_index": 0,
+			"minimum_database_version": 7.0,
+			"description": "arbitrary spend with multi‐sig input"
 		}
 	]
 }
