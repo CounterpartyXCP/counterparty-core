@@ -295,59 +295,69 @@ class APIServer(threading.Thread):
         ######################
         #WRITE/ACTION API
         @dispatcher.add_method
-        def create_bet(source, feed_address, bet_type, deadline, wager, counterwager, expiration, target_value=0.0, leverage=5040):
+        def create_bet(source, feed_address, bet_type, deadline, wager, counterwager, expiration, target_value=0.0, leverage=5040, multisig=config.MULTISIG):
             bet_type_id = util.BET_TYPE_ID[bet_type]
-            return bet.create(db, source, feed_address,
+            tx_info = bet.compose(db, source, feed_address,
                               bet_type_id, deadline, wager,
                               counterwager, target_value,
                               leverage, expiration)
+            return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def create_broadcast(source, fee_fraction, text, timestamp, value=-1):
-            return broadcast.create(db, source, timestamp,
+        def create_broadcast(source, fee_fraction, text, timestamp, value=-1, multisig=config.MULTISIG):
+            tx_info = broadcast.compose(db, source, timestamp,
                                     value, fee_fraction, text)
+            return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def create_btcpay(order_match_id):
-            return btcpay.create(db, order_match_id)
+        def create_btcpay(order_match_id, multisig=config.MULTISIG):
+            tx_info = btcpay.compose(db, order_match_id)
+            return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def create_burn(source, quantity):
-            return burn.create(db, source, quantity)
+        def create_burn(source, quantity, multisig=config.MULTISIG):
+            tx_info = burn.compose(db, source, quantity)
+            return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def create_cancel(offer_hash):
-            return cancel.create(db, offer_hash)
+        def create_cancel(offer_hash, multisig=config.MULTISIG):
+            tx_info = cancel.compose(db, offer_hash)
+            return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def create_callback(source, fraction, asset):
-            return callback.create(db, source, fraction, asset)
+        def create_callback(source, fraction, asset, multisig=config.MULTISIG):
+            tx_info = callback.compose(db, source, fraction, asset)
+            return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def create_dividend(source, quantity_per_unit, asset):
-            return dividend.create(db, source, quantity_per_unit,
+        def create_dividend(source, quantity_per_unit, asset, multisig=config.MULTISIG):
+            tx_info = dividend.compose(db, source, quantity_per_unit,
                                    asset)
+            return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def create_issuance(source, quantity, asset, divisible, description, callable_=None, call_date=None, call_price=None, transfer_destination=None):
+        def create_issuance(source, asset, quantity, divisible, description, callable_=None, call_date=None, call_price=None, transfer_destination=None, multisig=config.MULTISIG):
             try:
                 quantity = int(quantity)
             except ValueError:
                 raise Exception("Invalid quantity")
-            return issuance.create(db, source, transfer_destination,
+            tx_info = issuance.compose(db, source, transfer_destination,
                                    asset, quantity, divisible, callable_,
                                    call_date, call_price, description)
+            return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def create_order(source, give_quantity, give_asset, get_quantity, get_asset, expiration, fee_required, fee_provided):
-            return order.create(db, source, give_asset,
+        def create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, fee_provided, multisig=config.MULTISIG):
+            tx_info = order.compose(db, source, give_asset,
                                 give_quantity, get_asset,
                                 get_quantity, expiration,
                                 fee_required, fee_provided)
+            return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def create_send(source, destination, quantity, asset):
-            return send.create(db, source, destination, quantity, asset)
+        def create_send(source, destination, asset, quantity, multisig=config.MULTISIG):
+            tx_info = send.compose(db, source, destination, asset, quantity)
+            return bitcoin.transaction(tx_info, multisig)
                 
         @dispatcher.add_method
         def transmit(unsigned_tx_hex):

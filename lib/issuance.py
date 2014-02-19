@@ -74,7 +74,7 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
 
     return problems
 
-def create (db, source, destination, asset, amount, divisible, callable_, call_date, call_price, description):
+def compose (db, source, destination, asset, amount, divisible, callable_, call_date, call_price, description):
     problems = validate(db, source, destination, asset, amount, divisible, callable_, call_date, call_price, description)
     if problems: raise exceptions.IssuanceError(problems)
 
@@ -83,7 +83,7 @@ def create (db, source, destination, asset, amount, divisible, callable_, call_d
     data += struct.pack(FORMAT_2, asset_id, amount, divisible, callable_, call_date or 0, call_price or 0, description.encode('utf-8'))
     if len(data) > 80:
         raise exceptions.IssuanceError('Description is greater than 52 bytes.')
-    return bitcoin.transaction(source, None, None, config.MIN_FEE, data)
+    return (source, None, None, config.MIN_FEE, data)
 
 def parse (db, tx, message):
     issuance_parse_cursor = db.cursor()

@@ -170,7 +170,7 @@ def op_push (i):
     else:
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
-def serialise (inputs, multisig, destination_output=None, data_output=None, change_output=None, source=None, signature=None):
+def serialise (inputs, destination_output=None, data_output=None, change_output=None, source=None, multisig=False):
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
     # Number of inputs.
@@ -182,19 +182,7 @@ def serialise (inputs, multisig, destination_output=None, data_output=None, chan
         s += binascii.unhexlify(bytes(txin['txid'], 'utf-8'))[::-1]         # TxOutHash
         s += txin['vout'].to_bytes(4, byteorder='little')   # TxOutIndex
 
-        if not signature:
-            # No signature.
-            script = b''
-        else:
-            #pubkeyhash = base58_decode(source, config.ADDRESSVERSION)
-            #script = OP_DUP                                     # OP_DUP
-            #script += OP_HASH160                                # OP_HASH160
-            #script += op_push(20)                               # Push 0x14 bytes
-            #script += pubkeyhash                                # pubKeyHash
-            #script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
-            #script += OP_CHECKSIG                               # OP_CHECKSIG
-            script = str.encode(txin['scriptPubKey'])
-
+        script = str.encode(txin['scriptPubKey'])
         s += var_int(int(len(script)))                      # Script length
         s += script                                         # Script
         s += b'\xff' * 4                                    # Sequence
@@ -230,9 +218,9 @@ def serialise (inputs, multisig, destination_output=None, data_output=None, chan
         s += value.to_bytes(8, byteorder='little')        # Value
 
         if multisig:
-            # Get source public key.
-            if isinstance(signature, str):
-                pubkeypair = bitcoin_utils.parse_as_public_pair(signature)
+            # Get source public key (either provided as a string or derived from a private key in the wallet).
+            if isinstance(multisig, str):
+                pubkeypair = bitcoin_utils.parse_as_public_pair(multisig)
                 source_pubkey = public_pair_to_sec(pubkeypair, compressed=True)
             else:
                 if config.PREFIX == config.UNITTEST_PREFIX:
@@ -331,7 +319,9 @@ def get_inputs (source, total_btc_out, unittest=False):
     return None, None
 
 # Replace unittest flag with fake bitcoind JSON-RPC server.
-def transaction (source, destination, btc_amount, fee, data, unittest=False, multisig=config.MULTISIG):
+def transaction (tx_info, multisig, unittest=False):
+    source, destination, btc_amount, fee, data = tx_info
+
     if config.PREFIX == config.UNITTEST_PREFIX: unittest = True
 
     # Validate addresses.
@@ -397,7 +387,7 @@ def transaction (source, destination, btc_amount, fee, data, unittest=False, mul
     else: change_output = None
 
     # Serialise inputs and outputs.
-    transaction = serialise(inputs, multisig, destination_output, data_output, change_output, source=source, signature=None)
+    transaction = serialise(inputs, destination_output, data_output, change_output, source=source, multisig=multisig)
     unsigned_tx_hex = binascii.hexlify(transaction).decode('utf-8')
     return unsigned_tx_hex
 

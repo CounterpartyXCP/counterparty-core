@@ -425,8 +425,8 @@ if __name__ == '__main__':
     # MESSAGE CREATION
     if args.action == 'send':
         quantity = util.devise(db, args.quantity, args.asset, 'input')
-        cli('create_send', [args.source, args.destination, quantity,
-                           args.asset],
+        cli('create_send', [args.source, args.destination, args.asset,
+                           quantity],
             args.unsigned)
 
     elif args.action == 'order':
@@ -451,8 +451,8 @@ if __name__ == '__main__':
         give_quantity = util.devise(db, give_quantity, args.give_asset, 'input')
         get_quantity = util.devise(db, get_quantity, args.get_asset, 'input')
 
-        cli('create_order', [args.source, give_quantity, args.give_asset,
-                            get_quantity, args.get_asset, args.expiration,
+        cli('create_order', [args.source, args.give_asset, give_quantity,
+                            args.get_asset, get_quantity, args.expiration,
                             fee_required, fee_provided],
            args.unsigned)
 

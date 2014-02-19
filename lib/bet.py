@@ -67,7 +67,7 @@ def validate (db, source, feed_address, bet_type, deadline, wager_amount,
 
     return problems
 
-def create (db, source, feed_address, bet_type, deadline, wager_amount,
+def compose (db, source, feed_address, bet_type, deadline, wager_amount,
             counterwager_amount, target_value, leverage, expiration):
 
     # Check for sufficient funds.
@@ -84,7 +84,7 @@ def create (db, source, feed_address, bet_type, deadline, wager_amount,
     data += struct.pack(FORMAT, bet_type, deadline,
                         wager_amount, counterwager_amount, target_value,
                         leverage, expiration)
-    return bitcoin.transaction(source, feed_address, None, config.MIN_FEE,
+    return (source, feed_address, None, config.MIN_FEE,
                                data)
 
 def parse (db, tx, message):

@@ -160,10 +160,8 @@ def test_initialise ():
     cursor.close()
 
 def test_burn ():
-    unsigned_tx_hex = burn.create(db, source_default, int(.62 * quantity))
-
+    unsigned_tx_hex = util.api('create_burn', [source_default, int(.62 * quantity)])
     parse_hex(unsigned_tx_hex)
-
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_send ():

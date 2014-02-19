@@ -52,7 +52,7 @@ def validate (db, source, timestamp, value, fee_fraction_int, text):
 
     return problems
 
-def create (db, source, timestamp, value, fee_fraction, text):
+def compose (db, source, timestamp, value, fee_fraction, text):
 
     # Store the fee fraction as an integer.
     fee_fraction_int = int(D(fee_fraction) * D(1e8))
@@ -65,7 +65,7 @@ def create (db, source, timestamp, value, fee_fraction, text):
                         text.encode('utf-8'))
     if len(data) > 80:
         raise exceptions.BroadcastError('Text is greater than 52 bytes.')
-    return bitcoin.transaction(source, None, None, config.MIN_FEE, data)
+    return (source, None, None, config.MIN_FEE, data)
 
 def parse (db, tx, message):
     broadcast_parse_cursor = db.cursor()
