@@ -27,7 +27,7 @@ def validate (db, source, fraction, asset, block_time):
         return None, None, None, problems
     else:
         last_issuance = issuances[-1]
-        if block_time == None:
+        if block_time == None:  # For composition only.
             block_time = util.last_block(db)['block_time']
 
         if last_issuance['issuer'] != source:
@@ -87,9 +87,7 @@ def parse (db, tx, message):
         validity = 'invalid: could not unpack'
 
     if validity == 'valid':
-        block = util.last_block(db)
-        block_time = block['block_time']
-        call_price, callback_total, outputs, problems = validate(db, tx['source'], fraction, asset, block_time)
+        call_price, callback_total, outputs, problems = validate(db, tx['source'], fraction, asset, tx['block_time'])
         if problems: validity = 'invalid: ' + ';'.join(problems)
 
     if validity == 'valid':

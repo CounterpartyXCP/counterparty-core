@@ -273,7 +273,7 @@ def versions_check (db):
     # comes into effect.
     try:
         block_index = last_block(db)['block_index']
-    except apsw.SQLError:
+    except (exceptions.DatabaseError, apsw.SQLError):
         logging.debug('Status: Version checks passed.') # DUPE
         return
     for protocol_change in versions['protocol_changes']:
