@@ -8,7 +8,7 @@ UNITTEST_PREFIX = b'TESTXXXX'
 
 # Versions
 CLIENT_VERSION_MAJOR = 6
-CLIENT_VERSION_MINOR = 0
+CLIENT_VERSION_MINOR = 1
 CLIENT_VERSION = float(str(CLIENT_VERSION_MAJOR) + '.' + str(CLIENT_VERSION_MINOR))
 DB_VERSION_MAJOR = 7        # Major version changes the blocks or transactions table.
 DB_VERSION_MINOR = 0        # Minor version changes just the parsing.
@@ -32,5 +32,5 @@ MAX_EXPIRATION = 4 * 2016   # Two months
 MAX_INT = 2**63 - 1
 
 # Order fees
-FEE_FRACTION_REQUIRED_DEFAULT = .09   # 0.9%
-FEE_FRACTION_PROVIDED_DEFAULT = .01   # 1.0%
+FEE_FRACTION_REQUIRED_DEFAULT = .0095  # 0.95%
+FEE_FRACTION_PROVIDED_DEFAULT = .01    # 1.00%
