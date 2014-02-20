@@ -633,10 +633,6 @@ def follow (db):
             logging.warning('Status: NEW DATABASE')
             block_index = config.BLOCK_FIRST
 
-            #in the case of this, send out an initialize message to our zmq feed, any attached services
-            # (such as counterwalletd) can then get this and clear our their data as well, so they don't get
-            # duplicated data in the event of a new DB version
-
         # Get index of last transaction.
         try:
             follow_cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)''')
