@@ -454,6 +454,12 @@ def initialise(db):
 
     initialise_cursor.close()
 
+def get_address (scriptpubkey):
+    asm = scriptpubkey['asm'].split(' ')
+    if asm[0] != 'OP_DUP' or asm[1] != 'OP_HASH160' or asm[3] != 'OP_EQUALVERIFY' or asm[4] != 'OP_CHECKSIG' or len(asm) != 5:
+        return False
+    return bitcoin.base58_check_encode(asm[2], config.ADDRESSVERSION)
+
 def get_tx_info (tx):
     """
     The destination, if it exists, always comes before the data output; the
@@ -483,14 +489,10 @@ def get_tx_info (tx):
 
         # Destination is the first output before the data.
         if not destination and not btc_amount and not data:
-            if 'addresses' in vout['scriptPubKey']:
-                address = vout['scriptPubKey']['addresses'][0]
-                try:  # If address is valid…
-                    bitcoin.base58_decode(address, config.ADDRESSVERSION)
-                    destination, btc_amount = address, round(D(vout['value']) * config.UNIT)
-                    continue
-                except:
-                    pass
+            address = get_address(vout['scriptPubKey'])
+            if address:
+                destination = address
+                btc_amount = round(D(vout['value']) * config.UNIT)
 
     # Check for, and strip away, prefix (except for burns).
     if destination == config.UNSPENDABLE:
@@ -504,16 +506,18 @@ def get_tx_info (tx):
     if not data and destination != config.UNSPENDABLE:
         return b'', None, None, None, None
 
-    # Collect all possible source addresses; ignore coinbase transactions.
+    # Collect all possible source addresses; ignore coinbase transactions and anything but the simplest Pay‐to‐PubkeyHash inputs.
     source_list = []
     for vin in tx['vin']:                                               # Loop through input transactions.
         if 'coinbase' in vin: return b'', None, None, None, None
         vin_tx = bitcoin.rpc('getrawtransaction', [vin['txid'], 1])     # Get the full transaction data for this input transaction.
         vout = vin_tx['vout'][vin['vout']]
         fee += D(vout['value']) * config.UNIT
-        addresses = vout['scriptPubKey']['addresses']
-        if len(addresses) != 1: return b'', None, None, None, None      # NOTE: Disallow multi‐sig inputs.
-        source_list.append(addresses[0])
+
+        address = get_address(vout['scriptPubKey'])
+        if not address: return b'', None, None, None, None
+        else: source_list.append(address)
+
     # Require that all possible source addresses be the same.
     if all(x == source_list[0] for x in source_list): source = source_list[0]
     else: source = None

@@ -119,6 +119,30 @@ def rpc (method, params):
     else:
         raise exceptions.BitcoindError('{}'.format(response_json['error']))
 
+def base58_check_encode(b, version):
+    b = binascii.unhexlify(bytes(b, 'utf-8'))
+    d = version + b   # mainnet
+
+    address_hex = d + dhash(d)[:4]
+
+    # Convert big‐endian bytes to integer
+    n = int('0x0' + binascii.hexlify(address_hex).decode('utf8'), 16)
+
+    # Divide that integer into base58
+    res = []
+    while n > 0:
+        n, r = divmod (n, 58)
+        res.append(b58_digits[r])
+    res = ''.join(res[::-1])
+
+    # Encode leading zeros as base58 zeros
+    czero = 0
+    pad = 0
+    for c in d:
+        if c == czero: pad += 1
+        else: break
+    return b58_digits[0] * pad + res
+
 def base58_decode (s, version):
     # Convert the string to an integer
     n = 0
