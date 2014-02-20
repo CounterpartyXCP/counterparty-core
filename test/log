@@ -38,10 +38,10 @@ Bet: BearCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 
 Bet Match: BullCFD for 1.5 XCP against BearCFD for 3.5 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00, leveraged 1.0x (ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c9779d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4) [pending]
 Debit: 7.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Debit: 0.375 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
-Bet: Equal on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 for 7.5 XCP against 6.5 XCP in 10 blocks that 1.0 value, leveraged 1.0x for a fee of 0.375 XCP (4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47) [valid]
+Bet: Equal on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 for 7.5 XCP against 6.5 XCP in 10 blocks on outcome 1.0, leveraged 1.0x for a fee of 0.375 XCP (4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47) [valid]
 Debit: 6.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Debit: 0.325 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
-Bet: NotEqual on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 for 6.5 XCP against 7.5 XCP in 10 blocks that 1.0 value, leveraged 1.0x for a fee of 0.325 XCP (dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8) [valid]
+Bet: NotEqual on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 for 6.5 XCP against 7.5 XCP in 10 blocks on outcome 1.0, leveraged 1.0x for a fee of 0.325 XCP (dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8) [valid]
 Bet Match: Equal for 7.5 XCP against NotEqual for 6.5 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 that 1.0 value, leveraged 1.0x (4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8) [pending]
 Broadcast: ‘Unit Test’ = 99.86166 from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:34:10-05:00 with a fee of 5.0% (c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee3) [valid]
 Credit: 0.6225 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>

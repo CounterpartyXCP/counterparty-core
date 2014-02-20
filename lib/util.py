@@ -75,7 +75,7 @@ def log (db, command, category, bindings):
         # TODO: elif category == 'balances':
             # logging.debug('Database: set balance of {} in {} to {}.'.format(bindings['address'], bindings['asset'], output(bindings['amount'], bindings['asset']).split(' ')[0]))
 
-    elif command == 'insert':  # TODO
+    elif command == 'insert':
 
         if category == 'credits':
             logging.debug('Credit: {} to {} #{}# <{}>'.format(output(bindings['amount'], bindings['asset']), bindings['address'], bindings['action'], bindings['event']))
@@ -128,8 +128,8 @@ def log (db, command, category, bindings):
 
         elif category == 'bets':
             placeholder = ''
-            if bindings['target_value']:    # 0.0 is not a valid target value.  # TODO
-                placeholder = ' that ' + str(output(bindings['target_value'], 'value'))
+            if bindings['target_value'] >= 0 and 'CFD' not in BET_TYPE_NAME[bindings['bet_type']]:
+                placeholder = ' on outcome ' + str(output(bindings['target_value'], 'value').split(' ')[0])
             if bindings['leverage']:
                 placeholder += ', leveraged {}x'.format(output(bindings['leverage']/ 5040, 'leverage'))
 

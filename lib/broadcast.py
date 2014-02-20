@@ -179,7 +179,6 @@ def parse (db, tx, message):
                 # Pay fee to feed.
                 util.credit(db, tx['block_index'], bet_match['feed_address'], 'XCP', fee)
 
-                # TODO
                 logging.info('Contract Force‐Liquidated: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), bet_match_id))
 
             # Settle (if not liquidated).
@@ -192,7 +191,6 @@ def parse (db, tx, message):
                 # Pay fee to feed.
                 util.credit(db, tx['block_index'], bet_match['feed_address'], 'XCP', fee)
 
-                # TODO
                 logging.info('Contract Settled: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), bet_match_id))
 
         # Equal[/NotEqual] bet.
@@ -219,7 +217,6 @@ def parse (db, tx, message):
             # Pay fee to feed.
             util.credit(db, tx['block_index'], bet_match['feed_address'], 'XCP', fee)
 
-            # TODO
             logging.info('Contract Settled: {} won the pot of {} XCP; {} XCP credited to the feed address ({})'.format(winner, util.devise(db, total_escrow, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), bet_match_id))
 
         # Update the bet match’s status.
