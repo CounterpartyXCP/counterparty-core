@@ -458,7 +458,15 @@ def get_address (scriptpubkey):
     asm = scriptpubkey['asm'].split(' ')
     if asm[0] != 'OP_DUP' or asm[1] != 'OP_HASH160' or asm[3] != 'OP_EQUALVERIFY' or asm[4] != 'OP_CHECKSIG' or len(asm) != 5:
         return False
-    return bitcoin.base58_check_encode(asm[2], config.ADDRESSVERSION)
+
+    pubkeyhash = asm[2]
+    address = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
+
+    # Test decoding of address.
+    if address != config.UNSPENDABLE and binascii.unhexlify(bytes(pubkeyhash, 'utf-8')) != bitcoin.base58_decode(address, config.ADDRESSVERSION):
+        return False
+
+    return address
 
 def get_tx_info (tx):
     """
