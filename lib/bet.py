@@ -281,7 +281,7 @@ def match (db, tx):
                 'tx1_expiration': tx1['expiration'],
                 'match_expire_index': min(tx0['expire_index'], tx1['expire_index']),
                 'fee_fraction_int': fee_fraction_int,
-                'status': 'valid',
+                'status': 'pending',
             }
             sql='insert into bet_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :tx0_bet_type, :tx1_bet_type, :feed_address, :initial_value, :deadline, :target_value, :leverage, :forward_amount, :backward_amount, :tx0_block_index, :tx1_block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :fee_fraction_int, :status)'
             cursor.execute(sql, bindings)
@@ -298,7 +298,7 @@ def expire (db, block_index, block_time):
 
         # Update status of bet.
         bindings = {
-            'status': 'invalid: expired',
+            'status': 'expired',
             'tx_index': bet['tx_index']
         }
         sql='update bets set status = :status where tx_index = :tx_index'
@@ -318,7 +318,7 @@ def expire (db, block_index, block_time):
 
     # Expire bet matches whose deadline is more than two weeks before the current block time.
     cursor.execute('''SELECT * FROM bet_matches \
-                      WHERE (status = ? AND deadline < ?)''', ('valid', block_time - config.TWO_WEEKS))
+                      WHERE (status = ? AND deadline < ?)''', ('pending', block_time - config.TWO_WEEKS))
     for bet_match in cursor.fetchall():
         util.credit(db, block_index, bet_match['tx0_address'], 'XCP',
                     round(bet_match['forward_amount'] * (1 + bet_match['fee_fraction_int'] / 1e8)))
@@ -327,7 +327,7 @@ def expire (db, block_index, block_time):
 
         # Update status of bet match.
         bindings = {
-            'status': 'invalid: expired awaiting broadcast',
+            'status': 'expired',
             'bet_match_id': bet_match['id']
         }
         sql='update bet_matches set status = :status where id = :bet_match_id'

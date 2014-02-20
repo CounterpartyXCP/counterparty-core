@@ -121,11 +121,11 @@ def parse (db, tx, message):
     broadcast_parse_cursor.execute('''SELECT * FROM bet_matches \
                                       WHERE (status=? AND feed_address=?)
                                       ORDER BY tx1_index ASC, tx0_index ASC''',
-                                   ('valid', tx['source']))
+                                   ('pending', tx['source']))
     for bet_match in broadcast_parse_cursor.fetchall():
         broadcast_bet_match_cursor = db.cursor()
-        status = 'valid'
         bet_match_id = bet_match['tx0_hash'] + bet_match['tx1_hash']
+        bet_match_status = None
 
         # Calculate total funds held in escrow and total fee to be paid if
         # the bet match is settled.
@@ -141,7 +141,7 @@ def parse (db, tx, message):
         bet_match_type_id = bet_match['tx0_bet_type'] + bet_match['tx1_bet_type']
 
         # Contract for difference, with determinate settlement date.
-        if status == 'valid' and bet_match_type_id == cfd_type_id:
+        if bet_match_type_id == cfd_type_id:
 
             # Recognise tx0, tx1 as the bull, bear (in the right direction).
             if bet_match['tx0_bet_type'] < bet_match['tx1_bet_type']:
@@ -163,38 +163,40 @@ def parse (db, tx, message):
             bear_credit = round(bear_credit)
             bull_credit = round(bull_credit)
 
-            if bet_match['status'] == 'valid':
-                # Liquidate, as necessary.
+            # Liquidate, as necessary.
+            if bull_credit >= total_escrow or bull_credit <= 0:
                 if bull_credit >= total_escrow:
                     bull_credit = total_escrow
                     bear_credit = 0
                     util.credit(db, tx['block_index'], bull_address, 'XCP', bull_credit)
-                    status = 'settled: liquidated for bear'
+                    bet_match_status = 'settled: liquidated for bear'
                 elif bull_credit <= 0:
                     bull_credit = 0
                     bear_credit = total_escrow
                     util.credit(db, tx['block_index'], bear_address, 'XCP', bear_credit)
-                    status = 'settled: liquidated for bull'
+                    bet_match_status = 'settled: liquidated for bull'
 
-                if status.startswith('settled: liquidated'):
-                    # Pay fee to feed.
-                    util.credit(db, tx['block_index'], bet_match['feed_address'], 'XCP', fee)
+                # Pay fee to feed.
+                util.credit(db, tx['block_index'], bet_match['feed_address'], 'XCP', fee)
 
-                    logging.info('Contract Force‐Liquidated: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), bet_match_id))
+                # TODO
+                logging.info('Contract Force‐Liquidated: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), bet_match_id))
 
-            # Settle.
-            if status == 'valid' and timestamp >= bet_match['deadline']:
+            # Settle (if not liquidated).
+            elif timestamp >= bet_match['deadline']:
+                bet_match_status = 'settled'
+
                 util.credit(db, tx['block_index'], bull_address, 'XCP', bull_credit)
                 util.credit(db, tx['block_index'], bear_address, 'XCP', bear_credit)
 
                 # Pay fee to feed.
                 util.credit(db, tx['block_index'], bet_match['feed_address'], 'XCP', fee)
 
-                status = 'settled'
+                # TODO
                 logging.info('Contract Settled: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), bet_match_id))
 
         # Equal[/NotEqual] bet.
-        if status == 'valid' and  bet_match_type_id == equal_type_id and timestamp >= bet_match['deadline']:
+        elif bet_match_type_id == equal_type_id and timestamp >= bet_match['deadline']:
 
             # Recognise tx0, tx1 as the bull, bear (in the right direction).
             if bet_match['tx0_bet_type'] < bet_match['tx1_bet_type']:
@@ -208,24 +210,26 @@ def parse (db, tx, message):
             if value == bet_match['target_value']:
                 winner = 'Equal'
                 util.credit(db, tx['block_index'], equal_address, 'XCP', total_escrow)
-                status = 'settled: for equal'
+                bet_match_status = 'settled: for equal'
             else:
                 winner = 'NotEqual'
                 util.credit(db, tx['block_index'], notequal_address, 'XCP', total_escrow)
-                status = 'settled: for notequal'
+                bet_match_status = 'settled: for notequal'
 
             # Pay fee to feed.
             util.credit(db, tx['block_index'], bet_match['feed_address'], 'XCP', fee)
 
+            # TODO
             logging.info('Contract Settled: {} won the pot of {} XCP; {} XCP credited to the feed address ({})'.format(winner, util.devise(db, total_escrow, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), bet_match_id))
 
-        # Update the bet match's status.
-        bindings = {
-            'status': status,
-            'bet_match_id': bet_match['tx0_hash'] + bet_match['tx1_hash']
-        }
-        sql='update bet_matches set status = :status where id = :bet_match_id'
-        broadcast_parse_cursor.execute(sql, bindings)
+        # Update the bet match’s status.
+        if bet_match_status:
+            bindings = {
+                'status': bet_match_status,
+                'bet_match_id': bet_match['tx0_hash'] + bet_match['tx1_hash']
+            }
+            sql='update bet_matches set status = :status where id = :bet_match_id'
+            broadcast_parse_cursor.execute(sql, bindings)
 
         broadcast_bet_match_cursor.close()
 

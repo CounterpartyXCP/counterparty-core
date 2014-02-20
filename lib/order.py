@@ -185,7 +185,7 @@ def match (db, tx):
             if 'BTC' in (tx1['give_asset'], tx1['get_asset']):
                 status = 'pending'
             else:
-                status = 'valid'
+                status = 'completed'
                 # Credit.
                 util.credit(db, tx['block_index'], tx1['source'], tx1['get_asset'],
                                     forward_amount, event=order_match_id)
@@ -261,7 +261,7 @@ def expire (db, block_index):
 
         # Update status of order.
         bindings = {
-            'status': 'invalid: expired',
+            'status': 'expired',
             'tx_index': order['tx_index']
         }
         sql='update orders set status = :status where tx_index = :tx_index'
@@ -287,7 +287,7 @@ def expire (db, block_index):
         
         # Update status of order match.
         bindings = {
-            'status': 'invalid: expired awaiting payment',
+            'status': 'expired',
             'order_match_id': order_match['id']
         }
         sql='update order_matches set status = :status where id = :order_match_id'

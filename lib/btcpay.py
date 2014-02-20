@@ -99,7 +99,7 @@ def parse (db, tx, message):
         if update:
             # Update order match.
             bindings = {
-                'status': 'valid',
+                'status': 'completed',
                 'order_match_id': order_match_id
             }
             sql='update order_matches set status = :status where id = :order_match_id'

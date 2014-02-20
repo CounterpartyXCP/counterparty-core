@@ -901,7 +901,7 @@ def get_address (db, address, start_block=None, end_block=None):
     address_dict['orders'] = get_orders(db, status='valid', source=address, order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)
     
-    address_dict['order_matches'] = get_order_matches(db, status='valid', address=address,
+    address_dict['order_matches'] = get_order_matches(db, status='completed', address=address,
         order_by='tx0_block_index', order_dir='asc', start_block=start_block, end_block=end_block)
     
     address_dict['btcpays'] = get_btcpays(db,
@@ -918,7 +918,8 @@ def get_address (db, address, start_block=None, end_block=None):
     address_dict['bets'] = get_bets(db, status='valid', source=address, order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)
     
-    address_dict['bet_matches'] = get_bet_matches(db, status='valid', address=address,
+    # Statuses are complicated (need startswith)
+    address_dict['bet_matches'] = get_bet_matches(db, address=address,
         order_by='tx0_block_index', order_dir='asc', start_block=start_block, end_block=end_block)
     
     address_dict['dividends'] = get_dividends(db, status='valid', source=address, order_by='block_index',
