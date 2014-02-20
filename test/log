@@ -47,7 +47,7 @@ Broadcast: ‘Unit Test’ = 99.86166 from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at
 Credit: 0.6225 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Credit: 0.031125 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Contract Force‐Liquidated: 0.0 XCP credited to the bull, 0.6225 XCP credited to the bear, and 0.031125 XCP credited to the feed address (01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546be7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6)
-Database: set status of bet_match 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546be7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6 to Force‐Liquidated Bull.
+Database: set status of bet_match 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546be7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6 to settled: liquidated for bull.
 Database: set status of bet_match ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c9779d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4 to valid.
 Database: set status of bet_match 4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8 to valid.
 Broadcast: ‘Unit Test’ = 100.343 from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:01-05:00 with a fee of 5.0% (4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a) [valid]
@@ -55,13 +55,13 @@ Credit: 1.843 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Credit: 3.157 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Credit: 0.25 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Contract Settled: 1.843 XCP credited to the bull, 3.157 XCP credited to the bear, and 0.25 XCP credited to the feed address (ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c9779d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4)
-Database: set status of bet_match ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c9779d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4 to Settled (CFD).
+Database: set status of bet_match ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c9779d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4 to settled.
 Database: set status of bet_match 4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8 to valid.
 Broadcast: ‘Unit Test’ = 2.0 from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:41-05:00 with a fee of 5.0% (f299791cddd3d6664f6670842812ef6053eb6501bd6282a476bbbf3ee91e750c) [valid]
 Credit: 14.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Credit: 0.7 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Contract Settled: NotEqual won the pot of 14.0 XCP; 0.7 XCP credited to the feed address (4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8)
-Database: set status of bet_match 4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8 to Settled for NotEqual.
+Database: set status of bet_match 4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8 to settled: for notequal.
 Debit: 0.5 BBBB from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2>
 Order: give 0.5 BBBB for 0.5 XCP in 10 blocks, with a provided fee of 0.0001 BTC and a required fee of 0.0 BTC (ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2) [valid]
 Credit: 0.5 BBBB to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>

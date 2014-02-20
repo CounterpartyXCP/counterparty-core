@@ -169,14 +169,14 @@ def parse (db, tx, message):
                     bull_credit = total_escrow
                     bear_credit = 0
                     util.credit(db, tx['block_index'], bull_address, 'XCP', bull_credit)
-                    status = 'Force‐Liquidated Bear'
+                    status = 'settled: liquidated for bear'
                 elif bull_credit <= 0:
                     bull_credit = 0
                     bear_credit = total_escrow
                     util.credit(db, tx['block_index'], bear_address, 'XCP', bear_credit)
-                    status = 'Force‐Liquidated Bull'
+                    status = 'settled: liquidated for bull'
 
-                if status.startswith('Force‐Liquidated'):
+                if status.startswith('settled: liquidated'):
                     # Pay fee to feed.
                     util.credit(db, tx['block_index'], bet_match['feed_address'], 'XCP', fee)
 
@@ -190,7 +190,7 @@ def parse (db, tx, message):
                 # Pay fee to feed.
                 util.credit(db, tx['block_index'], bet_match['feed_address'], 'XCP', fee)
 
-                status = 'Settled (CFD)'
+                status = 'settled'
                 logging.info('Contract Settled: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), bet_match_id))
 
         # Equal[/NotEqual] bet.
@@ -208,11 +208,11 @@ def parse (db, tx, message):
             if value == bet_match['target_value']:
                 winner = 'Equal'
                 util.credit(db, tx['block_index'], equal_address, 'XCP', total_escrow)
-                status = 'Settled for Equal'
+                status = 'settled: for equal'
             else:
                 winner = 'NotEqual'
                 util.credit(db, tx['block_index'], notequal_address, 'XCP', total_escrow)
-                status = 'Settled for NotEqual'
+                status = 'settled: for notequal'
 
             # Pay fee to feed.
             util.credit(db, tx['block_index'], bet_match['feed_address'], 'XCP', fee)

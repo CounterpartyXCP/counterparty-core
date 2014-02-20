@@ -365,6 +365,7 @@ def test_json_rpc():
                 output_new['rpc.' + payload['method']] = response['error']
             assert response['jsonrpc'] == '2.0'
             assert response['id'] == 0
+        if attempt == 99: exit(1)   # Fail
 
 def test_stop():
     logging.info('STOP TEST')
