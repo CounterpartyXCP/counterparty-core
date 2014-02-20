@@ -65,13 +65,13 @@ def log (db, command, category, bindings):
 
     if command == 'update':
         if category == 'order':
-            logging.debug('Database: set validity of order {} to {}.'.format(bindings['tx_hash'], bindings['validity']))
+            logging.debug('Database: set status of order {} to {}.'.format(bindings['tx_hash'], bindings['status']))
         elif category == 'bet':
-            logging.debug('Database: set validity of bet {} to {}.'.format(bindings['tx_hash'], bindings['validity']))
+            logging.debug('Database: set status of bet {} to {}.'.format(bindings['tx_hash'], bindings['status']))
         elif category == 'order_matches':
-            logging.debug('Database: set validity of order_match {} to {}.'.format(bindings['order_match_id'], bindings['validity']))
+            logging.debug('Database: set status of order_match {} to {}.'.format(bindings['order_match_id'], bindings['status']))
         elif category == 'bet_matches':
-            logging.debug('Database: set validity of bet_match {} to {}.'.format(bindings['bet_match_id'], bindings['validity']))
+            logging.debug('Database: set status of bet_match {} to {}.'.format(bindings['bet_match_id'], bindings['status']))
         # TODO: elif category == 'balances':
             # logging.debug('Database: set balance of {} in {} to {}.'.format(bindings['address'], bindings['asset'], output(bindings['amount'], bindings['asset']).split(' ')[0]))
 
@@ -84,22 +84,22 @@ def log (db, command, category, bindings):
             logging.debug('Debit: {} from {} #{}# <{}>'.format(output(bindings['amount'], bindings['asset']), bindings['address'], bindings['action'], bindings['event']))
 
         elif category == 'sends':
-            logging.info('Send: {} from {} to {} ({}) [{}]'.format(output(bindings['amount'], bindings['asset']), bindings['source'], bindings['destination'], bindings['tx_hash'], bindings['validity']))
+            logging.info('Send: {} from {} to {} ({}) [{}]'.format(output(bindings['amount'], bindings['asset']), bindings['source'], bindings['destination'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'orders':
-            logging.info('Order: give {} for {} in {} blocks, with a provided fee of {} BTC and a required fee of {} BTC ({}) [{}]'.format(output(bindings['give_amount'], bindings['give_asset']), output(bindings['get_amount'], bindings['get_asset']), bindings['expiration'], bindings['fee_provided'] / config.UNIT, bindings['fee_required'] / config.UNIT, bindings['tx_hash'], bindings['validity']))
+            logging.info('Order: give {} for {} in {} blocks, with a provided fee of {} BTC and a required fee of {} BTC ({}) [{}]'.format(output(bindings['give_amount'], bindings['give_asset']), output(bindings['get_amount'], bindings['get_asset']), bindings['expiration'], bindings['fee_provided'] / config.UNIT, bindings['fee_required'] / config.UNIT, bindings['tx_hash'], bindings['status']))
 
         elif category == 'order_matches':
-            logging.info('Order Match: {} for {} ({}) [{}]'.format(output(bindings['forward_amount'], bindings['forward_asset']), output(bindings['backward_amount'], bindings['backward_asset']), bindings['id'], bindings['validity']))
+            logging.info('Order Match: {} for {} ({}) [{}]'.format(output(bindings['forward_amount'], bindings['forward_asset']), output(bindings['backward_amount'], bindings['backward_asset']), bindings['id'], bindings['status']))
 
         elif category == 'btcpays':
-            logging.info('BTC Payment: {} paid {} to {} for order match {} ({}) [{}]'.format(bindings['source'], output(bindings['btc_amount'], 'BTC'), bindings['destination'], bindings['order_match_id'], bindings['tx_hash'], bindings['validity']))
+            logging.info('BTC Payment: {} paid {} to {} for order match {} ({}) [{}]'.format(bindings['source'], output(bindings['btc_amount'], 'BTC'), bindings['destination'], bindings['order_match_id'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'issuances':
             if bindings['transfer']:
-                logging.info('Issuance: {} transferred asset {} to {} ({}) [{}]'.format(bindings['source'], bindings['asset'], bindings['issuer'], bindings['tx_hash'], bindings['validity']))
+                logging.info('Issuance: {} transferred asset {} to {} ({}) [{}]'.format(bindings['source'], bindings['asset'], bindings['issuer'], bindings['tx_hash'], bindings['status']))
             elif bindings['locked']:
-                logging.info('Issuance: {} locked asset {} ({}) [{}]'.format(bindings['issuer'], bindings['asset'], bindings['tx_hash'], bindings['validity']))
+                logging.info('Issuance: {} locked asset {} ({}) [{}]'.format(bindings['issuer'], bindings['asset'], bindings['tx_hash'], bindings['status']))
             else:
                 if bindings['divisible']:
                     divisibility = 'divisible'
@@ -115,15 +115,15 @@ def log (db, command, category, bindings):
                     amount = devise(db, bindings['amount'], None, dest='output', divisible=bindings['divisible'])
                 except:
                     amount = '?'
-                logging.info('Issuance: {} created {} of asset {}, which is {} and {}, with description ‘{}’ ({}) [{}]'.format(bindings['issuer'], amount, bindings['asset'], divisibility, callability, bindings['description'], bindings['tx_hash'], bindings['validity']))
+                logging.info('Issuance: {} created {} of asset {}, which is {} and {}, with description ‘{}’ ({}) [{}]'.format(bindings['issuer'], amount, bindings['asset'], divisibility, callability, bindings['description'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'broadcasts':
             if bindings['locked']:
-                logging.info('Broadcast: {} locked his feed ({}) [{}]'.format(bindings['source'], bindings['tx_hash'], bindings['validity']))
+                logging.info('Broadcast: {} locked his feed ({}) [{}]'.format(bindings['source'], bindings['tx_hash'], bindings['status']))
             else:
                 if not bindings['value']: infix = '‘{}’'.format(bindings['text'])
                 else: infix = '‘{}’ = {}'.format(bindings['text'], bindings['value'])
-                suffix = ' from ' + bindings['source'] + ' at ' + isodt(bindings['timestamp']) + ' with a fee of {}%'.format(output(D(bindings['fee_fraction_int'] / 1e8) * D(100), 'fraction')) + ' (' + bindings['tx_hash'] + ')' + ' [{}]'.format(bindings['validity'])
+                suffix = ' from ' + bindings['source'] + ' at ' + isodt(bindings['timestamp']) + ' with a fee of {}%'.format(output(D(bindings['fee_fraction_int'] / 1e8) * D(100), 'fraction')) + ' (' + bindings['tx_hash'] + ')' + ' [{}]'.format(bindings['status'])
                 logging.info('Broadcast: {}'.format(infix + suffix))
 
         elif category == 'bets':
@@ -135,7 +135,7 @@ def log (db, command, category, bindings):
 
             fee = round(bindings['wager_amount'] * bindings['fee_fraction_int'] / 1e8)    # round?!
 
-            logging.info('Bet: {} on {} at {} for {} against {} in {} blocks{} for a fee of {} ({}) [{}]'.format(BET_TYPE_NAME[bindings['bet_type']], bindings['feed_address'], isodt(bindings['deadline']), output(bindings['wager_amount'], 'XCP'), output(bindings['counterwager_amount'], 'XCP'), bindings['expiration'], placeholder, output(fee, 'XCP'), bindings['tx_hash'], bindings['validity']))
+            logging.info('Bet: {} on {} at {} for {} against {} in {} blocks{} for a fee of {} ({}) [{}]'.format(BET_TYPE_NAME[bindings['bet_type']], bindings['feed_address'], isodt(bindings['deadline']), output(bindings['wager_amount'], 'XCP'), output(bindings['counterwager_amount'], 'XCP'), bindings['expiration'], placeholder, output(fee, 'XCP'), bindings['tx_hash'], bindings['status']))
 
         elif category == 'bet_matches':
             placeholder = ''
@@ -143,19 +143,19 @@ def log (db, command, category, bindings):
                 placeholder = ' that ' + str(output(bindings['target_value'], 'value'))
             if bindings['leverage']:
                 placeholder += ', leveraged {}x'.format(output(bindings['leverage'] / 5040, 'leverage'))
-            logging.info('Bet Match: {} for {} against {} for {} on {} at {}{} ({}) [{}]'.format(BET_TYPE_NAME[bindings['tx0_bet_type']], output(bindings['forward_amount'], 'XCP'), BET_TYPE_NAME[bindings['tx1_bet_type']], output(bindings['backward_amount'], 'XCP'), bindings['feed_address'], isodt(bindings['deadline']), placeholder, bindings['id'], bindings['validity']))
+            logging.info('Bet Match: {} for {} against {} for {} on {} at {}{} ({}) [{}]'.format(BET_TYPE_NAME[bindings['tx0_bet_type']], output(bindings['forward_amount'], 'XCP'), BET_TYPE_NAME[bindings['tx1_bet_type']], output(bindings['backward_amount'], 'XCP'), bindings['feed_address'], isodt(bindings['deadline']), placeholder, bindings['id'], bindings['status']))
 
         elif category == 'dividends':
-            logging.info('Dividend: {} paid {} per unit of {} ({}) [{}]'.format(bindings['source'], output(bindings['amount_per_unit'], 'XCP'), bindings['asset'], bindings['tx_hash'], bindings['validity']))
+            logging.info('Dividend: {} paid {} per unit of {} ({}) [{}]'.format(bindings['source'], output(bindings['amount_per_unit'], 'XCP'), bindings['asset'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'burns':
-            logging.info('Burn: {} burned {} for {} ({}) [{}]'.format(bindings['source'], output(bindings['burned'], 'BTC'), output(bindings['earned'], 'XCP'), bindings['tx_hash'], bindings['validity']))
+            logging.info('Burn: {} burned {} for {} ({}) [{}]'.format(bindings['source'], output(bindings['burned'], 'BTC'), output(bindings['earned'], 'XCP'), bindings['tx_hash'], bindings['status']))
 
         elif category == 'cancels':
-            logging.info('Cancel: {} ({}) [{}]'.format(bindings['offer_hash'], bindings['tx_hash'], bindings['validity']))
+            logging.info('Cancel: {} ({}) [{}]'.format(bindings['offer_hash'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'callbacks':
-            logging.info('Callback: {} called back {}% of {} ({}) [{}]'.format(bindings['source'], float(D(bindings['fraction']) * D(100)), bindings['asset'], bindings['tx_hash'], bindings['validity']))
+            logging.info('Callback: {} called back {}% of {} ({}) [{}]'.format(bindings['source'], float(D(bindings['fraction']) * D(100)), bindings['asset'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'order_expirations':
             logging.info('Expired order: {}'.format(bindings['order_hash']))
@@ -244,7 +244,7 @@ def connect_to_db(flags=None):
     cursor.execute('''PRAGMA count_changes = OFF''')
 
     # Integrity check
-    time.sleep(.1)    # Hack
+    time.sleep(1)    # Hack
     cursor.execute('''PRAGMA integrity_check''')
     rows = cursor.fetchall()
     if not (len(rows) == 1 and rows[0][0] == 'ok'):
@@ -480,7 +480,7 @@ def devise (db, quantity, asset, dest, divisible=None):
         else:
             cursor = db.cursor()
             cursor.execute('''SELECT * FROM issuances \
-                              WHERE (validity = ? AND asset = ?)''', ('valid', asset))
+                              WHERE (status = ? AND asset = ?)''', ('valid', asset))
             issuances = cursor.fetchall()
             cursor.close()
             if not issuances: raise exceptions.AssetError('No such asset: {}'.format(asset))
@@ -556,13 +556,13 @@ def do_filter(results, filters, filterop):
     else: #or
         combined_results = []
         for filter in filters:
-            if filter['field'] == 'validity': continue #don't filter validity as an OR requirement
+            if filter['field'] == 'status': continue #don't filter status as an OR requirement
             combined_results += [e for e in results if DO_FILTER_OPERATORS[filter['op']](e[filter['field']], filter['value'])]
         
-        validity_filter = next((f for f in filters if f['field'] == 'validity'), None)
-        if validity_filter: #filter out invalid results as an AND requirement
-            combined_results = [e for e in combined_results if DO_FILTER_OPERATORS[validity_filter['op']](
-                e[validity_filter['field']], validity_filter['value'])]
+        status_filter = next((f for f in filters if f['field'] == 'status'), None)
+        if status_filter: #filter out invalid results as an AND requirement
+            combined_results = [e for e in combined_results if DO_FILTER_OPERATORS[status_filter['op']](
+                e[status_filter['field']], status_filter['value'])]
         return combined_results
 
 def do_order_by(results, order_by, order_dir):
@@ -611,12 +611,12 @@ def xcp_supply (db):
 
     # Add burns.
     cursor.execute('''SELECT * FROM burns \
-                      WHERE validity = ?''', ('valid',))
+                      WHERE status = ?''', ('valid',))
     burn_total = sum([burn['earned'] for burn in cursor.fetchall()])
 
     # Subtract issuance fees.
     cursor.execute('''SELECT * FROM issuances\
-                      WHERE validity = ?''', ('valid',))
+                      WHERE status = ?''', ('valid',))
     fee_total = sum([issuance['fee_paid'] for issuance in cursor.fetchall()])
 
     cursor.close()
@@ -660,10 +660,10 @@ def get_balances (db, address=None, asset=None, filters=None, order_by=None, ord
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_sends (db, validity=None, source=None, destination=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
+def get_sends (db, status=None, source=None, destination=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
-    if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
+    if status: filters.append({'field': 'status', 'op': '==', 'value': status})
     if source: filters.append({'field': 'source', 'op': '==', 'value': source})
     if destination: filters.append({'field': 'destination', 'op': '==', 'value': destination})
     cursor = db.cursor()
@@ -673,7 +673,7 @@ def get_sends (db, validity=None, source=None, destination=None, filters=None, o
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_orders (db, validity=None, source=None, show_empty=True, show_expired=True, filters=None, order_by=None, order_dir='asc', start_block=None, end_block=None, filterop='and'):
+def get_orders (db, status=None, source=None, show_empty=True, show_expired=True, filters=None, order_by=None, order_dir='asc', start_block=None, end_block=None, filterop='and'):
     def filter_expired(e):
         #Ignore BTC orders one block early. (This is why we need show_expired.)
         #function returns True if the element is NOT expired
@@ -683,7 +683,7 @@ def get_orders (db, validity=None, source=None, show_empty=True, show_expired=Tr
 
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
-    if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
+    if status: filters.append({'field': 'status', 'op': '==', 'value': status})
     if source: filters.append({'field': 'source', 'op': '==', 'value': source})
     if not show_empty: filters.append({'field': 'give_remaining', 'op': '!=', 'value': 0})
     cursor = db.cursor()
@@ -694,7 +694,7 @@ def get_orders (db, validity=None, source=None, show_empty=True, show_expired=Tr
     if not show_expired: results = [e for e in results if filter_expired(e)]
     return do_order_by(results, order_by, order_dir)
 
-def get_order_matches (db, validity=None, is_mine=False, address=None, tx0_hash=None, tx1_hash=None, filters=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
+def get_order_matches (db, status=None, is_mine=False, address=None, tx0_hash=None, tx1_hash=None, filters=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     from . import bitcoin   # HACK
     def filter_is_mine(e):
         if (    (not bitcoin.rpc('validateaddress', [e['tx0_address']])['ismine'] or
@@ -705,7 +705,7 @@ def get_order_matches (db, validity=None, is_mine=False, address=None, tx0_hash=
         return True #is mine
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
-    if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
+    if status: filters.append({'field': 'status', 'op': '==', 'value': status})
     if tx0_hash: filters.append({'field': 'tx0_hash', 'op': '==', 'value': tx0_hash})
     if tx1_hash: filters.append({'field': 'tx1_hash', 'op': '==', 'value': tx1_hash})
     cursor = db.cursor()
@@ -718,10 +718,10 @@ def get_order_matches (db, validity=None, is_mine=False, address=None, tx0_hash=
     if address: results = [e for e in results if e['tx0_address'] == address or e['tx1_address'] == address]
     return do_order_by(results, order_by, order_dir)
 
-def get_btcpays (db, validity=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
+def get_btcpays (db, status=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
-    if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
+    if status: filters.append({'field': 'status', 'op': '==', 'value': status})
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM btcpays%s'''
         % get_limit_to_blocks(start_block, end_block))
@@ -729,10 +729,10 @@ def get_btcpays (db, validity=None, filters=None, order_by='tx_index', order_dir
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_issuances (db, validity=None, asset=None, issuer=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
+def get_issuances (db, status=None, asset=None, issuer=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
-    if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
+    if status: filters.append({'field': 'status', 'op': '==', 'value': status})
     if asset: filters.append({'field': 'asset', 'op': '==', 'value': asset})
     if issuer: filters.append({'field': 'issuer', 'op': '==', 'value': issuer})
     # TODO: callable, call_date (range?), call_price (range?)
@@ -744,10 +744,10 @@ def get_issuances (db, validity=None, asset=None, issuer=None, filters=None, ord
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_broadcasts (db, validity=None, source=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
+def get_broadcasts (db, status=None, source=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
-    if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
+    if status: filters.append({'field': 'status', 'op': '==', 'value': status})
     if source: filters.append({'field': 'source', 'op': '==', 'value': source})
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM broadcasts%s'''
@@ -756,10 +756,10 @@ def get_broadcasts (db, validity=None, source=None, filters=None, order_by='tx_i
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_bets (db, validity=None, source=None, show_empty=True, filters=None, order_by=None, order_dir='desc', start_block=None, end_block=None, filterop='and'):
+def get_bets (db, status=None, source=None, show_empty=True, filters=None, order_by=None, order_dir='desc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
-    if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
+    if status: filters.append({'field': 'status', 'op': '==', 'value': status})
     if source: filters.append({'field': 'source', 'op': '==', 'value': source})
     if not show_empty: filters.append({'field': 'wager_remaining', 'op': '==', 'value': 0})
     cursor = db.cursor()
@@ -769,10 +769,10 @@ def get_bets (db, validity=None, source=None, show_empty=True, filters=None, ord
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_bet_matches (db, validity=None, address=None, tx0_hash=None, tx1_hash=None, filters=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
+def get_bet_matches (db, status=None, address=None, tx0_hash=None, tx1_hash=None, filters=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
-    if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
+    if status: filters.append({'field': 'status', 'op': '==', 'value': status})
     if tx0_hash: filters.append({'field': 'tx0_hash', 'op': '==', 'value': tx0_hash})
     if tx1_hash: filters.append({'field': 'tx1_hash', 'op': '==', 'value': tx1_hash})
     cursor = db.cursor()
@@ -784,10 +784,10 @@ def get_bet_matches (db, validity=None, address=None, tx0_hash=None, tx1_hash=No
     if address: results = [e for e in results if e['tx0_address'] == address or e['tx1_address'] == address]
     return do_order_by(results, order_by, order_dir)
 
-def get_dividends (db, validity=None, source=None, asset=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
+def get_dividends (db, status=None, source=None, asset=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
-    if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
+    if status: filters.append({'field': 'status', 'op': '==', 'value': status})
     if source: filters.append({'field': 'source', 'op': '==', 'value': source})
     if asset: filters.append({'field': 'asset', 'op': '==', 'value': asset})
     cursor = db.cursor()
@@ -797,10 +797,10 @@ def get_dividends (db, validity=None, source=None, asset=None, filters=None, ord
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_burns (db, validity=True, source=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
+def get_burns (db, status=True, source=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
-    if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
+    if status: filters.append({'field': 'status', 'op': '==', 'value': status})
     if source: filters.append({'field': 'source', 'op': '==', 'value': source})
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM burns%s'''
@@ -809,10 +809,10 @@ def get_burns (db, validity=True, source=None, filters=None, order_by='tx_index'
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_cancels (db, validity=True, source=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
+def get_cancels (db, status=True, source=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
-    if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
+    if status: filters.append({'field': 'status', 'op': '==', 'value': status})
     if source: filters.append({'field': 'source', 'op': '==', 'value': source})
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM cancels%s'''
@@ -821,10 +821,10 @@ def get_cancels (db, validity=True, source=None, filters=None, order_by=None, or
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_callbacks (db, validity=True, source=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
+def get_callbacks (db, status=True, source=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
-    if validity: filters.append({'field': 'validity', 'op': '==', 'value': validity})
+    if status: filters.append({'field': 'status', 'op': '==', 'value': status})
     if source: filters.append({'field': 'source', 'op': '==', 'value': source})
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM callbacks%s'''
@@ -891,43 +891,43 @@ def get_address (db, address, start_block=None, end_block=None):
     address_dict['credits'] = get_credits(db, address=address, order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)
 
-    address_dict['burns'] = get_burns(db, validity='valid', source=address, order_by='block_index',
+    address_dict['burns'] = get_burns(db, status='valid', source=address, order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)
     
-    address_dict['sends'] = get_sends(db, validity='valid', source=address, destination=address, order_by='block_index',
+    address_dict['sends'] = get_sends(db, status='valid', source=address, destination=address, order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block, filterop='or')
     #^ with filterop == 'or', we get all sends where this address was the source OR destination 
     
-    address_dict['orders'] = get_orders(db, validity='valid', source=address, order_by='block_index',
+    address_dict['orders'] = get_orders(db, status='valid', source=address, order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)
     
-    address_dict['order_matches'] = get_order_matches(db, validity='valid', address=address,
+    address_dict['order_matches'] = get_order_matches(db, status='valid', address=address,
         order_by='tx0_block_index', order_dir='asc', start_block=start_block, end_block=end_block)
     
     address_dict['btcpays'] = get_btcpays(db,
         filters=[{'field': 'source', 'op': '==', 'value': address}, {'field': 'destination', 'op': '==', 'value': address}],
-        filterop='or', validity='valid', order_by='block_index',
+        filterop='or', status='valid', order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)
     
-    address_dict['issuances'] = get_issuances(db, validity='valid', issuer=address,
+    address_dict['issuances'] = get_issuances(db, status='valid', issuer=address,
         order_by='block_index', order_dir='asc', start_block=start_block, end_block=end_block)
     
-    address_dict['broadcasts'] = get_broadcasts(db, validity='valid', source=address,
+    address_dict['broadcasts'] = get_broadcasts(db, status='valid', source=address,
         order_by='block_index', order_dir='asc', start_block=start_block, end_block=end_block)
     
-    address_dict['bets'] = get_bets(db, validity='valid', source=address, order_by='block_index',
+    address_dict['bets'] = get_bets(db, status='valid', source=address, order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)
     
-    address_dict['bet_matches'] = get_bet_matches(db, validity='valid', address=address,
+    address_dict['bet_matches'] = get_bet_matches(db, status='valid', address=address,
         order_by='tx0_block_index', order_dir='asc', start_block=start_block, end_block=end_block)
     
-    address_dict['dividends'] = get_dividends(db, validity='valid', source=address, order_by='block_index',
+    address_dict['dividends'] = get_dividends(db, status='valid', source=address, order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)
 
-    address_dict['cancels'] = get_cancels(db, validity='valid', source=address, order_by='block_index',
+    address_dict['cancels'] = get_cancels(db, status='valid', source=address, order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)
 
-    address_dict['callbacks'] = get_callbacks(db, validity='valid', source=address, order_by='block_index',
+    address_dict['callbacks'] = get_callbacks(db, status='valid', source=address, order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)
 
     address_dict['bet_expirations'] = get_bet_expirations(db, source=address, order_by='block_index',

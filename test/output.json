@@ -32,10 +32,10 @@
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "leverage": 15120, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "status": "valid", 
             "target_value": 0.0, 
             "tx_hash": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b", 
             "tx_index": 10, 
-            "validity": "valid", 
             "wager_amount": 50000000, 
             "wager_remaining": 8500000
         }, 
@@ -51,10 +51,10 @@
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "leverage": 15120, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "status": "valid", 
             "target_value": 0.0, 
             "tx_hash": "e7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6", 
             "tx_index": 11, 
-            "validity": "valid", 
             "wager_amount": 25000000, 
             "wager_remaining": 4250000
         }, 
@@ -70,10 +70,10 @@
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "leverage": 5040, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "status": "valid", 
             "target_value": 0.0, 
             "tx_hash": "ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c977", 
             "tx_index": 12, 
-            "validity": "valid", 
             "wager_amount": 150000000, 
             "wager_remaining": 0
         }, 
@@ -89,10 +89,10 @@
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "leverage": 5040, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "status": "valid", 
             "target_value": 0.0, 
             "tx_hash": "9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4", 
             "tx_index": 13, 
-            "validity": "valid", 
             "wager_amount": 350000000, 
             "wager_remaining": 0
         }, 
@@ -108,10 +108,10 @@
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "leverage": 5040, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "status": "valid", 
             "target_value": 1.0, 
             "tx_hash": "4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47", 
             "tx_index": 14, 
-            "validity": "valid", 
             "wager_amount": 750000000, 
             "wager_remaining": 0
         }, 
@@ -127,10 +127,10 @@
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "leverage": 5040, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "status": "valid", 
             "target_value": 1.0, 
             "tx_hash": "dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8", 
             "tx_index": 15, 
-            "validity": "valid", 
             "wager_amount": 650000000, 
             "wager_remaining": 0
         }
@@ -141,11 +141,11 @@
             "fee_fraction_int": 5000000, 
             "locked": 0, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "status": "valid", 
             "text": "Unit Test", 
             "timestamp": 1388000000, 
             "tx_hash": "2b4c342f5433ebe591a1da77e013d1b72475562d48578dca8b84bac6651c3cb9", 
             "tx_index": 9, 
-            "validity": "valid", 
             "value": 100.0
         }, 
         {
@@ -153,11 +153,11 @@
             "fee_fraction_int": 5000000, 
             "locked": 0, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "status": "valid", 
             "text": "Unit Test", 
             "timestamp": 1388000050, 
             "tx_hash": "c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee3", 
             "tx_index": 16, 
-            "validity": "valid", 
             "value": 99.86166
         }, 
         {
@@ -165,11 +165,11 @@
             "fee_fraction_int": 5000000, 
             "locked": 0, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "status": "valid", 
             "text": "Unit Test", 
             "timestamp": 1388000101, 
             "tx_hash": "4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a", 
             "tx_index": 17, 
-            "validity": "valid", 
             "value": 100.343
         }, 
         {
@@ -177,11 +177,11 @@
             "fee_fraction_int": 5000000, 
             "locked": 0, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "status": "valid", 
             "text": "Unit Test", 
             "timestamp": 1388000201, 
             "tx_hash": "f299791cddd3d6664f6670842812ef6053eb6501bd6282a476bbbf3ee91e750c", 
             "tx_index": 18, 
-            "validity": "valid", 
             "value": 2.0
         }
     ], 
@@ -192,9 +192,9 @@
             "destination": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "order_match_id": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5", 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "status": "valid", 
             "tx_hash": "e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71", 
-            "tx_index": 4, 
-            "validity": "valid"
+            "tx_index": 4
         }, 
         {
             "block_index": 154912, 
@@ -202,9 +202,9 @@
             "destination": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "order_match_id": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5", 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "status": "valid", 
             "tx_hash": "e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71", 
-            "tx_index": 4, 
-            "validity": "valid"
+            "tx_index": 4
         }
     ], 
     "get_address_burns": [
@@ -213,18 +213,18 @@
             "burned": 62000000, 
             "earned": 93000000000, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "status": "valid", 
             "tx_hash": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d", 
-            "tx_index": 0, 
-            "validity": "valid"
+            "tx_index": 0
         }, 
         {
             "block_index": 154929, 
             "burned": 38000000, 
             "earned": 56999896707, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "status": "valid", 
             "tx_hash": "2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608", 
-            "tx_index": 21, 
-            "validity": "valid"
+            "tx_index": 21
         }
     ], 
     "get_address_callbacks": [
@@ -233,9 +233,9 @@
             "block_index": 154931, 
             "fraction": "0.3", 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "status": "valid", 
             "tx_hash": "8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034", 
-            "tx_index": 23, 
-            "validity": "valid"
+            "tx_index": 23
         }
     ], 
     "get_address_cancels": [
@@ -243,9 +243,9 @@
             "block_index": 154928, 
             "offer_hash": "ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2", 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "status": "valid", 
             "tx_hash": "83891d7fe85c33e52c8b4e5814c92fb6a3b9467299200538a6babaa8b452d879", 
-            "tx_index": 20, 
-            "validity": "valid"
+            "tx_index": 20
         }
     ], 
     "get_address_credits": [
@@ -538,18 +538,18 @@
             "asset": "BBBB", 
             "block_index": 154915, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "status": "valid", 
             "tx_hash": "ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879", 
-            "tx_index": 7, 
-            "validity": "valid"
+            "tx_index": 7
         }, 
         {
             "amount_per_unit": 8, 
             "asset": "BBBC", 
             "block_index": 154916, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "status": "valid", 
             "tx_hash": "beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a", 
-            "tx_index": 8, 
-            "validity": "valid"
+            "tx_index": 8
         }
     ], 
     "get_address_issuances": [
@@ -565,10 +565,10 @@
             "fee_paid": 0, 
             "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "locked": null, 
+            "status": "valid", 
             "transfer": 0, 
             "tx_hash": "e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db", 
-            "tx_index": 5, 
-            "validity": "valid"
+            "tx_index": 5
         }, 
         {
             "amount": 100000, 
@@ -582,10 +582,10 @@
             "fee_paid": 0, 
             "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "locked": null, 
+            "status": "valid", 
             "transfer": 0, 
             "tx_hash": "67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6", 
-            "tx_index": 6, 
-            "validity": "valid"
+            "tx_index": 6
         }
     ], 
     "get_address_order_expirations": [], 
@@ -598,6 +598,7 @@
             "forward_asset": "BTC", 
             "id": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5", 
             "match_expire_index": 154920, 
+            "status": "valid", 
             "tx0_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "tx0_block_index": 154910, 
             "tx0_expiration": 10, 
@@ -607,8 +608,7 @@
             "tx1_block_index": 154911, 
             "tx1_expiration": 10, 
             "tx1_hash": "084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5", 
-            "tx1_index": 3, 
-            "validity": "valid"
+            "tx1_index": 3
         }
     ], 
     "get_address_orders": [
@@ -626,9 +626,9 @@
             "give_asset": "BTC", 
             "give_remaining": 0, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "status": "valid", 
             "tx_hash": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986", 
-            "tx_index": 2, 
-            "validity": "valid"
+            "tx_index": 2
         }, 
         {
             "block_index": 154911, 
@@ -644,9 +644,9 @@
             "give_asset": "XCP", 
             "give_remaining": 5000000, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "status": "valid", 
             "tx_hash": "084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5", 
-            "tx_index": 3, 
-            "validity": "valid"
+            "tx_index": 3
         }
     ], 
     "get_address_sends": [
@@ -656,9 +656,9 @@
             "block_index": 154909, 
             "destination": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "status": "valid", 
             "tx_hash": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a", 
-            "tx_index": 1, 
-            "validity": "valid"
+            "tx_index": 1
         }, 
         {
             "amount": 10000, 
@@ -666,9 +666,9 @@
             "block_index": 154930, 
             "destination": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "status": "valid", 
             "tx_hash": "7cb7c4547cf2653590d7a9ace60cc623d25148adfbc88a89aeb0ef88da7839ba", 
-            "tx_index": 22, 
-            "validity": "valid"
+            "tx_index": 22
         }
     ], 
     "rpc.get_balances": [

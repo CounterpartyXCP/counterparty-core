@@ -160,7 +160,7 @@ def initialise(db):
                         destination TEXT,
                         asset TEXT,
                         amount INTEGER,
-                        validity TEXT)
+                        status TEXT)
                    ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
                         sends_block_index_idx ON sends (block_index)
@@ -183,16 +183,16 @@ def initialise(db):
                                  fee_required INTEGER,
                                  fee_provided INTEGER,
                                  fee_remaining INTEGER,
-                                 validity TEXT)
+                                 status TEXT)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  block_index_idx ON orders (block_index)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                                 expire_idx ON orders (validity, expire_index)
+                                 expire_idx ON orders (status, expire_index)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                                 give_get_valid_idx ON orders (give_asset, get_asset, validity)
+                                 give_get_valid_idx ON orders (give_asset, get_asset, status)
                               ''')
 
     # Order Matches
@@ -214,10 +214,10 @@ def initialise(db):
                                  tx0_expiration INTEGER,
                                  tx1_expiration INTEGER,
                                  match_expire_index INTEGER,
-                                 validity TEXT)
+                                 status TEXT)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                                 match_expire_idx ON order_matches (validity, match_expire_index)
+                                 match_expire_idx ON order_matches (status, match_expire_index)
                               ''')
 
     # BTCpays
@@ -229,7 +229,7 @@ def initialise(db):
                                  destination TEXT,
                                  btc_amount INTEGER,
                                  order_match_id TEXT,
-                                 validity TEXT)
+                                 status TEXT)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  block_index_idx ON btcpays (block_index)
@@ -250,14 +250,14 @@ def initialise(db):
                         description TEXT,
                         fee_paid INTEGER,
                         locked BOOL,
-                        validity TEXT
+                        status TEXT
                         )
                    ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
                         issuances_idx ON issuances (block_index)
                     ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        valid_asset_idx ON issuances (validity, asset)
+                        valid_asset_idx ON issuances (status, asset)
                     ''')
 
     # Broadcasts
@@ -271,7 +271,7 @@ def initialise(db):
                                  fee_fraction_int INTEGER,
                                  text TEXT,
                                  locked BOOL,
-                                 validity TEXT)
+                                 status TEXT)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  block_index_idx ON broadcasts (block_index)
@@ -295,16 +295,16 @@ def initialise(db):
                                  expiration INTEGER,
                                  expire_index INTEGER,
                                  fee_fraction_int INTEGER,
-                                 validity TEXT)
+                                 status TEXT)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  block_index_idx ON bets (block_index)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                                 expire_idx ON bets (validity, expire_index)
+                                 expire_idx ON bets (status, expire_index)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                                 feed_valid_bettype_idx ON bets (feed_address, validity, bet_type)
+                                 feed_valid_bettype_idx ON bets (feed_address, status, bet_type)
                               ''')
 
     # Bet Matches
@@ -332,13 +332,13 @@ def initialise(db):
                                  tx1_expiration INTEGER,
                                  match_expire_index INTEGER,
                                  fee_fraction_int INTEGER,
-                                 validity TEXT)
+                                 status TEXT)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                                 match_expire_idx ON bet_matches (validity, match_expire_index)
+                                 match_expire_idx ON bet_matches (status, match_expire_index)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                                 valid_feed_idx ON bet_matches (validity, feed_address)
+                                 valid_feed_idx ON bet_matches (status, feed_address)
                               ''')
 
     initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS dividends(
@@ -348,7 +348,7 @@ def initialise(db):
                         source TEXT,
                         asset TEXT,
                         amount_per_unit INTEGER,
-                        validity TEXT)
+                        status TEXT)
                    ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
                         dividends_block_index_idx ON dividends (block_index)
@@ -361,10 +361,10 @@ def initialise(db):
                         source TEXT,
                         burned INTEGER,
                         earned INTEGER,
-                        validity TEXT)
+                        status TEXT)
                    ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                                 validity_idx ON burns (validity)
+                                 status_idx ON burns (status)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  address_idx ON burns (source)
@@ -376,7 +376,7 @@ def initialise(db):
                         block_index INTEGER,
                         source TEXT,
                         offer_hash TEXT,
-                        validity TEXT)
+                        status TEXT)
                    ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
                         cancels_block_index_idx ON cancels (block_index)
@@ -390,7 +390,7 @@ def initialise(db):
                                  source TEXT,
                                  fraction TEXT,
                                  asset TEXT,
-                                 validity TEXT)
+                                 status TEXT)
                               ''')
     initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  block_index_idx ON callbacks (block_index)

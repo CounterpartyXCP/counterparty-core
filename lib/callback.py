@@ -21,7 +21,7 @@ def validate (db, source, fraction, asset, block_time):
     elif fraction <= 0:
         problems.append('fraction less than or equal to zero')
 
-    issuances = util.get_issuances(db, validity='valid', asset=asset)
+    issuances = util.get_issuances(db, status='valid', asset=asset)
     if not issuances:
         problems.append('no such asset, {}.'.format(asset))
         return None, None, None, problems
@@ -81,16 +81,16 @@ def parse (db, tx, message):
         assert len(message) == LENGTH
         fraction, asset_id = struct.unpack(FORMAT, message)
         asset = util.get_asset_name(asset_id)
-        validity = 'valid'
+        status = 'valid'
     except struct.error as e:
         fraction, asset = None, None
-        validity = 'invalid: could not unpack'
+        status = 'invalid: could not unpack'
 
-    if validity == 'valid':
+    if status == 'valid':
         call_price, callback_total, outputs, problems = validate(db, tx['source'], fraction, asset, tx['block_time'])
-        if problems: validity = 'invalid: ' + ';'.join(problems)
+        if problems: status = 'invalid: ' + ';'.join(problems)
 
-    if validity == 'valid':
+    if status == 'valid':
         # Issuer.
         assert call_price * callback_total == int(call_price * callback_total)
         util.debit(db, tx['block_index'], tx['source'], 'XCP', int(call_price * callback_total))
@@ -110,9 +110,9 @@ def parse (db, tx, message):
         'source': tx['source'],
         'fraction': fraction,
         'asset': asset,
-        'validity': validity,
+        'status': status,
     }
-    sql='insert into callbacks values(:tx_index, :tx_hash, :block_index, :source, :fraction, :asset, :validity)'
+    sql='insert into callbacks values(:tx_index, :tx_hash, :block_index, :source, :fraction, :asset, :status)'
     callback_parse_cursor.execute(sql, bindings)
 
     callback_parse_cursor.close()
