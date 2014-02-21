@@ -243,12 +243,30 @@ def connect_to_db(flags=None):
     # For speed.
     cursor.execute('''PRAGMA count_changes = OFF''')
 
+    # For integrity, security.
+    cursor.execute('''PRAGMA foreign_keys = ON''')
+
+    """
+    cursor.execute('''PRAGMA foreign_key_check''')
+    if rows:
+        raise exceptions.DatabaseError('Foreign key check failed.')
+
     # Integrity check
-    time.sleep(.1)    # Hack
-    cursor.execute('''PRAGMA integrity_check''')
-    rows = cursor.fetchall()
-    if not (len(rows) == 1 and rows[0][0] == 'ok'):
-        raise exceptions.DatabaseError('Integrity check failed.')
+    integral = False
+    for i in range(10): # DUPE
+        try:
+            cursor.execute('''PRAGMA integrity_check''')
+            rows = cursor.fetchall()
+            if not (len(rows) == 1 and rows[0][0] == 'ok'):
+                raise exceptions.DatabaseError('Integrity check failed.')
+            integral = True
+            break
+        except Exception:
+            time.sleep(1)
+            continue
+    if not integral:
+        raise exceptions.DatabaseError('Could not perform integrity check.')
+    """
 
     cursor.close()
 

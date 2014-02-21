@@ -80,17 +80,20 @@ def parse_block (db, block_index, block_time):
     parse_block_cursor.close()
 
 def initialise(db):
-    initialise_cursor = db.cursor()
-    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS blocks(
+    cursor = db.cursor()
+
+    # Blocks
+    cursor.execute('''CREATE TABLE IF NOT EXISTS blocks(
                         block_index INTEGER PRIMARY KEY,
                         block_hash TEXT UNIQUE,
                         block_time INTEGER)
                    ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        blocks_block_index_idx ON blocks (block_index)
-                    ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      block_index_idx ON blocks (block_index)
+                   ''')
 
-    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS transactions(
+    # Transactions
+    cursor.execute('''CREATE TABLE IF NOT EXISTS transactions(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
@@ -102,35 +105,36 @@ def initialise(db):
                         data BLOB,
                         supported BOOL DEFAULT 1)
                     ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        transactions_block_index_idx ON transactions (block_index)
-                    ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        transactions_tx_index_idx ON transactions (tx_index)
-                    ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        transactions_tx_hash_idx ON transactions (tx_hash)
-                    ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      block_index_idx ON transactions (block_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      tx_index_idx ON transactions (tx_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      tx_hash_idx ON transactions (tx_hash)
+                   ''')
 
     # Purge database of blocks, transactions from before BLOCK_FIRST.
-    initialise_cursor.execute('''DELETE FROM blocks WHERE block_index<?''', (config.BLOCK_FIRST,))
-    initialise_cursor.execute('''DELETE FROM transactions WHERE block_index<?''', (config.BLOCK_FIRST,))
+    cursor.execute('''DELETE FROM blocks WHERE block_index<?''', (config.BLOCK_FIRST,))
+    cursor.execute('''DELETE FROM transactions WHERE block_index<?''', (config.BLOCK_FIRST,))
+
 
     # (Valid) debits
-    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS debits(
-                        block_index INTEGER,
-                        address TEXT,
-                        asset TEXT,
-                        amount INTEGER,
-                        action TEXT,
-                        event TEXT)
+    cursor.execute('''CREATE TABLE IF NOT EXISTS debits(
+                      block_index INTEGER,
+                      address TEXT,
+                      asset TEXT,
+                      amount INTEGER,
+                      action TEXT,
+                      event TEXT)
                    ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        debits_address_idx ON debits (address)
-                    ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      debits_address_idx ON debits (address)
+                   ''')
 
     # (Valid) credits
-    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS credits(
+    cursor.execute('''CREATE TABLE IF NOT EXISTS credits(
                         block_index INTEGER,
                         address TEXT,
                         asset TEXT,
@@ -138,66 +142,73 @@ def initialise(db):
                         calling_function TEXT,
                         event TEXT)
                    ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        credits_address_idx ON credits (address)
-                    ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      address_idx ON credits (address)
+                   ''')
 
     # Balances
-    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS balances(
-                                 address TEXT,
-                                 asset TEXT,
-                                 amount INTEGER)
-                              ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                                 address_asset_idx ON balances (address, asset)
-                              ''')
-
-    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS sends(
-                        tx_index INTEGER PRIMARY KEY,
-                        tx_hash TEXT UNIQUE,
-                        block_index INTEGER,
-                        source TEXT,
-                        destination TEXT,
-                        asset TEXT,
-                        amount INTEGER,
-                        validity TEXT)
+    cursor.execute('''CREATE TABLE IF NOT EXISTS balances(
+                      address TEXT,
+                      asset TEXT,
+                      amount INTEGER)
                    ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                        sends_block_index_idx ON sends (block_index)
-                    ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      asset_idx ON balances (address, asset)
+                   ''')
+
+    # Sends
+    cursor.execute('''CREATE TABLE IF NOT EXISTS sends(
+                      tx_index INTEGER PRIMARY KEY,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      source TEXT,
+                      destination TEXT,
+                      asset TEXT,
+                      amount INTEGER,
+                      validity TEXT,
+                      FOREIGN KEY (tx_index) REFERENCES transactions(tx_index),
+                      FOREIGN KEY (tx_hash) REFERENCES transactions(tx_hash),
+                      FOREIGN KEY (block_index) REFERENCES blocks(block_index))
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      block_index_idx ON sends (block_index)
+                   ''')
 
     # Orders
-    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS orders(
-                                 tx_index INTEGER PRIMARY KEY,
-                                 tx_hash TEXT UNIQUE,
-                                 block_index INTEGER,
-                                 source TEXT,
-                                 give_asset TEXT,
-                                 give_amount INTEGER,
-                                 give_remaining INTEGER,
-                                 get_asset TEXT,
-                                 get_amount INTEGER,
-                                 get_remaining INTEGER,
-                                 expiration INTEGER,
-                                 expire_index INTEGER,
-                                 fee_required INTEGER,
-                                 fee_provided INTEGER,
-                                 fee_remaining INTEGER,
-                                 validity TEXT)
-                              ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
-                                 block_index_idx ON orders (block_index)
-                              ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+    cursor.execute('''CREATE TABLE IF NOT EXISTS orders(
+                      tx_index INTEGER PRIMARY KEY,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      source TEXT,
+                      give_asset TEXT,
+                      give_amount INTEGER,
+                      give_remaining INTEGER,
+                      get_asset TEXT,
+                      get_amount INTEGER,
+                      get_remaining INTEGER,
+                      expiration INTEGER,
+                      expire_index INTEGER,
+                      fee_required INTEGER,
+                      fee_provided INTEGER,
+                      fee_remaining INTEGER,
+                      validity TEXT,
+                      FOREIGN KEY (tx_index) REFERENCES transactions(tx_index),
+                      FOREIGN KEY (tx_hash) REFERENCES transactions(tx_hash),
+                      FOREIGN KEY (block_index) REFERENCES blocks(block_index))
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      block_index_idx ON orders (block_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  expire_idx ON orders (validity, expire_index)
                               ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  give_get_valid_idx ON orders (give_asset, get_asset, validity)
                               ''')
 
     # Order Matches
     # TODO: id field is largely unused.
-    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS order_matches(
+    cursor.execute('''CREATE TABLE IF NOT EXISTS order_matches(
                                  id TEXT PRIMARY KEY,
                                  tx0_index INTEGER,
                                  tx0_hash TEXT,
@@ -216,12 +227,12 @@ def initialise(db):
                                  match_expire_index INTEGER,
                                  validity TEXT)
                               ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  match_expire_idx ON order_matches (validity, match_expire_index)
                               ''')
 
     # BTCpays
-    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS btcpays(
+    cursor.execute('''CREATE TABLE IF NOT EXISTS btcpays(
                                  tx_index INTEGER PRIMARY KEY,
                                  tx_hash TEXT UNIQUE,
                                  block_index INTEGER,
@@ -231,11 +242,11 @@ def initialise(db):
                                  order_match_id TEXT,
                                  validity TEXT)
                               ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  block_index_idx ON btcpays (block_index)
                               ''')
 
-    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS issuances(
+    cursor.execute('''CREATE TABLE IF NOT EXISTS issuances(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
@@ -253,15 +264,15 @@ def initialise(db):
                         validity TEXT
                         )
                    ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                         issuances_idx ON issuances (block_index)
                     ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                         valid_asset_idx ON issuances (validity, asset)
                     ''')
 
     # Broadcasts
-    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS broadcasts(
+    cursor.execute('''CREATE TABLE IF NOT EXISTS broadcasts(
                                  tx_index INTEGER PRIMARY KEY,
                                  tx_hash TEXT UNIQUE,
                                  block_index INTEGER,
@@ -273,12 +284,12 @@ def initialise(db):
                                  locked BOOL,
                                  validity TEXT)
                               ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  block_index_idx ON broadcasts (block_index)
                               ''')
 
     # Bets.
-    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS bets(
+    cursor.execute('''CREATE TABLE IF NOT EXISTS bets(
                                  tx_index INTEGER PRIMARY KEY,
                                  tx_hash TEXT UNIQUE,
                                  block_index INTEGER,
@@ -297,19 +308,19 @@ def initialise(db):
                                  fee_fraction_int INTEGER,
                                  validity TEXT)
                               ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  block_index_idx ON bets (block_index)
                               ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  expire_idx ON bets (validity, expire_index)
                               ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  feed_valid_bettype_idx ON bets (feed_address, validity, bet_type)
                               ''')
 
     # Bet Matches
     # TODO: id field is largely unused.
-    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS bet_matches(
+    cursor.execute('''CREATE TABLE IF NOT EXISTS bet_matches(
                                  id TEXT PRIMARY KEY,
                                  tx0_index INTEGER,
                                  tx0_hash TEXT,
@@ -334,14 +345,14 @@ def initialise(db):
                                  fee_fraction_int INTEGER,
                                  validity TEXT)
                               ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  match_expire_idx ON bet_matches (validity, match_expire_index)
                               ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  valid_feed_idx ON bet_matches (validity, feed_address)
                               ''')
 
-    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS dividends(
+    cursor.execute('''CREATE TABLE IF NOT EXISTS dividends(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
@@ -350,11 +361,11 @@ def initialise(db):
                         amount_per_unit INTEGER,
                         validity TEXT)
                    ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                         dividends_block_index_idx ON dividends (block_index)
                     ''')
 
-    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS burns(
+    cursor.execute('''CREATE TABLE IF NOT EXISTS burns(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
@@ -363,14 +374,14 @@ def initialise(db):
                         earned INTEGER,
                         validity TEXT)
                    ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  validity_idx ON burns (validity)
                               ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  address_idx ON burns (source)
                               ''')
 
-    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS cancels(
+    cursor.execute('''CREATE TABLE IF NOT EXISTS cancels(
                         tx_index INTEGER PRIMARY KEY,
                         tx_hash TEXT UNIQUE,
                         block_index INTEGER,
@@ -378,12 +389,12 @@ def initialise(db):
                         offer_hash TEXT,
                         validity TEXT)
                    ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                         cancels_block_index_idx ON cancels (block_index)
                     ''')
 
     # Callbacks
-    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS callbacks(
+    cursor.execute('''CREATE TABLE IF NOT EXISTS callbacks(
                                  tx_index INTEGER PRIMARY KEY,
                                  tx_hash TEXT UNIQUE,
                                  block_index INTEGER,
@@ -392,67 +403,67 @@ def initialise(db):
                                  asset TEXT,
                                  validity TEXT)
                               ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  block_index_idx ON callbacks (block_index)
                               ''')
 
     # Order Expirations
-    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS order_expirations(
+    cursor.execute('''CREATE TABLE IF NOT EXISTS order_expirations(
                                  order_index INTEGER PRIMARY KEY,
                                  order_hash TEXT UNIQUE,
                                  source TEXT,
                                  block_index INTEGER)
                               ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  block_index_idx ON order_expirations (block_index)
                               ''')
 
     # Bet Expirations
-    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS bet_expirations(
+    cursor.execute('''CREATE TABLE IF NOT EXISTS bet_expirations(
                                  bet_index INTEGER PRIMARY KEY,
                                  bet_hash TEXT UNIQUE,
                                  source TEXT,
                                  block_index INTEGER)
                               ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  block_index_idx ON bet_expirations (block_index)
                               ''')
 
     # Order Match Expirations
-    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS order_match_expirations(
+    cursor.execute('''CREATE TABLE IF NOT EXISTS order_match_expirations(
                                  order_match_id TEXT PRIMARY KEY,
                                  tx0_address TEXT,
                                  tx1_address TEXT,
                                  block_index INTEGER)
                               ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  block_index_idx ON order_match_expirations (block_index)
                               ''')
 
     # Bet Match Expirations
-    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS bet_match_expirations(
+    cursor.execute('''CREATE TABLE IF NOT EXISTS bet_match_expirations(
                                  bet_match_id TEXT PRIMARY KEY,
                                  tx0_address TEXT,
                                  tx1_address TEXT,
                                  block_index INTEGER)
                               ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  block_index_idx ON bet_match_expirations (block_index)
                               ''')
 
     # Messages
-    initialise_cursor.execute('''CREATE TABLE IF NOT EXISTS messages(
+    cursor.execute('''CREATE TABLE IF NOT EXISTS messages(
                                  message_index INTEGER PRIMARY KEY,
                                  block_index INTEGER,
                                  command TEXT,
                                  category TEXT,
                                  bindings TEXT)
                               ''')
-    initialise_cursor.execute('''CREATE INDEX IF NOT EXISTS
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                                  block_index_idx ON messages (block_index)
                               ''')
 
-    initialise_cursor.close()
+    cursor.close()
 
 def get_address (scriptpubkey):
     asm = scriptpubkey['asm'].split(' ')
@@ -510,7 +521,7 @@ def get_tx_info (tx):
     else:
         return b'', None, None, None, None
 
-    # Only look for source if data were found (or destination is UNSPENDABLE), for speed.
+    # Only look for source if data were found or destination is UNSPENDABLE, for speed.
     if not data and destination != config.UNSPENDABLE:
         return b'', None, None, None, None
 

@@ -9,17 +9,17 @@ BEGIN TRANSACTION;
 -- Table  balances
 DROP TABLE IF EXISTS balances;
 CREATE TABLE balances(
-                                 address TEXT,
-                                 asset TEXT,
-                                 amount INTEGER);
+                      address TEXT,
+                      asset TEXT,
+                      amount INTEGER);
 INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',145431509207);
 INSERT INTO balances VALUES('n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',4550000000);
 INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',1000000000);
 INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',93000);
 INSERT INTO balances VALUES('n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',7000);
 -- Triggers and indices on  balances
-CREATE INDEX address_asset_idx ON balances (address, asset)
-                              ;
+CREATE INDEX asset_idx ON balances (address, asset)
+                   ;
 
 -- Table  bet_expirations
 DROP TABLE IF EXISTS bet_expirations;
@@ -132,8 +132,8 @@ INSERT INTO blocks VALUES(154929,'7068c1abc38664730e4b979aa4d3beb7131c65e36cf7aa
 INSERT INTO blocks VALUES(154930,'2b7fef6e9069f1a2f44e6eb08f0f5e32033d0048fc3cfc526237a4c4ced59590dbacfa4bfe95b894bc21658cffb2908b85280e6cfaa1545970bf2a724ceeea5b',1549300000000);
 INSERT INTO blocks VALUES(154931,'efd744787f5fa988aa515f4a7d14323969ab838c70a3d6d3a029ddf6eac7dd74568b09659b7756eafc7b6e410d8e5f5ba921d9a454c97f6c6b72ca7da37b5c58',1549310000000);
 -- Triggers and indices on  blocks
-CREATE INDEX blocks_block_index_idx ON blocks (block_index)
-                    ;
+CREATE INDEX block_index_idx ON blocks (block_index)
+                   ;
 
 -- Table  broadcasts
 DROP TABLE IF EXISTS broadcasts;
@@ -179,8 +179,6 @@ CREATE TABLE burns(
 INSERT INTO burns VALUES(0,'6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d',154908,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',62000000,93000000000,'valid');
 INSERT INTO burns VALUES(21,'2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608',154929,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',38000000,56999896707,'valid');
 -- Triggers and indices on  burns
-CREATE INDEX address_idx ON burns (source)
-                              ;
 CREATE INDEX validity_idx ON burns (validity)
                               ;
 
@@ -239,18 +237,18 @@ INSERT INTO credits VALUES(154930,'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',10
 INSERT INTO credits VALUES(154931,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',3000,NULL,NULL);
 INSERT INTO credits VALUES(154931,'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',4500000000,NULL,NULL);
 -- Triggers and indices on  credits
-CREATE INDEX credits_address_idx ON credits (address)
-                    ;
+CREATE INDEX address_idx ON credits (address)
+                   ;
 
 -- Table  debits
 DROP TABLE IF EXISTS debits;
 CREATE TABLE debits(
-                        block_index INTEGER,
-                        address TEXT,
-                        asset TEXT,
-                        amount INTEGER,
-                        action TEXT,
-                        event TEXT);
+                      block_index INTEGER,
+                      address TEXT,
+                      asset TEXT,
+                      amount INTEGER,
+                      action TEXT,
+                      event TEXT);
 INSERT INTO debits VALUES(154909,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',50000000,NULL,'4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a');
 INSERT INTO debits VALUES(154911,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',105000000,NULL,'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5');
 INSERT INTO debits VALUES(154915,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',60,NULL,NULL);
@@ -273,7 +271,7 @@ INSERT INTO debits VALUES(154931,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',4500
 INSERT INTO debits VALUES(154931,'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',3000,NULL,NULL);
 -- Triggers and indices on  debits
 CREATE INDEX debits_address_idx ON debits (address)
-                    ;
+                   ;
 
 -- Table  dividends
 DROP TABLE IF EXISTS dividends;
@@ -454,28 +452,29 @@ CREATE INDEX match_expire_idx ON order_matches (validity, match_expire_index)
 -- Table  orders
 DROP TABLE IF EXISTS orders;
 CREATE TABLE orders(
-                                 tx_index INTEGER PRIMARY KEY,
-                                 tx_hash TEXT UNIQUE,
-                                 block_index INTEGER,
-                                 source TEXT,
-                                 give_asset TEXT,
-                                 give_amount INTEGER,
-                                 give_remaining INTEGER,
-                                 get_asset TEXT,
-                                 get_amount INTEGER,
-                                 get_remaining INTEGER,
-                                 expiration INTEGER,
-                                 expire_index INTEGER,
-                                 fee_required INTEGER,
-                                 fee_provided INTEGER,
-                                 fee_remaining INTEGER,
-                                 validity TEXT);
+                      tx_index INTEGER PRIMARY KEY,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      source TEXT,
+                      give_asset TEXT,
+                      give_amount INTEGER,
+                      give_remaining INTEGER,
+                      get_asset TEXT,
+                      get_amount INTEGER,
+                      get_remaining INTEGER,
+                      expiration INTEGER,
+                      expire_index INTEGER,
+                      fee_required INTEGER,
+                      fee_provided INTEGER,
+                      fee_remaining INTEGER,
+                      validity TEXT,
+                      FOREIGN KEY (tx_index) REFERENCES transactions(tx_index),
+                      FOREIGN KEY (tx_hash) REFERENCES transactions(tx_hash),
+                      FOREIGN KEY (block_index) REFERENCES blocks(block_index));
 INSERT INTO orders VALUES(2,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986',154910,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BTC',50000000,0,'XCP',100000000,0,10,154920,0,1000000,1000000,'valid');
 INSERT INTO orders VALUES(3,'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5',154911,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',105000000,5000000,'BTC',50000000,0,10,154921,900000,10000,10000,'valid');
 INSERT INTO orders VALUES(19,'ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2',154927,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',50000000,50000000,'XCP',50000000,50000000,10,154937,0,10000,10000,'cancelled');
 -- Triggers and indices on  orders
-CREATE INDEX block_index_idx ON orders (block_index)
-                              ;
 CREATE INDEX expire_idx ON orders (validity, expire_index)
                               ;
 CREATE INDEX give_get_valid_idx ON orders (give_asset, get_asset, validity)
@@ -484,19 +483,19 @@ CREATE INDEX give_get_valid_idx ON orders (give_asset, get_asset, validity)
 -- Table  sends
 DROP TABLE IF EXISTS sends;
 CREATE TABLE sends(
-                        tx_index INTEGER PRIMARY KEY,
-                        tx_hash TEXT UNIQUE,
-                        block_index INTEGER,
-                        source TEXT,
-                        destination TEXT,
-                        asset TEXT,
-                        amount INTEGER,
-                        validity TEXT);
+                      tx_index INTEGER PRIMARY KEY,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      source TEXT,
+                      destination TEXT,
+                      asset TEXT,
+                      amount INTEGER,
+                      validity TEXT,
+                      FOREIGN KEY (tx_index) REFERENCES transactions(tx_index),
+                      FOREIGN KEY (tx_hash) REFERENCES transactions(tx_hash),
+                      FOREIGN KEY (block_index) REFERENCES blocks(block_index));
 INSERT INTO sends VALUES(1,'4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a',154909,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',50000000,'valid');
 INSERT INTO sends VALUES(22,'7cb7c4547cf2653590d7a9ace60cc623d25148adfbc88a89aeb0ef88da7839ba',154930,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',10000,'valid');
--- Triggers and indices on  sends
-CREATE INDEX sends_block_index_idx ON sends (block_index)
-                    ;
 
 -- Table  transactions
 DROP TABLE IF EXISTS transactions;
@@ -536,11 +535,9 @@ INSERT INTO transactions VALUES(21,'2f0fd1e89b8de1d57292742ec380ea47066e307ad645
 INSERT INTO transactions VALUES(22,'7cb7c4547cf2653590d7a9ace60cc623d25148adfbc88a89aeb0ef88da7839ba',154930,22,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7',10860,10000,X'0000000000000000000047680000000000002710',1);
 INSERT INTO transactions VALUES(23,'8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034',154931,23,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',NULL,NULL,10000,X'000000153FD33333333333330000000000004768',1);
 -- Triggers and indices on  transactions
-CREATE INDEX transactions_block_index_idx ON transactions (block_index)
-                    ;
-CREATE INDEX transactions_tx_hash_idx ON transactions (tx_hash)
-                    ;
-CREATE INDEX transactions_tx_index_idx ON transactions (tx_index)
-                    ;
+CREATE INDEX tx_hash_idx ON transactions (tx_hash)
+                   ;
+CREATE INDEX tx_index_idx ON transactions (tx_index)
+                   ;
 
 COMMIT TRANSACTION;
