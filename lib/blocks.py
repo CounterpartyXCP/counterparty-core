@@ -532,6 +532,20 @@ def get_tx_info (tx):
 
     return source, destination, btc_amount, round(fee), data
 
+def check_potential(tx):
+    for vout in tx['vout']:
+        # Data
+        asm = vout['scriptPubKey']['asm'].split(' ')
+        if 'OP_RETURN' in asm or 'OP_CHECKMULTISIG' in asm:
+            return True
+
+        # Unspendable
+        address = get_address(vout['scriptPubKey'])
+        if address == config.UNSPENDABLE:
+            return True
+
+    return False
+
 def reparse (db, block_index=None, quiet=False):
     """Reparse all transactions (atomically). If block_index is set, rollback
     to the end of that block.
@@ -712,5 +726,65 @@ def follow (db):
             time.sleep(2)
 
     follow_cursor.close()
+
+
+def get_potentials (db):
+    # TODO: This is not thread-safe!
+    cursor = db.cursor()
+
+    cursor.execute('''CREATE TABLE IF NOT EXISTS potentials(
+                        potential_index INTEGER PRIMARY KEY,
+                        tx_hash TEXT UNIQUE,
+                        block_hash TEXT,
+                        block_index INTEGER,
+                        block_time INTEGER,
+                        raw TEXT)
+                   ''')
+
+    # Get index of last potential transaction.
+    try:
+        cursor.execute('''SELECT * FROM potentials WHERE potential_index = (SELECT MAX(potential_index) from potentials)''')
+        potential = cursor.fetchall()[0]
+        potential_index = potential['potential_index'] + 1
+        block_index = potential['block_index'] + 1
+    except Exception:   # TODO
+        potential_index = 0
+        block_index = config.BLOCK_FIRST
+
+    # Get new blocks.
+    block_count = bitcoin.rpc('getblockcount', [])
+    while block_index <= block_count - 12:  # For reorgs.
+        logging.info('Block: {}'.format(str(block_index)))
+        block_hash = bitcoin.rpc('getblockhash', [block_index])
+        block = bitcoin.rpc('getblock', [block_hash])
+        block_time = block['time']
+        tx_hash_list = block['tx']
+
+        # Get potentials in this block (atomically).
+        with db:
+            # List the transactions in the block.
+            for tx_hash in tx_hash_list:
+                # Get the important details about each potential transaction.
+                tx = bitcoin.rpc('getrawtransaction', [tx_hash, 1])
+                if check_potential(tx):
+                    logging.info('Potential: {} ({})'.format(potential_index, tx_hash))
+                    cursor.execute('''INSERT INTO potentials(
+                                        potential_index,
+                                        tx_hash,
+                                        block_index,
+                                        block_hash,
+                                        block_time,
+                                        raw) VALUES(?,?,?,?,?,?)''',
+                                        (potential_index,
+                                         tx_hash,
+                                         block_index,
+                                         block_hash,
+                                         block_time,
+                                         str(tx))
+                                  )
+                    potential_index += 1
+
+        block_index += 1
+    cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
