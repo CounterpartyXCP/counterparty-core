@@ -20,7 +20,6 @@ Table of Contents
    :maxdepth: 2
 
    API
-   HowToBurn
 
 
 Indices and tables

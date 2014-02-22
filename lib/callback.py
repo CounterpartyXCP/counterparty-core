@@ -27,12 +27,8 @@ def validate (db, source, fraction, asset, block_time):
         return None, None, None, problems
     else:
         last_issuance = issuances[-1]
-        if block_time == None:
-            if config.PREFIX == config.UNITTEST_PREFIX:
-                import time
-                block_time = time.time()
-            else:
-                block_time = util.last_block(db)['block_time']
+        if block_time == None:  # For composition only.
+            block_time = util.last_block(db)['block_time']
 
         if last_issuance['issuer'] != source:
             problems.append('not asset owner')
@@ -67,7 +63,7 @@ def validate (db, source, fraction, asset, block_time):
 
     return call_price, callback_total, outputs, problems
 
-def create (db, source, fraction, asset, unsigned=False):
+def compose (db, source, fraction, asset):
     call_price, callback_total, outputs, problems = validate(db, source, fraction, asset, None)
     if problems: raise exceptions.CallbackError(problems)
     print('Total amount to be called back:', util.devise(db, callback_total, asset, 'output'), asset)
@@ -75,7 +71,7 @@ def create (db, source, fraction, asset, unsigned=False):
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, fraction, asset_id)
-    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, unsigned=unsigned)
+    return (source, None, None, config.MIN_FEE, data)
 
 def parse (db, tx, message):
     callback_parse_cursor = db.cursor()
@@ -91,15 +87,7 @@ def parse (db, tx, message):
         validity = 'invalid: could not unpack'
 
     if validity == 'valid':
-        # HACK
-        if config.PREFIX == config.UNITTEST_PREFIX:
-            block_time = 9999999999999
-        else:   # Wrong
-            block_index = tx['block_index']
-            callback_parse_cursor.execute('select * from blocks where block_index = ?', (block_index,))
-            block = callback_parse_cursor.fetchall()[0]
-            block_time = block['block_time']
-        call_price, callback_total, outputs, problems = validate(db, tx['source'], fraction, asset, block_time)
+        call_price, callback_total, outputs, problems = validate(db, tx['source'], fraction, asset, tx['block_time'])
         if problems: validity = 'invalid: ' + ';'.join(problems)
 
     if validity == 'valid':

@@ -43,7 +43,7 @@ def validate (db, source, amount_per_unit, asset):
 
     return amount, problems
 
-def create (db, source, amount_per_unit, asset, unsigned=False):
+def compose (db, source, amount_per_unit, asset):
     amount, problems = validate(db, source, amount_per_unit, asset)
     if problems: raise exceptions.DividendError(problems)
     print('Total amount to be distributed in dividends:', util.devise(db, amount, 'XCP', 'output'), 'XCP')
@@ -51,7 +51,7 @@ def create (db, source, amount_per_unit, asset, unsigned=False):
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, amount_per_unit, asset_id)
-    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, unsigned=unsigned)
+    return (source, None, None, config.MIN_FEE, data)
 
 def parse (db, tx, message):
     dividend_parse_cursor = db.cursor()

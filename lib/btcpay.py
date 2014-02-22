@@ -33,7 +33,7 @@ def validate (db, order_match_id):
 
     return order_match, problems
 
-def create (db, order_match_id, unsigned=False):
+def compose (db, order_match_id):
     tx0_hash, tx1_hash = order_match_id[:64], order_match_id[64:] # UTF-8 encoding means that the indices are doubled.
 
     # Try to match.
@@ -51,15 +51,16 @@ def create (db, order_match_id, unsigned=False):
         btc_amount = order_match['forward_amount']
 
     # Warn if down to the wire.
-    if not config.PREFIX == config.UNITTEST_PREFIX:
-        time_left = order_match['match_expire_index'] - util.last_block(db)['block_index']
-        if time_left < 4:
-            print('WARNING: Only {} blocks until that order match expires. The payment might not make into the blockchain in time.'.format(time_left))
+    time_left = order_match['match_expire_index'] - util.last_block(db)['block_index']
+    if time_left < 4:
+        print('WARNING: Only {} blocks until that order match expires. The payment might not make into the blockchain in time.'.format(time_left))
+    if 10 - time_left < 4:
+        print('WARNING: Order match has only {} confirmations.'.format(time_left))
 
     tx0_hash_bytes, tx1_hash_bytes = binascii.unhexlify(bytes(tx0_hash, 'utf-8')), binascii.unhexlify(bytes(tx1_hash, 'utf-8'))
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, tx0_hash_bytes, tx1_hash_bytes)
-    return bitcoin.transaction(source, destination, btc_amount, config.MIN_FEE, data, unsigned=unsigned)
+    return (source, destination, btc_amount, config.MIN_FEE, data)
 
 def parse (db, tx, message):
     cursor = db.cursor()

@@ -32,14 +32,14 @@ def validate (db, offer_hash, source=None):
     return None, None, problems
 
 
-def create (db, offer_hash, unsigned=False):
+def compose (db, offer_hash):
     source, offer, problems = validate(db, offer_hash)
     if problems: raise exceptions.CancelError(problems)
 
     offer_hash_bytes = binascii.unhexlify(bytes(offer_hash, 'utf-8'))
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, offer_hash_bytes)
-    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, unsigned=unsigned)
+    return (source, None, None, config.MIN_FEE, data)
 
 def parse (db, tx, message):
     cursor = db.cursor()
@@ -95,7 +95,7 @@ def parse (db, tx, message):
             cursor.execute(sql, bindings)
 
             util.credit(db, tx['block_index'], tx['source'], 'XCP', bet['wager_remaining'])
-            util.credit(db, tx['block_index'], tx['source'], 'XCP', round(bet['wager_amount'] * bet['fee_multiplier'] / 1e8))
+            util.credit(db, tx['block_index'], tx['source'], 'XCP', round(bet['wager_amount'] * bet['fee_fraction_int'] / 1e8))
         # If neither order or bet, mark as invalid.
         else:
             validity = 'invalid: no valid offer with that hash from that address'

@@ -15,7 +15,7 @@ import cherrypy
 from cherrypy import wsgiserver
 from jsonrpc import JSONRPCResponseManager, dispatcher
 
-from . import (config, exceptions, util, bitcoin)
+from . import (config, bitcoin, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel)
 
 class APIServer(threading.Thread):
@@ -24,7 +24,7 @@ class APIServer(threading.Thread):
         threading.Thread.__init__(self)
 
     def run (self):
-        db = util.connect_to_db()
+        db = util.connect_to_db(flags='SQLITE_OPEN_READONLY')
 
         ######################
         #READ API
@@ -198,6 +198,19 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_asset_info(asset):
+            if asset in ['BTC', 'XCP']:
+                return {
+                    'owner': None,
+                    'divisible': True,
+                    'locked': False,
+                    'total_issued': util.xcp_supply(db) if asset == 'XCP' else None,
+                    'callable': False,
+                    'call_date': None,
+                    'call_price': None,
+                    'description': '',
+                    'issuer': None
+                }
+            
             #gets some useful info for the given asset
             issuances = util.get_issuances(db,
                 filters={'field': 'asset', 'op': '==', 'value': asset},
@@ -212,13 +225,14 @@ class APIServer(threading.Thread):
             locked = not last_issuance['amount'] and not last_issuance['transfer']
             total_issued = sum([e['amount'] for e in issuances])
             return {'owner': last_issuance['issuer'],
-                    'divisible': last_issuance['divisible'],
+                    'divisible': bool(last_issuance['divisible']),
                     'locked': locked,
                     'total_issued': total_issued,
-                    'callable': last_issuance['callable'],
+                    'callable': bool(last_issuance['callable']),
                     'call_date': util.isodt(last_issuance['call_date']) if last_issuance['call_date'] else None,
                     'call_price': last_issuance['call_price'],
-                    'description': last_issuance['description']}
+                    'description': last_issuance['description'],
+                    'issuer': last_issuance['issuer']}
 
         @dispatcher.add_method
         def get_block_info(block_index):
@@ -234,8 +248,10 @@ class APIServer(threading.Thread):
             
         @dispatcher.add_method
         def get_running_info():
+            latestBlockIndex = bitcoin.rpc('getblockcount', [])
+            
             try:
-                util.database_check(db)
+                util.database_check(db, latestBlockIndex)
             except:
                 caught_up = False
             else:
@@ -248,76 +264,104 @@ class APIServer(threading.Thread):
                 
             return {
                 'db_caught_up': caught_up,
+                'bitcoin_block_count': latestBlockIndex,
                 'last_block': last_block,
                 'counterpartyd_version': config.CLIENT_VERSION,
+                'running_testnet': config.TESTNET,
                 'db_version_major': config.DB_VERSION_MAJOR,
                 'db_version_minor': config.DB_VERSION_MINOR,
             }
 
+        @dispatcher.add_method
+        def get_asset_names():
+            cursor = db.cursor()
+            names = [row['asset'] for row in cursor.execute("SELECT DISTINCT asset FROM issuances WHERE validity = 'valid' ORDER BY asset ASC")]
+            cursor.close()
+            return names
+
+        @dispatcher.add_method
+        def get_element_counts():
+            counts = {}
+            cursor = db.cursor()
+            for element in ['transactions', 'blocks', 'debits', 'credits', 'balances', 'sends', 'orders',
+                'order_matches', 'btcpays', 'issuances', 'broadcasts', 'bets', 'bet_matches', 'dividends',
+                'burns', 'cancels', 'callbacks', 'order_expirations', 'bet_expirations', 'order_match_expirations',
+                'bet_match_expirations', 'messages']:
+                cursor.execute("SELECT COUNT(*) AS count FROM %s" % element)
+                counts[element] = cursor.fetchall()[0]['count']
+            cursor.close()
+            return counts
 
         ######################
         #WRITE/ACTION API
         @dispatcher.add_method
-        def do_bet(source, feed_address, bet_type, deadline, wager, counterwager, target_value=0.0, leverage=5040, unsigned=False):
+        def create_bet(source, feed_address, bet_type, deadline, wager, counterwager, expiration, target_value=0.0, leverage=5040, multisig=config.MULTISIG):
             bet_type_id = util.BET_TYPE_ID[bet_type]
-            unsigned_tx_hex = bet.create(db, source, feed_address,
-                                         bet_type_id, deadline, wager,
-                                         counterwager, target_value,
-                                         leverage, expiration, unsigned=unsigned)
-            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
+            tx_info = bet.compose(db, source, feed_address,
+                              bet_type_id, deadline, wager,
+                              counterwager, target_value,
+                              leverage, expiration)
+            return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def do_broadcast(source, fee_multiplier, text, timestamp, value=0, unsigned=False):
-            unsigned_tx_hex = broadcast.create(db, source, timestamp,
-                                               value, fee_multiplier, text, unsigned=unsigned)
-            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
+        def create_broadcast(source, fee_fraction, text, timestamp, value=-1, multisig=config.MULTISIG):
+            tx_info = broadcast.compose(db, source, timestamp,
+                                    value, fee_fraction, text)
+            return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def do_btcpay(order_match_id, unsigned=False):
-            unsigned_tx_hex = btcpay.create(db, order_match_id, unsigned=unsigned)
-            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
+        def create_btcpay(order_match_id, multisig=config.MULTISIG):
+            tx_info = btcpay.compose(db, order_match_id)
+            return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def do_burn(source, quantity, unsigned=False):
-            unsigned_tx_hex = burn.create(db, source, quantity, unsigned=unsigned)
-            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
+        def create_burn(source, quantity, multisig=config.MULTISIG):
+            tx_info = burn.compose(db, source, quantity)
+            return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def do_cancel(offer_hash, unsigned=False):
-            unsigned_tx_hex = cancel.create(db, offer_hash, unsigned=unsigned)
-            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
+        def create_cancel(offer_hash, multisig=config.MULTISIG):
+            tx_info = cancel.compose(db, offer_hash)
+            return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def do_dividend(source, quantity_per_unit, share_asset, unsigned=False):
-            unsigned_tx_hex = dividend.create(db, source, quantity_per_unit,
-                                              share_asset, unsigned=unsigned)
-            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
+        def create_callback(source, fraction, asset, multisig=config.MULTISIG):
+            tx_info = callback.compose(db, source, fraction, asset)
+            return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def do_issuance(source, quantity, asset, divisible, description, callable=False, call_date=None, call_price=None, transfer_destination=None, unsigned=False):
+        def create_dividend(source, quantity_per_unit, asset, multisig=config.MULTISIG):
+            tx_info = dividend.compose(db, source, quantity_per_unit,
+                                   asset)
+            return bitcoin.transaction(tx_info, multisig)
+
+        @dispatcher.add_method
+        def create_issuance(source, asset, quantity, divisible, description, callable_=None, call_date=None, call_price=None, transfer_destination=None, multisig=config.MULTISIG):
             try:
                 quantity = int(quantity)
             except ValueError:
                 raise Exception("Invalid quantity")
-            unsigned_tx_hex = issuance.create(db, source, transfer_destination,
-                asset, quantity, divisible, callable, call_date, call_price, description, unsigned=unsigned)
-            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
+            tx_info = issuance.compose(db, source, transfer_destination,
+                                   asset, quantity, divisible, callable_,
+                                   call_date, call_price, description)
+            return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def do_order(source, give_quantity, give_asset, get_quantity, get_asset, expiration, fee_required=0,
-                     fee_provided=config.MIN_FEE / config.UNIT, unsigned=False):
-            unsigned_tx_hex = order.create(db, source, give_asset,
-                                           give_quantity, get_asset,
-                                           get_quantity, expiration,
-                                           fee_required, fee_provided,
-                                           unsigned=unsigned)
-            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
+        def create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, fee_provided, multisig=config.MULTISIG):
+            tx_info = order.compose(db, source, give_asset,
+                                give_quantity, get_asset,
+                                get_quantity, expiration,
+                                fee_required, fee_provided)
+            return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def do_send(source, destination, quantity, asset, unsigned=False):
-            unsigned_tx_hex = send.create(db, source, destination, quantity, asset, unsigned=unsigned)
-            return unsigned_tx_hex if unsigned else bitcoin.transmit(unsigned_tx_hex, ask=False)
-
+        def create_send(source, destination, asset, quantity, multisig=config.MULTISIG):
+            tx_info = send.compose(db, source, destination, asset, quantity)
+            return bitcoin.transaction(tx_info, multisig)
+                
+        @dispatcher.add_method
+        def transmit(unsigned_tx_hex):
+            return bitcoin.transmit(unsigned_tx_hex)
 
         class API(object):
             @cherrypy.expose

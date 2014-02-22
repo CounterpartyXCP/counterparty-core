@@ -21,14 +21,14 @@ LENGTH = 2 + 4 + 8 + 8 + 8 + 4 + 4
 ID = 40
 
 
-def get_fee_multiplier (db, feed_address):
-    '''Get fee_multiplier from the last broadcast from the feed_address address.
+def get_fee_fraction (db, feed_address):
+    '''Get fee fraction from the last broadcast from the feed_address address.
     '''
     broadcasts = util.get_broadcasts(db, source=feed_address)
     if broadcasts:
         last_broadcast = broadcasts[-1]
-        fee_multiplier = last_broadcast['fee_multiplier']
-        if fee_multiplier: return fee_multiplier
+        fee_fraction_int = last_broadcast['fee_fraction_int']
+        if fee_fraction_int: return fee_fraction_int / 1e8
         else: return 0
     else:
         return 0
@@ -67,13 +67,13 @@ def validate (db, source, feed_address, bet_type, deadline, wager_amount,
 
     return problems
 
-def create (db, source, feed_address, bet_type, deadline, wager_amount,
-            counterwager_amount, target_value, leverage, expiration, unsigned=False):
+def compose (db, source, feed_address, bet_type, deadline, wager_amount,
+            counterwager_amount, target_value, leverage, expiration):
 
     # Check for sufficient funds.
-    fee_multiplier = get_fee_multiplier(db, feed_address)
+    fee_fraction = get_fee_fraction(db, feed_address)
     balances = util.get_balances(db, address=source, asset='XCP')
-    if not balances or balances[0]['amount']/(1 + fee_multiplier / 1e8) < wager_amount :
+    if not balances or balances[0]['amount']/(1 + fee_fraction) < wager_amount :
         raise exceptions.BetError('insufficient funds to both make wager and pay feed fee (in XCP)')
 
     problems = validate(db, source, feed_address, bet_type, deadline, wager_amount,
@@ -84,8 +84,8 @@ def create (db, source, feed_address, bet_type, deadline, wager_amount,
     data += struct.pack(FORMAT, bet_type, deadline,
                         wager_amount, counterwager_amount, target_value,
                         leverage, expiration)
-    return bitcoin.transaction(source, feed_address, config.DUST_SIZE,
-                               config.MIN_FEE, data, unsigned=unsigned)
+    return (source, feed_address, None, config.MIN_FEE,
+                               data)
 
 def parse (db, tx, message):
     bet_parse_cursor = db.cursor()
@@ -103,28 +103,30 @@ def parse (db, tx, message):
          expiration) = None, None, None, None, None, None, None
         validity = 'invalid: could not unpack'
 
-    fee_multiplier = 0
+    fee_fraction = 0
     odds = 0
     if validity == 'valid':
+        feed_address = tx['destination']
+        fee_fraction = get_fee_fraction(db, feed_address)
+
         try: odds = D(wager_amount) / D(counterwager_amount)
         except: pass
 
-        # Overbet
-        balances = util.get_balances(db, address=tx['source'], asset='XCP')
-        if not balances: wager_amount = 0
-        elif balances[0]['amount']/(1 + fee_multiplier / 1e8) < wager_amount:
-            wager_amount = min(round(balances[0]['amount']/(1 + fee_multiplier / 1e8)), wager_amount)
-            counterwager_amount = int(D(wager_amount) / odds)
-
-        feed_address = tx['destination']
         problems = validate(db, tx['source'], feed_address, bet_type, deadline, wager_amount,
                             counterwager_amount, target_value, leverage, expiration)
         if problems: validity = 'invalid: ' + ';'.join(problems)
 
+    if validity == 'valid':
+        # Overbet
+        balances = util.get_balances(db, address=tx['source'], asset='XCP')
+        if not balances: wager_amount = 0
+        elif balances[0]['amount']/(1 + fee_fraction) < wager_amount:
+            wager_amount = min(round(balances[0]['amount']/(1 + fee_fraction)), wager_amount)
+            counterwager_amount = int(D(wager_amount) / odds)
+
     # Debit amount wagered and fee.
     if validity == 'valid':
-        fee_multiplier = get_fee_multiplier(db, feed_address)
-        fee = round(wager_amount * fee_multiplier / 1e8)    # round?!
+        fee = round(wager_amount * fee_fraction)    # round?!
         util.debit(db, tx['block_index'], tx['source'], 'XCP', wager_amount)
         util.debit(db, tx['block_index'], tx['source'], 'XCP', fee)
 
@@ -145,10 +147,10 @@ def parse (db, tx, message):
         'leverage': leverage,
         'expiration': expiration,
         'expire_index': tx['block_index'] + expiration,
-        'fee_multiplier': fee_multiplier,
+        'fee_fraction_int': fee_fraction * 1e8,
         'validity': validity,
     }
-    sql='insert into bets values(:tx_index, :tx_hash, :block_index, :source, :feed_address, :bet_type, :deadline, :wager_amount, :wager_remaining, :counterwager_amount, :counterwager_remaining, :target_value, :leverage, :expiration, :expire_index, :fee_multiplier, :validity)'
+    sql='insert into bets values(:tx_index, :tx_hash, :block_index, :source, :feed_address, :bet_type, :deadline, :wager_amount, :wager_remaining, :counterwager_amount, :counterwager_remaining, :target_value, :leverage, :expiration, :expire_index, :fee_fraction_int, :validity)'
     bet_parse_cursor.execute(sql, bindings)
 
     # Match.
@@ -194,11 +196,11 @@ def match (db, tx):
         else:
             continue
 
-        # Fee multipliers must agree exactly.
-        if tx0['fee_multiplier'] != tx1['fee_multiplier']:
+        # Fee fractions must agree exactly.
+        if tx0['fee_fraction_int'] != tx1['fee_fraction_int']:
             continue
         else:
-            fee_multiplier = tx0['fee_multiplier']
+            fee_fraction_int = tx0['fee_fraction_int']
 
         # Deadlines must agree exactly.
         if tx0['deadline'] != tx1['deadline']:
@@ -278,10 +280,10 @@ def match (db, tx):
                 'tx0_expiration': tx0['expiration'],
                 'tx1_expiration': tx1['expiration'],
                 'match_expire_index': min(tx0['expire_index'], tx1['expire_index']),
-                'fee_multiplier': fee_multiplier,
+                'fee_fraction_int': fee_fraction_int,
                 'validity': 'valid',
             }
-            sql='insert into bet_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :tx0_bet_type, :tx1_bet_type, :feed_address, :initial_value, :deadline, :target_value, :leverage, :forward_amount, :backward_amount, :tx0_block_index, :tx1_block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :fee_multiplier, :validity)'
+            sql='insert into bet_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :tx0_bet_type, :tx1_bet_type, :feed_address, :initial_value, :deadline, :target_value, :leverage, :forward_amount, :backward_amount, :tx0_block_index, :tx1_block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :fee_fraction_int, :validity)'
             cursor.execute(sql, bindings)
 
     cursor.close()
@@ -302,7 +304,7 @@ def expire (db, block_index, block_time):
         sql='update bets set validity = :validity where tx_index = :tx_index'
         cursor.execute(sql, bindings)
 
-        util.credit(db, block_index, bet['source'], 'XCP', round(bet['wager_remaining'] * (1 + bet['fee_multiplier'] / 1e8)))
+        util.credit(db, block_index, bet['source'], 'XCP', round(bet['wager_remaining'] * (1 + bet['fee_fraction_int'] / 1e8)))
 
         # Record bet expiration.
         bindings = {
@@ -319,9 +321,9 @@ def expire (db, block_index, block_time):
                       WHERE (validity = ? AND deadline < ?)''', ('valid', block_time - config.TWO_WEEKS))
     for bet_match in cursor.fetchall():
         util.credit(db, block_index, bet_match['tx0_address'], 'XCP',
-                    round(bet_match['forward_amount'] * (1 + bet_match['fee_multiplier'] / 1e8)))
+                    round(bet_match['forward_amount'] * (1 + bet_match['fee_fraction_int'] / 1e8)))
         util.credit(db, block_index, bet_match['tx1_address'], 'XCP',
-                    round(bet_match['backward_amount'] * (1 + bet_match['fee_multiplier'] / 1e8)))
+                    round(bet_match['backward_amount'] * (1 + bet_match['fee_fraction_int'] / 1e8)))
 
         # Update validity of bet match.
         bindings = {

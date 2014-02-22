@@ -31,8 +31,18 @@ OP_2 = b'\x52'
 OP_CHECKMULTISIG = b'\xae'
 b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
-request_session = None
 dhash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
+
+request_session = None
+
+def bitcoind_check (db):
+    """Checks blocktime of last block to see if Bitcoind is running behind."""
+    block_count = rpc('getblockcount', [])
+    block_hash = rpc('getblockhash', [block_count])
+    block = rpc('getblock', [block_hash])
+    time_behind = time.time() - block['time']   # How reliable is the block time?!
+    if time_behind > 60 * 60 * 2:   # Two hours.
+        raise exceptions.BitcoindError('Bitcoind is running about {} seconds behind.'.format(round(time_behind)))
 
 def connect (host, payload, headers):
     global request_session
@@ -47,6 +57,18 @@ def connect (host, payload, headers):
             print('Could not connect to Bitcoind. Sleeping for five seconds. (Try {}/{})'.format(i+1, TRIES), file=sys.stderr)
             time.sleep(5)
     return None
+
+def wallet_unlock ():
+    getinfo = rpc('getinfo', [])
+    if 'unlocked_until' not in getinfo:
+        return True
+    elif getinfo['unlocked_until'] > 0:
+        return True
+    else:
+        print('Wallet is locked.')
+        passphrase = getpass.getpass('Enter your Bitcoind[‐Qt] wallet passhrase: ')
+        print('Unlocking wallet for 60 seconds.')
+        rpc('walletpassphrase', [passphrase, 60])
 
 def rpc (method, params):
     headers = {'content-type': 'application/json'}
@@ -70,8 +92,7 @@ def rpc (method, params):
         if config.TESTNET: network = 'testnet'
         else: network = 'mainnet'
         raise exceptions.BitcoindRPCError('Cannot communicate with Bitcoind. (counterpartyd is set to run on {}, is Bitcoind?)'.format(network))
-
-    if response.status_code not in (200, 500):
+    elif response.status_code not in (200, 500):
         raise exceptions.BitcoindRPCError(str(response.status_code) + ' ' + response.reason)
 
     '''
@@ -86,21 +107,41 @@ def rpc (method, params):
         return response_json['result']
     elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
         raise exceptions.BitcoindError('{} Is txindex enabled in Bitcoind?'.format(response_json['error']))
-    elif not config.HEADLESS and response_json['error']['code'] == -4:   # Unknown private key (locked wallet?)
+    elif response_json['error']['code'] == -4:   # Unknown private key (locked wallet?)
         # If address in wallet, attempt to unlock.
         address = params[0]
         if rpc('validateaddress', [address])['ismine']:
-            print('Wallet locked.')
-            passphrase = getpass.getpass('Enter your Bitcoind[‐Qt] wallet passhrase: ')
-            print('Unlocking wallet for 60 seconds.')
-            rpc('walletpassphrase', [passphrase, 60])
-            return rpc(method, params)  # This shouldn’t recurse.
+            raise exceptions.BitcoindError('Wallet is locked.')
         else:   # When will this happen?
             raise exceptions.BitcoindError('Source address not in wallet.')
     # elif config.PREFIX == config.UNITTEST_PREFIX:
     #     print(method)
     else:
         raise exceptions.BitcoindError('{}'.format(response_json['error']))
+
+def base58_check_encode(b, version):
+    b = binascii.unhexlify(bytes(b, 'utf-8'))
+    d = version + b   # mainnet
+
+    address_hex = d + dhash(d)[:4]
+
+    # Convert big‐endian bytes to integer
+    n = int('0x0' + binascii.hexlify(address_hex).decode('utf8'), 16)
+
+    # Divide that integer into base58
+    res = []
+    while n > 0:
+        n, r = divmod (n, 58)
+        res.append(b58_digits[r])
+    res = ''.join(res[::-1])
+
+    # Encode leading zeros as base58 zeros
+    czero = 0
+    pad = 0
+    for c in d:
+        if c == czero: pad += 1
+        else: break
+    return b58_digits[0] * pad + res
 
 def base58_decode (s, version):
     # Convert the string to an integer
@@ -153,8 +194,7 @@ def op_push (i):
     else:
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
-def serialise (inputs, destination_output=None, data_output=None, change_output=None, multisig=False, source=None, unsigned=False):
-    assert not (multisig and unsigned is True)
+def serialise (inputs, destination_output=None, data_output=None, change_output=None, source=None, multisig=False):
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
     # Number of inputs.
@@ -166,19 +206,7 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
         s += binascii.unhexlify(bytes(txin['txid'], 'utf-8'))[::-1]         # TxOutHash
         s += txin['vout'].to_bytes(4, byteorder='little')   # TxOutIndex
 
-        if not unsigned:
-            # No signature.
-            script = b''
-        else:
-            #pubkeyhash = base58_decode(source, config.ADDRESSVERSION)
-            #script = OP_DUP                                     # OP_DUP
-            #script += OP_HASH160                                # OP_HASH160
-            #script += op_push(20)                               # Push 0x14 bytes
-            #script += pubkeyhash                                # pubKeyHash
-            #script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
-            #script += OP_CHECKSIG                               # OP_CHECKSIG
-            script = str.encode(txin['scriptPubKey'])
-
+        script = str.encode(txin['scriptPubKey'])
         s += var_int(int(len(script)))                      # Script length
         s += script                                         # Script
         s += b'\xff' * 4                                    # Sequence
@@ -211,13 +239,12 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
     # Data output.
     for data_chunk in data_array:
         data_array, value = data_output # DUPE
-        s += (value).to_bytes(8, byteorder='little')        # Value
+        s += value.to_bytes(8, byteorder='little')        # Value
 
         if multisig:
-            # Get source public key.
-            if unsigned:
-                assert isinstance(unsigned, str)
-                pubkeypair = bitcoin_utils.parse_as_public_pair(unsigned)
+            # Get source public key (either provided as a string or derived from a private key in the wallet).
+            if isinstance(multisig, str):
+                pubkeypair = bitcoin_utils.parse_as_public_pair(multisig)
                 source_pubkey = public_pair_to_sec(pubkeypair, compressed=True)
             else:
                 if config.PREFIX == config.UNITTEST_PREFIX:
@@ -266,45 +293,46 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
     s += (0).to_bytes(4, byteorder='little')                # LockTime
     return s
 
-def get_inputs (source, total_btc_out, unittest=False, unsigned=False):
+def get_inputs (source, total_btc_out, unittest=False):
     """List unspent inputs for source."""
-    if not unittest and (not unsigned or rpc('validateaddress', [source])['ismine']):
-        listunspent = rpc('listunspent', [])
-    elif unsigned and not unittest:
-        if config.TESTNET: raise exceptions.TransactionError('Blockchain.info does not support testnet.')
+    if not unittest:
+        if rpc('validateaddress', [source])['ismine']:
+            listunspent = rpc('listunspent', [])
+        else:
+            if config.TESTNET: raise exceptions.TransactionError('Blockchain.info does not support testnet.')
 
-        #since the address is probably not in our wallet, consult blockchain to ensure that the address has the minimum balance
-        try:
-            r = requests.get("http://blockchain.info/unspent?active=" + source)
-            # ^any other services that provide this?? (blockexplorer.com doesn't...)
-            if r.status_code == 500 and r.text.lower() == "no free outputs to spend":
-                return None, None
-            elif r.status_code != 200:
-                raise Exception("Bad status code returned from blockchain.info: %s" % r.status_code)
-            unspent_outputs = r.json()['unspent_outputs']
-        except requests.exceptions.RequestException as e:
-            raise Exception("Problem getting unspent transactions from blockchain.info: " % e)
+            #since the address is probably not in our wallet, consult blockchain to ensure that the address has the minimum balance
+            try:
+                r = requests.get("http://blockchain.info/unspent?active=" + source)
+                # ^any other services that provide this?? (blockexplorer.com doesn't...)
+                if r.status_code == 500 and r.text.lower() == "no free outputs to spend":
+                    return None, None
+                elif r.status_code != 200:
+                    raise Exception("Bad status code returned from blockchain.info: %s" % r.status_code)
+                unspent_outputs = r.json()['unspent_outputs']
+            except requests.exceptions.RequestException as e:
+                raise Exception("Problem getting unspent transactions from blockchain.info: " % e)
 
-        #take the returned data to a format compatible with bitcoind's output
-        listunspent = []
-        for o in unspent_outputs:
-            #blockchain.info lists the txhash in some weird reversed string notation with character pairs fipped...fun
-            o['tx_hash'] = o['tx_hash'][::-1] #reverse string
-            o['tx_hash'] = ''.join([o['tx_hash'][i:i+2][::-1] for i in range(0, len(o['tx_hash']), 2)]) #flip the character pairs within the string
-            listunspent.append({
-                'address': source,
-                'txid': o['tx_hash'],
-                'vout': o['tx_output_n'],
-                'account': "",
-                'scriptPubKey': o['script'],
-                'amount': o['value'] / float(config.UNIT),
-                'confirmations': o['confirmations']
-            })
+            #take the returned data to a format compatible with bitcoind's output
+            listunspent = []
+            for o in unspent_outputs:
+                #blockchain.info lists the txhash in some weird reversed string notation with character pairs fipped...fun
+                o['tx_hash'] = o['tx_hash'][::-1] #reverse string
+                o['tx_hash'] = ''.join([o['tx_hash'][i:i+2][::-1] for i in range(0, len(o['tx_hash']), 2)]) #flip the character pairs within the string
+                listunspent.append({
+                    'address': source,
+                    'txid': o['tx_hash'],
+                    'vout': o['tx_output_n'],
+                    'account': "",
+                    'scriptPubKey': o['script'],
+                    'amount': o['value'] / float(config.UNIT),
+                    'confirmations': o['confirmations']
+                })
     else:
-        assert unittest and not unsigned
         CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
         with open(CURR_DIR + '/../test/listunspent.test.json', 'r') as listunspent_test_file:   # HACK
             listunspent = json.load(listunspent_test_file)
+
     unspent = [coin for coin in listunspent if coin['address'] == source]
     inputs, total_btc_in = [], 0
     for coin in unspent:
@@ -315,13 +343,10 @@ def get_inputs (source, total_btc_out, unittest=False, unsigned=False):
     return None, None
 
 # Replace unittest flag with fake bitcoind JSON-RPC server.
-def transaction (source, destination, btc_amount, fee, data, unittest=False, multisig=True, unsigned=False):
-    if config.PREFIX == config.UNITTEST_PREFIX: unittest = True
+def transaction (tx_info, multisig, unittest=False):
+    source, destination, btc_amount, fee, data = tx_info
 
-    #NB: if unsigned is True (instead of false or a public key string) and multisig is specified, then disable multisig and use OP_RETURN
-    # TODO: Why? This is sometimes very surprising!
-    if unsigned is True and multisig:
-        multisig = False
+    if config.PREFIX == config.UNITTEST_PREFIX: unittest = True
 
     # Validate addresses.
     for address in (source, destination):
@@ -333,14 +358,20 @@ def transaction (source, destination, btc_amount, fee, data, unittest=False, mul
                                           address)
 
     # Check that the source is in wallet.
-    if not unittest and not unsigned:
+    if not unittest:
         if not rpc('validateaddress', [source])['ismine']:
             raise exceptions.InvalidAddressError('Not one of your Bitcoin addresses:', source)
 
     # Check that the destination output isn't a dust output.
     if destination:
-        if not btc_amount >= config.DUST_SIZE:
-            raise exceptions.TransactionError('Destination output is below the dust target value.')
+        if multisig:
+            if btc_amount == None: btc_amount = config.MULTISIG_DUST_SIZE
+            if not btc_amount >= config.MULTISIG_DUST_SIZE:
+                raise exceptions.TransactionError('Destination output is below the dust target value.')
+        else:
+            if btc_amount == None: btc_amount = config.REGULAR_DUST_SIZE
+            if not btc_amount >= config.REGULAR_DUST_SIZE:
+                raise exceptions.TransactionError('Destination output is below the dust target value.')
     else:
         assert not btc_amount
 
@@ -360,13 +391,13 @@ def transaction (source, destination, btc_amount, fee, data, unittest=False, mul
 
     # Calculate total BTC to be sent.
     total_btc_out = fee
-    if multisig: data_value = config.DUST_SIZE
-    else: data_value = config.DATA_VALUE
+    if multisig: data_value = config.MULTISIG_DUST_SIZE
+    else: data_value = config.OP_RETURN_VALUE
     for data_chunk in data_array: total_btc_out += data_value
     if destination: total_btc_out += btc_amount
 
     # Construct inputs.
-    inputs, total_btc_in = get_inputs(source, total_btc_out, unittest=unittest, unsigned=unsigned)
+    inputs, total_btc_in = get_inputs(source, total_btc_out, unittest=unittest)
     if not inputs:
         raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need {} BTC.)'.format(source, total_btc_out / config.UNIT))
 
@@ -380,27 +411,15 @@ def transaction (source, destination, btc_amount, fee, data, unittest=False, mul
     else: change_output = None
 
     # Serialise inputs and outputs.
-    transaction = serialise(inputs, destination_output, data_output, change_output, multisig=multisig, source=source, unsigned=unsigned)
+    transaction = serialise(inputs, destination_output, data_output, change_output, source=source, multisig=multisig)
     unsigned_tx_hex = binascii.hexlify(transaction).decode('utf-8')
     return unsigned_tx_hex
 
-def transmit (unsigned_tx_hex, ask=True, unsigned=False):
-    # Confirm transaction.
-    if not unsigned:
-        print('Transaction (unsigned):', unsigned_tx_hex)
-    if ask and not unsigned and not config.HEADLESS:    # Over‐complicated
-        if config.TESTNET: print('Attention: TESTNET!')
-        if config.TESTCOIN: print('Attention: TESTCOIN!\n')
-        if input('Confirm? (y/N) ') != 'y':
-            print('Transaction aborted.', file=sys.stderr)
-            sys.exit(1)
-    if unsigned:
-        return unsigned_tx_hex
-    else:
-        # Sign transaction.
-        result = rpc('signrawtransaction', [unsigned_tx_hex])
-        if result['complete']:
-            signed_tx_hex = result['hex']
-            return rpc('sendrawtransaction', [signed_tx_hex])
+def transmit (unsigned_tx_hex):
+    # Sign transaction.
+    result = rpc('signrawtransaction', [unsigned_tx_hex])
+    if result['complete']:
+        signed_tx_hex = result['hex']
+        return rpc('sendrawtransaction', [signed_tx_hex])
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

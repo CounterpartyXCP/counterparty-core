@@ -6,17 +6,17 @@ Broadcast a message, with or without a price.
 Multiple messages per block are allowed. Bets are be made on the 'timestamp'
 field, and not the block index.
 
-An address is a feed of broadcasts. Feeds (addresses) may be locked with a
-broadcast containing a blank 'text' field. Bets on a feed reference the address
-that is the source of the feed in an output which includes the (latest)
-required fee.
+An address is a feed of broadcasts. Feeds may be locked with a broadcast whose
+text field is identical to ‘lock’ (case insensitive). Bets on a feed reference
+the address that is the source of the feed in an output which includes the
+(latest) required fee.
 
 Broadcasts without a price may not be used for betting. Broadcasts about events
 with a small number of possible outcomes (e.g. sports games), should be
 written, for example, such that a price of 1 XCP means one outcome, 2 XCP means
 another, etc., which schema should be described in the 'text' field.
 
-fee_multipilier: .05 XCP means 5%. It may be greater than 1, however; but
+fee_fraction: .05 XCP means 5%. It may be greater than 1, however; but
 because it is stored as a four‐byte integer, it may not be greater than about
 42.
 """
@@ -33,11 +33,11 @@ LENGTH = 4 + 8 + 4 + 52
 ID = 30
 
 
-def validate (db, source, timestamp, value, fee_multiplier, text):
+def validate (db, source, timestamp, value, fee_fraction_int, text):
     problems = []
 
-    if fee_multiplier > 4294967295:
-        problems.append('fee multiplier greater than 42.94967295')
+    if fee_fraction_int > 4294967295:
+        problems.append('fee fraction greater than 42.94967295')
 
     if not source:
         problems.append('null source address')
@@ -45,33 +45,27 @@ def validate (db, source, timestamp, value, fee_multiplier, text):
     broadcasts = util.get_broadcasts(db, validity='valid', source=source, order_by='tx_index', order_dir='asc')
     if broadcasts:
         last_broadcast = broadcasts[-1]
-        if not last_broadcast['text']:
+        if last_broadcast['locked']:
             problems.append('locked feed')
         elif timestamp <= last_broadcast['timestamp']:
             problems.append('feed timestamps not monotonically increasing')
 
-    # Locking
-    if not text:
-        if value:
-            problems.append('value specified when locking feed')
-        elif fee_multiplier:
-            problems.append('fee multiplier specified when locking feed')
-
     return problems
 
-def create (db, source, timestamp, value, fee_multiplier, text, unsigned=False):
-    # Use a magic number to store the fee multplier as an integer.
-    fee_multiplier = int(D(fee_multiplier) * D(1e8))
+def compose (db, source, timestamp, value, fee_fraction, text):
 
-    problems = validate(db, source, timestamp, value, fee_multiplier, text)
+    # Store the fee fraction as an integer.
+    fee_fraction_int = int(D(fee_fraction) * D(1e8))
+
+    problems = validate(db, source, timestamp, value, fee_fraction_int, text)
     if problems: raise exceptions.BroadcastError(problems)
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
-    data += struct.pack(FORMAT, timestamp, value, fee_multiplier,
+    data += struct.pack(FORMAT, timestamp, value, fee_fraction_int,
                         text.encode('utf-8'))
     if len(data) > 80:
         raise exceptions.BroadcastError('Text is greater than 52 bytes.')
-    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, unsigned=unsigned)
+    return (source, None, None, config.MIN_FEE, data)
 
 def parse (db, tx, message):
     broadcast_parse_cursor = db.cursor()
@@ -79,11 +73,11 @@ def parse (db, tx, message):
     # Unpack message.
     try:
         assert len(message) == LENGTH
-        timestamp, value, fee_multiplier, text = struct.unpack(FORMAT, message)
+        timestamp, value, fee_fraction_int, text = struct.unpack(FORMAT, message)
         text = text.decode('utf-8')
         validity = 'valid'
     except struct.error as e:
-        timestamp, value, fee_multiplier, text = None, None, None, None
+        timestamp, value, fee_fraction_int, text = None, None, None, None
         validity = 'invalid: could not unpack'
 
     if validity == 'valid':
@@ -91,8 +85,16 @@ def parse (db, tx, message):
         timestamp = min(timestamp, config.MAX_INT)
         value = min(value, config.MAX_INT)
 
-        problems = validate(db, tx['source'], timestamp, value, fee_multiplier, text)
+        problems = validate(db, tx['source'], timestamp, value, fee_fraction_int, text)
         if problems: validity = 'invalid: ' + ';'.join(problems)
+
+    # Lock?
+    lock = False
+    if text and text.lower() == 'lock':
+        lock = True
+        timestamp, value, fee_fraction_int, text = None, None, None, None
+    else:
+        lock = False
 
     # Add parsed transaction to message-type–specific table.
     bindings = {
@@ -102,16 +104,16 @@ def parse (db, tx, message):
         'source': tx['source'],
         'timestamp': timestamp,
         'value': value,
-        'fee_multiplier': fee_multiplier,
+        'fee_fraction_int': fee_fraction_int,
         'text': text,
+        'locked': lock,
         'validity': validity,
     }
-    sql='insert into broadcasts values(:tx_index, :tx_hash, :block_index, :source, :timestamp, :value, :fee_multiplier, :text, :validity)'
+    sql='insert into broadcasts values(:tx_index, :tx_hash, :block_index, :source, :timestamp, :value, :fee_fraction_int, :text, :locked, :validity)'
     broadcast_parse_cursor.execute(sql, bindings)
 
-
-    # Null values are special.
-    if not value:
+    # Negative values are invalid.
+    if value < 0 or value == None:
         broadcast_parse_cursor.close()
         return
 
@@ -128,7 +130,7 @@ def parse (db, tx, message):
         # Calculate total funds held in escrow and total fee to be paid if
         # the bet match is settled.
         total_escrow = bet_match['forward_amount'] + bet_match['backward_amount']
-        fee_fraction = D(bet_match['fee_multiplier']) / D(1e8)
+        fee_fraction = D(bet_match['fee_fraction_int']) / D(1e8)
         fee = round(total_escrow * fee_fraction)
 
         # Get known bet match type IDs.

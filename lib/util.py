@@ -13,21 +13,36 @@ import collections
 import inspect
 import requests
 
-from . import (config, exceptions, bitcoin)
+from . import (config, exceptions)
 
 b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 # Obsolete in Python 3.4, with enum module.
 BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
 BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
-DO_FILTER_OPERATORS = {
-    '==': operator.eq,
-    '!=': operator.ne,
-    '<': operator.lt,
-    '>': operator.gt,
-    '<=': operator.le,
-    '>=': operator.ge,
-}
+
+def api (method, params):
+    headers = {'content-type': 'application/json'}
+    payload = {
+        "method": method,
+        "params": params,
+        "jsonrpc": "2.0",
+        "id": 0,
+    }
+    response = requests.post(config.RPC, data=json.dumps(payload), headers=headers)
+    if response == None:
+        raise exceptions.RPCError('Cannot communicate with counterpartyd server.')
+    elif response.status_code != 200:
+        if response.status_code == 500:
+            raise exceptions.RPCError('Malformed API call.')
+        else:
+            raise exceptions.RPCError(str(response.status_code) + ' ' + response.reason)
+
+    response_json = response.json()
+    if 'error' not in response_json.keys() or response_json['error'] == None:
+        return response_json['result']
+    else:
+        raise exceptions.RPCError('{}'.format(response_json['error']))
 
 def price (numerator, denominator):
     numerator = D(numerator)
@@ -36,9 +51,10 @@ def price (numerator, denominator):
 
 def log (db, command, category, bindings):
 
+    # Slow?!
     def output (amount, asset):
         try:
-            if asset not in ('price', 'fee_multiplier', 'odds', 'leverage'):
+            if asset not in ('fraction', 'leverage'):
                 return str(devise(db, amount, asset, 'output')) + ' ' + asset
             else:
                 return str(devise(db, amount, asset, 'output'))
@@ -62,66 +78,19 @@ def log (db, command, category, bindings):
     elif command == 'insert':  # TODO
 
         if category == 'credits':
-            logging.debug('Credit: {} to {} #{}# <{}>'.format(output(bindings['amount'], bindings['asset']), bindings['address'], bindings['calling_function'], bindings['event']))
+            logging.debug('Credit: {} to {} #{}# <{}>'.format(output(bindings['amount'], bindings['asset']), bindings['address'], bindings['action'], bindings['event']))
 
         elif category == 'debits':
-            logging.debug('Debit: {} from {} #{}# <{}>'.format(output(bindings['amount'], bindings['asset']), bindings['address'], bindings['calling_function'], bindings['event']))
+            logging.debug('Debit: {} from {} #{}# <{}>'.format(output(bindings['amount'], bindings['asset']), bindings['address'], bindings['action'], bindings['event']))
 
         elif category == 'sends':
             logging.info('Send: {} from {} to {} ({}) [{}]'.format(output(bindings['amount'], bindings['asset']), bindings['source'], bindings['destination'], bindings['tx_hash'], bindings['validity']))
 
         elif category == 'orders':
-            give_asset = bindings['give_asset']
-            get_asset = bindings['get_asset']
-
-            give_amount = output(bindings['give_amount'], bindings['give_asset']).split(' ')[0]
-            get_amount = output(bindings['get_amount'], bindings['get_asset']).split(' ')[0]
-
-            # Consistent ordering for currency pairs. (Partial DUPE.)
-            if get_asset < give_asset:
-                try:
-                    price = output(D(get_amount) / D(give_amount), 'price')
-                except (decimal.DivisionByZero, decimal.InvalidOperation):
-                    price = '??'
-                price_assets = get_asset + '/' + give_asset
-                action = 'sell {} {}'.format(give_amount, give_asset)
-            else:
-                try:
-                    price = output(D(give_amount) / D(get_amount), 'price')
-                except (decimal.DivisionByZero, decimal.InvalidOperation):
-                    price = '??'
-                price_assets = give_asset + '/' + get_asset
-                action = 'buy {} {}'.format(get_amount, get_asset)
-
-            logging.info('Order: {} at {} {} in {} blocks, with a provided fee of {} BTC and a required fee of {} BTC ({}) [{}]'.format(action, price, price_assets, bindings['expiration'], bindings['fee_provided'] / config.UNIT, bindings['fee_required'] / config.UNIT, bindings['tx_hash'], bindings['validity']))
+            logging.info('Order: give {} for {} in {} blocks, with a provided fee of {} BTC and a required fee of {} BTC ({}) [{}]'.format(output(bindings['give_amount'], bindings['give_asset']), output(bindings['get_amount'], bindings['get_asset']), bindings['expiration'], bindings['fee_provided'] / config.UNIT, bindings['fee_required'] / config.UNIT, bindings['tx_hash'], bindings['validity']))
 
         elif category == 'order_matches':
-            forward_amount = bindings['forward_amount']
-            backward_amount = bindings['backward_amount']
-            forward_asset = bindings['forward_asset']
-            backward_asset = bindings['backward_asset']
-
-            # This can't be gotten rid of!
-            forward_print = output(forward_amount, forward_asset)
-            backward_print = output(backward_amount, backward_asset)
-
-            # Consistent ordering for currency pairs. (Partial DUPE.)
-            if forward_asset < backward_asset:
-                try:
-                    price = output(D(forward_amount) / D(backward_amount), 'price')
-                except (decimal.DivisionByZero, decimal.InvalidOperation):
-                    price = None
-                price_assets = forward_asset + '/' + backward_asset
-                foobar = '{} for {}'.format(forward_print, backward_print)
-            else:
-                try:
-                    price = output(D(backward_amount) / D(forward_amount), 'price')
-                except (decimal.DivisionByZero, decimal.InvalidOperation):
-                    price = None
-                price_assets = backward_asset + '/' + forward_asset
-                foobar = '{} for {}'.format(backward_print, forward_print)
-
-            logging.info('Order Match: {} at {} {} ({}) [{}]'.format(foobar, price, price_assets, bindings['id'], bindings['validity']))
+            logging.info('Order Match: {} for {} ({}) [{}]'.format(output(bindings['forward_amount'], bindings['forward_asset']), output(bindings['backward_amount'], bindings['backward_asset']), bindings['id'], bindings['validity']))
 
         elif category == 'btcpays':
             logging.info('BTC Payment: {} paid {} to {} for order match {} ({}) [{}]'.format(bindings['source'], output(bindings['btc_amount'], 'BTC'), bindings['destination'], bindings['order_match_id'], bindings['tx_hash'], bindings['validity']))
@@ -129,7 +98,7 @@ def log (db, command, category, bindings):
         elif category == 'issuances':
             if bindings['transfer']:
                 logging.info('Issuance: {} transferred asset {} to {} ({}) [{}]'.format(bindings['source'], bindings['asset'], bindings['issuer'], bindings['tx_hash'], bindings['validity']))
-            elif not bindings['amount']:
+            elif bindings['locked']:
                 logging.info('Issuance: {} locked asset {} ({}) [{}]'.format(bindings['issuer'], bindings['asset'], bindings['tx_hash'], bindings['validity']))
             else:
                 if bindings['divisible']:
@@ -149,25 +118,24 @@ def log (db, command, category, bindings):
                 logging.info('Issuance: {} created {} of asset {}, which is {} and {}, with description ‘{}’ ({}) [{}]'.format(bindings['issuer'], amount, bindings['asset'], divisibility, callability, bindings['description'], bindings['tx_hash'], bindings['validity']))
 
         elif category == 'broadcasts':
-            if not bindings['text']:
+            if bindings['locked']:
                 logging.info('Broadcast: {} locked his feed ({}) [{}]'.format(bindings['source'], bindings['tx_hash'], bindings['validity']))
             else:
                 if not bindings['value']: infix = '‘{}’'.format(bindings['text'])
                 else: infix = '‘{}’ = {}'.format(bindings['text'], bindings['value'])
-                suffix = ' from ' + bindings['source'] + ' at ' + isodt(bindings['timestamp']) + ' with a fee of {}%'.format(output(D(bindings['fee_multiplier']) * D(100), 'fee_multiplier')) + ' (' + bindings['tx_hash'] + ')' + ' [{}]'.format(bindings['validity'])
+                suffix = ' from ' + bindings['source'] + ' at ' + isodt(bindings['timestamp']) + ' with a fee of {}%'.format(output(D(bindings['fee_fraction_int'] / 1e8) * D(100), 'fraction')) + ' (' + bindings['tx_hash'] + ')' + ' [{}]'.format(bindings['validity'])
                 logging.info('Broadcast: {}'.format(infix + suffix))
 
         elif category == 'bets':
             placeholder = ''
-            if bindings['target_value']:    # 0.0 is not a valid target value.
+            if bindings['target_value']:    # 0.0 is not a valid target value.  # TODO
                 placeholder = ' that ' + str(output(bindings['target_value'], 'value'))
             if bindings['leverage']:
                 placeholder += ', leveraged {}x'.format(output(bindings['leverage']/ 5040, 'leverage'))
-            odds = D(bindings['wager_amount']) / D(bindings['counterwager_amount'])
 
-            fee = round(bindings['wager_amount'] * bindings['fee_multiplier'] / 1e8)    # round?!
+            fee = round(bindings['wager_amount'] * bindings['fee_fraction_int'] / 1e8)    # round?!
 
-            logging.info('Bet: {} on {} at {} for {} against {} at {} odds in {} blocks{} for a fee of {} ({}) [{}]'.format(BET_TYPE_NAME[bindings['bet_type']], bindings['feed_address'], isodt(bindings['deadline']), output(bindings['wager_amount'], 'XCP'), output(bindings['counterwager_amount'], 'XCP'), output(odds, 'odds'), bindings['expiration'], placeholder, output(fee, 'XCP'), bindings['tx_hash'], bindings['validity']))
+            logging.info('Bet: {} on {} at {} for {} against {} in {} blocks{} for a fee of {} ({}) [{}]'.format(BET_TYPE_NAME[bindings['bet_type']], bindings['feed_address'], isodt(bindings['deadline']), output(bindings['wager_amount'], 'XCP'), output(bindings['counterwager_amount'], 'XCP'), bindings['expiration'], placeholder, output(fee, 'XCP'), bindings['tx_hash'], bindings['validity']))
 
         elif category == 'bet_matches':
             placeholder = ''
@@ -226,7 +194,7 @@ def exectracer(cursor, sql, bindings):
     dictionary = {'command': command, 'category': category, 'bindings': bindings}
 
     # Skip blocks, transactions.
-    if 'blocks' in sql or 'transactions' in sql: return True
+    if 'blocks' in sql or 'transactions' in sql or 'potentials' in sql: return True
 
     # Record alteration in database.
     if not category in ('balances', 'messages'):
@@ -247,7 +215,7 @@ def exectracer(cursor, sql, bindings):
             try:
                 block_index = bindings['tx1_block_index']
             except KeyError:
-                block_index = 0 # TODO
+                block_index = last_block(db)['block_index'] + 1   # TODO: Double‐check that this is correct.
 
         bindings_string = json.dumps(collections.OrderedDict(sorted(bindings.items())))
         cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings)',
@@ -261,14 +229,50 @@ def exectracer(cursor, sql, bindings):
 
     return True
 
-def connect_to_db():
+def connect_to_db(flags=None):
     """Connects to the SQLite database, returning a db Connection object"""
-    db = apsw.Connection(config.DATABASE)
+
+    if flags == None:
+        db = apsw.Connection(config.DATABASE)
+    elif flags == 'SQLITE_OPEN_READONLY':
+        db = apsw.Connection(config.DATABASE, flags=0x00000001)
+    else: raise Exception # TODO
+
     cursor = db.cursor()
+
+    # For speed.
     cursor.execute('''PRAGMA count_changes = OFF''')
+
+    # For integrity, security.
+    cursor.execute('''PRAGMA foreign_keys = ON''')
+
+    """
+    cursor.execute('''PRAGMA foreign_key_check''')
+    if rows:
+        raise exceptions.DatabaseError('Foreign key check failed.')
+
+    # Integrity check
+    integral = False
+    for i in range(10): # DUPE
+        try:
+            cursor.execute('''PRAGMA integrity_check''')
+            rows = cursor.fetchall()
+            if not (len(rows) == 1 and rows[0][0] == 'ok'):
+                raise exceptions.DatabaseError('Integrity check failed.')
+            integral = True
+            break
+        except Exception:
+            time.sleep(1)
+            continue
+    if not integral:
+        raise exceptions.DatabaseError('Could not perform integrity check.')
+    """
+
     cursor.close()
+
     db.setrowtrace(rowtracer)
     db.setexectrace(exectracer)
+
     return db
 
 def versions_check (db):
@@ -287,7 +291,7 @@ def versions_check (db):
     # comes into effect.
     try:
         block_index = last_block(db)['block_index']
-    except apsw.SQLError:
+    except (exceptions.DatabaseError, apsw.SQLError):
         logging.debug('Status: Version checks passed.') # DUPE
         return
     for protocol_change in versions['protocol_changes']:
@@ -298,124 +302,22 @@ def versions_check (db):
     logging.debug('Status: Version checks passed.')
     return
 
-def bitcoind_check (db):
-    """Checks blocktime of last block to see if Bitcoind is running behind."""
-    block_count = bitcoin.rpc('getblockcount', [])
-    block_hash = bitcoin.rpc('getblockhash', [block_count])
-    block = bitcoin.rpc('getblock', [block_hash])
-    time_behind = time.time() - block['time']   # How reliable is the block time?!
-    if time_behind > 60 * 60 * 2:   # Two hours.
-        raise exceptions.BitcoindError('Bitcoind is running about {} seconds behind.'.format(round(time_behind)))
-
-def database_check (db):
+def database_check (db, blockcount):
     """Checks Counterparty database to see if the counterpartyd server has caught up with Bitcoind."""
     cursor = db.cursor()
     TRIES = 14
     for i in range(TRIES):
         block_index = last_block(db)['block_index']
-        if block_index == bitcoin.rpc('getblockcount', []):
+        if block_index == blockcount:
             cursor.close()
             return
-        print('Database not up to date. Sleeping for one second. (Try {}/{})'.format(i+1, TRIES), file=sys.stderr)
+        print('Database not up‐to‐date. Sleeping for one second. (Try {}/{})'.format(i+1, TRIES), file=sys.stderr)
         time.sleep(1)
     raise exceptions.DatabaseError('Counterparty database is behind Bitcoind. Is the counterpartyd server running?')
 
-def do_filter(results, filters, filterop):
-    """Filters results based on a filter data structure (as used by the API)"""
-    if not len(results) or not filters: #empty results, or not filtering
-        return results
-    if isinstance(filters, dict): #single filter entry, convert to a one entry list
-        filters = [filters,]
-    #validate filter(s)
-    required_fields = ['field', 'op', 'value']
-    for filter in filters:
-        for field in required_fields: #should have all fields
-            if field not in filter:
-                raise Exception("A specified filter is missing the '%s' field" % field)
-        if filterop not in ('and', 'or'):
-            raise Exception("Invalid filterop setting. Must be either 'and' or 'or'.")
-        if filter['op'] not in DO_FILTER_OPERATORS.keys():
-            raise Exception("A specified filter op is invalid or not recognized: '%s'" % filter['op'])
-        if filter['field'] == 'block_index':
-            raise Exception("For performance reasons, please use the start_block and end_block API arguments to do block_index filtering")
-        if filter['field'] not in results[0]:
-            raise Exception("A specified filter field is invalid or not recognized for the given object type: '%s'" % filter['field'])
-        if type(filter['value']) not in (str, int, float, bool):
-            raise Exception("Value specified for filter field '%s' is not one of the supported value types (str, int, float, bool)" % (
-                filter['field']))
-        if results[0][filter['field']] != None and filter['value'] != None and type(filter['value']) != type(results[0][filter['field']]):
-            # field is None when it does not matter.
-            raise Exception("Value specified for filter field '%s' does not match the data type of that field (value: %s, field: %s) and neither is None" % (
-                filter['field'], type(filter['value']), type(results[0][filter['field']])))
-    #filter data
-    if filterop == 'and':
-        for filter in filters:
-            results = [e for e in results if DO_FILTER_OPERATORS[filter['op']](e[filter['field']], filter['value'])]
-        return results
-    else: #or
-        combined_results = []
-        for filter in filters:
-            combined_results += [e for e in results if DO_FILTER_OPERATORS[filter['op']](e[filter['field']], filter['value'])]
-        return combined_results
-
-def do_order_by(results, order_by, order_dir):
-    if not len(results) or not order_by: #empty results, or not ordering
-        return results
-    assert isinstance(results, list) and isinstance(results[0], dict)
-
-    if order_by not in results[0]:
-        raise KeyError("Specified order_by property '%s' does not exist in returned data" % order_by)
-    if order_dir not in ('asc', 'desc'):
-        raise Exception("Invalid order_dir: '%s'. Must be 'asc' or 'desc'" % order_dir)
-    return sorted(results, key=itemgetter(order_by), reverse=order_dir=='desc')
-
-def get_limit_to_blocks(start_block, end_block, col_names=['block_index',]):
-    if    (start_block is not None and not isinstance(start_block, int)) \
-       or (end_block is not None and not isinstance(end_block, int)):
-        raise ValueError("start_block and end_block must be either an integer, or None")
-    assert isinstance(col_names, list) and len(col_names) in [1, 2]
-
-    if start_block is None and end_block is None:
-        return ''
-    elif len(col_names) == 1:
-        col_name = col_names[0]
-        if start_block and end_block:
-            block_limit_clause = " WHERE %s >= %s AND %s <= %s" % (col_name, start_block, col_name, end_block)
-        elif start_block:
-            block_limit_clause = " WHERE %s >= %s" % (col_name, start_block)
-        elif end_block:
-            block_limit_clause = " WHERE %s <= %s" % (col_name, end_block)
-    else: #length of 2
-        if start_block and end_block:
-            block_limit_clause = " WHERE (%s >= %s OR %s >= %s) AND (%s <= %s OR %s <= %s)" % (
-                col_name[0], start_block, col_name[1], start_block,
-                col_name[0], end_block, col_name[1], end_block)
-        elif start_block:
-            block_limit_clause = " WHERE %s >= %s OR %s >= %s" % (
-                col_name[0], start_block, col_name[1], start_block)
-        elif end_block:
-            block_limit_clause = " WHERE %s >= %s OR %s >= %s" % (
-                col_name[0], end_block, col_name[1], end_block)
-    return block_limit_clause
 
 def isodt (epoch_time):
     return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
-
-def xcp_supply (db):
-    cursor = db.cursor()
-
-    # Add burns.
-    cursor.execute('''SELECT * FROM burns \
-                      WHERE validity = ?''', ('valid',))
-    burn_total = sum([burn['earned'] for burn in cursor.fetchall()])
-
-    # Subtract issuance fees.
-    cursor.execute('''SELECT * FROM issuances\
-                      WHERE validity = ?''', ('valid',))
-    fee_total = sum([issuance['fee_paid'] for issuance in cursor.fetchall()])
-
-    cursor.close()
-    return burn_total - fee_total
 
 def last_block (db):
     cursor = db.cursor()
@@ -477,14 +379,7 @@ def get_asset_name (asset_id):
     return asset_name
 
 
-def debit (db, block_index, address, asset, amount, event=None):
-
-    # Get calling function.
-    parent = inspect.stack()[1]
-    frame, filename, lineno, function, code_context, index = parent
-    parent_name = inspect.getmodulename(filename)
-    calling_function = (parent_name + '.' + function)
-
+def debit (db, block_index, address, asset, amount, action=None, event=None):
     debit_cursor = db.cursor()
     assert asset != 'BTC' # Never BTC.
     assert type(amount) == int
@@ -517,21 +412,15 @@ def debit (db, block_index, address, asset, amount, event=None):
         'address': address,
         'asset': asset,
         'amount': amount,
-        'calling_function': calling_function,
+        'action': action,
         'event': event
     }
-    sql='insert into debits values(:block_index, :address, :asset, :amount, :calling_function, :event)'
+    sql='insert into debits values(:block_index, :address, :asset, :amount, :action, :event)'
     debit_cursor.execute(sql, bindings)
 
     debit_cursor.close()
 
-def credit (db, block_index, address, asset, amount, event=None):
-    # Get calling function. DUPE
-    parent = inspect.stack()[1]
-    frame, filename, lineno, function, code_context, index = parent
-    parent_name = inspect.getmodulename(filename)
-    calling_function = (parent_name + '.' + function)
-
+def credit (db, block_index, address, asset, amount, action=None, event=None):
     credit_cursor = db.cursor()
     assert asset != 'BTC' # Never BTC.
     assert type(amount) == int
@@ -572,14 +461,15 @@ def credit (db, block_index, address, asset, amount, event=None):
         'address': address,
         'asset': asset,
         'amount': amount,
-        'calling_function': calling_function,
+        'action': action,
         'event': event
     }
-    sql='insert into credits values(:block_index, :address, :asset, :amount, :calling_function, :event)'
+    sql='insert into credits values(:block_index, :address, :asset, :amount, :action, :event)'
     credit_cursor.execute(sql, bindings)
     credit_cursor.close()
 
 def devise (db, quantity, asset, dest, divisible=None):
+
     # For output only.
     def norm(num, places):
         # Round only if necessary.
@@ -589,7 +479,7 @@ def devise (db, quantity, asset, dest, divisible=None):
         num = fmt.format(num)
         return num.rstrip('0')+'0' if num.rstrip('0')[-1] == '.' else num.rstrip('0')
 
-    if asset in ('leverage', 'price', 'odds', 'value', 'fraction'):
+    if asset in ('leverage', 'value', 'fraction'):
         if dest == 'output':
             return norm(quantity, 6)
         elif dest == 'input':
@@ -599,7 +489,7 @@ def devise (db, quantity, asset, dest, divisible=None):
             else:
                 return float(quantity)  # TODO: Float?!
 
-    if asset in ('fee_multiplier',):
+    if asset in ('fraction',):
         return norm(D(quantity) / D(1e8), 6)
 
     if divisible == None:
@@ -633,6 +523,122 @@ def devise (db, quantity, asset, dest, divisible=None):
         if quantity != round(quantity):
             raise exceptions.QuantityError('Fractional quantities of indivisible assets.')
         return round(quantity)
+
+
+
+
+
+
+
+DO_FILTER_OPERATORS = {
+    '==': operator.eq,
+    '!=': operator.ne,
+    '<': operator.lt,
+    '>': operator.gt,
+    '<=': operator.le,
+    '>=': operator.ge,
+}
+
+def do_filter(results, filters, filterop):
+    """Filters results based on a filter data structure (as used by the API)"""
+    if not len(results) or not filters: #empty results, or not filtering
+        return results
+    if isinstance(filters, dict): #single filter entry, convert to a one entry list
+        filters = [filters,]
+    #validate filter(s)
+    required_fields = ['field', 'op', 'value']
+    for filter in filters:
+        for field in required_fields: #should have all fields
+            if field not in filter:
+                raise Exception("A specified filter is missing the '%s' field" % field)
+        if filterop not in ('and', 'or'):
+            raise Exception("Invalid filterop setting. Must be either 'and' or 'or'.")
+        if filter['op'] not in DO_FILTER_OPERATORS.keys():
+            raise Exception("A specified filter op is invalid or not recognized: '%s'" % filter['op'])
+        if filter['field'] == 'block_index':
+            raise Exception("For performance reasons, please use the start_block and end_block API arguments to do block_index filtering")
+        if filter['field'] not in results[0]:
+            raise Exception("A specified filter field is invalid or not recognized for the given object type: '%s'" % filter['field'])
+        if type(filter['value']) not in (str, int, float, bool):
+            raise Exception("Value specified for filter field '%s' is not one of the supported value types (str, int, float, bool)" % (
+                filter['field']))
+        if results[0][filter['field']] != None and filter['value'] != None and type(filter['value']) != type(results[0][filter['field']]):
+            # field is None when it does not matter.
+            raise Exception("Value specified for filter field '%s' does not match the data type of that field (value: %s, field: %s) and neither is None" % (
+                filter['field'], type(filter['value']), type(results[0][filter['field']])))
+    #filter data
+    if filterop == 'and':
+        for filter in filters:
+            results = [e for e in results if DO_FILTER_OPERATORS[filter['op']](e[filter['field']], filter['value'])]
+        return results
+    else: #or
+        combined_results = []
+        for filter in filters:
+            if filter['field'] == 'validity': continue #don't filter validity as an OR requirement
+            combined_results += [e for e in results if DO_FILTER_OPERATORS[filter['op']](e[filter['field']], filter['value'])]
+        
+        validity_filter = next((f for f in filters if f['field'] == 'validity'), None)
+        if validity_filter: #filter out invalid results as an AND requirement
+            combined_results = [e for e in combined_results if DO_FILTER_OPERATORS[validity_filter['op']](
+                e[validity_filter['field']], validity_filter['value'])]
+        return combined_results
+
+def do_order_by(results, order_by, order_dir):
+    if not len(results) or not order_by: #empty results, or not ordering
+        return results
+    assert isinstance(results, list) and isinstance(results[0], dict)
+
+    if order_by not in results[0]:
+        raise KeyError("Specified order_by property '%s' does not exist in returned data" % order_by)
+    if order_dir not in ('asc', 'desc'):
+        raise Exception("Invalid order_dir: '%s'. Must be 'asc' or 'desc'" % order_dir)
+    return sorted(results, key=itemgetter(order_by), reverse=order_dir=='desc')
+
+def get_limit_to_blocks(start_block, end_block, col_names=['block_index',]):
+    if    (start_block is not None and not isinstance(start_block, int)) \
+       or (end_block is not None and not isinstance(end_block, int)):
+        raise ValueError("start_block and end_block must be either an integer, or None")
+    assert isinstance(col_names, list) and len(col_names) in [1, 2]
+
+    if start_block is None and end_block is None:
+        return ''
+    elif len(col_names) == 1:
+        col_name = col_names[0]
+        if start_block and end_block:
+            block_limit_clause = " WHERE %s >= %s AND %s <= %s" % (col_name, start_block, col_name, end_block)
+        elif start_block:
+            block_limit_clause = " WHERE %s >= %s" % (col_name, start_block)
+        elif end_block:
+            block_limit_clause = " WHERE %s <= %s" % (col_name, end_block)
+    else: #length of 2
+        if start_block and end_block:
+            block_limit_clause = " WHERE (%s >= %s OR %s >= %s) AND (%s <= %s OR %s <= %s)" % (
+                col_names[0], start_block, col_names[1], start_block,
+                col_names[0], end_block, col_names[1], end_block)
+        elif start_block:
+            block_limit_clause = " WHERE %s >= %s OR %s >= %s" % (
+                col_names[0], start_block, col_names[1], start_block)
+        elif end_block:
+            block_limit_clause = " WHERE %s >= %s OR %s >= %s" % (
+                col_names[0], end_block, col_names[1], end_block)
+    return block_limit_clause
+
+
+def xcp_supply (db):
+    cursor = db.cursor()
+
+    # Add burns.
+    cursor.execute('''SELECT * FROM burns \
+                      WHERE validity = ?''', ('valid',))
+    burn_total = sum([burn['earned'] for burn in cursor.fetchall()])
+
+    # Subtract issuance fees.
+    cursor.execute('''SELECT * FROM issuances\
+                      WHERE validity = ?''', ('valid',))
+    fee_total = sum([issuance['fee_paid'] for issuance in cursor.fetchall()])
+
+    cursor.close()
+    return burn_total - fee_total
 
 def get_debits (db, address=None, asset=None, filters=None, order_by=None, order_dir='asc', start_block=None, end_block=None, filterop='and'):
     """This does not include BTC."""
@@ -707,6 +713,7 @@ def get_orders (db, validity=None, source=None, show_empty=True, show_expired=Tr
     return do_order_by(results, order_by, order_dir)
 
 def get_order_matches (db, validity=None, is_mine=False, address=None, tx0_hash=None, tx1_hash=None, filters=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
+    from . import bitcoin   # HACK
     def filter_is_mine(e):
         if (    (not bitcoin.rpc('validateaddress', [e['tx0_address']])['ismine'] or
                  e['forward_asset'] != 'BTC')
@@ -889,6 +896,7 @@ def get_order_match_expirations (db, address=None, filters=None, order_by=None, 
     return do_order_by(results, order_by, order_dir)
 
 def get_address (db, address, start_block=None, end_block=None):
+    from . import bitcoin   # HACK
     if not bitcoin.base58_decode(address, config.ADDRESSVERSION):
         raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
                                              address)
@@ -904,7 +912,7 @@ def get_address (db, address, start_block=None, end_block=None):
     address_dict['burns'] = get_burns(db, validity='valid', source=address, order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)
     
-    address_dict['sends'] = get_sends(db, validity='valid', source=address, order_by='block_index',
+    address_dict['sends'] = get_sends(db, validity='valid', source=address, destination=address, order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block, filterop='or')
     #^ with filterop == 'or', we get all sends where this address was the source OR destination 
     
@@ -914,7 +922,9 @@ def get_address (db, address, start_block=None, end_block=None):
     address_dict['order_matches'] = get_order_matches(db, validity='valid', address=address,
         order_by='tx0_block_index', order_dir='asc', start_block=start_block, end_block=end_block)
     
-    address_dict['btcpays'] = get_btcpays(db, validity='valid', order_by='block_index',
+    address_dict['btcpays'] = get_btcpays(db,
+        filters=[{'field': 'source', 'op': '==', 'value': address}, {'field': 'destination', 'op': '==', 'value': address}],
+        filterop='or', validity='valid', order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)
     
     address_dict['issuances'] = get_issuances(db, validity='valid', issuer=address,

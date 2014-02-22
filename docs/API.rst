@@ -397,7 +397,7 @@ get_orders
 
 .. py:function:: get_orders(filters=[], is_valid=true, show_expired=true, order_by=null, order_dir=null, start_block=None, end_block=None, filterop="and")
 
-   Gets a listing of orders (ordered by price, lowest to highest, and then by transaction ID).
+   Gets a listing of orders.
 
    :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
    :param boolean is_valid: Set to ``true`` to only return valid orders. Set to ``false`` to return all orders (including invalid attempts).

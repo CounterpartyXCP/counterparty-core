@@ -1,5 +1,9 @@
 #! /usr/bin/python3
 
+"""
+Allow simultaneous lock and transfer.
+"""
+
 import struct
 import decimal
 D = decimal.Decimal
@@ -27,16 +31,21 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
     cursor.close()
     if issuances:
         last_issuance = issuances[-1]
+        if call_date is None: call_date = 0
+        if call_price is None: call_price = 0
+        
         if last_issuance['issuer'] != source:
             problems.append('asset exists and was not issued by this address')
-        elif last_issuance['divisible'] != divisible:
+        elif bool(last_issuance['divisible']) != bool(divisible):
             problems.append('asset exists with a different divisibility')
-        elif last_issuance['callable'] != callable_ or last_issuance['call_date'] != call_date or last_issuance['call_price'] != call_price:
+        elif bool(last_issuance['callable']) != bool(callable_) or last_issuance['call_date'] != call_date or last_issuance['call_price'] != call_price:
             problems.append('asset exists with a different callability, call date or call price')
-        elif not last_issuance['amount'] and not last_issuance['transfer']:
-            problems.append('asset is locked')
-    elif not amount:
-        problems.append('cannot lock or transfer an unissued asset')
+        elif last_issuance['locked']:
+            problems.append('locked asset')
+    elif description.lower() == 'lock':
+        problems.append('cannot lock a nonexistent asset')
+    elif destination:
+        problems.append('cannot transfer a nonexistent asset')
 
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM balances \
@@ -53,6 +62,8 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
             problems.append('insufficient funds')
 
     # For SQLite3
+    call_date = min(call_date, config.MAX_INT)
+    call_price = min(call_price, config.MAX_INT)
     total = sum([issuance['amount'] for issuance in issuances])
     assert isinstance(amount, int)
     if total + amount > config.MAX_INT:
@@ -63,16 +74,16 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
 
     return problems
 
-def create (db, source, destination, asset, amount, divisible, callable_, call_date, call_price, description, unsigned=False):
+def compose (db, source, destination, asset, amount, divisible, callable_, call_date, call_price, description):
     problems = validate(db, source, destination, asset, amount, divisible, callable_, call_date, call_price, description)
     if problems: raise exceptions.IssuanceError(problems)
 
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
-    data += struct.pack(FORMAT_2, asset_id, amount, divisible, callable_, call_date, call_price, description.encode('utf-8'))
+    data += struct.pack(FORMAT_2, asset_id, amount, divisible, callable_, call_date or 0, call_price or 0, description.encode('utf-8'))
     if len(data) > 80:
         raise exceptions.IssuanceError('Description is greater than 52 bytes.')
-    return bitcoin.transaction(source, None, None, config.MIN_FEE, data, unsigned=unsigned)
+    return (source, None, None, config.MIN_FEE, data)
 
 def parse (db, tx, message):
     issuance_parse_cursor = db.cursor()
@@ -88,7 +99,7 @@ def parse (db, tx, message):
                 description = ''
         else:
             asset_id, amount, divisible = struct.unpack(FORMAT_1, message)
-            callable_, call_date, call_price, description = None, None, None, ''
+            callable_, call_date, call_price, description = False, 0, 0, ''
         try:
             asset = util.get_asset_name(asset_id)
         except:
@@ -107,6 +118,7 @@ def parse (db, tx, message):
     if tx['destination']:
         issuer = tx['destination']
         transfer = True
+        amount = 0
     else:
         issuer = tx['source']
         transfer = False
@@ -123,6 +135,13 @@ def parse (db, tx, message):
             if fee:
                 util.debit(db, tx['block_index'], tx['source'], 'XCP', fee)
 
+    # Lock?
+    if description and description.lower() == 'lock':
+        lock = True
+        timestamp, valuerint, fee_fraction_int = None, None, None, None
+    else:
+        lock = False
+
     # Add parsed transaction to message-type–specific table.
     bindings= {
         'tx_index': tx['tx_index'],
@@ -138,9 +157,10 @@ def parse (db, tx, message):
         'call_price': call_price,
         'description': description,
         'fee_paid': fee,
+        'locked': lock,
         'validity': validity,
     }
-    sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :amount, :divisible, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :validity)'
+    sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :amount, :divisible, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :lock, :validity)'
     issuance_parse_cursor.execute(sql, bindings)
 
     # Credit.
