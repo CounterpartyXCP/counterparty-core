@@ -162,9 +162,10 @@ def match (db, tx):
     cursor = db.cursor()
 
     # Get bet in question.
-    cursor.execute('''SELECT * FROM bets\
-                                WHERE tx_index=?''', (tx['tx_index'],))
-    tx1 = cursor.fetchall()[0]
+    bets = list(cursor.execute('''SELECT * FROM bets\
+                                WHERE tx_index=?''', (tx['tx_index'],)))
+    assert len(bets) == 1
+    tx1 = bets[0]
 
     # Get counterbet_type.
     if tx1['bet_type'] % 2: counterbet_type = tx1['bet_type'] - 1

@@ -600,6 +600,10 @@ def reparse (db, block_index=None, quiet=False):
             cursor.execute('''DELETE FROM transactions WHERE block_index > ?''', (block_index,))
 
         # Delete all of the results of parsing.
+        cursor.execute('''DROP TABLE IF EXISTS order_expirations''')
+        cursor.execute('''DROP TABLE IF EXISTS bet_expirations''')
+        cursor.execute('''DROP TABLE IF EXISTS order_match_expirations''')
+        cursor.execute('''DROP TABLE IF EXISTS bet_match_expirations''')
         cursor.execute('''DROP TABLE IF EXISTS debits''')
         cursor.execute('''DROP TABLE IF EXISTS credits''')
         cursor.execute('''DROP TABLE IF EXISTS balances''')
@@ -615,10 +619,6 @@ def reparse (db, block_index=None, quiet=False):
         cursor.execute('''DROP TABLE IF EXISTS burns''')
         cursor.execute('''DROP TABLE IF EXISTS cancels''')
         cursor.execute('''DROP TABLE IF EXISTS callbacks''')
-        cursor.execute('''DROP TABLE IF EXISTS order_expirations''')
-        cursor.execute('''DROP TABLE IF EXISTS bet_expirations''')
-        cursor.execute('''DROP TABLE IF EXISTS order_match_expirations''')
-        cursor.execute('''DROP TABLE IF EXISTS bet_match_expirations''')
         cursor.execute('''DROP TABLE IF EXISTS messages''')
 
         # Reparse all blocks, transactions.
@@ -643,13 +643,15 @@ def reparse (db, block_index=None, quiet=False):
 def reorg (db):
     # Detect blockchain reorganisation up to 10 blocks length.
     reorg_cursor = db.cursor()
-    reorg_cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)''')
-    last_block_index = reorg_cursor.fetchall()[0]['block_index']
+    blocks = list(reorg_cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)'''))
+    assert len(blocks) == 1
+    last_block_index = blocks[0]['block_index']
     reorg_necessary = False
     for block_index in range(last_block_index - 10, last_block_index + 1):
         block_hash_see = bitcoin.rpc('getblockhash', [block_index])
-        reorg_cursor.execute('''SELECT * FROM blocks WHERE block_index=?''', (block_index,))
-        block_hash_have = reorg_cursor.fetchall()[0]['block_hash']
+        blocks = list(reorg_cursor.execute('''SELECT * FROM blocks WHERE block_index=?''', (block_index,)))
+        assert len(blocks) == 1
+        block_hash_have = blocks[0]['block_hash']
         if block_hash_see != block_hash_have:
             reorg_necessary = True
             logging.warning('Status: Blockchain reorganisation at block {}.'.format(block_index))
@@ -688,8 +690,9 @@ def follow (db):
 
         # Get index of last transaction.
         try:
-            follow_cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)''')
-            tx_index = follow_cursor.fetchall()[0]['tx_index'] + 1
+            txes = list(follow_cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)'''))
+            assert len(txes) == 1
+            tx_index = txes[0]['tx_index'] + 1
         except Exception:   # TODO
             tx_index = 0
 
@@ -784,8 +787,9 @@ def get_potentials (db):
 
     # Get index of last potential transaction.
     try:
-        cursor.execute('''SELECT * FROM potentials WHERE potential_index = (SELECT MAX(potential_index) from potentials)''')
-        potential = cursor.fetchall()[0]
+        potentials = list(cursor.execute('''SELECT * FROM potentials WHERE potential_index = (SELECT MAX(potential_index) from potentials)'''))
+        assert len(potentials) == 1
+        potential = potentials[0]
         potential_index = potential['potential_index'] + 1
         block_index = potential['block_index'] + 1
     except Exception:   # TODO

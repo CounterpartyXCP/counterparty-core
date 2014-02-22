@@ -240,7 +240,9 @@ class APIServer(threading.Thread):
             cursor = db.cursor()
             cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,))
             try:
-                block = cursor.fetchall()[0]
+                blocks = list(cursor)
+                assert len(blocks) == 1
+                block = blocks[0]
             except IndexError:
                 raise exceptions.DatabaseError('No blocks found.')
             cursor.close()
@@ -288,7 +290,9 @@ class APIServer(threading.Thread):
                 'burns', 'cancels', 'callbacks', 'order_expirations', 'bet_expirations', 'order_match_expirations',
                 'bet_match_expirations', 'messages']:
                 cursor.execute("SELECT COUNT(*) AS count FROM %s" % element)
-                counts[element] = cursor.fetchall()[0]['count']
+                count_list = cursor.fetchall()
+                assert len(count_list) == 1
+                counts[element] = count_list[0]['count']
             cursor.close()
             return counts
 

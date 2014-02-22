@@ -201,10 +201,12 @@ def exectracer(cursor, sql, bindings):
         cursor = db.cursor()
 
         # Get last message index.
-        cursor.execute('''SELECT * FROM messages WHERE message_index = (SELECT MAX(message_index) from messages)''')
+        messages = list(cursor.execute('''SELECT * FROM messages
+                                          WHERE message_index = (SELECT MAX(message_index) from messages)'''))
         try:
-            message_index = cursor.fetchall()[0]['message_index'] + 1
-        except IndexError:
+            assert len(messages) == 1
+            message_index = messages[0]['message_index'] + 1
+        except (AssertionError, IndexError):
             message_index = 0
 
         # Get current block.
@@ -245,6 +247,7 @@ def connect_to_db(flags=None):
 
     # For integrity, security.
     cursor.execute('''PRAGMA foreign_keys = ON''')
+    cursor.execute('''PRAGMA defer_foreign_keys = ON''')
 
     """
     cursor.execute('''PRAGMA foreign_key_check''')
@@ -321,10 +324,11 @@ def isodt (epoch_time):
 
 def last_block (db):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)''')
+    blocks = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)'''))
     try:
-        last_block = cursor.fetchall()[0]
-    except IndexError:
+        assert len(blocks) == 1
+        last_block = blocks[0]
+    except (AssertionError, IndexError):
         raise exceptions.DatabaseError('No blocks found.')
     cursor.close()
     return last_block

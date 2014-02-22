@@ -117,9 +117,10 @@ def match (db, tx):
     cursor = db.cursor()
 
     # Get order in question.
-    cursor.execute('''SELECT * FROM orders\
-                      WHERE tx_index=?''', (tx['tx_index'],))
-    tx1 = cursor.fetchall()[0]
+    orders = list(cursor.execute('''SELECT * FROM orders\
+                                    WHERE tx_index=?''', (tx['tx_index'],)))
+    assert len(orders) == 1
+    tx1 = orders[0]
 
     cursor.execute('''SELECT * FROM orders \
                       WHERE (give_asset=? AND get_asset=? AND status=?)''',
@@ -306,10 +307,11 @@ def expire (db, block_index):
         cursor.execute(sql, bindings)
 
         # If tx0 is still good, replenish give, get remaining.
-        cursor.execute('''SELECT * FROM orders \
-                          WHERE tx_index = ?''',
-                       (order_match['tx0_index'],))
-        tx0_order = cursor.fetchall()[0]
+        orders = list(cursor.execute('''SELECT * FROM orders \
+                                        WHERE tx_index = ?''',
+                                     (order_match['tx0_index'],)))
+        assert len(orders) == 1
+        tx0_order = orders[0]
         tx0_order_time_left = tx0_order['expire_index'] - block_index
         if tx0_order_time_left >= 0:
             bindings = {
@@ -326,10 +328,11 @@ def expire (db, block_index):
                         order_match['forward_amount'], event=order_match['id'])
 
         # If tx1 is still good, replenish give, get remaining.
-        cursor.execute('''SELECT * FROM orders \
-                          WHERE tx_index = ?''',
-                       (order_match['tx1_index'],))
-        tx1_order = cursor.fetchall()[0]
+        orders = list(cursor.execute('''SELECT * FROM orders \
+                                        WHERE tx_index = ?''',
+                                     (order_match['tx1_index'],)))
+        assert len(orders) == 1
+        tx1_order = orders[0]
         tx1_order_time_left = tx1_order['expire_index'] - block_index
         if tx1_order_time_left >= 0:
             bindings = {
