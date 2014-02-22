@@ -25,8 +25,8 @@ def validate (db, order_match_id):
         assert False
     else:
         order_match = order_matches[0]
-        if order_match['validity'] != 'pending':
-            if order_match['validity'] == 'invalid: expired awaiting payment':
+        if order_match['status'] != 'pending':
+            if order_match['status'] == 'invalid: expired awaiting payment':
                 problems.append('expired order match')
             else:
                 problems.append('invalid order match')
@@ -71,19 +71,19 @@ def parse (db, tx, message):
         tx0_hash_bytes, tx1_hash_bytes = struct.unpack(FORMAT, message)
         tx0_hash, tx1_hash = binascii.hexlify(tx0_hash_bytes).decode('utf-8'), binascii.hexlify(tx1_hash_bytes).decode('utf-8')
         order_match_id = tx0_hash + tx1_hash
-        validity = 'valid'
+        status = 'valid'
     except struct.error as e:
         tx0_hash, tx1_hash = None, None
-        validity = 'invalid: could not unpack'
+        status = 'invalid: could not unpack'
 
-    if validity == 'valid':
+    if status == 'valid':
         # Try to match.
         order_match, problems = validate(db, order_match_id)
         if problems:
             order_match = None
-            validity = 'invalid: ' + ';'.join(problems)
+            status = 'invalid: ' + ';'.join(problems)
 
-    if validity == 'valid':
+    if status == 'valid':
         update = False
         # Credit source address for the currency that he bought with the bitcoins.
         # BTC must be paid all at once and come from the 'correct' address.
@@ -91,20 +91,20 @@ def parse (db, tx, message):
             update = True
             if order_match['backward_asset'] != 'BTC':
                 util.credit(db, tx['block_index'], tx['source'], order_match['backward_asset'], order_match['backward_amount'])
-            validity = 'valid'
+            status = 'valid'
         if order_match['tx1_address'] == tx['source'] and tx['btc_amount'] >= order_match['backward_amount']:
             update = True
             if order_match['forward_asset'] != 'BTC':
                 util.credit(db, tx['block_index'], tx['source'], order_match['forward_asset'], order_match['forward_amount'])
-            validity = 'valid'
+            status = 'valid'
 
         if update:
             # Update order match.
             bindings = {
-                'validity': 'valid',
+                'status': 'completed',
                 'order_match_id': order_match_id
             }
-            sql='update order_matches set validity = :validity where id = :order_match_id'
+            sql='update order_matches set status = :status where id = :order_match_id'
             cursor.execute(sql, bindings)
 
 
@@ -117,9 +117,9 @@ def parse (db, tx, message):
         'destination': tx['destination'],
         'btc_amount': tx['btc_amount'],
         'order_match_id': order_match_id,
-        'validity': validity,
+        'status': status,
     }
-    sql='insert into btcpays values(:tx_index, :tx_hash, :block_index, :source, :destination, :btc_amount, :order_match_id, :validity)'
+    sql='insert into btcpays values(:tx_index, :tx_hash, :block_index, :source, :destination, :btc_amount, :order_match_id, :status)'
     cursor.execute(sql, bindings)
 
 

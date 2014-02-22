@@ -338,7 +338,6 @@ def test_json_rpc():
     api_server = api.APIServer()
     api_server.daemon = True
     api_server.start()
-    time.sleep(1)
 
     url = 'http://localhost:' + str(config.RPC_PORT) + '/jsonrpc/'
     headers = {'content-type': 'application/json'}
@@ -353,13 +352,20 @@ def test_json_rpc():
     })
 
     for payload in payloads:
-        response = requests.post(url, data=json.dumps(payload), headers=headers, auth=auth).json()
-        try:
-            output_new['rpc.' + payload['method']] = response['result']
-        except:
-            output_new['rpc.' + payload['method']] = response['error']
-        assert response['jsonrpc'] == '2.0'
-        assert response['id'] == 0
+        for attempt in range(100):  # Try until server is ready.
+            try:
+                response = requests.post(url, data=json.dumps(payload), headers=headers, auth=auth).json()
+                break
+            except:
+                time.sleep(.05)
+                continue
+            try:
+                output_new['rpc.' + payload['method']] = response['result']
+            except:
+                output_new['rpc.' + payload['method']] = response['error']
+            assert response['jsonrpc'] == '2.0'
+            assert response['id'] == 0
+        if attempt == 99: exit(1)   # Fail
 
 def test_stop():
     logging.info('STOP TEST')

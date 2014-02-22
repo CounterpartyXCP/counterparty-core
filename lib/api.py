@@ -49,7 +49,7 @@ class APIServer(threading.Thread):
         def get_bets(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_bets(db,
                 filters=filters,
-                validity='valid' if bool(is_valid) else None,
+                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -60,7 +60,7 @@ class APIServer(threading.Thread):
         def get_bet_matches(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_bet_matches(db,
                 filters=filters,
-                validity='valid' if bool(is_valid) else None,
+                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -71,7 +71,7 @@ class APIServer(threading.Thread):
         def get_broadcasts(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_broadcasts(db,
                 filters=filters,
-                validity='valid' if bool(is_valid) else None,
+                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -82,7 +82,7 @@ class APIServer(threading.Thread):
         def get_btcpays(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_btcpays(db,
                 filters=filters,
-                validity='valid' if bool(is_valid) else None,
+                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -93,7 +93,7 @@ class APIServer(threading.Thread):
         def get_burns(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_burns(db,
                 filters=filters,
-                validity='valid' if bool(is_valid) else None,
+                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -104,7 +104,7 @@ class APIServer(threading.Thread):
         def get_cancels(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_cancels(db,
                 filters=filters,
-                validity='valid' if bool(is_valid) else None,
+                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -131,7 +131,7 @@ class APIServer(threading.Thread):
         def get_dividends(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_dividends(db,
                 filters=filters,
-                validity='valid' if bool(is_valid) else None,
+                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -142,7 +142,7 @@ class APIServer(threading.Thread):
         def get_issuances(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_issuances(db,
                 filters=filters,
-                validity='valid' if bool(is_valid) else None,
+                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -153,7 +153,7 @@ class APIServer(threading.Thread):
         def get_orders (filters=None, is_valid=True, show_expired=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_orders(db,
                 filters=filters,
-                validity='valid' if bool(is_valid) else None,
+                status='valid' if bool(is_valid) else None,
                 show_expired=show_expired,
                 order_by=order_by,
                 order_dir=order_dir,
@@ -165,7 +165,7 @@ class APIServer(threading.Thread):
         def get_order_matches (filters=None, is_valid=True, is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_order_matches(db,
                 filters=filters,
-                validity='valid' if bool(is_valid) else None,
+                status='valid' if bool(is_valid) else None,
                 is_mine=is_mine,
                 order_by=order_by,
                 order_dir=order_dir,
@@ -177,7 +177,7 @@ class APIServer(threading.Thread):
         def get_sends (filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_sends(db,
                 filters=filters,
-                validity='valid' if bool(is_valid) else None,
+                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -214,7 +214,7 @@ class APIServer(threading.Thread):
             #gets some useful info for the given asset
             issuances = util.get_issuances(db,
                 filters={'field': 'asset', 'op': '==', 'value': asset},
-                validity='valid',
+                status='valid',
                 order_by='block_index',
                 order_dir='asc')
             if not issuances: return None #asset not found, most likely
@@ -275,7 +275,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_asset_names():
             cursor = db.cursor()
-            names = [row['asset'] for row in cursor.execute("SELECT DISTINCT asset FROM issuances WHERE validity = 'valid' ORDER BY asset ASC")]
+            names = [row['asset'] for row in cursor.execute("SELECT DISTINCT asset FROM issuances WHERE status = 'valid' ORDER BY asset ASC")]
             cursor.close()
             return names
 

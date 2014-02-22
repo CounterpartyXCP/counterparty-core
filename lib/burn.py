@@ -33,7 +33,7 @@ def compose (db, source, quantity, overburn=False):
     if problems: raise exceptions.BurnError(problems)
 
     # Check that a maximum of 1 BTC total is burned per address.
-    burns = util.get_burns(db, source=source, validity='valid')
+    burns = util.get_burns(db, source=source, status='valid')
     already_burned = sum([burn['burned'] for burn in burns])
     if quantity > (1 * config.UNIT - already_burned) and not overburn:
         raise exceptions.BurnError('1 BTC may be burned per address')
@@ -42,21 +42,21 @@ def compose (db, source, quantity, overburn=False):
 
 def parse (db, tx, message=None):
     burn_parse_cursor = db.cursor()
-    validity = 'valid'
+    status = 'valid'
 
-    if validity == 'valid':
+    if status == 'valid':
         problems = validate(db, tx['source'], tx['destination'], tx['btc_amount'], tx['block_index'], overburn=False)
-        if problems: validity = 'invalid: ' + ';'.join(problems)
+        if problems: status = 'invalid: ' + ';'.join(problems)
 
         if tx['btc_amount'] != None:
             sent = tx['btc_amount']
         else:
             sent = 0
 
-    if validity == 'valid':
+    if status == 'valid':
         # Calculate quantity of XPC earned. (Maximum 1 BTC in total, ever.)
         cursor = db.cursor()
-        cursor.execute('''SELECT * FROM burns WHERE (validity = ? AND source = ?)''', ('valid', tx['source']))
+        cursor.execute('''SELECT * FROM burns WHERE (status = ? AND source = ?)''', ('valid', tx['source']))
         burns = cursor.fetchall()
         already_burned = sum([burn['burned'] for burn in burns])
         ONE_BTC = 1 * config.UNIT
@@ -84,9 +84,9 @@ def parse (db, tx, message=None):
         'source': tx['source'],
         'burned': burned,
         'earned': earned,
-        'validity': validity,
+        'status': status,
     }
-    sql='insert into burns values(:tx_index, :tx_hash, :block_index, :source, :burned, :earned, :validity)'
+    sql='insert into burns values(:tx_index, :tx_hash, :block_index, :source, :burned, :earned, :status)'
     burn_parse_cursor.execute(sql, bindings)
 
 

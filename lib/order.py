@@ -19,10 +19,10 @@ def validate (db, source, give_asset, give_amount, get_asset, get_amount, expira
 
     if not give_amount or not get_amount:
         problems.append('zero give or zero get')
-    cursor.execute('select * from issuances where (validity = ? and asset = ?)', ('valid', give_asset))
+    cursor.execute('select * from issuances where (status = ? and asset = ?)', ('valid', give_asset))
     if give_asset not in ('BTC', 'XCP') and not cursor.fetchall():
         problems.append('no such asset to give ({})'.format(give_asset))
-    cursor.execute('select * from issuances where (validity = ? and asset = ?)', ('valid', get_asset))
+    cursor.execute('select * from issuances where (status = ? and asset = ?)', ('valid', get_asset))
     if get_asset not in ('BTC', 'XCP') and not cursor.fetchall():
         problems.append('no such asset to get ({})'.format(get_asset))
     if expiration > config.MAX_EXPIRATION:
@@ -59,13 +59,13 @@ def parse (db, tx, message):
         give_id, give_amount, get_id, get_amount, expiration, fee_required = struct.unpack(FORMAT, message)
         give_asset = util.get_asset_name(give_id)
         get_asset = util.get_asset_name(get_id)
-        validity = 'valid'
+        status = 'valid'
     except struct.error as e:
         give_asset, give_amount, get_asset, get_amount, expiration, fee_required = None, None, None, None, None, None
-        validity = 'invalid: could not unpack'
+        status = 'invalid: could not unpack'
 
     price = 0
-    if validity == 'valid':
+    if status == 'valid':
         try: price = D(get_amount) / D(give_amount)
         except: pass
 
@@ -80,9 +80,9 @@ def parse (db, tx, message):
                 get_amount = int(price * D(give_amount))
 
         problems = validate(db, tx['source'], give_asset, give_amount, get_asset, get_amount, expiration, fee_required, tx['block_index'])
-        if problems: validity = 'invalid: ' + ';'.join(problems)
+        if problems: status = 'invalid: ' + ';'.join(problems)
 
-    if validity == 'valid':
+    if status == 'valid':
         if give_asset != 'BTC':  # No need (or way) to debit BTC.
             util.debit(db, tx['block_index'], tx['source'], give_asset, give_amount, event=tx['tx_hash'])
 
@@ -103,9 +103,9 @@ def parse (db, tx, message):
         'fee_required': fee_required,
         'fee_provided': tx['fee'],
         'fee_remaining': tx['fee'],
-        'validity': validity,
+        'status': status,
     }
-    sql='insert into orders values(:tx_index, :tx_hash, :block_index, :source, :give_asset, :give_amount, :give_remaining, :get_asset, :get_amount, :get_remaining, :expiration, :expire_index, :fee_required, :fee_provided, :fee_remaining, :validity)'
+    sql='insert into orders values(:tx_index, :tx_hash, :block_index, :source, :give_asset, :give_amount, :give_remaining, :get_asset, :get_amount, :get_remaining, :expiration, :expire_index, :fee_required, :fee_provided, :fee_remaining, :status)'
     order_parse_cursor.execute(sql, bindings)
 
     # Match.
@@ -122,7 +122,7 @@ def match (db, tx):
     tx1 = cursor.fetchall()[0]
 
     cursor.execute('''SELECT * FROM orders \
-                      WHERE (give_asset=? AND get_asset=? AND validity=?)''',
+                      WHERE (give_asset=? AND get_asset=? AND status=?)''',
                    (tx1['get_asset'], tx1['give_asset'], 'valid'))
 
     tx1_give_remaining = tx1['give_remaining']
@@ -183,9 +183,9 @@ def match (db, tx):
             order_match_id = tx0['tx_hash'] + tx1['tx_hash']
 
             if 'BTC' in (tx1['give_asset'], tx1['get_asset']):
-                validity = 'pending'
+                status = 'pending'
             else:
-                validity = 'valid'
+                status = 'completed'
                 # Credit.
                 util.credit(db, tx['block_index'], tx1['source'], tx1['get_asset'],
                                     forward_amount, event=order_match_id)
@@ -244,9 +244,9 @@ def match (db, tx):
                 'tx0_expiration': tx0['expiration'],
                 'tx1_expiration': tx1['expiration'],
                 'match_expire_index': match_expire_index,
-                'validity': validity,
+                'status': status,
             }
-            sql='insert into order_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :forward_asset, :forward_amount, :backward_asset, :backward_amount, :tx0_block_index, :tx1_block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :validity)'
+            sql='insert into order_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :forward_asset, :forward_amount, :backward_asset, :backward_amount, :tx0_block_index, :tx1_block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :status)'
             cursor.execute(sql, bindings)
 
     cursor.close()
@@ -256,15 +256,15 @@ def expire (db, block_index):
 
     # Expire orders and give refunds for the amount give_remaining (if non-zero; if not BTC).
     cursor.execute('''SELECT * FROM orders \
-                      WHERE (validity = ? AND expire_index < ?)''', ('valid', block_index))
+                      WHERE (status = ? AND expire_index < ?)''', ('valid', block_index))
     for order in cursor.fetchall():
 
-        # Update validity of order.
+        # Update status of order.
         bindings = {
-            'validity': 'invalid: expired',
+            'status': 'expired',
             'tx_index': order['tx_index']
         }
-        sql='update orders set validity = :validity where tx_index = :tx_index'
+        sql='update orders set status = :status where tx_index = :tx_index'
         cursor.execute(sql, bindings)
 
         if order['give_asset'] != 'BTC':    # Can't credit BTC.
@@ -282,15 +282,15 @@ def expire (db, block_index):
 
     # Expire order_matches for BTC with no BTC.
     cursor.execute('''SELECT * FROM order_matches \
-                      WHERE (validity = ? and match_expire_index < ?)''', ('pending', block_index))
+                      WHERE (status = ? and match_expire_index < ?)''', ('pending', block_index))
     for order_match in cursor.fetchall():
         
-        # Update validity of order match.
+        # Update status of order match.
         bindings = {
-            'validity': 'invalid: expired awaiting payment',
+            'status': 'expired',
             'order_match_id': order_match['id']
         }
-        sql='update order_matches set validity = :validity where id = :order_match_id'
+        sql='update order_matches set status = :status where id = :order_match_id'
         cursor.execute(sql, bindings)
 
         order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']
