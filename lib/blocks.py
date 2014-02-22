@@ -92,6 +92,9 @@ def initialise(db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       block_index_idx ON blocks (block_index)
                    ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      index_hash_idx ON blocks (block_index, block_hash)
+                   ''')
 
     # Transactions
     cursor.execute('''CREATE TABLE IF NOT EXISTS transactions(
@@ -117,6 +120,9 @@ def initialise(db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       tx_hash_idx ON transactions (tx_hash)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      index_hash_index_idx ON transactions (tx_index, tx_hash, block_index)
                    ''')
 
     # Purge database of blocks, transactions from before BLOCK_FIRST.
@@ -203,6 +209,9 @@ def initialise(db):
                       block_index_idx ON orders (block_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      index_hash_idx ON orders (tx_index, tx_hash)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                       expire_idx ON orders (status, expire_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -233,6 +242,9 @@ def initialise(db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       match_expire_idx ON order_matches (status, match_expire_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      id_idx ON order_matches (id)
                    ''')
 
     # BTCpays
@@ -322,6 +334,9 @@ def initialise(db):
                       block_index_idx ON bets (block_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      index_hash_idx ON bets (tx_index, tx_hash)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                       expire_idx ON bets (status, expire_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -361,6 +376,9 @@ def initialise(db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       valid_feed_idx ON bet_matches (status, feed_address)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      id_idx ON bet_matches (id)
                    ''')
 
     # Dividends
