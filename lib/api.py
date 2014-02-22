@@ -186,8 +186,30 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_messages(block_index):
+            if not isinstance(block_index, int):
+                raise Exception("block_index must be an interger.")
+            
             cursor = db.cursor()
             cursor.execute('select * from messages where block_index = ? order by message_index asc', (block_index,))
+            messages = cursor.fetchall()
+            cursor.close()
+            return messages
+
+        @dispatcher.add_method
+        def get_messages_by_index(message_indexes):
+            """Get specific messages from the feed, based on the message_index.
+            
+            @param message_index: A single index, or a list of one or more message indexes to retrieve.
+            """
+            if not isinstance(message_indexes, list):
+                message_indexes = [message_indexes,]
+            for idx in message_indexes:  #make sure the data is clean
+                if not isinstance(block_index, int):
+                    raise Exception("All items in message_indexes are not integers")
+                
+            cursor = db.cursor()
+            cursor.execute('select * from messages where message_index IN (%s) ORDER BY message_index ASC'
+                % (','.join([str(x) for x in message_indexes]),))
             messages = cursor.fetchall()
             cursor.close()
             return messages
@@ -360,8 +382,13 @@ class APIServer(threading.Thread):
             return bitcoin.transaction(tx_info, multisig)
                 
         @dispatcher.add_method
-        def transmit(unsigned_tx_hex):
-            return bitcoin.transmit(unsigned_tx_hex)
+        def transmit(tx_hex, is_signed=False):
+            if not is_signed:
+                #sign with private key in local wallet and send
+                return bitcoin.transmit(tx_hex)
+            else:
+                #already signed, just broadcast it
+                return bitcoin.rpc('sendrawtransaction', [tx_hex])
 
         class API(object):
             @cherrypy.expose
