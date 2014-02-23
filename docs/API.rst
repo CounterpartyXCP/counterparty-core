@@ -176,25 +176,25 @@ the specific comparison logic used, please see `this page <http://docs.python.or
 The ``multisig`` Parameter of ``create_`` Calls 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-All ``create_`` API calls return an unsigned raw transaction string, hex encoded (i.e. the same format that ``bitcoind`` returns
+All ``create_`` API calls return an *unsigned raw transaction string*, hex encoded (i.e. the same format that ``bitcoind`` returns
 with its raw transaction API calls).
 
 The exact form and format of this unsigned raw transaction string is specified via the ``multisig`` parameter on each ``create_``
 API call:
 
-- Specify ``false`` to return an unsigned OP_RETURN transaction.
-- For multisig, if the source address is in the local ``bitcoind`` ``wallet.dat``, specify ``true`` to returned the
-  unsigned raw transaction (hex encoded) as a multisig transaction.
-- For multisig where the address is *not* in the local ``bitcoind`` ``wallet.dat``, specify the public key
-  (hex encoded) here.
+- Specify ``false`` to return the transaction as an **OP_RETURN** transaction.
+- If the source address is in the local ``bitcoind`` ``wallet.dat``, specify ``true`` to return the
+  transaction as a **multisig** transaction.
+- If the address is *not* in the local ``bitcoind`` ``wallet.dat``, specify the public key
+  (hex encoded) to return the transaction as a **multisig** transaction.
   
 With any of the above settings, as the *unsigned* raw transaction is returned, you have two options:
 
-- If the key you need to sign the raw transaction is in the local ``bitcoind`` ``wallet.dat``, you can simply call the
+- If the private key you need to sign the raw transaction is in the local ``bitcoind`` ``wallet.dat``, you can simply call the
   ``transmit`` API call and pass it to the raw unsigned transaction string.
-- If the key you need to sign the raw transaction is *not* in the local ``bitcoind`` ``wallet.dat``, you must first sign
-  the transaction yourself with the private key before calling ``transmit``. You must then pass the resultant signed
-  hex-encoded transaction to ``transmit`` when you do call it.
+- If the private key you need to sign the raw transaction is *not* in the local ``bitcoind`` ``wallet.dat``, you must first sign
+  the transaction yourself before calling ``transmit``. You must then pass the resultant signed
+  hex-encoded transaction to ``transmit`` when you do call it, and specify ``is_signed`` as ``true``.
 
 .. _read_api:
 
@@ -505,10 +505,10 @@ get_asset_info
    :param string asset: The :ref:`asset <assets>` for which to retrieve information.
    :return: ``null`` if the asset was not found. Otherwise, an object with the following parameters:
 
-- **owner** (*string*): The address that currently owns the asset (i.e. has issuance rights to it) 
-- **divisible** (*boolean*): Whether the asset is divisible or not
-- **locked** (*boolean*): Whether the asset is locked (future issuances prohibited)
-- **total_issued** (*integer*): The :ref:`quantity <amounts>` of the asset issued, in total
+     - **owner** (*string*): The address that currently owns the asset (i.e. has issuance rights to it) 
+     - **divisible** (*boolean*): Whether the asset is divisible or not
+     - **locked** (*boolean*): Whether the asset is locked (future issuances prohibited)
+     - **total_issued** (*integer*): The :ref:`quantity <amounts>` of the asset issued, in total
 
 
 .. _get_messages:
@@ -561,9 +561,9 @@ get_block_info
    :param integer block_index: The block index for which to retrieve information.
    :return: If the block was found, an object with the following parameters:
      
-- **block_index** (*integer*): The block index (i.e. block height). Should match what was specified for the *block_index* input parameter). 
-- **block_hash** (*string*): The block hash identifier
-- **block_time** (*integer*): A UNIX timestamp of when the block was processed by the network 
+     - **block_index** (*integer*): The block index (i.e. block height). Should match what was specified for the *block_index* input parameter). 
+     - **block_hash** (*string*): The block hash identifier
+     - **block_time** (*integer*): A UNIX timestamp of when the block was processed by the network 
 
 .. _get_running_info:
 
@@ -587,6 +587,22 @@ get_running_info
 
 Action/Write API Function Reference
 -----------------------------------
+
+.. _transmit:
+
+transmit
+^^^^^^^^^^^^^^
+
+.. py:function:: transmit(tx_hex, is_signed=false)
+
+   Broadcast a transaction created with the Action/Write API onto the Bitcoin network.
+
+   :param string tx_hex: A hex-encoded raw transaction (which was created via one of the ``create_`` calls below).
+   :param boolean is_signed: If ``false`` is specified here, the ``tx_hex`` string passed will be signed with a key
+    in the local ``bitcoind``'s ``wallet.dat`` before being broadcast. If ``true`` is specified, the ``tx_hex`` specified
+    is already signed and it will simply be broadcast.  
+   :return: Returns the created transaction's id on the Bitcoin network, or an error if the transaction is invalid for any reason.
+
 
 .. _create_bet:
 
