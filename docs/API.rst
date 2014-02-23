@@ -188,13 +188,14 @@ API call:
 - If the address is *not* in the local ``bitcoind`` ``wallet.dat``, specify the public key
   (hex encoded) to return the transaction as a **multisig** transaction.
   
-With any of the above settings, as the *unsigned* raw transaction is returned, you have two options:
+With any of the above settings, as the *unsigned* raw transaction is returned from the ``create_`` API call itself, you have two options:
 
 - If the private key you need to sign the raw transaction is in the local ``bitcoind`` ``wallet.dat``, you can simply call the
   ``transmit`` API call and pass it to the raw unsigned transaction string.
 - If the private key you need to sign the raw transaction is *not* in the local ``bitcoind`` ``wallet.dat``, you must first sign
   the transaction yourself before calling ``transmit``. You must then pass the resultant signed
   hex-encoded transaction to ``transmit`` when you do call it, and specify ``is_signed`` as ``true``.
+
 
 .. _read_api:
 
