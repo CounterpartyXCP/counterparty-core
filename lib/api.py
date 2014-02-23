@@ -101,6 +101,17 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
+        def get_callbacks(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+            return util.get_callbacks(db,
+                filters=filters,
+                status='valid' if bool(is_valid) else None,
+                order_by=order_by,
+                order_dir=order_dir,
+                start_block=start_block,
+                end_block=end_block,
+                filterop=filterop)
+
+        @dispatcher.add_method
         def get_cancels(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_cancels(db,
                 filters=filters,
