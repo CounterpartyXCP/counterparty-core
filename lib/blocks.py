@@ -513,7 +513,7 @@ def initialise(db):
 
 def get_address (scriptpubkey):
     asm = scriptpubkey['asm'].split(' ')
-    if asm[0] != 'OP_DUP' or asm[1] != 'OP_HASH160' or asm[3] != 'OP_EQUALVERIFY' or asm[4] != 'OP_CHECKSIG' or len(asm) != 5:
+    if len(asm) != 5 or asm[0] != 'OP_DUP' or asm[1] != 'OP_HASH160' or asm[3] != 'OP_EQUALVERIFY' or asm[4] != 'OP_CHECKSIG':
         return False
 
     pubkeyhash = asm[2]
