@@ -249,6 +249,9 @@ def connect_to_db(flags=None):
     cursor.execute('''PRAGMA foreign_keys = ON''')
     cursor.execute('''PRAGMA defer_foreign_keys = ON''')
 
+    # So that writers don’t block readers.
+    cursor.execute('''PRAGMA journal_mode = WAL''')
+
     """
     cursor.execute('''PRAGMA foreign_key_check''')
     if rows:

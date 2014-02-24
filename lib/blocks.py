@@ -690,30 +690,32 @@ def follow (db):
 
     logging.info('Status: RESTART')
 
-    # Reparse all transactions if minor version changes.
-    minor_version = follow_cursor.execute('PRAGMA user_version').fetchall()[0]['user_version']
-    if minor_version != config.DB_VERSION_MINOR:
-        logging.info('Status: Database and client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.DB_VERSION_MINOR))
-        reparse(db, quiet=False)
-
     # Initialise.
     initialise(db)
 
-    while True:
-        # Get index of last block.
-        try:
-            block_index = util.last_block(db)['block_index'] + 1
-        except exceptions.DatabaseError:
-            logging.warning('Status: NEW DATABASE')
-            block_index = config.BLOCK_FIRST
+    # Get index of last block.
+    try:
+        block_index = util.last_block(db)['block_index'] + 1
 
-        # Get index of last transaction.
-        try:
-            txes = list(follow_cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)'''))
-            assert len(txes) == 1
-            tx_index = txes[0]['tx_index'] + 1
-        except Exception:   # TODO
-            tx_index = 0
+        # Reparse all transactions if minor version has changed.
+        minor_version = follow_cursor.execute('PRAGMA user_version').fetchall()[0]['user_version']
+        if minor_version != config.DB_VERSION_MINOR:
+            logging.info('Status: Database and client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.DB_VERSION_MINOR))
+            reparse(db, quiet=False)
+
+    except exceptions.DatabaseError:
+        logging.warning('Status: NEW DATABASE')
+        block_index = config.BLOCK_FIRST
+
+    # Get index of last transaction.
+    try:
+        txes = list(follow_cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)'''))
+        assert len(txes) == 1
+        tx_index = txes[0]['tx_index'] + 1
+    except Exception:   # TODO
+        tx_index = 0
+
+    while True:
 
         # Get new blocks.
         block_count = bitcoin.rpc('getblockcount', [])
