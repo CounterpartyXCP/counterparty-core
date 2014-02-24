@@ -238,7 +238,8 @@ def connect_to_db(flags=None):
         db = apsw.Connection(config.DATABASE)
     elif flags == 'SQLITE_OPEN_READONLY':
         db = apsw.Connection(config.DATABASE, flags=0x00000001)
-    else: raise Exception # TODO
+    else:
+        raise Exception # TODO
 
     cursor = db.cursor()
 
@@ -252,10 +253,8 @@ def connect_to_db(flags=None):
     # So that writers don’t block readers.
     cursor.execute('''PRAGMA journal_mode = WAL''')
 
-    """
-    cursor.execute('''PRAGMA foreign_key_check''')
-    if rows:
-        raise exceptions.DatabaseError('Foreign key check failed.')
+    rows = list(cursor.execute('''PRAGMA foreign_key_check'''))
+    if rows: raise exceptions.DatabaseError('Foreign key check failed.')
 
     # Integrity check
     integral = False
@@ -272,7 +271,6 @@ def connect_to_db(flags=None):
             continue
     if not integral:
         raise exceptions.DatabaseError('Could not perform integrity check.')
-    """
 
     cursor.close()
 
