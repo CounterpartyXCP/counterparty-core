@@ -807,7 +807,7 @@ An object that describes the history of a requested address:
 * **bet_matches** (*list*): The bets matchings to which this address was a party, as a list of :ref:`bet match objects <bet-match-object>`.
 * **dividends** (*list*): All dividends rewarded from this address, as a list of :ref:`dividend objects <dividend-object>`.
 * **cancels** (*list*): All cancels from this address, as a list of :ref:`cancel objects <cancel-object>`.
-* **cancels** (*list*): All asset callbacks issued from this address, as a list of :ref:`callback objects <callback-object>`.
+* **callbacks** (*list*): All asset callbacks issued from this address, as a list of :ref:`callback objects <callback-object>`.
 * **bet_expirations** (*list*): All expirations of bets issued from this address, as a list of :ref:`bet expiration objects <bet-expiration-object>`.
 * **order_expirations** (*list*): All expirations of orders issued from this address, as a list of :ref:`bet expiration objects <order-expiration-object>`.
 * **bet_match_expirations** (*list*): All expirations of bet matches issued from this address, as a list of :ref:`bet expiration objects <bet-match-expiration-object>`.
