@@ -32,6 +32,101 @@ if os.name == 'nt':
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
 
+def format_order (order):
+    give_amount = util.devise(db, D(order['give_amount']), order['give_asset'], 'output')
+    get_amount = util.devise(db, D(order['get_amount']), order['get_asset'], 'output')
+    give_remaining = util.devise(db, D(order['give_remaining']), order['give_asset'], 'output')
+    get_remaining = util.devise(db, D(order['get_remaining']), order['get_asset'], 'output')
+    give_asset = order['give_asset']
+    get_asset = order['get_asset']
+
+    if get_asset < give_asset:
+        price = util.devise(db, D(order['get_amount']) / D(order['give_amount']), 'price', 'output')
+        price_assets = get_asset + '/' + give_asset + ' ask'
+    else:
+        price = util.devise(db, D(order['give_amount']) / D(order['get_amount']), 'price', 'output')
+        price_assets = give_asset + '/' + get_asset + ' bid'
+
+    return [D(give_remaining), give_asset, price, price_assets, str(order['fee_required'] / config.UNIT), str(order['fee_provided'] / config.UNIT), order['expire_index'] - util.last_block(db)['block_index'], order['tx_hash']]
+
+def format_bet (bet):
+    odds = D(bet['counterwager_amount']) / D(bet['wager_amount'])
+
+    if not bet['target_value']: target_value = None
+    else: target_value = bet['target_value']
+    if not bet['leverage']: leverage = None
+    else: leverage = util.devise(db, D(bet['leverage']) / 5040, 'leverage', 'output')
+
+    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], util.isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.devise(db, odds, 'odds', 'output'), bet['expire_index'] - util.last_block(db)['block_index'], bet['tx_hash']]
+
+def format_order_match (db, order_match):
+    order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']
+    order_match_time_left = order_match['match_expire_index'] - util.last_block(db)['block_index']
+    return [order_match_id, order_match_time_left]
+
+def format_feed (feed):
+    timestamp = util.isodt(feed['timestamp'])
+    if not feed['text']:
+        text = '<Locked>'
+    else:
+        text = feed['text']
+    return [feed['source'], timestamp, text, feed['value'], D(feed['fee_fraction_int']) / D(1e8)]
+
+def market (give_asset, get_asset):
+
+    # Your Pending Orders Matches.
+    awaiting_btcs = util.get_order_matches(db, status='pending', is_mine=True)
+    table = PrettyTable(['Matched Order ID', 'Time Left'])
+    for order_match in awaiting_btcs:
+        order_match = format_order_match(db, order_match)
+        table.add_row(order_match)
+    print('Your Pending Order Matches')
+    print(table)
+    print('\n')
+
+    # Open orders.
+    orders = util.get_orders(db, status='valid', show_expired=False, show_empty=False)
+    table = PrettyTable(['Give Quantity', 'Give Asset', 'Price', 'Price Assets', 'Required BTC Fee', 'Provided BTC Fee', 'Time Left', 'Tx Hash'])
+    for order in orders:
+        if give_asset and order['give_asset'] != give_asset: continue
+        if get_asset and order['get_asset'] != get_asset: continue
+        order = format_order(order)
+        table.add_row(order)
+    print('Open Orders')
+    table = table.get_string(sortby='Price')
+    print(table)
+    print('\n')
+
+    # Open bets.
+    bets = util.get_bets(db, status='valid', show_empty=False)
+    table = PrettyTable(['Bet Type', 'Feed Address', 'Deadline', 'Target Value', 'Leverage', 'Wager', 'Odds', 'Time Left', 'Tx Hash'])
+    for bet in bets:
+        bet = format_bet(bet)
+        table.add_row(bet)
+    print('Open Bets')
+    print(table)
+    print('\n')
+
+    # Feeds
+    broadcasts = util.get_broadcasts(db, status='valid', order_by='timestamp', order_dir='desc')
+    table = PrettyTable(['Feed Address', 'Timestamp', 'Text', 'Value', 'Fee Fraction'])
+    seen_addresses = []
+    for broadcast in broadcasts:
+        # Only show feeds with broadcasts in the last two weeks.
+        last_block_time = util.last_block(db)['block_time']
+        if broadcast['timestamp'] + config.TWO_WEEKS < last_block_time:
+            continue
+        # Always show only the latest broadcast from a feed address.
+        if broadcast['source'] not in seen_addresses:
+            feed = format_feed(broadcast)
+            table.add_row(feed)
+            seen_addresses.append(broadcast['source'])
+        else:
+            continue
+    print('Feeds')
+    print(table)
+
+
 def cli(method, params, unsigned):
 
     # Unlock wallet, as necessary.
@@ -369,6 +464,10 @@ if __name__ == '__main__':
     parser_rollback = subparsers.add_parser('rollback', help='rollback database (WARNING: not thread‐safe)')
     parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
 
+    parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the Counterparty market')
+    parser_market.add_argument('--give-asset', help='only show orders offering to sell GIVE_ASSET')
+    parser_market.add_argument('--get-asset', help='only show orders offering to buy GET_ASSET')
+
     """
     parser_checksum = subparsers.add_parser('checksum', help='create an asset name from a base string')
     parser_checksum.add_argument('string', help='base string of the desired asset name')
@@ -589,6 +688,9 @@ if __name__ == '__main__':
             order_match = format_order_match(db, order_match)
             table.add_row(order_match)
         print(table)
+
+    elif args.action == 'market':
+        market(args.give_asset, args.get_asset)
 
 
     # PARSING

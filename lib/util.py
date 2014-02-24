@@ -483,7 +483,8 @@ def devise (db, quantity, asset, dest, divisible=None):
         num = fmt.format(num)
         return num.rstrip('0')+'0' if num.rstrip('0')[-1] == '.' else num.rstrip('0')
 
-    if asset in ('leverage', 'value', 'fraction'):
+    # TODO: remove price, odds
+    if asset in ('leverage', 'value', 'fraction', 'price', 'odds'):
         if dest == 'output':
             return norm(quantity, 6)
         elif dest == 'input':
