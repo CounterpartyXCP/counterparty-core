@@ -101,11 +101,12 @@ def parse (db, tx, message):
         'expiration': expiration,
         'expire_index': tx['block_index'] + expiration,
         'fee_required': fee_required,
+        'fee_required_remaining': fee_required,
         'fee_provided': tx['fee'],
-        'fee_remaining': tx['fee'],
+        'fee_provided_remaining': tx['fee'],
         'status': status,
     }
-    sql='insert into orders values(:tx_index, :tx_hash, :block_index, :source, :give_asset, :give_amount, :give_remaining, :get_asset, :get_amount, :get_remaining, :expiration, :expire_index, :fee_required, :fee_provided, :fee_remaining, :status)'
+    sql='insert into orders values(:tx_index, :tx_hash, :block_index, :source, :give_asset, :give_amount, :give_remaining, :get_asset, :get_amount, :get_remaining, :expiration, :expire_index, :fee_required, :fee_required_remaining, :fee_provided, :fee_provided_remaining, :status)'
     order_parse_cursor.execute(sql, bindings)
 
     # Match.
@@ -135,14 +136,16 @@ def match (db, tx):
         order_matches = sorted(order_matches, key=lambda x: D(x['get_amount']) / D(x['give_amount']))   # Sort by price first.
 
     # Get fee remaining.
-    tx1_fee_remaining = tx1['fee_remaining']
+    tx1_fee_required_remaining = tx1['fee_required_remaining']
+    tx1_fee_provided_remaining = tx1['fee_provided_remaining']
 
     for tx0 in order_matches:
         tx0_give_remaining = tx0['give_remaining']
         tx0_get_remaining = tx0['get_remaining']
 
-        # Get fee remaining.
-        tx0_fee_remaining = tx0['fee_remaining']
+        # Get fee provided remaining.
+        tx0_fee_required_remaining = tx0['fee_required_remaining']
+        tx0_fee_provided_remaining = tx0['fee_provided_remaining']
 
         # Make sure that that both orders still have funds remaining [to be sold].
         if tx0_give_remaining <= 0 or tx1_give_remaining <= 0: continue
@@ -165,20 +168,26 @@ def match (db, tx):
                 if not backward_amount: continue
 
             # Check and update fee remainings.
-            if tx1['block_index'] >= 286500: # Deduct fee_required from fee_remaining, if possible (else don’t match).
+            if tx1['block_index'] >= 286500: # Deduct fee_required from fee_provided_remaining, etc., if possible (else don’t match).
                 if tx1['get_asset'] == 'BTC':
-                    fee = int(D(tx1['fee_required']) * D(forward_amount) / D(tx1_get_remaining))
-                    if tx0_fee_remaining < fee: continue
-                    else: tx0_fee_remaining -= fee
+                    fee = int(D(tx1['fee_required_remaining']) * D(forward_amount) / D(tx1_get_remaining))
+                    if tx0_fee_provided_remaining < fee: continue
+                    else:
+                        tx0_fee_provided_remaining -= fee
+                        if tx1['block_index'] >= 287800:
+                            tx1_fee_required_remaining -= fee
                 elif tx1['give_asset'] == 'BTC':
-                    fee = int(D(tx0['fee_required']) * D(backward_amount) / D(tx0_get_remaining))
-                    if tx1_fee_remaining < fee: continue
-                    else: tx1_fee_remaining -= fee 
+                    fee = int(D(tx0['fee_required_remaining']) * D(backward_amount) / D(tx0_get_remaining))
+                    if tx1_fee_provided_remaining < fee: continue
+                    else:
+                        tx1_fee_provided_remaining -= fee 
+                        if tx1['block_index'] >= 287800:
+                            tx0_fee_required_remaining -= fee
             else:   # Don’t deduct.
                 if tx1['get_asset'] == 'BTC':
-                    if tx0_fee_remaining < tx1['fee_required']: continue
+                    if tx0_fee_provided_remaining < tx1['fee_required']: continue
                 elif tx1['give_asset'] == 'BTC':
-                    if tx1_fee_remaining < tx0['fee_required']: continue
+                    if tx1_fee_provided_remaining < tx0['fee_required']: continue
 
             forward_asset, backward_asset = tx1['get_asset'], tx1['give_asset']
             order_match_id = tx0['tx_hash'] + tx1['tx_hash']
@@ -206,19 +215,21 @@ def match (db, tx):
             bindings = {
                 'give_remaining': tx0_give_remaining,
                 'get_remaining': tx0_get_remaining,
-                'fee_remaining': tx0_fee_remaining,
+                'fee_required_remaining': tx0_fee_required_remaining,
+                'fee_provided_remaining': tx0_fee_provided_remaining,
                 'tx_index': tx0['tx_index']
             }
-            sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_remaining = :fee_remaining where tx_index = :tx_index'
+            sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining, fee_provided_remaining = :fee_provided_remaining where tx_index = :tx_index'
             cursor.execute(sql, bindings)
             # tx1
             bindings = {
                 'give_remaining': tx1_give_remaining,
                 'get_remaining': tx1_get_remaining,
-                'fee_remaining': tx1_fee_remaining,
+                'fee_required_remaining': tx1_fee_required_remaining,
+                'fee_provided_remaining': tx1_fee_provided_remaining,
                 'tx_index': tx1['tx_index']
             }
-            sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_remaining = :fee_remaining where tx_index = :tx_index'
+            sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining, fee_provided_remaining = :fee_provided_remaining where tx_index = :tx_index'
             cursor.execute(sql, bindings)
 
             # Calculate when the match will expire.

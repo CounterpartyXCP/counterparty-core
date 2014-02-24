@@ -199,8 +199,9 @@ def initialise(db):
                       expiration INTEGER,
                       expire_index INTEGER,
                       fee_required INTEGER,
+                      fee_required_remaining INTEGER,
                       fee_provided INTEGER,
-                      fee_remaining INTEGER,
+                      fee_provided_remaining INTEGER,
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                       PRIMARY KEY (tx_index, tx_hash))
