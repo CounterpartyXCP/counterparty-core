@@ -22,7 +22,7 @@ def validate (db, source, amount_per_unit, asset):
     if not amount_per_unit:
         problems.append('zero amount per unit')
 
-    issuances = util.get_issuances(db, validity='valid', asset=asset)
+    issuances = util.get_issuances(db, status='valid', asset=asset)
     if not issuances:
         problems.append('no such asset, {}.'.format(asset))
         return None, problems
@@ -61,24 +61,24 @@ def parse (db, tx, message):
         assert len(message) == LENGTH
         amount_per_unit, asset_id = struct.unpack(FORMAT, message)
         asset = util.get_asset_name(asset_id)
-        validity = 'valid'
+        status = 'valid'
     except struct.error as e:
         amount_per_unit, asset = None, None
-        validity = 'invalid: could not unpack'
+        status = 'invalid: could not unpack'
 
-    if validity == 'valid':
+    if status == 'valid':
         # For SQLite3
         amount_per_unit = min(amount_per_unit, config.MAX_INT)
 
         amount, problems = validate(db, tx['source'], amount_per_unit, asset)
-        if problems: validity = 'invalid: ' + ';'.join(problems)
+        if problems: status = 'invalid: ' + ';'.join(problems)
 
-    if validity == 'valid':
+    if status == 'valid':
         # Debit.
         util.debit(db, tx['block_index'], tx['source'], 'XCP', amount)
 
         # Credit.
-        issuances = util.get_issuances(db, validity='valid', asset=asset)
+        issuances = util.get_issuances(db, status='valid', asset=asset)
         divisible = issuances[0]['divisible']
         balances = util.get_balances(db, asset=asset)
         for balance in balances:
@@ -96,9 +96,9 @@ def parse (db, tx, message):
         'source': tx['source'],
         'asset': asset,
         'amount_per_unit': amount_per_unit,
-        'validity': validity,
+        'status': status,
     }
-    sql='insert into dividends values(:tx_index, :tx_hash, :block_index, :source, :asset, :amount_per_unit, :validity)'
+    sql='insert into dividends values(:tx_index, :tx_hash, :block_index, :source, :asset, :amount_per_unit, :status)'
     dividend_parse_cursor.execute(sql, bindings)
 
     dividend_parse_cursor.close()

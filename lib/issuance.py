@@ -26,7 +26,7 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
     # Valid re-issuance?
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM issuances \
-                      WHERE (validity = ? AND asset = ?)''', ('valid', asset))
+                      WHERE (status = ? AND asset = ?)''', ('valid', asset))
     issuances = cursor.fetchall()
     cursor.close()
     if issuances:
@@ -103,15 +103,15 @@ def parse (db, tx, message):
         try:
             asset = util.get_asset_name(asset_id)
         except:
-            validity = 'invalid: bad asset name'
-        validity = 'valid'
+            status = 'invalid: bad asset name'
+        status = 'valid'
     except struct.error:
         asset, amount, divisible, callable_, call_date, call_price, description = None, None, None, None, None, None, None
-        validity = 'invalid: could not unpack'
+        status = 'invalid: could not unpack'
 
-    if validity == 'valid':
+    if status == 'valid':
         problems = validate(db, tx['source'], tx['destination'], asset, amount, divisible, callable_, call_date, call_price, description, block_index=tx['block_index'])
-        if problems: validity = 'invalid: ' + ';'.join(problems)
+        if problems: status = 'invalid: ' + ';'.join(problems)
         if 'maximum total quantity exceeded' in problems:
             amount = 0
 
@@ -124,7 +124,7 @@ def parse (db, tx, message):
         transfer = False
 
     fee = 0
-    if validity == 'valid':
+    if status == 'valid':
         # Debit fee.
         fee = 0
         if amount:
@@ -158,13 +158,13 @@ def parse (db, tx, message):
         'description': description,
         'fee_paid': fee,
         'locked': lock,
-        'validity': validity,
+        'status': status,
     }
-    sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :amount, :divisible, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :lock, :validity)'
+    sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :amount, :divisible, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :lock, :status)'
     issuance_parse_cursor.execute(sql, bindings)
 
     # Credit.
-    if validity == 'valid' and amount:
+    if status == 'valid' and amount:
         util.credit(db, tx['block_index'], tx['source'], asset, amount)
 
     issuance_parse_cursor.close()

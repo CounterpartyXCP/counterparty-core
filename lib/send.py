@@ -47,12 +47,12 @@ def parse (db, tx, message):
         assert len(message) == LENGTH
         asset_id, amount = struct.unpack(FORMAT, message)
         asset = util.get_asset_name(asset_id)
-        validity = 'valid'
+        status = 'valid'
     except struct.error as e:
         asset, amount = None, None
-        validity = 'invalid: Could not unpack.'
+        status = 'invalid: Could not unpack.'
 
-    if validity == 'valid':
+    if status == 'valid':
         # Oversend
         cursor.execute('''SELECT * FROM balances \
                                      WHERE (address = ? AND asset = ?)''', (tx['source'], asset))
@@ -63,9 +63,9 @@ def parse (db, tx, message):
         # For SQLite3
         amount = min(amount, config.MAX_INT)
         problems = validate(db, tx['source'], tx['destination'], asset, amount)
-        if problems: validity = 'invalid: ' + ';'.join(problems)
+        if problems: status = 'invalid: ' + ';'.join(problems)
 
-    if validity == 'valid':
+    if status == 'valid':
         util.debit(db, tx['block_index'], tx['source'], asset, amount, event=tx['tx_hash'])
         util.credit(db, tx['block_index'], tx['destination'], asset, amount, event=tx['tx_hash'])
 
@@ -78,9 +78,9 @@ def parse (db, tx, message):
         'destination': tx['destination'],
         'asset': asset,
         'amount': amount,
-        'validity': validity,
+        'status': status,
     }
-    sql='insert into sends values(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :amount, :validity)'
+    sql='insert into sends values(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :amount, :status)'
     cursor.execute(sql, bindings)
 
 

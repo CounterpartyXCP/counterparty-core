@@ -583,7 +583,7 @@ if __name__ == '__main__':
         print()
 
     elif args.action == 'pending':
-        awaiting_btcs = util.get_order_matches(db, validity='pending', is_mine=True)
+        awaiting_btcs = util.get_order_matches(db, status='pending', is_mine=True)
         table = PrettyTable(['Matched Order ID', 'Time Left'])
         for order_match in awaiting_btcs:
             order_match = format_order_match(db, order_match)

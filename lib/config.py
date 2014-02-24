@@ -8,10 +8,10 @@ UNITTEST_PREFIX = b'TESTXXXX'
 
 # Versions
 CLIENT_VERSION_MAJOR = 6
-CLIENT_VERSION_MINOR = 1
+CLIENT_VERSION_MINOR = 2
 CLIENT_VERSION = float(str(CLIENT_VERSION_MAJOR) + '.' + str(CLIENT_VERSION_MINOR))
-DB_VERSION_MAJOR = 8        # Major version changes the blocks or transactions table.
-DB_VERSION_MINOR = 0        # Minor version changes just the parsing.
+DB_VERSION_MAJOR = 9        # Major version changes the blocks or transactions table.
+DB_VERSION_MINOR = 1        # Minor version changes just the parsing.
 DB_VERSION = float(str(DB_VERSION_MAJOR) + '.' + str(DB_VERSION_MINOR))
 
 # Bitcoin protocol
