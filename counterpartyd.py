@@ -541,10 +541,12 @@ if __name__ == '__main__':
             fee_provided = round(D(fee_fraction_provided) * D(give_quantity) * D(config.UNIT))
             if fee_provided < config.MIN_FEE:
                 raise exceptions.InputError('Fee provided less than minimum necessary for acceptance in a block.')
+            print('Fee provided: {} BTC'.format(util.devise(db, fee_provided, 'BTC', 'output')))
         elif args.get_asset == 'BTC':
             fee_provided = config.MIN_FEE
             fee_fraction_required = util.devise(db, args.fee_fraction_required, 'fraction', 'input')
             fee_required = round(D(fee_fraction_required) * D(get_quantity) * D(config.UNIT))
+            print('Fee required: {} BTC'.format(util.devise(db, fee_required, 'BTC', 'output')))
         else:
             fee_required = 0
             fee_provided = config.MIN_FEE
