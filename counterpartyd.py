@@ -149,7 +149,7 @@ def cli(method, params, unsigned):
 
 def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=None,
                  bitcoind_rpc_user=None, bitcoind_rpc_password=None, rpc_host=None, rpc_port=None,
-                 rpc_user=None, rpc_password=None, log_file=None, database_file=None, testnet=False, testcoin=False, unittest=False):
+                 rpc_user=None, rpc_password=None, log_file=None, pid_file=None, database_file=None, testnet=False, testcoin=False, unittest=False):
 
     # Unittests always run on testnet.
     if unittest and not testnet:
@@ -272,13 +272,21 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
     # Log
     if log_file:
         config.LOG = log_file
-    elif has_config and 'logfile' in configfile['Default']:
-        config.LOG = configfile['Default']['logfile']
+    elif has_config and 'log-file' in configfile['Default']:
+        config.LOG = configfile['Default']['log-file']
     else:
         if config.TESTNET:
             config.LOG = os.path.join(config.DATA_DIR, 'counterpartyd.testnet.log')
         else:
             config.LOG = os.path.join(config.DATA_DIR, 'counterpartyd.log')
+
+    # PID file
+    if pid_file:
+        config.PID = pid_file
+    elif has_config and 'pid-file' in configfile['Default']:
+        config.PID = configfile['Default']['pid-file']
+    else:
+        config.PID = os.path.join(config.DATA_DIR, 'counterpartyd.pid')
 
     if not unittest:
         if config.TESTCOIN:
@@ -368,6 +376,7 @@ if __name__ == '__main__':
     parser.add_argument('--database-file', help='the location of the SQLite3 database')
     parser.add_argument('--config-file', help='the location of the configuration file')
     parser.add_argument('--log-file', help='the location of the log file')
+    parser.add_argument('--pid-file', help='the location of the pid file')
 
     parser.add_argument('--bitcoind-rpc-connect', help='the hostname of the Bitcoind JSON-RPC server')
     parser.add_argument('--bitcoind-rpc-port', type=int, help='the port used to communicate with Bitcoind over JSON-RPC')
@@ -478,7 +487,13 @@ if __name__ == '__main__':
     # Configuration
     set_options(data_dir=args.data_dir, bitcoind_rpc_connect=args.bitcoind_rpc_connect, bitcoind_rpc_port=args.bitcoind_rpc_port,
                  bitcoind_rpc_user=args.bitcoind_rpc_user, bitcoind_rpc_password=args.bitcoind_rpc_password, rpc_host=args.rpc_host, rpc_port=args.rpc_port,
-                 rpc_user=args.rpc_user, rpc_password=args.rpc_password, log_file=args.log_file, database_file=args.database_file, testnet=args.testnet, testcoin=args.testcoin, unittest=False)
+                 rpc_user=args.rpc_user, rpc_password=args.rpc_password, log_file=args.log_file, pid_file=args.pid_file, database_file=args.database_file, testnet=args.testnet, testcoin=args.testcoin, unittest=False)
+
+    #Create/update pid file
+    pid = str(os.getpid())
+    pidf = open(config.PID, 'w')
+    pidf.write(pid)
+    pidf.close()    
 
     # Database
     db = util.connect_to_db()
@@ -507,8 +522,7 @@ if __name__ == '__main__':
     requests_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
 
     if args.action == None: args.action = 'server'
-
-
+    
     # TODO
     # Check versions.
     util.versions_check(db)
