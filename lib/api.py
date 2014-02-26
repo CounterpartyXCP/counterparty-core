@@ -57,10 +57,10 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_bet_matches(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_bet_matches(filters=None, is_settled=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_bet_matches(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
+                status='settled' if bool(is_settled) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -173,10 +173,10 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_order_matches (filters=None, is_valid=True, is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_order_matches (filters=None, is_completed=True, is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_order_matches(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
+                status='completed' if bool(is_completed) else None,
                 is_mine=is_mine,
                 order_by=order_by,
                 order_dir=order_dir,
