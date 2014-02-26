@@ -57,10 +57,10 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_bet_matches(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_bet_matches(filters=None, is_settled=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_bet_matches(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
+                status='settled' if bool(is_settled) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -173,10 +173,10 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_order_matches (filters=None, is_valid=True, is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_order_matches (filters=None, is_completed=True, is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_order_matches(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
+                status='completed' if bool(is_completed) else None,
                 is_mine=is_mine,
                 order_by=order_by,
                 order_dir=order_dir,
@@ -440,7 +440,7 @@ class APIServer(threading.Thread):
                 'tools.auth_basic.checkpassword': checkpassword,
             },
         }
-        application = cherrypy.Application(API(), script_name="/jsonrpc/", config=app_config)
+        application = cherrypy.Application(API(), script_name="/api/", config=app_config)
 
         #disable logging of the access and error logs to the screen
         application.log.access_log.propagate = False
@@ -467,8 +467,8 @@ class APIServer(threading.Thread):
             application.log.access_log.addHandler(h)
 
         #start up the API listener/handler
-        server = wsgiserver.CherryPyWSGIServer(
-            (config.RPC_HOST, int(config.RPC_PORT)), application)
+        server = wsgiserver.CherryPyWSGIServer((config.RPC_HOST, int(config.RPC_PORT)), application,
+            numthreads=config.API_NUM_THREADS, request_queue_size=config.API_REQUEST_QUEUE_SIZE)
         #logging.debug("Initializing API interface…")
         try:
             server.start()

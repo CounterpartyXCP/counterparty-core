@@ -149,7 +149,9 @@ def cli(method, params, unsigned):
 
 def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=None,
                  bitcoind_rpc_user=None, bitcoind_rpc_password=None, rpc_host=None, rpc_port=None,
-                 rpc_user=None, rpc_password=None, log_file=None, pid_file=None, database_file=None, testnet=False, testcoin=False, unittest=False):
+                 rpc_user=None, rpc_password=None, log_file=None, pid_file=None,
+                 api_num_threads=None, api_request_queue_size=None,
+                 database_file=None, testnet=False, testcoin=False, unittest=False):
 
     # Unittests always run on testnet.
     if unittest and not testnet:
@@ -295,6 +297,20 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
             config.PREFIX = b'CNTRPRTY'             # 8 bytes
     else:
         config.PREFIX = config.UNITTEST_PREFIX
+        
+    if api_num_threads:
+        config.API_NUM_THREADS = int(api_num_threads)
+    elif has_config and 'api-num-threads' in configfile['Default']:
+        config.API_NUM_THREADS = int(configfile['Default']['api-num-threads'])
+    else:
+        config.API_NUM_THREADS = 10 #cherrypy default (not suitable for multiuser, high-performance production)
+
+    if api_request_queue_size:
+        config.API_REQUEST_QUEUE_SIZE = int(api_request_queue_size)
+    elif has_config and 'api-request-queue-size' in configfile['Default']:
+        config.API_REQUEST_QUEUE_SIZE = int(configfile['Default']['api-request-queue-size'])
+    else:
+        config.API_REQUEST_QUEUE_SIZE = 5 #cherrypy default (not suitable for multiuser, high-performance production)
 
     # Database
     if config.TESTNET:
@@ -377,6 +393,8 @@ if __name__ == '__main__':
     parser.add_argument('--config-file', help='the location of the configuration file')
     parser.add_argument('--log-file', help='the location of the log file')
     parser.add_argument('--pid-file', help='the location of the pid file')
+    parser.add_argument('--api-num-threads', help='the number of threads created for API request processing (CherryPy WSGI, default 10)')
+    parser.add_argument('--api-request-queue-size', help='the size of the API request queue (CherryPY WSGI, default 5)')
 
     parser.add_argument('--bitcoind-rpc-connect', help='the hostname of the Bitcoind JSON-RPC server')
     parser.add_argument('--bitcoind-rpc-port', type=int, help='the port used to communicate with Bitcoind over JSON-RPC')
@@ -487,7 +505,9 @@ if __name__ == '__main__':
     # Configuration
     set_options(data_dir=args.data_dir, bitcoind_rpc_connect=args.bitcoind_rpc_connect, bitcoind_rpc_port=args.bitcoind_rpc_port,
                  bitcoind_rpc_user=args.bitcoind_rpc_user, bitcoind_rpc_password=args.bitcoind_rpc_password, rpc_host=args.rpc_host, rpc_port=args.rpc_port,
-                 rpc_user=args.rpc_user, rpc_password=args.rpc_password, log_file=args.log_file, pid_file=args.pid_file, database_file=args.database_file, testnet=args.testnet, testcoin=args.testcoin, unittest=False)
+                 rpc_user=args.rpc_user, rpc_password=args.rpc_password, log_file=args.log_file, pid_file=args.pid_file,
+                 api_num_threads=args.api_num_threads, api_request_queue_size=args.api_request_queue_size,
+                 database_file=args.database_file, testnet=args.testnet, testcoin=args.testcoin, unittest=False)
 
     #Create/update pid file
     pid = str(os.getpid())

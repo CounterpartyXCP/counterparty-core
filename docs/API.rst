@@ -19,7 +19,7 @@ Connecting to the API
 ----------------------
 
 By default, ``counterpartyd`` will listen on port ``4000`` (if on mainnet) or port ``14000`` (on testnet) for API
-requests. API requests are made via a HTTP POST request to ``/jsonrpc/``, with JSON-encoded
+requests. API requests are made via a HTTP POST request to ``/api/``, with JSON-encoded
 data passed as the POST body. For more information on JSON RPC, please see the `JSON RPC 2.0 specification <http://www.jsonrpc.org/specification>`__.
 
 .. _examples:
@@ -33,7 +33,7 @@ Python Example
     import requests
     from requests.auth import HTTPBasicAuth
     
-    url = "http://localhost:4000/jsonrpc/"
+    url = "http://localhost:4000/api/"
     headers = {'content-type': 'application/json'}
     auth = HTTPBasicAuth('rpcuser', 'rpcpassword')
     
@@ -255,12 +255,12 @@ get_bets
 get_bet_matches
 ^^^^^^^^^^^^^^^^^^^
 
-.. py:function:: get_bet_matches(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
+.. py:function:: get_bet_matches(filters=[], is_settled=true, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
 
    Gets a listing of order matches.
 
    :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param boolean is_valid: Set to ``true`` to only return valid records. Set to ``false`` to return all records (including invalid attempts).
+   :param boolean is_settled: Set to ``true`` to only return settled bet match records. Set to ``false`` to return all records (including invalid attempts).
    :param string order_by: If sorted results are desired, specify the name of a :ref:`bet match object <bet-match-object>` attribute to order the results by (e.g. ``deadline``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
    :param integer start_block: If specified, only results from the specified block index on will be returned  
@@ -461,12 +461,12 @@ get_orders
 get_order_matches
 ^^^^^^^^^^^^^^^^^^^
 
-.. py:function:: get_order_matches(filters=[], is_valid=true, is_mine=false, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
+.. py:function:: get_order_matches(filters=[], is_completed=true, is_mine=false, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
 
    Gets a listing of order matches.
 
    :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param boolean is_valid: Set to ``true`` to only return valid records. Set to ``false`` to return all records (including invalid attempts).
+   :param boolean is_completed: Set to ``true`` to only return completed order match records. Set to ``false`` to return all records (including invalid attempts).
    :param boolean is_mine: Set to ``true`` to include results where either the ``tx0_address`` or ``tx1_address`` exist in the linked ``bitcoind`` wallet.
    :param string order_by: If sorted results are desired, specify the name of an :ref:`order match object <order-match-object>` attribute to order the results by (e.g. ``forward_asset``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
