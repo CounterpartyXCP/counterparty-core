@@ -467,8 +467,8 @@ class APIServer(threading.Thread):
             application.log.access_log.addHandler(h)
 
         #start up the API listener/handler
-        server = wsgiserver.CherryPyWSGIServer(
-            (config.RPC_HOST, int(config.RPC_PORT)), application)
+        server = wsgiserver.CherryPyWSGIServer((config.RPC_HOST, int(config.RPC_PORT)), application,
+            numthreads=config.API_NUM_THREADS, request_queue_size=config.API_REQUEST_QUEUE_SIZE)
         #logging.debug("Initializing API interface…")
         try:
             server.start()
