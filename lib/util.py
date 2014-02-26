@@ -168,7 +168,25 @@ def log (db, command, category, bindings):
 
         elif category == 'bet_match_expirations':
             logging.info('Expired Bet Match: {}'.format(bindings['bet_match_id']))
-        
+
+def message (db, block_index, command, category, bindings_string):
+    cursor = db.cursor()
+
+    # Get last message index.
+    messages = list(cursor.execute('''SELECT * FROM messages
+                                      WHERE message_index = (SELECT MAX(message_index) from messages)'''))
+    try:
+        assert len(messages) == 1
+        message_index = messages[0]['message_index'] + 1
+    except (AssertionError, IndexError):
+        message_index = 0
+
+    cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings)',
+                   (message_index, block_index, command, category, bindings_string))
+
+    cursor.close()
+
+       
 def rowtracer(cursor, sql):
     """Converts fetched SQL data into dict-style"""
     dictionary = {}
@@ -198,19 +216,8 @@ def exectracer(cursor, sql, bindings):
 
     # Record alteration in database.
     if not category in ('balances', 'messages'):
-        cursor = db.cursor()
 
-        # Get last message index.
-        messages = list(cursor.execute('''SELECT * FROM messages
-                                          WHERE message_index = (SELECT MAX(message_index) from messages)'''))
-        try:
-            assert len(messages) == 1
-            message_index = messages[0]['message_index'] + 1
-        except (AssertionError, IndexError):
-            message_index = 0
-
-        # Get current block.
-        # Hackish
+        # Get current block. (Hackish)
         try:
             block_index = bindings['block_index']
         except KeyError:
@@ -220,11 +227,7 @@ def exectracer(cursor, sql, bindings):
                 block_index = last_block(db)['block_index'] + 1   # TODO: Double‐check that this is correct.
 
         bindings_string = json.dumps(collections.OrderedDict(sorted(bindings.items())))
-        cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings)',
-                       (message_index, block_index, command, category, bindings_string))
-
-        message_index += 1
-        cursor.close()
+        message(db, block_index, command, category, bindings_string)
 
     # Log.
     log(db, command, category, bindings)

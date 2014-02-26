@@ -673,8 +673,11 @@ def reorg (db):
         assert len(blocks) == 1
         block_hash_have = blocks[0]['block_hash']
         if block_hash_see != block_hash_have:
-            reorg_necessary = True
+            # Record reorganisation.
             logging.warning('Status: Blockchain reorganisation at block {}.'.format(block_index))
+            util.message(db, last_block_index, 'reorg', None, str(block_index))
+
+            reorg_necessary = True
             break
 
     if not reorg_necessary: return last_block_index + 1
