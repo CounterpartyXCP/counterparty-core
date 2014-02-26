@@ -440,7 +440,7 @@ class APIServer(threading.Thread):
                 'tools.auth_basic.checkpassword': checkpassword,
             },
         }
-        application = cherrypy.Application(API(), script_name="/jsonrpc/", config=app_config)
+        application = cherrypy.Application(API(), script_name="/api/", config=app_config)
 
         #disable logging of the access and error logs to the screen
         application.log.access_log.propagate = False

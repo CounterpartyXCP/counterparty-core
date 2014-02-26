@@ -19,7 +19,7 @@ Connecting to the API
 ----------------------
 
 By default, ``counterpartyd`` will listen on port ``4000`` (if on mainnet) or port ``14000`` (on testnet) for API
-requests. API requests are made via a HTTP POST request to ``/jsonrpc/``, with JSON-encoded
+requests. API requests are made via a HTTP POST request to ``/api/``, with JSON-encoded
 data passed as the POST body. For more information on JSON RPC, please see the `JSON RPC 2.0 specification <http://www.jsonrpc.org/specification>`__.
 
 .. _examples:
@@ -33,7 +33,7 @@ Python Example
     import requests
     from requests.auth import HTTPBasicAuth
     
-    url = "http://localhost:4000/jsonrpc/"
+    url = "http://localhost:4000/api/"
     headers = {'content-type': 'application/json'}
     auth = HTTPBasicAuth('rpcuser', 'rpcpassword')
     
