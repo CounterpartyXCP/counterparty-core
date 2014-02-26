@@ -33,7 +33,9 @@ def validate (db, source, amount_per_unit, asset):
         total_shares = sum([issuance['amount'] for issuance in issuances]) / config.UNIT
     else:
         total_shares = sum([issuance['amount'] for issuance in issuances])
-    amount = round(amount_per_unit * total_shares)
+    amount = amount_per_unit * total_shares
+    assert int(amount) == amount
+    amount = int(amount)
 
     if not amount: problems.append('dividend too small')
 

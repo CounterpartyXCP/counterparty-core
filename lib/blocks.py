@@ -613,10 +613,6 @@ def reparse (db, block_index=None, quiet=False):
     cursor = db.cursor()
 
     with db:
-        # For rollbacks, just delete new blocks and then reparse what’s left.
-        if block_index:
-            cursor.execute('''DELETE FROM blocks WHERE block_index > ?''', (block_index,))
-            cursor.execute('''DELETE FROM transactions WHERE block_index > ?''', (block_index,))
 
         # Delete all of the results of parsing.
         cursor.execute('''DROP TABLE IF EXISTS order_expirations''')
@@ -639,6 +635,11 @@ def reparse (db, block_index=None, quiet=False):
         cursor.execute('''DROP TABLE IF EXISTS cancels''')
         cursor.execute('''DROP TABLE IF EXISTS callbacks''')
         cursor.execute('''DROP TABLE IF EXISTS messages''')
+
+        # For rollbacks, just delete new blocks and then reparse what’s left.
+        if block_index:
+            cursor.execute('''DELETE FROM transactions WHERE block_index > ?''', (block_index,))
+            cursor.execute('''DELETE FROM blocks WHERE block_index > ?''', (block_index,))
 
         # Reparse all blocks, transactions.
         if quiet:

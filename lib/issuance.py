@@ -138,7 +138,7 @@ def parse (db, tx, message):
     # Lock?
     if description and description.lower() == 'lock':
         lock = True
-        timestamp, valuerint, fee_fraction_int = None, None, None, None
+        timestamp, valuerint, fee_fraction_int = None, None, None
     else:
         lock = False
 
