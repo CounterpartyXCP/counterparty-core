@@ -232,11 +232,20 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_asset_info(asset):
             if asset in ['BTC', 'XCP']:
+                total_supply = None
+                if asset == 'BTC':
+                    r = requests.get("https://blockchain.info/q/totalbc")
+                    if r.status_code != 200:
+                        raise Exception("Bad status code returned from blockchain.info: %s" % r.status_code)
+                    total_supply = r.json()
+                else:
+                    total_supply = util.xcp_supply(db)
+                
                 return {
                     'owner': None,
                     'divisible': True,
                     'locked': False,
-                    'total_issued': util.xcp_supply(db) if asset == 'XCP' else None,
+                    'total_issued': total_supply,
                     'callable': False,
                     'call_date': None,
                     'call_price': None,

@@ -303,7 +303,7 @@ def get_inputs (source, total_btc_out, unittest=False):
 
             #since the address is probably not in our wallet, consult blockchain to ensure that the address has the minimum balance
             try:
-                r = requests.get("http://blockchain.info/unspent?active=" + source)
+                r = requests.get("https://blockchain.info/unspent?active=" + source)
                 # ^any other services that provide this?? (blockexplorer.com doesn't...)
                 if r.status_code == 500 and r.text.lower() == "no free outputs to spend":
                     return None, None
