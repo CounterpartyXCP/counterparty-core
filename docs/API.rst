@@ -108,6 +108,18 @@ Python Example
       url, data=json.dumps(payload), headers=headers, auth=auth).json()
     print("\nDO_SEND RESULT: ", response)
 
+PHP Example
+^^^^^^^^^^^^
+
+With PHP, you can connect and query ``counterpartyd`` using the `json-rpc2php <https://github.com/subutux/json-rpc2php>`__
+library. Here's a simple example that will get you the asset balances for a specific address:
+
+.. code-block:: php
+
+    $client = new jsonRPCClient('http://localhost:4000/jsonrpc/', array('username' => 'myusername', 'password' => 'mypass'));
+    $addr = '15vA2MJ4ESG3Rt1PVQ79D1LFMBBNtcSz1f'; // BTC/XCP address you want to query
+    $res = $client->get_balances(array('field' => 'address', 'op' => '==', 'value' => $addr));
+
 
 
 Terms & Conventions
