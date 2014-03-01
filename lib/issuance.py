@@ -40,8 +40,8 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
             problems.append('asset exists with a different divisibility')
         elif bool(last_issuance['callable']) != bool(callable_) or last_issuance['call_date'] != call_date or last_issuance['call_price'] != call_price:
             problems.append('asset exists with a different callability, call date or call price')
-        elif last_issuance['locked']:
-            problems.append('locked asset')
+        elif last_issuance['locked'] and amount:
+            problems.append('locked asset and non‐zero amount')
     elif description.lower() == 'lock':
         problems.append('cannot lock a nonexistent asset')
     elif destination:
@@ -138,6 +138,11 @@ def parse (db, tx, message):
     # Lock?
     if description and description.lower() == 'lock':
         lock = True
+        cursor = db.cursor()
+        issuances = list(cursor.execute('''SELECT * FROM issuances \
+                                           WHERE (status = ? AND asset = ?)''', ('valid', asset)))
+        cursor.close()
+        description = issuances[-1]['description']  # Use last description.
         timestamp, valuerint, fee_fraction_int = None, None, None
     else:
         lock = False

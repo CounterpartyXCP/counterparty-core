@@ -440,7 +440,7 @@ if __name__ == '__main__':
     parser_issuance.add_argument('--callable', dest='callable_', action='store_true', help='whether or not the asset is callable (must agree with previous issuances)')
     parser_issuance.add_argument('--call-date', help='the date from which a callable asset may be called back (must agree with previous issuances)')
     parser_issuance.add_argument('--call-price', help='the price, in XCP per whole unit, at which a callable asset may be called back (must agree with previous issuances)')
-    parser_issuance.add_argument('--description', type=str, required=True, help='a description of the asset')
+    parser_issuance.add_argument('--description', type=str, required=True, help='a description of the asset (set to ‘LOCK’ to lock against further issuances with non‐zero amounts)')
 
     parser_broadcast = subparsers.add_parser('broadcast', help='broadcast textual and numerical information to the network')
     parser_broadcast.add_argument('--source', required=True, help='the source address')
