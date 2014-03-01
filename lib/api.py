@@ -215,7 +215,7 @@ class APIServer(threading.Thread):
             if not isinstance(message_indexes, list):
                 message_indexes = [message_indexes,]
             for idx in message_indexes:  #make sure the data is clean
-                if not isinstance(block_index, int):
+                if not isinstance(idx, int):
                     raise Exception("All items in message_indexes are not integers")
                 
             cursor = db.cursor()
@@ -226,17 +226,26 @@ class APIServer(threading.Thread):
             return messages
 
         @dispatcher.add_method
-        def xcp_supply():
+        def get_xcp_supply():
             return util.xcp_supply(db)
 
         @dispatcher.add_method
         def get_asset_info(asset):
             if asset in ['BTC', 'XCP']:
+                total_supply = None
+                if asset == 'BTC':
+                    r = requests.get("https://blockchain.info/q/totalbc")
+                    if r.status_code != 200:
+                        raise Exception("Bad status code returned from blockchain.info: %s" % r.status_code)
+                    total_supply = r.json()
+                else:
+                    total_supply = util.xcp_supply(db)
+                
                 return {
                     'owner': None,
                     'divisible': True,
                     'locked': False,
-                    'total_issued': util.xcp_supply(db) if asset == 'XCP' else None,
+                    'total_issued': total_supply,
                     'callable': False,
                     'call_date': None,
                     'call_price': None,

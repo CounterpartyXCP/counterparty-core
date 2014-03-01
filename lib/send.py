@@ -24,6 +24,10 @@ def compose (db, source, destination, asset, amount):
     # Just send BTC?
     if asset == 'BTC':
         return (source, destination, amount, config.MIN_FEE, None)
+    
+    #amount must be in int satoshi (not float, string, etc)
+    if not isinstance(amount, int):
+        raise exceptions.SendError('amount must be an int (in satoshi)')
 
     # Only for outgoing (incoming will overburn).
     balances = util.get_balances(db, address=source, asset=asset)

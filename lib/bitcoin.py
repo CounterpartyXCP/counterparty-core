@@ -205,7 +205,7 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
         txin = inputs[i]
         s += binascii.unhexlify(bytes(txin['txid'], 'utf-8'))[::-1]         # TxOutHash
         s += txin['vout'].to_bytes(4, byteorder='little')   # TxOutIndex
-
+        
         script = str.encode(txin['scriptPubKey'])
         s += var_int(int(len(script)))                      # Script length
         s += script                                         # Script
@@ -303,7 +303,7 @@ def get_inputs (source, total_btc_out, unittest=False):
 
             #since the address is probably not in our wallet, consult blockchain to ensure that the address has the minimum balance
             try:
-                r = requests.get("http://blockchain.info/unspent?active=" + source)
+                r = requests.get("https://blockchain.info/unspent?active=" + source)
                 # ^any other services that provide this?? (blockexplorer.com doesn't...)
                 if r.status_code == 500 and r.text.lower() == "no free outputs to spend":
                     return None, None
@@ -358,7 +358,7 @@ def transaction (tx_info, multisig, unittest=False):
                                           address)
 
     # Check that the source is in wallet.
-    if not unittest:
+    if not unittest and not isinstance(multisig, str): #do not run this check if multisig is a public key string
         if not rpc('validateaddress', [source])['ismine']:
             raise exceptions.InvalidAddressError('Not one of your Bitcoin addresses:', source)
 
