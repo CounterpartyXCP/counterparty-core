@@ -463,6 +463,7 @@ if __name__ == '__main__':
     parser_dividend.add_argument('--source', required=True, help='the source address')
     parser_dividend.add_argument('--quantity-per-unit', required=True, help='the quantity of XCP to be paid per whole unit held of ASSET')
     parser_dividend.add_argument('--asset', required=True, help='the asset to which pay dividends')
+    parser_dividend.add_argument('--dividend-asset', required=True, help='asset in which to pay the dividends')
 
     parser_burn = subparsers.add_parser('burn', help='destroy bitcoins to earn XCP, during an initial period of time')
     parser_burn.add_argument('--source', required=True, help='the source address')
@@ -639,7 +640,7 @@ if __name__ == '__main__':
     elif args.action == 'dividend':
         quantity_per_unit = util.devise(db, args.quantity_per_unit, 'XCP', 'input')
         cli('create_dividend', [args.source, quantity_per_unit, args.asset],
-           args.unsigned)
+           args.unsigned, args.dividend_asset)
 
     elif args.action == 'burn':
         quantity = util.devise(db, args.quantity, 'BTC', 'input')

@@ -211,14 +211,14 @@ def test_issuance_indivisible_callable ():
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_dividend_divisible ():
-    unsigned_tx_hex = bitcoin.transaction(dividend.compose(db, source_default, 6, 'BBBB'), True)
+    unsigned_tx_hex = bitcoin.transaction(dividend.compose(db, source_default, 6, 'BBBB', 'XCP'), True)
 
     parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_dividend_indivisible ():
-    unsigned_tx_hex = bitcoin.transaction(dividend.compose(db, source_default, 8, 'BBBC'), True)
+    unsigned_tx_hex = bitcoin.transaction(dividend.compose(db, source_default, 8, 'BBBC', 'XCP'), True)
 
     parse_hex(unsigned_tx_hex)
 
@@ -340,7 +340,7 @@ def test_json_rpc():
     api_server.daemon = True
     api_server.start()
 
-    url = 'http://localhost:' + str(config.RPC_PORT) + '/jsonrpc/'
+    url = 'http://localhost:' + str(config.RPC_PORT) + '/rpc/'
     headers = {'content-type': 'application/json'}
     auth = HTTPBasicAuth(config.RPC_USER, config.RPC_PASSWORD)
 

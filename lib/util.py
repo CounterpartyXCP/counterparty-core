@@ -146,7 +146,7 @@ def log (db, command, category, bindings):
             logging.info('Bet Match: {} for {} against {} for {} on {} at {}{} ({}) [{}]'.format(BET_TYPE_NAME[bindings['tx0_bet_type']], output(bindings['forward_amount'], 'XCP'), BET_TYPE_NAME[bindings['tx1_bet_type']], output(bindings['backward_amount'], 'XCP'), bindings['feed_address'], isodt(bindings['deadline']), placeholder, bindings['id'], bindings['status']))
 
         elif category == 'dividends':
-            logging.info('Dividend: {} paid {} per unit of {} ({}) [{}]'.format(bindings['source'], output(bindings['amount_per_unit'], 'XCP'), bindings['asset'], bindings['tx_hash'], bindings['status']))
+            logging.info('Dividend: {} paid {} per unit of {} ({}) [{}]'.format(bindings['source'], output(bindings['amount_per_unit'], bindings['dividend_asset']), bindings['asset'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'burns':
             logging.info('Burn: {} burned {} for {} ({}) [{}]'.format(bindings['source'], output(bindings['burned'], 'BTC'), output(bindings['earned'], 'XCP'), bindings['tx_hash'], bindings['status']))
@@ -169,7 +169,7 @@ def log (db, command, category, bindings):
         elif category == 'bet_match_expirations':
             logging.info('Expired Bet Match: {}'.format(bindings['bet_match_id']))
 
-def message (db, block_index, command, category, bindings_string):
+def message (db, block_index, command, category, bindings):
     cursor = db.cursor()
 
     # Get last message index.
@@ -181,6 +181,7 @@ def message (db, block_index, command, category, bindings_string):
     except (AssertionError, IndexError):
         message_index = 0
 
+    bindings_string = json.dumps(collections.OrderedDict(sorted(bindings.items())))
     cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings)',
                    (message_index, block_index, command, category, bindings_string))
 
@@ -226,8 +227,7 @@ def exectracer(cursor, sql, bindings):
             except KeyError:
                 block_index = last_block(db)['block_index'] + 1   # TODO: Double‐check that this is correct.
 
-        bindings_string = json.dumps(collections.OrderedDict(sorted(bindings.items())))
-        message(db, block_index, command, category, bindings_string)
+        message(db, block_index, command, category, bindings)
 
     # Log.
     log(db, command, category, bindings)

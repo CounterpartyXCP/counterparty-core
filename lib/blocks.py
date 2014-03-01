@@ -389,6 +389,7 @@ def initialise(db):
                       block_index INTEGER,
                       source TEXT,
                       asset TEXT,
+                      dividend_asset TEXT,
                       amount_per_unit INTEGER,
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
@@ -673,10 +674,6 @@ def reorg (db):
         assert len(blocks) == 1
         block_hash_have = blocks[0]['block_hash']
         if block_hash_see != block_hash_have:
-            # Record reorganisation.
-            logging.warning('Status: Blockchain reorganisation at block {}.'.format(block_index))
-            util.message(db, last_block_index, 'reorg', None, str(block_index))
-
             reorg_necessary = True
             break
 
@@ -684,6 +681,10 @@ def reorg (db):
 
     # Rollback the DB.
     reparse(db, block_index=block_index-1, quiet=True)
+
+    # Record reorganisation.
+    logging.warning('Status: Blockchain reorganisation at block {}.'.format(block_index))
+    util.message(db, last_block_index, 'reorg', None, {'block_index': block_index})
 
     reorg_cursor.close()
     return block_index

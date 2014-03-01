@@ -299,11 +299,12 @@ CREATE TABLE dividends(
                       block_index INTEGER,
                       source TEXT,
                       asset TEXT,
+                      dividend_asset TEXT,
                       amount_per_unit INTEGER,
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
-INSERT INTO dividends VALUES(7,'ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879',154915,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',6,'valid');
-INSERT INTO dividends VALUES(8,'beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a',154916,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',8,'valid');
+INSERT INTO dividends VALUES(7,'ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879',154915,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB','XCP',6,'valid');
+INSERT INTO dividends VALUES(8,'beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a',154916,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC','XCP',8,'valid');
 
 -- Table  issuances
 DROP TABLE IF EXISTS issuances;
@@ -358,10 +359,10 @@ INSERT INTO messages VALUES(16,154914,'insert','issuances','{"amount": 100000, "
 INSERT INTO messages VALUES(17,154914,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "amount": 100000, "asset": "BBBC", "block_index": 154914, "event": null}');
 INSERT INTO messages VALUES(18,154915,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "amount": 60, "asset": "XCP", "block_index": 154915, "event": null}');
 INSERT INTO messages VALUES(19,154915,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "amount": 60, "asset": "XCP", "block_index": 154915, "event": null}');
-INSERT INTO messages VALUES(20,154915,'insert','dividends','{"amount_per_unit": 6, "asset": "BBBB", "block_index": 154915, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879", "tx_index": 7}');
+INSERT INTO messages VALUES(20,154915,'insert','dividends','{"amount_per_unit": 6, "asset": "BBBB", "block_index": 154915, "dividend_asset": "XCP", "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879", "tx_index": 7}');
 INSERT INTO messages VALUES(21,154916,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "amount": 800000, "asset": "XCP", "block_index": 154916, "event": null}');
 INSERT INTO messages VALUES(22,154916,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "amount": 800000, "asset": "XCP", "block_index": 154916, "event": null}');
-INSERT INTO messages VALUES(23,154916,'insert','dividends','{"amount_per_unit": 8, "asset": "BBBC", "block_index": 154916, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a", "tx_index": 8}');
+INSERT INTO messages VALUES(23,154916,'insert','dividends','{"amount_per_unit": 8, "asset": "BBBC", "block_index": 154916, "dividend_asset": "XCP", "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a", "tx_index": 8}');
 INSERT INTO messages VALUES(24,154917,'insert','broadcasts','{"block_index": 154917, "fee_fraction_int": 5000000, "locked": false, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "text": "Unit Test", "timestamp": 1388000000, "tx_hash": "2b4c342f5433ebe591a1da77e013d1b72475562d48578dca8b84bac6651c3cb9", "tx_index": 9, "value": 100.0}');
 INSERT INTO messages VALUES(25,154918,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "amount": 50000000, "asset": "XCP", "block_index": 154918, "event": null}');
 INSERT INTO messages VALUES(26,154918,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "amount": 2500000, "asset": "XCP", "block_index": 154918, "event": null}');
@@ -537,8 +538,8 @@ INSERT INTO transactions VALUES(3,'084fed08b978af4d7d196a7446a86b58009e636b611db
 INSERT INTO transactions VALUES(4,'e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71',154912,NULL,4,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',50000000,10000,X'0000000BDBC1B4C900FFE48D575B5DA5C638040125F65DB0FE3E24494B76EA986457D986084FED08B978AF4D7D196A7446A86B58009E636B611DB16211B65A9AADFF29C5',1);
 INSERT INTO transactions VALUES(5,'e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db',154913,NULL,5,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',NULL,NULL,10000,X'000000140000000000004767000000003B9ACA0001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000',1);
 INSERT INTO transactions VALUES(6,'67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6',154914,NULL,6,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',NULL,NULL,10000,X'00000014000000000000476800000000000186A00001000000113C75C28F06666F6F6261720000000000000000000000000000000000000000000000000000000000000000000000',1);
-INSERT INTO transactions VALUES(7,'ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879',154915,NULL,7,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',NULL,NULL,10000,X'0000003200000000000000060000000000004767',1);
-INSERT INTO transactions VALUES(8,'beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a',154916,NULL,8,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',NULL,NULL,10000,X'0000003200000000000000080000000000004768',1);
+INSERT INTO transactions VALUES(7,'ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879',154915,NULL,7,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',NULL,NULL,10000,X'00000032000000000000000600000000000047670000000000000001',1);
+INSERT INTO transactions VALUES(8,'beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a',154916,NULL,8,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',NULL,NULL,10000,X'00000032000000000000000800000000000047680000000000000001',1);
 INSERT INTO transactions VALUES(9,'2b4c342f5433ebe591a1da77e013d1b72475562d48578dca8b84bac6651c3cb9',154917,NULL,9,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',NULL,NULL,10000,X'0000001E52BB33004059000000000000004C4B4009556E69742054657374000000000000000000000000000000000000000000000000000000000000000000000000000000000000',1);
 INSERT INTO transactions VALUES(10,'01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b',154918,NULL,10,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',10860,10000,X'00000028000052BB33640000000002FAF08000000000017D7840000000000000000000003B100000000A',1);
 INSERT INTO transactions VALUES(11,'e7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6',154919,NULL,11,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',10860,10000,X'00000028000152BB336400000000017D78400000000002793D60000000000000000000003B100000000A',1);
