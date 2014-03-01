@@ -205,7 +205,7 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
         txin = inputs[i]
         s += binascii.unhexlify(bytes(txin['txid'], 'utf-8'))[::-1]         # TxOutHash
         s += txin['vout'].to_bytes(4, byteorder='little')   # TxOutIndex
-
+        
         script = str.encode(txin['scriptPubKey'])
         s += var_int(int(len(script)))                      # Script length
         s += script                                         # Script
@@ -358,7 +358,7 @@ def transaction (tx_info, multisig, unittest=False):
                                           address)
 
     # Check that the source is in wallet.
-    if not unittest:
+    if not unittest and not isinstance(multisig, str): #do not run this check if multisig is a public key string
         if not rpc('validateaddress', [source])['ismine']:
             raise exceptions.InvalidAddressError('Not one of your Bitcoin addresses:', source)
 

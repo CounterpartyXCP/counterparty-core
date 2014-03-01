@@ -215,7 +215,7 @@ class APIServer(threading.Thread):
             if not isinstance(message_indexes, list):
                 message_indexes = [message_indexes,]
             for idx in message_indexes:  #make sure the data is clean
-                if not isinstance(block_index, int):
+                if not isinstance(idx, int):
                     raise Exception("All items in message_indexes are not integers")
                 
             cursor = db.cursor()
@@ -226,7 +226,7 @@ class APIServer(threading.Thread):
             return messages
 
         @dispatcher.add_method
-        def xcp_supply():
+        def get_xcp_supply():
             return util.xcp_supply(db)
 
         @dispatcher.add_method

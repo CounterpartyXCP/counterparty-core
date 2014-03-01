@@ -549,12 +549,12 @@ get_messages_by_index
    :param list message_indexes: An array of one or more ``message_index`` values for which the cooresponding message feed entries are desired. 
    :return: A list containing a :ref:`message <message-object>` for each message found in the specified ``message_indexes`` list. If none were found, ``[]`` (empty list) is returned.
 
-.. _xcp_supply:
+.. _get_xcp_supply:
 
-xcp_supply
-^^^^^^^^^^^^^^
+get_xcp_supply
+^^^^^^^^^^^^^^^
 
-.. py:function:: xcp_supply(asset)
+.. py:function:: get_xcp_supply(asset)
 
    Gets the current total amount of XCP in existance (i.e. amount created via proof-of-burn, minus amount
    destroyed via asset issuances, etc).
