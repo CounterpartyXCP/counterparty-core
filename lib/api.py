@@ -15,7 +15,7 @@ import cherrypy
 from cherrypy import wsgiserver
 from jsonrpc import JSONRPCResponseManager, dispatcher
 
-from . import (config, bitcoin, exceptions, util, bitcoin)
+from . import (config, bitcoin, exceptions, util)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel)
 
 class APIServer(threading.Thread):
@@ -234,10 +234,7 @@ class APIServer(threading.Thread):
             if asset in ['BTC', 'XCP']:
                 total_supply = None
                 if asset == 'BTC':
-                    r = requests.get("https://blockchain.info/q/totalbc")
-                    if r.status_code != 200:
-                        raise Exception("Bad status code returned from blockchain.info: %s" % r.status_code)
-                    total_supply = r.json()
+                    total_supply = bitcoin.get_btc_supply(normalize=False)
                 else:
                     total_supply = util.xcp_supply(db)
                 
@@ -476,7 +473,7 @@ class APIServer(threading.Thread):
             application.log.access_log.addHandler(h)
 
         #start up the API listener/handler
-        server = wsgiserver.CherryPyWSGIServer((config.RPC_HOST, int(config.RPC_PORT)), application,
+        server = wsgiserver.CherryPyWSGIServer((config.RPC_HOST, config.RPC_PORT), application,
             numthreads=config.API_NUM_THREADS, request_queue_size=config.API_REQUEST_QUEUE_SIZE)
         #logging.debug("Initializing API interface…")
         try:

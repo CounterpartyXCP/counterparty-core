@@ -1,20 +1,20 @@
 import time
-from datetime import datetime
-from dateutil.tz import tzlocal
 import decimal
-D = decimal.Decimal
 import sys
 import json
 import logging
 import operator
-from operator import itemgetter
 import apsw
 import collections
 import inspect
 import requests
+from datetime import datetime
+from dateutil.tz import tzlocal
+from operator import itemgetter
 
 from . import (config, exceptions)
 
+D = decimal.Decimal
 b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 # Obsolete in Python 3.4, with enum module.
