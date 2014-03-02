@@ -474,9 +474,8 @@ if __name__ == '__main__':
         else:
             call_date, call_price = 0, 0
 
-        cli('create_issuance', [args.source, 
-                               args.asset, quantity, args.divisible,
-                               args.description,
+        cli('create_issuance', [args.source,
+                               args.asset, quantity, args.divisible, args.description,
                                args.callable_, call_date,
                                call_price, args.transfer_destination],
            args.unsigned)
