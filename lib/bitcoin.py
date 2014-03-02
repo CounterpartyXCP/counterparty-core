@@ -8,11 +8,13 @@ import sys
 import binascii
 import json
 import hashlib
-import requests
 import re
 import time
 import getpass
+import decimal
+import logging
 
+import requests
 from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
 from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec
 from pycoin.scripts import bitcoin_utils
@@ -31,8 +33,8 @@ OP_2 = b'\x52'
 OP_CHECKMULTISIG = b'\xae'
 b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
+D = decimal.Decimal
 dhash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
-
 request_session = None
 
 def bitcoind_check (db):
@@ -300,34 +302,7 @@ def get_inputs (source, total_btc_out, unittest=False):
             listunspent = rpc('listunspent', [])
         else:
             if config.TESTNET: raise exceptions.TransactionError('Blockchain.info does not support testnet.')
-
-            #since the address is probably not in our wallet, consult blockchain to ensure that the address has the minimum balance
-            try:
-                r = requests.get("https://blockchain.info/unspent?active=" + source)
-                # ^any other services that provide this?? (blockexplorer.com doesn't...)
-                if r.status_code == 500 and r.text.lower() == "no free outputs to spend":
-                    return None, None
-                elif r.status_code != 200:
-                    raise Exception("Bad status code returned from blockchain.info: %s" % r.status_code)
-                unspent_outputs = r.json()['unspent_outputs']
-            except requests.exceptions.RequestException as e:
-                raise Exception("Problem getting unspent transactions from blockchain.info: " % e)
-
-            #take the returned data to a format compatible with bitcoind's output
-            listunspent = []
-            for o in unspent_outputs:
-                #blockchain.info lists the txhash in some weird reversed string notation with character pairs fipped...fun
-                o['tx_hash'] = o['tx_hash'][::-1] #reverse string
-                o['tx_hash'] = ''.join([o['tx_hash'][i:i+2][::-1] for i in range(0, len(o['tx_hash']), 2)]) #flip the character pairs within the string
-                listunspent.append({
-                    'address': source,
-                    'txid': o['tx_hash'],
-                    'vout': o['tx_output_n'],
-                    'account': "",
-                    'scriptPubKey': o['script'],
-                    'amount': o['value'] / float(config.UNIT),
-                    'confirmations': o['confirmations']
-                })
+            listunspent = get_unspent_txouts(address, normalize=True)
     else:
         CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
         with open(CURR_DIR + '/../test/listunspent.test.json', 'r') as listunspent_test_file:   # HACK
@@ -421,5 +396,81 @@ def transmit (unsigned_tx_hex):
     if result['complete']:
         signed_tx_hex = result['hex']
         return rpc('sendrawtransaction', [signed_tx_hex])
+
+def normalize_amount(amount, divisible):
+    if divisible:
+        return float((D(amount) / D(config.UNIT)).quantize(D('.00000000'), rounding=decimal.ROUND_HALF_EVEN)) 
+    else: return amount
+
+def get_btc_balance(address, normalize=False):
+    """returns the BTC balance for a specific address"""
+    if config.INSIGHT_ENABLE:
+        r = requests.get(config.INSIGHT + '/api/addr/' + address)
+        if r.status_code != 200:
+            return "???"
+        else:
+            data = r.json()
+            return data['balance'] if normalize else data['balanceSat']
+    else: #use blockchain
+        r = requests.get("https://blockchain.info/q/addressbalance/" + address)
+        # ^any other services that provide this?? (blockexplorer.com doesn't...)
+        if r.status_code != 200:
+            return "???"
+        else:
+            return normalize_amount(int(r.text), True) if normalize else int(r.text)
+
+def get_btc_supply(normalize=False):
+    """returns the total supply of BTC (based on what bitcoind says the current block height is)"""
+    block_count = int(bitcoin.rpc('getblockcount', []))
+    blocks_remaining = block_count
+    total_supply = 0 
+    reward = 50.0
+    while blocks_remaining > 0:
+        if blocks_remaining >= 210000:
+            blocks_remaining -= 210000
+            total_supply += 210000 * reward
+            reward /= 2
+        else:
+            total_supply += (blocks_remaining * reward)
+            blocks_remaining = 0
+    return total_supply if normalize else int(total_supply * config.UNIT)
+
+def get_unspent_txouts(address, normalize=False):
+    """returns a list of unspent outputs for a specific address
+    @return: A list of dicts, with each entry in the dict having the following keys:
+        * 
+    """
+    if config.INSIGHT_ENABLE:
+        r = requests.get(config.INSIGHT + '/api/addr/' + address + '/utxo')
+        if r.status_code != 200:
+            raise Exception("Can't get unspent txouts: insight returned bad status code: %s" % r.status_code)
+        else:
+            data = r.json()
+            if not normalize:
+                data['amount'] = int(data['amount'] * config.UNIT) 
+            return data
+    else: #use blockchain
+        r = requests.get("https://blockchain.info/unspent?active=" + address)
+        if r.status_code == 500 and r.text.lower() == "no free outputs to spend":
+            return []
+        elif r.status_code != 200:
+            raise Exception("Bad status code returned from blockchain.info: %s" % r.status_code)
+        data = r.json()['unspent_outputs']
+        results = []
+        for d in data:
+            #blockchain.info lists the txhash in some weird reversed string notation with character pairs fipped...fun
+            d['tx_hash'] = d['tx_hash'][::-1] #reverse string
+            d['tx_hash'] = ''.join([d['tx_hash'][i:i+2][::-1] for i in range(0, len(d['tx_hash']), 2)]) #flip the character pairs within the string
+            results.append({
+                'account': "",
+                'address': address,
+                'txid': d['tx_hash'],
+                'vout': d['tx_output_n'],
+                'ts': None,
+                'scriptPubKey': d['script'],
+                'amount': normalize_amount(d['value'], True) if normalize else d['value'],
+                'confirmations': d['confirmations'],
+            })
+        return results
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

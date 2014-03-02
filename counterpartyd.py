@@ -147,10 +147,12 @@ def cli(method, params, unsigned):
             sys.exit(1)
 
 
-def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=None,
-                 bitcoind_rpc_user=None, bitcoind_rpc_password=None, rpc_host=None, rpc_port=None,
-                 rpc_user=None, rpc_password=None, log_file=None, pid_file=None,
-                 api_num_threads=None, api_request_queue_size=None,
+def set_options (data_dir=None,
+                 bitcoind_rpc_connect=None, bitcoind_rpc_port=None,
+                 bitcoind_rpc_user=None, bitcoind_rpc_password=None,
+                 insight_enable=None, insight_connect=None, insight_port=None,
+                 rpc_host=None, rpc_port=None, rpc_user=None, rpc_password=None,
+                 log_file=None, pid_file=None, api_num_threads=None, api_request_queue_size=None,
                  database_file=None, testnet=False, testcoin=False, unittest=False):
 
     # Unittests always run on testnet.
@@ -187,6 +189,9 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
     else:
         config.TESTCOIN = False
 
+    ##############
+    # THINGS WE CONNECT TO
+
     # Bitcoind RPC host
     if bitcoind_rpc_connect:
         config.BITCOIND_RPC_CONNECT = bitcoind_rpc_connect
@@ -202,11 +207,11 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
         config.BITCOIND_RPC_PORT = configfile['Default']['bitcoind-rpc-port']
     else:
         if config.TESTNET:
-            config.BITCOIND_RPC_PORT = '18332'
+            config.BITCOIND_RPC_PORT = 18332
         else:
-            config.BITCOIND_RPC_PORT = '8332'
+            config.BITCOIND_RPC_PORT = 8332
     try:
-        int(config.BITCOIND_RPC_PORT)
+        config.BITCOIND_RPC_PORT = int(config.BITCOIND_RPC_PORT)
         assert int(config.BITCOIND_RPC_PORT) > 1 and int(config.BITCOIND_RPC_PORT) < 65535
     except:
         raise Exception("Please specific a valid port number bitcoind-rpc-port configuration parameter")
@@ -229,7 +234,49 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
 
     config.BITCOIND_RPC = 'http://' + config.BITCOIND_RPC_USER + ':' + config.BITCOIND_RPC_PASSWORD + '@' + config.BITCOIND_RPC_CONNECT + ':' + str(config.BITCOIND_RPC_PORT)
 
-    # RPC host
+    # insight enable
+    if insight_enable:
+        config.INSIGHT_ENABLE = insight_enable
+    elif has_config and 'insight-enable' in configfile['Default']:
+        config.INSIGHT_ENABLE = configfile['Default'].getboolean('insight-enable')
+    else:
+        config.INSIGHT_ENABLE = False
+    
+    if unittest:
+        config.INSIGHT_ENABLE = True #override when running test suite
+    if config.TESTNET and not config.INSIGHT_ENABLE:
+        raise Exception("insight support must be enabled to run counterpartyd on testnet") 
+
+    # insight API host
+    if insight_connect:
+        config.INSIGHT_CONNECT = insight_connect
+    elif has_config and 'insight-connect' in configfile['Default'] and configfile['Default']['insight-connect']:
+        config.INSIGHT_CONNECT = configfile['Default']['insight-connect']
+    else:
+        config.INSIGHT_CONNECT = 'localhost'
+
+    # insight API port
+    if insight_port:
+        config.INSIGHT_PORT = insight_port
+    elif has_config and 'insight-port' in configfile['Default'] and configfile['Default']['insight-port']:
+        config.INSIGHT_PORT = configfile['Default']['insight-port']
+    else:
+        if config.TESTNET:
+            config.INSIGHT_PORT = 3001
+        else:
+            config.INSIGHT_PORT = 3000
+    try:
+        config.INSIGHT_PORT = int(config.INSIGHT_PORT)
+        assert int(config.INSIGHT_PORT) > 1 and int(config.INSIGHT_PORT) < 65535
+    except:
+        raise Exception("Please specific a valid port number insight-port configuration parameter")
+
+    config.INSIGHT = 'http://' + config.INSIGHT_CONNECT + ':' + str(config.INSIGHT_PORT)
+
+    ##############
+    # THINGS WE SERVE
+
+    # counterpartyd API RPC host
     if rpc_host:
         config.RPC_HOST = rpc_host
     elif has_config and 'rpc-host' in configfile['Default'] and configfile['Default']['rpc-host']:
@@ -237,23 +284,23 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
     else:
         config.RPC_HOST = 'localhost'
 
-    # RPC port
+    #  counterpartyd API RPC port
     if rpc_port:
         config.RPC_PORT = rpc_port
     elif has_config and 'rpc-port' in configfile['Default'] and configfile['Default']['rpc-port']:
         config.RPC_PORT = configfile['Default']['rpc-port']
     else:
         if config.TESTNET:
-            config.RPC_PORT = '14000'
+            config.RPC_PORT = 14000
         else:
-            config.RPC_PORT = '4000'
+            config.RPC_PORT = 4000
     try:
-        int(config.RPC_PORT)
+        config.RPC_PORT = int(config.RPC_PORT)
         assert int(config.RPC_PORT) > 1 and int(config.RPC_PORT) < 65535
     except:
         raise Exception("Please specific a valid port number rpc-port configuration parameter")
 
-    # RPC user
+    #  counterpartyd API RPC user
     if rpc_user:
         config.RPC_USER = rpc_user
     elif has_config and 'rpc-user' in configfile['Default'] and configfile['Default']['rpc-user']:
@@ -261,7 +308,7 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
     else:
         config.RPC_USER = 'rpc'
 
-    # RPC password
+    #  counterpartyd API RPC password
     if rpc_password:
         config.RPC_PASSWORD = rpc_password
     elif has_config and 'rpc-password' in configfile['Default'] and configfile['Default']['rpc-password']:
@@ -270,6 +317,9 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
         raise exceptions.ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
 
     config.RPC = 'http://' + config.RPC_USER + ':' + config.RPC_PASSWORD + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT)
+
+    ##############
+    # OTHER SETTINGS
 
     # Log
     if log_file:
@@ -350,21 +400,10 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
             config.UNSPENDABLE = '1CounterpartyXXXXXXXXXXXXXXXUWLpVr'
 
 def balances (address):
-    def get_btc_balance(address):
-        r = requests.get("https://blockchain.info/q/addressbalance/" + address)
-        # ^any other services that provide this?? (blockexplorer.com doesn't...)
-        try:
-            assert r.status_code == 200
-            return int(r.text) / float(config.UNIT)
-        except:
-            return "???"
-
     address_data = util.get_address(db, address=address)
-
-    # Balances.
     balances = address_data['balances']
     table = PrettyTable(['Asset', 'Amount'])
-    table.add_row(['BTC', get_btc_balance(address)])  # BTC
+    table.add_row(['BTC', bitcoin.get_btc_balance(address)])  # BTC
     for balance in balances:
         asset = balance['asset']
         amount = util.devise(db, balance['amount'], balance['asset'], 'output')
@@ -396,12 +435,16 @@ if __name__ == '__main__':
     parser.add_argument('--api-num-threads', help='the number of threads created for API request processing (CherryPy WSGI, default 10)')
     parser.add_argument('--api-request-queue-size', help='the size of the API request queue (CherryPY WSGI, default 5)')
 
-    parser.add_argument('--bitcoind-rpc-connect', help='the hostname of the Bitcoind JSON-RPC server')
-    parser.add_argument('--bitcoind-rpc-port', type=int, help='the port used to communicate with Bitcoind over JSON-RPC')
+    parser.add_argument('--bitcoind-rpc-connect', help='the hostname or IP of the bitcoind JSON-RPC server')
+    parser.add_argument('--bitcoind-rpc-port', type=int, help='the bitcoind JSON-RPC port to connect to')
     parser.add_argument('--bitcoind-rpc-user', help='the username used to communicate with Bitcoind over JSON-RPC')
     parser.add_argument('--bitcoind-rpc-password', help='the password used to communicate with Bitcoind over JSON-RPC')
 
-    parser.add_argument('--rpc-host', help='the host to provide the counterpartyd JSON-RPC API')
+    parser.add_argument('--insight-enable', action='store_true', default=False, help='enable the use of insight, instead of blockchain.info')
+    parser.add_argument('--insight-connect', help='the insight server hostname or IP to connect to')
+    parser.add_argument('--insight-port', type=int, help='the insight server port to connect to')
+
+    parser.add_argument('--rpc-host', help='the IP of the interface to bind to for providing JSON-RPC API access (0.0.0.0 for all interfaces)')
     parser.add_argument('--rpc-port', type=int, help='port on which to provide the counterpartyd JSON-RPC API')
     parser.add_argument('--rpc-user', help='required username to use the counterpartyd JSON-RPC API (via HTTP basic auth)')
     parser.add_argument('--rpc-password', help='required password (for rpc-user) to use the counterpartyd JSON-RPC API (via HTTP basic auth)')
@@ -504,11 +547,14 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Configuration
-    set_options(data_dir=args.data_dir, bitcoind_rpc_connect=args.bitcoind_rpc_connect, bitcoind_rpc_port=args.bitcoind_rpc_port,
-                 bitcoind_rpc_user=args.bitcoind_rpc_user, bitcoind_rpc_password=args.bitcoind_rpc_password, rpc_host=args.rpc_host, rpc_port=args.rpc_port,
-                 rpc_user=args.rpc_user, rpc_password=args.rpc_password, log_file=args.log_file, pid_file=args.pid_file,
-                 api_num_threads=args.api_num_threads, api_request_queue_size=args.api_request_queue_size,
-                 database_file=args.database_file, testnet=args.testnet, testcoin=args.testcoin, unittest=False)
+    set_options(data_dir=args.data_dir,
+                bitcoind_rpc_connect=args.bitcoind_rpc_connect, bitcoind_rpc_port=args.bitcoind_rpc_port,
+                bitcoind_rpc_user=args.bitcoind_rpc_user, bitcoind_rpc_password=args.bitcoind_rpc_password,
+                insight_enable=args.insight_enable, insight_connect=args.insight_connect, insight_port=args.insight_port,
+                rpc_host=args.rpc_host, rpc_port=args.rpc_port, rpc_user=args.rpc_user, rpc_password=args.rpc_password,
+                log_file=args.log_file, pid_file=args.pid_file,
+                api_num_threads=args.api_num_threads, api_request_queue_size=args.api_request_queue_size,
+                database_file=args.database_file, testnet=args.testnet, testcoin=args.testcoin, unittest=False)
 
     #Create/update pid file
     pid = str(os.getpid())
