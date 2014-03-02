@@ -143,7 +143,7 @@ def parse (db, tx, message):
                                            WHERE (status = ? AND asset = ?)''', ('valid', asset)))
         cursor.close()
         description = issuances[-1]['description']  # Use last description.
-        timestamp, valuerint, fee_fraction_int = None, None, None
+        timestamp, value_int, fee_fraction_int = None, None, None
     else:
         lock = False
 
