@@ -23,6 +23,10 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
     if asset in ('BTC', 'XCP'):
         problems.append('cannot issue BTC or XCP')
 
+    if amount <= 0: problems.append('non‐positive amount')
+    if call_price < 0: problems.append('negative call_price')
+    if call_date < 0: problems.append('negative call_date')
+
     # Valid re-issuance?
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM issuances \
@@ -110,6 +114,7 @@ def parse (db, tx, message):
         status = 'invalid: could not unpack'
 
     if status == 'valid':
+        if not callable_: calldate, call_price = 0, 0
         problems = validate(db, tx['source'], tx['destination'], asset, amount, divisible, callable_, call_date, call_price, description, block_index=tx['block_index'])
         if problems: status = 'invalid: ' + ';'.join(problems)
         if 'maximum total quantity exceeded' in problems:

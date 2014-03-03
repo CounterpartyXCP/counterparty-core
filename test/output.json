@@ -739,26 +739,6 @@
             "tx_index": 1
         }, 
         {
-            "amount": 50000000, 
-            "asset": "XCP", 
-            "block_index": 1, 
-            "destination": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", 
-            "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "tx_hash": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a", 
-            "tx_index": 1, 
-            "validity": "valid"
-        }, 
-        {
-            "amount": 10000, 
-            "asset": "BBBC", 
-            "block_index": 22, 
-            "destination": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", 
-            "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "tx_hash": "7cb7c4547cf2653590d7a9ace60cc623d25148adfbc88a89aeb0ef88da7839ba", 
-            "tx_index": 22, 
-            "validity": "valid"
-        }, 
-        {
             "amount": 10000, 
             "asset": "BBBC", 
             "block_index": 154930, 

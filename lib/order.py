@@ -17,6 +17,11 @@ def validate (db, source, give_asset, give_amount, get_asset, get_amount, expira
     if give_asset == get_asset:
         problems.append('trading an asset for itself')
 
+    if give_amount <= 0: problems.append('non‐positive give quantity')
+    if get_amount <= 0: problems.append('non‐positive get quantity')
+    if fee_required < 0: problems.append('negative fee_required')
+    if expiration <= 0: problems.append('non‐positive expiration')
+
     if not give_amount or not get_amount:
         problems.append('zero give or zero get')
     cursor.execute('select * from issuances where (status = ? and asset = ?)', ('valid', give_asset))

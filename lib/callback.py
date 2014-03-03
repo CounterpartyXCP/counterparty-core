@@ -19,7 +19,7 @@ def validate (db, source, fraction, asset, block_time):
     if fraction > 1:
         problems.append('fraction greater than one')
     elif fraction <= 0:
-        problems.append('fraction less than or equal to zero')
+        problems.append('non‐positive fraction')
 
     issuances = util.get_issuances(db, status='valid', asset=asset)
     if not issuances:

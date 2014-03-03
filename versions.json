@@ -1,5 +1,5 @@
 {
-	"minimum_client_version": 6.1,
+	"minimum_client_version": 6.3,
 	"protocol_changes": [
 		{
 			"block_index": 285306,
@@ -20,6 +20,11 @@
 			"block_index": 287800,
 			"minimum_database_version": 9.1,
 			"description": "deduct fee_required, too"
+		},
+		{
+			"block_index": 0,
+			"minimum_database_version": 9.3,
+			"description": "value, quantity, etc. sanity checking"
 		}
 	]
 }
