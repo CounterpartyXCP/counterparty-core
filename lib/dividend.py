@@ -21,8 +21,7 @@ def validate (db, source, amount_per_unit, asset, dividend_asset):
     if asset in ('BTC', 'XCP'):
         problems.append('cannot send dividends to BTC or XCP')
 
-    if not amount_per_unit:
-        problems.append('zero amount per unit')
+    if amount_per_unit <= 0: problems.append('non‐positive amount per unit')
 
     # Examine asset.
     issuances = util.get_issuances(db, status='valid', asset=asset)

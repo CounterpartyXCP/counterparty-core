@@ -52,8 +52,11 @@ def validate (db, source, feed_address, bet_type, deadline, wager_amount,
     if leverage < 5040:
         problems.append('leverage level too low (less than 5040, which is 1:1)')
 
-    if not wager_amount or not counterwager_amount:
-        problems.append('zero wager or counterwager')
+    if wager_amount <= 0: problems.append('non‐positive wager')
+    if counterwager_amount <= 0: problems.append('non‐positive counterwager')
+    if target_value < 0: problems.append('negative target value')
+    if deadline < 0: problems.append('negative deadline')
+    if expiration <= 0: problems.append('non‐positive expiration')
 
     if target_value and bet_type in (0,1):   # BullCFD, BearCFD
         problems.append('CFDs have no target value')

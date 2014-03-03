@@ -15,7 +15,7 @@ def validate (db, source, destination, asset, amount):
     problems = []
 
     if asset == 'BTC': problems.append('cannot send bitcoins')  # Only for parsing.
-    if not amount: problems.append('zero quantity')
+    if amount <= 0: problems.append('non‐positive quantity')
 
     return problems
 
@@ -34,7 +34,7 @@ def compose (db, source, destination, asset, amount):
     if not balances or balances[0]['amount'] < amount:
         raise exceptions.SendError('insufficient funds')
 
-    problems = validate(db, source, destination, asset, asset)
+    problems = validate(db, source, destination, asset, amount)
     if problems: raise exceptions.SendError(problems)
 
     asset_id = util.get_asset_id(asset)

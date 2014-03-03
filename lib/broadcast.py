@@ -39,6 +39,9 @@ def validate (db, source, timestamp, value, fee_fraction_int, text):
     if fee_fraction_int > 4294967295:
         problems.append('fee fraction greater than 42.94967295')
 
+    if timestamp < 0: problems.append('negative timestamp')
+    if value < 0: problems.append('negative value')
+
     if not source:
         problems.append('null source address')
     # Check previous broadcast in this feed.

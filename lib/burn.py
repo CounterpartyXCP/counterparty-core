@@ -18,6 +18,8 @@ def validate (db, source, destination, quantity, block_index=None, overburn=Fals
     if destination != config.UNSPENDABLE:
         problems.append('wrong destination address')
 
+    if quantity <= 0: problems.append('non‐positive quantity')
+
     # Try to make sure that the burned funds won't go to waste.
     if not block_index: block_index = util.last_block(db)['block_index']
     if block_index < config.BURN_START - 1:
