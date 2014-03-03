@@ -592,10 +592,10 @@ if __name__ == '__main__':
     
     # TODO
     # Check versions.
-    util.versions_check(db)
     # Check that bitcoind is running, communicable, and caught up with the blockchain.
     # Check that the database has caught up with bitcoind.
     if not args.force:
+        util.versions_check(db)
         bitcoin.bitcoind_check(db)
         if args.action not in ('server', 'reparse', 'rollback', 'potentials'):
             util.database_check(db, bitcoin.rpc('getblockcount', []))
