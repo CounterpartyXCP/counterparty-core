@@ -244,8 +244,8 @@ def set_options (data_dir=None,
     
     if unittest:
         config.INSIGHT_ENABLE = True #override when running test suite
-    if config.TESTNET and not config.INSIGHT_ENABLE:
-        raise Exception("insight support must be enabled to run counterpartyd on testnet") 
+    if config.TESTNET:
+        config.INSIGHT_ENABLE = True
 
     # insight API host
     if insight_connect:
@@ -787,6 +787,14 @@ if __name__ == '__main__':
         api_server = api.APIServer()
         api_server.daemon = True
         api_server.start()
+
+        # Check that Insight works if enabled.
+        if config.INSIGHT_ENABLE:
+            try:
+                bitcoin.get_btc_balance(config.UNSPENDABLE, normalize=False)
+            except requests.exceptions.ConnectionError:
+                raise exceptions.InsightError('Could not connect to Insight server.')
+
         blocks.follow(db)
 
     elif args.action == 'potentials':

@@ -23,7 +23,7 @@ class BitcoindError (Exception):
     pass
 class BitcoindRPCError (BitcoindError):
     pass
-class ZeroMQError (Exception):
+class InsightError (Exception):
     pass
 
 class FeeError (Exception):
