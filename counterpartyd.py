@@ -592,13 +592,13 @@ if __name__ == '__main__':
     
     # TODO
     # Check versions.
-    util.versions_check(db)
     # Check that bitcoind is running, communicable, and caught up with the blockchain.
     # Check that the database has caught up with bitcoind.
     if not args.force:
+        util.versions_check(db)
         bitcoin.bitcoind_check(db)
         if args.action not in ('server', 'reparse', 'rollback', 'potentials'):
-            util.database_check(db, bitcoin.rpc('getblockcount', []))
+            util.database_check(db, bitcoin.get_block_count())
     # TODO
 
     # Do something.
@@ -733,30 +733,29 @@ if __name__ == '__main__':
         totals = {}
 
         print()
-        for group in bitcoin.rpc('listaddressgroupings', []):
-            for bunch in group:
-                address, btc_balance = bunch[:2]
-                get_address = util.get_address(db, address=address)
-                balances = get_address['balances']
-                table = PrettyTable(['Asset', 'Balance'])
-                empty = True
-                if btc_balance:
-                    table.add_row(['BTC', btc_balance])  # BTC
-                    if 'BTC' in totals.keys(): totals['BTC'] += btc_balance
-                    else: totals['BTC'] = btc_balance
+        for bunch in bitcoin.get_wallet():
+            address, btc_balance = bunch[:2]
+            get_address = util.get_address(db, address=address)
+            balances = get_address['balances']
+            table = PrettyTable(['Asset', 'Balance'])
+            empty = True
+            if btc_balance:
+                table.add_row(['BTC', btc_balance])  # BTC
+                if 'BTC' in totals.keys(): totals['BTC'] += btc_balance
+                else: totals['BTC'] = btc_balance
+                empty = False
+            for balance in balances:
+                asset = balance['asset']
+                balance = D(util.devise(db, balance['amount'], balance['asset'], 'output'))
+                if balance:
+                    if asset in totals.keys(): totals[asset] += balance
+                    else: totals[asset] = balance
+                    table.add_row([asset, balance])
                     empty = False
-                for balance in balances:
-                    asset = balance['asset']
-                    balance = D(util.devise(db, balance['amount'], balance['asset'], 'output'))
-                    if balance:
-                        if asset in totals.keys(): totals[asset] += balance
-                        else: totals[asset] = balance
-                        table.add_row([asset, balance])
-                        empty = False
-                if not empty:
-                    print(address)
-                    print(table.get_string())
-                    print()
+            if not empty:
+                print(address)
+                print(table.get_string())
+                print()
         for asset in totals.keys():
             balance = totals[asset]
             total_table.add_row([asset, round(balance, 8)])

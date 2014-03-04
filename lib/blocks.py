@@ -577,7 +577,7 @@ def get_tx_info (tx):
     source_list = []
     for vin in tx['vin']:                                               # Loop through input transactions.
         if 'coinbase' in vin: return b'', None, None, None, None
-        vin_tx = bitcoin.rpc('getrawtransaction', [vin['txid'], 1])     # Get the full transaction data for this input transaction.
+        vin_tx = bitcoin.get_raw_transaction(vin['txid'])     # Get the full transaction data for this input transaction.
         vout = vin_tx['vout'][vin['vout']]
         fee += D(vout['value']) * config.UNIT
 
@@ -669,7 +669,7 @@ def reorg (db):
     last_block_index = blocks[0]['block_index']
     reorg_necessary = False
     for block_index in range(last_block_index - 10, last_block_index + 1):
-        block_hash_see = bitcoin.rpc('getblockhash', [block_index])
+        block_hash_see = bitcoin.get_block_hash(block_index)
         blocks = list(reorg_cursor.execute('''SELECT * FROM blocks WHERE block_index=?''', (block_index,)))
         assert len(blocks) == 1
         block_hash_have = blocks[0]['block_hash']
@@ -723,11 +723,11 @@ def follow (db):
     while True:
 
         # Get new blocks.
-        block_count = bitcoin.rpc('getblockcount', [])
+        block_count = bitcoin.get_block_count()
         while block_index <= block_count:
             logging.info('Block: {}'.format(str(block_index)))
-            block_hash = bitcoin.rpc('getblockhash', [block_index])
-            block = bitcoin.rpc('getblock', [block_hash])
+            block_hash = bitcoin.get_block_hash(block_index)
+            block = bitcoin.get_block(block_hash)
             block_time = block['time']
             tx_hash_list = block['tx']
 
@@ -752,7 +752,7 @@ def follow (db):
                         tx_index += 1
                         continue
                     # Get the important details about each transaction.
-                    tx = bitcoin.rpc('getrawtransaction', [tx_hash, 1])
+                    tx = bitcoin.get_raw_transaction(tx_hash)
                     logging.debug('Status: examining transaction {}'.format(tx_hash))
                     source, destination, btc_amount, fee, data = get_tx_info(tx)
                     if source and (data or destination == config.UNSPENDABLE):
@@ -784,7 +784,7 @@ def follow (db):
                 parse_block(db, block_index, block_time)
 
             # Increment block index.
-            block_count = bitcoin.rpc('getblockcount', [])
+            block_count = bitcoin.get_block_count()
             block_index +=1
 
         while block_index > block_count: # DUPE
@@ -792,7 +792,7 @@ def follow (db):
             with db:
                 block_index = reorg(db)
 
-            block_count = bitcoin.rpc('getblockcount', [])
+            block_count = bitcoin.get_block_count()
             time.sleep(2)
 
     follow_cursor.close()
@@ -823,11 +823,11 @@ def get_potentials (db):
         block_index = config.BLOCK_FIRST
 
     # Get new blocks.
-    block_count = bitcoin.rpc('getblockcount', [])
+    block_count = bitcoin.get_block_count()
     while block_index <= block_count - 12:  # For reorgs.
         logging.info('Block: {}'.format(str(block_index)))
-        block_hash = bitcoin.rpc('getblockhash', [block_index])
-        block = bitcoin.rpc('getblock', [block_hash])
+        block_hash = bitcoin.get_block_hash(block_index)
+        block = bitcoin.get_block(block_hash)
         block_time = block['time']
         tx_hash_list = block['tx']
 
@@ -836,7 +836,7 @@ def get_potentials (db):
             # List the transactions in the block.
             for tx_hash in tx_hash_list:
                 # Get the important details about each potential transaction.
-                tx = bitcoin.rpc('getrawtransaction', [tx_hash, 1])
+                tx = bitcoin.get_raw_transaction(tx_hash)
                 if check_potential(tx):
                     logging.info('Potential: {} ({})'.format(potential_index, tx_hash))
                     cursor.execute('''INSERT INTO potentials(

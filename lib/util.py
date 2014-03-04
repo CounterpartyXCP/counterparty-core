@@ -21,6 +21,7 @@ b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
 BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
 
+
 def api (method, params):
     headers = {'content-type': 'application/json'}
     payload = {
@@ -728,9 +729,9 @@ def get_orders (db, status=None, source=None, show_empty=True, show_expired=True
 def get_order_matches (db, status=None, is_mine=False, address=None, tx0_hash=None, tx1_hash=None, filters=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     from . import bitcoin   # HACK
     def filter_is_mine(e):
-        if (    (not bitcoin.rpc('validateaddress', [e['tx0_address']])['ismine'] or
+        if (    (not bitcoin.is_mine(e['tx0_address']) or
                  e['forward_asset'] != 'BTC')
-            and (not bitcoin.rpc('validateaddress', [e['tx1_address']])['ismine'] or
+            and (not bitcoin.is_mine(e['tx1_address']) or
                  e['backward_asset'] != 'BTC')):
             return False #is not mine
         return True #is mine
