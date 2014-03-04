@@ -37,6 +37,35 @@ D = decimal.Decimal
 dhash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
 request_session = None
 
+
+def get_block_count():
+    return int(rpc('getblockcount', []))
+    
+def get_block_hash(block_index):
+    return rpc('getblockhash', [block_index])
+
+def is_mine (address):
+    return rpc('validateaddress', [address])['ismine']
+
+def send_raw_transaction (tx_hex):
+    return rpc('sendrawtransaction', [tx_hex])
+
+def get_raw_transaction (tx_hash):
+    return rpc('getrawtransaction', [tx_hash, 1])
+
+def get_block (block_hash):
+    return rpc('getblock', [block_hash])
+
+def get_block_hash (block_index):
+    return rpc('getblockhash', [block_index])
+
+def decode_raw_transaction (unsigned_tx_hex):
+    return rpc('decoderawtransaction', [unsigned_tx_hex])
+
+def get_wallet ():
+    return [bunch for bunch in group for group in rpc('listaddressgroupings', [])]
+
+
 def bitcoind_check (db):
     """Checks blocktime of last block to see if Bitcoind is running behind."""
     block_count = rpc('getblockcount', [])
@@ -421,7 +450,7 @@ def get_btc_balance(address, normalize=False):
 
 def get_btc_supply(normalize=False):
     """returns the total supply of BTC (based on what bitcoind says the current block height is)"""
-    block_count = int(bitcoin.rpc('getblockcount', []))
+    block_count = util.get_block_count()
     blocks_remaining = block_count
     total_supply = 0 
     reward = 50.0

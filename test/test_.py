@@ -49,7 +49,7 @@ fee_multiplier_default = .05
 
 def parse_hex (unsigned_tx_hex):
 
-    tx = bitcoin.rpc('decoderawtransaction', [unsigned_tx_hex])
+    tx = bitcoin.decode_raw_transaction(unsigned_tx_hex)
     source, destination, btc_amount, fee, data = blocks.get_tx_info(tx)
 
     cursor = db.cursor()

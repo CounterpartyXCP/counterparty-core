@@ -289,7 +289,7 @@ class APIServer(threading.Thread):
             
         @dispatcher.add_method
         def get_running_info():
-            latestBlockIndex = bitcoin.rpc('getblockcount', [])
+            latestBlockIndex = bitcoin.get_block_count()
             
             try:
                 util.database_check(db, latestBlockIndex)
@@ -409,7 +409,7 @@ class APIServer(threading.Thread):
                 return bitcoin.transmit(tx_hex)
             else:
                 #already signed, just broadcast it
-                return bitcoin.rpc('sendrawtransaction', [tx_hex])
+                return bitcoin.send_raw_transaction(tx_hex)
 
         class API(object):
             @cherrypy.expose
