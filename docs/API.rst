@@ -735,7 +735,7 @@ create_dividend
 .. _create_issuance:
 
 create_issuance
-^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^
 
 .. py:function:: create_issuance(source, quantity, asset, divisible, description, callable=false, call_date=null, call_price=null, transfer_destination=null, multisig=true):
 
@@ -759,7 +759,7 @@ create_issuance
 create_order
 ^^^^^^^^^^^^^^
 
-.. py:function:: create_order(source, give_quantity, give_asset, get_quantity, get_asset, expiration, fee_required=0, fee_provided=config.MIN_FEE / config.UNIT, multisig=true)
+.. py:function:: create_order(source, give_quantity, give_asset, get_quantity, get_asset, expiration, fee_required=0, fee_provided=config.MIN_FEE, multisig=true)
 
    Issue an order request.
 
