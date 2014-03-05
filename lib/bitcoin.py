@@ -63,7 +63,9 @@ def decode_raw_transaction (unsigned_tx_hex):
     return rpc('decoderawtransaction', [unsigned_tx_hex])
 
 def get_wallet ():
-    return [bunch for bunch in group for group in rpc('listaddressgroupings', [])]
+    for group in rpc('listaddressgroupings', []):
+        for bunch in group:
+            yield bunch
 
 
 def bitcoind_check (db):

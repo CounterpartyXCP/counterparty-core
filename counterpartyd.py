@@ -788,7 +788,7 @@ if __name__ == '__main__':
         api_server.start()
 
         # Check that Insight works if enabled.
-        if config.INSIGHT_ENABLE:
+        if config.INSIGHT_ENABLE and not args.force:
             try:
                 bitcoin.get_btc_balance(config.UNSPENDABLE, normalize=False)
             except requests.exceptions.ConnectionError:
