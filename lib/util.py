@@ -408,6 +408,7 @@ def debit (db, block_index, address, asset, amount, action=None, event=None):
 
     balance = round(old_balance - amount)
     balance = min(balance, config.MAX_INT)
+    assert balance >= 0
 
     bindings = {
         'amount': balance,
