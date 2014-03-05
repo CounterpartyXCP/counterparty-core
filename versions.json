@@ -1,5 +1,5 @@
 {
-	"minimum_client_version": 6.3,
+	"minimum_client_version": 6.4,
 	"protocol_changes": [
 		{
 			"block_index": 285306,
