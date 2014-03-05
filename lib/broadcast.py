@@ -40,7 +40,7 @@ def validate (db, source, timestamp, value, fee_fraction_int, text):
         problems.append('fee fraction greater than 42.94967295')
 
     if timestamp < 0: problems.append('negative timestamp')
-    if value < 0: problems.append('negative value')
+    if value < 0 and value != -1: problems.append('negative value')
 
     if not source:
         problems.append('null source address')
@@ -115,8 +115,8 @@ def parse (db, tx, message):
     sql='insert into broadcasts values(:tx_index, :tx_hash, :block_index, :source, :timestamp, :value, :fee_fraction_int, :text, :locked, :status)'
     broadcast_parse_cursor.execute(sql, bindings)
 
-    # Negative values are invalid.
-    if value < 0 or value == None:
+    # Values of -1 are ignored.
+    if value == -1 or value == None:
         broadcast_parse_cursor.close()
         return
 
