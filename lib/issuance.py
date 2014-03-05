@@ -23,6 +23,10 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
     if asset in ('BTC', 'XCP'):
         problems.append('cannot issue BTC or XCP')
 
+    if not isinstance(amount, int): problems.append('amount must be in satoshi')
+    if not isinstance(call_date, int): problems.append('call_date must be epoch integer')
+    if not isinstance(call_price, int): problems.append('call_price must be in satoshi')
+
     if amount <= 0: problems.append('non‐positive amount')
     if call_price < 0: problems.append('negative call_price')
     if call_date < 0: problems.append('negative call_date')
@@ -84,7 +88,8 @@ def compose (db, source, destination, asset, amount, divisible, callable_, call_
 
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
-    data += struct.pack(FORMAT_2, asset_id, amount, divisible, callable_, call_date or 0, call_price or 0, description.encode('utf-8'))
+    data += struct.pack(FORMAT_2, asset_id, amount, 1 if divisible else 0, 1 if callable_ else 0, 
+        call_date or 0, call_price or 0, description.encode('utf-8'))
     if len(data) > 80:
         raise exceptions.IssuanceError('Description is greater than 52 bytes.')
     return (source, None, None, config.MIN_FEE, data)

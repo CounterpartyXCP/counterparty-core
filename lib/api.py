@@ -390,7 +390,13 @@ class APIServer(threading.Thread):
             return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, fee_provided, multisig=config.MULTISIG):
+        def create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required=None, fee_provided=config.MIN_FEE, multisig=config.MULTISIG):
+            if get_asset == 'BTC' and fee_required is None:
+                #since no value is passed, set a default of 1% for fee_required if buying BTC
+                fee_required = int(get_quantity / 100)
+            elif fee_required is None:
+                fee_required = 0 #no default set, but fee_required does not apply
+            
             tx_info = order.compose(db, source, give_asset,
                                 give_quantity, get_asset,
                                 get_quantity, expiration,

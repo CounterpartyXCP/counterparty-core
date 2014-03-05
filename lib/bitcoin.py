@@ -332,8 +332,7 @@ def get_inputs (source, total_btc_out, unittest=False):
         if rpc('validateaddress', [source])['ismine']:
             listunspent = rpc('listunspent', [])
         else:
-            if config.TESTNET: raise exceptions.TransactionError('Blockchain.info does not support testnet.')
-            listunspent = get_unspent_txouts(address, normalize=True)
+            listunspent = get_unspent_txouts(source, normalize=False)
     else:
         CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
         with open(CURR_DIR + '/../test/listunspent.test.json', 'r') as listunspent_test_file:   # HACK
@@ -351,6 +350,9 @@ def get_inputs (source, total_btc_out, unittest=False):
 # Replace unittest flag with fake bitcoind JSON-RPC server.
 def transaction (tx_info, multisig, unittest=False):
     source, destination, btc_amount, fee, data = tx_info
+    
+    if not isinstance(fee, int):
+        raise exceptions.TransactionError('Fee must be in satoshis')
 
     if config.PREFIX == config.UNITTEST_PREFIX: unittest = True
 
@@ -452,7 +454,7 @@ def get_btc_balance(address, normalize=False):
 
 def get_btc_supply(normalize=False):
     """returns the total supply of BTC (based on what bitcoind says the current block height is)"""
-    block_count = util.get_block_count()
+    block_count = get_block_count()
     blocks_remaining = block_count
     total_supply = 0 
     reward = 50.0
@@ -475,11 +477,12 @@ def get_unspent_txouts(address, normalize=False):
         r = requests.get(config.INSIGHT + '/api/addr/' + address + '/utxo')
         if r.status_code != 200:
             raise Exception("Can't get unspent txouts: insight returned bad status code: %s" % r.status_code)
-        else:
-            data = r.json()
-            if not normalize:
-                data['amount'] = int(data['amount'] * config.UNIT) 
-            return data
+
+        data = r.json()
+        if not normalize: #listed normalized by default out of insight...we need to take to satoshi
+            for d in data:
+                d['amount'] = int(d['amount'] * config.UNIT)
+        return data
     else: #use blockchain
         r = requests.get("https://blockchain.info/unspent?active=" + address)
         if r.status_code == 500 and r.text.lower() == "no free outputs to spend":
