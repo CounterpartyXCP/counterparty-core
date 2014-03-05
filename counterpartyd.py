@@ -353,14 +353,14 @@ def set_options (data_dir=None,
     elif has_config and 'api-num-threads' in configfile['Default']:
         config.API_NUM_THREADS = int(configfile['Default']['api-num-threads'])
     else:
-        config.API_NUM_THREADS = 10 #cherrypy default (not suitable for multiuser, high-performance production)
+        config.API_NUM_THREADS = 15 #(not suitable for multiuser, high-performance production)
 
     if api_request_queue_size:
         config.API_REQUEST_QUEUE_SIZE = int(api_request_queue_size)
     elif has_config and 'api-request-queue-size' in configfile['Default']:
         config.API_REQUEST_QUEUE_SIZE = int(configfile['Default']['api-request-queue-size'])
     else:
-        config.API_REQUEST_QUEUE_SIZE = 5 #cherrypy default (not suitable for multiuser, high-performance production)
+        config.API_REQUEST_QUEUE_SIZE = 20 #(not suitable for multiuser, high-performance production)
 
     # Database
     if config.TESTNET:
