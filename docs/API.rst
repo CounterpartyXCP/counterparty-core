@@ -936,7 +936,7 @@ An object that describes an instance of a specific burn:
 * **tx_index** (*integer*): The transaction index
 * **tx_hash** (*string*): The transaction hash
 * **block_index** (*integer*): The block index (block number in the block chain)
-* **address** (*string*): The address the burn was performed from
+* **source** (*string*): The address the burn was performed from
 * **burned** (*integer*): The :ref:`amount <amounts>` of BTC burned
 * **earned** (*integer*): The :ref:`amount <amounts>` of XPC actually earned from the burn (takes into account any bonus amounts, 1 BTC limitation, etc)
 * **validity** (*string*): Set to "valid" if a valid burn. Any other setting signifies an invalid/improper burn

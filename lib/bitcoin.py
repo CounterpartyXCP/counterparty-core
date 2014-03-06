@@ -332,12 +332,11 @@ def get_inputs (source, total_btc_out, unittest=False):
         if rpc('validateaddress', [source])['ismine']:
             listunspent = rpc('listunspent', [])
         else:
-            listunspent = get_unspent_txouts(source, normalize=False)
+            listunspent = get_unspent_txouts(source, normalize=True)
     else:
         CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
         with open(CURR_DIR + '/../test/listunspent.test.json', 'r') as listunspent_test_file:   # HACK
             listunspent = json.load(listunspent_test_file)
-
     unspent = [coin for coin in listunspent if coin['address'] == source]
     inputs, total_btc_in = [], 0
     for coin in unspent:
