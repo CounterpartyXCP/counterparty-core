@@ -728,6 +728,15 @@ if __name__ == '__main__':
         print('Call Price:', call_price)
         print('Description:', '‘' + results['description'] + '’')
 
+        print('Shareholders:')
+        balances = util.get_balances(db, asset=args.asset)       # + util.get_escrowed(db, asset=asset)
+        print('\taddress, quantity')
+        for balance in balances:
+            if not balance['amount']: continue
+            amount = util.devise(db, balance['amount'], args.asset, 'output')
+            print('\t' + str(balance['address']) + ',' + str(amount))
+
+
     elif args.action == 'wallet':
         total_table = PrettyTable(['Asset', 'Balance'])
         totals = {}

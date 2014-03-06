@@ -19,7 +19,7 @@ def validate (db, source, amount_per_unit, asset, dividend_asset):
     problems = []
 
     if asset in ('BTC', 'XCP'):
-        problems.append('cannot send dividends to BTC or XCP')
+        problems.append('cannot pay dividends to holders of BTC or XCP')
 
     if amount_per_unit <= 0: problems.append('non‐positive amount per unit')
 
@@ -66,8 +66,7 @@ def compose (db, source, amount_per_unit, asset, dividend_asset):
     print('Total amount to be distributed in dividends:', util.devise(db, dividend_total, dividend_asset, 'output'), dividend_asset)
 
     if dividend_asset == 'BTC':
-        print(outputs)
-        exit(0) # TODO
+        problems.append('Cannot (yet) pay BTC dividends.')
 
     asset_id = util.get_asset_id(asset)
     dividend_asset_id = util.get_asset_id(dividend_asset)
@@ -95,6 +94,9 @@ def parse (db, tx, message):
     except (struct.error, Exception) as e:
         amount_per_unit, asset = None, None
         status = 'invalid: could not unpack'
+
+    if dividend_asset == 'BTC':
+        status = 'invalid: cannot pay BTC dividends within protocol'
 
     if status == 'valid':
         # For SQLite3

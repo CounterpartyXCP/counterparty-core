@@ -329,11 +329,6 @@ def test_callback ():
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
-def test_get_address():
-    get_address = util.get_address(db, source_default)
-    for field in get_address:
-        output_new['get_address_' + field] = get_address[field]
-
 def test_json_rpc():
 
     api_server = api.APIServer()
@@ -347,26 +342,37 @@ def test_json_rpc():
     payloads = []
     payloads.append({
         "method": "get_balances",
-        "params": {"filters": {'field': 'address', 'op': '==', 'value': source_default}},
+        "params": {"filters": {'field': 'address', 'op': '==', 'value': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'}},
+        "jsonrpc": "2.0",
+        "id": 0,
+    })
+    payloads.append({
+        "method": "create_send",
+        "params": {'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': destination_default, 'asset': 'XCP', 'quantity': 1},
         "jsonrpc": "2.0",
         "id": 0,
     })
 
     for payload in payloads:
         for attempt in range(100):  # Try until server is ready.
+            print(payload)
             try:
                 response = requests.post(url, data=json.dumps(payload), headers=headers, auth=auth).json()
+                try:
+                    output_new['rpc.' + payload['method']] = response['result']
+                except:
+                    output_new['rpc.' + payload['method']] = response['error']
+                assert response['jsonrpc'] == '2.0'
+                assert response['id'] == 0
                 break
-            except:
+            except requests.exceptions.ConnectionError:
                 time.sleep(.05)
-                continue
-            try:
-                output_new['rpc.' + payload['method']] = response['result']
-            except:
-                output_new['rpc.' + payload['method']] = response['error']
-            assert response['jsonrpc'] == '2.0'
-            assert response['id'] == 0
         if attempt == 99: exit(1)   # Fail
+
+def test_get_address():
+    get_address = util.get_address(db, source_default)
+    for field in get_address:
+        output_new['get_address_' + field] = get_address[field]
 
 def test_stop():
     logging.info('STOP TEST')
