@@ -23,6 +23,9 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
     if asset in ('BTC', 'XCP'):
         problems.append('cannot issue BTC or XCP')
 
+    if not isinstance(amount, int): problems.append('amount must be in satoshi')
+    if not isinstance(call_date, int): problems.append('call_date must be epoch integer')
+
     if amount <= 0: problems.append('non‐positive amount')
     if call_price < 0: problems.append('negative call_price')
     if call_date < 0: problems.append('negative call_date')
@@ -44,8 +47,8 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
             problems.append('asset exists with a different divisibility')
         elif bool(last_issuance['callable']) != bool(callable_) or last_issuance['call_date'] != call_date or last_issuance['call_price'] != call_price:
             problems.append('asset exists with a different callability, call date or call price')
-        elif last_issuance['locked']:
-            problems.append('locked asset')
+        elif last_issuance['locked'] and amount:
+            problems.append('locked asset and non‐zero amount')
     elif description.lower() == 'lock':
         problems.append('cannot lock a nonexistent asset')
     elif destination:
@@ -84,7 +87,8 @@ def compose (db, source, destination, asset, amount, divisible, callable_, call_
 
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
-    data += struct.pack(FORMAT_2, asset_id, amount, divisible, callable_, call_date or 0, call_price or 0, description.encode('utf-8'))
+    data += struct.pack(FORMAT_2, asset_id, amount, 1 if divisible else 0, 1 if callable_ else 0, 
+        call_date or 0, call_price or 0, description.encode('utf-8'))
     if len(data) > 80:
         raise exceptions.IssuanceError('Description is greater than 52 bytes.')
     return (source, None, None, config.MIN_FEE, data)
@@ -143,7 +147,12 @@ def parse (db, tx, message):
     # Lock?
     if description and description.lower() == 'lock':
         lock = True
-        timestamp, valuerint, fee_fraction_int = None, None, None
+        cursor = db.cursor()
+        issuances = list(cursor.execute('''SELECT * FROM issuances \
+                                           WHERE (status = ? AND asset = ?)''', ('valid', asset)))
+        cursor.close()
+        description = issuances[-1]['description']  # Use last description.
+        timestamp, value_int, fee_fraction_int = None, None, None
     else:
         lock = False
 

@@ -206,7 +206,7 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
         s += binascii.unhexlify(bytes(txin['txid'], 'utf-8'))[::-1]         # TxOutHash
         s += txin['vout'].to_bytes(4, byteorder='little')   # TxOutIndex
 
-        script = binascii.unhexlify(txin['scriptPubKey'])
+        script = binascii.unhexlify(bytes(txin['scriptPubKey'], 'utf-8'))
         s += var_int(int(len(script)))                      # Script length
         s += script                                         # Script
         s += b'\xff' * 4                                    # Sequence
