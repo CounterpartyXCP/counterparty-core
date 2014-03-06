@@ -25,7 +25,6 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
 
     if not isinstance(amount, int): problems.append('amount must be in satoshi')
     if not isinstance(call_date, int): problems.append('call_date must be epoch integer')
-    if not isinstance(call_price, int): problems.append('call_price must be in satoshi')
 
     if amount <= 0: problems.append('non‐positive amount')
     if call_price < 0: problems.append('negative call_price')
