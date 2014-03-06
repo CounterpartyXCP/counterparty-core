@@ -91,7 +91,7 @@ def compose (db, source, destination, asset, amount, divisible, callable_, call_
         call_date or 0, call_price or 0, description.encode('utf-8'))
     if len(data) > 80:
         raise exceptions.IssuanceError('Description is greater than 52 bytes.')
-    return (source, None, None, config.MIN_FEE, data)
+    return (source, destination, None, config.MIN_FEE, data)
 
 def parse (db, tx, message):
     issuance_parse_cursor = db.cursor()
