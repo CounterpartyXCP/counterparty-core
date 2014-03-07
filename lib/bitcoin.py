@@ -201,7 +201,7 @@ def base58_decode (s, version):
 
     addrbyte, data, chk0 = k[0:1], k[1:-4], k[-4:]
     if addrbyte != version:
-        raise exceptions.VersionByteError('mainnet–testnet mismatch')
+        raise exceptions.VersionByteError('incorrect version byte')
     chk1 = dhash(addrbyte + data)[:4]
     if chk0 != chk1:
         raise exceptions.Base58ChecksumError('Checksum mismatch: %r ≠ %r' % (chk0, chk1))
