@@ -429,7 +429,7 @@ def transmit (unsigned_tx_hex):
         signed_tx_hex = result['hex']
         return rpc('sendrawtransaction', [signed_tx_hex])
 
-def normalize_amount(amount, divisible):
+def normalize_amount(amount, divisible=True):
     if divisible:
         return float((D(amount) / D(config.UNIT)).quantize(D('.00000000'), rounding=decimal.ROUND_HALF_EVEN)) 
     else: return amount
@@ -449,7 +449,7 @@ def get_btc_balance(address, normalize=False):
         if r.status_code != 200:
             return "???"
         else:
-            return normalize_amount(int(r.text), True) if normalize else int(r.text)
+            return normalize_amount(int(r.text)) if normalize else int(r.text)
 
 def get_btc_supply(normalize=False):
     """returns the total supply of BTC (based on what bitcoind says the current block height is)"""
@@ -501,7 +501,7 @@ def get_unspent_txouts(address, normalize=False):
                 'vout': d['tx_output_n'],
                 'ts': None,
                 'scriptPubKey': d['script'],
-                'amount': normalize_amount(d['value'], True) if normalize else d['value'],
+                'amount': normalize_amount(d['value']) if normalize else d['value'],
                 'confirmations': d['confirmations'],
             })
         return results
