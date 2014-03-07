@@ -108,7 +108,7 @@ def log (db, command, category, bindings):
                 else:
                     divisibility = 'indivisible'
                     unit = 1
-                if bindings['callable'] and (bindings['block_index'] > 283271 or config.TESTNET):
+                if bindings['callable'] and (bindings['block_index'] > 283271 or config.TESTNET):   # Protocol change.
                     callability = 'callable from {} for {} XCP/{}'.format(isodt(bindings['call_date']), bindings['call_price'], bindings['asset'])
                 else:
                     callability = 'uncallable'

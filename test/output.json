@@ -2,7 +2,7 @@
     "get_address_balances": [
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "amount": 145431509207, 
+            "amount": 144431509207, 
             "asset": "XCP"
         }, 
         {
@@ -474,6 +474,22 @@
         {
             "action": null, 
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "amount": 500000000, 
+            "asset": "XCP", 
+            "block_index": 154913, 
+            "event": null
+        }, 
+        {
+            "action": null, 
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "amount": 500000000, 
+            "asset": "XCP", 
+            "block_index": 154914, 
+            "event": null
+        }, 
+        {
+            "action": null, 
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "amount": 60, 
             "asset": "XCP", 
             "block_index": 154915, 
@@ -640,7 +656,7 @@
             "callable": 0, 
             "description": "", 
             "divisible": 1, 
-            "fee_paid": 0, 
+            "fee_paid": 500000000, 
             "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "locked": null, 
             "status": "valid", 
@@ -657,7 +673,7 @@
             "callable": 1, 
             "description": "foobar", 
             "divisible": 0, 
-            "fee_paid": 0, 
+            "fee_paid": 500000000, 
             "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "locked": null, 
             "status": "valid", 
@@ -675,7 +691,7 @@
             "forward_amount": 50000000, 
             "forward_asset": "BTC", 
             "id": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5", 
-            "match_expire_index": 154920, 
+            "match_expire_index": 154921, 
             "status": "completed", 
             "tx0_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "tx0_block_index": 154910, 
@@ -695,7 +711,7 @@
             "expiration": 10, 
             "expire_index": 154920, 
             "fee_provided": 1000000, 
-            "fee_provided_remaining": 1000000, 
+            "fee_provided_remaining": 100000, 
             "fee_required": 0, 
             "fee_required_remaining": 0, 
             "get_amount": 100000000, 
@@ -716,7 +732,7 @@
             "fee_provided": 10000, 
             "fee_provided_remaining": 10000, 
             "fee_required": 900000, 
-            "fee_required_remaining": 900000, 
+            "fee_required_remaining": 0, 
             "get_amount": 50000000, 
             "get_asset": "BTC", 
             "get_remaining": 0, 

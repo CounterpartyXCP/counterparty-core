@@ -182,7 +182,7 @@ def match (db, tx):
     tx1_wager_remaining = tx1['wager_remaining']
     tx1_counterwager_remaining = tx1['counterwager_remaining']
     bet_matches = cursor.fetchall()
-    if tx['block_index'] > 284500:  # For backwards‐compatibility (no sorting before this block).
+    if tx['block_index'] > 284500 or config.TESTNET:  # Protocol change.
         sorted(bet_matches, key=lambda x: x['tx_index'])                                        # Sort by tx index second.
         sorted(bet_matches, key=lambda x: D(x['wager_amount']) / D(x['counterwager_amount']))   # Sort by price first.
     for tx0 in bet_matches:
@@ -219,15 +219,14 @@ def match (db, tx):
         tx0_inverse_odds = util.price(tx0['counterwager_amount'], tx0['wager_amount'])
         tx1_odds = util.price(tx1['wager_amount'], tx1['counterwager_amount'])
 
-        # NOTE: Old protocol.
-        if tx['block_index'] < 286000: tx0_inverse_odds = D(1) / tx0_odds
+        if tx['block_index'] < 286000: tx0_inverse_odds = D(1) / tx0_odds # Protocol change.
 
         if tx0_inverse_odds <= tx1_odds:
             forward_amount = int(min(D(tx0['wager_remaining']), D(tx1_wager_remaining) / tx1_odds))
             backward_amount = round(D(forward_amount) / tx0_odds)
 
             if not forward_amount: continue
-            if tx1['block_index'] >= 286500:    # Protocol change.
+            if tx1['block_index'] >= 286500 or config.TESTNET:    # Protocol change.
                 if not backward_amount: continue
 
             bet_match_id = tx0['tx_hash'] + tx1['tx_hash']
