@@ -308,6 +308,7 @@ class APIServer(threading.Thread):
                 'bitcoin_block_count': latestBlockIndex,
                 'last_block': last_block,
                 'counterpartyd_version': config.CLIENT_VERSION,
+                'last_message_index': util.last_message(db)['message_index'],
                 'running_testnet': config.TESTNET,
                 'db_version_major': config.DB_VERSION_MAJOR,
                 'db_version_minor': config.DB_VERSION_MINOR,
