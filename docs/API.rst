@@ -589,9 +589,12 @@ get_running_info
    
    :return: An object with the following parameters:
    
-     - **db_caught_up** (*boolean*): ``true`` if counterpartyd block processing is caught up with the Bitcoin blockchain, ``false`` otherwise.  
-     - **last_block** (*integer*): The index (height) of the last block processed by counterpartyd
+     - **db_caught_up** (*boolean*): ``true`` if counterpartyd block processing is caught up with the Bitcoin blockchain, ``false`` otherwise.
+     - **bitcoin_block_count** (**integer**): The block height on the Bitcoin network (may not necessarily be the same as ``last_block``, if ``counterpartyd`` is catching up)
+     - **last_block** (*integer*): The index (height) of the last block processed by ``counterpartyd``
      - **counterpartyd_version** (*float*): The counterpartyd program version, expressed as a float, such as 0.5
+     - **last_message_index** (*integer*): The index (ID) of the last message in the ``counterpartyd`` message feed
+     - **running_testnet** (*boolean*): ``true`` if counterpartyd is configured for testnet, ``false`` if configured on mainnet.
      - **db_version_major** (*integer*): The major version of the current counterpartyd database
      - **db_version_minor** (*integer*): The minor version of the current counterpartyd database
 
