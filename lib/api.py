@@ -268,7 +268,7 @@ class APIServer(threading.Thread):
                     'locked': locked,
                     'total_issued': total_issued,
                     'callable': bool(last_issuance['callable']),
-                    'call_date': util.isodt(last_issuance['call_date']) if last_issuance['call_date'] else None,
+                    'call_date': last_issuance['call_date'],
                     'call_price': last_issuance['call_price'],
                     'description': last_issuance['description'],
                     'issuer': last_issuance['issuer']}
@@ -391,12 +391,18 @@ class APIServer(threading.Thread):
             return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required=None, fee_provided=config.MIN_FEE, multisig=config.MULTISIG):
+        def create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required=None, fee_provided=None, multisig=config.MULTISIG):
             if get_asset == 'BTC' and fee_required is None:
                 #since no value is passed, set a default of 1% for fee_required if buying BTC
                 fee_required = int(get_quantity / 100)
             elif fee_required is None:
                 fee_required = 0 #no default set, but fee_required does not apply
+
+            if give_asset == 'BTC' and fee_provided is None:
+                #since no value is passed, set a default of 1% for fee_provided if selling BTC
+                fee_provided = int(give_quantity / 100)
+            elif fee_provided is None:
+                fee_provided = 0 #no default set, but fee_required does not apply
             
             tx_info = order.compose(db, source, give_asset,
                                 give_quantity, get_asset,

@@ -522,7 +522,11 @@ get_asset_info
      - **divisible** (*boolean*): Whether the asset is divisible or not
      - **locked** (*boolean*): Whether the asset is locked (future issuances prohibited)
      - **total_issued** (*integer*): The :ref:`quantity <amounts>` of the asset issued, in total
-
+     - **callable** (*boolean*): If the asset is callable or not
+     - **call_date** (*integer*): The call date, as an epoch timestamp
+     - **call_price** (*integer*): The call price, in satoshi
+     - **description** (*string*): The asset's current description
+     - **issuer** (*string*): The asset's original owner (i.e. issuer)
 
 .. _get_messages:
 
