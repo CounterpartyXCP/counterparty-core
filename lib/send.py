@@ -15,6 +15,11 @@ def validate (db, source, destination, asset, amount):
     problems = []
 
     if asset == 'BTC': problems.append('cannot send bitcoins')  # Only for parsing.
+    
+    if not isinstance(amount, int):
+        problems.append('amount must be in satoshi')
+        return problems #avoid an exception
+    
     if amount <= 0: problems.append('non‐positive quantity')
 
     return problems

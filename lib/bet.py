@@ -52,6 +52,16 @@ def validate (db, source, feed_address, bet_type, deadline, wager_amount,
     if leverage < 5040:
         problems.append('leverage level too low (less than 5040, which is 1:1)')
 
+    if not isinstance(wager_amount, int):
+        problems.append('wager_amount must be in satoshi')
+        return problems #avoid an exception
+    if not isinstance(counterwager_amount, int):
+        problems.append('counterwager_amount must be in satoshi')
+        return problems
+    if not isinstance(expiration, int):
+        problems.append('expiration must be expressed as an integer block delta')
+        return problems
+
     if wager_amount <= 0: problems.append('non‐positive wager')
     if counterwager_amount <= 0: problems.append('non‐positive counterwager')
     if target_value < 0: problems.append('negative target value')

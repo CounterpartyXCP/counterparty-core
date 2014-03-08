@@ -776,8 +776,10 @@ create_order
    :param integer get_quantity: The :ref:`quantity <amounts>` of the asset requested in return.
    :param string get_asset: The :ref:`asset <assets>` requested in return.
    :param integer expiration: The number of blocks for which the order should be valid.
-   :param integer fee_required: The miners' fee required to be paid by orders for them to match this one; in BTC; required only if buying BTC (may be zero, though).
-   :param integer fee_provided: The miners' fee provided; in BTC; required only if selling BTC (should not be lower than is required for acceptance in a block)
+   :param integer fee_required: The miners' fee required to be paid by orders for them to match this one; in BTC;
+    required only if buying BTC (may be zero, though). If not specified or set to ``null``, this defaults to 1% of the BTC desired for purchase.
+   :param integer fee_provided: The miners' fee provided; in BTC; required only if selling BTC (should not be lower than
+    is required for acceptance in a block).  If not specified or set to ``null``, this defaults to 1% of the BTC for sale. 
    :param boolean multisig: See :ref:`this section <multisig_param>`.  
    :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 

@@ -23,11 +23,18 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
     if asset in ('BTC', 'XCP'):
         problems.append('cannot issue BTC or XCP')
 
-    if not isinstance(amount, int): problems.append('amount must be in satoshi')
     if call_price is None: call_price = 0
-    if not isinstance(call_price, int): problems.append('call_price must be in satoshi')
     if call_date is None: call_date = 0
-    if not isinstance(call_date, int): problems.append('call_date must be epoch integer')
+
+    if not isinstance(amount, int):
+        problems.append('amount must be in satoshi')
+        return problems #avoid an exception
+    if not isinstance(call_price, int):
+        problems.append('call_price must be in satoshi')
+        return problems
+    if not isinstance(call_date, int):
+        problems.append('call_date must be epoch integer')
+        return problems
 
     if not destination and amount <= 0: problems.append('non‐positive amount')
     if destination and amount != 0: problems.append('amount must be 0 for transfers')

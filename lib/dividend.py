@@ -21,6 +21,10 @@ def validate (db, source, amount_per_unit, asset, dividend_asset):
     if asset in ('BTC', 'XCP'):
         problems.append('cannot pay dividends to holders of BTC or XCP')
 
+    if not isinstance(amount_per_unit, int):
+        problems.append('amount_per_unit must be in satoshi')
+        return problems #avoid an exception
+
     if amount_per_unit <= 0: problems.append('non‐positive amount per unit')
 
     # Examine asset.
