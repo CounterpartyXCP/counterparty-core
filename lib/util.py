@@ -97,7 +97,7 @@ def log (db, command, category, bindings):
 
         elif category == 'issuances':
             if bindings['transfer']:
-                logging.info('Issuance: {} transferred asset {} to {} ({}) [{}]'.format(bindings['source'], bindings['asset'], bindings['issuer'], bindings['tx_hash'], bindings['status']))
+                logging.info('Issuance: Asset {} transfered to {} ({}) [{}]'.format(bindings['asset'], bindings['issuer'], bindings['tx_hash'], bindings['status']))
             elif bindings['locked']:
                 logging.info('Issuance: {} locked asset {} ({}) [{}]'.format(bindings['issuer'], bindings['asset'], bindings['tx_hash'], bindings['status']))
             else:
