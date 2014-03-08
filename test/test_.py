@@ -357,7 +357,9 @@ def test_json_rpc():
         for attempt in range(100):  # Try until server is ready.
             try:
                 response = requests.post(url, data=json.dumps(payload), headers=headers, auth=auth).json()
-                assert response['result']
+                if not response['result']:
+                    raise Exception('testnet server not running')
+                    assert False
                 assert response['jsonrpc'] == '2.0'
                 assert response['id'] == 0
                 output_new['rpc.' + payload['method']] = response['result']

@@ -23,7 +23,7 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
     if asset in ('BTC', 'XCP'):
         problems.append('cannot issue BTC or XCP')
 
-    if call_price is None: call_price = 0
+    if call_price is None: call_price = 0.0
     if call_date is None: call_date = 0
 
     if not isinstance(amount, int):
@@ -31,6 +31,9 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
         return problems
     if not isinstance(call_date, int):
         problems.append('call_date must be epoch integer')
+        return problems
+    if not isinstance(call_price, float):
+        problems.append('call_price must be a float')
         return problems
 
     if amount < 0: problems.append('negative amount')
@@ -46,7 +49,7 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
     if issuances:
         last_issuance = issuances[-1]
         if call_date is None: call_date = 0
-        if call_price is None: call_price = 0
+        if call_price is None: call_price = 0.0
         
         if last_issuance['issuer'] != source:
             problems.append('asset exists and was not issued by this address')
@@ -77,7 +80,6 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
 
     # For SQLite3
     call_date = min(call_date, config.MAX_INT)
-    call_price = min(call_price, config.MAX_INT)
     total = sum([issuance['amount'] for issuance in issuances])
     assert isinstance(amount, int)
     if total + amount > config.MAX_INT:
@@ -95,7 +97,7 @@ def compose (db, source, destination, asset, amount, divisible, callable_, call_
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT_2, asset_id, amount, 1 if divisible else 0, 1 if callable_ else 0, 
-        call_date or 0, call_price or 0, description.encode('utf-8'))
+        call_date or 0, call_price or 0.0, description.encode('utf-8'))
     if len(data) > 80:
         raise exceptions.IssuanceError('Description is greater than 52 bytes.')
     return (source, destination, None, config.MIN_FEE, data)
@@ -114,7 +116,7 @@ def parse (db, tx, message):
                 description = ''
         else:
             asset_id, amount, divisible = struct.unpack(FORMAT_1, message)
-            callable_, call_date, call_price, description = False, 0, 0, ''
+            callable_, call_date, call_price, description = False, 0, 0.0, ''
         try:
             asset = util.get_asset_name(asset_id)
         except:
@@ -125,7 +127,7 @@ def parse (db, tx, message):
         status = 'invalid: could not unpack'
 
     if status == 'valid':
-        if not callable_: calldate, call_price = 0, 0
+        if not callable_: calldate, call_price = 0, 0.0
         problems = validate(db, tx['source'], tx['destination'], asset, amount, divisible, callable_, call_date, call_price, description, block_index=tx['block_index'])
         if problems: status = 'invalid: ' + ';'.join(problems)
         if 'maximum total quantity exceeded' in problems:
