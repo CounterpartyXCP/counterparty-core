@@ -18,6 +18,10 @@ def validate (db, source, destination, quantity, block_index=None, overburn=Fals
     if destination != config.UNSPENDABLE:
         problems.append('wrong destination address')
 
+    if not isinstance(quantity, int):
+        problems.append('quantity must be in satoshis')
+        return problems
+
     if quantity <= 0: problems.append('non‐positive quantity')
 
     # Try to make sure that the burned funds won't go to waste.

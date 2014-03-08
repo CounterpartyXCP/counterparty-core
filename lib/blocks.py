@@ -273,6 +273,7 @@ def initialise(db):
                       asset TEXT,
                       amount INTEGER,
                       divisible BOOL,
+                      source TEXT,
                       issuer TEXT,
                       transfer BOOL,
                       callable BOOL,
@@ -389,6 +390,7 @@ def initialise(db):
                       block_index INTEGER,
                       source TEXT,
                       asset TEXT,
+                      dividend_asset TEXT,
                       amount_per_unit INTEGER,
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
@@ -576,7 +578,7 @@ def get_tx_info (tx):
     source_list = []
     for vin in tx['vin']:                                               # Loop through input transactions.
         if 'coinbase' in vin: return b'', None, None, None, None
-        vin_tx = bitcoin.rpc('getrawtransaction', [vin['txid'], 1])     # Get the full transaction data for this input transaction.
+        vin_tx = bitcoin.get_raw_transaction(vin['txid'])     # Get the full transaction data for this input transaction.
         vout = vin_tx['vout'][vin['vout']]
         fee += D(vout['value']) * config.UNIT
 
@@ -613,10 +615,6 @@ def reparse (db, block_index=None, quiet=False):
     cursor = db.cursor()
 
     with db:
-        # For rollbacks, just delete new blocks and then reparse what’s left.
-        if block_index:
-            cursor.execute('''DELETE FROM blocks WHERE block_index > ?''', (block_index,))
-            cursor.execute('''DELETE FROM transactions WHERE block_index > ?''', (block_index,))
 
         # Delete all of the results of parsing.
         cursor.execute('''DROP TABLE IF EXISTS order_expirations''')
@@ -639,6 +637,11 @@ def reparse (db, block_index=None, quiet=False):
         cursor.execute('''DROP TABLE IF EXISTS cancels''')
         cursor.execute('''DROP TABLE IF EXISTS callbacks''')
         cursor.execute('''DROP TABLE IF EXISTS messages''')
+
+        # For rollbacks, just delete new blocks and then reparse what’s left.
+        if block_index:
+            cursor.execute('''DELETE FROM transactions WHERE block_index > ?''', (block_index,))
+            cursor.execute('''DELETE FROM blocks WHERE block_index > ?''', (block_index,))
 
         # Reparse all blocks, transactions.
         if quiet:
@@ -667,19 +670,22 @@ def reorg (db):
     last_block_index = blocks[0]['block_index']
     reorg_necessary = False
     for block_index in range(last_block_index - 10, last_block_index + 1):
-        block_hash_see = bitcoin.rpc('getblockhash', [block_index])
+        block_hash_see = bitcoin.get_block_hash(block_index)
         blocks = list(reorg_cursor.execute('''SELECT * FROM blocks WHERE block_index=?''', (block_index,)))
         assert len(blocks) == 1
         block_hash_have = blocks[0]['block_hash']
         if block_hash_see != block_hash_have:
             reorg_necessary = True
-            logging.warning('Status: Blockchain reorganisation at block {}.'.format(block_index))
             break
 
     if not reorg_necessary: return last_block_index + 1
 
     # Rollback the DB.
     reparse(db, block_index=block_index-1, quiet=True)
+
+    # Record reorganisation.
+    logging.warning('Status: Blockchain reorganisation at block {}.'.format(block_index))
+    util.message(db, last_block_index, 'reorg', None, {'block_index': block_index})
 
     reorg_cursor.close()
     return block_index
@@ -690,37 +696,39 @@ def follow (db):
 
     logging.info('Status: RESTART')
 
-    # Reparse all transactions if minor version changes.
-    minor_version = follow_cursor.execute('PRAGMA user_version').fetchall()[0]['user_version']
-    if minor_version != config.DB_VERSION_MINOR:
-        logging.info('Status: Database and client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.DB_VERSION_MINOR))
-        reparse(db, quiet=False)
-
     # Initialise.
     initialise(db)
 
-    while True:
-        # Get index of last block.
-        try:
-            block_index = util.last_block(db)['block_index'] + 1
-        except exceptions.DatabaseError:
-            logging.warning('Status: NEW DATABASE')
-            block_index = config.BLOCK_FIRST
+    # Get index of last block.
+    try:
+        block_index = util.last_block(db)['block_index'] + 1
 
-        # Get index of last transaction.
-        try:
-            txes = list(follow_cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)'''))
-            assert len(txes) == 1
-            tx_index = txes[0]['tx_index'] + 1
-        except Exception:   # TODO
-            tx_index = 0
+        # Reparse all transactions if minor version has changed.
+        minor_version = follow_cursor.execute('PRAGMA user_version').fetchall()[0]['user_version']
+        if minor_version != config.DB_VERSION_MINOR:
+            logging.info('Status: Database and client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.DB_VERSION_MINOR))
+            reparse(db, quiet=False)
+
+    except exceptions.DatabaseError:
+        logging.warning('Status: NEW DATABASE')
+        block_index = config.BLOCK_FIRST
+
+    # Get index of last transaction.
+    try:
+        txes = list(follow_cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)'''))
+        assert len(txes) == 1
+        tx_index = txes[0]['tx_index'] + 1
+    except Exception:   # TODO
+        tx_index = 0
+
+    while True:
 
         # Get new blocks.
-        block_count = bitcoin.rpc('getblockcount', [])
+        block_count = bitcoin.get_block_count()
         while block_index <= block_count:
             logging.info('Block: {}'.format(str(block_index)))
-            block_hash = bitcoin.rpc('getblockhash', [block_index])
-            block = bitcoin.rpc('getblock', [block_hash])
+            block_hash = bitcoin.get_block_hash(block_index)
+            block = bitcoin.get_block(block_hash)
             block_time = block['time']
             tx_hash_list = block['tx']
 
@@ -745,7 +753,7 @@ def follow (db):
                         tx_index += 1
                         continue
                     # Get the important details about each transaction.
-                    tx = bitcoin.rpc('getrawtransaction', [tx_hash, 1])
+                    tx = bitcoin.get_raw_transaction(tx_hash)
                     logging.debug('Status: examining transaction {}'.format(tx_hash))
                     source, destination, btc_amount, fee, data = get_tx_info(tx)
                     if source and (data or destination == config.UNSPENDABLE):
@@ -777,7 +785,7 @@ def follow (db):
                 parse_block(db, block_index, block_time)
 
             # Increment block index.
-            block_count = bitcoin.rpc('getblockcount', [])
+            block_count = bitcoin.get_block_count()
             block_index +=1
 
         while block_index > block_count: # DUPE
@@ -785,7 +793,7 @@ def follow (db):
             with db:
                 block_index = reorg(db)
 
-            block_count = bitcoin.rpc('getblockcount', [])
+            block_count = bitcoin.get_block_count()
             time.sleep(2)
 
     follow_cursor.close()
@@ -816,11 +824,11 @@ def get_potentials (db):
         block_index = config.BLOCK_FIRST
 
     # Get new blocks.
-    block_count = bitcoin.rpc('getblockcount', [])
+    block_count = bitcoin.get_block_count()
     while block_index <= block_count - 12:  # For reorgs.
         logging.info('Block: {}'.format(str(block_index)))
-        block_hash = bitcoin.rpc('getblockhash', [block_index])
-        block = bitcoin.rpc('getblock', [block_hash])
+        block_hash = bitcoin.get_block_hash(block_index)
+        block = bitcoin.get_block(block_hash)
         block_time = block['time']
         tx_hash_list = block['tx']
 
@@ -829,7 +837,7 @@ def get_potentials (db):
             # List the transactions in the block.
             for tx_hash in tx_hash_list:
                 # Get the important details about each potential transaction.
-                tx = bitcoin.rpc('getrawtransaction', [tx_hash, 1])
+                tx = bitcoin.get_raw_transaction(tx_hash)
                 if check_potential(tx):
                     logging.info('Potential: {} ({})'.format(potential_index, tx_hash))
                     cursor.execute('''INSERT INTO potentials(

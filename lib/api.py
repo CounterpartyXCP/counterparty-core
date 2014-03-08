@@ -15,7 +15,7 @@ import cherrypy
 from cherrypy import wsgiserver
 from jsonrpc import JSONRPCResponseManager, dispatcher
 
-from . import (config, bitcoin, exceptions, util, bitcoin)
+from . import (config, bitcoin, exceptions, util)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel)
 
 class APIServer(threading.Thread):
@@ -57,10 +57,10 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_bet_matches(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_bet_matches(filters=None, is_settled=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_bet_matches(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
+                status='settled' if bool(is_settled) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -173,10 +173,10 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_order_matches (filters=None, is_valid=True, is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_order_matches (filters=None, is_completed=True, is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_order_matches(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
+                status='completed' if bool(is_completed) else None,
                 is_mine=is_mine,
                 order_by=order_by,
                 order_dir=order_dir,
@@ -215,7 +215,7 @@ class APIServer(threading.Thread):
             if not isinstance(message_indexes, list):
                 message_indexes = [message_indexes,]
             for idx in message_indexes:  #make sure the data is clean
-                if not isinstance(block_index, int):
+                if not isinstance(idx, int):
                     raise Exception("All items in message_indexes are not integers")
                 
             cursor = db.cursor()
@@ -226,17 +226,23 @@ class APIServer(threading.Thread):
             return messages
 
         @dispatcher.add_method
-        def xcp_supply():
+        def get_xcp_supply():
             return util.xcp_supply(db)
 
         @dispatcher.add_method
         def get_asset_info(asset):
             if asset in ['BTC', 'XCP']:
+                total_supply = None
+                if asset == 'BTC':
+                    total_supply = bitcoin.get_btc_supply(normalize=False)
+                else:
+                    total_supply = util.xcp_supply(db)
+                
                 return {
                     'owner': None,
                     'divisible': True,
                     'locked': False,
-                    'total_issued': util.xcp_supply(db) if asset == 'XCP' else None,
+                    'total_issued': total_supply,
                     'callable': False,
                     'call_date': None,
                     'call_price': None,
@@ -262,7 +268,7 @@ class APIServer(threading.Thread):
                     'locked': locked,
                     'total_issued': total_issued,
                     'callable': bool(last_issuance['callable']),
-                    'call_date': util.isodt(last_issuance['call_date']) if last_issuance['call_date'] else None,
+                    'call_date': last_issuance['call_date'],
                     'call_price': last_issuance['call_price'],
                     'description': last_issuance['description'],
                     'issuer': last_issuance['issuer']}
@@ -283,7 +289,7 @@ class APIServer(threading.Thread):
             
         @dispatcher.add_method
         def get_running_info():
-            latestBlockIndex = bitcoin.rpc('getblockcount', [])
+            latestBlockIndex = bitcoin.get_block_count()
             
             try:
                 util.database_check(db, latestBlockIndex)
@@ -302,6 +308,7 @@ class APIServer(threading.Thread):
                 'bitcoin_block_count': latestBlockIndex,
                 'last_block': last_block,
                 'counterpartyd_version': config.CLIENT_VERSION,
+                'last_message_index': util.last_message(db)['message_index'],
                 'running_testnet': config.TESTNET,
                 'db_version_major': config.DB_VERSION_MAJOR,
                 'db_version_minor': config.DB_VERSION_MINOR,
@@ -367,7 +374,7 @@ class APIServer(threading.Thread):
             return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def create_dividend(source, quantity_per_unit, asset, multisig=config.MULTISIG):
+        def create_dividend(source, quantity_per_unit, asset, dividend_asset, multisig=config.MULTISIG):
             tx_info = dividend.compose(db, source, quantity_per_unit,
                                    asset)
             return bitcoin.transaction(tx_info, multisig)
@@ -384,7 +391,19 @@ class APIServer(threading.Thread):
             return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, fee_provided, multisig=config.MULTISIG):
+        def create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required=None, fee_provided=None, multisig=config.MULTISIG):
+            if get_asset == 'BTC' and fee_required is None:
+                #since no value is passed, set a default of 1% for fee_required if buying BTC
+                fee_required = int(get_quantity / 100)
+            elif fee_required is None:
+                fee_required = 0 #no default set, but fee_required does not apply
+
+            if give_asset == 'BTC' and fee_provided is None:
+                #since no value is passed, set a default of 1% for fee_provided if selling BTC
+                fee_provided = int(give_quantity / 100)
+            elif fee_provided is None:
+                fee_provided = 0 #no default set, but fee_required does not apply
+            
             tx_info = order.compose(db, source, give_asset,
                                 give_quantity, get_asset,
                                 get_quantity, expiration,
@@ -403,7 +422,7 @@ class APIServer(threading.Thread):
                 return bitcoin.transmit(tx_hex)
             else:
                 #already signed, just broadcast it
-                return bitcoin.rpc('sendrawtransaction', [tx_hex])
+                return bitcoin.send_raw_transaction(tx_hex)
 
         class API(object):
             @cherrypy.expose
@@ -440,7 +459,7 @@ class APIServer(threading.Thread):
                 'tools.auth_basic.checkpassword': checkpassword,
             },
         }
-        application = cherrypy.Application(API(), script_name="/jsonrpc/", config=app_config)
+        application = cherrypy.Application(API(), script_name="/api", config=app_config)
 
         #disable logging of the access and error logs to the screen
         application.log.access_log.propagate = False
@@ -467,8 +486,8 @@ class APIServer(threading.Thread):
             application.log.access_log.addHandler(h)
 
         #start up the API listener/handler
-        server = wsgiserver.CherryPyWSGIServer(
-            (config.RPC_HOST, int(config.RPC_PORT)), application)
+        server = wsgiserver.CherryPyWSGIServer((config.RPC_HOST, config.RPC_PORT), application,
+            numthreads=config.API_NUM_THREADS, request_queue_size=config.API_REQUEST_QUEUE_SIZE)
         #logging.debug("Initializing API interface…")
         try:
             server.start()

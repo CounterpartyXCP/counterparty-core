@@ -49,7 +49,7 @@ fee_multiplier_default = .05
 
 def parse_hex (unsigned_tx_hex):
 
-    tx = bitcoin.rpc('decoderawtransaction', [unsigned_tx_hex])
+    tx = bitcoin.decode_raw_transaction(unsigned_tx_hex)
     source, destination, btc_amount, fee, data = blocks.get_tx_info(tx)
 
     cursor = db.cursor()
@@ -211,14 +211,14 @@ def test_issuance_indivisible_callable ():
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_dividend_divisible ():
-    unsigned_tx_hex = bitcoin.transaction(dividend.compose(db, source_default, 6, 'BBBB'), True)
+    unsigned_tx_hex = bitcoin.transaction(dividend.compose(db, source_default, 6, 'BBBB', 'XCP'), True)
 
     parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_dividend_indivisible ():
-    unsigned_tx_hex = bitcoin.transaction(dividend.compose(db, source_default, 8, 'BBBC'), True)
+    unsigned_tx_hex = bitcoin.transaction(dividend.compose(db, source_default, 8, 'BBBC', 'XCP'), True)
 
     parse_hex(unsigned_tx_hex)
 
@@ -329,25 +329,26 @@ def test_callback ():
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
-def test_get_address():
-    get_address = util.get_address(db, source_default)
-    for field in get_address:
-        output_new['get_address_' + field] = get_address[field]
-
 def test_json_rpc():
 
     api_server = api.APIServer()
     api_server.daemon = True
     api_server.start()
 
-    url = 'http://localhost:' + str(config.RPC_PORT) + '/jsonrpc/'
+    url = 'http://localhost:' + str(config.RPC_PORT) + '/rpc/'
     headers = {'content-type': 'application/json'}
     auth = HTTPBasicAuth(config.RPC_USER, config.RPC_PASSWORD)
 
     payloads = []
     payloads.append({
         "method": "get_balances",
-        "params": {"filters": {'field': 'address', 'op': '==', 'value': source_default}},
+        "params": {"filters": {'field': 'address', 'op': '==', 'value': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'}},
+        "jsonrpc": "2.0",
+        "id": 0,
+    })
+    payloads.append({
+        "method": "create_send",
+        "params": {'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': destination_default, 'asset': 'XCP', 'quantity': 1},
         "jsonrpc": "2.0",
         "id": 0,
     })
@@ -356,17 +357,21 @@ def test_json_rpc():
         for attempt in range(100):  # Try until server is ready.
             try:
                 response = requests.post(url, data=json.dumps(payload), headers=headers, auth=auth).json()
-                break
-            except:
-                time.sleep(.05)
-                continue
-            try:
+                if not response['result']:
+                    raise Exception('testnet server not running')
+                    assert False
+                assert response['jsonrpc'] == '2.0'
+                assert response['id'] == 0
                 output_new['rpc.' + payload['method']] = response['result']
-            except:
-                output_new['rpc.' + payload['method']] = response['error']
-            assert response['jsonrpc'] == '2.0'
-            assert response['id'] == 0
+                break
+            except requests.exceptions.ConnectionError:
+                time.sleep(.05)
         if attempt == 99: exit(1)   # Fail
+
+def test_get_address():
+    get_address = util.get_address(db, source_default)
+    for field in get_address:
+        output_new['get_address_' + field] = get_address[field]
 
 def test_stop():
     logging.info('STOP TEST')

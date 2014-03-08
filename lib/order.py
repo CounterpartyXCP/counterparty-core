@@ -17,6 +17,19 @@ def validate (db, source, give_asset, give_amount, get_asset, get_amount, expira
     if give_asset == get_asset:
         problems.append('trading an asset for itself')
 
+    if not isinstance(give_amount, int):
+        problems.append('give_amount must be in satoshis')
+        return problems
+    if not isinstance(get_amount, int):
+        problems.append('get_amount must be in satoshis')
+        return problems
+    if not isinstance(fee_required, int):
+        problems.append('fee_required must be in satoshis')
+        return problems
+    if not isinstance(expiration, int):
+        problems.append('expiration must be expressed as an integer block delta')
+        return problems
+
     if give_amount <= 0: problems.append('non‐positive give quantity')
     if get_amount <= 0: problems.append('non‐positive get quantity')
     if fee_required < 0: problems.append('negative fee_required')
@@ -136,7 +149,7 @@ def match (db, tx):
     tx1_get_remaining = tx1['get_remaining']
 
     order_matches = cursor.fetchall()
-    if tx['block_index'] > 284500:  # For backwards‐compatibility (no sorting before this block).
+    if tx['block_index'] > 284500 or config.TESTNET:  # Protocol change.
         order_matches = sorted(order_matches, key=lambda x: x['tx_index'])                              # Sort by tx index second.
         order_matches = sorted(order_matches, key=lambda x: D(x['get_amount']) / D(x['give_amount']))   # Sort by price first.
 
@@ -161,32 +174,36 @@ def match (db, tx):
         tx1_price = util.price(tx1['get_amount'], tx1['give_amount'])
         tx1_inverse_price = util.price(tx1['give_amount'], tx1['get_amount'])
 
-        # NOTE: Old protocol.
+        # Protocol change.
         if tx['block_index'] < 286000: tx1_inverse_price = D(1) / tx1_price
 
+        # print('foo', tx0_price, tx1_inverse_price) # TODO
         if tx0_price <= tx1_inverse_price:
             forward_amount = int(min(tx0_give_remaining, D(tx1_give_remaining) / tx0_price))
             backward_amount = round(forward_amount * tx0_price)
 
             if not forward_amount: continue
-            if tx1['block_index'] >= 286500:    # Protocol change.
+            if tx1['block_index'] >= 286500 or config.TESTNET:    # Protocol change.
                 if not backward_amount: continue
+            # print('bar', backward_amount) # TODO
 
             # Check and update fee remainings.
-            if tx1['block_index'] >= 286500: # Deduct fee_required from fee_provided_remaining, etc., if possible (else don’t match).
+            if tx1['block_index'] >= 286500 or config.TESTNET: # Protocol change. Deduct fee_required from fee_provided_remaining, etc., if possible (else don’t match).
                 if tx1['get_asset'] == 'BTC':
                     fee = int(D(tx1['fee_required_remaining']) * D(forward_amount) / D(tx1_get_remaining))
+                    # print('baz', tx0_fee_provided_remaining, fee) # TODO
                     if tx0_fee_provided_remaining < fee: continue
                     else:
                         tx0_fee_provided_remaining -= fee
-                        if tx1['block_index'] >= 287800:
+                        if tx1['block_index'] >= 287800 or config.TESTNET:  # Protocol change.
                             tx1_fee_required_remaining -= fee
                 elif tx1['give_asset'] == 'BTC':
                     fee = int(D(tx0['fee_required_remaining']) * D(backward_amount) / D(tx0_get_remaining))
+                    # print('qux', tx1_fee_provided_remaining, fee) # TODO
                     if tx1_fee_provided_remaining < fee: continue
                     else:
                         tx1_fee_provided_remaining -= fee 
-                        if tx1['block_index'] >= 287800:
+                        if tx1['block_index'] >= 287800 or config.TESTNET:  # Protocol change.
                             tx0_fee_required_remaining -= fee
             else:   # Don’t deduct.
                 if tx1['get_asset'] == 'BTC':
@@ -238,7 +255,7 @@ def match (db, tx):
             cursor.execute(sql, bindings)
 
             # Calculate when the match will expire.
-            if tx1['block_index'] >= 286500:
+            if tx1['block_index'] >= 286500 or config.TESTNET:    # Protocol change.
                 match_expire_index = tx1['block_index'] + 10
             else:
                 match_expire_index = min(tx0['expire_index'], tx1['expire_index'])
@@ -364,8 +381,7 @@ def expire (db, block_index):
                         order_match['backward_asset'],
                         order_match['backward_amount'], event=order_match['id'])
 
-        # Protocol change.
-        if block_index < 286500:
+        if block_index < 286500:    # Protocol change.
             # Sanity check: one of the two must have expired.
             assert tx0_order_time_left or tx1_order_time_left
 

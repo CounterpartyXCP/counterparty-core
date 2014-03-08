@@ -19,7 +19,7 @@ Connecting to the API
 ----------------------
 
 By default, ``counterpartyd`` will listen on port ``4000`` (if on mainnet) or port ``14000`` (on testnet) for API
-requests. API requests are made via a HTTP POST request to ``/jsonrpc/``, with JSON-encoded
+requests. API requests are made via a HTTP POST request to ``/api/``, with JSON-encoded
 data passed as the POST body. For more information on JSON RPC, please see the `JSON RPC 2.0 specification <http://www.jsonrpc.org/specification>`__.
 
 .. _examples:
@@ -33,7 +33,7 @@ Python Example
     import requests
     from requests.auth import HTTPBasicAuth
     
-    url = "http://localhost:4000/jsonrpc/"
+    url = "http://localhost:4000/api/"
     headers = {'content-type': 'application/json'}
     auth = HTTPBasicAuth('rpcuser', 'rpcpassword')
     
@@ -100,13 +100,25 @@ Python Example
     # specified as False
     payload = {
       "method": "create_send",
-      "params": ["1CUdFmgK9trTNZHALfqGvd8d6nUZqH2AAf", "17rRm52PYGkntcJxD2yQF9jQqRS4S2nZ7E", 100000000, "XCP", false],
+      "params": ["1CUdFmgK9trTNZHALfqGvd8d6nUZqH2AAf", "17rRm52PYGkntcJxD2yQF9jQqRS4S2nZ7E", "XCP", 100000000, false],
       "jsonrpc": "2.0",
       "id": 0,
     }
     response = requests.post(
       url, data=json.dumps(payload), headers=headers, auth=auth).json()
     print("\nDO_SEND RESULT: ", response)
+
+PHP Example
+^^^^^^^^^^^^
+
+With PHP, you can connect and query ``counterpartyd`` using the `json-rpc2php <https://github.com/subutux/json-rpc2php>`__
+library. Here's a simple example that will get you the asset balances for a specific address:
+
+.. code-block:: php
+
+    $client = new jsonRPCClient('http://localhost:4000/jsonrpc/', array('username' => 'myusername', 'password' => 'mypass'));
+    $addr = '15vA2MJ4ESG3Rt1PVQ79D1LFMBBNtcSz1f'; // BTC/XCP address you want to query
+    $res = $client->get_balances(array('field' => 'address', 'op' => '==', 'value' => $addr));
 
 
 
@@ -119,7 +131,7 @@ assets
 ^^^^^^^^^
 
 Everywhere in the API an asset is referenced as an uppercase alphabetic (base
-26) string name of the asset, of at least 4 characters in length, or as 'BTC' or 'XCP' as appropriate. Examples are:
+26) string name of the asset, of at least 4 characters in length and not starting with 'A', or as 'BTC' or 'XCP' as appropriate. Examples are:
 
 - "BTC"
 - "XCP"
@@ -139,6 +151,13 @@ Examples:
 - 4381030000 = 4381030000 (if indivisible asset) 
 
 **NOTE:** XCP and BTC themselves are divisible assets, and thus are listed in satoshis.
+
+.. _ratios:
+
+floats
+^^^^^^^^^^^^^^^^^^^^
+
+Floats are are ratios or floating point values with six decimal places of precision, used in bets, dividends and callbacks.
 
 .. _filtering:
 
@@ -255,12 +274,12 @@ get_bets
 get_bet_matches
 ^^^^^^^^^^^^^^^^^^^
 
-.. py:function:: get_bet_matches(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
+.. py:function:: get_bet_matches(filters=[], is_settled=true, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
 
    Gets a listing of order matches.
 
    :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param boolean is_valid: Set to ``true`` to only return valid records. Set to ``false`` to return all records (including invalid attempts).
+   :param boolean is_settled: Set to ``true`` to only return settled bet match records. Set to ``false`` to return all records (including invalid attempts).
    :param string order_by: If sorted results are desired, specify the name of a :ref:`bet match object <bet-match-object>` attribute to order the results by (e.g. ``deadline``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
    :param integer start_block: If specified, only results from the specified block index on will be returned  
@@ -461,12 +480,12 @@ get_orders
 get_order_matches
 ^^^^^^^^^^^^^^^^^^^
 
-.. py:function:: get_order_matches(filters=[], is_valid=true, is_mine=false, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
+.. py:function:: get_order_matches(filters=[], is_completed=true, is_mine=false, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
 
    Gets a listing of order matches.
 
    :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param boolean is_valid: Set to ``true`` to only return valid records. Set to ``false`` to return all records (including invalid attempts).
+   :param boolean is_completed: Set to ``true`` to only return completed order match records. Set to ``false`` to return all records (including invalid attempts).
    :param boolean is_mine: Set to ``true`` to include results where either the ``tx0_address`` or ``tx1_address`` exist in the linked ``bitcoind`` wallet.
    :param string order_by: If sorted results are desired, specify the name of an :ref:`order match object <order-match-object>` attribute to order the results by (e.g. ``forward_asset``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
@@ -510,7 +529,11 @@ get_asset_info
      - **divisible** (*boolean*): Whether the asset is divisible or not
      - **locked** (*boolean*): Whether the asset is locked (future issuances prohibited)
      - **total_issued** (*integer*): The :ref:`quantity <amounts>` of the asset issued, in total
-
+     - **callable** (*boolean*): If the asset is callable or not
+     - **call_date** (*integer*): The call date, as an epoch timestamp
+     - **call_price** (*integer*): The call price, in satoshi
+     - **description** (*string*): The asset's current description
+     - **issuer** (*string*): The asset's original owner (i.e. issuer)
 
 .. _get_messages:
 
@@ -537,12 +560,12 @@ get_messages_by_index
    :param list message_indexes: An array of one or more ``message_index`` values for which the cooresponding message feed entries are desired. 
    :return: A list containing a :ref:`message <message-object>` for each message found in the specified ``message_indexes`` list. If none were found, ``[]`` (empty list) is returned.
 
-.. _xcp_supply:
+.. _get_xcp_supply:
 
-xcp_supply
-^^^^^^^^^^^^^^
+get_xcp_supply
+^^^^^^^^^^^^^^^
 
-.. py:function:: xcp_supply(asset)
+.. py:function:: get_xcp_supply(asset)
 
    Gets the current total amount of XCP in existance (i.e. amount created via proof-of-burn, minus amount
    destroyed via asset issuances, etc).
@@ -577,9 +600,12 @@ get_running_info
    
    :return: An object with the following parameters:
    
-     - **db_caught_up** (*boolean*): ``true`` if counterpartyd block processing is caught up with the Bitcoin blockchain, ``false`` otherwise.  
-     - **last_block** (*integer*): The index (height) of the last block processed by counterpartyd
+     - **db_caught_up** (*boolean*): ``true`` if counterpartyd block processing is caught up with the Bitcoin blockchain, ``false`` otherwise.
+     - **bitcoin_block_count** (**integer**): The block height on the Bitcoin network (may not necessarily be the same as ``last_block``, if ``counterpartyd`` is catching up)
+     - **last_block** (*integer*): The index (height) of the last block processed by ``counterpartyd``
      - **counterpartyd_version** (*float*): The counterpartyd program version, expressed as a float, such as 0.5
+     - **last_message_index** (*integer*): The index (ID) of the last message in the ``counterpartyd`` message feed
+     - **running_testnet** (*boolean*): ``true`` if counterpartyd is configured for testnet, ``false`` if configured on mainnet.
      - **db_version_major** (*integer*): The major version of the current counterpartyd database
      - **db_version_minor** (*integer*): The minor version of the current counterpartyd database
 
@@ -709,12 +735,13 @@ create_cancel
 create_dividend
 ^^^^^^^^^^^^^^
 
-.. py:function:: create_dividend(source, quantity_per_unit, share_asset, multisig=true)
+.. py:function:: create_dividend(source, quantity_per_unit, asset, dividend_asset, multisig=true)
 
    Issue a dividend on a specific user defined asset.
 
    :param string source: The address that will be issuing the dividend (must have the ownership of the asset which the dividend is being issued on).
-   :param string share_asset: The :ref:`asset <assets>` that the dividends are being rewarded on.
+   :param string asset: The :ref:`asset <assets>` that the dividends are being rewarded on.
+   :param string dividend_asset: The :ref:`asset <assets>` that the dividends are paid in.
    :param integer quantity_per_unit: The :ref:`amount <amounts>` of XCP rewarded per whole unit of the asset.
    :param boolean multisig: See :ref:`this section <multisig_param>`.  
    :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
@@ -723,9 +750,9 @@ create_dividend
 .. _create_issuance:
 
 create_issuance
-^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^
 
-.. py:function:: create_issuance(source, quantity, asset, divisible, description, callable=false, call_date=null, call_price=null, transfer_destination=null, multisig=true):
+.. py:function:: create_issuance(source, asset, quantity, divisible, description, callable=false, call_date=null, call_price=null, transfer_destination=null, multisig=true):
 
    Issue a new asset, issue more of an existing asset or transfer the ownership of an asset.
 
@@ -735,7 +762,7 @@ create_issuance
    :param boolean divisible: Whether this asset is divisible or not (if a transfer, this value must match the value specified when the asset was originally issued).
    :param boolean callable: Whether the asset is callable or not.
    :param integer call_date: The timestamp at which the asset may be called back, in Unix time. Only valid for callable assets.
-   :param integer call_price: The :ref:`price <amounts>` at which the asset may be called back, on the specified call_date. Only valid for callable assets.
+   :param integer call_price: The :ref:`price <floats>` at which the asset may be called back, on the specified call_date. Only valid for callable assets.
    :param boolean description: A textual description for the asset. 52 bytes max.
    :param string transfer_destination: The address to receive the asset (only used when *transferring* assets -- leave set to ``null`` if issuing an asset).
    :param boolean multisig: See :ref:`this section <multisig_param>`.  
@@ -747,7 +774,7 @@ create_issuance
 create_order
 ^^^^^^^^^^^^^^
 
-.. py:function:: create_order(source, give_quantity, give_asset, get_quantity, get_asset, expiration, fee_required=0, fee_provided=config.MIN_FEE / config.UNIT, multisig=true)
+.. py:function:: create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required=0, fee_provided=config.MIN_FEE, multisig=true)
 
    Issue an order request.
 
@@ -757,8 +784,10 @@ create_order
    :param integer get_quantity: The :ref:`quantity <amounts>` of the asset requested in return.
    :param string get_asset: The :ref:`asset <assets>` requested in return.
    :param integer expiration: The number of blocks for which the order should be valid.
-   :param integer fee_required: The miners' fee required to be paid by orders for them to match this one; in BTC; required only if buying BTC (may be zero, though).
-   :param integer fee_provided: The miners' fee provided; in BTC; required only if selling BTC (should not be lower than is required for acceptance in a block)
+   :param integer fee_required: The miners' fee required to be paid by orders for them to match this one; in BTC;
+    required only if buying BTC (may be zero, though). If not specified or set to ``null``, this defaults to 1% of the BTC desired for purchase.
+   :param integer fee_provided: The miners' fee provided; in BTC; required only if selling BTC (should not be lower than
+    is required for acceptance in a block).  If not specified or set to ``null``, this defaults to 1% of the BTC for sale. 
    :param boolean multisig: See :ref:`this section <multisig_param>`.  
    :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
@@ -768,7 +797,7 @@ create_order
 create_send
 ^^^^^^^^^^^^^^
 
-.. py:function:: create_send(source, destination, quantity, asset, multisig=true)
+.. py:function:: create_send(source, destination, asset, quantity, multisig=true)
 
    Send XCP or a user defined asset.
 
@@ -807,7 +836,7 @@ An object that describes the history of a requested address:
 * **bet_matches** (*list*): The bets matchings to which this address was a party, as a list of :ref:`bet match objects <bet-match-object>`.
 * **dividends** (*list*): All dividends rewarded from this address, as a list of :ref:`dividend objects <dividend-object>`.
 * **cancels** (*list*): All cancels from this address, as a list of :ref:`cancel objects <cancel-object>`.
-* **cancels** (*list*): All asset callbacks issued from this address, as a list of :ref:`callback objects <callback-object>`.
+* **callbacks** (*list*): All asset callbacks issued from this address, as a list of :ref:`callback objects <callback-object>`.
 * **bet_expirations** (*list*): All expirations of bets issued from this address, as a list of :ref:`bet expiration objects <bet-expiration-object>`.
 * **order_expirations** (*list*): All expirations of orders issued from this address, as a list of :ref:`bet expiration objects <order-expiration-object>`.
 * **bet_match_expirations** (*list*): All expirations of bet matches issued from this address, as a list of :ref:`bet expiration objects <bet-match-expiration-object>`.
@@ -924,7 +953,7 @@ An object that describes an instance of a specific burn:
 * **tx_index** (*integer*): The transaction index
 * **tx_hash** (*string*): The transaction hash
 * **block_index** (*integer*): The block index (block number in the block chain)
-* **address** (*string*): The address the burn was performed from
+* **source** (*string*): The address the burn was performed from
 * **burned** (*integer*): The :ref:`amount <amounts>` of BTC burned
 * **earned** (*integer*): The :ref:`amount <amounts>` of XPC actually earned from the burn (takes into account any bonus amounts, 1 BTC limitation, etc)
 * **validity** (*string*): Set to "valid" if a valid burn. Any other setting signifies an invalid/improper burn

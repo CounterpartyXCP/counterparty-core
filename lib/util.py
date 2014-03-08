@@ -1,27 +1,32 @@
 import time
-from datetime import datetime
-from dateutil.tz import tzlocal
 import decimal
-D = decimal.Decimal
 import sys
 import json
 import logging
 import operator
-from operator import itemgetter
 import apsw
 import collections
 import inspect
 import requests
+from datetime import datetime
+from dateutil.tz import tzlocal
+from operator import itemgetter
 
 from . import (config, exceptions)
 
+D = decimal.Decimal
 b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+request_session = None #see http://stackoverflow.com/a/20457621
 
 # Obsolete in Python 3.4, with enum module.
 BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
 BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
 
+
 def api (method, params):
+    global request_session
+    if not request_session: request_session = requests.Session()
+    
     headers = {'content-type': 'application/json'}
     payload = {
         "method": method,
@@ -29,7 +34,7 @@ def api (method, params):
         "jsonrpc": "2.0",
         "id": 0,
     }
-    response = requests.post(config.RPC, data=json.dumps(payload), headers=headers)
+    response = request_session.post(config.RPC, data=json.dumps(payload), headers=headers)
     if response == None:
         raise exceptions.RPCError('Cannot communicate with counterpartyd server.')
     elif response.status_code != 200:
@@ -97,7 +102,7 @@ def log (db, command, category, bindings):
 
         elif category == 'issuances':
             if bindings['transfer']:
-                logging.info('Issuance: Asset {} transfered to {} ({}) [{}]'.format(bindings['asset'], bindings['issuer'], bindings['tx_hash'], bindings['status']))
+                logging.info('Issuance: {} transfered asset {} to {} ({}) [{}]'.format(bindings['source'], bindings['asset'], bindings['issuer'], bindings['tx_hash'], bindings['status']))
             elif bindings['locked']:
                 logging.info('Issuance: {} locked asset {} ({}) [{}]'.format(bindings['issuer'], bindings['asset'], bindings['tx_hash'], bindings['status']))
             else:
@@ -107,7 +112,7 @@ def log (db, command, category, bindings):
                 else:
                     divisibility = 'indivisible'
                     unit = 1
-                if bindings['callable'] and (bindings['block_index'] > 283271 or config.TESTNET):
+                if bindings['callable'] and (bindings['block_index'] > 283271 or config.TESTNET):   # Protocol change.
                     callability = 'callable from {} for {} XCP/{}'.format(isodt(bindings['call_date']), bindings['call_price'], bindings['asset'])
                 else:
                     callability = 'uncallable'
@@ -146,7 +151,7 @@ def log (db, command, category, bindings):
             logging.info('Bet Match: {} for {} against {} for {} on {} at {}{} ({}) [{}]'.format(BET_TYPE_NAME[bindings['tx0_bet_type']], output(bindings['forward_amount'], 'XCP'), BET_TYPE_NAME[bindings['tx1_bet_type']], output(bindings['backward_amount'], 'XCP'), bindings['feed_address'], isodt(bindings['deadline']), placeholder, bindings['id'], bindings['status']))
 
         elif category == 'dividends':
-            logging.info('Dividend: {} paid {} per unit of {} ({}) [{}]'.format(bindings['source'], output(bindings['amount_per_unit'], 'XCP'), bindings['asset'], bindings['tx_hash'], bindings['status']))
+            logging.info('Dividend: {} paid {} per unit of {} ({}) [{}]'.format(bindings['source'], output(bindings['amount_per_unit'], bindings['dividend_asset']), bindings['asset'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'burns':
             logging.info('Burn: {} burned {} for {} ({}) [{}]'.format(bindings['source'], output(bindings['burned'], 'BTC'), output(bindings['earned'], 'XCP'), bindings['tx_hash'], bindings['status']))
@@ -168,7 +173,26 @@ def log (db, command, category, bindings):
 
         elif category == 'bet_match_expirations':
             logging.info('Expired Bet Match: {}'.format(bindings['bet_match_id']))
-        
+
+def message (db, block_index, command, category, bindings):
+    cursor = db.cursor()
+
+    # Get last message index.
+    messages = list(cursor.execute('''SELECT * FROM messages
+                                      WHERE message_index = (SELECT MAX(message_index) from messages)'''))
+    try:
+        assert len(messages) == 1
+        message_index = messages[0]['message_index'] + 1
+    except (AssertionError, IndexError):
+        message_index = 0
+
+    bindings_string = json.dumps(collections.OrderedDict(sorted(bindings.items())))
+    cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings)',
+                   (message_index, block_index, command, category, bindings_string))
+
+    cursor.close()
+
+       
 def rowtracer(cursor, sql):
     """Converts fetched SQL data into dict-style"""
     dictionary = {}
@@ -198,19 +222,8 @@ def exectracer(cursor, sql, bindings):
 
     # Record alteration in database.
     if not category in ('balances', 'messages'):
-        cursor = db.cursor()
 
-        # Get last message index.
-        messages = list(cursor.execute('''SELECT * FROM messages
-                                          WHERE message_index = (SELECT MAX(message_index) from messages)'''))
-        try:
-            assert len(messages) == 1
-            message_index = messages[0]['message_index'] + 1
-        except (AssertionError, IndexError):
-            message_index = 0
-
-        # Get current block.
-        # Hackish
+        # Get current block. (Hackish)
         try:
             block_index = bindings['block_index']
         except KeyError:
@@ -219,12 +232,7 @@ def exectracer(cursor, sql, bindings):
             except KeyError:
                 block_index = last_block(db)['block_index'] + 1   # TODO: Double‐check that this is correct.
 
-        bindings_string = json.dumps(collections.OrderedDict(sorted(bindings.items())))
-        cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings)',
-                       (message_index, block_index, command, category, bindings_string))
-
-        message_index += 1
-        cursor.close()
+        message(db, block_index, command, category, bindings)
 
     # Log.
     log(db, command, category, bindings)
@@ -238,7 +246,8 @@ def connect_to_db(flags=None):
         db = apsw.Connection(config.DATABASE)
     elif flags == 'SQLITE_OPEN_READONLY':
         db = apsw.Connection(config.DATABASE, flags=0x00000001)
-    else: raise Exception # TODO
+    else:
+        raise Exception # TODO
 
     cursor = db.cursor()
 
@@ -249,10 +258,11 @@ def connect_to_db(flags=None):
     cursor.execute('''PRAGMA foreign_keys = ON''')
     cursor.execute('''PRAGMA defer_foreign_keys = ON''')
 
-    """
-    cursor.execute('''PRAGMA foreign_key_check''')
-    if rows:
-        raise exceptions.DatabaseError('Foreign key check failed.')
+    # So that writers don’t block readers.
+    cursor.execute('''PRAGMA journal_mode = WAL''')
+
+    rows = list(cursor.execute('''PRAGMA foreign_key_check'''))
+    if rows: raise exceptions.DatabaseError('Foreign key check failed.')
 
     # Integrity check
     integral = False
@@ -269,7 +279,6 @@ def connect_to_db(flags=None):
             continue
     if not integral:
         raise exceptions.DatabaseError('Could not perform integrity check.')
-    """
 
     cursor.close()
 
@@ -332,6 +341,17 @@ def last_block (db):
         raise exceptions.DatabaseError('No blocks found.')
     cursor.close()
     return last_block
+
+def last_message (db):
+    cursor = db.cursor()
+    messages = list(cursor.execute('''SELECT * FROM messages WHERE message_index = (SELECT MAX(message_index) from messages)'''))
+    try:
+        assert len(messages) == 1
+        last_message = messages[0]
+    except (AssertionError, IndexError):
+        raise exceptions.DatabaseError('No messages found.')
+    cursor.close()
+    return last_message
 
 def get_asset_id (asset):
     # Special cases.
@@ -477,6 +497,7 @@ def credit (db, block_index, address, asset, amount, action=None, event=None):
     credit_cursor.close()
 
 def devise (db, quantity, asset, dest, divisible=None):
+    quantity = D(quantity)
 
     # For output only.
     def norm(num, places):
@@ -487,7 +508,8 @@ def devise (db, quantity, asset, dest, divisible=None):
         num = fmt.format(num)
         return num.rstrip('0')+'0' if num.rstrip('0')[-1] == '.' else num.rstrip('0')
 
-    if asset in ('leverage', 'value', 'fraction'):
+    # TODO: remove price, odds
+    if asset in ('leverage', 'value', 'fraction', 'price', 'odds'):
         if dest == 'output':
             return norm(quantity, 6)
         elif dest == 'input':
@@ -498,7 +520,7 @@ def devise (db, quantity, asset, dest, divisible=None):
                 return float(quantity)  # TODO: Float?!
 
     if asset in ('fraction',):
-        return norm(D(quantity) / D(1e8), 6)
+        return norm(quantity / D(1e8), 6)
 
     if divisible == None:
         if asset in ('BTC', 'XCP'):
@@ -514,13 +536,13 @@ def devise (db, quantity, asset, dest, divisible=None):
 
     if divisible:
         if dest == 'output':
-            quantity = D(quantity) / D(config.UNIT)
+            quantity = quantity / D(config.UNIT)
             if quantity == quantity.to_integral():
                 return str(quantity) + '.0'  # For divisible assets, display the decimal point.
             else:
                 return norm(quantity, 8)
         elif dest == 'input':
-            quantity = D(quantity) * D(config.UNIT)
+            quantity = quantity * D(config.UNIT)
             if quantity == quantity.to_integral():
                 return int(quantity)
             else:
@@ -678,7 +700,12 @@ def get_balances (db, address=None, asset=None, filters=None, order_by=None, ord
     """This should never be used to check Bitcoin balances."""
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
-    if address: filters.append({'field': 'address', 'op': '==', 'value': address})
+    if address:
+        from . import bitcoin   # HACK
+        if not bitcoin.base58_decode(address, config.ADDRESSVERSION):
+            raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
+                                                 address)
+        filters.append({'field': 'address', 'op': '==', 'value': address})
     if asset: filters.append({'field': 'asset', 'op': '==', 'value': asset})
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM balances''')
@@ -723,9 +750,9 @@ def get_orders (db, status=None, source=None, show_empty=True, show_expired=True
 def get_order_matches (db, status=None, is_mine=False, address=None, tx0_hash=None, tx1_hash=None, filters=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     from . import bitcoin   # HACK
     def filter_is_mine(e):
-        if (    (not bitcoin.rpc('validateaddress', [e['tx0_address']])['ismine'] or
+        if (    (not bitcoin.is_mine(e['tx0_address']) or
                  e['forward_asset'] != 'BTC')
-            and (not bitcoin.rpc('validateaddress', [e['tx1_address']])['ismine'] or
+            and (not bitcoin.is_mine(e['tx1_address']) or
                  e['backward_asset'] != 'BTC')):
             return False #is not mine
         return True #is mine

@@ -55,7 +55,7 @@ def compose (db, order_match_id):
     if time_left < 4:
         print('WARNING: Only {} blocks until that order match expires. The payment might not make into the blockchain in time.'.format(time_left))
     if 10 - time_left < 4:
-        print('WARNING: Order match has only {} confirmations.'.format(time_left))
+        print('WARNING: Order match has only {} confirmation(s).'.format(10 - time_left))
 
     tx0_hash_bytes, tx1_hash_bytes = binascii.unhexlify(bytes(tx0_hash, 'utf-8')), binascii.unhexlify(bytes(tx1_hash, 'utf-8'))
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
