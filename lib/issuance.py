@@ -27,17 +27,13 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
     if call_date is None: call_date = 0
 
     if not isinstance(amount, int):
-        problems.append('amount must be in satoshi')
-        return problems #avoid an exception
-    if not isinstance(call_price, int):
-        problems.append('call_price must be in satoshi')
+        problems.append('amount must be in satoshis')
         return problems
     if not isinstance(call_date, int):
         problems.append('call_date must be epoch integer')
         return problems
 
-    if not destination and amount <= 0: problems.append('non‐positive amount')
-    if destination and amount != 0: problems.append('amount must be 0 for transfers')
+    if amount < 0: problems.append('negative amount')
     if call_price < 0: problems.append('negative call_price')
     if call_date < 0: problems.append('negative call_date')
 
@@ -175,6 +171,7 @@ def parse (db, tx, message):
         'asset': asset,
         'amount': amount,
         'divisible': divisible,
+        'source': tx['source'],
         'issuer': issuer,
         'transfer': transfer,
         'callable': callable_,
@@ -185,7 +182,7 @@ def parse (db, tx, message):
         'locked': lock,
         'status': status,
     }
-    sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :amount, :divisible, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :lock, :status)'
+    sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :amount, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :lock, :status)'
     issuance_parse_cursor.execute(sql, bindings)
 
     # Credit.

@@ -317,6 +317,7 @@ CREATE TABLE issuances(
                       asset TEXT,
                       amount INTEGER,
                       divisible BOOL,
+                      source TEXT,
                       issuer TEXT,
                       transfer BOOL,
                       callable BOOL,
@@ -327,8 +328,8 @@ CREATE TABLE issuances(
                       locked BOOL,
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
-INSERT INTO issuances VALUES(5,'e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db',154913,'BBBB',1000000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'',500000000,NULL,'valid');
-INSERT INTO issuances VALUES(6,'67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6',154914,'BBBC',100000,0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1,17,0.015,'foobar',500000000,NULL,'valid');
+INSERT INTO issuances VALUES(5,'e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db',154913,'BBBB',1000000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'',500000000,NULL,'valid');
+INSERT INTO issuances VALUES(6,'67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6',154914,'BBBC',100000,0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1,17,0.015,'foobar',500000000,NULL,'valid');
 -- Triggers and indices on  issuances
 CREATE INDEX valid_asset_idx ON issuances (status, asset)
                    ;
@@ -356,10 +357,10 @@ INSERT INTO messages VALUES(11,154912,'insert','credits','{"action": null, "addr
 INSERT INTO messages VALUES(12,154913,'update','order_matches','{"order_match_id": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5", "status": "completed"}');
 INSERT INTO messages VALUES(13,154912,'insert','btcpays','{"block_index": 154912, "btc_amount": 50000000, "destination": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "order_match_id": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5", "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71", "tx_index": 4}');
 INSERT INTO messages VALUES(14,154913,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "amount": 500000000, "asset": "XCP", "block_index": 154913, "event": null}');
-INSERT INTO messages VALUES(15,154913,'insert','issuances','{"amount": 1000000000, "asset": "BBBB", "block_index": 154913, "call_date": 0, "call_price": 0, "callable": false, "description": "", "divisible": true, "fee_paid": 500000000, "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "locked": false, "status": "valid", "transfer": false, "tx_hash": "e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db", "tx_index": 5}');
+INSERT INTO messages VALUES(15,154913,'insert','issuances','{"amount": 1000000000, "asset": "BBBB", "block_index": 154913, "call_date": 0, "call_price": 0, "callable": false, "description": "", "divisible": true, "fee_paid": 500000000, "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "locked": false, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "transfer": false, "tx_hash": "e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db", "tx_index": 5}');
 INSERT INTO messages VALUES(16,154913,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "amount": 1000000000, "asset": "BBBB", "block_index": 154913, "event": null}');
 INSERT INTO messages VALUES(17,154914,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "amount": 500000000, "asset": "XCP", "block_index": 154914, "event": null}');
-INSERT INTO messages VALUES(18,154914,'insert','issuances','{"amount": 100000, "asset": "BBBC", "block_index": 154914, "call_date": 17, "call_price": 0.015, "callable": true, "description": "foobar", "divisible": false, "fee_paid": 500000000, "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "locked": false, "status": "valid", "transfer": false, "tx_hash": "67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6", "tx_index": 6}');
+INSERT INTO messages VALUES(18,154914,'insert','issuances','{"amount": 100000, "asset": "BBBC", "block_index": 154914, "call_date": 17, "call_price": 0.015, "callable": true, "description": "foobar", "divisible": false, "fee_paid": 500000000, "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "locked": false, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "transfer": false, "tx_hash": "67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6", "tx_index": 6}');
 INSERT INTO messages VALUES(19,154914,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "amount": 100000, "asset": "BBBC", "block_index": 154914, "event": null}');
 INSERT INTO messages VALUES(20,154915,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "amount": 60, "asset": "XCP", "block_index": 154915, "event": null}');
 INSERT INTO messages VALUES(21,154915,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "amount": 60, "asset": "XCP", "block_index": 154915, "event": null}');

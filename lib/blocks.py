@@ -273,6 +273,7 @@ def initialise(db):
                       asset TEXT,
                       amount INTEGER,
                       divisible BOOL,
+                      source TEXT,
                       issuer TEXT,
                       transfer BOOL,
                       callable BOOL,

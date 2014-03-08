@@ -18,13 +18,13 @@ def validate (db, source, give_asset, give_amount, get_asset, get_amount, expira
         problems.append('trading an asset for itself')
 
     if not isinstance(give_amount, int):
-        problems.append('give_amount must be in satoshi')
-        return problems #avoid an exception
+        problems.append('give_amount must be in satoshis')
+        return problems
     if not isinstance(get_amount, int):
-        problems.append('get_amount must be in satoshi')
+        problems.append('get_amount must be in satoshis')
         return problems
     if not isinstance(fee_required, int):
-        problems.append('fee_required must be in satoshi')
+        problems.append('fee_required must be in satoshis')
         return problems
     if not isinstance(expiration, int):
         problems.append('expiration must be expressed as an integer block delta')

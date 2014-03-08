@@ -19,8 +19,8 @@ def validate (db, source, destination, quantity, block_index=None, overburn=Fals
         problems.append('wrong destination address')
 
     if not isinstance(quantity, int):
-        problems.append('quantity must be in satoshi')
-        return problems #avoid an exception
+        problems.append('quantity must be in satoshis')
+        return problems
 
     if quantity <= 0: problems.append('non‐positive quantity')
 

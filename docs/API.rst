@@ -100,7 +100,7 @@ Python Example
     # specified as False
     payload = {
       "method": "create_send",
-      "params": ["1CUdFmgK9trTNZHALfqGvd8d6nUZqH2AAf", "17rRm52PYGkntcJxD2yQF9jQqRS4S2nZ7E", 100000000, "XCP", false],
+      "params": ["1CUdFmgK9trTNZHALfqGvd8d6nUZqH2AAf", "17rRm52PYGkntcJxD2yQF9jQqRS4S2nZ7E", "XCP", 100000000, false],
       "jsonrpc": "2.0",
       "id": 0,
     }
@@ -131,7 +131,7 @@ assets
 ^^^^^^^^^
 
 Everywhere in the API an asset is referenced as an uppercase alphabetic (base
-26) string name of the asset, of at least 4 characters in length, or as 'BTC' or 'XCP' as appropriate. Examples are:
+26) string name of the asset, of at least 4 characters in length and not starting with 'A', or as 'BTC' or 'XCP' as appropriate. Examples are:
 
 - "BTC"
 - "XCP"
@@ -151,6 +151,13 @@ Examples:
 - 4381030000 = 4381030000 (if indivisible asset) 
 
 **NOTE:** XCP and BTC themselves are divisible assets, and thus are listed in satoshis.
+
+.. _ratios:
+
+floats
+^^^^^^^^^^^^^^^^^^^^
+
+Floats are are ratios or floating point values with six decimal places of precision, used in bets, dividends and callbacks.
 
 .. _filtering:
 
@@ -728,12 +735,13 @@ create_cancel
 create_dividend
 ^^^^^^^^^^^^^^
 
-.. py:function:: create_dividend(source, quantity_per_unit, share_asset, multisig=true)
+.. py:function:: create_dividend(source, quantity_per_unit, asset, dividend_asset, multisig=true)
 
    Issue a dividend on a specific user defined asset.
 
    :param string source: The address that will be issuing the dividend (must have the ownership of the asset which the dividend is being issued on).
-   :param string share_asset: The :ref:`asset <assets>` that the dividends are being rewarded on.
+   :param string asset: The :ref:`asset <assets>` that the dividends are being rewarded on.
+   :param string dividend_asset: The :ref:`asset <assets>` that the dividends are paid in.
    :param integer quantity_per_unit: The :ref:`amount <amounts>` of XCP rewarded per whole unit of the asset.
    :param boolean multisig: See :ref:`this section <multisig_param>`.  
    :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
@@ -744,7 +752,7 @@ create_dividend
 create_issuance
 ^^^^^^^^^^^^^^^^^
 
-.. py:function:: create_issuance(source, quantity, asset, divisible, description, callable=false, call_date=null, call_price=null, transfer_destination=null, multisig=true):
+.. py:function:: create_issuance(source, asset, quantity, divisible, description, callable=false, call_date=null, call_price=null, transfer_destination=null, multisig=true):
 
    Issue a new asset, issue more of an existing asset or transfer the ownership of an asset.
 
@@ -754,7 +762,7 @@ create_issuance
    :param boolean divisible: Whether this asset is divisible or not (if a transfer, this value must match the value specified when the asset was originally issued).
    :param boolean callable: Whether the asset is callable or not.
    :param integer call_date: The timestamp at which the asset may be called back, in Unix time. Only valid for callable assets.
-   :param integer call_price: The :ref:`price <amounts>` at which the asset may be called back, on the specified call_date. Only valid for callable assets.
+   :param integer call_price: The :ref:`price <floats>` at which the asset may be called back, on the specified call_date. Only valid for callable assets.
    :param boolean description: A textual description for the asset. 52 bytes max.
    :param string transfer_destination: The address to receive the asset (only used when *transferring* assets -- leave set to ``null`` if issuing an asset).
    :param boolean multisig: See :ref:`this section <multisig_param>`.  
@@ -766,7 +774,7 @@ create_issuance
 create_order
 ^^^^^^^^^^^^^^
 
-.. py:function:: create_order(source, give_quantity, give_asset, get_quantity, get_asset, expiration, fee_required=0, fee_provided=config.MIN_FEE, multisig=true)
+.. py:function:: create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required=0, fee_provided=config.MIN_FEE, multisig=true)
 
    Issue an order request.
 
@@ -789,7 +797,7 @@ create_order
 create_send
 ^^^^^^^^^^^^^^
 
-.. py:function:: create_send(source, destination, quantity, asset, multisig=true)
+.. py:function:: create_send(source, destination, asset, quantity, multisig=true)
 
    Send XCP or a user defined asset.
 
