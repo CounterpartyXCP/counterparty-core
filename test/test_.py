@@ -355,15 +355,12 @@ def test_json_rpc():
 
     for payload in payloads:
         for attempt in range(100):  # Try until server is ready.
-            print(payload)
             try:
                 response = requests.post(url, data=json.dumps(payload), headers=headers, auth=auth).json()
-                try:
-                    output_new['rpc.' + payload['method']] = response['result']
-                except:
-                    output_new['rpc.' + payload['method']] = response['error']
+                assert response['result']
                 assert response['jsonrpc'] == '2.0'
                 assert response['id'] == 0
+                output_new['rpc.' + payload['method']] = response['result']
                 break
             except requests.exceptions.ConnectionError:
                 time.sleep(.05)

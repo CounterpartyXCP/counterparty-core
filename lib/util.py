@@ -112,7 +112,7 @@ def log (db, command, category, bindings):
                 else:
                     divisibility = 'indivisible'
                     unit = 1
-                if bindings['callable'] and (bindings['block_index'] > 283271 or config.TESTNET):
+                if bindings['callable'] and (bindings['block_index'] > 283271 or config.TESTNET):   # Protocol change.
                     callability = 'callable from {} for {} XCP/{}'.format(isodt(bindings['call_date']), bindings['call_price'], bindings['asset'])
                 else:
                     callability = 'uncallable'
@@ -700,7 +700,12 @@ def get_balances (db, address=None, asset=None, filters=None, order_by=None, ord
     """This should never be used to check Bitcoin balances."""
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
-    if address: filters.append({'field': 'address', 'op': '==', 'value': address})
+    if address:
+        from . import bitcoin   # HACK
+        if not bitcoin.base58_decode(address, config.ADDRESSVERSION):
+            raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
+                                                 address)
+        filters.append({'field': 'address', 'op': '==', 'value': address})
     if asset: filters.append({'field': 'asset', 'op': '==', 'value': asset})
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM balances''')

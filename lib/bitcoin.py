@@ -201,7 +201,7 @@ def base58_decode (s, version):
 
     addrbyte, data, chk0 = k[0:1], k[1:-4], k[-4:]
     if addrbyte != version:
-        raise exceptions.VersionByteError('mainnet–testnet mismatch')
+        raise exceptions.VersionByteError('incorrect version byte')
     chk1 = dhash(addrbyte + data)[:4]
     if chk0 != chk1:
         raise exceptions.Base58ChecksumError('Checksum mismatch: %r ≠ %r' % (chk0, chk1))
@@ -339,12 +339,19 @@ def get_inputs (source, total_btc_out, unittest=False):
             listunspent = json.load(listunspent_test_file)
     unspent = [coin for coin in listunspent if coin['address'] == source]
     inputs, total_btc_in = [], 0
+    change_amount = None
     for coin in unspent:
         inputs.append(coin)
         total_btc_in += round(coin['amount'] * config.UNIT)
-        if total_btc_in >= total_btc_out:
-            return inputs, total_btc_in
-    return None, None
+        change_amount = total_btc_in - total_btc_out
+        if total_btc_in >= total_btc_out and change_amount >= config.REGULAR_DUST_SIZE:
+            return inputs, total_btc_in, change_amount
+
+    # If change is necessary, need a bit more so that the change output is not a dust output.
+    if change_amount:
+        return None, None, config.REGULAR_DUST_SIZE
+    else:
+        return None, None, None
 
 # Replace unittest flag with fake bitcoind JSON-RPC server.
 def transaction (tx_info, multisig, unittest=False):
@@ -404,16 +411,15 @@ def transaction (tx_info, multisig, unittest=False):
     if destination: total_btc_out += btc_amount
 
     # Construct inputs.
-    inputs, total_btc_in = get_inputs(source, total_btc_out, unittest=unittest)
+    inputs, total_btc_in, change_amount = get_inputs(source, total_btc_out, unittest=unittest)
     if not inputs:
-        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need {} BTC.)'.format(source, total_btc_out / config.UNIT))
+        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need {} BTC.)'.format(source, (total_btc_out  + change_amount) / config.UNIT))
 
     # Construct outputs.
     if destination: destination_output = (destination, btc_amount)
     else: destination_output = None
     if data: data_output = (data_array, data_value)
     else: data_output = None
-    change_amount = total_btc_in - total_btc_out    # No check to make sure that the change output is above the dust target_value.
     if change_amount: change_output = (source, change_amount)
     else: change_output = None
 
