@@ -351,7 +351,7 @@ def get_inputs (source, total_btc_out, unittest=False):
     if change_amount:
         return None, None, config.REGULAR_DUST_SIZE
     else:
-        return None, None, None
+        return None, None, 0
 
 # Replace unittest flag with fake bitcoind JSON-RPC server.
 def transaction (tx_info, multisig, unittest=False):
