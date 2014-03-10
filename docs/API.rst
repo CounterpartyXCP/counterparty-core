@@ -531,7 +531,7 @@ get_asset_info
      - **total_issued** (*integer*): The :ref:`quantity <amounts>` of the asset issued, in total
      - **callable** (*boolean*): If the asset is callable or not
      - **call_date** (*integer*): The call date, as an epoch timestamp
-     - **call_price** (*integer*): The call price, in satoshi
+     - **call_price** (*float*): The call price
      - **description** (*string*): The asset's current description
      - **issuer** (*string*): The asset's original owner (i.e. issuer)
 
@@ -689,12 +689,12 @@ create_btcpay
 create_burn
 ^^^^^^^^^^^^^^
 
-.. py:function:: create_burn(source, quantity, multisig=true)
+.. py:function:: create_burn(source, amount, multisig=true)
 
    Burn a given amount of BTC for XCP (**only possible between blocks 278310 and 283810**).
 
    :param string source: The address with the BTC to burn.
-   :param integer quantity: The :ref:`amount <amounts>` of BTC to burn (1 BTC maximum burn per address).
+   :param integer amount: The :ref:`amount <amounts>` of BTC to burn (1 BTC maximum burn per address).
    :param boolean multisig: See :ref:`this section <multisig_param>`.  
    :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
@@ -735,14 +735,14 @@ create_cancel
 create_dividend
 ^^^^^^^^^^^^^^
 
-.. py:function:: create_dividend(source, quantity_per_unit, asset, dividend_asset, multisig=true)
+.. py:function:: create_dividend(source, amount_per_unit, asset, dividend_asset, multisig=true)
 
    Issue a dividend on a specific user defined asset.
 
    :param string source: The address that will be issuing the dividend (must have the ownership of the asset which the dividend is being issued on).
    :param string asset: The :ref:`asset <assets>` that the dividends are being rewarded on.
    :param string dividend_asset: The :ref:`asset <assets>` that the dividends are paid in.
-   :param integer quantity_per_unit: The :ref:`amount <amounts>` of XCP rewarded per whole unit of the asset.
+   :param integer amount_per_unit: The :ref:`amount <amounts>` of XCP rewarded per whole unit of the asset.
    :param boolean multisig: See :ref:`this section <multisig_param>`.  
    :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
@@ -752,17 +752,17 @@ create_dividend
 create_issuance
 ^^^^^^^^^^^^^^^^^
 
-.. py:function:: create_issuance(source, asset, quantity, divisible, description, callable=false, call_date=null, call_price=null, transfer_destination=null, multisig=true):
+.. py:function:: create_issuance(source, asset, amount, divisible, description, callable=false, call_date=null, call_price=null, transfer_destination=null, multisig=true):
 
    Issue a new asset, issue more of an existing asset or transfer the ownership of an asset.
 
    :param string source: The address that will be issuing or transfering the asset.
-   :param integer quantity: The :ref:`quantity <amounts>` of the asset to issue (set to 0 if *transferring* an asset).
+   :param integer amount: The :ref:`quantity <amounts>` of the asset to issue (set to 0 if *transferring* an asset).
    :param string asset: The :ref:`asset <assets>` to issue or transfer.
    :param boolean divisible: Whether this asset is divisible or not (if a transfer, this value must match the value specified when the asset was originally issued).
    :param boolean callable: Whether the asset is callable or not.
    :param integer call_date: The timestamp at which the asset may be called back, in Unix time. Only valid for callable assets.
-   :param integer call_price: The :ref:`price <floats>` at which the asset may be called back, on the specified call_date. Only valid for callable assets.
+   :param float call_price: The :ref:`price <floats>` at which the asset may be called back, on the specified call_date. Only valid for callable assets.
    :param boolean description: A textual description for the asset. 52 bytes max.
    :param string transfer_destination: The address to receive the asset (only used when *transferring* assets -- leave set to ``null`` if issuing an asset).
    :param boolean multisig: See :ref:`this section <multisig_param>`.  
@@ -774,14 +774,14 @@ create_issuance
 create_order
 ^^^^^^^^^^^^^^
 
-.. py:function:: create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required=0, fee_provided=config.MIN_FEE, multisig=true)
+.. py:function:: create_order(source, give_asset, give_amount, get_asset, get_amount, expiration, fee_required=0, fee_provided=config.MIN_FEE, multisig=true)
 
    Issue an order request.
 
    :param string source: The address that will be issuing the order request (must have the necessary quantity of the specified asset to give).
-   :param integer give_quantity: The :ref:`quantity <amounts>` of the asset to give.
+   :param integer give_amount: The :ref:`quantity <amounts>` of the asset to give.
    :param string give_asset: The :ref:`asset <assets>` to give.
-   :param integer get_quantity: The :ref:`quantity <amounts>` of the asset requested in return.
+   :param integer get_amount: The :ref:`quantity <amounts>` of the asset requested in return.
    :param string get_asset: The :ref:`asset <assets>` requested in return.
    :param integer expiration: The number of blocks for which the order should be valid.
    :param integer fee_required: The miners' fee required to be paid by orders for them to match this one; in BTC;
@@ -797,13 +797,13 @@ create_order
 create_send
 ^^^^^^^^^^^^^^
 
-.. py:function:: create_send(source, destination, asset, quantity, multisig=true)
+.. py:function:: create_send(source, destination, asset, amount, multisig=true)
 
    Send XCP or a user defined asset.
 
    :param string source: The address that will be sending (must have the necessary quantity of the specified asset).
    :param string destination: The address to receive the asset.
-   :param integer quantity: The :ref:`quantity <amounts>` of the asset to send.
+   :param integer amount: The :ref:`quantity <amounts>` of the asset to send.
    :param string asset: The :ref:`asset <assets>` to send.
    :param boolean multisig: See :ref:`this section <multisig_param>`.  
    :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.

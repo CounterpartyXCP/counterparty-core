@@ -1,34 +1,28 @@
 #! /usr/bin/env python3
-
-
 import os
 import argparse
 import json
-
 import decimal
-D = decimal.Decimal
-
 import sys
 import logging
-import requests
-from prettytable import PrettyTable
 import unicodedata
-
 import time
 import dateutil.parser
 import calendar
-from threading import Thread
-
-import appdirs
 import logging
 import configparser
+from threading import Thread
 
-# Units
+import requests
+import appdirs
+from prettytable import PrettyTable
+
 from lib import (config, api, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 if os.name == 'nt':
     from lib import util_windows
 
+D = decimal.Decimal
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
 
@@ -403,7 +397,7 @@ def balances (address):
     address_data = util.get_address(db, address=address)
     balances = address_data['balances']
     table = PrettyTable(['Asset', 'Amount'])
-    table.add_row(['BTC', bitcoin.get_btc_balance(address)])  # BTC
+    table.add_row(['BTC', bitcoin.get_btc_balance(address, normalize=True)])  # BTC
     for balance in balances:
         asset = balance['asset']
         amount = util.devise(db, balance['amount'], balance['asset'], 'output')
@@ -752,7 +746,7 @@ if __name__ == '__main__':
                 table.add_row(['BTC', btc_balance])  # BTC
                 if 'BTC' in totals.keys(): totals['BTC'] += btc_balance
                 else: totals['BTC'] = btc_balance
-                empty = False
+                empty = False            
             for balance in balances:
                 asset = balance['asset']
                 balance = D(util.devise(db, balance['amount'], balance['asset'], 'output'))
