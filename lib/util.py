@@ -297,7 +297,7 @@ def versions_check (db):
  
     # Check client version (for important UI changes).
     if config.CLIENT_VERSION < versions['minimum_client_version']:
-        raise exceptions.ClientVersionError('Please upgrade counterpartyd to the latest version.')
+        raise exceptions.ClientVersionError('Please upgrade counterpartyd to the latest version and restart the server.')
 
     # Check the database version when past the block at which the protocol change
     # comes into effect.
@@ -309,7 +309,7 @@ def versions_check (db):
     for protocol_change in versions['protocol_changes']:
         if block_index >= protocol_change['block_index']:
             if config.DB_VERSION < protocol_change['minimum_database_version']:
-                raise exceptions.DatabaseVersionError('Please upgrade counterpartyd to the latest version.')
+                raise exceptions.DatabaseVersionError('Please upgrade counterpartyd to the latest version and restart the server.')
 
     logging.debug('Status: Version checks passed.')
     return
