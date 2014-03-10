@@ -339,19 +339,16 @@ def get_inputs (source, total_btc_out, unittest=False):
             listunspent = json.load(listunspent_test_file)
     unspent = [coin for coin in listunspent if coin['address'] == source]
     inputs, total_btc_in = [], 0
-    change_amount = None
+    change_amount = 0
     for coin in unspent:
         inputs.append(coin)
         total_btc_in += round(coin['amount'] * config.UNIT)
         change_amount = total_btc_in - total_btc_out
-        if total_btc_in >= total_btc_out and change_amount >= config.REGULAR_DUST_SIZE:
+        if total_btc_in >= total_btc_out and (change_amount == 0 or change_amount >= config.REGULAR_DUST_SIZE): # If change is necessary, must not be a dust output.
             return inputs, total_btc_in, change_amount
 
-    # If change is necessary, need a bit more so that the change output is not a dust output.
-    if change_amount:
-        return None, None, config.REGULAR_DUST_SIZE
-    else:
-        return None, None, 0
+    # Approximate needed change by with most recently calculated amount.
+    return None, None, change_amount
 
 # Replace unittest flag with fake bitcoind JSON-RPC server.
 def transaction (tx_info, multisig, unittest=False):
