@@ -685,8 +685,8 @@ if __name__ == '__main__':
 
     elif args.action == 'dividend':
         quantity_per_unit = util.devise(db, args.quantity_per_unit, 'XCP', 'input')
-        cli('create_dividend', [args.source, quantity_per_unit, args.asset],
-           args.unsigned, args.dividend_asset)
+        cli('create_dividend', [args.source, quantity_per_unit, args.asset, args.dividend_asset],
+           args.unsigned)
 
     elif args.action == 'burn':
         quantity = util.devise(db, args.quantity, 'BTC', 'input')
