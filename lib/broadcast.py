@@ -68,7 +68,7 @@ def compose (db, source, timestamp, value, fee_fraction, text):
                         text.encode('utf-8'))
     if len(data) > 80:
         raise exceptions.BroadcastError('Text is greater than 52 bytes.')
-    return (source, None, None, config.MIN_FEE, data)
+    return (source, [], config.MIN_FEE, data)
 
 def parse (db, tx, message):
     broadcast_parse_cursor = db.cursor()

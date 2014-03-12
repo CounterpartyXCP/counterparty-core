@@ -227,7 +227,7 @@ def op_push (i):
     else:
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
-def serialise (inputs, destination_output=None, data_output=None, change_output=None, source=None, multisig=False):
+def serialise (inputs, destination_outputs, data_output=None, change_output=None, source=None, multisig=False):
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
     # Number of inputs.
@@ -246,7 +246,7 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
 
     # Number of outputs.
     n = 0
-    if destination_output: n += 1
+    n += len(destination_outputs)
     if data_output:
         data_array, value = data_output
         for data_chunk in data_array: n += 1
@@ -256,8 +256,7 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
     s += var_int(n)
 
     # Destination output.
-    if destination_output:
-        address, value = destination_output
+    for address, value in destination_outputs:
         pubkeyhash = base58_decode(address, config.ADDRESSVERSION)
         s += value.to_bytes(8, byteorder='little')          # Value
         script = OP_DUP                                     # OP_DUP
@@ -352,15 +351,16 @@ def get_inputs (source, total_btc_out, unittest=False):
 
 # Replace unittest flag with fake bitcoind JSON-RPC server.
 def transaction (tx_info, multisig, unittest=False):
-    source, destination, btc_amount, fee, data = tx_info
+    source, destination_outputs, fee, data = tx_info
     
     if not isinstance(fee, int):
         raise exceptions.TransactionError('Fee must be in satoshis')
 
     if config.PREFIX == config.UNITTEST_PREFIX: unittest = True
 
-    # Validate addresses.
-    for address in (source, destination):
+    # Validate source and all destination addresses.
+    destinations = [address for address, value in destination_outputs]
+    for address in destinations + [source]:
         if address:
             try:
                 base58_decode(address, config.ADDRESSVERSION)
@@ -374,17 +374,19 @@ def transaction (tx_info, multisig, unittest=False):
             raise exceptions.InvalidAddressError('Not one of your Bitcoin addresses:', source)
 
     # Check that the destination output isn't a dust output.
-    if destination:
+    # Set null values to dust size.
+    new_destination_outputs = []
+    for address, value in destination_outputs:
         if multisig:
-            if btc_amount == None: btc_amount = config.MULTISIG_DUST_SIZE
-            if not btc_amount >= config.MULTISIG_DUST_SIZE:
+            if value == None: value = config.MULTISIG_DUST_SIZE
+            if not value >= config.MULTISIG_DUST_SIZE:
                 raise exceptions.TransactionError('Destination output is below the dust target value.')
         else:
-            if btc_amount == None: btc_amount = config.REGULAR_DUST_SIZE
-            if not btc_amount >= config.REGULAR_DUST_SIZE:
+            if value == None: value = config.REGULAR_DUST_SIZE
+            if not value >= config.REGULAR_DUST_SIZE:
                 raise exceptions.TransactionError('Destination output is below the dust target value.')
-    else:
-        assert not btc_amount
+        new_destination_outputs.append((address, value))
+    destination_outputs = new_destination_outputs
 
     # Divide data into chunks.
     if data:
@@ -405,23 +407,21 @@ def transaction (tx_info, multisig, unittest=False):
     if multisig: data_value = config.MULTISIG_DUST_SIZE
     else: data_value = config.OP_RETURN_VALUE
     for data_chunk in data_array: total_btc_out += data_value
-    if destination: total_btc_out += btc_amount
+    total_btc_out += sum([value for address, value in destination_outputs])
 
     # Construct inputs.
     inputs, total_btc_in, change_amount = get_inputs(source, total_btc_out, unittest=unittest)
     if not inputs:
-        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need {} BTC.)'.format(source, (total_btc_out  + change_amount) / config.UNIT))
+        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need {} BTC.)'.format(source, (total_btc_out + max(change_amount, 0)) / config.UNIT))
 
     # Construct outputs.
-    if destination: destination_output = (destination, btc_amount)
-    else: destination_output = None
     if data: data_output = (data_array, data_value)
     else: data_output = None
     if change_amount: change_output = (source, change_amount)
     else: change_output = None
 
     # Serialise inputs and outputs.
-    transaction = serialise(inputs, destination_output, data_output, change_output, source=source, multisig=multisig)
+    transaction = serialise(inputs, destination_outputs, data_output, change_output, source=source, multisig=multisig)
     unsigned_tx_hex = binascii.hexlify(transaction).decode('utf-8')
     return unsigned_tx_hex
 

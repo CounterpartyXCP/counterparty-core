@@ -21,10 +21,6 @@ def validate (db, source, amount_per_unit, asset, dividend_asset):
     if asset in ('BTC', 'XCP'):
         problems.append('cannot pay dividends to holders of BTC or XCP')
 
-    if not isinstance(amount_per_unit, int):
-        problems.append('amount_per_unit must be in satoshis')
-        return problems
-
     if amount_per_unit <= 0: problems.append('non‐positive amount per unit')
 
     # Examine asset.
@@ -51,15 +47,17 @@ def validate (db, source, amount_per_unit, asset, dividend_asset):
         dividend_amount = address_amount * amount_per_unit
         if divisible: dividend_amount /= config.UNIT
         if not dividend_divisible: dividend_amount /= config.UNIT
+        if dividend_asset == 'BTC' and dividend_amount < config.MULTISIG_DUST_SIZE:  continue    # A bit hackish.
         dividend_amount = int(dividend_amount)
         outputs.append({'address': address, 'dividend_amount': dividend_amount})
 
     dividend_total = sum([output['dividend_amount'] for output in outputs])
     if not dividend_total: problems.append('zero dividend')
 
-    balances = util.get_balances(db, address=source, asset=dividend_asset)
-    if not balances or balances[0]['amount'] < dividend_total:
-        problems.append('insufficient funds')
+    if dividend_asset != 'BTC':
+        balances = util.get_balances(db, address=source, asset=dividend_asset)
+        if not balances or balances[0]['amount'] < dividend_total:
+            problems.append('insufficient funds')
 
     return dividend_total, outputs, problems
 
@@ -70,13 +68,13 @@ def compose (db, source, amount_per_unit, asset, dividend_asset):
     print('Total amount to be distributed in dividends:', util.devise(db, dividend_total, dividend_asset, 'output'), dividend_asset)
 
     if dividend_asset == 'BTC':
-        problems.append('Cannot (yet) pay BTC dividends.')
+        return (source, [(output['address'], output['dividend_amount']) for output in outputs], config.MIN_FEE, None)
 
     asset_id = util.get_asset_id(asset)
     dividend_asset_id = util.get_asset_id(dividend_asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT_2, amount_per_unit, asset_id, dividend_asset_id)
-    return (source, None, None, config.MIN_FEE, data)
+    return (source, [], config.MIN_FEE, data)
 
 def parse (db, tx, message):
     dividend_parse_cursor = db.cursor()

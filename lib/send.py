@@ -28,7 +28,7 @@ def compose (db, source, destination, asset, amount):
 
     # Just send BTC?
     if asset == 'BTC':
-        return (source, destination, amount, config.MIN_FEE, None)
+        return (source, [(destination, amount)], config.MIN_FEE, None)
     
     #amount must be in int satoshi (not float, string, etc)
     if not isinstance(amount, int):
@@ -46,7 +46,7 @@ def compose (db, source, destination, asset, amount):
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, amount)
 
-    return (source, destination, None, config.MIN_FEE, data)
+    return (source, [(destination, None)], config.MIN_FEE, data)
 
 def parse (db, tx, message):
     cursor = db.cursor()

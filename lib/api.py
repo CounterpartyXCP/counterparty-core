@@ -375,8 +375,8 @@ class APIServer(threading.Thread):
             return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def create_dividend(source, amount_per_unit, asset, dividend_asset, multisig=config.MULTISIG):
-            tx_info = dividend.compose(db, source, quantity_per_unit, asset)
+        def create_dividend(source, quantity_per_unit, asset, dividend_asset, multisig=config.MULTISIG):
+            tx_info = dividend.compose(db, source, quantity_per_unit, asset, dividend_asset)
             return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method

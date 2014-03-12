@@ -71,7 +71,7 @@ def compose (db, source, fraction, asset):
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, fraction, asset_id)
-    return (source, None, None, config.MIN_FEE, data)
+    return (source, [], config.MIN_FEE, data)
 
 def parse (db, tx, message):
     callback_parse_cursor = db.cursor()

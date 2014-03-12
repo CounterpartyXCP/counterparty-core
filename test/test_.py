@@ -348,7 +348,7 @@ def test_json_rpc():
     })
     payloads.append({
         "method": "create_send",
-        "params": {'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': destination_default, 'asset': 'XCP', 'quantity': 1},
+        "params": {'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': destination_default, 'asset': 'XCP', 'amount': 1},
         "jsonrpc": "2.0",
         "id": 0,
     })
@@ -357,6 +357,8 @@ def test_json_rpc():
         for attempt in range(100):  # Try until server is ready.
             try:
                 response = requests.post(url, data=json.dumps(payload), headers=headers, auth=auth).json()
+                # print('\npayload', payload)
+                # print('response', response, '\n')
                 if not response['result']:
                     raise Exception('testnet server not running')
                     assert False

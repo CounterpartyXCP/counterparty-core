@@ -60,7 +60,7 @@ def compose (db, order_match_id):
     tx0_hash_bytes, tx1_hash_bytes = binascii.unhexlify(bytes(tx0_hash, 'utf-8')), binascii.unhexlify(bytes(tx1_hash, 'utf-8'))
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, tx0_hash_bytes, tx1_hash_bytes)
-    return (source, destination, btc_amount, config.MIN_FEE, data)
+    return (source, [(destination, btc_amount)], config.MIN_FEE, data)
 
 def parse (db, tx, message):
     cursor = db.cursor()
