@@ -29,10 +29,10 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
     if not isinstance(amount, int):
         problems.append('amount must be in satoshis')
         return problems
-    if not isinstance(call_date, int):
+    if call_date and not isinstance(call_date, int):
         problems.append('call_date must be epoch integer')
         return problems
-    if not isinstance(call_price, float):
+    if call_price and not isinstance(call_price, float):
         problems.append('call_price must be a float')
         return problems
 
