@@ -73,10 +73,10 @@ Python Example
       url, data=json.dumps(payload), headers=headers, auth=auth).json()
     print("GET_BURNS RESULT: ", response)
     
-    #Fetch all debits for > 2 XCP between blocks 280537 and 280539, sorting the results by amount (descending order)
+    #Fetch all debits for > 2 XCP between blocks 280537 and 280539, sorting the results by quantity (descending order)
     payload = {
       "method": "get_debits",
-      "params": [[{'field': 'asset', 'op': '==', 'value': "XCP"}, {'field': 'amount', 'op': '>', 'value': 200000000}], 'amount', 'desc'],
+      "params": [[{'field': 'asset', 'op': '==', 'value': "XCP"}, {'field': 'quantity', 'op': '>', 'value': 200000000}], 'quantity', 'desc'],
       "jsonrpc": "2.0",
       "id": 0,
     }
@@ -137,12 +137,12 @@ Everywhere in the API an asset is referenced as an uppercase alphabetic (base
 - "XCP"
 - "FOOBAR"
 
-.. _amounts:
+.. _quantitys:
 
-amounts & balances
+quantitys & balances
 ^^^^^^^^^^^^^^^^^^^^
 
-Anywhere where an amount is specified, it is specified in **satoshis** (if a divisible asset), or as whole numbers
+Anywhere where an quantity is specified, it is specified in **satoshis** (if a divisible asset), or as whole numbers
 (if an indivisible asset). To convert satoshis to floating-point, simply cast to float and divide by 100,000,000.
 
 Examples:
@@ -245,7 +245,7 @@ get_balances
    include any BTC balances.
 
    :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param string order_by: If sorted results are desired, specify the name of a :ref:`balance object <balance-object>` attribute to order the results by (e.g. ``amount``). If left blank, the list of results will be returned unordered. 
+   :param string order_by: If sorted results are desired, specify the name of a :ref:`balance object <balance-object>` attribute to order the results by (e.g. ``quantity``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.
    :return: A list of one or more :ref:`balance objects <balance-object>` if any matching records were found, otherwise ``[]`` (empty list).
 
@@ -261,7 +261,7 @@ get_bets
 
    :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
    :param boolean is_valid: Set to ``true`` to only return valid records. Set to ``false`` to return all records (including invalid attempts).
-   :param string order_by: If sorted results are desired, specify the name of a :ref:`bet object <bet-object>` attribute to order the results by (e.g. ``wager_amount``). If left blank, the list of results will be returned unordered. 
+   :param string order_by: If sorted results are desired, specify the name of a :ref:`bet object <bet-object>` attribute to order the results by (e.g. ``wager_quantity``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
    :param integer start_block: If specified, only results from the specified block index on will be returned  
    :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
@@ -428,7 +428,7 @@ get_dividends
 
    :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
    :param boolean is_valid: Set to ``true`` to only return valid records. Set to ``false`` to return all records (including invalid attempts).
-   :param string order_by: If sorted results are desired, specify the name of a :ref:`dividend object <dividend-object>` attribute to order the results by (e.g. ``amount_per_unit``). If left blank, the list of results will be returned unordered. 
+   :param string order_by: If sorted results are desired, specify the name of a :ref:`dividend object <dividend-object>` attribute to order the results by (e.g. ``quantity_per_unit``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
    :param integer start_block: If specified, only results from the specified block index on will be returned  
    :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
@@ -528,7 +528,7 @@ get_asset_info
      - **owner** (*string*): The address that currently owns the asset (i.e. has issuance rights to it) 
      - **divisible** (*boolean*): Whether the asset is divisible or not
      - **locked** (*boolean*): Whether the asset is locked (future issuances prohibited)
-     - **total_issued** (*integer*): The :ref:`quantity <amounts>` of the asset issued, in total
+     - **total_issued** (*integer*): The :ref:`quantity <quantitys>` of the asset issued, in total
      - **callable** (*boolean*): If the asset is callable or not
      - **call_date** (*integer*): The call date, as an epoch timestamp
      - **call_price** (*float*): The call price
@@ -567,10 +567,10 @@ get_xcp_supply
 
 .. py:function:: get_xcp_supply(asset)
 
-   Gets the current total amount of XCP in existance (i.e. amount created via proof-of-burn, minus amount
+   Gets the current total quantity of XCP in existance (i.e. quantity created via proof-of-burn, minus quantity
    destroyed via asset issuances, etc).
    
-   :return:  The :ref:`quantity <amounts>` of XCP currently in existance.
+   :return:  The :ref:`quantity <quantitys>` of XCP currently in existance.
    
 
 .. _get_block_info:
@@ -644,8 +644,8 @@ create_bet
    :param string feed_address: The address that host the feed to be bet on.
    :param integer bet_type: 0 for Bullish CFD, 1 for Bearish CFD, 2 for Equal, 3 for NotEqual.
    :param integer deadline: The time at which the bet should be decided/settled, in Unix time.
-   :param integer wager: The :ref:`quantity <amounts>` of XCP to wager.
-   :param integer counterwager: The minimum :ref:`quantity <amounts>` of XCP to be wagered against, for the bets to match.
+   :param integer wager: The :ref:`quantity <quantitys>` of XCP to wager.
+   :param integer counterwager: The minimum :ref:`quantity <quantitys>` of XCP to be wagered against, for the bets to match.
    :param float target_value: Target value for Equal/NotEqual bet
    :param integer leverage: Leverage, as a fraction of 5040
    :param boolean multisig: See :ref:`this section <multisig_param>`.  
@@ -689,12 +689,12 @@ create_btcpay
 create_burn
 ^^^^^^^^^^^^^^
 
-.. py:function:: create_burn(source, amount, multisig=true)
+.. py:function:: create_burn(source, quantity, multisig=true)
 
-   Burn a given amount of BTC for XCP (**only possible between blocks 278310 and 283810**).
+   Burn a given quantity of BTC for XCP (**only possible between blocks 278310 and 283810**).
 
    :param string source: The address with the BTC to burn.
-   :param integer amount: The :ref:`amount <amounts>` of BTC to burn (1 BTC maximum burn per address).
+   :param integer quantity: The :ref:`quantity <quantitys>` of BTC to burn (1 BTC maximum burn per address).
    :param boolean multisig: See :ref:`this section <multisig_param>`.  
    :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
@@ -735,14 +735,14 @@ create_cancel
 create_dividend
 ^^^^^^^^^^^^^^
 
-.. py:function:: create_dividend(source, amount_per_unit, asset, dividend_asset, multisig=true)
+.. py:function:: create_dividend(source, quantity_per_unit, asset, dividend_asset, multisig=true)
 
    Issue a dividend on a specific user defined asset.
 
    :param string source: The address that will be issuing the dividend (must have the ownership of the asset which the dividend is being issued on).
    :param string asset: The :ref:`asset <assets>` that the dividends are being rewarded on.
    :param string dividend_asset: The :ref:`asset <assets>` that the dividends are paid in.
-   :param integer amount_per_unit: The :ref:`amount <amounts>` of XCP rewarded per whole unit of the asset.
+   :param integer quantity_per_unit: The :ref:`quantity <quantitys>` of XCP rewarded per whole unit of the asset.
    :param boolean multisig: See :ref:`this section <multisig_param>`.  
    :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
@@ -752,12 +752,12 @@ create_dividend
 create_issuance
 ^^^^^^^^^^^^^^^^^
 
-.. py:function:: create_issuance(source, asset, amount, divisible, description, callable=false, call_date=null, call_price=null, transfer_destination=null, multisig=true):
+.. py:function:: create_issuance(source, asset, quantity, divisible, description, callable=false, call_date=null, call_price=null, transfer_destination=null, multisig=true):
 
    Issue a new asset, issue more of an existing asset or transfer the ownership of an asset.
 
    :param string source: The address that will be issuing or transfering the asset.
-   :param integer amount: The :ref:`quantity <amounts>` of the asset to issue (set to 0 if *transferring* an asset).
+   :param integer quantity: The :ref:`quantity <quantitys>` of the asset to issue (set to 0 if *transferring* an asset).
    :param string asset: The :ref:`asset <assets>` to issue or transfer.
    :param boolean divisible: Whether this asset is divisible or not (if a transfer, this value must match the value specified when the asset was originally issued).
    :param boolean callable: Whether the asset is callable or not.
@@ -774,14 +774,14 @@ create_issuance
 create_order
 ^^^^^^^^^^^^^^
 
-.. py:function:: create_order(source, give_asset, give_amount, get_asset, get_amount, expiration, fee_required=0, fee_provided=config.MIN_FEE, multisig=true)
+.. py:function:: create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required=0, fee_provided=config.MIN_FEE, multisig=true)
 
    Issue an order request.
 
    :param string source: The address that will be issuing the order request (must have the necessary quantity of the specified asset to give).
-   :param integer give_amount: The :ref:`quantity <amounts>` of the asset to give.
+   :param integer give_quantity: The :ref:`quantity <quantitys>` of the asset to give.
    :param string give_asset: The :ref:`asset <assets>` to give.
-   :param integer get_amount: The :ref:`quantity <amounts>` of the asset requested in return.
+   :param integer get_quantity: The :ref:`quantity <quantitys>` of the asset requested in return.
    :param string get_asset: The :ref:`asset <assets>` requested in return.
    :param integer expiration: The number of blocks for which the order should be valid.
    :param integer fee_required: The miners' fee required to be paid by orders for them to match this one; in BTC;
@@ -797,13 +797,13 @@ create_order
 create_send
 ^^^^^^^^^^^^^^
 
-.. py:function:: create_send(source, destination, asset, amount, multisig=true)
+.. py:function:: create_send(source, destination, asset, quantity, multisig=true)
 
    Send XCP or a user defined asset.
 
    :param string source: The address that will be sending (must have the necessary quantity of the specified asset).
    :param string destination: The address to receive the asset.
-   :param integer amount: The :ref:`quantity <amounts>` of the asset to send.
+   :param integer quantity: The :ref:`quantity <quantitys>` of the asset to send.
    :param string asset: The :ref:`asset <assets>` to send.
    :param boolean multisig: See :ref:`this section <multisig_param>`.  
    :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
@@ -852,7 +852,7 @@ An object that describes a balance that is associated to a specific address:
 
 * **address** (*string*): The address that has the balance
 * **asset** (*string*): The ID of the :ref:`asset <assets>` in which the balance is specified
-* **amount** (*integer*): The :ref:`balance <amounts>` of the specified asset at this address
+* **quantity** (*integer*): The :ref:`balance <quantitys>` of the specified asset at this address
 
 
 .. _bet-object:
@@ -869,8 +869,8 @@ An object that describes a specific bet:
 * **feed_address** (*string*): The address with the feed that the bet is to be made on
 * **bet_type** (*integer*): 0 for Bullish CFD, 1 for Bearish CFD, 2 for Equal, 3 for Not Equal
 * **deadline** (*integer*): The timestamp at which the bet should be decided/settled, in Unix time.
-* **wager_amount** (*integer*): The :ref:`quantity <amounts>` of XCP to wager
-* **counterwager_amount** (*integer*): The minimum :ref:`quantity <amounts>` of XCP to be wagered by the user to bet against the bet issuer, if the other party were to accept the whole thing
+* **wager_quantity** (*integer*): The :ref:`quantity <quantitys>` of XCP to wager
+* **counterwager_quantity** (*integer*): The minimum :ref:`quantity <quantitys>` of XCP to be wagered by the user to bet against the bet issuer, if the other party were to accept the whole thing
 * **wager_remaining** (*integer*): The quantity of XCP wagered that is remaining to bet on
 * **odds** (*float*): 
 * **target_value** (*float*): Target value for Equal/NotEqual bet
@@ -904,8 +904,8 @@ An object that describes a specific occurance of two bets being matched (either 
 * **deadline** (*integer*): The timestamp at which the bet match was made, in Unix time.
 * **target_value** (*float*): Target value for Equal/NotEqual bet  
 * **leverage** (*integer*): Leverage, as a fraction of 5040
-* **forward_amount** (*integer*): The :ref:`amount <amounts>` of XCP bet in the initial bet
-* **backward_amount** (*integer*): The :ref:`amount <amounts>` of XCP bet in the matching bet
+* **forward_quantity** (*integer*): The :ref:`quantity <quantitys>` of XCP bet in the initial bet
+* **backward_quantity** (*integer*): The :ref:`quantity <quantitys>` of XCP bet in the matching bet
 * **fee_multiplier** (*integer*): 
 * **validity** (*string*): Set to "valid" if a valid order match. Any other setting signifies an invalid/improper order match
 
@@ -954,8 +954,8 @@ An object that describes an instance of a specific burn:
 * **tx_hash** (*string*): The transaction hash
 * **block_index** (*integer*): The block index (block number in the block chain)
 * **source** (*string*): The address the burn was performed from
-* **burned** (*integer*): The :ref:`amount <amounts>` of BTC burned
-* **earned** (*integer*): The :ref:`amount <amounts>` of XPC actually earned from the burn (takes into account any bonus amounts, 1 BTC limitation, etc)
+* **burned** (*integer*): The :ref:`quantity <quantitys>` of BTC burned
+* **earned** (*integer*): The :ref:`quantity <quantitys>` of XPC actually earned from the burn (takes into account any bonus quantitys, 1 BTC limitation, etc)
 * **validity** (*string*): Set to "valid" if a valid burn. Any other setting signifies an invalid/improper burn
 
 
@@ -986,7 +986,7 @@ An object that describes a account debit or credit:
 * **block_index** (*integer*): The block index (block number in the block chain)
 * **address** (*string*): The address debited or credited
 * **asset** (*string*): The :ref:`asset <assets>` debited or credited
-* **amount** (*integer*): The :ref:`amount <amounts>` of the specified asset debited or credited
+* **quantity** (*integer*): The :ref:`quantity <quantitys>` of the specified asset debited or credited
 
 
 .. _dividend-object:
@@ -1001,7 +1001,7 @@ An object that describes an issuance of dividends on a specific user defined ass
 * **block_index** (*integer*): The block index (block number in the block chain)
 * **source** (*string*): The address that issued the dividend
 * **asset** (*string*): The :ref:`asset <assets>` that the dividends are being rewarded on 
-* **amount_per_unit** (*integer*): The :ref:`amount <amounts>` of XCP rewarded per whole unit of the asset
+* **quantity_per_unit** (*integer*): The :ref:`quantity <quantitys>` of XCP rewarded per whole unit of the asset
 * **validity** (*string*): Set to "valid" if a valid burn. Any other setting signifies an invalid/improper burn
 
 
@@ -1016,7 +1016,7 @@ An object that describes a specific occurance of a user defined asset being issu
 * **tx_hash** (*string*): The transaction hash
 * **block_index** (*integer*): The block index (block number in the block chain)
 * **asset** (*string*): The :ref:`asset <assets>` being issued, or re-issued
-* **amount** (*integer*): The :ref:`amount <amounts>` of the specified asset being issued
+* **quantity** (*integer*): The :ref:`quantity <quantitys>` of the specified asset being issued
 * **divisible** (*boolean*): Whether or not the asset is divisible (must agree with previous issuances of the asset, if there are any)
 * **issuer** (*string*): 
 * **transfer** (*boolean*): Whether or not this objects marks the transfer of ownership rights for the specified quantity of this asset
@@ -1035,11 +1035,11 @@ An object that describes a specific order:
 * **block_index** (*integer*): The block index (block number in the block chain)
 * **source** (*string*): The address that made the order
 * **give_asset** (*string*): The :ref:`asset <assets>` being offered
-* **give_amount** (*integer*): The :ref:`amount <amounts>` of the specified asset being offered
-* **give_remaining** (*integer*): The :ref:`amount <amounts>` of the specified give asset remaining for the order
+* **give_quantity** (*integer*): The :ref:`quantity <quantitys>` of the specified asset being offered
+* **give_remaining** (*integer*): The :ref:`quantity <quantitys>` of the specified give asset remaining for the order
 * **get_asset** (*string*): The :ref:`asset <assets>` desired in exchange
-* **get_amount** (*integer*): The :ref:`amount <amounts>` of the specified asset desired in exchange
-* **get_remaining** (*integer*): The :ref:`amount <amounts>` of the specified get asset remaining for the order
+* **get_quantity** (*integer*): The :ref:`quantity <quantitys>` of the specified asset desired in exchange
+* **get_remaining** (*integer*): The :ref:`quantity <quantitys>` of the specified get asset remaining for the order
 * **price** (*float*): The given exchange rate (as an exchange ratio desired from the asset offered to the asset desired)
 * **expiration** (*integer*): The number of blocks over which the order should be valid
 * **fee_provided** (*integer*): The miners' fee provided; in BTC; required only if selling BTC (should not be lower than is required for acceptance in a block)
@@ -1064,9 +1064,9 @@ An object that describes a specific occurance of two orders being matched (eithe
 * **tx1_address** (*string*): The address that issued the second order
 * **tx1_expiration** (*integer*): The number of blocks over which the second order was valid
 * **forward_asset** (*string*): The :ref:`asset <assets>` exchanged FROM the first order to the second order
-* **forward_amount** (*integer*): The :ref:`amount <amounts>` of the specified forward asset
+* **forward_quantity** (*integer*): The :ref:`quantity <quantitys>` of the specified forward asset
 * **backward_asset** (*string*): The :ref:`asset <assets>` exchanged FROM the second order to the first order
-* **backward_amount** (*integer*): The :ref:`amount <amounts>` of the specified backward asset
+* **backward_quantity** (*integer*): The :ref:`quantity <quantitys>` of the specified backward asset
 * **validity** (*string*): Set to "valid" if a valid order match. Any other setting signifies an invalid/improper order match
 
 
@@ -1083,7 +1083,7 @@ An object that describes a specific send (e.g. "simple send", of XCP, or a user 
 * **source** (*string*): The source address of the send
 * **destination** (*string*): The destination address of the send
 * **asset** (*string*): The :ref:`asset <assets>` being sent
-* **amount** (*integer*): The :ref:`amount <amounts>` of the specified asset sent
+* **quantity** (*integer*): The :ref:`quantity <quantitys>` of the specified asset sent
 * **validity** (*string*): Set to "valid" if a valid send. Any other setting signifies an invalid/improper send
 
 

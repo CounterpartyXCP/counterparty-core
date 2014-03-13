@@ -261,8 +261,8 @@ class APIServer(threading.Thread):
 
             #get the last issurance message for this asset, which should reflect the current owner and if
             # its divisible (and if it was locked, for that matter)
-            locked = not last_issuance['amount'] and not last_issuance['transfer']
-            total_issued = sum([e['amount'] for e in issuances])
+            locked = not last_issuance['quantity'] and not last_issuance['transfer']
+            total_issued = sum([e['quantity'] for e in issuances])
             return {'owner': last_issuance['issuer'],
                     'divisible': bool(last_issuance['divisible']),
                     'locked': locked,
@@ -363,8 +363,8 @@ class APIServer(threading.Thread):
             return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def create_burn(source, amount, multisig=config.MULTISIG):
-            tx_info = burn.compose(db, source, amount)
+        def create_burn(source, quantity, multisig=config.MULTISIG):
+            tx_info = burn.compose(db, source, quantity)
             return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
@@ -378,46 +378,46 @@ class APIServer(threading.Thread):
             return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def create_dividend(source, amount_per_unit, asset, dividend_asset, multisig=config.MULTISIG):
-            tx_info = dividend.compose(db, source, amount_per_unit, asset, dividend_asset)
+        def create_dividend(source, quantity_per_unit, asset, dividend_asset, multisig=config.MULTISIG):
+            tx_info = dividend.compose(db, source, quantity_per_unit, asset, dividend_asset)
             return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def create_issuance(source, asset, amount, divisible, description, callable_=None, call_date=None,
+        def create_issuance(source, asset, quantity, divisible, description, callable_=None, call_date=None,
         call_price=None, transfer_destination=None, multisig=config.MULTISIG):
             try:
-                amount = int(amount)
+                quantity = int(quantity)
             except ValueError:
-                raise Exception("Invalid amount")
+                raise Exception("Invalid quantity")
             tx_info = issuance.compose(db, source, transfer_destination,
-                                   asset, amount, divisible, callable_,
+                                   asset, quantity, divisible, callable_,
                                    call_date, call_price, description)
             return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def create_order(source, give_asset, give_amount, get_asset, get_amount, expiration, fee_required=None,
+        def create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required=None,
         fee_provided=None, multisig=config.MULTISIG):
             if get_asset == 'BTC' and fee_required is None:
                 #since no value is passed, set a default of 1% for fee_required if buying BTC
-                fee_required = int(get_amount / 100)
+                fee_required = int(get_quantity / 100)
             elif fee_required is None:
                 fee_required = 0 #no default set, but fee_required does not apply
 
             if give_asset == 'BTC' and fee_provided is None:
                 #since no value is passed, set a default of 1% for fee_provided if selling BTC
-                fee_provided = int(give_amount / 100)
+                fee_provided = int(give_quantity / 100)
             elif fee_provided is None:
                 fee_provided = 0 #no default set, but fee_required does not apply
             
             tx_info = order.compose(db, source, give_asset,
-                                give_amount, get_asset,
-                                get_amount, expiration,
+                                give_quantity, get_asset,
+                                get_quantity, expiration,
                                 fee_required, fee_provided)
             return bitcoin.transaction(tx_info, multisig)
 
         @dispatcher.add_method
-        def create_send(source, destination, asset, amount, multisig=config.MULTISIG):
-            tx_info = send.compose(db, source, destination, asset, amount)
+        def create_send(source, destination, asset, quantity, multisig=config.MULTISIG):
+            tx_info = send.compose(db, source, destination, asset, quantity)
             return bitcoin.transaction(tx_info, multisig)
                 
         @dispatcher.add_method

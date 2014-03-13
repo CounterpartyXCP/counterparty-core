@@ -348,7 +348,7 @@ def test_json_rpc():
     })
     payloads.append({
         "method": "create_send",
-        "params": {'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': destination_default, 'asset': 'XCP', 'amount': 1},
+        "params": {'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': destination_default, 'asset': 'XCP', 'quantity': 1},
         "jsonrpc": "2.0",
         "id": 0,
     })
