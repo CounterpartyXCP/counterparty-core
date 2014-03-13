@@ -25,7 +25,6 @@ import configparser
 
 # Units
 from lib import (config, api, util, exceptions, bitcoin, blocks)
-from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 if os.name == 'nt':
     from lib import util_windows
 
@@ -677,11 +676,10 @@ if __name__ == '__main__':
         target_value = util.devise(db, args.target_value, 'value', 'input')
         leverage = util.devise(db, args.leverage, 'leverage', 'input')
 
-        cli('create_bet', [args.source, args.feed_address,
-                          util.BET_TYPE_ID[args.bet_type], deadline,
-                          wager, counterwager, args.expiration, target_value,
-                          leverage],
-           args.unsigned)
+        cli('create_bet', [args.source, args.feed_address, args.bet_type,
+                           deadline, wager, counterwager, args.expiration,
+                           target_value, leverage],
+            args.unsigned)
 
     elif args.action == 'dividend':
         quantity_per_unit = util.devise(db, args.quantity_per_unit, 'XCP', 'input')

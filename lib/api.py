@@ -339,8 +339,12 @@ class APIServer(threading.Thread):
         ######################
         #WRITE/ACTION API
         @dispatcher.add_method
-        def create_bet(source, feed_address, bet_type, deadline, wager, counterwager, expiration, target_value=0.0, leverage=5040, multisig=config.MULTISIG):
-            bet_type_id = util.BET_TYPE_ID[bet_type]
+        def create_bet(source, feed_address, bet_type, deadline, wager, counterwager, expiration, target_value=0.0,
+        leverage=5040, multisig=config.MULTISIG):
+            try:
+                bet_type_id = util.BET_TYPE_ID[args.bet_type]
+            except KeyError:
+                raise exceptions.BetError('Unknown bet type.')
             tx_info = bet.compose(db, source, feed_address,
                               bet_type_id, deadline, wager,
                               counterwager, target_value,
