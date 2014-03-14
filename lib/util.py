@@ -218,7 +218,7 @@ def exectracer(cursor, sql, bindings):
     dictionary = {'command': command, 'category': category, 'bindings': bindings}
 
     # Skip blocks, transactions.
-    if 'blocks' in sql or 'transactions' in sql or 'potentials' in sql: return True
+    if 'blocks' in sql or 'transactions' in sql: return True
 
     # Record alteration in database.
     if not category in ('balances', 'messages'):
