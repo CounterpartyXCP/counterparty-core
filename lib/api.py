@@ -262,8 +262,8 @@ class APIServer(threading.Thread):
 
             #get the last issurance message for this asset, which should reflect the current owner and if
             # its divisible (and if it was locked, for that matter)
-            locked = not last_issuance['quantity'] and not last_issuance['transfer']
-            total_issued = sum([e['quantity'] for e in issuances])
+            locked = not last_issuance['amount'] and not last_issuance['transfer']
+            total_issued = sum([e['amount'] for e in issuances])
             return {'owner': last_issuance['issuer'],
                     'divisible': bool(last_issuance['divisible']),
                     'locked': locked,
