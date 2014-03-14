@@ -98,16 +98,16 @@ def parse_hex (unsigned_tx_hex):
     # After parsing every transaction, check that the credits, debits sum properly.
     cursor.execute('''SELECT * FROM balances''')
     for balance in cursor.fetchall():
-        amount = 0
+        quantity = 0
         cursor.execute('''SELECT * FROM debits \
                           WHERE (address = ? AND asset = ?)''', (balance['address'], balance['asset']))
         for debit in cursor.fetchall():
-            amount -= debit['amount']
+            quantity -= debit['quantity']
         cursor.execute('''SELECT * FROM credits \
                           WHERE (address = ? AND asset = ?)''', (balance['address'], balance['asset']))
         for credit in cursor.fetchall():
-            amount += credit['amount']
-        assert amount == balance['amount']
+            quantity += credit['quantity']
+        assert quantity == balance['quantity']
 
     tx_index += 1
     cursor.close()

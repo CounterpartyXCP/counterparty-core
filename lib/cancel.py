@@ -95,7 +95,7 @@ def parse (db, tx, message):
             cursor.execute(sql, bindings)
 
             util.credit(db, tx['block_index'], tx['source'], 'XCP', bet['wager_remaining'])
-            util.credit(db, tx['block_index'], tx['source'], 'XCP', round(bet['wager_amount'] * bet['fee_fraction_int'] / 1e8))
+            util.credit(db, tx['block_index'], tx['source'], 'XCP', round(bet['wager_quantity'] * bet['fee_fraction_int'] / 1e8))
         # If neither order or bet, mark as invalid.
         else:
             status = 'invalid: no valid offer with that hash from that address'

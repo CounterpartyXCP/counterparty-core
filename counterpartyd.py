@@ -26,24 +26,24 @@ json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
 
 def format_order (order):
-    give_amount = util.devise(db, D(order['give_amount']), order['give_asset'], 'output')
-    get_amount = util.devise(db, D(order['get_amount']), order['get_asset'], 'output')
+    give_quantity = util.devise(db, D(order['give_quantity']), order['give_asset'], 'output')
+    get_quantity = util.devise(db, D(order['get_quantity']), order['get_asset'], 'output')
     give_remaining = util.devise(db, D(order['give_remaining']), order['give_asset'], 'output')
     get_remaining = util.devise(db, D(order['get_remaining']), order['get_asset'], 'output')
     give_asset = order['give_asset']
     get_asset = order['get_asset']
 
     if get_asset < give_asset:
-        price = util.devise(db, D(order['get_amount']) / D(order['give_amount']), 'price', 'output')
+        price = util.devise(db, D(order['get_quantity']) / D(order['give_quantity']), 'price', 'output')
         price_assets = get_asset + '/' + give_asset + ' ask'
     else:
-        price = util.devise(db, D(order['give_amount']) / D(order['get_amount']), 'price', 'output')
+        price = util.devise(db, D(order['give_quantity']) / D(order['get_quantity']), 'price', 'output')
         price_assets = give_asset + '/' + get_asset + ' bid'
 
     return [D(give_remaining), give_asset, price, price_assets, str(order['fee_required'] / config.UNIT), str(order['fee_provided'] / config.UNIT), order['expire_index'] - util.last_block(db)['block_index'], order['tx_hash']]
 
 def format_bet (bet):
-    odds = D(bet['counterwager_amount']) / D(bet['wager_amount'])
+    odds = D(bet['counterwager_quantity']) / D(bet['wager_quantity'])
 
     if not bet['target_value']: target_value = None
     else: target_value = bet['target_value']
@@ -399,8 +399,8 @@ def balances (address):
     table.add_row(['BTC', bitcoin.get_btc_balance(address, normalize=True)])  # BTC
     for balance in balances:
         asset = balance['asset']
-        amount = util.devise(db, balance['amount'], balance['asset'], 'output')
-        table.add_row([asset, amount])
+        quantity = util.devise(db, balance['quantity'], balance['asset'], 'output')
+        table.add_row([asset, quantity])
     print('Balances')
     print(table.get_string())
 
@@ -474,7 +474,7 @@ if __name__ == '__main__':
     parser_issuance.add_argument('--callable', dest='callable_', action='store_true', help='whether or not the asset is callable (must agree with previous issuances)')
     parser_issuance.add_argument('--call-date', help='the date from which a callable asset may be called back (must agree with previous issuances)')
     parser_issuance.add_argument('--call-price', help='the price, in XCP per whole unit, at which a callable asset may be called back (must agree with previous issuances)')
-    parser_issuance.add_argument('--description', type=str, required=True, help='a description of the asset (set to ‘LOCK’ to lock against further issuances with non‐zero amounts)')
+    parser_issuance.add_argument('--description', type=str, required=True, help='a description of the asset (set to ‘LOCK’ to lock against further issuances with non‐zero quantitys)')
 
     parser_broadcast = subparsers.add_parser('broadcast', help='broadcast textual and numerical information to the network')
     parser_broadcast.add_argument('--source', required=True, help='the source address')
@@ -722,9 +722,9 @@ if __name__ == '__main__':
         balances = util.get_balances(db, asset=args.asset)       # + util.get_escrowed(db, asset=asset)
         print('\taddress, quantity')
         for balance in balances:
-            if not balance['amount']: continue
-            amount = util.devise(db, balance['amount'], args.asset, 'output')
-            print('\t' + str(balance['address']) + ',' + str(amount))
+            if not balance['quantity']: continue
+            quantity = util.devise(db, balance['quantity'], args.asset, 'output')
+            print('\t' + str(balance['address']) + ',' + str(quantity))
 
 
     elif args.action == 'wallet':
@@ -745,7 +745,7 @@ if __name__ == '__main__':
                 empty = False            
             for balance in balances:
                 asset = balance['asset']
-                balance = D(util.devise(db, balance['amount'], balance['asset'], 'output'))
+                balance = D(util.devise(db, balance['quantity'], balance['asset'], 'output'))
                 if balance:
                     if asset in totals.keys(): totals[asset] += balance
                     else: totals[asset] = balance

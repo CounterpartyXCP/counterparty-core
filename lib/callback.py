@@ -48,17 +48,17 @@ def validate (db, source, fraction, asset, block_time):
     outputs = []
     balances = util.get_balances(db, asset=asset)
     for balance in balances:
-        address, address_amount = balance['address'], balance['amount']
+        address, address_quantity = balance['address'], balance['quantity']
         if address == source: continue
-        callback_amount = int(address_amount * fraction)   # Round down.
-        fraction_actual = callback_amount / address_amount
-        outputs.append({'address': address, 'callback_amount': callback_amount, 'fraction_actual': fraction_actual})
+        callback_quantity = int(address_quantity * fraction)   # Round down.
+        fraction_actual = callback_quantity / address_quantity
+        outputs.append({'address': address, 'callback_quantity': callback_quantity, 'fraction_actual': fraction_actual})
 
-    callback_total = sum([output['callback_amount'] for output in outputs])
+    callback_total = sum([output['callback_quantity'] for output in outputs])
     if not callback_total: problems.append('nothing called back')
 
     balances = util.get_balances(db, address=source, asset='XCP')
-    if not balances or balances[0]['amount'] < (call_price * callback_total):
+    if not balances or balances[0]['quantity'] < (call_price * callback_total):
         problems.append('insufficient funds')
 
     return call_price, callback_total, outputs, problems
@@ -66,7 +66,7 @@ def validate (db, source, fraction, asset, block_time):
 def compose (db, source, fraction, asset):
     call_price, callback_total, outputs, problems = validate(db, source, fraction, asset, None)
     if problems: raise exceptions.CallbackError(problems)
-    print('Total amount to be called back:', util.devise(db, callback_total, asset, 'output'), asset)
+    print('Total quantity to be called back:', util.devise(db, callback_total, asset, 'output'), asset)
 
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
@@ -98,9 +98,9 @@ def parse (db, tx, message):
 
         # Holders.
         for output in outputs:
-            assert call_price * output['callback_amount'] == int(call_price * output['callback_amount'])
-            util.debit(db, tx['block_index'], output['address'], asset, output['callback_amount'])
-            util.credit(db, tx['block_index'], output['address'], 'XCP', int(call_price * output['callback_amount']))
+            assert call_price * output['callback_quantity'] == int(call_price * output['callback_quantity'])
+            util.debit(db, tx['block_index'], output['address'], asset, output['callback_quantity'])
+            util.credit(db, tx['block_index'], output['address'], 'XCP', int(call_price * output['callback_quantity']))
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

@@ -338,16 +338,16 @@ def get_inputs (source, total_btc_out, unittest=False):
             listunspent = json.load(listunspent_test_file)
     unspent = [coin for coin in listunspent if coin['address'] == source]
     inputs, total_btc_in = [], 0
-    change_amount = 0
+    change_quantity = 0
     for coin in unspent:
         inputs.append(coin)
         total_btc_in += round(coin['amount'] * config.UNIT)
-        change_amount = total_btc_in - total_btc_out
-        if total_btc_in >= total_btc_out and (change_amount == 0 or change_amount >= config.REGULAR_DUST_SIZE): # If change is necessary, must not be a dust output.
-            return inputs, total_btc_in, change_amount
+        change_quantity = total_btc_in - total_btc_out
+        if total_btc_in >= total_btc_out and (change_quantity == 0 or change_quantity >= config.REGULAR_DUST_SIZE): # If change is necessary, must not be a dust output.
+            return inputs, total_btc_in, change_quantity
 
-    # Approximate needed change by with most recently calculated amount.
-    return None, None, change_amount
+    # Approximate needed change by with most recently calculated quantity.
+    return None, None, change_quantity
 
 # Replace unittest flag with fake bitcoind JSON-RPC server.
 def transaction (tx_info, multisig, unittest=False):
@@ -410,14 +410,14 @@ def transaction (tx_info, multisig, unittest=False):
     total_btc_out += sum([value for address, value in destination_outputs])
 
     # Construct inputs.
-    inputs, total_btc_in, change_amount = get_inputs(source, total_btc_out, unittest=unittest)
+    inputs, total_btc_in, change_quantity = get_inputs(source, total_btc_out, unittest=unittest)
     if not inputs:
-        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need {} BTC.)'.format(source, (total_btc_out + max(change_amount, 0)) / config.UNIT))
+        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need {} BTC.)'.format(source, (total_btc_out + max(change_quantity, 0)) / config.UNIT))
 
     # Construct outputs.
     if data: data_output = (data_array, data_value)
     else: data_output = None
-    if change_amount: change_output = (source, change_amount)
+    if change_quantity: change_output = (source, change_quantity)
     else: change_output = None
 
     # Serialise inputs and outputs.
@@ -432,10 +432,10 @@ def transmit (unsigned_tx_hex):
         signed_tx_hex = result['hex']
         return rpc('sendrawtransaction', [signed_tx_hex])
 
-def normalize_amount(amount, divisible=True):
+def normalize_quantity(quantity, divisible=True):
     if divisible:
-        return float((D(amount) / D(config.UNIT)).quantize(D('.00000000'), rounding=decimal.ROUND_HALF_EVEN)) 
-    else: return amount
+        return float((D(quantity) / D(config.UNIT)).quantize(D('.00000000'), rounding=decimal.ROUND_HALF_EVEN)) 
+    else: return quantity
 
 def get_btc_balance(address, normalize=False):
     """returns the BTC balance for a specific address"""
@@ -452,7 +452,7 @@ def get_btc_balance(address, normalize=False):
         if r.status_code != 200:
             return "???"
         else:
-            return normalize_amount(int(r.text)) if normalize else int(r.text)
+            return normalize_quantity(int(r.text)) if normalize else int(r.text)
 
 def get_btc_supply(normalize=False):
     """returns the total supply of BTC (based on what bitcoind says the current block height is)"""
@@ -483,7 +483,7 @@ def get_unspent_txouts(address, normalize=False):
         data = r.json()
         if not normalize: #listed normalized by default out of insight...we need to take to satoshi
             for d in data:
-                d['amount'] = int(d['amount'] * config.UNIT)
+                d['quantity'] = int(d['quantity'] * config.UNIT)
         return data
     else: #use blockchain
         r = requests.get("https://blockchain.info/unspent?active=" + address)
@@ -504,7 +504,7 @@ def get_unspent_txouts(address, normalize=False):
                 'vout': d['tx_output_n'],
                 'ts': None,
                 'scriptPubKey': d['script'],
-                'amount': normalize_amount(d['value']) if normalize else d['value'],
+                'quantity': normalize_quantity(d['value']) if normalize else d['value'],
                 'confirmations': d['confirmations'],
             })
         return results

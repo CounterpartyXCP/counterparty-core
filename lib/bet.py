@@ -33,8 +33,8 @@ def get_fee_fraction (db, feed_address):
     else:
         return 0
 
-def validate (db, source, feed_address, bet_type, deadline, wager_amount,
-              counterwager_amount, target_value, leverage, expiration):
+def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
+              counterwager_quantity, target_value, leverage, expiration):
     problems = []
 
     # Look at feed to be bet on.
@@ -52,18 +52,18 @@ def validate (db, source, feed_address, bet_type, deadline, wager_amount,
     if leverage < 5040:
         problems.append('leverage level too low (less than 5040, which is 1:1)')
 
-    if not isinstance(wager_amount, int):
-        problems.append('wager_amount must be in satoshis')
+    if not isinstance(wager_quantity, int):
+        problems.append('wager_quantity must be in satoshis')
         return problems
-    if not isinstance(counterwager_amount, int):
-        problems.append('counterwager_amount must be in satoshis')
+    if not isinstance(counterwager_quantity, int):
+        problems.append('counterwager_quantity must be in satoshis')
         return problems
     if not isinstance(expiration, int):
         problems.append('expiration must be expressed as an integer block delta')
         return problems
 
-    if wager_amount <= 0: problems.append('non‐positive wager')
-    if counterwager_amount <= 0: problems.append('non‐positive counterwager')
+    if wager_quantity <= 0: problems.append('non‐positive wager')
+    if counterwager_quantity <= 0: problems.append('non‐positive counterwager')
     if target_value < 0: problems.append('negative target value')
     if deadline < 0: problems.append('negative deadline')
     if expiration <= 0: problems.append('non‐positive expiration')
@@ -75,27 +75,27 @@ def validate (db, source, feed_address, bet_type, deadline, wager_amount,
         problems.append('maximum expiration time exceeded')
 
     # For SQLite3
-    if wager_amount > config.MAX_INT or counterwager_amount > config.MAX_INT or bet_type > config.MAX_INT or deadline > config.MAX_INT or leverage > config.MAX_INT:
+    if wager_quantity > config.MAX_INT or counterwager_quantity > config.MAX_INT or bet_type > config.MAX_INT or deadline > config.MAX_INT or leverage > config.MAX_INT:
         problems.append('maximum integer size exceeded')
 
     return problems
 
-def compose (db, source, feed_address, bet_type, deadline, wager_amount,
-            counterwager_amount, target_value, leverage, expiration):
+def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
+            counterwager_quantity, target_value, leverage, expiration):
 
     # Check for sufficient funds.
     fee_fraction = get_fee_fraction(db, feed_address)
     balances = util.get_balances(db, address=source, asset='XCP')
-    if not balances or balances[0]['amount']/(1 + fee_fraction) < wager_amount :
+    if not balances or balances[0]['quantity']/(1 + fee_fraction) < wager_quantity :
         raise exceptions.BetError('insufficient funds to both make wager and pay feed fee (in XCP)')
 
-    problems = validate(db, source, feed_address, bet_type, deadline, wager_amount,
-                        counterwager_amount, target_value, leverage, expiration)
+    problems = validate(db, source, feed_address, bet_type, deadline, wager_quantity,
+                        counterwager_quantity, target_value, leverage, expiration)
     if problems: raise exceptions.BetError(problems)
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, bet_type, deadline,
-                        wager_amount, counterwager_amount, target_value,
+                        wager_quantity, counterwager_quantity, target_value,
                         leverage, expiration)
     return (source, [(feed_address, None)], config.MIN_FEE,
                                data)
@@ -106,13 +106,13 @@ def parse (db, tx, message):
     # Unpack message.
     try:
         assert len(message) == LENGTH
-        (bet_type, deadline, wager_amount,
-         counterwager_amount, target_value, leverage,
+        (bet_type, deadline, wager_quantity,
+         counterwager_quantity, target_value, leverage,
          expiration) = struct.unpack(FORMAT, message)
         status = 'valid'
     except struct.error as e:
-        (bet_type, deadline, wager_amount,
-         counterwager_amount, target_value, leverage,
+        (bet_type, deadline, wager_quantity,
+         counterwager_quantity, target_value, leverage,
          expiration) = None, None, None, None, None, None, None
         status = 'invalid: could not unpack'
 
@@ -122,25 +122,25 @@ def parse (db, tx, message):
         feed_address = tx['destination']
         fee_fraction = get_fee_fraction(db, feed_address)
 
-        try: odds = D(wager_amount) / D(counterwager_amount)
+        try: odds = D(wager_quantity) / D(counterwager_quantity)
         except: pass
 
-        problems = validate(db, tx['source'], feed_address, bet_type, deadline, wager_amount,
-                            counterwager_amount, target_value, leverage, expiration)
+        problems = validate(db, tx['source'], feed_address, bet_type, deadline, wager_quantity,
+                            counterwager_quantity, target_value, leverage, expiration)
         if problems: status = 'invalid: ' + ';'.join(problems)
 
     if status == 'valid':
         # Overbet
         balances = util.get_balances(db, address=tx['source'], asset='XCP')
-        if not balances: wager_amount = 0
-        elif balances[0]['amount']/(1 + fee_fraction) < wager_amount:
-            wager_amount = min(round(balances[0]['amount']/(1 + fee_fraction)), wager_amount)
-            counterwager_amount = int(D(wager_amount) / odds)
+        if not balances: wager_quantity = 0
+        elif balances[0]['quantity']/(1 + fee_fraction) < wager_quantity:
+            wager_quantity = min(round(balances[0]['quantity']/(1 + fee_fraction)), wager_quantity)
+            counterwager_quantity = int(D(wager_quantity) / odds)
 
-    # Debit amount wagered and fee.
+    # Debit quantity wagered and fee.
     if status == 'valid':
-        fee = round(wager_amount * fee_fraction)    # round?!
-        util.debit(db, tx['block_index'], tx['source'], 'XCP', wager_amount)
+        fee = round(wager_quantity * fee_fraction)    # round?!
+        util.debit(db, tx['block_index'], tx['source'], 'XCP', wager_quantity)
         util.debit(db, tx['block_index'], tx['source'], 'XCP', fee)
 
     # Add parsed transaction to message-type–specific table.
@@ -152,10 +152,10 @@ def parse (db, tx, message):
         'feed_address': feed_address,
         'bet_type': bet_type,
         'deadline': deadline,
-        'wager_amount': wager_amount,
-        'wager_remaining': wager_amount,
-        'counterwager_amount': counterwager_amount,
-        'counterwager_remaining': counterwager_amount,
+        'wager_quantity': wager_quantity,
+        'wager_remaining': wager_quantity,
+        'counterwager_quantity': counterwager_quantity,
+        'counterwager_remaining': counterwager_quantity,
         'target_value': target_value,
         'leverage': leverage,
         'expiration': expiration,
@@ -163,7 +163,7 @@ def parse (db, tx, message):
         'fee_fraction_int': fee_fraction * 1e8,
         'status': status,
     }
-    sql='insert into bets values(:tx_index, :tx_hash, :block_index, :source, :feed_address, :bet_type, :deadline, :wager_amount, :wager_remaining, :counterwager_amount, :counterwager_remaining, :target_value, :leverage, :expiration, :expire_index, :fee_fraction_int, :status)'
+    sql='insert into bets values(:tx_index, :tx_hash, :block_index, :source, :feed_address, :bet_type, :deadline, :wager_quantity, :wager_remaining, :counterwager_quantity, :counterwager_remaining, :target_value, :leverage, :expiration, :expire_index, :fee_fraction_int, :status)'
     bet_parse_cursor.execute(sql, bindings)
 
     # Match.
@@ -194,7 +194,7 @@ def match (db, tx):
     bet_matches = cursor.fetchall()
     if tx['block_index'] > 284500 or config.TESTNET:  # Protocol change.
         sorted(bet_matches, key=lambda x: x['tx_index'])                                        # Sort by tx index second.
-        sorted(bet_matches, key=lambda x: D(x['wager_amount']) / D(x['counterwager_amount']))   # Sort by price first.
+        sorted(bet_matches, key=lambda x: D(x['wager_quantity']) / D(x['counterwager_quantity']))   # Sort by price first.
     for tx0 in bet_matches:
 
         # Bet types must be opposite.
@@ -225,28 +225,28 @@ def match (db, tx):
 
         # If the odds agree, make the trade. The found order sets the odds,
         # and they trade as much as they can.
-        tx0_odds = util.price(tx0['wager_amount'], tx0['counterwager_amount'])
-        tx0_inverse_odds = util.price(tx0['counterwager_amount'], tx0['wager_amount'])
-        tx1_odds = util.price(tx1['wager_amount'], tx1['counterwager_amount'])
+        tx0_odds = util.price(tx0['wager_quantity'], tx0['counterwager_quantity'])
+        tx0_inverse_odds = util.price(tx0['counterwager_quantity'], tx0['wager_quantity'])
+        tx1_odds = util.price(tx1['wager_quantity'], tx1['counterwager_quantity'])
 
         if tx['block_index'] < 286000: tx0_inverse_odds = D(1) / tx0_odds # Protocol change.
 
         if tx0_inverse_odds <= tx1_odds:
-            forward_amount = int(min(D(tx0['wager_remaining']), D(tx1_wager_remaining) / tx1_odds))
-            backward_amount = round(D(forward_amount) / tx0_odds)
+            forward_quantity = int(min(D(tx0['wager_remaining']), D(tx1_wager_remaining) / tx1_odds))
+            backward_quantity = round(D(forward_quantity) / tx0_odds)
 
-            if not forward_amount: continue
+            if not forward_quantity: continue
             if tx1['block_index'] >= 286500 or config.TESTNET:    # Protocol change.
-                if not backward_amount: continue
+                if not backward_quantity: continue
 
             bet_match_id = tx0['tx_hash'] + tx1['tx_hash']
 
             # Debit the order.
             # Counterwager remainings may be negative.
-            tx0_wager_remaining = tx0['wager_remaining'] - forward_amount
-            tx0_counterwager_remaining = tx0['counterwager_remaining'] - backward_amount
-            tx1_wager_remaining = tx1_wager_remaining - backward_amount
-            tx1_counterwager_remaining = tx1_counterwager_remaining - forward_amount
+            tx0_wager_remaining = tx0['wager_remaining'] - forward_quantity
+            tx0_counterwager_remaining = tx0['counterwager_remaining'] - backward_quantity
+            tx1_wager_remaining = tx1_wager_remaining - backward_quantity
+            tx1_counterwager_remaining = tx1_counterwager_remaining - forward_quantity
 
             # tx0
             bindings = {
@@ -286,8 +286,8 @@ def match (db, tx):
                 'deadline': tx1['deadline'],
                 'target_value': tx1['target_value'],
                 'leverage': tx1['leverage'],
-                'forward_amount': forward_amount,
-                'backward_amount': backward_amount,
+                'forward_quantity': forward_quantity,
+                'backward_quantity': backward_quantity,
                 'tx0_block_index': tx0['block_index'],
                 'tx1_block_index': tx1['block_index'],
                 'tx0_expiration': tx0['expiration'],
@@ -296,7 +296,7 @@ def match (db, tx):
                 'fee_fraction_int': fee_fraction_int,
                 'status': 'pending',
             }
-            sql='insert into bet_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :tx0_bet_type, :tx1_bet_type, :feed_address, :initial_value, :deadline, :target_value, :leverage, :forward_amount, :backward_amount, :tx0_block_index, :tx1_block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :fee_fraction_int, :status)'
+            sql='insert into bet_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :tx0_bet_type, :tx1_bet_type, :feed_address, :initial_value, :deadline, :target_value, :leverage, :forward_quantity, :backward_quantity, :tx0_block_index, :tx1_block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :fee_fraction_int, :status)'
             cursor.execute(sql, bindings)
 
     cursor.close()
@@ -304,7 +304,7 @@ def match (db, tx):
 def expire (db, block_index, block_time):
     cursor = db.cursor()
 
-    # Expire bets and give refunds for the amount wager_remaining.
+    # Expire bets and give refunds for the quantity wager_remaining.
     cursor.execute('''SELECT * FROM bets \
                       WHERE (status = ? AND expire_index < ?)''', ('valid', block_index))
     for bet in cursor.fetchall():
@@ -334,9 +334,9 @@ def expire (db, block_index, block_time):
                       WHERE (status = ? AND deadline < ?)''', ('pending', block_time - config.TWO_WEEKS))
     for bet_match in cursor.fetchall():
         util.credit(db, block_index, bet_match['tx0_address'], 'XCP',
-                    round(bet_match['forward_amount'] * (1 + bet_match['fee_fraction_int'] / 1e8)))
+                    round(bet_match['forward_quantity'] * (1 + bet_match['fee_fraction_int'] / 1e8)))
         util.credit(db, block_index, bet_match['tx1_address'], 'XCP',
-                    round(bet_match['backward_amount'] * (1 + bet_match['fee_fraction_int'] / 1e8)))
+                    round(bet_match['backward_quantity'] * (1 + bet_match['fee_fraction_int'] / 1e8)))
 
         # Update status of bet match.
         bindings = {

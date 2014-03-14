@@ -57,12 +57,12 @@ def price (numerator, denominator):
 def log (db, command, category, bindings):
 
     # Slow?!
-    def output (amount, asset):
+    def output (quantity, asset):
         try:
             if asset not in ('fraction', 'leverage'):
-                return str(devise(db, amount, asset, 'output')) + ' ' + asset
+                return str(devise(db, quantity, asset, 'output')) + ' ' + asset
             else:
-                return str(devise(db, amount, asset, 'output'))
+                return str(devise(db, quantity, asset, 'output'))
         except exceptions.AssetError:
             return '<AssetError>'
         except decimal.DivisionByZero:
@@ -78,24 +78,24 @@ def log (db, command, category, bindings):
         elif category == 'bet_matches':
             logging.debug('Database: set status of bet_match {} to {}.'.format(bindings['bet_match_id'], bindings['status']))
         # TODO: elif category == 'balances':
-            # logging.debug('Database: set balance of {} in {} to {}.'.format(bindings['address'], bindings['asset'], output(bindings['amount'], bindings['asset']).split(' ')[0]))
+            # logging.debug('Database: set balance of {} in {} to {}.'.format(bindings['address'], bindings['asset'], output(bindings['quantity'], bindings['asset']).split(' ')[0]))
 
     elif command == 'insert':
 
         if category == 'credits':
-            logging.debug('Credit: {} to {} #{}# <{}>'.format(output(bindings['amount'], bindings['asset']), bindings['address'], bindings['action'], bindings['event']))
+            logging.debug('Credit: {} to {} #{}# <{}>'.format(output(bindings['quantity'], bindings['asset']), bindings['address'], bindings['action'], bindings['event']))
 
         elif category == 'debits':
-            logging.debug('Debit: {} from {} #{}# <{}>'.format(output(bindings['amount'], bindings['asset']), bindings['address'], bindings['action'], bindings['event']))
+            logging.debug('Debit: {} from {} #{}# <{}>'.format(output(bindings['quantity'], bindings['asset']), bindings['address'], bindings['action'], bindings['event']))
 
         elif category == 'sends':
-            logging.info('Send: {} from {} to {} ({}) [{}]'.format(output(bindings['amount'], bindings['asset']), bindings['source'], bindings['destination'], bindings['tx_hash'], bindings['status']))
+            logging.info('Send: {} from {} to {} ({}) [{}]'.format(output(bindings['quantity'], bindings['asset']), bindings['source'], bindings['destination'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'orders':
-            logging.info('Order: give {} for {} in {} blocks, with a provided fee of {} BTC and a required fee of {} BTC ({}) [{}]'.format(output(bindings['give_amount'], bindings['give_asset']), output(bindings['get_amount'], bindings['get_asset']), bindings['expiration'], bindings['fee_provided'] / config.UNIT, bindings['fee_required'] / config.UNIT, bindings['tx_hash'], bindings['status']))
+            logging.info('Order: give {} for {} in {} blocks, with a provided fee of {} BTC and a required fee of {} BTC ({}) [{}]'.format(output(bindings['give_quantity'], bindings['give_asset']), output(bindings['get_quantity'], bindings['get_asset']), bindings['expiration'], bindings['fee_provided'] / config.UNIT, bindings['fee_required'] / config.UNIT, bindings['tx_hash'], bindings['status']))
 
         elif category == 'order_matches':
-            logging.info('Order Match: {} for {} ({}) [{}]'.format(output(bindings['forward_amount'], bindings['forward_asset']), output(bindings['backward_amount'], bindings['backward_asset']), bindings['id'], bindings['status']))
+            logging.info('Order Match: {} for {} ({}) [{}]'.format(output(bindings['forward_quantity'], bindings['forward_asset']), output(bindings['backward_quantity'], bindings['backward_asset']), bindings['id'], bindings['status']))
 
         elif category == 'btcpays':
             logging.info('BTC Payment: {} paid {} to {} for order match {} ({}) [{}]'.format(bindings['source'], output(bindings['btc_amount'], 'BTC'), bindings['destination'], bindings['order_match_id'], bindings['tx_hash'], bindings['status']))
@@ -117,10 +117,10 @@ def log (db, command, category, bindings):
                 else:
                     callability = 'uncallable'
                 try:
-                    amount = devise(db, bindings['amount'], None, dest='output', divisible=bindings['divisible'])
+                    quantity = devise(db, bindings['quantity'], None, dest='output', divisible=bindings['divisible'])
                 except:
-                    amount = '?'
-                logging.info('Issuance: {} created {} of asset {}, which is {} and {}, with description ‘{}’ ({}) [{}]'.format(bindings['issuer'], amount, bindings['asset'], divisibility, callability, bindings['description'], bindings['tx_hash'], bindings['status']))
+                    quantity = '?'
+                logging.info('Issuance: {} created {} of asset {}, which is {} and {}, with description ‘{}’ ({}) [{}]'.format(bindings['issuer'], quantity, bindings['asset'], divisibility, callability, bindings['description'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'broadcasts':
             if bindings['locked']:
@@ -138,9 +138,9 @@ def log (db, command, category, bindings):
             if bindings['leverage']:
                 placeholder += ', leveraged {}x'.format(output(bindings['leverage']/ 5040, 'leverage'))
 
-            fee = round(bindings['wager_amount'] * bindings['fee_fraction_int'] / 1e8)    # round?!
+            fee = round(bindings['wager_quantity'] * bindings['fee_fraction_int'] / 1e8)    # round?!
 
-            logging.info('Bet: {} on {} at {} for {} against {} in {} blocks{} for a fee of {} ({}) [{}]'.format(BET_TYPE_NAME[bindings['bet_type']], bindings['feed_address'], isodt(bindings['deadline']), output(bindings['wager_amount'], 'XCP'), output(bindings['counterwager_amount'], 'XCP'), bindings['expiration'], placeholder, output(fee, 'XCP'), bindings['tx_hash'], bindings['status']))
+            logging.info('Bet: {} on {} at {} for {} against {} in {} blocks{} for a fee of {} ({}) [{}]'.format(BET_TYPE_NAME[bindings['bet_type']], bindings['feed_address'], isodt(bindings['deadline']), output(bindings['wager_quantity'], 'XCP'), output(bindings['counterwager_quantity'], 'XCP'), bindings['expiration'], placeholder, output(fee, 'XCP'), bindings['tx_hash'], bindings['status']))
 
         elif category == 'bet_matches':
             placeholder = ''
@@ -148,10 +148,10 @@ def log (db, command, category, bindings):
                 placeholder = ' that ' + str(output(bindings['target_value'], 'value'))
             if bindings['leverage']:
                 placeholder += ', leveraged {}x'.format(output(bindings['leverage'] / 5040, 'leverage'))
-            logging.info('Bet Match: {} for {} against {} for {} on {} at {}{} ({}) [{}]'.format(BET_TYPE_NAME[bindings['tx0_bet_type']], output(bindings['forward_amount'], 'XCP'), BET_TYPE_NAME[bindings['tx1_bet_type']], output(bindings['backward_amount'], 'XCP'), bindings['feed_address'], isodt(bindings['deadline']), placeholder, bindings['id'], bindings['status']))
+            logging.info('Bet Match: {} for {} against {} for {} on {} at {}{} ({}) [{}]'.format(BET_TYPE_NAME[bindings['tx0_bet_type']], output(bindings['forward_quantity'], 'XCP'), BET_TYPE_NAME[bindings['tx1_bet_type']], output(bindings['backward_quantity'], 'XCP'), bindings['feed_address'], isodt(bindings['deadline']), placeholder, bindings['id'], bindings['status']))
 
         elif category == 'dividends':
-            logging.info('Dividend: {} paid {} per unit of {} ({}) [{}]'.format(bindings['source'], output(bindings['amount_per_unit'], bindings['dividend_asset']), bindings['asset'], bindings['tx_hash'], bindings['status']))
+            logging.info('Dividend: {} paid {} per unit of {} ({}) [{}]'.format(bindings['source'], output(bindings['quantity_per_unit'], bindings['dividend_asset']), bindings['asset'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'burns':
             logging.info('Burn: {} burned {} for {} ({}) [{}]'.format(bindings['source'], output(bindings['burned'], 'BTC'), output(bindings['earned'], 'XCP'), bindings['tx_hash'], bindings['status']))
@@ -403,11 +403,11 @@ def get_asset_name (asset_id):
     return asset_name
 
 
-def debit (db, block_index, address, asset, amount, action=None, event=None):
+def debit (db, block_index, address, asset, quantity, action=None, event=None):
     debit_cursor = db.cursor()
     assert asset != 'BTC' # Never BTC.
-    assert type(amount) == int
-    assert amount >= 0
+    assert type(quantity) == int
+    assert quantity >= 0
 
     if asset == 'BTC':
         raise exceptions.BalanceError('Cannot debit bitcoins from a Counterparty address!')
@@ -416,21 +416,21 @@ def debit (db, block_index, address, asset, amount, action=None, event=None):
                             WHERE (address = ? AND asset = ?)''', (address, asset))
     balances = debit_cursor.fetchall()
     if not len(balances) == 1: old_balance = 0
-    else: old_balance = balances[0]['amount']
+    else: old_balance = balances[0]['quantity']
 
-    if old_balance < amount:
+    if old_balance < quantity:
         raise exceptions.BalanceError('Insufficient funds.')
 
-    balance = round(old_balance - amount)
+    balance = round(old_balance - quantity)
     balance = min(balance, config.MAX_INT)
     assert balance >= 0
 
     bindings = {
-        'amount': balance,
+        'quantity': balance,
         'address': address,
         'asset': asset
     }
-    sql='update balances set amount = :amount where (address = :address and asset = :asset)'
+    sql='update balances set quantity = :quantity where (address = :address and asset = :asset)'
     debit_cursor.execute(sql, bindings)
 
     # Record debit.
@@ -438,20 +438,20 @@ def debit (db, block_index, address, asset, amount, action=None, event=None):
         'block_index': block_index,
         'address': address,
         'asset': asset,
-        'amount': amount,
+        'quantity': quantity,
         'action': action,
         'event': event
     }
-    sql='insert into debits values(:block_index, :address, :asset, :amount, :action, :event)'
+    sql='insert into debits values(:block_index, :address, :asset, :quantity, :action, :event)'
     debit_cursor.execute(sql, bindings)
 
     debit_cursor.close()
 
-def credit (db, block_index, address, asset, amount, action=None, event=None):
+def credit (db, block_index, address, asset, quantity, action=None, event=None):
     credit_cursor = db.cursor()
     assert asset != 'BTC' # Never BTC.
-    assert type(amount) == int
-    assert amount >= 0
+    assert type(quantity) == int
+    assert quantity >= 0
 
     credit_cursor.execute('''SELECT * FROM balances \
                              WHERE (address = ? AND asset = ?)''', (address, asset))
@@ -463,24 +463,24 @@ def credit (db, block_index, address, asset, amount, action=None, event=None):
         bindings = {
             'address': address,
             'asset': asset,
-            'amount': amount,
+            'quantity': quantity,
         }
-        sql='insert into balances values(:address, :asset, :amount)'
+        sql='insert into balances values(:address, :asset, :quantity)'
         credit_cursor.execute(sql, bindings)
     elif len(balances) > 1:
         raise Exception
     else:
-        old_balance = balances[0]['amount']
+        old_balance = balances[0]['quantity']
         assert type(old_balance) == int
-        balance = round(old_balance + amount)
+        balance = round(old_balance + quantity)
         balance = min(balance, config.MAX_INT)
 
         bindings = {
-            'amount': balance,
+            'quantity': balance,
             'address': address,
             'asset': asset
         }
-        sql='update balances set amount = :amount where (address = :address and asset = :asset)'
+        sql='update balances set quantity = :quantity where (address = :address and asset = :asset)'
         credit_cursor.execute(sql, bindings)
 
     # Record credit.
@@ -488,11 +488,11 @@ def credit (db, block_index, address, asset, amount, action=None, event=None):
         'block_index': block_index,
         'address': address,
         'asset': asset,
-        'amount': amount,
+        'quantity': quantity,
         'action': action,
         'event': event
     }
-    sql='insert into credits values(:block_index, :address, :asset, :amount, :action, :event)'
+    sql='insert into credits values(:block_index, :address, :asset, :quantity, :action, :event)'
     credit_cursor.execute(sql, bindings)
     credit_cursor.close()
 

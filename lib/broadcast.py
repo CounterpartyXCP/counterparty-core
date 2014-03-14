@@ -132,7 +132,7 @@ def parse (db, tx, message):
 
         # Calculate total funds held in escrow and total fee to be paid if
         # the bet match is settled.
-        total_escrow = bet_match['forward_amount'] + bet_match['backward_amount']
+        total_escrow = bet_match['forward_quantity'] + bet_match['backward_quantity']
         fee_fraction = D(bet_match['fee_fraction_int']) / D(1e8)
         fee = round(total_escrow * fee_fraction)
 
@@ -150,13 +150,13 @@ def parse (db, tx, message):
             if bet_match['tx0_bet_type'] < bet_match['tx1_bet_type']:
                 bull_address = bet_match['tx0_address']
                 bear_address = bet_match['tx1_address']
-                bull_escrow = bet_match['forward_amount']
-                bear_escrow = bet_match['backward_amount']
+                bull_escrow = bet_match['forward_quantity']
+                bear_escrow = bet_match['backward_quantity']
             else:
                 bull_address = bet_match['tx1_address']
                 bear_address = bet_match['tx0_address']
-                bull_escrow = bet_match['backward_amount']
-                bear_escrow = bet_match['forward_amount']
+                bull_escrow = bet_match['backward_quantity']
+                bear_escrow = bet_match['forward_quantity']
 
             leverage = D(bet_match['leverage']) / 5040
             initial_value = bet_match['initial_value']

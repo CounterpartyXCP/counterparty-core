@@ -11,18 +11,18 @@ from . import (util, config, exceptions, bitcoin, util)
 ID = 60
 
 
-def validate (db, source, destination, amount, block_index=None, overburn=False):
+def validate (db, source, destination, quantity, block_index=None, overburn=False):
     problems = []
 
     # Check destination address.
     if destination != config.UNSPENDABLE:
         problems.append('wrong destination address')
 
-    if not isinstance(amount, int):
-        problems.append('amount must be in satoshis')
+    if not isinstance(quantity, int):
+        problems.append('quantity must be in satoshis')
         return problems
 
-    if amount <= 0: problems.append('non‐positive amount')
+    if quantity <= 0: problems.append('non‐positive quantity')
 
     # Try to make sure that the burned funds won't go to waste.
     if not block_index: block_index = util.last_block(db)['block_index']
@@ -33,18 +33,18 @@ def validate (db, source, destination, amount, block_index=None, overburn=False)
 
     return problems
 
-def compose (db, source, amount, overburn=False):
+def compose (db, source, quantity, overburn=False):
     destination = config.UNSPENDABLE
-    problems = validate(db, source, destination, amount, None, overburn=overburn)
+    problems = validate(db, source, destination, quantity, None, overburn=overburn)
     if problems: raise exceptions.BurnError(problems)
 
     # Check that a maximum of 1 BTC total is burned per address.
     burns = util.get_burns(db, source=source, status='valid')
     already_burned = sum([burn['burned'] for burn in burns])
-    if amount > (1 * config.UNIT - already_burned) and not overburn:
+    if quantity > (1 * config.UNIT - already_burned) and not overburn:
         raise exceptions.BurnError('1 BTC may be burned per address')
 
-    return (source, [(destination, amount)], config.MIN_FEE, None)
+    return (source, [(destination, quantity)], config.MIN_FEE, None)
 
 def parse (db, tx, message=None):
     burn_parse_cursor = db.cursor()
@@ -60,7 +60,7 @@ def parse (db, tx, message=None):
             sent = 0
 
     if status == 'valid':
-        # Calculate amount of XCP earned. (Maximum 1 BTC in total, ever.)
+        # Calculate quantity of XCP earned. (Maximum 1 BTC in total, ever.)
         cursor = db.cursor()
         cursor.execute('''SELECT * FROM burns WHERE (status = ? AND source = ?)''', ('valid', tx['source']))
         burns = cursor.fetchall()

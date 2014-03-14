@@ -135,7 +135,7 @@ def initialise(db):
                       block_index INTEGER,
                       address TEXT,
                       asset TEXT,
-                      amount INTEGER,
+                      quantity INTEGER,
                       action TEXT,
                       event TEXT,
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index))
@@ -149,7 +149,7 @@ def initialise(db):
                       block_index INTEGER,
                       address TEXT,
                       asset TEXT,
-                      amount INTEGER,
+                      quantity INTEGER,
                       calling_function TEXT,
                       event TEXT,
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index))
@@ -162,7 +162,7 @@ def initialise(db):
     cursor.execute('''CREATE TABLE IF NOT EXISTS balances(
                       address TEXT,
                       asset TEXT,
-                      amount INTEGER)
+                      quantity INTEGER)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       asset_idx ON balances (address, asset)
@@ -176,7 +176,7 @@ def initialise(db):
                       source TEXT,
                       destination TEXT,
                       asset TEXT,
-                      amount INTEGER,
+                      quantity INTEGER,
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
@@ -191,10 +191,10 @@ def initialise(db):
                       block_index INTEGER,
                       source TEXT,
                       give_asset TEXT,
-                      give_amount INTEGER,
+                      give_quantity INTEGER,
                       give_remaining INTEGER,
                       get_asset TEXT,
-                      get_amount INTEGER,
+                      get_quantity INTEGER,
                       get_remaining INTEGER,
                       expiration INTEGER,
                       expire_index INTEGER,
@@ -229,9 +229,9 @@ def initialise(db):
                       tx1_hash TEXT,
                       tx1_address TEXT,
                       forward_asset TEXT,
-                      forward_amount INTEGER,
+                      forward_quantity INTEGER,
                       backward_asset TEXT,
-                      backward_amount INTEGER,
+                      backward_quantity INTEGER,
                       tx0_block_index INTEGER,
                       tx1_block_index INTEGER,
                       tx0_expiration INTEGER,
@@ -271,7 +271,7 @@ def initialise(db):
                       tx_hash TEXT UNIQUE,
                       block_index INTEGER,
                       asset TEXT,
-                      amount INTEGER,
+                      quantity INTEGER,
                       divisible BOOL,
                       source TEXT,
                       issuer TEXT,
@@ -319,9 +319,9 @@ def initialise(db):
                       feed_address TEXT,
                       bet_type INTEGER,
                       deadline INTEGER,
-                      wager_amount INTEGER,
+                      wager_quantity INTEGER,
                       wager_remaining INTEGER,
-                      counterwager_amount INTEGER,
+                      counterwager_quantity INTEGER,
                       counterwager_remaining INTEGER,
                       target_value REAL,
                       leverage INTEGER,
@@ -361,8 +361,8 @@ def initialise(db):
                       deadline INTEGER,
                       target_value REAL,
                       leverage INTEGER,
-                      forward_amount INTEGER,
-                      backward_amount INTEGER,
+                      forward_quantity INTEGER,
+                      backward_quantity INTEGER,
                       tx0_block_index INTEGER,
                       tx1_block_index INTEGER,
                       tx0_expiration INTEGER,
@@ -391,7 +391,7 @@ def initialise(db):
                       source TEXT,
                       asset TEXT,
                       dividend_asset TEXT,
-                      amount_per_unit INTEGER,
+                      quantity_per_unit INTEGER,
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')

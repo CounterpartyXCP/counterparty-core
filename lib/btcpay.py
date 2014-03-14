@@ -44,11 +44,11 @@ def compose (db, order_match_id):
     if order_match['backward_asset'] == 'BTC':
         source = order_match['tx1_address']
         destination = order_match['tx0_address']
-        btc_amount = order_match['backward_amount']
+        btc_amount = order_match['backward_quantity']
     else:
         source = order_match['tx0_address']
         destination = order_match['tx1_address']
-        btc_amount = order_match['forward_amount']
+        btc_amount = order_match['forward_quantity']
 
     # Warn if down to the wire.
     time_left = order_match['match_expire_index'] - util.last_block(db)['block_index']
@@ -87,15 +87,15 @@ def parse (db, tx, message):
         update = False
         # Credit source address for the currency that he bought with the bitcoins.
         # BTC must be paid all at once and come from the 'correct' address.
-        if order_match['tx0_address'] == tx['source'] and tx['btc_amount'] >= order_match['forward_amount']:
+        if order_match['tx0_address'] == tx['source'] and tx['btc_amount'] >= order_match['forward_quantity']:
             update = True
             if order_match['backward_asset'] != 'BTC':
-                util.credit(db, tx['block_index'], tx['source'], order_match['backward_asset'], order_match['backward_amount'])
+                util.credit(db, tx['block_index'], tx['source'], order_match['backward_asset'], order_match['backward_quantity'])
             status = 'valid'
-        if order_match['tx1_address'] == tx['source'] and tx['btc_amount'] >= order_match['backward_amount']:
+        if order_match['tx1_address'] == tx['source'] and tx['btc_amount'] >= order_match['backward_quantity']:
             update = True
             if order_match['forward_asset'] != 'BTC':
-                util.credit(db, tx['block_index'], tx['source'], order_match['forward_asset'], order_match['forward_amount'])
+                util.credit(db, tx['block_index'], tx['source'], order_match['forward_asset'], order_match['forward_quantity'])
             status = 'valid'
 
         if update:
