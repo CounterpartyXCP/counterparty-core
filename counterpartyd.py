@@ -446,8 +446,6 @@ if __name__ == '__main__':
 
     parser_server = subparsers.add_parser('server', help='run the server (WARNING: not thread‐safe)')
 
-    parser_potentials = subparsers.add_parser('potentials', help='get potential transactions (WARNING: not thread‐safe)')
-
     parser_send = subparsers.add_parser('send', help='create and broadcast a *send* message')
     parser_send.add_argument('--source', required=True, help='the source address')
     parser_send.add_argument('--destination', required=True, help='the destination address')
@@ -590,7 +588,7 @@ if __name__ == '__main__':
     if not args.force:
         util.versions_check(db)
         bitcoin.bitcoind_check(db)
-        if args.action not in ('server', 'reparse', 'rollback', 'potentials'):
+        if args.action not in ('server', 'reparse', 'rollback'):
             util.database_check(db, bitcoin.get_block_count())
     # TODO
 
@@ -796,10 +794,6 @@ if __name__ == '__main__':
                 raise exceptions.InsightError('Could not connect to Insight server.')
 
         blocks.follow(db)
-
-    elif args.action == 'potentials':
-        blocks.get_potentials(db)
-
 
     else:
         parser.print_help()
