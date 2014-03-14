@@ -173,10 +173,11 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_order_matches (filters=None, is_completed=True, is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_order_matches (filters=None, status='completed', is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+            assert status in ('completed', 'pending', None)
             return util.get_order_matches(db,
                 filters=filters,
-                status='completed' if bool(is_completed) else None,
+                status=status,
                 is_mine=is_mine,
                 order_by=order_by,
                 order_dir=order_dir,
