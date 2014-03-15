@@ -231,48 +231,59 @@ class APIServer(threading.Thread):
             return util.xcp_supply(db)
 
         @dispatcher.add_method
-        def get_asset_info(asset):
-            if asset in ['BTC', 'XCP']:
-                total_supply = None
-                if asset == 'BTC':
-                    total_supply = bitcoin.get_btc_supply(normalize=False)
-                else:
-                    total_supply = util.xcp_supply(db)
+        def get_asset_info(assets):
+            if not isinstance(assets, (list, tuple)):
+                assets = [assets,]
+            assetsInfo = []
+            for asset in assets:
+                if asset in ['BTC', 'XCP']:
+                    total_supply = None
+                    if asset == 'BTC':
+                        total_supply = bitcoin.get_btc_supply(normalize=False)
+                    else:
+                        total_supply = util.xcp_supply(db)
+                    
+                    assetsInfo.append({
+                        'asset': asset,
+                        'owner': None,
+                        'divisible': True,
+                        'locked': False,
+                        'total_issued': total_supply,
+                        'callable': False,
+                        'call_date': None,
+                        'call_price': None,
+                        'description': '',
+                        'issuer': None
+                    })
+                    continue
                 
-                return {
-                    'owner': None,
-                    'divisible': True,
-                    'locked': False,
-                    'total_issued': total_supply,
-                    'callable': False,
-                    'call_date': None,
-                    'call_price': None,
-                    'description': '',
-                    'issuer': None
-                }
-            
-            #gets some useful info for the given asset
-            issuances = util.get_issuances(db,
-                filters={'field': 'asset', 'op': '==', 'value': asset},
-                status='valid',
-                order_by='block_index',
-                order_dir='asc')
-            if not issuances: return None #asset not found, most likely
-            else: last_issuance = issuances[-1]
-
-            #get the last issurance message for this asset, which should reflect the current owner and if
-            # its divisible (and if it was locked, for that matter)
-            locked = not last_issuance['quantity'] and not last_issuance['transfer']
-            total_issued = sum([e['quantity'] for e in issuances])
-            return {'owner': last_issuance['issuer'],
-                    'divisible': bool(last_issuance['divisible']),
-                    'locked': locked,
-                    'total_issued': total_issued,
-                    'callable': bool(last_issuance['callable']),
-                    'call_date': last_issuance['call_date'],
-                    'call_price': last_issuance['call_price'],
-                    'description': last_issuance['description'],
-                    'issuer': last_issuance['issuer']}
+                #gets some useful info for the given asset
+                issuances = util.get_issuances(db,
+                    filters={'field': 'asset', 'op': '==', 'value': asset},
+                    status='valid',
+                    order_by='block_index',
+                    order_dir='asc')
+                if not issuances: return None #asset not found, most likely
+                else: last_issuance = issuances[-1]
+    
+                #get the last issurance message for this asset, which should reflect the current owner and if
+                # its divisible (and if it was locked, for that matter)
+                total_issued = 0
+                locked = False
+                for e in issuances:
+                    if e['locked']: locked = True
+                    total_issued += e['quantity']
+                assetsInfo.append({'asset': asset,
+                        'owner': last_issuance['issuer'],
+                        'divisible': bool(last_issuance['divisible']),
+                        'locked': locked,
+                        'total_issued': total_issued,
+                        'callable': bool(last_issuance['callable']),
+                        'call_date': last_issuance['call_date'],
+                        'call_price': last_issuance['call_price'],
+                        'description': last_issuance['description'],
+                        'issuer': last_issuance['issuer']})
+            return assetsInfo
 
         @dispatcher.add_method
         def get_block_info(block_index):

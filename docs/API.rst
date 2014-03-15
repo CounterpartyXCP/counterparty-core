@@ -139,8 +139,8 @@ Everywhere in the API an asset is referenced as an uppercase alphabetic (base
 
 .. _quantitys:
 
-quantitys & balances
-^^^^^^^^^^^^^^^^^^^^
+Quantities & balances
+^^^^^^^^^^^^^^^^^^^^^^
 
 Anywhere where an quantity is specified, it is specified in **satoshis** (if a divisible asset), or as whole numbers
 (if an indivisible asset). To convert satoshis to floating-point, simply cast to float and divide by 100,000,000.
@@ -518,13 +518,14 @@ get_sends
 get_asset_info
 ^^^^^^^^^^^^^^
 
-.. py:function:: get_asset_info(asset)
+.. py:function:: get_asset_info(assets)
 
    Gets information on an issued asset.
 
-   :param string asset: The :ref:`asset <assets>` for which to retrieve information.
-   :return: ``null`` if the asset was not found. Otherwise, an object with the following parameters:
+   :param string assets: A list of one or more :ref:`asset <assets>` for which to retrieve information.
+   :return: ``null`` if the asset was not found. Otherwise, a list of one or more objects, each one with the following parameters:
 
+     - **asset** (*string*): The :ref:`name <assets>` of the asset itself 
      - **owner** (*string*): The address that currently owns the asset (i.e. has issuance rights to it) 
      - **divisible** (*boolean*): Whether the asset is divisible or not
      - **locked** (*boolean*): Whether the asset is locked (future issuances prohibited)
