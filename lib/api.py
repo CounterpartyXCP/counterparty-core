@@ -396,11 +396,13 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def create_issuance(source, asset, quantity, divisible, description, callable_=None, call_date=None,
-        call_price=None, transfer_destination=None, multisig=config.MULTISIG):
+        call_price=None, transfer_destination=None, lock=False, multisig=config.MULTISIG):
             try:
                 quantity = int(quantity)
             except ValueError:
                 raise Exception("Invalid quantity")
+            if lock:
+                description = "LOCK"
             tx_info = issuance.compose(db, source, transfer_destination,
                                    asset, quantity, divisible, callable_,
                                    call_date, call_price, description)

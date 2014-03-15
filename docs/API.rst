@@ -753,19 +753,23 @@ create_dividend
 create_issuance
 ^^^^^^^^^^^^^^^^^
 
-.. py:function:: create_issuance(source, asset, quantity, divisible, description, callable=false, call_date=null, call_price=null, transfer_destination=null, multisig=true):
+.. py:function:: create_issuance(source, asset, quantity, divisible, description, callable=false, call_date=null, call_price=null, transfer_destination=null, lock=false, multisig=true):
 
-   Issue a new asset, issue more of an existing asset or transfer the ownership of an asset.
+   Issue a new asset, issue more of an existing asset, lock an asset, or transfer the ownership of an asset (note that
+   you can only do one of these operations in a given create_issuance call).
 
    :param string source: The address that will be issuing or transfering the asset.
    :param integer quantity: The :ref:`quantity <quantitys>` of the asset to issue (set to 0 if *transferring* an asset).
    :param string asset: The :ref:`asset <assets>` to issue or transfer.
-   :param boolean divisible: Whether this asset is divisible or not (if a transfer, this value must match the value specified when the asset was originally issued).
+   :param boolean divisible: Whether this asset is divisible or not (if a transfer, this value must match the value
+    specified when the asset was originally issued).
    :param boolean callable: Whether the asset is callable or not.
    :param integer call_date: The timestamp at which the asset may be called back, in Unix time. Only valid for callable assets.
    :param float call_price: The :ref:`price <floats>` at which the asset may be called back, on the specified call_date. Only valid for callable assets.
-   :param boolean description: A textual description for the asset. 52 bytes max.
+   :param string description: A textual description for the asset. 52 bytes max.
    :param string transfer_destination: The address to receive the asset (only used when *transferring* assets -- leave set to ``null`` if issuing an asset).
+   :param boolean lock: Set to ``true`` if this asset should be locked with this API call. Only valid if the asset is not
+    already locked. To keep as-is, set this to ``false``, or simply do not specify it. 
    :param boolean multisig: See :ref:`this section <multisig_param>`.  
    :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
