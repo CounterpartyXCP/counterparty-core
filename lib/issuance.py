@@ -64,19 +64,21 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     elif destination:
         problems.append('cannot transfer a nonexistent asset')
 
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM balances \
-                      WHERE (address = ? AND asset = ?)''', (source, 'XCP'))
-    balances = cursor.fetchall()
-    cursor.close()
-    if block_index:
-        fee = 0
-        if block_index >= 286000 or config.TESTNET:     # Protocol change.
-            fee = config.ISSUANCE_FEE * config.UNIT
-        elif block_index > 281236 or config.TESTNET:    # Protocol change.
-            fee = config.ISSUANCE_FEE
-        if fee and (not balances or balances[0]['quantity'] < fee):
-            problems.append('insufficient funds')
+    # Check for existence of fee funds.
+    if quantity:
+        cursor = db.cursor()
+        cursor.execute('''SELECT * FROM balances \
+                          WHERE (address = ? AND asset = ?)''', (source, 'XCP'))
+        balances = cursor.fetchall()
+        cursor.close()
+        if block_index:
+            fee = 0
+            if block_index >= 286000 or config.TESTNET:     # Protocol change.
+                fee = config.ISSUANCE_FEE * config.UNIT
+            elif block_index > 281236 or config.TESTNET:    # Protocol change.
+                fee = config.ISSUANCE_FEE
+            if fee and (not balances or balances[0]['quantity'] < fee):
+                problems.append('insufficient funds')
 
     # For SQLite3
     call_date = min(call_date, config.MAX_INT)
