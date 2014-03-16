@@ -132,19 +132,25 @@ def log (db, command, category, bindings):
                 logging.info('Broadcast: {}'.format(infix + suffix))
 
         elif category == 'bets':
-            placeholder = ''
-            if bindings['target_value'] >= 0 and 'CFD' not in BET_TYPE_NAME[bindings['bet_type']]:
-                placeholder = ' on outcome ' + str(output(bindings['target_value'], 'value').split(' ')[0])
-            if bindings['leverage']:
-                placeholder += ', leveraged {}x'.format(output(bindings['leverage']/ 5040, 'leverage'))
+            # Last text
+            broadcasts = get_broadcasts(db, status='valid', source=bindings['feed_address'], order_by='tx_index', order_dir='asc')
+            last_broadcast = broadcasts[-1]
+            text = last_broadcast['text']
 
+            # Suffix
             fee = round(bindings['wager_quantity'] * bindings['fee_fraction_int'] / 1e8)    # round?!
+            end = 'in {} blocks, for a fee of {} ({}) [{}]'.format(bindings['expiration'], output(fee, 'XCP'), bindings['tx_hash'], bindings['status'])
 
-            logging.info('Bet: {} on {} at {} for {} against {} in {} blocks{} for a fee of {} ({}) [{}]'.format(BET_TYPE_NAME[bindings['bet_type']], bindings['feed_address'], isodt(bindings['deadline']), output(bindings['wager_quantity'], 'XCP'), output(bindings['counterwager_quantity'], 'XCP'), bindings['expiration'], placeholder, output(fee, 'XCP'), bindings['tx_hash'], bindings['status']))
+            if bindings['target_value'] >= 0 and 'CFD' not in BET_TYPE_NAME[bindings['bet_type']]:
+                log_message = 'Bet: {} against {}, leveraged {}x, on {} that ‘{}’ will {} {} at {}, {}'.format(output(bindings['wager_quantity'], 'XCP'), output(bindings['counterwager_quantity'], 'XCP'), output(bindings['leverage']/ 5040, 'leverage'), bindings['feed_address'], text, BET_TYPE_NAME[bindings['bet_type']], str(output(bindings['target_value'], 'value').split(' ')[0]), isodt(bindings['deadline']), end)
+            else:
+                log_message = 'Bet: {} on {} for {} against {}, leveraged {}x, {}'.format(BET_TYPE_NAME[bindings['bet_type']], bindings['feed_address'],output(bindings['wager_quantity'], 'XCP'), output(bindings['counterwager_quantity'], 'XCP'), output(bindings['leverage']/ 5040, 'leverage'), end)
+
+            logging.info(log_message)
 
         elif category == 'bet_matches':
             placeholder = ''
-            if bindings['target_value']:    # 0 is not a valid target value.
+            if bindings['target_value'] >= 0:    # Only non‐negative values are valid.
                 placeholder = ' that ' + str(output(bindings['target_value'], 'value'))
             if bindings['leverage']:
                 placeholder += ', leveraged {}x'.format(output(bindings['leverage'] / 5040, 'leverage'))
