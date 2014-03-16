@@ -141,8 +141,8 @@ def log (db, command, category, bindings):
             fee = round(bindings['wager_quantity'] * bindings['fee_fraction_int'] / 1e8)    # round?!
             end = 'in {} blocks, for a fee of {} ({}) [{}]'.format(bindings['expiration'], output(fee, 'XCP'), bindings['tx_hash'], bindings['status'])
 
-            if bindings['target_value'] >= 0 and 'CFD' not in BET_TYPE_NAME[bindings['bet_type']]:
-                log_message = 'Bet: {} against {}, leveraged {}x, on {} that ‘{}’ will {} {} at {}, {}'.format(output(bindings['wager_quantity'], 'XCP'), output(bindings['counterwager_quantity'], 'XCP'), output(bindings['leverage']/ 5040, 'leverage'), bindings['feed_address'], text, BET_TYPE_NAME[bindings['bet_type']], str(output(bindings['target_value'], 'value').split(' ')[0]), isodt(bindings['deadline']), end)
+            if 'CFD' not in BET_TYPE_NAME[bindings['bet_type']]:
+                log_message = 'Bet: {} against {}, on {} that ‘{}’ will {} {} at {}, {}'.format(output(bindings['wager_quantity'], 'XCP'), output(bindings['counterwager_quantity'], 'XCP'), bindings['feed_address'], text, BET_TYPE_NAME[bindings['bet_type']], str(output(bindings['target_value'], 'value').split(' ')[0]), isodt(bindings['deadline']), end)
             else:
                 log_message = 'Bet: {} on {} for {} against {}, leveraged {}x, {}'.format(BET_TYPE_NAME[bindings['bet_type']], bindings['feed_address'],output(bindings['wager_quantity'], 'XCP'), output(bindings['counterwager_quantity'], 'XCP'), output(bindings['leverage']/ 5040, 'leverage'), end)
 
@@ -820,7 +820,7 @@ def get_bets (db, status=None, source=None, show_empty=True, filters=None, order
     if filters and not isinstance(filters, list): filters = [filters,]
     if status: filters.append({'field': 'status', 'op': '==', 'value': status})
     if source: filters.append({'field': 'source', 'op': '==', 'value': source})
-    if not show_empty: filters.append({'field': 'wager_remaining', 'op': '==', 'value': 0})
+    if not show_empty: filters.append({'field': 'wager_remaining', 'op': '!=', 'value': 0})
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM bets%s'''
         % get_limit_to_blocks(start_block, end_block))
