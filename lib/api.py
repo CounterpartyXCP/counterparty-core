@@ -16,7 +16,7 @@ from cherrypy import wsgiserver
 from jsonrpc import JSONRPCResponseManager, dispatcher
 
 from . import (config, bitcoin, exceptions, util)
-from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel)
+from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 
 class APIServer(threading.Thread):
 
