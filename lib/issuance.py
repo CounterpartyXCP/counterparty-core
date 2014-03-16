@@ -43,7 +43,8 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     # Valid re-issuance?
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM issuances \
-                      WHERE (status = ? AND asset = ?)''', ('valid', asset))
+                      WHERE (status = ? AND asset = ?)
+                      ORDER BY tx_index ASC''', ('valid', asset))
     issuances = cursor.fetchall()
     cursor.close()
     if issuances:
@@ -160,16 +161,16 @@ def parse (db, tx, message):
                 util.debit(db, tx['block_index'], tx['source'], 'XCP', fee)
 
     # Lock?
+    lock = False
     if description and description.lower() == 'lock':
         lock = True
         cursor = db.cursor()
         issuances = list(cursor.execute('''SELECT * FROM issuances \
-                                           WHERE (status = ? AND asset = ?)''', ('valid', asset)))
+                                           WHERE (status = ? AND asset = ?)
+                                           ORDER BY tx_index ASC''', ('valid', asset)))
         cursor.close()
         description = issuances[-1]['description']  # Use last description.
         timestamp, value_int, fee_fraction_int = None, None, None
-    else:
-        lock = False
 
     # Add parsed transaction to message-type–specific table.
     bindings= {
@@ -190,7 +191,7 @@ def parse (db, tx, message):
         'locked': lock,
         'status': status,
     }
-    sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :lock, :status)'
+    sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status)'
     issuance_parse_cursor.execute(sql, bindings)
 
     # Credit.

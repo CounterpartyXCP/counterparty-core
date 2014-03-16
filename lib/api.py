@@ -16,7 +16,7 @@ from cherrypy import wsgiserver
 from jsonrpc import JSONRPCResponseManager, dispatcher
 
 from . import (config, bitcoin, exceptions, util)
-from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel)
+from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 
 class APIServer(threading.Thread):
 
@@ -220,9 +220,12 @@ class APIServer(threading.Thread):
                     raise Exception("All items in message_indexes are not integers")
                 
             cursor = db.cursor()
-            cursor.execute('select * from messages where message_index IN (%s) ORDER BY message_index ASC'
+            cursor.execute('SELECT * FROM messages WHERE message_index IN (%s) ORDER BY message_index ASC'
                 % (','.join([str(x) for x in message_indexes]),))
             messages = cursor.fetchall()
+            print ("GET MSG QUERY", 'SELECT * FROM messages WHERE message_index IN (%s) ORDER BY message_index ASC'
+                % (','.join([str(x) for x in message_indexes]),))
+            print("GET MSG RESULT", messages)
             cursor.close()
             return messages
 
@@ -231,48 +234,59 @@ class APIServer(threading.Thread):
             return util.xcp_supply(db)
 
         @dispatcher.add_method
-        def get_asset_info(asset):
-            if asset in ['BTC', 'XCP']:
-                total_supply = None
-                if asset == 'BTC':
-                    total_supply = bitcoin.get_btc_supply(normalize=False)
-                else:
-                    total_supply = util.xcp_supply(db)
+        def get_asset_info(assets):
+            if not isinstance(assets, list):
+                raise Exception("assets must be a list of asset names, even if it just contains one entry")
+            assetsInfo = []
+            for asset in assets:
+                if asset in ['BTC', 'XCP']:
+                    total_supply = None
+                    if asset == 'BTC':
+                        total_supply = bitcoin.get_btc_supply(normalize=False)
+                    else:
+                        total_supply = util.xcp_supply(db)
+                    
+                    assetsInfo.append({
+                        'asset': asset,
+                        'owner': None,
+                        'divisible': True,
+                        'locked': False,
+                        'total_issued': total_supply,
+                        'callable': False,
+                        'call_date': None,
+                        'call_price': None,
+                        'description': '',
+                        'issuer': None
+                    })
+                    continue
                 
-                return {
-                    'owner': None,
-                    'divisible': True,
-                    'locked': False,
-                    'total_issued': total_supply,
-                    'callable': False,
-                    'call_date': None,
-                    'call_price': None,
-                    'description': '',
-                    'issuer': None
-                }
-            
-            #gets some useful info for the given asset
-            issuances = util.get_issuances(db,
-                filters={'field': 'asset', 'op': '==', 'value': asset},
-                status='valid',
-                order_by='block_index',
-                order_dir='asc')
-            if not issuances: return None #asset not found, most likely
-            else: last_issuance = issuances[-1]
-
-            #get the last issurance message for this asset, which should reflect the current owner and if
-            # its divisible (and if it was locked, for that matter)
-            locked = not last_issuance['quantity'] and not last_issuance['transfer']
-            total_issued = sum([e['quantity'] for e in issuances])
-            return {'owner': last_issuance['issuer'],
-                    'divisible': bool(last_issuance['divisible']),
-                    'locked': locked,
-                    'total_issued': total_issued,
-                    'callable': bool(last_issuance['callable']),
-                    'call_date': last_issuance['call_date'],
-                    'call_price': last_issuance['call_price'],
-                    'description': last_issuance['description'],
-                    'issuer': last_issuance['issuer']}
+                #gets some useful info for the given asset
+                issuances = util.get_issuances(db,
+                    filters={'field': 'asset', 'op': '==', 'value': asset},
+                    status='valid',
+                    order_by='block_index',
+                    order_dir='asc')
+                if not issuances: return None #asset not found, most likely
+                else: last_issuance = issuances[-1]
+    
+                #get the last issurance message for this asset, which should reflect the current owner and if
+                # its divisible (and if it was locked, for that matter)
+                total_issued = 0
+                locked = False
+                for e in issuances:
+                    if e['locked']: locked = True
+                    total_issued += e['quantity']
+                assetsInfo.append({'asset': asset,
+                        'owner': last_issuance['issuer'],
+                        'divisible': bool(last_issuance['divisible']),
+                        'locked': locked,
+                        'total_issued': total_issued,
+                        'callable': bool(last_issuance['callable']),
+                        'call_date': last_issuance['call_date'],
+                        'call_price': last_issuance['call_price'],
+                        'description': last_issuance['description'],
+                        'issuer': last_issuance['issuer']})
+            return assetsInfo
 
         @dispatcher.add_method
         def get_block_info(block_index):
@@ -385,11 +399,13 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def create_issuance(source, asset, quantity, divisible, description, callable_=None, call_date=None,
-        call_price=None, transfer_destination=None, multisig=config.MULTISIG):
+        call_price=None, transfer_destination=None, lock=False, multisig=config.MULTISIG):
             try:
                 quantity = int(quantity)
             except ValueError:
                 raise Exception("Invalid quantity")
+            if lock:
+                description = "LOCK"
             tx_info = issuance.compose(db, source, transfer_destination,
                                    asset, quantity, divisible, callable_,
                                    call_date, call_price, description)
