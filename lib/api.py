@@ -220,9 +220,12 @@ class APIServer(threading.Thread):
                     raise Exception("All items in message_indexes are not integers")
                 
             cursor = db.cursor()
-            cursor.execute('select * from messages where message_index IN (%s) ORDER BY message_index ASC'
+            cursor.execute('SELECT * FROM messages WHERE message_index IN (%s) ORDER BY message_index ASC'
                 % (','.join([str(x) for x in message_indexes]),))
             messages = cursor.fetchall()
+            print ("GET MSG QUERY", 'SELECT * FROM messages WHERE message_index IN (%s) ORDER BY message_index ASC'
+                % (','.join([str(x) for x in message_indexes]),))
+            print("GET MSG RESULT", messages)
             cursor.close()
             return messages
 
@@ -232,8 +235,8 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_asset_info(assets):
-            if not isinstance(assets, (list, tuple)):
-                assets = [assets,]
+            if not isinstance(assets, list):
+                raise Exception("assets must be a list of asset names, even if it just contains one entry")
             assetsInfo = []
             for asset in assets:
                 if asset in ['BTC', 'XCP']:
