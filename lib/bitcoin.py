@@ -325,6 +325,13 @@ def serialise (inputs, destination_outputs, data_output=None, change_output=None
     s += (0).to_bytes(4, byteorder='little')                # LockTime
     return s
 
+# Prefer outputs less than dust size, then bigger is better.
+def input_value_weight(amount):
+    if amount * config.UNIT <= config.REGULAR_DUST_SIZE:
+        return 0
+    else:
+        return 1/amount
+
 def get_inputs (source, total_btc_out, unittest=False):
     """List unspent inputs for source."""
     if not unittest:
@@ -339,7 +346,7 @@ def get_inputs (source, total_btc_out, unittest=False):
     unspent = [coin for coin in listunspent if coin['address'] == source]
     inputs, total_btc_in = [], 0
     change_quantity = 0
-    for coin in unspent:
+    for coin in sorted(unspent,key=lambda x:input_value_weight(x['amount'])):
         inputs.append(coin)
         total_btc_in += round(coin['amount'] * config.UNIT)
         change_quantity = total_btc_in - total_btc_out
