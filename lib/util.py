@@ -227,18 +227,13 @@ def exectracer(cursor, sql, bindings):
     if 'blocks' in sql or 'transactions' in sql: return True
 
     # Record alteration in database.
-    if not category in ('balances', 'messages'):
-
-        # Get current block. (Hackish)
-        try:
-            block_index = bindings['block_index']
-        except KeyError:
+    if category not in ('balances', 'messages'):
+        if not (command in ('update') and category in ('orders', 'bets', 'order_matches', 'bet_matches')):    # List message manually.
             try:
-                block_index = bindings['tx1_block_index']
+                block_index = bindings['block_index']
             except KeyError:
-                block_index = last_block(db)['block_index'] + 1   # TODO: Double‐check that this is correct.
-
-        message(db, block_index, command, category, bindings)
+                block_index = bindings['tx1_block_index']
+            message(db, block_index, command, category, bindings)
 
     # Log.
     log(db, command, category, bindings)

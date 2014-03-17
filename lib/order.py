@@ -243,6 +243,7 @@ def match (db, tx):
             }
             sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining, fee_provided_remaining = :fee_provided_remaining where tx_index = :tx_index'
             cursor.execute(sql, bindings)
+            util.message(db, tx1['block_index'], 'update', 'orders', bindings)
             # tx1
             bindings = {
                 'give_remaining': tx1_give_remaining,
@@ -253,6 +254,7 @@ def match (db, tx):
             }
             sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining, fee_provided_remaining = :fee_provided_remaining where tx_index = :tx_index'
             cursor.execute(sql, bindings)
+            util.message(db, tx1['block_index'], 'update', 'orders', bindings)
 
             # Calculate when the match will expire.
             if tx1['block_index'] >= 286500 or config.TESTNET:    # Protocol change.
@@ -300,6 +302,7 @@ def expire (db, block_index):
         }
         sql='update orders set status = :status where tx_index = :tx_index'
         cursor.execute(sql, bindings)
+        util.message(db, block_index, 'update', 'orders', bindings)
 
         if order['give_asset'] != 'BTC':    # Can't credit BTC.
             util.credit(db, block_index, order['source'], order['give_asset'], order['give_remaining'], event=order['tx_hash'])
@@ -326,6 +329,7 @@ def expire (db, block_index):
         }
         sql='update order_matches set status = :status where id = :order_match_id'
         cursor.execute(sql, bindings)
+        util.message(db, block_index, 'update', 'order_matches', bindings)
 
         order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']
 
@@ -354,6 +358,7 @@ def expire (db, block_index):
             }
             sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining where tx_index = :tx_index'
             cursor.execute(sql, bindings)
+            util.message(db, block_index, 'update', 'orders', bindings)
         # If tx0 is expired, credit address directly.
         elif order_match['forward_asset'] != 'BTC':
             util.credit(db, block_index, order_match['tx0_address'],
@@ -375,6 +380,7 @@ def expire (db, block_index):
             }
             sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining where tx_index = :tx_index'
             cursor.execute(sql, bindings)
+            util.message(db, block_index, 'update', 'orders', bindings)
         # If tx1 is expired, credit address directly.
         elif order_match['backward_asset'] != 'BTC':
             util.credit(db, block_index, order_match['tx1_address'],

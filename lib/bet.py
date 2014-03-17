@@ -256,6 +256,7 @@ def match (db, tx):
             }
             sql='update bets set wager_remaining = :wager_remaining, counterwager_remaining = :counterwager_remaining where tx_index = :tx_index'
             cursor.execute(sql, bindings)
+            util.message(db, tx1['block_index'], 'update', 'bets', bindings)
 
             # tx1
             bindings = {
@@ -265,7 +266,7 @@ def match (db, tx):
             }
             sql='update bets set wager_remaining = :wager_remaining, counterwager_remaining = :counterwager_remaining where tx_index = :tx_index'
             cursor.execute(sql, bindings)
-
+            util.message(db, tx1['block_index'], 'update', 'bets', bindings)
 
             # Get last value of feed.
             initial_value = util.get_broadcasts(db, status='valid', source=tx1['feed_address'])[-1]['value']
@@ -316,6 +317,7 @@ def expire (db, block_index, block_time):
         }
         sql='update bets set status = :status where tx_index = :tx_index'
         cursor.execute(sql, bindings)
+        util.message(db, block_index, 'update', 'bets', bindings)
 
         util.credit(db, block_index, bet['source'], 'XCP', round(bet['wager_remaining'] * (1 + bet['fee_fraction_int'] / 1e8)))
 
@@ -345,6 +347,7 @@ def expire (db, block_index, block_time):
         }
         sql='update bet_matches set status = :status where id = :bet_match_id'
         cursor.execute(sql, bindings)
+        util.message(db, block_index, 'update', 'bet_matches', bindings)
 
         # Record bet match expiration.
         bindings = {
