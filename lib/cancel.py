@@ -14,26 +14,15 @@ LENGTH = 32
 ID = 70
 
 
-def validate (db, offer_hash, source=None):
-    problems = []
+def compose (db, offer_hash):
 
+    # Check that offer exists.
+    problems = ['no valid offer with that hash']
     for offer in util.get_orders(db, status='valid') + util.get_bets(db, status='valid'):
         if offer_hash == offer['tx_hash']:
-            if source == offer['source']:
-                return source, offer, problems
-            else:
-                if bitcoin.is_mine(offer['source']) or config.PREFIX == config.UNITTEST_PREFIX:
-                    source = offer['source']
-                else:
-                    problems.append('offer was not made by one of your addresses')
-                return source, offer, problems
-
-    problems.append('no valid offer with that hash')
-    return None, None, problems
-
-
-def compose (db, offer_hash):
-    source, offer, problems = validate(db, offer_hash)
+            source = offer['source']
+            problems = None
+            break
     if problems: raise exceptions.CancelError(problems)
 
     offer_hash_bytes = binascii.unhexlify(bytes(offer_hash, 'utf-8'))
@@ -53,11 +42,6 @@ def parse (db, tx, message):
     except struct.error as e:
         offer_hash = None
         status = 'invalid: could not unpack'
-
-    if status == 'valid':
-        if status == 'valid':
-            source, offer, problems = validate(db, offer_hash, source=tx['source'])
-            if problems: status = 'invalid: ' + ';'.join(problems)
 
     if status == 'valid':
         # Find offer.
