@@ -49,7 +49,7 @@ def validate (db, source, fraction, asset, block_time):
     balances = util.get_balances(db, asset=asset)
     for balance in balances:
         address, address_amount = balance['address'], balance['amount']
-        if address == source: continue
+        if address == source or address_amount == 0: continue
         callback_amount = int(address_amount * fraction)   # Round down.
         fraction_actual = callback_amount / address_amount
         outputs.append({'address': address, 'callback_amount': callback_amount, 'fraction_actual': fraction_actual})
