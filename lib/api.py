@@ -161,16 +161,18 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_orders (filters=None, is_valid=True, show_expired=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            return util.get_orders(db,
+        def get_orders (filters=None, is_valid=True, show_empty=True, show_expired=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+            results = util.get_orders(db,
                 filters=filters,
                 status='valid' if bool(is_valid) else None,
+                show_empty=show_empty,
                 show_expired=show_expired,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
                 end_block=end_block,
                 filterop=filterop)
+            return results
 
         @dispatcher.add_method
         def get_order_matches (filters=None, status='completed', is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
@@ -223,9 +225,6 @@ class APIServer(threading.Thread):
             cursor.execute('SELECT * FROM messages WHERE message_index IN (%s) ORDER BY message_index ASC'
                 % (','.join([str(x) for x in message_indexes]),))
             messages = cursor.fetchall()
-            print ("GET MSG QUERY", 'SELECT * FROM messages WHERE message_index IN (%s) ORDER BY message_index ASC'
-                % (','.join([str(x) for x in message_indexes]),))
-            print("GET MSG RESULT", messages)
             cursor.close()
             return messages
 

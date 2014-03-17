@@ -733,24 +733,30 @@ def get_sends (db, status=None, source=None, destination=None, filters=None, ord
     return do_order_by(results, order_by, order_dir)
 
 def get_orders (db, status=None, source=None, show_empty=True, show_expired=True, filters=None, order_by=None, order_dir='asc', start_block=None, end_block=None, filterop='and'):
-    def filter_expired(e):
+    def filter_expired(e, cur_block_index):
         #Ignore BTC orders one block early. (This is why we need show_expired.)
         #function returns True if the element is NOT expired
         time_left = e['expire_index'] - last_block(db)['block_index']
         if e['give_asset'] == 'BTC': time_left -= 1
         return False if time_left < 0 else True
+    def filter_empty(e):
+        #return True if the element is NOT empty
+        #we could use filter syntax for this, but this method allows us to be more flexible with the
+        # normal ways people want to use this API call
+        return False if e['give_remaining'] == 0 else True
 
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
     if status: filters.append({'field': 'status', 'op': '==', 'value': status})
     if source: filters.append({'field': 'source', 'op': '==', 'value': source})
-    if not show_empty: filters.append({'field': 'give_remaining', 'op': '!=', 'value': 0})
+    cur_block_index = last_block(db)['block_index']
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM orders%s'''
         % get_limit_to_blocks(start_block, end_block))
     results = do_filter(cursor.fetchall(), filters, filterop)
     cursor.close()
-    if not show_expired: results = [e for e in results if filter_expired(e)]
+    if not show_empty: results = [e for e in results if filter_empty(e)]
+    if not show_expired: results = [e for e in results if filter_expired(e, cur_block_index)]
     return do_order_by(results, order_by, order_dir)
 
 def get_order_matches (db, status=None, is_mine=False, address=None, tx0_hash=None, tx1_hash=None, filters=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
