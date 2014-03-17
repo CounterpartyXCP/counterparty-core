@@ -736,7 +736,7 @@ def get_orders (db, status=None, source=None, show_empty=True, show_expired=True
     def filter_expired(e, cur_block_index):
         #Ignore BTC orders one block early. (This is why we need show_expired.)
         #function returns True if the element is NOT expired
-        time_left = e['expire_index'] - last_block(db)['block_index']
+        time_left = e['expire_index'] - cur_block_index
         if e['give_asset'] == 'BTC': time_left -= 1
         return False if time_left < 0 else True
     def filter_empty(e):
