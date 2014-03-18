@@ -11,10 +11,10 @@ Order Match: 0.5 BTC for 1.0 XCP (dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24
 Credit: 1.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Database: set status of order_match dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5 to completed.
 BTC Payment: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 0.5 BTC to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc for order match dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5 (e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71) [valid]
-Debit: 5.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
+Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 10.0 of asset BBBB, which is divisible and uncallable, with description ‘’ (e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db) [valid]
 Credit: 10.0 BBBB to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
-Debit: 5.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
+Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 100000 of asset BBBC, which is indivisible and callable from 1969-12-31T19:00:17-05:00 for 0.015 XCP/BBBC, with description ‘foobar’ (67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6) [valid]
 Credit: 100000 BBBC to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Debit: 0.0000006 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>

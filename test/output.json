@@ -2,7 +2,7 @@
     "get_address_balances": [
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "amount": 144431509207, 
+            "amount": 145331509207, 
             "asset": "XCP"
         }, 
         {
@@ -474,7 +474,7 @@
         {
             "action": null, 
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "amount": 500000000, 
+            "amount": 50000000, 
             "asset": "XCP", 
             "block_index": 154913, 
             "event": null
@@ -482,7 +482,7 @@
         {
             "action": null, 
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "amount": 500000000, 
+            "amount": 50000000, 
             "asset": "XCP", 
             "block_index": 154914, 
             "event": null
@@ -656,7 +656,7 @@
             "callable": 0, 
             "description": "", 
             "divisible": 1, 
-            "fee_paid": 500000000, 
+            "fee_paid": 50000000, 
             "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "locked": null, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
@@ -674,7 +674,7 @@
             "callable": 1, 
             "description": "foobar", 
             "divisible": 0, 
-            "fee_paid": 500000000, 
+            "fee_paid": 50000000, 
             "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "locked": null, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
@@ -774,7 +774,12 @@
         {
             "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", 
             "asset": "XCP", 
-            "quantity": 83759799712
+            "quantity": 84659799712
+        }, 
+        {
+            "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", 
+            "asset": "IIII", 
+            "quantity": 210000
         }, 
         {
             "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", 

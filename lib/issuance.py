@@ -64,19 +64,23 @@ def validate (db, source, destination, asset, amount, divisible, callable_, call
     elif destination:
         problems.append('cannot transfer a nonexistent asset')
 
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM balances \
-                      WHERE (address = ? AND asset = ?)''', (source, 'XCP'))
-    balances = cursor.fetchall()
-    cursor.close()
-    if block_index:
-        fee = 0
-        if block_index >= 286000 or config.TESTNET:     # Protocol change.
-            fee = config.ISSUANCE_FEE * config.UNIT
-        elif block_index > 281236 or config.TESTNET:    # Protocol change.
-            fee = config.ISSUANCE_FEE
-        if fee and (not balances or balances[0]['amount'] < fee):
-            problems.append('insufficient funds')
+    # Check for existence of fee funds.
+    if amount:
+        cursor = db.cursor()
+        cursor.execute('''SELECT * FROM balances \
+                          WHERE (address = ? AND asset = ?)''', (source, 'XCP'))
+        balances = cursor.fetchall()
+        cursor.close()
+        if block_index:
+            fee = 0
+            if block_index >= 291700 or config.TESTNET:     # Protocol change.
+                fee = int(0.5 * config.UNIT)
+            elif block_index >= 286000 or config.TESTNET:   # Protocol change.
+                fee = 5 * config.UNIT
+            elif block_index > 281236 or config.TESTNET:    # Protocol change.
+                fee = 5
+            if fee and (not balances or balances[0]['amount'] < fee):
+                problems.append('insufficient funds')
 
     # For SQLite3
     call_date = min(call_date, config.MAX_INT)
@@ -146,10 +150,12 @@ def parse (db, tx, message):
         # Debit fee.
         fee = 0
         if amount:
-            if tx['block_index'] >= 286000 or config.TESTNET:   # Protocol change.
-                fee = config.ISSUANCE_FEE * config.UNIT
-            elif tx['block_index'] > 281236 or config.TESTNET:                    # Protocol change.
-                fee = config.ISSUANCE_FEE
+            if tx['block_index'] >= 291700 or config.TESTNET:   # Protocol change.
+                fee = int(0.5 * config.UNIT)
+            elif tx['block_index'] >= 286000 or config.TESTNET: # Protocol change.
+                fee = 5 * config.UNIT
+            elif tx['block_index'] > 281236 or config.TESTNET:  # Protocol change.
+                fee = 5
             if fee:
                 util.debit(db, tx['block_index'], tx['source'], 'XCP', fee)
 

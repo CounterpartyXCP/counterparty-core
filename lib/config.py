@@ -8,10 +8,10 @@ UNITTEST_PREFIX = b'TESTXXXX'
 
 # Versions
 CLIENT_VERSION_MAJOR = 6
-CLIENT_VERSION_MINOR = 6
+CLIENT_VERSION_MINOR = 7
 CLIENT_VERSION = float(str(CLIENT_VERSION_MAJOR) + '.' + str(CLIENT_VERSION_MINOR))
 DB_VERSION_MAJOR = 9        # Major version changes the blocks or transactions table.
-DB_VERSION_MINOR = 5        # Minor version changes just the parsing.
+DB_VERSION_MINOR = 9        # Minor version changes just the parsing.
 DB_VERSION = float(str(DB_VERSION_MAJOR) + '.' + str(DB_VERSION_MINOR))
 
 # Bitcoin protocol
@@ -24,7 +24,6 @@ MIN_FEE = 10000                 # Counterparty transactions are all under 1KB in
 # Counterparty protocol
 TXTYPE_FORMAT = '>I'
 
-ISSUANCE_FEE = 5
 TWO_WEEKS = 2 * 7 * 24 * 3600
 MAX_EXPIRATION = 4 * 2016   # Two months
 
