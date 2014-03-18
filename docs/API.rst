@@ -460,13 +460,14 @@ get_issuances
 get_orders
 ^^^^^^^^^^^^^^
 
-.. py:function:: get_orders(filters=[], is_valid=true, show_expired=true, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
+.. py:function:: get_orders(filters=[], is_valid=true, show_empty=true, show_expired=true, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
 
    Gets a listing of orders.
 
    :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
    :param boolean is_valid: Set to ``true`` to only return valid records. Set to ``false`` to return all records (including invalid attempts).
-   :param boolean show_expired: Set to ``true`` to include expired orders in the results.
+   :param boolean show_empty: Set to ``false`` to not include empty orders in the results (i.e. where give remaining is zero).
+   :param boolean show_expired: Set to ``false`` to not include expired orders in the results.
    :param string order_by: If sorted results are desired, specify the name of an :ref:`order object <order-object>` attribute to order the results by (e.g. ``get_asset``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
    :param integer start_block: If specified, only results from the specified block index on will be returned  
