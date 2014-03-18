@@ -74,10 +74,12 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
         cursor.close()
         if block_index:
             fee = 0
-            if block_index >= 286000 or config.TESTNET:     # Protocol change.
-                fee = config.ISSUANCE_FEE * config.UNIT
+            if block_index >= 291700 or config.TESTNET:     # Protocol change.
+                fee = int(0.5 * config.UNIT)
+            elif block_index >= 286000 or config.TESTNET:   # Protocol change.
+                fee = 5 * config.UNIT
             elif block_index > 281236 or config.TESTNET:    # Protocol change.
-                fee = config.ISSUANCE_FEE
+                fee = 5
             if fee and (not balances or balances[0]['quantity'] < fee):
                 problems.append('insufficient funds')
 
@@ -153,10 +155,12 @@ def parse (db, tx, message):
         # Debit fee.
         fee = 0
         if quantity:
-            if tx['block_index'] >= 286000 or config.TESTNET:   # Protocol change.
-                fee = config.ISSUANCE_FEE * config.UNIT
-            elif tx['block_index'] > 281236 or config.TESTNET:                    # Protocol change.
-                fee = config.ISSUANCE_FEE
+            if tx['block_index'] >= 291700 or config.TESTNET:   # Protocol change.
+                fee = int(0.5 * config.UNIT)
+            elif tx['block_index'] >= 286000 or config.TESTNET: # Protocol change.
+                fee = 5 * config.UNIT
+            elif tx['block_index'] > 281236 or config.TESTNET:  # Protocol change.
+                fee = 5
             if fee:
                 util.debit(db, tx['block_index'], tx['source'], 'XCP', fee)
 
