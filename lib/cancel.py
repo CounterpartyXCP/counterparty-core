@@ -63,6 +63,7 @@ def parse (db, tx, message):
             }
             sql='update orders set status = :status where tx_hash = :tx_hash'
             cursor.execute(sql, bindings)
+            util.message(db, tx['block_index'], 'update', 'orders', bindings)
 
             if order['give_asset'] != 'BTC':
                 util.credit(db, tx['block_index'], tx['source'], order['give_asset'], order['give_remaining'])
@@ -77,6 +78,7 @@ def parse (db, tx, message):
             }
             sql='update bets set status = :status where tx_hash = :tx_hash'
             cursor.execute(sql, bindings)
+            util.message(db, tx['block_index'], 'update', 'bets', bindings)
 
             util.credit(db, tx['block_index'], tx['source'], 'XCP', bet['wager_remaining'])
             util.credit(db, tx['block_index'], tx['source'], 'XCP', round(bet['wager_quantity'] * bet['fee_fraction_int'] / 1e8))

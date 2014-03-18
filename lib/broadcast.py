@@ -230,6 +230,7 @@ def parse (db, tx, message):
             }
             sql='update bet_matches set status = :status where id = :bet_match_id'
             broadcast_parse_cursor.execute(sql, bindings)
+            util.message(db, tx['block_index'], 'update', 'bet_matches', bindings)
 
         broadcast_bet_match_cursor.close()
 
