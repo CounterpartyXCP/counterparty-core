@@ -700,11 +700,11 @@ def follow (db):
         block_index = config.BLOCK_FIRST
 
     # Get index of last transaction.
-    try:
-        txes = list(follow_cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)'''))
+    txes = list(follow_cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)'''))
+    if txes:
         assert len(txes) == 1
         tx_index = txes[0]['tx_index'] + 1
-    except Exception:   # TODO
+    else:
         tx_index = 0
 
     while True:

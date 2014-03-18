@@ -186,10 +186,10 @@ def message (db, block_index, command, category, bindings):
     # Get last message index.
     messages = list(cursor.execute('''SELECT * FROM messages
                                       WHERE message_index = (SELECT MAX(message_index) from messages)'''))
-    try:
+    if messages:
         assert len(messages) == 1
         message_index = messages[0]['message_index'] + 1
-    except (AssertionError, IndexError):
+    else:
         message_index = 0
 
     bindings_string = json.dumps(collections.OrderedDict(sorted(bindings.items())))
@@ -335,10 +335,10 @@ def isodt (epoch_time):
 def last_block (db):
     cursor = db.cursor()
     blocks = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)'''))
-    try:
+    if blocks:
         assert len(blocks) == 1
         last_block = blocks[0]
-    except (AssertionError, IndexError):
+    else:
         raise exceptions.DatabaseError('No blocks found.')
     cursor.close()
     return last_block
@@ -346,10 +346,10 @@ def last_block (db):
 def last_message (db):
     cursor = db.cursor()
     messages = list(cursor.execute('''SELECT * FROM messages WHERE message_index = (SELECT MAX(message_index) from messages)'''))
-    try:
+    if messages:
         assert len(messages) == 1
         last_message = messages[0]
-    except (AssertionError, IndexError):
+    else:
         raise exceptions.DatabaseError('No messages found.')
     cursor.close()
     return last_message
