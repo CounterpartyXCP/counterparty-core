@@ -648,20 +648,20 @@ def reparse (db, block_index=None, quiet=False):
     cursor.close()
     return
 
-def reorg (db):
+def reorg (db, last_block_index):
     # Detect blockchain reorganisation up to 10 blocks length.
     reorg_cursor = db.cursor()
-    blocks = list(reorg_cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)'''))
-    assert len(blocks) == 1
-    last_block_index = blocks[0]['block_index']
     reorg_necessary = False
     for block_index in range(last_block_index - 10, last_block_index + 1):
         block_hash_see = bitcoin.get_block_hash(block_index)
-        blocks = list(reorg_cursor.execute('''SELECT * FROM blocks WHERE block_index=?''', (block_index,)))
-        assert len(blocks) == 1
-        block_hash_have = blocks[0]['block_hash']
-        if block_hash_see != block_hash_have:
-            reorg_necessary = True
+        blocks = list(reorg_cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,)))
+        if blocks:
+            assert len(blocks) == 1
+            block_hash_have = blocks[0]['block_hash']
+            if block_hash_see != block_hash_have:
+                reorg_necessary = True
+                break
+        else:
             break
 
     if not reorg_necessary: return last_block_index + 1
@@ -777,7 +777,7 @@ def follow (db):
         while block_index > block_count: # DUPE
             # Handle blockchain reorganisations, as necessary, atomically.
             with db:
-                block_index = reorg(db)
+                block_index = reorg(db, block_index)    # This increments block_index if no reorg. is needed.
 
             block_count = bitcoin.get_block_count()
             time.sleep(2)
