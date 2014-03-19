@@ -766,7 +766,7 @@ create_issuance
     specified when the asset was originally issued).
    :param boolean callable: Whether the asset is callable or not.
    :param integer call_date: The timestamp at which the asset may be called back, in Unix time. Only valid for callable assets.
-   :param float call_price: The :ref:`price <floats>` at which the asset may be called back, on the specified call_date. Only valid for callable assets.
+   :param float call_price: The :ref:`price <floats>` per unit XCP at which the asset may be called back, on or after the specified call_date. Only valid for callable assets.
    :param string description: A textual description for the asset. 52 bytes max.
    :param string transfer_destination: The address to receive the asset (only used when *transferring* assets -- leave set to ``null`` if issuing an asset).
    :param boolean lock: Set to ``true`` if this asset should be locked with this API call. Only valid if the asset is not
