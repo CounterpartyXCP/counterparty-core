@@ -165,8 +165,10 @@ def match (db, tx):
         tx0_fee_required_remaining = tx0['fee_required_remaining']
         tx0_fee_provided_remaining = tx0['fee_provided_remaining']
 
-        # Make sure that that both orders still have funds remaining [to be sold].
+        # Make sure that that both orders still have funds remaining.
         if tx0_give_remaining <= 0 or tx1_give_remaining <= 0: continue
+        if tx1['block_index'] >= 292000 or config.TESTNET:  # Protocol change
+            if tx0_get_remaining <= 0 or tx1_get_remaining <= 0: continue
 
         # If the prices agree, make the trade. The found order sets the price,
         # and they trade as much as they can.
