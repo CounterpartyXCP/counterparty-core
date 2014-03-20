@@ -1,5 +1,5 @@
 {
-	"minimum_client_version": 6.7,
+	"minimum_client_version": 6.8,
 	"protocol_changes": [
 		{
 			"block_index": 285306,
@@ -30,6 +30,11 @@
 			"block_index": 291700,
 			"minimum_database_version": 9.9,
 			"description": "reduce issuance fee to 0.5 XCP"
+		},
+		{
+			"block_index": 292000,
+			"minimum_database_version": 9.901,
+			"description": "match only with positive get/counterwager remaining"
 		}
 	]
 }

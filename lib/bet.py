@@ -222,6 +222,8 @@ def match (db, tx):
 
         # Make sure that that both bets still have funds remaining [to be wagered].
         if tx0['wager_remaining'] <= 0 or tx1_wager_remaining <= 0: continue
+        if tx1['block_index'] >= 292000 or config.TESTNET:  # Protocol change
+            if tx0['counterwager_remaining'] <= 0 or tx1_counterwager_remaining <= 0: continue
 
         # If the odds agree, make the trade. The found order sets the odds,
         # and they trade as much as they can.
