@@ -275,16 +275,17 @@ class APIServer(threading.Thread):
                 for e in issuances:
                     if e['locked']: locked = True
                     total_issued += e['quantity']
-                assetsInfo.append({'asset': asset,
-                        'owner': last_issuance['issuer'],
-                        'divisible': bool(last_issuance['divisible']),
-                        'locked': locked,
-                        'total_issued': total_issued,
-                        'callable': bool(last_issuance['callable']),
-                        'call_date': last_issuance['call_date'],
-                        'call_price': last_issuance['call_price'],
-                        'description': last_issuance['description'],
-                        'issuer': last_issuance['issuer']})
+                assetsInfo.append({
+                    'asset': asset,
+                    'owner': last_issuance['issuer'],
+                    'divisible': bool(last_issuance['divisible']),
+                    'locked': locked,
+                    'total_issued': total_issued,
+                    'callable': bool(last_issuance['callable']),
+                    'call_date': last_issuance['call_date'],
+                    'call_price': last_issuance['call_price'],
+                    'description': last_issuance['description'],
+                    'issuer': last_issuance['issuer']})
             return assetsInfo
 
         @dispatcher.add_method

@@ -23,8 +23,11 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     if asset in ('BTC', 'XCP'):
         problems.append('cannot issue BTC or XCP')
 
-    if call_price is None: call_price = 0.0
     if call_date is None: call_date = 0
+    if call_price is None: call_price = 0.0
+    
+    if isinstance(call_price, int): call_price = float(call_price)
+    #^ helps especially with calls from JS-based clients, where parseFloat(15) returns 15 (not 15.0), which json takes as an int
 
     if not isinstance(quantity, int):
         problems.append('quantity must be in satoshis')
