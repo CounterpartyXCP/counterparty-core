@@ -5,6 +5,7 @@
 import struct
 import decimal
 D = decimal.Decimal
+from fractions import Fraction
 
 from . import (util, config, exceptions, bitcoin, util)
 
@@ -70,9 +71,9 @@ def parse (db, tx, message=None):
         if sent > max_burn: burned = max_burn   # Exceeded maximum burn; earn what you can.
         else: burned = sent
 
-        total_time = D(config.BURN_END - config.BURN_START)
-        partial_time = D(config.BURN_END - tx['block_index'])
-        multiplier = 1000 * (1 + D(.5) * (partial_time / total_time))
+        total_time = config.BURN_END - config.BURN_START
+        partial_time = config.BURN_END - tx['block_index']
+        multiplier = 1000 * (1 + (.5 * Fraction(partial_time, total_time)))
         earned = round(burned * multiplier)
 
         # Credit source address with earned XCP.

@@ -11,6 +11,7 @@ import requests
 from datetime import datetime
 from dateutil.tz import tzlocal
 from operator import itemgetter
+import fractions
 
 from . import (config, exceptions)
 
@@ -49,10 +50,13 @@ def api (method, params):
     else:
         raise exceptions.RPCError('{}'.format(response_json['error']))
 
-def price (numerator, denominator):
-    numerator = D(numerator)
-    denominator = D(denominator)
-    return D(numerator / denominator)
+def price (numerator, denominator, block_index):
+    if config.TESTNET:  # TODO: Potential protocol change.
+        return fractions.Fraction(numerator, denominator)
+    else:
+        numerator = D(numerator)
+        denominator = D(denominator)
+        return D(numerator / denominator)
 
 def log (db, command, category, bindings):
 
@@ -498,7 +502,6 @@ def credit (db, block_index, address, asset, quantity, action=None, event=None):
     credit_cursor.close()
 
 def devise (db, quantity, asset, dest, divisible=None):
-    quantity = D(quantity)
 
     # For output only.
     def norm(num, places):
@@ -521,7 +524,7 @@ def devise (db, quantity, asset, dest, divisible=None):
                 return float(quantity)  # TODO: Float?!
 
     if asset in ('fraction',):
-        return norm(quantity / D(1e8), 6)
+        return norm(fraction(quantity, 1e8), 6)
 
     if divisible == None:
         if asset in ('BTC', 'XCP'):
@@ -537,13 +540,13 @@ def devise (db, quantity, asset, dest, divisible=None):
 
     if divisible:
         if dest == 'output':
-            quantity = quantity / D(config.UNIT)
+            quantity = D(quantity) / D(config.UNIT)
             if quantity == quantity.to_integral():
                 return str(quantity) + '.0'  # For divisible assets, display the decimal point.
             else:
                 return norm(quantity, 8)
         elif dest == 'input':
-            quantity = quantity * D(config.UNIT)
+            quantity = quantity * config.UNIT
             if quantity == quantity.to_integral():
                 return int(quantity)
             else:

@@ -84,8 +84,8 @@ def parse (db, tx, message):
 
     price = 0
     if status == 'valid':
-        try: price = D(get_quantity) / D(give_quantity)
-        except: pass
+        try: price = util.price(get_quantity, give_quantity, tx['block_index'])
+        except Exception as e: pass
 
         # Overorder
         order_parse_cursor.execute('''SELECT * FROM balances \
@@ -95,7 +95,7 @@ def parse (db, tx, message):
             if not balances:  give_quantity = 0
             elif balances[0]['quantity'] < give_quantity:
                 give_quantity = min(balances[0]['quantity'], give_quantity)
-                get_quantity = int(price * D(give_quantity))
+                get_quantity = int(price * give_quantity)
 
         problems = validate(db, tx['source'], give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, tx['block_index'])
         if problems: status = 'invalid: ' + ';'.join(problems)
@@ -151,7 +151,7 @@ def match (db, tx):
     order_matches = cursor.fetchall()
     if tx['block_index'] > 284500 or config.TESTNET:  # Protocol change.
         order_matches = sorted(order_matches, key=lambda x: x['tx_index'])                              # Sort by tx index second.
-        order_matches = sorted(order_matches, key=lambda x: D(x['get_quantity']) / D(x['give_quantity']))   # Sort by price first.
+        order_matches = sorted(order_matches, key=lambda x: util.price(x['get_quantity'], x['give_quantity'], tx1['block_index']))   # Sort by price first.
 
     # Get fee remaining.
     tx1_fee_required_remaining = tx1['fee_required_remaining']
@@ -172,18 +172,18 @@ def match (db, tx):
 
         # If the prices agree, make the trade. The found order sets the price,
         # and they trade as much as they can.
-        tx0_price = util.price(tx0['get_quantity'], tx0['give_quantity'])
-        tx1_price = util.price(tx1['get_quantity'], tx1['give_quantity'])
-        tx1_inverse_price = util.price(tx1['give_quantity'], tx1['get_quantity'])
+        tx0_price = util.price(tx0['get_quantity'], tx0['give_quantity'], tx1['block_index'])
+        tx1_price = util.price(tx1['get_quantity'], tx1['give_quantity'], tx1['block_index'])
+        tx1_inverse_price = util.price(tx1['give_quantity'], tx1['get_quantity'], tx1['block_index'])
 
         # Protocol change.
-        if tx['block_index'] < 286000: tx1_inverse_price = D(1) / tx1_price
+        if tx['block_index'] < 286000: tx1_inverse_price = util.price(1, tx1_price, tx1['block_index'])
 
         # import sys  # TODO
         # print('foo', tx0_price, tx1_inverse_price, file=sys.stderr) # TODO
         if tx0_price <= tx1_inverse_price:
-            forward_quantity = int(min(tx0_give_remaining, int(D(tx1_give_remaining) / tx0_price)))
-            # print('bar1', tx0_give_remaining, D(tx1_give_remaining) / tx0_price, file=sys.stderr) # TODO
+            forward_quantity = int(min(tx0_give_remaining, int(util.price(tx1_give_remaining, tx0_price, tx1['block_index']))))
+            # print('bar1', tx0_give_remaining, int(util.price(tx1_give_remaining, tx0_price, tx1['block_index']), file=sys.stderr) # TODO
             # print('bar2', forward_quantity, file=sys.stderr) # TODO
             backward_quantity = round(forward_quantity * tx0_price)
 
@@ -195,7 +195,7 @@ def match (db, tx):
             # Check and update fee remainings.
             if tx1['block_index'] >= 286500 or config.TESTNET: # Protocol change. Deduct fee_required from fee_provided_remaining, etc., if possible (else don’t match).
                 if tx1['get_asset'] == 'BTC':
-                    fee = int(D(tx1['fee_required_remaining']) * D(forward_quantity) / D(tx1_get_remaining))
+                    fee = int(tx1['fee_required_remaining'] * util.price(forward_quantity, tx1_get_remaining, tx1['block_index']))
                     # print('baz', tx0_fee_provided_remaining, fee, file=sys.stderr) # TODO
                     if tx0_fee_provided_remaining < fee: continue
                     else:
@@ -203,7 +203,7 @@ def match (db, tx):
                         if tx1['block_index'] >= 287800 or config.TESTNET:  # Protocol change.
                             tx1_fee_required_remaining -= fee
                 elif tx1['give_asset'] == 'BTC':
-                    fee = int(D(tx0['fee_required_remaining']) * D(backward_quantity) / D(tx0_get_remaining))
+                    fee = int(tx0['fee_required_remaining'] * util.price(backward_quantity, tx0_get_remaining, tx1['block_index']))
                     # print('qux', tx1_fee_provided_remaining, fee, file=sys.stderr) # TODO
                     if tx1_fee_provided_remaining < fee: continue
                     else:

@@ -535,12 +535,12 @@ def get_tx_info (tx):
     """
 
     # Fee is the input values minus output values.
-    fee = D(0)
+    fee = 0
 
     # Get destination output and data output.
     destination, btc_amount, data = None, None, b''
     for vout in tx['vout']:
-        fee -= D(vout['value']) * config.UNIT
+        fee -= vout['value'] * config.UNIT
 
         # Sum data chunks to get data. (Can mix OP_RETURN and multi-sig.)
         asm = vout['scriptPubKey']['asm'].split(' ')
@@ -560,7 +560,7 @@ def get_tx_info (tx):
             address = get_address(vout['scriptPubKey'])
             if address:
                 destination = address
-                btc_amount = round(D(vout['value']) * config.UNIT)
+                btc_amount = vout['value'] * config.UNIT
 
     # Check for, and strip away, prefix (except for burns).
     if destination == config.UNSPENDABLE:
@@ -580,7 +580,7 @@ def get_tx_info (tx):
         if 'coinbase' in vin: return b'', None, None, None, None
         vin_tx = bitcoin.get_raw_transaction(vin['txid'])     # Get the full transaction data for this input transaction.
         vout = vin_tx['vout'][vin['vout']]
-        fee += D(vout['value']) * config.UNIT
+        fee += vout['value'] * config.UNIT
 
         address = get_address(vout['scriptPubKey'])
         if not address: return b'', None, None, None, None

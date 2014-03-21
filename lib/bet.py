@@ -122,7 +122,7 @@ def parse (db, tx, message):
         feed_address = tx['destination']
         fee_fraction = get_fee_fraction(db, feed_address)
 
-        try: odds = D(wager_quantity) / D(counterwager_quantity)
+        try: odds = util.price(wager_quantity, counterwager_quantity, tx['block_index'])
         except: pass
 
         problems = validate(db, tx['source'], feed_address, bet_type, deadline, wager_quantity,
@@ -135,7 +135,7 @@ def parse (db, tx, message):
         if not balances: wager_quantity = 0
         elif balances[0]['quantity']/(1 + fee_fraction) < wager_quantity:
             wager_quantity = min(round(balances[0]['quantity']/(1 + fee_fraction)), wager_quantity)
-            counterwager_quantity = int(D(wager_quantity) / odds)
+            counterwager_quantity = int(util.price(wager_quantity, odds, tx['block_index']))
 
     # Debit quantity wagered and fee.
     if status == 'valid':
@@ -194,7 +194,7 @@ def match (db, tx):
     bet_matches = cursor.fetchall()
     if tx['block_index'] > 284500 or config.TESTNET:  # Protocol change.
         sorted(bet_matches, key=lambda x: x['tx_index'])                                        # Sort by tx index second.
-        sorted(bet_matches, key=lambda x: D(x['wager_quantity']) / D(x['counterwager_quantity']))   # Sort by price first.
+        sorted(bet_matches, key=lambda x: util.price(x['wager_quantity'], x['counterwager_quantity'], tx1['block_index']))   # Sort by price first.
     for tx0 in bet_matches:
 
         # Bet types must be opposite.
@@ -227,15 +227,15 @@ def match (db, tx):
 
         # If the odds agree, make the trade. The found order sets the odds,
         # and they trade as much as they can.
-        tx0_odds = util.price(tx0['wager_quantity'], tx0['counterwager_quantity'])
-        tx0_inverse_odds = util.price(tx0['counterwager_quantity'], tx0['wager_quantity'])
-        tx1_odds = util.price(tx1['wager_quantity'], tx1['counterwager_quantity'])
+        tx0_odds = util.price(tx0['wager_quantity'], tx0['counterwager_quantity'], tx1['block_index'])
+        tx0_inverse_odds = util.price(tx0['counterwager_quantity'], tx0['wager_quantity'], tx1['block_index'])
+        tx1_odds = util.price(tx1['wager_quantity'], tx1['counterwager_quantity'], tx1['block_index'])
 
-        if tx['block_index'] < 286000: tx0_inverse_odds = D(1) / tx0_odds # Protocol change.
+        if tx['block_index'] < 286000: tx0_inverse_odds = util.price(1, tx0_odds, tx1['block_index']) # Protocol change.
 
         if tx0_inverse_odds <= tx1_odds:
-            forward_quantity = int(min(D(tx0['wager_remaining']), int(D(tx1_wager_remaining) / tx1_odds)))
-            backward_quantity = round(D(forward_quantity) / tx0_odds)
+            forward_quantity = int(min(tx0['wager_remaining'], int(util.price(tx1_wager_remaining, tx1_odds, tx1['block_index']))))
+            backward_quantity = round(forward_quantity / tx0_odds)
 
             if not forward_quantity: continue
             if tx1['block_index'] >= 286500 or config.TESTNET:    # Protocol change.

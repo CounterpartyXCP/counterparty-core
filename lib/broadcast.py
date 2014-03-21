@@ -24,6 +24,7 @@ because it is stored as a four‐byte integer, it may not be greater than about
 import struct
 import decimal
 D = decimal.Decimal
+from fractions import Fraction
 import logging
 
 from . import (util, exceptions, config, bitcoin)
@@ -58,7 +59,7 @@ def validate (db, source, timestamp, value, fee_fraction_int, text):
 def compose (db, source, timestamp, value, fee_fraction, text):
 
     # Store the fee fraction as an integer.
-    fee_fraction_int = int(D(fee_fraction) * D(1e8))
+    fee_fraction_int = int(fee_fraction * 1e8)
 
     problems = validate(db, source, timestamp, value, fee_fraction_int, text)
     if problems: raise exceptions.BroadcastError(problems)
@@ -133,7 +134,7 @@ def parse (db, tx, message):
         # Calculate total funds held in escrow and total fee to be paid if
         # the bet match is settled.
         total_escrow = bet_match['forward_quantity'] + bet_match['backward_quantity']
-        fee_fraction = D(bet_match['fee_fraction_int']) / D(1e8)
+        fee_fraction = Fraction(bet_match['fee_fraction_int'], int(1e8))
         fee = round(total_escrow * fee_fraction)
 
         # Get known bet match type IDs.
@@ -158,11 +159,11 @@ def parse (db, tx, message):
                 bull_escrow = bet_match['backward_quantity']
                 bear_escrow = bet_match['forward_quantity']
 
-            leverage = D(bet_match['leverage']) / 5040
+            leverage = Fraction(bet_match['leverage'], 5040)
             initial_value = bet_match['initial_value']
 
-            bear_credit = D(bear_escrow) - (D(value) - D(initial_value)) * D(leverage) * D(config.UNIT)
-            bull_credit = D(total_escrow) - bear_credit
+            bear_credit = bear_escrow - (value - initial_value) * leverage * config.UNIT
+            bull_credit = total_escrow - bear_credit
             bear_credit = round(bear_credit)
             bull_credit = round(bull_credit)
 
