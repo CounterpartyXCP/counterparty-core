@@ -179,21 +179,24 @@ def match (db, tx):
         # Protocol change.
         if tx['block_index'] < 286000: tx1_inverse_price = D(1) / tx1_price
 
-        # print('foo', tx0_price, tx1_inverse_price) # TODO
+        # import sys  # TODO
+        # print('foo', tx0_price, tx1_inverse_price, file=sys.stderr) # TODO
         if tx0_price <= tx1_inverse_price:
-            forward_quantity = int(min(tx0_give_remaining, D(tx1_give_remaining) / tx0_price))
+            forward_quantity = int(min(tx0_give_remaining, int(D(tx1_give_remaining) / tx0_price)))
+            # print('bar1', tx0_give_remaining, D(tx1_give_remaining) / tx0_price, file=sys.stderr) # TODO
+            # print('bar2', forward_quantity, file=sys.stderr) # TODO
             backward_quantity = round(forward_quantity * tx0_price)
 
             if not forward_quantity: continue
             if tx1['block_index'] >= 286500 or config.TESTNET:    # Protocol change.
                 if not backward_quantity: continue
-            # print('bar', backward_quantity) # TODO
+            # print('bar', backward_quantity, file=sys.stderr) # TODO
 
             # Check and update fee remainings.
             if tx1['block_index'] >= 286500 or config.TESTNET: # Protocol change. Deduct fee_required from fee_provided_remaining, etc., if possible (else don’t match).
                 if tx1['get_asset'] == 'BTC':
                     fee = int(D(tx1['fee_required_remaining']) * D(forward_quantity) / D(tx1_get_remaining))
-                    # print('baz', tx0_fee_provided_remaining, fee) # TODO
+                    # print('baz', tx0_fee_provided_remaining, fee, file=sys.stderr) # TODO
                     if tx0_fee_provided_remaining < fee: continue
                     else:
                         tx0_fee_provided_remaining -= fee
@@ -201,7 +204,7 @@ def match (db, tx):
                             tx1_fee_required_remaining -= fee
                 elif tx1['give_asset'] == 'BTC':
                     fee = int(D(tx0['fee_required_remaining']) * D(backward_quantity) / D(tx0_get_remaining))
-                    # print('qux', tx1_fee_provided_remaining, fee) # TODO
+                    # print('qux', tx1_fee_provided_remaining, fee, file=sys.stderr) # TODO
                     if tx1_fee_provided_remaining < fee: continue
                     else:
                         tx1_fee_provided_remaining -= fee 

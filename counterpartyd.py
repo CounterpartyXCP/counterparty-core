@@ -9,7 +9,6 @@ import unicodedata
 import time
 import dateutil.parser
 import calendar
-import logging
 import configparser
 from threading import Thread
 

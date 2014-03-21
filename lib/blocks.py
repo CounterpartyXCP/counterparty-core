@@ -665,12 +665,12 @@ def reorg (db, next_block_index):
             break
 
     if not reorg_necessary: return next_block_index
+    logging.warning('Status: Blockchain reorganisation at block {}.'.format(block_index))
 
     # Rollback the DB.
     reparse(db, block_index=block_index-1, quiet=True)
 
     # Record reorganisation.
-    logging.warning('Status: Blockchain reorganisation at block {}.'.format(block_index))
     util.message(db, next_block_index, 'reorg', None, {'block_index': block_index})
 
     reorg_cursor.close()

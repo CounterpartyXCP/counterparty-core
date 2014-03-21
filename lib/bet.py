@@ -234,7 +234,7 @@ def match (db, tx):
         if tx['block_index'] < 286000: tx0_inverse_odds = D(1) / tx0_odds # Protocol change.
 
         if tx0_inverse_odds <= tx1_odds:
-            forward_quantity = int(min(D(tx0['wager_remaining']), D(tx1_wager_remaining) / tx1_odds))
+            forward_quantity = int(min(D(tx0['wager_remaining']), int(D(tx1_wager_remaining) / tx1_odds)))
             backward_quantity = round(D(forward_quantity) / tx0_odds)
 
             if not forward_quantity: continue
