@@ -357,7 +357,7 @@ class APIServer(threading.Thread):
         def create_bet(source, feed_address, bet_type, deadline, wager, counterwager, expiration, target_value=0.0,
         leverage=5040, multisig=config.MULTISIG):
             try:
-                bet_type_id = util.BET_TYPE_ID[args.bet_type]
+                bet_type_id = util.BET_TYPE_ID[bet_type]
             except KeyError:
                 raise exceptions.BetError('Unknown bet type.')
             tx_info = bet.compose(db, source, feed_address,
