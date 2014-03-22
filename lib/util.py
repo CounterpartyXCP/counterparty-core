@@ -17,7 +17,6 @@ from . import (config, exceptions)
 
 D = decimal.Decimal
 b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-request_session = None #see http://stackoverflow.com/a/20457621
 
 # Obsolete in Python 3.4, with enum module.
 BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
@@ -25,9 +24,6 @@ BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
 
 
 def api (method, params):
-    global request_session
-    if not request_session: request_session = requests.Session()
-    
     headers = {'content-type': 'application/json'}
     payload = {
         "method": method,
@@ -35,7 +31,7 @@ def api (method, params):
         "jsonrpc": "2.0",
         "id": 0,
     }
-    response = request_session.post(config.RPC, data=json.dumps(payload), headers=headers)
+    response = requests.post(config.RPC, data=json.dumps(payload), headers=headers)
     if response == None:
         raise exceptions.RPCError('Cannot communicate with counterpartyd server.')
     elif response.status_code != 200:
