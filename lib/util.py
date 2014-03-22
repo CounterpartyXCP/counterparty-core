@@ -382,7 +382,7 @@ def get_asset_id (asset):
         digit = b26_digits.index(c)
         n += digit
 
-    if not n > 26**3:
+    if n < 26**3:
         raise exceptions.AssetNameError('too short')
 
     return n
@@ -391,7 +391,7 @@ def get_asset_name (asset_id):
     if asset_id == 0: return 'BTC'
     elif asset_id == 1: return 'XCP'
 
-    if not asset_id > 26**3:
+    if asset_id < 26**3:
         raise exceptions.AssetIDError('too low')
 
     # Divide that integer into Base 26 string.
@@ -546,7 +546,7 @@ def devise (db, quantity, asset, dest, divisible=None):
             else:
                 return norm(quantity, 8)
         elif dest == 'input':
-            quantity = quantity * config.UNIT
+            quantity = D(quantity) * config.UNIT
             if quantity == quantity.to_integral():
                 return int(quantity)
             else:
