@@ -35,7 +35,6 @@ b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
 D = decimal.Decimal
 dhash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
-request_session = None
 
 
 def get_block_count():
@@ -78,12 +77,10 @@ def bitcoind_check (db):
         raise exceptions.BitcoindError('Bitcoind is running about {} seconds behind.'.format(round(time_behind)))
 
 def connect (host, payload, headers):
-    global request_session
-    if not request_session: request_session = requests.Session()
     TRIES = 12
     for i in range(TRIES):
         try:
-            response = request_session.post(host, data=json.dumps(payload), headers=headers)
+            response = requests.post(host, data=json.dumps(payload), headers=headers)
             if i > 0: print('Successfully connected.', file=sys.stderr)
             return response
         except requests.exceptions.ConnectionError:
