@@ -110,10 +110,10 @@ def parse (db, tx, message):
          counterwager_quantity, target_value, leverage,
          expiration) = struct.unpack(FORMAT, message)
         status = 'valid'
-    except struct.error as e:
+    except (AssertionError, struct.error) as e:
         (bet_type, deadline, wager_quantity,
          counterwager_quantity, target_value, leverage,
-         expiration) = None, None, None, None, None, None, None
+         expiration) = 0, 0, 0, 0, 0, 0, 0
         status = 'invalid: could not unpack'
 
     fee_fraction = 0

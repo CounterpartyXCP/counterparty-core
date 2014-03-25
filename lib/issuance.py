@@ -132,9 +132,10 @@ def parse (db, tx, message):
         try:
             asset = util.get_asset_name(asset_id)
         except:
+            asset = None
             status = 'invalid: bad asset name'
         status = 'valid'
-    except struct.error:
+    except (AssertionError, struct.error) as e:
         asset, quantity, divisible, callable_, call_date, call_price, description = None, None, None, None, None, None, None
         status = 'invalid: could not unpack'
 

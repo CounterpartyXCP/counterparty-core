@@ -80,7 +80,7 @@ def parse (db, tx, message):
         timestamp, value, fee_fraction_int, text = struct.unpack(FORMAT, message)
         text = text.decode('utf-8')
         status = 'valid'
-    except struct.error as e:
+    except (AssertionError, struct.error) as e:
         timestamp, value, fee_fraction_int, text = None, None, None, None
         status = 'invalid: could not unpack'
 

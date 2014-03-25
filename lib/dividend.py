@@ -93,7 +93,7 @@ def parse (db, tx, message):
             status = 'valid'
         else:
             raise Exception
-    except (struct.error, Exception) as e:
+    except (AssertionError, struct.error) as e:
         quantity_per_unit, asset = None, None
         status = 'invalid: could not unpack'
 

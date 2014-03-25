@@ -554,6 +554,7 @@ def devise (db, quantity, asset, dest, divisible=None):
         else:
             return quantity
     else:
+        quantity = D(quantity)
         if quantity != round(quantity):
             raise exceptions.QuantityError('Fractional quantities of indivisible assets.')
         return round(quantity)

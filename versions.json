@@ -1,5 +1,5 @@
 {
-	"minimum_client_version": 6.8,
+	"minimum_client_version": 6.9,
 	"protocol_changes": [
 		{
 			"block_index": 285306,
@@ -35,6 +35,11 @@
 			"block_index": 292000,
 			"minimum_database_version": 9.901,
 			"description": "match only with positive get/counterwager remaining"
+		},
+		{
+			"block_index": 293000,
+			"minimum_database_version": 9.902,
+			"description": "pay‐to‐pubkeyhash encoding"
 		}
 	]
 }

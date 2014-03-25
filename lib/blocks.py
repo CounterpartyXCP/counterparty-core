@@ -11,6 +11,7 @@ import struct
 import decimal
 D = decimal.Decimal
 import logging
+from Crypto.Cipher import ARC4
 
 from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
@@ -514,12 +515,16 @@ def initialise(db):
 
     cursor.close()
 
-def get_address (scriptpubkey):
+def get_pubkeyhash (scriptpubkey):
     asm = scriptpubkey['asm'].split(' ')
     if len(asm) != 5 or asm[0] != 'OP_DUP' or asm[1] != 'OP_HASH160' or asm[3] != 'OP_EQUALVERIFY' or asm[4] != 'OP_CHECKSIG':
         return False
+    return asm[2]
 
-    pubkeyhash = asm[2]
+def get_address (scriptpubkey):
+    pubkeyhash = get_pubkeyhash(scriptpubkey)
+    if not pubkeyhash: return False
+
     address = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
 
     # Test decoding of address.
@@ -528,7 +533,7 @@ def get_address (scriptpubkey):
 
     return address
 
-def get_tx_info (tx):
+def get_tx_info (tx, block_index):
     """
     The destination, if it exists, always comes before the data output; the
     change, if it exists, always comes after.
@@ -539,6 +544,7 @@ def get_tx_info (tx):
 
     # Get destination output and data output.
     destination, btc_amount, data = None, None, b''
+    pubkeyhash_encoding = False
     for vout in tx['vout']:
         fee -= vout['value'] * config.UNIT
 
@@ -554,13 +560,30 @@ def get_tx_info (tx):
             data_chunk_length = data_pubkey[0]  # No ord() necessary.
             data_chunk = data_pubkey[1:data_chunk_length + 1]
             data += data_chunk
+        elif len(asm) == 5 and (block_index >= 293000 or config.TESTNET):    # Protocol change.
+            # Be strict.
+            pubkeyhash_string = get_pubkeyhash(vout['scriptPubKey'])
+            try: pubkeyhash = binascii.unhexlify(bytes(pubkeyhash_string, 'utf-8'))
+            except binascii.Error: continue
+
+            obj1 = ARC4.new(binascii.unhexlify(tx['vin'][0]['txid']))
+            data_pubkey = obj1.decrypt(pubkeyhash)
+            if data_pubkey[1:9] == config.PREFIX or pubkeyhash_encoding:
+                pubkeyhash_encoding = True
+                data_chunk_length = data_pubkey[0]  # No ord() necessary.
+                data_chunk = data_pubkey[1:data_chunk_length + 1]
+                if data_chunk[-8:] == config.PREFIX:
+                    data += data_chunk[:-8]
+                    break
+                else:
+                    data += data_chunk
 
         # Destination is the first output before the data.
         if not destination and not btc_amount and not data:
             address = get_address(vout['scriptPubKey'])
             if address:
                 destination = address
-                btc_amount = vout['value'] * config.UNIT
+                btc_amount = round(vout['value'] * config.UNIT) # Floats are awful.
 
     # Check for, and strip away, prefix (except for burns).
     if destination == config.UNSPENDABLE:
@@ -741,7 +764,7 @@ def follow (db):
                     # Get the important details about each transaction.
                     tx = bitcoin.get_raw_transaction(tx_hash)
                     logging.debug('Status: examining transaction {}'.format(tx_hash))
-                    source, destination, btc_amount, fee, data = get_tx_info(tx)
+                    source, destination, btc_amount, fee, data = get_tx_info(tx, block_index)
                     if source and (data or destination == config.UNSPENDABLE):
                         follow_cursor.execute('''INSERT INTO transactions(
                                             tx_index,

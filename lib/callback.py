@@ -82,7 +82,7 @@ def parse (db, tx, message):
         fraction, asset_id = struct.unpack(FORMAT, message)
         asset = util.get_asset_name(asset_id)
         status = 'valid'
-    except struct.error as e:
+    except (AssertionError, struct.error) as e:
         fraction, asset = None, None
         status = 'invalid: could not unpack'
 

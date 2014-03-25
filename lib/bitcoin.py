@@ -18,6 +18,7 @@ import requests
 from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
 from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec
 from pycoin.scripts import bitcoin_utils
+from Crypto.Cipher import ARC4
 
 from . import (config, exceptions)
 
@@ -227,7 +228,7 @@ def op_push (i):
     else:
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
-def serialise (inputs, destination_outputs, data_output=None, change_output=None, source=None, multisig=False):
+def serialise (encoding, inputs, destination_outputs, data_output=None, change_output=None, source=None, pubkey=None):
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
     # Number of inputs.
@@ -273,10 +274,10 @@ def serialise (inputs, destination_outputs, data_output=None, change_output=None
         data_array, value = data_output # DUPE
         s += value.to_bytes(8, byteorder='little')        # Value
 
-        if multisig:
-            # Get source public key (either provided as a string or derived from a private key in the wallet).
-            if isinstance(multisig, str):
-                pubkeypair = bitcoin_utils.parse_as_public_pair(multisig)
+        # Get source public key (either provided as a string or derived from a private key in the wallet).
+        if encoding in ('multisig', 'pubkeyhash'):
+            if pubkey:
+                pubkeypair = bitcoin_utils.parse_as_public_pair(pubkey)
                 source_pubkey = public_pair_to_sec(pubkeypair, compressed=True)
             else:
                 if config.PREFIX == config.UNITTEST_PREFIX:
@@ -289,11 +290,12 @@ def serialise (inputs, destination_outputs, data_output=None, change_output=None
                 public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
                 source_pubkey = public_pair_to_sec(public_pair, compressed=compressed)
 
+        if encoding == 'multisig':
             # Get data (fake) public key.
             pad_length = 33 - 1 - len(data_chunk)
             assert pad_length >= 0
             data_pubkey = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
-
+            # Construct script.
             script = OP_1                                   # OP_1
             script += op_push(len(source_pubkey))           # Push bytes of source public key
             script += source_pubkey                         # Source public key
@@ -301,10 +303,26 @@ def serialise (inputs, destination_outputs, data_output=None, change_output=None
             script += data_pubkey                           # Data chunk (fake) public key
             script += OP_2                                  # OP_2
             script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
-        else:
+        elif encoding == 'opreturn':
             script = OP_RETURN                              # OP_RETURN
             script += op_push(len(data_chunk))              # Push bytes of data chunk (NOTE: OP_SMALLDATA?)
             script += data_chunk                            # Data chunk
+        elif encoding == 'pubkeyhash':
+            pad_length = 20 - 1 - len(data_chunk)
+            assert pad_length >= 0
+            obj1 = ARC4.new(binascii.unhexlify(inputs[0]['txid']))  # Arbitrary, easy‐to‐find, unique key.
+            pubkeyhash = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
+            pubkeyhash_encrypted = obj1.encrypt(pubkeyhash)
+            # Construct script.
+            script = OP_DUP                                     # OP_DUP
+            script += OP_HASH160                                # OP_HASH160
+            script += op_push(20)                               # Push 0x14 bytes
+            script += pubkeyhash_encrypted                      # pubKeyHash
+            script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
+            script += OP_CHECKSIG                               # OP_CHECKSIG
+        else:
+            raise exceptions.TransactionError('Unknown encoding‐scheme.')
+
         s += var_int(int(len(script)))                      # Script length
         s += script
 
@@ -357,8 +375,12 @@ def get_inputs (source, total_btc_out, unittest=False):
     return None, None, change_quantity
 
 # Replace unittest flag with fake bitcoind JSON-RPC server.
-def transaction (tx_info, multisig, unittest=False):
+def transaction (tx_info, encoding, pubkey=None, unittest=False):
     source, destination_outputs, fee, data = tx_info
+
+    # Protocol change.
+    if encoding == 'pubkeyhash' and get_block_count() < 293000 and not config.TESTNET:
+        raise exceptions.TransactionError('pubkeyhash encoding unsupported before block 293000')
     
     if not isinstance(fee, int):
         raise exceptions.TransactionError('Fee must be in satoshis')
@@ -376,7 +398,7 @@ def transaction (tx_info, multisig, unittest=False):
                                           address)
 
     # Check that the source is in wallet.
-    if not unittest and not isinstance(multisig, str): #do not run this check if multisig is a public key string
+    if not unittest and encoding in ('multisig') and not pubkey:
         if not rpc('validateaddress', [source])['ismine']:
             raise exceptions.InvalidAddressError('Not one of your Bitcoin addresses:', source)
 
@@ -384,7 +406,7 @@ def transaction (tx_info, multisig, unittest=False):
     # Set null values to dust size.
     new_destination_outputs = []
     for address, value in destination_outputs:
-        if multisig:
+        if encoding == 'multisig':
             if value == None: value = config.MULTISIG_DUST_SIZE
             if not value >= config.MULTISIG_DUST_SIZE:
                 raise exceptions.TransactionError('Destination output is below the dust target value.')
@@ -401,18 +423,23 @@ def transaction (tx_info, multisig, unittest=False):
             """ Yield successive n‐sized chunks from l.
             """
             for i in range(0, len(l), n): yield l[i:i+n]
-        if multisig:
+        if encoding == 'pubkeyhash':
+            data_array = list(chunks(data + config.PREFIX, 20 - 1)) # Prefix is also a suffix here.
+        elif encoding == 'multisig':
             data_array = list(chunks(data, 33 - 1))
-        else:
+        elif encoding == 'opreturn':
             data_array = list(chunks(data, 80))
             assert len(data_array) == 1 # Only one OP_RETURN output currently supported (messages should all be shorter than 80 bytes, at the moment).
+        else:
+            raise exceptions.TransactionError('Unknown encoding‐scheme.')
     else:
         data_array = []
 
     # Calculate total BTC to be sent.
     total_btc_out = fee
-    if multisig: data_value = config.MULTISIG_DUST_SIZE
-    else: data_value = config.OP_RETURN_VALUE
+    if encoding == 'multisig': data_value = config.MULTISIG_DUST_SIZE
+    elif encoding == 'opreturn': data_value = config.OP_RETURN_VALUE
+    else: data_value = config.REGULAR_DUST_SIZE
     for data_chunk in data_array: total_btc_out += data_value
     total_btc_out += sum([value for address, value in destination_outputs])
 
@@ -428,7 +455,7 @@ def transaction (tx_info, multisig, unittest=False):
     else: change_output = None
 
     # Serialise inputs and outputs.
-    transaction = serialise(inputs, destination_outputs, data_output, change_output, source=source, multisig=multisig)
+    transaction = serialise(encoding, inputs, destination_outputs, data_output, change_output, source=source, pubkey=pubkey)
     unsigned_tx_hex = binascii.hexlify(transaction).decode('utf-8')
     return unsigned_tx_hex
 
