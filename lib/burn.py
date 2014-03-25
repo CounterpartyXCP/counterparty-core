@@ -23,7 +23,7 @@ def validate (db, source, destination, quantity, block_index=None, overburn=Fals
         problems.append('quantity must be in satoshis')
         return problems
 
-    if quantity <= 0: problems.append('non‐positive quantity')
+    if quantity < 0: problems.append('negative quantity')
 
     # Try to make sure that the burned funds won't go to waste.
     if not block_index: block_index = util.last_block(db)['block_index']

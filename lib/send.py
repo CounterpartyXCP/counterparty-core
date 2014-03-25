@@ -20,7 +20,7 @@ def validate (db, source, destination, asset, quantity):
         problems.append('quantity must be in satoshis')
         return problems
     
-    if quantity <= 0: problems.append('non‐positive quantity')
+    if quantity < 0: problems.append('negative quantity')
 
     return problems
 
