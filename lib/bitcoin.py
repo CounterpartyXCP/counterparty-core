@@ -377,6 +377,8 @@ def get_inputs (source, total_btc_out, unittest=False):
 # Replace unittest flag with fake bitcoind JSON-RPC server.
 def transaction (tx_info, encoding, pubkey=None, unittest=False):
     source, destination_outputs, fee, data = tx_info
+    if encoding not in ('pubkeyhash', 'multisig', 'opreturn'):
+        raise exceptions.TransactionError('Unknown encoding‐scheme.')
 
     # Protocol change.
     if encoding == 'pubkeyhash' and get_block_count() < 293000 and not config.TESTNET:
@@ -430,8 +432,6 @@ def transaction (tx_info, encoding, pubkey=None, unittest=False):
         elif encoding == 'opreturn':
             data_array = list(chunks(data, 80))
             assert len(data_array) == 1 # Only one OP_RETURN output currently supported (messages should all be shorter than 80 bytes, at the moment).
-        else:
-            raise exceptions.TransactionError('Unknown encoding‐scheme.')
     else:
         data_array = []
 

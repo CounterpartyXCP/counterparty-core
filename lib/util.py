@@ -738,7 +738,7 @@ def get_orders (db, status=None, source=None, show_empty=True, show_expired=True
         #return True if the element is NOT empty
         #we could use filter syntax for this, but this method allows us to be more flexible with the
         # normal ways people want to use this API call
-        return False if e['give_remaining'] == 0 else True
+        return False if e['give_remaining'] <= 0 or e['get_remaining'] <= 0 else True
 
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
