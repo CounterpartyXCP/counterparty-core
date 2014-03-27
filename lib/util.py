@@ -727,18 +727,13 @@ def get_sends (db, status=None, source=None, destination=None, filters=None, ord
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_orders (db, status=None, source=None, show_empty=True, show_expired=True, filters=None, order_by=None, order_dir='asc', start_block=None, end_block=None, filterop='and'):
+def get_orders (db, status=None, source=None, show_expired=True, filters=None, order_by=None, order_dir='asc', start_block=None, end_block=None, filterop='and'):
     def filter_expired(e, cur_block_index):
         #Ignore BTC orders one block early. (This is why we need show_expired.)
         #function returns True if the element is NOT expired
         time_left = e['expire_index'] - cur_block_index
         if e['give_asset'] == 'BTC': time_left -= 1
         return False if time_left < 0 else True
-    def filter_empty(e):
-        #return True if the element is NOT empty
-        #we could use filter syntax for this, but this method allows us to be more flexible with the
-        # normal ways people want to use this API call
-        return False if e['give_remaining'] == 0 else True
 
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
@@ -750,7 +745,6 @@ def get_orders (db, status=None, source=None, show_empty=True, show_expired=True
         % get_limit_to_blocks(start_block, end_block))
     results = do_filter(cursor.fetchall(), filters, filterop)
     cursor.close()
-    if not show_empty: results = [e for e in results if filter_empty(e)]
     if not show_expired: results = [e for e in results if filter_expired(e, cur_block_index)]
     return do_order_by(results, order_by, order_dir)
 
@@ -816,12 +810,11 @@ def get_broadcasts (db, status=None, source=None, filters=None, order_by='tx_ind
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_bets (db, status=None, source=None, show_empty=True, filters=None, order_by=None, order_dir='desc', start_block=None, end_block=None, filterop='and'):
+def get_bets (db, status=None, source=None, filters=None, order_by=None, order_dir='desc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
     if status: filters.append({'field': 'status', 'op': '==', 'value': status})
     if source: filters.append({'field': 'source', 'op': '==', 'value': source})
-    if not show_empty: filters.append({'field': 'wager_remaining', 'op': '!=', 'value': 0})
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM bets%s'''
         % get_limit_to_blocks(start_block, end_block))
@@ -857,7 +850,7 @@ def get_dividends (db, status=None, source=None, asset=None, filters=None, order
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_burns (db, status=True, source=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
+def get_burns (db, status=None, source=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
     if status: filters.append({'field': 'status', 'op': '==', 'value': status})
@@ -869,7 +862,7 @@ def get_burns (db, status=True, source=None, filters=None, order_by='tx_index', 
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_cancels (db, status=True, source=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
+def get_cancels (db, status=None, source=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
     if status: filters.append({'field': 'status', 'op': '==', 'value': status})
@@ -881,7 +874,7 @@ def get_cancels (db, status=True, source=None, filters=None, order_by=None, orde
     cursor.close()
     return do_order_by(results, order_by, order_dir)
 
-def get_callbacks (db, status=True, source=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
+def get_callbacks (db, status=None, source=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
     if status: filters.append({'field': 'status', 'op': '==', 'value': status})
@@ -938,10 +931,6 @@ def get_order_match_expirations (db, address=None, filters=None, order_by=None, 
     return do_order_by(results, order_by, order_dir)
 
 def get_address (db, address, start_block=None, end_block=None):
-    from . import bitcoin   # HACK
-    if not bitcoin.base58_decode(address, config.ADDRESSVERSION):
-        raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
-                                             address)
     address_dict = {}
     address_dict['balances'] = get_balances(db, address=address)
     
@@ -951,44 +940,43 @@ def get_address (db, address, start_block=None, end_block=None):
     address_dict['credits'] = get_credits(db, address=address, order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)
 
-    address_dict['burns'] = get_burns(db, status='valid', source=address, order_by='block_index',
+    address_dict['burns'] = get_burns(db, source=address, order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)
     
-    address_dict['sends'] = get_sends(db, status='valid', source=address, destination=address, order_by='block_index',
+    address_dict['sends'] = get_sends(db, source=address, destination=address, order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block, filterop='or')
     #^ with filterop == 'or', we get all sends where this address was the source OR destination 
     
-    address_dict['orders'] = get_orders(db, status='valid', source=address, order_by='block_index',
+    address_dict['orders'] = get_orders(db, source=address, order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)
     
-    address_dict['order_matches'] = get_order_matches(db, status='completed', address=address,
+    address_dict['order_matches'] = get_order_matches(db, address=address,
         order_by='tx0_block_index', order_dir='asc', start_block=start_block, end_block=end_block)
     
     address_dict['btcpays'] = get_btcpays(db,
         filters=[{'field': 'source', 'op': '==', 'value': address}, {'field': 'destination', 'op': '==', 'value': address}],
-        filterop='or', status='valid', order_by='block_index',
+        filterop='or', order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)
     
-    address_dict['issuances'] = get_issuances(db, status='valid', issuer=address,
+    address_dict['issuances'] = get_issuances(db, issuer=address,
         order_by='block_index', order_dir='asc', start_block=start_block, end_block=end_block)
     
-    address_dict['broadcasts'] = get_broadcasts(db, status='valid', source=address,
+    address_dict['broadcasts'] = get_broadcasts(db, source=address,
         order_by='block_index', order_dir='asc', start_block=start_block, end_block=end_block)
     
-    address_dict['bets'] = get_bets(db, status='valid', source=address, order_by='block_index',
+    address_dict['bets'] = get_bets(db, source=address, order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)
     
-    # Statuses are complicated (need startswith)
     address_dict['bet_matches'] = get_bet_matches(db, address=address,
         order_by='tx0_block_index', order_dir='asc', start_block=start_block, end_block=end_block)
     
-    address_dict['dividends'] = get_dividends(db, status='valid', source=address, order_by='block_index',
+    address_dict['dividends'] = get_dividends(db, source=address, order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)
 
-    address_dict['cancels'] = get_cancels(db, status='valid', source=address, order_by='block_index',
+    address_dict['cancels'] = get_cancels(db, source=address, order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)
 
-    address_dict['callbacks'] = get_callbacks(db, status='valid', source=address, order_by='block_index',
+    address_dict['callbacks'] = get_callbacks(db, source=address, order_by='block_index',
         order_dir='asc', start_block=start_block, end_block=end_block)
 
     address_dict['bet_expirations'] = get_bet_expirations(db, source=address, order_by='block_index',
