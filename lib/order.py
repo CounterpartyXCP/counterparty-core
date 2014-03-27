@@ -165,11 +165,6 @@ def match (db, tx):
         tx0_fee_required_remaining = tx0['fee_required_remaining']
         tx0_fee_provided_remaining = tx0['fee_provided_remaining']
 
-        # Make sure that that both orders still have funds remaining.
-        if tx0_give_remaining <= 0 or tx1_give_remaining <= 0: continue
-        if tx1['block_index'] >= 292000 or config.TESTNET:  # Protocol change
-            if tx0_get_remaining <= 0 or tx1_get_remaining <= 0: continue
-
         # If the prices agree, make the trade. The found order sets the price,
         # and they trade as much as they can.
         tx0_price = util.price(tx0['get_quantity'], tx0['give_quantity'], tx1['block_index'])
@@ -219,16 +214,6 @@ def match (db, tx):
             forward_asset, backward_asset = tx1['get_asset'], tx1['give_asset']
             order_match_id = tx0['tx_hash'] + tx1['tx_hash']
 
-            if 'BTC' in (tx1['give_asset'], tx1['get_asset']):
-                status = 'pending'
-            else:
-                status = 'completed'
-                # Credit.
-                util.credit(db, tx['block_index'], tx1['source'], tx1['get_asset'],
-                                    forward_quantity, event=order_match_id)
-                util.credit(db, tx['block_index'], tx0['source'], tx0['get_asset'],
-                                    backward_quantity, event=order_match_id)
-
             # Debit the order, even if it involves giving bitcoins, and so one
             # can't debit the sending account.
             # Get remainings may be negative.
@@ -260,6 +245,16 @@ def match (db, tx):
             sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining, fee_provided_remaining = :fee_provided_remaining where tx_index = :tx_index'
             cursor.execute(sql, bindings)
             util.message(db, tx1['block_index'], 'update', 'orders', bindings)
+
+            # Credit.
+            if 'BTC' in (tx1['give_asset'], tx1['get_asset']):
+                status = 'pending'
+            else:
+                status = 'completed'
+                util.credit(db, tx['block_index'], tx1['source'], tx1['get_asset'],
+                                    forward_quantity, event=order_match_id)
+                util.credit(db, tx['block_index'], tx0['source'], tx0['get_asset'],
+                                    backward_quantity, event=order_match_id)
 
             # Calculate when the match will expire.
             if tx1['block_index'] >= 286500 or config.TESTNET:    # Protocol change.
