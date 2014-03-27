@@ -46,10 +46,9 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_bets(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_bets(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_bets(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -57,10 +56,9 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_bet_matches(filters=None, is_settled=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_bet_matches(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_bet_matches(db,
                 filters=filters,
-                status='settled' if bool(is_settled) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -68,10 +66,9 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_broadcasts(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_broadcasts(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_broadcasts(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -79,10 +76,9 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_btcpays(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_btcpays(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_btcpays(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -90,10 +86,9 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_burns(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_burns(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_burns(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -101,10 +96,9 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_callbacks(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_callbacks(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_callbacks(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -112,10 +106,9 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_cancels(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_cancels(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_cancels(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -139,10 +132,9 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_dividends(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_dividends(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_dividends(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -150,10 +142,9 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_issuances(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_issuances(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_issuances(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -161,10 +152,9 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_orders (filters=None, is_valid=True, show_empty=True, show_expired=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_orders (filters=None, show_empty=True, show_expired=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             results = util.get_orders(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
                 show_empty=show_empty,
                 show_expired=show_expired,
                 order_by=order_by,
@@ -175,11 +165,10 @@ class APIServer(threading.Thread):
             return results
 
         @dispatcher.add_method
-        def get_order_matches (filters=None, status='completed', is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_order_matches (filters=None, is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             assert status in ('completed', 'pending', None)
             return util.get_order_matches(db,
                 filters=filters,
-                status=status,
                 is_mine=is_mine,
                 order_by=order_by,
                 order_dir=order_dir,
@@ -188,10 +177,9 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_sends (filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_sends (filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_sends(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,

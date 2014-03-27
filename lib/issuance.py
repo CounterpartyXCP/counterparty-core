@@ -142,7 +142,7 @@ def parse (db, tx, message):
     if status == 'valid':
         if not callable_: calldate, call_price = 0, 0.0
         problems = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, callable_, call_date, call_price, description, block_index=tx['block_index'])
-        if problems: status = 'invalid: ' + ';'.join(problems)
+        if problems: status = 'invalid: ' + '; '.join(problems)
         if 'maximum total quantity exceeded' in problems:
             quantity = 0
 

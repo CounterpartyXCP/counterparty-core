@@ -90,7 +90,7 @@ def parse (db, tx, message):
         value = min(value, config.MAX_INT)
 
         problems = validate(db, tx['source'], timestamp, value, fee_fraction_int, text)
-        if problems: status = 'invalid: ' + ';'.join(problems)
+        if problems: status = 'invalid: ' + '; '.join(problems)
 
     # Lock?
     lock = False

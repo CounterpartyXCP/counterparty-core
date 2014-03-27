@@ -105,7 +105,7 @@ def parse (db, tx, message):
         quantity_per_unit = min(quantity_per_unit, config.MAX_INT)
 
         dividend_total, outputs, problems = validate(db, tx['source'], quantity_per_unit, asset, dividend_asset)
-        if problems: status = 'invalid: ' + ';'.join(problems)
+        if problems: status = 'invalid: ' + '; '.join(problems)
 
     if status == 'valid':
         # Debit.

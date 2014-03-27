@@ -72,7 +72,7 @@ def parse (db, tx, message):
         # For SQLite3
         quantity = min(quantity, config.MAX_INT)
         problems = validate(db, tx['source'], tx['destination'], asset, quantity)
-        if problems: status = 'invalid: ' + ';'.join(problems)
+        if problems: status = 'invalid: ' + '; '.join(problems)
 
     if status == 'valid':
         util.debit(db, tx['block_index'], tx['source'], asset, quantity, event=tx['tx_hash'])

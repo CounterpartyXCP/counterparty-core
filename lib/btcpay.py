@@ -81,7 +81,7 @@ def parse (db, tx, message):
         order_match, problems = validate(db, order_match_id)
         if problems:
             order_match = None
-            status = 'invalid: ' + ';'.join(problems)
+            status = 'invalid: ' + '; '.join(problems)
 
     if status == 'valid':
         update = False

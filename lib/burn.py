@@ -53,7 +53,7 @@ def parse (db, tx, message=None):
 
     if status == 'valid':
         problems = validate(db, tx['source'], tx['destination'], tx['btc_amount'], tx['block_index'], overburn=False)
-        if problems: status = 'invalid: ' + ';'.join(problems)
+        if problems: status = 'invalid: ' + '; '.join(problems)
 
         if tx['btc_amount'] != None:
             sent = tx['btc_amount']

@@ -88,7 +88,7 @@ def parse (db, tx, message):
 
     if status == 'valid':
         call_price, callback_total, outputs, problems = validate(db, tx['source'], fraction, asset, tx['block_time'])
-        if problems: status = 'invalid: ' + ';'.join(problems)
+        if problems: status = 'invalid: ' + '; '.join(problems)
 
     if status == 'valid':
         # Issuer.

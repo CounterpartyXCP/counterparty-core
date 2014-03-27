@@ -109,7 +109,7 @@ def parse (db, tx, message):
         (bet_type, deadline, wager_quantity,
          counterwager_quantity, target_value, leverage,
          expiration) = struct.unpack(FORMAT, message)
-        status = 'valid'
+        status = 'open'
     except (AssertionError, struct.error) as e:
         (bet_type, deadline, wager_quantity,
          counterwager_quantity, target_value, leverage,
@@ -118,7 +118,7 @@ def parse (db, tx, message):
 
     fee_fraction = 0
     odds = 0
-    if status == 'valid':
+    if status == 'open':
         feed_address = tx['destination']
         fee_fraction = get_fee_fraction(db, feed_address)
 
@@ -127,9 +127,9 @@ def parse (db, tx, message):
 
         problems = validate(db, tx['source'], feed_address, bet_type, deadline, wager_quantity,
                             counterwager_quantity, target_value, leverage, expiration)
-        if problems: status = 'invalid: ' + ';'.join(problems)
+        if problems: status = 'invalid: ' + '; '.join(problems)
 
-    if status == 'valid':
+    if status == 'open':
         # Overbet
         balances = util.get_balances(db, address=tx['source'], asset='XCP')
         if not balances: wager_quantity = 0
@@ -138,7 +138,7 @@ def parse (db, tx, message):
             counterwager_quantity = int(util.price(wager_quantity, odds, tx['block_index']))
 
     # Debit quantity wagered and fee.
-    if status == 'valid':
+    if status == 'open':
         fee = round(wager_quantity * fee_fraction)    # round?!
         util.debit(db, tx['block_index'], tx['source'], 'XCP', wager_quantity)
         util.debit(db, tx['block_index'], tx['source'], 'XCP', fee)
@@ -167,7 +167,8 @@ def parse (db, tx, message):
     bet_parse_cursor.execute(sql, bindings)
 
     # Match.
-    match(db, tx)
+    if status == 'open':
+        match(db, tx)
 
     bet_parse_cursor.close()
 
@@ -188,7 +189,7 @@ def match (db, tx):
 
     cursor.execute('''SELECT * FROM bets\
                              WHERE (feed_address=? AND status=? AND bet_type=?)''',
-                             (tx1['feed_address'], 'valid', counterbet_type))
+                             (tx1['feed_address'], 'open', counterbet_type))
     tx1_wager_remaining = tx1['wager_remaining']
     tx1_counterwager_remaining = tx1['counterwager_remaining']
     bet_matches = cursor.fetchall()
@@ -309,7 +310,7 @@ def expire (db, block_index, block_time):
 
     # Expire bets and give refunds for the quantity wager_remaining.
     cursor.execute('''SELECT * FROM bets \
-                      WHERE (status = ? AND expire_index < ?)''', ('valid', block_index))
+                      WHERE (status = ? AND expire_index < ?)''', ('open', block_index))
     for bet in cursor.fetchall():
 
         # Update status of bet.

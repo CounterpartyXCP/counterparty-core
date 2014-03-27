@@ -392,6 +392,9 @@ def set_options (data_dir=None,
             config.UNSPENDABLE = '1CounterpartyXXXXXXXXXXXXXXXUWLpVr'
 
 def balances (address):
+    if not bitcoin.base58_decode(address, config.ADDRESSVERSION):
+        raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
+                                             address)
     address_data = util.get_address(db, address=address)
     balances = address_data['balances']
     table = PrettyTable(['Asset', 'Amount'])

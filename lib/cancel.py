@@ -17,8 +17,8 @@ ID = 70
 def compose (db, offer_hash):
 
     # Check that offer exists.
-    problems = ['no valid offer with that hash']
-    for offer in util.get_orders(db, status='valid') + util.get_bets(db, status='valid'):
+    problems = ['no open offer with that hash']
+    for offer in util.get_orders(db, status='open') + util.get_bets(db, status='open'):
         if offer_hash == offer['tx_hash']:
             source = offer['source']
             problems = None
@@ -46,10 +46,10 @@ def parse (db, tx, message):
     if status == 'valid':
         # Find offer.
         cursor.execute('''SELECT * FROM orders \
-                          WHERE (tx_hash=? AND source=? AND status=?)''', (offer_hash, tx['source'], 'valid'))
+                          WHERE (tx_hash=? AND source=? AND status=?)''', (offer_hash, tx['source'], 'open'))
         orders = cursor.fetchall()
         cursor.execute('''SELECT * FROM bets \
-                          WHERE (tx_hash=? AND source=? AND status=?)''', (offer_hash, tx['source'], 'valid'))
+                          WHERE (tx_hash=? AND source=? AND status=?)''', (offer_hash, tx['source'], 'open'))
         bets = cursor.fetchall()
 
         # Cancel if order.
@@ -84,7 +84,7 @@ def parse (db, tx, message):
             util.credit(db, tx['block_index'], tx['source'], 'XCP', round(bet['wager_quantity'] * bet['fee_fraction_int'] / 1e8))
         # If neither order or bet, mark as invalid.
         else:
-            status = 'invalid: no valid offer with that hash from that address'
+            status = 'invalid: no open offer with that hash from that address'
 
     # Add parsed transaction to message-type–specific table.
     bindings = {
