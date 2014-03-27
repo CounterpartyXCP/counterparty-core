@@ -122,20 +122,19 @@ def parse (db, tx, message):
         feed_address = tx['destination']
         fee_fraction = get_fee_fraction(db, feed_address)
 
-        try: odds = util.price(wager_quantity, counterwager_quantity, tx['block_index'])
-        except: pass
-
-        problems = validate(db, tx['source'], feed_address, bet_type, deadline, wager_quantity,
-                            counterwager_quantity, target_value, leverage, expiration)
-        if problems: status = 'invalid: ' + '; '.join(problems)
-
-    if status == 'open':
         # Overbet
         balances = util.get_balances(db, address=tx['source'], asset='XCP')
         if not balances: wager_quantity = 0
         elif balances[0]['quantity']/(1 + fee_fraction) < wager_quantity:
             wager_quantity = min(round(balances[0]['quantity']/(1 + fee_fraction)), wager_quantity)
             counterwager_quantity = int(util.price(wager_quantity, odds, tx['block_index']))
+
+        try: odds = util.price(wager_quantity, counterwager_quantity, tx['block_index'])
+        except: pass
+
+        problems = validate(db, tx['source'], feed_address, bet_type, deadline, wager_quantity,
+                            counterwager_quantity, target_value, leverage, expiration)
+        if problems: status = 'invalid: ' + '; '.join(problems)
 
     # Debit quantity wagered and fee.
     if status == 'open':

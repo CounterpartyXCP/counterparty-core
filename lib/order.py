@@ -184,7 +184,7 @@ def match (db, tx):
         # print('foo', tx0_price, tx1_inverse_price, file=sys.stderr) # TODO
         if tx0_price <= tx1_inverse_price:
             forward_quantity = int(min(tx0_give_remaining, int(util.price(tx1_give_remaining, tx0_price, tx1['block_index']))))
-            # print('bar1', tx0_give_remaining, int(util.price(tx1_give_remaining, tx0_price, tx1['block_index']), file=sys.stderr) # TODO
+            # print('bar1', tx0_give_remaining, int(util.price(tx1_give_remaining, tx0_price, tx1['block_index'])), file=sys.stderr) # TODO
             # print('bar2', forward_quantity, file=sys.stderr) # TODO
             backward_quantity = round(forward_quantity * tx0_price)
 

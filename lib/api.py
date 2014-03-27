@@ -152,10 +152,9 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_orders (filters=None, show_empty=True, show_expired=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_orders (filters=None, show_expired=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             results = util.get_orders(db,
                 filters=filters,
-                show_empty=show_empty,
                 show_expired=show_expired,
                 order_by=order_by,
                 order_dir=order_dir,
