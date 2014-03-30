@@ -41,7 +41,8 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset):
         dividend_divisible = issuances[0]['divisible']
 
     outputs = []
-    balances = util.get_balances(db, asset=asset)       # + util.get_escrowed(db, asset=asset)
+    # Balances
+    balances = util.get_balances(db, asset=asset)
     for balance in balances:
         address, address_quantity = balance['address'], balance['quantity']
         dividend_quantity = address_quantity * quantity_per_unit
@@ -50,6 +51,9 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset):
         if dividend_asset == 'BTC' and dividend_quantity < config.MULTISIG_DUST_SIZE:  continue    # A bit hackish.
         dividend_quantity = int(dividend_quantity)
         outputs.append({'address': address, 'dividend_quantity': dividend_quantity})
+    # Funds escrowed in orders.
+
+    # Funds escrowed in pending order matches.
 
     dividend_total = sum([output['dividend_quantity'] for output in outputs])
     if not dividend_total: problems.append('zero dividend')

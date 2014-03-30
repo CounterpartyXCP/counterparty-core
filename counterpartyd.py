@@ -414,7 +414,7 @@ if __name__ == '__main__':
     
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(prog='counterpartyd', description='the reference implementation of the Counterparty protocol')
-    parser.add_argument('-V', '--version', action='version', version="counterpartyd v%s" % config.CLIENT_VERSION)
+    parser.add_argument('-V', '--version', action='version', version="counterpartyd v%s" % config.CLIENT_VERSION_STRING)
 
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='sets log level to DEBUG instead of WARNING')
     parser.add_argument('--force', action='store_true', help='don\'t check whether Bitcoind is caught up')
@@ -703,7 +703,7 @@ if __name__ == '__main__':
         balances(args.address)
 
     elif args.action == 'asset':
-        results = util.api('get_asset_info', [args.asset])[0]
+        results = util.api('get_asset_info', ([args.asset],))[0]    # HACK
         asset_id = util.get_asset_id(args.asset)
         divisible = results['divisible']
         total_issued = util.devise(db, results['total_issued'], args.asset, dest='output')

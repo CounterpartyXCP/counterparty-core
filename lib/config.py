@@ -8,11 +8,11 @@ UNITTEST_PREFIX = b'TESTXXXX'
 
 # Versions
 CLIENT_VERSION_MAJOR = 6
-CLIENT_VERSION_MINOR = 901
-CLIENT_VERSION = float(str(CLIENT_VERSION_MAJOR) + '.' + str(CLIENT_VERSION_MINOR))
+CLIENT_VERSION_MINOR = 10
+CLIENT_VERSION_STRING = str(CLIENT_VERSION_MAJOR) + '.' + str(CLIENT_VERSION_MINOR)
 DB_VERSION_MAJOR = 9            # Major version changes the blocks or transactions table.
-DB_VERSION_MINOR = 902          # Minor version changes just the parsing.
-DB_VERSION = float(str(DB_VERSION_MAJOR) + '.' + str(DB_VERSION_MINOR))
+DB_VERSION_MINOR = 10           # Minor version changes just the parsing.
+DB_VERSION_STRING = str(DB_VERSION_MAJOR) + '.' + str(DB_VERSION_MINOR)
 
 # Bitcoin protocol
 MULTISIG = True
