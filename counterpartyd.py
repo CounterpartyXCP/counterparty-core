@@ -355,13 +355,13 @@ def set_options (data_dir=None,
         config.API_REQUEST_QUEUE_SIZE = 20 #(not suitable for multiuser, high-performance production)
 
     # Database
-    if config.TESTNET:
-        config.DB_VERSION_MAJOR = str(config.DB_VERSION_MAJOR) + '.testnet'
     if database_file:
         config.DATABASE = database_file
     else:
-        config.DB_VERSION_MAJOR
-        config.DATABASE = os.path.join(config.DATA_DIR, 'counterpartyd.' + str(config.DB_VERSION_MAJOR) + '.db')
+        if config.TESTNET:
+            config.DATABASE = os.path.join(config.DATA_DIR, 'counterpartyd.' + str(config.DB_VERSION_MAJOR) + '.testnet.db')
+        else:
+            config.DATABASE = os.path.join(config.DATA_DIR, 'counterpartyd.' + str(config.DB_VERSION_MAJOR) + '.db')
 
     # (more) Testnet
     if config.TESTNET:
