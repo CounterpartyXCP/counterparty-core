@@ -139,8 +139,8 @@ Everywhere in the API an asset is referenced as an uppercase alphabetic (base
 
 .. _quantitys:
 
-quantitys & balances
-^^^^^^^^^^^^^^^^^^^^
+Quantities & balances
+^^^^^^^^^^^^^^^^^^^^^^
 
 Anywhere where an quantity is specified, it is specified in **satoshis** (if a divisible asset), or as whole numbers
 (if an indivisible asset). To convert satoshis to floating-point, simply cast to float and divide by 100,000,000.
@@ -190,24 +190,33 @@ NOTE: Note that with strings being compared, operators like ``>=`` do a lexigrap
 compares, letter to letter, based on the ASCII ordering for individual characters. For more information on
 the specific comparison logic used, please see `this page <http://docs.python.org/3/library/stdtypes.html#comparisons>`__.
 
-.. _multisig_param:
+.. _encoding_param:
 
-The ``multisig`` Parameter of ``create_`` Calls 
+The ``encoding`` Parameter of ``create_`` Calls 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 All ``create_`` API calls return an *unsigned raw transaction string*, hex encoded (i.e. the same format that ``bitcoind`` returns
 with its raw transaction API calls).
 
-The exact form and format of this unsigned raw transaction string is specified via the ``multisig`` parameter on each ``create_``
+The exact form and format of this unsigned raw transaction string is specified via the ``encoding`` and ``pubkey`` parameters on each ``create_``
 API call:
 
-- Specify ``false`` to return the transaction as an **OP_RETURN** transaction.
-- If the source address is in the local ``bitcoind`` ``wallet.dat``, specify ``true`` to return the
-  transaction as a **multisig** transaction.
-- If the address is *not* in the local ``bitcoind`` ``wallet.dat``, specify the public key
-  (hex encoded) to return the transaction as a **multisig** transaction.
-  
-With any of the above settings, as the *unsigned* raw transaction is returned from the ``create_`` API call itself, you have two options:
+- To return the transaction as an **OP_RETURN** transaction, specify ``opreturn`` for the ``encoding`` parameter.
+  Note that as of ``bitcoind`` 0.9.0, not all Counterparty transactions are possible with OP_RETURN, due to the 40
+  byte limit imposed by the ``bitcoind`` client in order for the transaction to be relayed on mainnet.
+- To return the transaction as a **multisig** transaction, specify ``multisig`` for the ``encoding`` parameter.
+    
+    - If the source address is in the local ``bitcoind`` ``wallet.dat``. ``pubkey`` can be left as ``null``.
+    - If the source address is *not* in the local ``bitcoind`` ``wallet.dat``, ``pubkey`` should be set to the hex-encoded
+      public key.
+
+- To return the Counterparty transaction encoded into arbitrary address outputs (i.e. pubkeyhash encoding), specify
+  ``pubkeyhash`` for the ``encoding`` parameter. ``pubkey`` is also required to be set (as above, with ``multisig`` encoding)
+  if the source address is not contained in the local ``bitcoind`` ``wallet.dat``. Note that this method is **not** recommended
+  as a first-resort, as it pollutes the UTXO set.
+
+With any of the above settings, as the *unsigned* raw transaction is returned from the ``create_`` API call itself, you
+then have two approaches with respect to broadcasting the transaction on the network:
 
 - If the private key you need to sign the raw transaction is in the local ``bitcoind`` ``wallet.dat``, you can simply call the
   ``transmit`` API call and pass it to the raw unsigned transaction string.
@@ -460,13 +469,14 @@ get_issuances
 get_orders
 ^^^^^^^^^^^^^^
 
-.. py:function:: get_orders(filters=[], is_valid=true, show_expired=true, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
+.. py:function:: get_orders(filters=[], is_valid=true, show_empty=true, show_expired=true, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
 
    Gets a listing of orders.
 
    :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
    :param boolean is_valid: Set to ``true`` to only return valid records. Set to ``false`` to return all records (including invalid attempts).
-   :param boolean show_expired: Set to ``true`` to include expired orders in the results.
+   :param boolean show_empty: Set to ``false`` to not include empty orders in the results (i.e. where give remaining is zero).
+   :param boolean show_expired: Set to ``false`` to not include expired orders in the results.
    :param string order_by: If sorted results are desired, specify the name of an :ref:`order object <order-object>` attribute to order the results by (e.g. ``get_asset``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
    :param integer start_block: If specified, only results from the specified block index on will be returned  
@@ -480,12 +490,12 @@ get_orders
 get_order_matches
 ^^^^^^^^^^^^^^^^^^^
 
-.. py:function:: get_order_matches(filters=[], is_completed=true, is_mine=false, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
+.. py:function:: get_order_matches(filters=[], status="completed", is_mine=false, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
 
    Gets a listing of order matches.
 
    :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param boolean is_completed: Set to ``true`` to only return completed order match records. Set to ``false`` to return all records (including invalid attempts).
+   :param boolean status: Either ``completed`` (to return completed matches only), ``pending`` (to return matches requiring BTC payment only) or ``null`` to return all records (including invalid attempts).
    :param boolean is_mine: Set to ``true`` to include results where either the ``tx0_address`` or ``tx1_address`` exist in the linked ``bitcoind`` wallet.
    :param string order_by: If sorted results are desired, specify the name of an :ref:`order match object <order-match-object>` attribute to order the results by (e.g. ``forward_asset``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
@@ -518,20 +528,21 @@ get_sends
 get_asset_info
 ^^^^^^^^^^^^^^
 
-.. py:function:: get_asset_info(asset)
+.. py:function:: get_asset_info(assets)
 
    Gets information on an issued asset.
 
-   :param string asset: The :ref:`asset <assets>` for which to retrieve information.
-   :return: ``null`` if the asset was not found. Otherwise, an object with the following parameters:
+   :param string assets: A list of one or more :ref:`asset <assets>` for which to retrieve information.
+   :return: ``null`` if the asset was not found. Otherwise, a list of one or more objects, each one with the following parameters:
 
+     - **asset** (*string*): The :ref:`name <assets>` of the asset itself 
      - **owner** (*string*): The address that currently owns the asset (i.e. has issuance rights to it) 
      - **divisible** (*boolean*): Whether the asset is divisible or not
      - **locked** (*boolean*): Whether the asset is locked (future issuances prohibited)
      - **total_issued** (*integer*): The :ref:`quantity <quantitys>` of the asset issued, in total
      - **callable** (*boolean*): If the asset is callable or not
      - **call_date** (*integer*): The call date, as an epoch timestamp
-     - **call_price** (*integer*): The call price, in satoshi
+     - **call_price** (*float*): The call price
      - **description** (*string*): The asset's current description
      - **issuer** (*string*): The asset's original owner (i.e. issuer)
 
@@ -636,7 +647,7 @@ transmit
 create_bet
 ^^^^^^^^^^^^^^
 
-.. py:function:: create_bet(source, feed_address, bet_type, deadline, wager, counterwager, target_value=0.0, leverage=5040, multisig=true)
+.. py:function:: create_bet(source, feed_address, bet_type, deadline, wager, counterwager, target_value=0.0, leverage=5040, encoding='multisig', pubkey=null)
 
    Issue a bet against a feed.
 
@@ -648,7 +659,8 @@ create_bet
    :param integer counterwager: The minimum :ref:`quantity <quantitys>` of XCP to be wagered against, for the bets to match.
    :param float target_value: Target value for Equal/NotEqual bet
    :param integer leverage: Leverage, as a fraction of 5040
-   :param boolean multisig: See :ref:`this section <multisig_param>`.  
+   :param string encoding: The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
+   :param string pubkey: The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
    :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
 
@@ -657,7 +669,7 @@ create_bet
 create_broadcast
 ^^^^^^^^^^^^^^
 
-.. py:function:: create_broadcast(source, fee_multiplier, text, value=0, multisig=true)
+.. py:function:: create_broadcast(source, fee_multiplier, text, value=0, encoding='multisig', pubkey=null)
 
    Broadcast textual and numerical information to the network.
 
@@ -666,7 +678,8 @@ create_broadcast
    :param string text: The textual part of the broadcast.
    :param integer timestamp: The timestamp of the broadcast, in Unix time.
    :param float value: Numerical value of the broadcast.
-   :param boolean multisig: See :ref:`this section <multisig_param>`.  
+   :param string encoding: The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
+   :param string pubkey: The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
    :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
 
@@ -675,12 +688,13 @@ create_broadcast
 create_btcpay
 ^^^^^^^^^^^^^^
 
-.. py:function:: create_btcpay(order_match_id, multisig=true)
+.. py:function:: create_btcpay(order_match_id, encoding='multisig', pubkey=null)
 
    Create and (optionally) broadcast a BTCpay message, to settle an Order Match for which you owe BTC. 
 
    :param string order_match_id: The concatenation of the hashes of the two transactions which compose the order match.
-   :param boolean multisig: See :ref:`this section <multisig_param>`.  
+   :param string encoding: The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
+   :param string pubkey: The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
    :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
 
@@ -689,13 +703,14 @@ create_btcpay
 create_burn
 ^^^^^^^^^^^^^^
 
-.. py:function:: create_burn(source, quantity, multisig=true)
+.. py:function:: create_burn(source, quantity, encoding='multisig', pubkey=null)
 
    Burn a given quantity of BTC for XCP (**only possible between blocks 278310 and 283810**).
 
    :param string source: The address with the BTC to burn.
    :param integer quantity: The :ref:`quantity <quantitys>` of BTC to burn (1 BTC maximum burn per address).
-   :param boolean multisig: See :ref:`this section <multisig_param>`.  
+   :param string encoding: The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
+   :param string pubkey: The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
    :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
 
@@ -704,7 +719,7 @@ create_burn
 create_callback
 ^^^^^^^^^^^^^^^^^
 
-.. py:function:: create_callback(offer_hash, multisig=true)
+.. py:function:: create_callback(offer_hash, encoding='multisig', pubkey=null)
 
    Make a call on a callable asset (where some whole or part of the asset is returned to the issuer, on or after the asset's call date).
 
@@ -712,7 +727,8 @@ create_callback
    :param float fraction: A floating point number greater than zero but less than or equal to 1, where 0% is for a callback of 0%
     of the balance of each of the asset's holders, and 1 would be for a callback of 100%). For example, ``0.56`` would be 56%.
     Each holder of the called asset will be paid the call price for the asset, times the number of units of that asset that were called back from them.
-   :param string asset: The :ref:`asset <assets>` to call back (must be currently owned by the address specified as ``source``). 
+   :param string encoding: The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
+   :param string pubkey: The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
    :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
 
@@ -721,12 +737,13 @@ create_callback
 create_cancel
 ^^^^^^^^^^^^^^
 
-.. py:function:: create_cancel(offer_hash, multisig=true)
+.. py:function:: create_cancel(offer_hash, encoding='multisig', pubkey=null)
 
    Cancel an open order or bet you created.
 
    :param string offer_hash: The transaction hash of the order or bet.
-   :param boolean multisig: See :ref:`this section <multisig_param>`.  
+   :param string encoding: The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
+   :param string pubkey: The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
    :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
 
@@ -735,7 +752,7 @@ create_cancel
 create_dividend
 ^^^^^^^^^^^^^^
 
-.. py:function:: create_dividend(source, quantity_per_unit, asset, dividend_asset, multisig=true)
+.. py:function:: create_dividend(source, quantity_per_unit, asset, dividend_asset, encoding='multisig', pubkey=null)
 
    Issue a dividend on a specific user defined asset.
 
@@ -743,7 +760,8 @@ create_dividend
    :param string asset: The :ref:`asset <assets>` that the dividends are being rewarded on.
    :param string dividend_asset: The :ref:`asset <assets>` that the dividends are paid in.
    :param integer quantity_per_unit: The :ref:`quantity <quantitys>` of XCP rewarded per whole unit of the asset.
-   :param boolean multisig: See :ref:`this section <multisig_param>`.  
+   :param string encoding: The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
+   :param string pubkey: The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
    :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
 
@@ -752,20 +770,25 @@ create_dividend
 create_issuance
 ^^^^^^^^^^^^^^^^^
 
-.. py:function:: create_issuance(source, asset, quantity, divisible, description, callable=false, call_date=null, call_price=null, transfer_destination=null, multisig=true):
+.. py:function:: create_issuance(source, asset, quantity, divisible, description, callable=false, call_date=null, call_price=null, transfer_destination=null, lock=false, encoding='multisig', pubkey=null):
 
-   Issue a new asset, issue more of an existing asset or transfer the ownership of an asset.
+   Issue a new asset, issue more of an existing asset, lock an asset, or transfer the ownership of an asset (note that
+   you can only do one of these operations in a given create_issuance call).
 
    :param string source: The address that will be issuing or transfering the asset.
    :param integer quantity: The :ref:`quantity <quantitys>` of the asset to issue (set to 0 if *transferring* an asset).
    :param string asset: The :ref:`asset <assets>` to issue or transfer.
-   :param boolean divisible: Whether this asset is divisible or not (if a transfer, this value must match the value specified when the asset was originally issued).
+   :param boolean divisible: Whether this asset is divisible or not (if a transfer, this value must match the value
+    specified when the asset was originally issued).
    :param boolean callable: Whether the asset is callable or not.
    :param integer call_date: The timestamp at which the asset may be called back, in Unix time. Only valid for callable assets.
-   :param integer call_price: The :ref:`price <floats>` at which the asset may be called back, on the specified call_date. Only valid for callable assets.
-   :param boolean description: A textual description for the asset. 52 bytes max.
+   :param float call_price: The :ref:`price <floats>` per unit XCP at which the asset may be called back, on or after the specified call_date. Only valid for callable assets.
+   :param string description: A textual description for the asset. 52 bytes max.
    :param string transfer_destination: The address to receive the asset (only used when *transferring* assets -- leave set to ``null`` if issuing an asset).
-   :param boolean multisig: See :ref:`this section <multisig_param>`.  
+   :param boolean lock: Set to ``true`` if this asset should be locked with this API call. Only valid if the asset is not
+    already locked. To keep as-is, set this to ``false``, or simply do not specify it. 
+   :param string encoding: The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
+   :param string pubkey: The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
    :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
 
@@ -774,7 +797,7 @@ create_issuance
 create_order
 ^^^^^^^^^^^^^^
 
-.. py:function:: create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required=0, fee_provided=config.MIN_FEE, multisig=true)
+.. py:function:: create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required=0, fee_provided=config.MIN_FEE, encoding='multisig', pubkey=null)
 
    Issue an order request.
 
@@ -788,7 +811,8 @@ create_order
     required only if buying BTC (may be zero, though). If not specified or set to ``null``, this defaults to 1% of the BTC desired for purchase.
    :param integer fee_provided: The miners' fee provided; in BTC; required only if selling BTC (should not be lower than
     is required for acceptance in a block).  If not specified or set to ``null``, this defaults to 1% of the BTC for sale. 
-   :param boolean multisig: See :ref:`this section <multisig_param>`.  
+   :param string encoding: The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
+   :param string pubkey: The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
    :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
 
@@ -797,7 +821,7 @@ create_order
 create_send
 ^^^^^^^^^^^^^^
 
-.. py:function:: create_send(source, destination, asset, quantity, multisig=true)
+.. py:function:: create_send(source, destination, asset, quantity, encoding='multisig', pubkey=null)
 
    Send XCP or a user defined asset.
 
@@ -805,7 +829,8 @@ create_send
    :param string destination: The address to receive the asset.
    :param integer quantity: The :ref:`quantity <quantitys>` of the asset to send.
    :param string asset: The :ref:`asset <assets>` to send.
-   :param boolean multisig: See :ref:`this section <multisig_param>`.  
+   :param string encoding: The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
+   :param string pubkey: The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
    :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
    

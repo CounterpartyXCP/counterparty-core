@@ -13,7 +13,7 @@ LENGTH = 8 + 8
 ID = 21
 
 
-def validate (db, source, fraction, asset, block_time):
+def validate (db, source, fraction, asset, block_time, block_index):
     problems = []
 
     if fraction > 1:
@@ -27,8 +27,6 @@ def validate (db, source, fraction, asset, block_time):
         return None, None, None, problems
     else:
         last_issuance = issuances[-1]
-        if block_time == None:  # For composition only.
-            block_time = util.last_block(db)['block_time']
 
         if last_issuance['issuer'] != source:
             problems.append('not asset owner')
@@ -45,33 +43,37 @@ def validate (db, source, fraction, asset, block_time):
     if not divisible:   # Pay per output unit.
         call_price *= config.UNIT
 
+    # Calculate callback quantities.
+    holders = util.get_holders(db, asset)
     outputs = []
-    balances = util.get_balances(db, asset=asset)
-    for balance in balances:
-        address, address_amount = balance['address'], balance['amount']
-        if address == source or address_amount == 0: continue
-        callback_amount = int(address_amount * fraction)   # Round down.
-        fraction_actual = callback_amount / address_amount
-        outputs.append({'address': address, 'callback_amount': callback_amount, 'fraction_actual': fraction_actual})
+    for holder in holders:
+        if holder['escrow']: continue   # Can’t callback escrowed funds directly.
 
-    callback_total = sum([output['callback_amount'] for output in outputs])
+        address = holder['address']
+        address_quantity = holder['address_quantity']
+        if address == source or address_quantity == 0: continue
+        callback_quantity = int(address_quantity * fraction)   # Round down.
+        fraction_actual = callback_quantity / address_quantity
+        outputs.append({'address': address, 'address_quantity': address_quantity, 'callback_quantity': callback_quantity, 'fraction_actual': fraction_actual})
+
+    callback_total = sum([output['callback_quantity'] for output in outputs])
     if not callback_total: problems.append('nothing called back')
 
     balances = util.get_balances(db, address=source, asset='XCP')
-    if not balances or balances[0]['amount'] < (call_price * callback_total):
+    if not balances or balances[0]['quantity'] < (call_price * callback_total):
         problems.append('insufficient funds')
 
     return call_price, callback_total, outputs, problems
 
 def compose (db, source, fraction, asset):
-    call_price, callback_total, outputs, problems = validate(db, source, fraction, asset, None)
+    call_price, callback_total, outputs, problems = validate(db, source, fraction, asset, util.last_block(db)['block_time'], util.last_block(db)['block_index'])
     if problems: raise exceptions.CallbackError(problems)
-    print('Total amount to be called back:', util.devise(db, callback_total, asset, 'output'), asset)
+    print('Total quantity to be called back:', util.devise(db, callback_total, asset, 'output'), asset)
 
     asset_id = util.get_asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, fraction, asset_id)
-    return (source, None, None, config.MIN_FEE, data)
+    return (source, [], config.MIN_FEE, data)
 
 def parse (db, tx, message):
     callback_parse_cursor = db.cursor()
@@ -82,13 +84,13 @@ def parse (db, tx, message):
         fraction, asset_id = struct.unpack(FORMAT, message)
         asset = util.get_asset_name(asset_id)
         status = 'valid'
-    except struct.error as e:
+    except (AssertionError, struct.error) as e:
         fraction, asset = None, None
         status = 'invalid: could not unpack'
 
     if status == 'valid':
-        call_price, callback_total, outputs, problems = validate(db, tx['source'], fraction, asset, tx['block_time'])
-        if problems: status = 'invalid: ' + ';'.join(problems)
+        call_price, callback_total, outputs, problems = validate(db, tx['source'], fraction, asset, tx['block_time'], tx['block_index'])
+        if problems: status = 'invalid: ' + '; '.join(problems)
 
     if status == 'valid':
         # Issuer.
@@ -98,9 +100,9 @@ def parse (db, tx, message):
 
         # Holders.
         for output in outputs:
-            assert call_price * output['callback_amount'] == int(call_price * output['callback_amount'])
-            util.debit(db, tx['block_index'], output['address'], asset, output['callback_amount'])
-            util.credit(db, tx['block_index'], output['address'], 'XCP', int(call_price * output['callback_amount']))
+            assert call_price * output['callback_quantity'] == int(call_price * output['callback_quantity'])
+            util.debit(db, tx['block_index'], output['address'], asset, output['callback_quantity'])
+            util.credit(db, tx['block_index'], output['address'], 'XCP', int(call_price * output['callback_quantity']))
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

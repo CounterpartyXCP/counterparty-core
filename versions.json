@@ -1,40 +1,55 @@
 {
-	"minimum_client_version": 6.8,
+	"minimum_client_version_major": 6,
+	"minimum_client_version_minor": 10,
 	"protocol_changes": [
 		{
 			"block_index": 285306,
+			"minimum_database_version_major": 6,
+			"minimum_database_version_minor": 10,
 			"minimum_database_version": 6.15,
 			"description": "issuances fees regression"
 		},
 		{
 			"block_index": 0,
-			"minimum_database_version": 6.17,
+			"minimum_database_version_major": 6,
+			"minimum_database_version_minor": 17,
 			"description": "double credits on order match expirations"
 		},
 		{
 			"block_index": 0,
-			"minimum_database_version": 7.0,
+			"minimum_database_version_major": 7,
+			"minimum_database_version_minor": 0,
 			"description": "arbitrary spend with multi‐sig input"
 		},
 		{
 			"block_index": 287800,
-			"minimum_database_version": 9.1,
+			"minimum_database_version_major": 9,
+			"minimum_database_version_minor": 1,
 			"description": "deduct fee_required, too"
 		},
 		{
 			"block_index": 0,
-			"minimum_database_version": 9.3,
+			"minimum_database_version_major": 9,
+			"minimum_database_version_minor": 3,
 			"description": "value, quantity, etc. sanity checking"
 		},
 		{
 			"block_index": 291700,
-			"minimum_database_version": 9.9,
+			"minimum_database_version_major": 9,
+			"minimum_database_version_minor": 9,
 			"description": "reduce issuance fee to 0.5 XCP"
 		},
 		{
 			"block_index": 292000,
-			"minimum_database_version": 9.901,
+			"minimum_database_version_major": 9,
+			"minimum_database_version_minor": 10,
 			"description": "match only with positive get/counterwager remaining"
+		},
+		{
+			"block_index": 293000,
+			"minimum_database_version_major": 9,
+			"minimum_database_version_minor": 10,
+			"description": "pay‐to‐pubkeyhash encoding"
 		}
 	]
 }

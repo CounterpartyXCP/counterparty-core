@@ -15,17 +15,13 @@ LENGTH_2 = 8 + 8 + 8
 ID = 50
 
 
-def validate (db, source, amount_per_unit, asset, dividend_asset):
+def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index):
     problems = []
 
     if asset in ('BTC', 'XCP'):
         problems.append('cannot pay dividends to holders of BTC or XCP')
 
-    if not isinstance(amount_per_unit, int):
-        problems.append('amount_per_unit must be in satoshis')
-        return problems
-
-    if amount_per_unit <= 0: problems.append('non‐positive amount per unit')
+    if quantity_per_unit <= 0: problems.append('non‐positive quantity per unit')
 
     # Examine asset.
     issuances = util.get_issuances(db, status='valid', asset=asset)
@@ -44,39 +40,46 @@ def validate (db, source, amount_per_unit, asset, dividend_asset):
             return None, None, problems
         dividend_divisible = issuances[0]['divisible']
 
+    # Calculate dividend quantities.
+    holders = util.get_holders(db, asset)
     outputs = []
-    balances = util.get_balances(db, asset=asset)       # + util.get_escrowed(db, asset=asset)
-    for balance in balances:
-        address, address_amount = balance['address'], balance['amount']
-        dividend_amount = address_amount * amount_per_unit
-        if divisible: dividend_amount /= config.UNIT
-        if not dividend_divisible: dividend_amount /= config.UNIT
-        dividend_amount = int(dividend_amount)
-        outputs.append({'address': address, 'dividend_amount': dividend_amount})
+    for holder in holders:
+        if not config.TESTNET: # Protocol change.
+            if holder['escrow']: continue
+            
+        address = holder['address']
+        address_quantity = holder['address_quantity']
+        dividend_quantity = address_quantity * quantity_per_unit
+        if divisible: dividend_quantity /= config.UNIT
+        if not dividend_divisible: dividend_quantity /= config.UNIT
+        if dividend_asset == 'BTC' and dividend_quantity < config.MULTISIG_DUST_SIZE:  continue    # A bit hackish.
+        dividend_quantity = int(dividend_quantity)
+        outputs.append({'address': address, 'address_quantity': address_quantity, 'dividend_quantity': dividend_quantity})
 
-    dividend_total = sum([output['dividend_amount'] for output in outputs])
+    dividend_total = sum([output['dividend_quantity'] for output in outputs])
     if not dividend_total: problems.append('zero dividend')
 
-    balances = util.get_balances(db, address=source, asset=dividend_asset)
-    if not balances or balances[0]['amount'] < dividend_total:
-        problems.append('insufficient funds')
+    if dividend_asset != 'BTC':
+        balances = util.get_balances(db, address=source, asset=dividend_asset)
+        if not balances or balances[0]['quantity'] < dividend_total:
+            problems.append('insufficient funds')
 
     return dividend_total, outputs, problems
 
-def compose (db, source, amount_per_unit, asset, dividend_asset):
+def compose (db, source, quantity_per_unit, asset, dividend_asset):
 
-    dividend_total, outputs, problems = validate(db, source, amount_per_unit, asset, dividend_asset)
+    dividend_total, outputs, problems = validate(db, source, quantity_per_unit, asset, dividend_asset, util.last_block(db)['block_index'])
     if problems: raise exceptions.DividendError(problems)
-    print('Total amount to be distributed in dividends:', util.devise(db, dividend_total, dividend_asset, 'output'), dividend_asset)
+    print('Total quantity to be distributed in dividends:', util.devise(db, dividend_total, dividend_asset, 'output'), dividend_asset)
 
     if dividend_asset == 'BTC':
-        problems.append('Cannot (yet) pay BTC dividends.')
+        return (source, [(output['address'], output['dividend_quantity']) for output in outputs], config.MIN_FEE, None)
 
     asset_id = util.get_asset_id(asset)
     dividend_asset_id = util.get_asset_id(dividend_asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
-    data += struct.pack(FORMAT_2, amount_per_unit, asset_id, dividend_asset_id)
-    return (source, None, None, config.MIN_FEE, data)
+    data += struct.pack(FORMAT_2, quantity_per_unit, asset_id, dividend_asset_id)
+    return (source, [], config.MIN_FEE, data)
 
 def parse (db, tx, message):
     dividend_parse_cursor = db.cursor()
@@ -84,19 +87,19 @@ def parse (db, tx, message):
     # Unpack message.
     try:
         if (tx['block_index'] > 288150 or config.TESTNET) and len(message) == LENGTH_2:
-            amount_per_unit, asset_id, dividend_asset_id = struct.unpack(FORMAT_2, message)
+            quantity_per_unit, asset_id, dividend_asset_id = struct.unpack(FORMAT_2, message)
             asset = util.get_asset_name(asset_id)
             dividend_asset = util.get_asset_name(dividend_asset_id)
             status = 'valid'
         elif len(message) == LENGTH_1:
-            amount_per_unit, asset_id = struct.unpack(FORMAT_1, message)
+            quantity_per_unit, asset_id = struct.unpack(FORMAT_1, message)
             asset = util.get_asset_name(asset_id)
             dividend_asset = 'XCP'
             status = 'valid'
         else:
             raise Exception
-    except (struct.error, Exception) as e:
-        amount_per_unit, asset = None, None
+    except (AssertionError, struct.error) as e:
+        quantity_per_unit, asset = None, None
         status = 'invalid: could not unpack'
 
     if dividend_asset == 'BTC':
@@ -104,10 +107,10 @@ def parse (db, tx, message):
 
     if status == 'valid':
         # For SQLite3
-        amount_per_unit = min(amount_per_unit, config.MAX_INT)
+        quantity_per_unit = min(quantity_per_unit, config.MAX_INT)
 
-        dividend_total, outputs, problems = validate(db, tx['source'], amount_per_unit, asset, dividend_asset)
-        if problems: status = 'invalid: ' + ';'.join(problems)
+        dividend_total, outputs, problems = validate(db, tx['source'], quantity_per_unit, asset, dividend_asset, block_index=tx['block_index'])
+        if problems: status = 'invalid: ' + '; '.join(problems)
 
     if status == 'valid':
         # Debit.
@@ -115,7 +118,7 @@ def parse (db, tx, message):
 
         # Credit.
         for output in outputs:
-            util.credit(db, tx['block_index'], output['address'], dividend_asset, output['dividend_amount'])
+            util.credit(db, tx['block_index'], output['address'], dividend_asset, output['dividend_quantity'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {
@@ -125,10 +128,10 @@ def parse (db, tx, message):
         'source': tx['source'],
         'asset': asset,
         'dividend_asset': dividend_asset,
-        'amount_per_unit': amount_per_unit,
+        'quantity_per_unit': quantity_per_unit,
         'status': status,
     }
-    sql='insert into dividends values(:tx_index, :tx_hash, :block_index, :source, :asset, :dividend_asset, :amount_per_unit, :status)'
+    sql='insert into dividends values(:tx_index, :tx_hash, :block_index, :source, :asset, :dividend_asset, :quantity_per_unit, :status)'
     dividend_parse_cursor.execute(sql, bindings)
 
     dividend_parse_cursor.close()

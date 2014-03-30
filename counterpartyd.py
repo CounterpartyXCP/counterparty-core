@@ -1,55 +1,48 @@
 #! /usr/bin/env python3
-
-
 import os
 import argparse
 import json
-
 import decimal
-D = decimal.Decimal
-
 import sys
 import logging
-import requests
-from prettytable import PrettyTable
 import unicodedata
-
 import time
 import dateutil.parser
 import calendar
+import configparser
 from threading import Thread
 
+import requests
 import appdirs
-import logging
-import configparser
+from prettytable import PrettyTable
 
-# Units
 from lib import (config, api, util, exceptions, bitcoin, blocks)
 if os.name == 'nt':
     from lib import util_windows
 
+D = decimal.Decimal
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
 
 def format_order (order):
-    give_amount = util.devise(db, D(order['give_amount']), order['give_asset'], 'output')
-    get_amount = util.devise(db, D(order['get_amount']), order['get_asset'], 'output')
+    give_quantity = util.devise(db, D(order['give_quantity']), order['give_asset'], 'output')
+    get_quantity = util.devise(db, D(order['get_quantity']), order['get_asset'], 'output')
     give_remaining = util.devise(db, D(order['give_remaining']), order['give_asset'], 'output')
     get_remaining = util.devise(db, D(order['get_remaining']), order['get_asset'], 'output')
     give_asset = order['give_asset']
     get_asset = order['get_asset']
 
     if get_asset < give_asset:
-        price = util.devise(db, D(order['get_amount']) / D(order['give_amount']), 'price', 'output')
+        price = util.devise(db, D(order['get_quantity']) / D(order['give_quantity']), 'price', 'output')
         price_assets = get_asset + '/' + give_asset + ' ask'
     else:
-        price = util.devise(db, D(order['give_amount']) / D(order['get_amount']), 'price', 'output')
+        price = util.devise(db, D(order['give_quantity']) / D(order['get_quantity']), 'price', 'output')
         price_assets = give_asset + '/' + get_asset + ' bid'
 
     return [D(give_remaining), give_asset, price, price_assets, str(order['fee_required'] / config.UNIT), str(order['fee_provided'] / config.UNIT), order['expire_index'] - util.last_block(db)['block_index'], order['tx_hash']]
 
 def format_bet (bet):
-    odds = D(bet['counterwager_amount']) / D(bet['wager_amount'])
+    odds = D(bet['counterwager_quantity']) / D(bet['wager_quantity'])
 
     if not bet['target_value']: target_value = None
     else: target_value = bet['target_value']
@@ -399,14 +392,17 @@ def set_options (data_dir=None,
             config.UNSPENDABLE = '1CounterpartyXXXXXXXXXXXXXXXUWLpVr'
 
 def balances (address):
+    if not bitcoin.base58_decode(address, config.ADDRESSVERSION):
+        raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
+                                             address)
     address_data = util.get_address(db, address=address)
     balances = address_data['balances']
     table = PrettyTable(['Asset', 'Amount'])
-    table.add_row(['BTC', bitcoin.get_btc_balance(address)])  # BTC
+    table.add_row(['BTC', bitcoin.get_btc_balance(address, normalize=True)])  # BTC
     for balance in balances:
         asset = balance['asset']
-        amount = util.devise(db, balance['amount'], balance['asset'], 'output')
-        table.add_row([asset, amount])
+        quantity = util.devise(db, balance['quantity'], balance['asset'], 'output')
+        table.add_row([asset, quantity])
     print('Balances')
     print(table.get_string())
 
@@ -418,7 +414,7 @@ if __name__ == '__main__':
     
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(prog='counterpartyd', description='the reference implementation of the Counterparty protocol')
-    parser.add_argument('-V', '--version', action='version', version="counterpartyd v%s" % config.CLIENT_VERSION)
+    parser.add_argument('-V', '--version', action='version', version="counterpartyd v%s" % config.CLIENT_VERSION_STRING)
 
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='sets log level to DEBUG instead of WARNING')
     parser.add_argument('--force', action='store_true', help='don\'t check whether Bitcoind is caught up')
@@ -452,8 +448,6 @@ if __name__ == '__main__':
 
     parser_server = subparsers.add_parser('server', help='run the server (WARNING: not thread‐safe)')
 
-    parser_potentials = subparsers.add_parser('potentials', help='get potential transactions (WARNING: not thread‐safe)')
-
     parser_send = subparsers.add_parser('send', help='create and broadcast a *send* message')
     parser_send.add_argument('--source', required=True, help='the source address')
     parser_send.add_argument('--destination', required=True, help='the destination address')
@@ -467,8 +461,8 @@ if __name__ == '__main__':
     parser_order.add_argument('--give-quantity', required=True, help='the quantity of GIVE_ASSET that you are willing to give')
     parser_order.add_argument('--give-asset', required=True, help='the asset that you would like to sell')
     parser_order.add_argument('--expiration', type=int, required=True, help='the number of blocks for which the order should be valid')
-    parser_order.add_argument('--fee-fraction-required', default=D(config.FEE_FRACTION_REQUIRED_DEFAULT), help='the miners’ fee required for an order to match this one, as a fraction of the BTC to be bought')
-    parser_order.add_argument('--fee-fraction-provided', default=D(config.FEE_FRACTION_PROVIDED_DEFAULT), help='the miners’ fee provided, as a fraction of the BTC to be sold')
+    parser_order.add_argument('--fee-fraction-required', default=config.FEE_FRACTION_REQUIRED_DEFAULT, help='the miners’ fee required for an order to match this one, as a fraction of the BTC to be bought')
+    parser_order.add_argument('--fee-fraction-provided', default=config.FEE_FRACTION_PROVIDED_DEFAULT, help='the miners’ fee provided, as a fraction of the BTC to be sold')
 
     parser_btcpay= subparsers.add_parser('btcpay', help='create and broadcast a *BTCpay* message, to settle an Order Match for which you owe BTC')
     parser_btcpay.add_argument('--order-match-id', required=True, help='the concatenation of the hashes of the two transactions which compose the order match')
@@ -482,7 +476,7 @@ if __name__ == '__main__':
     parser_issuance.add_argument('--callable', dest='callable_', action='store_true', help='whether or not the asset is callable (must agree with previous issuances)')
     parser_issuance.add_argument('--call-date', help='the date from which a callable asset may be called back (must agree with previous issuances)')
     parser_issuance.add_argument('--call-price', help='the price, in XCP per whole unit, at which a callable asset may be called back (must agree with previous issuances)')
-    parser_issuance.add_argument('--description', type=str, required=True, help='a description of the asset (set to ‘LOCK’ to lock against further issuances with non‐zero amounts)')
+    parser_issuance.add_argument('--description', type=str, required=True, help='a description of the asset (set to ‘LOCK’ to lock against further issuances with non‐zero quantitys)')
 
     parser_broadcast = subparsers.add_parser('broadcast', help='broadcast textual and numerical information to the network')
     parser_broadcast.add_argument('--source', required=True, help='the source address')
@@ -596,7 +590,7 @@ if __name__ == '__main__':
     if not args.force:
         util.versions_check(db)
         bitcoin.bitcoind_check(db)
-        if args.action not in ('server', 'reparse', 'rollback', 'potentials'):
+        if args.action not in ('server', 'reparse', 'rollback'):
             util.database_check(db, bitcoin.get_block_count())
     # TODO
 
@@ -709,7 +703,7 @@ if __name__ == '__main__':
         balances(args.address)
 
     elif args.action == 'asset':
-        results = util.api('get_asset_info', [args.asset])
+        results = util.api('get_asset_info', ([args.asset],))[0]    # HACK
         asset_id = util.get_asset_id(args.asset)
         divisible = results['divisible']
         total_issued = util.devise(db, results['total_issued'], args.asset, dest='output')
@@ -728,11 +722,14 @@ if __name__ == '__main__':
 
         print('Shareholders:')
         balances = util.get_balances(db, asset=args.asset)       # + util.get_escrowed(db, asset=asset)
-        print('\taddress, quantity')
-        for balance in balances:
-            if not balance['amount']: continue
-            amount = util.devise(db, balance['amount'], args.asset, 'output')
-            print('\t' + str(balance['address']) + ',' + str(amount))
+        print('\taddress, quantity, escrow')
+        for holder in util.get_holders(db, args.asset):
+            quantity = holder['address_quantity']
+            if not quantity: continue
+            quantity = util.devise(db, quantity, args.asset, 'output')
+            if holder['escrow']: escrow = holder['escrow']
+            else: escrow = 'None'
+            print('\t' + str(holder['address']) + ',' + str(quantity) + ',' + escrow)
 
 
     elif args.action == 'wallet':
@@ -750,10 +747,10 @@ if __name__ == '__main__':
                 table.add_row(['BTC', btc_balance])  # BTC
                 if 'BTC' in totals.keys(): totals['BTC'] += btc_balance
                 else: totals['BTC'] = btc_balance
-                empty = False
+                empty = False            
             for balance in balances:
                 asset = balance['asset']
-                balance = D(util.devise(db, balance['amount'], balance['asset'], 'output'))
+                balance = D(util.devise(db, balance['quantity'], balance['asset'], 'output'))
                 if balance:
                     if asset in totals.keys(): totals[asset] += balance
                     else: totals[asset] = balance
@@ -802,10 +799,6 @@ if __name__ == '__main__':
                 raise exceptions.InsightError('Could not connect to Insight server.')
 
         blocks.follow(db)
-
-    elif args.action == 'potentials':
-        blocks.get_potentials(db)
-
 
     else:
         parser.print_help()

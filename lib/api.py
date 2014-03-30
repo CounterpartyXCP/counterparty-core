@@ -16,7 +16,7 @@ from cherrypy import wsgiserver
 from jsonrpc import JSONRPCResponseManager, dispatcher
 
 from . import (config, bitcoin, exceptions, util)
-from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel)
+from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 
 class APIServer(threading.Thread):
 
@@ -46,10 +46,9 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_bets(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_bets(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_bets(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -57,10 +56,9 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_bet_matches(filters=None, is_settled=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_bet_matches(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_bet_matches(db,
                 filters=filters,
-                status='settled' if bool(is_settled) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -68,10 +66,9 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_broadcasts(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_broadcasts(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_broadcasts(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -79,10 +76,9 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_btcpays(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_btcpays(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_btcpays(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -90,10 +86,9 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_burns(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_burns(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_burns(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -101,10 +96,9 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_callbacks(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_callbacks(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_callbacks(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -112,10 +106,9 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_cancels(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_cancels(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_cancels(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -139,10 +132,9 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_dividends(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_dividends(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_dividends(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -150,10 +142,9 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_issuances(filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_issuances(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_issuances(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -161,22 +152,22 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_orders (filters=None, is_valid=True, show_expired=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            return util.get_orders(db,
+        def get_orders (filters=None, show_expired=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+            results = util.get_orders(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
                 show_expired=show_expired,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
                 end_block=end_block,
                 filterop=filterop)
+            return results
 
         @dispatcher.add_method
-        def get_order_matches (filters=None, is_completed=True, is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_order_matches (filters=None, is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+            assert status in ('completed', 'pending', None)
             return util.get_order_matches(db,
                 filters=filters,
-                status='completed' if bool(is_completed) else None,
                 is_mine=is_mine,
                 order_by=order_by,
                 order_dir=order_dir,
@@ -185,10 +176,9 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_sends (filters=None, is_valid=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+        def get_sends (filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_sends(db,
                 filters=filters,
-                status='valid' if bool(is_valid) else None,
                 order_by=order_by,
                 order_dir=order_dir,
                 start_block=start_block,
@@ -198,7 +188,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_messages(block_index):
             if not isinstance(block_index, int):
-                raise Exception("block_index must be an interger.")
+                raise Exception("block_index must be an integer.")
             
             cursor = db.cursor()
             cursor.execute('select * from messages where block_index = ? order by message_index asc', (block_index,))
@@ -219,7 +209,7 @@ class APIServer(threading.Thread):
                     raise Exception("All items in message_indexes are not integers")
                 
             cursor = db.cursor()
-            cursor.execute('select * from messages where message_index IN (%s) ORDER BY message_index ASC'
+            cursor.execute('SELECT * FROM messages WHERE message_index IN (%s) ORDER BY message_index ASC'
                 % (','.join([str(x) for x in message_indexes]),))
             messages = cursor.fetchall()
             cursor.close()
@@ -230,40 +220,51 @@ class APIServer(threading.Thread):
             return util.xcp_supply(db)
 
         @dispatcher.add_method
-        def get_asset_info(asset):
-            if asset in ['BTC', 'XCP']:
-                total_supply = None
-                if asset == 'BTC':
-                    total_supply = bitcoin.get_btc_supply(normalize=False)
-                else:
-                    total_supply = util.xcp_supply(db)
+        def get_asset_info(assets):
+            if not isinstance(assets, list):
+                raise Exception("assets must be a list of asset names, even if it just contains one entry")
+            assetsInfo = []
+            for asset in assets:
+                if asset in ['BTC', 'XCP']:
+                    total_supply = None
+                    if asset == 'BTC':
+                        total_supply = bitcoin.get_btc_supply(normalize=False)
+                    else:
+                        total_supply = util.xcp_supply(db)
+                    
+                    assetsInfo.append({
+                        'asset': asset,
+                        'owner': None,
+                        'divisible': True,
+                        'locked': False,
+                        'total_issued': total_supply,
+                        'callable': False,
+                        'call_date': None,
+                        'call_price': None,
+                        'description': '',
+                        'issuer': None
+                    })
+                    continue
                 
-                return {
-                    'owner': None,
-                    'divisible': True,
-                    'locked': False,
-                    'total_issued': total_supply,
-                    'callable': False,
-                    'call_date': None,
-                    'call_price': None,
-                    'description': '',
-                    'issuer': None
-                }
-            
-            #gets some useful info for the given asset
-            issuances = util.get_issuances(db,
-                filters={'field': 'asset', 'op': '==', 'value': asset},
-                status='valid',
-                order_by='block_index',
-                order_dir='asc')
-            if not issuances: return None #asset not found, most likely
-            else: last_issuance = issuances[-1]
-
-            #get the last issurance message for this asset, which should reflect the current owner and if
-            # its divisible (and if it was locked, for that matter)
-            locked = not last_issuance['amount'] and not last_issuance['transfer']
-            total_issued = sum([e['amount'] for e in issuances])
-            return {'owner': last_issuance['issuer'],
+                #gets some useful info for the given asset
+                issuances = util.get_issuances(db,
+                    filters={'field': 'asset', 'op': '==', 'value': asset},
+                    status='valid',
+                    order_by='block_index',
+                    order_dir='asc')
+                if not issuances: return None #asset not found, most likely
+                else: last_issuance = issuances[-1]
+    
+                #get the last issurance message for this asset, which should reflect the current owner and if
+                # its divisible (and if it was locked, for that matter)
+                total_issued = 0
+                locked = False
+                for e in issuances:
+                    if e['locked']: locked = True
+                    total_issued += e['quantity']
+                assetsInfo.append({
+                    'asset': asset,
+                    'owner': last_issuance['issuer'],
                     'divisible': bool(last_issuance['divisible']),
                     'locked': locked,
                     'total_issued': total_issued,
@@ -271,7 +272,8 @@ class APIServer(threading.Thread):
                     'call_date': last_issuance['call_date'],
                     'call_price': last_issuance['call_price'],
                     'description': last_issuance['description'],
-                    'issuer': last_issuance['issuer']}
+                    'issuer': last_issuance['issuer']})
+            return assetsInfo
 
         @dispatcher.add_method
         def get_block_info(block_index):
@@ -307,7 +309,7 @@ class APIServer(threading.Thread):
                 'db_caught_up': caught_up,
                 'bitcoin_block_count': latestBlockIndex,
                 'last_block': last_block,
-                'counterpartyd_version': config.CLIENT_VERSION,
+                'counterpartyd_version': config.CLIENT_VERSION_STRING,
                 'last_message_index': util.last_message(db)['message_index'],
                 'running_testnet': config.TESTNET,
                 'db_version_major': config.DB_VERSION_MAJOR,
@@ -340,62 +342,65 @@ class APIServer(threading.Thread):
         #WRITE/ACTION API
         @dispatcher.add_method
         def create_bet(source, feed_address, bet_type, deadline, wager, counterwager, expiration, target_value=0.0,
-        leverage=5040, multisig=config.MULTISIG):
+        leverage=5040, encoding='multisig', pubkey=None):
             try:
-                bet_type_id = util.BET_TYPE_ID[args.bet_type]
+                bet_type_id = util.BET_TYPE_ID[bet_type]
             except KeyError:
                 raise exceptions.BetError('Unknown bet type.')
             tx_info = bet.compose(db, source, feed_address,
                               bet_type_id, deadline, wager,
                               counterwager, target_value,
                               leverage, expiration)
-            return bitcoin.transaction(tx_info, multisig)
+            return bitcoin.transaction(tx_info, encoding=encoding, pubkey=pubkey)
 
         @dispatcher.add_method
-        def create_broadcast(source, fee_fraction, text, timestamp, value=-1, multisig=config.MULTISIG):
+        def create_broadcast(source, fee_fraction, text, timestamp, value=-1, encoding='multisig', pubkey=None):
             tx_info = broadcast.compose(db, source, timestamp,
                                     value, fee_fraction, text)
-            return bitcoin.transaction(tx_info, multisig)
+            return bitcoin.transaction(tx_info, encoding=encoding, pubkey=pubkey)
 
         @dispatcher.add_method
-        def create_btcpay(order_match_id, multisig=config.MULTISIG):
+        def create_btcpay(order_match_id, encoding='multisig', pubkey=None):
             tx_info = btcpay.compose(db, order_match_id)
-            return bitcoin.transaction(tx_info, multisig)
+            return bitcoin.transaction(tx_info, encoding=encoding, pubkey=pubkey)
 
         @dispatcher.add_method
-        def create_burn(source, quantity, multisig=config.MULTISIG):
+        def create_burn(source, quantity, encoding='multisig', pubkey=None):
             tx_info = burn.compose(db, source, quantity)
-            return bitcoin.transaction(tx_info, multisig)
+            return bitcoin.transaction(tx_info, encoding=encoding, pubkey=pubkey)
 
         @dispatcher.add_method
-        def create_cancel(offer_hash, multisig=config.MULTISIG):
+        def create_cancel(offer_hash, encoding='multisig', pubkey=None):
             tx_info = cancel.compose(db, offer_hash)
-            return bitcoin.transaction(tx_info, multisig)
+            return bitcoin.transaction(tx_info, encoding=encoding, pubkey=pubkey)
 
         @dispatcher.add_method
-        def create_callback(source, fraction, asset, multisig=config.MULTISIG):
+        def create_callback(source, fraction, asset, encoding='multisig', pubkey=None):
             tx_info = callback.compose(db, source, fraction, asset)
-            return bitcoin.transaction(tx_info, multisig)
+            return bitcoin.transaction(tx_info, encoding=encoding, pubkey=pubkey)
 
         @dispatcher.add_method
-        def create_dividend(source, quantity_per_unit, asset, dividend_asset, multisig=config.MULTISIG):
-            tx_info = dividend.compose(db, source, quantity_per_unit,
-                                   asset, dividend_asset)
-            return bitcoin.transaction(tx_info, multisig)
+        def create_dividend(source, quantity_per_unit, asset, dividend_asset, encoding='multisig', pubkey=None):
+            tx_info = dividend.compose(db, source, quantity_per_unit, asset, dividend_asset)
+            return bitcoin.transaction(tx_info, encoding=encoding, pubkey=pubkey)
 
         @dispatcher.add_method
-        def create_issuance(source, asset, quantity, divisible, description, callable_=None, call_date=None, call_price=None, transfer_destination=None, multisig=config.MULTISIG):
+        def create_issuance(source, asset, quantity, divisible, description, callable_=None, call_date=None,
+        call_price=None, transfer_destination=None, lock=False, encoding='multisig', pubkey=None):
             try:
                 quantity = int(quantity)
             except ValueError:
                 raise Exception("Invalid quantity")
+            if lock:
+                description = "LOCK"
             tx_info = issuance.compose(db, source, transfer_destination,
                                    asset, quantity, divisible, callable_,
                                    call_date, call_price, description)
-            return bitcoin.transaction(tx_info, multisig)
+            return bitcoin.transaction(tx_info, encoding=encoding, pubkey=pubkey)
 
         @dispatcher.add_method
-        def create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required=None, fee_provided=None, multisig=config.MULTISIG):
+        def create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required=None,
+        fee_provided=None, encoding='multisig', pubkey=None):
             if get_asset == 'BTC' and fee_required is None:
                 #since no value is passed, set a default of 1% for fee_required if buying BTC
                 fee_required = int(get_quantity / 100)
@@ -412,12 +417,12 @@ class APIServer(threading.Thread):
                                 give_quantity, get_asset,
                                 get_quantity, expiration,
                                 fee_required, fee_provided)
-            return bitcoin.transaction(tx_info, multisig)
+            return bitcoin.transaction(tx_info, encoding=encoding, pubkey=pubkey)
 
         @dispatcher.add_method
-        def create_send(source, destination, asset, quantity, multisig=config.MULTISIG):
+        def create_send(source, destination, asset, quantity, encoding='multisig', pubkey=None):
             tx_info = send.compose(db, source, destination, asset, quantity)
-            return bitcoin.transaction(tx_info, multisig)
+            return bitcoin.transaction(tx_info, encoding=encoding, pubkey=pubkey)
                 
         @dispatcher.add_method
         def transmit(tx_hex, is_signed=False):

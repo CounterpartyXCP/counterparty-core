@@ -24,6 +24,7 @@ because it is stored as a four‐byte integer, it may not be greater than about
 import struct
 import decimal
 D = decimal.Decimal
+from fractions import Fraction
 import logging
 
 from . import (util, exceptions, config, bitcoin)
@@ -58,7 +59,7 @@ def validate (db, source, timestamp, value, fee_fraction_int, text):
 def compose (db, source, timestamp, value, fee_fraction, text):
 
     # Store the fee fraction as an integer.
-    fee_fraction_int = int(D(fee_fraction) * D(1e8))
+    fee_fraction_int = int(fee_fraction * 1e8)
 
     problems = validate(db, source, timestamp, value, fee_fraction_int, text)
     if problems: raise exceptions.BroadcastError(problems)
@@ -68,7 +69,7 @@ def compose (db, source, timestamp, value, fee_fraction, text):
                         text.encode('utf-8'))
     if len(data) > 80:
         raise exceptions.BroadcastError('Text is greater than 52 bytes.')
-    return (source, None, None, config.MIN_FEE, data)
+    return (source, [], config.MIN_FEE, data)
 
 def parse (db, tx, message):
     broadcast_parse_cursor = db.cursor()
@@ -79,7 +80,7 @@ def parse (db, tx, message):
         timestamp, value, fee_fraction_int, text = struct.unpack(FORMAT, message)
         text = text.decode('utf-8')
         status = 'valid'
-    except struct.error as e:
+    except (AssertionError, struct.error) as e:
         timestamp, value, fee_fraction_int, text = None, None, None, None
         status = 'invalid: could not unpack'
 
@@ -89,7 +90,7 @@ def parse (db, tx, message):
         value = min(value, config.MAX_INT)
 
         problems = validate(db, tx['source'], timestamp, value, fee_fraction_int, text)
-        if problems: status = 'invalid: ' + ';'.join(problems)
+        if problems: status = 'invalid: ' + '; '.join(problems)
 
     # Lock?
     lock = False
@@ -132,8 +133,8 @@ def parse (db, tx, message):
 
         # Calculate total funds held in escrow and total fee to be paid if
         # the bet match is settled.
-        total_escrow = bet_match['forward_amount'] + bet_match['backward_amount']
-        fee_fraction = D(bet_match['fee_fraction_int']) / D(1e8)
+        total_escrow = bet_match['forward_quantity'] + bet_match['backward_quantity']
+        fee_fraction = Fraction(bet_match['fee_fraction_int'], int(1e8))
         fee = round(total_escrow * fee_fraction)
 
         # Get known bet match type IDs.
@@ -150,19 +151,19 @@ def parse (db, tx, message):
             if bet_match['tx0_bet_type'] < bet_match['tx1_bet_type']:
                 bull_address = bet_match['tx0_address']
                 bear_address = bet_match['tx1_address']
-                bull_escrow = bet_match['forward_amount']
-                bear_escrow = bet_match['backward_amount']
+                bull_escrow = bet_match['forward_quantity']
+                bear_escrow = bet_match['backward_quantity']
             else:
                 bull_address = bet_match['tx1_address']
                 bear_address = bet_match['tx0_address']
-                bull_escrow = bet_match['backward_amount']
-                bear_escrow = bet_match['forward_amount']
+                bull_escrow = bet_match['backward_quantity']
+                bear_escrow = bet_match['forward_quantity']
 
-            leverage = D(bet_match['leverage']) / 5040
+            leverage = Fraction(bet_match['leverage'], 5040)
             initial_value = bet_match['initial_value']
 
-            bear_credit = D(bear_escrow) - (D(value) - D(initial_value)) * D(leverage) * D(config.UNIT)
-            bull_credit = D(total_escrow) - bear_credit
+            bear_credit = bear_escrow - (value - initial_value) * leverage * config.UNIT
+            bull_credit = total_escrow - bear_credit
             bear_credit = round(bear_credit)
             bull_credit = round(bull_credit)
 
@@ -230,6 +231,7 @@ def parse (db, tx, message):
             }
             sql='update bet_matches set status = :status where id = :bet_match_id'
             broadcast_parse_cursor.execute(sql, bindings)
+            util.message(db, tx['block_index'], 'update', 'bet_matches', bindings)
 
         broadcast_bet_match_cursor.close()
 

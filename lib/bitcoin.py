@@ -18,6 +18,7 @@ import requests
 from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
 from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec
 from pycoin.scripts import bitcoin_utils
+from Crypto.Cipher import ARC4
 
 from . import (config, exceptions)
 
@@ -35,7 +36,7 @@ b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
 D = decimal.Decimal
 dhash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
-request_session = None
+bitcoin_rpc_session = None
 
 
 def get_block_count():
@@ -78,12 +79,12 @@ def bitcoind_check (db):
         raise exceptions.BitcoindError('Bitcoind is running about {} seconds behind.'.format(round(time_behind)))
 
 def connect (host, payload, headers):
-    global request_session
-    if not request_session: request_session = requests.Session()
+    global bitcoin_rpc_session
+    if not bitcoin_rpc_session: bitcoin_rpc_session = requests.Session()
     TRIES = 12
     for i in range(TRIES):
         try:
-            response = request_session.post(host, data=json.dumps(payload), headers=headers)
+            response = bitcoin_rpc_session.post(host, data=json.dumps(payload), headers=headers)
             if i > 0: print('Successfully connected.', file=sys.stderr)
             return response
         except requests.exceptions.ConnectionError:
@@ -227,7 +228,7 @@ def op_push (i):
     else:
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
-def serialise (inputs, destination_output=None, data_output=None, change_output=None, source=None, multisig=False):
+def serialise (encoding, inputs, destination_outputs, data_output=None, change_output=None, source=None, pubkey=None):
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
     # Number of inputs.
@@ -246,7 +247,7 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
 
     # Number of outputs.
     n = 0
-    if destination_output: n += 1
+    n += len(destination_outputs)
     if data_output:
         data_array, value = data_output
         for data_chunk in data_array: n += 1
@@ -256,8 +257,7 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
     s += var_int(n)
 
     # Destination output.
-    if destination_output:
-        address, value = destination_output
+    for address, value in destination_outputs:
         pubkeyhash = base58_decode(address, config.ADDRESSVERSION)
         s += value.to_bytes(8, byteorder='little')          # Value
         script = OP_DUP                                     # OP_DUP
@@ -274,10 +274,10 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
         data_array, value = data_output # DUPE
         s += value.to_bytes(8, byteorder='little')        # Value
 
-        if multisig:
-            # Get source public key (either provided as a string or derived from a private key in the wallet).
-            if isinstance(multisig, str):
-                pubkeypair = bitcoin_utils.parse_as_public_pair(multisig)
+        # Get source public key (either provided as a string or derived from a private key in the wallet).
+        if encoding in ('multisig', 'pubkeyhash'):
+            if pubkey:
+                pubkeypair = bitcoin_utils.parse_as_public_pair(pubkey)
                 source_pubkey = public_pair_to_sec(pubkeypair, compressed=True)
             else:
                 if config.PREFIX == config.UNITTEST_PREFIX:
@@ -290,11 +290,12 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
                 public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
                 source_pubkey = public_pair_to_sec(public_pair, compressed=compressed)
 
+        if encoding == 'multisig':
             # Get data (fake) public key.
             pad_length = 33 - 1 - len(data_chunk)
             assert pad_length >= 0
             data_pubkey = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
-
+            # Construct script.
             script = OP_1                                   # OP_1
             script += op_push(len(source_pubkey))           # Push bytes of source public key
             script += source_pubkey                         # Source public key
@@ -302,10 +303,26 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
             script += data_pubkey                           # Data chunk (fake) public key
             script += OP_2                                  # OP_2
             script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
-        else:
+        elif encoding == 'opreturn':
             script = OP_RETURN                              # OP_RETURN
             script += op_push(len(data_chunk))              # Push bytes of data chunk (NOTE: OP_SMALLDATA?)
             script += data_chunk                            # Data chunk
+        elif encoding == 'pubkeyhash':
+            pad_length = 20 - 1 - len(data_chunk)
+            assert pad_length >= 0
+            obj1 = ARC4.new(binascii.unhexlify(inputs[0]['txid']))  # Arbitrary, easy‐to‐find, unique key.
+            pubkeyhash = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
+            pubkeyhash_encrypted = obj1.encrypt(pubkeyhash)
+            # Construct script.
+            script = OP_DUP                                     # OP_DUP
+            script += OP_HASH160                                # OP_HASH160
+            script += op_push(20)                               # Push 0x14 bytes
+            script += pubkeyhash_encrypted                      # pubKeyHash
+            script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
+            script += OP_CHECKSIG                               # OP_CHECKSIG
+        else:
+            raise exceptions.TransactionError('Unknown encoding‐scheme.')
+
         s += var_int(int(len(script)))                      # Script length
         s += script
 
@@ -326,6 +343,13 @@ def serialise (inputs, destination_output=None, data_output=None, change_output=
     s += (0).to_bytes(4, byteorder='little')                # LockTime
     return s
 
+# Prefer outputs less than dust size, then bigger is better.
+def input_value_weight(amount):
+    if amount * config.UNIT <= config.REGULAR_DUST_SIZE:
+        return 0
+    else:
+        return 1/amount
+
 def get_inputs (source, total_btc_out, unittest=False):
     """List unspent inputs for source."""
     if not unittest:
@@ -339,31 +363,35 @@ def get_inputs (source, total_btc_out, unittest=False):
             listunspent = json.load(listunspent_test_file)
     unspent = [coin for coin in listunspent if coin['address'] == source]
     inputs, total_btc_in = [], 0
-    change_amount = None
-    for coin in unspent:
+    change_quantity = 0
+    for coin in sorted(unspent,key=lambda x:input_value_weight(x['amount'])):
         inputs.append(coin)
         total_btc_in += round(coin['amount'] * config.UNIT)
-        change_amount = total_btc_in - total_btc_out
-        if total_btc_in >= total_btc_out and change_amount >= config.REGULAR_DUST_SIZE:
-            return inputs, total_btc_in, change_amount
+        change_quantity = total_btc_in - total_btc_out
+        if total_btc_in >= total_btc_out and (change_quantity == 0 or change_quantity >= config.REGULAR_DUST_SIZE): # If change is necessary, must not be a dust output.
+            return inputs, total_btc_in, change_quantity
 
-    # If change is necessary, need a bit more so that the change output is not a dust output.
-    if change_amount:
-        return None, None, config.REGULAR_DUST_SIZE
-    else:
-        return None, None, 0
+    # Approximate needed change by with most recently calculated quantity.
+    return None, None, change_quantity
 
 # Replace unittest flag with fake bitcoind JSON-RPC server.
-def transaction (tx_info, multisig, unittest=False):
-    source, destination, btc_amount, fee, data = tx_info
+def transaction (tx_info, encoding, pubkey=None, unittest=False):
+    source, destination_outputs, fee, data = tx_info
+    if encoding not in ('pubkeyhash', 'multisig', 'opreturn'):
+        raise exceptions.TransactionError('Unknown encoding‐scheme.')
+
+    # Protocol change.
+    if encoding == 'pubkeyhash' and get_block_count() < 293000 and not config.TESTNET:
+        raise exceptions.TransactionError('pubkeyhash encoding unsupported before block 293000')
     
     if not isinstance(fee, int):
         raise exceptions.TransactionError('Fee must be in satoshis')
 
     if config.PREFIX == config.UNITTEST_PREFIX: unittest = True
 
-    # Validate addresses.
-    for address in (source, destination):
+    # Validate source and all destination addresses.
+    destinations = [address for address, value in destination_outputs]
+    for address in destinations + [source]:
         if address:
             try:
                 base58_decode(address, config.ADDRESSVERSION)
@@ -372,22 +400,24 @@ def transaction (tx_info, multisig, unittest=False):
                                           address)
 
     # Check that the source is in wallet.
-    if not unittest and not isinstance(multisig, str): #do not run this check if multisig is a public key string
+    if not unittest and encoding in ('multisig') and not pubkey:
         if not rpc('validateaddress', [source])['ismine']:
             raise exceptions.InvalidAddressError('Not one of your Bitcoin addresses:', source)
 
     # Check that the destination output isn't a dust output.
-    if destination:
-        if multisig:
-            if btc_amount == None: btc_amount = config.MULTISIG_DUST_SIZE
-            if not btc_amount >= config.MULTISIG_DUST_SIZE:
+    # Set null values to dust size.
+    new_destination_outputs = []
+    for address, value in destination_outputs:
+        if encoding == 'multisig':
+            if value == None: value = config.MULTISIG_DUST_SIZE
+            if not value >= config.MULTISIG_DUST_SIZE:
                 raise exceptions.TransactionError('Destination output is below the dust target value.')
         else:
-            if btc_amount == None: btc_amount = config.REGULAR_DUST_SIZE
-            if not btc_amount >= config.REGULAR_DUST_SIZE:
+            if value == None: value = config.REGULAR_DUST_SIZE
+            if not value >= config.REGULAR_DUST_SIZE:
                 raise exceptions.TransactionError('Destination output is below the dust target value.')
-    else:
-        assert not btc_amount
+        new_destination_outputs.append((address, value))
+    destination_outputs = new_destination_outputs
 
     # Divide data into chunks.
     if data:
@@ -395,9 +425,11 @@ def transaction (tx_info, multisig, unittest=False):
             """ Yield successive n‐sized chunks from l.
             """
             for i in range(0, len(l), n): yield l[i:i+n]
-        if multisig:
+        if encoding == 'pubkeyhash':
+            data_array = list(chunks(data + config.PREFIX, 20 - 1)) # Prefix is also a suffix here.
+        elif encoding == 'multisig':
             data_array = list(chunks(data, 33 - 1))
-        else:
+        elif encoding == 'opreturn':
             data_array = list(chunks(data, 80))
             assert len(data_array) == 1 # Only one OP_RETURN output currently supported (messages should all be shorter than 80 bytes, at the moment).
     else:
@@ -405,26 +437,25 @@ def transaction (tx_info, multisig, unittest=False):
 
     # Calculate total BTC to be sent.
     total_btc_out = fee
-    if multisig: data_value = config.MULTISIG_DUST_SIZE
-    else: data_value = config.OP_RETURN_VALUE
+    if encoding == 'multisig': data_value = config.MULTISIG_DUST_SIZE
+    elif encoding == 'opreturn': data_value = config.OP_RETURN_VALUE
+    else: data_value = config.REGULAR_DUST_SIZE
     for data_chunk in data_array: total_btc_out += data_value
-    if destination: total_btc_out += btc_amount
+    total_btc_out += sum([value for address, value in destination_outputs])
 
     # Construct inputs.
-    inputs, total_btc_in, change_amount = get_inputs(source, total_btc_out, unittest=unittest)
+    inputs, total_btc_in, change_quantity = get_inputs(source, total_btc_out, unittest=unittest)
     if not inputs:
-        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need {} BTC.)'.format(source, (total_btc_out  + change_amount) / config.UNIT))
+        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need {} BTC.)'.format(source, (total_btc_out + max(change_quantity, 0)) / config.UNIT))
 
     # Construct outputs.
-    if destination: destination_output = (destination, btc_amount)
-    else: destination_output = None
     if data: data_output = (data_array, data_value)
     else: data_output = None
-    if change_amount: change_output = (source, change_amount)
+    if change_quantity: change_output = (source, change_quantity)
     else: change_output = None
 
     # Serialise inputs and outputs.
-    transaction = serialise(inputs, destination_output, data_output, change_output, source=source, multisig=multisig)
+    transaction = serialise(encoding, inputs, destination_outputs, data_output, change_output, source=source, pubkey=pubkey)
     unsigned_tx_hex = binascii.hexlify(transaction).decode('utf-8')
     return unsigned_tx_hex
 
@@ -435,10 +466,10 @@ def transmit (unsigned_tx_hex):
         signed_tx_hex = result['hex']
         return rpc('sendrawtransaction', [signed_tx_hex])
 
-def normalize_amount(amount, divisible=True):
+def normalize_quantity(quantity, divisible=True):
     if divisible:
-        return float((D(amount) / D(config.UNIT)).quantize(D('.00000000'), rounding=decimal.ROUND_HALF_EVEN)) 
-    else: return amount
+        return float((D(quantity) / D(config.UNIT)).quantize(D('.00000000'), rounding=decimal.ROUND_HALF_EVEN)) 
+    else: return quantity
 
 def get_btc_balance(address, normalize=False):
     """returns the BTC balance for a specific address"""
@@ -455,7 +486,7 @@ def get_btc_balance(address, normalize=False):
         if r.status_code != 200:
             return "???"
         else:
-            return normalize_amount(int(r.text)) if normalize else int(r.text)
+            return normalize_quantity(int(r.text)) if normalize else int(r.text)
 
 def get_btc_supply(normalize=False):
     """returns the total supply of BTC (based on what bitcoind says the current block height is)"""
@@ -486,7 +517,7 @@ def get_unspent_txouts(address, normalize=False):
         data = r.json()
         if not normalize: #listed normalized by default out of insight...we need to take to satoshi
             for d in data:
-                d['amount'] = int(d['amount'] * config.UNIT)
+                d['quantity'] = int(d['quantity'] * config.UNIT)
         return data
     else: #use blockchain
         r = requests.get("https://blockchain.info/unspent?active=" + address)
@@ -507,7 +538,7 @@ def get_unspent_txouts(address, normalize=False):
                 'vout': d['tx_output_n'],
                 'ts': None,
                 'scriptPubKey': d['script'],
-                'amount': normalize_amount(d['value']) if normalize else d['value'],
+                'quantity': normalize_quantity(d['value']) if normalize else d['value'],
                 'confirmations': d['confirmations'],
             })
         return results

@@ -14,32 +14,21 @@ LENGTH = 32
 ID = 70
 
 
-def validate (db, offer_hash, source=None):
-    problems = []
-
-    for offer in util.get_orders(db, status='valid') + util.get_bets(db, status='valid'):
-        if offer_hash == offer['tx_hash']:
-            if source == offer['source']:
-                return source, offer, problems
-            else:
-                if bitcoin.is_mine(offer['source']) or config.PREFIX == config.UNITTEST_PREFIX:
-                    source = offer['source']
-                else:
-                    problems.append('offer was not made by one of your addresses')
-                return source, offer, problems
-
-    problems.append('no valid offer with that hash')
-    return None, None, problems
-
-
 def compose (db, offer_hash):
-    source, offer, problems = validate(db, offer_hash)
+
+    # Check that offer exists.
+    problems = ['no open offer with that hash']
+    for offer in util.get_orders(db, status='open') + util.get_bets(db, status='open'):
+        if offer_hash == offer['tx_hash']:
+            source = offer['source']
+            problems = None
+            break
     if problems: raise exceptions.CancelError(problems)
 
     offer_hash_bytes = binascii.unhexlify(bytes(offer_hash, 'utf-8'))
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, offer_hash_bytes)
-    return (source, None, None, config.MIN_FEE, data)
+    return (source, [], config.MIN_FEE, data)
 
 def parse (db, tx, message):
     cursor = db.cursor()
@@ -50,22 +39,17 @@ def parse (db, tx, message):
         offer_hash_bytes = struct.unpack(FORMAT, message)[0]
         offer_hash = binascii.hexlify(offer_hash_bytes).decode('utf-8')
         status = 'valid'
-    except struct.error as e:
+    except (AssertionError, struct.error) as e:
         offer_hash = None
         status = 'invalid: could not unpack'
 
     if status == 'valid':
-        if status == 'valid':
-            source, offer, problems = validate(db, offer_hash, source=tx['source'])
-            if problems: status = 'invalid: ' + ';'.join(problems)
-
-    if status == 'valid':
         # Find offer.
         cursor.execute('''SELECT * FROM orders \
-                          WHERE (tx_hash=? AND source=? AND status=?)''', (offer_hash, tx['source'], 'valid'))
+                          WHERE (tx_hash=? AND source=? AND status=?)''', (offer_hash, tx['source'], 'open'))
         orders = cursor.fetchall()
         cursor.execute('''SELECT * FROM bets \
-                          WHERE (tx_hash=? AND source=? AND status=?)''', (offer_hash, tx['source'], 'valid'))
+                          WHERE (tx_hash=? AND source=? AND status=?)''', (offer_hash, tx['source'], 'open'))
         bets = cursor.fetchall()
 
         # Cancel if order.
@@ -79,6 +63,7 @@ def parse (db, tx, message):
             }
             sql='update orders set status = :status where tx_hash = :tx_hash'
             cursor.execute(sql, bindings)
+            util.message(db, tx['block_index'], 'update', 'orders', bindings)
 
             if order['give_asset'] != 'BTC':
                 util.credit(db, tx['block_index'], tx['source'], order['give_asset'], order['give_remaining'])
@@ -93,12 +78,13 @@ def parse (db, tx, message):
             }
             sql='update bets set status = :status where tx_hash = :tx_hash'
             cursor.execute(sql, bindings)
+            util.message(db, tx['block_index'], 'update', 'bets', bindings)
 
             util.credit(db, tx['block_index'], tx['source'], 'XCP', bet['wager_remaining'])
-            util.credit(db, tx['block_index'], tx['source'], 'XCP', round(bet['wager_amount'] * bet['fee_fraction_int'] / 1e8))
+            util.credit(db, tx['block_index'], tx['source'], 'XCP', round(bet['wager_quantity'] * bet['fee_fraction_int'] / 1e8))
         # If neither order or bet, mark as invalid.
         else:
-            status = 'invalid: no valid offer with that hash from that address'
+            status = 'invalid: no open offer with that hash from that address'
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

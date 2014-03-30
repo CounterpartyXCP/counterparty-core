@@ -11,6 +11,7 @@ import struct
 import decimal
 D = decimal.Decimal
 import logging
+from Crypto.Cipher import ARC4
 
 from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
@@ -135,7 +136,7 @@ def initialise(db):
                       block_index INTEGER,
                       address TEXT,
                       asset TEXT,
-                      amount INTEGER,
+                      quantity INTEGER,
                       action TEXT,
                       event TEXT,
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index))
@@ -149,7 +150,7 @@ def initialise(db):
                       block_index INTEGER,
                       address TEXT,
                       asset TEXT,
-                      amount INTEGER,
+                      quantity INTEGER,
                       calling_function TEXT,
                       event TEXT,
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index))
@@ -162,7 +163,7 @@ def initialise(db):
     cursor.execute('''CREATE TABLE IF NOT EXISTS balances(
                       address TEXT,
                       asset TEXT,
-                      amount INTEGER)
+                      quantity INTEGER)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       asset_idx ON balances (address, asset)
@@ -176,7 +177,7 @@ def initialise(db):
                       source TEXT,
                       destination TEXT,
                       asset TEXT,
-                      amount INTEGER,
+                      quantity INTEGER,
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
@@ -191,10 +192,10 @@ def initialise(db):
                       block_index INTEGER,
                       source TEXT,
                       give_asset TEXT,
-                      give_amount INTEGER,
+                      give_quantity INTEGER,
                       give_remaining INTEGER,
                       get_asset TEXT,
-                      get_amount INTEGER,
+                      get_quantity INTEGER,
                       get_remaining INTEGER,
                       expiration INTEGER,
                       expire_index INTEGER,
@@ -229,9 +230,9 @@ def initialise(db):
                       tx1_hash TEXT,
                       tx1_address TEXT,
                       forward_asset TEXT,
-                      forward_amount INTEGER,
+                      forward_quantity INTEGER,
                       backward_asset TEXT,
-                      backward_amount INTEGER,
+                      backward_quantity INTEGER,
                       tx0_block_index INTEGER,
                       tx1_block_index INTEGER,
                       tx0_expiration INTEGER,
@@ -271,7 +272,7 @@ def initialise(db):
                       tx_hash TEXT UNIQUE,
                       block_index INTEGER,
                       asset TEXT,
-                      amount INTEGER,
+                      quantity INTEGER,
                       divisible BOOL,
                       source TEXT,
                       issuer TEXT,
@@ -319,9 +320,9 @@ def initialise(db):
                       feed_address TEXT,
                       bet_type INTEGER,
                       deadline INTEGER,
-                      wager_amount INTEGER,
+                      wager_quantity INTEGER,
                       wager_remaining INTEGER,
-                      counterwager_amount INTEGER,
+                      counterwager_quantity INTEGER,
                       counterwager_remaining INTEGER,
                       target_value REAL,
                       leverage INTEGER,
@@ -361,8 +362,8 @@ def initialise(db):
                       deadline INTEGER,
                       target_value REAL,
                       leverage INTEGER,
-                      forward_amount INTEGER,
-                      backward_amount INTEGER,
+                      forward_quantity INTEGER,
+                      backward_quantity INTEGER,
                       tx0_block_index INTEGER,
                       tx1_block_index INTEGER,
                       tx0_expiration INTEGER,
@@ -391,7 +392,7 @@ def initialise(db):
                       source TEXT,
                       asset TEXT,
                       dividend_asset TEXT,
-                      amount_per_unit INTEGER,
+                      quantity_per_unit INTEGER,
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
@@ -514,12 +515,16 @@ def initialise(db):
 
     cursor.close()
 
-def get_address (scriptpubkey):
+def get_pubkeyhash (scriptpubkey):
     asm = scriptpubkey['asm'].split(' ')
     if len(asm) != 5 or asm[0] != 'OP_DUP' or asm[1] != 'OP_HASH160' or asm[3] != 'OP_EQUALVERIFY' or asm[4] != 'OP_CHECKSIG':
         return False
+    return asm[2]
 
-    pubkeyhash = asm[2]
+def get_address (scriptpubkey):
+    pubkeyhash = get_pubkeyhash(scriptpubkey)
+    if not pubkeyhash: return False
+
     address = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
 
     # Test decoding of address.
@@ -528,19 +533,20 @@ def get_address (scriptpubkey):
 
     return address
 
-def get_tx_info (tx):
+def get_tx_info (tx, block_index):
     """
     The destination, if it exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
 
     # Fee is the input values minus output values.
-    fee = D(0)
+    fee = 0
 
     # Get destination output and data output.
     destination, btc_amount, data = None, None, b''
+    pubkeyhash_encoding = False
     for vout in tx['vout']:
-        fee -= D(vout['value']) * config.UNIT
+        fee -= vout['value'] * config.UNIT
 
         # Sum data chunks to get data. (Can mix OP_RETURN and multi-sig.)
         asm = vout['scriptPubKey']['asm'].split(' ')
@@ -554,13 +560,31 @@ def get_tx_info (tx):
             data_chunk_length = data_pubkey[0]  # No ord() necessary.
             data_chunk = data_pubkey[1:data_chunk_length + 1]
             data += data_chunk
+        elif len(asm) == 5 and (block_index >= 293000 or config.TESTNET):    # Protocol change.
+            # Be strict.
+            pubkeyhash_string = get_pubkeyhash(vout['scriptPubKey'])
+            try: pubkeyhash = binascii.unhexlify(bytes(pubkeyhash_string, 'utf-8'))
+            except binascii.Error: continue
+
+            if 'coinbase' in tx['vin'][0]: return b'', None, None, None, None
+            obj1 = ARC4.new(binascii.unhexlify(bytes(tx['vin'][0]['txid'], 'utf-8')))
+            data_pubkey = obj1.decrypt(pubkeyhash)
+            if data_pubkey[1:9] == config.PREFIX or pubkeyhash_encoding:
+                pubkeyhash_encoding = True
+                data_chunk_length = data_pubkey[0]  # No ord() necessary.
+                data_chunk = data_pubkey[1:data_chunk_length + 1]
+                if data_chunk[-8:] == config.PREFIX:
+                    data += data_chunk[:-8]
+                    break
+                else:
+                    data += data_chunk
 
         # Destination is the first output before the data.
         if not destination and not btc_amount and not data:
             address = get_address(vout['scriptPubKey'])
             if address:
                 destination = address
-                btc_amount = round(D(vout['value']) * config.UNIT)
+                btc_amount = round(vout['value'] * config.UNIT) # Floats are awful.
 
     # Check for, and strip away, prefix (except for burns).
     if destination == config.UNSPENDABLE:
@@ -580,7 +604,7 @@ def get_tx_info (tx):
         if 'coinbase' in vin: return b'', None, None, None, None
         vin_tx = bitcoin.get_raw_transaction(vin['txid'])     # Get the full transaction data for this input transaction.
         vout = vin_tx['vout'][vin['vout']]
-        fee += D(vout['value']) * config.UNIT
+        fee += vout['value'] * config.UNIT
 
         address = get_address(vout['scriptPubKey'])
         if not address: return b'', None, None, None, None
@@ -591,20 +615,6 @@ def get_tx_info (tx):
     else: source = None
 
     return source, destination, btc_amount, round(fee), data
-
-def check_potential(tx):
-    for vout in tx['vout']:
-        # Data
-        asm = vout['scriptPubKey']['asm'].split(' ')
-        if 'OP_RETURN' in asm or 'OP_CHECKMULTISIG' in asm:
-            return True
-
-        # Unspendable
-        address = get_address(vout['scriptPubKey'])
-        if address == config.UNSPENDABLE:
-            return True
-
-    return False
 
 def reparse (db, block_index=None, quiet=False):
     """Reparse all transactions (atomically). If block_index is set, rollback
@@ -662,30 +672,30 @@ def reparse (db, block_index=None, quiet=False):
     cursor.close()
     return
 
-def reorg (db):
+def reorg (db, next_block_index):
     # Detect blockchain reorganisation up to 10 blocks length.
     reorg_cursor = db.cursor()
-    blocks = list(reorg_cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)'''))
-    assert len(blocks) == 1
-    last_block_index = blocks[0]['block_index']
     reorg_necessary = False
-    for block_index in range(last_block_index - 10, last_block_index + 1):
+    for block_index in range(next_block_index - 10, next_block_index):
         block_hash_see = bitcoin.get_block_hash(block_index)
-        blocks = list(reorg_cursor.execute('''SELECT * FROM blocks WHERE block_index=?''', (block_index,)))
-        assert len(blocks) == 1
-        block_hash_have = blocks[0]['block_hash']
-        if block_hash_see != block_hash_have:
-            reorg_necessary = True
+        blocks = list(reorg_cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,)))
+        if blocks:
+            assert len(blocks) == 1
+            block_hash_have = blocks[0]['block_hash']
+            if block_hash_see != block_hash_have:
+                reorg_necessary = True
+                break
+        else:
             break
 
-    if not reorg_necessary: return last_block_index + 1
-
-    # Rollback the DB.
-    reparse(db, block_index=block_index-1, quiet=True)
+    if not reorg_necessary: return next_block_index
 
     # Record reorganisation.
     logging.warning('Status: Blockchain reorganisation at block {}.'.format(block_index))
-    util.message(db, last_block_index, 'reorg', None, {'block_index': block_index})
+    util.message(db, next_block_index, 'reorg', None, {'block_index': block_index})
+
+    # Rollback the DB.
+    reparse(db, block_index=block_index-1, quiet=True)
 
     reorg_cursor.close()
     return block_index
@@ -714,11 +724,11 @@ def follow (db):
         block_index = config.BLOCK_FIRST
 
     # Get index of last transaction.
-    try:
-        txes = list(follow_cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)'''))
+    txes = list(follow_cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)'''))
+    if txes:
         assert len(txes) == 1
         tx_index = txes[0]['tx_index'] + 1
-    except Exception:   # TODO
+    else:
         tx_index = 0
 
     while True:
@@ -755,7 +765,7 @@ def follow (db):
                     # Get the important details about each transaction.
                     tx = bitcoin.get_raw_transaction(tx_hash)
                     logging.debug('Status: examining transaction {}'.format(tx_hash))
-                    source, destination, btc_amount, fee, data = get_tx_info(tx)
+                    source, destination, btc_amount, fee, data = get_tx_info(tx, block_index)
                     if source and (data or destination == config.UNSPENDABLE):
                         follow_cursor.execute('''INSERT INTO transactions(
                                             tx_index,
@@ -791,72 +801,11 @@ def follow (db):
         while block_index > block_count: # DUPE
             # Handle blockchain reorganisations, as necessary, atomically.
             with db:
-                block_index = reorg(db)
+                block_index = reorg(db, block_index)
 
             block_count = bitcoin.get_block_count()
             time.sleep(2)
 
     follow_cursor.close()
-
-
-def get_potentials (db):
-    # TODO: This is not thread-safe!
-    cursor = db.cursor()
-
-    cursor.execute('''CREATE TABLE IF NOT EXISTS potentials(
-                        potential_index INTEGER PRIMARY KEY,
-                        tx_hash TEXT UNIQUE,
-                        block_hash TEXT,
-                        block_index INTEGER,
-                        block_time INTEGER,
-                        raw TEXT)
-                   ''')
-
-    # Get index of last potential transaction.
-    try:
-        potentials = list(cursor.execute('''SELECT * FROM potentials WHERE potential_index = (SELECT MAX(potential_index) from potentials)'''))
-        assert len(potentials) == 1
-        potential = potentials[0]
-        potential_index = potential['potential_index'] + 1
-        block_index = potential['block_index'] + 1
-    except Exception:   # TODO
-        potential_index = 0
-        block_index = config.BLOCK_FIRST
-
-    # Get new blocks.
-    block_count = bitcoin.get_block_count()
-    while block_index <= block_count - 12:  # For reorgs.
-        logging.info('Block: {}'.format(str(block_index)))
-        block_hash = bitcoin.get_block_hash(block_index)
-        block = bitcoin.get_block(block_hash)
-        block_time = block['time']
-        tx_hash_list = block['tx']
-
-        # Get potentials in this block (atomically).
-        with db:
-            # List the transactions in the block.
-            for tx_hash in tx_hash_list:
-                # Get the important details about each potential transaction.
-                tx = bitcoin.get_raw_transaction(tx_hash)
-                if check_potential(tx):
-                    logging.info('Potential: {} ({})'.format(potential_index, tx_hash))
-                    cursor.execute('''INSERT INTO potentials(
-                                        potential_index,
-                                        tx_hash,
-                                        block_index,
-                                        block_hash,
-                                        block_time,
-                                        raw) VALUES(?,?,?,?,?,?)''',
-                                        (potential_index,
-                                         tx_hash,
-                                         block_index,
-                                         block_hash,
-                                         block_time,
-                                         str(tx))
-                                  )
-                    potential_index += 1
-
-        block_index += 1
-    cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
