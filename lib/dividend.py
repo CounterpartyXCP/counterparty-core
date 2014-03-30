@@ -15,7 +15,9 @@ LENGTH_2 = 8 + 8 + 8
 ID = 50
 
 
-def validate (db, source, quantity_per_unit, asset, dividend_asset):
+def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index=None):
+    if not block_index: block_index = util.last_block(db)['block_index']
+
     problems = []
 
     if asset in ('BTC', 'XCP'):
@@ -41,19 +43,37 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset):
         dividend_divisible = issuances[0]['divisible']
 
     outputs = []
+    cursor = db.cursor()
     # Balances
-    balances = util.get_balances(db, asset=asset)
-    for balance in balances:
-        address, address_quantity = balance['address'], balance['quantity']
-        dividend_quantity = address_quantity * quantity_per_unit
+    cursor.execute('''SELECT * FROM balances \
+                      WHERE asset = ?''', (asset,))
+    for balance in list(cursor):
+        outputs.append({'address': balance['address'], 'address_quantity': balance['quantity']})
+    if block_index >= 295000 or config.TESTNET:
+        # Funds escrowed in orders. (Protocol change.)
+        cursor.execute('''SELECT * FROM orders \
+                          WHERE give_asset = ?''', (asset,))
+        for order in list(cursor):
+            outputs.append({'address': order['source'], 'address_quantity': order['give_quantity']})
+        # Funds escrowed in pending order matches. (Protocol change.)
+        cursor.execute('''SELECT * FROM order_matches \
+                          WHERE (status = ? AND forward_asset = ?)''', ('pending', asset))
+        for order_match in list(cursor):
+            outputs.append({'address': order_match['tx0_address'], 'address_quantity': order_match['forward_quantity']})
+        cursor.execute('''SELECT * FROM order_matches \
+                          WHERE (status = ? AND backward_asset = ?)''', ('pending', asset))
+        for order_match in list(cursor):
+            outputs.append({'address': order_match['tx1_address'], 'address_quantity': order_match['backward_quantity']})
+    cursor.close()
+
+    # Calculate actual dividend quantities.
+    for output in outputs:
+        dividend_quantity = output['address_quantity'] * quantity_per_unit
         if divisible: dividend_quantity /= config.UNIT
         if not dividend_divisible: dividend_quantity /= config.UNIT
         if dividend_asset == 'BTC' and dividend_quantity < config.MULTISIG_DUST_SIZE:  continue    # A bit hackish.
         dividend_quantity = int(dividend_quantity)
-        outputs.append({'address': address, 'dividend_quantity': dividend_quantity})
-    # Funds escrowed in orders.
-
-    # Funds escrowed in pending order matches.
+        output['dividend_quantity'] = dividend_quantity
 
     dividend_total = sum([output['dividend_quantity'] for output in outputs])
     if not dividend_total: problems.append('zero dividend')
@@ -108,7 +128,7 @@ def parse (db, tx, message):
         # For SQLite3
         quantity_per_unit = min(quantity_per_unit, config.MAX_INT)
 
-        dividend_total, outputs, problems = validate(db, tx['source'], quantity_per_unit, asset, dividend_asset)
+        dividend_total, outputs, problems = validate(db, tx['source'], quantity_per_unit, asset, dividend_asset, block_index=tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
 
     if status == 'valid':
