@@ -12,7 +12,7 @@ from . import (util, config, exceptions, bitcoin, util)
 ID = 60
 
 
-def validate (db, source, destination, quantity, block_index=None, overburn=False):
+def validate (db, source, destination, quantity, block_index, overburn=False):
     problems = []
 
     # Check destination address.
@@ -26,7 +26,6 @@ def validate (db, source, destination, quantity, block_index=None, overburn=Fals
     if quantity < 0: problems.append('negative quantity')
 
     # Try to make sure that the burned funds won't go to waste.
-    if not block_index: block_index = util.last_block(db)['block_index']
     if block_index < config.BURN_START - 1:
         problems.append('too early')
     elif block_index > config.BURN_END:
@@ -36,7 +35,7 @@ def validate (db, source, destination, quantity, block_index=None, overburn=Fals
 
 def compose (db, source, quantity, overburn=False):
     destination = config.UNSPENDABLE
-    problems = validate(db, source, destination, quantity, None, overburn=overburn)
+    problems = validate(db, source, destination, quantity, util.last_block(db)['block_index'], overburn=overburn)
     if problems: raise exceptions.BurnError(problems)
 
     # Check that a maximum of 1 BTC total is burned per address.

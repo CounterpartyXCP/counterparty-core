@@ -15,9 +15,7 @@ LENGTH_2 = 8 + 8 + 8
 ID = 50
 
 
-def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index=None):
-    if not block_index: block_index = util.last_block(db)['block_index']
-
+def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index):
     problems = []
 
     if asset in ('BTC', 'XCP'):
@@ -42,38 +40,21 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index=
             return None, None, problems
         dividend_divisible = issuances[0]['divisible']
 
+    # Calculate dividend quantities.
+    holders = util.get_holders(db, asset)
     outputs = []
-    cursor = db.cursor()
-    # Balances
-    cursor.execute('''SELECT * FROM balances \
-                      WHERE asset = ?''', (asset,))
-    for balance in list(cursor):
-        outputs.append({'address': balance['address'], 'address_quantity': balance['quantity']})
-    if block_index >= 295000 or config.TESTNET:
-        # Funds escrowed in orders. (Protocol change.)
-        cursor.execute('''SELECT * FROM orders \
-                          WHERE give_asset = ?''', (asset,))
-        for order in list(cursor):
-            outputs.append({'address': order['source'], 'address_quantity': order['give_quantity']})
-        # Funds escrowed in pending order matches. (Protocol change.)
-        cursor.execute('''SELECT * FROM order_matches \
-                          WHERE (status = ? AND forward_asset = ?)''', ('pending', asset))
-        for order_match in list(cursor):
-            outputs.append({'address': order_match['tx0_address'], 'address_quantity': order_match['forward_quantity']})
-        cursor.execute('''SELECT * FROM order_matches \
-                          WHERE (status = ? AND backward_asset = ?)''', ('pending', asset))
-        for order_match in list(cursor):
-            outputs.append({'address': order_match['tx1_address'], 'address_quantity': order_match['backward_quantity']})
-    cursor.close()
-
-    # Calculate actual dividend quantities.
-    for output in outputs:
-        dividend_quantity = output['address_quantity'] * quantity_per_unit
+    for holder in holders:
+        if not config.TESTNET: # Protocol change.
+            if holder['escrow']: continue
+            
+        address = holder['address']
+        address_quantity = holder['address_quantity']
+        dividend_quantity = address_quantity * quantity_per_unit
         if divisible: dividend_quantity /= config.UNIT
         if not dividend_divisible: dividend_quantity /= config.UNIT
         if dividend_asset == 'BTC' and dividend_quantity < config.MULTISIG_DUST_SIZE:  continue    # A bit hackish.
         dividend_quantity = int(dividend_quantity)
-        output['dividend_quantity'] = dividend_quantity
+        outputs.append({'address': address, 'address_quantity': address_quantity, 'dividend_quantity': dividend_quantity})
 
     dividend_total = sum([output['dividend_quantity'] for output in outputs])
     if not dividend_total: problems.append('zero dividend')
@@ -87,7 +68,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index=
 
 def compose (db, source, quantity_per_unit, asset, dividend_asset):
 
-    dividend_total, outputs, problems = validate(db, source, quantity_per_unit, asset, dividend_asset)
+    dividend_total, outputs, problems = validate(db, source, quantity_per_unit, asset, dividend_asset, util.last_block(db)['block_index'])
     if problems: raise exceptions.DividendError(problems)
     print('Total quantity to be distributed in dividends:', util.devise(db, dividend_total, dividend_asset, 'output'), dividend_asset)
 

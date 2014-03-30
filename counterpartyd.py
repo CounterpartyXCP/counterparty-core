@@ -722,11 +722,14 @@ if __name__ == '__main__':
 
         print('Shareholders:')
         balances = util.get_balances(db, asset=args.asset)       # + util.get_escrowed(db, asset=asset)
-        print('\taddress, quantity')
-        for balance in balances:
-            if not balance['quantity']: continue
-            quantity = util.devise(db, balance['quantity'], args.asset, 'output')
-            print('\t' + str(balance['address']) + ',' + str(quantity))
+        print('\taddress, quantity, escrow')
+        for holder in util.get_holders(db, args.asset):
+            quantity = holder['address_quantity']
+            if not quantity: continue
+            quantity = util.devise(db, quantity, args.asset, 'output')
+            if holder['escrow']: escrow = holder['escrow']
+            else: escrow = 'None'
+            print('\t' + str(holder['address']) + ',' + str(quantity) + ',' + escrow)
 
 
     elif args.action == 'wallet':

@@ -17,7 +17,7 @@ LENGTH_2 = 8 + 8 + 1 + 1 + 4 + 4 + 42
 ID = 20
 
 
-def validate (db, source, destination, asset, quantity, divisible, callable_, call_date, call_price, description, block_index=None):
+def validate (db, source, destination, asset, quantity, divisible, callable_, call_date, call_price, description, block_index):
     problems = []
 
     if asset in ('BTC', 'XCP'):
@@ -75,16 +75,15 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
                           WHERE (address = ? AND asset = ?)''', (source, 'XCP'))
         balances = cursor.fetchall()
         cursor.close()
-        if block_index:
-            fee = 0
-            if block_index >= 291700 or config.TESTNET:     # Protocol change.
-                fee = int(0.5 * config.UNIT)
-            elif block_index >= 286000 or config.TESTNET:   # Protocol change.
-                fee = 5 * config.UNIT
-            elif block_index > 281236 or config.TESTNET:    # Protocol change.
-                fee = 5
-            if fee and (not balances or balances[0]['quantity'] < fee):
-                problems.append('insufficient funds')
+        fee = 0
+        if block_index >= 291700 or config.TESTNET:     # Protocol change.
+            fee = int(0.5 * config.UNIT)
+        elif block_index >= 286000 or config.TESTNET:   # Protocol change.
+            fee = 5 * config.UNIT
+        elif block_index > 281236 or config.TESTNET:    # Protocol change.
+            fee = 5
+        if fee and (not balances or balances[0]['quantity'] < fee):
+            problems.append('insufficient funds')
 
     # For SQLite3
     call_date = min(call_date, config.MAX_INT)
@@ -99,7 +98,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     return problems
 
 def compose (db, source, destination, asset, quantity, divisible, callable_, call_date, call_price, description):
-    problems = validate(db, source, destination, asset, quantity, divisible, callable_, call_date, call_price, description)
+    problems = validate(db, source, destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.last_block(db)['block_index'])
     if problems: raise exceptions.IssuanceError(problems)
 
     asset_id = util.get_asset_id(asset)

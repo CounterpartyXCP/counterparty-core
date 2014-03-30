@@ -657,6 +657,31 @@ def get_limit_to_blocks(start_block, end_block, col_names=['block_index',]):
     return block_limit_clause
 
 
+def get_holders(db, asset):
+    holders = []
+    cursor = db.cursor()
+    # Balances
+    cursor.execute('''SELECT * FROM balances \
+                      WHERE asset = ?''', (asset,))
+    for balance in list(cursor):
+        holders.append({'address': balance['address'], 'address_quantity': balance['quantity'], 'escrow': None})
+    # Funds escrowed in orders. (Protocol change.)
+    cursor.execute('''SELECT * FROM orders \
+                      WHERE give_asset = ?''', (asset,))
+    for order in list(cursor):
+        holders.append({'address': order['source'], 'address_quantity': order['give_remaining'], 'escrow': order['tx_hash']})
+    # Funds escrowed in pending order matches. (Protocol change.)
+    cursor.execute('''SELECT * FROM order_matches \
+                      WHERE (status = ? AND forward_asset = ?)''', ('pending', asset))
+    for order_match in list(cursor):
+        holders.append({'address': order_match['tx0_address'], 'address_quantity': order_match['forward_quantity'], 'escrow': order_match['id']})
+    cursor.execute('''SELECT * FROM order_matches \
+                      WHERE (status = ? AND backward_asset = ?)''', ('pending', asset))
+    for order_match in list(cursor):
+        holders.append({'address': order_match['tx1_address'], 'address_quantity': order_match['backward_quantity'], 'escrow': order_match['id']})
+    cursor.close()
+    return holders
+
 def xcp_supply (db):
     cursor = db.cursor()
 

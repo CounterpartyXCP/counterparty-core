@@ -10,7 +10,7 @@ FORMAT = '>QQQQHQ'
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8
 ID = 10
 
-def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, block_index):
+def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required):
     problems = []
     cursor = db.cursor()
 
@@ -58,7 +58,7 @@ def compose (db, source, give_asset, give_quantity, get_asset, get_quantity, exp
     if give_asset != 'BTC' and (not balances or balances[0]['quantity'] < give_quantity):
         raise exceptions.OrderError('insufficient funds')
 
-    problems = validate(db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, None)
+    problems = validate(db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required)
     if problems: raise exceptions.OrderError(problems)
 
     give_id = util.get_asset_id(give_asset)
@@ -97,7 +97,7 @@ def parse (db, tx, message):
                 give_quantity = min(balances[0]['quantity'], give_quantity)
                 get_quantity = int(price * give_quantity)
 
-        problems = validate(db, tx['source'], give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, tx['block_index'])
+        problems = validate(db, tx['source'], give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required)
         if problems: status = 'invalid: ' + '; '.join(problems)
 
     if status == 'open':
