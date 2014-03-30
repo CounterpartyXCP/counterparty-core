@@ -188,7 +188,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_messages(block_index):
             if not isinstance(block_index, int):
-                raise Exception("block_index must be an interger.")
+                raise Exception("block_index must be an integer.")
             
             cursor = db.cursor()
             cursor.execute('select * from messages where block_index = ? order by message_index asc', (block_index,))

@@ -703,7 +703,7 @@ if __name__ == '__main__':
         balances(args.address)
 
     elif args.action == 'asset':
-        results = util.api('get_asset_info', [args.asset])
+        results = util.api('get_asset_info', [args.asset])[0]
         asset_id = util.get_asset_id(args.asset)
         divisible = results['divisible']
         total_issued = util.devise(db, results['total_issued'], args.asset, dest='output')
