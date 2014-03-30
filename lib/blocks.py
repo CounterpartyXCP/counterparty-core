@@ -567,7 +567,7 @@ def get_tx_info (tx, block_index):
             except binascii.Error: continue
 
             if 'coinbase' in tx['vin'][0]: return b'', None, None, None, None
-            obj1 = ARC4.new(binascii.unhexlify(tx['vin'][0]['txid']))
+            obj1 = ARC4.new(binascii.unhexlify(bytes(tx['vin'][0]['txid'], 'utf-8')))
             data_pubkey = obj1.decrypt(pubkeyhash)
             if data_pubkey[1:9] == config.PREFIX or pubkeyhash_encoding:
                 pubkeyhash_encoding = True
