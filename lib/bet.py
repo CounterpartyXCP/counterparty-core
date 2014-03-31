@@ -254,13 +254,12 @@ def match (db, tx):
                 tx0_status = 'filled'
                 util.credit(db, tx1['block_index'], tx0['source'], 'XCP', tx0_wager_remaining, event=tx1['tx_hash'], action='filled')
             bindings = {
-                'tx_hash': tx0['tx_hash'],
                 'wager_remaining': tx0_wager_remaining,
                 'counterwager_remaining': tx0_counterwager_remaining,
-                'tx_index': tx0['tx_index'],
-                'status': tx0_status
+                'status': tx0_status,
+                'tx_hash': tx0['tx_hash']
             }
-            sql='update bets set tx_hash = :tx_hash, wager_remaining = :wager_remaining, counterwager_remaining = :counterwager_remaining, status = :status where tx_index = :tx_index'
+            sql='update bets set wager_remaining = :wager_remaining, counterwager_remaining = :counterwager_remaining, status = :status where tx_hash = :tx_hash'
             cursor.execute(sql, bindings)
             util.message(db, tx1['block_index'], 'update', 'bets', bindings)
 
@@ -272,13 +271,12 @@ def match (db, tx):
                     util.credit(db, tx1['block_index'], tx1['source'], 'XCP', tx1_wager_remaining, event=tx1['tx_hash'], action='filled')
             # tx1
             bindings = {
-                'tx_hash': tx1['tx_hash'],
                 'wager_remaining': tx1_wager_remaining,
                 'counterwager_remaining': tx1_counterwager_remaining,
-                'tx_index': tx1['tx_index'],
-                'status': tx1_status
+                'status': tx1_status,
+                'tx_hash': tx1['tx_hash']
             }
-            sql='update bets set tx_hash = :tx_hash, wager_remaining = :wager_remaining, counterwager_remaining = :counterwager_remaining, status = :status where tx_index = :tx_index'
+            sql='update bets set wager_remaining = :wager_remaining, counterwager_remaining = :counterwager_remaining, status = :status where tx_hash = :tx_hash'
             cursor.execute(sql, bindings)
             util.message(db, tx1['block_index'], 'update', 'bets', bindings)
 
@@ -327,9 +325,9 @@ def expire (db, block_index, block_time):
         # Update status of bet.
         bindings = {
             'status': 'expired',
-            'tx_index': bet['tx_index']
+            'tx_hash': bet['tx_hash']
         }
-        sql='update bets set status = :status where tx_index = :tx_index'
+        sql='update bets set status = :status where tx_hash = :tx_hash'
         cursor.execute(sql, bindings)
         util.message(db, block_index, 'update', 'bets', bindings)
 
