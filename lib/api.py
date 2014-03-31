@@ -165,7 +165,6 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_order_matches (filters=None, is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            assert status in ('completed', 'pending', None)
             return util.get_order_matches(db,
                 filters=filters,
                 is_mine=is_mine,
