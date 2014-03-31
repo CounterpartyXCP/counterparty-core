@@ -167,9 +167,9 @@ def match (db, tx):
         tx0_fee_provided_remaining = tx0['fee_provided_remaining']
 
         # Make sure that that both orders still have funds remaining.
-        # if tx0_give_remaining <= 0 or tx1_give_remaining <= 0: continue
-        # if tx1['block_index'] >= 292000 or config.TESTNET:  # Protocol change
-        #     if tx0_get_remaining <= 0 or tx1_get_remaining <= 0: continue
+        if tx0_give_remaining <= 0 or tx1_give_remaining <= 0: continue
+        if tx1['block_index'] >= 292000 or config.TESTNET:  # Protocol change
+            if tx0_get_remaining <= 0 or tx1_get_remaining <= 0: continue
 
         # If the prices agree, make the trade. The found order sets the price,
         # and they trade as much as they can.
@@ -242,7 +242,8 @@ def match (db, tx):
             # tx0
             tx0_status = 'open'
             if tx0_give_remaining <= 0 or (tx0_get_remaining <= 0 and (tx1['block_index'] >= 292000 or config.TESTNET)):    # Protocol change
-               tx0_status = 'filled'
+                if tx0['give_asset'] != 'BTC' and tx0['get_asset'] != 'BTC':
+                    tx0_status = 'filled'
             bindings = {
                 'give_remaining': tx0_give_remaining,
                 'get_remaining': tx0_get_remaining,
@@ -257,7 +258,8 @@ def match (db, tx):
             # tx1
             tx1_status = 'open'
             if tx1_give_remaining <= 0 or (tx1_get_remaining <= 0 and (tx1['block_index'] >= 292000 or config.TESTNET)):    # Protocol change
-               tx1_status = 'filled'
+                if tx1['give_asset'] != 'BTC' and tx1['get_asset'] != 'BTC':
+                    tx1_status = 'filled'
             bindings = {
                 'give_remaining': tx1_give_remaining,
                 'get_remaining': tx1_get_remaining,
