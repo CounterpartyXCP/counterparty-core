@@ -3,7 +3,7 @@
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "asset": "XCP", 
-            "quantity": 145331509207
+            "quantity": 145335759207
         }, 
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
@@ -127,7 +127,7 @@
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "leverage": 15120, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "status": "open", 
+            "status": "filled", 
             "target_value": 0.0, 
             "tx_hash": "e7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6", 
             "tx_index": 11, 
@@ -146,7 +146,7 @@
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "leverage": 5040, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "status": "open", 
+            "status": "filled", 
             "target_value": 0.0, 
             "tx_hash": "ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c977", 
             "tx_index": 12, 
@@ -165,7 +165,7 @@
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "leverage": 5040, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "status": "open", 
+            "status": "filled", 
             "target_value": 0.0, 
             "tx_hash": "9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4", 
             "tx_index": 13, 
@@ -184,7 +184,7 @@
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "leverage": 5040, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "status": "open", 
+            "status": "filled", 
             "target_value": 1.0, 
             "tx_hash": "4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47", 
             "tx_index": 14, 
@@ -203,7 +203,7 @@
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "leverage": 5040, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "status": "open", 
+            "status": "filled", 
             "target_value": 1.0, 
             "tx_hash": "dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8", 
             "tx_index": 15, 
@@ -372,6 +372,46 @@
             "calling_function": null, 
             "event": null, 
             "quantity": 800000
+        }, 
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "asset": "XCP", 
+            "block_index": 154919, 
+            "calling_function": "filled", 
+            "event": "e7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6", 
+            "quantity": 4250000
+        }, 
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "asset": "XCP", 
+            "block_index": 154921, 
+            "calling_function": "filled", 
+            "event": "9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4", 
+            "quantity": 0
+        }, 
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "asset": "XCP", 
+            "block_index": 154921, 
+            "calling_function": "filled", 
+            "event": "9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4", 
+            "quantity": 0
+        }, 
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "asset": "XCP", 
+            "block_index": 154923, 
+            "calling_function": "filled", 
+            "event": "dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8", 
+            "quantity": 0
+        }, 
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "asset": "XCP", 
+            "block_index": 154923, 
+            "calling_function": "filled", 
+            "event": "dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8", 
+            "quantity": 0
         }, 
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 

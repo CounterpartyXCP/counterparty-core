@@ -8,6 +8,8 @@ For CFD leverage, 1x = 5040, 2x = 10080, etc.: 5040 is a superior highly
 composite number and a colossally abundant number, and has 1-10, 12 as factors.
 
 All wagers are in XCP.
+
+Expiring a bet match doesn’t re‐open the constituent bets. (So all bets may be ‘filled’.)
 """
 
 import struct
@@ -220,11 +222,6 @@ def match (db, tx):
         if tx0['deadline'] != tx1['deadline']:
             continue
 
-        # Make sure that that both bets still have funds remaining [to be wagered].
-        if tx0['wager_remaining'] <= 0 or tx1_wager_remaining <= 0: continue
-        if tx1['block_index'] >= 292000 or config.TESTNET:  # Protocol change
-            if tx0['counterwager_remaining'] <= 0 or tx1_counterwager_remaining <= 0: continue
-
         # If the odds agree, make the trade. The found order sets the odds,
         # and they trade as much as they can.
         tx0_odds = util.price(tx0['wager_quantity'], tx0['counterwager_quantity'], tx1['block_index'])
@@ -251,22 +248,37 @@ def match (db, tx):
             tx1_counterwager_remaining = tx1_counterwager_remaining - forward_quantity
 
             # tx0
+            tx0_status = 'open'
+            if tx0['wager_remaining'] <= 0 or tx1_wager_remaining <= 0:
+                # Fill order, and recredit give_remaining.
+                tx0_status = 'filled'
+                util.credit(db, tx1['block_index'], tx0['source'], 'XCP', tx0_wager_remaining, event=tx1['tx_hash'], action='filled')
             bindings = {
+                'tx_hash': tx0['tx_hash'],
                 'wager_remaining': tx0_wager_remaining,
                 'counterwager_remaining': tx0_counterwager_remaining,
-                'tx_index': tx0['tx_index']
+                'tx_index': tx0['tx_index'],
+                'status': tx0_status
             }
-            sql='update bets set wager_remaining = :wager_remaining, counterwager_remaining = :counterwager_remaining where tx_index = :tx_index'
+            sql='update bets set tx_hash = :tx_hash, wager_remaining = :wager_remaining, counterwager_remaining = :counterwager_remaining, status = :status where tx_index = :tx_index'
             cursor.execute(sql, bindings)
             util.message(db, tx1['block_index'], 'update', 'bets', bindings)
 
+            tx1_status = 'open'
+            if tx1['block_index'] >= 292000 or config.TESTNET:  # Protocol change
+                if tx0['counterwager_remaining'] <= 0 or tx1_counterwager_remaining <= 0:
+                    # Fill order, and recredit give_remaining.
+                    tx1_status = 'filled'
+                    util.credit(db, tx1['block_index'], tx1['source'], 'XCP', tx1_wager_remaining, event=tx1['tx_hash'], action='filled')
             # tx1
             bindings = {
+                'tx_hash': tx1['tx_hash'],
                 'wager_remaining': tx1_wager_remaining,
                 'counterwager_remaining': tx1_counterwager_remaining,
-                'tx_index': tx1['tx_index']
+                'tx_index': tx1['tx_index'],
+                'status': tx1_status
             }
-            sql='update bets set wager_remaining = :wager_remaining, counterwager_remaining = :counterwager_remaining where tx_index = :tx_index'
+            sql='update bets set tx_hash = :tx_hash, wager_remaining = :wager_remaining, counterwager_remaining = :counterwager_remaining, status = :status where tx_index = :tx_index'
             cursor.execute(sql, bindings)
             util.message(db, tx1['block_index'], 'update', 'bets', bindings)
 
