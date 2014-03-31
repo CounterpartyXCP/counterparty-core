@@ -18,7 +18,7 @@ def compose (db, offer_hash):
 
     # Check that offer exists.
     problems = ['no open offer with that hash']
-    for offer in util.get_orders(db, status='open') + util.get_bets(db, status='open') + util.get_orders(db, status='filled') + util.get_bets(db, status='filled'):
+    for offer in util.get_orders(db, status='open') + util.get_bets(db, status='open'):
         if offer_hash == offer['tx_hash']:
             source = offer['source']
             problems = None
@@ -46,10 +46,10 @@ def parse (db, tx, message):
     if status == 'valid':
         # Find offer.
         cursor.execute('''SELECT * FROM orders \
-                          WHERE (tx_hash=? AND source=? AND (status=? OR status=?))''', (offer_hash, tx['source'], 'open', 'filled'))
+                          WHERE (tx_hash=? AND source=? AND status=?)''', (offer_hash, tx['source'], 'open'))
         orders = cursor.fetchall()
         cursor.execute('''SELECT * FROM bets \
-                          WHERE (tx_hash=? AND source=? AND (status=? OR status=?))''', (offer_hash, tx['source'], 'open', 'filled'))
+                          WHERE (tx_hash=? AND source=? AND status=?)''', (offer_hash, tx['source'], 'open'))
         bets = cursor.fetchall()
 
         # Cancel if order.

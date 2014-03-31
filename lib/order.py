@@ -1,5 +1,8 @@
 #! /usr/bin/python3
 
+# Filled orders may not be re‐opened, so only orders not involving BTC (and so
+# which cannot have expired order matches) may be filled.
+
 import struct
 import decimal
 D = decimal.Decimal
@@ -166,10 +169,13 @@ def match (db, tx):
         tx0_fee_required_remaining = tx0['fee_required_remaining']
         tx0_fee_provided_remaining = tx0['fee_provided_remaining']
 
-        # Make sure that that both orders still have funds remaining.
-        if tx0_give_remaining <= 0 or tx1_give_remaining <= 0: continue
-        if tx1['block_index'] >= 292000 or config.TESTNET:  # Protocol change
-            if tx0_get_remaining <= 0 or tx1_get_remaining <= 0: continue
+        # Make sure that that both orders still have funds remaining (if order involves BTC, and so cannot be ‘filled’).
+        if tx0['give_asset'] == 'BTC' or tx0['get_asset'] == 'BTC':
+            if tx0_give_remaining <= 0 or tx1_give_remaining <= 0:
+                continue
+            if tx1['block_index'] >= 292000 or config.TESTNET:  # Protocol change
+                if tx0_get_remaining <= 0 or tx1_get_remaining <= 0:
+                    continue
 
         # If the prices agree, make the trade. The found order sets the price,
         # and they trade as much as they can.
@@ -243,8 +249,11 @@ def match (db, tx):
             tx0_status = 'open'
             if tx0_give_remaining <= 0 or (tx0_get_remaining <= 0 and (tx1['block_index'] >= 292000 or config.TESTNET)):    # Protocol change
                 if tx0['give_asset'] != 'BTC' and tx0['get_asset'] != 'BTC':
+                    # Fill order, and recredit give_remaining.
                     tx0_status = 'filled'
+                    util.credit(db, tx1['block_index'], tx0['source'], tx0['give_asset'], tx0_give_remaining, event=tx1['tx_hash'], action='filled')
             bindings = {
+                'tx_hash': tx0['tx_hash'],
                 'give_remaining': tx0_give_remaining,
                 'get_remaining': tx0_get_remaining,
                 'fee_required_remaining': tx0_fee_required_remaining,
@@ -252,15 +261,18 @@ def match (db, tx):
                 'tx_index': tx0['tx_index'],
                 'status': tx0_status
             }
-            sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining, fee_provided_remaining = :fee_provided_remaining, status = :status where tx_index = :tx_index'
+            sql='update orders set tx_hash = :tx_hash, give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining, fee_provided_remaining = :fee_provided_remaining, status = :status where tx_index = :tx_index'
             cursor.execute(sql, bindings)
             util.message(db, tx1['block_index'], 'update', 'orders', bindings)
             # tx1
             tx1_status = 'open'
             if tx1_give_remaining <= 0 or (tx1_get_remaining <= 0 and (tx1['block_index'] >= 292000 or config.TESTNET)):    # Protocol change
                 if tx1['give_asset'] != 'BTC' and tx1['get_asset'] != 'BTC':
+                    # Fill order, and recredit give_remaining.
                     tx1_status = 'filled'
+                    util.credit(db, tx1['block_index'], tx1['source'], tx1['give_asset'], tx1_give_remaining, event=tx0['tx_hash'], action='filled')
             bindings = {
+                'tx_hash': tx1['tx_hash'],
                 'give_remaining': tx1_give_remaining,
                 'get_remaining': tx1_get_remaining,
                 'fee_required_remaining': tx1_fee_required_remaining,
@@ -268,7 +280,7 @@ def match (db, tx):
                 'tx_index': tx1['tx_index'],
                 'status': tx1_status
             }
-            sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining, fee_provided_remaining = :fee_provided_remaining, status = :status where tx_index = :tx_index'
+            sql='update orders set tx_hash = :tx_hash, give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining, fee_provided_remaining = :fee_provided_remaining, status = :status where tx_index = :tx_index'
             cursor.execute(sql, bindings)
             util.message(db, tx1['block_index'], 'update', 'orders', bindings)
 
@@ -311,7 +323,7 @@ def expire (db, block_index):
 
     # Expire orders and give refunds for the quantity give_remaining (if non-zero; if not BTC).
     cursor.execute('''SELECT * FROM orders \
-                      WHERE ((status = ? OR status = ?) AND expire_index < ?)''', ('open', 'filled', block_index))
+                      WHERE (status = ? AND expire_index < ?)''', ('open', block_index))
     for order in cursor.fetchall():
 
         # Update status of order.
@@ -377,10 +389,7 @@ def expire (db, block_index):
         else:
             tx0_give_remaining = tx0_order['give_remaining'] + order_match['forward_quantity']
             tx0_get_remaining = tx0_order['get_remaining'] + order_match['backward_quantity']
-            if tx0_give_remaining <= 0 or (tx0_get_remaining <= 0 and (block_index >= 292000 or config.TESTNET)):    # Protocol change
-                tx0_order_status = 'filled'
-            else:
-                tx0_order_status = 'open'
+            tx0_order_status = tx0_order['status']
             bindings = {
                 'give_remaining': tx0_give_remaining,
                 'get_remaining': tx0_get_remaining,
@@ -406,10 +415,7 @@ def expire (db, block_index):
         else:
             tx1_give_remaining = tx1_order['give_remaining'] + order_match['backward_quantity']
             tx1_get_remaining = tx1_order['get_remaining'] + order_match['forward_quantity']
-            if tx1_give_remaining <= 0 or (tx1_get_remaining <= 0 and (block_index >= 292000 or config.TESTNET)):    # Protocol change
-                tx1_order_status = 'filled'
-            else:
-                tx1_order_status = 'open'
+            tx1_order_status = tx1_order['status']
             bindings = {
                 'give_remaining': tx1_give_remaining,
                 'get_remaining': tx1_get_remaining,
