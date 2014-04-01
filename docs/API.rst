@@ -490,12 +490,12 @@ get_orders
 get_order_matches
 ^^^^^^^^^^^^^^^^^^^
 
-.. py:function:: get_order_matches(filters=[], status="completed", is_mine=false, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
+.. py:function:: get_order_matches(filters=[], post_filter_status=null, is_mine=false, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
 
    Gets a listing of order matches.
 
    :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param boolean status: Either ``completed`` (to return completed matches only), ``pending`` (to return matches requiring BTC payment only) or ``null`` to return all records (including invalid attempts).
+   :param boolean post_filter_status: Set to filter by status after filtering by filters (useful if filters has a number of addresses and filterop='or'). This parameter is set to either ``completed`` (to return completed matches only), ``pending`` (to return matches requiring BTC payment only) or ``null`` to return all records (including invalid attempts).
    :param boolean is_mine: Set to ``true`` to include results where either the ``tx0_address`` or ``tx1_address`` exist in the linked ``bitcoind`` wallet.
    :param string order_by: If sorted results are desired, specify the name of an :ref:`order match object <order-match-object>` attribute to order the results by (e.g. ``forward_asset``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
