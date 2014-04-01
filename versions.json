@@ -50,6 +50,12 @@
 			"minimum_database_version_major": 9,
 			"minimum_database_version_minor": 10,
 			"description": "pay‐to‐pubkeyhash encoding"
-		}
+		},
+		{
+			"block_index": 294000,
+			"minimum_database_version_major": 9,
+			"minimum_database_version_minor": 11,
+			"description": "filtered negative order fees"
+
 	]
 }

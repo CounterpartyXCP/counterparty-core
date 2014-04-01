@@ -177,6 +177,12 @@ def match (db, tx):
                 if tx0_get_remaining <= 0 or tx1_get_remaining <= 0:
                     continue
 
+            if tx1['block_index'] >= 294000 or config.TESTNET:  # Protocol change.
+                if tx0['fee_required_remaining'] < 0: continue
+                if tx0['fee_provided_remaining'] < 0: continue
+                if tx1_fee_provided_remaining < 0: continue
+                if tx1_fee_required_remaining < 0: continue
+
         # If the prices agree, make the trade. The found order sets the price,
         # and they trade as much as they can.
         tx0_price = util.price(tx0['get_quantity'], tx0['give_quantity'], tx1['block_index'])
