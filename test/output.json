@@ -3,7 +3,7 @@
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "asset": "XCP", 
-            "quantity": 145331509207
+            "quantity": 145335759207
         }, 
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
@@ -20,10 +20,12 @@
     "get_address_bet_match_expirations": [], 
     "get_address_bet_matches": [
         {
+            "backward_fee": 1037500, 
             "backward_quantity": 20750000, 
             "deadline": 1388000100, 
             "fee_fraction_int": 5000000, 
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "forward_fee": 2075000, 
             "forward_quantity": 41500000, 
             "id": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546be7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6", 
             "initial_value": 100, 
@@ -45,10 +47,12 @@
             "tx1_index": 11
         }, 
         {
+            "backward_fee": 17500000, 
             "backward_quantity": 350000000, 
             "deadline": 1388000100, 
             "fee_fraction_int": 5000000, 
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "forward_fee": 7500000, 
             "forward_quantity": 150000000, 
             "id": "ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c9779d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4", 
             "initial_value": 100, 
@@ -70,10 +74,12 @@
             "tx1_index": 13
         }, 
         {
+            "backward_fee": 32500000, 
             "backward_quantity": 650000000, 
             "deadline": 1388000200, 
             "fee_fraction_int": 5000000, 
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "forward_fee": 37500000, 
             "forward_quantity": 750000000, 
             "id": "4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8", 
             "initial_value": 100, 
@@ -105,6 +111,7 @@
             "expiration": 10, 
             "expire_index": 154928, 
             "fee_fraction_int": 5000000, 
+            "fee_paid": 2500000, 
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "leverage": 15120, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
@@ -124,10 +131,11 @@
             "expiration": 10, 
             "expire_index": 154929, 
             "fee_fraction_int": 5000000, 
+            "fee_paid": 1250000, 
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "leverage": 15120, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "status": "open", 
+            "status": "filled", 
             "target_value": 0.0, 
             "tx_hash": "e7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6", 
             "tx_index": 11, 
@@ -143,10 +151,11 @@
             "expiration": 10, 
             "expire_index": 154930, 
             "fee_fraction_int": 5000000, 
+            "fee_paid": 7500000, 
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "leverage": 5040, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "status": "open", 
+            "status": "filled", 
             "target_value": 0.0, 
             "tx_hash": "ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c977", 
             "tx_index": 12, 
@@ -162,10 +171,11 @@
             "expiration": 10, 
             "expire_index": 154931, 
             "fee_fraction_int": 5000000, 
+            "fee_paid": 17500000, 
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "leverage": 5040, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "status": "open", 
+            "status": "filled", 
             "target_value": 0.0, 
             "tx_hash": "9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4", 
             "tx_index": 13, 
@@ -181,10 +191,11 @@
             "expiration": 10, 
             "expire_index": 154932, 
             "fee_fraction_int": 5000000, 
+            "fee_paid": 37500000, 
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "leverage": 5040, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "status": "open", 
+            "status": "filled", 
             "target_value": 1.0, 
             "tx_hash": "4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47", 
             "tx_index": 14, 
@@ -200,10 +211,11 @@
             "expiration": 10, 
             "expire_index": 154933, 
             "fee_fraction_int": 5000000, 
+            "fee_paid": 32500000, 
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "leverage": 5040, 
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
-            "status": "open", 
+            "status": "filled", 
             "target_value": 1.0, 
             "tx_hash": "dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8", 
             "tx_index": 15, 
@@ -376,6 +388,46 @@
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
             "asset": "XCP", 
+            "block_index": 154919, 
+            "calling_function": "filled", 
+            "event": "e7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6", 
+            "quantity": 4250000
+        }, 
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "asset": "XCP", 
+            "block_index": 154921, 
+            "calling_function": "filled", 
+            "event": "9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4", 
+            "quantity": 0
+        }, 
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "asset": "XCP", 
+            "block_index": 154921, 
+            "calling_function": "filled", 
+            "event": "9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4", 
+            "quantity": 0
+        }, 
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "asset": "XCP", 
+            "block_index": 154923, 
+            "calling_function": "filled", 
+            "event": "dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8", 
+            "quantity": 0
+        }, 
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "asset": "XCP", 
+            "block_index": 154923, 
+            "calling_function": "filled", 
+            "event": "dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8", 
+            "quantity": 0
+        }, 
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 
+            "asset": "XCP", 
             "block_index": 154924, 
             "calling_function": null, 
             "event": null, 
@@ -434,7 +486,7 @@
             "asset": "BBBB", 
             "block_index": 154928, 
             "calling_function": null, 
-            "event": null, 
+            "event": "ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2", 
             "quantity": 50000000
         }, 
         {

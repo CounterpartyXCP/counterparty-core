@@ -55,6 +55,20 @@ def parse_tx (db, tx):
                                 (False, tx['tx_hash']))
         logging.info('Unsupported transaction: hash {}; data {}'.format(tx['tx_hash'], tx['data']))
 
+    # Check that assets are conserved as they should be.
+    if config.CAREFUL and not tx['tx_index'] % 60:    # Arbitrary
+        supplies = util.get_supplies(db)
+        for asset in supplies.keys():
+            logging.debug('Status: Checking conservation of {}'.format(asset))
+
+            issued = supplies[asset]
+            held = sum([holder['address_quantity'] for holder in util.get_holders(db, asset)])
+            if held != issued:
+                # import json
+                # json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
+                # json_print(util.get_holders(db, asset))
+                raise exceptions.SanityError('{} {} issued ≠ {} {} held'.format(util.devise(db, issued, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
+            logging.debug('Status: {} is conserved.'.format(asset))
 
     parse_tx_cursor.close()
 
@@ -166,7 +180,10 @@ def initialise(db):
                       quantity INTEGER)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      asset_idx ON balances (address, asset)
+                      address_asset_idx ON balances (address, asset)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      asset_idx ON balances (asset)
                    ''')
 
     # Sends
@@ -217,7 +234,10 @@ def initialise(db):
                       expire_idx ON orders (status, expire_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      give_get_valid_idx ON orders (give_asset, get_asset, status)
+                      give_status_idx ON orders (give_asset, status)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      give_get_status_idx ON orders (give_asset, get_asset, status)
                    ''')
 
     # Order Matches
@@ -244,6 +264,12 @@ def initialise(db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       match_expire_idx ON order_matches (status, match_expire_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      forward_status_idx ON order_matches (forward_asset, status)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      backward_status_idx ON order_matches (backward_asset, status)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       id_idx ON order_matches (id)
@@ -292,6 +318,9 @@ def initialise(db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       valid_asset_idx ON issuances (status, asset)
                    ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      status_idx ON issuances (status)
+                   ''')
 
     # Broadcasts
     cursor.execute('''CREATE TABLE IF NOT EXISTS broadcasts(
@@ -329,6 +358,7 @@ def initialise(db):
                       expiration INTEGER,
                       expire_index INTEGER,
                       fee_fraction_int INTEGER,
+                      fee_paid INTEGER,
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                       PRIMARY KEY (tx_index, tx_hash))
@@ -363,7 +393,9 @@ def initialise(db):
                       target_value REAL,
                       leverage INTEGER,
                       forward_quantity INTEGER,
+                      forward_fee INTEGER,
                       backward_quantity INTEGER,
+                      backward_fee INTEGER,
                       tx0_block_index INTEGER,
                       tx1_block_index INTEGER,
                       tx0_expiration INTEGER,

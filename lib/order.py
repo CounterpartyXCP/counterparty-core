@@ -1,5 +1,8 @@
 #! /usr/bin/python3
 
+# Filled orders may not be re‐opened, so only orders not involving BTC (and so
+# which cannot have expired order matches) may be filled.
+
 import struct
 import decimal
 D = decimal.Decimal
@@ -9,6 +12,101 @@ from . import (util, config, exceptions, bitcoin, util)
 FORMAT = '>QQQQHQ'
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8
 ID = 10
+
+def cancel_order (db, order, status, block_index):
+    cursor = db.cursor()
+
+    # Update status of order.
+    bindings = {
+        'status': status,
+        'tx_hash': order['tx_hash']
+    }
+    sql='update orders set status = :status where tx_hash = :tx_hash'
+    cursor.execute(sql, bindings)
+    util.message(db, block_index, 'update', 'orders', bindings)
+
+    if order['give_asset'] != 'BTC':    # Can’t credit BTC.
+        util.credit(db, block_index, order['source'], order['give_asset'], order['give_remaining'], event=order['tx_hash'])
+
+    cursor.close()
+
+def cancel_order_match (db, order_match, status, block_index):
+    '''
+    May only be cancelled by callbacks.'''
+
+    cursor = db.cursor()
+
+    # Update status of order match.
+    bindings = {
+        'status': status,
+        'order_match_id': order_match['id']
+    }
+    sql='update order_matches set status = :status where id = :order_match_id'
+    cursor.execute(sql, bindings)
+    util.message(db, block_index, 'update', 'order_matches', bindings)
+
+    order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']
+
+    # If tx0 is dead, credit address directly; if not, replenish give, get remaining.
+    orders = list(cursor.execute('''SELECT * FROM orders \
+                                    WHERE tx_index = ?''',
+                                 (order_match['tx0_index'],)))
+    assert len(orders) == 1
+    tx0_order = orders[0]
+    if tx0_order['status'] in ('expired', 'cancelled'):
+        tx0_order_status = tx0_order['status']
+        if order_match['forward_asset'] != 'BTC':
+            util.credit(db, block_index, order_match['tx0_address'],
+                        order_match['forward_asset'],
+                        order_match['forward_quantity'], event=order_match['id'])
+    else:
+        tx0_give_remaining = tx0_order['give_remaining'] + order_match['forward_quantity']
+        tx0_get_remaining = tx0_order['get_remaining'] + order_match['backward_quantity']
+        tx0_order_status = tx0_order['status']
+        bindings = {
+            'give_remaining': tx0_give_remaining,
+            'get_remaining': tx0_get_remaining,
+            'status': tx0_order_status,
+            'tx_hash': order_match['tx0_hash']
+        }
+        sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining where tx_hash = :tx_hash'
+        cursor.execute(sql, bindings)
+        util.message(db, block_index, 'update', 'orders', bindings)
+
+    # If tx1 is dead, credit address directly; if not, replenish give, get remaining.
+    orders = list(cursor.execute('''SELECT * FROM orders \
+                                    WHERE tx_index = ?''',
+                                 (order_match['tx1_index'],)))
+    assert len(orders) == 1
+    tx1_order = orders[0]
+    if tx1_order['status'] in ('expired', 'cancelled'):
+        tx1_order_status = tx1_order['status']
+        if order_match['backward_asset'] != 'BTC':
+            util.credit(db, block_index, order_match['tx1_address'],
+                        order_match['backward_asset'],
+                        order_match['backward_quantity'], event=order_match['id'])
+    else:
+        tx1_give_remaining = tx1_order['give_remaining'] + order_match['backward_quantity']
+        tx1_get_remaining = tx1_order['get_remaining'] + order_match['forward_quantity']
+        tx1_order_status = tx1_order['status']
+        bindings = {
+            'give_remaining': tx1_give_remaining,
+            'get_remaining': tx1_get_remaining,
+            'status': tx1_order_status,
+            'tx_hash': order_match['tx1_hash']
+        }
+        sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining where tx_hash = :tx_hash'
+        cursor.execute(sql, bindings)
+        util.message(db, block_index, 'update', 'orders', bindings)
+
+    if block_index < 286500:    # Protocol change.
+        # Sanity check: one of the two must have expired.
+        tx0_order_time_left = tx0_order['expire_index'] - block_index
+        tx1_order_time_left = tx1_order['expire_index'] - block_index
+        assert tx0_order_time_left or tx1_order_time_left
+
+    cursor.close()
+
 
 def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required):
     problems = []
@@ -166,10 +264,19 @@ def match (db, tx):
         tx0_fee_required_remaining = tx0['fee_required_remaining']
         tx0_fee_provided_remaining = tx0['fee_provided_remaining']
 
-        # Make sure that that both orders still have funds remaining.
-        if tx0_give_remaining <= 0 or tx1_give_remaining <= 0: continue
-        if tx1['block_index'] >= 292000 or config.TESTNET:  # Protocol change
-            if tx0_get_remaining <= 0 or tx1_get_remaining <= 0: continue
+        # Make sure that that both orders still have funds remaining (if order involves BTC, and so cannot be ‘filled’).
+        if tx0['give_asset'] == 'BTC' or tx0['get_asset'] == 'BTC': # Gratuitous
+            if tx0_give_remaining <= 0 or tx1_give_remaining <= 0:
+                continue
+            if tx1['block_index'] >= 292000 or config.TESTNET:  # Protocol change
+                if tx0_get_remaining <= 0 or tx1_get_remaining <= 0:
+                    continue
+
+            if tx1['block_index'] >= 294000 or config.TESTNET:  # Protocol change.
+                if tx0['fee_required_remaining'] < 0: continue
+                if tx0['fee_provided_remaining'] < 0: continue
+                if tx1_fee_provided_remaining < 0: continue
+                if tx1_fee_required_remaining < 0: continue
 
         # If the prices agree, make the trade. The found order sets the price,
         # and they trade as much as they can.
@@ -240,25 +347,39 @@ def match (db, tx):
 
             # Update give_remaining, get_remaining.
             # tx0
+            tx0_status = 'open'
+            if tx0_give_remaining <= 0 or (tx0_get_remaining <= 0 and (tx1['block_index'] >= 292000 or config.TESTNET)):    # Protocol change
+                if tx0['give_asset'] != 'BTC' and tx0['get_asset'] != 'BTC':
+                    # Fill order, and recredit give_remaining.
+                    tx0_status = 'filled'
+                    util.credit(db, tx1['block_index'], tx0['source'], tx0['give_asset'], tx0_give_remaining, event=tx1['tx_hash'], action='filled')
             bindings = {
                 'give_remaining': tx0_give_remaining,
                 'get_remaining': tx0_get_remaining,
                 'fee_required_remaining': tx0_fee_required_remaining,
                 'fee_provided_remaining': tx0_fee_provided_remaining,
-                'tx_index': tx0['tx_index']
+                'status': tx0_status,
+                'tx_hash': tx0['tx_hash']
             }
-            sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining, fee_provided_remaining = :fee_provided_remaining where tx_index = :tx_index'
+            sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining, fee_provided_remaining = :fee_provided_remaining, status = :status where tx_hash = :tx_hash'
             cursor.execute(sql, bindings)
             util.message(db, tx1['block_index'], 'update', 'orders', bindings)
             # tx1
+            tx1_status = 'open'
+            if tx1_give_remaining <= 0 or (tx1_get_remaining <= 0 and (tx1['block_index'] >= 292000 or config.TESTNET)):    # Protocol change
+                if tx1['give_asset'] != 'BTC' and tx1['get_asset'] != 'BTC':
+                    # Fill order, and recredit give_remaining.
+                    tx1_status = 'filled'
+                    util.credit(db, tx1['block_index'], tx1['source'], tx1['give_asset'], tx1_give_remaining, event=tx0['tx_hash'], action='filled')
             bindings = {
                 'give_remaining': tx1_give_remaining,
                 'get_remaining': tx1_get_remaining,
                 'fee_required_remaining': tx1_fee_required_remaining,
                 'fee_provided_remaining': tx1_fee_provided_remaining,
-                'tx_index': tx1['tx_index']
+                'status': tx1_status,
+                'tx_hash': tx1['tx_hash']
             }
-            sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining, fee_provided_remaining = :fee_provided_remaining where tx_index = :tx_index'
+            sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining, fee_provided_remaining = :fee_provided_remaining, status = :status where tx_hash = :tx_hash'
             cursor.execute(sql, bindings)
             util.message(db, tx1['block_index'], 'update', 'orders', bindings)
 
@@ -291,6 +412,9 @@ def match (db, tx):
             sql='insert into order_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :forward_asset, :forward_quantity, :backward_asset, :backward_quantity, :tx0_block_index, :tx1_block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :status)'
             cursor.execute(sql, bindings)
 
+            if tx1_status == 'filled':
+                break
+
     cursor.close()
 
 def expire (db, block_index):
@@ -300,18 +424,7 @@ def expire (db, block_index):
     cursor.execute('''SELECT * FROM orders \
                       WHERE (status = ? AND expire_index < ?)''', ('open', block_index))
     for order in cursor.fetchall():
-
-        # Update status of order.
-        bindings = {
-            'status': 'expired',
-            'tx_index': order['tx_index']
-        }
-        sql='update orders set status = :status where tx_index = :tx_index'
-        cursor.execute(sql, bindings)
-        util.message(db, block_index, 'update', 'orders', bindings)
-
-        if order['give_asset'] != 'BTC':    # Can't credit BTC.
-            util.credit(db, block_index, order['source'], order['give_asset'], order['give_remaining'], event=order['tx_hash'])
+        cancel_order(db, order, 'expired', block_index)
 
         # Record offer expiration.
         bindings = {
@@ -323,79 +436,22 @@ def expire (db, block_index):
         sql='insert into order_expirations values(:order_index, :order_hash, :source, :block_index)'
         cursor.execute(sql, bindings)
 
+
     # Expire order_matches for BTC with no BTC.
     cursor.execute('''SELECT * FROM order_matches \
                       WHERE (status = ? and match_expire_index < ?)''', ('pending', block_index))
     for order_match in cursor.fetchall():
-        
-        # Update status of order match.
-        bindings = {
-            'status': 'expired',
-            'order_match_id': order_match['id']
-        }
-        sql='update order_matches set status = :status where id = :order_match_id'
-        cursor.execute(sql, bindings)
-        util.message(db, block_index, 'update', 'order_matches', bindings)
-
-        order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']
+        cancel_order_match(db, order_match, 'expired', block_index)
 
         # Record order match expiration.
         bindings = {
-            'order_match_id': order_match_id,
+            'order_match_id': order_match['id'],
             'tx0_address': order_match['tx0_address'],
             'tx1_address': order_match['tx1_address'],
             'block_index': block_index
         }
         sql='insert into order_match_expirations values(:order_match_id, :tx0_address, :tx1_address, :block_index)'
         cursor.execute(sql, bindings)
-
-        # If tx0 is dead, credit address directly; if not, replenish give, get remaining.
-        orders = list(cursor.execute('''SELECT * FROM orders \
-                                        WHERE tx_index = ?''',
-                                     (order_match['tx0_index'],)))
-        assert len(orders) == 1
-        tx0_order = orders[0]
-        if tx0_order['status'] in ('expired', 'cancelled'):
-            if order_match['forward_asset'] != 'BTC':
-                util.credit(db, block_index, order_match['tx0_address'],
-                            order_match['forward_asset'],
-                            order_match['forward_quantity'], event=order_match['id'])
-        else:
-            bindings = {
-                'give_remaining': tx0_order['give_remaining'] + order_match['forward_quantity'],
-                'get_remaining': tx0_order['get_remaining'] + order_match['backward_quantity'],
-                'tx_index': order_match['tx0_index']
-            }
-            sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining where tx_index = :tx_index'
-            cursor.execute(sql, bindings)
-            util.message(db, block_index, 'update', 'orders', bindings)
-
-        # If tx1 is dead, credit address directly; if not, replenish give, get remaining.
-        orders = list(cursor.execute('''SELECT * FROM orders \
-                                        WHERE tx_index = ?''',
-                                     (order_match['tx1_index'],)))
-        assert len(orders) == 1
-        tx1_order = orders[0]
-        if tx1_order['status'] in ('expired', 'cancelled'):
-            if order_match['backward_asset'] != 'BTC':
-                util.credit(db, block_index, order_match['tx1_address'],
-                            order_match['backward_asset'],
-                            order_match['backward_quantity'], event=order_match['id'])
-        else:
-            bindings = {
-                'give_remaining': tx1_order['give_remaining'] + order_match['backward_quantity'],
-                'get_remaining': tx1_order['get_remaining'] + order_match['forward_quantity'],
-                'tx_index': order_match['tx1_index']
-            }
-            sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining where tx_index = :tx_index'
-            cursor.execute(sql, bindings)
-            util.message(db, block_index, 'update', 'orders', bindings)
-
-        if block_index < 286500:    # Protocol change.
-            # Sanity check: one of the two must have expired.
-            tx0_order_time_left = tx0_order['expire_index'] - block_index
-            tx1_order_time_left = tx1_order['expire_index'] - block_index
-            assert tx0_order_time_left or tx1_order_time_left
 
     cursor.close()
 

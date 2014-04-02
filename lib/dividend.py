@@ -44,7 +44,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     holders = util.get_holders(db, asset)
     outputs = []
     for holder in holders:
-        if not config.TESTNET: # Protocol change.
+        if block_index < 294500 and not config.TESTNET: # Protocol change.
             if holder['escrow']: continue
             
         address = holder['address']

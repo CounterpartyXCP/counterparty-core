@@ -7,14 +7,21 @@ import decimal
 D = decimal.Decimal
 
 from . import (util, config, exceptions, bitcoin, util)
+from . import order
 
 FORMAT = '>dQ'
 LENGTH = 8 + 8
 ID = 21
 
 
-def validate (db, source, fraction, asset, block_time, block_index):
+def validate (db, source, fraction, asset, block_time, block_index, parse):
     problems = []
+
+    # TODO
+    if not config.TESTNET: 
+        problems.append('callbacks are currently disabled on mainnet')
+        return None, None, None, problems
+    # TODO
 
     if fraction > 1:
         problems.append('fraction greater than one')
@@ -43,11 +50,34 @@ def validate (db, source, fraction, asset, block_time, block_index):
     if not divisible:   # Pay per output unit.
         call_price *= config.UNIT
 
+    # If parsing, unescrow all funds of asset. (Order of operations is
+    # important here.)
+    if parse:
+        cursor = db.cursor()
+
+        # Cancel pending order matches involving asset.
+        cursor.execute('''SELECT * from order_matches \
+                          WHERE status = ? AND (forward_asset = ? OR backward_asset = ?)''', ('pending', asset, asset))
+        for order_match in list(cursor):
+            order.cancel_order_match(db, order_match, 'cancelled', block_index)
+
+        # Cancel open orders involving asset.
+        cursor.execute('''SELECT * from orders \
+                          WHERE status = ? AND (give_asset = ? OR get_asset = ?)''', ('open', asset, asset))
+        for order_element in list(cursor):
+            order.cancel_order(db, order_element, 'cancelled', block_index)
+
+        cursor.close()
+
     # Calculate callback quantities.
     holders = util.get_holders(db, asset)
     outputs = []
     for holder in holders:
-        if holder['escrow']: continue   # Can’t callback escrowed funds directly.
+        # If composing (and not parsing), predict funds to be returned from
+        # escrow (instead of cancelling open offers, etc.), by *not* skipping
+        # listing escrowed funds here.
+        if parse and holder['escrow']:
+            continue
 
         address = holder['address']
         address_quantity = holder['address_quantity']
@@ -66,7 +96,7 @@ def validate (db, source, fraction, asset, block_time, block_index):
     return call_price, callback_total, outputs, problems
 
 def compose (db, source, fraction, asset):
-    call_price, callback_total, outputs, problems = validate(db, source, fraction, asset, util.last_block(db)['block_time'], util.last_block(db)['block_index'])
+    call_price, callback_total, outputs, problems = validate(db, source, fraction, asset, util.last_block(db)['block_time'], util.last_block(db)['block_index'], parse=False)
     if problems: raise exceptions.CallbackError(problems)
     print('Total quantity to be called back:', util.devise(db, callback_total, asset, 'output'), asset)
 
@@ -89,7 +119,7 @@ def parse (db, tx, message):
         status = 'invalid: could not unpack'
 
     if status == 'valid':
-        call_price, callback_total, outputs, problems = validate(db, tx['source'], fraction, asset, tx['block_time'], tx['block_index'])
+        call_price, callback_total, outputs, problems = validate(db, tx['source'], fraction, asset, tx['block_time'], tx['block_index'], parse=True)
         if problems: status = 'invalid: ' + '; '.join(problems)
 
     if status == 'valid':

@@ -8,6 +8,8 @@ For CFD leverage, 1x = 5040, 2x = 10080, etc.: 5040 is a superior highly
 composite number and a colossally abundant number, and has 1-10, 12 as factors.
 
 All wagers are in XCP.
+
+Expiring a bet match doesn’t re‐open the constituent bets. (So all bets may be ‘filled’.)
 """
 
 import struct
@@ -19,6 +21,49 @@ from . import (util, config, bitcoin, exceptions, util)
 FORMAT = '>HIQQdII'
 LENGTH = 2 + 4 + 8 + 8 + 8 + 4 + 4
 ID = 40
+
+def cancel_bet (db, bet, status, block_index):
+    cursor = db.cursor()
+
+    # Update status of bet.
+    bindings = {
+        'status': status,
+        'tx_hash': bet['tx_hash']
+    }
+    sql='update bets set status = :status where tx_hash = :tx_hash'
+    cursor.execute(sql, bindings)
+    util.message(db, block_index, 'update', 'bets', bindings)
+
+    util.credit(db, block_index, bet['source'], 'XCP', bet['wager_remaining'], action='recredit wager remaining', event=bet['tx_hash'])
+    util.credit(db, block_index, bet['source'], 'XCP', bet['fee_paid'], action='recredit fee', event=bet['tx_hash'])
+
+    cursor = db.cursor()
+
+def cancel_bet_match (db, bet_match, status, block_index):
+    cursor = db.cursor()
+
+    # Recredit tx0 address.
+    util.credit(db, block_index, bet_match['tx0_address'], 'XCP',
+                bet_match['forward_quantity'], action='recredit forward quantity', event=bet_match['id'])
+    util.credit(db, block_index, bet_match['tx0_address'], 'XCP',
+                bet_match['forward_fee'], action='recredit forward fee', event=bet_match['id'])
+
+    # Recredit tx1 address.
+    util.credit(db, block_index, bet_match['tx1_address'], 'XCP',
+                bet_match['backward_quantity'], action='recredit backward quantity', event=bet_match['id'])
+    util.credit(db, block_index, bet_match['tx1_address'], 'XCP',
+                bet_match['backward_fee'], action='recredit backward fee', event=bet_match['id'])
+
+    # Update status of bet match.
+    bindings = {
+        'status': status,
+        'bet_match_id': bet_match['id']
+    }
+    sql='update bet_matches set status = :status where id = :bet_match_id'
+    cursor.execute(sql, bindings)
+    util.message(db, block_index, 'update', 'bet_matches', bindings)
+
+    cursor.close()
 
 
 def get_fee_fraction (db, feed_address):
@@ -137,8 +182,9 @@ def parse (db, tx, message):
         if problems: status = 'invalid: ' + '; '.join(problems)
 
     # Debit quantity wagered and fee.
+    fee = 0
     if status == 'open':
-        fee = round(wager_quantity * fee_fraction)    # round?!
+        fee = round(wager_quantity * fee_fraction)
         util.debit(db, tx['block_index'], tx['source'], 'XCP', wager_quantity)
         util.debit(db, tx['block_index'], tx['source'], 'XCP', fee)
 
@@ -160,9 +206,10 @@ def parse (db, tx, message):
         'expiration': expiration,
         'expire_index': tx['block_index'] + expiration,
         'fee_fraction_int': fee_fraction * 1e8,
+        'fee_paid': fee,
         'status': status,
     }
-    sql='insert into bets values(:tx_index, :tx_hash, :block_index, :source, :feed_address, :bet_type, :deadline, :wager_quantity, :wager_remaining, :counterwager_quantity, :counterwager_remaining, :target_value, :leverage, :expiration, :expire_index, :fee_fraction_int, :status)'
+    sql='insert into bets values(:tx_index, :tx_hash, :block_index, :source, :feed_address, :bet_type, :deadline, :wager_quantity, :wager_remaining, :counterwager_quantity, :counterwager_remaining, :target_value, :leverage, :expiration, :expire_index, :fee_fraction_int, :fee_paid, :status)'
     bet_parse_cursor.execute(sql, bindings)
 
     # Match.
@@ -220,11 +267,6 @@ def match (db, tx):
         if tx0['deadline'] != tx1['deadline']:
             continue
 
-        # Make sure that that both bets still have funds remaining [to be wagered].
-        if tx0['wager_remaining'] <= 0 or tx1_wager_remaining <= 0: continue
-        if tx1['block_index'] >= 292000 or config.TESTNET:  # Protocol change
-            if tx0['counterwager_remaining'] <= 0 or tx1_counterwager_remaining <= 0: continue
-
         # If the odds agree, make the trade. The found order sets the odds,
         # and they trade as much as they can.
         tx0_odds = util.price(tx0['wager_quantity'], tx0['counterwager_quantity'], tx1['block_index'])
@@ -251,27 +293,44 @@ def match (db, tx):
             tx1_counterwager_remaining = tx1_counterwager_remaining - forward_quantity
 
             # tx0
+            tx0_status = 'open'
+            if tx0['wager_remaining'] <= 0 or tx1_wager_remaining <= 0:
+                # Fill order, and recredit give_remaining.
+                tx0_status = 'filled'
+                util.credit(db, tx1['block_index'], tx0['source'], 'XCP', tx0_wager_remaining, event=tx1['tx_hash'], action='filled')
             bindings = {
                 'wager_remaining': tx0_wager_remaining,
                 'counterwager_remaining': tx0_counterwager_remaining,
-                'tx_index': tx0['tx_index']
+                'status': tx0_status,
+                'tx_hash': tx0['tx_hash']
             }
-            sql='update bets set wager_remaining = :wager_remaining, counterwager_remaining = :counterwager_remaining where tx_index = :tx_index'
+            sql='update bets set wager_remaining = :wager_remaining, counterwager_remaining = :counterwager_remaining, status = :status where tx_hash = :tx_hash'
             cursor.execute(sql, bindings)
             util.message(db, tx1['block_index'], 'update', 'bets', bindings)
 
+            tx1_status = 'open'
+            if tx1['block_index'] >= 292000 or config.TESTNET:  # Protocol change
+                if tx0['counterwager_remaining'] <= 0 or tx1_counterwager_remaining <= 0:
+                    # Fill order, and recredit give_remaining.
+                    tx1_status = 'filled'
+                    util.credit(db, tx1['block_index'], tx1['source'], 'XCP', tx1_wager_remaining, event=tx1['tx_hash'], action='filled')
             # tx1
             bindings = {
                 'wager_remaining': tx1_wager_remaining,
                 'counterwager_remaining': tx1_counterwager_remaining,
-                'tx_index': tx1['tx_index']
+                'status': tx1_status,
+                'tx_hash': tx1['tx_hash']
             }
-            sql='update bets set wager_remaining = :wager_remaining, counterwager_remaining = :counterwager_remaining where tx_index = :tx_index'
+            sql='update bets set wager_remaining = :wager_remaining, counterwager_remaining = :counterwager_remaining, status = :status where tx_hash = :tx_hash'
             cursor.execute(sql, bindings)
             util.message(db, tx1['block_index'], 'update', 'bets', bindings)
 
             # Get last value of feed.
             initial_value = util.get_broadcasts(db, status='valid', source=tx1['feed_address'])[-1]['value']
+
+            # Record fees.
+            forward_fee = round(forward_quantity * fee_fraction_int / 1e8)
+            backward_fee = round(backward_quantity * fee_fraction_int / 1e8)
 
             # Record bet fulfillment.
             bindings = {
@@ -290,7 +349,9 @@ def match (db, tx):
                 'target_value': tx1['target_value'],
                 'leverage': tx1['leverage'],
                 'forward_quantity': forward_quantity,
+                'forward_fee': forward_fee,
                 'backward_quantity': backward_quantity,
+                'backward_fee': backward_fee,
                 'tx0_block_index': tx0['block_index'],
                 'tx1_block_index': tx1['block_index'],
                 'tx0_expiration': tx0['expiration'],
@@ -299,7 +360,7 @@ def match (db, tx):
                 'fee_fraction_int': fee_fraction_int,
                 'status': 'pending',
             }
-            sql='insert into bet_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :tx0_bet_type, :tx1_bet_type, :feed_address, :initial_value, :deadline, :target_value, :leverage, :forward_quantity, :backward_quantity, :tx0_block_index, :tx1_block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :fee_fraction_int, :status)'
+            sql='insert into bet_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :tx0_bet_type, :tx1_bet_type, :feed_address, :initial_value, :deadline, :target_value, :leverage, :forward_quantity, :forward_fee, :backward_quantity, :backward_fee, :tx0_block_index, :tx1_block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :fee_fraction_int, :status)'
             cursor.execute(sql, bindings)
 
     cursor.close()
@@ -311,17 +372,7 @@ def expire (db, block_index, block_time):
     cursor.execute('''SELECT * FROM bets \
                       WHERE (status = ? AND expire_index < ?)''', ('open', block_index))
     for bet in cursor.fetchall():
-
-        # Update status of bet.
-        bindings = {
-            'status': 'expired',
-            'tx_index': bet['tx_index']
-        }
-        sql='update bets set status = :status where tx_index = :tx_index'
-        cursor.execute(sql, bindings)
-        util.message(db, block_index, 'update', 'bets', bindings)
-
-        util.credit(db, block_index, bet['source'], 'XCP', round(bet['wager_remaining'] * (1 + bet['fee_fraction_int'] / 1e8)))
+        cancel_bet(db, bet, 'expired', block_index)
 
         # Record bet expiration.
         bindings = {
@@ -337,19 +388,7 @@ def expire (db, block_index, block_time):
     cursor.execute('''SELECT * FROM bet_matches \
                       WHERE (status = ? AND deadline < ?)''', ('pending', block_time - config.TWO_WEEKS))
     for bet_match in cursor.fetchall():
-        util.credit(db, block_index, bet_match['tx0_address'], 'XCP',
-                    round(bet_match['forward_quantity'] * (1 + bet_match['fee_fraction_int'] / 1e8)))
-        util.credit(db, block_index, bet_match['tx1_address'], 'XCP',
-                    round(bet_match['backward_quantity'] * (1 + bet_match['fee_fraction_int'] / 1e8)))
-
-        # Update status of bet match.
-        bindings = {
-            'status': 'expired',
-            'bet_match_id': bet_match['id']
-        }
-        sql='update bet_matches set status = :status where id = :bet_match_id'
-        cursor.execute(sql, bindings)
-        util.message(db, block_index, 'update', 'bet_matches', bindings)
+        cancel_bet_match(db, bet_match, 'expired', block_index)
 
         # Record bet match expiration.
         bindings = {

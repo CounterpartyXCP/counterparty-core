@@ -8,6 +8,7 @@ import binascii
 import struct
 
 from . import (util, config, exceptions, bitcoin, util)
+from . import (order, bet)
 
 FORMAT = '>32s'
 LENGTH = 32
@@ -54,34 +55,10 @@ def parse (db, tx, message):
 
         # Cancel if order.
         if orders:
-            order = orders[0]
-
-            # Update status of order.
-            bindings = {
-                'status': 'cancelled',
-                'tx_hash': order['tx_hash']
-            }
-            sql='update orders set status = :status where tx_hash = :tx_hash'
-            cursor.execute(sql, bindings)
-            util.message(db, tx['block_index'], 'update', 'orders', bindings)
-
-            if order['give_asset'] != 'BTC':
-                util.credit(db, tx['block_index'], tx['source'], order['give_asset'], order['give_remaining'])
+            order.cancel_order(db, orders[0], 'cancelled', tx['block_index'])
         # Cancel if bet.
         elif bets:
-            bet = bets[0]
-
-            # Update status of bet.
-            bindings = {
-                'status': 'cancelled',
-                'tx_hash': bet['tx_hash']
-            }
-            sql='update bets set status = :status where tx_hash = :tx_hash'
-            cursor.execute(sql, bindings)
-            util.message(db, tx['block_index'], 'update', 'bets', bindings)
-
-            util.credit(db, tx['block_index'], tx['source'], 'XCP', bet['wager_remaining'])
-            util.credit(db, tx['block_index'], tx['source'], 'XCP', round(bet['wager_quantity'] * bet['fee_fraction_int'] / 1e8))
+            bet.cancel_bet(db, bets[0], 'cancelled', tx['block_index'])
         # If neither order or bet, mark as invalid.
         else:
             status = 'invalid: no open offer with that hash from that address'
@@ -97,7 +74,6 @@ def parse (db, tx, message):
     }
     sql='insert into cancels values(:tx_index, :tx_hash, :block_index, :source, :offer_hash, :status)'
     cursor.execute(sql, bindings)
-
 
     cursor.close()
 

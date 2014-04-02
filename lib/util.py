@@ -47,7 +47,7 @@ def api (method, params):
         raise exceptions.RPCError('{}'.format(response_json['error']))
 
 def price (numerator, denominator, block_index):
-    if config.TESTNET:  # TODO: Potential protocol change.
+    if block_index >= 294500 or config.TESTNET: # Protocol change.
         return fractions.Fraction(numerator, denominator)
     else:
         numerator = D(numerator)
@@ -138,8 +138,7 @@ def log (db, command, category, bindings):
             text = last_broadcast['text']
 
             # Suffix
-            fee = round(bindings['wager_quantity'] * bindings['fee_fraction_int'] / 1e8)    # round?!
-            end = 'in {} blocks, for a fee of {} ({}) [{}]'.format(bindings['expiration'], output(fee, 'XCP'), bindings['tx_hash'], bindings['status'])
+            end = 'in {} blocks, for a fee of {} ({}) [{}]'.format(bindings['expiration'], output(bindings['fee_paid'], 'XCP'), bindings['tx_hash'], bindings['status'])
 
             if 'CFD' not in BET_TYPE_NAME[bindings['bet_type']]:
                 log_message = 'Bet: {} against {}, on {} that ‘{}’ will {} {} at {}, {}'.format(output(bindings['wager_quantity'], 'XCP'), output(bindings['counterwager_quantity'], 'XCP'), bindings['feed_address'], text, BET_TYPE_NAME[bindings['bet_type']], str(output(bindings['target_value'], 'value').split(' ')[0]), isodt(bindings['deadline']), end)
@@ -667,18 +666,32 @@ def get_holders(db, asset):
         holders.append({'address': balance['address'], 'address_quantity': balance['quantity'], 'escrow': None})
     # Funds escrowed in orders. (Protocol change.)
     cursor.execute('''SELECT * FROM orders \
-                      WHERE give_asset = ?''', (asset,))
+                      WHERE give_asset = ? AND status = ?''', (asset, 'open'))
     for order in list(cursor):
         holders.append({'address': order['source'], 'address_quantity': order['give_remaining'], 'escrow': order['tx_hash']})
     # Funds escrowed in pending order matches. (Protocol change.)
     cursor.execute('''SELECT * FROM order_matches \
-                      WHERE (status = ? AND forward_asset = ?)''', ('pending', asset))
+                      WHERE (forward_asset = ? AND status = ?)''', (asset, 'pending'))
     for order_match in list(cursor):
         holders.append({'address': order_match['tx0_address'], 'address_quantity': order_match['forward_quantity'], 'escrow': order_match['id']})
     cursor.execute('''SELECT * FROM order_matches \
-                      WHERE (status = ? AND backward_asset = ?)''', ('pending', asset))
+                      WHERE (backward_asset = ? AND status = ?)''', (asset, 'pending'))
     for order_match in list(cursor):
         holders.append({'address': order_match['tx1_address'], 'address_quantity': order_match['backward_quantity'], 'escrow': order_match['id']})
+
+    # Bets (and bet matches) only escrow XCP.
+    if asset == 'XCP':
+        cursor.execute('''SELECT * FROM bets \
+                          WHERE status = ?''', ('open',))
+        for bet in list(cursor):
+            holders.append({'address': bet['source'], 'address_quantity': bet['wager_remaining'], 'escrow': bet['tx_hash']})
+            holders.append({'address': bet['source'], 'address_quantity': bet['fee_paid'], 'escrow': bet['tx_hash']})
+        cursor.execute('''SELECT * FROM bet_matches \
+                          WHERE status = ?''', ('pending',))
+        for bet_match in list(cursor):
+            holders.append({'address': bet_match['tx0_address'], 'address_quantity': bet_match['forward_quantity'], 'escrow': bet_match['id']})
+            holders.append({'address': bet_match['tx1_address'], 'address_quantity': bet_match['backward_quantity'], 'escrow': bet_match['id']})
+
     cursor.close()
     return holders
 
@@ -697,6 +710,22 @@ def xcp_supply (db):
 
     cursor.close()
     return burn_total - fee_total
+
+def get_supplies (db):
+    cursor = db.cursor()
+    supplies = {'XCP': xcp_supply(db)}
+    cursor.execute('''SELECT * from issuances \
+                      WHERE status = ?''', ('valid',))
+    for issuance in list(cursor):
+        asset = issuance['asset']
+        quantity = issuance['quantity']
+        if asset in supplies.keys():
+            supplies[asset] += quantity
+        else:
+            supplies[asset] = quantity
+
+    cursor.close()
+    return supplies 
 
 def get_debits (db, address=None, asset=None, filters=None, order_by=None, order_dir='asc', start_block=None, end_block=None, filterop='and'):
     """This does not include BTC."""
@@ -775,7 +804,7 @@ def get_orders (db, status=None, source=None, show_expired=True, filters=None, o
     if not show_expired: results = [e for e in results if filter_expired(e, cur_block_index)]
     return do_order_by(results, order_by, order_dir)
 
-def get_order_matches (db, status=None, is_mine=False, address=None, tx0_hash=None, tx1_hash=None, filters=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
+def get_order_matches (db, status=None, post_filter_status=None, is_mine=False, address=None, tx0_hash=None, tx1_hash=None, filters=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     from . import bitcoin   # HACK
     def filter_is_mine(e):
         if (    (not bitcoin.is_mine(e['tx0_address']) or
@@ -797,6 +826,7 @@ def get_order_matches (db, status=None, is_mine=False, address=None, tx0_hash=No
     cursor.close()
     if is_mine: results = [e for e in results if filter_is_mine(e)]
     if address: results = [e for e in results if e['tx0_address'] == address or e['tx1_address'] == address]
+    if post_filter_status: results = [e for e in results if e['status'] == post_filter_status]
     return do_order_by(results, order_by, order_dir)
 
 def get_btcpays (db, status=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):

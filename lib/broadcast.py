@@ -134,8 +134,7 @@ def parse (db, tx, message):
         # Calculate total funds held in escrow and total fee to be paid if
         # the bet match is settled.
         total_escrow = bet_match['forward_quantity'] + bet_match['backward_quantity']
-        fee_fraction = Fraction(bet_match['fee_fraction_int'], int(1e8))
-        fee = round(total_escrow * fee_fraction)
+        fee = bet_match['forward_fee'] + bet_match['backward_fee']
 
         # Get known bet match type IDs.
         cfd_type_id = util.BET_TYPE_ID['BullCFD'] + util.BET_TYPE_ID['BearCFD']
