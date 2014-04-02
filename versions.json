@@ -1,6 +1,6 @@
 {
 	"minimum_client_version_major": 6,
-	"minimum_client_version_minor": 10,
+	"minimum_client_version_minor": 11,
 	"protocol_changes": [
 		{
 			"block_index": 285306,
@@ -56,6 +56,18 @@
 			"minimum_database_version_major": 9,
 			"minimum_database_version_minor": 11,
 			"description": "filtered negative order fees"
-
+		},
+		{
+			"block_index": 294500,
+			"minimum_database_version_major": 9,
+			"minimum_database_version_minor": 12,
+			"description": "dividends on escrowed funds"
+		},
+		{
+			"block_index": 294500,
+			"minimum_database_version_major": 9,
+			"minimum_database_version_minor": 12,
+			"description": "fractions, not decimals, for rounding"
+		}
 	]
 }
