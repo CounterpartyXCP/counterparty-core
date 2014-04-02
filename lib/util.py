@@ -805,7 +805,7 @@ def get_orders (db, status=None, source=None, show_expired=True, filters=None, o
     if not show_expired: results = [e for e in results if filter_expired(e, cur_block_index)]
     return do_order_by(results, order_by, order_dir)
 
-def get_order_matches (db, status=None, is_mine=False, address=None, tx0_hash=None, tx1_hash=None, filters=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
+def get_order_matches (db, status=None, post_filter_status=None, is_mine=False, address=None, tx0_hash=None, tx1_hash=None, filters=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     from . import bitcoin   # HACK
     def filter_is_mine(e):
         if (    (not bitcoin.is_mine(e['tx0_address']) or
@@ -827,6 +827,7 @@ def get_order_matches (db, status=None, is_mine=False, address=None, tx0_hash=No
     cursor.close()
     if is_mine: results = [e for e in results if filter_is_mine(e)]
     if address: results = [e for e in results if e['tx0_address'] == address or e['tx1_address'] == address]
+    if post_filter_status: results = [e for e in results if e['status'] == post_filter_status]
     return do_order_by(results, order_by, order_dir)
 
 def get_btcpays (db, status=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
