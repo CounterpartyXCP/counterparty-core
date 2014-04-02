@@ -327,10 +327,12 @@ def set_options (data_dir=None,
     elif has_config and 'log-file' in configfile['Default']:
         config.LOG = configfile['Default']['log-file']
     else:
+        string = 'counterpartyd'
         if config.TESTNET:
-            config.LOG = os.path.join(config.DATA_DIR, 'counterpartyd.testnet.log')
-        else:
-            config.LOG = os.path.join(config.DATA_DIR, 'counterpartyd.log')
+            string += '.testnet'
+        if config.TESTCOIN:
+            string += '.testcoin'
+        config.LOG = os.path.join(config.DATA_DIR, string + '.log')
 
     # PID file
     if pid_file:
@@ -366,10 +368,12 @@ def set_options (data_dir=None,
     if database_file:
         config.DATABASE = database_file
     else:
+        string = 'counterpartyd.' + str(config.DB_VERSION_MAJOR)
         if config.TESTNET:
-            config.DATABASE = os.path.join(config.DATA_DIR, 'counterpartyd.' + str(config.DB_VERSION_MAJOR) + '.testnet.db')
-        else:
-            config.DATABASE = os.path.join(config.DATA_DIR, 'counterpartyd.' + str(config.DB_VERSION_MAJOR) + '.db')
+            string += '.testnet'
+        if config.TESTCOIN:
+            string += '.testcoin'
+        config.DATABASE = os.path.join(config.DATA_DIR, string + '.db')
 
     # (more) Testnet
     if config.TESTNET:

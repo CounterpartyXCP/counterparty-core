@@ -14,6 +14,8 @@ import inspect
 import requests
 from requests.auth import HTTPBasicAuth
 import logging
+import tempfile
+import shutil
 
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
@@ -25,7 +27,7 @@ import counterpartyd
 # config.BLOCK_FIRST = 0
 # config.BURN_START = 0
 # config.BURN_END = 9999999
-counterpartyd.set_options(database_file=CURR_DIR+'/counterpartyd.unittest.db', testnet=True, testcoin=False, unittest=True)
+counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/counterpartyd.unittest.db', testnet=True, testcoin=False, unittest=True)
 
 # Connect to database.
 try: os.remove(config.DATABASE)
@@ -44,8 +46,6 @@ expiration = 10
 fee_required = 900000
 fee_provided = 1000000
 fee_multiplier_default = .05
-
-
 
 def parse_hex (unsigned_tx_hex):
 
@@ -113,6 +113,21 @@ def parse_hex (unsigned_tx_hex):
     tx_index += 1
     cursor.close()
 
+def compare(filename):
+    old = CURR_DIR + '/' + filename
+    new = old + '.new'
+
+    with open(old, 'r') as f:
+        old_lines = f.readlines()
+    with open(new, 'r') as f:
+        new_lines = f.readlines()
+    diff = list(difflib.unified_diff(old_lines, new_lines, n=0))
+    if len(diff):
+        print(diff)
+    assert not len(diff)
+
+def summarise (ebit):
+    return (ebit['block_index'], ebit['address'], ebit['asset'], ebit['quantity'])
 
 
 def setup_function(function):
@@ -134,12 +149,6 @@ requests_log.setLevel(logging.WARNING)
 output_new = {}
 with open(CURR_DIR + '/output.json', 'r') as output_file:
     output = json.load(output_file)
-
-'''
-# Fake RPC responses
-try: os.remove(CURR_DIR + '/rpc.new')
-except: pass
-'''
 
 # TODO: replace inspect.stack()[0][3] with inspect.currentframe().f_code.co_name?
 
@@ -332,14 +341,16 @@ def test_callback ():
 
 def test_json_rpc():
 
+    # TODO: Broken
     api_server = api.APIServer()
     api_server.daemon = True
     api_server.start()
+    url = 'http://' + str(config.RPC_USER) + ':' + config.RPC_PASSWORD + '@localhost:' + str(config.RPC_PORT)
 
-    url = 'http://localhost:' + str(config.RPC_PORT) + '/rpc/'
+    # TEMP: Use external server.
+    url = 'http://' + str(config.RPC_USER) + ':' + config.RPC_PASSWORD + '@localhost:' + '14000'
+
     headers = {'content-type': 'application/json'}
-    auth = HTTPBasicAuth(config.RPC_USER, config.RPC_PASSWORD)
-
     payloads = []
     payloads.append({
         "method": "get_balances",
@@ -357,11 +368,11 @@ def test_json_rpc():
     for payload in payloads:
         for attempt in range(100):  # Try until server is ready.
             try:
-                response = requests.post(url, data=json.dumps(payload), headers=headers, auth=auth).json()
+                response = requests.post(url, data=json.dumps(payload), headers=headers).json()
                 # print('\npayload', payload)
                 # print('response', response, '\n')
                 if not response['result']:
-                    raise Exception('testnet server not running')
+                    raise Exception('null result')
                     assert False
                 assert response['jsonrpc'] == '2.0'
                 assert response['id'] == 0
@@ -382,7 +393,7 @@ def test_stop():
 
 def test_db():
     GOOD = CURR_DIR + '/db.dump'
-    NEW = CURR_DIR + '/db.new.dump'
+    NEW = CURR_DIR + '/db.dump.new'
 
     with open(GOOD, 'r') as f:
         good_data = f.readlines()
@@ -396,11 +407,10 @@ def test_db():
         new_data = '\n'.join(lines)
         f.writelines(new_data)
 
-    import subprocess
-    assert not subprocess.call(['diff', GOOD, NEW])
+    compare('db.dump')
 
 def test_output():
-    with open(CURR_DIR + '/output.new.json', 'w') as output_new_file:
+    with open(CURR_DIR + '/output.json.new', 'w') as output_new_file:
         json.dump(output_new, output_new_file, sort_keys=True, indent=4)
 
     for key in output_new.keys():
@@ -415,14 +425,7 @@ def test_output():
             raise e
 
 def test_log():
-    with open(CURR_DIR + '/log', 'r') as f:
-        old_log = f.readlines()
-    with open(CURR_DIR + '/log.new', 'r') as f:
-        new_log = f.readlines()
-
-    log_diff = list(difflib.unified_diff(old_log, new_log, n=0))
-    print(log_diff)
-    assert not len(log_diff)
+    compare('log')
 
 def test_base58_decode():
     """
@@ -436,34 +439,55 @@ def test_base58_decode():
     assert binascii.hexlify(pubkeyhash).decode('utf-8') == '010966776006953D5567439E5E39F86A0D273BEE'.lower()
     assert len(pubkeyhash) == 20
 
+def do_book(testnet):
+    # Filenames.
+    if testnet:
+        filename = 'book.testnet'
+    else:
+        filename = 'book.mainnet'
+    old = CURR_DIR + '/' + filename
+    new = old + '.new'
 
-"""
-follow()
+    # Get last block_index of old book.
+    with open(old, 'r') as f:
+        block_index = int(f.readlines()[-1][7:13])
 
-reorg()
+    # Use temporary DB.
+    counterpartyd.set_options(testnet=testnet, careful=True)
+    default_db = config.DATABASE
+    temp_db = tempfile.gettempdir() + '/' + os.path.basename(config.DATABASE)
+    shutil.copyfile(default_db, temp_db)
+    counterpartyd.set_options(database_file=temp_db, testnet=testnet, careful=True)
+    db = util.connect_to_db()
+    cursor = db.cursor()
 
-asset lock
-asset transfer
-expire order matches
-expire bet matches
-cancelling bets, orders
+    # TODO: USE API
+    import subprocess
+    if testnet:
+        subprocess.check_call(['counterpartyd.py', '--database-file=' + temp_db, '--testnet', '--force', '--careful', 'reparse'])
+    else:
+        subprocess.check_call(['counterpartyd.py', '--database-file=' + temp_db, '--careful', 'reparse'])
 
-bet_match
-order_match
-rpc
-bitcoind_check
-serialize
-get_inputs
-transaction
-"""
+    # Get new book.
+    with open(new, 'w') as f:
+        # Credits.
+        cursor.execute('select * from credits where block_index <= ? order by block_index, address, asset', (block_index,))
+        for credit in list(cursor):
+            f.write('credit ' + str(summarise(credit)) + '\n')
+        # Debits.
+        cursor.execute('select * from debits where block_index <= ? order by block_index, address, asset', (block_index,))
+        for debit in cursor.fetchall():
+            f.write('debit ' + str(summarise(debit)) + '\n')
 
+    # Compare books.
+    compare(filename)
 
-"""
-Too small:
-util.isodt()
-util.devise()
-bet.get_fee_multiplier()
-"""
+    # Clean up.
+    cursor.close()
+    os.remove(temp_db)
 
+def test_book_testnet():
+    do_book(True)
 
-
+def test_book_mainnet():
+    do_book(False)
