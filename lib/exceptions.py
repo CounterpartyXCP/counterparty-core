@@ -1,5 +1,8 @@
 #! /usr/bin/python3
 
+class SanityError (Exception):
+    pass
+
 class ConfigurationError (Exception):
     pass
 class DatabaseError (Exception):

@@ -139,6 +139,7 @@ def parse (db, tx, message):
         if problems: status = 'invalid: ' + '; '.join(problems)
 
     # Debit quantity wagered and fee.
+    fee = 0
     if status == 'open':
         fee = round(wager_quantity * fee_fraction)    # round?!
         util.debit(db, tx['block_index'], tx['source'], 'XCP', wager_quantity)
@@ -162,9 +163,10 @@ def parse (db, tx, message):
         'expiration': expiration,
         'expire_index': tx['block_index'] + expiration,
         'fee_fraction_int': fee_fraction * 1e8,
+        'fee_paid': fee,
         'status': status,
     }
-    sql='insert into bets values(:tx_index, :tx_hash, :block_index, :source, :feed_address, :bet_type, :deadline, :wager_quantity, :wager_remaining, :counterwager_quantity, :counterwager_remaining, :target_value, :leverage, :expiration, :expire_index, :fee_fraction_int, :status)'
+    sql='insert into bets values(:tx_index, :tx_hash, :block_index, :source, :feed_address, :bet_type, :deadline, :wager_quantity, :wager_remaining, :counterwager_quantity, :counterwager_remaining, :target_value, :leverage, :expiration, :expire_index, :fee_fraction_int, :fee_paid, :status)'
     bet_parse_cursor.execute(sql, bindings)
 
     # Match.

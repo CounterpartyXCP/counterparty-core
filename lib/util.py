@@ -667,18 +667,32 @@ def get_holders(db, asset):
         holders.append({'address': balance['address'], 'address_quantity': balance['quantity'], 'escrow': None})
     # Funds escrowed in orders. (Protocol change.)
     cursor.execute('''SELECT * FROM orders \
-                      WHERE give_asset = ?''', (asset,))
+                      WHERE give_asset = ? AND status = ?''', (asset, 'open'))
     for order in list(cursor):
         holders.append({'address': order['source'], 'address_quantity': order['give_remaining'], 'escrow': order['tx_hash']})
     # Funds escrowed in pending order matches. (Protocol change.)
     cursor.execute('''SELECT * FROM order_matches \
-                      WHERE (status = ? AND forward_asset = ?)''', ('pending', asset))
+                      WHERE (forward_asset = ? AND status = ?)''', (asset, 'pending'))
     for order_match in list(cursor):
         holders.append({'address': order_match['tx0_address'], 'address_quantity': order_match['forward_quantity'], 'escrow': order_match['id']})
     cursor.execute('''SELECT * FROM order_matches \
-                      WHERE (status = ? AND backward_asset = ?)''', ('pending', asset))
+                      WHERE (backward_asset = ? AND status = ?)''', (asset, 'pending'))
     for order_match in list(cursor):
         holders.append({'address': order_match['tx1_address'], 'address_quantity': order_match['backward_quantity'], 'escrow': order_match['id']})
+
+    # Bets (and bet matches) only escrow XCP.
+    if asset == 'XCP':
+        cursor.execute('''SELECT * FROM bets \
+                          WHERE status = ?''', ('open',))
+        for bet in list(cursor):
+            holders.append({'address': bet['source'], 'address_quantity': bet['wager_remaining'], 'escrow': bet['tx_hash']})
+            holders.append({'address': bet['source'], 'address_quantity': bet['fee_paid'], 'escrow': bet['tx_hash']})
+        cursor.execute('''SELECT * FROM bet_matches \
+                          WHERE status = ?''', ('pending',))
+        for bet_match in list(cursor):
+            holders.append({'address': bet_match['tx0_address'], 'address_quantity': bet_match['forward_quantity'], 'escrow': bet_match['id']})
+            holders.append({'address': bet_match['tx1_address'], 'address_quantity': bet_match['backward_quantity'], 'escrow': bet_match['id']})
+
     cursor.close()
     return holders
 
