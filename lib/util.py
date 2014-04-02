@@ -712,6 +712,22 @@ def xcp_supply (db):
     cursor.close()
     return burn_total - fee_total
 
+def get_supplies (db):
+    cursor = db.cursor()
+    supplies = {'XCP': xcp_supply(db)}
+    cursor.execute('''SELECT * from issuances \
+                      WHERE status = ?''', ('valid',))
+    for issuance in list(cursor):
+        asset = issuance['asset']
+        quantity = issuance['quantity']
+        if asset in supplies.keys():
+            supplies[asset] += quantity
+        else:
+            supplies[asset] = quantity
+
+    cursor.close()
+    return supplies 
+
 def get_debits (db, address=None, asset=None, filters=None, order_by=None, order_dir='asc', start_block=None, end_block=None, filterop='and'):
     """This does not include BTC."""
     if filters is None: filters = list()

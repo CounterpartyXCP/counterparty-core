@@ -12,7 +12,6 @@ import decimal
 D = decimal.Decimal
 import logging
 from Crypto.Cipher import ARC4
-from collections import OrderedDict
 
 from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
@@ -80,30 +79,19 @@ def parse_block (db, block_index, block_time):
         parse_tx(db, tx)
 
     # Check that assets are conserved as they should be.
-    if False and not block_index % 60:    # Arbitrary
-        parse_block_cursor.execute('''SELECT * from issuances \
-                                      WHERE status = ?''', ('valid',))
-        asset_list = [issuance['asset'] for issuance in list(parse_block_cursor)]
-        asset_list.append('XCP')
-        for asset in list(OrderedDict.fromkeys(asset_list)):  # De‐duplicate
+    if config.CAREFUL and not block_index % 60:    # Arbitrary
+        supplies = util.get_supplies(db)
+        for asset in supplies.keys():
             logging.debug('Status: Checking conservation of {}'.format(asset))
 
-            # Get issued.
-            if asset == 'XCP':
-                issued = util.xcp_supply(db)
-            else:
-                parse_block_cursor.execute('''SELECT * from issuances \
-                                              WHERE (status = ? and asset = ?)''', ('valid', asset))
-                issued = sum(issuance['quantity'] for issuance in list(parse_block_cursor))
-
-            # Get held.
+            issued = supplies[asset]
             held = sum([holder['address_quantity'] for holder in util.get_holders(db, asset)])
-
             if held != issued:
                 # import json
                 # json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
                 # json_print(util.get_holders(db, asset))
                 raise exceptions.SanityError('{} {} issued ≠ {} {} held'.format(util.devise(db, issued, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
+            logging.debug('Status: {} conserved'.format(asset))
 
     parse_block_cursor.close()
 
