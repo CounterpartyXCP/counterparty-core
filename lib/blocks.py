@@ -16,6 +16,21 @@ from Crypto.Cipher import ARC4
 from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 
+def check_conservation (db):
+    logging.info('Status: Checking for conservation of assets.')
+
+    supplies = util.get_supplies(db)
+    for asset in supplies.keys():
+
+        issued = supplies[asset]
+        held = sum([holder['address_quantity'] for holder in util.get_holders(db, asset)])
+        if held != issued:
+            # import json
+            # json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
+            # json_print(util.get_holders(db, asset))
+            raise exceptions.SanityError('{} {} issued ≠ {} {} held'.format(util.devise(db, issued, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
+        logging.debug('Status: {} has been conserved.'.format(asset))
+
 def parse_tx (db, tx):
     parse_tx_cursor = db.cursor()
     # Burns.
@@ -55,20 +70,9 @@ def parse_tx (db, tx):
                                 (False, tx['tx_hash']))
         logging.info('Unsupported transaction: hash {}; data {}'.format(tx['tx_hash'], tx['data']))
 
-    # Check that assets are conserved as they should be.
-    if config.CAREFUL and not tx['tx_index'] % 60:    # Arbitrary
-        supplies = util.get_supplies(db)
-        for asset in supplies.keys():
-            logging.debug('Status: Checking conservation of {}'.format(asset))
-
-            issued = supplies[asset]
-            held = sum([holder['address_quantity'] for holder in util.get_holders(db, asset)])
-            if held != issued:
-                # import json
-                # json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
-                # json_print(util.get_holders(db, asset))
-                raise exceptions.SanityError('{} {} issued ≠ {} {} held'.format(util.devise(db, issued, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
-            logging.debug('Status: {} is conserved.'.format(asset))
+    if config.CAREFUL and not tx['tx_index'] % 60:
+        # Check for conservation of assets.
+        check_conservation(db)
 
     parse_tx_cursor.close()
 
@@ -697,6 +701,9 @@ def reparse (db, block_index=None, quiet=False):
         if quiet:
             log.setLevel(logging.INFO)
 
+        # Check for conservation of assets.
+        check_conservation(db)
+
         # Update minor version number.
         minor_version = cursor.execute('PRAGMA user_version = {}'.format(int(config.DB_VERSION_MINOR))) # Syntax?!
         logging.info('Status: Database minor version number updated.')
@@ -829,6 +836,9 @@ def follow (db):
             # Increment block index.
             block_count = bitcoin.get_block_count()
             block_index +=1
+
+        # Check for conservation of assets.
+        check_conservation(db)
 
         while block_index > block_count: # DUPE
             # Handle blockchain reorganisations, as necessary, atomically.
