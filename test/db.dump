@@ -253,7 +253,7 @@ INSERT INTO credits VALUES(154925,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',315
 INSERT INTO credits VALUES(154925,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',25000000,NULL,NULL);
 INSERT INTO credits VALUES(154926,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',1400000000,NULL,NULL);
 INSERT INTO credits VALUES(154926,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',70000000,NULL,NULL);
-INSERT INTO credits VALUES(154928,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',50000000,NULL,NULL);
+INSERT INTO credits VALUES(154928,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',50000000,NULL,'ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2');
 INSERT INTO credits VALUES(154929,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',56999896707,NULL,'2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608');
 INSERT INTO credits VALUES(154930,'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',10000,NULL,'7cb7c4547cf2653590d7a9ace60cc623d25148adfbc88a89aeb0ef88da7839ba');
 INSERT INTO credits VALUES(154931,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',3000,NULL,NULL);
@@ -424,7 +424,7 @@ INSERT INTO messages VALUES(71,154926,'update','bet_matches','{"bet_match_id": "
 INSERT INTO messages VALUES(72,154927,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBB", "block_index": 154927, "event": "ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2", "quantity": 50000000}');
 INSERT INTO messages VALUES(73,154927,'insert','orders','{"block_index": 154927, "expiration": 10, "expire_index": 154937, "fee_provided": 10000, "fee_provided_remaining": 10000, "fee_required": 0, "fee_required_remaining": 0, "get_asset": "XCP", "get_quantity": 50000000, "get_remaining": 50000000, "give_asset": "BBBB", "give_quantity": 50000000, "give_remaining": 50000000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "tx_hash": "ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2", "tx_index": 19}');
 INSERT INTO messages VALUES(74,154928,'update','orders','{"status": "cancelled", "tx_hash": "ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2"}');
-INSERT INTO messages VALUES(75,154928,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBB", "block_index": 154928, "event": null, "quantity": 50000000}');
+INSERT INTO messages VALUES(75,154928,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBB", "block_index": 154928, "event": "ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2", "quantity": 50000000}');
 INSERT INTO messages VALUES(76,154928,'insert','cancels','{"block_index": 154928, "offer_hash": "ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2", "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "83891d7fe85c33e52c8b4e5814c92fb6a3b9467299200538a6babaa8b452d879", "tx_index": 20}');
 INSERT INTO messages VALUES(77,154929,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154929, "event": "2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608", "quantity": 56999896707}');
 INSERT INTO messages VALUES(78,154929,'insert','burns','{"block_index": 154929, "burned": 38000000, "earned": 56999896707, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608", "tx_index": 21}');

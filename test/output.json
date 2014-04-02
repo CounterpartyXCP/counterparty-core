@@ -480,7 +480,7 @@
             "asset": "BBBB", 
             "block_index": 154928, 
             "calling_function": null, 
-            "event": null, 
+            "event": "ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2", 
             "quantity": 50000000
         }, 
         {

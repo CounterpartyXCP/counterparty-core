@@ -22,6 +22,49 @@ FORMAT = '>HIQQdII'
 LENGTH = 2 + 4 + 8 + 8 + 8 + 4 + 4
 ID = 40
 
+def cancel_bet (db, bet, status, block_index):
+    cursor = db.cursor()
+
+    # Update status of bet.
+    bindings = {
+        'status': status,
+        'tx_hash': bet['tx_hash']
+    }
+    sql='update bets set status = :status where tx_hash = :tx_hash'
+    cursor.execute(sql, bindings)
+    util.message(db, block_index, 'update', 'bets', bindings)
+
+    util.credit(db, block_index, bet['source'], 'XCP', bet['wager_remaining'], action='recredit wager remaining', event=bet['tx_hash'])
+    util.credit(db, block_index, bet['source'], 'XCP', bet['fee_paid'], action='recredit fee', event=bet['tx_hash'])
+
+    cursor = db.cursor()
+
+def cancel_bet_match (db, bet_match, status, block_index):
+    cursor = db.cursor()
+
+    # Recredit tx0 address.
+    util.credit(db, block_index, bet_match['tx0_address'], 'XCP',
+                bet_match['forward_quantity'], action='recredit forward quantity', event=bet_match['id'])
+    util.credit(db, block_index, bet_match['tx0_address'], 'XCP',
+                bet_match['forward_fee'], action='recredit forward fee', event=bet_match['id'])
+
+    # Recredit tx1 address.
+    util.credit(db, block_index, bet_match['tx1_address'], 'XCP',
+                bet_match['backward_quantity'], action='recredit backward quantity', event=bet_match['id'])
+    util.credit(db, block_index, bet_match['tx1_address'], 'XCP',
+                bet_match['backward_fee'], action='recredit backward fee', event=bet_match['id'])
+
+    # Update status of bet match.
+    bindings = {
+        'status': status,
+        'bet_match_id': bet_match['id']
+    }
+    sql='update bet_matches set status = :status where id = :bet_match_id'
+    cursor.execute(sql, bindings)
+    util.message(db, block_index, 'update', 'bet_matches', bindings)
+
+    cursor.close()
+
 
 def get_fee_fraction (db, feed_address):
     '''Get fee fraction from the last broadcast from the feed_address address.
@@ -141,7 +184,7 @@ def parse (db, tx, message):
     # Debit quantity wagered and fee.
     fee = 0
     if status == 'open':
-        fee = round(wager_quantity * fee_fraction)    # round?!
+        fee = round(wager_quantity * fee_fraction)
         util.debit(db, tx['block_index'], tx['source'], 'XCP', wager_quantity)
         util.debit(db, tx['block_index'], tx['source'], 'XCP', fee)
 
@@ -285,6 +328,10 @@ def match (db, tx):
             # Get last value of feed.
             initial_value = util.get_broadcasts(db, status='valid', source=tx1['feed_address'])[-1]['value']
 
+            # Record fees.
+            forward_fee = round(forward_quantity * fee_fraction_int / 1e8)
+            backward_fee = round(backward_quantity * fee_fraction_int / 1e8)
+
             # Record bet fulfillment.
             bindings = {
                 'id': tx0['tx_hash'] + tx['tx_hash'],
@@ -302,7 +349,9 @@ def match (db, tx):
                 'target_value': tx1['target_value'],
                 'leverage': tx1['leverage'],
                 'forward_quantity': forward_quantity,
+                'forward_fee': forward_fee,
                 'backward_quantity': backward_quantity,
+                'backward_fee': backward_fee,
                 'tx0_block_index': tx0['block_index'],
                 'tx1_block_index': tx1['block_index'],
                 'tx0_expiration': tx0['expiration'],
@@ -311,7 +360,7 @@ def match (db, tx):
                 'fee_fraction_int': fee_fraction_int,
                 'status': 'pending',
             }
-            sql='insert into bet_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :tx0_bet_type, :tx1_bet_type, :feed_address, :initial_value, :deadline, :target_value, :leverage, :forward_quantity, :backward_quantity, :tx0_block_index, :tx1_block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :fee_fraction_int, :status)'
+            sql='insert into bet_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :tx0_bet_type, :tx1_bet_type, :feed_address, :initial_value, :deadline, :target_value, :leverage, :forward_quantity, :forward_fee, :backward_quantity, :backward_fee, :tx0_block_index, :tx1_block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :fee_fraction_int, :status)'
             cursor.execute(sql, bindings)
 
     cursor.close()
@@ -323,17 +372,7 @@ def expire (db, block_index, block_time):
     cursor.execute('''SELECT * FROM bets \
                       WHERE (status = ? AND expire_index < ?)''', ('open', block_index))
     for bet in cursor.fetchall():
-
-        # Update status of bet.
-        bindings = {
-            'status': 'expired',
-            'tx_hash': bet['tx_hash']
-        }
-        sql='update bets set status = :status where tx_hash = :tx_hash'
-        cursor.execute(sql, bindings)
-        util.message(db, block_index, 'update', 'bets', bindings)
-
-        util.credit(db, block_index, bet['source'], 'XCP', round(bet['wager_remaining'] * (1 + bet['fee_fraction_int'] / 1e8)))
+        cancel_bet(db, bet, 'expired', block_index)
 
         # Record bet expiration.
         bindings = {
@@ -349,19 +388,7 @@ def expire (db, block_index, block_time):
     cursor.execute('''SELECT * FROM bet_matches \
                       WHERE (status = ? AND deadline < ?)''', ('pending', block_time - config.TWO_WEEKS))
     for bet_match in cursor.fetchall():
-        util.credit(db, block_index, bet_match['tx0_address'], 'XCP',
-                    round(bet_match['forward_quantity'] * (1 + bet_match['fee_fraction_int'] / 1e8)))
-        util.credit(db, block_index, bet_match['tx1_address'], 'XCP',
-                    round(bet_match['backward_quantity'] * (1 + bet_match['fee_fraction_int'] / 1e8)))
-
-        # Update status of bet match.
-        bindings = {
-            'status': 'expired',
-            'bet_match_id': bet_match['id']
-        }
-        sql='update bet_matches set status = :status where id = :bet_match_id'
-        cursor.execute(sql, bindings)
-        util.message(db, block_index, 'update', 'bet_matches', bindings)
+        cancel_bet_match(db, bet_match, 'expired', block_index)
 
         # Record bet match expiration.
         bindings = {

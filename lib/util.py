@@ -138,8 +138,7 @@ def log (db, command, category, bindings):
             text = last_broadcast['text']
 
             # Suffix
-            fee = round(bindings['wager_quantity'] * bindings['fee_fraction_int'] / 1e8)    # round?!
-            end = 'in {} blocks, for a fee of {} ({}) [{}]'.format(bindings['expiration'], output(fee, 'XCP'), bindings['tx_hash'], bindings['status'])
+            end = 'in {} blocks, for a fee of {} ({}) [{}]'.format(bindings['expiration'], output(bindings['fee_paid'], 'XCP'), bindings['tx_hash'], bindings['status'])
 
             if 'CFD' not in BET_TYPE_NAME[bindings['bet_type']]:
                 log_message = 'Bet: {} against {}, on {} that ‘{}’ will {} {} at {}, {}'.format(output(bindings['wager_quantity'], 'XCP'), output(bindings['counterwager_quantity'], 'XCP'), bindings['feed_address'], text, BET_TYPE_NAME[bindings['bet_type']], str(output(bindings['target_value'], 'value').split(' ')[0]), isodt(bindings['deadline']), end)
