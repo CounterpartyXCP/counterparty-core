@@ -55,6 +55,20 @@ def parse_tx (db, tx):
                                 (False, tx['tx_hash']))
         logging.info('Unsupported transaction: hash {}; data {}'.format(tx['tx_hash'], tx['data']))
 
+    # Check that assets are conserved as they should be.
+    if config.CAREFUL and not tx['tx_index'] % 60:    # Arbitrary
+        supplies = util.get_supplies(db)
+        for asset in supplies.keys():
+            logging.debug('Status: Checking conservation of {}'.format(asset))
+
+            issued = supplies[asset]
+            held = sum([holder['address_quantity'] for holder in util.get_holders(db, asset)])
+            if held != issued:
+                # import json
+                # json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
+                # json_print(util.get_holders(db, asset))
+                raise exceptions.SanityError('{} {} issued ≠ {} {} held'.format(util.devise(db, issued, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
+            logging.debug('Status: {} is conserved.'.format(asset))
 
     parse_tx_cursor.close()
 
@@ -77,21 +91,6 @@ def parse_block (db, block_index, block_time):
     transactions = parse_block_cursor.fetchall()
     for tx in transactions:
         parse_tx(db, tx)
-
-    # Check that assets are conserved as they should be.
-    if config.CAREFUL and not block_index % 60:    # Arbitrary
-        supplies = util.get_supplies(db)
-        for asset in supplies.keys():
-            logging.debug('Status: Checking conservation of {}'.format(asset))
-
-            issued = supplies[asset]
-            held = sum([holder['address_quantity'] for holder in util.get_holders(db, asset)])
-            if held != issued:
-                # import json
-                # json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
-                # json_print(util.get_holders(db, asset))
-                raise exceptions.SanityError('{} {} issued ≠ {} {} held'.format(util.devise(db, issued, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
-            logging.debug('Status: {} conserved'.format(asset))
 
     parse_block_cursor.close()
 
