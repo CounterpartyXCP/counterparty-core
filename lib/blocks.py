@@ -17,7 +17,7 @@ from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 
 def check_conservation (db):
-    logging.info('Status: Checking for conservation of assets.')
+    logging.debug('Status: Checking for conservation of assets.')
 
     supplies = util.get_supplies(db)
     for asset in supplies.keys():

@@ -538,7 +538,7 @@ def get_unspent_txouts(address, normalize=False):
                 'vout': d['tx_output_n'],
                 'ts': None,
                 'scriptPubKey': d['script'],
-                'quantity': normalize_quantity(d['value']) if normalize else d['value'],
+                'amount': normalize_quantity(d['value']) if normalize else d['value'],  # This is what Bitcoin uses for a field name.
                 'confirmations': d['confirmations'],
             })
         return results

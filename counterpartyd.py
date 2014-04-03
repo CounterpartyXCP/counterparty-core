@@ -122,7 +122,10 @@ def market (give_asset, get_asset):
 def cli(method, params, unsigned):
 
     # Unlock wallet, as necessary.
-    bitcoin.wallet_unlock()
+    if unsigned:
+        params['pubkey'] = input('Public key (hexadecimal): ')
+    else:
+        bitcoin.wallet_unlock()
 
     # Get unsigned transaction serialisation.
     unsigned_tx_hex = util.api(method, params)
@@ -613,8 +616,8 @@ if __name__ == '__main__':
     # MESSAGE CREATION
     if args.action == 'send':
         quantity = util.devise(db, args.quantity, args.asset, 'input')
-        cli('create_send', [args.source, args.destination, args.asset,
-                           quantity],
+        cli('create_send', {'source': args.source, 'destination': args.destination, 'asset': args.asset,
+                           'quantity': quantity},
             args.unsigned)
 
     elif args.action == 'order':
@@ -641,13 +644,13 @@ if __name__ == '__main__':
         give_quantity = util.devise(db, give_quantity, args.give_asset, 'input')
         get_quantity = util.devise(db, get_quantity, args.get_asset, 'input')
 
-        cli('create_order', [args.source, args.give_asset, give_quantity,
-                            args.get_asset, get_quantity, args.expiration,
-                            fee_required, fee_provided],
+        cli('create_order', {'source': args.source, 'give_asset': args.give_asset, 'give_quantity': give_quantity,
+                            'get_asset': args.get_asset, 'get_quantity': get_quantity, 'expiration': args.expiration,
+                            'fee_required': fee_required, 'fee_provided': fee_provided},
            args.unsigned)
 
     elif args.action == 'btcpay':
-        cli('create_btcpay', [args.order_match_id], args.unsigned)
+        cli('create_btcpay', {'order_match_id': args.order_match_id}, args.unsigned)
 
     elif args.action == 'issuance':
         quantity = util.devise(db, args.quantity, None, 'input',
@@ -662,18 +665,18 @@ if __name__ == '__main__':
         else:
             call_date, call_price = 0, 0
 
-        cli('create_issuance', [args.source, args.asset, quantity,
-                                args.divisible, args.description,
-                                args.callable_, call_date, call_price,
-                                args.transfer_destination],
+        cli('create_issuance', {'source': args.source, 'asset': args.asset, 'quantity': quantity,
+                                'divisible': args.divisible, 'description': args.description,
+                                'callable_': args.callable_, 'call_date': call_date, 'call_price': call_price,
+                                'transfer_destination': args.transfer_destination},
            args.unsigned)
 
     elif args.action == 'broadcast':
         value = util.devise(db, args.value, 'value', 'input')
         fee_fraction = util.devise(db, args.fee_fraction, 'fraction', 'input')
 
-        cli('create_broadcast', [args.source, fee_fraction, args.text,
-                                 int(time.time()), value],
+        cli('create_broadcast', {'source': args.source, 'fee_fraction': fee_fraction, 'text': args.text,
+                                 'timestamp': int(time.time()), 'value': value},
            args.unsigned)
 
     elif args.action == 'bet':
@@ -683,26 +686,26 @@ if __name__ == '__main__':
         target_value = util.devise(db, args.target_value, 'value', 'input')
         leverage = util.devise(db, args.leverage, 'leverage', 'input')
 
-        cli('create_bet', [args.source, args.feed_address, args.bet_type,
-                           deadline, wager, counterwager, args.expiration,
-                           target_value, leverage],
+        cli('create_bet', {'source': args.source, 'feed_address': args.feed_address, 'bet_type': args.bet_type,
+                           'deadline': deadline, 'wager': wager, 'counterwager': counterwager, 'expiration': args.expiration,
+                           'target_value': target_value, 'leverage': leverage},
             args.unsigned)
 
     elif args.action == 'dividend':
         quantity_per_unit = util.devise(db, args.quantity_per_unit, 'XCP', 'input')
-        cli('create_dividend', [args.source, quantity_per_unit, args.asset, args.dividend_asset],
+        cli('create_dividend', {'source': args.source, 'quantity_per_unit': quantity_per_unit, 'asset': args.asset, 'dividend_asset': args.dividend_asset},
            args.unsigned)
 
     elif args.action == 'burn':
         quantity = util.devise(db, args.quantity, 'BTC', 'input')
-        cli('create_burn', [args.source, quantity], args.unsigned)
+        cli('create_burn', {'source': args.source, 'quantity': quantity}, args.unsigned)
 
     elif args.action == 'cancel':
-        cli('create_cancel', [args.offer_hash], args.unsigned)
+        cli('create_cancel', {'offer_hash': args.offer_hash}, args.unsigned)
 
     elif args.action == 'callback':
-        cli('create_callback', [args.source, util.devise(db, args.fraction,
-                                'fraction', 'input'), args.asset],
+        cli('create_callback', {'source': args.source, 'fraction': util.devise(db, args.fraction,
+                                'fraction', 'input'), 'asset': args.asset},
            args.unsigned)
 
 
