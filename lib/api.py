@@ -438,12 +438,7 @@ class APIServer(threading.Thread):
             @cherrypy.expose
             def index(self):
                 cherrypy.response.headers["Content-Type"] = "application/json"
-                cherrypy.response.headers["Access-Control-Allow-Origin"] = '*'
-                cherrypy.response.headers["Access-Control-Allow-Methods"] = 'POST, GET, OPTIONS'
-                cherrypy.response.headers["Access-Control-Allow-Headers"] = 'Origin, X-Requested-With, Content-Type, Accept'
-
-                if cherrypy.request.method == "OPTIONS": #web client will send us this before making a request
-                    return
+                #CORS logic is handled in the nginx config
 
                 try:
                     data = cherrypy.request.body.read().decode('utf-8')

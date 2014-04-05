@@ -20,7 +20,7 @@ from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_p
 from pycoin.scripts import bitcoin_utils
 from Crypto.Cipher import ARC4
 
-from . import (config, exceptions)
+from . import (config, exceptions, util)
 
 # Constants
 OP_RETURN = b'\x6a'
@@ -514,11 +514,14 @@ def get_unspent_txouts(address, normalize=False):
         if r.status_code != 200:
             raise Exception("Can't get unspent txouts: insight returned bad status code: %s" % r.status_code)
 
-        data = r.json()
+        txns = r.json()
         if not normalize: #listed normalized by default out of insight...we need to take to satoshi
-            for d in data:
+            for d in txns:
                 d['quantity'] = int(d['quantity'] * config.UNIT)
-        return data
+        #in order to get deterministic results (for multiAPIConsensus type requirements), sort by (ts, vout)
+        sorted_txns = sorted(txns, key=util.sortkeypicker(['ts', 'vout']))
+        #^ oldest to newest so the nodes don't have to be exactly caught up to eachother for multinode consensus to work
+        return sorted_txns
     else: #use blockchain
         r = requests.get("https://blockchain.info/unspent?active=" + address)
         if r.status_code == 500 and r.text.lower() == "no free outputs to spend":
@@ -526,12 +529,12 @@ def get_unspent_txouts(address, normalize=False):
         elif r.status_code != 200:
             raise Exception("Bad status code returned from blockchain.info: %s" % r.status_code)
         data = r.json()['unspent_outputs']
-        results = []
+        txns = []
         for d in data:
             #blockchain.info lists the txhash in some weird reversed string notation with character pairs fipped...fun
             d['tx_hash'] = d['tx_hash'][::-1] #reverse string
             d['tx_hash'] = ''.join([d['tx_hash'][i:i+2][::-1] for i in range(0, len(d['tx_hash']), 2)]) #flip the character pairs within the string
-            results.append({
+            txns.append({
                 'account': "",
                 'address': address,
                 'txid': d['tx_hash'],
@@ -541,6 +544,6 @@ def get_unspent_txouts(address, normalize=False):
                 'quantity': normalize_quantity(d['value']) if normalize else d['value'],
                 'confirmations': d['confirmations'],
             })
-        return results
+        return txns
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
