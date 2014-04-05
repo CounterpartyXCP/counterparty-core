@@ -722,14 +722,14 @@ if __name__ == '__main__':
         results = util.api('get_asset_info', ([args.asset],))[0]    # HACK
         asset_id = util.get_asset_id(args.asset)
         divisible = results['divisible']
-        total_issued = util.devise(db, results['total_issued'], args.asset, dest='output')
+        supply = util.devise(db, results['supply'], args.asset, dest='output')
         call_date = util.isodt(results['call_date']) if results['call_date'] else results['call_date']
         call_price = str(results['call_price']) + ' XCP' if results['call_price'] else results['call_price']
 
         print('Asset Name:', args.asset)
         print('Asset ID:', asset_id)
         print('Divisible:', divisible)
-        print('Total Issued:', total_issued)
+        print('Supply:', supply)
         print('Issuer:', results['issuer'])
         print('Callable:', results['callable'])
         print('Call Date:', call_date)
