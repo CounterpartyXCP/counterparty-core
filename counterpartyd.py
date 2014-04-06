@@ -584,7 +584,7 @@ if __name__ == '__main__':
     console.setFormatter(formatter)
     logger.addHandler(console)
     #File logging (rotated)
-    max_log_size = 2 * 1024 * 1024 #max log size of 2 MB before rotation (make configurable later)
+    max_log_size = 20 * 1024 * 1024 #max log size of 20 MB before rotation (make configurable later)
     if os.name == 'nt':
         fileh = util_windows.SanitizedRotatingFileHandler(config.LOG, maxBytes=max_log_size, backupCount=5)
     else:
