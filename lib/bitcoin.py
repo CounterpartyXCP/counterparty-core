@@ -228,7 +228,7 @@ def op_push (i):
     else:
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
-def serialise (encoding, inputs, destination_outputs, data_output=None, change_output=None, source=None, pubkey=None):
+def serialise (encoding, inputs, destination_outputs, data_output=None, change_output=None, source=None, public_key=None):
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
     # Number of inputs.
@@ -274,22 +274,6 @@ def serialise (encoding, inputs, destination_outputs, data_output=None, change_o
         data_array, value = data_output # DUPE
         s += value.to_bytes(8, byteorder='little')        # Value
 
-        # Get source public key (either provided as a string or derived from a private key in the wallet).
-        if encoding in ('multisig', 'pubkeyhash'):
-            if pubkey:
-                pubkeypair = bitcoin_utils.parse_as_public_pair(pubkey)
-                source_pubkey = public_pair_to_sec(pubkeypair, compressed=True)
-            else:
-                if config.PREFIX == config.UNITTEST_PREFIX:
-                    private_key_wif = 'cPdUqd5EbBWsjcG9xiL1hz8bEyGFiz4SW99maU9JgpL9TEcxUf3j'
-                else:
-                    private_key_wif = rpc('dumpprivkey', [source])
-                if private_key_wif[0] == 'c': testnet = True
-                else: testnet = False
-                secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif, is_test=testnet)
-                public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
-                source_pubkey = public_pair_to_sec(public_pair, compressed=compressed)
-
         if encoding == 'multisig':
             # Get data (fake) public key.
             pad_length = 33 - 1 - len(data_chunk)
@@ -297,8 +281,8 @@ def serialise (encoding, inputs, destination_outputs, data_output=None, change_o
             data_pubkey = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
             # Construct script.
             script = OP_1                                   # OP_1
-            script += op_push(len(source_pubkey))           # Push bytes of source public key
-            script += source_pubkey                         # Source public key
+            script += op_push(len(public_key))              # Push bytes of source public key
+            script += public_key                            # Source public key
             script += op_push(len(data_pubkey))             # Push bytes of data chunk (fake) public key
             script += data_pubkey                           # Data chunk (fake) public key
             script += OP_2                                  # OP_2
@@ -375,10 +359,37 @@ def get_inputs (source, total_btc_out, unittest=False):
     return None, None, change_quantity
 
 # Replace unittest flag with fake bitcoind JSON-RPC server.
-def transaction (tx_info, encoding, pubkey=None, unittest=False):
+def transaction (tx_info, encoding, unittest=False, public_key_hex=None):
+
     source, destination_outputs, fee, data = tx_info
     if encoding not in ('pubkeyhash', 'multisig', 'opreturn'):
         raise exceptions.TransactionError('Unknown encoding‐scheme.')
+
+    # If public key is necessary for construction of (unsigned) transaction,
+    # either use the public key provided, or derive it from a private key
+    # retrieved from wallet.
+    if encoding in ('multisig', 'pubkeyhash'):
+        # If no public key was provided, derive from private key.
+        if not public_key_hex:
+            # Get private key.
+            if unittest:
+                private_key_wif = 'cPdUqd5EbBWsjcG9xiL1hz8bEyGFiz4SW99maU9JgpL9TEcxUf3j'
+            else:
+                private_key_wif = rpc('dumpprivkey', [source])
+
+            # Check if testnet.
+            if private_key_wif[0] == 'c': testnet = True
+            else: testnet = False
+
+            # Derive public key.
+            secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif, is_test=testnet)
+            public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
+            public_key = public_pair_to_sec(public_pair, compressed=compressed)
+
+        # Always compress public key.
+        public_key_hex = binascii.hexlify(public_key).decode('utf-8')
+        pubkeypair = bitcoin_utils.parse_as_public_pair(public_key_hex)
+        public_key = public_pair_to_sec(pubkeypair, compressed=True)
 
     # Protocol change.
     if encoding == 'pubkeyhash' and get_block_count() < 293000 and not config.TESTNET:
@@ -400,7 +411,7 @@ def transaction (tx_info, encoding, pubkey=None, unittest=False):
                                           address)
 
     # Check that the source is in wallet.
-    if not unittest and encoding in ('multisig') and not pubkey:
+    if not unittest and encoding in ('multisig') and not public_key:
         if not rpc('validateaddress', [source])['ismine']:
             raise exceptions.InvalidAddressError('Not one of your Bitcoin addresses:', source)
 
@@ -455,16 +466,28 @@ def transaction (tx_info, encoding, pubkey=None, unittest=False):
     else: change_output = None
 
     # Serialise inputs and outputs.
-    transaction = serialise(encoding, inputs, destination_outputs, data_output, change_output, source=source, pubkey=pubkey)
+    transaction = serialise(encoding, inputs, destination_outputs, data_output, change_output, source=source, public_key=public_key)
     unsigned_tx_hex = binascii.hexlify(transaction).decode('utf-8')
     return unsigned_tx_hex
 
-def transmit (unsigned_tx_hex):
-    # Sign transaction.
-    result = rpc('signrawtransaction', [unsigned_tx_hex])
-    if result['complete']:
-        signed_tx_hex = result['hex']
-        return rpc('sendrawtransaction', [signed_tx_hex])
+def sign_tx (unsigned_tx_hex, private_key_wif=None):
+    """Sign unsigned transaction serialisation."""
+
+    if private_key_wif:
+        return None
+        # TODO: Sign transaction with provided private key.
+
+    else:   # Assume source is in wallet and wallet is unlocked.
+        result = rpc('signrawtransaction', [unsigned_tx_hex])
+        if result['complete']:
+            signed_tx_hex = result['hex']
+        else:
+            return None
+
+    return signed_tx_hex
+
+def broadcast (signed_tx_hex):
+    return send_raw_transaction(signed_tx_hex)
 
 def normalize_quantity(quantity, divisible=True):
     if divisible:

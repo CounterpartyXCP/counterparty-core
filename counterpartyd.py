@@ -121,25 +121,25 @@ def market (give_asset, get_asset):
 
 def cli(method, params, unsigned):
 
-    # Unlock wallet, as necessary.
-    if unsigned:
-        params['pubkey'] = input('Public key (hexadecimal): ')
-    else:
-        bitcoin.wallet_unlock()
-
     # Get unsigned transaction serialisation.
+    if bitcoin.is_mine(params['source']):
+        bitcoin.wallet_unlock()
+    else:
+        params['pubkey'] = input('Public key (hexadecimal): ')
     unsigned_tx_hex = util.api(method, params)
     print('Transaction (unsigned):', unsigned_tx_hex)
 
     # Ask to sign and broadcast.
-    if not unsigned:
-        if config.TESTNET: print('Attention: TESTNET!')
-        if config.TESTCOIN: print('Attention: TESTCOIN!\n')
-        if input('Sign and broadcast? (y/N) ') == 'y':
-            print(bitcoin.transmit(unsigned_tx_hex))
+    if not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
+        if bitcoin.is_mine(params['source']):
+            private_key_wif = None
         else:
-            print('Transaction aborted.', file=sys.stderr)
-            sys.exit(1)
+            private_key_wif = input('Private key (Wallet Import Format): ')
+
+        # Sign and broadcast.
+        signed_tx_hex = bitcoin.sign_tx(unsigned_tx_hex, private_key_wif=private_key_wif)
+        print('Transaction (signed):', signed_tx_hex)
+        print('Hash of transaction (broadcasted):', bitcoin.broadcast(signed_tx_hex))
 
 
 def set_options (data_dir=None,

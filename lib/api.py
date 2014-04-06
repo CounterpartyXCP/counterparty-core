@@ -351,38 +351,38 @@ class APIServer(threading.Thread):
                               bet_type_id, deadline, wager,
                               counterwager, target_value,
                               leverage, expiration)
-            return bitcoin.transaction(tx_info, encoding=encoding, pubkey=pubkey)
+            return bitcoin.transaction(tx_info, encoding=encoding, public_key_hex=pubkey)
 
         @dispatcher.add_method
         def create_broadcast(source, fee_fraction, text, timestamp, value=-1, encoding='multisig', pubkey=None):
             tx_info = broadcast.compose(db, source, timestamp,
                                     value, fee_fraction, text)
-            return bitcoin.transaction(tx_info, encoding=encoding, pubkey=pubkey)
+            return bitcoin.transaction(tx_info, encoding=encoding, public_key_hex=pubkey)
 
         @dispatcher.add_method
         def create_btcpay(order_match_id, encoding='multisig', pubkey=None):
             tx_info = btcpay.compose(db, order_match_id)
-            return bitcoin.transaction(tx_info, encoding=encoding, pubkey=pubkey)
+            return bitcoin.transaction(tx_info, encoding=encoding, public_key_hex=pubkey)
 
         @dispatcher.add_method
         def create_burn(source, quantity, encoding='multisig', pubkey=None):
             tx_info = burn.compose(db, source, quantity)
-            return bitcoin.transaction(tx_info, encoding=encoding, pubkey=pubkey)
+            return bitcoin.transaction(tx_info, encoding=encoding, public_key_hex=pubkey)
 
         @dispatcher.add_method
         def create_cancel(offer_hash, encoding='multisig', pubkey=None):
             tx_info = cancel.compose(db, offer_hash)
-            return bitcoin.transaction(tx_info, encoding=encoding, pubkey=pubkey)
+            return bitcoin.transaction(tx_info, encoding=encoding, public_key_hex=pubkey)
 
         @dispatcher.add_method
         def create_callback(source, fraction, asset, encoding='multisig', pubkey=None):
             tx_info = callback.compose(db, source, fraction, asset)
-            return bitcoin.transaction(tx_info, encoding=encoding, pubkey=pubkey)
+            return bitcoin.transaction(tx_info, encoding=encoding, public_key_hex=pubkey)
 
         @dispatcher.add_method
         def create_dividend(source, quantity_per_unit, asset, dividend_asset, encoding='multisig', pubkey=None):
             tx_info = dividend.compose(db, source, quantity_per_unit, asset, dividend_asset)
-            return bitcoin.transaction(tx_info, encoding=encoding, pubkey=pubkey)
+            return bitcoin.transaction(tx_info, encoding=encoding, public_key_hex=pubkey)
 
         @dispatcher.add_method
         def create_issuance(source, asset, quantity, divisible, description, callable_=None, call_date=None,
@@ -396,7 +396,7 @@ class APIServer(threading.Thread):
             tx_info = issuance.compose(db, source, transfer_destination,
                                    asset, quantity, divisible, callable_,
                                    call_date, call_price, description)
-            return bitcoin.transaction(tx_info, encoding=encoding, pubkey=pubkey)
+            return bitcoin.transaction(tx_info, encoding=encoding, public_key_hex=pubkey)
 
         @dispatcher.add_method
         def create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required=None,
@@ -417,21 +417,27 @@ class APIServer(threading.Thread):
                                 give_quantity, get_asset,
                                 get_quantity, expiration,
                                 fee_required, fee_provided)
-            return bitcoin.transaction(tx_info, encoding=encoding, pubkey=pubkey)
+            return bitcoin.transaction(tx_info, encoding=encoding, public_key_hex=pubkey)
 
         @dispatcher.add_method
         def create_send(source, destination, asset, quantity, encoding='multisig', pubkey=None):
             tx_info = send.compose(db, source, destination, asset, quantity)
-            return bitcoin.transaction(tx_info, encoding=encoding, pubkey=pubkey)
+            return bitcoin.transaction(tx_info, encoding=encoding, public_key_hex=pubkey)
+
+        @dispatcher.add_method
+        def sign_tx(unsigned_tx_hex, privkey=None):
+            return bitcoin.sign_tx(unsigned_tx_hex, private_key=privkey)
                 
+        @dispatcher.add_method
+        def broadcast(signed_tx_hex):
+            return bitcoin.broadcast(signed_tx_hex)
+
+        # NOTE: DEPRECIATED
         @dispatcher.add_method
         def transmit(tx_hex, is_signed=False):
             if not is_signed:
-                #sign with private key in local wallet and send
-                return bitcoin.transmit(tx_hex)
-            else:
-                #already signed, just broadcast it
-                return bitcoin.send_raw_transaction(tx_hex)
+                tx_hex = sign_tx(tx_hex)
+            return broadcast(tx_hex)
 
         class API(object):
             @cherrypy.expose
