@@ -161,30 +161,33 @@ def parse (db, tx, message):
          expiration) = 0, 0, 0, 0, 0, 0, 0
         status = 'invalid: could not unpack'
 
-    fee_fraction = 0
-    odds = 0
+    odds, fee_fraction, fee = 0, 0, 0
     if status == 'open':
+        try: odds = util.price(wager_quantity, counterwager_quantity, tx['block_index'])
+        except Exception as e: pass
+
         feed_address = tx['destination']
         fee_fraction = get_fee_fraction(db, feed_address)
+        fee = round(wager_quantity * fee_fraction)
 
         # Overbet
-        balances = util.get_balances(db, address=tx['source'], asset='XCP')
-        if not balances: wager_quantity = 0
-        elif balances[0]['quantity']/(1 + fee_fraction) < wager_quantity:
-            wager_quantity = min(round(balances[0]['quantity']/(1 + fee_fraction)), wager_quantity)
-            counterwager_quantity = int(util.price(wager_quantity, odds, tx['block_index']))
-
-        try: odds = util.price(wager_quantity, counterwager_quantity, tx['block_index'])
-        except: pass
+        bet_parse_cursor.execute('''SELECT * FROM balances \
+                                    WHERE (address = ? AND asset = ?)''', (tx['source'], 'XCP'))
+        balances = list(bet_parse_cursor)
+        if not balances:
+            wager_quantity = 0
+        else:
+            balance = balances[0]['quantity']
+            if balance < wager_quantity + fee:
+                wager_quantity = balance - fee
+                counterwager_quantity = int(util.price(wager_quantity, odds, tx['block_index']))
 
         problems = validate(db, tx['source'], feed_address, bet_type, deadline, wager_quantity,
                             counterwager_quantity, target_value, leverage, expiration)
         if problems: status = 'invalid: ' + '; '.join(problems)
 
-    # Debit quantity wagered and fee.
-    fee = 0
+    # Debit quantity wagered and fee. (Escrow.)
     if status == 'open':
-        fee = round(wager_quantity * fee_fraction)
         util.debit(db, tx['block_index'], tx['source'], 'XCP', wager_quantity)
         util.debit(db, tx['block_index'], tx['source'], 'XCP', fee)
 

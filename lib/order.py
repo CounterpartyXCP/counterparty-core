@@ -188,16 +188,20 @@ def parse (db, tx, message):
         # Overorder
         order_parse_cursor.execute('''SELECT * FROM balances \
                                       WHERE (address = ? AND asset = ?)''', (tx['source'], give_asset))
-        balances = order_parse_cursor.fetchall()
+        balances = list(order_parse_cursor)
         if give_asset != 'BTC':
-            if not balances:  give_quantity = 0
-            elif balances[0]['quantity'] < give_quantity:
-                give_quantity = min(balances[0]['quantity'], give_quantity)
-                get_quantity = int(price * give_quantity)
+            if not balances:
+                give_quantity = 0
+            else:
+                balance = balances[0]['quantity']
+                if balance < give_quantity:
+                    give_quantity = balance
+                    get_quantity = int(price * give_quantity)
 
         problems = validate(db, tx['source'], give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required)
         if problems: status = 'invalid: ' + '; '.join(problems)
 
+    # Debit give quantity. (Escrow.)
     if status == 'open':
         if give_asset != 'BTC':  # No need (or way) to debit BTC.
             util.debit(db, tx['block_index'], tx['source'], give_asset, give_quantity, event=tx['tx_hash'])
