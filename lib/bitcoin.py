@@ -334,17 +334,10 @@ def input_value_weight(amount):
     else:
         return 1/amount
 
-def get_inputs (source, total_btc_out, unittest=False):
+def get_inputs (source, total_btc_out, unittest=False, unconfirmed_change=False):
     """List unspent inputs for source."""
-    if not unittest:
-        if rpc('validateaddress', [source])['ismine']:
-            listunspent = rpc('listunspent', [])
-        else:
-            listunspent = get_unspent_txouts(source, normalize=True)
-    else:
-        CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
-        with open(CURR_DIR + '/../test/listunspent.test.json', 'r') as listunspent_test_file:   # HACK
-            listunspent = json.load(listunspent_test_file)
+    listunspent = get_unspent_txouts(source, normalize=True, unittest=unittest, unconfirmed_change=unconfirmed_change)
+
     unspent = [coin for coin in listunspent if coin['address'] == source]
     inputs, total_btc_in = [], 0
     change_quantity = 0
@@ -359,7 +352,7 @@ def get_inputs (source, total_btc_out, unittest=False):
     return None, None, change_quantity
 
 # Replace unittest flag with fake bitcoind JSON-RPC server.
-def transaction (tx_info, encoding, unittest=False, public_key_hex=None):
+def transaction (tx_info, encoding, unittest=False, public_key_hex=None, unconfirmed_change=False):
 
     source, destination_outputs, fee, data = tx_info
     if encoding not in ('pubkeyhash', 'multisig', 'opreturn'):
@@ -455,7 +448,7 @@ def transaction (tx_info, encoding, unittest=False, public_key_hex=None):
     total_btc_out += sum([value for address, value in destination_outputs])
 
     # Construct inputs.
-    inputs, total_btc_in, change_quantity = get_inputs(source, total_btc_out, unittest=unittest)
+    inputs, total_btc_in, change_quantity = get_inputs(source, total_btc_out, unittest=unittest, unconfirmed_change=unconfirmed_change)
     if not inputs:
         raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need {} BTC.)'.format(source, (total_btc_out + max(change_quantity, 0)) / config.UNIT))
 
@@ -527,46 +520,65 @@ def get_btc_supply(normalize=False):
             blocks_remaining = 0
     return total_supply if normalize else int(total_supply * config.UNIT)
 
-def get_unspent_txouts(address, normalize=False):
+def get_unspent_txouts(address, normalize=False, unittest=False, unconfirmed_change=False):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
         * 
     """
-    if config.INSIGHT_ENABLE:
-        r = requests.get(config.INSIGHT + '/api/addr/' + address + '/utxo')
-        if r.status_code != 200:
-            raise Exception("Can't get unspent txouts: insight returned bad status code: %s" % r.status_code)
 
-        txns = r.json()
-        if not normalize: #listed normalized by default out of insight...we need to take to satoshi
-            for d in txns:
-                d['quantity'] = int(d['quantity'] * config.UNIT)
-        #in order to get deterministic results (for multiAPIConsensus type requirements), sort by (ts, vout)
-        sorted_txns = sorted(txns, key=util.sortkeypicker(['ts', 'vout']))
-        #^ oldest to newest so the nodes don't have to be exactly caught up to eachother for multinode consensus to work
-        return sorted_txns
-    else: #use blockchain
-        r = requests.get("https://blockchain.info/unspent?active=" + address)
-        if r.status_code == 500 and r.text.lower() == "no free outputs to spend":
-            return []
-        elif r.status_code != 200:
-            raise Exception("Bad status code returned from blockchain.info: %s" % r.status_code)
-        data = r.json()['unspent_outputs']
-        txns = []
-        for d in data:
-            #blockchain.info lists the txhash in some weird reversed string notation with character pairs fipped...fun
-            d['tx_hash'] = d['tx_hash'][::-1] #reverse string
-            d['tx_hash'] = ''.join([d['tx_hash'][i:i+2][::-1] for i in range(0, len(d['tx_hash']), 2)]) #flip the character pairs within the string
-            txns.append({
-                'account': "",
-                'address': address,
-                'txid': d['tx_hash'],
-                'vout': d['tx_output_n'],
-                'ts': None,
-                'scriptPubKey': d['script'],
-                'amount': normalize_quantity(d['value']) if normalize else d['value'],  # This is what Bitcoin uses for a field name.
-                'confirmations': d['confirmations'],
-            })
-        return txns
+    # Unittest
+    if unittest:
+        CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
+        with open(CURR_DIR + '/../test/listunspent.test.json', 'r') as listunspent_test_file:   # HACK
+            return json.load(listunspent_test_file)
+
+    if rpc('validateaddress', [source])['ismine']:
+        if unconfirmed_change:
+            return rpc('listunspent', [1])
+        else:
+            return rpc('listunspent', [])
+    else:
+        if config.INSIGHT_ENABLE:
+            r = requests.get(config.INSIGHT + '/api/addr/' + address + '/utxo')
+            if r.status_code != 200:
+                raise Exception("Can't get unspent txouts: insight returned bad status code: %s" % r.status_code)
+
+            outputs = r.json()
+            if not normalize: #listed normalized by default out of insight...we need to take to satoshi
+                for d in outputs:
+                    d['quantity'] = int(d['quantity'] * config.UNIT)
+            if not unconfirmed_change:  # ignore unconfirmed utxos
+                sorted_outputs = [output for output in sorted_outputs if output['confirmations']]
+            #in order to get deterministic results (for multiAPIConsensus type requirements), sort by (ts, vout)
+            sorted_outputs = sorted(outputs, key=util.sortkeypicker(['ts', 'vout']))
+            #^ oldest to newest so the nodes don't have to be exactly caught up to eachother for multinode consensus to work
+            return sorted_outputs
+
+        else: #use blockchain
+            r = requests.get("https://blockchain.info/unspent?active=" + address)
+            if r.status_code == 500 and r.text.lower() == "no free outputs to spend":
+                return []
+            elif r.status_code != 200:
+                raise Exception("Bad status code returned from blockchain.info: %s" % r.status_code)
+            data = r.json()['unspent_outputs']
+            outputs = []
+            for d in data:
+                if not unconfirmed_change:  # ignore unconfirmed utxos
+                    if not d['confirmations']: continue
+                #blockchain.info lists the txhash in some weird reversed string notation with character pairs fipped...fun
+                d['tx_hash'] = d['tx_hash'][::-1] #reverse string
+                d['tx_hash'] = ''.join([d['tx_hash'][i:i+2][::-1] for i in range(0, len(d['tx_hash']), 2)]) #flip the character pairs within the string
+                outputs.append({
+                    'account': "",
+                    'address': address,
+                    'txid': d['tx_hash'],
+                    'vout': d['tx_output_n'],
+                    'ts': None,
+                    'scriptPubKey': d['script'],
+                    'amount': normalize_quantity(d['value']) if normalize else d['value'],  # This is what Bitcoin uses for a field name.
+                    'confirmations': d['confirmations'],
+                })
+            return outputs
+
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
