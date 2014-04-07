@@ -378,9 +378,8 @@ def transaction (tx_info, encoding, unittest=False, public_key_hex=None, unconfi
             secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif, is_test=testnet)
             public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
             public_key = public_pair_to_sec(public_pair, compressed=compressed)
-
-        # Always compress public key.
-        public_key_hex = binascii.hexlify(public_key).decode('utf-8')
+            public_key_hex = binascii.hexlify(public_key).decode('utf-8')
+            
         pubkeypair = bitcoin_utils.parse_as_public_pair(public_key_hex)
         public_key = public_pair_to_sec(pubkeypair, compressed=True)
 
