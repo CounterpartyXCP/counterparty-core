@@ -73,6 +73,7 @@ def validate (db, source, fraction, asset, block_time, block_index, parse):
     holders = util.get_holders(db, asset)
     outputs = []
     for holder in holders:
+
         # If composing (and not parsing), predict funds to be returned from
         # escrow (instead of cancelling open offers, etc.), by *not* skipping
         # listing escrowed funds here.
@@ -82,8 +83,10 @@ def validate (db, source, fraction, asset, block_time, block_index, parse):
         address = holder['address']
         address_quantity = holder['address_quantity']
         if address == source or address_quantity == 0: continue
+
         callback_quantity = int(address_quantity * fraction)   # Round down.
         fraction_actual = callback_quantity / address_quantity
+
         outputs.append({'address': address, 'address_quantity': address_quantity, 'callback_quantity': callback_quantity, 'fraction_actual': fraction_actual})
 
     callback_total = sum([output['callback_quantity'] for output in outputs])

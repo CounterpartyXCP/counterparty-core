@@ -432,13 +432,6 @@ class APIServer(threading.Thread):
         def broadcast(signed_tx_hex):
             return bitcoin.broadcast(signed_tx_hex)
 
-        # NOTE: DEPRECIATED
-        @dispatcher.add_method
-        def transmit(tx_hex, is_signed=False):
-            if not is_signed:
-                tx_hex = sign_tx(tx_hex)
-            return broadcast(tx_hex)
-
         class API(object):
             @cherrypy.expose
             def index(self):

@@ -220,15 +220,29 @@ def test_issuance_indivisible_callable ():
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
+def test_send_divisible ():
+    unsigned_tx_hex = bitcoin.transaction(send.compose(db, source_default, destination_default, 'BBBB', round(quantity / 25)), encoding='multisig')
+
+    parse_hex(unsigned_tx_hex)
+
+    output_new[inspect.stack()[0][3]] = unsigned_tx_hex
+
+def test_send_indivisible ():
+    unsigned_tx_hex = bitcoin.transaction(send.compose(db, source_default, destination_default, 'BBBC', round(quantity / 190000)), encoding='multisig')
+
+    parse_hex(unsigned_tx_hex)
+
+    output_new[inspect.stack()[0][3]] = unsigned_tx_hex
+
 def test_dividend_divisible ():
-    unsigned_tx_hex = bitcoin.transaction(dividend.compose(db, source_default, 6, 'BBBB', 'XCP'), encoding='multisig')
+    unsigned_tx_hex = bitcoin.transaction(dividend.compose(db, source_default, 600, 'BBBB', 'XCP'), encoding='multisig')
 
     parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_dividend_indivisible ():
-    unsigned_tx_hex = bitcoin.transaction(dividend.compose(db, source_default, 8, 'BBBC', 'XCP'), encoding='multisig')
+    unsigned_tx_hex = bitcoin.transaction(dividend.compose(db, source_default, 800, 'BBBC', 'XCP'), encoding='multisig')
 
     parse_hex(unsigned_tx_hex)
 
@@ -312,7 +326,7 @@ def test_order_to_be_cancelled ():
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_cancel ():
-    unsigned_tx_hex = bitcoin.transaction(cancel.compose(db, 'ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2'), encoding='multisig')
+    unsigned_tx_hex = bitcoin.transaction(cancel.compose(db, '2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608'), encoding='multisig')
 
     parse_hex(unsigned_tx_hex)
 
