@@ -454,7 +454,7 @@ def transaction (tx_info, encoding, unittest=False, public_key_hex=None, unconfi
         necessary_fee = (int(size / 10000) + 1) * config.FEE_PER_KB
         final_fee = max(fee_provided, necessary_fee)
         change_quantity = btc_in - (btc_out + final_fee)
-        if btc_in >= (btc_out + final_fee) and (change_quantity == 0 or change_quantity >= config.REGULAR_DUST_SIZE): # If change is necessary, must not be a dust output.
+        if change_quantity == 0 or change_quantity >= config.REGULAR_DUST_SIZE: # If change is necessary, must not be a dust output.
             sufficient_funds = True
             break
     if not sufficient_funds:

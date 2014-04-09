@@ -125,6 +125,7 @@ def cli(method, params, unsigned):
     if bitcoin.is_mine(params['source']):
         bitcoin.wallet_unlock()
     else:
+        print('Source not in Bitcoind wallet.')
         params['pubkey'] = input('Public key (hexadecimal): ')
     unsigned_tx_hex = util.api(method, params)
     print('Transaction (unsigned):', unsigned_tx_hex)
@@ -764,7 +765,10 @@ if __name__ == '__main__':
                 empty = False            
             for balance in balances:
                 asset = balance['asset']
-                balance = D(util.devise(db, balance['quantity'], balance['asset'], 'output'))
+                try:
+                    balance = D(util.devise(db, balance['quantity'], balance['asset'], 'output'))
+                except:
+                    balance = None
                 if balance:
                     if asset in totals.keys(): totals[asset] += balance
                     else: totals[asset] = balance
