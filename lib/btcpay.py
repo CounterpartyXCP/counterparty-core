@@ -25,11 +25,15 @@ def validate (db, order_match_id):
         assert False
     else:
         order_match = order_matches[0]
-        if order_match['status'] != 'pending':
-            if order_match['status'] == 'invalid: expired awaiting payment':
-                problems.append('expired order match')
-            else:
-                problems.append('invalid order match')
+
+        if order_match['status'] == 'expired':
+            problems.append('order match expired')
+        elif order_match['status'] == 'completed':
+            problems.append('order match completed')
+        elif order_match['status'].startswith('invalid'):
+            problems.append('order match invalid')
+        elif order_match['status'] != 'pending':
+            raise exceptions.OrderError('unrecognised order match status')
 
     return order_match, problems
 

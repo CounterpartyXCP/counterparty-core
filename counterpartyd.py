@@ -77,7 +77,7 @@ def market (give_asset, get_asset):
     print('\n')
 
     # Open orders.
-    orders = util.get_orders(db, status='valid', show_expired=False, show_empty=False)
+    orders = util.get_orders(db, status='open', show_expired=False)
     table = PrettyTable(['Give Quantity', 'Give Asset', 'Price', 'Price Assets', 'Required BTC Fee', 'Provided BTC Fee', 'Time Left', 'Tx Hash'])
     for order in orders:
         if give_asset and order['give_asset'] != give_asset: continue
@@ -90,7 +90,7 @@ def market (give_asset, get_asset):
     print('\n')
 
     # Open bets.
-    bets = util.get_bets(db, status='valid', show_empty=False)
+    bets = util.get_bets(db, status='open')
     table = PrettyTable(['Bet Type', 'Feed Address', 'Deadline', 'Target Value', 'Leverage', 'Wager', 'Odds', 'Time Left', 'Tx Hash'])
     for bet in bets:
         bet = format_bet(bet)

@@ -8,10 +8,10 @@ UNITTEST_PREFIX = b'TESTXXXX'
 
 # Versions
 CLIENT_VERSION_MAJOR = 6
-CLIENT_VERSION_MINOR = 12
+CLIENT_VERSION_MINOR = 13
 CLIENT_VERSION_STRING = str(CLIENT_VERSION_MAJOR) + '.' + str(CLIENT_VERSION_MINOR)
 DB_VERSION_MAJOR = 9            # Major version changes the blocks or transactions table.
-DB_VERSION_MINOR = 12           # Minor version changes just the parsing.
+DB_VERSION_MINOR = 13           # Minor version changes just the parsing.
 DB_VERSION_STRING = str(DB_VERSION_MAJOR) + '.' + str(DB_VERSION_MINOR)
 
 # Bitcoin protocol
@@ -19,7 +19,7 @@ MULTISIG = True
 REGULAR_DUST_SIZE = 5430        # TODO: This is just a guess. I got it down to 5530 satoshis.
 OP_RETURN_VALUE = 0
 MULTISIG_DUST_SIZE = 5430 * 2   # TODO: This is just a guess. I did it down to 1.4x. (Used for regular outputs in multi‐sig transactions, too.)
-MIN_FEE = 10000                 # Counterparty transactions are all under 1KB in size.
+MIN_FEE = 20000                 # Counterparty transactions are only usually under 1KB in size.
 
 # Counterparty protocol
 TXTYPE_FORMAT = '>I'

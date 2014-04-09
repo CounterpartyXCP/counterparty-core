@@ -50,7 +50,8 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
             
         address = holder['address']
         address_quantity = holder['address_quantity']
-        # TODO: if address == source: continue
+        if block_index >= 296000 or config.TESTNET: # Protocol change.
+            if address == source: continue
 
         dividend_quantity = address_quantity * quantity_per_unit
         if divisible: dividend_quantity /= config.UNIT

@@ -292,7 +292,7 @@ def match (db, tx):
         if tx['block_index'] < 286000: tx1_inverse_price = util.price(1, tx1_price, tx1['block_index'])
 
         # import sys  # TODO
-        # print('foo', tx0_price, tx1_inverse_price, file=sys.stderr) # TODO
+        # print('foo', float(tx0_price), float(tx1_inverse_price), file=sys.stderr) # TODO
         if tx0_price <= tx1_inverse_price:
             forward_quantity = int(min(tx0_give_remaining, int(util.price(tx1_give_remaining, tx0_price, tx1['block_index']))))
             # print('bar1', tx0_give_remaining, int(util.price(tx1_give_remaining, tx0_price, tx1['block_index'])), file=sys.stderr) # TODO

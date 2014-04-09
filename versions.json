@@ -1,6 +1,6 @@
 {
 	"minimum_client_version_major": 6,
-	"minimum_client_version_minor": 12,
+	"minimum_client_version_minor": 13,
 	"protocol_changes": [
 		{
 			"block_index": 285306,
@@ -68,6 +68,12 @@
 			"minimum_database_version_major": 9,
 			"minimum_database_version_minor": 12,
 			"description": "fractions, not decimals, for rounding"
+		},
+		{
+			"block_index": 296000,
+			"minimum_database_version_major": 9,
+			"minimum_database_version_minor": 13,
+			"description": "no dividends to self"
 		}
 	]
 }

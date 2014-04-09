@@ -96,12 +96,10 @@ def wallet_unlock ():
     getinfo = rpc('getinfo', [])
     if 'unlocked_until' not in getinfo:
         return True
-    elif getinfo['unlocked_until'] > 0:
-        return True
     else:
         print('Wallet is locked.')
         passphrase = getpass.getpass('Enter your Bitcoind[‐Qt] wallet passhrase: ')
-        print('Unlocking wallet for 60 seconds.')
+        print('Unlocking wallet for 60 (more) seconds.')
         rpc('walletpassphrase', [passphrase, 60])
 
 def rpc (method, params):
@@ -148,6 +146,10 @@ def rpc (method, params):
             raise exceptions.BitcoindError('Wallet is locked.')
         else:   # When will this happen?
             raise exceptions.BitcoindError('Source address not in wallet.')
+    elif response_json['error']['code'] == -1 and response_json['message'] == 'Block number out of range.':
+        time.sleep(10)
+        return rpc('getblockhash', [block_index])
+        
     # elif config.PREFIX == config.UNITTEST_PREFIX:
     #     print(method)
     else:

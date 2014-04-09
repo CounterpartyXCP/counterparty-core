@@ -6,7 +6,7 @@ Credit: 0.5 XCP to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 #None# <4bf5122f344554c53b
 Send: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 (4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a) [valid]
 Order: give 0.5 BTC for 1.0 XCP in 10 blocks, with a provided fee of 0.01 BTC and a required fee of 0.0 BTC (dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986) [open]
 Debit: 1.05 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5>
-Order: give 1.05 XCP for 0.5 BTC in 10 blocks, with a provided fee of 0.0001 BTC and a required fee of 0.009 BTC (084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5) [open]
+Order: give 1.05 XCP for 0.5 BTC in 10 blocks, with a provided fee of 0.0002 BTC and a required fee of 0.009 BTC (084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5) [open]
 Order Match: 0.5 BTC for 1.0 XCP (dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5) [pending]
 Credit: 1.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Database: set status of order_match dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5 to completed.
@@ -23,12 +23,10 @@ Send: 0.04 BBBB from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to n3BrDB6zDiEPWEE6wLxyw
 Debit: 526 BBBC from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a>
 Credit: 526 BBBC to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 #None# <beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a>
 Send: 526 BBBC from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 (beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a) [valid]
-Debit: 0.00006 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
-Credit: 0.00005976 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
+Debit: 0.00000024 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Credit: 0.00000024 XCP to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 #None# <None>
 Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 0.000006 XCP per unit of BBBB (2b4c342f5433ebe591a1da77e013d1b72475562d48578dca8b84bac6651c3cb9) [valid]
-Debit: 0.8 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
-Credit: 0.795792 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
+Debit: 0.004208 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Credit: 0.004208 XCP to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 #None# <None>
 Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 0.000008 XCP per unit of BBBC (01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b) [valid]
 Broadcast: ‘Unit Test’ = 100.0 from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:33:20-05:00 with a fee of 5.0% (e7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6) [valid]
@@ -75,7 +73,7 @@ Credit: 0.7 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Contract Settled: NotEqual won the pot of 14.0 XCP; 0.7 XCP credited to the feed address (c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee34a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a)
 Database: set status of bet_match c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee34a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a to settled: for notequal.
 Debit: 0.5 BBBB from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608>
-Order: give 0.5 BBBB for 0.5 XCP in 10 blocks, with a provided fee of 0.0001 BTC and a required fee of 0.0 BTC (2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608) [open]
+Order: give 0.5 BBBB for 0.5 XCP in 10 blocks, with a provided fee of 0.0002 BTC and a required fee of 0.0 BTC (2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608) [open]
 Credit: 0.5 BBBB to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608>
 Cancel: 2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608 (7cb7c4547cf2653590d7a9ace60cc623d25148adfbc88a89aeb0ef88da7839ba) [valid]
 Credit: 569.9988687 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034>
