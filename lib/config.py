@@ -19,7 +19,7 @@ MULTISIG = True
 REGULAR_DUST_SIZE = 5430        # TODO: This is just a guess. I got it down to 5530 satoshis.
 OP_RETURN_VALUE = 0
 MULTISIG_DUST_SIZE = 5430 * 2   # TODO: This is just a guess. I did it down to 1.4x. (Used for regular outputs in multi‐sig transactions, too.)
-MIN_FEE = 20000                 # Counterparty transactions are only usually under 1KB in size.
+FEE_PER_KB = 20000              # Bitcoin Core default is 10000.
 
 # Counterparty protocol
 TXTYPE_FORMAT = '>I'
@@ -31,5 +31,5 @@ MAX_EXPIRATION = 4 * 2016   # Two months
 MAX_INT = 2**63 - 1
 
 # Order fees
-FEE_FRACTION_REQUIRED_DEFAULT = .0095  # 0.95%
+FEE_FRACTION_REQUIRED_DEFAULT = .009   # 0.90%
 FEE_FRACTION_PROVIDED_DEFAULT = .01    # 1.00%

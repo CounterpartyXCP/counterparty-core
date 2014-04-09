@@ -44,7 +44,7 @@ def compose (db, source, quantity, overburn=False):
     if quantity > (1 * config.UNIT - already_burned) and not overburn:
         raise exceptions.BurnError('1 BTC may be burned per address')
 
-    return (source, [(destination, quantity)], config.MIN_FEE, None)
+    return (source, [(destination, quantity)], None)
 
 def parse (db, tx, message=None):
     burn_parse_cursor = db.cursor()

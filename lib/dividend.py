@@ -78,13 +78,13 @@ def compose (db, source, quantity_per_unit, asset, dividend_asset):
     print('Total quantity to be distributed in dividends:', util.devise(db, dividend_total, dividend_asset, 'output'), dividend_asset)
 
     if dividend_asset == 'BTC':
-        return (source, [(output['address'], output['dividend_quantity']) for output in outputs], config.MIN_FEE, None)
+        return (source, [(output['address'], output['dividend_quantity']) for output in outputs], None)
 
     asset_id = util.get_asset_id(asset)
     dividend_asset_id = util.get_asset_id(dividend_asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT_2, quantity_per_unit, asset_id, dividend_asset_id)
-    return (source, [], config.MIN_FEE, data)
+    return (source, [], data)
 
 def parse (db, tx, message):
     dividend_parse_cursor = db.cursor()

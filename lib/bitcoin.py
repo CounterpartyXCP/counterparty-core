@@ -336,33 +336,23 @@ def input_value_weight(amount):
     else:
         return 1/amount
 
-def get_inputs (source, total_btc_out, unittest=False, unconfirmed_change=False):
-    """List unspent inputs for source."""
-    listunspent = get_unspent_txouts(source, normalize=True, unittest=unittest, unconfirmed_change=unconfirmed_change)
-
-    unspent = [coin for coin in listunspent if coin['address'] == source]
-    inputs, total_btc_in = [], 0
-    change_quantity = 0
-    for coin in sorted(unspent,key=lambda x:input_value_weight(x['amount'])):
-        inputs.append(coin)
-        total_btc_in += round(coin['amount'] * config.UNIT)
-        change_quantity = total_btc_in - total_btc_out
-        if total_btc_in >= total_btc_out and (change_quantity == 0 or change_quantity >= config.REGULAR_DUST_SIZE): # If change is necessary, must not be a dust output.
-            return inputs, total_btc_in, change_quantity
-
-    # Approximate needed change by with most recently calculated quantity.
-    return None, None, change_quantity
-
 # Replace unittest flag with fake bitcoind JSON-RPC server.
 def transaction (tx_info, encoding, unittest=False, public_key_hex=None, unconfirmed_change=False):
 
-    source, destination_outputs, fee, data = tx_info
+    if len(tx_info) == 3:
+        source, destination_outputs, data = tx_info
+        fee_provided = 0
+    else:
+        source, destination_outputs, data, fee_provided = tx_info
+    if not isinstance(fee_provided, int):
+        raise exceptions.TransactionError('Fee provided must be in satoshis')
     if encoding not in ('pubkeyhash', 'multisig', 'opreturn'):
         raise exceptions.TransactionError('Unknown encoding‐scheme.')
 
     # If public key is necessary for construction of (unsigned) transaction,
     # either use the public key provided, or derive it from a private key
     # retrieved from wallet.
+    public_key = None
     if encoding in ('multisig', 'pubkeyhash'):
         # If no public key was provided, derive from private key.
         if not public_key_hex:
@@ -389,9 +379,6 @@ def transaction (tx_info, encoding, unittest=False, public_key_hex=None, unconfi
     if encoding == 'pubkeyhash' and get_block_count() < 293000 and not config.TESTNET:
         raise exceptions.TransactionError('pubkeyhash encoding unsupported before block 293000')
     
-    if not isinstance(fee, int):
-        raise exceptions.TransactionError('Fee must be in satoshis')
-
     if config.PREFIX == config.UNITTEST_PREFIX: unittest = True
 
     # Validate source and all destination addresses.
@@ -441,17 +428,39 @@ def transaction (tx_info, encoding, unittest=False, public_key_hex=None, unconfi
         data_array = []
 
     # Calculate total BTC to be sent.
-    total_btc_out = fee
+    btc_out = 0
     if encoding == 'multisig': data_value = config.MULTISIG_DUST_SIZE
     elif encoding == 'opreturn': data_value = config.OP_RETURN_VALUE
-    else: data_value = config.REGULAR_DUST_SIZE
-    for data_chunk in data_array: total_btc_out += data_value
-    total_btc_out += sum([value for address, value in destination_outputs])
+    else: data_value = config.REGULAR_DUST_SIZE # Pay‐to‐PubKeyHash
+    btc_out = sum([data_value for data_chunk in data_array])
+    btc_out += sum([value for address, value in destination_outputs])
 
-    # Construct inputs.
-    inputs, total_btc_in, change_quantity = get_inputs(source, total_btc_out, unittest=unittest, unconfirmed_change=unconfirmed_change)
-    if not inputs:
-        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need {} BTC.)'.format(source, (total_btc_out + max(change_quantity, 0)) / config.UNIT))
+    # Get size of outputs.
+    if encoding == 'multisig': data_output_size = 81        # 71 for the data
+    elif encoding == 'opreturn': data_output_size = 90      # 80 for the data
+    else: data_output_size = 25 + 9                         # Pay‐to‐PubKeyHash (25 for the data?)
+    outputs_size = ((25 + 9) * len(destination_outputs)) + (len(data_array) * data_output_size)
+
+    # Get inputs.
+    listunspent = get_unspent_txouts(source, normalize=True, unittest=unittest, unconfirmed_change=unconfirmed_change)
+    unspent = [coin for coin in listunspent if coin['address'] == source]
+    inputs, btc_in = [], 0
+    change_quantity = 0
+    sufficient_funds = False
+    for coin in sorted(unspent,key=lambda x:input_value_weight(x['amount'])):
+        inputs.append(coin)
+        btc_in += round(coin['amount'] * config.UNIT)
+        size = 181 * len(inputs) + outputs_size + 10
+        necessary_fee = (int(size / 10000) + 1) * config.FEE_PER_KB
+        final_fee = max(fee_provided, necessary_fee)
+        change_quantity = btc_in - (btc_out + final_fee)
+        if btc_in >= (btc_out + final_fee) and (change_quantity == 0 or change_quantity >= config.REGULAR_DUST_SIZE): # If change is necessary, must not be a dust output.
+            sufficient_funds = True
+            break
+    if not sufficient_funds:
+        # Approximate needed change, fee by with most recently calculated quantities.
+        total_btc_out = btc_out + max(change_quantity, 0) + final_fee
+        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need {} BTC.)'.format(source, total_btc_out / config.UNIT))
 
     # Construct outputs.
     if data: data_output = (data_array, data_value)

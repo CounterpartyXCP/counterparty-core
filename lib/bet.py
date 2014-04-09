@@ -142,8 +142,7 @@ def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
     data += struct.pack(FORMAT, bet_type, deadline,
                         wager_quantity, counterwager_quantity, target_value,
                         leverage, expiration)
-    return (source, [(feed_address, None)], config.MIN_FEE,
-                               data)
+    return (source, [(feed_address, None)], data)
 
 def parse (db, tx, message):
     bet_parse_cursor = db.cursor()

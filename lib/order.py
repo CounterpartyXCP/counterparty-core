@@ -164,7 +164,7 @@ def compose (db, source, give_asset, give_quantity, get_asset, get_quantity, exp
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, give_id, give_quantity, get_id, get_quantity,
                         expiration, fee_required)
-    return (source, [], fee_provided, data)
+    return (source, [], data, fee_provided)
 
 def parse (db, tx, message):
     order_parse_cursor = db.cursor()

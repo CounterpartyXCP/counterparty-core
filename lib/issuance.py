@@ -111,7 +111,7 @@ def compose (db, source, destination, asset, quantity, divisible, callable_, cal
         destination_outputs = [(destination, None)]
     else:
         destination_outputs = []
-    return (source, destination_outputs, config.MIN_FEE, data)
+    return (source, destination_outputs, data)
 
 def parse (db, tx, message):
     issuance_parse_cursor = db.cursor()

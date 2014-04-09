@@ -29,7 +29,7 @@ def compose (db, offer_hash):
     offer_hash_bytes = binascii.unhexlify(bytes(offer_hash, 'utf-8'))
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, offer_hash_bytes)
-    return (source, [], config.MIN_FEE, data)
+    return (source, [], data)
 
 def parse (db, tx, message):
     cursor = db.cursor()
