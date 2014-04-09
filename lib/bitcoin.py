@@ -531,7 +531,7 @@ def get_unspent_txouts(address, normalize=False, unittest=False, unconfirmed_cha
         with open(CURR_DIR + '/../test/listunspent.test.json', 'r') as listunspent_test_file:   # HACK
             return json.load(listunspent_test_file)
 
-    if rpc('validateaddress', [source])['ismine']:
+    if rpc('validateaddress', [address])['ismine']:
         if unconfirmed_change:
             return rpc('listunspent', [1])
         else:
