@@ -547,11 +547,11 @@ def get_unspent_txouts(address, normalize=False, unittest=False, unconfirmed_cha
                 for d in outputs:
                     d['quantity'] = int(d['quantity'] * config.UNIT)
             if not unconfirmed_change:  # ignore unconfirmed utxos
-                sorted_outputs = [output for output in sorted_outputs if output['confirmations']]
+                outputs = [output for output in outputs if output['confirmations']]
             #in order to get deterministic results (for multiAPIConsensus type requirements), sort by (ts, vout)
-            sorted_outputs = sorted(outputs, key=util.sortkeypicker(['ts', 'vout']))
+            outputs = sorted(outputs, key=util.sortkeypicker(['ts', 'vout']))
             #^ oldest to newest so the nodes don't have to be exactly caught up to eachother for multinode consensus to work
-            return sorted_outputs
+            return outputs
 
         else: #use blockchain
             r = requests.get("https://blockchain.info/unspent?active=" + address)
