@@ -91,6 +91,9 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
     elif broadcasts[-1]['timestamp'] >= deadline:
         problems.append('deadline in that feed’s past')
 
+    if not bet_type in (0, 1, 2, 3):
+        problems.append('unknown bet type')
+
     # Valid leverage level?
     if leverage != 5040 and bet_type in (2,3):   # Equal, NotEqual
         problems.append('leverage cannot be used with bet types Equal and NotEqual')
@@ -123,18 +126,23 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
     if wager_quantity > config.MAX_INT or counterwager_quantity > config.MAX_INT or bet_type > config.MAX_INT or deadline > config.MAX_INT or leverage > config.MAX_INT:
         problems.append('maximum integer size exceeded')
 
-    return problems
+    # Check for sufficient funds.
+    fee_fraction = get_fee_fraction(db, feed_address)
+    fee = round(wager_quantity * fee_fraction)
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM balances \
+                      WHERE (address = ? AND asset = ?)''', (source, 'XCP'))
+    balances = list(cursor)
+    if not balances or balances[0]['quantity'] < wager_quantity + fee:
+        problems.append('insufficient funds for wager and fee')
+
+    cursor.close()
+    return problems, fee
 
 def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
             counterwager_quantity, target_value, leverage, expiration):
 
-    # Check for sufficient funds.
-    fee_fraction = get_fee_fraction(db, feed_address)
-    balances = util.get_balances(db, address=source, asset='XCP')
-    if not balances or balances[0]['quantity']/(1 + fee_fraction) < wager_quantity :
-        raise exceptions.BetError('insufficient funds to both make wager and pay feed fee (in XCP)')
-
-    problems = validate(db, source, feed_address, bet_type, deadline, wager_quantity,
+    problems, fee = validate(db, source, feed_address, bet_type, deadline, wager_quantity,
                         counterwager_quantity, target_value, leverage, expiration)
     if problems: raise exceptions.BetError(problems)
 
@@ -167,7 +175,6 @@ def parse (db, tx, message):
 
         feed_address = tx['destination']
         fee_fraction = get_fee_fraction(db, feed_address)
-        fee = round(wager_quantity * fee_fraction)
 
         # Overbet
         bet_parse_cursor.execute('''SELECT * FROM balances \
@@ -181,7 +188,7 @@ def parse (db, tx, message):
                 wager_quantity = balance - fee
                 counterwager_quantity = int(util.price(wager_quantity, odds, tx['block_index']))
 
-        problems = validate(db, tx['source'], feed_address, bet_type, deadline, wager_quantity,
+        problems, fee = validate(db, tx['source'], feed_address, bet_type, deadline, wager_quantity,
                             counterwager_quantity, target_value, leverage, expiration)
         if problems: status = 'invalid: ' + '; '.join(problems)
 

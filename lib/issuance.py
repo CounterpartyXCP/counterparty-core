@@ -19,6 +19,7 @@ ID = 20
 
 def validate (db, source, destination, asset, quantity, divisible, callable_, call_date, call_price, description, block_index):
     problems = []
+    fee = 0
 
     if asset in ('BTC', 'XCP'):
         problems.append('cannot issue BTC or XCP')
@@ -31,13 +32,13 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
 
     if not isinstance(quantity, int):
         problems.append('quantity must be in satoshis')
-        return problems
+        return problems, fee
     if call_date and not isinstance(call_date, int):
         problems.append('call_date must be epoch integer')
-        return problems
+        return problems, fee
     if call_price and not isinstance(call_price, float):
         problems.append('call_price must be a float')
-        return problems
+        return problems, fee
 
     if quantity < 0: problems.append('negative quantity')
     if call_price < 0: problems.append('negative call_price')
@@ -75,7 +76,6 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
                           WHERE (address = ? AND asset = ?)''', (source, 'XCP'))
         balances = cursor.fetchall()
         cursor.close()
-        fee = 0
         if block_index >= 291700 or config.TESTNET:     # Protocol change.
             fee = int(0.5 * config.UNIT)
         elif block_index >= 286000 or config.TESTNET:   # Protocol change.
@@ -95,10 +95,10 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     if destination and quantity:
         problems.append('cannot issue and transfer simultaneously')
 
-    return problems
+    return problems, fee
 
 def compose (db, source, destination, asset, quantity, divisible, callable_, call_date, call_price, description):
-    problems = validate(db, source, destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.last_block(db)['block_index'])
+    problems, fee = validate(db, source, destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.last_block(db)['block_index'])
     if problems: raise exceptions.IssuanceError(problems)
 
     asset_id = util.get_asset_id(asset)
@@ -138,9 +138,10 @@ def parse (db, tx, message):
         asset, quantity, divisible, callable_, call_date, call_price, description = None, None, None, None, None, None, None
         status = 'invalid: could not unpack'
 
+    fee = 0
     if status == 'valid':
         if not callable_: calldate, call_price = 0, 0.0
-        problems = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, callable_, call_date, call_price, description, block_index=tx['block_index'])
+        problems, fee = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, callable_, call_date, call_price, description, block_index=tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
         if 'maximum total quantity exceeded' in problems:
             quantity = 0
@@ -153,19 +154,9 @@ def parse (db, tx, message):
         issuer = tx['source']
         transfer = False
 
-    fee = 0
+    # Debit fee.
     if status == 'valid':
-        # Debit fee.
-        fee = 0
-        if quantity:
-            if tx['block_index'] >= 291700 or config.TESTNET:   # Protocol change.
-                fee = int(0.5 * config.UNIT)
-            elif tx['block_index'] >= 286000 or config.TESTNET: # Protocol change.
-                fee = 5 * config.UNIT
-            elif tx['block_index'] > 281236 or config.TESTNET:  # Protocol change.
-                fee = 5
-            if fee:
-                util.debit(db, tx['block_index'], tx['source'], 'XCP', fee)
+        util.debit(db, tx['block_index'], tx['source'], 'XCP', fee)
 
     # Lock?
     lock = False
