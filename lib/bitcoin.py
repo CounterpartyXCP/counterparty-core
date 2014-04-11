@@ -444,9 +444,11 @@ def transaction (tx_info, encoding, unittest=False, public_key_hex=None, unconfi
     # Get inputs.
     listunspent = get_unspent_txouts(source, normalize=True, unittest=unittest, unconfirmed_change=unconfirmed_change)
     unspent = [coin for coin in listunspent if coin['address'] == source]
+
     inputs, btc_in = [], 0
     change_quantity = 0
     sufficient_funds = False
+    final_fee = config.FEE_PER_KB
     for coin in sorted(unspent,key=lambda x:input_value_weight(x['amount'])):
         inputs.append(coin)
         btc_in += round(coin['amount'] * config.UNIT)
