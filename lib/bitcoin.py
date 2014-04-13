@@ -479,8 +479,20 @@ def sign_tx (unsigned_tx_hex, private_key_wif=None):
     """Sign unsigned transaction serialisation."""
 
     if private_key_wif:
-        return 'UNIMPLEMENTED!'
-        # TODO: Sign transaction with provided private key.
+        # TODO: Hack! (pybitcointools is Python 2 only)
+        import subprocess
+        i = 0
+        tx_hex = unsigned_tx_hex
+        while True: # pybtctool doesn’t implement `signall`
+            try:
+                tx_hex = subprocess.check_output(['pybtctool', 'sign', tx_hex, str(i), private_key_wif])
+            except Exception as e:
+                break
+        if tx_hex != unsigned_tx_hex:
+            signed_tx_hex = tx_hex.decode('utf-8')
+            return signed_tx_hex[:-1]   # Get rid of newline.
+        else:
+            raise exceptions.TransactionError('Could not sign transaction with pybtctool.')
 
     else:   # Assume source is in wallet and wallet is unlocked.
         result = rpc('signrawtransaction', [unsigned_tx_hex])
