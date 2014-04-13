@@ -11,6 +11,7 @@ import dateutil.parser
 import calendar
 import configparser
 from threading import Thread
+import binascii
 
 import requests
 import appdirs
@@ -126,7 +127,18 @@ def cli(method, params, unsigned):
         bitcoin.wallet_unlock()
     else:
         print('Source not in Bitcoind wallet.')
-        params['pubkey'] = input('Public key (hexadecimal): ')
+        answer = input('Public key (hexadecimal) or Private key (Wallet Import Format): ')
+
+        # Public key or private key?
+        try:
+            binascii.unhexlify(answer)  # Check if hex.
+            params['pubkey'] = answer   # If hex, assume public key.
+            private_key_wif = None
+        except binascii.Error:
+            private_key_wif = answer    # Else, assume private key.
+            params['pubkey'] = bitcoin.private_key_to_public_key(private_key_wif)
+
+
     unsigned_tx_hex = util.api(method, params)
     print('Transaction (unsigned):', unsigned_tx_hex)
 
@@ -134,7 +146,7 @@ def cli(method, params, unsigned):
     if not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
         if bitcoin.is_mine(params['source']):
             private_key_wif = None
-        else:
+        elif not private_key_wif:   # If private key was not given earlier.
             private_key_wif = input('Private key (Wallet Import Format): ')
 
         # Sign and broadcast.

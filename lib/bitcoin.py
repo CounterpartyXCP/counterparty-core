@@ -336,6 +336,13 @@ def input_value_weight(amount):
     else:
         return 1/amount
 
+def private_key_to_public_key (private_key_wif):
+    secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif, is_test=config.TESTNET)
+    public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
+    public_key = public_pair_to_sec(public_pair, compressed=compressed)
+    public_key_hex = binascii.hexlify(public_key).decode('utf-8')
+    return public_key_hex
+
 # Replace unittest flag with fake bitcoind JSON-RPC server.
 def transaction (tx_info, encoding, unittest=False, public_key_hex=None, unconfirmed_change=False):
 
@@ -362,15 +369,8 @@ def transaction (tx_info, encoding, unittest=False, public_key_hex=None, unconfi
             else:
                 private_key_wif = rpc('dumpprivkey', [source])
 
-            # Check if testnet.
-            if private_key_wif[0] == 'c': testnet = True
-            else: testnet = False
-
             # Derive public key.
-            secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif, is_test=testnet)
-            public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
-            public_key = public_pair_to_sec(public_pair, compressed=compressed)
-            public_key_hex = binascii.hexlify(public_key).decode('utf-8')
+            public_key_hex = private_key_to_public_key(private_key_wif)
             
         pubkeypair = bitcoin_utils.parse_as_public_pair(public_key_hex)
         public_key = public_pair_to_sec(pubkeypair, compressed=True)
