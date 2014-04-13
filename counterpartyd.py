@@ -718,7 +718,13 @@ if __name__ == '__main__':
         balances(args.address)
 
     elif args.action == 'asset':
-        results = util.api('get_asset_info', ([args.asset],))[0]    # HACK
+        results = util.api('get_asset_info', ([args.asset],))
+        if results:
+            results = results[0]    # HACK
+        else:
+            print('Asset ‘{}’ not found.'.format(args.asset))
+            exit(0)
+        
         asset_id = util.get_asset_id(args.asset)
         divisible = results['divisible']
         supply = util.devise(db, results['supply'], args.asset, dest='output')
@@ -735,16 +741,17 @@ if __name__ == '__main__':
         print('Call Price:', call_price)
         print('Description:', '‘' + results['description'] + '’')
 
-        print('Shareholders:')
-        balances = util.get_balances(db, asset=args.asset)       # + util.get_escrowed(db, asset=asset)
-        print('\taddress, quantity, escrow')
-        for holder in util.get_holders(db, args.asset):
-            quantity = holder['address_quantity']
-            if not quantity: continue
-            quantity = util.devise(db, quantity, args.asset, 'output')
-            if holder['escrow']: escrow = holder['escrow']
-            else: escrow = 'None'
-            print('\t' + str(holder['address']) + ',' + str(quantity) + ',' + escrow)
+        if args.asset != 'BTC':
+            print('Shareholders:')
+            balances = util.get_balances(db, asset=args.asset)
+            print('\taddress, quantity, escrow')
+            for holder in util.get_holders(db, args.asset):
+                quantity = holder['address_quantity']
+                if not quantity: continue
+                quantity = util.devise(db, quantity, args.asset, 'output')
+                if holder['escrow']: escrow = holder['escrow']
+                else: escrow = 'None'
+                print('\t' + str(holder['address']) + ',' + str(quantity) + ',' + escrow)
 
 
     elif args.action == 'wallet':

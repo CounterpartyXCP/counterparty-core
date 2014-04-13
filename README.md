@@ -1,30 +1,3 @@
-# Changelog
-* **v6.12**
-* v6.11
-* v6.10
-* v6.9
-* v6.8
-* v6.8
-* v6.7
-* v6.6
-* v6.5
-* v6.4
-* v6.3
-* v6.2
-* v6.1
-* v6.0
-* v5.3
-* v5.2
-* v5.1
-* v5.0
-* v4.3
-* v0.4.2
-* v0.4.1
-* v0.4
-* v0.3
-* v0.2
-* v0.1—initial release
-
 # Description
 Counterparty is a protocol for the creation and use of decentralised financial
 instruments such as asset exchanges, contracts for difference and dividend
@@ -38,7 +11,7 @@ The Counterparty protocol specification may be found at
 # Dependencies
 * [Python 3](http://python.org)
 * Python 3 packages: apsw, requests, appdirs, prettytable, python-dateutil, json-rpc, cherrypy, pycoin, pyzmq(v2.2+) (see [this link](https://github.com/xnova/counterpartyd_build/blob/master/dist/reqs.txt) for exact working versions)
-* Bitcoind
+* Bitcoind or pyrpcwallet
 
 # Installation
 
@@ -80,7 +53,7 @@ If and only if counterpartyd is to be run on the Bitcoin testnet, with the
 counterpartyd may run with the `--testcoin` option on any blockchain,
 however.
 
-The test suite is invoked with `py.test`.
+The test suite is invoked with `py.test` in the root directory of the repository.
 
 # Usage
 The command‐line syntax of counterpartyd is generally that of

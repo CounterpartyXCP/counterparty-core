@@ -226,6 +226,8 @@ class APIServer(threading.Thread):
                 raise Exception("assets must be a list of asset names, even if it just contains one entry")
             assetsInfo = []
             for asset in assets:
+
+                # BTC and XCP.
                 if asset in ['BTC', 'XCP']:
                     if asset == 'BTC':
                         supply = bitcoin.get_btc_supply(normalize=False)
@@ -246,17 +248,14 @@ class APIServer(threading.Thread):
                     })
                     continue
                 
-                #gets some useful info for the given asset
+                # User‐created asset.
                 issuances = util.get_issuances(db,
                     filters={'field': 'asset', 'op': '==', 'value': asset},
                     status='valid',
                     order_by='block_index',
                     order_dir='asc')
-                if not issuances: return None #asset not found, most likely
+                if not issuances: break #asset not found, most likely
                 else: last_issuance = issuances[-1]
-    
-                #get the last issurance message for this asset, which should reflect the current owner and if
-                # its divisible (and if it was locked, for that matter)
                 supply = 0
                 locked = False
                 for e in issuances:

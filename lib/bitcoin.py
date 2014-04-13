@@ -479,7 +479,7 @@ def sign_tx (unsigned_tx_hex, private_key_wif=None):
     """Sign unsigned transaction serialisation."""
 
     if private_key_wif:
-        return None
+        return 'UNIMPLEMENTED!'
         # TODO: Sign transaction with provided private key.
 
     else:   # Assume source is in wallet and wallet is unlocked.
