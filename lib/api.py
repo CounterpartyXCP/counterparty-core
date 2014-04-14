@@ -34,7 +34,7 @@ class APIServer(threading.Thread):
         def get_address(address, start_block=None, end_block=None):
             try:
                 return util.get_address(db, address=address, start_block=start_block, end_block=end_block)
-            except exceptions.InvalidAddressError:
+            except exceptions.AddressError:
                 return None
 
         @dispatcher.add_method

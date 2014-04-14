@@ -775,7 +775,7 @@ def get_balances (db, address=None, asset=None, filters=None, order_by=None, ord
     if address:
         from . import bitcoin   # HACK
         if not bitcoin.base58_decode(address, config.ADDRESSVERSION):
-            raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
+            raise exceptions.AddressError('Not a valid Bitcoin address:',
                                                  address)
         filters.append({'field': 'address', 'op': '==', 'value': address})
     if asset: filters.append({'field': 'asset', 'op': '==', 'value': asset})

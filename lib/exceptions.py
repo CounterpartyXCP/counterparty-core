@@ -36,11 +36,11 @@ class BalanceError (Exception):
 class QuantityError(Exception):
     pass
 
-class InvalidAddressError (Exception):
+class AddressError (Exception):
     pass
-class VersionByteError (InvalidAddressError):
+class VersionByteError (AddressError):
     pass
-class Base58Error (InvalidAddressError):
+class Base58Error (AddressError):
     pass
 class InvalidBase58Error (Base58Error):
     pass

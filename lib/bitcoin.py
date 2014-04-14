@@ -45,6 +45,9 @@ def get_block_count():
 def get_block_hash(block_index):
     return rpc('getblockhash', [block_index])
 
+def is_valid (address):
+    return rpc('validateaddress', [address])['isvalid']
+
 def is_mine (address):
     return rpc('validateaddress', [address])['ismine']
 
@@ -94,12 +97,15 @@ def connect (host, payload, headers):
 
 def wallet_unlock ():
     getinfo = rpc('getinfo', [])
-    if 'unlocked_until' not in getinfo:
-        return True    # Wallet is unlocked.
+    if 'unlocked_until' in getinfo:
+        if getinfo['unlocked_until'] >= 60:
+            return True # Wallet is unlocked for at least the next 60 seconds.
+        else:
+            passphrase = getpass.getpass('Enter your Bitcoind[‐Qt] wallet passhrase: ')
+            print('Unlocking wallet for 60 (more) seconds.')
+            rpc('walletpassphrase', [passphrase, 60])
     else:
-        passphrase = getpass.getpass('Enter your Bitcoind[‐Qt] wallet passhrase: ')
-        print('Unlocking wallet for 60 (more) seconds.')
-        rpc('walletpassphrase', [passphrase, 60])
+        return True    # Wallet is unencrypted.
 
 def rpc (method, params):
     headers = {'content-type': 'application/json'}
@@ -141,10 +147,14 @@ def rpc (method, params):
     elif response_json['error']['code'] == -4:   # Unknown private key (locked wallet?)
         # If address in wallet, attempt to unlock.
         address = params[0]
-        if rpc('validateaddress', [address])['ismine']:
-            raise exceptions.BitcoindError('Wallet is locked.')
-        else:   # When will this happen?
-            raise exceptions.BitcoindError('Source address not in wallet.')
+        validate_address = rpc('validateaddress', [address])
+        if validate_address['isvalid']:
+            if validate_address['ismine']:
+                raise exceptions.BitcoindError('Wallet is locked.')
+            else:   # When will this happen?
+                raise exceptions.BitcoindError('Source address not in wallet.')
+        else:
+            raise exceptions.AddressError('Invalid address.')
     elif response_json['error']['code'] == -1 and response_json['message'] == 'Block number out of range.':
         time.sleep(10)
         return rpc('getblockhash', [block_index])
@@ -387,12 +397,12 @@ def transaction (tx_info, encoding, unittest=False, public_key_hex=None, allow_u
             try:
                 base58_decode(address, config.ADDRESSVERSION)
             except Exception:   # TODO
-                raise exceptions.InvalidAddressError('Invalid Bitcoin address:', address)
+                raise exceptions.AddressError('Invalid Bitcoin address:', address)
 
     # Check that the source is in wallet.
     if not unittest and encoding in ('multisig') and not public_key:
         if not rpc('validateaddress', [source])['ismine']:
-            raise exceptions.InvalidAddressError('Not one of your Bitcoin addresses:', source)
+            raise exceptions.AddressError('Not one of your Bitcoin addresses:', source)
 
     # Check that the destination output isn't a dust output.
     # Set null values to dust size.

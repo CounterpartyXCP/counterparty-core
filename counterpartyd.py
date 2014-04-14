@@ -123,21 +123,23 @@ def market (give_asset, get_asset):
 def cli(method, params, unsigned):
 
     # Get unsigned transaction serialisation.
-    if bitcoin.is_mine(params['source']):
-        bitcoin.wallet_unlock()
+    if bitcoin.is_valid(params['source']):
+        if bitcoin.is_mine(params['source']):
+            bitcoin.wallet_unlock()
+        else:
+            print('Source not in Bitcoind wallet.')
+            answer = input('Public key (hexadecimal) or Private key (Wallet Import Format): ')
+
+            # Public key or private key?
+            try:
+                binascii.unhexlify(answer)  # Check if hex.
+                params['pubkey'] = answer   # If hex, assume public key.
+                private_key_wif = None
+            except binascii.Error:
+                private_key_wif = answer    # Else, assume private key.
+                params['pubkey'] = bitcoin.private_key_to_public_key(private_key_wif)
     else:
-        print('Source not in Bitcoind wallet.')
-        answer = input('Public key (hexadecimal) or Private key (Wallet Import Format): ')
-
-        # Public key or private key?
-        try:
-            binascii.unhexlify(answer)  # Check if hex.
-            params['pubkey'] = answer   # If hex, assume public key.
-            private_key_wif = None
-        except binascii.Error:
-            private_key_wif = answer    # Else, assume private key.
-            params['pubkey'] = bitcoin.private_key_to_public_key(private_key_wif)
-
+        raise exceptions.AddressError('Invalid address.')
 
     unsigned_tx_hex = util.api(method, params)
     print('Transaction (unsigned):', unsigned_tx_hex)
@@ -421,7 +423,7 @@ def set_options (data_dir=None,
 
 def balances (address):
     if not bitcoin.base58_decode(address, config.ADDRESSVERSION):
-        raise exceptions.InvalidAddressError('Not a valid Bitcoin address:',
+        raise exceptions.AddressError('Not a valid Bitcoin address:',
                                              address)
     address_data = util.get_address(db, address=address)
     balances = address_data['balances']
@@ -727,7 +729,7 @@ if __name__ == '__main__':
         try:
             bitcoin.base58_decode(args.address, config.ADDRESSVERSION)
         except Exception:
-            raise exceptions.InvalidAddressError('Invalid Bitcoin address:',
+            raise exceptions.AddressError('Invalid Bitcoin address:',
                                                   args.address)
         balances(args.address)
 
