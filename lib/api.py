@@ -303,13 +303,18 @@ class APIServer(threading.Thread):
                 last_block = util.last_block(db)
             except:
                 last_block = {'block_index': None, 'block_hash': None, 'block_time': None}
-                
+            
+            try:
+                last_message = util.last_message(db)
+            except:
+                last_message = None
+            
             return {
                 'db_caught_up': caught_up,
                 'bitcoin_block_count': latestBlockIndex,
                 'last_block': last_block,
                 'counterpartyd_version': config.CLIENT_VERSION_STRING,
-                'last_message_index': util.last_message(db)['message_index'],
+                'last_message_index': last_message['message_index'] if last_message else -1,
                 'running_testnet': config.TESTNET,
                 'db_version_major': config.DB_VERSION_MAJOR,
                 'db_version_minor': config.DB_VERSION_MINOR,
