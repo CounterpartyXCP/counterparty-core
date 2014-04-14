@@ -200,7 +200,7 @@ def test_order_sell_xcp ():
 
 def test_btcpay ():
     order_match_id = 'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5'
-    unsigned_tx_hex = bitcoin.transaction(btcpay.compose(db, order_match_id), encoding='multisig')
+    unsigned_tx_hex = bitcoin.transaction(btcpay.compose(db, source_default, order_match_id), encoding='multisig')
 
     parse_hex(unsigned_tx_hex)
 
@@ -326,7 +326,7 @@ def test_order_to_be_cancelled ():
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_cancel ():
-    unsigned_tx_hex = bitcoin.transaction(cancel.compose(db, '2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608'), encoding='multisig')
+    unsigned_tx_hex = bitcoin.transaction(cancel.compose(db, source_default, '2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608'), encoding='multisig')
 
     parse_hex(unsigned_tx_hex)
 

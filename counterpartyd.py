@@ -449,7 +449,7 @@ if __name__ == '__main__':
     parser.add_argument('--testnet', action='store_true', help='use Bitcoin testnet addresses and block numbers')
     parser.add_argument('--testcoin', action='store_true', help='use the test Counterparty network on every blockchain')
     parser.add_argument('--unsigned', action='store_true', default=False, help='print out unsigned hex of transaction; do not sign or broadcast')
-    parser.add_argument('--careful', action='store_true', default=False, help='check conservation of assets')
+    parser.add_argument('--careful', action='store_true', default=False, help='check conservation of assets after every 60 transactions (slow)')
 
     parser.add_argument('--data-dir', help='the directory in which to keep the database, config file and log file, by default')
     parser.add_argument('--database-file', help='the location of the SQLite3 database')
@@ -494,6 +494,7 @@ if __name__ == '__main__':
     parser_order.add_argument('--fee-fraction-provided', default=config.FEE_FRACTION_PROVIDED_DEFAULT, help='the miners’ fee provided, as a fraction of the BTC to be sold')
 
     parser_btcpay= subparsers.add_parser('btcpay', help='create and broadcast a *BTCpay* message, to settle an Order Match for which you owe BTC')
+    parser_btcpay.add_argument('--source', required=True, help='the source address')
     parser_btcpay.add_argument('--order-match-id', required=True, help='the concatenation of the hashes of the two transactions which compose the order match')
 
     parser_issuance = subparsers.add_parser('issuance', help='issue a new asset, issue more of an existing asset or transfer the ownership of an asset')
@@ -535,6 +536,7 @@ if __name__ == '__main__':
     parser_burn.add_argument('--quantity', required=True, help='quantity of BTC to be destroyed')
 
     parser_cancel= subparsers.add_parser('cancel', help='cancel an open order or bet you created')
+    parser_cancel.add_argument('--source', required=True, help='the source address')
     parser_cancel.add_argument('--offer-hash', required=True, help='the transaction hash of the order or bet')
 
     parser_callback = subparsers.add_parser('callback', help='callback a fraction of an asset')
@@ -661,7 +663,7 @@ if __name__ == '__main__':
            args.unsigned)
 
     elif args.action == 'btcpay':
-        cli('create_btcpay', {'order_match_id': args.order_match_id}, args.unsigned)
+        cli('create_btcpay', {'source': args.source, 'order_match_id': args.order_match_id}, args.unsigned)
 
     elif args.action == 'issuance':
         quantity = util.devise(db, args.quantity, None, 'input',
@@ -712,7 +714,7 @@ if __name__ == '__main__':
         cli('create_burn', {'source': args.source, 'quantity': quantity}, args.unsigned)
 
     elif args.action == 'cancel':
-        cli('create_cancel', {'offer_hash': args.offer_hash}, args.unsigned)
+        cli('create_cancel', {'source': args.source, 'offer_hash': args.offer_hash}, args.unsigned)
 
     elif args.action == 'callback':
         cli('create_callback', {'source': args.source, 'fraction': util.devise(db, args.fraction,

@@ -95,9 +95,8 @@ def connect (host, payload, headers):
 def wallet_unlock ():
     getinfo = rpc('getinfo', [])
     if 'unlocked_until' not in getinfo:
-        return True
+        return True    # Wallet is unlocked.
     else:
-        print('Wallet is locked.')
         passphrase = getpass.getpass('Enter your Bitcoind[‐Qt] wallet passhrase: ')
         print('Unlocking wallet for 60 (more) seconds.')
         rpc('walletpassphrase', [passphrase, 60])
@@ -344,7 +343,7 @@ def private_key_to_public_key (private_key_wif):
     return public_key_hex
 
 # Replace unittest flag with fake bitcoind JSON-RPC server.
-def transaction (tx_info, encoding, unittest=False, public_key_hex=None, unconfirmed_change=False):
+def transaction (tx_info, encoding, unittest=False, public_key_hex=None, allow_unconfirmed_inputs=False):
 
     if len(tx_info) == 3:
         source, destination_outputs, data = tx_info
@@ -388,8 +387,7 @@ def transaction (tx_info, encoding, unittest=False, public_key_hex=None, unconfi
             try:
                 base58_decode(address, config.ADDRESSVERSION)
             except Exception:   # TODO
-                raise exceptions.InvalidAddressError('Invalid Bitcoin address:',
-                                          address)
+                raise exceptions.InvalidAddressError('Invalid Bitcoin address:', address)
 
     # Check that the source is in wallet.
     if not unittest and encoding in ('multisig') and not public_key:
@@ -442,8 +440,7 @@ def transaction (tx_info, encoding, unittest=False, public_key_hex=None, unconfi
     outputs_size = ((25 + 9) * len(destination_outputs)) + (len(data_array) * data_output_size)
 
     # Get inputs.
-    listunspent = get_unspent_txouts(source, normalize=True, unittest=unittest, unconfirmed_change=unconfirmed_change)
-    unspent = [coin for coin in listunspent if coin['address'] == source]
+    unspent = get_unspent_txouts(source, normalize=True, unittest=unittest, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
 
     inputs, btc_in = [], 0
     change_quantity = 0
@@ -544,7 +541,7 @@ def get_btc_supply(normalize=False):
             blocks_remaining = 0
     return total_supply if normalize else int(total_supply * config.UNIT)
 
-def get_unspent_txouts(address, normalize=False, unittest=False, unconfirmed_change=False):
+def get_unspent_txouts(address, normalize=False, unittest=False, allow_unconfirmed_inputs=False):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
         * 
@@ -554,13 +551,15 @@ def get_unspent_txouts(address, normalize=False, unittest=False, unconfirmed_cha
     if unittest:
         CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
         with open(CURR_DIR + '/../test/listunspent.test.json', 'r') as listunspent_test_file:   # HACK
-            return json.load(listunspent_test_file)
+            wallet_unspent = json.load(listunspent_test_file)
+            return [output for output in wallet_unspent if output['address'] == address]
 
     if rpc('validateaddress', [address])['ismine']:
-        if unconfirmed_change:
-            return rpc('listunspent', [1])
+        if allow_unconfirmed_inputs:
+            wallet_unspent = rpc('listunspent', [0, 999999])
         else:
-            return rpc('listunspent', [])
+            wallet_unspent = rpc('listunspent', [1, 999999])
+        return [output for output in wallet_unspent if output['address'] == address]
     else:
         if config.INSIGHT_ENABLE:
             r = requests.get(config.INSIGHT + '/api/addr/' + address + '/utxo')
@@ -571,7 +570,7 @@ def get_unspent_txouts(address, normalize=False, unittest=False, unconfirmed_cha
             if not normalize: #listed normalized by default out of insight...we need to take to satoshi
                 for d in outputs:
                     d['quantity'] = int(d['quantity'] * config.UNIT)
-            if not unconfirmed_change:  # ignore unconfirmed utxos
+            if not allow_unconfirmed_inputs:  # ignore unconfirmed utxos
                 outputs = [output for output in outputs if output['confirmations']]
             #in order to get deterministic results (for multiAPIConsensus type requirements), sort by (ts, vout)
             outputs = sorted(outputs, key=util.sortkeypicker(['ts', 'vout']))
@@ -587,7 +586,7 @@ def get_unspent_txouts(address, normalize=False, unittest=False, unconfirmed_cha
             data = r.json()['unspent_outputs']
             outputs = []
             for d in data:
-                if not unconfirmed_change:  # ignore unconfirmed utxos
+                if not allow_unconfirmed_inputs:  # ignore unconfirmed utxos
                     if not d['confirmations']: continue
                 #blockchain.info lists the txhash in some weird reversed string notation with character pairs fipped...fun
                 d['tx_hash'] = d['tx_hash'][::-1] #reverse string

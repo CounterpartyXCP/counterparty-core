@@ -14,16 +14,35 @@ FORMAT = '>32s'
 LENGTH = 32
 ID = 70
 
+def validate (db, source, offer_hash):
+    problems = []
 
-def compose (db, offer_hash):
+    cursor = db.cursor()
+    cursor.execute('''SELECT * from orders WHERE tx_hash = ?''', (offer_hash,))
+    orders = list(cursor)
+    cursor.execute('''SELECT * from bets WHERE tx_hash = ?''', (offer_hash,))
+    bets = list(cursor)
+    cursor.close()
+
+    offer_type = None
+    if orders: offer_type = 'order'
+    elif bets: offer_type = 'bet'
+    else: problems = ['no open offer with that hash']
+
+    if offer_type:
+        offers = orders + bets
+        offer = offers[0]
+        if offer['source'] != source:
+            problems.append('incorrect source address')
+        if offer['status'] != 'open':
+            problems.append('offer not open')
+
+    return offer, offer_type, problems
+
+def compose (db, source, offer_hash):
 
     # Check that offer exists.
-    problems = ['no open offer with that hash']
-    for offer in util.get_orders(db, status='open') + util.get_bets(db, status='open'):
-        if offer_hash == offer['tx_hash']:
-            source = offer['source']
-            problems = None
-            break
+    offer, offer_type, problems = validate(db, source, offer_hash)
     if problems: raise exceptions.CancelError(problems)
 
     offer_hash_bytes = binascii.unhexlify(bytes(offer_hash, 'utf-8'))
@@ -45,23 +64,20 @@ def parse (db, tx, message):
         status = 'invalid: could not unpack'
 
     if status == 'valid':
-        # Find offer.
-        cursor.execute('''SELECT * FROM orders \
-                          WHERE (tx_hash=? AND source=? AND status=?)''', (offer_hash, tx['source'], 'open'))
-        orders = cursor.fetchall()
-        cursor.execute('''SELECT * FROM bets \
-                          WHERE (tx_hash=? AND source=? AND status=?)''', (offer_hash, tx['source'], 'open'))
-        bets = cursor.fetchall()
+        offer, offer_type, problems = validate(db, tx['source'], offer_hash)
+        if problems:
+            status = 'invalid: ' + '; '.join(problems)
 
+    if status == 'valid':
         # Cancel if order.
-        if orders:
-            order.cancel_order(db, orders[0], 'cancelled', tx['block_index'])
+        if offer_type == 'order':
+            order.cancel_order(db, offer, 'cancelled', tx['block_index'])
         # Cancel if bet.
-        elif bets:
-            bet.cancel_bet(db, bets[0], 'cancelled', tx['block_index'])
+        elif offer_type == 'bet':
+            bet.cancel_bet(db, offer, 'cancelled', tx['block_index'])
         # If neither order or bet, mark as invalid.
         else:
-            status = 'invalid: no open offer with that hash from that address'
+            assert False
 
     # Add parsed transaction to message-type–specific table.
     bindings = {
