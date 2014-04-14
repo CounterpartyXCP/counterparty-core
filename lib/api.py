@@ -425,7 +425,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def sign_tx(unsigned_tx_hex, privkey=None):
-            return bitcoin.sign_tx(unsigned_tx_hex, private_key=privkey)
+            return bitcoin.sign_tx(unsigned_tx_hex, private_key_wif=privkey)
                 
         @dispatcher.add_method
         def broadcast(signed_tx_hex):

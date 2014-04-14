@@ -499,7 +499,7 @@ def sign_tx (unsigned_tx_hex, private_key_wif=None):
         if result['complete']:
             signed_tx_hex = result['hex']
         else:
-            return None
+            raise exceptions.TransactionError('Could not sign transaction with Bitcoin Core.')
 
     return signed_tx_hex
 
