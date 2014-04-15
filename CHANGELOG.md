@@ -1,5 +1,9 @@
 * v6.14 (unreleased)
 	* fully floating transaction fees
+	* lots of miscellaneous bug fixes
+	* replenish fee_required_remaining on order match expiration
+	* transaction signing for source addresses not in Bitcoin Core wallet
+	* tweaks to API
 * v6.13
 	* miscellaneous bug fixes
 	* add some sanity checks

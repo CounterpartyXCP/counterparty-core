@@ -1,6 +1,6 @@
 {
 	"minimum_client_version_major": 6,
-	"minimum_client_version_minor": 13,
+	"minimum_client_version_minor": 14,
 	"protocol_changes": [
 		{
 			"block_index": 285306,
@@ -74,6 +74,12 @@
 			"minimum_database_version_major": 9,
 			"minimum_database_version_minor": 13,
 			"description": "no dividends to self"
+		},
+		{
+			"block_index": 296500,
+			"minimum_database_version_major": 9,
+			"minimum_database_version_minor": 14,
+			"description": "replenish fee_required_remaining"
 		}
 	]
 }

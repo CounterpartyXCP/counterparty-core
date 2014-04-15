@@ -6,6 +6,7 @@
 import struct
 import decimal
 D = decimal.Decimal
+import logging
 
 from . import (util, config, exceptions, bitcoin, util)
 
@@ -47,7 +48,7 @@ def cancel_order_match (db, order_match, status, block_index):
 
     order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']
 
-    # If tx0 is dead, credit address directly; if not, replenish give, get remaining.
+    # If tx0 is dead, credit address directly; if not, replenish give remaining, get remaining, and fee required remaining.
     orders = list(cursor.execute('''SELECT * FROM orders \
                                     WHERE tx_index = ?''',
                                  (order_match['tx0_index'],)))
@@ -62,18 +63,23 @@ def cancel_order_match (db, order_match, status, block_index):
     else:
         tx0_give_remaining = tx0_order['give_remaining'] + order_match['forward_quantity']
         tx0_get_remaining = tx0_order['get_remaining'] + order_match['backward_quantity']
+        if tx0_order['get_asset'] == 'BTC' and (block_index >= 296500 or config.TESTNET):    # Protocol change.
+            tx0_fee_required_remaining = tx0_order['fee_required_remaining'] + order_match['fee_paid']
+        else:
+            tx0_fee_required_remaining = tx0_order['fee_required_remaining']
         tx0_order_status = tx0_order['status']
         bindings = {
             'give_remaining': tx0_give_remaining,
             'get_remaining': tx0_get_remaining,
             'status': tx0_order_status,
+            'fee_required_remaining': tx0_fee_required_remaining,
             'tx_hash': order_match['tx0_hash']
         }
-        sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining where tx_hash = :tx_hash'
+        sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining where tx_hash = :tx_hash'
         cursor.execute(sql, bindings)
         util.message(db, block_index, 'update', 'orders', bindings)
 
-    # If tx1 is dead, credit address directly; if not, replenish give, get remaining.
+    # If tx1 is dead, credit address directly; if not, replenish give remaining, get remaining, and fee required remaining.
     orders = list(cursor.execute('''SELECT * FROM orders \
                                     WHERE tx_index = ?''',
                                  (order_match['tx1_index'],)))
@@ -88,14 +94,19 @@ def cancel_order_match (db, order_match, status, block_index):
     else:
         tx1_give_remaining = tx1_order['give_remaining'] + order_match['backward_quantity']
         tx1_get_remaining = tx1_order['get_remaining'] + order_match['forward_quantity']
+        if tx1_order['get_asset'] == 'BTC' and (block_index >= 296500 or config.TESTNET):    # Protocol change.
+            tx1_fee_required_remaining = tx1_order['fee_required_remaining'] + order_match['fee_paid']
+        else:
+            tx1_fee_required_remaining = tx1_order['fee_required_remaining']
         tx1_order_status = tx1_order['status']
         bindings = {
             'give_remaining': tx1_give_remaining,
             'get_remaining': tx1_get_remaining,
             'status': tx1_order_status,
+            'fee_required_remaining': tx1_fee_required_remaining,
             'tx_hash': order_match['tx1_hash']
         }
-        sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining where tx_hash = :tx_hash'
+        sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining where tx_hash = :tx_hash'
         cursor.execute(sql, bindings)
         util.message(db, block_index, 'update', 'orders', bindings)
 
@@ -261,6 +272,7 @@ def match (db, tx):
     tx1_fee_provided_remaining = tx1['fee_provided_remaining']
 
     for tx0 in order_matches:
+        logging.debug('Considering: ' + tx0['tx_hash'])
         tx0_give_remaining = tx0['give_remaining']
         tx0_get_remaining = tx0['get_remaining']
 
@@ -271,16 +283,26 @@ def match (db, tx):
         # Make sure that that both orders still have funds remaining (if order involves BTC, and so cannot be ‘filled’).
         if tx0['give_asset'] == 'BTC' or tx0['get_asset'] == 'BTC': # Gratuitous
             if tx0_give_remaining <= 0 or tx1_give_remaining <= 0:
+                logging.debug('Negative give remaining.')
                 continue
             if tx1['block_index'] >= 292000 or config.TESTNET:  # Protocol change
                 if tx0_get_remaining <= 0 or tx1_get_remaining <= 0:
+                    logging.debug('Negative get remaining.')
                     continue
 
             if tx1['block_index'] >= 294000 or config.TESTNET:  # Protocol change.
-                if tx0['fee_required_remaining'] < 0: continue
-                if tx0['fee_provided_remaining'] < 0: continue
-                if tx1_fee_provided_remaining < 0: continue
-                if tx1_fee_required_remaining < 0: continue
+                if tx0['fee_required_remaining'] < 0:
+                    logging.debug('Negative tx0 fee required remaining.')
+                    continue
+                if tx0['fee_provided_remaining'] < 0:
+                    logging.debug('Negative tx0 fee provided remaining.')
+                    continue
+                if tx1_fee_provided_remaining < 0:
+                    logging.debug('Negative tx1 fee provided remaining.')
+                    continue
+                if tx1_fee_required_remaining < 0:
+                    logging.debug('Negative tx1 fee required remaining.')
+                    continue
 
         # If the prices agree, make the trade. The found order sets the price,
         # and they trade as much as they can.
@@ -291,33 +313,39 @@ def match (db, tx):
         # Protocol change.
         if tx['block_index'] < 286000: tx1_inverse_price = util.price(1, tx1_price, tx1['block_index'])
 
-        # import sys  # TODO
-        # print('foo', float(tx0_price), float(tx1_inverse_price), file=sys.stderr) # TODO
+        logging.debug('Tx0 Price: {}; Tx1 Inverse Price: {}'.format(float(tx0_price), float(tx1_inverse_price)))
         if tx0_price <= tx1_inverse_price:
+            logging.debug('Potential forward quantities: {}, {}'.format(tx0_give_remaining, int(util.price(tx1_give_remaining, tx0_price, tx1['block_index']))))
             forward_quantity = int(min(tx0_give_remaining, int(util.price(tx1_give_remaining, tx0_price, tx1['block_index']))))
-            # print('bar1', tx0_give_remaining, int(util.price(tx1_give_remaining, tx0_price, tx1['block_index'])), file=sys.stderr) # TODO
-            # print('bar2', forward_quantity, file=sys.stderr) # TODO
+            logging.debug('Forward Quantity: {}'.format(forward_quantity))
             backward_quantity = round(forward_quantity * tx0_price)
 
-            if not forward_quantity: continue
+            if not forward_quantity:
+                logging.debug('Zero forward quantity.')
+                continue
             if tx1['block_index'] >= 286500 or config.TESTNET:    # Protocol change.
-                if not backward_quantity: continue
-            # print('bar', backward_quantity, file=sys.stderr) # TODO
+                if not backward_quantity:
+                    logging.debug('Zero backward quantity.')
+                    continue
+            logging.debug('Backward Quantity: {}'.format(backward_quantity))
 
             # Check and update fee remainings.
+            fee = 0
             if tx1['block_index'] >= 286500 or config.TESTNET: # Protocol change. Deduct fee_required from fee_provided_remaining, etc., if possible (else don’t match).
                 if tx1['get_asset'] == 'BTC':
                     fee = int(tx1['fee_required_remaining'] * util.price(forward_quantity, tx1_get_remaining, tx1['block_index']))
-                    # print('baz', tx0_fee_provided_remaining, fee, file=sys.stderr) # TODO
-                    if tx0_fee_provided_remaining < fee: continue
+                    if tx0_fee_provided_remaining < fee:
+                        logging.debug('Tx0 fee provided remaining: {}; Fee: {}'.format(tx0_fee_provided_remaining, fee))
+                        continue
                     else:
                         tx0_fee_provided_remaining -= fee
                         if tx1['block_index'] >= 287800 or config.TESTNET:  # Protocol change.
                             tx1_fee_required_remaining -= fee
                 elif tx1['give_asset'] == 'BTC':
                     fee = int(tx0['fee_required_remaining'] * util.price(backward_quantity, tx0_get_remaining, tx1['block_index']))
-                    # print('qux', tx1_fee_provided_remaining, fee, file=sys.stderr) # TODO
-                    if tx1_fee_provided_remaining < fee: continue
+                    if tx1_fee_provided_remaining < fee:
+                        logging.debug('Tx1 fee provided remaining: {}; Fee: {}'.format(tx1_fee_provided_remaining, fee))
+                        continue
                     else:
                         tx1_fee_provided_remaining -= fee 
                         if tx1['block_index'] >= 287800 or config.TESTNET:  # Protocol change.
@@ -411,9 +439,10 @@ def match (db, tx):
                 'tx0_expiration': tx0['expiration'],
                 'tx1_expiration': tx1['expiration'],
                 'match_expire_index': match_expire_index,
+                'fee_paid': fee,
                 'status': status,
             }
-            sql='insert into order_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :forward_asset, :forward_quantity, :backward_asset, :backward_quantity, :tx0_block_index, :tx1_block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :status)'
+            sql='insert into order_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :forward_asset, :forward_quantity, :backward_asset, :backward_quantity, :tx0_block_index, :tx1_block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :fee_paid, :status)'
             cursor.execute(sql, bindings)
 
             if tx1_status == 'filled':
