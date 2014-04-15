@@ -153,11 +153,11 @@ def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, ex
     if get_asset not in ('BTC', 'XCP') and not cursor.fetchall():
         problems.append('no such asset to get ({})'.format(get_asset))
     if expiration > config.MAX_EXPIRATION:
-        problems.append('maximum expiration time exceeded')
+        problems.append('expiration overflow')
 
     # For SQLite3
     if give_quantity > config.MAX_INT or get_quantity > config.MAX_INT or fee_required > config.MAX_INT:
-        problems.append('maximum integer size exceeded')
+        problems.append('integer overflow')
 
     cursor.close()
     return problems

@@ -120,11 +120,11 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
         problems.append('CFDs have no target value')
 
     if expiration > config.MAX_EXPIRATION:
-        problems.append('maximum expiration time exceeded')
+        problems.append('expiration overflow')
 
     # For SQLite3
     if wager_quantity > config.MAX_INT or counterwager_quantity > config.MAX_INT or bet_type > config.MAX_INT or deadline > config.MAX_INT or leverage > config.MAX_INT:
-        problems.append('maximum integer size exceeded')
+        problems.append('integer overflow')
 
     # Check for sufficient funds.
     fee_fraction = get_fee_fraction(db, feed_address)

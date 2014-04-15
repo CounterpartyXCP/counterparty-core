@@ -90,7 +90,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     total = sum([issuance['quantity'] for issuance in issuances])
     assert isinstance(quantity, int)
     if total + quantity > config.MAX_INT:
-        problems.append('maximum total quantity exceeded')
+        problems.append('total quantity overflow')
 
     if destination and quantity:
         problems.append('cannot issue and transfer simultaneously')
@@ -143,7 +143,7 @@ def parse (db, tx, message):
         if not callable_: calldate, call_price = 0, 0.0
         problems, fee = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, callable_, call_date, call_price, description, block_index=tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
-        if 'maximum total quantity exceeded' in problems:
+        if 'total quantity overflow' in problems:
             quantity = 0
 
     if tx['destination']:
