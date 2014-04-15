@@ -712,47 +712,6 @@ def reparse (db, block_index=None, quiet=False):
     cursor.close()
     return
 
-def reorg (db, next_block_index):
-    # Detect and effect chain reorganisations of arbitrary length.
-    # Return next good block index.
-
-    cursor = db.cursor()
-    last_block_index = next_block_index - 1
-    block_index = last_block_index
-    while True:
-
-        # Get DB and Bitcoind hashes of a particular block.
-        try:
-            bitcoind_hash = bitcoin.get_block_hash(block_index)
-        except Exception as e:
-            block_index -= 1
-            continue
-        blocks = list(cursor.execute('''SELECT * FROM blocks
-                                        WHERE block_index = ?''', (block_index,)))
-        assert len(blocks) == 1
-        db_hash = blocks[0]['block_hash']
-
-        # If they don’t agree, rollback to that point.
-        if db_hash == bitcoind_hash:                # Stop looking.
-            if block_index == last_block_index:     # No reorg..
-                cursor.close()
-                return last_block_index + 1
-            else:                                   # Yes reorg..
-                # Record reorganisation.
-                logging.warning('Status: Blockchain reorganisation at block {}.'.format(block_index))
-                util.message(db, next_block_index, 'reorg', None, {'block_index': block_index + 1})
-
-                # Rollback the DB.
-                reparse(db, block_index=block_index, quiet=True)
-
-                cursor.close()
-                return block_index + 1
-        else:
-            if block_index == config.BLOCK_FIRST:   # End of the line.
-                return block_index
-            else:                                   # Keep looking.
-                block_index -= 1
-
 
 def follow (db):
     # TODO: This is not thread-safe!
@@ -788,21 +747,47 @@ def follow (db):
     while True:
 
         # Get new blocks.
-        block_count = bitcoin.get_block_count()
-        while block_index <= block_count:
+        if block_index <= bitcoin.get_block_count():
             logging.info('Block: {}'.format(str(block_index)))
-            block_hash = bitcoin.get_block_hash(block_index)
-            block = bitcoin.get_block(block_hash)
-            block_time = block['time']
-            tx_hash_list = block['tx']
 
-            # Reorg. check.
-            next_good_block_index = reorg(db, block_index)
-            if next_good_block_index != block_index:
-                block_index = next_good_block_index
+            # Backwards check for incorrect blocks due to chain reorganisation, and stop when a common parent is found.
+            c = block_index
+            requires_rollback = False
+            while True:
+                if c == config.BLOCK_FIRST: break
+
+                block_hash = bitcoin.get_block_hash(block_index)
+                block = bitcoin.get_block(block_hash)
+
+                # Bitcoind parent hash.
+                bitcoind_parent = block['previousblockhash']
+
+                # DB parent hash.
+                blocks = list(follow_cursor.execute('''SELECT * FROM blocks
+                                                WHERE block_index = ?''', (c - 1,)))
+                assert len(blocks) == 1
+                db_parent = blocks[0]['block_hash']
+
+                # Compare.
+                if db_parent == bitcoind_parent: break
+
+                c -= 1
+                requires_rollback = True
+
+            # Rollback for reorganisation.
+            if requires_rollback:
+                # Record reorganisation.
+                logging.warning('Status: Blockchain reorganisation at block {}.'.format(block_index))
+                util.message(db, next_block_index, 'reorg', None, {'block_index': block_index + 1})
+
+                # Rollback the DB.
+                reparse(db, block_index=c-1, quiet=True)
+                block_index = c
                 continue
 
             # Get and parse transactions in this block (atomically).
+            block_time = block['time']
+            tx_hash_list = block['tx']
             with db:
                 # List the block.
                 follow_cursor.execute('''INSERT INTO blocks(
@@ -860,12 +845,7 @@ def follow (db):
 
         # Check for conservation of assets.
         check_conservation(db)
-
-        while block_index > block_count: # DUPE
-            next_good_block_index = reorg(db, block_index)
-
-            block_count = bitcoin.get_block_count()
-            time.sleep(2)
+        time.sleep(2)
 
     follow_cursor.close()
 
