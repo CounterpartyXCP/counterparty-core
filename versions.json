@@ -76,7 +76,7 @@
 			"description": "no dividends to self"
 		},
 		{
-			"block_index": 296500,
+			"block_index": 297000,
 			"minimum_database_version_major": 9,
 			"minimum_database_version_minor": 14,
 			"description": "replenish fee_required_remaining"

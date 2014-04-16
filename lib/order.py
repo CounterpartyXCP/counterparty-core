@@ -63,7 +63,7 @@ def cancel_order_match (db, order_match, status, block_index):
     else:
         tx0_give_remaining = tx0_order['give_remaining'] + order_match['forward_quantity']
         tx0_get_remaining = tx0_order['get_remaining'] + order_match['backward_quantity']
-        if tx0_order['get_asset'] == 'BTC' and (block_index >= 296500 or config.TESTNET):    # Protocol change.
+        if tx0_order['get_asset'] == 'BTC' and (block_index >= 297000 or config.TESTNET):    # Protocol change.
             tx0_fee_required_remaining = tx0_order['fee_required_remaining'] + order_match['fee_paid']
         else:
             tx0_fee_required_remaining = tx0_order['fee_required_remaining']
@@ -94,7 +94,7 @@ def cancel_order_match (db, order_match, status, block_index):
     else:
         tx1_give_remaining = tx1_order['give_remaining'] + order_match['backward_quantity']
         tx1_get_remaining = tx1_order['get_remaining'] + order_match['forward_quantity']
-        if tx1_order['get_asset'] == 'BTC' and (block_index >= 296500 or config.TESTNET):    # Protocol change.
+        if tx1_order['get_asset'] == 'BTC' and (block_index >= 297000 or config.TESTNET):    # Protocol change.
             tx1_fee_required_remaining = tx1_order['fee_required_remaining'] + order_match['fee_paid']
         else:
             tx1_fee_required_remaining = tx1_order['fee_required_remaining']
