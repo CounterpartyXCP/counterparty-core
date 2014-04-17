@@ -756,29 +756,29 @@ def follow (db):
             while True:
                 if c == config.BLOCK_FIRST: break
 
-                block_hash = bitcoin.get_block_hash(block_index)
-                block = bitcoin.get_block(block_hash)
-
                 # Bitcoind parent hash.
-                bitcoind_parent = block['previousblockhash']
+                c_hash = bitcoin.get_block_hash(c)
+                c_block = bitcoin.get_block(c_hash)
+                bitcoind_parent = c_block['previousblockhash']
 
                 # DB parent hash.
                 blocks = list(follow_cursor.execute('''SELECT * FROM blocks
-                                                WHERE block_index = ?''', (c - 1,)))
-                assert len(blocks) == 1
+                                                       WHERE block_index = ?''', (c - 1,)))
+                if len(blocks) != 1: break  # For empty DB.
                 db_parent = blocks[0]['block_hash']
 
                 # Compare.
-                if db_parent == bitcoind_parent: break
-
-                c -= 1
-                requires_rollback = True
+                if db_parent == bitcoind_parent:
+                    break
+                else:
+                    c -= 1
+                    requires_rollback = True
 
             # Rollback for reorganisation.
             if requires_rollback:
                 # Record reorganisation.
                 logging.warning('Status: Blockchain reorganisation at block {}.'.format(block_index))
-                util.message(db, next_block_index, 'reorg', None, {'block_index': block_index + 1})
+                util.message(db, c, 'reorg', None, {'block_index': block_index + 1})
 
                 # Rollback the DB.
                 reparse(db, block_index=c-1, quiet=True)
@@ -786,6 +786,8 @@ def follow (db):
                 continue
 
             # Get and parse transactions in this block (atomically).
+            block_hash = bitcoin.get_block_hash(block_index)
+            block = bitcoin.get_block(block_hash)
             block_time = block['time']
             tx_hash_list = block['tx']
             with db:

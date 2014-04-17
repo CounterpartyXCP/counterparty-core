@@ -469,7 +469,7 @@ def transaction (tx_info, encoding, unittest=False, public_key_hex=None, allow_u
     if not sufficient_funds:
         # Approximate needed change, fee by with most recently calculated quantities.
         total_btc_out = btc_out + max(change_quantity, 0) + final_fee
-        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need {} BTC.)'.format(source, total_btc_out / config.UNIT))
+        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need approximately {} BTC.)'.format(source, total_btc_out / config.UNIT))
 
     # Construct outputs.
     if data: data_output = (data_array, data_value)

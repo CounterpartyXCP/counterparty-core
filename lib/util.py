@@ -134,16 +134,19 @@ def log (db, command, category, bindings):
         elif category == 'bets':
             # Last text
             broadcasts = get_broadcasts(db, status='valid', source=bindings['feed_address'], order_by='tx_index', order_dir='asc')
-            last_broadcast = broadcasts[-1]
-            text = last_broadcast['text']
+            try:
+                last_broadcast = broadcasts[-1]
+                text = last_broadcast['text']
+            except IndexError:
+                text = '<Text>'
 
             # Suffix
             end = 'in {} blocks, for a fee of {} ({}) [{}]'.format(bindings['expiration'], output(bindings['fee_paid'], 'XCP'), bindings['tx_hash'], bindings['status'])
 
             if 'CFD' not in BET_TYPE_NAME[bindings['bet_type']]:
-                log_message = 'Bet: {} against {}, on {} that ‘{}’ will {} {} at {}, {}'.format(output(bindings['wager_quantity'], 'XCP'), output(bindings['counterwager_quantity'], 'XCP'), bindings['feed_address'], text, BET_TYPE_NAME[bindings['bet_type']], str(output(bindings['target_value'], 'value').split(' ')[0]), isodt(bindings['deadline']), end)
+                log_message = 'Bet: {} against {}, by {}, on {} that ‘{}’ will {} {} at {}, {}'.format(output(bindings['wager_quantity'], 'XCP'), output(bindings['counterwager_quantity'], 'XCP'), bindings['source'], bindings['feed_address'], text, BET_TYPE_NAME[bindings['bet_type']], str(output(bindings['target_value'], 'value').split(' ')[0]), isodt(bindings['deadline']), end)
             else:
-                log_message = 'Bet: {} on {} for {} against {}, leveraged {}x, {}'.format(BET_TYPE_NAME[bindings['bet_type']], bindings['feed_address'],output(bindings['wager_quantity'], 'XCP'), output(bindings['counterwager_quantity'], 'XCP'), output(bindings['leverage']/ 5040, 'leverage'), end)
+                log_message = 'Bet: {}, by {}, on {} for {} against {}, leveraged {}x, {}'.format(BET_TYPE_NAME[bindings['bet_type']], bindings['source'], bindings['feed_address'],output(bindings['wager_quantity'], 'XCP'), output(bindings['counterwager_quantity'], 'XCP'), output(bindings['leverage']/ 5040, 'leverage'), end)
 
             logging.info(log_message)
 

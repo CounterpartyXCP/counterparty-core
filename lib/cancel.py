@@ -29,6 +29,7 @@ def validate (db, source, offer_hash):
     elif bets: offer_type = 'bet'
     else: problems = ['no open offer with that hash']
 
+    offer = None
     if offer_type:
         offers = orders + bets
         offer = offers[0]
