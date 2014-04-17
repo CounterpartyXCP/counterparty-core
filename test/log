@@ -7,6 +7,11 @@ Send: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to n3BrDB6zDiEPWEE6wLxywFb
 Order: give 0.5 BTC for 1.0 XCP in 10 blocks, with a provided fee of 0.01 BTC and a required fee of 0.0 BTC (dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986) [open]
 Debit: 1.05 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5>
 Order: give 1.05 XCP for 0.5 BTC in 10 blocks, with a provided fee of 0.0002 BTC and a required fee of 0.009 BTC (084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5) [open]
+Considering: dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986
+Tx0 Price: 2.0; Tx1 Inverse Price: 2.1
+Potential forward quantities: 50000000, 52500000
+Forward Quantity: 50000000
+Backward Quantity: 100000000
 Order Match: 0.5 BTC for 1.0 XCP (dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5) [pending]
 Credit: 1.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Database: set status of order_match dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5 to completed.
@@ -32,27 +37,27 @@ Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 0.000008 XCP per unit of BBBC 
 Broadcast: ‘Unit Test’ = 100.0 from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:33:20-05:00 with a fee of 5.0% (e7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6) [valid]
 Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Debit: 0.025 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
-Bet: BullCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc for 0.5 XCP against 0.25 XCP, leveraged 3.0x, in 10 blocks, for a fee of 0.025 XCP (ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c977) [open]
+Bet: BullCFD, by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc, on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc for 0.5 XCP against 0.25 XCP, leveraged 3.0x, in 10 blocks, for a fee of 0.025 XCP (ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c977) [open]
 Debit: 0.25 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Debit: 0.0125 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
-Bet: BearCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc for 0.25 XCP against 0.415 XCP, leveraged 3.0x, in 10 blocks, for a fee of 0.0125 XCP (9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4) [open]
+Bet: BearCFD, by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc, on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc for 0.25 XCP against 0.415 XCP, leveraged 3.0x, in 10 blocks, for a fee of 0.0125 XCP (9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4) [open]
 Credit: 0.0425 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #filled# <9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4>
 Bet Match: BullCFD for 0.415 XCP against BearCFD for 0.2075 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 that 0.0 value, leveraged 3.0x (ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c9779d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4) [pending]
 Debit: 1.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Debit: 0.075 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
-Bet: BullCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc for 1.5 XCP against 3.5 XCP, leveraged 1.0x, in 10 blocks, for a fee of 0.075 XCP (4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47) [open]
+Bet: BullCFD, by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc, on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc for 1.5 XCP against 3.5 XCP, leveraged 1.0x, in 10 blocks, for a fee of 0.075 XCP (4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47) [open]
 Debit: 3.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Debit: 0.175 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
-Bet: BearCFD on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc for 3.5 XCP against 1.5 XCP, leveraged 1.0x, in 10 blocks, for a fee of 0.175 XCP (dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8) [open]
+Bet: BearCFD, by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc, on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc for 3.5 XCP against 1.5 XCP, leveraged 1.0x, in 10 blocks, for a fee of 0.175 XCP (dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8) [open]
 Credit: 0.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #filled# <dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8>
 Credit: 0.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #filled# <dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8>
 Bet Match: BullCFD for 1.5 XCP against BearCFD for 3.5 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:35:00-05:00 that 0.0 value, leveraged 1.0x (4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8) [pending]
 Debit: 7.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Debit: 0.375 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
-Bet: 7.5 XCP against 6.5 XCP, on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc that ‘Unit Test’ will Equal 1.0 at 2013-12-25T14:36:40-05:00, in 10 blocks, for a fee of 0.375 XCP (c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee3) [open]
+Bet: 7.5 XCP against 6.5 XCP, by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc, on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc that ‘Unit Test’ will Equal 1.0 at 2013-12-25T14:36:40-05:00, in 10 blocks, for a fee of 0.375 XCP (c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee3) [open]
 Debit: 6.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Debit: 0.325 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
-Bet: 6.5 XCP against 7.5 XCP, on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc that ‘Unit Test’ will NotEqual 1.0 at 2013-12-25T14:36:40-05:00, in 10 blocks, for a fee of 0.325 XCP (4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a) [open]
+Bet: 6.5 XCP against 7.5 XCP, by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc, on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc that ‘Unit Test’ will NotEqual 1.0 at 2013-12-25T14:36:40-05:00, in 10 blocks, for a fee of 0.325 XCP (4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a) [open]
 Credit: 0.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #filled# <4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a>
 Credit: 0.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #filled# <4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a>
 Bet Match: Equal for 7.5 XCP against NotEqual for 6.5 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:36:40-05:00 that 1.0 value, leveraged 1.0x (c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee34a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a) [pending]

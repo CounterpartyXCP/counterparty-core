@@ -70,7 +70,7 @@ def parse_tx (db, tx):
                                 (False, tx['tx_hash']))
         logging.info('Unsupported transaction: hash {}; data {}'.format(tx['tx_hash'], tx['data']))
 
-    if config.CAREFUL and not tx['tx_index'] % 60:
+    if config.CAREFUL and not tx['tx_index'] % 60:  # TODO
         # Check for conservation of assets.
         check_conservation(db)
 

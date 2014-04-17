@@ -154,7 +154,7 @@ def cli(method, params, unsigned):
         # Sign and broadcast.
         signed_tx_hex = bitcoin.sign_tx(unsigned_tx_hex, private_key_wif=private_key_wif)
         print('Transaction (signed):', signed_tx_hex)
-        print('Hash of transaction (broadcasted):', bitcoin.broadcast(signed_tx_hex))
+        print('Hash of transaction (broadcasted):', bitcoin.broadcast_tx(signed_tx_hex))
 
 
 def set_options (data_dir=None,

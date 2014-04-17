@@ -433,8 +433,8 @@ class APIServer(threading.Thread):
             return bitcoin.sign_tx(unsigned_tx_hex, private_key_wif=privkey)
                 
         @dispatcher.add_method
-        def broadcast(signed_tx_hex):
-            return bitcoin.broadcast(signed_tx_hex)
+        def broadcast_tx(signed_tx_hex):
+            return bitcoin.broadcast_tx(signed_tx_hex)
 
         class API(object):
             @cherrypy.expose

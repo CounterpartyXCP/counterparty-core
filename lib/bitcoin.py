@@ -510,7 +510,7 @@ def sign_tx (unsigned_tx_hex, private_key_wif=None):
 
     return signed_tx_hex
 
-def broadcast (signed_tx_hex):
+def broadcast_tx (signed_tx_hex):
     return send_raw_transaction(signed_tx_hex)
 
 def normalize_quantity(quantity, divisible=True):
