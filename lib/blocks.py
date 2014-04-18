@@ -777,8 +777,8 @@ def follow (db):
             # Rollback for reorganisation.
             if requires_rollback:
                 # Record reorganisation.
-                logging.warning('Status: Blockchain reorganisation at block {}.'.format(block_index))
-                util.message(db, c, 'reorg', None, {'block_index': block_index + 1})
+                logging.warning('Status: Blockchain reorganisation at block {}.'.format(c))
+                util.message(db, block_index, 'reorg', None, {'block_index': c})
 
                 # Rollback the DB.
                 reparse(db, block_index=c-1, quiet=True)
