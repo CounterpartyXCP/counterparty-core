@@ -7,12 +7,9 @@ UNIT = 100000000        # The same across currencies.
 UNITTEST_PREFIX = b'TESTXXXX'
 
 # Versions
-CLIENT_VERSION_MAJOR = 6
-CLIENT_VERSION_MINOR = 15
-CLIENT_VERSION_STRING = str(CLIENT_VERSION_MAJOR) + '.' + str(CLIENT_VERSION_MINOR)
-DB_VERSION_MAJOR = 9            # Major version changes the blocks or transactions table.
-DB_VERSION_MINOR = 15           # Minor version changes just the parsing.
-DB_VERSION_STRING = str(DB_VERSION_MAJOR) + '.' + str(DB_VERSION_MINOR)
+VERSION_MAJOR = 9
+VERSION_MINOR = 16
+VERSION_STRING = str(VERSION_MAJOR) + '.' + str(VERSION_MINOR)
 
 # Bitcoin protocol
 MULTISIG = True

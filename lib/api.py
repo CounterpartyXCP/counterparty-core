@@ -313,11 +313,10 @@ class APIServer(threading.Thread):
                 'db_caught_up': caught_up,
                 'bitcoin_block_count': latestBlockIndex,
                 'last_block': last_block,
-                'counterpartyd_version': config.CLIENT_VERSION_STRING,
                 'last_message_index': last_message['message_index'] if last_message else -1,
                 'running_testnet': config.TESTNET,
-                'db_version_major': config.DB_VERSION_MAJOR,
-                'db_version_minor': config.DB_VERSION_MINOR,
+                'version_major': config.VERSION_MAJOR,
+                'version_minor': config.VERSION_MINOR,
             }
 
         @dispatcher.add_method

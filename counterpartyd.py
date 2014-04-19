@@ -386,7 +386,7 @@ def set_options (data_dir=None,
     if database_file:
         config.DATABASE = database_file
     else:
-        string = 'counterpartyd.' + str(config.DB_VERSION_MAJOR)
+        string = 'counterpartyd.' + str(config.VERSION_MAJOR)
         if config.TESTNET:
             string += '.testnet'
         if config.TESTCOIN:
@@ -444,7 +444,7 @@ if __name__ == '__main__':
     
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(prog='counterpartyd', description='the reference implementation of the Counterparty protocol')
-    parser.add_argument('-V', '--version', action='version', version="counterpartyd v%s" % config.CLIENT_VERSION_STRING)
+    parser.add_argument('-V', '--version', action='version', version="counterpartyd v%s" % config.VERSION_STRING)
 
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='sets log level to DEBUG instead of WARNING')
     parser.add_argument('--force', action='store_true', help='don\'t check whether Bitcoind is caught up')
@@ -617,11 +617,11 @@ if __name__ == '__main__':
     if args.action == None: args.action = 'server'
     
     # TODO
-    # Check versions.
+    # Check version.
     # Check that bitcoind is running, communicable, and caught up with the blockchain.
     # Check that the database has caught up with bitcoind.
     if not args.force:
-        util.versions_check(db)
+        util.version_check(db)
         bitcoin.bitcoind_check(db)
         if args.action not in ('server', 'reparse', 'rollback'):
             util.database_check(db, bitcoin.get_block_count())
