@@ -42,7 +42,10 @@ def api (method, params):
 
     response_json = response.json()
     if 'error' not in response_json.keys() or response_json['error'] == None:
-        return response_json['result']
+        try:
+            return response_json['result']
+        except KeyError:
+            raise Exception(response_json)
     else:
         raise exceptions.RPCError('{}'.format(response_json['error']))
 
@@ -290,33 +293,20 @@ def connect_to_db(flags=None):
 
     return db
 
-def versions_check (db):
+def version_check (db):
     try:
-        host = 'https://raw2.github.com/PhantomPhreak/counterpartyd/master/versions.json'
+        host = 'https://raw2.github.com/PhantomPhreak/counterpartyd/master/version.json'
         response = requests.get(host, headers={'cache-control': 'no-cache'})
         versions = json.loads(response.text)
     except Exception as e:
-        raise exceptions.DatabaseVersionError('Unable to check client, database versions. How’s your Internet access?')
+        raise exceptions.VersionError('Unable to check version. How’s your Internet access?')
  
-    # Check client version (for important UI changes).
-    if config.CLIENT_VERSION_MAJOR < versions['minimum_client_version_major']:
-        if config.CLIENT_VERSION_MiNOR < versions['minimum_client_version_minor']:
-            raise exceptions.ClientVersionError('Please upgrade counterpartyd to the latest version and restart the server.')
+    # Check client version.
+    if config.VERSION_MAJOR < versions['minimum_version_major']:
+        if config.VERSION_MINOR < versions['minimum_version_minor']:
+            raise exceptions.VersionError('Please upgrade counterpartyd to the latest version and restart the server.')
 
-    # Check the database version when past the block at which the protocol change
-    # comes into effect.
-    try:
-        block_index = last_block(db)['block_index']
-    except (exceptions.DatabaseError, apsw.SQLError):
-        logging.debug('Status: Version checks passed.') # DUPE
-        return
-    for protocol_change in versions['protocol_changes']:
-        if block_index >= protocol_change['block_index']:
-            if config.DB_VERSION_MAJOR < protocol_change['minimum_database_version_major']:
-                if config.DB_VERSION_MINOR < protocol_change['minimum_database_version_minor']:
-                    raise exceptions.DatabaseVersionError('Please upgrade counterpartyd to the latest version and restart the server.')
-
-    logging.debug('Status: Version checks passed.')
+    logging.debug('Status: Version check passed.')
     return
 
 def database_check (db, blockcount):

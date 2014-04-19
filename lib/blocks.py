@@ -706,7 +706,7 @@ def reparse (db, block_index=None, quiet=False):
         check_conservation(db)
 
         # Update minor version number.
-        minor_version = cursor.execute('PRAGMA user_version = {}'.format(int(config.DB_VERSION_MINOR))) # Syntax?!
+        minor_version = cursor.execute('PRAGMA user_version = {}'.format(int(config.VERSION_MINOR))) # Syntax?!
         logging.info('Status: Database minor version number updated.')
 
     cursor.close()
@@ -728,8 +728,8 @@ def follow (db):
 
         # Reparse all transactions if minor version has changed.
         minor_version = follow_cursor.execute('PRAGMA user_version').fetchall()[0]['user_version']
-        if minor_version != config.DB_VERSION_MINOR:
-            logging.info('Status: Database and client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.DB_VERSION_MINOR))
+        if minor_version != config.VERSION_MINOR:
+            logging.info('Status: client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.VERSION_MINOR))
             reparse(db, quiet=False)
 
     except exceptions.DatabaseError:

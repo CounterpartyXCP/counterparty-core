@@ -67,6 +67,11 @@ balances or open orders.
 For a summary of the command‐line arguments and options, see
 `./counterpartyd.py --help`.
 
+# Versioning
+* Major version changes require a full rebuild of the database.
+* Minor version changes require a database reparse.
+* All protocol changes are retroactive on testnet.
+
 ## Input and Output
 * Quantities of divisible assets are written to eight decimal places.
 * Quantities of indivisible assets are written as integers.

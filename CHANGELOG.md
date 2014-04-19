@@ -1,9 +1,14 @@
+## Client Versions ##
+* v9.16 (unreleased)
+	* regular version, database, Bitcoind checking in API
+	* better testcoin support
+	* simplify version checking (combined DB and client versions), which necessitates skipping versions
 * v6.15
-	* bug in calculation of holders
+	* bug in calculation of holders (protocol change: retroactive)
 * v6.14
 	* fully floating transaction fees
 	* lots of miscellaneous bug fixes
-	* replenish fee_required_remaining on order match expiration
+	* replenish fee_required_remaining on order match expiration (protocol change: 297000)
 	* transaction signing for source addresses not in Bitcoin Core wallet
 	* tweaks to API
 * v6.13
@@ -39,3 +44,17 @@
 * v0.2
 * v0.1
 	* initial release
+
+## Other Protocol Changes ##
+* issuances fees regression: 285306
+* double credits on order match expirations: retroactive
+* arbitrary spend with multi‐sig input: retroactive
+* deduct `fee_required`, too: 287800
+* value, quantity, etc. sanity checking: retroactive
+* reduce issuance fee to 0.5 XCP: 291700
+* match only with positive get/counterwager remaining: 292000
+* pay‐to‐pubkeyhash encoding: 293000
+* filtered negative order fees: 294000
+* dividends on escrowed funds: 294500
+* fractions, not decimals, for rounding: 294500
+* no dividends to self: 296000
