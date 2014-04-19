@@ -1,6 +1,6 @@
 {
 	"minimum_client_version_major": 6,
-	"minimum_client_version_minor": 14,
+	"minimum_client_version_minor": 15,
 	"protocol_changes": [
 		{
 			"block_index": 285306,
@@ -80,6 +80,12 @@
 			"minimum_database_version_major": 9,
 			"minimum_database_version_minor": 14,
 			"description": "replenish fee_required_remaining"
+		},
+		{
+			"block_index": 0,
+			"minimum_database_version_major": 9,
+			"minimum_database_version_minor": 15,
+			"description": "bug in calculation of holders"
 		}
 	]
 }

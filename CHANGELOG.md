@@ -1,4 +1,6 @@
-* v6.14 (unreleased)
+* v6.15
+	* bug in calculation of holders
+* v6.14
 	* fully floating transaction fees
 	* lots of miscellaneous bug fixes
 	* replenish fee_required_remaining on order match expiration
