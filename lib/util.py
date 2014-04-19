@@ -708,7 +708,9 @@ def get_holders(db, asset):
                           WHERE status = ?''', ('pending',))
         for bet_match in list(cursor):
             holders.append({'address': bet_match['tx0_address'], 'address_quantity': bet_match['forward_quantity'], 'escrow': bet_match['id']})
+            holders.append({'address': bet_match['tx0_address'], 'address_quantity': bet_match['forward_fee'], 'escrow': bet_match['id']})
             holders.append({'address': bet_match['tx1_address'], 'address_quantity': bet_match['backward_quantity'], 'escrow': bet_match['id']})
+            holders.append({'address': bet_match['tx1_address'], 'address_quantity': bet_match['backward_fee'], 'escrow': bet_match['id']})
 
     cursor.close()
     return holders
