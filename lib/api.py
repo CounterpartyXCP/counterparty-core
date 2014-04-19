@@ -319,6 +319,7 @@ class APIServer(threading.Thread):
                 'running_testcoin': config.TESTCOIN,
                 'version_major': config.VERSION_MAJOR,
                 'version_minor': config.VERSION_MINOR,
+                'version_revision': config.VERSION_REVISION
             }
 
         @dispatcher.add_method
