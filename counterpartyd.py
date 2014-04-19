@@ -309,9 +309,15 @@ def set_options (data_dir=None,
         config.RPC_PORT = configfile['Default']['rpc-port']
     else:
         if config.TESTNET:
-            config.RPC_PORT = 14000
+            if config.TESTCOIN:
+                config.RPC_PORT = 14001
+            else:
+                config.RPC_PORT = 14000
         else:
-            config.RPC_PORT = 4000
+            if config.TESTCOIN:
+                config.RPC_PORT = 4001
+            else:
+                config.RPC_PORT = 4000
     try:
         config.RPC_PORT = int(config.RPC_PORT)
         assert int(config.RPC_PORT) > 1 and int(config.RPC_PORT) < 65535
@@ -565,11 +571,6 @@ if __name__ == '__main__':
     parser_market.add_argument('--give-asset', help='only show orders offering to sell GIVE_ASSET')
     parser_market.add_argument('--get-asset', help='only show orders offering to buy GET_ASSET')
 
-    """
-    parser_checksum = subparsers.add_parser('checksum', help='create an asset name from a base string')
-    parser_checksum.add_argument('string', help='base string of the desired asset name')
-    """
-
     args = parser.parse_args()
 
     # Configuration
@@ -616,19 +617,10 @@ if __name__ == '__main__':
 
     if args.action == None: args.action = 'server'
     
-    # TODO
-    # Check version.
-    # Check that bitcoind is running, communicable, and caught up with the blockchain.
-    # Check that the database has caught up with bitcoind.
-    if not args.force:
+    # TODO: Keep around only as long as reparse and rollback don’t use API.
+    if not args.force and args.action in ('reparse', 'rollback'):
         util.version_check(db)
         bitcoin.bitcoind_check(db)
-        if args.action not in ('server', 'reparse', 'rollback'):
-            util.database_check(db, bitcoin.get_block_count())
-    # TODO
-
-    # Do something.
-
 
     # MESSAGE CREATION
     if args.action == 'send':

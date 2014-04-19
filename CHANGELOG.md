@@ -1,5 +1,7 @@
 ## Client Versions ##
 * v9.16 (unreleased)
+	* regular version, database, Bitcoind checking in API
+	* better testcoin support
 	* simplify version checking (combined DB and client versions), which necessitates skipping versions
 * v6.15
 	* bug in calculation of holders (protocol change: retroactive)

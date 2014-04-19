@@ -13,7 +13,8 @@ D = decimal.Decimal
 import apsw
 import cherrypy
 from cherrypy import wsgiserver
-from jsonrpc import JSONRPCResponseManager, dispatcher
+import jsonrpc
+from jsonrpc import dispatcher
 
 from . import (config, bitcoin, exceptions, util)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
@@ -315,6 +316,7 @@ class APIServer(threading.Thread):
                 'last_block': last_block,
                 'last_message_index': last_message['message_index'] if last_message else -1,
                 'running_testnet': config.TESTNET,
+                'running_testcoin': config.TESTCOIN,
                 'version_major': config.VERSION_MAJOR,
                 'version_minor': config.VERSION_MINOR,
             }
@@ -441,11 +443,32 @@ class APIServer(threading.Thread):
                 cherrypy.response.headers["Content-Type"] = "application/json"
                 #CORS logic is handled in the nginx config
 
+                # Check version.
+                # Check that bitcoind is running, communicable, and caught up with the blockchain.
+                # Check that the database has caught up with bitcoind.
+                try: self.last_check
+                except: self.last_check = 0
+                try:
+                    if time.time() - self.last_check >= 4 * 3600: # Four hours since last check.
+                        code = 10
+                        util.version_check(db)
+                    if time.time() - self.last_check > 10 * 60: # Ten minutes since last check.
+                        code = 11
+                        bitcoin.bitcoind_check(db)
+                        code = 12
+                        util.database_check(db, bitcoin.get_block_count())  # TODO: If not reparse or rollback, once those use API.
+                    self.last_check = time.time()
+                except Exception as e:
+                    exception_name = e.__class__.__name__
+                    exception_text = str(e)
+                    response = jsonrpc.exceptions.JSONRPCError(code=code, message=exception_name, data=exception_text)
+                    return response.json.encode()
+
                 try:
                     data = cherrypy.request.body.read().decode('utf-8')
                 except ValueError:
                     raise cherrypy.HTTPError(400, 'Invalid JSON document')
-                response = JSONRPCResponseManager.handle(data, dispatcher)
+                response = jsonrpc.JSONRPCResponseManager.handle(data, dispatcher)
                 return response.json.encode()
 
         cherrypy.config.update({

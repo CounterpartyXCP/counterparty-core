@@ -42,7 +42,10 @@ def api (method, params):
 
     response_json = response.json()
     if 'error' not in response_json.keys() or response_json['error'] == None:
-        return response_json['result']
+        try:
+            return response_json['result']
+        except KeyError:
+            raise Exception(response_json)
     else:
         raise exceptions.RPCError('{}'.format(response_json['error']))
 
