@@ -1,8 +1,10 @@
 ## Client Versions ##
-* v9.16 (unreleased)
+* v9.16
 	* regular version, database, Bitcoind checking in API
 	* better testcoin support
 	* simplify version checking (combined DB and client versions), which necessitates skipping versions
+	* simplify betting fees: just deduct from pot at settlement (protocol change: retroactive)
+	* CLI option for frequency of asset conservation sanity checks
 * v6.15
 	* bug in calculation of holders (protocol change: retroactive)
 * v6.14
