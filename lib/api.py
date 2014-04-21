@@ -31,13 +31,6 @@ class APIServer(threading.Thread):
         # TODO: Move all of these functions from util.py here (and use native SQLite queries internally).
 
         @dispatcher.add_method
-        def get_address(address, start_block=None, end_block=None):
-            try:
-                return util.get_address(db, address=address, start_block=start_block, end_block=end_block)
-            except exceptions.AddressError:
-                return None
-
-        @dispatcher.add_method
         def get_balances(filters=None, order_by=None, order_dir=None, filterop="and"):
             return util.get_balances(db,
                 filters=filters,
@@ -116,19 +109,23 @@ class APIServer(threading.Thread):
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_credits (filters=None, order_by=None, order_dir=None, filterop="and"):
+        def get_credits (filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_credits(db,
                 filters=filters,
                 order_by=order_by,
                 order_dir=order_dir,
+                start_block=start_block,
+                end_block=end_block,
                 filterop=filterop)
 
         @dispatcher.add_method
-        def get_debits (filters=None, order_by=None, order_dir=None, filterop="and"):
+        def get_debits (filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return util.get_debits(db,
                 filters=filters,
                 order_by=order_by,
                 order_dir=order_dir,
+                start_block=start_block,
+                end_block=end_block,
                 filterop=filterop)
 
         @dispatcher.add_method
@@ -186,6 +183,46 @@ class APIServer(threading.Thread):
                 end_block=end_block,
                 filterop=filterop)
 
+        @dispatcher.add_method
+        def get_bet_expirations (filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+            return util.get_bet_expirations(db,
+                filters=filters,
+                order_by=order_by,
+                order_dir=order_dir,
+                start_block=start_block,
+                end_block=end_block,
+                filterop=filterop)
+
+        @dispatcher.add_method
+        def get_order_expirations (filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+            return util.get_order_expirations(db,
+                filters=filters,
+                order_by=order_by,
+                order_dir=order_dir,
+                start_block=start_block,
+                end_block=end_block,
+                filterop=filterop)
+
+        @dispatcher.add_method
+        def get_bet_match_expirations (filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+            return util.get_bet_match_expirations(db,
+                filters=filters,
+                order_by=order_by,
+                order_dir=order_dir,
+                start_block=start_block,
+                end_block=end_block,
+                filterop=filterop)
+
+        @dispatcher.add_method
+        def get_order_match_expirations (filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+            return util.get_order_match_expirations(db,
+                filters=filters,
+                order_by=order_by,
+                order_dir=order_dir,
+                start_block=start_block,
+                end_block=end_block,
+                filterop=filterop)
+        
         @dispatcher.add_method
         def get_messages(block_index):
             if not isinstance(block_index, int):
