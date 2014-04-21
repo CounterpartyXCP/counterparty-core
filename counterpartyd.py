@@ -24,6 +24,69 @@ if os.name == 'nt':
 D = decimal.Decimal
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
+def get_address (db, address, start_block=None, end_block=None):
+    address_dict = {}
+    address_dict['balances'] = util.get_balances(db, address=address)
+
+    address_dict['debits'] = util.get_debits(db, address=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['credits'] = util.get_credits(db, address=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['burns'] = util.get_burns(db, source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['sends'] = util.get_sends(db, source=address, destination=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block, filterop='or')
+    #^ with filterop == 'or', we get all sends where this address was the source OR destination 
+
+    address_dict['orders'] = util.get_orders(db, source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['order_matches'] = util.get_order_matches(db, address=address,
+        order_by='tx0_block_index', order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['btcpays'] = util.get_btcpays(db,
+        filters=[{'field': 'source', 'op': '==', 'value': address}, {'field': 'destination', 'op': '==', 'value': address}],
+        filterop='or', order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['issuances'] = util.get_issuances(db, issuer=address,
+        order_by='block_index', order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['broadcasts'] = util.get_broadcasts(db, source=address,
+        order_by='block_index', order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['bets'] = util.get_bets(db, source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['bet_matches'] = util.get_bet_matches(db, address=address,
+        order_by='tx0_block_index', order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['dividends'] = util.get_dividends(db, source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['cancels'] = util.get_cancels(db, source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['callbacks'] = util.get_callbacks(db, source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['bet_expirations'] = util.get_bet_expirations(db, source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['order_expirations'] = util.get_order_expirations(db, source=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['bet_match_expirations'] = util.get_bet_match_expirations(db, address=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    address_dict['order_match_expirations'] = util.get_order_match_expirations(db, address=address, order_by='block_index',
+        order_dir='asc', start_block=start_block, end_block=end_block)
+
+    return address_dict
+
 
 def format_order (order):
     give_quantity = util.devise(db, D(order['give_quantity']), order['give_asset'], 'output')
@@ -431,7 +494,7 @@ def balances (address):
     if not bitcoin.base58_decode(address, config.ADDRESSVERSION):
         raise exceptions.AddressError('Not a valid Bitcoin address:',
                                              address)
-    address_data = util.get_address(db, address=address)
+    address_data = get_address(db, address=address)
     balances = address_data['balances']
     table = PrettyTable(['Asset', 'Amount'])
     table.add_row(['BTC', bitcoin.get_btc_balance(address, normalize=True)])  # BTC
@@ -769,7 +832,7 @@ if __name__ == '__main__':
         print()
         for bunch in bitcoin.get_wallet():
             address, btc_balance = bunch[:2]
-            get_address = util.get_address(db, address=address)
+            get_address = get_address(db, address=address)
             balances = get_address['balances']
             table = PrettyTable(['Asset', 'Balance'])
             empty = True
