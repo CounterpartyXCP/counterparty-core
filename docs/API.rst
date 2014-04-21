@@ -84,17 +84,6 @@ Python Example
       url, data=json.dumps(payload), headers=headers, auth=auth).json()
     print("GET_DEBITS RESULT: ", response)
     
-    #Get information for a specific address
-    payload = {
-      "method": "get_address",
-      "params": ["1CUdFmgK9trTNZHALfqGvd8d6nUZqH2AAf"],
-      "jsonrpc": "2.0",
-      "id": 0,
-    }
-    response = requests.post(
-      url, data=json.dumps(payload), headers=headers, auth=auth).json()
-    print("\nGET ADDRESS RESULT: ", response)
-    
     #Send 1 XCP (specified in satoshis) from one address to another (you must have the sending address in your wallet
     # and it will be returned as an unsigned OP_RETURN transaction in this example, as the multisig parameter is
     # specified as False
@@ -229,19 +218,6 @@ then have two approaches with respect to broadcasting the transaction on the net
 
 Read API Function Reference
 ------------------------------------
-
-.. _get_address:
-
-get_address
-^^^^^^^^^^^^^^
-
-.. py:function:: get_address(address)
-
-   Gets the history for a specific address
-
-   :param string address: Address
-   :return: An :ref:`address history object <address-history-object>` if the address was found, otherwise ``null``.
-
 
 .. _get_balances:
 
@@ -397,7 +373,7 @@ get_cancels
 get_credits
 ^^^^^^^^^^^^^^
 
-.. py:function:: get_credits(filters=[], order_by=null, order_dir=null, filterop="and")
+.. py:function:: get_credits(filters=[], order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
 
    Gets a sorted history of address credits, optionally filtered to an address and/or asset. This list does not
    include any BTC credits.
@@ -405,6 +381,8 @@ get_credits
    :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
    :param string order_by: If sorted results are desired, specify the name of a :ref:`debit/credit object <debit-credit-object>` attribute to order the results by (e.g. ``tx_hash``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
+   :param integer start_block: If specified, only results from the specified block index on will be returned  
+   :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
    :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
    :return: A list of one or more :ref:`debit/credit objects <debit-credit-object>` if any matching records were found, otherwise ``[]`` (empty list).
 
@@ -414,7 +392,7 @@ get_credits
 get_debits
 ^^^^^^^^^^^^^^
 
-.. py:function:: get_debits(filters=[], order_by=null, order_dir=null, filterop="and")
+.. py:function:: get_debits(filters=[], order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
 
    Gets a sorted history of address debits, optionally filtered to an address and/or asset. This list does not
    include any BTC debits.
@@ -422,6 +400,8 @@ get_debits
    :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
    :param string order_by: If sorted results are desired, specify the name of a :ref:`debit/credit object <debit-credit-object>` attribute to order the results by (e.g. ``tx_hash``). If left blank, the list of results will be returned unordered. 
    :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
+   :param integer start_block: If specified, only results from the specified block index on will be returned  
+   :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
    :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
    :return: A list of one or more :ref:`debit/credit objects <debit-credit-object>` if any matching records were found, otherwise ``[]`` (empty list).
    
@@ -522,6 +502,62 @@ get_sends
    :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
    :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
    :return: A list of one or more :ref:`send objects <send-object>` if any matching records were found, otherwise ``[]`` (empty list).
+
+.. get_bet_expirations:
+
+get_bet_expirations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. py:function:: get_bet_expirations(filters=[], order_by=null, order_dir=null, filterop="and")
+
+   Gets an optionally filtered listing of bet expirations.
+
+   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
+   :param string order_by: If sorted results are desired, specify the name of a :ref:`bet expiration objects <bet-expiration-object>` attribute to order the results by (e.g. ``quantity``). If left blank, the list of results will be returned unordered. 
+   :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.
+   :return: A list of one or more :ref:`bet expiration objects <bet-expiration-object>` if any matching records were found, otherwise ``[]`` (empty list).
+
+.. get_order_expirations:
+
+get_order_expirations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. py:function:: get_order_expirations(filters=[], order_by=null, order_dir=null, filterop="and")
+
+   Gets an optionally filtered listing of order expirations.
+
+   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
+   :param string order_by: If sorted results are desired, specify the name of a :ref:`order expiration objects <order-expiration-object>` attribute to order the results by (e.g. ``quantity``). If left blank, the list of results will be returned unordered. 
+   :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.
+   :return: A list of one or more :ref:`order expiration objects <order-expiration-object>` if any matching records were found, otherwise ``[]`` (empty list).
+
+.. get_bet_match_expirations:
+
+get_bet_match_expirations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. py:function:: get_bet_match_expirations(filters=[], order_by=null, order_dir=null, filterop="and")
+
+   Gets an optionally filtered listing of bet match expirations.
+
+   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
+   :param string order_by: If sorted results are desired, specify the name of a :ref:`bet match expiration objects <bet-match-expiration-object>` attribute to order the results by (e.g. ``quantity``). If left blank, the list of results will be returned unordered. 
+   :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.
+   :return: A list of one or more :ref:`bet match expiration objects <bet-match-expiration-object>` if any matching records were found, otherwise ``[]`` (empty list).
+
+.. get_order_match_expirations:
+
+get_order_match_expirations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. py:function:: get_order_match_expirations(filters=[], order_by=null, order_dir=null, filterop="and")
+
+   Gets an optionally filtered listing of order match expirations.
+
+   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
+   :param string order_by: If sorted results are desired, specify the name of a :ref:`order match expiration objects <order-match-expiration-object>` attribute to order the results by (e.g. ``quantity``). If left blank, the list of results will be returned unordered. 
+   :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.
+   :return: A list of one or more :ref:`order match expiration objects <order-match-expiration-object>` if any matching records were found, otherwise ``[]`` (empty list).
 
 .. _get_asset_info:
 
@@ -750,7 +786,7 @@ create_cancel
 .. _create_dividend:
 
 create_dividend
-^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^
 
 .. py:function:: create_dividend(source, quantity_per_unit, asset, dividend_asset, encoding='multisig', pubkey=null)
 
@@ -838,35 +874,6 @@ Objects
 ----------
 
 The API calls documented can return any one of these objects.
-
-
-.. _address-history-object:
-
-Address History Object
-^^^^^^^^^^^^^^^^^^^^^^^
-
-An object that describes the history of a requested address:
-
-* **balances** (*list*): Contains the current balances for this address, as a list of :ref:`balance objects <balance-object>`.
-* **credits** (*list*): Credits made to asset balances for this address, as a list of :ref:`debit/credit objects <debit-credit-object>`.
-* **debits** (*list*): Debits made to asset balances for this address, as a list of :ref:`debit/credit objects <debit-credit-object>`.
-* **burns** (*list*): Contains the burns performed with this address, as a list of :ref:`burn objects <burn-object>`.
-* **sends** (*list*): The sends performed with this address, as a list of :ref:`send objects <send-object>`.
-* **orders** (*list*): The orders of this address,  as a list of :ref:`order objects <order-object>`.
-* **order_matches** (*list*): All orders matchings to which this address was a party, as a list of :ref:`order match objects <order-match-object>`.
-* **btcpays** (*list*): The BTC pays on this address, as a list of :ref:`BTCPay objects <btcpay-object>`.
-* **issuances** (*list*): The asset issuances performed by this address, as a list of :ref:`issuance objects <issuance-object>`.
-* **broadcasts** (*list*): The broadcasts performed by this address, as a list of :ref:`broadcast objects <broadcast-object>`.
-* **bets** (*list*): All bets made from this address, as a list of :ref:`bet objects <bet-object>`.
-* **bet_matches** (*list*): The bets matchings to which this address was a party, as a list of :ref:`bet match objects <bet-match-object>`.
-* **dividends** (*list*): All dividends rewarded from this address, as a list of :ref:`dividend objects <dividend-object>`.
-* **cancels** (*list*): All cancels from this address, as a list of :ref:`cancel objects <cancel-object>`.
-* **callbacks** (*list*): All asset callbacks issued from this address, as a list of :ref:`callback objects <callback-object>`.
-* **bet_expirations** (*list*): All expirations of bets issued from this address, as a list of :ref:`bet expiration objects <bet-expiration-object>`.
-* **order_expirations** (*list*): All expirations of orders issued from this address, as a list of :ref:`bet expiration objects <order-expiration-object>`.
-* **bet_match_expirations** (*list*): All expirations of bet matches issued from this address, as a list of :ref:`bet expiration objects <bet-match-expiration-object>`.
-* **order_match_expirations** (*list*): All expirations of order matches issued from this address, as a list of :ref:`bet expiration objects <order-match-expiration-object>`.
-
 
 .. _balance-object:
 
@@ -1176,7 +1183,7 @@ An object that describes the expiration of an order created by the source addres
 .. _bet-match-expiration-object:
 
 Bet Match Expiration Object
-^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 An object that describes the expiration of a bet match.
 
@@ -1189,7 +1196,7 @@ An object that describes the expiration of a bet match.
 .. _order-match-expiration-object:
 
 Order Match Expiration Object
-^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 An object that describes the expiration of an order match.
 
