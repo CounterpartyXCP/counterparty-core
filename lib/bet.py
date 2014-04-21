@@ -35,7 +35,6 @@ def cancel_bet (db, bet, status, block_index):
     util.message(db, block_index, 'update', 'bets', bindings)
 
     util.credit(db, block_index, bet['source'], 'XCP', bet['wager_remaining'], action='recredit wager remaining', event=bet['tx_hash'])
-    util.credit(db, block_index, bet['source'], 'XCP', bet['fee_paid'], action='recredit fee', event=bet['tx_hash'])
 
     cursor = db.cursor()
 
@@ -45,14 +44,10 @@ def cancel_bet_match (db, bet_match, status, block_index):
     # Recredit tx0 address.
     util.credit(db, block_index, bet_match['tx0_address'], 'XCP',
                 bet_match['forward_quantity'], action='recredit forward quantity', event=bet_match['id'])
-    util.credit(db, block_index, bet_match['tx0_address'], 'XCP',
-                bet_match['forward_fee'], action='recredit forward fee', event=bet_match['id'])
 
     # Recredit tx1 address.
     util.credit(db, block_index, bet_match['tx1_address'], 'XCP',
                 bet_match['backward_quantity'], action='recredit backward quantity', event=bet_match['id'])
-    util.credit(db, block_index, bet_match['tx1_address'], 'XCP',
-                bet_match['backward_fee'], action='recredit backward fee', event=bet_match['id'])
 
     # Update status of bet match.
     bindings = {
@@ -126,23 +121,12 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
     if wager_quantity > config.MAX_INT or counterwager_quantity > config.MAX_INT or bet_type > config.MAX_INT or deadline > config.MAX_INT or leverage > config.MAX_INT:
         problems.append('integer overflow')
 
-    # Check for sufficient funds.
-    fee_fraction = get_fee_fraction(db, feed_address)
-    fee = round(wager_quantity * fee_fraction)
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM balances \
-                      WHERE (address = ? AND asset = ?)''', (source, 'XCP'))
-    balances = list(cursor)
-    if not balances or balances[0]['quantity'] < wager_quantity + fee:
-        problems.append('insufficient funds for wager and fee')
-
-    cursor.close()
-    return problems, fee
+    return problems
 
 def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
             counterwager_quantity, target_value, leverage, expiration):
 
-    problems, fee = validate(db, source, feed_address, bet_type, deadline, wager_quantity,
+    problems = validate(db, source, feed_address, bet_type, deadline, wager_quantity,
                         counterwager_quantity, target_value, leverage, expiration)
     if problems: raise exceptions.BetError(problems)
 
@@ -168,7 +152,7 @@ def parse (db, tx, message):
          expiration) = 0, 0, 0, 0, 0, 0, 0
         status = 'invalid: could not unpack'
 
-    odds, fee_fraction, fee = 0, 0, 0
+    odds, fee_fraction = 0, 0
     if status == 'open':
         try: odds = util.price(wager_quantity, counterwager_quantity, tx['block_index'])
         except Exception as e: pass
@@ -184,18 +168,17 @@ def parse (db, tx, message):
             wager_quantity = 0
         else:
             balance = balances[0]['quantity']
-            if balance < wager_quantity + fee:
-                wager_quantity = balance - fee
+            if balance < wager_quantity:
+                wager_quantity = balance
                 counterwager_quantity = int(util.price(wager_quantity, odds, tx['block_index']))
 
-        problems, fee = validate(db, tx['source'], feed_address, bet_type, deadline, wager_quantity,
+        problems = validate(db, tx['source'], feed_address, bet_type, deadline, wager_quantity,
                             counterwager_quantity, target_value, leverage, expiration)
         if problems: status = 'invalid: ' + '; '.join(problems)
 
-    # Debit quantity wagered and fee. (Escrow.)
+    # Debit quantity wagered. (Escrow.)
     if status == 'open':
         util.debit(db, tx['block_index'], tx['source'], 'XCP', wager_quantity)
-        util.debit(db, tx['block_index'], tx['source'], 'XCP', fee)
 
     # Add parsed transaction to message-type–specific table.
     bindings = {
@@ -215,10 +198,9 @@ def parse (db, tx, message):
         'expiration': expiration,
         'expire_index': tx['block_index'] + expiration,
         'fee_fraction_int': fee_fraction * 1e8,
-        'fee_paid': fee,
         'status': status,
     }
-    sql='insert into bets values(:tx_index, :tx_hash, :block_index, :source, :feed_address, :bet_type, :deadline, :wager_quantity, :wager_remaining, :counterwager_quantity, :counterwager_remaining, :target_value, :leverage, :expiration, :expire_index, :fee_fraction_int, :fee_paid, :status)'
+    sql='insert into bets values(:tx_index, :tx_hash, :block_index, :source, :feed_address, :bet_type, :deadline, :wager_quantity, :wager_remaining, :counterwager_quantity, :counterwager_remaining, :target_value, :leverage, :expiration, :expire_index, :fee_fraction_int, :status)'
     bet_parse_cursor.execute(sql, bindings)
 
     # Match.
@@ -337,10 +319,6 @@ def match (db, tx):
             # Get last value of feed.
             initial_value = util.get_broadcasts(db, status='valid', source=tx1['feed_address'])[-1]['value']
 
-            # Record fees.
-            forward_fee = round(forward_quantity * fee_fraction_int / 1e8)
-            backward_fee = round(backward_quantity * fee_fraction_int / 1e8)
-
             # Record bet fulfillment.
             bindings = {
                 'id': tx0['tx_hash'] + tx['tx_hash'],
@@ -358,9 +336,7 @@ def match (db, tx):
                 'target_value': tx1['target_value'],
                 'leverage': tx1['leverage'],
                 'forward_quantity': forward_quantity,
-                'forward_fee': forward_fee,
                 'backward_quantity': backward_quantity,
-                'backward_fee': backward_fee,
                 'tx0_block_index': tx0['block_index'],
                 'tx1_block_index': tx1['block_index'],
                 'tx0_expiration': tx0['expiration'],
@@ -369,7 +345,7 @@ def match (db, tx):
                 'fee_fraction_int': fee_fraction_int,
                 'status': 'pending',
             }
-            sql='insert into bet_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :tx0_bet_type, :tx1_bet_type, :feed_address, :initial_value, :deadline, :target_value, :leverage, :forward_quantity, :forward_fee, :backward_quantity, :backward_fee, :tx0_block_index, :tx1_block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :fee_fraction_int, :status)'
+            sql='insert into bet_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :tx0_bet_type, :tx1_bet_type, :feed_address, :initial_value, :deadline, :target_value, :leverage, :forward_quantity, :backward_quantity, :tx0_block_index, :tx1_block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :fee_fraction_int, :status)'
             cursor.execute(sql, bindings)
 
     cursor.close()

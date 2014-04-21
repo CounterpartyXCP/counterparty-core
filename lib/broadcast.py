@@ -132,9 +132,12 @@ def parse (db, tx, message):
         bet_match_status = None
 
         # Calculate total funds held in escrow and total fee to be paid if
-        # the bet match is settled.
+        # the bet match is settled. Escrow less fee is amount to be paid back
+        # to betters.
         total_escrow = bet_match['forward_quantity'] + bet_match['backward_quantity']
-        fee = bet_match['forward_fee'] + bet_match['backward_fee']
+        fee_fraction = fee_fraction_int / config.UNIT
+        fee = int(fee_fraction * total_escrow)              # Truncate.
+        escrow_less_fee = total_escrow - fee
 
         # Get known bet match type IDs.
         cfd_type_id = util.BET_TYPE_ID['BullCFD'] + util.BET_TYPE_ID['BearCFD']
@@ -162,20 +165,20 @@ def parse (db, tx, message):
             initial_value = bet_match['initial_value']
 
             bear_credit = bear_escrow - (value - initial_value) * leverage * config.UNIT
-            bull_credit = total_escrow - bear_credit
+            bull_credit = escrow_less_fee - bear_credit
             bear_credit = round(bear_credit)
             bull_credit = round(bull_credit)
 
             # Liquidate, as necessary.
-            if bull_credit >= total_escrow or bull_credit <= 0:
-                if bull_credit >= total_escrow:
-                    bull_credit = total_escrow
+            if bull_credit >= escrow_less_fee or bull_credit <= 0:
+                if bull_credit >= escrow_less_fee:
+                    bull_credit = escrow_less_fee
                     bear_credit = 0
                     util.credit(db, tx['block_index'], bull_address, 'XCP', bull_credit)
                     bet_match_status = 'settled: liquidated for bear'
                 elif bull_credit <= 0:
                     bull_credit = 0
-                    bear_credit = total_escrow
+                    bear_credit = escrow_less_fee
                     util.credit(db, tx['block_index'], bear_address, 'XCP', bear_credit)
                     bet_match_status = 'settled: liquidated for bull'
 
@@ -210,17 +213,17 @@ def parse (db, tx, message):
             # Decide who won, and credit appropriately.
             if value == bet_match['target_value']:
                 winner = 'Equal'
-                util.credit(db, tx['block_index'], equal_address, 'XCP', total_escrow)
+                util.credit(db, tx['block_index'], equal_address, 'XCP', escrow_less_fee)
                 bet_match_status = 'settled: for equal'
             else:
                 winner = 'NotEqual'
-                util.credit(db, tx['block_index'], notequal_address, 'XCP', total_escrow)
+                util.credit(db, tx['block_index'], notequal_address, 'XCP', escrow_less_fee)
                 bet_match_status = 'settled: for notequal'
 
             # Pay fee to feed.
             util.credit(db, tx['block_index'], bet_match['feed_address'], 'XCP', fee)
 
-            logging.info('Contract Settled: {} won the pot of {} XCP; {} XCP credited to the feed address ({})'.format(winner, util.devise(db, total_escrow, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), bet_match_id))
+            logging.info('Contract Settled: {} won the pot of {} XCP; {} XCP credited to the feed address ({})'.format(winner, util.devise(db, escrow_less_fee, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), bet_match_id))
 
         # Update the bet match’s status.
         if bet_match_status:

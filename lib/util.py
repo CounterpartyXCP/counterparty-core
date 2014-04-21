@@ -144,7 +144,7 @@ def log (db, command, category, bindings):
                 text = '<Text>'
 
             # Suffix
-            end = 'in {} blocks, for a fee of {} ({}) [{}]'.format(bindings['expiration'], output(bindings['fee_paid'], 'XCP'), bindings['tx_hash'], bindings['status'])
+            end = 'in {} blocks ({}) [{}]'.format(bindings['expiration'], bindings['tx_hash'], bindings['status'])
 
             if 'CFD' not in BET_TYPE_NAME[bindings['bet_type']]:
                 log_message = 'Bet: {} against {}, by {}, on {} that ‘{}’ will {} {} at {}, {}'.format(output(bindings['wager_quantity'], 'XCP'), output(bindings['counterwager_quantity'], 'XCP'), bindings['source'], bindings['feed_address'], text, BET_TYPE_NAME[bindings['bet_type']], str(output(bindings['target_value'], 'value').split(' ')[0]), isodt(bindings['deadline']), end)
@@ -693,14 +693,11 @@ def get_holders(db, asset):
                           WHERE status = ?''', ('open',))
         for bet in list(cursor):
             holders.append({'address': bet['source'], 'address_quantity': bet['wager_remaining'], 'escrow': bet['tx_hash']})
-            holders.append({'address': bet['source'], 'address_quantity': bet['fee_paid'], 'escrow': bet['tx_hash']})
         cursor.execute('''SELECT * FROM bet_matches \
                           WHERE status = ?''', ('pending',))
         for bet_match in list(cursor):
             holders.append({'address': bet_match['tx0_address'], 'address_quantity': bet_match['forward_quantity'], 'escrow': bet_match['id']})
-            holders.append({'address': bet_match['tx0_address'], 'address_quantity': bet_match['forward_fee'], 'escrow': bet_match['id']})
             holders.append({'address': bet_match['tx1_address'], 'address_quantity': bet_match['backward_quantity'], 'escrow': bet_match['id']})
-            holders.append({'address': bet_match['tx1_address'], 'address_quantity': bet_match['backward_fee'], 'escrow': bet_match['id']})
 
     cursor.close()
     return holders

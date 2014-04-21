@@ -24,12 +24,12 @@ def check_conservation (db):
 
         issued = supplies[asset]
         held = sum([holder['address_quantity'] for holder in util.get_holders(db, asset)])
+        # import json
+        # json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
+        # json_print(util.get_holders(db, asset))
         if held != issued:
-            # import json
-            # json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
-            # json_print(util.get_holders(db, asset))
             raise exceptions.SanityError('{} {} issued ≠ {} {} held'.format(util.devise(db, issued, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
-        logging.debug('Status: {} has been conserved.'.format(asset))
+        logging.debug('Status: {} has been conserved ({} {} both issued and held)'.format(asset, util.devise(db, issued, asset, 'output'), asset))
 
 def parse_tx (db, tx):
     parse_tx_cursor = db.cursor()
@@ -363,7 +363,6 @@ def initialise(db):
                       expiration INTEGER,
                       expire_index INTEGER,
                       fee_fraction_int INTEGER,
-                      fee_paid INTEGER,
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                       PRIMARY KEY (tx_index, tx_hash))
@@ -398,9 +397,7 @@ def initialise(db):
                       target_value REAL,
                       leverage INTEGER,
                       forward_quantity INTEGER,
-                      forward_fee INTEGER,
                       backward_quantity INTEGER,
-                      backward_fee INTEGER,
                       tx0_block_index INTEGER,
                       tx1_block_index INTEGER,
                       tx0_expiration INTEGER,
