@@ -163,7 +163,7 @@ def set_options (data_dir=None,
                  insight_enable=None, insight_connect=None, insight_port=None,
                  rpc_host=None, rpc_port=None, rpc_user=None, rpc_password=None,
                  log_file=None, pid_file=None, api_num_threads=None, api_request_queue_size=None,
-                 database_file=None, testnet=False, testcoin=False, unittest=False, careful=False):
+                 database_file=None, testnet=False, testcoin=False, unittest=False, carefulness=0):
 
     # Unittests always run on testnet.
     if unittest and not testnet:
@@ -199,13 +199,13 @@ def set_options (data_dir=None,
     else:
         config.TESTCOIN = False
 
-    # careful (check conservation of assets)
-    if careful:
-        config.CAREFUL = careful
-    elif has_config and 'careful' in configfile['Default']:
-        config.CAREFUL = configfile['Default'].getboolean('careful')
+    # carefulness (check conservation of assets)
+    if carefulness:
+        config.CAREFULNESS = carefulness
+    elif has_config and 'carefulness' in configfile['Default']:
+        config.CAREFULNESS = configfile['Default'].getboolean('carefulness')
     else:
-        config.CAREFUL = False
+        config.CAREFULNESS = 0
 
     ##############
     # THINGS WE CONNECT TO
@@ -457,7 +457,7 @@ if __name__ == '__main__':
     parser.add_argument('--testnet', action='store_true', help='use Bitcoin testnet addresses and block numbers')
     parser.add_argument('--testcoin', action='store_true', help='use the test Counterparty network on every blockchain')
     parser.add_argument('--unsigned', action='store_true', default=False, help='print out unsigned hex of transaction; do not sign or broadcast')
-    parser.add_argument('--careful', action='store_true', default=False, help='check conservation of assets after every 60 transactions (slow)')
+    parser.add_argument('--carefulness', type=int, default=0, help='check conservation of assets after every CAREFULNESS transactions (potentially slow)')
 
     parser.add_argument('--data-dir', help='the directory in which to keep the database, config file and log file, by default')
     parser.add_argument('--database-file', help='the location of the SQLite3 database')
@@ -581,7 +581,7 @@ if __name__ == '__main__':
                 rpc_host=args.rpc_host, rpc_port=args.rpc_port, rpc_user=args.rpc_user, rpc_password=args.rpc_password,
                 log_file=args.log_file, pid_file=args.pid_file,
                 api_num_threads=args.api_num_threads, api_request_queue_size=args.api_request_queue_size,
-                database_file=args.database_file, testnet=args.testnet, testcoin=args.testcoin, unittest=False, careful=args.careful)
+                database_file=args.database_file, testnet=args.testnet, testcoin=args.testcoin, unittest=False, carefulness=args.carefulness)
 
     #Create/update pid file
     pid = str(os.getpid())
