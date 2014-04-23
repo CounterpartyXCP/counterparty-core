@@ -338,12 +338,32 @@ def serialise (encoding, inputs, destination_outputs, data_output=None, change_o
     s += (0).to_bytes(4, byteorder='little')                # LockTime
     return s
 
-# Prefer outputs less than dust size, then bigger is better.
 def input_value_weight(amount):
+    # Prefer outputs less than dust size, then bigger is better.
     if amount * config.UNIT <= config.REGULAR_DUST_SIZE:
         return 0
     else:
-        return 1/amount
+        return 1 / amount
+
+def sort_unspent_txouts(unspent, allow_unconfirmed_inputs):
+    # Get deterministic results (for multiAPIConsensus type requirements), sort by timestamp and vout index.
+    # (Oldest to newest so the nodes don’t have to be exactly caught up to each other for consensus to be achieved.)
+    try:
+        unspent = sorted(unspent, key=util.sortkeypicker(['ts', 'vout']))
+    except KeyError: # If timestamp isn’t given.
+        pass
+
+    # Sort by amount.
+    unspent = sorted(unspent,key=lambda x:input_value_weight(x['amount']))
+
+    # Remove unconfirmed txouts, if desired.
+    if allow_unconfirmed_inputs:
+        # Hackish: skip unspent outputs which are unconfirmed and were first seen a while ago.
+        unspent = [coin for coin in unspent if (coin['confirmations'] <= 0 and time.tim() - coin['ts'] < 6 * 3600)] # Six hours.
+    else:
+        unspent = [coin for coin in unspent if coin['confirmations'] > 0]
+
+    return unspent
 
 def private_key_to_public_key (private_key_wif):
     secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif, is_test=config.TESTNET)
@@ -382,6 +402,8 @@ def transaction (tx_info, encoding, unittest=False, public_key_hex=None, allow_u
             public_key_hex = private_key_to_public_key(private_key_wif)
             
         pubkeypair = bitcoin_utils.parse_as_public_pair(public_key_hex)
+        if not pubkeypair:
+            raise exceptions.InputError('Invalid private key.')
         public_key = public_pair_to_sec(pubkeypair, compressed=True)
 
     # Protocol change.
@@ -450,18 +472,20 @@ def transaction (tx_info, encoding, unittest=False, public_key_hex=None, allow_u
     outputs_size = ((25 + 9) * len(destination_outputs)) + (len(data_array) * data_output_size)
 
     # Get inputs.
-    unspent = get_unspent_txouts(source, normalize=True, unittest=unittest, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
+    unspent = get_unspent_txouts(source, normalize=True, unittest=unittest)
+    unspent = sort_unspent_txouts(unspent, allow_unconfirmed_inputs)
 
     inputs, btc_in = [], 0
     change_quantity = 0
     sufficient_funds = False
     final_fee = config.FEE_PER_KB
-    for coin in sorted(unspent,key=lambda x:input_value_weight(x['amount'])):
+    for coin in unspent:
         inputs.append(coin)
         btc_in += round(coin['amount'] * config.UNIT)
         size = 181 * len(inputs) + outputs_size + 10
         necessary_fee = (int(size / 10000) + 1) * config.FEE_PER_KB
         final_fee = max(fee_provided, necessary_fee)
+        assert final_fee >= 1 * config.FEE_PER_KB
         change_quantity = btc_in - (btc_out + final_fee)
         if change_quantity == 0 or change_quantity >= config.REGULAR_DUST_SIZE: # If change is necessary, must not be a dust output.
             sufficient_funds = True
@@ -492,7 +516,7 @@ def sign_tx (unsigned_tx_hex, private_key_wif=None):
         tx_hex = unsigned_tx_hex
         while True: # pybtctool doesn’t implement `signall`
             try:
-                tx_hex = subprocess.check_output(['pybtctool', 'sign', tx_hex, str(i), private_key_wif])
+                tx_hex = subprocess.check_output(['pybtctool', 'sign', tx_hex, str(i), private_key_wif], stderr=subprocess.DEVNULL)
             except Exception as e:
                 break
         if tx_hex != unsigned_tx_hex:
@@ -519,6 +543,7 @@ def normalize_quantity(quantity, divisible=True):
     else: return quantity
 
 def get_btc_balance(address, normalize=False):
+    # TODO: shows unconfirmed BTC balance, while counterpartyd shows only confirmed balances for all other assets.
     """returns the BTC balance for a specific address"""
     if config.INSIGHT_ENABLE:
         r = requests.get(config.INSIGHT + '/api/addr/' + address)
@@ -551,7 +576,7 @@ def get_btc_supply(normalize=False):
             blocks_remaining = 0
     return total_supply if normalize else int(total_supply * config.UNIT)
 
-def get_unspent_txouts(address, normalize=False, unittest=False, allow_unconfirmed_inputs=False):
+def get_unspent_txouts(address, normalize=False, unittest=False):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
         * 
@@ -565,10 +590,7 @@ def get_unspent_txouts(address, normalize=False, unittest=False, allow_unconfirm
             return [output for output in wallet_unspent if output['address'] == address]
 
     if rpc('validateaddress', [address])['ismine']:
-        if allow_unconfirmed_inputs:
-            wallet_unspent = rpc('listunspent', [0, 999999])
-        else:
-            wallet_unspent = rpc('listunspent', [1, 999999])
+        wallet_unspent = rpc('listunspent', [0, 999999])
         return [output for output in wallet_unspent if output['address'] == address]
     else:
         if config.INSIGHT_ENABLE:
@@ -580,11 +602,6 @@ def get_unspent_txouts(address, normalize=False, unittest=False, allow_unconfirm
             if not normalize: #listed normalized by default out of insight...we need to take to satoshi
                 for d in outputs:
                     d['quantity'] = int(d['quantity'] * config.UNIT)
-            if not allow_unconfirmed_inputs:  # ignore unconfirmed utxos
-                outputs = [output for output in outputs if output['confirmations']]
-            #in order to get deterministic results (for multiAPIConsensus type requirements), sort by (ts, vout)
-            outputs = sorted(outputs, key=util.sortkeypicker(['ts', 'vout']))
-            #^ oldest to newest so the nodes don't have to be exactly caught up to eachother for multinode consensus to work
             return outputs
 
         else: #use blockchain
@@ -596,8 +613,6 @@ def get_unspent_txouts(address, normalize=False, unittest=False, allow_unconfirm
             data = r.json()['unspent_outputs']
             outputs = []
             for d in data:
-                if not allow_unconfirmed_inputs:  # ignore unconfirmed utxos
-                    if not d['confirmations']: continue
                 #blockchain.info lists the txhash in some weird reversed string notation with character pairs fipped...fun
                 d['tx_hash'] = d['tx_hash'][::-1] #reverse string
                 d['tx_hash'] = ''.join([d['tx_hash'][i:i+2][::-1] for i in range(0, len(d['tx_hash']), 2)]) #flip the character pairs within the string

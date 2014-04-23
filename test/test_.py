@@ -397,7 +397,7 @@ def test_json_rpc():
         if attempt == 99: exit(1)   # Fail
 
 def test_get_address():
-    get_address = util.get_address(db, source_default)
+    get_address = counterpartyd.get_address(db, source_default)
     for field in get_address:
         output_new['get_address_' + field] = get_address[field]
 

@@ -832,8 +832,8 @@ if __name__ == '__main__':
         print()
         for bunch in bitcoin.get_wallet():
             address, btc_balance = bunch[:2]
-            get_address = get_address(db, address=address)
-            balances = get_address['balances']
+            address_data = get_address(db, address=address)
+            balances = address_data['balances']
             table = PrettyTable(['Asset', 'Balance'])
             empty = True
             if btc_balance:
