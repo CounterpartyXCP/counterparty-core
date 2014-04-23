@@ -162,7 +162,7 @@ def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, ex
     cursor.close()
     return problems
 
-def compose (db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, fee_provided):
+def compose (db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required):
     balances = util.get_balances(db, address=source, asset=give_asset)
     if give_asset != 'BTC' and (not balances or balances[0]['quantity'] < give_quantity):
         raise exceptions.OrderError('insufficient funds')
@@ -175,7 +175,7 @@ def compose (db, source, give_asset, give_quantity, get_asset, get_quantity, exp
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, give_id, give_quantity, get_id, get_quantity,
                         expiration, fee_required)
-    return (source, [], data, fee_provided)
+    return (source, [], data)
 
 def parse (db, tx, message):
     order_parse_cursor = db.cursor()

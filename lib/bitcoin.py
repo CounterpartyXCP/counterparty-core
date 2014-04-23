@@ -373,15 +373,14 @@ def private_key_to_public_key (private_key_wif):
     return public_key_hex
 
 # Replace unittest flag with fake bitcoind JSON-RPC server.
-def transaction (tx_info, encoding, unittest=False, public_key_hex=None, allow_unconfirmed_inputs=False):
+def transaction (tx_info, encoding, exact_fee=None, fee_provided=0, unittest=False, public_key_hex=None, allow_unconfirmed_inputs=False):
 
-    if len(tx_info) == 3:
-        source, destination_outputs, data = tx_info
-        fee_provided = 0
-    else:
-        source, destination_outputs, data, fee_provided = tx_info
+    (source, destination_outputs, data) = tx_info
+
+    if exact_fee and not isinstance(exact_fee, int):
+        raise exceptions.TransactionError('Exact fees must be in satoshis.')
     if not isinstance(fee_provided, int):
-        raise exceptions.TransactionError('Fee provided must be in satoshis')
+        raise exceptions.TransactionError('Fee provided must be in satoshis.')
     if encoding not in ('pubkeyhash', 'multisig', 'opreturn'):
         raise exceptions.TransactionError('Unknown encoding‐scheme.')
 
@@ -482,10 +481,17 @@ def transaction (tx_info, encoding, unittest=False, public_key_hex=None, allow_u
     for coin in unspent:
         inputs.append(coin)
         btc_in += round(coin['amount'] * config.UNIT)
-        size = 181 * len(inputs) + outputs_size + 10
-        necessary_fee = (int(size / 10000) + 1) * config.FEE_PER_KB
-        final_fee = max(fee_provided, necessary_fee)
-        assert final_fee >= 1 * config.FEE_PER_KB
+
+        # If exact fee is specified, use that. Otherwise, calculate size of tx and base fee on that (plus provide a minimum fee for selling BTC).
+        if exact_fee:
+            final_fee = exact_fee
+        else:
+            size = 181 * len(inputs) + outputs_size + 10
+            necessary_fee = (int(size / 10000) + 1) * config.FEE_PER_KB
+            final_fee = max(fee_provided, necessary_fee)
+            assert final_fee >= 1 * config.FEE_PER_KB
+
+        # Check if good.
         change_quantity = btc_in - (btc_out + final_fee)
         if change_quantity == 0 or change_quantity >= config.REGULAR_DUST_SIZE: # If change is necessary, must not be a dust output.
             sufficient_funds = True

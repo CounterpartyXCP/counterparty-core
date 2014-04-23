@@ -553,6 +553,7 @@ if __name__ == '__main__':
     parser_send.add_argument('--destination', required=True, help='the destination address')
     parser_send.add_argument('--quantity', required=True, help='the quantity of ASSET to send')
     parser_send.add_argument('--asset', required=True, help='the ASSET of which you would like to send QUANTITY')
+    parser_send.add_argument('--fee', help='the exact BTC fee to be paid to miners')
 
     parser_order = subparsers.add_parser('order', help='create and broadcast an *order* message')
     parser_order.add_argument('--source', required=True, help='the source address')
@@ -562,11 +563,14 @@ if __name__ == '__main__':
     parser_order.add_argument('--give-asset', required=True, help='the asset that you would like to sell')
     parser_order.add_argument('--expiration', type=int, required=True, help='the number of blocks for which the order should be valid')
     parser_order.add_argument('--fee-fraction-required', default=config.FEE_FRACTION_REQUIRED_DEFAULT, help='the miners’ fee required for an order to match this one, as a fraction of the BTC to be bought')
-    parser_order.add_argument('--fee-fraction-provided', default=config.FEE_FRACTION_PROVIDED_DEFAULT, help='the miners’ fee provided, as a fraction of the BTC to be sold')
+    parser_order_fees = parser_order.add_mutually_exclusive_group()
+    parser_order_fees.add_argument('--fee-fraction-provided', default=config.FEE_FRACTION_PROVIDED_DEFAULT, help='the miners’ fee provided, as a fraction of the BTC to be sold')
+    parser_order_fees.add_argument('--fee', help='the exact BTC fee to be paid to miners')
 
     parser_btcpay= subparsers.add_parser('btcpay', help='create and broadcast a *BTCpay* message, to settle an Order Match for which you owe BTC')
     parser_btcpay.add_argument('--source', required=True, help='the source address')
     parser_btcpay.add_argument('--order-match-id', required=True, help='the concatenation of the hashes of the two transactions which compose the order match')
+    parser_btcpay.add_argument('--fee', help='the exact BTC fee to be paid to miners')
 
     parser_issuance = subparsers.add_parser('issuance', help='issue a new asset, issue more of an existing asset or transfer the ownership of an asset')
     parser_issuance.add_argument('--source', required=True, help='the source address')
@@ -578,12 +582,14 @@ if __name__ == '__main__':
     parser_issuance.add_argument('--call-date', help='the date from which a callable asset may be called back (must agree with previous issuances)')
     parser_issuance.add_argument('--call-price', help='the price, in XCP per whole unit, at which a callable asset may be called back (must agree with previous issuances)')
     parser_issuance.add_argument('--description', type=str, required=True, help='a description of the asset (set to ‘LOCK’ to lock against further issuances with non‐zero quantitys)')
+    parser_issuance.add_argument('--fee', help='the exact BTC fee to be paid to miners')
 
     parser_broadcast = subparsers.add_parser('broadcast', help='broadcast textual and numerical information to the network')
     parser_broadcast.add_argument('--source', required=True, help='the source address')
     parser_broadcast.add_argument('--text', type=str, required=True, help='the textual part of the broadcast (set to ‘LOCK’ to lock feed)')
     parser_broadcast.add_argument('--value', type=float, default=-1, help='numerical value of the broadcast')
     parser_broadcast.add_argument('--fee-fraction', default=0, help='the fraction of bets on this feed that go to its operator')
+    parser_broadcast.add_argument('--fee', help='the exact BTC fee to be paid to miners')
 
     parser_bet = subparsers.add_parser('bet', help='offer to make a bet on the value of a feed')
     parser_bet.add_argument('--source', required=True, help='the source address')
@@ -595,25 +601,30 @@ if __name__ == '__main__':
     parser_bet.add_argument('--target-value', default=0.0, help='target value for Equal/NotEqual bet')
     parser_bet.add_argument('--leverage', type=int, default=5040, help='leverage, as a fraction of 5040')
     parser_bet.add_argument('--expiration', type=int, required=True, help='the number of blocks for which the bet should be valid')
+    parser_bet.add_argument('--fee', help='the exact BTC fee to be paid to miners')
 
     parser_dividend = subparsers.add_parser('dividend', help='pay dividends to the holders of an asset (in proportion to their stake in it)')
     parser_dividend.add_argument('--source', required=True, help='the source address')
     parser_dividend.add_argument('--quantity-per-unit', required=True, help='the quantity of XCP to be paid per whole unit held of ASSET')
     parser_dividend.add_argument('--asset', required=True, help='the asset to which pay dividends')
     parser_dividend.add_argument('--dividend-asset', required=True, help='asset in which to pay the dividends')
+    parser_dividend.add_argument('--fee', help='the exact BTC fee to be paid to miners')
 
     parser_burn = subparsers.add_parser('burn', help='destroy bitcoins to earn XCP, during an initial period of time')
     parser_burn.add_argument('--source', required=True, help='the source address')
     parser_burn.add_argument('--quantity', required=True, help='quantity of BTC to be destroyed')
+    parser_burn.add_argument('--fee', help='the exact BTC fee to be paid to miners')
 
     parser_cancel= subparsers.add_parser('cancel', help='cancel an open order or bet you created')
     parser_cancel.add_argument('--source', required=True, help='the source address')
     parser_cancel.add_argument('--offer-hash', required=True, help='the transaction hash of the order or bet')
+    parser_cancel.add_argument('--fee', help='the exact BTC fee to be paid to miners')
 
     parser_callback = subparsers.add_parser('callback', help='callback a fraction of an asset')
     parser_callback.add_argument('--source', required=True, help='the source address')
     parser_callback.add_argument('--fraction', required=True, help='the fraction of ASSET to call back')
     parser_callback.add_argument('--asset', required=True, help='the asset to callback')
+    parser_callback.add_argument('--fee', help='the exact BTC fee to be paid to miners')
 
     parser_address = subparsers.add_parser('balances', help='display the balances of a Counterparty address')
     parser_address.add_argument('address', help='the address you are interested in')
@@ -687,12 +698,14 @@ if __name__ == '__main__':
 
     # MESSAGE CREATION
     if args.action == 'send':
+        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
         quantity = util.devise(db, args.quantity, args.asset, 'input')
         cli('create_send', {'source': args.source, 'destination': args.destination, 'asset': args.asset,
-                           'quantity': quantity},
+                           'quantity': quantity, 'fee': args.fee},
             args.unsigned)
 
     elif args.action == 'order':
+        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
         fee_required, fee_fraction_provided = D(args.fee_fraction_required), D(args.fee_fraction_provided)
         give_quantity, get_quantity = D(args.give_quantity), D(args.get_quantity)
 
@@ -711,6 +724,9 @@ if __name__ == '__main__':
             fee_required = 0
             fee_provided = 0
 
+        # Set fee provided exactly.
+        if args.fee: fee_provided = args.fee
+
         give_quantity = util.devise(db, give_quantity, args.give_asset, 'input')
         get_quantity = util.devise(db, get_quantity, args.get_asset, 'input')
 
@@ -720,9 +736,11 @@ if __name__ == '__main__':
            args.unsigned)
 
     elif args.action == 'btcpay':
-        cli('create_btcpay', {'source': args.source, 'order_match_id': args.order_match_id}, args.unsigned)
+        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
+        cli('create_btcpay', {'source': args.source, 'order_match_id': args.order_match_id, 'fee': args.fee}, args.unsigned)
 
     elif args.action == 'issuance':
+        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
         quantity = util.devise(db, args.quantity, None, 'input',
                                divisible=args.divisible)
         if args.callable_:
@@ -738,18 +756,20 @@ if __name__ == '__main__':
         cli('create_issuance', {'source': args.source, 'asset': args.asset, 'quantity': quantity,
                                 'divisible': args.divisible, 'description': args.description,
                                 'callable_': args.callable_, 'call_date': call_date, 'call_price': call_price,
-                                'transfer_destination': args.transfer_destination},
+                                'transfer_destination': args.transfer_destination, 'fee': args.fee},
            args.unsigned)
 
     elif args.action == 'broadcast':
+        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
         value = util.devise(db, args.value, 'value', 'input')
         fee_fraction = util.devise(db, args.fee_fraction, 'fraction', 'input')
 
         cli('create_broadcast', {'source': args.source, 'fee_fraction': fee_fraction, 'text': args.text,
-                                 'timestamp': int(time.time()), 'value': value},
+                                 'timestamp': int(time.time()), 'value': value, 'fee': args.fee},
            args.unsigned)
 
     elif args.action == 'bet':
+        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
         deadline = calendar.timegm(dateutil.parser.parse(args.deadline).utctimetuple())
         wager = util.devise(db, args.wager, 'XCP', 'input')
         counterwager = util.devise(db, args.counterwager, 'XCP', 'input')
@@ -758,24 +778,28 @@ if __name__ == '__main__':
 
         cli('create_bet', {'source': args.source, 'feed_address': args.feed_address, 'bet_type': args.bet_type,
                            'deadline': deadline, 'wager': wager, 'counterwager': counterwager, 'expiration': args.expiration,
-                           'target_value': target_value, 'leverage': leverage},
+                           'target_value': target_value, 'leverage': leverage, 'fee': args.fee},
             args.unsigned)
 
     elif args.action == 'dividend':
+        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
         quantity_per_unit = util.devise(db, args.quantity_per_unit, 'XCP', 'input')
-        cli('create_dividend', {'source': args.source, 'quantity_per_unit': quantity_per_unit, 'asset': args.asset, 'dividend_asset': args.dividend_asset},
+        cli('create_dividend', {'source': args.source, 'quantity_per_unit': quantity_per_unit, 'asset': args.asset, 'dividend_asset': args.dividend_asset, 'fee': args.fee},
            args.unsigned)
 
     elif args.action == 'burn':
+        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
         quantity = util.devise(db, args.quantity, 'BTC', 'input')
-        cli('create_burn', {'source': args.source, 'quantity': quantity}, args.unsigned)
+        cli('create_burn', {'source': args.source, 'quantity': quantity, 'fee': args.fee}, args.unsigned)
 
     elif args.action == 'cancel':
-        cli('create_cancel', {'source': args.source, 'offer_hash': args.offer_hash}, args.unsigned)
+        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
+        cli('create_cancel', {'source': args.source, 'offer_hash': args.offer_hash, 'fee': args.fee}, args.unsigned)
 
     elif args.action == 'callback':
+        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
         cli('create_callback', {'source': args.source, 'fraction': util.devise(db, args.fraction,
-                                'fraction', 'input'), 'asset': args.asset},
+                                'fraction', 'input'), 'asset': args.asset, 'fee': args.fee},
            args.unsigned)
 
 

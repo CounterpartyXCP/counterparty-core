@@ -185,14 +185,14 @@ def test_send ():
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_order_buy_xcp ():
-    unsigned_tx_hex = bitcoin.transaction(order.compose(db, source_default, 'BTC', small, 'XCP', small * 2, expiration, 0, fee_provided), encoding='multisig')
+    unsigned_tx_hex = bitcoin.transaction(order.compose(db, source_default, 'BTC', small, 'XCP', small * 2, expiration, 0), encoding='multisig', fee_provided=fee_provided)
 
     parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_order_sell_xcp ():
-    unsigned_tx_hex = bitcoin.transaction(order.compose(db, source_default, 'XCP', round(small * 2.1), 'BTC', small, expiration, fee_required, 0), encoding='multisig')
+    unsigned_tx_hex = bitcoin.transaction(order.compose(db, source_default, 'XCP', round(small * 2.1), 'BTC', small, expiration, fee_required), encoding='multisig')
 
     parse_hex(unsigned_tx_hex)
 
@@ -319,7 +319,7 @@ def test_broadcast_equal ():
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_order_to_be_cancelled ():
-    unsigned_tx_hex = bitcoin.transaction(order.compose(db, source_default, 'BBBB', small, 'XCP', small, expiration, 0, 0), encoding='multisig')
+    unsigned_tx_hex = bitcoin.transaction(order.compose(db, source_default, 'BBBB', small, 'XCP', small, expiration, 0), encoding='multisig')
 
     parse_hex(unsigned_tx_hex)
 
