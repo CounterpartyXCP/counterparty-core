@@ -1,7 +1,8 @@
 ## Client Versions ##
-* v9.17 (unreleased)
+* v9.16.1
 	* allow exact fees to be specified in CLI
 	* improved algorithm for choosing unspent txouts in transaction construction
+	* allow the unconfirmed inputs CLI option
 * v9.16
 	* regular version, database, Bitcoind checking in API
 	* better testcoin support
