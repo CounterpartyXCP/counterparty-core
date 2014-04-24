@@ -519,8 +519,9 @@ if __name__ == '__main__':
     parser.add_argument('--force', action='store_true', help='don\'t check whether Bitcoind is caught up')
     parser.add_argument('--testnet', action='store_true', help='use Bitcoin testnet addresses and block numbers')
     parser.add_argument('--testcoin', action='store_true', help='use the test Counterparty network on every blockchain')
-    parser.add_argument('--unsigned', action='store_true', default=False, help='print out unsigned hex of transaction; do not sign or broadcast')
+    parser.add_argument('--unsigned', action='store_true', help='print out unsigned hex of transaction; do not sign or broadcast')
     parser.add_argument('--carefulness', type=int, default=0, help='check conservation of assets after every CAREFULNESS transactions (potentially slow)')
+    parser.add_argument('--unconfirmed', action='store_true', help='allow the spending of unconfirmed transaction outputs')
 
     parser.add_argument('--data-dir', help='the directory in which to keep the database, config file and log file, by default')
     parser.add_argument('--database-file', help='the location of the SQLite3 database')
@@ -701,7 +702,7 @@ if __name__ == '__main__':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
         quantity = util.devise(db, args.quantity, args.asset, 'input')
         cli('create_send', {'source': args.source, 'destination': args.destination, 'asset': args.asset,
-                           'quantity': quantity, 'fee': args.fee},
+                           'quantity': quantity, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed},
             args.unsigned)
 
     elif args.action == 'order':
@@ -737,7 +738,7 @@ if __name__ == '__main__':
 
     elif args.action == 'btcpay':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
-        cli('create_btcpay', {'source': args.source, 'order_match_id': args.order_match_id, 'fee': args.fee}, args.unsigned)
+        cli('create_btcpay', {'source': args.source, 'order_match_id': args.order_match_id, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed}, args.unsigned)
 
     elif args.action == 'issuance':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
@@ -756,7 +757,7 @@ if __name__ == '__main__':
         cli('create_issuance', {'source': args.source, 'asset': args.asset, 'quantity': quantity,
                                 'divisible': args.divisible, 'description': args.description,
                                 'callable_': args.callable_, 'call_date': call_date, 'call_price': call_price,
-                                'transfer_destination': args.transfer_destination, 'fee': args.fee},
+                                'transfer_destination': args.transfer_destination, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed},
            args.unsigned)
 
     elif args.action == 'broadcast':
@@ -765,7 +766,7 @@ if __name__ == '__main__':
         fee_fraction = util.devise(db, args.fee_fraction, 'fraction', 'input')
 
         cli('create_broadcast', {'source': args.source, 'fee_fraction': fee_fraction, 'text': args.text,
-                                 'timestamp': int(time.time()), 'value': value, 'fee': args.fee},
+                                 'timestamp': int(time.time()), 'value': value, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed},
            args.unsigned)
 
     elif args.action == 'bet':
@@ -778,28 +779,28 @@ if __name__ == '__main__':
 
         cli('create_bet', {'source': args.source, 'feed_address': args.feed_address, 'bet_type': args.bet_type,
                            'deadline': deadline, 'wager': wager, 'counterwager': counterwager, 'expiration': args.expiration,
-                           'target_value': target_value, 'leverage': leverage, 'fee': args.fee},
+                           'target_value': target_value, 'leverage': leverage, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed},
             args.unsigned)
 
     elif args.action == 'dividend':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
         quantity_per_unit = util.devise(db, args.quantity_per_unit, 'XCP', 'input')
-        cli('create_dividend', {'source': args.source, 'quantity_per_unit': quantity_per_unit, 'asset': args.asset, 'dividend_asset': args.dividend_asset, 'fee': args.fee},
+        cli('create_dividend', {'source': args.source, 'quantity_per_unit': quantity_per_unit, 'asset': args.asset, 'dividend_asset': args.dividend_asset, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed},
            args.unsigned)
 
     elif args.action == 'burn':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
         quantity = util.devise(db, args.quantity, 'BTC', 'input')
-        cli('create_burn', {'source': args.source, 'quantity': quantity, 'fee': args.fee}, args.unsigned)
+        cli('create_burn', {'source': args.source, 'quantity': quantity, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed}, args.unsigned)
 
     elif args.action == 'cancel':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
-        cli('create_cancel', {'source': args.source, 'offer_hash': args.offer_hash, 'fee': args.fee}, args.unsigned)
+        cli('create_cancel', {'source': args.source, 'offer_hash': args.offer_hash, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed}, args.unsigned)
 
     elif args.action == 'callback':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
         cli('create_callback', {'source': args.source, 'fraction': util.devise(db, args.fraction,
-                                'fraction', 'input'), 'asset': args.asset, 'fee': args.fee},
+                                'fraction', 'input'), 'asset': args.asset, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed},
            args.unsigned)
 
 
