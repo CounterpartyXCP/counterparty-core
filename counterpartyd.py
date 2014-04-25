@@ -226,11 +226,16 @@ def set_options (data_dir=None,
                  insight_enable=None, insight_connect=None, insight_port=None,
                  rpc_host=None, rpc_port=None, rpc_user=None, rpc_password=None,
                  log_file=None, pid_file=None, api_num_threads=None, api_request_queue_size=None,
-                 database_file=None, testnet=False, testcoin=False, unittest=False, carefulness=0):
+                 database_file=None, testnet=False, testcoin=False, unittest=False, carefulness=0, force=False):
 
     # Unittests always run on testnet.
     if unittest and not testnet:
         raise Exception # TODO
+
+    if force:
+        config.FORCE = force
+    else:
+        config.FORCE = False
 
     # Data directory
     if not data_dir:
@@ -654,9 +659,9 @@ if __name__ == '__main__':
                 bitcoind_rpc_user=args.bitcoind_rpc_user, bitcoind_rpc_password=args.bitcoind_rpc_password,
                 insight_enable=args.insight_enable, insight_connect=args.insight_connect, insight_port=args.insight_port,
                 rpc_host=args.rpc_host, rpc_port=args.rpc_port, rpc_user=args.rpc_user, rpc_password=args.rpc_password,
-                log_file=args.log_file, pid_file=args.pid_file,
-                api_num_threads=args.api_num_threads, api_request_queue_size=args.api_request_queue_size,
-                database_file=args.database_file, testnet=args.testnet, testcoin=args.testcoin, unittest=False, carefulness=args.carefulness)
+                log_file=args.log_file, pid_file=args.pid_file, api_num_threads=args.api_num_threads,
+                api_request_queue_size=args.api_request_queue_size, database_file=args.database_file, testnet=args.testnet,
+                testcoin=args.testcoin, unittest=False, carefulness=args.carefulness, force=args.force)
 
     #Create/update pid file
     pid = str(os.getpid())
@@ -693,7 +698,7 @@ if __name__ == '__main__':
     if args.action == None: args.action = 'server'
     
     # TODO: Keep around only as long as reparse and rollback don’t use API.
-    if not args.force and args.action in ('reparse', 'rollback'):
+    if not config.FORCE and args.action in ('reparse', 'rollback'):
         util.version_check(db)
         bitcoin.bitcoind_check(db)
 
@@ -725,15 +730,12 @@ if __name__ == '__main__':
             fee_required = 0
             fee_provided = 0
 
-        # Set fee provided exactly.
-        if args.fee: fee_provided = args.fee
-
         give_quantity = util.devise(db, give_quantity, args.give_asset, 'input')
         get_quantity = util.devise(db, get_quantity, args.get_asset, 'input')
 
         cli('create_order', {'source': args.source, 'give_asset': args.give_asset, 'give_quantity': give_quantity,
                             'get_asset': args.get_asset, 'get_quantity': get_quantity, 'expiration': args.expiration,
-                            'fee_required': fee_required, 'fee_provided': fee_provided},
+                            'fee_required': fee_required, 'fee_provided': fee_provided, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed},
            args.unsigned)
 
     elif args.action == 'btcpay':
@@ -913,7 +915,7 @@ if __name__ == '__main__':
         api_server.start()
 
         # Check that Insight works if enabled.
-        if config.INSIGHT_ENABLE and not args.force:
+        if config.INSIGHT_ENABLE and not config.FORCE:
             try:
                 bitcoin.get_btc_balance(config.UNSPENDABLE, normalize=False)
             except requests.exceptions.ConnectionError:

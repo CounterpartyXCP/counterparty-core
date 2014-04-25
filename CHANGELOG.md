@@ -1,4 +1,7 @@
 ## Client Versions ##
+* v9.16.2
+	* order bug in last version
+	* improve --force
 * v9.16.1
 	* allow exact fees to be specified in CLI
 	* improved algorithm for choosing unspent txouts in transaction construction

@@ -443,7 +443,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required=None,
-                         encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
+                         encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee_provided=None, fee=None):
             if get_asset == 'BTC' and fee_required is None:
                 #since no value is passed, set a default of 1% for fee_required if buying BTC
                 fee_required = int(get_quantity / 100)
@@ -456,10 +456,9 @@ class APIServer(threading.Thread):
             elif fee_provided is None:
                 fee_provided = 0 #no default set, but fee_required does not apply
             
-            tx_info = order.compose(db, source, give_asset,
-                                give_quantity, get_asset,
-                                get_quantity, expiration,
-                                fee_required, fee_provided)
+            tx_info = order.compose(db, source, give_asset, give_quantity,
+                                    get_asset, get_quantity, expiration,
+                                    fee_required)
             return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, fee_provided=fee_provided, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
 
         @dispatcher.add_method
@@ -478,34 +477,36 @@ class APIServer(threading.Thread):
         class API(object):
             @cherrypy.expose
             def index(self):
+                try:
+                    data = cherrypy.request.body.read().decode('utf-8')
+                except ValueError:
+                    raise cherrypy.HTTPError(400, 'Invalid JSON document')
+
                 cherrypy.response.headers["Content-Type"] = "application/json"
                 #CORS logic is handled in the nginx config
 
                 # Check version.
                 # Check that bitcoind is running, communicable, and caught up with the blockchain.
                 # Check that the database has caught up with bitcoind.
-                try: self.last_check
-                except: self.last_check = 0
-                try:
-                    if time.time() - self.last_check >= 4 * 3600: # Four hours since last check.
-                        code = 10
-                        util.version_check(db)
-                    if time.time() - self.last_check > 10 * 60: # Ten minutes since last check.
-                        code = 11
-                        bitcoin.bitcoind_check(db)
-                        code = 12
-                        util.database_check(db, bitcoin.get_block_count())  # TODO: If not reparse or rollback, once those use API.
-                    self.last_check = time.time()
-                except Exception as e:
-                    exception_name = e.__class__.__name__
-                    exception_text = str(e)
-                    response = jsonrpc.exceptions.JSONRPCError(code=code, message=exception_name, data=exception_text)
-                    return response.json.encode()
+                if not config.FORCE:
+                    try: self.last_check
+                    except: self.last_check = 0
+                    try:
+                        if time.time() - self.last_check >= 4 * 3600: # Four hours since last check.
+                            code = 10
+                            util.version_check(db)
+                        if time.time() - self.last_check > 10 * 60: # Ten minutes since last check.
+                            code = 11
+                            bitcoin.bitcoind_check(db)
+                            code = 12
+                            util.database_check(db, bitcoin.get_block_count())  # TODO: If not reparse or rollback, once those use API.
+                        self.last_check = time.time()
+                    except Exception as e:
+                        exception_name = e.__class__.__name__
+                        exception_text = str(e)
+                        response = jsonrpc.exceptions.JSONRPCError(code=code, message=exception_name, data=exception_text)
+                        return response.json.encode()
 
-                try:
-                    data = cherrypy.request.body.read().decode('utf-8')
-                except ValueError:
-                    raise cherrypy.HTTPError(400, 'Invalid JSON document')
                 response = jsonrpc.JSONRPCResponseManager.handle(data, dispatcher)
                 return response.json.encode()
 
