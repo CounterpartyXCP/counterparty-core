@@ -443,7 +443,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required=None,
-                         encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
+                         fee_provided=None, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
             if get_asset == 'BTC' and fee_required is None:
                 #since no value is passed, set a default of 1% for fee_required if buying BTC
                 fee_required = int(get_quantity / 100)
