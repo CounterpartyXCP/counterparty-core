@@ -12,7 +12,7 @@ VERSION_REVISION = 3
 VERSION_STRING = str(VERSION_MAJOR) + '.' + str(VERSION_MINOR) + '.' + str(VERSION_REVISION)
 
 # Bitcoin protocol
-# NOTE: If the DUST_SIZE constants are changed, they MUST also be changed in counterwalletd/lib/config.py as well 
+# NOTE: If the DUST_SIZE constants are changed, they MUST also be changed in counterblockd/lib/config.py as well 
 MULTISIG = True
 REGULAR_DUST_SIZE = 5430        # TODO: This is just a guess. I got it down to 5530 satoshis.
 MULTISIG_DUST_SIZE = 5430 * 2   # TODO: This is just a guess. I did it down to 1.4x. (Used for regular outputs in multi‐sig transactions, too.)
