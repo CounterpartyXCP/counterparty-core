@@ -358,10 +358,10 @@ def sort_unspent_txouts(unspent, allow_unconfirmed_inputs):
 
     # Remove unconfirmed txouts, if desired.
     if allow_unconfirmed_inputs:
-        # Hackish: skip unspent outputs which are unconfirmed and were first seen a while ago.
+        # Hackish: Allow only inputs which are either already confirmed or were seen only recently. (Skip outputs from slow‐to‐confirm transanctions.)
         try:
-            unspent = [coin for coin in unspent if (coin['confirmations'] <= 0 and time.time() - coin['ts'] < 6 * 3600)] # Six hours.
-        except: # DUPE: If timestamp isn’t given. (Why not KeyError?!)
+            unspent = [coin for coin in unspent if (coin['confirmations'] > 0 or (time.time() - coin['ts']) < 6 * 3600)] # Cutoff: six hours
+        except (KeyError, TypeError):
             pass
     else:
         unspent = [coin for coin in unspent if coin['confirmations'] > 0]

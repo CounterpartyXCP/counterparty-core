@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.16.3
+	* bug fixes
 * v9.16.2
 	* order bug in last version
 	* improve --force
