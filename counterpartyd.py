@@ -694,6 +694,10 @@ if __name__ == '__main__':
     #API requests logging (don't show on console in normal operation)
     requests_log = logging.getLogger("requests")
     requests_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
+    requests_log.propagate = False
+    urllib3_log = logging.getLogger('urllib3')
+    urllib3_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
+    urllib3_log.propagate = False
 
     if args.action == None: args.action = 'server'
     
