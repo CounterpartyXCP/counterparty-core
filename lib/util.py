@@ -813,13 +813,15 @@ def get_orders (db, status=None, source=None, show_expired=True, filters=None, o
 
 def get_order_matches (db, status=None, post_filter_status=None, is_mine=False, address=None, tx0_hash=None, tx1_hash=None, filters=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     from . import bitcoin   # HACK
+    
     def filter_is_mine(e):
-        if (    (not bitcoin.is_mine(e['tx0_address']) or
+        if ((not bitcoin.is_mine(e['tx0_address']) or
                  e['forward_asset'] != 'BTC')
             and (not bitcoin.is_mine(e['tx1_address']) or
                  e['backward_asset'] != 'BTC')):
             return False #is not mine
         return True #is mine
+    
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
     if status: filters.append({'field': 'status', 'op': '==', 'value': status})
@@ -831,10 +833,22 @@ def get_order_matches (db, status=None, post_filter_status=None, is_mine=False, 
             col_names=['tx0_block_index', 'tx1_block_index']))
     results = do_filter(cursor.fetchall(), filters, filterop)
     cursor.close()
-    if is_mine: results = [e for e in results if filter_is_mine(e)]
-    if address: results = [e for e in results if e['tx0_address'] == address or e['tx1_address'] == address]
-    if post_filter_status: results = [e for e in results if e['status'] == post_filter_status]
-    return do_order_by(results, order_by, order_dir)
+
+    filtered_results = []
+    for e in results:
+        if e in filtered_results: 
+            continue
+        include = True
+        if is_mine:
+            include = filter_is_mine(e)
+        if include and address:
+            include = e['tx0_address'] == address or e['tx1_address'] == address
+        if include and post_filter_status:
+            include = e['status'] == post_filter_status
+        if include:
+            filtered_results.append(e)
+
+    return do_order_by(filtered_results, order_by, order_dir)
 
 def get_btcpays (db, status=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     if filters is None: filters = list()
