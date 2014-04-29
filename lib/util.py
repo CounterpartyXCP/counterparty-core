@@ -566,9 +566,8 @@ def devise (db, quantity, asset, dest, divisible=None):
 
 
 
-
-
-
+def containsIgnoreCase(a, b): 
+    return operator.contains(a.upper(), b.upper()) 
 
 DO_FILTER_OPERATORS = {
     '==': operator.eq,
@@ -577,6 +576,8 @@ DO_FILTER_OPERATORS = {
     '>': operator.gt,
     '<=': operator.le,
     '>=': operator.ge,
+    '+T': operator.contains, #case
+    '+t': containsIgnoreCase,  #ignore case
 }
 
 def do_filter(results, filters, filterop):
