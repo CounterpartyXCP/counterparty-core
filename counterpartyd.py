@@ -694,6 +694,10 @@ if __name__ == '__main__':
     #API requests logging (don't show on console in normal operation)
     requests_log = logging.getLogger("requests")
     requests_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
+    requests_log.propagate = False
+    urllib3_log = logging.getLogger('urllib3')
+    urllib3_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
+    urllib3_log.propagate = False
 
     if args.action == None: args.action = 'server'
     
@@ -917,9 +921,16 @@ if __name__ == '__main__':
         # Check that Insight works if enabled.
         if config.INSIGHT_ENABLE and not config.FORCE:
             try:
-                bitcoin.get_btc_balance(config.UNSPENDABLE, normalize=False)
-            except requests.exceptions.ConnectionError:
-                raise exceptions.InsightError('Could not connect to Insight server.')
+                r = requests.get(config.INSIGHT + '/api/sync/')
+                if r.status_code != 200:
+                    raise ValueError("Bad status code returned from insight: %s" % r.status_code)
+                result = r.json()
+                if result['status'] == 'error':
+                    raise exceptions.InsightError('Insight reports error: %s' % result['error'])
+                if result['status'] == 'syncing':
+                    logging.warning("WARNING: Insight is not fully synced to the blockchain: %s%% complete" % result['syncPercentage'])
+            except Exception as e:
+                raise exceptions.InsightError('Could not connect to Insight server: %s' % e)
 
         blocks.follow(db)
 
