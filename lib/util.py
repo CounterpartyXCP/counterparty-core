@@ -813,7 +813,7 @@ def get_orders (db, status=None, source=None, show_expired=True, filters=None, o
 
 def get_order_matches (db, status=None, post_filter_status=None, is_mine=False, address=None, tx0_hash=None, tx1_hash=None, filters=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
     from . import bitcoin   # HACK
-    
+
     def filter_is_mine(e):
         if ((not bitcoin.is_mine(e['tx0_address']) or
                  e['forward_asset'] != 'BTC')
@@ -821,7 +821,7 @@ def get_order_matches (db, status=None, post_filter_status=None, is_mine=False, 
                  e['backward_asset'] != 'BTC')):
             return False #is not mine
         return True #is mine
-    
+
     if filters is None: filters = list()
     if filters and not isinstance(filters, list): filters = [filters,]
     if status: filters.append({'field': 'status', 'op': '==', 'value': status})

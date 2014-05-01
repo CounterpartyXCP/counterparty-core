@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.16.4 (should be minor version bump)
+	* failed XCP conservation sanity check on testnet (deadline checking in bets)
 * v9.16.3
 	* bug fixes
 * v9.16.2
