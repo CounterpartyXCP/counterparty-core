@@ -16,7 +16,7 @@ from Crypto.Cipher import ARC4
 from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 
-def check_conservation (db):
+def check_conservation (db): 
     logging.debug('Status: Checking for conservation of assets.')
 
     supplies = util.get_supplies(db)
@@ -31,7 +31,7 @@ def check_conservation (db):
             raise exceptions.SanityError('{} {} issued ≠ {} {} held'.format(util.devise(db, issued, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
         logging.debug('Status: {} has been conserved ({} {} both issued and held)'.format(asset, util.devise(db, issued, asset, 'output'), asset))
 
-def parse_tx (db, tx):
+def parse_tx (db, tx, block_time):
     parse_tx_cursor = db.cursor()
     # Burns.
     if tx['destination'] == config.UNSPENDABLE:
@@ -56,7 +56,7 @@ def parse_tx (db, tx):
     elif message_type_id == broadcast.ID:
         broadcast.parse(db, tx, message)
     elif message_type_id == bet.ID:
-        bet.parse(db, tx, message)
+        bet.parse(db, tx, message, block_time)
     elif message_type_id == dividend.ID:
         dividend.parse(db, tx, message)
     elif message_type_id == cancel.ID:
@@ -94,9 +94,10 @@ def parse_block (db, block_index, block_time):
                                (block_index,))
     transactions = parse_block_cursor.fetchall()
     for tx in transactions:
-        parse_tx(db, tx)
+        parse_tx(db, tx, block_time)
 
     parse_block_cursor.close()
+
 
 def initialise(db):
     cursor = db.cursor()
