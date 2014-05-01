@@ -94,7 +94,7 @@ def parse_hex (unsigned_tx_hex):
                                   WHERE tx_index=?''', (tx_index,)))
     assert len(txes) == 1
     tx = txes[0]
-    blocks.parse_tx(db, tx)
+    blocks.parse_tx(db, tx, block_time)
 
     # After parsing every transaction, check that the credits, debits sum properly.
     cursor.execute('''SELECT * FROM balances''')

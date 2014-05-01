@@ -90,7 +90,7 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
     if not bet_type in (0, 1, 2, 3):
         problems.append('unknown bet type')
 
-    if deadline <= block_time:
+    if deadline <= block_time and config.PREFIX != config.UNITTEST_PREFIX:
         problems.append('deadline passed')
 
     # Valid leverage level?
