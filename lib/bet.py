@@ -136,7 +136,7 @@ def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
                         leverage, expiration)
     return (source, [(feed_address, None)], data)
 
-def parse (db, tx, message):
+def parse (db, tx, message, block_time):
     bet_parse_cursor = db.cursor()
 
     # Unpack message.
@@ -152,12 +152,17 @@ def parse (db, tx, message):
          expiration) = 0, 0, 0, 0, 0, 0, 0
         status = 'invalid: could not unpack'
 
+    # not in validate because blocktime unknown when compose
+    if deadline<=block_time:
+        status = 'invalid: deadline already passed'
+
+    feed_address = tx['destination']
+
     odds, fee_fraction = 0, 0
     if status == 'open':
         try: odds = util.price(wager_quantity, counterwager_quantity, tx['block_index'])
         except Exception as e: pass
-
-        feed_address = tx['destination']
+        
         fee_fraction = get_fee_fraction(db, feed_address)
 
         # Overbet
