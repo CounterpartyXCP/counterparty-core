@@ -237,8 +237,9 @@ def match (db, tx):
     if tx['block_index'] > 284500 or config.TESTNET:  # Protocol change.
         sorted(bet_matches, key=lambda x: x['tx_index'])                                        # Sort by tx index second.
         sorted(bet_matches, key=lambda x: util.price(x['wager_quantity'], x['counterwager_quantity'], tx1['block_index']))   # Sort by price first.
+    tx1_status = 'open'
     for tx0 in bet_matches:
-
+        if tx1_status != 'open': continue
         # Bet types must be opposite.
         if not counterbet_type == tx0['bet_type']: continue
         if tx0['leverage'] == tx1['leverage']:
@@ -303,7 +304,6 @@ def match (db, tx):
             cursor.execute(sql, bindings)
             util.message(db, tx1['block_index'], 'update', 'bets', bindings)
 
-            tx1_status = 'open'
             if tx1['block_index'] >= 292000 or config.TESTNET:  # Protocol change
                 if tx0['counterwager_remaining'] <= 0 or tx1_counterwager_remaining <= 0:
                     # Fill order, and recredit give_remaining.
