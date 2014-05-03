@@ -293,6 +293,8 @@ def match (db, tx):
                 # Fill order, and recredit give_remaining.
                 tx0_status = 'filled'
                 util.credit(db, tx1['block_index'], tx0['source'], 'XCP', tx0_wager_remaining, event=tx1['tx_hash'], action='filled')
+                tx0_wager_remaining = 0
+
             bindings = {
                 'wager_remaining': tx0_wager_remaining,
                 'counterwager_remaining': tx0_counterwager_remaining,
@@ -303,13 +305,15 @@ def match (db, tx):
             cursor.execute(sql, bindings)
             util.message(db, tx1['block_index'], 'update', 'bets', bindings)
 
+            # tx1
             tx1_status = 'open'
             if tx1['block_index'] >= 292000 or config.TESTNET:  # Protocol change
                 if tx0['counterwager_remaining'] <= 0 or tx1_counterwager_remaining <= 0:
                     # Fill order, and recredit give_remaining.
                     tx1_status = 'filled'
                     util.credit(db, tx1['block_index'], tx1['source'], 'XCP', tx1_wager_remaining, event=tx1['tx_hash'], action='filled')
-            # tx1
+                    tx1_wager_remaining = 0
+            
             bindings = {
                 'wager_remaining': tx1_wager_remaining,
                 'counterwager_remaining': tx1_counterwager_remaining,
