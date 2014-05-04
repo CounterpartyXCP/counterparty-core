@@ -1,4 +1,7 @@
 ## Client Versions ##
+* v9.18.0
+	* tweaked test suite
+	* fixed failed sanity check on testnet
 * v9.17.0
 	* failed XCP conservation sanity check on testnet (deadline checking in bets)
 * v9.16.3

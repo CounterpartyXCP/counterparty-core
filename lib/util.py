@@ -304,7 +304,8 @@ def version_check (db):
     # Check client version.
     if config.VERSION_MAJOR < versions['minimum_version_major']:
         if config.VERSION_MINOR < versions['minimum_version_minor']:
-            raise exceptions.VersionError('Please upgrade counterpartyd to the latest version and restart the server.')
+            if config.VERSION_REVISION < versions['minimum_version_revision']:
+                raise exceptions.VersionError('Please upgrade counterpartyd to the latest version and restart the server.')
 
     logging.debug('Status: Version check passed.')
     return
