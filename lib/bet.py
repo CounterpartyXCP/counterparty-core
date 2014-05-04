@@ -239,7 +239,7 @@ def match (db, tx):
         sorted(bet_matches, key=lambda x: util.price(x['wager_quantity'], x['counterwager_quantity'], tx1['block_index']))   # Sort by price first.
     tx1_status = 'open'
     for tx0 in bet_matches:
-        if tx1_status != 'open': continue
+        if tx1_status != 'open': break
         # Bet types must be opposite.
         if not counterbet_type == tx0['bet_type']: continue
         if tx0['leverage'] == tx1['leverage']:
