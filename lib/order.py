@@ -271,7 +271,10 @@ def match (db, tx):
     tx1_fee_required_remaining = tx1['fee_required_remaining']
     tx1_fee_provided_remaining = tx1['fee_provided_remaining']
 
+    tx1_status = 'open'
     for tx0 in order_matches:
+        if tx1_status != 'open': break
+        
         logging.debug('Considering: ' + tx0['tx_hash'])
         tx0_give_remaining = tx0['give_remaining']
         tx0_get_remaining = tx0['get_remaining']
@@ -397,7 +400,6 @@ def match (db, tx):
             cursor.execute(sql, bindings)
             util.message(db, tx1['block_index'], 'update', 'orders', bindings)
             # tx1
-            tx1_status = 'open'
             if tx1_give_remaining <= 0 or (tx1_get_remaining <= 0 and (tx1['block_index'] >= 292000 or config.TESTNET)):    # Protocol change
                 if tx1['give_asset'] != 'BTC' and tx1['get_asset'] != 'BTC':
                     # Fill order, and recredit give_remaining.
