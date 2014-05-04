@@ -842,9 +842,10 @@ def follow (db):
             block_count = bitcoin.get_block_count()
             block_index +=1
 
-        # Check for conservation of assets.
-        check_conservation(db)
-        time.sleep(2)
+        else:
+            # Check for conservation of assets.
+            check_conservation(db)
+            time.sleep(2)
 
     follow_cursor.close()
 
