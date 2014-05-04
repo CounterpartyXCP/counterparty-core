@@ -923,9 +923,16 @@ if __name__ == '__main__':
         # Check that Insight works if enabled.
         if config.INSIGHT_ENABLE and not config.FORCE:
             try:
-                bitcoin.get_btc_balance(config.UNSPENDABLE, normalize=False)
-            except requests.exceptions.ConnectionError:
-                raise exceptions.InsightError('Could not connect to Insight server.')
+                r = requests.get(config.INSIGHT + '/api/sync/')
+                if r.status_code != 200:
+                    raise ValueError("Bad status code returned from insight: %s" % r.status_code)
+                result = r.json()
+                if result['status'] == 'error':
+                    raise exceptions.InsightError('Insight reports error: %s' % result['error'])
+                if result['status'] == 'syncing':
+                    logging.warning("WARNING: Insight is not fully synced to the blockchain: %s%% complete" % result['syncPercentage'])
+            except Exception as e:
+                raise exceptions.InsightError('Could not connect to Insight server: %s' % e)
 
         blocks.follow(db)
 

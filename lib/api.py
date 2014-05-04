@@ -442,20 +442,8 @@ class APIServer(threading.Thread):
             return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
 
         @dispatcher.add_method
-        def create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required=None,
-                         encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee_provided=None, fee=None):
-            if get_asset == 'BTC' and fee_required is None:
-                #since no value is passed, set a default of 1% for fee_required if buying BTC
-                fee_required = int(get_quantity / 100)
-            elif fee_required is None:
-                fee_required = 0 #no default set, but fee_required does not apply
-
-            if give_asset == 'BTC' and fee_provided is None:
-                #since no value is passed, set a default of 1% for fee_provided if selling BTC
-                fee_provided = int(give_quantity / 100)
-            elif fee_provided is None:
-                fee_provided = 0 #no default set, but fee_required does not apply
-            
+        def create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required,
+                         fee_provided, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
             tx_info = order.compose(db, source, give_asset, give_quantity,
                                     get_asset, get_quantity, expiration,
                                     fee_required)

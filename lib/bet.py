@@ -15,6 +15,7 @@ Expiring a bet match doesn’t re‐open the constituent bets. (So all bets may 
 import struct
 import decimal
 D = decimal.Decimal
+import time
 
 from . import (util, config, bitcoin, exceptions, util)
 
@@ -74,7 +75,7 @@ def get_fee_fraction (db, feed_address):
         return 0
 
 def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
-              counterwager_quantity, target_value, leverage, expiration):
+              counterwager_quantity, target_value, leverage, expiration, block_time):
     problems = []
 
     # Look at feed to be bet on.
@@ -88,6 +89,9 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
 
     if not bet_type in (0, 1, 2, 3):
         problems.append('unknown bet type')
+
+    if deadline <= block_time and config.PREFIX != config.UNITTEST_PREFIX:
+        problems.append('deadline passed')
 
     # Valid leverage level?
     if leverage != 5040 and bet_type in (2,3):   # Equal, NotEqual
@@ -127,7 +131,7 @@ def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
             counterwager_quantity, target_value, leverage, expiration):
 
     problems = validate(db, source, feed_address, bet_type, deadline, wager_quantity,
-                        counterwager_quantity, target_value, leverage, expiration)
+                        counterwager_quantity, target_value, leverage, expiration, time.time())
     if problems: raise exceptions.BetError(problems)
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
@@ -136,7 +140,7 @@ def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
                         leverage, expiration)
     return (source, [(feed_address, None)], data)
 
-def parse (db, tx, message):
+def parse (db, tx, message, block_time):
     bet_parse_cursor = db.cursor()
 
     # Unpack message.
@@ -153,11 +157,11 @@ def parse (db, tx, message):
         status = 'invalid: could not unpack'
 
     odds, fee_fraction = 0, 0
+    feed_address = tx['destination']
     if status == 'open':
         try: odds = util.price(wager_quantity, counterwager_quantity, tx['block_index'])
         except Exception as e: pass
 
-        feed_address = tx['destination']
         fee_fraction = get_fee_fraction(db, feed_address)
 
         # Overbet
@@ -173,7 +177,7 @@ def parse (db, tx, message):
                 counterwager_quantity = int(util.price(wager_quantity, odds, tx['block_index']))
 
         problems = validate(db, tx['source'], feed_address, bet_type, deadline, wager_quantity,
-                            counterwager_quantity, target_value, leverage, expiration)
+                            counterwager_quantity, target_value, leverage, expiration, block_time)
         if problems: status = 'invalid: ' + '; '.join(problems)
 
     # Debit quantity wagered. (Escrow.)
@@ -233,8 +237,9 @@ def match (db, tx):
     if tx['block_index'] > 284500 or config.TESTNET:  # Protocol change.
         sorted(bet_matches, key=lambda x: x['tx_index'])                                        # Sort by tx index second.
         sorted(bet_matches, key=lambda x: util.price(x['wager_quantity'], x['counterwager_quantity'], tx1['block_index']))   # Sort by price first.
+    tx1_status = 'open'
     for tx0 in bet_matches:
-
+        if tx1_status != 'open': break
         # Bet types must be opposite.
         if not counterbet_type == tx0['bet_type']: continue
         if tx0['leverage'] == tx1['leverage']:
@@ -299,7 +304,6 @@ def match (db, tx):
             cursor.execute(sql, bindings)
             util.message(db, tx1['block_index'], 'update', 'bets', bindings)
 
-            tx1_status = 'open'
             if tx1['block_index'] >= 292000 or config.TESTNET:  # Protocol change
                 if tx0['counterwager_remaining'] <= 0 or tx1_counterwager_remaining <= 0:
                     # Fill order, and recredit give_remaining.
