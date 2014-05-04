@@ -16,6 +16,13 @@ from requests.auth import HTTPBasicAuth
 import logging
 import tempfile
 import shutil
+import locale
+import re
+
+# Set test environment
+os.environ['TZ'] = 'EST'
+time.tzset()
+locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
@@ -113,6 +120,13 @@ def parse_hex (unsigned_tx_hex):
     tx_index += 1
     cursor.close()
 
+# https://github.com/PhantomPhreak/counterpartyd/blob/develop/test/db.dump#L23
+# some sqlite version generates spaces and line breaks too.
+def clean_sqlite_dump(dump):
+    dump = "\n".join(dump)
+    dump = re.sub('\)[\n\s]+;', ');', dump)
+    return dump.split("\n")
+
 def compare(filename):
     old = CURR_DIR + '/' + filename
     new = old + '.new'
@@ -121,6 +135,11 @@ def compare(filename):
         old_lines = f.readlines()
     with open(new, 'r') as f:
         new_lines = f.readlines()
+
+    if (filename == 'db.dump'):
+        old_lines = clean_sqlite_dump(old_lines)
+        new_lines = clean_sqlite_dump(new_lines)
+
     diff = list(difflib.unified_diff(old_lines, new_lines, n=0))
     if len(diff):
         print(diff)
@@ -478,9 +497,9 @@ def do_book(testnet):
     # TODO: USE API
     import subprocess
     if testnet:
-        subprocess.check_call(['counterpartyd.py', '--database-file=' + temp_db, '--testnet', '--force', '--carefulness=60', 'reparse'])
+        subprocess.check_call(['./counterpartyd.py', '--database-file=' + temp_db, '--testnet', '--force', '--carefulness=60', 'reparse'])
     else:
-        subprocess.check_call(['counterpartyd.py', '--database-file=' + temp_db, '--carefulness=60', 'reparse'])
+        subprocess.check_call(['./counterpartyd.py', '--database-file=' + temp_db, '--carefulness=60', 'reparse'])
 
     # Get new book.
     with open(new, 'w') as f:
