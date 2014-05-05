@@ -6,17 +6,17 @@ repository, `counterpartyd`, constitute the reference implementation of the
 protocol.
 
 The Counterparty protocol specification may be found at
-<https://github.com/PhantomPhreak/Counterparty>.
+<https://github.com/CounterpartyXCP/Counterparty>.
 
 # Dependencies
 * [Python 3](http://python.org)
-* Python 3 packages: apsw, requests, appdirs, prettytable, python-dateutil, json-rpc, cherrypy, pycoin, pyzmq(v2.2+) (see [this link](https://github.com/xnova/counterpartyd_build/blob/master/dist/reqs.txt) for exact working versions)
-* Bitcoind or pyrpcwallet
+* Python 3 packages: apsw, requests, appdirs, prettytable, python-dateutil, json-rpc, cherrypy, pycoin, pyzmq(v2.2+) (see [this link](https://github.com/CounterpartyXCP/counterpartyd_build/blob/master/dist/reqs.txt) for exact working versions)
+* Bitcoind
 
 # Installation
 
-*NOTE: This section covers manual installation of counterpartyd. If you want more of
-an automated approach to counterpartyd installation for Windows and Linux, see [this link](http://counterpartyd-build.readthedocs.org/en/latest/).*
+**NOTE: This section covers manual installation of counterpartyd. If you want more of
+an automated approach to counterpartyd installation for Windows and Linux, see [this link](http://counterpartyd-build.readthedocs.org/en/latest/).**
 
 In order for counterpartyd to function, it must be able to communicate with a
 running instance of Bitcoind or Bitcoin-Qt, which handles many Bitcoin‐specific
