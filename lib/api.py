@@ -32,6 +32,12 @@ class APIServer(threading.Thread):
         # TODO: Move all of these functions from util.py here (and use native SQLite queries internally).
 
         @dispatcher.add_method
+        def sql(query):
+            cursor = db.cursor()
+            return list(cursor.execute(query))
+            cursor.close()
+
+        @dispatcher.add_method
         def get_balances(filters=None, order_by=None, order_dir=None, filterop="and"):
             return util.get_balances(db,
                 filters=filters,

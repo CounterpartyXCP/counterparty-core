@@ -1,6 +1,7 @@
 ## Client Versions ##
 * v9.18.1
 	* speed up catching up with blockchain
+	* raw SQL query API method
 * v9.18.0
 	* tweaked test suite
 	* fixed failed sanity check on testnet
