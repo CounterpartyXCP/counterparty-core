@@ -120,7 +120,7 @@ def parse_hex (unsigned_tx_hex):
     tx_index += 1
     cursor.close()
 
-# https://github.com/PhantomPhreak/counterpartyd/blob/develop/test/db.dump#L23
+# https://github.com/CounterpartyXCP/counterpartyd/blob/develop/test/db.dump#L23
 # some sqlite version generates spaces and line breaks too.
 def clean_sqlite_dump(dump):
     dump = "\n".join(dump)
