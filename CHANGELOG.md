@@ -1,7 +1,8 @@
 ## Client Versions ##
-* v9.18.1
+* v9.19.0
 	* speed up catching up with blockchain
 	* raw SQL query API method
+	* fractional leverage with CFDs
 * v9.18.0
 	* tweaked test suite
 	* fixed failed sanity check on testnet

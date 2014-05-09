@@ -96,7 +96,7 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
     # Valid leverage level?
     if leverage != 5040 and bet_type in (2,3):   # Equal, NotEqual
         problems.append('leverage cannot be used with bet types Equal and NotEqual')
-    if leverage < 5040:
+    if leverage < 5040 and not bet_type in (0,1):   # BullCFD, BearCFD (fractional leverage makes sense precisely with CFDs)
         problems.append('leverage level too low (less than 5040, which is 1:1)')
 
     if not isinstance(wager_quantity, int):
