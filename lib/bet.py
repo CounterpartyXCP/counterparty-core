@@ -95,9 +95,9 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
 
     # Valid leverage level?
     if leverage != 5040 and bet_type in (2,3):   # Equal, NotEqual
-        problems.append('leverage cannot be used with bet types Equal and NotEqual')
+        problems.append('leverage used with Equal or NotEqual')
     if leverage < 5040 and not bet_type in (0,1):   # BullCFD, BearCFD (fractional leverage makes sense precisely with CFDs)
-        problems.append('leverage level too low (less than 5040, which is 1:1)')
+        problems.append('leverage level too low')
 
     if not isinstance(wager_quantity, int):
         problems.append('wager_quantity must be in satoshis')
@@ -383,12 +383,12 @@ def expire (db, block_index, block_time):
 
         # Record bet match expiration.
         bindings = {
-            'block_index': block_index,
+            'bet_match_id': bet_match['id'],
             'tx0_address': bet_match['tx0_address'],
             'tx1_address': bet_match['tx1_address'],
-            'bet_match_id': bet_match['tx0_hash'] + bet_match['tx1_hash']
+            'block_index': block_index
         }
-        sql='insert into bet_match_expirations values(:block_index, :tx0_address, :tx1_address, :bet_match_id)'
+        sql='insert into bet_match_expirations values(:bet_match_id, :tx0_address, :tx1_address, :block_index)'
         cursor.execute(sql, bindings)
 
     cursor.close()
