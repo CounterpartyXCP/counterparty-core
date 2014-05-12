@@ -1,6 +1,7 @@
 ## Client Versions ##
 * v9.20.0
 	* remove deadline checking in bets
+	* functionality to drop open bets, pending bet matches
 * v9.19.0
 	* speed up catching up with blockchain
 	* raw SQL query API method
@@ -15,7 +16,7 @@
 	* bug fixes
 * v9.16.2
 	* order bug in last version
-	* improve --force
+	* improve `--force`
 * v9.16.1
 	* allow exact fees to be specified in CLI
 	* improved algorithm for choosing unspent txouts in transaction construction

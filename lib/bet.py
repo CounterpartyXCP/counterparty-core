@@ -40,6 +40,8 @@ def cancel_bet (db, bet, status, block_index):
     cursor = db.cursor()
 
 def cancel_bet_match (db, bet_match, status, block_index):
+    # Does not re‐open, re‐fill, etc. constituent bets.
+
     cursor = db.cursor()
 
     # Recredit tx0 address.
