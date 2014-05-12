@@ -101,7 +101,7 @@ def parse_hex (unsigned_tx_hex):
                                   WHERE tx_index=?''', (tx_index,)))
     assert len(txes) == 1
     tx = txes[0]
-    blocks.parse_tx(db, tx, block_time)
+    blocks.parse_tx(db, tx)
 
     # After parsing every transaction, check that the credits, debits sum properly.
     cursor.execute('''SELECT * FROM balances''')
@@ -486,20 +486,20 @@ def do_book(testnet):
         block_index = int(f.readlines()[-1][7:13])
 
     # Use temporary DB.
-    counterpartyd.set_options(testnet=testnet, carefulness=60)
+    counterpartyd.set_options(testnet=testnet)
     default_db = config.DATABASE
     temp_db = tempfile.gettempdir() + '/' + os.path.basename(config.DATABASE)
     shutil.copyfile(default_db, temp_db)
-    counterpartyd.set_options(database_file=temp_db, testnet=testnet, carefulness=60)
+    counterpartyd.set_options(database_file=temp_db, testnet=testnet)
     db = util.connect_to_db()
     cursor = db.cursor()
 
     # TODO: USE API
     import subprocess
     if testnet:
-        subprocess.check_call(['./counterpartyd.py', '--database-file=' + temp_db, '--testnet', '--force', '--carefulness=60', 'reparse'])
+        subprocess.check_call(['./counterpartyd.py', '--database-file=' + temp_db, '--testnet', '--force', 'reparse'])
     else:
-        subprocess.check_call(['./counterpartyd.py', '--database-file=' + temp_db, '--carefulness=60', 'reparse'])
+        subprocess.check_call(['./counterpartyd.py', '--database-file=' + temp_db, 'reparse'])
 
     # Get new book.
     with open(new, 'w') as f:

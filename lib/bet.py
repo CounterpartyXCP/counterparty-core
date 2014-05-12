@@ -75,7 +75,7 @@ def get_fee_fraction (db, feed_address):
         return 0
 
 def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
-              counterwager_quantity, target_value, leverage, expiration, block_time):
+              counterwager_quantity, target_value, leverage, expiration):
     problems = []
 
     # Look at feed to be bet on.
@@ -89,9 +89,6 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
 
     if not bet_type in (0, 1, 2, 3):
         problems.append('unknown bet type')
-
-    if deadline <= block_time and config.PREFIX != config.UNITTEST_PREFIX:
-        problems.append('deadline passed')
 
     # Valid leverage level?
     if leverage != 5040 and bet_type in (2,3):   # Equal, NotEqual
@@ -131,7 +128,9 @@ def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
             counterwager_quantity, target_value, leverage, expiration):
 
     problems = validate(db, source, feed_address, bet_type, deadline, wager_quantity,
-                        counterwager_quantity, target_value, leverage, expiration, time.time())
+                        counterwager_quantity, target_value, leverage, expiration)
+    if deadline <= time.time() and config.PREFIX != config.UNITTEST_PREFIX:
+        problems.append('deadline passed')
     if problems: raise exceptions.BetError(problems)
 
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
@@ -140,7 +139,7 @@ def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
                         leverage, expiration)
     return (source, [(feed_address, None)], data)
 
-def parse (db, tx, message, block_time):
+def parse (db, tx, message):
     bet_parse_cursor = db.cursor()
 
     # Unpack message.
@@ -177,7 +176,7 @@ def parse (db, tx, message, block_time):
                 counterwager_quantity = int(util.price(wager_quantity, odds, tx['block_index']))
 
         problems = validate(db, tx['source'], feed_address, bet_type, deadline, wager_quantity,
-                            counterwager_quantity, target_value, leverage, expiration, block_time)
+                            counterwager_quantity, target_value, leverage, expiration)
         if problems: status = 'invalid: ' + '; '.join(problems)
 
     # Debit quantity wagered. (Escrow.)

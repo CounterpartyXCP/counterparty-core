@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.20.0
+	* remove deadline checking in bets
 * v9.19.0
 	* speed up catching up with blockchain
 	* raw SQL query API method
