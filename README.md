@@ -53,7 +53,11 @@ If and only if counterpartyd is to be run on the Bitcoin testnet, with the
 counterpartyd may run with the `--testcoin` option on any blockchain,
 however.
 
+# Test suite
+
 The test suite is invoked with `py.test` in the root directory of the repository.
+Bitcoind testnet and mainnet must run on the default ports and use the same rpcuser and rpcpassword. 
+Do not include the following values ​​in counterpartyd.conf: bitcoind-rpc-connect, bitcoind-rpc-port, rpc-host, rpc-port and testnet.
 
 # Usage
 The command‐line syntax of counterpartyd is generally that of

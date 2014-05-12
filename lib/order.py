@@ -274,7 +274,7 @@ def match (db, tx):
     tx1_status = 'open'
     for tx0 in order_matches:
         if tx1_status != 'open': break
-        
+
         logging.debug('Considering: ' + tx0['tx_hash'])
         tx0_give_remaining = tx0['give_remaining']
         tx0_get_remaining = tx0['get_remaining']
