@@ -295,7 +295,7 @@ def connect_to_db(flags=None):
 
 def version_check (db):
     try:
-        host = 'https://raw2.github.com/PhantomPhreak/counterpartyd/master/version.json'
+        host = 'https://raw2.github.com/CounterpartyXCP/counterpartyd/master/version.json'
         response = requests.get(host, headers={'cache-control': 'no-cache'})
         versions = json.loads(response.text)
     except Exception as e:

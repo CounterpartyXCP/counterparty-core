@@ -31,7 +31,7 @@ def check_conservation (db):
             raise exceptions.SanityError('{} {} issued ≠ {} {} held'.format(util.devise(db, issued, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
         logging.debug('Status: {} has been conserved ({} {} both issued and held)'.format(asset, util.devise(db, issued, asset, 'output'), asset))
 
-def parse_tx (db, tx, block_time):
+def parse_tx (db, tx):
     parse_tx_cursor = db.cursor()
     # Burns.
     if tx['destination'] == config.UNSPENDABLE:
@@ -56,7 +56,7 @@ def parse_tx (db, tx, block_time):
     elif message_type_id == broadcast.ID:
         broadcast.parse(db, tx, message)
     elif message_type_id == bet.ID:
-        bet.parse(db, tx, message, block_time)
+        bet.parse(db, tx, message)
     elif message_type_id == dividend.ID:
         dividend.parse(db, tx, message)
     elif message_type_id == cancel.ID:
@@ -94,7 +94,7 @@ def parse_block (db, block_index, block_time):
                                (block_index,))
     transactions = parse_block_cursor.fetchall()
     for tx in transactions:
-        parse_tx(db, tx, block_time)
+        parse_tx(db, tx)
 
     parse_block_cursor.close()
 
@@ -842,9 +842,10 @@ def follow (db):
             block_count = bitcoin.get_block_count()
             block_index +=1
 
-        # Check for conservation of assets.
-        check_conservation(db)
-        time.sleep(2)
+        else:
+            # Check for conservation of assets.
+            check_conservation(db)
+            time.sleep(2)
 
     follow_cursor.close()
 

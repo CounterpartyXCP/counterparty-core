@@ -30,6 +30,14 @@ class APIServer(threading.Thread):
         ######################
         #READ API
         # TODO: Move all of these functions from util.py here (and use native SQLite queries internally).
+        # TODO: Migrate away from the filters entirely?! (That is, always use sql method when not creating a new transaction?!)
+
+        @dispatcher.add_method
+        def sql(query):
+            cursor = db.cursor()
+            results = list(cursor.execute(query))
+            cursor.close()
+            return results
 
         @dispatcher.add_method
         def get_balances(filters=None, order_by=None, order_dir=None, filterop="and"):

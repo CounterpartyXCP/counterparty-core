@@ -28,6 +28,7 @@ from fractions import Fraction
 import logging
 
 from . import (util, exceptions, config, bitcoin)
+from . import (bet)
 
 FORMAT = '>IdI52p'
 LENGTH = 4 + 8 + 4 + 52
@@ -41,7 +42,6 @@ def validate (db, source, timestamp, value, fee_fraction_int, text):
         problems.append('fee fraction greater than 42.94967295')
 
     if timestamp < 0: problems.append('negative timestamp')
-    if value < 0 and value != -1: problems.append('negative value')
 
     if not source:
         problems.append('null source address')
@@ -72,7 +72,7 @@ def compose (db, source, timestamp, value, fee_fraction, text):
     return (source, [], data)
 
 def parse (db, tx, message):
-    broadcast_parse_cursor = db.cursor()
+    cursor = db.cursor()
 
     # Unpack message.
     try:
@@ -114,19 +114,33 @@ def parse (db, tx, message):
         'status': status,
     }
     sql='insert into broadcasts values(:tx_index, :tx_hash, :block_index, :source, :timestamp, :value, :fee_fraction_int, :text, :locked, :status)'
-    broadcast_parse_cursor.execute(sql, bindings)
+    cursor.execute(sql, bindings)
 
-    # Values of -1 are ignored.
-    if value == -1 or value == None:
-        broadcast_parse_cursor.close()
+    # Negative values (default to ignore).
+    if value < 0 or value == None:
+        # Cancel Open Bets?
+        if value == -2:
+            cursor.execute('''SELECT * FROM bet \
+                              WHERE (status = ? AND feed_address = ?)''',
+                           ('open', tx['source']))
+            for bet in list(cursor):
+                bet.cancel_bet(db, bet, 'dropped', tx['block_index'])
+        # Cancel Pending Bet Matches?
+        if value == -3:
+            cursor.execute('''SELECT * FROM bet_matches \
+                              WHERE (status = ? AND feed_address = ?)''',
+                           ('pending', tx['source']))
+            for bet_match in list(cursor):
+                bet.cancel_bet_match(db, bet_match, 'dropped', tx['block_index'])
+        cursor.close()
         return
 
     # Handle bet matches that use this feed.
-    broadcast_parse_cursor.execute('''SELECT * FROM bet_matches \
-                                      WHERE (status=? AND feed_address=?)
-                                      ORDER BY tx1_index ASC, tx0_index ASC''',
-                                   ('pending', tx['source']))
-    for bet_match in broadcast_parse_cursor.fetchall():
+    cursor.execute('''SELECT * FROM bet_matches \
+                      WHERE (status=? AND feed_address=?)
+                      ORDER BY tx1_index ASC, tx0_index ASC''',
+                   ('pending', tx['source']))
+    for bet_match in cursor.fetchall():
         broadcast_bet_match_cursor = db.cursor()
         bet_match_id = bet_match['tx0_hash'] + bet_match['tx1_hash']
         bet_match_status = None
@@ -232,11 +246,11 @@ def parse (db, tx, message):
                 'bet_match_id': bet_match['tx0_hash'] + bet_match['tx1_hash']
             }
             sql='update bet_matches set status = :status where id = :bet_match_id'
-            broadcast_parse_cursor.execute(sql, bindings)
+            cursor.execute(sql, bindings)
             util.message(db, tx['block_index'], 'update', 'bet_matches', bindings)
 
         broadcast_bet_match_cursor.close()
 
-    broadcast_parse_cursor.close()
+    cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
