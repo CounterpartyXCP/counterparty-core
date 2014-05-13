@@ -22,6 +22,8 @@ from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, ca
 
 def translate(db, table=None, filters=None, filterop=None, order_by=None, order_dir=None, start_block=None, end_block=None, show_expired=True):
     """Filters results based on a filter data structure (as used by the API)"""
+    # TODO: Exceptions should be more specific.
+    # TODO: Document that filterop and op both can be anything that SQLite3 accepts.
     assert table
 
     if isinstance(filters, dict): #single filter entry, convert to a one entry list
@@ -40,9 +42,13 @@ def translate(db, table=None, filters=None, filterop=None, order_by=None, order_
     for filter_ in filters:
         if type(filter_) in (list, tuple):
             new_filters.append({'field': filter_[0], 'op': filter_[1], 'value':  filter_[2]})
+        elif type(filter_) == dict:
+            new_filters.append(filter_)
+        else:
+            raise Exception('Unknown filter type.')
     filters = new_filters
 
-    #validate filter(s)
+    # validate filter(s)
     for filter_ in filters:
         # Put quotes around string values.
         if isinstance(filter_['value'], str):
@@ -51,11 +57,6 @@ def translate(db, table=None, filters=None, filterop=None, order_by=None, order_
         for field in ['field', 'op', 'value']: #should have all fields
             if field not in filter_:
                 raise Exception("A specified filter is missing the '%s' field" % field)
-        if filterop not in ('and', 'or'):
-            raise Exception("Invalid filterop setting. Must be either 'and' or 'or'.")
-        if type(filter_['value']) not in (str, int, float, bool):
-            raise Exception("Value specified for filter field '%s' is not one of the supported value types (str, int, float, bool)" % (
-                filter_['field']))
 
     # SELECT
     statement = '''SELECT * FROM {}'''.format(table)
