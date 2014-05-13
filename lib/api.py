@@ -16,61 +16,62 @@ from cherrypy import wsgiserver
 import jsonrpc
 from jsonrpc import dispatcher
 
-from sqlalchemy import *
-
 from . import (config, bitcoin, exceptions, util)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 
 
-def alchemy(table_name, filters, filterop):
+def translate(db, table_name, filters, filterop):
     """Filters results based on a filter data structure (as used by the API)"""
+
     if isinstance(filters, dict): #single filter entry, convert to a one entry list
         filters = [filters,]
 
     #validate filter(s)
     required_fields = ['field', 'op', 'value']
-    for filter in filters:
-        for field in required_fields: #should have all fields
-            if field not in filter:
-                raise Exception("A specified filter is missing the '%s' field" % field)
-        if filterop not in ('and', 'or', 'in'): # TODO
-            raise Exception("Invalid filterop setting. Must be either 'and' or 'or'.")
-        # if filter['op'] not in OPERATORS.keys():    # TODO
-        #     raise Exception("A specified filter op is invalid or not recognized: '%s'" % filter['op'])
-        if filter['field'] == 'block_index':
-            raise Exception("For performance reasons, please use the start_block and end_block API arguments to do block_index filtering")
-        # TODO if filter['field'] not in results[0]:
-                # raise Exception("A specified filter field is invalid or not recognized for the given object type: '%s'" % filter['field'])
-        if type(filter['value']) not in (str, int, float, bool):
-            raise Exception("Value specified for filter field '%s' is not one of the supported value types (str, int, float, bool)" % (
-                filter['field']))
-        # TODO: if results[0][filter['field']] != None and filter['value'] != None and type(filter['value']) != type(results[0][filter['field']]):
-                # field is None when it does not matter.
-                # raise Exception("Value specified for filter field '%s' does not match the data type of that field (value: %s, field: %s) and neither is None" % (
-                # filter['field'], type(filter['value']), type(results[0][filter['field']])))
-
-    engine = create_engine('sqlite:////home/adam/.config/counterpartyd/counterpartyd.9.testnet.db')   # TODO
-    engine.echo = True
-    metadata = MetaData()
-    metadata.bind=engine
-
-    # Put quotes around string values.
     for filter_ in filters:
+
+        # Put quotes around string values.
         if type(filter_['value']) == str:
             filter_['value'] = '\''  + filter_['value'] + '\''
 
-    table = Table(table_name, metadata, autoload=True)
-    conditions = ['table.c.' + filter_['field'] + filter_['op'] + str(filter_['value']) for filter_ in filters]
+
+        for field in required_fields: #should have all fields
+            if field not in filter_:
+                raise Exception("A specified filter is missing the '%s' field" % field)
+        if filterop not in ('and', 'or'): # TODO
+            raise Exception("Invalid filterop setting. Must be either 'and' or 'or'.")
+        # if filter_['op'] not in OPERATORS.keys():    # TODO
+        #     raise Exception("A specified filter op is invalid or not recognized: '%s'" % filter_['op'])
+        if filter_['field'] == 'block_index':
+            raise Exception("For performance reasons, please use the start_block and end_block API arguments to do block_index filtering")
+        # TODO if filter_['field'] not in results[0]:
+                # raise Exception("A specified filter field is invalid or not recognized for the given object type: '%s'" % filter_['field'])
+        if type(filter_['value']) not in (str, int, float, bool):
+            raise Exception("Value specified for filter field '%s' is not one of the supported value types (str, int, float, bool)" % (
+                filter_['field']))
+        # TODO: if results[0][filter_['field']] != None and filter_['value'] != None and type(filter_['value']) != type(results[0][filter_['field']]):
+                # field is None when it does not matter.
+                # raise Exception("Value specified for filter field '%s' does not match the data type of that field (value: %s, field: %s) and neither is None" % (
+                # filter_['field'], type(filter_['value']), type(results[0][filter_['field']])))
 
     # TODO: Status filters
         # Disallow in regular filters. 
 
-    # TODO: Super‐sanitize.
+    # SELECT
+    statement = '''SELECT * FROM {}'''.format(table_name)
+    # WHERE
+    if filters:
+        conditions = ['{} {} {}'.format(filter_['field'], filter_['op'], str(filter_['value'])) for filter_ in filters]
+        expression = '( {} )'.format(' {} '.format(filterop.upper()).join(conditions))
+        statement += ''' WHERE {}'''.format(expression)
+    # ORDER_BY
 
-    expression = filterop + '_(' + ', '.join(conditions) + ')'
-    print('expression', expression) # TODO
-    s = table.select(eval(expression))
-    return s.execute()
+    print('statement', statement)    # TODO
+    cursor = db.cursor()
+    results = list(cursor.execute(statement))
+    cursor.close()
+    return results
+
 
 class APIServer(threading.Thread):
 
@@ -82,8 +83,6 @@ class APIServer(threading.Thread):
 
         ######################
         #READ API
-        # TODO: Move all of these functions from util.py here (and use native SQLite queries internally).
-        # TODO: Migrate away from the filters entirely?! (That is, always use sql method when not creating a new transaction?!)
 
         @dispatcher.add_method
         def sql(query):
@@ -94,7 +93,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_balances(filters=[], order_by=None, order_dir=None, filterop="and"):
-            return alchemy('balances', filters, filterop)
+            return translate(db, 'balances', filters, filterop)
 
         @dispatcher.add_method
         def get_bets(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
