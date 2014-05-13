@@ -20,7 +20,7 @@ from . import (config, bitcoin, exceptions, util)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 
 
-def translate(db, table=None, filters=None, filterop=None, order_by=None, order_dir=None, start_block=None, end_block=None, show_expired=True, post_filter_status=None):
+def translate(db, table=None, filters=None, filterop=None, order_by=None, order_dir=None, start_block=None, end_block=None, show_expired=True):
     """Filters results based on a filter data structure (as used by the API)"""
     assert table
 
@@ -29,9 +29,11 @@ def translate(db, table=None, filters=None, filterop=None, order_by=None, order_
 
     # Legacy functionality.
     if start_block != None:
-        filters.append({'field': 'block_index', 'op': '>=', 'value': start_block})
+        filters.append(('block_index', '>=', start_block))
     if end_block != None:
-        filters.append({'field': 'block_index', 'op': '<=', 'value': end_block})
+        filters.append(('block_index', '<=', end_block))
+    if show_expired != True:
+        filters.append(('status', '!=', 'expired'))
 
     # TODO: Document this! (Each filter can be an ordered list.)
     new_filters = []
@@ -55,20 +57,12 @@ def translate(db, table=None, filters=None, filterop=None, order_by=None, order_
             raise Exception("Value specified for filter field '%s' is not one of the supported value types (str, int, float, bool)" % (
                 filter_['field']))
 
-    # TODO: Status filters
-        # Disallow in regular status filters?
-        # if show_expired != True:
-        #     filters.append({'field': 'block_index', 'op': '>=', 'value': end_block})
-        # if post_filter_status != None:
-            # assert post_filter_status in (None, 'completed', 'pending')
-
     # SELECT
     statement = '''SELECT * FROM {}'''.format(table)
     # WHERE
     if filters:
         conditions = ['{} {} {}'.format(filter_['field'], filter_['op'], str(filter_['value'])) for filter_ in filters]
-        expression = '({})'.format(' {} '.format(filterop.upper()).join(conditions))
-        statement += ''' WHERE {}'''.format(expression)
+        statement += ''' WHERE ({})'''.format(' {} '.format(filterop.upper()).join(conditions))
     # ORDER BY
     if order_by != None:
         statement += ''' ORDER BY {}'''.format(order_by)
@@ -296,8 +290,8 @@ class APIServer(threading.Thread):
         def get_orders (filters=[], show_expired=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return translate(db, table='orders', filters=filters, filterop=filterop, order_by=order_by, order_dir=order_dir, start_block=start_block, end_block=end_block, show_expired=show_expired)
         @dispatcher.add_method
-        def get_order_matches (filters=[], post_filter_status=None, is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            return translate(db, table='order_matches', filters=filters, filterop=filterop, order_by=order_by, order_dir=order_dir, start_block=start_block, end_block=end_block, post_filter_status=post_filter_status)
+        def get_order_matches (filters=[], order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
+            return translate(db, table='order_matches', filters=filters, filterop=filterop, order_by=order_by, order_dir=order_dir, start_block=start_block, end_block=end_block)
         @dispatcher.add_method
         def get_sends (filters=[], order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
             return translate(db, table='sends', filters=filters, filterop=filterop, order_by=order_by, order_dir=order_dir, start_block=start_block, end_block=end_block)
