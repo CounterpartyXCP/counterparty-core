@@ -34,12 +34,20 @@ def translate(db, table=None, filters=None, filterop=None, order_by=None, order_
     if end_block != None:
         filters.append({'field': 'block_index', 'op': '<=', 'value': end_block})
 
+    # TODO: Document this! (Each filter can be an ordered list.)
+    new_filters = []
+    for filter_ in filters:
+        if not isinstance(filter_, dict):   # TODO: Fragile
+            new_filters.append({'field': filter_[0], 'op': filter_[1], 'value':  filter_[2]})
+    filters = new_filters
+
     #validate filter(s)
     required_fields = ['field', 'op', 'value']
     for filter_ in filters:
+        # print(filter_)  # TODO
 
         # Put quotes around string values.
-        if type(filter_['value']) == str:
+        if isinstance(filter_['value'], str):
             filter_['value'] = '\''  + filter_['value'] + '\''
 
         for field in required_fields: #should have all fields
@@ -74,7 +82,7 @@ def translate(db, table=None, filters=None, filterop=None, order_by=None, order_
     # WHERE
     if filters:
         conditions = ['{} {} {}'.format(filter_['field'], filter_['op'], str(filter_['value'])) for filter_ in filters]
-        expression = '( {} )'.format(' {} '.format(filterop.upper()).join(conditions))
+        expression = '({})'.format(' {} '.format(filterop.upper()).join(conditions))
         statement += ''' WHERE {}'''.format(expression)
     # ORDER BY
     if order_by != None:
@@ -82,7 +90,7 @@ def translate(db, table=None, filters=None, filterop=None, order_by=None, order_
         if order_dir != None:
             statement += ''' {}'''.format(order_dir.upper())
 
-    print('statement', statement)    # TODO
+    # print('statement', statement)    # TODO
     cursor = db.cursor()
     results = list(cursor.execute(statement))
     cursor.close()
@@ -167,11 +175,9 @@ class APIServer(threading.Thread):
                     continue
                 
                 # User‐created asset.
-                issuances = util.get_issuances(db,
-                    filters={'field': 'asset', 'op': '==', 'value': asset},
-                    status='valid',
-                    order_by='block_index',
-                    order_dir='asc')
+                cursor = db.cursor()
+                issuances = list(cursor.execute('''SELECT * FROM issuances WHERE (status = ? AND asset = ?) ORDER BY block_index ASC''', ('valid', asset)))
+                cursor.close()
                 if not issuances: break #asset not found, most likely
                 else: last_issuance = issuances[-1]
                 supply = 0
@@ -240,7 +246,7 @@ class APIServer(threading.Thread):
             }
 
         @dispatcher.add_method
-        def get_asset_names():
+        def asset_names():
             cursor = db.cursor()
             names = [row['asset'] for row in cursor.execute("SELECT DISTINCT asset FROM issuances WHERE status = 'valid' ORDER BY asset ASC")]
             cursor.close()

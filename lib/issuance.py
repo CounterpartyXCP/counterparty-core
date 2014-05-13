@@ -101,7 +101,7 @@ def compose (db, source, destination, asset, quantity, divisible, callable_, cal
     problems, fee = validate(db, source, destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.last_block(db)['block_index'])
     if problems: raise exceptions.IssuanceError(problems)
 
-    asset_id = util.get_asset_id(asset)
+    asset_id = util.asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT_2, asset_id, quantity, 1 if divisible else 0, 1 if callable_ else 0, 
         call_date or 0, call_price or 0.0, description.encode('utf-8'))
@@ -129,7 +129,7 @@ def parse (db, tx, message):
             asset_id, quantity, divisible = struct.unpack(FORMAT_1, message)
             callable_, call_date, call_price, description = False, 0, 0.0, ''
         try:
-            asset = util.get_asset_name(asset_id)
+            asset = util.asset_name(asset_id)
         except:
             asset = None
             status = 'invalid: bad asset name'

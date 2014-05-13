@@ -22,6 +22,7 @@ BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
 BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
 
 
+# TODO: This doesn’t timeout properly. (If server hangs, then unhangs, no result.)
 def api (method, params):
     headers = {'content-type': 'application/json'}
     payload = {
@@ -57,6 +58,7 @@ def price (numerator, denominator, block_index):
         return D(numerator / denominator)
 
 def log (db, command, category, bindings):
+    cursor = db.cursor()
 
     # Slow?!
     def output (quantity, asset):
@@ -135,7 +137,7 @@ def log (db, command, category, bindings):
 
         elif category == 'bets':
             # Last text
-            broadcasts = get_broadcasts(db, status='valid', source=bindings['feed_address'], order_by='tx_index', order_dir='asc')
+            broadcasts = list(cursor.execute('''SELECT * FROM broadcasts WHERE (status = ? AND source = ?) ORDER BY tx_index ASC''', ('valid', bindings['feed_address'])))
             try:
                 last_broadcast = broadcasts[-1]
                 text = last_broadcast['text']
@@ -183,6 +185,7 @@ def log (db, command, category, bindings):
 
         elif category == 'bet_match_expirations':
             logging.info('Expired Bet Match: {}'.format(bindings['bet_match_id']))
+    cursor.close()
 
 def message (db, block_index, command, category, bindings):
     cursor = db.cursor()
@@ -363,7 +366,7 @@ def last_message (db):
     cursor.close()
     return last_message
 
-def get_asset_id (asset):
+def asset_id (asset):
     # Special cases.
     if asset == 'BTC': return 0
     elif asset == 'XCP': return 1
@@ -392,7 +395,7 @@ def get_asset_id (asset):
 
     return n
 
-def get_asset_name (asset_id):
+def asset_name (asset_id):
     if asset_id == 0: return 'BTC'
     elif asset_id == 1: return 'XCP'
 
@@ -564,7 +567,7 @@ def devise (db, quantity, asset, dest, divisible=None):
             raise exceptions.QuantityError('Fractional quantities of indivisible assets.')
         return round(quantity)
 
-def get_holders(db, asset):
+def holders(db, asset):
     holders = []
     cursor = db.cursor()
     # Balances
@@ -618,7 +621,7 @@ def xcp_supply (db):
     cursor.close()
     return burn_total - fee_total
 
-def get_supplies (db):
+def supplies (db):
     cursor = db.cursor()
     supplies = {'XCP': xcp_supply(db)}
     cursor.execute('''SELECT * from issuances \

@@ -163,18 +163,20 @@ def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, ex
     return problems
 
 def compose (db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required):
-    balances = util.get_balances(db, address=source, asset=give_asset)
+    cursor = db.cursor()
+    balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, give_asset)))
     if give_asset != 'BTC' and (not balances or balances[0]['quantity'] < give_quantity):
         raise exceptions.OrderError('insufficient funds')
 
     problems = validate(db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required)
     if problems: raise exceptions.OrderError(problems)
 
-    give_id = util.get_asset_id(give_asset)
-    get_id = util.get_asset_id(get_asset)
+    give_id = util.asset_id(give_asset)
+    get_id = util.asset_id(get_asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, give_id, give_quantity, get_id, get_quantity,
                         expiration, fee_required)
+    cursor.close()
     return (source, [], data)
 
 def parse (db, tx, message):
@@ -184,8 +186,8 @@ def parse (db, tx, message):
     try:
         assert len(message) == LENGTH
         give_id, give_quantity, get_id, get_quantity, expiration, fee_required = struct.unpack(FORMAT, message)
-        give_asset = util.get_asset_name(give_id)
-        get_asset = util.get_asset_name(get_id)
+        give_asset = util.asset_name(give_id)
+        get_asset = util.asset_name(get_id)
         status = 'open'
     except (AssertionError, struct.error) as e:
         give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required = 0, 0, 0, 0, 0, 0

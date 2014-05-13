@@ -25,6 +25,7 @@ def validate (db, source, destination, asset, quantity):
     return problems
 
 def compose (db, source, destination, asset, quantity):
+    cursor = db.cursor()
 
     # Just send BTC?
     if asset == 'BTC':
@@ -35,17 +36,18 @@ def compose (db, source, destination, asset, quantity):
         raise exceptions.SendError('quantity must be an int (in satoshi)')
 
     # Only for outgoing (incoming will overburn).
-    balances = util.get_balances(db, address=source, asset=asset)
+    balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, asset)))
     if not balances or balances[0]['quantity'] < quantity:
         raise exceptions.SendError('insufficient funds')
 
     problems = validate(db, source, destination, asset, quantity)
     if problems: raise exceptions.SendError(problems)
 
-    asset_id = util.get_asset_id(asset)
+    asset_id = util.asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, quantity)
 
+    cursor.close()
     return (source, [(destination, None)], data)
 
 def parse (db, tx, message):
@@ -55,7 +57,7 @@ def parse (db, tx, message):
     try:
         assert len(message) == LENGTH
         asset_id, quantity = struct.unpack(FORMAT, message)
-        asset = util.get_asset_name(asset_id)
+        asset = util.asset_name(asset_id)
         status = 'valid'
     except (AssertionError, struct.error) as e:
         asset, quantity = None, None
