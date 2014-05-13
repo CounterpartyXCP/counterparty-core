@@ -16,8 +16,61 @@ from cherrypy import wsgiserver
 import jsonrpc
 from jsonrpc import dispatcher
 
+from sqlalchemy import *
+
 from . import (config, bitcoin, exceptions, util)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
+
+
+def alchemy(table_name, filters, filterop):
+    """Filters results based on a filter data structure (as used by the API)"""
+    if isinstance(filters, dict): #single filter entry, convert to a one entry list
+        filters = [filters,]
+
+    #validate filter(s)
+    required_fields = ['field', 'op', 'value']
+    for filter in filters:
+        for field in required_fields: #should have all fields
+            if field not in filter:
+                raise Exception("A specified filter is missing the '%s' field" % field)
+        if filterop not in ('and', 'or', 'in'): # TODO
+            raise Exception("Invalid filterop setting. Must be either 'and' or 'or'.")
+        # if filter['op'] not in OPERATORS.keys():    # TODO
+        #     raise Exception("A specified filter op is invalid or not recognized: '%s'" % filter['op'])
+        if filter['field'] == 'block_index':
+            raise Exception("For performance reasons, please use the start_block and end_block API arguments to do block_index filtering")
+        # TODO if filter['field'] not in results[0]:
+                # raise Exception("A specified filter field is invalid or not recognized for the given object type: '%s'" % filter['field'])
+        if type(filter['value']) not in (str, int, float, bool):
+            raise Exception("Value specified for filter field '%s' is not one of the supported value types (str, int, float, bool)" % (
+                filter['field']))
+        # TODO: if results[0][filter['field']] != None and filter['value'] != None and type(filter['value']) != type(results[0][filter['field']]):
+                # field is None when it does not matter.
+                # raise Exception("Value specified for filter field '%s' does not match the data type of that field (value: %s, field: %s) and neither is None" % (
+                # filter['field'], type(filter['value']), type(results[0][filter['field']])))
+
+    engine = create_engine('sqlite:////home/adam/.config/counterpartyd/counterpartyd.9.testnet.db')   # TODO
+    engine.echo = True
+    metadata = MetaData()
+    metadata.bind=engine
+
+    # Put quotes around string values.
+    for filter_ in filters:
+        if type(filter_['value']) == str:
+            filter_['value'] = '\''  + filter_['value'] + '\''
+
+    table = Table(table_name, metadata, autoload=True)
+    conditions = ['table.c.' + filter_['field'] + filter_['op'] + str(filter_['value']) for filter_ in filters]
+
+    # TODO: Status filters
+        # Disallow in regular filters. 
+
+    # TODO: Super‐sanitize.
+
+    expression = filterop + '_(' + ', '.join(conditions) + ')'
+    print('expression', expression) # TODO
+    s = table.select(eval(expression))
+    return s.execute()
 
 class APIServer(threading.Thread):
 
@@ -40,12 +93,8 @@ class APIServer(threading.Thread):
             return results
 
         @dispatcher.add_method
-        def get_balances(filters=None, order_by=None, order_dir=None, filterop="and"):
-            return util.get_balances(db,
-                filters=filters,
-                order_by=order_by,
-                order_dir=order_dir,
-                filterop=filterop)
+        def get_balances(filters=[], order_by=None, order_dir=None, filterop="and"):
+            return alchemy('balances', filters, filterop)
 
         @dispatcher.add_method
         def get_bets(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
