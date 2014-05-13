@@ -38,7 +38,7 @@ def translate(db, table=None, filters=None, filterop=None, order_by=None, order_
     # TODO: Document this! (Each filter can be an ordered list.)
     new_filters = []
     for filter_ in filters:
-        if type(filter_) in (TupleType, ListType):
+        if type(filter_) in (list, tuple):
             new_filters.append({'field': filter_[0], 'op': filter_[1], 'value':  filter_[2]})
     filters = new_filters
 

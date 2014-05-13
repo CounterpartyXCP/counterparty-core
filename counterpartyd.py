@@ -36,15 +36,15 @@ def get_address (db, address):
     address_dict['btcpays'] = util.api('get_btcpays', {'filters': [('source', '==', address), ('destination', '==', address)], 'filterop': 'or'})
     address_dict['issuances'] = util.api('get_issuances', {'filters': [('source', '==', address),]})
     address_dict['broadcasts'] = util.api('get_broadcasts', {'filters': [('source', '==', address),]})
-    address_dict['bet'] = util.api('get_bets', {'filters': [('source', '==', address),]})
+    address_dict['bets'] = util.api('get_bets', {'filters': [('source', '==', address),]})
     address_dict['bet_matches'] = util.api('get_bet_matches', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
     address_dict['dividends'] = util.api('get_dividends', {'filters': [('source', '==', address),]})
     address_dict['cancels'] = util.api('get_cancels', {'filters': [('source', '==', address),]})
     address_dict['callbacks'] = util.api('get_callbacks', {'filters': [('source', '==', address),]})
-    address_dict['order_expirations'] = util.api('get_order_expirations', {'filters': [('source', '==', address),]})
-    address_dict['order_match_expirations'] = util.api('get_order_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
     address_dict['bet_expirations'] = util.api('get_bet_expirations', {'filters': [('source', '==', address),]})
+    address_dict['order_expirations'] = util.api('get_order_expirations', {'filters': [('source', '==', address),]})
     address_dict['bet_match_expirations'] = util.api('get_bet_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
+    address_dict['order_match_expirations'] = util.api('get_order_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
     return address_dict
 
 
