@@ -59,7 +59,7 @@ def parse (db, tx, message):
         status = 'valid'
     except (AssertionError, struct.error) as e:
         asset, quantity = None, None
-        status = 'invalid: Could not unpack.'
+        status = 'invalid: could not unpack'
 
     if status == 'valid':
         # Oversend
