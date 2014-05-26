@@ -344,6 +344,9 @@ def initialise(db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       block_index_idx ON broadcasts (block_index)
                    ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      status_source_idx ON broadcasts (status, source)
+                   ''')
 
     # Bets.
     cursor.execute('''CREATE TABLE IF NOT EXISTS bets(
@@ -378,6 +381,9 @@ def initialise(db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       feed_valid_bettype_idx ON bets (feed_address, status, bet_type)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      feed_status_idx ON bets (status, feed_address)
                    ''')
 
     # Bet Matches
