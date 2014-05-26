@@ -297,7 +297,7 @@ def match (db, tx):
 
             # tx0
             tx0_status = 'open'
-            if tx0['wager_remaining'] <= 0 or tx1_wager_remaining <= 0:
+            if tx0['wager_remaining'] <= 0 or tx0['counterwager_remaining'] <= 0:
                 # Fill order, and recredit give_remaining.
                 tx0_status = 'filled'
                 util.credit(db, tx1['block_index'], tx0['source'], 'XCP', tx0_wager_remaining, event=tx1['tx_hash'], action='filled')
@@ -312,7 +312,7 @@ def match (db, tx):
             util.message(db, tx1['block_index'], 'update', 'bets', bindings)
 
             if tx1['block_index'] >= 292000 or config.TESTNET:  # Protocol change
-                if tx0['counterwager_remaining'] <= 0 or tx1_counterwager_remaining <= 0:
+                if tx1_wager_remaining <= 0 or tx1_counterwager_remaining <= 0:
                     # Fill order, and recredit give_remaining.
                     tx1_status = 'filled'
                     util.credit(db, tx1['block_index'], tx1['source'], 'XCP', tx1_wager_remaining, event=tx1['tx_hash'], action='filled')

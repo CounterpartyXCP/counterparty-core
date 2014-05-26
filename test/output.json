@@ -146,7 +146,7 @@
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "leverage": 5040,
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-            "status": "filled",
+            "status": "open",
             "target_value": 0.0,
             "tx_hash": "4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47",
             "tx_index": 14,
@@ -184,7 +184,7 @@
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "leverage": 5040,
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-            "status": "filled",
+            "status": "open",
             "target_value": 1.0,
             "tx_hash": "c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee3",
             "tx_index": 16,
@@ -371,22 +371,6 @@
             "block_index": 154923,
             "calling_function": "filled",
             "event": "dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8",
-            "quantity": 0
-        },
-        {
-            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-            "asset": "XCP",
-            "block_index": 154923,
-            "calling_function": "filled",
-            "event": "dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8",
-            "quantity": 0
-        },
-        {
-            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-            "asset": "XCP",
-            "block_index": 154925,
-            "calling_function": "filled",
-            "event": "4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a",
             "quantity": 0
         },
         {
@@ -801,7 +785,7 @@
             "tx_index": 24
         }
     ],
-    "rpc.create_send": "01000000017553f59329a919477a160b356fd361a14838fc3a514b555ac5714c8df1c1b0e4020000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff0436150000000000001976a914edb5c902eadd71e698a8ce05ba1d7b31efbaa57b88ac36150000000000001976a914a8005ed315a77b99c624cca7dc72a9854600823388ac36150000000000001976a914aa42108747f729cd9f258fe98820f9d71259823388ac785e6e01000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000",
+    "rpc.create_send": "0100000004fbcf15b8e753e7fce7336db256e831b81e50c7690e0451cc1810ee57c032690c000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff0e110a51d552b443740181766a0b61975e6100c465236ed233a1176178cb675d000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff00516259be9266fef5a690006fa91538b5491f4e30d89033bed43514901824ea000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff00516259be9266fef5a690006fa91538b5491f4e30d89033bed43514901824ea030000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff0436150000000000001976a914edb5c902eadd71e698a8ce05ba1d7b31efbaa57b88ac36150000000000001976a9142017e7e2579c7c36eca9768ef796b4ade84fa4ab88ac36150000000000001976a9142255a9b605cc2e62b5a835c0a3c4e4ffbc16a4ab88ac58106e01000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000",
     "rpc.get_balances": [
         {
             "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
