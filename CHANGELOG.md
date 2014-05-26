@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.21.0
+	* bug in bet parsing
 * v9.20.0
 	* remove deadline checking in bets
 	* functionality to drop open bets, pending bet matches
