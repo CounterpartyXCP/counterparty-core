@@ -268,7 +268,7 @@ def match (db, tx):
 
         # If the odds agree, make the trade. The found order sets the odds,
         # and they trade as much as they can.
-        tx0_odds = util.price(tx0['wager_quantity'], tx0['counterwager_quantity'], tx1['block_index'])
+        tx0_odds = util.price(tx0['wager_quantity'], tx0['counterwager_quantity'], tx1['block_index'])     ###
         tx0_inverse_odds = util.price(tx0['counterwager_quantity'], tx0['wager_quantity'], tx1['block_index'])
         tx1_odds = util.price(tx1['wager_quantity'], tx1['counterwager_quantity'], tx1['block_index'])
 

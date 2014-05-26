@@ -11,10 +11,20 @@ import struct
 import decimal
 D = decimal.Decimal
 import logging
+import sys
 from Crypto.Cipher import ARC4
 
 from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
+import socket 
+if socket.gethostname() == 'l-pc':
+  sys.path.append('/home/hurin/xcpfeeds/')
+  import xcpfeeds.get
+if socket.gethostname() == 'xcpfeeds-dev1': 
+  sys.path.append('/var/www/xcpfeeds.info/') 
+  import xcpfeeds.get
+
+
 
 def check_conservation (db):
     logging.debug('Status: Checking for conservation of assets.')
@@ -37,7 +47,6 @@ def parse_tx (db, tx):
     if tx['destination'] == config.UNSPENDABLE:
         burn.parse(db, tx)
         return
-
     try:
         message_type_id = struct.unpack(config.TXTYPE_FORMAT, tx['data'][:4])[0]
     except:
@@ -713,7 +722,7 @@ def reparse (db, block_index=None, quiet=False):
 def follow (db):
     # TODO: This is not thread-safe!
     follow_cursor = db.cursor()
-
+    
     logging.info('Status: RESTART')
 
     # Initialise.
@@ -746,7 +755,7 @@ def follow (db):
         # Get new blocks.
         if block_index <= bitcoin.get_block_count():
             logging.info('Block: {}'.format(str(block_index)))
-
+            
             # Backwards check for incorrect blocks due to chain reorganisation, and stop when a common parent is found.
             c = block_index
             requires_rollback = False
@@ -841,6 +850,12 @@ def follow (db):
             # Increment block index.
             block_count = bitcoin.get_block_count()
             block_index +=1
+            
+            #update site cache
+            print('running xcpfeeds cache updates...') 
+            #try: 
+            xcpfeeds.get.getUpdatesXCP() 
+            #except: pass
 
         else:
             # Check for conservation of assets.
