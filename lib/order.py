@@ -116,6 +116,15 @@ def cancel_order_match (db, order_match, status, block_index):
         tx1_order_time_left = tx1_order['expire_index'] - block_index
         assert tx0_order_time_left or tx1_order_time_left
 
+    # Re‐match.                 # Protocol change
+    if block_index >= 305000 or config.TESTNET:
+        cursor.execute('''SELECT * FROM transactions\
+                          WHERE tx_hash = ?''', (tx0_order['tx_hash'],))
+        match(db, list(cursor)[0])
+        cursor.execute('''SELECT * FROM transactions\
+                          WHERE tx_hash = ?''', (tx1_order['tx_hash'],))
+        match(db, list(cursor)[0])
+
     cursor.close()
 
 
@@ -273,11 +282,16 @@ def match (db, tx):
 
     tx1_status = 'open'
     for tx0 in order_matches:
+        order_match_id = tx0['tx_hash'] + tx1['tx_hash']
         if tx1_status != 'open': break
 
         logging.debug('Considering: ' + tx0['tx_hash'])
         tx0_give_remaining = tx0['give_remaining']
         tx0_get_remaining = tx0['get_remaining']
+
+        # Ignore previous matches.
+        cursor.execute('''SELECT * FROM order_matches''')
+        if order_match_id in [order_match['id'] for order_match in list(cursor)]: continue
 
         # Get fee provided remaining.
         tx0_fee_required_remaining = tx0['fee_required_remaining']
@@ -360,7 +374,6 @@ def match (db, tx):
                     if tx1_fee_provided_remaining < tx0['fee_required']: continue
 
             forward_asset, backward_asset = tx1['get_asset'], tx1['give_asset']
-            order_match_id = tx0['tx_hash'] + tx1['tx_hash']
 
             if 'BTC' in (tx1['give_asset'], tx1['get_asset']):
                 status = 'pending'

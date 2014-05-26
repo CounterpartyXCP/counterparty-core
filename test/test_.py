@@ -389,13 +389,13 @@ def test_json_rpc():
         "method": "get_balances",
         "params": {"filters": {'field': 'address', 'op': '==', 'value': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'}},
         "jsonrpc": "2.0",
-        "id": 0,
+        "id": 0
     })
     payloads.append({
         "method": "create_send",
         "params": {'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': destination_default, 'asset': 'XCP', 'quantity': 1, 'encoding': 'pubkeyhash', 'pubkey': '0319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b977'},
         "jsonrpc": "2.0",
-        "id": 0,
+        "id": 0
     })
 
     for payload in payloads:
