@@ -297,7 +297,7 @@ def match (db, tx):
 
             # tx0
             tx0_status = 'open'
-            if tx0['wager_remaining'] <= 0 or tx0['counterwager_remaining'] <= 0:
+            if tx0_wager_remaining <= 0 or tx0_counterwager_remaining <= 0:
                 # Fill order, and recredit give_remaining.
                 tx0_status = 'filled'
                 util.credit(db, tx1['block_index'], tx0['source'], 'XCP', tx0_wager_remaining, event=tx1['tx_hash'], action='filled')
