@@ -338,8 +338,10 @@ def set_options (data_dir=None,
         config.INSIGHT_CONNECT = insight_connect
     elif has_config and 'insight-connect' in configfile['Default'] and configfile['Default']['insight-connect']:
         config.INSIGHT_CONNECT = configfile['Default']['insight-connect']
-    else:
-        config.INSIGHT_CONNECT = 'localhost'
+    elif config.TESTNET:
+        config.INSIGHT_CONNECT = 'test.insight.is'
+    else: 
+        config.INSIGHT_CONNECT = 'live.insight.is'
 
     # insight API port
     if insight_port:
