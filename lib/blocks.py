@@ -20,10 +20,6 @@ import socket
 if socket.gethostname() == 'l-pc':
   sys.path.append('/home/hurin/xcpfeeds/')
   import xcpfeeds.get
-if socket.gethostname() == 'xcpfeeds-dev1': 
-  sys.path.append('/var/www/xcpfeeds.info/') 
-  import xcpfeeds.get
-
 
 
 def check_conservation (db):
@@ -853,9 +849,9 @@ def follow (db):
             
             #update site cache
             print('running xcpfeeds cache updates...') 
-            #try: 
-            xcpfeeds.get.getUpdatesXCP() 
-            #except: pass
+            try: 
+              xcpfeeds.get.getUpdatesXCP() 
+            except: pass
 
         else:
             # Check for conservation of assets.
