@@ -123,8 +123,8 @@ def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, ex
     problems = []
     cursor = db.cursor()
 
-    if give_asset == get_asset:
-        problems.append('trading an asset for itself')
+    if give_asset == 'BTC' and get_asset == 'BTC':
+        problems.append('cannot trade BTC for itself')
 
     if not isinstance(give_quantity, int):
         problems.append('give_quantity must be in satoshis')

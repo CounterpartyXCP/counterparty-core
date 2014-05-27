@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.23.0
+	* allow assets to be traded for themselves
 * v9.22.0
 	* bug in previous bugfix
 * v9.21.0
