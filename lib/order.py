@@ -123,8 +123,8 @@ def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, ex
     problems = []
     cursor = db.cursor()
 
-    if give_asset == get_asset:
-        problems.append('trading an asset for itself')
+    if give_asset == 'BTC' and get_asset == 'BTC':
+        problems.append('cannot trade BTC for itself')
 
     if not isinstance(give_quantity, int):
         problems.append('give_quantity must be in satoshis')
@@ -258,8 +258,8 @@ def match (db, tx):
     tx1 = orders[0]
 
     cursor.execute('''SELECT * FROM orders \
-                      WHERE (give_asset=? AND get_asset=? AND status=?)''',
-                   (tx1['get_asset'], tx1['give_asset'], 'open'))
+                      WHERE (give_asset=? AND get_asset=? AND status=? AND tx_hash != ?)''',
+                   (tx1['get_asset'], tx1['give_asset'], 'open', tx1['tx_hash']))
 
     tx1_give_remaining = tx1['give_remaining']
     tx1_get_remaining = tx1['get_remaining']
