@@ -146,7 +146,7 @@
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "leverage": 5040,
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-            "status": "open",
+            "status": "filled",
             "target_value": 0.0,
             "tx_hash": "4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47",
             "tx_index": 14,
@@ -184,7 +184,7 @@
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "leverage": 5040,
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-            "status": "open",
+            "status": "filled",
             "target_value": 1.0,
             "tx_hash": "c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee3",
             "tx_index": 16,
@@ -371,6 +371,22 @@
             "block_index": 154923,
             "calling_function": "filled",
             "event": "dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8",
+            "quantity": 0
+        },
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "asset": "XCP",
+            "block_index": 154923,
+            "calling_function": "filled",
+            "event": "dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8",
+            "quantity": 0
+        },
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "asset": "XCP",
+            "block_index": 154925,
+            "calling_function": "filled",
+            "event": "4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a",
             "quantity": 0
         },
         {
@@ -789,8 +805,8 @@
     "rpc.get_balances": [
         {
             "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-            "asset": "XCP",
-            "quantity": 74659799712
+            "asset": "FOOBAR",
+            "quantity": 2499700
         },
         {
             "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -799,8 +815,8 @@
         },
         {
             "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-            "asset": "FOOBAR",
-            "quantity": 2499700
+            "asset": "XCP",
+            "quantity": 74659799712
         }
     ],
     "test_bet_bearcfd_to_be_liquidated": "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff046c2a0000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac6c2a0000000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b02120544553545858585800000028000152bb336400000000017d784000000000027952ae6c2a0000000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b021123d60000000000000000000003b100000000a000000000000000000000000000052aeb091e90b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",

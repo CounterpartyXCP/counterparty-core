@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.22.0
+	* bug in previous bugfix
 * v9.21.0
 	* bug in bet parsing
 * v9.20.0
