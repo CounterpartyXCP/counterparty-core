@@ -33,10 +33,11 @@ def db_query(db, statement, bindings=(), callback=None, **callback_args):
         cursor.execute(statement, bindings)
         for row in cursor:
             callback(row, **callback_args)
+        results = None
     else:
         results = list(cursor.execute(statement, bindings))
-        cursor.close()
-        return results
+    cursor.close()
+    return results
 
 # best name?
 def translate(db, table=None, filters=None, filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None, 
@@ -64,7 +65,7 @@ def translate(db, table=None, filters=None, filterop='AND', order_by=None, order
         raise Exception('Invalid offset')
     # TODO: accept an object:  {'field1':'ASC', 'field2': 'DESC'}
     if order_by and not re.compile('^[a-z0-9_]+$').match(order_by):
-        raise Exception('Invalid order_by. Must be a field name.')
+        raise Exception('Invalid order_by, must be a field name')
 
     # max 1000 results
     limit = min(limit, 1000)
@@ -80,7 +81,7 @@ def translate(db, table=None, filters=None, filterop='AND', order_by=None, order
         elif type(filter_) == dict:
             new_filters.append(filter_)
         else:
-            raise Exception('Unknown filter type.')
+            raise Exception('Unknown filter type')
     filters = new_filters
 
     # validate filter(s)
@@ -100,14 +101,13 @@ def translate(db, table=None, filters=None, filterop='AND', order_by=None, order
     # WHERE
     bindings = []
     conditions = []
-    for filter_ in filters:    
-        if isinstance(filter_['value'], list):         
-            binding_value = filter_['value']
-        else:
-            binding_value = [filter_['value']]
+    for filter_ in filters:
         marker = value_to_marker(filter_['value'])
         conditions.append('{} {} {}'.format(filter_['field'], filter_['op'], marker))
-        bindings += binding_value
+        if isinstance(filter_['value'], list):         
+            bindings += filter_['value']
+        else:
+            bindings.append(filter_['value'])
     statement += ''' WHERE ({})'''.format(' {} '.format(filterop.upper()).join(conditions)) 
 
     # AND filters
