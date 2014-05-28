@@ -65,7 +65,7 @@ def translate(db, table=None, filters=None, filterop='AND', order_by=None, order
     # TODO: accept an object:  {'field1':'ASC', 'field2': 'DESC'}
     if order_by and not re.compile('^[a-z0-9_]+$').match(order_by):
         raise Exception('Invalid order_by. Must be a field name.')
-    
+
     # max 1000 results
     limit = min(limit, 1000)
 
@@ -82,7 +82,7 @@ def translate(db, table=None, filters=None, filterop='AND', order_by=None, order
         else:
             raise Exception('Unknown filter type.')
     filters = new_filters
-    
+
     # validate filter(s)
     for filter_ in filters:
         for field in ['field', 'op', 'value']: #should have all fields
@@ -94,7 +94,7 @@ def translate(db, table=None, filters=None, filterop='AND', order_by=None, order
             raise Exception("Invalid value for the field '%s'" % filter_['field'])
         if filter_['op'].upper() not in ['=', '==', '!=', '>', '<', '>=', '<=', 'IN']:
             raise Exception("Invalid operator for the field '%s'" % filter_['field'])      
-    
+
     # SELECT
     statement = '''SELECT * FROM {}'''.format(table)
     # WHERE
@@ -165,8 +165,8 @@ class APIServer(threading.Thread):
             dispatcher.add_method(new_method)
 
         @dispatcher.add_method
-        def sql(query, bindings=()):
-            return db_query(db, query, bindings)
+        def sql(query, bindings=[]):
+            return db_query(db, query, tuple(bindings))
         
         @dispatcher.add_method
         def get_messages(block_index):
