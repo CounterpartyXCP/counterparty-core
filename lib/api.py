@@ -32,7 +32,7 @@ def db_query(db, statement, bindings=(), callback=None, **callback_args):
     if hasattr(callback, '__call__'):
         cursor.execute(statement, bindings)
         for row in cursor:
-            callback(row, callback_args)
+            callback(row, **callback_args)
     else:
         results = list(cursor.execute(statement, bindings))
         cursor.close()
@@ -109,13 +109,23 @@ def translate(db, table=None, filters=None, filterop='AND', order_by=None, order
         conditions.append('{} {} {}'.format(filter_['field'], filter_['op'], marker))
         bindings += binding_value
     statement += ''' WHERE ({})'''.format(' {} '.format(filterop.upper()).join(conditions)) 
+
     # AND filters
-    if start_block != None:
-        statement += ''' AND block_index >= ?'''
-        bindings.append(start_block)
-    if end_block != None:
-        statement += ''' AND block_index <= ?'''
-        bindings.append(end_block)
+    if table not in ['balances', 'order_matches', 'bet_matches']:
+        if start_block != None:
+            statement += ''' AND block_index >= ?'''
+            bindings.append(start_block)
+        if end_block != None:
+            statement += ''' AND block_index <= ?'''
+            bindings.append(end_block)
+    elif table in ['order_matches', 'bet_matches']:
+        if start_block != None:
+            statement += ''' AND (tx0_block_index >= ? OR tx1_block_index >= ?)'''
+            bindings += [start_block, start_block]
+        if end_block != None:
+            statement += ''' AND (tx0_block_index <= ? OR tx1_block_index <= ?)'''
+            bindings += [end_block, end_block]
+
     if isinstance(status, list) and len(status)>0:
         statement += ''' AND status IN {}'''.format(value_to_marker(status))
         bindings += status
