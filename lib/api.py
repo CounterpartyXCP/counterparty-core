@@ -40,7 +40,7 @@ def db_query(db, statement, bindings=(), callback=None, **callback_args):
     return results
 
 # best name?
-def translate(db, table=None, filters=None, filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None, 
+def translate(db, table, filters=[], filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None, 
               status=None, limit=1000, offset=0, show_expired=True):
     """Filters results based on a filter data structure (as used by the API)"""
     
