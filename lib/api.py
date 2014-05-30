@@ -47,11 +47,10 @@ def translate(db, table, filters=[], filterop='AND', order_by=None, order_dir=No
     def value_to_marker(value):
         # if value is an array place holder is (?,?,?,..)
         if isinstance(value, list):
-            return "({})".format(",".join(['?' for e in range(0,len(value))]))
+            return '({})'.format(','.join(['?' for e in range(0,len(value))]))
         else:
             return '?'
 
-    # TODO: Exceptions should be more specific.
     # TODO: Document that filterop and op both can be anything that SQLite3 accepts.
     if not table or table.lower() not in API_TABLES:
         raise Exception('Unknown table')
@@ -61,14 +60,13 @@ def translate(db, table, filters=[], filterop='AND', order_by=None, order_dir=No
         raise Exception('Invalid order direction (ASC, DESC)')
     if not isinstance(limit, int):
         raise Exception('Invalid limit')
+    elif limit > 1000:
+        raise Exception('Limit should be lower or equal to 1000')
     if not isinstance(offset, int):
         raise Exception('Invalid offset')
     # TODO: accept an object:  {'field1':'ASC', 'field2': 'DESC'}
     if order_by and not re.compile('^[a-z0-9_]+$').match(order_by):
         raise Exception('Invalid order_by, must be a field name')
-
-    # max 1000 results
-    limit = min(limit, 1000)
 
     if isinstance(filters, dict): #single filter entry, convert to a one entry list
         filters = [filters,]
@@ -97,7 +95,7 @@ def translate(db, table, filters=[], filterop='AND', order_by=None, order_dir=No
             raise Exception("Invalid operator for the field '%s'" % filter_['field'])      
 
     # SELECT
-    statement = '''SELECT * FROM {}'''.format(table)
+    statement = 'SELECT * FROM {}'.format(table)
     # WHERE
     bindings = []
     conditions = []
@@ -112,53 +110,51 @@ def translate(db, table, filters=[], filterop='AND', order_by=None, order_dir=No
     more_conditions = []
     if table not in ['balances', 'order_matches', 'bet_matches']:
         if start_block != None:
-            more_conditions.append('''block_index >= ?''')
+            more_conditions.append('block_index >= ?')
             bindings.append(start_block)
         if end_block != None:
-            more_conditions.append('''block_index <= ?''')
+            more_conditions.append('block_index <= ?')
             bindings.append(end_block)
     elif table in ['order_matches', 'bet_matches']:
         if start_block != None:
-            more_conditions.append('''(tx0_block_index >= ? OR tx1_block_index >= ?)''')
+            more_conditions.append('tx0_block_index >= ?')
             bindings += [start_block, start_block]
         if end_block != None:
-            more_conditions.append('''(tx0_block_index <= ? OR tx1_block_index <= ?)''')
+            more_conditions.append('tx1_block_index <= ?')
             bindings += [end_block, end_block]
-
+    # status
     if isinstance(status, list) and len(status)>0:
-        more_conditions.append('''status IN {}'''.format(value_to_marker(status)))
+        more_conditions.append('status IN {}'.format(value_to_marker(status)))
         bindings += status
     elif isinstance(status, str) and status != '':
-        more_conditions.append('''status == ?''')
+        more_conditions.append('status == ?')
         bindings.append(status)
     # legacy filters
     if not show_expired and table == 'orders':
         #Ignore BTC orders one block early.
         expire_index = util.last_block(db)['block_index'] + 1
-        more_conditions.append('''((give_asset == ? AND expire_index > ?) OR give_asset != ?)''')
+        more_conditions.append('((give_asset == ? AND expire_index > ?) OR give_asset != ?)')
         bindings += ['BTC', expire_index, 'BTC']
 
     if (len(conditions) + len(more_conditions)) > 0:
-        statement += ''' WHERE'''
+        statement += ' WHERE'
         all_conditions = []
         if len(conditions) > 0:
-            all_conditions.append('''({})'''.format(' {} '.format(filterop.upper()).join(conditions)))
+            all_conditions.append('({})'.format(' {} '.format(filterop.upper()).join(conditions)))
         if len(more_conditions) > 0: 
-            all_conditions.append('''({})'''.format(' AND '.join(more_conditions)))
+            all_conditions.append('({})'.format(' AND '.join(more_conditions)))
         statement += ' {}'.format(' AND '.join(all_conditions))
 
     # ORDER BY
     if order_by != None:
-        statement += ''' ORDER BY {}'''.format(order_by)
+        statement += ' ORDER BY {}'.format(order_by)
         if order_dir != None:
-            statement += ''' {}'''.format(order_dir.upper())
+            statement += ' {}'.format(order_dir.upper())
     # LIMIT
     if limit:
-        statement += ''' LIMIT {}'''.format(limit)
+        statement += ' LIMIT {}'.format(limit)
         if offset:
-            statement += ''' OFFSET {}'''.format(offset)
-
-    logging.error(statement)
+            statement += ' OFFSET {}'.format(offset)
 
     return db_query(db, statement, tuple(bindings))
 
