@@ -108,36 +108,45 @@ def translate(db, table=None, filters=None, filterop='AND', order_by=None, order
             bindings += filter_['value']
         else:
             bindings.append(filter_['value'])
-    statement += ''' WHERE ({})'''.format(' {} '.format(filterop.upper()).join(conditions)) 
-
     # AND filters
+    more_conditions = []
     if table not in ['balances', 'order_matches', 'bet_matches']:
         if start_block != None:
-            statement += ''' AND block_index >= ?'''
+            more_conditions.append('''block_index >= ?''')
             bindings.append(start_block)
         if end_block != None:
-            statement += ''' AND block_index <= ?'''
+            more_conditions.append('''block_index <= ?''')
             bindings.append(end_block)
     elif table in ['order_matches', 'bet_matches']:
         if start_block != None:
-            statement += ''' AND (tx0_block_index >= ? OR tx1_block_index >= ?)'''
+            more_conditions.append('''(tx0_block_index >= ? OR tx1_block_index >= ?)''')
             bindings += [start_block, start_block]
         if end_block != None:
-            statement += ''' AND (tx0_block_index <= ? OR tx1_block_index <= ?)'''
+            more_conditions.append('''(tx0_block_index <= ? OR tx1_block_index <= ?)''')
             bindings += [end_block, end_block]
 
     if isinstance(status, list) and len(status)>0:
-        statement += ''' AND status IN {}'''.format(value_to_marker(status))
+        more_conditions.append('''status IN {}'''.format(value_to_marker(status)))
         bindings += status
     elif isinstance(status, str) and status != '':
-        statement += ''' AND status == ?'''
+        more_conditions.append('''status == ?''')
         bindings.append(status)
     # legacy filters
     if not show_expired and table == 'orders':
         #Ignore BTC orders one block early.
         expire_index = util.last_block(db)['block_index'] + 1
-        statement += ''' AND ((give_asset == ? AND expire_index > ?) OR give_asset != ?) '''
+        more_conditions.append('''((give_asset == ? AND expire_index > ?) OR give_asset != ?)''')
         bindings += ['BTC', expire_index, 'BTC']
+
+    if (len(conditions) + len(more_conditions)) > 0:
+        statement += ''' WHERE'''
+        all_conditions = []
+        if len(conditions) > 0:
+            all_conditions.append('''({})'''.format(' {} '.format(filterop.upper()).join(conditions)))
+        if len(more_conditions) > 0: 
+            all_conditions.append('''({})'''.format(' AND '.join(more_conditions)))
+        statement += ' {}'.format(' AND '.join(all_conditions))
+
     # ORDER BY
     if order_by != None:
         statement += ''' ORDER BY {}'''.format(order_by)
@@ -148,6 +157,8 @@ def translate(db, table=None, filters=None, filterop='AND', order_by=None, order
         statement += ''' LIMIT {}'''.format(limit)
         if offset:
             statement += ''' OFFSET {}'''.format(offset)
+
+    logging.error(statement)
 
     return db_query(db, statement, tuple(bindings))
 
