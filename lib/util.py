@@ -318,7 +318,6 @@ def database_check (db, blockcount):
     TRIES = 14
     for i in range(TRIES):
         block_index = last_block(db)['block_index']
-        logging.debug(block_index+', '+blockcount)
         if block_index == blockcount:
             cursor.close()
             return
