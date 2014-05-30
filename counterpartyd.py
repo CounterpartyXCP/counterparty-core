@@ -24,67 +24,27 @@ if os.name == 'nt':
 D = decimal.Decimal
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
-def get_address (db, address, start_block=None, end_block=None):
+def get_address (db, address):
     address_dict = {}
-    address_dict['balances'] = util.get_balances(db, address=address)
-
-    address_dict['debits'] = util.get_debits(db, address=address, order_by='block_index',
-        order_dir='asc', start_block=start_block, end_block=end_block)
-
-    address_dict['credits'] = util.get_credits(db, address=address, order_by='block_index',
-        order_dir='asc', start_block=start_block, end_block=end_block)
-
-    address_dict['burns'] = util.get_burns(db, source=address, order_by='block_index',
-        order_dir='asc', start_block=start_block, end_block=end_block)
-
-    address_dict['sends'] = util.get_sends(db, source=address, destination=address, order_by='block_index',
-        order_dir='asc', start_block=start_block, end_block=end_block, filterop='or')
-    #^ with filterop == 'or', we get all sends where this address was the source OR destination 
-
-    address_dict['orders'] = util.get_orders(db, source=address, order_by='block_index',
-        order_dir='asc', start_block=start_block, end_block=end_block)
-
-    address_dict['order_matches'] = util.get_order_matches(db, address=address,
-        order_by='tx0_block_index', order_dir='asc', start_block=start_block, end_block=end_block)
-
-    address_dict['btcpays'] = util.get_btcpays(db,
-        filters=[{'field': 'source', 'op': '==', 'value': address}, {'field': 'destination', 'op': '==', 'value': address}],
-        filterop='or', order_by='block_index',
-        order_dir='asc', start_block=start_block, end_block=end_block)
-
-    address_dict['issuances'] = util.get_issuances(db, issuer=address,
-        order_by='block_index', order_dir='asc', start_block=start_block, end_block=end_block)
-
-    address_dict['broadcasts'] = util.get_broadcasts(db, source=address,
-        order_by='block_index', order_dir='asc', start_block=start_block, end_block=end_block)
-
-    address_dict['bets'] = util.get_bets(db, source=address, order_by='block_index',
-        order_dir='asc', start_block=start_block, end_block=end_block)
-
-    address_dict['bet_matches'] = util.get_bet_matches(db, address=address,
-        order_by='tx0_block_index', order_dir='asc', start_block=start_block, end_block=end_block)
-
-    address_dict['dividends'] = util.get_dividends(db, source=address, order_by='block_index',
-        order_dir='asc', start_block=start_block, end_block=end_block)
-
-    address_dict['cancels'] = util.get_cancels(db, source=address, order_by='block_index',
-        order_dir='asc', start_block=start_block, end_block=end_block)
-
-    address_dict['callbacks'] = util.get_callbacks(db, source=address, order_by='block_index',
-        order_dir='asc', start_block=start_block, end_block=end_block)
-
-    address_dict['bet_expirations'] = util.get_bet_expirations(db, source=address, order_by='block_index',
-        order_dir='asc', start_block=start_block, end_block=end_block)
-
-    address_dict['order_expirations'] = util.get_order_expirations(db, source=address, order_by='block_index',
-        order_dir='asc', start_block=start_block, end_block=end_block)
-
-    address_dict['bet_match_expirations'] = util.get_bet_match_expirations(db, address=address, order_by='block_index',
-        order_dir='asc', start_block=start_block, end_block=end_block)
-
-    address_dict['order_match_expirations'] = util.get_order_match_expirations(db, address=address, order_by='block_index',
-        order_dir='asc', start_block=start_block, end_block=end_block)
-
+    address_dict['balances'] = util.api('get_balances', {'filters': [('address', '==', address),]})
+    address_dict['debits'] = util.api('get_debits', {'filters': [('address', '==', address),]})
+    address_dict['credits'] = util.api('get_credits', {'filters': [('address', '==', address),]})
+    address_dict['burns'] = util.api('get_burns', {'filters': [('source', '==', address),]})
+    address_dict['sends'] = util.api('get_sends', {'filters': [('source', '==', address), ('destination', '==', address)], 'filterop': 'or'})
+    address_dict['orders'] = util.api('get_orders', {'filters': [('source', '==', address),]})
+    address_dict['order_matches'] = util.api('get_order_matches', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
+    address_dict['btcpays'] = util.api('get_btcpays', {'filters': [('source', '==', address), ('destination', '==', address)], 'filterop': 'or'})
+    address_dict['issuances'] = util.api('get_issuances', {'filters': [('source', '==', address),]})
+    address_dict['broadcasts'] = util.api('get_broadcasts', {'filters': [('source', '==', address),]})
+    address_dict['bets'] = util.api('get_bets', {'filters': [('source', '==', address),]})
+    address_dict['bet_matches'] = util.api('get_bet_matches', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
+    address_dict['dividends'] = util.api('get_dividends', {'filters': [('source', '==', address),]})
+    address_dict['cancels'] = util.api('get_cancels', {'filters': [('source', '==', address),]})
+    address_dict['callbacks'] = util.api('get_callbacks', {'filters': [('source', '==', address),]})
+    address_dict['bet_expirations'] = util.api('get_bet_expirations', {'filters': [('source', '==', address),]})
+    address_dict['order_expirations'] = util.api('get_order_expirations', {'filters': [('source', '==', address),]})
+    address_dict['bet_match_expirations'] = util.api('get_bet_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
+    address_dict['order_match_expirations'] = util.api('get_order_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
     return address_dict
 
 
@@ -340,7 +300,7 @@ def set_options (data_dir=None,
         config.INSIGHT_CONNECT = configfile['Default']['insight-connect']
     elif config.TESTNET:
         config.INSIGHT_CONNECT = 'test.insight.is'
-    else: 
+    else:
         config.INSIGHT_CONNECT = 'live.insight.is'
 
     # insight API port
@@ -829,7 +789,7 @@ if __name__ == '__main__':
             print('Asset ‘{}’ not found.'.format(args.asset))
             exit(0)
         
-        asset_id = util.get_asset_id(args.asset)
+        asset_id = util.asset_id(args.asset)
         divisible = results['divisible']
         supply = util.devise(db, results['supply'], args.asset, dest='output')
         call_date = util.isodt(results['call_date']) if results['call_date'] else results['call_date']
@@ -849,7 +809,7 @@ if __name__ == '__main__':
             print('Shareholders:')
             balances = util.get_balances(db, asset=args.asset)
             print('\taddress, quantity, escrow')
-            for holder in util.get_holders(db, args.asset):
+            for holder in util.holders(db, args.asset):
                 quantity = holder['address_quantity']
                 if not quantity: continue
                 quantity = util.devise(db, quantity, args.asset, 'output')

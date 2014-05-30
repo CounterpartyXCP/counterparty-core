@@ -34,7 +34,7 @@ import counterpartyd
 # config.BLOCK_FIRST = 0
 # config.BURN_START = 0
 # config.BURN_END = 9999999
-counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/counterpartyd.unittest.db', testnet=True, testcoin=False, unittest=True)
+counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/counterpartyd.unittest.db', testnet=True, testcoin=False, unittest=True, force=True)
 
 # Connect to database.
 try: os.remove(config.DATABASE)
@@ -385,12 +385,12 @@ def test_json_rpc():
 
     headers = {'content-type': 'application/json'}
     payloads = []
-    payloads.append({
-        "method": "get_balances",
-        "params": {"filters": {'field': 'address', 'op': '==', 'value': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'}},
-        "jsonrpc": "2.0",
-        "id": 0,
-    })
+#     payloads.append({
+#         "method": "get_balances",
+#         "params": {"filters": {'field': 'address', 'op': '==', 'value': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'}},
+#         "jsonrpc": "2.0",
+#         "id": 0,
+#     })
     payloads.append({
         "method": "create_send",
         "params": {'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': destination_default, 'asset': 'XCP', 'quantity': 1, 'encoding': 'pubkeyhash', 'pubkey': '0319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b977'},
@@ -414,11 +414,6 @@ def test_json_rpc():
             except requests.exceptions.ConnectionError:
                 time.sleep(.05)
         if attempt == 99: exit(1)   # Fail
-
-def test_get_address():
-    get_address = counterpartyd.get_address(db, source_default)
-    for field in get_address:
-        output_new['get_address_' + field] = get_address[field]
 
 def test_stop():
     logging.info('STOP TEST')

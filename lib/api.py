@@ -6,6 +6,7 @@ import threading
 import decimal
 import time
 import json
+import re
 import logging
 from logging import handlers as logging_handlers
 D = decimal.Decimal
@@ -19,6 +20,139 @@ from jsonrpc import dispatcher
 from . import (config, bitcoin, exceptions, util)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 
+# best place?
+API_TABLES = ['balances', 'credits', 'debits', 'bets', 'bet_matches', 'broadcasts', 'btcpays', 'burns', 
+          'callbacks', 'cancels', 'dividends', 'issuances', 'orders', 'order_matches', 'sends', 
+          'bet_expirations', 'order_expirations', 'bet_match_expirations', 'order_match_expirations']
+
+
+# TODO: ALL queries EVERYWHERE should be done with this method
+def db_query(db, statement, bindings=(), callback=None, **callback_args):
+    cursor = db.cursor()
+    if hasattr(callback, '__call__'):
+        cursor.execute(statement, bindings)
+        for row in cursor:
+            callback(row, **callback_args)
+        results = None
+    else:
+        results = list(cursor.execute(statement, bindings))
+    cursor.close()
+    return results
+
+# best name?
+def translate(db, table=None, filters=None, filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None, 
+              status=None, limit=1000, offset=0, show_expired=True):
+    """Filters results based on a filter data structure (as used by the API)"""
+    
+    def value_to_marker(value):
+        # if value is an array place holder is (?,?,?,..)
+        if isinstance(value, list):
+            return "({})".format(",".join(['?' for e in range(0,len(value))]))
+        else:
+            return '?'
+
+    # TODO: Exceptions should be more specific.
+    # TODO: Document that filterop and op both can be anything that SQLite3 accepts.
+    if not table or table.lower() not in API_TABLES:
+        raise Exception('Unknown table')
+    if filterop and filterop.upper() not in ['OR', 'AND']:
+        raise Exception('Invalid filter operator (OR, AND)')
+    if order_dir and order_dir.upper() not in ['ASC', 'DESC']:
+        raise Exception('Invalid order direction (ASC, DESC)')
+    if not isinstance(limit, int):
+        raise Exception('Invalid limit')
+    if not isinstance(offset, int):
+        raise Exception('Invalid offset')
+    # TODO: accept an object:  {'field1':'ASC', 'field2': 'DESC'}
+    if order_by and not re.compile('^[a-z0-9_]+$').match(order_by):
+        raise Exception('Invalid order_by, must be a field name')
+
+    ### bad idea
+    # max 1000 results 
+    #limit = min(limit, 1000)
+
+    if isinstance(filters, dict): #single filter entry, convert to a one entry list
+        filters = [filters,]
+
+    # TODO: Document this! (Each filter can be an ordered list.)
+    new_filters = []
+    for filter_ in filters:
+        if type(filter_) in (list, tuple):
+            new_filters.append({'field': filter_[0], 'op': filter_[1], 'value':  filter_[2]})
+        elif type(filter_) == dict:
+            new_filters.append(filter_)
+        else:
+            raise Exception('Unknown filter type')
+    filters = new_filters
+
+    # validate filter(s)
+    for filter_ in filters:
+        for field in ['field', 'op', 'value']: #should have all fields
+            if field not in filter_:
+                raise Exception("A specified filter is missing the '%s' field" % field)
+        if not isinstance(filter_['value'], (str, int, float, list)):
+            raise Exception("Invalid value for the field '%s'" % filter_['field'])
+        if isinstance(filter_['value'], list) and filter_['op'].upper() != 'IN':
+            raise Exception("Invalid value for the field '%s'" % filter_['field'])
+        if filter_['op'].upper() not in ['=', '==', '!=', '>', '<', '>=', '<=', 'IN']:
+            raise Exception("Invalid operator for the field '%s'" % filter_['field'])      
+
+    # SELECT
+    statement = '''SELECT * FROM {}'''.format(table)
+    # WHERE
+    bindings = []
+    conditions = []
+    for filter_ in filters:
+        marker = value_to_marker(filter_['value'])
+        conditions.append('{} {} {}'.format(filter_['field'], filter_['op'], marker))
+        if isinstance(filter_['value'], list):         
+            bindings += filter_['value']
+        else:
+            bindings.append(filter_['value'])
+    statement += ''' WHERE ({})'''.format(' {} '.format(filterop.upper()).join(conditions)) 
+
+    # AND filters
+    if table not in ['balances', 'order_matches', 'bet_matches']:
+        if start_block != None:
+            statement += ''' AND block_index >= ?'''
+            bindings.append(start_block)
+        if end_block != None:
+            statement += ''' AND block_index <= ?'''
+            bindings.append(end_block)
+    elif table in ['order_matches', 'bet_matches']:
+        if start_block != None:
+            statement += ''' AND (tx0_block_index >= ? OR tx1_block_index >= ?)'''
+            bindings += [start_block, start_block]
+        if end_block != None:
+            statement += ''' AND (tx0_block_index <= ? OR tx1_block_index <= ?)'''
+            bindings += [end_block, end_block]
+
+    if isinstance(status, list) and len(status)>0:
+        statement += ''' AND status IN {}'''.format(value_to_marker(status))
+        bindings += status
+    elif isinstance(status, str) and status != '':
+        statement += ''' AND status == ?'''
+        bindings.append(status)
+    # legacy filters
+    if not show_expired and table == 'orders':
+        #Ignore BTC orders one block early.
+        expire_index = util.last_block(db)['block_index'] + 1
+        statement += ''' AND ((give_asset == ? AND expire_index > ?) OR give_asset != ?) '''
+        bindings += ['BTC', expire_index, 'BTC']
+    # ORDER BY
+    if order_by != None:
+        statement += ''' ORDER BY {}'''.format(order_by)
+        if order_dir != None:
+            statement += ''' {}'''.format(order_dir.upper())
+    # LIMIT
+    if limit:
+        statement += ''' LIMIT {}'''.format(limit)
+        if offset:
+            statement += ''' OFFSET {}'''.format(offset)
+
+    return db_query(db, statement, tuple(bindings))
+
+
 class APIServer(threading.Thread):
 
     def __init__ (self):
@@ -29,208 +163,21 @@ class APIServer(threading.Thread):
 
         ######################
         #READ API
-        # TODO: Move all of these functions from util.py here (and use native SQLite queries internally).
-        # TODO: Migrate away from the filters entirely?! (That is, always use sql method when not creating a new transaction?!)
+
+        # Generate dynamically get_{table} methods
+        def generate_get_method(table):
+            def get_method(**kwargs):
+                return translate(db, table=table, **kwargs)
+            return get_method
+
+        for table in API_TABLES:
+            new_method = generate_get_method(table)
+            new_method.__name__ = 'get_{}'.format(table)
+            dispatcher.add_method(new_method)
 
         @dispatcher.add_method
-        def sql(query):
-            cursor = db.cursor()
-            results = list(cursor.execute(query))
-            cursor.close()
-            return results
-
-        @dispatcher.add_method
-        def get_balances(filters=None, order_by=None, order_dir=None, filterop="and"):
-            return util.get_balances(db,
-                filters=filters,
-                order_by=order_by,
-                order_dir=order_dir,
-                filterop=filterop)
-
-        @dispatcher.add_method
-        def get_bets(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            return util.get_bets(db,
-                filters=filters,
-                order_by=order_by,
-                order_dir=order_dir,
-                start_block=start_block,
-                end_block=end_block,
-                filterop=filterop)
-
-        @dispatcher.add_method
-        def get_bet_matches(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            return util.get_bet_matches(db,
-                filters=filters,
-                order_by=order_by,
-                order_dir=order_dir,
-                start_block=start_block,
-                end_block=end_block,
-                filterop=filterop)
-
-        @dispatcher.add_method
-        def get_broadcasts(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            return util.get_broadcasts(db,
-                filters=filters,
-                order_by=order_by,
-                order_dir=order_dir,
-                start_block=start_block,
-                end_block=end_block,
-                filterop=filterop)
-
-        @dispatcher.add_method
-        def get_btcpays(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            return util.get_btcpays(db,
-                filters=filters,
-                order_by=order_by,
-                order_dir=order_dir,
-                start_block=start_block,
-                end_block=end_block,
-                filterop=filterop)
-
-        @dispatcher.add_method
-        def get_burns(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            return util.get_burns(db,
-                filters=filters,
-                order_by=order_by,
-                order_dir=order_dir,
-                start_block=start_block,
-                end_block=end_block,
-                filterop=filterop)
-
-        @dispatcher.add_method
-        def get_callbacks(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            return util.get_callbacks(db,
-                filters=filters,
-                order_by=order_by,
-                order_dir=order_dir,
-                start_block=start_block,
-                end_block=end_block,
-                filterop=filterop)
-
-        @dispatcher.add_method
-        def get_cancels(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            return util.get_cancels(db,
-                filters=filters,
-                order_by=order_by,
-                order_dir=order_dir,
-                start_block=start_block,
-                end_block=end_block,
-                filterop=filterop)
-
-        @dispatcher.add_method
-        def get_credits (filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            return util.get_credits(db,
-                filters=filters,
-                order_by=order_by,
-                order_dir=order_dir,
-                start_block=start_block,
-                end_block=end_block,
-                filterop=filterop)
-
-        @dispatcher.add_method
-        def get_debits (filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            return util.get_debits(db,
-                filters=filters,
-                order_by=order_by,
-                order_dir=order_dir,
-                start_block=start_block,
-                end_block=end_block,
-                filterop=filterop)
-
-        @dispatcher.add_method
-        def get_dividends(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            return util.get_dividends(db,
-                filters=filters,
-                order_by=order_by,
-                order_dir=order_dir,
-                start_block=start_block,
-                end_block=end_block,
-                filterop=filterop)
-
-        @dispatcher.add_method
-        def get_issuances(filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            return util.get_issuances(db,
-                filters=filters,
-                order_by=order_by,
-                order_dir=order_dir,
-                start_block=start_block,
-                end_block=end_block,
-                filterop=filterop)
-
-        @dispatcher.add_method
-        def get_orders (filters=None, show_expired=True, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            results = util.get_orders(db,
-                filters=filters,
-                show_expired=show_expired,
-                order_by=order_by,
-                order_dir=order_dir,
-                start_block=start_block,
-                end_block=end_block,
-                filterop=filterop)
-            return results
-
-        @dispatcher.add_method
-        def get_order_matches (filters=None, post_filter_status=None, is_mine=False, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            assert post_filter_status in (None, 'completed', 'pending')
-            return util.get_order_matches(db,
-                filters=filters,
-                post_filter_status=post_filter_status,
-                is_mine=is_mine,
-                order_by=order_by,
-                order_dir=order_dir,
-                start_block=start_block,
-                end_block=end_block,
-                filterop=filterop)
-
-        @dispatcher.add_method
-        def get_sends (filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            return util.get_sends(db,
-                filters=filters,
-                order_by=order_by,
-                order_dir=order_dir,
-                start_block=start_block,
-                end_block=end_block,
-                filterop=filterop)
-
-        @dispatcher.add_method
-        def get_bet_expirations (filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            return util.get_bet_expirations(db,
-                filters=filters,
-                order_by=order_by,
-                order_dir=order_dir,
-                start_block=start_block,
-                end_block=end_block,
-                filterop=filterop)
-
-        @dispatcher.add_method
-        def get_order_expirations (filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            return util.get_order_expirations(db,
-                filters=filters,
-                order_by=order_by,
-                order_dir=order_dir,
-                start_block=start_block,
-                end_block=end_block,
-                filterop=filterop)
-
-        @dispatcher.add_method
-        def get_bet_match_expirations (filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            return util.get_bet_match_expirations(db,
-                filters=filters,
-                order_by=order_by,
-                order_dir=order_dir,
-                start_block=start_block,
-                end_block=end_block,
-                filterop=filterop)
-
-        @dispatcher.add_method
-        def get_order_match_expirations (filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop="and"):
-            return util.get_order_match_expirations(db,
-                filters=filters,
-                order_by=order_by,
-                order_dir=order_dir,
-                start_block=start_block,
-                end_block=end_block,
-                filterop=filterop)
+        def sql(query, bindings=[]):
+            return db_query(db, query, tuple(bindings))
         
         @dispatcher.add_method
         def get_messages(block_index):
@@ -295,11 +242,9 @@ class APIServer(threading.Thread):
                     continue
                 
                 # User‐created asset.
-                issuances = util.get_issuances(db,
-                    filters={'field': 'asset', 'op': '==', 'value': asset},
-                    status='valid',
-                    order_by='block_index',
-                    order_dir='asc')
+                cursor = db.cursor()
+                issuances = list(cursor.execute('''SELECT * FROM issuances WHERE (status = ? AND asset = ?) ORDER BY block_index ASC''', ('valid', asset)))
+                cursor.close()
                 if not issuances: break #asset not found, most likely
                 else: last_issuance = issuances[-1]
                 supply = 0
@@ -369,7 +314,7 @@ class APIServer(threading.Thread):
             }
 
         @dispatcher.add_method
-        def get_asset_names():
+        def asset_names():
             cursor = db.cursor()
             names = [row['asset'] for row in cursor.execute("SELECT DISTINCT asset FROM issuances WHERE status = 'valid' ORDER BY asset ASC")]
             cursor.close()
@@ -389,6 +334,13 @@ class APIServer(threading.Thread):
                 counts[element] = count_list[0]['count']
             cursor.close()
             return counts
+
+        @dispatcher.add_method
+        def get_asset_names():
+            cursor = db.cursor()
+            names = [row['asset'] for row in cursor.execute("SELECT DISTINCT asset FROM issuances WHERE status = 'valid' ORDER BY asset ASC")]
+            cursor.close()
+            return names
 
         ######################
         #WRITE/ACTION API

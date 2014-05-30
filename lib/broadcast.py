@@ -46,7 +46,9 @@ def validate (db, source, timestamp, value, fee_fraction_int, text):
     if not source:
         problems.append('null source address')
     # Check previous broadcast in this feed.
-    broadcasts = util.get_broadcasts(db, status='valid', source=source, order_by='tx_index', order_dir='asc')
+    cursor = db.cursor()
+    broadcasts = list(cursor.execute('''SELECT * FROM broadcasts WHERE (status = ? AND source = ?) ORDER BY tx_index ASC''', ('valid', source)))
+    cursor.close()
     if broadcasts:
         last_broadcast = broadcasts[-1]
         if last_broadcast['locked']:

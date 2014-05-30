@@ -123,8 +123,8 @@ def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, ex
     problems = []
     cursor = db.cursor()
 
-    if give_asset == get_asset:
-        problems.append('trading an asset for itself')
+    if give_asset == 'BTC' and get_asset == 'BTC':
+        problems.append('cannot trade BTC for itself')
 
     if not isinstance(give_quantity, int):
         problems.append('give_quantity must be in satoshis')
@@ -163,18 +163,20 @@ def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, ex
     return problems
 
 def compose (db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required):
-    balances = util.get_balances(db, address=source, asset=give_asset)
+    cursor = db.cursor()
+    balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, give_asset)))
     if give_asset != 'BTC' and (not balances or balances[0]['quantity'] < give_quantity):
         raise exceptions.OrderError('insufficient funds')
 
     problems = validate(db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required)
     if problems: raise exceptions.OrderError(problems)
 
-    give_id = util.get_asset_id(give_asset)
-    get_id = util.get_asset_id(get_asset)
+    give_id = util.asset_id(give_asset)
+    get_id = util.asset_id(get_asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, give_id, give_quantity, get_id, get_quantity,
                         expiration, fee_required)
+    cursor.close()
     return (source, [], data)
 
 def parse (db, tx, message):
@@ -184,8 +186,8 @@ def parse (db, tx, message):
     try:
         assert len(message) == LENGTH
         give_id, give_quantity, get_id, get_quantity, expiration, fee_required = struct.unpack(FORMAT, message)
-        give_asset = util.get_asset_name(give_id)
-        get_asset = util.get_asset_name(get_id)
+        give_asset = util.asset_name(give_id)
+        get_asset = util.asset_name(get_id)
         status = 'open'
     except (AssertionError, struct.error) as e:
         give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required = 0, 0, 0, 0, 0, 0
@@ -256,8 +258,8 @@ def match (db, tx):
     tx1 = orders[0]
 
     cursor.execute('''SELECT * FROM orders \
-                      WHERE (give_asset=? AND get_asset=? AND status=?)''',
-                   (tx1['get_asset'], tx1['give_asset'], 'open'))
+                      WHERE (give_asset=? AND get_asset=? AND status=? AND tx_hash != ?)''',
+                   (tx1['get_asset'], tx1['give_asset'], 'open', tx1['tx_hash']))
 
     tx1_give_remaining = tx1['give_remaining']
     tx1_get_remaining = tx1['get_remaining']

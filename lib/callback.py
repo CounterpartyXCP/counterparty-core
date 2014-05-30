@@ -15,6 +15,7 @@ ID = 21
 
 
 def validate (db, source, fraction, asset, block_time, block_index, parse):
+    cursor = db.cursor()
     problems = []
 
     # TODO
@@ -28,7 +29,7 @@ def validate (db, source, fraction, asset, block_time, block_index, parse):
     elif fraction <= 0:
         problems.append('non‐positive fraction')
 
-    issuances = util.get_issuances(db, status='valid', asset=asset)
+    issuances = list(cursor.execute('''SELECT * FROM issuances WHERE (status = ? AND asset = ?)''', ('valid', asset)))
     if not issuances:
         problems.append('no such asset, {}.'.format(asset))
         return None, None, None, problems
@@ -53,7 +54,6 @@ def validate (db, source, fraction, asset, block_time, block_index, parse):
     # If parsing, unescrow all funds of asset. (Order of operations is
     # important here.)
     if parse:
-        cursor = db.cursor()
 
         # Cancel pending order matches involving asset.
         cursor.execute('''SELECT * from order_matches \
@@ -67,10 +67,8 @@ def validate (db, source, fraction, asset, block_time, block_index, parse):
         for order_element in list(cursor):
             order.cancel_order(db, order_element, 'cancelled', block_index)
 
-        cursor.close()
-
     # Calculate callback quantities.
-    holders = util.get_holders(db, asset)
+    holders = util.holders(db, asset)
     outputs = []
     for holder in holders:
 
@@ -92,10 +90,11 @@ def validate (db, source, fraction, asset, block_time, block_index, parse):
     callback_total = sum([output['callback_quantity'] for output in outputs])
     if not callback_total: problems.append('nothing called back')
 
-    balances = util.get_balances(db, address=source, asset='XCP')
+    balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, 'XCP')))
     if not balances or balances[0]['quantity'] < (call_price * callback_total):
         problems.append('insufficient funds')
 
+    cursor.close()
     return call_price, callback_total, outputs, problems
 
 def compose (db, source, fraction, asset):
@@ -103,7 +102,7 @@ def compose (db, source, fraction, asset):
     if problems: raise exceptions.CallbackError(problems)
     print('Total quantity to be called back:', util.devise(db, callback_total, asset, 'output'), asset)
 
-    asset_id = util.get_asset_id(asset)
+    asset_id = util.asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, fraction, asset_id)
     return (source, [], data)
@@ -115,7 +114,7 @@ def parse (db, tx, message):
     try:
         assert len(message) == LENGTH
         fraction, asset_id = struct.unpack(FORMAT, message)
-        asset = util.get_asset_name(asset_id)
+        asset = util.asset_name(asset_id)
         status = 'valid'
     except (AssertionError, struct.error) as e:
         fraction, asset = None, None
