@@ -106,7 +106,7 @@ def translate(db, table, filters=[], filterop='AND', order_by=None, order_dir=No
     bindings = []
     conditions = []
     for filter_ in filters:
-        case_sensitive = False if  'case_sensitive' not in filter_ else filter_['case_sensitive']
+        case_sensitive = False if 'case_sensitive' not in filter_ else filter_['case_sensitive']
         if filter_['op'] == 'LIKE' and case_sensitive == False:
             filter_['field'] = '''UPPER({})'''.format(filter_['field'])
             filter_['value'] = filter_['value'].upper()
