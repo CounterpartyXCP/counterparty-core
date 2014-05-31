@@ -41,7 +41,7 @@ def db_query(db, statement, bindings=(), callback=None, **callback_args):
 
 # best name?
 def translate(db, table, filters=[], filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None, 
-              status=None, limit=1000, offset=0, show_expired=True):
+              status=None, limit=1000, offset=0, show_expired=True, case_sensitive=False):
     """Filters results based on a filter data structure (as used by the API)"""
     
     def value_to_marker(value):
@@ -100,9 +100,8 @@ def translate(db, table, filters=[], filterop='AND', order_by=None, order_dir=No
     bindings = []
     conditions = []
     for filter_ in filters:
-        if filter_['op'] == '==': 
-            filter_['op'] = 'LIKE'
-        else filter_['op'] == 'LIKE':
+        # == behave like a sensitive case LIKE
+        if filter_['op'] == 'LIKE' and case_sensitive == False:
             filter_['field'] = 'UPPER({})'.format(filter_['field'])
             filter_['value'] = filter_['value'].upper()
         marker = value_to_marker(filter_['value'])
