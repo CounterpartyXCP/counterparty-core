@@ -35,7 +35,6 @@ def db_query(db, statement, bindings=(), callback=None, **callback_args):
             callback(row, **callback_args)
         results = None
     else:
-        #cursor.execute()
         results = list(cursor.execute(statement, bindings))
     cursor.close()
     return results
@@ -175,7 +174,6 @@ def translate(db, table=None, filters=[], filterop='AND', order_by=None, order_d
             statement += ''' OFFSET {}'''.format(offset)
 
     logging.error(statement)
-    print(statement, tuple(bindings))
     return db_query(db, statement, tuple(bindings))
 
 
