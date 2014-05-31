@@ -100,6 +100,11 @@ def translate(db, table, filters=[], filterop='AND', order_by=None, order_dir=No
     bindings = []
     conditions = []
     for filter_ in filters:
+        if filter_['op'] == '==': 
+            filter_['op'] = 'LIKE'
+        else filter_['op'] == 'LIKE':
+            filter_['field'] = 'UPPER({})'.format(filter_['field'])
+            filter_['value'] = filter_['value'].upper()
         marker = value_to_marker(filter_['value'])
         conditions.append('{} {} {}'.format(filter_['field'], filter_['op'], marker))
         if isinstance(filter_['value'], list):         
