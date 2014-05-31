@@ -35,15 +35,15 @@ def db_query(db, statement, bindings=(), callback=None, **callback_args):
             callback(row, **callback_args)
         results = None
     else:
+        #cursor.execute()
         results = list(cursor.execute(statement, bindings))
     cursor.close()
     return results
 
 # best name?
-def translate(db, table=None, filters=None, filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None, 
+def translate(db, table=None, filters=[], filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None, 
               status=None, limit=1000, offset=0, show_expired=True):
     """Filters results based on a filter data structure (as used by the API)"""
-    
     def value_to_marker(value):
         # if value is an array place holder is (?,?,?,..)
         if isinstance(value, list):
@@ -70,7 +70,7 @@ def translate(db, table=None, filters=None, filterop='AND', order_by=None, order
     ### bad idea
     # max 1000 results 
     #limit = min(limit, 1000)
-
+    
     if isinstance(filters, dict): #single filter entry, convert to a one entry list
         filters = [filters,]
 
@@ -94,7 +94,7 @@ def translate(db, table=None, filters=None, filterop='AND', order_by=None, order
             raise Exception("Invalid value for the field '%s'" % filter_['field'])
         if isinstance(filter_['value'], list) and filter_['op'].upper() != 'IN':
             raise Exception("Invalid value for the field '%s'" % filter_['field'])
-        if filter_['op'].upper() not in ['=', '==', '!=', '>', '<', '>=', '<=', 'IN']:
+        if filter_['op'].upper() not in ['=', '==', '!=', '>', '<', '>=', '<=', 'IN', 'LIKE', 'LIKECASE']:
             raise Exception("Invalid operator for the field '%s'" % filter_['field'])      
 
     # SELECT
@@ -104,11 +104,26 @@ def translate(db, table=None, filters=None, filterop='AND', order_by=None, order
     conditions = []
     for filter_ in filters:
         marker = value_to_marker(filter_['value'])
-        conditions.append('{} {} {}'.format(filter_['field'], filter_['op'], marker))
-        if isinstance(filter_['value'], list):         
-            bindings += filter_['value']
+        if filter_['op'] == 'LIKE':
+            conditions.append('{} {} {}'.format('UPPER(' + filter_['field'] + ')', 'LIKE', marker)) #convert to upper in case used with LIKECASE
+            if not isinstance(filter_['value'], str):
+                raise Exception("Like operator must take a string in the value field") 
+            else:
+                bindings.append('%' + filter_['value'].upper() + '%')
+        elif filter_['op'] == 'LIKECASE':
+            statement = 'PRAGMA case_sensitive_like=ON;' + statement
+            conditions.append('{} {} {}'.format(filter_['field'], 'LIKE', marker))
+            print(filter_['value'], isinstance(filter_['value'], str))
+            if not isinstance(filter_['value'], str):         
+                raise Exception("Like operator must take a string in the value field") 
+            else:
+                bindings.append('%' + filter_['value'] + '%')
         else:
-            bindings.append(filter_['value'])
+            conditions.append('{} {} {}'.format(filter_['field'], filter_['op'], marker))
+            if isinstance(filter_['value'], list):         
+                bindings += filter_['value']
+            else:
+                bindings.append(filter_['value'])
     # AND filters
     more_conditions = []
     if table not in ['balances', 'order_matches', 'bet_matches']:
@@ -160,7 +175,7 @@ def translate(db, table=None, filters=None, filterop='AND', order_by=None, order
             statement += ''' OFFSET {}'''.format(offset)
 
     logging.error(statement)
-
+    print(statement, tuple(bindings))
     return db_query(db, statement, tuple(bindings))
 
 
@@ -188,6 +203,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def sql(query, bindings=[]):
+            print(query, tuple(bindings))
             return db_query(db, query, tuple(bindings))
         
         @dispatcher.add_method
