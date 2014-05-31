@@ -51,7 +51,7 @@ def translate(db, table, filters=[], filterop='AND', order_by=None, order_dir=No
         else:
             return '''?'''
 
-    # TODO: Document that filterop and op both can be anything that SQLite3 accepts.
+    # TODO: Document that op can be anything that SQLite3 accepts.
     if not table or table.lower() not in API_TABLES:
         raise Exception('Unknown table')
     if filterop and filterop.upper() not in ['OR', 'AND']:
@@ -70,6 +70,8 @@ def translate(db, table, filters=[], filterop='AND', order_by=None, order_dir=No
 
     if isinstance(filters, dict): #single filter entry, convert to a one entry list
         filters = [filters,]
+    elif not isinstance(filters, list):
+        raise Exception('filters must be an array or an hashmap')
 
     # TODO: Document this! (Each filter can be an ordered list.)
     new_filters = []
