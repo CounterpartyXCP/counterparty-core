@@ -91,7 +91,7 @@ def translate(db, table, filters=[], filterop='AND', order_by=None, order_dir=No
             raise Exception("Invalid value for the field '%s'" % filter_['field'])
         if isinstance(filter_['value'], list) and filter_['op'].upper() != 'IN':
             raise Exception("Invalid value for the field '%s'" % filter_['field'])
-        if filter_['op'].upper() not in ['=', '==', '!=', '>', '<', '>=', '<=', 'IN']:
+        if filter_['op'].upper() not in ['=', '==', '!=', '>', '<', '>=', '<=', 'IN', 'LIKE']:
             raise Exception("Invalid operator for the field '%s'" % filter_['field'])      
 
     # SELECT
