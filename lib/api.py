@@ -41,15 +41,15 @@ def db_query(db, statement, bindings=(), callback=None, **callback_args):
 
 # best name?
 def translate(db, table, filters=[], filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None, 
-              status=None, limit=1000, offset=0, show_expired=True, case_sensitive=False):
+              status=None, limit=1000, offset=0, show_expired=True):
     """Filters results based on a filter data structure (as used by the API)"""
     
     def value_to_marker(value):
         # if value is an array place holder is (?,?,?,..)
         if isinstance(value, list):
-            return '({})'.format(','.join(['?' for e in range(0,len(value))]))
+            return '''({})'''.format(','.join(['?' for e in range(0,len(value))]))
         else:
-            return '?'
+            return '''?'''
 
     # TODO: Document that filterop and op both can be anything that SQLite3 accepts.
     if not table or table.lower() not in API_TABLES:
@@ -74,8 +74,10 @@ def translate(db, table, filters=[], filterop='AND', order_by=None, order_dir=No
     # TODO: Document this! (Each filter can be an ordered list.)
     new_filters = []
     for filter_ in filters:
-        if type(filter_) in (list, tuple):
-            new_filters.append({'field': filter_[0], 'op': filter_[1], 'value':  filter_[2]})
+        if type(filter_) in (list, tuple) and len(a) in [3, 4]:
+            new_filter = {'field': filter_[0], 'op': filter_[1], 'value':  filter_[2]}
+            if len(a) == 4: new_filter['case_sensitive'] = filter_[3]
+            new_filters.append(new_filter)
         elif type(filter_) == dict:
             new_filters.append(filter_)
         else:
@@ -92,19 +94,22 @@ def translate(db, table, filters=[], filterop='AND', order_by=None, order_dir=No
         if isinstance(filter_['value'], list) and filter_['op'].upper() != 'IN':
             raise Exception("Invalid value for the field '%s'" % filter_['field'])
         if filter_['op'].upper() not in ['=', '==', '!=', '>', '<', '>=', '<=', 'IN', 'LIKE']:
-            raise Exception("Invalid operator for the field '%s'" % filter_['field'])      
+            raise Exception("Invalid operator for the field '%s'" % filter_['field'])  
+        if 'case_sensitive' in filter_ and not isinstance(filter_['case_sensitive'], bool):
+            raise Exception("case_sensitive must be a boolean")
 
     # SELECT
-    statement = 'SELECT * FROM {}'.format(table)
+    statement = '''SELECT * FROM {}'''.format(table)
     # WHERE
     bindings = []
     conditions = []
     for filter_ in filters:
+        case_sensitive = False if  'case_sensitive' not in filter_ else filter_['case_sensitive']
         if filter_['op'] == 'LIKE' and case_sensitive == False:
-            filter_['field'] = 'UPPER({})'.format(filter_['field'])
+            filter_['field'] = '''UPPER({})'''.format(filter_['field'])
             filter_['value'] = filter_['value'].upper()
         marker = value_to_marker(filter_['value'])
-        conditions.append('{} {} {}'.format(filter_['field'], filter_['op'], marker))
+        conditions.append('''{} {} {}'''.format(filter_['field'], filter_['op'], marker))
         if isinstance(filter_['value'], list):         
             bindings += filter_['value']
         else:
@@ -113,51 +118,51 @@ def translate(db, table, filters=[], filterop='AND', order_by=None, order_dir=No
     more_conditions = []
     if table not in ['balances', 'order_matches', 'bet_matches']:
         if start_block != None:
-            more_conditions.append('block_index >= ?')
+            more_conditions.append('''block_index >= ?''')
             bindings.append(start_block)
         if end_block != None:
-            more_conditions.append('block_index <= ?')
+            more_conditions.append('''block_index <= ?''')
             bindings.append(end_block)
     elif table in ['order_matches', 'bet_matches']:
         if start_block != None:
-            more_conditions.append('tx0_block_index >= ?')
+            more_conditions.append('''tx0_block_index >= ?''')
             bindings += [start_block, start_block]
         if end_block != None:
-            more_conditions.append('tx1_block_index <= ?')
+            more_conditions.append('''tx1_block_index <= ?''')
             bindings += [end_block, end_block]
     # status
     if isinstance(status, list) and len(status)>0:
-        more_conditions.append('status IN {}'.format(value_to_marker(status)))
+        more_conditions.append('''status IN {}'''.format(value_to_marker(status)))
         bindings += status
     elif isinstance(status, str) and status != '':
-        more_conditions.append('status == ?')
+        more_conditions.append('''status == ?''')
         bindings.append(status)
     # legacy filters
     if not show_expired and table == 'orders':
         #Ignore BTC orders one block early.
         expire_index = util.last_block(db)['block_index'] + 1
-        more_conditions.append('((give_asset == ? AND expire_index > ?) OR give_asset != ?)')
+        more_conditions.append('''((give_asset == ? AND expire_index > ?) OR give_asset != ?)''')
         bindings += ['BTC', expire_index, 'BTC']
 
     if (len(conditions) + len(more_conditions)) > 0:
-        statement += ' WHERE'
+        statement += ''' WHERE'''
         all_conditions = []
         if len(conditions) > 0:
-            all_conditions.append('({})'.format(' {} '.format(filterop.upper()).join(conditions)))
+            all_conditions.append('''({})'''.format(''' {} '''.format(filterop.upper()).join(conditions)))
         if len(more_conditions) > 0: 
-            all_conditions.append('({})'.format(' AND '.join(more_conditions)))
-        statement += ' {}'.format(' AND '.join(all_conditions))
+            all_conditions.append('''({})'''.format(''' AND '''.join(more_conditions)))
+        statement += ''' {}'''.format(''' AND '''.join(all_conditions))
 
     # ORDER BY
     if order_by != None:
-        statement += ' ORDER BY {}'.format(order_by)
+        statement += ''' ORDER BY {}'''.format(order_by)
         if order_dir != None:
-            statement += ' {}'.format(order_dir.upper())
+            statement += ''' {}'''.format(order_dir.upper())
     # LIMIT
     if limit:
-        statement += ' LIMIT {}'.format(limit)
+        statement += ''' LIMIT {}'''.format(limit)
         if offset:
-            statement += ' OFFSET {}'.format(offset)
+            statement += ''' OFFSET {}'''.format(offset)
 
     return db_query(db, statement, tuple(bindings))
 
