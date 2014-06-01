@@ -269,6 +269,10 @@ def connect_to_db(flags=None):
     # So that writers don’t block readers.
     cursor.execute('''PRAGMA journal_mode = WAL''')
 
+    # Make case sensitive the LIKE operator. 
+    # For insensitive queries use 'UPPER(fieldname) LIKE value.upper()''
+    cursor.execute('''PRAGMA case_sensitive_like = ON''')
+
     rows = list(cursor.execute('''PRAGMA foreign_key_check'''))
     if rows: raise exceptions.DatabaseError('Foreign key check failed.')
 
