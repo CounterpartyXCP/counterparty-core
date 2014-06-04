@@ -132,6 +132,7 @@ def translate(db, table, filters=[], filterop='AND', order_by=None, order_dir=No
         if end_block != None:
             more_conditions.append('''tx1_block_index <= ?''')
             bindings += [end_block, end_block]
+
     # status
     if isinstance(status, list) and len(status)>0:
         more_conditions.append('''status IN {}'''.format(value_to_marker(status)))
@@ -140,8 +141,14 @@ def translate(db, table, filters=[], filterop='AND', order_by=None, order_dir=No
         more_conditions.append('''status == ?''')
         bindings.append(status)
     elif status == None:
-        more_conditions.append('''status NOT LIKE ?''')
-        bindings.append('invalid%')
+        if table in ['broadcasts', 'btcpays', 'burns', 'callbacks', 'cancels', 'dividends', 'issuances', 'sends']:
+            more_conditions.append('''status == ?''')
+            bindings.append('valid')
+        elif table in ['bets', 'orders']:
+            valid_status = ['open', 'filled', 'cancelled', 'expired', 'dropped']
+            more_conditions.append('''status IN {}'''.format(value_to_marker(valid_status)))
+            bindings += valid_status
+
     # legacy filters
     if not show_expired and table == 'orders':
         #Ignore BTC orders one block early.

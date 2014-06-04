@@ -236,13 +236,17 @@ get_{table}
   * **order_dir (string):** The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.
   * **start_block (integer):** If specified, only results from the specified block index on will be returned 
   * **end_block (integer):** If specified, only results up to and including the specified block index on will be returned
-  * **status (string/array):** return only result with specified status.
+  * **status (string/array):** return only result with specified status. See below the status list for each tables: ref:`status list <status-list>`
   * **limit (integer):** maximum result return by the query. Maximum 1000. For more results, use ``limit`` and ``offset`` parameters to paginate results.
   * **offset (integer):** return rows starting from the next row to the given ``offset``
+  * **show_expired (boolean):** used only when ``table`` is ``orders``. When false get_orders don't return orders which expire next block.
 
 **Return:**
 
   A list of objects with attributes corresponding to the queried table fields
+  **Examples:**
+  To get a listing of bets, call ``get_bets``. This method will return a list of one or more ref:`bet objects <bet-object>` .
+  To get a listing all open orders for a given address call ``get_orders``. This method will return a list of one or more ref:`order objects <order-object>`.
 
 .. _get_address:
 
@@ -953,4 +957,31 @@ An object that describes the expiration of an order match.
 * **tx0_address** (*string*): The tx0 (first) address for the order match
 * **tx1_address** (*string*): The tx1 (second) address for the order match
 * **block_index** (*integer*): The block index (block number in the block chain) when this expiration occurred
+
+.. _status-list:
+
+Status
+----------
+
+Here the list of all possible status for each table:
+
+* **balances**: No status field
+* **bet_expirations**: No status field
+* **bet_match_expirations**: No status field
+* **bet_matches**: pending, settled: liquidated for bear, settled, settled: liquidated for bull, settled: for equal, settled: for notequal, dropped, expired
+* **bets**: open, filled, cancelled, expired, dropped, invalid: {problem(s)}
+* **broadcasts**: valid, invalid: {problem(s)}
+* **btcpays**: valid, invalid: {problem(s)}
+* **burns**: valid, invalid: {problem(s)}
+* **callbacks**: valid, invalid: {problem(s)}
+* **cancels**: valid, invalid: {problem(s)}
+* **credits**: No status field
+* **debits**: No status field
+* **dividends**: valid, invalid: {problem(s)}
+* **issuances**: valid, invalid: {problem(s)}
+* **order_expirations**: No status field
+* **order_match_expirations**: No status field
+* **order_matches**: pending, completed, expired
+* **orders**: open, filled, canceled, expired, invalid: {problem(s)}
+* **sends**: valid, invalid: {problem(s)}
   
