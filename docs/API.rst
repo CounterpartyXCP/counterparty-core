@@ -223,10 +223,10 @@ get_{table}
 ^^^^^^^^^^^^^^
 **get_{table}(filters=[], filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None, status=None, limit=1000, offset=0, show_expired=True)**
 
-*{table}* must be one of the following values:
-'balances', 'credits', 'debits', 'bets', 'bet_matches', 'broadcasts', 'btcpays', 'burns', 
-'callbacks', 'cancels', 'dividends', 'issuances', 'orders', 'order_matches', 'sends', 
-'bet_expirations', 'order_expirations', 'bet_match_expirations', 'order_match_expirations'
+**{table}** must be one of the following values:
+balances, credits, debits, bets, bet_matches, broadcasts, btcpays, burns, 
+callbacks, cancels, dividends, issuances, orders, order_matches, sends, 
+bet_expirations, order_expirations, bet_match_expirations, order_match_expirations
 
 **Parameters:**
 
@@ -236,17 +236,19 @@ get_{table}
   * **order_dir (string):** The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.
   * **start_block (integer):** If specified, only results from the specified block index on will be returned 
   * **end_block (integer):** If specified, only results up to and including the specified block index on will be returned
-  * **status (string/array):** return only result with specified status. See below the status list for each tables: ref:`status list <status-list>`
+  * **status (string/array):** return only result with specified status. See below the status list for each table: :ref:`status list <status-list>`
   * **limit (integer):** maximum result return by the query. Maximum 1000. For more results, use ``limit`` and ``offset`` parameters to paginate results.
   * **offset (integer):** return rows starting from the next row to the given ``offset``
-  * **show_expired (boolean):** used only when ``table`` is ``orders``. When false get_orders don't return orders which expire next block.
+  * **show_expired (boolean):** used only when ``table`` is ``orders``. When false, get_orders don't return orders which expire next block.
 
 **Return:**
 
   A list of objects with attributes corresponding to the queried table fields
+
   **Examples:**
-  To get a listing of bets, call ``get_bets``. This method will return a list of one or more ref:`bet objects <bet-object>` .
-  To get a listing all open orders for a given address call ``get_orders``. This method will return a list of one or more ref:`order objects <order-object>`.
+
+  * To get a listing of bets, call ``get_bets``. This method will return a list of one or more :ref:`bet objects <bet-object>` .
+  * To get a listing all open orders for a given address call ``get_orders``. This method will return a list of one or more :ref:`objects <order-object>`.
 
 .. _get_address:
 
