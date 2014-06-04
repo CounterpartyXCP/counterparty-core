@@ -65,7 +65,7 @@ Python Example
     #With this (and the rest of the examples below) we use positional arguments, instead of keyword-based arguments
     payload = {
       "method": "get_burns",
-      "params": [{'field': 'burned', 'op': '>', 'value': 20000000}, True, 'tx_hash', 'asc', 280537, 280539],
+      "params": [{'field': 'burned', 'op': '>', 'value': 20000000}, 'AND', 'tx_hash', 'asc', 280537, 280539],
       "jsonrpc": "2.0",
       "id": 0,
     }
@@ -76,7 +76,7 @@ Python Example
     #Fetch all debits for > 2 XCP between blocks 280537 and 280539, sorting the results by quantity (descending order)
     payload = {
       "method": "get_debits",
-      "params": [[{'field': 'asset', 'op': '==', 'value': "XCP"}, {'field': 'quantity', 'op': '>', 'value': 200000000}], 'quantity', 'desc'],
+      "params": [[{'field': 'asset', 'op': '==', 'value': "XCP"}, {'field': 'quantity', 'op': '>', 'value': 200000000}], 'AND', 'quantity', 'desc'],
       "jsonrpc": "2.0",
       "id": 0,
     }
@@ -160,7 +160,7 @@ For each Read API function that supports it, a ``filters`` parameter exists. To 
 specify an object (e.g. dict in Python) as this parameter, with the following members:
 
 - field: The field to filter on. Must be a valid field in the type of object being returned
-- op: The comparison operation to perform. One of: ``"=="``, ``"!="``, ``">"``, ``"<"``, ``">="``, ``"<="``
+- op: The comparison operation to perform. One of: ``"=="``, ``"!="``, ``">"``, ``"<"``, ``">="``, ``"<="``, ``"IN"``, ``"LIKE"``, ``"NOT IN"``, ``"NOT LIKE"``
 - value: The value that the field will be compared against. Must be the same data type as the field is
   (e.g. if the field is a string, the value must be a string too)
 
@@ -177,7 +177,7 @@ For examples of filtering in-use, please see the :ref:`API code examples <exampl
 
 NOTE: Note that with strings being compared, operators like ``>=`` do a lexigraphic string comparison (which
 compares, letter to letter, based on the ASCII ordering for individual characters. For more information on
-the specific comparison logic used, please see `this page <http://docs.python.org/3/library/stdtypes.html#comparisons>`__.
+the specific comparison logic used, please see `this page <http://www.sqlite.org/lang_expr.html>`__.
 
 .. _encoding_param:
 
@@ -214,450 +214,174 @@ then have two approaches with respect to broadcasting the transaction on the net
   hex-encoded transaction to ``transmit`` when you do call it, and specify ``is_signed`` as ``true``.
 
 
-.. _read_api:
-
 Read API Function Reference
 ------------------------------------
 
-.. _get_balances:
+.. _get_{table}:
 
-get_balances
+get_{table}
 ^^^^^^^^^^^^^^
+**get_{table}(filters=[], filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None, status=None, limit=1000, offset=0, show_expired=True)**
 
-.. py:function:: get_balances(filters=[], order_by=null, order_dir=null, filterop="and")
+*{table}* must be one of the following values:
+'balances', 'credits', 'debits', 'bets', 'bet_matches', 'broadcasts', 'btcpays', 'burns', 
+'callbacks', 'cancels', 'dividends', 'issuances', 'orders', 'order_matches', 'sends', 
+'bet_expirations', 'order_expirations', 'bet_match_expirations', 'order_match_expirations'
 
-   Gets the current address balances, optionally filtered by an address and/or asset ID. This list does not
-   include any BTC balances.
+**Parameters:**
 
-   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param string order_by: If sorted results are desired, specify the name of a :ref:`balance object <balance-object>` attribute to order the results by (e.g. ``quantity``). If left blank, the list of results will be returned unordered. 
-   :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.
-   :return: A list of one or more :ref:`balance objects <balance-object>` if any matching records were found, otherwise ``[]`` (empty list).
+  * **filters (list/dict):** An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.
+  * **filterop (string):** Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
+  * **order_by  (string):** If sorted results are desired, specify the name of a :ref:`balance object <balance-object>` attribute to order the results by (e.g. ``quantity``). If left blank, the list of results will be returned unordered. 
+  * **order_dir (string):** The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.
+  * **start_block (integer):** If specified, only results from the specified block index on will be returned 
+  * **end_block (integer):** If specified, only results up to and including the specified block index on will be returned
+  * **status (string/array):** return only result with specified status.
+  * **limit (integer):** maximum result return by the query. Maximum 1000. For more results, use ``limit`` and ``offset`` parameters to paginate results.
+  * **offset (integer):** return rows starting from the next row to the given ``offset``
 
+**Return:**
 
-.. _get_bets:
+  A list of objects with attributes corresponding to the queried table fields
 
-get_bets
+.. _get_address:
+
+get_address
 ^^^^^^^^^^^^^^
+**get_address()**
 
-.. py:function:: get_bets(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
+Gets the history for a specific address
 
-   Gets a listing of bets.
+**Parameters:**
 
-   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param boolean is_valid: Set to ``true`` to only return valid records. Set to ``false`` to return all records (including invalid attempts).
-   :param string order_by: If sorted results are desired, specify the name of a :ref:`bet object <bet-object>` attribute to order the results by (e.g. ``wager_quantity``). If left blank, the list of results will be returned unordered. 
-   :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
-   :param integer start_block: If specified, only results from the specified block index on will be returned  
-   :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
-   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
-   :return: A list of one or more :ref:`bet objects <bet-object>` if any matching records were found, otherwise ``[]`` (empty list).
+  * **address (string):** Address
 
+**Return:**
 
-.. _get_bet_matches:
-
-get_bet_matches
-^^^^^^^^^^^^^^^^^^^
-
-.. py:function:: get_bet_matches(filters=[], is_settled=true, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
-
-   Gets a listing of order matches.
-
-   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param boolean is_settled: Set to ``true`` to only return settled bet match records. Set to ``false`` to return all records (including invalid attempts).
-   :param string order_by: If sorted results are desired, specify the name of a :ref:`bet match object <bet-match-object>` attribute to order the results by (e.g. ``deadline``). If left blank, the list of results will be returned unordered. 
-   :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
-   :param integer start_block: If specified, only results from the specified block index on will be returned  
-   :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
-   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
-   :return: A list of one or more :ref:`bet match objects <bet-match-object>` if any matching records were found, otherwise ``[]`` (empty list).
-
-
-.. _get_broadcasts:
-
-get_broadcasts
-^^^^^^^^^^^^^^
-
-.. py:function:: get_broadcasts(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
-
-   Gets a listing of broadcasts.
-
-   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param boolean is_valid: Set to ``true`` to only return valid records. Set to ``false`` to return all records (including invalid attempts).
-   :param string order_by: If sorted results are desired, specify the name of a :ref:`broadcast object <broadcast-object>` attribute to order the results by (e.g. ``fee_multiplier``). If left blank, the list of results will be returned unordered. 
-   :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
-   :param integer start_block: If specified, only results from the specified block index on will be returned  
-   :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
-   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
-   :return: A list of one or more :ref:`broadcast objects <broadcast-object>` if any matching records were found, otherwise ``[]`` (empty list).
-
-
-.. _get_btcpays:
-
-get_btcpays
-^^^^^^^^^^^^^^
-
-.. py:function:: get_btcpays(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
-
-   Gets a listing of BTCPay records.
-
-   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param boolean is_valid: Set to ``true`` to only return valid records. Set to ``false`` to return all records (including invalid attempts).
-   :param string order_by: If sorted results are desired, specify the name of a :ref:`BTCPay object <btcpay-object>` attribute to order the results by (e.g. ``block_index``). If left blank, the list of results will be returned unordered. 
-   :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
-   :param integer start_block: If specified, only results from the specified block index on will be returned  
-   :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
-   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
-   :return: A list of one or more :ref:`BTCPay objects <btcpay-object>` if any matching records were found, otherwise ``[]`` (empty list).
-
-
-.. _get_burns:
-
-get_burns
-^^^^^^^^^^^^^^
-
-.. py:function:: get_burns(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
-
-   Gets a listing of burns.
-
-   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param boolean is_valid: Set to ``true`` to only return valid records. Set to ``false`` to return all records (including invalid attempts).
-   :param string order_by: If sorted results are desired, specify the name of a :ref:`burn object <burn-object>` attribute to order the results by (e.g. ``tx_hash``). If left blank, the list of results will be returned unordered. 
-   :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
-   :param integer start_block: If specified, only results from the specified block index on will be returned  
-   :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
-   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
-   :return: A list of one or more :ref:`burn objects <burn-object>` if any matching records were found, otherwise ``[]`` (empty list).
-
-
-.. _get_callbacks:
-
-get_callbacks
-^^^^^^^^^^^^^^
-
-.. py:function:: get_callbacks(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
-
-   Gets a listing of instances of an asset being called back (either wholly or partially).
-
-   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param boolean is_valid: Set to ``true`` to only return valid records. Set to ``false`` to return all records (including invalid attempts).
-   :param string order_by: If sorted results are desired, specify the name of a :ref:`cancel object <cancel-object>` attribute to order the results by (e.g. ``source``). If left blank, the list of results will be returned unordered. 
-   :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
-   :param integer start_block: If specified, only results from the specified block index on will be returned  
-   :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
-   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
-   :return: A list of one or more :ref:`callback objects <callback-object>` if any matching records were found, otherwise ``[]`` (empty list).
-
-
-.. _get_cancels:
-
-get_cancels
-^^^^^^^^^^^^^^
-
-.. py:function:: get_cancels(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
-
-   Gets a listing of canceled orders or bets.
-
-   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param boolean is_valid: Set to ``true`` to only return valid records. Set to ``false`` to return all records (including invalid attempts).
-   :param string order_by: If sorted results are desired, specify the name of a :ref:`cancel object <cancel-object>` attribute to order the results by (e.g. ``source``). If left blank, the list of results will be returned unordered. 
-   :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
-   :param integer start_block: If specified, only results from the specified block index on will be returned  
-   :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
-   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
-   :return: A list of one or more :ref:`cancel objects <cancel-object>` if any matching records were found, otherwise ``[]`` (empty list).
-
-
-.. _get_credits:
-
-get_credits
-^^^^^^^^^^^^^^
-
-.. py:function:: get_credits(filters=[], order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
-
-   Gets a sorted history of address credits, optionally filtered to an address and/or asset. This list does not
-   include any BTC credits.
-
-   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param string order_by: If sorted results are desired, specify the name of a :ref:`debit/credit object <debit-credit-object>` attribute to order the results by (e.g. ``tx_hash``). If left blank, the list of results will be returned unordered. 
-   :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
-   :param integer start_block: If specified, only results from the specified block index on will be returned  
-   :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
-   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
-   :return: A list of one or more :ref:`debit/credit objects <debit-credit-object>` if any matching records were found, otherwise ``[]`` (empty list).
-
-
-.. _get_debits:
-
-get_debits
-^^^^^^^^^^^^^^
-
-.. py:function:: get_debits(filters=[], order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
-
-   Gets a sorted history of address debits, optionally filtered to an address and/or asset. This list does not
-   include any BTC debits.
-
-   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param string order_by: If sorted results are desired, specify the name of a :ref:`debit/credit object <debit-credit-object>` attribute to order the results by (e.g. ``tx_hash``). If left blank, the list of results will be returned unordered. 
-   :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
-   :param integer start_block: If specified, only results from the specified block index on will be returned  
-   :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
-   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
-   :return: A list of one or more :ref:`debit/credit objects <debit-credit-object>` if any matching records were found, otherwise ``[]`` (empty list).
-   
-
-.. _get_dividends:
-
-get_dividends
-^^^^^^^^^^^^^^
-
-.. py:function:: get_dividends(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
-
-   Gets a listing of dividends.
-
-   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param boolean is_valid: Set to ``true`` to only return valid records. Set to ``false`` to return all records (including invalid attempts).
-   :param string order_by: If sorted results are desired, specify the name of a :ref:`dividend object <dividend-object>` attribute to order the results by (e.g. ``quantity_per_unit``). If left blank, the list of results will be returned unordered. 
-   :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
-   :param integer start_block: If specified, only results from the specified block index on will be returned  
-   :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
-   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
-   :return: A list of one or more :ref:`dividend objects <dividend-object>` if any matching records were found, otherwise ``[]`` (empty list).
-
-
-.. _get_issuances:
-
-get_issuances
-^^^^^^^^^^^^^^
-
-.. py:function:: get_issuances(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
-
-   Gets a listing of asset issuances.
-
-   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param boolean is_valid: Set to ``true`` to only return valid records. Set to ``false`` to return all records (including invalid attempts).
-   :param string order_by: If sorted results are desired, specify the name of an :ref:`issuance object <issuance-object>` attribute to order the results by (e.g. ``transfer``). If left blank, the list of results will be returned unordered. 
-   :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
-   :param integer start_block: If specified, only results from the specified block index on will be returned  
-   :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
-   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
-   :return: A list of one or more :ref:`issuance objects <issuance-object>` if any matching records were found, otherwise ``[]`` (empty list).
-
-
-.. _get_orders:
-
-get_orders
-^^^^^^^^^^^^^^
-
-.. py:function:: get_orders(filters=[], is_valid=true, show_empty=true, show_expired=true, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
-
-   Gets a listing of orders.
-
-   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param boolean is_valid: Set to ``true`` to only return valid records. Set to ``false`` to return all records (including invalid attempts).
-   :param boolean show_empty: Set to ``false`` to not include empty orders in the results (i.e. where give remaining is zero).
-   :param boolean show_expired: Set to ``false`` to not include expired orders in the results.
-   :param string order_by: If sorted results are desired, specify the name of an :ref:`order object <order-object>` attribute to order the results by (e.g. ``get_asset``). If left blank, the list of results will be returned unordered. 
-   :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
-   :param integer start_block: If specified, only results from the specified block index on will be returned  
-   :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
-   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
-   :return: A list of one or more :ref:`order objects <order-object>` if any matching records were found, otherwise ``[]`` (empty list).
-
-
-.. _get_order_matches:
-
-get_order_matches
-^^^^^^^^^^^^^^^^^^^
-
-.. py:function:: get_order_matches(filters=[], post_filter_status=null, is_mine=false, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
-
-   Gets a listing of order matches.
-
-   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param boolean post_filter_status: Set to filter by status after filtering by filters (useful if filters has a number of addresses and filterop='or'). This parameter is set to either ``completed`` (to return completed matches only), ``pending`` (to return matches requiring BTC payment only) or ``null`` to return all records (including invalid attempts).
-   :param boolean is_mine: Set to ``true`` to include results where either the ``tx0_address`` or ``tx1_address`` exist in the linked ``bitcoind`` wallet.
-   :param string order_by: If sorted results are desired, specify the name of an :ref:`order match object <order-match-object>` attribute to order the results by (e.g. ``forward_asset``). If left blank, the list of results will be returned unordered. 
-   :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.  
-   :param integer start_block: If specified, only results from the specified block index on will be returned  
-   :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
-   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
-   :return: A list of one or more :ref:`order match objects <order-match-object>` if any matching records were found, otherwise ``[]`` (empty list).
-
-
-.. _get_sends:
-
-get_sends
-^^^^^^^^^^^^^^
-
-.. py:function:: get_sends(filters=[], is_valid=true, order_by=null, order_dir=null, start_block=null, end_block=null, filterop="and")
-
-   Gets an optionally filtered listing of past sends.
-
-   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param boolean is_valid: Set to ``true`` to only return valid records. Set to ``false`` to return all records (including invalid attempts).
-   :param string order_by: If sorted results are desired, specify the name of a :ref:`send object <send-object>` attribute to order the results by (e.g. ``asset``). If left blank, the list of results will be returned unordered. 
-   :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.
-   :param integer start_block: If specified, only results from the specified block index on will be returned  
-   :param integer end_block: If specified, only results up to and including the specified block index on will be returned  
-   :param string filterop: Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
-   :return: A list of one or more :ref:`send objects <send-object>` if any matching records were found, otherwise ``[]`` (empty list).
-
-.. get_bet_expirations:
-
-get_bet_expirations
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. py:function:: get_bet_expirations(filters=[], order_by=null, order_dir=null, filterop="and")
-
-   Gets an optionally filtered listing of bet expirations.
-
-   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param string order_by: If sorted results are desired, specify the name of a :ref:`bet expiration objects <bet-expiration-object>` attribute to order the results by (e.g. ``quantity``). If left blank, the list of results will be returned unordered. 
-   :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.
-   :return: A list of one or more :ref:`bet expiration objects <bet-expiration-object>` if any matching records were found, otherwise ``[]`` (empty list).
-
-.. get_order_expirations:
-
-get_order_expirations
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. py:function:: get_order_expirations(filters=[], order_by=null, order_dir=null, filterop="and")
-
-   Gets an optionally filtered listing of order expirations.
-
-   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param string order_by: If sorted results are desired, specify the name of a :ref:`order expiration objects <order-expiration-object>` attribute to order the results by (e.g. ``quantity``). If left blank, the list of results will be returned unordered. 
-   :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.
-   :return: A list of one or more :ref:`order expiration objects <order-expiration-object>` if any matching records were found, otherwise ``[]`` (empty list).
-
-.. get_bet_match_expirations:
-
-get_bet_match_expirations
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. py:function:: get_bet_match_expirations(filters=[], order_by=null, order_dir=null, filterop="and")
-
-   Gets an optionally filtered listing of bet match expirations.
-
-   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param string order_by: If sorted results are desired, specify the name of a :ref:`bet match expiration objects <bet-match-expiration-object>` attribute to order the results by (e.g. ``quantity``). If left blank, the list of results will be returned unordered. 
-   :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.
-   :return: A list of one or more :ref:`bet match expiration objects <bet-match-expiration-object>` if any matching records were found, otherwise ``[]`` (empty list).
-
-.. get_order_match_expirations:
-
-get_order_match_expirations
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. py:function:: get_order_match_expirations(filters=[], order_by=null, order_dir=null, filterop="and")
-
-   Gets an optionally filtered listing of order match expirations.
-
-   :param list/dict filters: An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.   
-   :param string order_by: If sorted results are desired, specify the name of a :ref:`order match expiration objects <order-match-expiration-object>` attribute to order the results by (e.g. ``quantity``). If left blank, the list of results will be returned unordered. 
-   :param string order_dir: The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.
-   :return: A list of one or more :ref:`order match expiration objects <order-match-expiration-object>` if any matching records were found, otherwise ``[]`` (empty list).
+  An :ref:`address history object <address-history-object>` if the address was found, otherwise ``null``.
 
 .. _get_asset_info:
 
 get_asset_info
 ^^^^^^^^^^^^^^
+**get_asset_info(assets)**
 
-.. py:function:: get_asset_info(assets)
+Gets information on an issued asset. 
 
-   Gets information on an issued asset.
+**Parameters:**
 
-   :param string assets: A list of one or more :ref:`asset <assets>` for which to retrieve information.
-   :return: ``null`` if the asset was not found. Otherwise, a list of one or more objects, each one with the following parameters:
+  * **assets (list):** A list of one or more :ref:`asset <assets>` for which to retrieve information.
 
-     - **asset** (*string*): The :ref:`name <assets>` of the asset itself 
-     - **owner** (*string*): The address that currently owns the asset (i.e. has issuance rights to it) 
-     - **divisible** (*boolean*): Whether the asset is divisible or not
-     - **locked** (*boolean*): Whether the asset is locked (future issuances prohibited)
-     - **total_issued** (*integer*): The :ref:`quantity <quantitys>` of the asset issued, in total
-     - **callable** (*boolean*): If the asset is callable or not
-     - **call_date** (*integer*): The call date, as an epoch timestamp
-     - **call_price** (*float*): The call price
-     - **description** (*string*): The asset's current description
-     - **issuer** (*string*): The asset's original owner (i.e. issuer)
+**Return:**
+
+  ``null`` if the asset was not found. Otherwise, a list of one or more objects, each one with the following parameters:
+
+  - **asset** (*string*): The :ref:`name <assets>` of the asset itself 
+  - **owner** (*string*): The address that currently owns the asset (i.e. has issuance rights to it) 
+  - **divisible** (*boolean*): Whether the asset is divisible or not
+  - **locked** (*boolean*): Whether the asset is locked (future issuances prohibited)
+  - **total_issued** (*integer*): The :ref:`quantity <quantitys>` of the asset issued, in total
+  - **callable** (*boolean*): If the asset is callable or not
+  - **call_date** (*integer*): The call date, as an epoch timestamp
+  - **call_price** (*float*): The call price
+  - **description** (*string*): The asset's current description
+  - **issuer** (*string*): The asset's original owner (i.e. issuer)
 
 .. _get_messages:
 
 get_messages
 ^^^^^^^^^^^^^^
+**get_messages(block_index)**
 
-.. py:function:: get_messages(block_index)
-
-   Return message feed activity for the specified block index. The message feed essentially tracks all counterpartyd
-   database actions and allows for lower-level state tracking for applications that hook into it.
+Return message feed activity for the specified block index. The message feed essentially tracks all counterpartyd
+database actions and allows for lower-level state tracking for applications that hook into it.
    
-   :param integer block_index: The block index for which to retrieve activity. 
-   :return: A list of one or more :ref:`message <message-object>` if there was any activity in the block, otherwise ``[]`` (empty list).
+**Parameters:**
+
+  * **block_index (integer):** The block index for which to retrieve activity.
+
+**Return:** 
+  
+  A list of one or more :ref:`message <message-object>` if there was any activity in the block, otherwise ``[]`` (empty list).
 
 .. _get_messages_by_index:
 
 get_messages_by_index
 ^^^^^^^^^^^^^^^^^^^^^^
+**get_messages_by_index(message_indexes)**
 
-.. py:function:: get_messages_by_index(message_indexes)
-
-   Return the message feed messages whose ``message_index`` values are contained in the specified list of message indexes.
+Return the message feed messages whose ``message_index`` values are contained in the specified list of message indexes.
    
-   :param list message_indexes: An array of one or more ``message_index`` values for which the cooresponding message feed entries are desired. 
-   :return: A list containing a :ref:`message <message-object>` for each message found in the specified ``message_indexes`` list. If none were found, ``[]`` (empty list) is returned.
+**Parameters:**
+
+  * **message_indexes (list)**: An array of one or more ``message_index`` values for which the cooresponding message feed entries are desired. 
+
+**Return:** 
+
+  A list containing a `message <#message-object>`_ for each message found in the specified ``message_indexes`` list. If none were found, ``[]`` (empty list) is returned.
 
 .. _get_xcp_supply:
 
 get_xcp_supply
 ^^^^^^^^^^^^^^^
+**get_xcp_supply()**
 
-.. py:function:: get_xcp_supply(asset)
+Gets the current total quantity of XCP in existance (i.e. quantity created via proof-of-burn, minus quantity
+destroyed via asset issuances, etc).
 
-   Gets the current total quantity of XCP in existance (i.e. quantity created via proof-of-burn, minus quantity
-   destroyed via asset issuances, etc).
-   
-   :return:  The :ref:`quantity <quantitys>` of XCP currently in existance.
-   
+**Parameters:**
+
+  None
+
+**Return:** 
+
+  The :ref:`quantity <quantitys>` of XCP currently in existance.
 
 .. _get_block_info:
 
 get_block_info
 ^^^^^^^^^^^^^^
+**get_block_info(block_index)**
 
-.. py:function:: get_block_info(block_index)
+Gets some basic information on a specific block.
 
-   Gets some basic information on a specific block.
-   
-   :param integer block_index: The block index for which to retrieve information.
-   :return: If the block was found, an object with the following parameters:
+**Parameters:**
+
+  * **block_index (integer)**: The block index for which to retrieve information.
+
+**Return:** 
+
+  If the block was found, an object with the following parameters:
      
-     - **block_index** (*integer*): The block index (i.e. block height). Should match what was specified for the *block_index* input parameter). 
-     - **block_hash** (*string*): The block hash identifier
-     - **block_time** (*integer*): A UNIX timestamp of when the block was processed by the network 
+  - **block_index** (*integer*): The block index (i.e. block height). Should match what was specified for the *block_index* input parameter). 
+  - **block_hash** (*string*): The block hash identifier
+  - **block_time** (*integer*): A UNIX timestamp of when the block was processed by the network 
 
 .. _get_running_info:
 
 get_running_info
 ^^^^^^^^^^^^^^
+**get_running_info()**
 
-.. py:function:: get_running_info()
+Gets some operational parameters for counterpartyd.
 
-   Gets some operational parameters for counterpartyd.
-   
-   :return: An object with the following parameters:
-   
-     - **db_caught_up** (*boolean*): ``true`` if counterpartyd block processing is caught up with the Bitcoin blockchain, ``false`` otherwise.
-     - **bitcoin_block_count** (**integer**): The block height on the Bitcoin network (may not necessarily be the same as ``last_block``, if ``counterpartyd`` is catching up)
-     - **last_block** (*integer*): The index (height) of the last block processed by ``counterpartyd``
-     - **counterpartyd_version** (*float*): The counterpartyd program version, expressed as a float, such as 0.5
-     - **last_message_index** (*integer*): The index (ID) of the last message in the ``counterpartyd`` message feed
-     - **running_testnet** (*boolean*): ``true`` if counterpartyd is configured for testnet, ``false`` if configured on mainnet.
-     - **db_version_major** (*integer*): The major version of the current counterpartyd database
-     - **db_version_minor** (*integer*): The minor version of the current counterpartyd database
+**Parameters:**
 
+  None
 
-.. _action_api:
+**Return:** 
+
+  An object with the following parameters:
+
+  - **db_caught_up** (*boolean*): ``true`` if counterpartyd block processing is caught up with the Bitcoin blockchain, ``false`` otherwise.
+  - **bitcoin_block_count** (**integer**): The block height on the Bitcoin network (may not necessarily be the same as ``last_block``, if ``counterpartyd`` is catching up)
+  - **last_block** (*integer*): The index (height) of the last block processed by ``counterpartyd``
+  - **counterpartyd_version** (*float*): The counterpartyd program version, expressed as a float, such as 0.5
+  - **last_message_index** (*integer*): The index (ID) of the last message in the ``counterpartyd`` message feed
+  - **running_testnet** (*boolean*): ``true`` if counterpartyd is configured for testnet, ``false`` if configured on mainnet.
+  - **db_version_major** (*integer*): The major version of the current counterpartyd database
+  - **db_version_minor** (*integer*): The minor version of the current counterpartyd database
+
 
 Action/Write API Function Reference
 -----------------------------------
@@ -666,208 +390,233 @@ Action/Write API Function Reference
 
 transmit
 ^^^^^^^^^^^^^^
+**transmit(tx_hex, is_signed=false)**
 
-.. py:function:: transmit(tx_hex, is_signed=false)
+Broadcast a transaction created with the Action/Write API onto the Bitcoin network.
 
-   Broadcast a transaction created with the Action/Write API onto the Bitcoin network.
+**Parameters:**
 
-   :param string tx_hex: A hex-encoded raw transaction (which was created via one of the ``create_`` calls below).
-   :param boolean is_signed: If ``false`` is specified here, the ``tx_hex`` string passed will be signed with a key
-    in the local ``bitcoind``'s ``wallet.dat`` before being broadcast. If ``true`` is specified, the ``tx_hex`` specified
-    is already signed and it will simply be broadcast.  
-   :return: Returns the created transaction's id on the Bitcoin network, or an error if the transaction is invalid for any reason.
+  * **tx_hex (string):** A hex-encoded raw transaction (which was created via one of the ``create_`` calls below).
+  * **is_signed (boolean):** If ``false`` is specified here, the ``tx_hex`` string passed will be signed with a key in the local ``bitcoind``'s ``wallet.dat`` before being broadcast. If ``true`` is specified, the ``tx_hex`` specified is already signed and it will simply be broadcast.  
 
+**Return:** 
+
+  The created transaction's id on the Bitcoin network, or an error if the transaction is invalid for any reason.
 
 .. _create_bet:
 
 create_bet
 ^^^^^^^^^^^^^^
+**create_bet(source, feed_address, bet_type, deadline, wager, counterwager, target_value=0.0, leverage=5040, encoding='multisig', pubkey=null)**
 
-.. py:function:: create_bet(source, feed_address, bet_type, deadline, wager, counterwager, target_value=0.0, leverage=5040, encoding='multisig', pubkey=null)
+Issue a bet against a feed.
 
-   Issue a bet against a feed.
+**Parameters:**
 
-   :param string source: The address that will make the bet.
-   :param string feed_address: The address that host the feed to be bet on.
-   :param integer bet_type: 0 for Bullish CFD, 1 for Bearish CFD, 2 for Equal, 3 for NotEqual.
-   :param integer deadline: The time at which the bet should be decided/settled, in Unix time.
-   :param integer wager: The :ref:`quantity <quantitys>` of XCP to wager.
-   :param integer counterwager: The minimum :ref:`quantity <quantitys>` of XCP to be wagered against, for the bets to match.
-   :param float target_value: Target value for Equal/NotEqual bet
-   :param integer leverage: Leverage, as a fraction of 5040
-   :param string encoding: The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
-   :param string pubkey: The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
-   :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
+  * **source (string):** The address that will make the bet.
+  * **feed_address (string):** The address that host the feed to be bet on.
+  * **bet_type (integer):** 0 for Bullish CFD, 1 for Bearish CFD, 2 for Equal, 3 for NotEqual.
+  * **deadline (integer):** The time at which the bet should be decided/settled, in Unix time.
+  * **wager (integer):** The :ref:`quantity <quantitys>` of XCP to wager.
+  * **counterwager (integer):** The minimum :ref:`quantity <quantitys>` of XCP to be wagered against, for the bets to match.
+  * **target_value (float):** Target value for Equal/NotEqual bet
+  * **leverage (integer):** Leverage, as a fraction of 5040
+  * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
+  * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
 
+**Return:** 
+
+  The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
 .. _create_broadcast:
 
 create_broadcast
 ^^^^^^^^^^^^^^
+**create_broadcast(source, fee_multiplier, text, value=0, encoding='multisig', pubkey=null)**
 
-.. py:function:: create_broadcast(source, fee_multiplier, text, value=0, encoding='multisig', pubkey=null)
+Broadcast textual and numerical information to the network.
 
-   Broadcast textual and numerical information to the network.
+**Parameters:**
 
-   :param string source: The address that will be sending (must have the necessary quantity of the specified asset).
-   :param float fee_multiplier: How much of every bet on this feed should go to its operator; a fraction of 1, (i.e. .05 is five percent).
-   :param string text: The textual part of the broadcast.
-   :param integer timestamp: The timestamp of the broadcast, in Unix time.
-   :param float value: Numerical value of the broadcast.
-   :param string encoding: The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
-   :param string pubkey: The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
-   :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
+  * **source (string):** The address that will be sending (must have the necessary quantity of the specified asset).
+  * **fee_multiplier (float):** How much of every bet on this feed should go to its operator; a fraction of 1, (i.e. .05 is five percent).
+  * **text (string):** The textual part of the broadcast.
+  * **timestamp (integer):** The timestamp of the broadcast, in Unix time.
+  * **value (float):** Numerical value of the broadcast.
+  * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
+  * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
 
+**Return:** 
+
+  The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
 .. _create_btcpay:
 
 create_btcpay
 ^^^^^^^^^^^^^^
+**create_btcpay(order_match_id, encoding='multisig', pubkey=null)**
 
-.. py:function:: create_btcpay(order_match_id, encoding='multisig', pubkey=null)
+Create and (optionally) broadcast a BTCpay message, to settle an Order Match for which you owe BTC. 
 
-   Create and (optionally) broadcast a BTCpay message, to settle an Order Match for which you owe BTC. 
+**Parameters:**
 
-   :param string order_match_id: The concatenation of the hashes of the two transactions which compose the order match.
-   :param string encoding: The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
-   :param string pubkey: The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
-   :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
+  * **order_match_id (string):** The concatenation of the hashes of the two transactions which compose the order match.
+  * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
+  * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
 
+**Return:** 
+
+  The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
 .. _create_burn:
 
 create_burn
 ^^^^^^^^^^^^^^
+**create_burn(source, quantity, encoding='multisig', pubkey=null)**
 
-.. py:function:: create_burn(source, quantity, encoding='multisig', pubkey=null)
+Burn a given quantity of BTC for XCP (**only possible between blocks 278310 and 283810**).
 
-   Burn a given quantity of BTC for XCP (**only possible between blocks 278310 and 283810**).
+**Parameters:**
 
-   :param string source: The address with the BTC to burn.
-   :param integer quantity: The :ref:`quantity <quantitys>` of BTC to burn (1 BTC maximum burn per address).
-   :param string encoding: The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
-   :param string pubkey: The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
-   :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
+  * **source (string):** The address with the BTC to burn.
+  * **quantity (integer):** The :ref:`quantity <quantitys>` of BTC to burn (1 BTC maximum burn per address).
+  * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
+  * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
 
+**Return:** 
+
+  The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
 .. _create_callback:
 
 create_callback
 ^^^^^^^^^^^^^^^^^
+**create_callback(offer_hash, encoding='multisig', pubkey=null)**
 
-.. py:function:: create_callback(offer_hash, encoding='multisig', pubkey=null)
+Make a call on a callable asset (where some whole or part of the asset is returned to the issuer, on or after the asset's call date).
 
-   Make a call on a callable asset (where some whole or part of the asset is returned to the issuer, on or after the asset's call date).
+**Parameters:**
 
-   :param string source: The callback source address. Must be the same address as the specified asset's owner.
-   :param float fraction: A floating point number greater than zero but less than or equal to 1, where 0% is for a callback of 0%
-    of the balance of each of the asset's holders, and 1 would be for a callback of 100%). For example, ``0.56`` would be 56%.
-    Each holder of the called asset will be paid the call price for the asset, times the number of units of that asset that were called back from them.
-   :param string encoding: The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
-   :param string pubkey: The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
-   :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
+  * **source (string):** The callback source address. Must be the same address as the specified asset's owner.
+  * **fraction (float):** A floating point number greater than zero but less than or equal to 1, where 0% is for a callback of 0% of the balance of each of the asset's holders, and 1 would be for a callback of 100%). For example, ``0.56`` would be 56%. Each holder of the called asset will be paid the call price for the asset, times the number of units of that asset that were called back from them.
+  * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
+  * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
 
+**Return:** 
+
+  The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
 .. _create_cancel:
 
 create_cancel
 ^^^^^^^^^^^^^^
+**create_cancel(offer_hash, encoding='multisig', pubkey=null)**
 
-.. py:function:: create_cancel(offer_hash, encoding='multisig', pubkey=null)
+Cancel an open order or bet you created.
 
-   Cancel an open order or bet you created.
+**Parameters:**
 
-   :param string offer_hash: The transaction hash of the order or bet.
-   :param string encoding: The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
-   :param string pubkey: The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
-   :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
+  * **offer_hash (string):** The transaction hash of the order or bet.
+  * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
+  * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
 
+**Return:** 
+
+  The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
 .. _create_dividend:
 
 create_dividend
 ^^^^^^^^^^^^^^^^^
+**create_dividend(source, quantity_per_unit, asset, dividend_asset, encoding='multisig', pubkey=null)**
 
-.. py:function:: create_dividend(source, quantity_per_unit, asset, dividend_asset, encoding='multisig', pubkey=null)
+Issue a dividend on a specific user defined asset.
 
-   Issue a dividend on a specific user defined asset.
+**Parameters:**
 
-   :param string source: The address that will be issuing the dividend (must have the ownership of the asset which the dividend is being issued on).
-   :param string asset: The :ref:`asset <assets>` that the dividends are being rewarded on.
-   :param string dividend_asset: The :ref:`asset <assets>` that the dividends are paid in.
-   :param integer quantity_per_unit: The :ref:`quantity <quantitys>` of XCP rewarded per whole unit of the asset.
-   :param string encoding: The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
-   :param string pubkey: The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
-   :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
+  * **source (string):** The address that will be issuing the dividend (must have the ownership of the asset which the dividend is being issued on).
+  * **asset (string):** The :ref:`asset <assets>` that the dividends are being rewarded on.
+  * **dividend_asset (string):** The :ref:`asset <assets>` that the dividends are paid in.
+  * **quantity_per_unit (integer):** The :ref:`quantity <quantitys>` of XCP rewarded per whole unit of the asset.
+  * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
+  * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
 
+**Return:** 
+
+  The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
 .. _create_issuance:
 
 create_issuance
 ^^^^^^^^^^^^^^^^^
+**create_issuance(source, asset, quantity, divisible, description, callable=false, call_date=null, call_price=null, transfer_destination=null, lock=false, encoding='multisig', pubkey=null)**
 
-.. py:function:: create_issuance(source, asset, quantity, divisible, description, callable=false, call_date=null, call_price=null, transfer_destination=null, lock=false, encoding='multisig', pubkey=null):
+Issue a new asset, issue more of an existing asset, lock an asset, or transfer the ownership of an asset (note that you can only do one of these operations in a given create_issuance call).
 
-   Issue a new asset, issue more of an existing asset, lock an asset, or transfer the ownership of an asset (note that
-   you can only do one of these operations in a given create_issuance call).
+**Parameters:**
 
-   :param string source: The address that will be issuing or transfering the asset.
-   :param integer quantity: The :ref:`quantity <quantitys>` of the asset to issue (set to 0 if *transferring* an asset).
-   :param string asset: The :ref:`asset <assets>` to issue or transfer.
-   :param boolean divisible: Whether this asset is divisible or not (if a transfer, this value must match the value
-    specified when the asset was originally issued).
-   :param boolean callable: Whether the asset is callable or not.
-   :param integer call_date: The timestamp at which the asset may be called back, in Unix time. Only valid for callable assets.
-   :param float call_price: The :ref:`price <floats>` per unit XCP at which the asset may be called back, on or after the specified call_date. Only valid for callable assets.
-   :param string description: A textual description for the asset. 52 bytes max.
-   :param string transfer_destination: The address to receive the asset (only used when *transferring* assets -- leave set to ``null`` if issuing an asset).
-   :param boolean lock: Set to ``true`` if this asset should be locked with this API call. Only valid if the asset is not
-    already locked. To keep as-is, set this to ``false``, or simply do not specify it. 
-   :param string encoding: The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
-   :param string pubkey: The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
-   :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
+  * **source (string):** The address that will be issuing or transfering the asset.
+  * **quantity (integer):** The :ref:`quantity <quantitys>` of the asset to issue (set to 0 if *transferring* an asset).
+  * **asset (string):** The :ref:`asset <assets>` to issue or transfer.
+  * **divisible (boolean):** Whether this asset is divisible or not (if a transfer, this value must match the value specified when the asset was originally issued).
+  * **callable (boolean):** Whether the asset is callable or not.
+  * **call_date (integer):** The timestamp at which the asset may be called back, in Unix time. Only valid for callable assets.
+  * **call_price (float):** The :ref:`price <floats>` per unit XCP at which the asset may be called back, on or after the specified call_date. Only valid for callable assets.
+  * **description (string):** A textual description for the asset. 52 bytes max.
+  * **transfer_destination (string):** The address to receive the asset (only used when *transferring* assets -- leave set to ``null`` if issuing an asset).
+  * **lock (boolean):** Set to ``true`` if this asset should be locked with this API call. Only valid if the asset is not already locked. To keep as-is, set this to ``false``, or simply do not specify it. 
+  * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
+  * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
 
+**Return:** 
+
+  The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
 .. _create_order:
 
 create_order
 ^^^^^^^^^^^^^^
+**create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required=0, fee_provided=0, encoding='multisig', pubkey=null)**
 
-.. py:function:: create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required=0, fee_provided=0, encoding='multisig', pubkey=null)
+Issue an order request.
 
-   Issue an order request.
+**Parameters:**
 
-   :param string source: The address that will be issuing the order request (must have the necessary quantity of the specified asset to give).
-   :param integer give_quantity: The :ref:`quantity <quantitys>` of the asset to give.
-   :param string give_asset: The :ref:`asset <assets>` to give.
-   :param integer get_quantity: The :ref:`quantity <quantitys>` of the asset requested in return.
-   :param string get_asset: The :ref:`asset <assets>` requested in return.
-   :param integer expiration: The number of blocks for which the order should be valid.
-   :param integer fee_required: The miners' fee required to be paid by orders for them to match this one; in BTC;
-    required only if buying BTC (may be zero, though). If not specified or set to ``null``, this defaults to 1% of the BTC desired for purchase.
-   :param integer fee_provided: The miners' fee provided; in BTC; required only if selling BTC (should not be lower than
-    is required for acceptance in a block).  If not specified or set to ``null``, this defaults to 1% of the BTC for sale. 
-   :param string encoding: The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
-   :param string pubkey: The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
-   :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
+  * **source (string):** The address that will be issuing the order request (must have the necessary quantity of the specified asset to give).
+  * **give_quantity (integer):** The :ref:`quantity <quantitys>` of the asset to give.
+  * **give_asset (string):** The :ref:`asset <assets>` to give.
+  * **get_quantity (integer):** The :ref:`quantity <quantitys>` of the asset requested in return.
+  * **get_asset (string):** The :ref:`asset <assets>` requested in return.
+  * **expiration (integer):** The number of blocks for which the order should be valid.
+  * **fee_required (integer):** The miners' fee required to be paid by orders for them to match this one; in BTC; required only if buying BTC (may be zero, though). If not specified or set to ``null``, this defaults to 1% of the BTC desired for purchase.
+  * **fee_provided (integer):** The miners' fee provided; in BTC; required only if selling BTC (should not be lower than is required for acceptance in a block).  If not specified or set to ``null``, this defaults to 1% of the BTC for sale. 
+  * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
+  * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
 
+**Return:** 
+
+  The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
 .. _create_send:
 
 create_send
 ^^^^^^^^^^^^^^
+**create_send(source, destination, asset, quantity, encoding='multisig', pubkey=null)**
 
-.. py:function:: create_send(source, destination, asset, quantity, encoding='multisig', pubkey=null)
+Send XCP or a user defined asset.
 
-   Send XCP or a user defined asset.
+**Parameters:**
 
-   :param string source: The address that will be sending (must have the necessary quantity of the specified asset).
-   :param string destination: The address to receive the asset.
-   :param integer quantity: The :ref:`quantity <quantitys>` of the asset to send.
-   :param string asset: The :ref:`asset <assets>` to send.
-   :param string encoding: The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
-   :param string pubkey: The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
-   :return: The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
+  * **source (string):** The address that will be sending (must have the necessary quantity of the specified asset).
+  * **destination (string):** The address to receive the asset.
+  * **quantity (integer):** The :ref:`quantity <quantitys>` of the asset to send.
+  * **asset (string):** The :ref:`asset <assets>` to send.
+  * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
+  * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
+
+**Return:** 
+
+  The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
 
    
 Objects
