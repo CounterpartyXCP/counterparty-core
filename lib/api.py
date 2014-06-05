@@ -128,10 +128,10 @@ def translate(db, table, filters=[], filterop='AND', order_by=None, order_dir=No
     elif table in ['order_matches', 'bet_matches']:
         if start_block != None:
             more_conditions.append('''tx0_block_index >= ?''')
-            bindings += [start_block, start_block]
+            bindings.append(start_block)
         if end_block != None:
             more_conditions.append('''tx1_block_index <= ?''')
-            bindings += [end_block, end_block]
+            bindings.append(end_block)
 
     # status
     if isinstance(status, list) and len(status)>0:
