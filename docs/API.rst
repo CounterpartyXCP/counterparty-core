@@ -207,11 +207,15 @@ API call:
 With any of the above settings, as the *unsigned* raw transaction is returned from the ``create_`` API call itself, you
 then have two approaches with respect to broadcasting the transaction on the network:
 
-- If the private key you need to sign the raw transaction is in the local ``bitcoind`` ``wallet.dat``, you can simply call the
-  ``transmit`` API call and pass it to the raw unsigned transaction string.
+- If the private key you need to sign the raw transaction is in the local ``bitcoind`` ``wallet.dat``, you should then call the
+  ``sign_tx`` API call and pass it to the raw unsigned transaction string as the ``tx_hex`` parameter, with the ``privkey`` parameter
+  set to None. This method will then return the signed hex transaction, which you can then broadcast using the ``broadcast_tx``
+  API method.
 - If the private key you need to sign the raw transaction is *not* in the local ``bitcoind`` ``wallet.dat``, you must first sign
-  the transaction yourself before calling ``transmit``. You must then pass the resultant signed
-  hex-encoded transaction to ``transmit`` when you do call it, and specify ``is_signed`` as ``true``.
+  the transaction yourself (or, alternatively, you can call the ``sign_tx`` API method and specify
+  the private key string to it, and ``counterpartyd`` will sign it for you). In either case, once you have the signed,
+  hex-encoded transaction string, you can then call the ``broadcast_tx`` API method, which will then broadcast the transaction on the
+  Bitcoin network for you.
 
 
 Read API Function Reference
@@ -221,50 +225,53 @@ Read API Function Reference
 
 get_{table}
 ^^^^^^^^^^^^^^
-**get_{table}(filters=[], filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None, status=None, limit=1000, offset=0, show_expired=True)**
+
+**get_{table}(filters=[], filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None, status=None,
+limit=1000, offset=0, show_expired=True)**
 
 **{table}** must be one of the following values:
-balances, credits, debits, bets, bet_matches, broadcasts, btcpays, burns, 
-callbacks, cancels, dividends, issuances, orders, order_matches, sends, 
-bet_expirations, order_expirations, bet_match_expirations, order_match_expirations
+``balances``, ``credits``, ``debits``, ``bets``, ``bet_matches``, ``broadcasts``, ``btcpays``, ``burns``, 
+``callbacks``, ``cancels``, ``dividends``, ``issuances``, ``orders``, ``order_matches``, ``sends``, 
+``bet_expirations``, ``order_expirations``, ``bet_match_expirations``, or ``order_match_expirations``.
+
+For example: ``get_balances``, ``get_credits``, ``get_debits``, etc are all valid API methods.
 
 **Parameters:**
 
-  * **filters (list/dict):** An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API results <filtering>` for more information.
-  * **filterop (string):** Specifies how multiple filter settings are combined. Defaults to ``"and"``, but ``"or"`` can be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
-  * **order_by  (string):** If sorted results are desired, specify the name of a :ref:`balance object <balance-object>` attribute to order the results by (e.g. ``quantity``). If left blank, the list of results will be returned unordered. 
-  * **order_dir (string):** The direction of the ordering. Either ``asc`` for ascending order, or ``desc`` for descending order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.
+  * **filters (list/dict):** An optional filtering object, or list of filtering objects. See :ref:`Filtering Read API
+    results <filtering>` for more information.
+  * **filterop (string):** Specifies how multiple filter settings are combined. Defaults to ``AND``, but ``OR`` can
+    be specified as well. See :ref:`Filtering Read API results <filtering>` for more information.
+  * **order_by  (string):** If sorted results are desired, specify the name of an attribute of the appropriate table to
+    order the results by (e.g. ``quantity`` for :ref:`balance objects <balance-object>`, if you called ``get_balances``).
+    If left blank, the list of results will be returned unordered. 
+  * **order_dir (string):** The direction of the ordering. Either ``ASC`` for ascending order, or ``DESC`` for descending
+    order. Must be set if ``order_by`` is specified. Leave blank if ``order_by`` is not specified.
   * **start_block (integer):** If specified, only results from the specified block index on will be returned 
   * **end_block (integer):** If specified, only results up to and including the specified block index on will be returned
-  * **status (string/array):** return only result with specified status. See below the status list for each table: :ref:`status list <status-list>`
-  * **limit (integer):** maximum result return by the query. Maximum 1000. For more results, use ``limit`` and ``offset`` parameters to paginate results.
-  * **offset (integer):** return rows starting from the next row to the given ``offset``
-  * **show_expired (boolean):** used only when ``table`` is ``orders``. When false, get_orders don't return orders which expire next block.
+  * **status (string/list):** return only results with the specified status or statuses (if a list of status strings is supplied).
+    See the :ref:`list of possible statuses <status-list>`. Note that if ``null`` is supplied (the default), then this parameter
+    will default to ``valid`` for broadcasts, BTCpays, burns, callbacks, cancels, dividends, issuances, and sends. For bets
+    and orders, if ``null`` is supplied, then this parameter defaults to a list containing the following status
+    strings: ``open``, ``filled``, ``cancelled``, ``expired``, and ``dropped``.
+  * **limit (integer):** (maximum) number of elements to return. Can specify a value less than or equal to 1000. For more results, use
+    a combination of ``limit`` and ``offset`` parameters to paginate results.
+  * **offset (integer):** return results starting from specified ``offset``
+
+**Special Parameters:**
+
+  * **show_expired (boolean):** used only for ``get_orders``. When false, get_orders don't return orders which expire next block.
 
 **Return:**
 
   A list of objects with attributes corresponding to the queried table fields
 
-  **Examples:**
+**Examples:**
 
   * To get a listing of bets, call ``get_bets``. This method will return a list of one or more :ref:`bet objects <bet-object>` .
-  * To get a listing all open orders for a given address call ``get_orders``. This method will return a list of one or more :ref:`objects <order-object>`.
+  * To get a listing all open orders for a given address like 1Ayw5aXXTnqYfS3LbguMCf9dxRqzbTVbjf, you could call
+    ``get_orders`` with the appropriate parameters. This method will return a list of one or more :ref:`order objects <order-object>`.
 
-.. _get_address:
-
-get_address
-^^^^^^^^^^^^^^
-**get_address()**
-
-Gets the history for a specific address
-
-**Parameters:**
-
-  * **address (string):** Address
-
-**Return:**
-
-  An :ref:`address history object <address-history-object>` if the address was found, otherwise ``null``.
 
 .. _get_asset_info:
 
