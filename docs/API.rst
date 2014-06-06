@@ -392,19 +392,35 @@ Gets some operational parameters for counterpartyd.
 Action/Write API Function Reference
 -----------------------------------
 
-.. _transmit:
+.. _sign_tx:
 
-transmit
 ^^^^^^^^^^^^^^
-**transmit(tx_hex, is_signed=false)**
+**sign_tx(unsigned_tx_hex, privkey=None)**
 
-Broadcast a transaction created with the Action/Write API onto the Bitcoin network.
+Sign a transaction created with the Action/Write API.
 
 **Parameters:**
 
   * **tx_hex (string):** A hex-encoded raw transaction (which was created via one of the ``create_`` calls below).
-  * **is_signed (boolean):** If ``false`` is specified here, the ``tx_hex`` string passed will be signed with a key in the local ``bitcoind``'s ``wallet.dat`` before being broadcast. If ``true`` is specified, the ``tx_hex`` specified is already signed and it will simply be broadcast.  
+  * **privkey (string):** The privkey in WIF format to use for signing the transaction. If not provided, the privkey must to be known by the bitcoind wallet.
+  
+**Return:** 
 
+  A hex-encoded signed raw transaction ready to be broadcasted with the broadcast_tx function.
+
+
+.. _broadcast_tx:
+
+broadcast_tx
+^^^^^^^^^^^^^^
+**broadcast_tx(tx_hex)**
+
+Broadcast a signed transaction onto the Bitcoin network.
+
+**Parameters:**
+
+  * **tx_hex (string):** A hex-encoded signed raw transaction (which was created via one of the ``create_`` calls below and signed with ``sign_tx`` method).
+  
 **Return:** 
 
   The created transaction's id on the Bitcoin network, or an error if the transaction is invalid for any reason.
