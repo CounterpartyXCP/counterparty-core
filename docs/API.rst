@@ -141,7 +141,7 @@ Examples:
 
 **NOTE:** XCP and BTC themselves are divisible assets, and thus are listed in satoshis.
 
-.. _ratios:
+.. _floats:
 
 floats
 ^^^^^^^^^^^^^^^^^^^^
@@ -218,14 +218,15 @@ then have two approaches with respect to broadcasting the transaction on the net
   Bitcoin network for you.
 
 
+.. _read_api:
+
 Read API Function Reference
 ------------------------------------
 
-.. _get_{table}:
+.. _get_table:
 
 get_{table}
 ^^^^^^^^^^^^^^
-
 **get_{table}(filters=[], filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None, status=None,
 limit=1000, offset=0, show_expired=True)**
 
@@ -373,7 +374,7 @@ Gets some basic information on a specific block.
 .. _get_running_info:
 
 get_running_info
-^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^
 **get_running_info()**
 
 Gets some operational parameters for counterpartyd.
@@ -401,6 +402,7 @@ Action/Write API Function Reference
 
 .. _sign_tx:
 
+sign_tx
 ^^^^^^^^^^^^^^
 **sign_tx(unsigned_tx_hex, privkey=None)**
 
@@ -409,11 +411,12 @@ Sign a transaction created with the Action/Write API.
 **Parameters:**
 
   * **tx_hex (string):** A hex-encoded raw transaction (which was created via one of the ``create_`` calls below).
-  * **privkey (string):** The privkey in WIF format to use for signing the transaction. If not provided, the privkey must to be known by the bitcoind wallet.
+  * **privkey (string):** The privkey in WIF format to use for signing the transaction. If not provided,
+    the privkey must to be known by the ``bitcoind`` wallet.
   
 **Return:** 
 
-  A hex-encoded signed raw transaction ready to be broadcasted with the broadcast_tx function.
+  A hex-encoded signed raw transaction ready to be broadcast with the broadcast_tx function.
 
 
 .. _broadcast_tx:
@@ -426,7 +429,8 @@ Broadcast a signed transaction onto the Bitcoin network.
 
 **Parameters:**
 
-  * **tx_hex (string):** A hex-encoded signed raw transaction (which was created via one of the ``create_`` calls below and signed with ``sign_tx`` method).
+  * **tx_hex (string):** A hex-encoded signed raw transaction (which was created via one of the ``create_`` calls
+    below and signed with ``sign_tx`` method).
   
 **Return:** 
 
@@ -455,7 +459,7 @@ Issue a bet against a feed.
 
 **Return:** 
 
-  The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
+  The unsigned transaction, as an hex-encoded string. See :ref:`this section <encoding_param>` for more information.
 
 .. _create_broadcast:
 
@@ -477,7 +481,7 @@ Broadcast textual and numerical information to the network.
 
 **Return:** 
 
-  The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
+  The unsigned transaction, as an hex-encoded string. See :ref:`this section <encoding_param>` for more information.
 
 .. _create_btcpay:
 
@@ -495,7 +499,7 @@ Create and (optionally) broadcast a BTCpay message, to settle an Order Match for
 
 **Return:** 
 
-  The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
+  The unsigned transaction, as an hex-encoded string. See :ref:`this section <encoding_param>` for more information.
 
 .. _create_burn:
 
@@ -514,7 +518,7 @@ Burn a given quantity of BTC for XCP (**only possible between blocks 278310 and 
 
 **Return:** 
 
-  The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
+  The unsigned transaction, as an hex-encoded string. See :ref:`this section <encoding_param>` for more information.
 
 .. _create_callback:
 
@@ -533,7 +537,7 @@ Make a call on a callable asset (where some whole or part of the asset is return
 
 **Return:** 
 
-  The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
+  The unsigned transaction, as an hex-encoded string. See :ref:`this section <encoding_param>` for more information.
 
 .. _create_cancel:
 
@@ -551,7 +555,7 @@ Cancel an open order or bet you created.
 
 **Return:** 
 
-  The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
+  The unsigned transaction, as an hex-encoded string. See :ref:`this section <encoding_param>` for more information.
 
 .. _create_dividend:
 
@@ -572,7 +576,7 @@ Issue a dividend on a specific user defined asset.
 
 **Return:** 
 
-  The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
+  The unsigned transaction, as an hex-encoded string. See :ref:`this section <encoding_param>` for more information.
 
 .. _create_issuance:
 
@@ -599,7 +603,7 @@ Issue a new asset, issue more of an existing asset, lock an asset, or transfer t
 
 **Return:** 
 
-  The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
+  The unsigned transaction, as an hex-encoded string. See :ref:`this section <encoding_param>` for more information.
 
 .. _create_order:
 
@@ -624,7 +628,7 @@ Issue an order request.
 
 **Return:** 
 
-  The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
+  The unsigned transaction, as an hex-encoded string. See :ref:`this section <encoding_param>` for more information.
 
 .. _create_send:
 
@@ -645,7 +649,7 @@ Send XCP or a user defined asset.
 
 **Return:** 
 
-  The unsigned hex-encoded transaction in either OP_RETURN or multisig format. See :ref:`this section <multisig_param>`.
+  The unsigned transaction, as an hex-encoded string. See :ref:`this section <encoding_param>` for more information.
 
    
 Objects
