@@ -451,7 +451,6 @@ class APIServer(threading.Thread):
                 url = "https://blockchain.info/pushtx"
                 params = {'tx': signed_tx_hex}
                 response = requests.post(url, data=params)
-                logging.error(response.text)
                 return response.text
             else:
                 return bitcoin.broadcast_tx(signed_tx_hex)
