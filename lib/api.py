@@ -71,7 +71,7 @@ def translate(db, table, filters=[], filterop='AND', order_by=None, order_dir=No
     if isinstance(filters, dict): #single filter entry, convert to a one entry list
         filters = [filters,]
     elif not isinstance(filters, list):
-        raise Exception('filters must be an array or an hashmap')
+        filters = []
 
     # TODO: Document this! (Each filter can be an ordered list.)
     new_filters = []
@@ -95,7 +95,7 @@ def translate(db, table, filters=[], filterop='AND', order_by=None, order_dir=No
             raise Exception("Invalid value for the field '%s'" % filter_['field'])
         if isinstance(filter_['value'], list) and filter_['op'].upper() != 'IN':
             raise Exception("Invalid value for the field '%s'" % filter_['field'])
-        if filter_['op'].upper() not in ['=', '==', '!=', '>', '<', '>=', '<=', 'IN', 'LIKE']:
+        if filter_['op'].upper() not in ['=', '==', '!=', '>', '<', '>=', '<=', 'IN', 'LIKE', 'NOT IN', 'NOT LIKE']:
             raise Exception("Invalid operator for the field '%s'" % filter_['field'])  
         if 'case_sensitive' in filter_ and not isinstance(filter_['case_sensitive'], bool):
             raise Exception("case_sensitive must be a boolean")
@@ -128,10 +128,11 @@ def translate(db, table, filters=[], filterop='AND', order_by=None, order_dir=No
     elif table in ['order_matches', 'bet_matches']:
         if start_block != None:
             more_conditions.append('''tx0_block_index >= ?''')
-            bindings += [start_block, start_block]
+            bindings.append(start_block)
         if end_block != None:
             more_conditions.append('''tx1_block_index <= ?''')
-            bindings += [end_block, end_block]
+            bindings.append(end_block)
+
     # status
     if isinstance(status, list) and len(status)>0:
         more_conditions.append('''status IN {}'''.format(value_to_marker(status)))
@@ -139,6 +140,15 @@ def translate(db, table, filters=[], filterop='AND', order_by=None, order_dir=No
     elif isinstance(status, str) and status != '':
         more_conditions.append('''status == ?''')
         bindings.append(status)
+    elif status == None:
+        if table in ['broadcasts', 'btcpays', 'burns', 'callbacks', 'cancels', 'dividends', 'issuances', 'sends']:
+            more_conditions.append('''status == ?''')
+            bindings.append('valid')
+        elif table in ['bets', 'orders']:
+            valid_status = ['open', 'filled', 'cancelled', 'expired', 'dropped']
+            more_conditions.append('''status IN {}'''.format(value_to_marker(valid_status)))
+            bindings += valid_status
+
     # legacy filters
     if not show_expired and table == 'orders':
         #Ignore BTC orders one block early.

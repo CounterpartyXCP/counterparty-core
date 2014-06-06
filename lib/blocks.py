@@ -256,19 +256,16 @@ def initialise(db):
                       expire_idx ON orders (status, expire_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      give_status_idx ON orders (give_asset, status)
+                      give_status_idx ON orders (status, give_asset)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      give_get_status_idx ON orders (give_asset, get_asset, status)
+                      give_get_status_idx ON orders (get_asset, give_asset, status)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       source_idx ON orders (source)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       give_asset_idx ON orders (give_asset)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      get_asset_idx ON orders (get_asset)
                    ''')
 
     # Order Matches
@@ -360,7 +357,7 @@ def initialise(db):
                       block_index_idx ON issuances (block_index)
                     ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      valid_asset_idx ON issuances (status, asset)
+                      valid_asset_idx ON issuances (asset, status)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       status_idx ON issuances (status)
@@ -428,9 +425,6 @@ def initialise(db):
                       feed_valid_bettype_idx ON bets (feed_address, status, bet_type)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      feed_status_idx ON bets (status, feed_address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
                       source_idx ON bets (source)
                    ''')
 
@@ -466,7 +460,7 @@ def initialise(db):
                       match_expire_idx ON bet_matches (status, match_expire_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      valid_feed_idx ON bet_matches (status, feed_address)
+                      valid_feed_idx ON bet_matches (feed_address, status)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       id_idx ON bet_matches (id)
