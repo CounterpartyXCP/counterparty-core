@@ -7,7 +7,6 @@ import decimal
 import time
 import json
 import re
-import requests
 import logging
 from logging import handlers as logging_handlers
 D = decimal.Decimal
@@ -446,14 +445,8 @@ class APIServer(threading.Thread):
             return bitcoin.sign_tx(unsigned_tx_hex, private_key_wif=privkey)
                 
         @dispatcher.add_method
-        def broadcast_tx(signed_tx_hex, use_bci=False):
-            if use_bci:   
-                url = "https://blockchain.info/pushtx"
-                params = {'tx': signed_tx_hex}
-                response = requests.post(url, data=params)
-                return response.text
-            else:
-                return bitcoin.broadcast_tx(signed_tx_hex)
+        def broadcast_tx(signed_tx_hex):
+            return bitcoin.broadcast_tx(signed_tx_hex)
 
         class API(object):
             @cherrypy.expose
