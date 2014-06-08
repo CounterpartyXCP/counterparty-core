@@ -251,10 +251,9 @@ For example: ``get_balances``, ``get_credits``, ``get_debits``, etc are all vali
   * **start_block (integer):** If specified, only results from the specified block index on will be returned 
   * **end_block (integer):** If specified, only results up to and including the specified block index on will be returned
   * **status (string/list):** return only results with the specified status or statuses (if a list of status strings is supplied).
-    See the :ref:`list of possible statuses <status-list>`. Note that if ``null`` is supplied (the default), then this parameter
-    will default to ``valid`` for broadcasts, BTCpays, burns, callbacks, cancels, dividends, issuances, and sends. For bets
-    and orders, if ``null`` is supplied, then this parameter defaults to a list containing the following status
-    strings: ``open``, ``filled``, ``cancelled``, ``expired``, and ``dropped``.
+    See the :ref:`list of possible statuses <status-list>`. Note that if ``null`` is supplied (the default), then status is not filtered.
+    Also note that status filtering can be done via the ``filters`` parameter, but doing it through this parameter is more
+    flexible, as it essentially allows for situations where ``OR`` filter logic is desired, as well as status-based filtering.
   * **limit (integer):** (maximum) number of elements to return. Can specify a value less than or equal to 1000. For more results, use
     a combination of ``limit`` and ``offset`` parameters to paginate results.
   * **offset (integer):** return results starting from specified ``offset``

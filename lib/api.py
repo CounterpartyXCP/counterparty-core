@@ -134,20 +134,12 @@ def translate(db, table, filters=[], filterop='AND', order_by=None, order_dir=No
             bindings.append(end_block)
 
     # status
-    if isinstance(status, list) and len(status)>0:
+    if isinstance(status, list) and len(status) > 0:
         more_conditions.append('''status IN {}'''.format(value_to_marker(status)))
         bindings += status
     elif isinstance(status, str) and status != '':
         more_conditions.append('''status == ?''')
         bindings.append(status)
-    elif status == None:
-        if table in ['broadcasts', 'btcpays', 'burns', 'callbacks', 'cancels', 'dividends', 'issuances', 'sends']:
-            more_conditions.append('''status == ?''')
-            bindings.append('valid')
-        elif table in ['bets', 'orders']:
-            valid_status = ['open', 'filled', 'cancelled', 'expired', 'dropped']
-            more_conditions.append('''status IN {}'''.format(value_to_marker(valid_status)))
-            bindings += valid_status
 
     # legacy filters
     if not show_expired and table == 'orders':
