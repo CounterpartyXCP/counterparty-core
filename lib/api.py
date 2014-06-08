@@ -447,12 +447,15 @@ class APIServer(threading.Thread):
                 
         @dispatcher.add_method
         def broadcast_tx(signed_tx_hex):
-            if not config.TESTNET and config.BROADCAST_TX_MAINNET == 'bci':
+            if not config.TESTNET and config.BROADCAST_TX_MAINNET in ['bci', 'bci-failover']:
                 url = "https://blockchain.info/pushtx"
                 params = {'tx': signed_tx_hex}
                 response = requests.post(url, data=params)
-                if response.text != 'Transaction Submitted':
-                    raise Exception(response.text)
+                if response.text.lower() != 'transaction submitted' or response.status_code != 200:
+                    if config.BROADCAST_TX_MAINNET == 'bci-failover':
+                        return bitcoin.broadcast_tx(signed_tx_hex)
+                    else:
+                        raise Exception(response.text)
                 return response.text
             else:
                 return bitcoin.broadcast_tx(signed_tx_hex)
