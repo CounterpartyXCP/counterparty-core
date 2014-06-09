@@ -228,7 +228,7 @@ def set_options (data_dir=None,
                  log_file=None, pid_file=None, api_num_threads=None, api_request_queue_size=None,
                  database_file=None, testnet=False, testcoin=False, unittest=False, carefulness=0, force=False):
 
-    # Unittests always run on testnet.
+    # Unit tests always run on testnet.
     if unittest and not testnet:
         raise Exception # TODO
 
@@ -266,6 +266,14 @@ def set_options (data_dir=None,
         config.TESTCOIN = configfile['Default'].getboolean('testcoin')
     else:
         config.TESTCOIN = False
+
+    # unittest 
+    if unittest:
+        config.UNITTEST = unittest
+    elif has_config and 'unittest' in configfile['Default']:
+        config.UNITTEST = configfile['Default'].getboolean('unittest')
+    else:
+        config.UNITTEST = False
 
     # carefulness (check conservation of assets)
     if carefulness:

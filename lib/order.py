@@ -110,20 +110,22 @@ def cancel_order_match (db, order_match, status, block_index):
         cursor.execute(sql, bindings)
         util.message(db, block_index, 'update', 'orders', bindings)
 
+    tx0_order_time_left = tx0_order['expire_index'] - block_index
+    tx1_order_time_left = tx1_order['expire_index'] - block_index
     if block_index < 286500:    # Protocol change.
         # Sanity check: one of the two must have expired.
-        tx0_order_time_left = tx0_order['expire_index'] - block_index
-        tx1_order_time_left = tx1_order['expire_index'] - block_index
         assert tx0_order_time_left or tx1_order_time_left
 
     # Re‐match.                 # Protocol change
     if block_index >= 305000 or config.TESTNET:
-        cursor.execute('''SELECT * FROM transactions\
-                          WHERE tx_hash = ?''', (tx0_order['tx_hash'],))
-        match(db, list(cursor)[0])
-        cursor.execute('''SELECT * FROM transactions\
-                          WHERE tx_hash = ?''', (tx1_order['tx_hash'],))
-        match(db, list(cursor)[0])
+        if tx0_order_time_left:
+            cursor.execute('''SELECT * FROM transactions\
+                              WHERE tx_hash = ?''', (tx0_order['tx_hash'],))
+            match(db, list(cursor)[0])
+        if tx1_order_time_left:
+            cursor.execute('''SELECT * FROM transactions\
+                              WHERE tx_hash = ?''', (tx1_order['tx_hash'],))
+            match(db, list(cursor)[0])
 
     cursor.close()
 
