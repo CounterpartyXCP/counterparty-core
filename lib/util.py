@@ -3,7 +3,6 @@ import decimal
 import sys
 import json
 import logging
-import operator
 import apsw
 import collections
 import inspect
@@ -23,6 +22,7 @@ BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
 BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
 
 
+# TODO: This doesn’t timeout properly. (If server hangs, then unhangs, no result.)
 def api (method, params):
     headers = {'content-type': 'application/json'}
     payload = {
@@ -58,6 +58,7 @@ def price (numerator, denominator, block_index):
         return D(numerator / denominator)
 
 def log (db, command, category, bindings):
+    cursor = db.cursor()
 
     # Slow?!
     def output (quantity, asset):
@@ -95,7 +96,7 @@ def log (db, command, category, bindings):
             logging.info('Send: {} from {} to {} ({}) [{}]'.format(output(bindings['quantity'], bindings['asset']), bindings['source'], bindings['destination'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'orders':
-            logging.info('Order: give {} for {} in {} blocks, with a provided fee of {} BTC and a required fee of {} BTC ({}) [{}]'.format(output(bindings['give_quantity'], bindings['give_asset']), output(bindings['get_quantity'], bindings['get_asset']), bindings['expiration'], bindings['fee_provided'] / config.UNIT, bindings['fee_required'] / config.UNIT, bindings['tx_hash'], bindings['status']))
+            logging.info('Order: {} ordered {} for {} in {} blocks, with a provided fee of {} BTC and a required fee of {} BTC ({}) [{}]'.format(bindings['source'], output(bindings['give_quantity'], bindings['give_asset']), output(bindings['get_quantity'], bindings['get_asset']), bindings['expiration'], bindings['fee_provided'] / config.UNIT, bindings['fee_required'] / config.UNIT, bindings['tx_hash'], bindings['status']))
 
         elif category == 'order_matches':
             logging.info('Order Match: {} for {} ({}) [{}]'.format(output(bindings['forward_quantity'], bindings['forward_asset']), output(bindings['backward_quantity'], bindings['backward_asset']), bindings['id'], bindings['status']))
@@ -136,7 +137,7 @@ def log (db, command, category, bindings):
 
         elif category == 'bets':
             # Last text
-            broadcasts = get_broadcasts(db, status='valid', source=bindings['feed_address'], order_by='tx_index', order_dir='asc')
+            broadcasts = list(cursor.execute('''SELECT * FROM broadcasts WHERE (status = ? AND source = ?) ORDER BY tx_index ASC''', ('valid', bindings['feed_address'])))
             try:
                 last_broadcast = broadcasts[-1]
                 text = last_broadcast['text']
@@ -184,6 +185,7 @@ def log (db, command, category, bindings):
 
         elif category == 'bet_match_expirations':
             logging.info('Expired Bet Match: {}'.format(bindings['bet_match_id']))
+    cursor.close()
 
 def message (db, block_index, command, category, bindings):
     cursor = db.cursor()
@@ -266,6 +268,10 @@ def connect_to_db(flags=None):
 
     # So that writers don’t block readers.
     cursor.execute('''PRAGMA journal_mode = WAL''')
+
+    # Make case sensitive the LIKE operator. 
+    # For insensitive queries use 'UPPER(fieldname) LIKE value.upper()''
+    cursor.execute('''PRAGMA case_sensitive_like = ON''')
 
     rows = list(cursor.execute('''PRAGMA foreign_key_check'''))
     if rows: raise exceptions.DatabaseError('Foreign key check failed.')
@@ -364,7 +370,7 @@ def last_message (db):
     cursor.close()
     return last_message
 
-def get_asset_id (asset):
+def asset_id (asset):
     # Special cases.
     if asset == 'BTC': return 0
     elif asset == 'XCP': return 1
@@ -393,7 +399,7 @@ def get_asset_id (asset):
 
     return n
 
-def get_asset_name (asset_id):
+def asset_name (asset_id):
     if asset_id == 0: return 'BTC'
     elif asset_id == 1: return 'XCP'
 
@@ -565,107 +571,7 @@ def devise (db, quantity, asset, dest, divisible=None):
             raise exceptions.QuantityError('Fractional quantities of indivisible assets.')
         return round(quantity)
 
-
-
-
-
-
-
-DO_FILTER_OPERATORS = {
-    '==': operator.eq,
-    '!=': operator.ne,
-    '<': operator.lt,
-    '>': operator.gt,
-    '<=': operator.le,
-    '>=': operator.ge,
-}
-
-def do_filter(results, filters, filterop):
-    """Filters results based on a filter data structure (as used by the API)"""
-    if not len(results) or not filters: #empty results, or not filtering
-        return results
-    if isinstance(filters, dict): #single filter entry, convert to a one entry list
-        filters = [filters,]
-    #validate filter(s)
-    required_fields = ['field', 'op', 'value']
-    for filter in filters:
-        for field in required_fields: #should have all fields
-            if field not in filter:
-                raise Exception("A specified filter is missing the '%s' field" % field)
-        if filterop not in ('and', 'or'):
-            raise Exception("Invalid filterop setting. Must be either 'and' or 'or'.")
-        if filter['op'] not in DO_FILTER_OPERATORS.keys():
-            raise Exception("A specified filter op is invalid or not recognized: '%s'" % filter['op'])
-        if filter['field'] == 'block_index':
-            raise Exception("For performance reasons, please use the start_block and end_block API arguments to do block_index filtering")
-        if filter['field'] not in results[0]:
-            raise Exception("A specified filter field is invalid or not recognized for the given object type: '%s'" % filter['field'])
-        if type(filter['value']) not in (str, int, float, bool):
-            raise Exception("Value specified for filter field '%s' is not one of the supported value types (str, int, float, bool)" % (
-                filter['field']))
-        if results[0][filter['field']] != None and filter['value'] != None and type(filter['value']) != type(results[0][filter['field']]):
-            # field is None when it does not matter.
-            raise Exception("Value specified for filter field '%s' does not match the data type of that field (value: %s, field: %s) and neither is None" % (
-                filter['field'], type(filter['value']), type(results[0][filter['field']])))
-    #filter data
-    if filterop == 'and':
-        for filter in filters:
-            results = [e for e in results if DO_FILTER_OPERATORS[filter['op']](e[filter['field']], filter['value'])]
-        return results
-    else: #or
-        combined_results = []
-        for filter in filters:
-            if filter['field'] == 'status': continue #don't filter status as an OR requirement
-            combined_results += [e for e in results if DO_FILTER_OPERATORS[filter['op']](e[filter['field']], filter['value'])]
-        
-        status_filter = next((f for f in filters if f['field'] == 'status'), None)
-        if status_filter: #filter out invalid results as an AND requirement
-            combined_results = [e for e in combined_results if DO_FILTER_OPERATORS[status_filter['op']](
-                e[status_filter['field']], status_filter['value'])]
-        return combined_results
-
-def do_order_by(results, order_by, order_dir):
-    if not len(results) or not order_by: #empty results, or not ordering
-        return results
-    assert isinstance(results, list) and isinstance(results[0], dict)
-
-    if order_by not in results[0]:
-        raise KeyError("Specified order_by property '%s' does not exist in returned data" % order_by)
-    if order_dir not in ('asc', 'desc'):
-        raise Exception("Invalid order_dir: '%s'. Must be 'asc' or 'desc'" % order_dir)
-    return sorted(results, key=itemgetter(order_by), reverse=order_dir=='desc')
-
-def get_limit_to_blocks(start_block, end_block, col_names=['block_index',]):
-    if    (start_block is not None and not isinstance(start_block, int)) \
-       or (end_block is not None and not isinstance(end_block, int)):
-        raise ValueError("start_block and end_block must be either an integer, or None")
-    assert isinstance(col_names, list) and len(col_names) in [1, 2]
-
-    if start_block is None and end_block is None:
-        return ''
-    elif len(col_names) == 1:
-        col_name = col_names[0]
-        if start_block and end_block:
-            block_limit_clause = " WHERE %s >= %s AND %s <= %s" % (col_name, start_block, col_name, end_block)
-        elif start_block:
-            block_limit_clause = " WHERE %s >= %s" % (col_name, start_block)
-        elif end_block:
-            block_limit_clause = " WHERE %s <= %s" % (col_name, end_block)
-    else: #length of 2
-        if start_block and end_block:
-            block_limit_clause = " WHERE (%s >= %s OR %s >= %s) AND (%s <= %s OR %s <= %s)" % (
-                col_names[0], start_block, col_names[1], start_block,
-                col_names[0], end_block, col_names[1], end_block)
-        elif start_block:
-            block_limit_clause = " WHERE %s >= %s OR %s >= %s" % (
-                col_names[0], start_block, col_names[1], start_block)
-        elif end_block:
-            block_limit_clause = " WHERE %s >= %s OR %s >= %s" % (
-                col_names[0], end_block, col_names[1], end_block)
-    return block_limit_clause
-
-
-def get_holders(db, asset):
+def holders(db, asset):
     holders = []
     cursor = db.cursor()
     # Balances
@@ -719,7 +625,7 @@ def xcp_supply (db):
     cursor.close()
     return burn_total - fee_total
 
-def get_supplies (db):
+def supplies (db):
     cursor = db.cursor()
     supplies = {'XCP': xcp_supply(db)}
     cursor.execute('''SELECT * from issuances \
@@ -734,279 +640,5 @@ def get_supplies (db):
 
     cursor.close()
     return supplies 
-
-def get_debits (db, address=None, asset=None, filters=None, order_by=None, order_dir='asc', start_block=None, end_block=None, filterop='and'):
-    """This does not include BTC."""
-    if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,]
-    if address: filters.append({'field': 'address', 'op': '==', 'value': address})
-    if asset: filters.append({'field': 'asset', 'op': '==', 'value': asset})
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM debits%s'''
-        % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters, filterop)
-    cursor.close()
-    return do_order_by(results, order_by, order_dir)
-
-def get_credits (db, address=None, asset=None, filters=None, order_by=None, order_dir='asc', start_block=None, end_block=None, filterop='and'):
-    """This does not include BTC."""
-    if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,]
-    if address: filters.append({'field': 'address', 'op': '==', 'value': address})
-    if asset: filters.append({'field': 'asset', 'op': '==', 'value': asset})
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM credits%s'''
-        % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters, filterop)
-    cursor.close()
-    return do_order_by(results, order_by, order_dir)
-
-def get_balances (db, address=None, asset=None, filters=None, order_by=None, order_dir='asc', filterop='and'):
-    """This should never be used to check Bitcoin balances."""
-    if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,]
-    if address:
-        from . import bitcoin   # HACK
-        if not bitcoin.base58_decode(address, config.ADDRESSVERSION):
-            raise exceptions.AddressError('Not a valid Bitcoin address:',
-                                                 address)
-        filters.append({'field': 'address', 'op': '==', 'value': address})
-    if asset: filters.append({'field': 'asset', 'op': '==', 'value': asset})
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM balances''')
-    results = do_filter(cursor.fetchall(), filters, filterop)
-    cursor.close()
-    return do_order_by(results, order_by, order_dir)
-
-def get_sends (db, status=None, source=None, destination=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
-    if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,]
-    if status: filters.append({'field': 'status', 'op': '==', 'value': status})
-    if source: filters.append({'field': 'source', 'op': '==', 'value': source})
-    if destination: filters.append({'field': 'destination', 'op': '==', 'value': destination})
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM sends%s'''
-        % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters, filterop)
-    cursor.close()
-    return do_order_by(results, order_by, order_dir)
-
-def get_orders (db, status=None, source=None, show_expired=True, filters=None, order_by=None, order_dir='asc', start_block=None, end_block=None, filterop='and'):
-    def filter_expired(e, cur_block_index):
-        #Ignore BTC orders one block early. (This is why we need show_expired.)
-        #function returns True if the element is NOT expired
-        time_left = e['expire_index'] - cur_block_index
-        if e['give_asset'] == 'BTC': time_left -= 1
-        return False if time_left < 0 else True
-
-    if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,]
-    if status: filters.append({'field': 'status', 'op': '==', 'value': status})
-    if source: filters.append({'field': 'source', 'op': '==', 'value': source})
-    cur_block_index = last_block(db)['block_index']
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM orders%s'''
-        % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters, filterop)
-    cursor.close()
-    if not show_expired: results = [e for e in results if filter_expired(e, cur_block_index)]
-    return do_order_by(results, order_by, order_dir)
-
-def get_order_matches (db, status=None, post_filter_status=None, is_mine=False, address=None, tx0_hash=None, tx1_hash=None, filters=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
-    from . import bitcoin   # HACK
-
-    def filter_is_mine(e):
-        if ((not bitcoin.is_mine(e['tx0_address']) or
-                 e['forward_asset'] != 'BTC')
-            and (not bitcoin.is_mine(e['tx1_address']) or
-                 e['backward_asset'] != 'BTC')):
-            return False #is not mine
-        return True #is mine
-
-    if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,]
-    if status: filters.append({'field': 'status', 'op': '==', 'value': status})
-    if tx0_hash: filters.append({'field': 'tx0_hash', 'op': '==', 'value': tx0_hash})
-    if tx1_hash: filters.append({'field': 'tx1_hash', 'op': '==', 'value': tx1_hash})
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM order_matches%s'''
-        % get_limit_to_blocks(start_block, end_block,
-            col_names=['tx0_block_index', 'tx1_block_index']))
-    results = do_filter(cursor.fetchall(), filters, filterop)
-    cursor.close()
-
-    filtered_results = []
-    for e in results:
-        if e in filtered_results: 
-            continue
-        include = True
-        if is_mine:
-            include = filter_is_mine(e)
-        if include and address:
-            include = e['tx0_address'] == address or e['tx1_address'] == address
-        if include and post_filter_status:
-            include = e['status'] == post_filter_status
-        if include:
-            filtered_results.append(e)
-
-    return do_order_by(filtered_results, order_by, order_dir)
-
-def get_btcpays (db, status=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
-    if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,]
-    if status: filters.append({'field': 'status', 'op': '==', 'value': status})
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM btcpays%s'''
-        % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters, filterop)
-    cursor.close()
-    return do_order_by(results, order_by, order_dir)
-
-def get_issuances (db, status=None, asset=None, issuer=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
-    if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,]
-    if status: filters.append({'field': 'status', 'op': '==', 'value': status})
-    if asset: filters.append({'field': 'asset', 'op': '==', 'value': asset})
-    if issuer: filters.append({'field': 'issuer', 'op': '==', 'value': issuer})
-    # TODO: callable, call_date (range?), call_price (range?)
-    # TODO: description search
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM issuances%s'''
-         % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters, filterop)
-    cursor.close()
-    return do_order_by(results, order_by, order_dir)
-
-def get_broadcasts (db, status=None, source=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
-    if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,]
-    if status: filters.append({'field': 'status', 'op': '==', 'value': status})
-    if source: filters.append({'field': 'source', 'op': '==', 'value': source})
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM broadcasts%s'''
-         % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters, filterop)
-    cursor.close()
-    return do_order_by(results, order_by, order_dir)
-
-def get_bets (db, status=None, source=None, filters=None, order_by=None, order_dir='desc', start_block=None, end_block=None, filterop='and'):
-    if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,]
-    if status: filters.append({'field': 'status', 'op': '==', 'value': status})
-    if source: filters.append({'field': 'source', 'op': '==', 'value': source})
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM bets%s'''
-        % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters, filterop)
-    cursor.close()
-    return do_order_by(results, order_by, order_dir)
-
-def get_bet_matches (db, status=None, address=None, tx0_hash=None, tx1_hash=None, filters=None, order_by='tx1_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
-    if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,]
-    if status: filters.append({'field': 'status', 'op': '==', 'value': status})
-    if tx0_hash: filters.append({'field': 'tx0_hash', 'op': '==', 'value': tx0_hash})
-    if tx1_hash: filters.append({'field': 'tx1_hash', 'op': '==', 'value': tx1_hash})
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM bet_matches%s'''
-         % get_limit_to_blocks(start_block, end_block,
-             col_names=['tx0_block_index', 'tx1_block_index']))
-    results = do_filter(cursor.fetchall(), filters, filterop)
-    cursor.close()
-    if address: results = [e for e in results if e['tx0_address'] == address or e['tx1_address'] == address]
-    return do_order_by(results, order_by, order_dir)
-
-def get_dividends (db, status=None, source=None, asset=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
-    if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,]
-    if status: filters.append({'field': 'status', 'op': '==', 'value': status})
-    if source: filters.append({'field': 'source', 'op': '==', 'value': source})
-    if asset: filters.append({'field': 'asset', 'op': '==', 'value': asset})
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM dividends%s'''
-         % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters, filterop)
-    cursor.close()
-    return do_order_by(results, order_by, order_dir)
-
-def get_burns (db, status=None, source=None, filters=None, order_by='tx_index', order_dir='asc', start_block=None, end_block=None, filterop='and'):
-    if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,]
-    if status: filters.append({'field': 'status', 'op': '==', 'value': status})
-    if source: filters.append({'field': 'source', 'op': '==', 'value': source})
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM burns%s'''
-         % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters, filterop)
-    cursor.close()
-    return do_order_by(results, order_by, order_dir)
-
-def get_cancels (db, status=None, source=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
-    if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,]
-    if status: filters.append({'field': 'status', 'op': '==', 'value': status})
-    if source: filters.append({'field': 'source', 'op': '==', 'value': source})
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM cancels%s'''
-         % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters, filterop)
-    cursor.close()
-    return do_order_by(results, order_by, order_dir)
-
-def get_callbacks (db, status=None, source=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
-    if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,]
-    if status: filters.append({'field': 'status', 'op': '==', 'value': status})
-    if source: filters.append({'field': 'source', 'op': '==', 'value': source})
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM callbacks%s'''
-         % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters, filterop)
-    cursor.close()
-    return do_order_by(results, order_by, order_dir)
-
-def get_bet_expirations (db, source=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
-    if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,]
-    if source: filters.append({'field': 'source', 'op': '==', 'value': source})
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM bet_expirations%s'''
-         % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters, filterop)
-    cursor.close()
-    return do_order_by(results, order_by, order_dir)
-
-def get_order_expirations (db, source=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
-    if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,]
-    if source: filters.append({'field': 'source', 'op': '==', 'value': source})
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM order_expirations%s'''
-         % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters, filterop)
-    cursor.close()
-    return do_order_by(results, order_by, order_dir)
-
-def get_bet_match_expirations (db, address=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
-    if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,]
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM bet_match_expirations%s'''
-         % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters, filterop)
-    cursor.close()
-    if address: results = [e for e in results if e['tx0_address'] == address or e['tx1_address'] == address]
-    return do_order_by(results, order_by, order_dir)
-
-def get_order_match_expirations (db, address=None, filters=None, order_by=None, order_dir=None, start_block=None, end_block=None, filterop='and'):
-    if filters is None: filters = list()
-    if filters and not isinstance(filters, list): filters = [filters,]
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM order_match_expirations%s'''
-         % get_limit_to_blocks(start_block, end_block))
-    results = do_filter(cursor.fetchall(), filters, filterop)
-    cursor.close()
-    if address: results = [e for e in results if e['tx0_address'] == address or e['tx1_address'] == address]
-    return do_order_by(results, order_by, order_dir)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

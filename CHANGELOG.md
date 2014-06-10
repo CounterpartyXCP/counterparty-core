@@ -1,4 +1,17 @@
 ## Client Versions ##
+* v9.25.0
+	* issuance fee only upon first issuance (protocol change: retroactive)
+* v9.24.1
+	* replace internal Python filters with SQL queries (much faster parsing)
+	* totally re‐did API: now much faster, more powerful (backwards‐compatible, though)
+* v9.24.0
+	* bug in previous version
+* v9.23.0
+	* allow assets to be traded for themselves
+* v9.22.0
+	* bug in previous bugfix
+* v9.21.0
+	* bug in bet parsing
 * v9.20.0
 	* remove deadline checking in bets
 	* functionality to drop open bets, pending bet matches

@@ -52,6 +52,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     issuances = cursor.fetchall()
     cursor.close()
     if issuances:
+        reissuance = True
         last_issuance = issuances[-1]
         if call_date is None: call_date = 0
         if call_price is None: call_price = 0.0
@@ -64,26 +65,29 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
             problems.append('asset exists with a different callability, call date or call price')
         elif last_issuance['locked'] and quantity:
             problems.append('locked asset and non‐zero quantity')
-    elif description.lower() == 'lock':
-        problems.append('cannot lock a nonexistent asset')
-    elif destination:
-        problems.append('cannot transfer a nonexistent asset')
+    else:
+        reissuance = False
+        if description.lower() == 'lock':
+            problems.append('cannot lock a nonexistent asset')
+        if destination:
+            problems.append('cannot transfer a nonexistent asset')
 
     # Check for existence of fee funds.
     if quantity:
-        cursor = db.cursor()
-        cursor.execute('''SELECT * FROM balances \
-                          WHERE (address = ? AND asset = ?)''', (source, 'XCP'))
-        balances = cursor.fetchall()
-        cursor.close()
-        if block_index >= 291700 or config.TESTNET:     # Protocol change.
-            fee = int(0.5 * config.UNIT)
-        elif block_index >= 286000 or config.TESTNET:   # Protocol change.
-            fee = 5 * config.UNIT
-        elif block_index > 281236 or config.TESTNET:    # Protocol change.
-            fee = 5
-        if fee and (not balances or balances[0]['quantity'] < fee):
-            problems.append('insufficient funds')
+        if not reissuance:  # Pay fee only upon first issuance. (Protocol change.)
+            cursor = db.cursor()
+            cursor.execute('''SELECT * FROM balances \
+                              WHERE (address = ? AND asset = ?)''', (source, 'XCP'))
+            balances = cursor.fetchall()
+            cursor.close()
+            if block_index >= 291700 or config.TESTNET:     # Protocol change.
+                fee = int(0.5 * config.UNIT)
+            elif block_index >= 286000 or config.TESTNET:   # Protocol change.
+                fee = 5 * config.UNIT
+            elif block_index > 281236 or config.TESTNET:    # Protocol change.
+                fee = 5
+            if fee and (not balances or balances[0]['quantity'] < fee):
+                problems.append('insufficient funds')
 
     # For SQLite3
     call_date = min(call_date, config.MAX_INT)
@@ -101,7 +105,7 @@ def compose (db, source, destination, asset, quantity, divisible, callable_, cal
     problems, fee = validate(db, source, destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.last_block(db)['block_index'])
     if problems: raise exceptions.IssuanceError(problems)
 
-    asset_id = util.get_asset_id(asset)
+    asset_id = util.asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT_2, asset_id, quantity, 1 if divisible else 0, 1 if callable_ else 0, 
         call_date or 0, call_price or 0.0, description.encode('utf-8'))
@@ -129,7 +133,7 @@ def parse (db, tx, message):
             asset_id, quantity, divisible = struct.unpack(FORMAT_1, message)
             callable_, call_date, call_price, description = False, 0, 0.0, ''
         try:
-            asset = util.get_asset_name(asset_id)
+            asset = util.asset_name(asset_id)
         except:
             asset = None
             status = 'invalid: bad asset name'

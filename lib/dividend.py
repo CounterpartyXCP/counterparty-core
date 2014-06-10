@@ -16,6 +16,7 @@ ID = 50
 
 
 def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index):
+    cursor = db.cursor()
     problems = []
 
     if asset in ('BTC', 'XCP'):
@@ -24,7 +25,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     if quantity_per_unit <= 0: problems.append('non‐positive quantity per unit')
 
     # Examine asset.
-    issuances = util.get_issuances(db, status='valid', asset=asset)
+    issuances = list(cursor.execute('''SELECT * FROM issuances WHERE (status = ? AND asset = ?)''', ('valid', asset)))
     if not issuances:
         problems.append('no such asset, {}.'.format(asset))
         return None, None, problems
@@ -34,14 +35,14 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     if dividend_asset in ('BTC', 'XCP'):
         dividend_divisible = True
     else:
-        issuances = util.get_issuances(db, status='valid', asset=dividend_asset)
+        issuances = list(cursor.execute('''SELECT * FROM issuances WHERE (status = ? AND asset = ?)''', ('valid', dividend_asset)))
         if not issuances:
             problems.append('no such dividend asset, {}.'.format(dividend_asset))
             return None, None, problems
         dividend_divisible = issuances[0]['divisible']
 
     # Calculate dividend quantities.
-    holders = util.get_holders(db, asset)
+    holders = util.holders(db, asset)
     outputs = []
     for holder in holders:
 
@@ -65,10 +66,11 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     if not dividend_total: problems.append('zero dividend')
 
     if dividend_asset != 'BTC':
-        balances = util.get_balances(db, address=source, asset=dividend_asset)
+        balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, dividend_asset)))
         if not balances or balances[0]['quantity'] < dividend_total:
             problems.append('insufficient funds')
 
+    cursor.close()
     return dividend_total, outputs, problems
 
 def compose (db, source, quantity_per_unit, asset, dividend_asset):
@@ -80,8 +82,8 @@ def compose (db, source, quantity_per_unit, asset, dividend_asset):
     if dividend_asset == 'BTC':
         return (source, [(output['address'], output['dividend_quantity']) for output in outputs], None)
 
-    asset_id = util.get_asset_id(asset)
-    dividend_asset_id = util.get_asset_id(dividend_asset)
+    asset_id = util.asset_id(asset)
+    dividend_asset_id = util.asset_id(dividend_asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT_2, quantity_per_unit, asset_id, dividend_asset_id)
     return (source, [], data)
@@ -93,12 +95,12 @@ def parse (db, tx, message):
     try:
         if (tx['block_index'] > 288150 or config.TESTNET) and len(message) == LENGTH_2:
             quantity_per_unit, asset_id, dividend_asset_id = struct.unpack(FORMAT_2, message)
-            asset = util.get_asset_name(asset_id)
-            dividend_asset = util.get_asset_name(dividend_asset_id)
+            asset = util.asset_name(asset_id)
+            dividend_asset = util.asset_name(dividend_asset_id)
             status = 'valid'
         elif len(message) == LENGTH_1:
             quantity_per_unit, asset_id = struct.unpack(FORMAT_1, message)
-            asset = util.get_asset_name(asset_id)
+            asset = util.asset_name(asset_id)
             dividend_asset = 'XCP'
             status = 'valid'
         else:

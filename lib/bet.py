@@ -67,7 +67,9 @@ def cancel_bet_match (db, bet_match, status, block_index):
 def get_fee_fraction (db, feed_address):
     '''Get fee fraction from the last broadcast from the feed_address address.
     '''
-    broadcasts = util.get_broadcasts(db, source=feed_address)
+    cursor = db.cursor()
+    broadcasts = list(cursor.execute('''SELECT * FROM broadcasts WHERE (status = ? AND source = ?) ORDER BY tx_index ASC''', ('valid', feed_address)))
+    cursor.close()
     if broadcasts:
         last_broadcast = broadcasts[-1]
         fee_fraction_int = last_broadcast['fee_fraction_int']
@@ -81,7 +83,9 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
     problems = []
 
     # Look at feed to be bet on.
-    broadcasts = util.get_broadcasts(db, status='valid', source=feed_address)
+    cursor = db.cursor()
+    broadcasts = list(cursor.execute('''SELECT * FROM broadcasts WHERE (status = ? AND source = ?) ORDER BY tx_index ASC''', ('valid', feed_address)))
+    cursor.close()
     if not broadcasts:
         problems.append('feed doesn’t exist')
     elif not broadcasts[-1]['text']:
@@ -293,7 +297,7 @@ def match (db, tx):
 
             # tx0
             tx0_status = 'open'
-            if tx0['wager_remaining'] <= 0 or tx1_wager_remaining <= 0:
+            if tx0_wager_remaining <= 0 or tx0_counterwager_remaining <= 0:
                 # Fill order, and recredit give_remaining.
                 tx0_status = 'filled'
                 util.credit(db, tx1['block_index'], tx0['source'], 'XCP', tx0_wager_remaining, event=tx1['tx_hash'], action='filled')
@@ -308,7 +312,7 @@ def match (db, tx):
             util.message(db, tx1['block_index'], 'update', 'bets', bindings)
 
             if tx1['block_index'] >= 292000 or config.TESTNET:  # Protocol change
-                if tx0['counterwager_remaining'] <= 0 or tx1_counterwager_remaining <= 0:
+                if tx1_wager_remaining <= 0 or tx1_counterwager_remaining <= 0:
                     # Fill order, and recredit give_remaining.
                     tx1_status = 'filled'
                     util.credit(db, tx1['block_index'], tx1['source'], 'XCP', tx1_wager_remaining, event=tx1['tx_hash'], action='filled')
@@ -324,7 +328,8 @@ def match (db, tx):
             util.message(db, tx1['block_index'], 'update', 'bets', bindings)
 
             # Get last value of feed.
-            initial_value = util.get_broadcasts(db, status='valid', source=tx1['feed_address'])[-1]['value']
+            broadcasts = list(cursor.execute('''SELECT * FROM broadcasts WHERE (status = ? AND source = ?) ORDER BY tx_index ASC''', ('valid', feed_address)))
+            initial_value = broadcasts[-1]['value']
 
             # Record bet fulfillment.
             bindings = {
