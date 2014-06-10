@@ -375,7 +375,12 @@ def private_key_to_public_key (private_key_wif):
     public_key_hex = binascii.hexlify(public_key).decode('utf-8')
     return public_key_hex
 
-def transaction (tx_info, encoding, exact_fee=None, fee_provided=0, public_key_hex=None, allow_unconfirmed_inputs=False):
+def transaction (tx_info, encoding='multisig', fee_per_kb=config.FEE_PER_KB,
+                 regular_dust_size=config.REGULAR_DUST_SIZE,
+                 multisig_dust_size=config.MULTISIG_DUST_SIZE,
+                 op_return_value=config.OP_RETURN_VALUE, exact_fee=None,
+                 fee_provided=0, public_key_hex=None,
+                 allow_unconfirmed_inputs=False):
 
     (source, destination_outputs, data) = tx_info
 
@@ -430,12 +435,12 @@ def transaction (tx_info, encoding, exact_fee=None, fee_provided=0, public_key_h
     new_destination_outputs = []
     for address, value in destination_outputs:
         if encoding == 'multisig':
-            if value == None: value = config.MULTISIG_DUST_SIZE
-            if not value >= config.MULTISIG_DUST_SIZE:
+            if value == None: value = multisig_dust_size
+            if not value >= multisig_dust_size:
                 raise exceptions.TransactionError('Destination output is below the dust target value.')
         else:
-            if value == None: value = config.REGULAR_DUST_SIZE
-            if not value >= config.REGULAR_DUST_SIZE:
+            if value == None: value = regular_dust_size
+            if not value >= regular_dust_size:
                 raise exceptions.TransactionError('Destination output is below the dust target value.')
         new_destination_outputs.append((address, value))
     destination_outputs = new_destination_outputs
@@ -458,9 +463,9 @@ def transaction (tx_info, encoding, exact_fee=None, fee_provided=0, public_key_h
 
     # Calculate total BTC to be sent.
     btc_out = 0
-    if encoding == 'multisig': data_value = config.MULTISIG_DUST_SIZE
-    elif encoding == 'opreturn': data_value = config.OP_RETURN_VALUE
-    else: data_value = config.REGULAR_DUST_SIZE # Pay‐to‐PubKeyHash
+    if encoding == 'multisig': data_value = multisig_dust_size
+    elif encoding == 'opreturn': data_value = op_return_value
+    else: data_value = regular_dust_size # Pay‐to‐PubKeyHash
     btc_out = sum([data_value for data_chunk in data_array])
     btc_out += sum([value for address, value in destination_outputs])
 
@@ -477,7 +482,7 @@ def transaction (tx_info, encoding, exact_fee=None, fee_provided=0, public_key_h
     inputs, btc_in = [], 0
     change_quantity = 0
     sufficient_funds = False
-    final_fee = config.FEE_PER_KB
+    final_fee = fee_per_kb
     for coin in unspent:
         inputs.append(coin)
         btc_in += round(coin['amount'] * config.UNIT)
@@ -487,13 +492,13 @@ def transaction (tx_info, encoding, exact_fee=None, fee_provided=0, public_key_h
             final_fee = exact_fee
         else:
             size = 181 * len(inputs) + outputs_size + 10
-            necessary_fee = (int(size / 10000) + 1) * config.FEE_PER_KB
+            necessary_fee = (int(size / 10000) + 1) * fee_per_kb
             final_fee = max(fee_provided, necessary_fee)
-            assert final_fee >= 1 * config.FEE_PER_KB
+            assert final_fee >= 1 * fee_per_kb
 
         # Check if good.
         change_quantity = btc_in - (btc_out + final_fee)
-        if change_quantity == 0 or change_quantity >= config.REGULAR_DUST_SIZE: # If change is necessary, must not be a dust output.
+        if change_quantity == 0 or change_quantity >= regular_dust_size: # If change is necessary, must not be a dust output.
             sufficient_funds = True
             break
     if not sufficient_funds:

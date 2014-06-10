@@ -498,6 +498,12 @@ if __name__ == '__main__':
     parser.add_argument('--carefulness', type=int, default=0, help='check conservation of assets after every CAREFULNESS transactions (potentially slow)')
     parser.add_argument('--unconfirmed', action='store_true', help='allow the spending of unconfirmed transaction outputs')
 
+    parser.add_argument('--encoding', type=str, help='data encoding method')
+    parser.add_argument('--fee-per-kb', help='fee per kilobyte, in BTC')
+    parser.add_argument('--regular-dust-size', help='value for dust Pay‐to‐Pubkey‐Hash outputs, in BTC')
+    parser.add_argument('--multisig-dust-size', help='for dust OP_CHECKMULTISIG outputs, in BTC')
+    parser.add_argument('--op-return-value', help='value for OP_RETURN outputs, in BTC')
+
     parser.add_argument('--data-dir', help='the directory in which to keep the database, config file and log file, by default')
     parser.add_argument('--database-file', help='the location of the SQLite3 database')
     parser.add_argument('--config-file', help='the location of the configuration file')
@@ -538,9 +544,9 @@ if __name__ == '__main__':
     parser_order.add_argument('--give-quantity', required=True, help='the quantity of GIVE_ASSET that you are willing to give')
     parser_order.add_argument('--give-asset', required=True, help='the asset that you would like to sell')
     parser_order.add_argument('--expiration', type=int, required=True, help='the number of blocks for which the order should be valid')
-    parser_order.add_argument('--fee-fraction-required', default=config.FEE_FRACTION_REQUIRED_DEFAULT, help='the miners’ fee required for an order to match this one, as a fraction of the BTC to be bought')
+    parser_order.add_argument('--fee-fraction-required', default=config.FEE_FRACTION_REQUIRED, help='the miners’ fee required for an order to match this one, as a fraction of the BTC to be bought')
     parser_order_fees = parser_order.add_mutually_exclusive_group()
-    parser_order_fees.add_argument('--fee-fraction-provided', default=config.FEE_FRACTION_PROVIDED_DEFAULT, help='the miners’ fee provided, as a fraction of the BTC to be sold')
+    parser_order_fees.add_argument('--fee-fraction-provided', default=config.FEE_FRACTION_PROVIDED, help='the miners’ fee provided, as a fraction of the BTC to be sold')
     parser_order_fees.add_argument('--fee', help='the exact BTC fee to be paid to miners')
 
     parser_btcpay= subparsers.add_parser('btcpay', help='create and broadcast a *BTCpay* message, to settle an Order Match for which you owe BTC')
@@ -623,6 +629,12 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    # Convert.
+    if args.fee_per_kb: args.fee_per_kb *= config.UNIT
+    if args.regular_dust_size: args.regular_size *= config.UNIT
+    if args.multisig_dust_size: args.multisig_dust_size *= config.UNIT
+    if args.op_return_value: args.op_return_value *= config.UNIT
+
     # Configuration
     set_options(data_dir=args.data_dir,
                 bitcoind_rpc_connect=args.bitcoind_rpc_connect, bitcoind_rpc_port=args.bitcoind_rpc_port,
@@ -680,8 +692,15 @@ if __name__ == '__main__':
     if args.action == 'send':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
         quantity = util.devise(db, args.quantity, args.asset, 'input')
-        cli('create_send', {'source': args.source, 'destination': args.destination, 'asset': args.asset,
-                           'quantity': quantity, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed},
+        cli('create_send', {'source': args.source,
+                            'destination': args.destination, 'asset':
+                            args.asset, 'quantity': quantity, 'fee': args.fee,
+                            'allow_unconfirmed_inputs': args.unconfirmed,
+                            'encoding': args.encoding, 'fee_per_kb':
+                            args.fee_per_kb, 'regular_dust_size':
+                            args.regular_dust_size, 'multisig_dust_size':
+                            args.multisig_dust_size, 'op_return_value':
+                            args.op_return_value},
             args.unsigned)
 
     elif args.action == 'order':
@@ -707,14 +726,31 @@ if __name__ == '__main__':
         give_quantity = util.devise(db, give_quantity, args.give_asset, 'input')
         get_quantity = util.devise(db, get_quantity, args.get_asset, 'input')
 
-        cli('create_order', {'source': args.source, 'give_asset': args.give_asset, 'give_quantity': give_quantity,
-                            'get_asset': args.get_asset, 'get_quantity': get_quantity, 'expiration': args.expiration,
-                            'fee_required': fee_required, 'fee_provided': fee_provided, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed},
+        cli('create_order', {'source': args.source,
+                             'give_asset': args.give_asset, 'give_quantity':
+                             give_quantity, 'get_asset': args.get_asset,
+                             'get_quantity': get_quantity, 'expiration':
+                             args.expiration, 'fee_required': fee_required,
+                             'fee_provided': fee_provided, 'fee': args.fee,
+                             'allow_unconfirmed_inputs': args.unconfirmed,
+                             'encoding': args.encoding, 'fee_per_kb':
+                             args.fee_per_kb, 'regular_dust_size':
+                             args.regular_dust_size, 'multisig_dust_size':
+                             args.multisig_dust_size, 'op_return_value':
+                             args.op_return_value},
            args.unsigned)
 
     elif args.action == 'btcpay':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
-        cli('create_btcpay', {'source': args.source, 'order_match_id': args.order_match_id, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed}, args.unsigned)
+        cli('create_btcpay', {'source': args.source,
+                              'order_match_id': args.order_match_id, 'fee':
+                              args.fee, 'allow_unconfirmed_inputs':
+                              args.unconfirmed, 'encoding': args.encoding,
+                              'fee_per_kb': args.fee_per_kb,
+                              'regular_dust_size': args.regular_dust_size,
+                              'multisig_dust_size': args.multisig_dust_size,
+                              'op_return_value': args.op_return_value},
+            args.unsigned)
 
     elif args.action == 'issuance':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
@@ -730,10 +766,19 @@ if __name__ == '__main__':
         else:
             call_date, call_price = 0, 0
 
-        cli('create_issuance', {'source': args.source, 'asset': args.asset, 'quantity': quantity,
-                                'divisible': args.divisible, 'description': args.description,
-                                'callable_': args.callable_, 'call_date': call_date, 'call_price': call_price,
-                                'transfer_destination': args.transfer_destination, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed},
+        cli('create_issuance', {'source': args.source, 'asset': args.asset,
+                                'quantity': quantity, 'divisible':
+                                args.divisible, 'description':
+                                args.description, 'callable_': args.callable_,
+                                'call_date': call_date, 'call_price':
+                                call_price, 'transfer_destination':
+                                args.transfer_destination, 'fee': args.fee,
+                                'allow_unconfirmed_inputs': args.unconfirmed,
+                                'encoding': args.encoding, 'fee_per_kb':
+                                args.fee_per_kb, 'regular_dust_size':
+                                args.regular_dust_size, 'multisig_dust_size':
+                                args.multisig_dust_size, 'op_return_value':
+                                args.op_return_value},
            args.unsigned)
 
     elif args.action == 'broadcast':
@@ -741,8 +786,16 @@ if __name__ == '__main__':
         value = util.devise(db, args.value, 'value', 'input')
         fee_fraction = util.devise(db, args.fee_fraction, 'fraction', 'input')
 
-        cli('create_broadcast', {'source': args.source, 'fee_fraction': fee_fraction, 'text': args.text,
-                                 'timestamp': int(time.time()), 'value': value, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed},
+        cli('create_broadcast', {'source': args.source,
+                                 'fee_fraction': fee_fraction, 'text':
+                                 args.text, 'timestamp': int(time.time()),
+                                 'value': value, 'fee': args.fee,
+                                 'allow_unconfirmed_inputs': args.unconfirmed,
+                                 'encoding': args.encoding, 'fee_per_kb':
+                                 args.fee_per_kb, 'regular_dust_size':
+                                 args.regular_dust_size, 'multisig_dust_size':
+                                 args.multisig_dust_size, 'op_return_value':
+                                 args.op_return_value},
            args.unsigned)
 
     elif args.action == 'bet':
@@ -753,30 +806,70 @@ if __name__ == '__main__':
         target_value = util.devise(db, args.target_value, 'value', 'input')
         leverage = util.devise(db, args.leverage, 'leverage', 'input')
 
-        cli('create_bet', {'source': args.source, 'feed_address': args.feed_address, 'bet_type': args.bet_type,
-                           'deadline': deadline, 'wager': wager, 'counterwager': counterwager, 'expiration': args.expiration,
-                           'target_value': target_value, 'leverage': leverage, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed},
+        cli('create_bet', {'source': args.source,
+                           'feed_address': args.feed_address, 'bet_type':
+                           args.bet_type, 'deadline': deadline, 'wager': wager,
+                           'counterwager': counterwager, 'expiration':
+                           args.expiration, 'target_value': target_value,
+                           'leverage': leverage, 'fee': args.fee,
+                           'allow_unconfirmed_inputs': args.unconfirmed,
+                           'encoding': args.encoding, 'fee_per_kb':
+                           args.fee_per_kb, 'regular_dust_size':
+                           args.regular_dust_size, 'multisig_dust_size':
+                           args.multisig_dust_size, 'op_return_value':
+                           args.op_return_value},
             args.unsigned)
 
     elif args.action == 'dividend':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
         quantity_per_unit = util.devise(db, args.quantity_per_unit, 'XCP', 'input')
-        cli('create_dividend', {'source': args.source, 'quantity_per_unit': quantity_per_unit, 'asset': args.asset, 'dividend_asset': args.dividend_asset, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed},
+        cli('create_dividend', {'source': args.source,
+                                'quantity_per_unit': quantity_per_unit,
+                                'asset': args.asset, 'dividend_asset':
+                                args.dividend_asset, 'fee': args.fee,
+                                'allow_unconfirmed_inputs': args.unconfirmed,
+                                'encoding': args.encoding, 'fee_per_kb':
+                                args.fee_per_kb, 'regular_dust_size':
+                                args.regular_dust_size, 'multisig_dust_size':
+                                args.multisig_dust_size, 'op_return_value':
+                                args.op_return_value},
            args.unsigned)
 
     elif args.action == 'burn':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
         quantity = util.devise(db, args.quantity, 'BTC', 'input')
-        cli('create_burn', {'source': args.source, 'quantity': quantity, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed}, args.unsigned)
+        cli('create_burn', {'source': args.source, 'quantity': quantity,
+                            'fee': args.fee, 'allow_unconfirmed_inputs':
+                            args.unconfirmed, 'encoding': args.encoding,
+                            'fee_per_kb': args.fee_per_kb, 'regular_dust_size':
+                            args.regular_dust_size, 'multisig_dust_size':
+                            args.multisig_dust_size, 'op_return_value':
+                            args.op_return_value},
+        args.unsigned)
 
     elif args.action == 'cancel':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
-        cli('create_cancel', {'source': args.source, 'offer_hash': args.offer_hash, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed}, args.unsigned)
+        cli('create_cancel', {'source': args.source,
+                              'offer_hash': args.offer_hash, 'fee': args.fee,
+                              'allow_unconfirmed_inputs': args.unconfirmed,
+                              'encoding': args.encoding, 'fee_per_kb':
+                              args.fee_per_kb, 'regular_dust_size':
+                              args.regular_dust_size, 'multisig_dust_size':
+                              args.multisig_dust_size, 'op_return_value':
+                              args.op_return_value},
+        args.unsigned)
 
     elif args.action == 'callback':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
-        cli('create_callback', {'source': args.source, 'fraction': util.devise(db, args.fraction,
-                                'fraction', 'input'), 'asset': args.asset, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed},
+        cli('create_callback', {'source': args.source,
+                                'fraction': util.devise(db, args.fraction, 'fraction', 'input'),
+                                'asset': args.asset, 'fee': args.fee,
+                                'allow_unconfirmed_inputs': args.unconfirmed,
+                                'encoding': args.encoding, 'fee_per_kb':
+                                args.fee_per_kb, 'regular_dust_size':
+                                args.regular_dust_size, 'multisig_dust_size':
+                                args.multisig_dust_size, 'op_return_value':
+                                args.op_return_value},
            args.unsigned)
 
 
