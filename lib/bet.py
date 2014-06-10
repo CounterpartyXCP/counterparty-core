@@ -135,7 +135,7 @@ def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
 
     problems = validate(db, source, feed_address, bet_type, deadline, wager_quantity,
                         counterwager_quantity, target_value, leverage, expiration)
-    if deadline <= time.time() and config.PREFIX != config.UNITTEST_PREFIX:
+    if deadline <= time.time() and not config.UNITTEST:
         problems.append('deadline passed')
     if problems: raise exceptions.BetError(problems)
 

@@ -117,7 +117,7 @@ def rpc (method, params):
     }
 
     '''
-    if config.PREFIX == config.UNITTEST_PREFIX:
+    if config.UNITTEST:
         CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
         CURR_DIR += '/../test/'
         open(CURR_DIR + '/rpc.new', 'a') as f
@@ -133,7 +133,7 @@ def rpc (method, params):
         raise exceptions.BitcoindRPCError(str(response.status_code) + ' ' + response.reason)
 
     '''
-    if config.PREFIX == config.UNITTEST_PREFIX:
+    if config.UNITTEST:
         print(response)
         f.close()
     '''
@@ -159,7 +159,7 @@ def rpc (method, params):
         time.sleep(10)
         return rpc('getblockhash', [block_index])
         
-    # elif config.PREFIX == config.UNITTEST_PREFIX:
+    # elif config.UNITTEST:
     #     print(method)
     else:
         raise exceptions.BitcoindError('{}'.format(response_json['error']))
@@ -375,8 +375,7 @@ def private_key_to_public_key (private_key_wif):
     public_key_hex = binascii.hexlify(public_key).decode('utf-8')
     return public_key_hex
 
-# Replace unittest flag with fake bitcoind JSON-RPC server.
-def transaction (tx_info, encoding, exact_fee=None, fee_provided=0, unittest=False, public_key_hex=None, allow_unconfirmed_inputs=False):
+def transaction (tx_info, encoding, exact_fee=None, fee_provided=0, public_key_hex=None, allow_unconfirmed_inputs=False):
 
     (source, destination_outputs, data) = tx_info
 
@@ -395,7 +394,7 @@ def transaction (tx_info, encoding, exact_fee=None, fee_provided=0, unittest=Fal
         # If no public key was provided, derive from private key.
         if not public_key_hex:
             # Get private key.
-            if unittest:
+            if config.UNITTEST:
                 private_key_wif = 'cPdUqd5EbBWsjcG9xiL1hz8bEyGFiz4SW99maU9JgpL9TEcxUf3j'
             else:
                 private_key_wif = rpc('dumpprivkey', [source])
@@ -412,8 +411,6 @@ def transaction (tx_info, encoding, exact_fee=None, fee_provided=0, unittest=Fal
     if encoding == 'pubkeyhash' and get_block_count() < 293000 and not config.TESTNET:
         raise exceptions.TransactionError('pubkeyhash encoding unsupported before block 293000')
     
-    if config.PREFIX == config.UNITTEST_PREFIX: unittest = True
-
     # Validate source and all destination addresses.
     destinations = [address for address, value in destination_outputs]
     for address in destinations + [source]:
@@ -424,7 +421,7 @@ def transaction (tx_info, encoding, exact_fee=None, fee_provided=0, unittest=Fal
                 raise exceptions.AddressError('Invalid Bitcoin address:', address)
 
     # Check that the source is in wallet.
-    if not unittest and encoding in ('multisig') and not public_key:
+    if not config.UNITTEST and encoding in ('multisig') and not public_key:
         if not rpc('validateaddress', [source])['ismine']:
             raise exceptions.AddressError('Not one of your Bitcoin addresses:', source)
 
@@ -474,7 +471,7 @@ def transaction (tx_info, encoding, exact_fee=None, fee_provided=0, unittest=Fal
     outputs_size = ((25 + 9) * len(destination_outputs)) + (len(data_array) * data_output_size)
 
     # Get inputs.
-    unspent = get_unspent_txouts(source, normalize=True, unittest=unittest)
+    unspent = get_unspent_txouts(source, normalize=True)
     unspent = sort_unspent_txouts(unspent, allow_unconfirmed_inputs)
 
     inputs, btc_in = [], 0
@@ -585,14 +582,14 @@ def get_btc_supply(normalize=False):
             blocks_remaining = 0
     return total_supply if normalize else int(total_supply * config.UNIT)
 
-def get_unspent_txouts(address, normalize=False, unittest=False):
+def get_unspent_txouts(address, normalize=False):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
         * 
     """
 
     # Unittest
-    if unittest:
+    if config.UNITTEST:
         CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
         with open(CURR_DIR + '/../test/listunspent.test.json', 'r') as listunspent_test_file:   # HACK
             wallet_unspent = json.load(listunspent_test_file)

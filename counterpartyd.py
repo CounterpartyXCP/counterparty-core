@@ -227,6 +227,14 @@ def set_options (data_dir=None,
     else:
         config.TESTCOIN = False
 
+    # unittest
+    if unittest:
+        config.UNITTEST = unittest
+    elif has_config and 'unittest' in configfile['Default']:
+        config.UNITTEST = configfile['Default'].getboolean('unittest')
+    else:
+        config.UNITTEST = False
+
     # carefulness (check conservation of assets)
     if carefulness:
         config.CAREFULNESS = carefulness
@@ -402,7 +410,7 @@ def set_options (data_dir=None,
         else:
             config.PREFIX = b'CNTRPRTY'             # 8 bytes
     else:
-        config.PREFIX = config.UNITTEST_PREFIX
+        config.PREFIX = b'TESTXXXX'                 # 8 bytes
         
     if api_num_threads:
         config.API_NUM_THREADS = int(api_num_threads)

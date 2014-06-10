@@ -1,6 +1,7 @@
 ## Client Versions ##
 * v9.25.0
 	* issuance fee only upon first issuance (protocol change: retroactive)
+	* misc. clean‐up
 * v9.24.1
 	* replace internal Python filters with SQL queries (much faster parsing)
 	* totally re‐did API: now much faster, more powerful (backwards‐compatible, though)
