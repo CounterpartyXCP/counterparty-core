@@ -186,7 +186,8 @@ def set_options (data_dir=None,
                  insight_enable=None, insight_connect=None, insight_port=None,
                  rpc_host=None, rpc_port=None, rpc_user=None, rpc_password=None,
                  log_file=None, pid_file=None, api_num_threads=None, api_request_queue_size=None,
-                 database_file=None, testnet=False, testcoin=False, unittest=False, carefulness=0, force=False):
+                 database_file=None, testnet=False, testcoin=False, unittest=False, carefulness=0, force=False,
+                 broadcast_tx_mainnet=None):
 
     # Unittests always run on testnet.
     if unittest and not testnet:
@@ -456,6 +457,14 @@ def set_options (data_dir=None,
             config.BURN_START = 278310
             config.BURN_END = 283810
             config.UNSPENDABLE = '1CounterpartyXXXXXXXXXXXXXXXUWLpVr'
+
+    # method used to broadcast signed transactions. bitcoind or bci (default: bitcoind)
+    if broadcast_tx_mainnet:
+        config.BROADCAST_TX_MAINNET = broadcast_tx_mainnet
+    elif has_config and 'broadcast-tx-mainnet' in configfile['Default']:
+        config.BROADCAST_TX_MAINNET = configfile['Default']['broadcast-tx-mainnet']
+    else:
+        config.BROADCAST_TX_MAINNET = 'bitcoind'
 
 def balances (address):
     if not bitcoin.base58_decode(address, config.ADDRESSVERSION):
