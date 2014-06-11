@@ -41,8 +41,8 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
         return problems, fee
 
     if quantity < 0: problems.append('negative quantity')
-    if call_price < 0: problems.append('negative call_price')
-    if call_date < 0: problems.append('negative call_date')
+    if call_price < 0: problems.append('negative call price')
+    if call_date < 0: problems.append('negative call date')
 
     # Valid re-issuance?
     cursor = db.cursor()
@@ -58,19 +58,23 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
         if call_price is None: call_price = 0.0
         
         if last_issuance['issuer'] != source:
-            problems.append('asset exists and was not issued by this address')
-        elif bool(last_issuance['divisible']) != bool(divisible):
-            problems.append('asset exists with a different divisibility')
-        elif bool(last_issuance['callable']) != bool(callable_) or last_issuance['call_date'] != call_date or last_issuance['call_price'] != call_price:
-            problems.append('asset exists with a different callability, call date or call price')
-        elif last_issuance['locked'] and quantity:
+            problems.append('issued by another address')
+        if bool(last_issuance['divisible']) != bool(divisible):
+            problems.append('cannot change divisibility')
+        if bool(last_issuance['callable']) != bool(callable_):
+            problems.append('cannot change callability')
+        if last_issuance['call_date'] > call_date:
+            problems.append('cannot advance call date')
+        if last_issuance['call_price'] > call_price:
+            problems.append('cannot reduce call price')
+        if last_issuance['locked'] and quantity:
             problems.append('locked asset and non‐zero quantity')
     else:
         reissuance = False
         if description.lower() == 'lock':
-            problems.append('cannot lock a nonexistent asset')
+            problems.append('cannot lock a non‐existent asset')
         if destination:
-            problems.append('cannot transfer a nonexistent asset')
+            problems.append('cannot transfer a non‐existent asset')
 
     # Check for existence of fee funds.
     if quantity:
@@ -88,6 +92,12 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
                 fee = 5
             if fee and (not balances or balances[0]['quantity'] < fee):
                 problems.append('insufficient funds')
+
+    # Callable, or not. (Protocol change.)
+    if call_date and not callable_:
+        problems.append('call date for non‐callable asset')
+    if call_price and not callable_:
+        problems.append('call price for non‐callable asset')
 
     # For SQLite3
     call_date = min(call_date, config.MAX_INT)
