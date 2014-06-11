@@ -686,7 +686,6 @@ if __name__ == '__main__':
     # TODO: Keep around only as long as reparse and rollback don’t use API.
     if not config.FORCE and args.action in ('reparse', 'rollback'):
         util.version_check(db)
-        bitcoin.bitcoind_check(db)
 
     # MESSAGE CREATION
     if args.action == 'send':
