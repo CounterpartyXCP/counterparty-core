@@ -93,11 +93,15 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
             if fee and (not balances or balances[0]['quantity'] < fee):
                 problems.append('insufficient funds')
 
-    # Callable, or not. (Protocol change.)
-    if call_date and not callable_:
-        problems.append('call date for non‐callable asset')
-    if call_price and not callable_:
-        problems.append('call price for non‐callable asset')
+    # Callable, or not.
+    if block_index >= 310000 or config.TESTNET: # Protocol change.
+        if call_date and not callable_:
+            problems.append('call date for non‐callable asset')
+        if call_price and not callable_:
+            problems.append('call price for non‐callable asset')
+    elif not callable_:
+            call_date = 0
+            call_price = 0
 
     # For SQLite3
     call_date = min(call_date, config.MAX_INT)
