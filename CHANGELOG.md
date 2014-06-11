@@ -3,6 +3,7 @@
 	* issuance fee only upon first issuance (protocol change: retroactive)
 	* misc. clean‐up
 	* make dust sizes user‐configurable per‐tx (through API)
+	* bet debug logging
 * v9.24.1
 	* replace internal Python filters with SQL queries (much faster parsing)
 	* totally re‐did API: now much faster, more powerful (backwards‐compatible, though)

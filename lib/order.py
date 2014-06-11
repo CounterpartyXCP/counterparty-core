@@ -324,6 +324,7 @@ def match (db, tx):
             forward_quantity = int(min(tx0_give_remaining, int(util.price(tx1_give_remaining, tx0_price, tx1['block_index']))))
             logging.debug('Forward Quantity: {}'.format(forward_quantity))
             backward_quantity = round(forward_quantity * tx0_price)
+            logging.debug('Backward Quantity: {}'.format(backward_quantity))
 
             if not forward_quantity:
                 logging.debug('Zero forward quantity.')
@@ -332,7 +333,6 @@ def match (db, tx):
                 if not backward_quantity:
                     logging.debug('Zero backward quantity.')
                     continue
-            logging.debug('Backward Quantity: {}'.format(backward_quantity))
 
             # Check and update fee remainings.
             fee = 0
