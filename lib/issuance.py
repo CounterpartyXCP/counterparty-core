@@ -178,15 +178,16 @@ def parse (db, tx, message):
 
     # Lock?
     lock = False
-    if description and description.lower() == 'lock':
-        lock = True
-        cursor = db.cursor()
-        issuances = list(cursor.execute('''SELECT * FROM issuances \
-                                           WHERE (status = ? AND asset = ?)
-                                           ORDER BY tx_index ASC''', ('valid', asset)))
-        cursor.close()
-        description = issuances[-1]['description']  # Use last description.
-        timestamp, value_int, fee_fraction_int = None, None, None
+    if status == 'valid':
+        if description and description.lower() == 'lock':
+            lock = True
+            cursor = db.cursor()
+            issuances = list(cursor.execute('''SELECT * FROM issuances \
+                                               WHERE (status = ? AND asset = ?)
+                                               ORDER BY tx_index ASC''', ('valid', asset)))
+            cursor.close()
+            description = issuances[-1]['description']  # Use last description. (Assume previous issuance exists because tx is valid.)
+            timestamp, value_int, fee_fraction_int = None, None, None
 
     # Add parsed transaction to message-type–specific table.
     bindings= {
