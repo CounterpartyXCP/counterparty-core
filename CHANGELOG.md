@@ -1,5 +1,5 @@
 ## Client Versions ##
-* v9.25.2
+* v9.24.2
 	* bug in version checking: mandatory manual upgrade
 * v9.24.1
 	* replace internal Python filters with SQL queries (much faster parsing)
