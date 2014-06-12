@@ -31,3 +31,7 @@ MAX_INT = 2**63 - 1
 # Order fees (UI)
 FEE_FRACTION_REQUIRED_DEFAULT = .009   # 0.90%
 FEE_FRACTION_PROVIDED_DEFAULT = .01    # 1.00%
+
+API_TABLES = ['balances', 'credits', 'debits', 'bets', 'bet_matches', 'broadcasts', 'btcpays', 'burns', 
+          	  'callbacks', 'cancels', 'dividends', 'issuances', 'orders', 'order_matches', 'sends', 
+          	  'bet_expirations', 'order_expirations', 'bet_match_expirations', 'order_match_expirations']

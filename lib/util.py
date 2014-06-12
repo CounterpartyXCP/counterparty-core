@@ -6,6 +6,7 @@ import logging
 import apsw
 import collections
 import inspect
+import re
 import requests
 from datetime import datetime
 from dateutil.tz import tzlocal
@@ -640,5 +641,148 @@ def supplies (db):
 
     cursor.close()
     return supplies 
+
+# TODO: ALL queries EVERYWHERE should be done with this method
+def db_query(db, statement, bindings=(), callback=None, **callback_args):
+    cursor = db.cursor()
+    if hasattr(callback, '__call__'):
+        cursor.execute(statement, bindings)
+        for row in cursor:
+            callback(row, **callback_args)
+        results = None
+    else:
+        results = list(cursor.execute(statement, bindings))
+    cursor.close()
+    return results
+
+def get_rows(db, table, filters=[], filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None, 
+              status=None, limit=1000, offset=0, show_expired=True):
+    """Filters results based on a filter data structure (as used by the API)"""
+    
+    def value_to_marker(value):
+        # if value is an array place holder is (?,?,?,..)
+        if isinstance(value, list):
+            return '''({})'''.format(','.join(['?' for e in range(0,len(value))]))
+        else:
+            return '''?'''
+
+    # TODO: Document that op can be anything that SQLite3 accepts.
+    if not table or table.lower() not in config.API_TABLES:
+        raise Exception('Unknown table')
+    if filterop and filterop.upper() not in ['OR', 'AND']:
+        raise Exception('Invalid filter operator (OR, AND)')
+    if order_dir and order_dir.upper() not in ['ASC', 'DESC']:
+        raise Exception('Invalid order direction (ASC, DESC)')
+    if not isinstance(limit, int):
+        raise Exception('Invalid limit')
+    elif limit > 1000:
+        raise Exception('Limit should be lower or equal to 1000')
+    if not isinstance(offset, int):
+        raise Exception('Invalid offset')
+    # TODO: accept an object:  {'field1':'ASC', 'field2': 'DESC'}
+    if order_by and not re.compile('^[a-z0-9_]+$').match(order_by):
+        raise Exception('Invalid order_by, must be a field name')
+
+    if isinstance(filters, dict): #single filter entry, convert to a one entry list
+        filters = [filters,]
+    elif not isinstance(filters, list):
+        filters = []
+
+    # TODO: Document this! (Each filter can be an ordered list.)
+    new_filters = []
+    for filter_ in filters:
+        if type(filter_) in (list, tuple) and len(a) in [3, 4]:
+            new_filter = {'field': filter_[0], 'op': filter_[1], 'value':  filter_[2]}
+            if len(a) == 4: new_filter['case_sensitive'] = filter_[3]
+            new_filters.append(new_filter)
+        elif type(filter_) == dict:
+            new_filters.append(filter_)
+        else:
+            raise Exception('Unknown filter type')
+    filters = new_filters
+
+    # validate filter(s)
+    for filter_ in filters:
+        for field in ['field', 'op', 'value']: #should have all fields
+            if field not in filter_:
+                raise Exception("A specified filter is missing the '%s' field" % field)
+        if not isinstance(filter_['value'], (str, int, float, list)):
+            raise Exception("Invalid value for the field '%s'" % filter_['field'])
+        if isinstance(filter_['value'], list) and filter_['op'].upper() != 'IN':
+            raise Exception("Invalid value for the field '%s'" % filter_['field'])
+        if filter_['op'].upper() not in ['=', '==', '!=', '>', '<', '>=', '<=', 'IN', 'LIKE', 'NOT IN', 'NOT LIKE']:
+            raise Exception("Invalid operator for the field '%s'" % filter_['field'])  
+        if 'case_sensitive' in filter_ and not isinstance(filter_['case_sensitive'], bool):
+            raise Exception("case_sensitive must be a boolean")
+
+    # SELECT
+    statement = '''SELECT * FROM {}'''.format(table)
+    # WHERE
+    bindings = []
+    conditions = []
+    for filter_ in filters:
+        case_sensitive = False if 'case_sensitive' not in filter_ else filter_['case_sensitive']
+        if filter_['op'] == 'LIKE' and case_sensitive == False:
+            filter_['field'] = '''UPPER({})'''.format(filter_['field'])
+            filter_['value'] = filter_['value'].upper()
+        marker = value_to_marker(filter_['value'])
+        conditions.append('''{} {} {}'''.format(filter_['field'], filter_['op'], marker))
+        if isinstance(filter_['value'], list):         
+            bindings += filter_['value']
+        else:
+            bindings.append(filter_['value'])
+    # AND filters
+    more_conditions = []
+    if table not in ['balances', 'order_matches', 'bet_matches']:
+        if start_block != None:
+            more_conditions.append('''block_index >= ?''')
+            bindings.append(start_block)
+        if end_block != None:
+            more_conditions.append('''block_index <= ?''')
+            bindings.append(end_block)
+    elif table in ['order_matches', 'bet_matches']:
+        if start_block != None:
+            more_conditions.append('''tx0_block_index >= ?''')
+            bindings.append(start_block)
+        if end_block != None:
+            more_conditions.append('''tx1_block_index <= ?''')
+            bindings.append(end_block)
+
+    # status
+    if isinstance(status, list) and len(status) > 0:
+        more_conditions.append('''status IN {}'''.format(value_to_marker(status)))
+        bindings += status
+    elif isinstance(status, str) and status != '':
+        more_conditions.append('''status == ?''')
+        bindings.append(status)
+
+    # legacy filters
+    if not show_expired and table == 'orders':
+        #Ignore BTC orders one block early.
+        expire_index = last_block(db)['block_index'] + 1
+        more_conditions.append('''((give_asset == ? AND expire_index > ?) OR give_asset != ?)''')
+        bindings += ['BTC', expire_index, 'BTC']
+
+    if (len(conditions) + len(more_conditions)) > 0:
+        statement += ''' WHERE'''
+        all_conditions = []
+        if len(conditions) > 0:
+            all_conditions.append('''({})'''.format(''' {} '''.format(filterop.upper()).join(conditions)))
+        if len(more_conditions) > 0: 
+            all_conditions.append('''({})'''.format(''' AND '''.join(more_conditions)))
+        statement += ''' {}'''.format(''' AND '''.join(all_conditions))
+
+    # ORDER BY
+    if order_by != None:
+        statement += ''' ORDER BY {}'''.format(order_by)
+        if order_dir != None:
+            statement += ''' {}'''.format(order_dir.upper())
+    # LIMIT
+    if limit:
+        statement += ''' LIMIT {}'''.format(limit)
+        if offset:
+            statement += ''' OFFSET {}'''.format(offset)
+
+    return db_query(db, statement, tuple(bindings))
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

@@ -91,7 +91,13 @@ def format_feed (feed):
 def market (give_asset, get_asset):
 
     # Your Pending Orders Matches.
-    awaiting_btcs = util.get_order_matches(db, status='pending', is_mine=True)
+    my_addresses = [bunch[:2][0] for bunch in bitcoin.get_wallet()]
+    filters = [
+        {'field': 'tx0_address', 'op': 'IN', 'value': my_addresses},
+        {'field': 'tx1_address', 'op': 'IN', 'value': my_addresses}
+    ]
+    awaiting_btcs = util.get_rows(db, table='order_matches', filters=filters, filterop='OR', status='pending')
+
     table = PrettyTable(['Matched Order ID', 'Time Left'])
     for order_match in awaiting_btcs:
         order_match = format_order_match(db, order_match)
@@ -101,7 +107,7 @@ def market (give_asset, get_asset):
     print('\n')
 
     # Open orders.
-    orders = util.get_orders(db, status='open', show_expired=False)
+    orders = util.get_rows(db, table='orders', status='open', show_expired=False)
     table = PrettyTable(['Give Quantity', 'Give Asset', 'Price', 'Price Assets', 'Required BTC Fee', 'Provided BTC Fee', 'Time Left', 'Tx Hash'])
     for order in orders:
         if give_asset and order['give_asset'] != give_asset: continue
@@ -114,7 +120,7 @@ def market (give_asset, get_asset):
     print('\n')
 
     # Open bets.
-    bets = util.get_bets(db, status='open')
+    bets = util.get_rows(db, table='bets', status='open')
     table = PrettyTable(['Bet Type', 'Feed Address', 'Deadline', 'Target Value', 'Leverage', 'Wager', 'Odds', 'Time Left', 'Tx Hash'])
     for bet in bets:
         bet = format_bet(bet)
@@ -124,7 +130,7 @@ def market (give_asset, get_asset):
     print('\n')
 
     # Feeds
-    broadcasts = util.get_broadcasts(db, status='valid', order_by='timestamp', order_dir='desc')
+    broadcasts = util.get_rows(db, table='broadcasts', status='valid', order_by='timestamp', order_dir='desc')
     table = PrettyTable(['Feed Address', 'Timestamp', 'Text', 'Value', 'Fee Fraction'])
     seen_addresses = []
     for broadcast in broadcasts:
@@ -816,7 +822,7 @@ if __name__ == '__main__':
 
         if args.asset != 'BTC':
             print('Shareholders:')
-            balances = util.get_balances(db, asset=args.asset)
+            balances = util.get_rows(db, table='balances', filters={'field': 'asset', 'op': '=', 'value': args.asset})
             print('\taddress, quantity, escrow')
             for holder in util.holders(db, args.asset):
                 quantity = holder['address_quantity']
@@ -866,7 +872,12 @@ if __name__ == '__main__':
         print()
 
     elif args.action == 'pending':
-        awaiting_btcs = util.get_order_matches(db, status='pending', is_mine=True)
+        my_addresses = [bunch[:2][0] for bunch in bitcoin.get_wallet()]
+        filters = [
+            {'field': 'tx0_address', 'op': 'IN', 'value': my_addresses},
+            {'field': 'tx1_address', 'op': 'IN', 'value': my_addresses}
+        ]
+        awaiting_btcs = util.get_rows(db, table='order_matches', filters=filters, filterop='OR', status='pending')
         table = PrettyTable(['Matched Order ID', 'Time Left'])
         for order_match in awaiting_btcs:
             order_match = format_order_match(db, order_match)
