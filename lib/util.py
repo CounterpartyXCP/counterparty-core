@@ -308,10 +308,18 @@ def version_check (db):
         raise exceptions.VersionError('Unable to check version. How’s your Internet access?')
  
     # Check client version.
+    passed = True
     if config.VERSION_MAJOR < versions['minimum_version_major']:
+        passed = False
+    elif config.VERSION_MAJOR == versions['minimum_version_major']:
         if config.VERSION_MINOR < versions['minimum_version_minor']:
+            passed = False
+        elif config.VERSION_MINOR == versions['minimum_version_minor']:
             if config.VERSION_REVISION < versions['minimum_version_revision']:
-                raise exceptions.VersionError('Please upgrade counterpartyd to the latest version and restart the server.')
+                passed = False
+
+    if not passed:
+        raise exceptions.VersionError('Please upgrade counterpartyd to the latest version and restart the server.')
 
     logging.debug('Status: Version check passed.')
     return

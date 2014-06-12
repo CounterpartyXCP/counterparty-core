@@ -5,9 +5,11 @@
 	* make dust sizes user‐configurable per‐tx (through API)
 	* bet debug logging
 	* tweak issuance parsing logic (minor protocol change: 310000)
+* v9.24.2
+	* bug in version checking: mandatory manual upgrade
 * v9.24.1
 	* replace internal Python filters with SQL queries (much faster parsing)
-	* totally re‐did API: now much faster, more powerful (while preserving backwards-compatibility)
+	* totally re‐did API: now much faster, more powerful (backwards‐compatible, though)
 * v9.24.0
 	* bug in previous version
 * v9.23.0
