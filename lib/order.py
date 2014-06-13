@@ -296,9 +296,12 @@ def match (db, tx):
         tx0_get_remaining = tx0['get_remaining']
 
         # Ignore previous matches. (Both directions, just to be sure.)
-        cursor.execute('''SELECT * FROM order_matches''')
-        if order_match_id in [order_match['tx0_hash'] + order_match['tx1_hash'] for order_match in list(cursor)]: continue
-        if order_match_id in [order_match['tx1_hash'] + order_match['tx0_hash'] for order_match in list(cursor)]: continue
+        cursor.execute('''SELECT * FROM order_matches
+                          WHERE id = ? ''', (tx0['tx_hash'] + tx1['tx_hash'], ))
+        if list(cursor): continue
+        cursor.execute('''SELECT * FROM order_matches
+                          WHERE id = ? ''', (tx1['tx_hash'] + tx0['tx_hash'], ))
+        if list(cursor): continue
 
         # Get fee provided remaining.
         tx0_fee_required_remaining = tx0['fee_required_remaining']
