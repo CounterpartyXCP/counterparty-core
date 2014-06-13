@@ -1053,7 +1053,20 @@ This section documents any changes to the ``counterpartyd`` API, for version num
 * Added ``sql`` API method
 * Filter params: Added ``LIKE``, ``NOT LIKE`` and ``IN``
 
+.. _9_25_0:
 
+9.25.0
+^^^^^^^^^^^^^^^^^^^^^^^
+
+* new do_* methods: like create_*, but also sign and broadcast the transaction. Same parameters as create_*, plus optional privkey parameter.
+
+**backwards incompatible changes**
+
+* create_*: accept only dict as parameters
+* create_bet: ``bet_type`` must be a integer (instead string)
+* create_bet: ``wager`` and ``counterwager`` args are replaced by ``wager_quantity`` and ``counterwager_quantity``
+* create_issuance: parameter ``lock`` (boolean) removed (use LOCK in description)
+* create_issuance: parameter ``transfer_destination`` replaced by ``destination``
 
 
 
