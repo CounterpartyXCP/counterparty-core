@@ -6,6 +6,7 @@ import threading
 import decimal
 import time
 import json
+import re
 import requests
 import logging
 from logging import handlers as logging_handlers
@@ -54,7 +55,7 @@ def get_rows(db, table, filters=[], filterop='AND', order_by=None, order_dir=Non
             return '''?'''
 
     # TODO: Document that op can be anything that SQLite3 accepts.
-    if not table or table.lower() not in config.API_TABLES:
+    if not table or table.lower() not in API_TABLES:
         raise Exception('Unknown table')
     if filterop and filterop.upper() not in ['OR', 'AND']:
         raise Exception('Invalid filter operator (OR, AND)')
@@ -146,7 +147,7 @@ def get_rows(db, table, filters=[], filterop='AND', order_by=None, order_dir=Non
     # legacy filters
     if not show_expired and table == 'orders':
         #Ignore BTC orders one block early.
-        expire_index = last_block(db)['block_index'] + 1
+        expire_index = util.last_block(db)['block_index'] + 1
         more_conditions.append('''((give_asset == ? AND expire_index > ?) OR give_asset != ?)''')
         bindings += ['BTC', expire_index, 'BTC']
 
@@ -215,10 +216,10 @@ class APIServer(threading.Thread):
         # Generate dynamically get_{table} methods
         def generate_get_method(table):
             def get_method(**kwargs):
-                return util.get_rows(db, table=table, **kwargs)
+                return get_rows(db, table=table, **kwargs)
             return get_method
 
-        for table in config.API_TABLES:
+        for table in API_TABLES:
             new_method = generate_get_method(table)
             new_method.__name__ = 'get_{}'.format(table)
             dispatcher.add_method(new_method)
@@ -253,7 +254,7 @@ class APIServer(threading.Thread):
 
             return create_method, do_method
 
-        for transaction in config.API_TRANSACTIONS:
+        for transaction in API_TRANSACTIONS:
             create_method, do_method = generate_create_method(transaction)
             create_method.__name__ = 'create_{}'.format(transaction)
             do_method.__name__ = 'do_{}'.format(transaction)
