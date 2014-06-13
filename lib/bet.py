@@ -223,8 +223,12 @@ def match (db, tx):
 
     # Get bet in question.
     bets = list(cursor.execute('''SELECT * FROM bets\
-                                WHERE tx_index=?''', (tx['tx_index'],)))
-    assert len(bets) == 1
+                                  WHERE (tx_index = ? AND status = ?)''', (tx['tx_index'], 'open')))
+    if not bets:
+        cursor.close()
+        return
+    else:
+        assert len(bets) == 1
     tx1 = bets[0]
 
     # Get counterbet_type.
@@ -243,7 +247,7 @@ def match (db, tx):
         sorted(bet_matches, key=lambda x: x['tx_index'])                                        # Sort by tx index second.
         sorted(bet_matches, key=lambda x: util.price(x['wager_quantity'], x['counterwager_quantity'], tx1['block_index']))   # Sort by price first.
 
-    tx1_status = 'open'
+    tx1_status = tx1['status']
     for tx0 in bet_matches:
         if tx1_status != 'open': break
 
@@ -361,6 +365,7 @@ def match (db, tx):
             cursor.execute(sql, bindings)
 
     cursor.close()
+    return
 
 def expire (db, block_index, block_time):
     cursor = db.cursor()

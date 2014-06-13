@@ -118,14 +118,12 @@ def cancel_order_match (db, order_match, status, block_index):
 
     # Re‐match.                 # Protocol change
     if block_index >= 305000 or config.TESTNET:
-        if tx0_order_time_left:
-            cursor.execute('''SELECT * FROM transactions\
-                              WHERE tx_hash = ?''', (tx0_order['tx_hash'],))
-            match(db, list(cursor)[0])
-        if tx1_order_time_left:
-            cursor.execute('''SELECT * FROM transactions\
-                              WHERE tx_hash = ?''', (tx1_order['tx_hash'],))
-            match(db, list(cursor)[0])
+        cursor.execute('''SELECT * FROM transactions\
+                          WHERE tx_hash = ?''', (tx0_order['tx_hash'],))
+        match(db, list(cursor)[0])
+        cursor.execute('''SELECT * FROM transactions\
+                          WHERE tx_hash = ?''', (tx1_order['tx_hash'],))
+        match(db, list(cursor)[0])
 
     cursor.close()
 
@@ -264,8 +262,12 @@ def match (db, tx):
 
     # Get order in question.
     orders = list(cursor.execute('''SELECT * FROM orders\
-                                    WHERE tx_index=?''', (tx['tx_index'],)))
-    assert len(orders) == 1
+                                    WHERE (tx_index = ? AND status = ?)''', (tx['tx_index'], 'open')))
+    if not orders:
+        cursor.close()
+        return
+    else:
+        assert len(orders) == 1
     tx1 = orders[0]
 
     cursor.execute('''SELECT * FROM orders \
@@ -284,7 +286,7 @@ def match (db, tx):
     tx1_fee_required_remaining = tx1['fee_required_remaining']
     tx1_fee_provided_remaining = tx1['fee_provided_remaining']
 
-    tx1_status = 'open'
+    tx1_status = tx1['status']
     for tx0 in order_matches:
         order_match_id = tx0['tx_hash'] + tx1['tx_hash']
         if tx1_status != 'open': break
@@ -293,9 +295,10 @@ def match (db, tx):
         tx0_give_remaining = tx0['give_remaining']
         tx0_get_remaining = tx0['get_remaining']
 
-        # Ignore previous matches.
+        # Ignore previous matches. (Both directions, just to be sure.)
         cursor.execute('''SELECT * FROM order_matches''')
-        if order_match_id in [order_match['id'] for order_match in list(cursor)]: continue
+        if order_match_id in [order_match['tx0_hash'] + order_match['tx1_hash'] for order_match in list(cursor)]: continue
+        if order_match_id in [order_match['tx1_hash'] + order_match['tx0_hash'] for order_match in list(cursor)]: continue
 
         # Get fee provided remaining.
         tx0_fee_required_remaining = tx0['fee_required_remaining']
@@ -468,6 +471,7 @@ def match (db, tx):
                 break
 
     cursor.close()
+    return
 
 def expire (db, block_index):
     cursor = db.cursor()
