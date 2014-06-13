@@ -781,7 +781,7 @@ def reparse (db, block_index=None, quiet=False):
         initialise(db)
         cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
         for block in cursor.fetchall():
-            logging.info('Block (re-parse): {}'.format(str(block['block_index'])))
+            logging.info('Block (re‐parse): {}'.format(str(block['block_index'])))
             parse_block(db, block['block_index'], block['block_time'])
         if quiet:
             log.setLevel(logging.INFO)
