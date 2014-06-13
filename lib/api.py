@@ -20,6 +20,187 @@ from jsonrpc import dispatcher
 from . import (config, bitcoin, exceptions, util)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 
+
+# API config
+API_TABLES = ['balances', 'credits', 'debits', 'bets', 'bet_matches', 'broadcasts', 'btcpays', 'burns', 
+              'callbacks', 'cancels', 'dividends', 'issuances', 'orders', 'order_matches', 'sends', 
+              'bet_expirations', 'order_expirations', 'bet_match_expirations', 'order_match_expirations']
+
+API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel', 'callback', 'dividend', 'issuance', 'order', 'send']
+
+
+# TODO: ALL queries EVERYWHERE should be done with this method
+def db_query(db, statement, bindings=(), callback=None, **callback_args):
+    cursor = db.cursor()
+    if hasattr(callback, '__call__'):
+        cursor.execute(statement, bindings)
+        for row in cursor:
+            callback(row, **callback_args)
+        results = None
+    else:
+        results = list(cursor.execute(statement, bindings))
+    cursor.close()
+    return results
+
+def get_rows(db, table, filters=[], filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None, 
+              status=None, limit=1000, offset=0, show_expired=True):
+    """Filters results based on a filter data structure (as used by the API)"""
+    
+    def value_to_marker(value):
+        # if value is an array place holder is (?,?,?,..)
+        if isinstance(value, list):
+            return '''({})'''.format(','.join(['?' for e in range(0,len(value))]))
+        else:
+            return '''?'''
+
+    # TODO: Document that op can be anything that SQLite3 accepts.
+    if not table or table.lower() not in config.API_TABLES:
+        raise Exception('Unknown table')
+    if filterop and filterop.upper() not in ['OR', 'AND']:
+        raise Exception('Invalid filter operator (OR, AND)')
+    if order_dir and order_dir.upper() not in ['ASC', 'DESC']:
+        raise Exception('Invalid order direction (ASC, DESC)')
+    if not isinstance(limit, int):
+        raise Exception('Invalid limit')
+    elif limit > 1000:
+        raise Exception('Limit should be lower or equal to 1000')
+    if not isinstance(offset, int):
+        raise Exception('Invalid offset')
+    # TODO: accept an object:  {'field1':'ASC', 'field2': 'DESC'}
+    if order_by and not re.compile('^[a-z0-9_]+$').match(order_by):
+        raise Exception('Invalid order_by, must be a field name')
+
+    if isinstance(filters, dict): #single filter entry, convert to a one entry list
+        filters = [filters,]
+    elif not isinstance(filters, list):
+        filters = []
+
+    # TODO: Document this! (Each filter can be an ordered list.)
+    new_filters = []
+    for filter_ in filters:
+        if type(filter_) in (list, tuple) and len(a) in [3, 4]:
+            new_filter = {'field': filter_[0], 'op': filter_[1], 'value':  filter_[2]}
+            if len(a) == 4: new_filter['case_sensitive'] = filter_[3]
+            new_filters.append(new_filter)
+        elif type(filter_) == dict:
+            new_filters.append(filter_)
+        else:
+            raise Exception('Unknown filter type')
+    filters = new_filters
+
+    # validate filter(s)
+    for filter_ in filters:
+        for field in ['field', 'op', 'value']: #should have all fields
+            if field not in filter_:
+                raise Exception("A specified filter is missing the '%s' field" % field)
+        if not isinstance(filter_['value'], (str, int, float, list)):
+            raise Exception("Invalid value for the field '%s'" % filter_['field'])
+        if isinstance(filter_['value'], list) and filter_['op'].upper() != 'IN':
+            raise Exception("Invalid value for the field '%s'" % filter_['field'])
+        if filter_['op'].upper() not in ['=', '==', '!=', '>', '<', '>=', '<=', 'IN', 'LIKE', 'NOT IN', 'NOT LIKE']:
+            raise Exception("Invalid operator for the field '%s'" % filter_['field'])  
+        if 'case_sensitive' in filter_ and not isinstance(filter_['case_sensitive'], bool):
+            raise Exception("case_sensitive must be a boolean")
+
+    # SELECT
+    statement = '''SELECT * FROM {}'''.format(table)
+    # WHERE
+    bindings = []
+    conditions = []
+    for filter_ in filters:
+        case_sensitive = False if 'case_sensitive' not in filter_ else filter_['case_sensitive']
+        if filter_['op'] == 'LIKE' and case_sensitive == False:
+            filter_['field'] = '''UPPER({})'''.format(filter_['field'])
+            filter_['value'] = filter_['value'].upper()
+        marker = value_to_marker(filter_['value'])
+        conditions.append('''{} {} {}'''.format(filter_['field'], filter_['op'], marker))
+        if isinstance(filter_['value'], list):         
+            bindings += filter_['value']
+        else:
+            bindings.append(filter_['value'])
+    # AND filters
+    more_conditions = []
+    if table not in ['balances', 'order_matches', 'bet_matches']:
+        if start_block != None:
+            more_conditions.append('''block_index >= ?''')
+            bindings.append(start_block)
+        if end_block != None:
+            more_conditions.append('''block_index <= ?''')
+            bindings.append(end_block)
+    elif table in ['order_matches', 'bet_matches']:
+        if start_block != None:
+            more_conditions.append('''tx0_block_index >= ?''')
+            bindings.append(start_block)
+        if end_block != None:
+            more_conditions.append('''tx1_block_index <= ?''')
+            bindings.append(end_block)
+
+    # status
+    if isinstance(status, list) and len(status) > 0:
+        more_conditions.append('''status IN {}'''.format(value_to_marker(status)))
+        bindings += status
+    elif isinstance(status, str) and status != '':
+        more_conditions.append('''status == ?''')
+        bindings.append(status)
+
+    # legacy filters
+    if not show_expired and table == 'orders':
+        #Ignore BTC orders one block early.
+        expire_index = last_block(db)['block_index'] + 1
+        more_conditions.append('''((give_asset == ? AND expire_index > ?) OR give_asset != ?)''')
+        bindings += ['BTC', expire_index, 'BTC']
+
+    if (len(conditions) + len(more_conditions)) > 0:
+        statement += ''' WHERE'''
+        all_conditions = []
+        if len(conditions) > 0:
+            all_conditions.append('''({})'''.format(''' {} '''.format(filterop.upper()).join(conditions)))
+        if len(more_conditions) > 0: 
+            all_conditions.append('''({})'''.format(''' AND '''.join(more_conditions)))
+        statement += ''' {}'''.format(''' AND '''.join(all_conditions))
+
+    # ORDER BY
+    if order_by != None:
+        statement += ''' ORDER BY {}'''.format(order_by)
+        if order_dir != None:
+            statement += ''' {}'''.format(order_dir.upper())
+    # LIMIT
+    if limit:
+        statement += ''' LIMIT {}'''.format(limit)
+        if offset:
+            statement += ''' OFFSET {}'''.format(offset)
+
+    return db_query(db, statement, tuple(bindings))
+
+def compose_transaction(db, name, params, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
+    tx_info = sys.modules['lib.{}'.format(name)].compose(db, **params)
+    return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
+
+def sign_transaction(unsigned_tx_hex, privkey=None):
+    return bitcoin.sign_tx(unsigned_tx_hex, private_key_wif=privkey)
+
+def broadcast_transaction(signed_tx_hex):
+    if not config.TESTNET and config.BROADCAST_TX_MAINNET in ['bci', 'bci-failover']:
+        url = "https://blockchain.info/pushtx"
+        params = {'tx': signed_tx_hex}
+        response = requests.post(url, data=params)
+        if response.text.lower() != 'transaction submitted' or response.status_code != 200:
+            if config.BROADCAST_TX_MAINNET == 'bci-failover':
+                return bitcoin.broadcast_tx(signed_tx_hex)
+            else:
+                raise Exception(response.text)
+        return response.text
+    else:
+        return bitcoin.broadcast_tx(signed_tx_hex)
+    
+def do_transaction(db, name, params, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None, privkey=None):
+    unsigned_tx = compose_transaction(db, name, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs, **kwargs)
+    signed_tx = sign_transaction(unsigned_tx, private_key_wif=privkey)
+    return broadcast_transaction(signed_tx)
+
+
+# JSON RPC
+# TODO: move in jsonrpc.py
 class APIServer(threading.Thread):
 
     def __init__ (self):
@@ -44,8 +225,50 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def sql(query, bindings=[]):
-            return util.db_query(db, query, tuple(bindings))
-        
+            return db_query(db, query, tuple(bindings))
+
+        ######################
+        #WRITE/ACTION API
+
+        # Generate dynamically create_{transaction} and do_{transaction} methods
+        def generate_create_method(transaction):
+
+            def split_params(**kwargs):
+                transaction_args = {}
+                common_args = {}
+                for key in kwargs:
+                    if key in ['encoding', 'pubkey', 'allow_unconfirmed_inputs', 'fee', 'privkey']:
+                        common_args[key] = kwargs[key]
+                    else:
+                        transaction_args[key] = kwargs[key]
+                return transaction_args, common_args
+
+            def create_method(**kwargs):
+                transaction_args, common_args = split_params(**kwargs)
+                return compose_transaction(db, name=transaction, params=transaction_args, **common_args)
+
+            def do_method(**kwargs):
+                transaction_args, common_args = split_params(**kwargs)
+                return do_transaction(db, name=transaction, params=transaction_args, **common_args)
+
+            return create_method, do_method
+
+        for transaction in config.API_TRANSACTIONS:
+            create_method, do_method = generate_create_method(transaction)
+            create_method.__name__ = 'create_{}'.format(transaction)
+            do_method.__name__ = 'do_{}'.format(transaction)
+            dispatcher.add_method(create_method)
+            dispatcher.add_method(do_method)
+
+        @dispatcher.add_method
+        def sign_tx(unsigned_tx_hex, privkey=None):
+            return sign_transaction(unsigned_tx_hex, private_key_wif=privkey)
+                
+        @dispatcher.add_method
+        def broadcast_tx(signed_tx_hex):
+            return broadcast_transaction(signed_tx_hex)
+
+
         @dispatcher.add_method
         def get_messages(block_index):
             if not isinstance(block_index, int):
@@ -208,97 +431,7 @@ class APIServer(threading.Thread):
             cursor.close()
             return names
 
-        ######################
-        #WRITE/ACTION API
-        @dispatcher.add_method
-        def create_bet(source, feed_address, bet_type, deadline, wager, counterwager, expiration, target_value=0.0,
-        leverage=5040, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
-            try:
-                bet_type_id = util.BET_TYPE_ID[bet_type]
-            except KeyError:
-                raise exceptions.BetError('Unknown bet type.')
-            tx_info = bet.compose(db, source, feed_address,
-                              bet_type_id, deadline, wager,
-                              counterwager, target_value,
-                              leverage, expiration)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
-
-        @dispatcher.add_method
-        def create_broadcast(source, fee_fraction, text, timestamp, value=-1, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
-            tx_info = broadcast.compose(db, source, timestamp,
-                                    value, fee_fraction, text)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
-
-        @dispatcher.add_method
-        def create_btcpay(source, order_match_id, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
-            tx_info = btcpay.compose(db, source, order_match_id)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
-
-        @dispatcher.add_method
-        def create_burn(source, quantity, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
-            tx_info = burn.compose(db, source, quantity)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
-
-        @dispatcher.add_method
-        def create_cancel(source, offer_hash, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
-            tx_info = cancel.compose(db, source, offer_hash)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
-
-        @dispatcher.add_method
-        def create_callback(source, fraction, asset, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
-            tx_info = callback.compose(db, source, fraction, asset)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
-
-        @dispatcher.add_method
-        def create_dividend(source, quantity_per_unit, asset, dividend_asset, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
-            tx_info = dividend.compose(db, source, quantity_per_unit, asset, dividend_asset)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
-
-        @dispatcher.add_method
-        def create_issuance(source, asset, quantity, divisible, description, callable_=None, call_date=None,
-        call_price=None, transfer_destination=None, lock=False, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
-            try:
-                quantity = int(quantity)
-            except ValueError:
-                raise Exception("Invalid quantity")
-            if lock:
-                description = "LOCK"
-            tx_info = issuance.compose(db, source, transfer_destination,
-                                   asset, quantity, divisible, callable_,
-                                   call_date, call_price, description)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
-
-        @dispatcher.add_method
-        def create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required,
-                         fee_provided, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
-            tx_info = order.compose(db, source, give_asset, give_quantity,
-                                    get_asset, get_quantity, expiration,
-                                    fee_required)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, fee_provided=fee_provided, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
-
-        @dispatcher.add_method
-        def create_send(source, destination, asset, quantity, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
-            tx_info = send.compose(db, source, destination, asset, quantity)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
-
-        @dispatcher.add_method
-        def sign_tx(unsigned_tx_hex, privkey=None):
-            return bitcoin.sign_tx(unsigned_tx_hex, private_key_wif=privkey)
-                
-        @dispatcher.add_method
-        def broadcast_tx(signed_tx_hex):
-            if not config.TESTNET and config.BROADCAST_TX_MAINNET in ['bci', 'bci-failover']:
-                url = "https://blockchain.info/pushtx"
-                params = {'tx': signed_tx_hex}
-                response = requests.post(url, data=params)
-                if response.text.lower() != 'transaction submitted' or response.status_code != 200:
-                    if config.BROADCAST_TX_MAINNET == 'bci-failover':
-                        return bitcoin.broadcast_tx(signed_tx_hex)
-                    else:
-                        raise Exception(response.text)
-                return response.text
-            else:
-                return bitcoin.broadcast_tx(signed_tx_hex)
+        
 
         class API(object):
             @cherrypy.expose
