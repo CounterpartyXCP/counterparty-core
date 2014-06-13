@@ -173,9 +173,9 @@ def get_rows(db, table, filters=[], filterop='AND', order_by=None, order_dir=Non
 
     return db_query(db, statement, tuple(bindings))
 
-def compose_transaction(db, name, params, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
+def compose_transaction(db, name, params, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None, fee_provided=None):
     tx_info = sys.modules['lib.{}'.format(name)].compose(db, **params)
-    return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
+    return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs, fee_provided=fee_provided)
 
 def sign_transaction(unsigned_tx_hex, privkey=None):
     return bitcoin.sign_tx(unsigned_tx_hex, private_key_wif=privkey)
@@ -238,7 +238,7 @@ class APIServer(threading.Thread):
                 transaction_args = {}
                 common_args = {}
                 for key in kwargs:
-                    if key in ['encoding', 'pubkey', 'allow_unconfirmed_inputs', 'fee', 'privkey']:
+                    if key in ['encoding', 'pubkey', 'allow_unconfirmed_inputs', 'fee', 'privkey', 'fee_provided']:
                         common_args[key] = kwargs[key]
                     else:
                         transaction_args[key] = kwargs[key]
