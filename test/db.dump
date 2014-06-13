@@ -21,8 +21,6 @@ INSERT INTO balances VALUES('n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',7369);
 -- Triggers and indices on  balances
 CREATE INDEX address_asset_idx ON balances (address, asset)
                    ;
-CREATE INDEX asset_idx ON balances (asset)
-                   ;
 
 -- Table  bet_expirations
 DROP TABLE IF EXISTS bet_expirations;
@@ -76,7 +74,7 @@ INSERT INTO bet_matches VALUES('ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05
 INSERT INTO bet_matches VALUES('4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8',14,'4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',15,'dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000100,0.0,5040,150000000,350000000,154922,154923,10,10,154932,5000000,'settled');
 INSERT INTO bet_matches VALUES('c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee34a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a',16,'c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee3','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',17,'4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',2,3,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000200,1.0,5040,750000000,650000000,154924,154925,10,10,154934,5000000,'settled: for notequal');
 -- Triggers and indices on  bet_matches
-CREATE INDEX valid_feed_idx ON bet_matches (status, feed_address)
+CREATE INDEX valid_feed_idx ON bet_matches (feed_address, status)
                    ;
 
 -- Table  bets
@@ -108,8 +106,6 @@ INSERT INTO bets VALUES(15,'dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923a
 INSERT INTO bets VALUES(16,'c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee3',154924,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',2,1388000200,750000000,0,650000000,0,1.0,5040,10,154934,5000000,'filled');
 INSERT INTO bets VALUES(17,'4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a',154925,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,1388000200,650000000,0,750000000,0,1.0,5040,10,154935,5000000,'filled');
 -- Triggers and indices on  bets
-CREATE INDEX feed_status_idx ON bets (status, feed_address)
-                   ;
 CREATE INDEX feed_valid_bettype_idx ON bets (feed_address, status, bet_type)
                    ;
 
@@ -173,6 +169,8 @@ INSERT INTO broadcasts VALUES(19,'ab897fbdedfa502b2d839b6a56100887dccdc507555c28
 INSERT INTO broadcasts VALUES(20,'83891d7fe85c33e52c8b4e5814c92fb6a3b9467299200538a6babaa8b452d879',154928,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1388000201,2.0,5000000,'Unit Test',0,'valid');
 -- Triggers and indices on  broadcasts
 CREATE INDEX status_source_idx ON broadcasts (status, source)
+                   ;
+CREATE INDEX timestamp_idx ON broadcasts (timestamp)
                    ;
 
 -- Table  btcpays
@@ -267,9 +265,6 @@ INSERT INTO credits VALUES(154931,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',569
 INSERT INTO credits VALUES(154932,'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',10000,NULL,'452ba1ddef80246c48be7690193c76c1d61185906be9401014fe14f1be64b74f');
 INSERT INTO credits VALUES(154933,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',3157,NULL,NULL);
 INSERT INTO credits VALUES(154933,'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',4735500000,NULL,NULL);
--- Triggers and indices on  credits
-CREATE INDEX address_idx ON credits (address)
-                   ;
 
 -- Table  debits
 DROP TABLE IF EXISTS debits;
@@ -300,7 +295,9 @@ INSERT INTO debits VALUES(154932,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',100
 INSERT INTO debits VALUES(154933,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',4735500000,NULL,NULL);
 INSERT INTO debits VALUES(154933,'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',3157,NULL,NULL);
 -- Triggers and indices on  debits
-CREATE INDEX debits_address_idx ON debits (address)
+CREATE INDEX address_idx ON debits (address)
+                   ;
+CREATE INDEX asset_idx ON debits (asset)
                    ;
 
 -- Table  dividends
@@ -343,7 +340,7 @@ INSERT INTO issuances VALUES(6,'67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8be
 -- Triggers and indices on  issuances
 CREATE INDEX status_idx ON issuances (status)
                    ;
-CREATE INDEX valid_asset_idx ON issuances (status, asset)
+CREATE INDEX valid_asset_idx ON issuances (asset, status)
                    ;
 
 -- Table  messages
@@ -495,6 +492,10 @@ CREATE INDEX id_idx ON order_matches (id)
                    ;
 CREATE INDEX match_expire_idx ON order_matches (status, match_expire_index)
                    ;
+CREATE INDEX tx0_address_idx ON order_matches (tx0_address)
+                   ;
+CREATE INDEX tx1_address_idx ON order_matches (tx1_address)
+                   ;
 
 -- Table  orders
 DROP TABLE IF EXISTS orders;
@@ -524,9 +525,11 @@ INSERT INTO orders VALUES(21,'2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3a
 -- Triggers and indices on  orders
 CREATE INDEX expire_idx ON orders (status, expire_index)
                    ;
-CREATE INDEX give_get_status_idx ON orders (give_asset, get_asset, status)
+CREATE INDEX give_asset_idx ON orders (give_asset)
                    ;
-CREATE INDEX give_status_idx ON orders (give_asset, status)
+CREATE INDEX give_get_status_idx ON orders (get_asset, give_asset, status)
+                   ;
+CREATE INDEX give_status_idx ON orders (status, give_asset)
                    ;
 
 -- Table  sends
@@ -545,6 +548,11 @@ INSERT INTO sends VALUES(1,'4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cc
 INSERT INTO sends VALUES(7,'ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879',154915,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBB',4000000,'valid');
 INSERT INTO sends VALUES(8,'beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a',154916,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',526,'valid');
 INSERT INTO sends VALUES(24,'452ba1ddef80246c48be7690193c76c1d61185906be9401014fe14f1be64b74f',154932,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',10000,'valid');
+-- Triggers and indices on  sends
+CREATE INDEX destination_idx ON sends (destination)
+                   ;
+CREATE INDEX source_idx ON sends (source)
+                   ;
 
 -- Table  transactions
 DROP TABLE IF EXISTS transactions;

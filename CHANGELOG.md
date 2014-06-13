@@ -1,9 +1,16 @@
 ## Client Versions ##
 * v9.25.0
 	* issuance fee only upon first issuance (protocol change: retroactive)
+	* misc. clean‐up
+	* make dust sizes user‐configurable per‐tx (through API)
+	* bet debug logging
+	* tweak issuance parsing logic (minor protocol change: 310000)
+	* constituent orders of expired order matches re‐match
+* v9.24.2
+	* bug in version checking: mandatory manual upgrade
 * v9.24.1
 	* replace internal Python filters with SQL queries (much faster parsing)
-	* totally re‐did API: now much faster, more powerful (backwards‐compatible, though)
+	* totally re‐did API: now much faster, more powerful (almost entirely backwards‐compatible, though)
 * v9.24.0
 	* bug in previous version
 * v9.23.0

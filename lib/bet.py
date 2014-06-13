@@ -16,6 +16,7 @@ import struct
 import decimal
 D = decimal.Decimal
 import time
+import logging
 
 from . import (util, config, bitcoin, exceptions, util)
 
@@ -135,7 +136,7 @@ def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
 
     problems = validate(db, source, feed_address, bet_type, deadline, wager_quantity,
                         counterwager_quantity, target_value, leverage, expiration)
-    if deadline <= time.time() and config.PREFIX != config.UNITTEST_PREFIX:
+    if deadline <= time.time() and not config.UNITTEST:
         problems.append('deadline passed')
     if problems: raise exceptions.BetError(problems)
 
@@ -251,27 +252,33 @@ def match (db, tx):
     for tx0 in bet_matches:
         if tx1_status != 'open': break
 
+        logging.debug('Considering: ' + tx0['tx_hash'])
+        tx0_wager_remaining = tx0['wager_remaining']
+        tx0_counterwager_remaining = tx0['counterwager_remaining']
+
         # Bet types must be opposite.
-        if not counterbet_type == tx0['bet_type']: continue
-        if tx0['leverage'] == tx1['leverage']:
-            leverage = tx0['leverage']
-        else:
+        if counterbet_type != tx0['bet_type']:
+            logging.debug('Leverages disagree.')
+            continue
+
+        # Leverages must agree exactly
+        if tx0['leverage'] != tx1['leverage']:
+            logging.debug('Leverages disagree.')
             continue
 
         # Target values must agree exactly.
-        if tx0['target_value'] == tx1['target_value']:
-            target_value = tx0['target_value']
-        else:
+        if tx0['target_value'] != tx1['target_value']:
+            logging.debug('Target values disagree.')
             continue
 
         # Fee fractions must agree exactly.
         if tx0['fee_fraction_int'] != tx1['fee_fraction_int']:
+            logging.debug('Fee fractions disagree.')
             continue
-        else:
-            fee_fraction_int = tx0['fee_fraction_int']
 
         # Deadlines must agree exactly.
         if tx0['deadline'] != tx1['deadline']:
+            logging.debug('Deadlines disagree.')
             continue
 
         # If the odds agree, make the trade. The found order sets the odds,
@@ -282,20 +289,28 @@ def match (db, tx):
 
         if tx['block_index'] < 286000: tx0_inverse_odds = util.price(1, tx0_odds, tx1['block_index']) # Protocol change.
 
+        logging.debug('Tx0 Inverse Odds: {}; Tx1 Odds: {}'.format(float(tx0_inverse_odds), float(tx1_odds)))
         if tx0_inverse_odds <= tx1_odds:
-            forward_quantity = int(min(tx0['wager_remaining'], int(util.price(tx1_wager_remaining, tx1_odds, tx1['block_index']))))
+            logging.debug('Potential forward quantities: {}, {}'.format(tx0_wager_remaining, int(util.price(tx1_wager_remaining, tx1_odds, tx1['block_index']))))
+            forward_quantity = int(min(tx0_wager_remaining, int(util.price(tx1_wager_remaining, tx1_odds, tx1['block_index']))))
+            logging.debug('Forward Quantity: {}'.format(forward_quantity))
             backward_quantity = round(forward_quantity / tx0_odds)
+            logging.debug('Backward Quantity: {}'.format(backward_quantity))
 
-            if not forward_quantity: continue
+            if not forward_quantity:
+                logging.debug('Zero forward quantity.')
+                continue
             if tx1['block_index'] >= 286500 or config.TESTNET:    # Protocol change.
-                if not backward_quantity: continue
+                if not backward_quantity:
+                    logging.debug('Zero backward quantity.')
+                    continue
 
             bet_match_id = tx0['tx_hash'] + tx1['tx_hash']
 
             # Debit the order.
             # Counterwager remainings may be negative.
-            tx0_wager_remaining = tx0['wager_remaining'] - forward_quantity
-            tx0_counterwager_remaining = tx0['counterwager_remaining'] - backward_quantity
+            tx0_wager_remaining = tx0_wager_remaining - forward_quantity
+            tx0_counterwager_remaining = tx0_counterwager_remaining - backward_quantity
             tx1_wager_remaining = tx1_wager_remaining - backward_quantity
             tx1_counterwager_remaining = tx1_counterwager_remaining - forward_quantity
 
@@ -358,7 +373,7 @@ def match (db, tx):
                 'tx0_expiration': tx0['expiration'],
                 'tx1_expiration': tx1['expiration'],
                 'match_expire_index': min(tx0['expire_index'], tx1['expire_index']),
-                'fee_fraction_int': fee_fraction_int,
+                'fee_fraction_int': tx1['fee_fraction_int'],
                 'status': 'pending',
             }
             sql='insert into bet_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :tx0_bet_type, :tx1_bet_type, :feed_address, :initial_value, :deadline, :target_value, :leverage, :forward_quantity, :backward_quantity, :tx0_block_index, :tx1_block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :fee_fraction_int, :status)'

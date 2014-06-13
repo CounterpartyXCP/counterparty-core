@@ -7,6 +7,7 @@ import decimal
 import time
 import json
 import re
+import requests
 import logging
 from logging import handlers as logging_handlers
 D = decimal.Decimal
@@ -362,8 +363,15 @@ class APIServer(threading.Thread):
         ######################
         #WRITE/ACTION API
         @dispatcher.add_method
-        def create_bet(source, feed_address, bet_type, deadline, wager, counterwager, expiration, target_value=0.0,
-        leverage=5040, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
+        def create_bet(source, feed_address, bet_type, deadline, wager,
+                       counterwager, expiration, target_value=0.0,
+                       leverage=5040, encoding=config.ENCODING,
+                       fee_per_kb=config.FEE_PER_KB,
+                       regular_dust_size=config.REGULAR_DUST_SIZE,
+                       multisig_dust_size=config.MULTISIG_DUST_SIZE,
+                       op_return_value=config.OP_RETURN_VALUE, pubkey=None,
+                       allow_unconfirmed_inputs=False, fee=None):
+
             try:
                 bet_type_id = util.BET_TYPE_ID[bet_type]
             except KeyError:
@@ -372,42 +380,128 @@ class APIServer(threading.Thread):
                               bet_type_id, deadline, wager,
                               counterwager, target_value,
                               leverage, expiration)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
+            return bitcoin.transaction(tx_info, encoding=encoding,
+                                       fee_per_kb=fee_per_kb,
+                                       regular_dust_size=regular_dust_size,
+                                       multisig_dust_size=multisig_dust_size,
+                                       op_return_value=op_return_value,
+                                       exact_fee=fee, public_key_hex=pubkey,
+                                       allow_unconfirmed_inputs=allow_unconfirmed_inputs)
 
         @dispatcher.add_method
-        def create_broadcast(source, fee_fraction, text, timestamp, value=-1, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
+        def create_broadcast(source, fee_fraction, text, timestamp, value=-1,
+                             encoding=config.ENCODING,
+                             fee_per_kb=config.FEE_PER_KB,
+                             regular_dust_size=config.REGULAR_DUST_SIZE,
+                             multisig_dust_size=config.MULTISIG_DUST_SIZE,
+                             op_return_value=config.OP_RETURN_VALUE,
+                             pubkey=None, allow_unconfirmed_inputs=False,
+                             fee=None):
             tx_info = broadcast.compose(db, source, timestamp,
                                     value, fee_fraction, text)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
+            return bitcoin.transaction(tx_info, encoding=encoding,
+                                       fee_per_kb=fee_per_kb,
+                                       regular_dust_size=regular_dust_size,
+                                       multisig_dust_size=multisig_dust_size,
+                                       op_return_value=op_return_value,
+                                       exact_fee=fee, public_key_hex=pubkey,
+                                       allow_unconfirmed_inputs=allow_unconfirmed_inputs)
 
         @dispatcher.add_method
-        def create_btcpay(source, order_match_id, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
+        def create_btcpay(source, order_match_id, encoding=config.ENCODING,
+                          fee_per_kb=config.FEE_PER_KB,
+                          regular_dust_size=config.REGULAR_DUST_SIZE,
+                          multisig_dust_size=config.MULTISIG_DUST_SIZE,
+                          op_return_value=config.OP_RETURN_VALUE, pubkey=None,
+                          allow_unconfirmed_inputs=False, fee=None):
             tx_info = btcpay.compose(db, source, order_match_id)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
+            return bitcoin.transaction(tx_info, encoding=encoding,
+                                       fee_per_kb=fee_per_kb,
+                                       regular_dust_size=regular_dust_size,
+                                       multisig_dust_size=multisig_dust_size,
+                                       op_return_value=op_return_value,
+                                       exact_fee=fee, public_key_hex=pubkey,
+                                       allow_unconfirmed_inputs=allow_unconfirmed_inputs)
 
         @dispatcher.add_method
-        def create_burn(source, quantity, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
+        def create_burn(source, quantity, encoding=config.ENCODING,
+                        fee_per_kb=config.FEE_PER_KB,
+                        regular_dust_size=config.REGULAR_DUST_SIZE,
+                        multisig_dust_size=config.MULTISIG_DUST_SIZE,
+                        op_return_value=config.OP_RETURN_VALUE, pubkey=None,
+                        allow_unconfirmed_inputs=False, fee=None):
             tx_info = burn.compose(db, source, quantity)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
+            return bitcoin.transaction(tx_info, encoding=encoding,
+                                       fee_per_kb=fee_per_kb,
+                                       regular_dust_size=regular_dust_size,
+                                       multisig_dust_size=multisig_dust_size,
+                                       op_return_value=op_return_value,
+                                       exact_fee=fee, public_key_hex=pubkey,
+                                       allow_unconfirmed_inputs=allow_unconfirmed_inputs)
 
         @dispatcher.add_method
-        def create_cancel(source, offer_hash, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
+        def create_cancel(source, offer_hash, encoding=config.ENCODING,
+                          fee_per_kb=config.FEE_PER_KB,
+                          regular_dust_size=config.REGULAR_DUST_SIZE,
+                          multisig_dust_size=config.MULTISIG_DUST_SIZE,
+                          op_return_value=config.OP_RETURN_VALUE, pubkey=None,
+                          allow_unconfirmed_inputs=False, fee=None):
             tx_info = cancel.compose(db, source, offer_hash)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
+            return bitcoin.transaction(tx_info, encoding=encoding,
+                                       fee_per_kb=fee_per_kb,
+                                       regular_dust_size=regular_dust_size,
+                                       multisig_dust_size=multisig_dust_size,
+                                       op_return_value=op_return_value,
+                                       exact_fee=fee, public_key_hex=pubkey,
+                                       allow_unconfirmed_inputs=allow_unconfirmed_inputs)
 
         @dispatcher.add_method
-        def create_callback(source, fraction, asset, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
+        def create_callback(source, fraction, asset, encoding=config.ENCODING,
+                            fee_per_kb=config.FEE_PER_KB,
+                            regular_dust_size=config.REGULAR_DUST_SIZE,
+                            multisig_dust_size=config.MULTISIG_DUST_SIZE,
+                            op_return_value=config.OP_RETURN_VALUE,
+                            pubkey=None, allow_unconfirmed_inputs=False,
+                            fee=None):
             tx_info = callback.compose(db, source, fraction, asset)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
+            return bitcoin.transaction(tx_info, encoding=encoding,
+                                       fee_per_kb=fee_per_kb,
+                                       regular_dust_size=regular_dust_size,
+                                       multisig_dust_size=multisig_dust_size,
+                                       op_return_value=op_return_value,
+                                       exact_fee=fee, public_key_hex=pubkey,
+                                       allow_unconfirmed_inputs=allow_unconfirmed_inputs)
 
         @dispatcher.add_method
-        def create_dividend(source, quantity_per_unit, asset, dividend_asset, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
-            tx_info = dividend.compose(db, source, quantity_per_unit, asset, dividend_asset)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
+        def create_dividend(source, quantity_per_unit, asset, dividend_asset,
+                            encoding=config.ENCODING,
+                            fee_per_kb=config.FEE_PER_KB,
+                            regular_dust_size=config.REGULAR_DUST_SIZE,
+                            multisig_dust_size=config.MULTISIG_DUST_SIZE,
+                            op_return_value=config.OP_RETURN_VALUE,
+                            pubkey=None, allow_unconfirmed_inputs=False,
+                            fee=None):
+            tx_info = dividend.compose(db, source, quantity_per_unit, asset,
+                                       dividend_asset)
+            return bitcoin.transaction(tx_info, encoding=encoding,
+                                       fee_per_kb=fee_per_kb,
+                                       regular_dust_size=regular_dust_size,
+                                       multisig_dust_size=multisig_dust_size,
+                                       op_return_value=op_return_value,
+                                       exact_fee=fee, public_key_hex=pubkey,
+                                       allow_unconfirmed_inputs=allow_unconfirmed_inputs)
 
         @dispatcher.add_method
-        def create_issuance(source, asset, quantity, divisible, description, callable_=None, call_date=None,
-        call_price=None, transfer_destination=None, lock=False, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
+        def create_issuance(source, asset, quantity, divisible, description,
+                            callable_=None, call_date=None, call_price=None,
+                            transfer_destination=None, lock=False,
+                            encoding=config.ENCODING,
+                            fee_per_kb=config.FEE_PER_KB,
+                            regular_dust_size=config.REGULAR_DUST_SIZE,
+                            multisig_dust_size=config.MULTISIG_DUST_SIZE,
+                            op_return_value=config.OP_RETURN_VALUE,
+                            pubkey=None, allow_unconfirmed_inputs=False,
+                            fee=None):
             try:
                 quantity = int(quantity)
             except ValueError:
@@ -415,22 +509,53 @@ class APIServer(threading.Thread):
             if lock:
                 description = "LOCK"
             tx_info = issuance.compose(db, source, transfer_destination,
-                                   asset, quantity, divisible, callable_,
-                                   call_date, call_price, description)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
+                                       asset, quantity, divisible, callable_,
+                                       call_date, call_price, description)
+            return bitcoin.transaction(tx_info, encoding=encoding,
+                                       fee_per_kb=fee_per_kb,
+                                       regular_dust_size=regular_dust_size,
+                                       multisig_dust_size=multisig_dust_size,
+                                       op_return_value=op_return_value,
+                                       exact_fee=fee, public_key_hex=pubkey,
+                                       allow_unconfirmed_inputs=allow_unconfirmed_inputs)
 
         @dispatcher.add_method
-        def create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required,
-                         fee_provided, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
+        def create_order(source, give_asset, give_quantity, get_asset,
+                         get_quantity, expiration, fee_required, fee_provided,
+                         encoding=config.ENCODING,
+                         fee_per_kb=config.FEE_PER_KB,
+                         regular_dust_size=config.REGULAR_DUST_SIZE,
+                         multisig_dust_size=config.MULTISIG_DUST_SIZE,
+                         op_return_value=config.OP_RETURN_VALUE, pubkey=None,
+                         allow_unconfirmed_inputs=False, fee=None):
             tx_info = order.compose(db, source, give_asset, give_quantity,
                                     get_asset, get_quantity, expiration,
                                     fee_required)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, fee_provided=fee_provided, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
+            return bitcoin.transaction(tx_info, encoding=encoding,
+                                       fee_per_kb=fee_per_kb,
+                                       regular_dust_size=regular_dust_size,
+                                       multisig_dust_size=multisig_dust_size,
+                                       op_return_value=op_return_value,
+                                       exact_fee=fee,
+                                       fee_provided=fee_provided,
+                                       public_key_hex=pubkey,
+                                       allow_unconfirmed_inputs=allow_unconfirmed_inputs)
 
         @dispatcher.add_method
-        def create_send(source, destination, asset, quantity, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
+        def create_send(source, destination, asset, quantity,
+                        encoding=config.ENCODING, fee_per_kb=config.FEE_PER_KB,
+                        regular_dust_size=config.REGULAR_DUST_SIZE,
+                        multisig_dust_size=config.MULTISIG_DUST_SIZE,
+                        op_return_value=config.OP_RETURN_VALUE, pubkey=None,
+                        allow_unconfirmed_inputs=False, fee=None):
             tx_info = send.compose(db, source, destination, asset, quantity)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
+            return bitcoin.transaction(tx_info, encoding=encoding,
+                                       fee_per_kb=fee_per_kb,
+                                       regular_dust_size=regular_dust_size,
+                                       multisig_dust_size=multisig_dust_size,
+                                       op_return_value=op_return_value,
+                                       exact_fee=fee, public_key_hex=pubkey,
+                                       allow_unconfirmed_inputs=allow_unconfirmed_inputs)
 
         @dispatcher.add_method
         def sign_tx(unsigned_tx_hex, privkey=None):
@@ -438,7 +563,18 @@ class APIServer(threading.Thread):
                 
         @dispatcher.add_method
         def broadcast_tx(signed_tx_hex):
-            return bitcoin.broadcast_tx(signed_tx_hex)
+            if not config.TESTNET and config.BROADCAST_TX_MAINNET in ['bci', 'bci-failover']:
+                url = "https://blockchain.info/pushtx"
+                params = {'tx': signed_tx_hex}
+                response = requests.post(url, data=params)
+                if response.text.lower() != 'transaction submitted' or response.status_code != 200:
+                    if config.BROADCAST_TX_MAINNET == 'bci-failover':
+                        return bitcoin.broadcast_tx(signed_tx_hex)
+                    else:
+                        raise Exception(response.text)
+                return response.text
+            else:
+                return bitcoin.broadcast_tx(signed_tx_hex)
 
         class API(object):
             @cherrypy.expose
@@ -499,7 +635,7 @@ class APIServer(threading.Thread):
         application.log.access_log.propagate = False
         application.log.error_log.propagate = False
 
-        if config.PREFIX != config.UNITTEST_PREFIX:  #skip setting up logs when for the test suite
+        if not config.UNITTEST:  #skip setting up logs when for the test suite
             #set up a rotating log handler for this application
             # Remove the default FileHandlers if present.
             application.log.error_file = ""
