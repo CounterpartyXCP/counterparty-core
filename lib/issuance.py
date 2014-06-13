@@ -78,7 +78,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
 
     # Check for existence of fee funds.
     if quantity:
-        if not reissuance:  # Pay fee only upon first issuance. (Protocol change.)
+        if not reissuance or (block_index < 310000 or config.TESTNET):  # Pay fee only upon first issuance. (Protocol change.)
             cursor = db.cursor()
             cursor.execute('''SELECT * FROM balances \
                               WHERE (address = ? AND asset = ?)''', (source, 'XCP'))

@@ -1,11 +1,11 @@
 ## Client Versions ##
 * v9.25.0
-	* issuance fee only upon first issuance (protocol change: retroactive)
+	* issuance fee only upon first issuance (protocol change: 310000)
 	* misc. clean‐up
 	* make dust sizes user‐configurable per‐tx (through API)
 	* bet debug logging
 	* tweak issuance parsing logic (minor protocol change: 310000)
-	* constituent orders of expired order matches re‐match
+	* constituent orders of expired order matches re‐match (protocol change: 310000)
 * v9.24.2
 	* bug in version checking: mandatory manual upgrade
 * v9.24.1
