@@ -173,7 +173,7 @@ def get_rows(db, table, filters=[], filterop='AND', order_by=None, order_dir=Non
 
     return db_query(db, statement, tuple(bindings))
 
-def compose_transaction(db, name, params, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None, fee_provided=None):
+def compose_transaction(db, name, params, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None, fee_provided=0):
     tx_info = sys.modules['lib.{}'.format(name)].compose(db, **params)
     return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs, fee_provided=fee_provided)
 
