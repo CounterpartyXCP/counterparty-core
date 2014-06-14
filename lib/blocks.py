@@ -16,6 +16,13 @@ from Crypto.Cipher import ARC4
 from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 
+# Order matters for FOREIGN KEY constraints.
+TABLES = ['credits', 'debits', 'messages'] + \
+         ['order_match_expirations', 'order_matches', 'order_expirations', 'orders'] + \
+         ['bet_match_expirations', 'bet_matches', 'bet_expirations', 'bets'] + \
+         ['broadcasts', 'btcpays', 'burns', 'callbacks', 'cancels',
+         'dividends', 'issuances', 'sends']
+
 def check_conservation (db):
     logging.debug('Status: Checking for conservation of assets.')
 
@@ -283,6 +290,7 @@ def initialise(db):
                       backward_quantity INTEGER,
                       tx0_block_index INTEGER,
                       tx1_block_index INTEGER,
+                      block_index INTEGER,
                       tx0_expiration INTEGER,
                       tx1_expiration INTEGER,
                       match_expire_index INTEGER,
@@ -308,6 +316,9 @@ def initialise(db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       tx1_address_idx ON order_matches (tx1_address)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      block_index_idx ON order_matches (block_index)
                    ''')
 
     # BTCpays
@@ -448,6 +459,7 @@ def initialise(db):
                       backward_quantity INTEGER,
                       tx0_block_index INTEGER,
                       tx1_block_index INTEGER,
+                      block_index INTEGER,
                       tx0_expiration INTEGER,
                       tx1_expiration INTEGER,
                       match_expire_index INTEGER,
@@ -470,6 +482,9 @@ def initialise(db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       tx1_address_idx ON bet_matches (tx1_address)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      block_index_idx ON bet_matches (block_index)
                    ''')
 
     # Dividends
@@ -737,6 +752,27 @@ def get_tx_info (tx, block_index):
 
     return source, destination, btc_amount, round(fee), data
 
+
+def rollback (db, block_index=None):
+    cursor = db.cursor()
+
+    with db:
+        for table in TABLES + ['transactions', 'blocks']:
+            print(table)
+            cursor.execute('''DELETE FROM {} WHERE block_index > ?'''.format(table), (block_index,))
+
+        balances = list(cursor.execute('''SELECT * FROM balances'''))
+        for balance in balances:
+            print(balance)  # TODO
+            cursor.execute('''UPDATE balances SET quantity = ?\
+                              WHERE address = ? AND asset = ?)''', (balance['address'], balance['asset']))
+
+        # Check for conservation of assets.
+        check_conservation(db)
+
+    cursor.close()
+    return
+
 def reparse (db, block_index=None, quiet=False):
     """Reparse all transactions (atomically). If block_index is set, rollback
     to the end of that block.
@@ -748,26 +784,8 @@ def reparse (db, block_index=None, quiet=False):
     with db:
 
         # Delete all of the results of parsing.
-        cursor.execute('''DROP TABLE IF EXISTS order_expirations''')
-        cursor.execute('''DROP TABLE IF EXISTS bet_expirations''')
-        cursor.execute('''DROP TABLE IF EXISTS order_match_expirations''')
-        cursor.execute('''DROP TABLE IF EXISTS bet_match_expirations''')
-        cursor.execute('''DROP TABLE IF EXISTS debits''')
-        cursor.execute('''DROP TABLE IF EXISTS credits''')
-        cursor.execute('''DROP TABLE IF EXISTS balances''')
-        cursor.execute('''DROP TABLE IF EXISTS sends''')
-        cursor.execute('''DROP TABLE IF EXISTS orders''')
-        cursor.execute('''DROP TABLE IF EXISTS order_matches''')
-        cursor.execute('''DROP TABLE IF EXISTS btcpays''')
-        cursor.execute('''DROP TABLE IF EXISTS issuances''')
-        cursor.execute('''DROP TABLE IF EXISTS broadcasts''')
-        cursor.execute('''DROP TABLE IF EXISTS bets''')
-        cursor.execute('''DROP TABLE IF EXISTS bet_matches''')
-        cursor.execute('''DROP TABLE IF EXISTS dividends''')
-        cursor.execute('''DROP TABLE IF EXISTS burns''')
-        cursor.execute('''DROP TABLE IF EXISTS cancels''')
-        cursor.execute('''DROP TABLE IF EXISTS callbacks''')
-        cursor.execute('''DROP TABLE IF EXISTS messages''')
+        for table in TABLES + ['balances']:
+            cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
 
         # For rollbacks, just delete new blocks and then reparse what’s left.
         if block_index:
@@ -932,6 +950,7 @@ def follow (db):
         else:
             # Check for conservation of assets.
             check_conservation(db)
+            print(bitcoin.get_mempool())    # TODO
             time.sleep(2)
 
     follow_cursor.close()

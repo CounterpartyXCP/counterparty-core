@@ -71,6 +71,9 @@ def get_wallet ():
         for bunch in group:
             yield bunch
 
+def get_mempool ():
+    return rpc('getrawmempool', [])
+
 
 def bitcoind_check (db):
     """Checks blocktime of last block to see if Bitcoind is running behind."""

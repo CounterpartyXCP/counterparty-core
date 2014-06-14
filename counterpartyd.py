@@ -996,7 +996,8 @@ if __name__ == '__main__':
         blocks.reparse(db)
 
     elif args.action == 'rollback':
-        blocks.reparse(db, block_index=args.block_index)
+        # blocks.reparse(db, block_index=args.block_index)
+        blocks.rollback(db, block_index=args.block_index)
 
     elif args.action == 'server':
         api_server = api.APIServer()
