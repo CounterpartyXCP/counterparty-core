@@ -68,11 +68,14 @@ def parse (db, tx, message):
         cursor.execute('''SELECT * FROM balances \
                                      WHERE (address = ? AND asset = ?)''', (tx['source'], asset))
         balances = cursor.fetchall()
-        if not balances:  quantity = 0
+        if not balances:
+            status = 'invalid: insufficient funds'
         elif balances[0]['quantity'] < quantity:
             quantity = min(balances[0]['quantity'], quantity)
-        # For SQLite3
-        quantity = min(quantity, config.MAX_INT)
+            # For SQLite3
+            quantity = min(quantity, config.MAX_INT)
+
+    if status == 'valid':
         problems = validate(db, tx['source'], tx['destination'], asset, quantity)
         if problems: status = 'invalid: ' + '; '.join(problems)
 
