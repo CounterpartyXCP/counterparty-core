@@ -72,10 +72,10 @@ def parse (db, tx, message):
             status = 'invalid: insufficient funds'
         elif balances[0]['quantity'] < quantity:
             quantity = min(balances[0]['quantity'], quantity)
-            # For SQLite3
-            quantity = min(quantity, config.MAX_INT)
 
     if status == 'valid':
+        # For SQLite3
+        quantity = min(quantity, config.MAX_INT)
         problems = validate(db, tx['source'], tx['destination'], asset, quantity)
         if problems: status = 'invalid: ' + '; '.join(problems)
 
