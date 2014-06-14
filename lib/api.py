@@ -82,9 +82,9 @@ def get_rows(db, table, filters=[], filterop='AND', order_by=None, order_dir=Non
     # TODO: Document this! (Each filter can be an ordered list.)
     new_filters = []
     for filter_ in filters:
-        if type(filter_) in (list, tuple) and len(a) in [3, 4]:
+        if type(filter_) in (list, tuple) and len(filter_) in [3, 4]:
             new_filter = {'field': filter_[0], 'op': filter_[1], 'value':  filter_[2]}
-            if len(a) == 4: new_filter['case_sensitive'] = filter_[3]
+            if len(filter_) == 4: new_filter['case_sensitive'] = filter_[3]
             new_filters.append(new_filter)
         elif type(filter_) == dict:
             new_filters.append(filter_)
