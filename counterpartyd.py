@@ -91,12 +91,18 @@ def format_feed (feed):
 def market (give_asset, get_asset):
 
     # Your Pending Orders Matches.
-    awaiting_btcs = util.api('get_order_matches', {'status': 'pending'})
+    addresses = []
+    for bunch in bitcoin.get_wallet():
+        addresses.append(bunch[:2][0])
+    filters = [
+        ('tx0_address', 'IN', addresses),
+        ('tx1_address', 'IN', addresses)
+    ]
+    awaiting_btcs = util.api('get_order_matches', {'filters': filters, 'filterop': 'OR', 'status': 'pending'})  
     table = PrettyTable(['Matched Order ID', 'Time Left'])
     for order_match in awaiting_btcs:
-        if bitcoin.is_mine(order_match['tx0_address']) and order_match['forward_asset'] == 'BTC' or bitcoin.is_mine(order_match['tx1_address']) and order_match['backward_asset'] == 'BTC':
-            order_match = format_order_match(db, order_match)
-            table.add_row(order_match)
+        order_match = format_order_match(db, order_match)
+        table.add_row(order_match)
     print('Your Pending Order Matches')
     print(table)
     print('\n')
@@ -967,12 +973,18 @@ if __name__ == '__main__':
         print()
 
     elif args.action == 'pending':
-        awaiting_btcs = util.api('get_order_matches', {'status': 'pending'})
+        addresses = []
+        for bunch in bitcoin.get_wallet():
+            addresses.append(bunch[:2][0])
+        filters = [
+            ('tx0_address', 'IN', addresses),
+            ('tx1_address', 'IN', addresses)
+        ]
+        awaiting_btcs = util.api('get_order_matches', {'filters': filters, 'filterop': 'OR', 'status': 'pending'})
         table = PrettyTable(['Matched Order ID', 'Time Left'])
         for order_match in awaiting_btcs:
-            if bitcoin.is_mine(order_match['tx0_address']) and order_match['forward_asset'] == 'BTC' or bitcoin.is_mine(order_match['tx1_address']) and order_match['backward'] == 'BTC':
-                order_match = format_order_match(db, order_match)
-                table.add_row(order_match)
+            order_match = format_order_match(db, order_match)
+            table.add_row(order_match)
         print(table)
 
     elif args.action == 'market':

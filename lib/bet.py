@@ -258,7 +258,7 @@ def match (db, tx):
 
         # Bet types must be opposite.
         if counterbet_type != tx0['bet_type']:
-            logging.debug('Leverages disagree.')
+            logging.debug('Bet types disagree.')
             continue
 
         # Leverages must agree exactly
