@@ -923,6 +923,7 @@ def follow (db, mempool):
 
         else:
             # Log and ephemerally parse transactions in Bitcoin Core mempool.
+            # TODO: skip all matching?!
             if mempool:
                 try:
                     with db:
@@ -942,7 +943,7 @@ def follow (db, mempool):
 
                         # List zero‐confirmation transactions.
                         for tx_hash in bitcoin.get_mempool():
-                            list_tx(db, config.MEMPOOL_BLOCK_HASH, config.MEMPOOL_BLOCK_INDEX, curr_time, tx_hash, MEMPOOL_tx_index)
+                            list_tx(db, config.MEMPOOL_BLOCK_HASH, config.MEMPOOL_BLOCK_INDEX, curr_time, tx_hash, mempool_tx_index)
                             mempool_tx_index += 1
 
                         # Parse zero‐confirmation transactions.

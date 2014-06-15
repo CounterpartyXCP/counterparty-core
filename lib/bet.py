@@ -220,6 +220,10 @@ def parse (db, tx, message):
     bet_parse_cursor.close()
 
 def match (db, tx):
+
+    # Never match mempool transactions.
+    if tx['block_index'] == config.MEMPOOL_BLOCK_INDEX: return
+
     cursor = db.cursor()
 
     # Get bet in question.
