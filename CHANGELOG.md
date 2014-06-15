@@ -1,7 +1,7 @@
 ## Client Versions ##
 * v9.26.0
 	* *major* speed‐up in reparsing
-	* support for zero‐confirmation transactions
+	* support for mempool (so‐called ‘unconfirmed’ or ‘zero‐confirmation’) transactions
 * v9.25.0
 	* issuance fee only upon first issuance (protocol change: 310000)
 	* misc. clean‐up

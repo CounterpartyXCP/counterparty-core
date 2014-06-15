@@ -62,7 +62,7 @@ def log (db, command, category, bindings):
 
     # Unconfirmed transaction.
     try:
-        if bindings['block_index'] == config.ZEROCONF_BLOCK_INDEX: bindings['status'] = 'UNCONFIRMED'
+        if bindings['block_index'] == config.MEMPOOL_BLOCK_INDEX: bindings['status'] = 'MEMPOOL'
     except TypeError:   # With invalid transactions `bindings` isn’t a dictionary.
         pass
     except KeyError:    # Balances aren’t tied to particular blocks.
