@@ -167,9 +167,6 @@ def initialise(db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       asset_idx ON debits (asset)
                    ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      address_asset_idx ON debits (address, asset)
-                   ''')
 
     # (Valid) credits
     cursor.execute('''CREATE TABLE IF NOT EXISTS credits(
@@ -186,9 +183,6 @@ def initialise(db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       asset_idx ON credits (asset)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      address_asset_idx ON credits (address, asset)
                    ''')
 
     # Balances
@@ -291,7 +285,6 @@ def initialise(db):
                       backward_quantity INTEGER,
                       tx0_block_index INTEGER,
                       tx1_block_index INTEGER,
-                      block_index INTEGER,
                       tx0_expiration INTEGER,
                       tx1_expiration INTEGER,
                       match_expire_index INTEGER,
@@ -317,9 +310,6 @@ def initialise(db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       tx1_address_idx ON order_matches (tx1_address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON order_matches (block_index)
                    ''')
 
     # BTCpays
@@ -460,7 +450,6 @@ def initialise(db):
                       backward_quantity INTEGER,
                       tx0_block_index INTEGER,
                       tx1_block_index INTEGER,
-                      block_index INTEGER,
                       tx0_expiration INTEGER,
                       tx1_expiration INTEGER,
                       match_expire_index INTEGER,
@@ -483,9 +472,6 @@ def initialise(db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       tx1_address_idx ON bet_matches (tx1_address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON bet_matches (block_index)
                    ''')
 
     # Dividends
@@ -754,41 +740,6 @@ def get_tx_info (tx, block_index):
     return source, destination, btc_amount, round(fee), data
 
 
-def rollback (db, block_index=None):
-    cursor = db.cursor()
-
-    with db:
-        for table in TABLES + ['transactions', 'blocks']:
-            cursor.execute('''DELETE FROM {} WHERE block_index > ?'''.format(table), (block_index,))
-
-        # Re‐calculate all balances.
-        # TODO: Slower than it has to be: could use balances‐as‐of-block!
-        balances = list(cursor.execute('''SELECT * FROM balances'''))
-        for balance in balances:
-
-            # Sum credits and debits.
-            credit = list(cursor.execute('''SELECT sum(quantity) FROM credits \
-                                            WHERE (address = ? AND asset = ?)''', (balance['address'], balance['asset'])))
-            debit = list(cursor.execute('''SELECT sum(quantity) FROM debits\
-                                           WHERE (address = ? AND asset = ?)''', (balance['address'], balance['asset'])))
-            credit = credit[0]['sum(quantity)']
-            debit = debit[0]['sum(quantity)']
-            if not credit: credit = 0
-            if not debit: debit = 0
-            new_balance = credit - debit
-
-            # Update balance.
-            cursor.execute('''UPDATE balances SET quantity = ?\
-                              WHERE (address = ? AND asset = ?)''', (new_balance, balance['address'], balance['asset']))
-            difference = balance['quantity'] - new_balance
-            if difference: print(difference / config.UNIT, balance['asset'])  # TODO
-
-        # Check for conservation of assets.
-        check_conservation(db)
-
-    cursor.close()
-    return
-
 def reparse (db, block_index=None, quiet=False):
     """Reparse all transactions (atomically). If block_index is set, rollback
     to the end of that block.
@@ -813,7 +764,6 @@ def reparse (db, block_index=None, quiet=False):
             log = logging.getLogger('')
             log.setLevel(logging.WARNING)
         initialise(db)
-        # TODO: What about if block_index is 0?
         cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
         for block in cursor.fetchall():
             logging.info('Block (re‐parse): {}'.format(str(block['block_index'])))

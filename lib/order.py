@@ -461,14 +461,13 @@ def match (db, tx):
                 'backward_quantity': backward_quantity,
                 'tx0_block_index': tx0['block_index'],
                 'tx1_block_index': tx1['block_index'],
-                'block_index': max(tx0['block_index'], tx1['block_index']),
                 'tx0_expiration': tx0['expiration'],
                 'tx1_expiration': tx1['expiration'],
                 'match_expire_index': match_expire_index,
                 'fee_paid': fee,
                 'status': status,
             }
-            sql='insert into order_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :forward_asset, :forward_quantity, :backward_asset, :backward_quantity, :tx0_block_index, :tx1_block_index, :block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :fee_paid, :status)'
+            sql='insert into order_matches values(:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address, :forward_asset, :forward_quantity, :backward_asset, :backward_quantity, :tx0_block_index, :tx1_block_index, :tx0_expiration, :tx1_expiration, :match_expire_index, :fee_paid, :status)'
             cursor.execute(sql, bindings)
 
             if tx1_status == 'filled':
