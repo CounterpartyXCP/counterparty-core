@@ -12,6 +12,7 @@ import calendar
 import configparser
 from threading import Thread
 import binascii
+from fractions import Fraction
 
 import requests
 import appdirs
@@ -513,12 +514,11 @@ if __name__ == '__main__':
     parser.add_argument('--unsigned', action='store_true', help='print out unsigned hex of transaction; do not sign or broadcast')
     parser.add_argument('--carefulness', type=int, default=0, help='check conservation of assets after every CAREFULNESS transactions (potentially slow)')
     parser.add_argument('--unconfirmed', action='store_true', help='allow the spending of unconfirmed transaction outputs')
-
-    parser.add_argument('--encoding', type=str, help='data encoding method')
-    parser.add_argument('--fee-per-kb', help='fee per kilobyte, in BTC')
-    parser.add_argument('--regular-dust-size', help='value for dust Pay‐to‐Pubkey‐Hash outputs, in BTC')
-    parser.add_argument('--multisig-dust-size', help='for dust OP_CHECKMULTISIG outputs, in BTC')
-    parser.add_argument('--op-return-value', help='value for OP_RETURN outputs, in BTC')
+    parser.add_argument('--encoding', default=config.ENCODING, type=str, help='data encoding method')
+    parser.add_argument('--fee-per-kb', default=Fraction(config.FEE_PER_KB, config.UNIT), help='fee per kilobyte, in BTC')
+    parser.add_argument('--regular-dust-size', default=Fraction(config.REGULAR_DUST_SIZE, config.UNIT), help='value for dust Pay‐to‐Pubkey‐Hash outputs, in BTC')
+    parser.add_argument('--multisig-dust-size', default=Fraction(config.MULTISIG_DUST_SIZE, config.UNIT), help='for dust OP_CHECKMULTISIG outputs, in BTC')
+    parser.add_argument('--op-return-value', default=Fraction(config.OP_RETURN_VALUE, config.UNIT), help='value for OP_RETURN outputs, in BTC')
 
     parser.add_argument('--data-dir', help='the directory in which to keep the database, config file and log file, by default')
     parser.add_argument('--database-file', help='the location of the SQLite3 database')
@@ -646,10 +646,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Convert.
-    if args.fee_per_kb: args.fee_per_kb *= config.UNIT
-    if args.regular_dust_size: args.regular_size *= config.UNIT
-    if args.multisig_dust_size: args.multisig_dust_size *= config.UNIT
-    if args.op_return_value: args.op_return_value *= config.UNIT
+    args.fee_per_kb = int(args.fee_per_kb * config.UNIT)
+    args.regular_dust_size = int(args.regular_dust_size * config.UNIT)
+    args.multisig_dust_size = int(args.multisig_dust_size * config.UNIT)
+    args.op_return_value= int(args.op_return_value * config.UNIT)
 
     # Configuration
     set_options(data_dir=args.data_dir,

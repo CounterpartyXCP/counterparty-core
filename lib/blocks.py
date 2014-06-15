@@ -84,21 +84,20 @@ def parse_tx (db, tx):
     parse_tx_cursor.close()
 
 def parse_block (db, block_index, block_time):
-    parse_block_cursor = db.cursor()
+    cursor = db.cursor()
 
     # Expire orders and bets.
     order.expire(db, block_index)
     bet.expire(db, block_index, block_time)
 
     # Parse transactions, sorting them by type.
-    parse_block_cursor.execute('''SELECT * FROM transactions \
-                                  WHERE block_index=? ORDER BY tx_index''',
-                               (block_index,))
-    transactions = parse_block_cursor.fetchall()
-    for tx in transactions:
+    cursor.execute('''SELECT * FROM transactions \
+                      WHERE block_index=? ORDER BY tx_index''',
+                   (block_index,))
+    for tx in list(cursor):
         parse_tx(db, tx)
 
-    parse_block_cursor.close()
+    cursor.close()
 
 def initialise(db):
     cursor = db.cursor()
@@ -787,10 +786,41 @@ def reparse (db, block_index=None, quiet=False):
     cursor.close()
     return
 
+def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
+    cursor = db.cursor()
+    # Get the important details about each transaction.
+    tx = bitcoin.get_raw_transaction(tx_hash)
+    logging.debug('Status: examining transaction {}'.format(tx_hash))
+    source, destination, btc_amount, fee, data = get_tx_info(tx, block_index)
+    if source and (data or destination == config.UNSPENDABLE):
+        cursor.execute('''INSERT INTO transactions(
+                            tx_index,
+                            tx_hash,
+                            block_index,
+                            block_hash,
+                            block_time,
+                            source,
+                            destination,
+                            btc_amount,
+                            fee,
+                            data) VALUES(?,?,?,?,?,?,?,?,?,?)''',
+                            (tx_index,
+                             tx_hash,
+                             block_index,
+                             block_hash,
+                             block_time,
+                             source,
+                             destination,
+                             btc_amount,
+                             fee,
+                             data)
+                      )
+    cursor.close()
+    return
 
 def follow (db):
     # TODO: This is not thread-safe!
-    follow_cursor = db.cursor()
+    cursor = db.cursor()
 
     logging.info('Status: RESTART')
 
@@ -802,7 +832,7 @@ def follow (db):
         block_index = util.last_block(db)['block_index'] + 1
 
         # Reparse all transactions if minor version has changed.
-        minor_version = follow_cursor.execute('PRAGMA user_version').fetchall()[0]['user_version']
+        minor_version = cursor.execute('PRAGMA user_version').fetchall()[0]['user_version']
         if minor_version != config.VERSION_MINOR:
             logging.info('Status: client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.VERSION_MINOR))
             reparse(db, quiet=False)
@@ -812,7 +842,7 @@ def follow (db):
         block_index = config.BLOCK_FIRST
 
     # Get index of last transaction.
-    txes = list(follow_cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)'''))
+    txes = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)'''))
     if txes:
         assert len(txes) == 1
         tx_index = txes[0]['tx_index'] + 1
@@ -837,7 +867,7 @@ def follow (db):
                 bitcoind_parent = c_block['previousblockhash']
 
                 # DB parent hash.
-                blocks = list(follow_cursor.execute('''SELECT * FROM blocks
+                blocks = list(cursor.execute('''SELECT * FROM blocks
                                                        WHERE block_index = ?''', (c - 1,)))
                 if len(blocks) != 1: break  # For empty DB.
                 db_parent = blocks[0]['block_hash']
@@ -867,7 +897,7 @@ def follow (db):
             tx_hash_list = block['tx']
             with db:
                 # List the block.
-                follow_cursor.execute('''INSERT INTO blocks(
+                cursor.execute('''INSERT INTO blocks(
                                     block_index,
                                     block_hash,
                                     block_time) VALUES(?,?,?)''',
@@ -878,40 +908,8 @@ def follow (db):
 
                 # List the transactions in the block.
                 for tx_hash in tx_hash_list:
-                    # Skip duplicate transaction entries.
-                    follow_cursor.execute('''SELECT * FROM transactions WHERE tx_hash=?''', (tx_hash,))
-                    blocks = follow_cursor.fetchall()
-                    if blocks:
-                        tx_index += 1
-                        continue
-                    # Get the important details about each transaction.
-                    tx = bitcoin.get_raw_transaction(tx_hash)
-                    logging.debug('Status: examining transaction {}'.format(tx_hash))
-                    source, destination, btc_amount, fee, data = get_tx_info(tx, block_index)
-                    if source and (data or destination == config.UNSPENDABLE):
-                        follow_cursor.execute('''INSERT INTO transactions(
-                                            tx_index,
-                                            tx_hash,
-                                            block_index,
-                                            block_hash,
-                                            block_time,
-                                            source,
-                                            destination,
-                                            btc_amount,
-                                            fee,
-                                            data) VALUES(?,?,?,?,?,?,?,?,?,?)''',
-                                            (tx_index,
-                                             tx_hash,
-                                             block_index,
-                                             block_hash,
-                                             block_time,
-                                             source,
-                                             destination,
-                                             btc_amount,
-                                             fee,
-                                             data)
-                                      )
-                        tx_index += 1
+                    list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index)
+                    tx_index += 1
 
                 # Parse the transactions in the block.
                 parse_block(db, block_index, block_time)
@@ -921,16 +919,37 @@ def follow (db):
             block_index +=1
 
         else:
+            cursor.execute('''SAVEPOINT blocks_end''')
+            logging.info('Mempool:')
+
+            curr_time = time.time()
+            zeroconf_tx_index = tx_index
+
+            # List the block.
+            cursor.execute('''INSERT INTO blocks(
+                                block_index,
+                                block_hash,
+                                block_time) VALUES(?,?,?)''',
+                                (config.ZEROCONF_BLOCK_INDEX,
+                                 config.ZEROCONF_BLOCK_HASH,
+                                curr_time)
+                          )
+
+            for tx_hash in bitcoin.get_mempool():
+                list_tx(db, config.ZEROCONF_BLOCK_HASH, config.ZEROCONF_BLOCK_INDEX, curr_time, tx_hash, zeroconf_tx_index)
+                zeroconf_tx_index += 1
+            cursor.execute('''SELECT * FROM transactions \
+                              WHERE block_index=? ORDER BY tx_index''',
+                           (block_index,))
+            for tx in list(cursor):
+                parse_tx(db, tx)
+
             # Check for conservation of assets.
             check_conservation(db)
-            # TODO:
-                # parse TXs in mempool with block_index 0
-                    # will this be problematic?
-                # rollback to latest [actual] block
-                    # using savepoints?!?!
-            print(bitcoin.get_mempool())    # TODO
             time.sleep(2)
 
-    follow_cursor.close()
+            cursor.execute('''ROLLBACK to SAVEPOINT blocks_end''')
+
+    cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
