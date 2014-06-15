@@ -143,6 +143,9 @@ def initialise(db):
                       tx_hash_idx ON transactions (tx_hash)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      index_index_idx ON transactions (block_index, tx_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
                       index_hash_index_idx ON transactions (tx_index, tx_hash, block_index)
                    ''')
 
@@ -387,6 +390,9 @@ def initialise(db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       status_source_idx ON broadcasts (status, source)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      status_source_index_idx ON broadcasts (status, source, tx_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       timestamp_idx ON broadcasts (timestamp)
@@ -921,6 +927,7 @@ def follow (db):
                 # parse TXs in mempool with block_index 0
                     # will this be problematic?
                 # rollback to latest [actual] block
+                    # using savepoints?!?!
             print(bitcoin.get_mempool())    # TODO
             time.sleep(2)
 
