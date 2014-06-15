@@ -456,7 +456,7 @@ class APIServer(threading.Thread):
             @cherrypy.expose
             def index(self):
                 try:
-                    data = cherrypy.request.body.read().decode('utf-8')
+                    data = json.loads(cherrypy.request.body.read().decode('utf-8'))
                 except ValueError:
                     raise cherrypy.HTTPError(400, 'Invalid JSON document')
 
