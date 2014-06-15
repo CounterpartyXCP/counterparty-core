@@ -84,11 +84,6 @@ def parse_tx (db, tx):
     parse_tx_cursor.close()
 
 def parse_block (db, block_index, block_time):
-    """This is a separate function from follow() so that changing the parsing
-    rules doesn't require a full database rebuild. If parsing rules are changed
-    (but not data identification), then just restart `counterparty.py follow`.
-
-    """
     parse_block_cursor = db.cursor()
 
     # Expire orders and bets.
@@ -172,6 +167,9 @@ def initialise(db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       asset_idx ON debits (asset)
                    ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      address_asset_idx ON debits (address, asset)
+                   ''')
 
     # (Valid) credits
     cursor.execute('''CREATE TABLE IF NOT EXISTS credits(
@@ -188,6 +186,9 @@ def initialise(db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       asset_idx ON credits (asset)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      address_asset_idx ON credits (address, asset)
                    ''')
 
     # Balances
@@ -758,14 +759,29 @@ def rollback (db, block_index=None):
 
     with db:
         for table in TABLES + ['transactions', 'blocks']:
-            print(table)
             cursor.execute('''DELETE FROM {} WHERE block_index > ?'''.format(table), (block_index,))
 
+        # Re‐calculate all balances.
+        # TODO: Slower than it has to be: could use balances‐as‐of-block!
         balances = list(cursor.execute('''SELECT * FROM balances'''))
         for balance in balances:
-            print(balance)  # TODO
+
+            # Sum credits and debits.
+            credit = list(cursor.execute('''SELECT sum(quantity) FROM credits \
+                                            WHERE (address = ? AND asset = ?)''', (balance['address'], balance['asset'])))
+            debit = list(cursor.execute('''SELECT sum(quantity) FROM debits\
+                                           WHERE (address = ? AND asset = ?)''', (balance['address'], balance['asset'])))
+            credit = credit[0]['sum(quantity)']
+            debit = debit[0]['sum(quantity)']
+            if not credit: credit = 0
+            if not debit: debit = 0
+            new_balance = credit - debit
+
+            # Update balance.
             cursor.execute('''UPDATE balances SET quantity = ?\
-                              WHERE address = ? AND asset = ?)''', (balance['address'], balance['asset']))
+                              WHERE (address = ? AND asset = ?)''', (new_balance, balance['address'], balance['asset']))
+            difference = balance['quantity'] - new_balance
+            if difference: print(difference / config.UNIT, balance['asset'])  # TODO
 
         # Check for conservation of assets.
         check_conservation(db)
@@ -797,6 +813,7 @@ def reparse (db, block_index=None, quiet=False):
             log = logging.getLogger('')
             log.setLevel(logging.WARNING)
         initialise(db)
+        # TODO: What about if block_index is 0?
         cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
         for block in cursor.fetchall():
             logging.info('Block (re‐parse): {}'.format(str(block['block_index'])))
@@ -950,6 +967,10 @@ def follow (db):
         else:
             # Check for conservation of assets.
             check_conservation(db)
+            # TODO:
+                # parse TXs in mempool with block_index 0
+                    # will this be problematic?
+                # rollback to latest [actual] block
             print(bitcoin.get_mempool())    # TODO
             time.sleep(2)
 
