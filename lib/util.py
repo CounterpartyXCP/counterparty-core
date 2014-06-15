@@ -60,6 +60,14 @@ def price (numerator, denominator, block_index):
 def log (db, command, category, bindings):
     cursor = db.cursor()
 
+    # Unconfirmed transaction.
+    try:
+        if bindings['block_index'] == config.ZEROCONF_BLOCK_INDEX: bindings['status'] = 'UNCONFIRMED'
+    except TypeError:   # With invalid transactions `bindings` isn’t a dictionary.
+        pass
+    except KeyError:    # Balances aren’t tied to particular blocks.
+        pass
+
     # Slow?!
     def output (quantity, asset):
         try:
@@ -236,10 +244,7 @@ def exectracer(cursor, sql, bindings):
     # Record alteration in database.
     if category not in ('balances', 'messages'):
         if not (command in ('update') and category in ('orders', 'bets', 'order_matches', 'bet_matches')):    # List message manually.
-            try:
-                block_index = bindings['block_index']
-            except KeyError:
-                block_index = bindings['tx1_block_index']
+            block_index = bindings['block_index']
             message(db, block_index, command, category, bindings)
 
     # Log.

@@ -287,6 +287,7 @@ def initialise(db):
                       backward_quantity INTEGER,
                       tx0_block_index INTEGER,
                       tx1_block_index INTEGER,
+                      block_index INTEGER,
                       tx0_expiration INTEGER,
                       tx1_expiration INTEGER,
                       match_expire_index INTEGER,
@@ -455,6 +456,7 @@ def initialise(db):
                       backward_quantity INTEGER,
                       tx0_block_index INTEGER,
                       tx1_block_index INTEGER,
+                      block_index INTEGER,
                       tx0_expiration INTEGER,
                       tx1_expiration INTEGER,
                       match_expire_index INTEGER,
@@ -949,7 +951,6 @@ def follow (db, zeroconf):
                                        (config.ZEROCONF_BLOCK_INDEX,))
                         for tx in list(cursor):
                             if tx['tx_hash'] not in zeroconf_transactions_seen:
-                                logging.info('Unconfirmed:')
                                 parse_tx(db, tx)
                                 zeroconf_transactions_seen.append(tx['tx_hash'])
 
