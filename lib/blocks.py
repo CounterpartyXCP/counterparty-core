@@ -818,7 +818,7 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     cursor.close()
     return
 
-def follow (db):
+def follow (db, zeroconf):
     # TODO: This is not thread-safe!
     cursor = db.cursor()
 
@@ -849,6 +849,7 @@ def follow (db):
     else:
         tx_index = 0
 
+    zeroconf_transactions_seen = []
     while True:
 
         # Get new blocks.
@@ -919,36 +920,46 @@ def follow (db):
             block_index +=1
 
         else:
-            cursor.execute('''SAVEPOINT blocks_end''')
-            logging.info('Mempool:')
+            # Log and ephemerally parse transactions in Bitcoin Core mempool.
+            if zeroconf:
+                try:
+                    with db:
+                        # Fake values for fake block.
+                        curr_time = time.time()
+                        zeroconf_tx_index = tx_index
 
-            curr_time = time.time()
-            zeroconf_tx_index = tx_index
+                        # List the fake block.
+                        cursor.execute('''INSERT INTO blocks(
+                                            block_index,
+                                            block_hash,
+                                            block_time) VALUES(?,?,?)''',
+                                            (config.ZEROCONF_BLOCK_INDEX,
+                                             config.ZEROCONF_BLOCK_HASH,
+                                             curr_time)
+                                      )
 
-            # List the block.
-            cursor.execute('''INSERT INTO blocks(
-                                block_index,
-                                block_hash,
-                                block_time) VALUES(?,?,?)''',
-                                (config.ZEROCONF_BLOCK_INDEX,
-                                 config.ZEROCONF_BLOCK_HASH,
-                                curr_time)
-                          )
+                        # List zero‐confirmation transactions.
+                        for tx_hash in bitcoin.get_mempool():
+                            list_tx(db, config.ZEROCONF_BLOCK_HASH, config.ZEROCONF_BLOCK_INDEX, curr_time, tx_hash, zeroconf_tx_index)
+                            zeroconf_tx_index += 1
 
-            for tx_hash in bitcoin.get_mempool():
-                list_tx(db, config.ZEROCONF_BLOCK_HASH, config.ZEROCONF_BLOCK_INDEX, curr_time, tx_hash, zeroconf_tx_index)
-                zeroconf_tx_index += 1
-            cursor.execute('''SELECT * FROM transactions \
-                              WHERE block_index=? ORDER BY tx_index''',
-                           (block_index,))
-            for tx in list(cursor):
-                parse_tx(db, tx)
+                        # Parse zero‐confirmation transactions.
+                        cursor.execute('''SELECT * FROM transactions \
+                                          WHERE block_index = ?''',
+                                       (config.ZEROCONF_BLOCK_INDEX,))
+                        for tx in list(cursor):
+                            if tx['tx_hash'] not in zeroconf_transactions_seen:
+                                logging.info('Unconfirmed:')
+                                parse_tx(db, tx)
+                                zeroconf_transactions_seen.append(tx['tx_hash'])
+
+                        assert False    # Never commit!
+                except AssertionError:
+                    pass
 
             # Check for conservation of assets.
             check_conservation(db)
-            time.sleep(2)
-
-            cursor.execute('''ROLLBACK to SAVEPOINT blocks_end''')
+            time.sleep(10)
 
     cursor.close()
 
