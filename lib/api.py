@@ -22,15 +22,18 @@ from . import (config, bitcoin, exceptions, util)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 
 
-API_TABLES = ['balances', 'credits', 'debits', 'bets', 'bet_matches', 'broadcasts', 'btcpays', 'burns', 
-              'callbacks', 'cancels', 'dividends', 'issuances', 'orders', 'order_matches', 'sends', 
-              'bet_expirations', 'order_expirations', 'bet_match_expirations', 'order_match_expirations']
+API_TABLES = ['balances', 'credits', 'debits', 'bets', 'bet_matches',
+              'broadcasts', 'btcpays', 'burns', 'callbacks', 'cancels',
+              'dividends', 'issuances', 'orders', 'order_matches', 'sends',
+              'bet_expirations', 'order_expirations', 'bet_match_expirations',
+              'order_match_expirations', 'mempool']
 
 API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel', 
                     'callback', 'dividend', 'issuance', 'order', 'send']
 
-COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size', 'multisig_dust_size', 'op_return_value', 
-                'pubkey', 'allow_unconfirmed_inputs', 'fee', 'fee_provided']
+COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
+                'multisig_dust_size', 'op_return_value', 'pubkey',
+                'allow_unconfirmed_inputs', 'fee', 'fee_provided']
 
 
 # TODO: ALL queries EVERYWHERE should be done with these methods

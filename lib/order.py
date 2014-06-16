@@ -259,9 +259,6 @@ def parse (db, tx, message):
 
 def match (db, tx):
 
-    # Never match mempool transactions.
-    if tx['block_index'] == config.MEMPOOL_BLOCK_INDEX: return
-
     cursor = db.cursor()
 
     # Get order in question.

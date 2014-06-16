@@ -831,7 +831,7 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     cursor.close()
     return
 
-def follow (db, mempool):
+def follow (db):
     # TODO: This is not thread-safe!
     cursor = db.cursor()
 
@@ -881,7 +881,7 @@ def follow (db, mempool):
 
                 # DB parent hash.
                 blocks = list(cursor.execute('''SELECT * FROM blocks
-                                                       WHERE block_index = ?''', (c - 1,)))
+                                                WHERE block_index = ?''', (c - 1,)))
                 if len(blocks) != 1: break  # For empty DB.
                 db_parent = blocks[0]['block_hash']
 
@@ -932,72 +932,63 @@ def follow (db, mempool):
             block_index +=1
 
         else:
-            # Log and ephemerally parse transactions in Bitcoin Core mempool.
-            if mempool:
-                try:
-                    with db:
-                        # Create fake block and fake transactions, capture (some) generated messages, then save those messages.
-
-                        cursor.execute('''SAVEPOINT end_of_block''')
-                        # Fake values for fake block.
-                        curr_time = time.time()
-                        mempool_tx_index = tx_index
-
-                        # List the fake block.
-                        try:
-                            cursor.execute('''INSERT INTO blocks(
-                                                block_index,
-                                                block_hash,
-                                                block_time) VALUES(?,?,?)''',
-                                                (config.MEMPOOL_BLOCK_INDEX,
-                                                 config.MEMPOOL_BLOCK_HASH,
-                                                 curr_time)
-                                          )
-                        except:
-                            pass    # TODO: Hack
-
-                        # List zero‐confirmation transactions.
-                        for tx_hash in bitcoin.get_mempool():
-                            try:    # Sometimes the transactions can’t be found: `{'code': -5, 'message': 'No information available about transaction'} Is txindex enabled in Bitcoind?`
-                                list_tx(db, config.MEMPOOL_BLOCK_HASH, config.MEMPOOL_BLOCK_INDEX, curr_time, tx_hash, mempool_tx_index)
-                                mempool_tx_index += 1
-                            except exceptions.BitcoindError:
-                                pass
-
-                        # Parse zero‐confirmation transactions.
-                        cursor.execute('''DELETE FROM messages WHERE block_index = ?''', (config.MEMPOOL_BLOCK_INDEX,))
-                        cursor.execute('''SELECT * FROM transactions \
-                                          WHERE block_index = ?''',
-                                       (config.MEMPOOL_BLOCK_INDEX,))
-                        for tx in list(cursor):
-                            parse_tx(db, tx)
-
-                        # Save temporary mempool messages.
-                        cursor.execute('''SELECT * FROM messages WHERE block_index = ?''', (config.MEMPOOL_BLOCK_INDEX,))
-                        mempool = list(cursor)
-
-                        # Rollback.
-                        assert False
-                # TODO: except Exception:
-                except AssertionError:
-                    pass
-
-                # Write mempool messages.
+            # Fill counterpartyd mempool.
+            try:
                 with db:
-                    for message in mempool:
-                        try:
-                            if message['tx_hash']:  # Must be able to identify mempool messages uniquely.
-                                cursor.execute('''INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings)''', (message))
-                        except apsw.ConstraintError:    # Duplicates!
+                    # Create fake block and fake transactions, capture (some) generated messages, then save those messages.
+
+                    cursor.execute('''SAVEPOINT end_of_block''')
+                    # Fake values for fake block.
+                    curr_time = time.time()
+                    mempool_tx_index = tx_index
+
+                    # List the fake block.
+                    cursor.execute('''INSERT INTO blocks(
+                                        block_index,
+                                        block_hash,
+                                        block_time) VALUES(?,?,?)''',
+                                        (config.MEMPOOL_BLOCK_INDEX,
+                                         config.MEMPOOL_BLOCK_HASH,
+                                         curr_time)
+                                  )
+
+                    # List zero‐confirmation transactions.
+                    for tx_hash in bitcoin.get_mempool():
+                        try:    # Sometimes the transactions can’t be found: `{'code': -5, 'message': 'No information available about transaction'} Is txindex enabled in Bitcoind?`
+                            list_tx(db, config.MEMPOOL_BLOCK_HASH, config.MEMPOOL_BLOCK_INDEX, curr_time, tx_hash, mempool_tx_index)
+                            mempool_tx_index += 1
+                        except exceptions.BitcoindError:
                             pass
 
-                # Check for conservation of assets; wait.
-                check_conservation(db)
-                time.sleep(2)
-            else:
-                # Check for conservation of assets; wait.
-                check_conservation(db)
-                time.sleep(2)
+                    # Parse zero‐confirmation transactions.
+                    cursor.execute('''DELETE FROM messages WHERE block_index = ?''', (config.MEMPOOL_BLOCK_INDEX,))
+                    cursor.execute('''SELECT * FROM transactions \
+                                      WHERE block_index = ?''',
+                                   (config.MEMPOOL_BLOCK_INDEX,))
+                    for tx in list(cursor):
+                        parse_tx(db, tx)
+
+                    # Save temporary mempool messages.
+                    cursor.execute('''SELECT * FROM messages WHERE block_index = ?''', (config.MEMPOOL_BLOCK_INDEX,))
+                    mempool = list(cursor)
+
+                    # Rollback.
+                    assert False
+            except Exception:   # TODO: fragile
+                pass
+
+            # Write mempool messages.
+            with db:
+                cursor.execute('''DELETE FROM mempool''')
+                for message in mempool:
+                    if message['tx_hash']:  # Must be able to identify mempool messages uniquely.
+                        cursor.execute('''INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings)''', (message))
+
+            # Wait
+            time.sleep(2)
+
+            # Check for conservation of assets.
+            check_conservation(db)
 
     cursor.close()
 

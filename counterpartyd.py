@@ -514,7 +514,6 @@ if __name__ == '__main__':
     parser.add_argument('--unsigned', action='store_true', help='print out unsigned hex of transaction; do not sign or broadcast')
     parser.add_argument('--carefulness', type=int, default=0, help='check conservation of assets after every CAREFULNESS transactions (potentially slow)')
     parser.add_argument('--unconfirmed', action='store_true', help='allow the spending of unconfirmed transaction outputs')
-    parser.add_argument('--mempool', action='store_true', help='log and ephemerally parse transactions in Bitcoin Core mempool')
     parser.add_argument('--encoding', default=config.ENCODING, type=str, help='data encoding method')
     parser.add_argument('--fee-per-kb', default=Fraction(config.FEE_PER_KB, config.UNIT), help='fee per kilobyte, in BTC')
     parser.add_argument('--regular-dust-size', default=Fraction(config.REGULAR_DUST_SIZE, config.UNIT), help='value for dust Pay‐to‐Pubkey‐Hash outputs, in BTC')
@@ -1018,7 +1017,7 @@ if __name__ == '__main__':
             except Exception as e:
                 raise exceptions.InsightError('Could not connect to Insight server: %s' % e)
 
-        blocks.follow(db, args.mempool)
+        blocks.follow(db)
 
     else:
         parser.print_help()

@@ -204,7 +204,7 @@ def message (db, block_index, command, category, bindings, tx_hash=None):
                    (message_index, tx_hash, block_index, command, category, bindings_string))
 
     # Log only real transactions.
-    if block_index == config.MEMPOOL_BLOCK_INDEX:
+    if block_index != config.MEMPOOL_BLOCK_INDEX:
         log(db, command, category, bindings)
 
     cursor.close()
