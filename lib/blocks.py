@@ -862,10 +862,13 @@ def follow (db):
     else:
         tx_index = 0
 
+    not_counterparty = []
     while True:
 
         # Get new blocks.
-        if block_index <= bitcoin.get_block_count():
+        block_count = bitcoin.get_block_count()
+        if block_index <= block_count:
+
             logging.info('Block: {}'.format(str(block_index)))
 
             # Backwards check for incorrect blocks due to chain reorganisation, and stop when a common parent is found.
@@ -927,17 +930,29 @@ def follow (db):
                 # Parse the transactions in the block.
                 parse_block(db, block_index, block_time)
 
+            # When newly caught up, check for conservation of assets.
+            if block_index == block_count:
+                check_conservation(db)
+
             # Increment block index.
             block_count = bitcoin.get_block_count()
             block_index +=1
 
         else:
             # Fill counterpartyd mempool.
+
+            if not not_counterparty:
+                logging.info('Status: Initialising mempool.')
+            else:
+                logging.debug('Status: Updating mempool.')
+
             try:
                 with db:
                     # Create fake block and fake transactions, capture (some) generated messages, then save those messages.
 
+                    cursor.execute('''DELETE FROM messages WHERE block_index = ?''', (config.MEMPOOL_BLOCK_INDEX,))
                     cursor.execute('''SAVEPOINT end_of_block''')
+
                     # Fake values for fake block.
                     curr_time = time.time()
                     mempool_tx_index = tx_index
@@ -952,32 +967,60 @@ def follow (db):
                                          curr_time)
                                   )
 
-                    # List zero‐confirmation transactions.
+                    # Get old counterpartyd mempool.
+                    old_mempool = list(cursor.execute('''SELECT * FROM mempool'''))
+                    old_mempool_hashes = [message['tx_hash'] for message in old_mempool]
+
+                    # Go through current Bitcoin Core mempool.
+                    mempool = []
                     for tx_hash in bitcoin.get_mempool():
-                        try:    # Sometimes the transactions can’t be found: `{'code': -5, 'message': 'No information available about transaction'} Is txindex enabled in Bitcoind?`
-                            list_tx(db, config.MEMPOOL_BLOCK_HASH, config.MEMPOOL_BLOCK_INDEX, curr_time, tx_hash, mempool_tx_index)
-                            mempool_tx_index += 1
-                        except exceptions.BitcoindError:
-                            pass
+                        # If already in counterpartyd mempool, just copy it over.
+                        if tx_hash in old_mempool_hashes:
+                            for message in old_mempool:
+                                if message['tx_hash'] == tx_hash:
+                                    mempool.append(message)
+                                    break
+                        # If new transaction not already determined to not be a
+                        # Counterparty transaction, then list, parse and then
+                        # save it.
+                        elif tx_hash not in not_counterparty:
+                            # List transaction.
+                            try:    # Sometimes the transactions can’t be found: `{'code': -5, 'message': 'No information available about transaction'} Is txindex enabled in Bitcoind?`
+                                list_tx(db, config.MEMPOOL_BLOCK_HASH, config.MEMPOOL_BLOCK_INDEX, curr_time, tx_hash, mempool_tx_index)
+                                mempool_tx_index += 1
+                            except exceptions.BitcoindError:
+                                continue
 
-                    # Parse zero‐confirmation transactions.
-                    cursor.execute('''DELETE FROM messages WHERE block_index = ?''', (config.MEMPOOL_BLOCK_INDEX,))
-                    cursor.execute('''SELECT * FROM transactions \
-                                      WHERE block_index = ?''',
-                                   (config.MEMPOOL_BLOCK_INDEX,))
-                    for tx in list(cursor):
-                        parse_tx(db, tx)
+                            # Parse transaction.
+                            cursor.execute('''SELECT * FROM transactions \
+                                              WHERE tx_hash = ?''',
+                                           (tx_hash,))
+                            transactions = list(cursor)
+                            if transactions:
+                                assert len(transactions) == 1
+                                parse_tx(db, transactions[0])
+                            else:
+                                # If a transaction hasn’t been added to the
+                                # table `transactions`, then it’s not a
+                                # Counterparty transaction.
+                                not_counterparty.append(tx_hash)
+                                continue
 
-                    # Save temporary mempool messages.
-                    cursor.execute('''SELECT * FROM messages WHERE block_index = ?''', (config.MEMPOOL_BLOCK_INDEX,))
-                    mempool = list(cursor)
+                            # Save transaction in memory.
+                            cursor.execute('''SELECT * FROM messages WHERE tx_hash = ?''', (tx_hash,))
+                            messages = list(cursor)
+                            if messages:
+                                assert len(messages) == 1
+                                mempool.append(messages[0])
+                            else:
+                                continue
 
                     # Rollback.
                     assert False
-            except Exception:   # TODO: fragile
+            except AssertionError:
                 pass
 
-            # Write mempool messages.
+            # Write mempool messages to database.
             with db:
                 cursor.execute('''DELETE FROM mempool''')
                 for message in mempool:
@@ -986,9 +1029,6 @@ def follow (db):
 
             # Wait
             time.sleep(2)
-
-            # Check for conservation of assets.
-            check_conservation(db)
 
     cursor.close()
 
