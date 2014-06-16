@@ -240,10 +240,19 @@ def exectracer(cursor, sql, bindings):
     # Record alteration in database.
     if category not in ('balances', 'messages', 'mempool'):
         if not (command in ('update') and category in ('orders', 'bets', 'order_matches', 'bet_matches')):    # List message manually.
+
+            # For uniqueness of messages in mempool…
             try:
                 tx_hash = bindings['tx_hash']
             except KeyError:
                 tx_hash = None
+
+            # To not be misleading…
+            try:
+                bindings['status'] = config.MEMPOOL_STATUS
+            except KeyError:
+                pass
+
             message(db, bindings['block_index'], command, category, bindings, tx_hash=tx_hash)
 
     return True
