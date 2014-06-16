@@ -946,7 +946,7 @@ def follow (db, mempool):
                             try:    # Sometimes the transactions can’t be found: `{'code': -5, 'message': 'No information available about transaction'} Is txindex enabled in Bitcoind?`
                                 list_tx(db, config.MEMPOOL_BLOCK_HASH, config.MEMPOOL_BLOCK_INDEX, curr_time, tx_hash, mempool_tx_index)
                                 mempool_tx_index += 1
-                            except lib.exceptions.BitcoindError:
+                            except exceptions.BitcoindError:
                                 pass
 
                         # Parse zero‐confirmation transactions.
