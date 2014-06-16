@@ -249,7 +249,8 @@ def exectracer(cursor, sql, bindings):
 
             # To not be misleading…
             try:
-                bindings['status'] = config.MEMPOOL_STATUS
+                if bindings['block_index'] == config.MEMPOOL_BLOCK_INDEX:
+                    bindings['status'] = config.MEMPOOL_STATUS
             except KeyError:
                 pass
 
