@@ -12,6 +12,7 @@ import decimal
 D = decimal.Decimal
 import logging
 from Crypto.Cipher import ARC4
+import apsw
 
 from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
@@ -633,6 +634,7 @@ def initialise(db):
     # Messages
     cursor.execute('''CREATE TABLE IF NOT EXISTS messages(
                       message_index INTEGER PRIMARY KEY,
+                      tx_hash TEXT,
                       block_index INTEGER,
                       command TEXT,
                       category TEXT,
@@ -644,8 +646,8 @@ def initialise(db):
                    ''')
 
     # Mempool messages
-    cursor.execute('''DROP TABLE IF EXISTS mempool_messages''')
-    cursor.execute('''CREATE TABLE mempool_messages(
+    cursor.execute('''DROP TABLE IF EXISTS mempool''')
+    cursor.execute('''CREATE TABLE mempool(
                       tx_hash TEXT PRIMARY KEY,
                       command TEXT,
                       category TEXT,
@@ -963,7 +965,7 @@ def follow (db, mempool):
                                 pass
 
                         # Parse zero‐confirmation transactions.
-                        cursor.execute('''DELETE FROM mempool_messages''')  # TODO
+                        cursor.execute('''DELETE FROM messages WHERE block_index = ?''', (config.MEMPOOL_BLOCK_INDEX,))
                         cursor.execute('''SELECT * FROM transactions \
                                           WHERE block_index = ?''',
                                        (config.MEMPOOL_BLOCK_INDEX,))
@@ -971,8 +973,8 @@ def follow (db, mempool):
                             parse_tx(db, tx)
 
                         # Save temporary mempool messages.
-                        cursor.execute('''SELECT * FROM mempool_messages''')
-                        mempool_messages = list(cursor)
+                        cursor.execute('''SELECT * FROM messages WHERE block_index = ?''', (config.MEMPOOL_BLOCK_INDEX,))
+                        mempool = list(cursor)
 
                         # Rollback.
                         assert False
@@ -982,10 +984,10 @@ def follow (db, mempool):
 
                 # Write mempool messages.
                 with db:
-                    cursor.execute('''DELETE FROM mempool_messages''')  # TODO
-                    for mempool_message in mempool_messages:
+                    for message in mempool:
                         try:
-                            cursor.execute('''INSERT INTO mempool_messages VALUES(:tx_hash, :command, :category, :bindings)''', (mempool_message))
+                            if message['tx_hash']:  # Must be able to identify mempool messages uniquely.
+                                cursor.execute('''INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings)''', (message))
                         except apsw.ConstraintError:    # Duplicates!
                             pass
 
