@@ -389,7 +389,8 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.FEE_PER_KB,
 
     if encoding == 'auto':
         if len(data) <= 40:
-            encoding = 'opreturn'
+            # encoding = 'opreturn'
+            encoding = 'multisig'   # BTCGuild isn’t mining OP_RETURN?!
         else:
             encoding = 'multisig'
 
