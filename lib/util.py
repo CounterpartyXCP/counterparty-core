@@ -187,7 +187,7 @@ def log (db, command, category, bindings):
             logging.info('Expired Bet Match: {}'.format(bindings['bet_match_id']))
     cursor.close()
 
-def message (db, block_index, command, category, bindings):
+def message (db, block_index, command, category, bindings, mempool=False):
     cursor = db.cursor()
 
     # Get last message index.
@@ -200,8 +200,15 @@ def message (db, block_index, command, category, bindings):
         message_index = 0
 
     bindings_string = json.dumps(collections.OrderedDict(sorted(bindings.items())))
-    cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings)',
-                   (message_index, block_index, command, category, bindings_string))
+    if mempool:
+        if command == 'insert' and category not in ('debits', 'credits'):   # TODO: Ugly
+            cursor.execute('insert into mempool_messages values(:tx_hash, :command, :category, :bindings)',
+                           (bindings['tx_hash'], command, category, bindings_string))
+            # TODO: Log mempool stuff?!
+    else:
+        cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings)',
+                       (message_index, block_index, command, category, bindings_string))
+        log(db, command, category, bindings)
 
     cursor.close()
 
@@ -234,21 +241,9 @@ def exectracer(cursor, sql, bindings):
     if 'blocks' in sql or 'transactions' in sql: return True
 
     # Record alteration in database.
-    if category not in ('balances', 'messages'):
-
-        # Special status for mempool transactions.
-        try:
-            if bindings['block_index'] == config.MEMPOOL_BLOCK_INDEX:
-                bindings['status'] = config.MEMPOOL_STATUS
-        except KeyError:
-            pass
-
+    if category not in ('balances', 'messages', 'mempool_messages'):
         if not (command in ('update') and category in ('orders', 'bets', 'order_matches', 'bet_matches')):    # List message manually.
-            block_index = bindings['block_index']
-            message(db, block_index, command, category, bindings)
-
-    # Log.
-    log(db, command, category, bindings)
+            message(db, bindings['block_index'], command, category, bindings, mempool=True)
 
     return True
 

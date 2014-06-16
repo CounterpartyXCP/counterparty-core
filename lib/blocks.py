@@ -643,6 +643,15 @@ def initialise(db):
                       block_index_idx ON messages (block_index)
                    ''')
 
+    # Mempool messages
+    cursor.execute('''DROP TABLE IF EXISTS mempool_messages''')
+    cursor.execute('''CREATE TABLE mempool_messages(
+                      tx_hash TEXT PRIMARY KEY,
+                      command TEXT,
+                      category TEXT,
+                      bindings TEXT)
+                  ''')
+
     cursor.close()
 
 def get_pubkeyhash (scriptpubkey):
@@ -851,7 +860,6 @@ def follow (db, mempool):
     else:
         tx_index = 0
 
-    mempool_transactions_seen = []
     while True:
 
         # Get new blocks.
@@ -923,23 +931,28 @@ def follow (db, mempool):
 
         else:
             # Log and ephemerally parse transactions in Bitcoin Core mempool.
-            # TODO: skip all matching?!
             if mempool:
                 try:
                     with db:
+                        # Create fake block and fake transactions, capture (some) generated messages, then save those messages.
+
+                        cursor.execute('''SAVEPOINT end_of_block''')
                         # Fake values for fake block.
                         curr_time = time.time()
                         mempool_tx_index = tx_index
 
                         # List the fake block.
-                        cursor.execute('''INSERT INTO blocks(
-                                            block_index,
-                                            block_hash,
-                                            block_time) VALUES(?,?,?)''',
-                                            (config.MEMPOOL_BLOCK_INDEX,
-                                             config.MEMPOOL_BLOCK_HASH,
-                                             curr_time)
-                                      )
+                        try:
+                            cursor.execute('''INSERT INTO blocks(
+                                                block_index,
+                                                block_hash,
+                                                block_time) VALUES(?,?,?)''',
+                                                (config.MEMPOOL_BLOCK_INDEX,
+                                                 config.MEMPOOL_BLOCK_HASH,
+                                                 curr_time)
+                                          )
+                        except:
+                            pass    # TODO: Hack
 
                         # List zero‐confirmation transactions.
                         for tx_hash in bitcoin.get_mempool():
@@ -950,21 +963,39 @@ def follow (db, mempool):
                                 pass
 
                         # Parse zero‐confirmation transactions.
+                        cursor.execute('''DELETE FROM mempool_messages''')  # TODO
                         cursor.execute('''SELECT * FROM transactions \
                                           WHERE block_index = ?''',
                                        (config.MEMPOOL_BLOCK_INDEX,))
                         for tx in list(cursor):
-                            if tx['tx_hash'] not in mempool_transactions_seen: # If not already logged as zero‐conf…
-                                parse_tx(db, tx)
-                                mempool_transactions_seen.append(tx['tx_hash'])
+                            parse_tx(db, tx)
 
-                        assert False    # Never commit!
+                        # Save temporary mempool messages.
+                        cursor.execute('''SELECT * FROM mempool_messages''')
+                        mempool_messages = list(cursor)
+
+                        # Rollback.
+                        assert False
+                # TODO: except Exception:
                 except AssertionError:
                     pass
 
-            # Check for conservation of assets.
-            check_conservation(db)
-            time.sleep(10)
+                # Write mempool messages.
+                with db:
+                    cursor.execute('''DELETE FROM mempool_messages''')  # TODO
+                    for mempool_message in mempool_messages:
+                        try:
+                            cursor.execute('''INSERT INTO mempool_messages VALUES(:tx_hash, :command, :category, :bindings)''', (mempool_message))
+                        except apsw.ConstraintError:    # Duplicates!
+                            pass
+
+                # Check for conservation of assets; wait.
+                check_conservation(db)
+                time.sleep(2)
+            else:
+                # Check for conservation of assets; wait.
+                check_conservation(db)
+                time.sleep(2)
 
     cursor.close()
 
