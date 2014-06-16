@@ -180,7 +180,7 @@ def get_rows(db, table, filters=[], filterop='AND', order_by=None, order_dir=Non
     return db_query(db, statement, tuple(bindings))
 
 def compose_transaction(db, name, params,
-                        encoding=config.ENCODING,
+                        encoding='auto',
                         fee_per_kb=config.FEE_PER_KB,
                         regular_dust_size=config.REGULAR_DUST_SIZE,
                         multisig_dust_size=config.MULTISIG_DUST_SIZE,

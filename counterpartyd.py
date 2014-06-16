@@ -514,7 +514,7 @@ if __name__ == '__main__':
     parser.add_argument('--unsigned', action='store_true', help='print out unsigned hex of transaction; do not sign or broadcast')
     parser.add_argument('--carefulness', type=int, default=0, help='check conservation of assets after every CAREFULNESS transactions (potentially slow)')
     parser.add_argument('--unconfirmed', action='store_true', help='allow the spending of unconfirmed transaction outputs')
-    parser.add_argument('--encoding', default=config.ENCODING, type=str, help='data encoding method')
+    parser.add_argument('--encoding', default='auto', type=str, help='data encoding method')
     parser.add_argument('--fee-per-kb', default=Fraction(config.FEE_PER_KB, config.UNIT), help='fee per kilobyte, in BTC')
     parser.add_argument('--regular-dust-size', default=Fraction(config.REGULAR_DUST_SIZE, config.UNIT), help='value for dust Pay‐to‐Pubkey‐Hash outputs, in BTC')
     parser.add_argument('--multisig-dust-size', default=Fraction(config.MULTISIG_DUST_SIZE, config.UNIT), help='for dust OP_CHECKMULTISIG outputs, in BTC')

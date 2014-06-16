@@ -378,7 +378,7 @@ def private_key_to_public_key (private_key_wif):
     public_key_hex = binascii.hexlify(public_key).decode('utf-8')
     return public_key_hex
 
-def transaction (tx_info, encoding='multisig', fee_per_kb=config.FEE_PER_KB,
+def transaction (tx_info, encoding='auto', fee_per_kb=config.FEE_PER_KB,
                  regular_dust_size=config.REGULAR_DUST_SIZE,
                  multisig_dust_size=config.MULTISIG_DUST_SIZE,
                  op_return_value=config.OP_RETURN_VALUE, exact_fee=None,
@@ -386,6 +386,12 @@ def transaction (tx_info, encoding='multisig', fee_per_kb=config.FEE_PER_KB,
                  allow_unconfirmed_inputs=False):
 
     (source, destination_outputs, data) = tx_info
+
+    if encoding == 'auto':
+        if len(data) <= 40:
+            encoding = 'opreturn'
+        else:
+            encoding = 'multisig'
 
     if exact_fee and not isinstance(exact_fee, int):
         raise exceptions.TransactionError('Exact fees must be in satoshis.')
@@ -459,7 +465,7 @@ def transaction (tx_info, encoding='multisig', fee_per_kb=config.FEE_PER_KB,
         elif encoding == 'multisig':
             data_array = list(chunks(data, 33 - 1))
         elif encoding == 'opreturn':
-            data_array = list(chunks(data, 80))
+            data_array = list(chunks(data, config.OP_RETURN_MAX_SIZE))
             assert len(data_array) == 1 # Only one OP_RETURN output currently supported (messages should all be shorter than 80 bytes, at the moment).
     else:
         data_array = []

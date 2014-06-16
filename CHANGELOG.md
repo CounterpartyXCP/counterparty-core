@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.26.1
+	* automatic transaction encoding
 * v9.26.0
 	* *major* speed‐up in reparsing
 	* support for mempool (so‐called ‘unconfirmed’ or ‘zero‐confirmation’) transactions
