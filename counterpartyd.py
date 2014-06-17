@@ -923,7 +923,7 @@ if __name__ == '__main__':
 
         if args.asset != config.BTC:
             print('Shareholders:')
-            balances = util.api('get_balances', {'field': 'asset', 'op': '==', 'value': args.asset})
+            balances = util.api('get_balances', {'filters': [('asset', '==', args.asset)]})
             print('\taddress, quantity, escrow')
             for holder in util.holders(db, args.asset):
                 quantity = holder['address_quantity']
