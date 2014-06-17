@@ -638,7 +638,8 @@ def initialise(db):
                       block_index INTEGER,
                       command TEXT,
                       category TEXT,
-                      bindings TEXT)
+                      bindings TEXT,
+                      timestamp INTEGER)
                   ''')
                       # TODO: FOREIGN KEY (block_index) REFERENCES blocks(block_index) DEFERRABLE INITIALLY DEFERRED)
     cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -646,7 +647,7 @@ def initialise(db):
                    ''')
 
     # Mempool messages
-    # NOTE: `status` is removed from bindings.
+    # NOTE: `status`, 'block_index` are removed from bindings.
     # NOTE: `tx_hash` provides uniqueness.
     cursor.execute('''DROP TABLE IF EXISTS mempool''')
     cursor.execute('''CREATE TABLE mempool(
@@ -1028,7 +1029,6 @@ def follow (db):
                 cursor.execute('''DELETE FROM mempool''')
                 for message in mempool:
                     if message['tx_hash']:  # Must be able to identify mempool messages uniquely.
-                        message['timestamp'] = curr_time
                         cursor.execute('''INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp)''', (message))
 
             # Wait

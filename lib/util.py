@@ -199,9 +199,17 @@ def message (db, block_index, command, category, bindings, tx_hash=None):
     else:
         message_index = 0
 
+    # To not be misleading…
+    if block_index == config.MEMPOOL_BLOCK_INDEX:
+        try:
+            del bindings['status']
+            del bindings['block_index']
+        except KeyError:
+            pass
+
     bindings_string = json.dumps(collections.OrderedDict(sorted(bindings.items())))
-    cursor.execute('insert into messages values(:message_index, :tx_hash, :block_index, :command, :category, :bindings)',
-                   (message_index, tx_hash, block_index, command, category, bindings_string))
+    cursor.execute('insert into messages values(:message_index, :tx_hash, :block_index, :command, :category, :bindings, :timestamp)',
+                   (message_index, tx_hash, block_index, command, category, bindings_string, int(time.time())))
 
     # Log only real transactions.
     if block_index != config.MEMPOOL_BLOCK_INDEX:
@@ -246,13 +254,6 @@ def exectracer(cursor, sql, bindings):
                 tx_hash = bindings['tx_hash']
             except KeyError:
                 tx_hash = None
-
-            # To not be misleading…
-            try:
-                if bindings['block_index'] == config.MEMPOOL_BLOCK_INDEX:
-                    del bindings['status']
-            except KeyError:
-                pass
 
             message(db, bindings['block_index'], command, category, bindings, tx_hash=tx_hash)
 
