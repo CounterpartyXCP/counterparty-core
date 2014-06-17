@@ -651,7 +651,8 @@ def initialise(db):
                       tx_hash TEXT PRIMARY KEY,
                       command TEXT,
                       category TEXT,
-                      bindings TEXT)
+                      bindings TEXT,
+                      timestamp INTEGER)
                   ''')
 
     cursor.close()
@@ -942,7 +943,7 @@ def follow (db):
             # Fill counterpartyd mempool.
 
             if not not_counterparty:
-                logging.info('Status: Initialising mempool.')
+                logging.debug('Status: Initialising mempool.')
             else:
                 logging.debug('Status: Updating mempool.')
 
@@ -954,7 +955,7 @@ def follow (db):
                     cursor.execute('''SAVEPOINT end_of_block''')
 
                     # Fake values for fake block.
-                    curr_time = time.time()
+                    curr_time = int(time.time())
                     mempool_tx_index = tx_index
 
                     # List the fake block.
@@ -1025,7 +1026,8 @@ def follow (db):
                 cursor.execute('''DELETE FROM mempool''')
                 for message in mempool:
                     if message['tx_hash']:  # Must be able to identify mempool messages uniquely.
-                        cursor.execute('''INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings)''', (message))
+                        message['timestamp'] = curr_time
+                        cursor.execute('''INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp)''', (message))
 
             # Wait
             time.sleep(2)
