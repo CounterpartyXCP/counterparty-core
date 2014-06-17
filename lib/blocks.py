@@ -646,6 +646,8 @@ def initialise(db):
                    ''')
 
     # Mempool messages
+    # NOTE: `status` is removed from bindings.
+    # NOTE: `tx_hash` provides uniqueness.
     cursor.execute('''DROP TABLE IF EXISTS mempool''')
     cursor.execute('''CREATE TABLE mempool(
                       tx_hash TEXT PRIMARY KEY,
