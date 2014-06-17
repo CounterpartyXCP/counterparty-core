@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.26.2
+	* currency agnosticism
 * v9.26.1
 	* automatic transaction encoding
 * v9.26.0

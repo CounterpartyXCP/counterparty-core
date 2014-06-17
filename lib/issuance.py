@@ -21,8 +21,8 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     problems = []
     fee = 0
 
-    if asset in ('BTC', 'XCP'):
-        problems.append('cannot issue BTC or XCP')
+    if asset in (config.BTC, config.XCP):
+        problems.append('cannot issue {} or {}'.format(config.BTC, config.XCP))
 
     if call_date is None: call_date = 0
     if call_price is None: call_price = 0.0
@@ -81,7 +81,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
         if not reissuance or (block_index < 310000 or config.TESTNET):  # Pay fee only upon first issuance. (Protocol change.)
             cursor = db.cursor()
             cursor.execute('''SELECT * FROM balances \
-                              WHERE (address = ? AND asset = ?)''', (source, 'XCP'))
+                              WHERE (address = ? AND asset = ?)''', (source, config.XCP))
             balances = cursor.fetchall()
             cursor.close()
             if block_index >= 291700 or config.TESTNET:     # Protocol change.
@@ -174,7 +174,7 @@ def parse (db, tx, message):
 
     # Debit fee.
     if status == 'valid':
-        util.debit(db, tx['block_index'], tx['source'], 'XCP', fee)
+        util.debit(db, tx['block_index'], tx['source'], config.XCP, fee)
 
     # Lock?
     lock = False

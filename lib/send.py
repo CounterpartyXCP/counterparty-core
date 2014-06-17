@@ -14,7 +14,7 @@ ID = 0
 def validate (db, source, destination, asset, quantity):
     problems = []
 
-    if asset == 'BTC': problems.append('cannot send bitcoins')  # Only for parsing.
+    if asset == config.BTC: problems.append('cannot send bitcoins')  # Only for parsing.
     
     if not isinstance(quantity, int):
         problems.append('quantity must be in satoshis')
@@ -28,7 +28,7 @@ def compose (db, source, destination, asset, quantity):
     cursor = db.cursor()
 
     # Just send BTC?
-    if asset == 'BTC':
+    if asset == config.BTC:
         return (source, [(destination, quantity)], None)
     
     #quantity must be in int satoshi (not float, string, etc)

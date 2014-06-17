@@ -155,7 +155,7 @@ def get_rows(db, table, filters=[], filterop='AND', order_by=None, order_dir=Non
         #Ignore BTC orders one block early.
         expire_index = util.last_block(db)['block_index'] + 1
         more_conditions.append('''((give_asset == ? AND expire_index > ?) OR give_asset != ?)''')
-        bindings += ['BTC', expire_index, 'BTC']
+        bindings += [config.BTC, expire_index, config.BTC]
 
     if (len(conditions) + len(more_conditions)) > 0:
         statement += ''' WHERE'''
@@ -181,10 +181,10 @@ def get_rows(db, table, filters=[], filterop='AND', order_by=None, order_dir=Non
 
 def compose_transaction(db, name, params,
                         encoding='auto',
-                        fee_per_kb=config.FEE_PER_KB,
-                        regular_dust_size=config.REGULAR_DUST_SIZE,
-                        multisig_dust_size=config.MULTISIG_DUST_SIZE,
-                        op_return_value=config.OP_RETURN_VALUE, 
+                        fee_per_kb=config.DEFAULT_FEE_PER_KB,
+                        regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
+                        multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
+                        op_return_value=config.DEFAULT_OP_RETURN_VALUE, 
                         pubkey=None,
                         allow_unconfirmed_inputs=False, 
                         fee=None,
@@ -340,8 +340,8 @@ class APIServer(threading.Thread):
             for asset in assets:
 
                 # BTC and XCP.
-                if asset in ['BTC', 'XCP']:
-                    if asset == 'BTC':
+                if asset in [config.BTC, config.XCP]:
+                    if asset == config.BTC:
                         supply = bitcoin.get_btc_supply(normalize=False)
                     else:
                         supply = util.xcp_supply(db)

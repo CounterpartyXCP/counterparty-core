@@ -378,10 +378,10 @@ def private_key_to_public_key (private_key_wif):
     public_key_hex = binascii.hexlify(public_key).decode('utf-8')
     return public_key_hex
 
-def transaction (tx_info, encoding='auto', fee_per_kb=config.FEE_PER_KB,
-                 regular_dust_size=config.REGULAR_DUST_SIZE,
-                 multisig_dust_size=config.MULTISIG_DUST_SIZE,
-                 op_return_value=config.OP_RETURN_VALUE, exact_fee=None,
+def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
+                 regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
+                 multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
+                 op_return_value=config.DEFAULT_OP_RETURN_VALUE, exact_fee=None,
                  fee_provided=0, public_key_hex=None,
                  allow_unconfirmed_inputs=False):
 
@@ -514,7 +514,7 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.FEE_PER_KB,
     if not sufficient_funds:
         # Approximate needed change, fee by with most recently calculated quantities.
         total_btc_out = btc_out + max(change_quantity, 0) + final_fee
-        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need approximately {} BTC.)'.format(source, total_btc_out / config.UNIT))
+        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need approximately {} {}.)'.format(source, total_btc_out / config.UNIT, config.BTC))
 
     # Construct outputs.
     if data: data_output = (data_array, data_value)
@@ -565,7 +565,7 @@ def normalize_quantity(quantity, divisible=True):
 
 def get_btc_balance(address, normalize=False):
     # TODO: shows unconfirmed BTC balance, while counterpartyd shows only confirmed balances for all other assets.
-    """returns the BTC balance for a specific address"""
+    """returns the {} balance for a specific address""".format(config.BTC)
     if config.INSIGHT_ENABLE:
         r = requests.get(config.INSIGHT + '/api/addr/' + address)
         if r.status_code != 200:
@@ -582,7 +582,7 @@ def get_btc_balance(address, normalize=False):
             return normalize_quantity(int(r.text)) if normalize else int(r.text)
 
 def get_btc_supply(normalize=False):
-    """returns the total supply of BTC (based on what bitcoind says the current block height is)"""
+    """returns the total supply of {} (based on what Bitcoin Core says the current block height is)""".format(config.BTC)
     block_count = get_block_count()
     blocks_remaining = block_count
     total_supply = 0 
