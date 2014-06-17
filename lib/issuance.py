@@ -115,8 +115,8 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
 
     return problems, fee
 
-def compose (db, source, destination, asset, quantity, divisible, callable_, call_date, call_price, description):
-    problems, fee = validate(db, source, destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.last_block(db)['block_index'])
+def compose (db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description):
+    problems, fee = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.last_block(db)['block_index'])
     if problems: raise exceptions.IssuanceError(problems)
 
     asset_id = util.asset_id(asset)
@@ -125,8 +125,8 @@ def compose (db, source, destination, asset, quantity, divisible, callable_, cal
         call_date or 0, call_price or 0.0, description.encode('utf-8'))
     if len(data) > 80:
         raise exceptions.IssuanceError('Description is greater than 52 bytes.')
-    if destination:
-        destination_outputs = [(destination, None)]
+    if transfer_destination:
+        destination_outputs = [(transfer_destination, None)]
     else:
         destination_outputs = []
     return (source, destination_outputs, data)
