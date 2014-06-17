@@ -449,30 +449,30 @@ def set_options (data_dir=None,
     # (more) Testnet
     if config.TESTNET:
         if config.TESTCOIN:
-            config.ADDRESSVERSION = b'\x6f'
-            config.BLOCK_FIRST = 154908
-            config.BURN_START = 154908
-            config.BURN_END = 4017708   # Fifty years, at ten minutes per block.
-            config.UNSPENDABLE = 'mvCounterpartyXXXXXXXXXXXXXXW24Hef'
+            config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
+            config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET_TESTCOIN
+            config.BURN_START = config.BURN_START_TESTNET_TESTCOIN
+            config.BURN_END = config.BURN_END_TESTNET_TESTCOIN
+            config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
         else:
-            config.ADDRESSVERSION = b'\x6f'
-            config.BLOCK_FIRST = 154908
-            config.BURN_START = 154908
-            config.BURN_END = 4017708   # Fifty years, at ten minutes per block.
-            config.UNSPENDABLE = 'mvCounterpartyXXXXXXXXXXXXXXW24Hef'
+            config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
+            config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET
+            config.BURN_START = config.BURN_START_TESTNET
+            config.BURN_END = config.BURN_END_TESTNET
+            config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
     else:
         if config.TESTCOIN:
-            config.ADDRESSVERSION = b'\x00'
-            config.BLOCK_FIRST = 278270
-            config.BURN_START = 278310
-            config.BURN_END = 2500000   # A long time.
-            config.UNSPENDABLE = '1CounterpartyXXXXXXXXXXXXXXXUWLpVr'
+            config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
+            config.BLOCK_FIRST = config.BLOCK_FIRST_MAINNET_TESTCOIN
+            config.BURN_START = config.BURN_START_MAINNET_TESTCOIN
+            config.BURN_END = config.BURN_END_MAINNET_TESTCOIN
+            config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
         else:
-            config.ADDRESSVERSION = b'\x00'
-            config.BLOCK_FIRST = 278270
-            config.BURN_START = 278310
-            config.BURN_END = 283810
-            config.UNSPENDABLE = '1CounterpartyXXXXXXXXXXXXXXXUWLpVr'
+            config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
+            config.BLOCK_FIRST = config.BLOCK_FIRST_MAINNET
+            config.BURN_START = config.BURN_START_MAINNET
+            config.BURN_END = config.BURN_END_MAINNET
+            config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
 
     # method used to broadcast signed transactions. bitcoind or bci (default: bitcoind)
     if broadcast_tx_mainnet:

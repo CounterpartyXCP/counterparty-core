@@ -343,7 +343,7 @@ def serialise (encoding, inputs, destination_outputs, data_output=None, change_o
 
 def input_value_weight(amount):
     # Prefer outputs less than dust size, then bigger is better.
-    if amount * config.UNIT <= config.REGULAR_DUST_SIZE:
+    if amount * config.UNIT <= config.DEFAULT_REGULAR_DUST_SIZE:
         return 0
     else:
         return 1 / amount
