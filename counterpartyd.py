@@ -208,14 +208,14 @@ def set_options (data_dir=None,
 
     # Data directory
     if not data_dir:
-        config.DATA_DIR = appdirs.user_data_dir(appauthor='Counterparty', appname='counterpartyd', roaming=True)
+        config.DATA_DIR = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.XCP_CLIENT, roaming=True)
     else:
         config.DATA_DIR = os.path.expanduser(data_dir)
     if not os.path.isdir(config.DATA_DIR): os.mkdir(config.DATA_DIR)
 
     # Configuration file
     configfile = configparser.ConfigParser()
-    config_path = os.path.join(config.DATA_DIR, 'counterpartyd.conf')
+    config_path = os.path.join(config.DATA_DIR, '{}.conf'.format(config.XCP_CLIENT))
     configfile.read(config_path)
     has_config = 'Default' in configfile
     #logging.debug("Config file: %s; Exists: %s" % (config_path, "Yes" if has_config else "No"))
@@ -255,7 +255,7 @@ def set_options (data_dir=None,
     ##############
     # THINGS WE CONNECT TO
 
-    # Bitcoind RPC host
+    # Bitcoin Core RPC host
     if bitcoind_rpc_connect:
         config.BITCOIND_RPC_CONNECT = bitcoind_rpc_connect
     elif has_config and '{}-rpc-connect'.format(config.BTC_CLIENT) in configfile['Default'] and configfile['Default']['{}-rpc-connect'.format(config.BTC_CLIENT)]:
@@ -263,7 +263,7 @@ def set_options (data_dir=None,
     else:
         config.BITCOIND_RPC_CONNECT = 'localhost'
 
-    # Bitcoind RPC port
+    # Bitcoin Core RPC port
     if bitcoind_rpc_port:
         config.BITCOIND_RPC_PORT = bitcoind_rpc_port
     elif has_config and '{}-rpc-port'.format(config.BTC_CLIENT) in configfile['Default'] and configfile['Default']['{}-rpc-port'.format(config.BTC_CLIENT)]:
@@ -279,7 +279,7 @@ def set_options (data_dir=None,
     except:
         raise Exception("Please specific a valid port number {}-rpc-port configuration parameter".format(config.BTC_CLIENT))
 
-    # Bitcoind RPC user
+    # Bitcoin Core RPC user
     if bitcoind_rpc_user:
         config.BITCOIND_RPC_USER = bitcoind_rpc_user
     elif has_config and '{}-rpc-user'.format(config.BTC_CLIENT) in configfile['Default'] and configfile['Default']['{}-rpc-user'.format(config.BTC_CLIENT)]:
@@ -287,7 +287,7 @@ def set_options (data_dir=None,
     else:
         config.BITCOIND_RPC_USER = 'bitcoinrpc'
 
-    # Bitcoind RPC password
+    # Bitcoin Core RPC password
     if bitcoind_rpc_password:
         config.BITCOIND_RPC_PASSWORD = bitcoind_rpc_password
     elif has_config and '{}-rpc-password'.format(config.BTC_CLIENT) in configfile['Default'] and configfile['Default']['{}-rpc-password'.format(config.BTC_CLIENT)]:
@@ -349,7 +349,7 @@ def set_options (data_dir=None,
     else:
         config.RPC_HOST = 'localhost'
 
-    #  counterpartyd API RPC port
+    # counterpartyd API RPC port
     if rpc_port:
         config.RPC_PORT = rpc_port
     elif has_config and 'rpc-port' in configfile['Default'] and configfile['Default']['rpc-port']:
@@ -398,7 +398,7 @@ def set_options (data_dir=None,
     elif has_config and 'log-file' in configfile['Default']:
         config.LOG = configfile['Default']['log-file']
     else:
-        string = 'counterpartyd'
+        string = config.XCP_CLIENT
         if config.TESTNET:
             string += '.testnet'
         if config.TESTCOIN:
@@ -411,7 +411,7 @@ def set_options (data_dir=None,
     elif has_config and 'pid-file' in configfile['Default']:
         config.PID = configfile['Default']['pid-file']
     else:
-        config.PID = os.path.join(config.DATA_DIR, 'counterpartyd.pid')
+        config.PID = os.path.join(config.DATA_DIR, '{}.pid'.format(config.XCP_CLIENT))
 
     if not unittest:
         if config.TESTCOIN:
@@ -439,7 +439,7 @@ def set_options (data_dir=None,
     if database_file:
         config.DATABASE = database_file
     else:
-        string = 'counterpartyd.' + str(config.VERSION_MAJOR)
+        string = '{}.'.format(config.XCP_CLIENT) + str(config.VERSION_MAJOR)
         if config.TESTNET:
             string += '.testnet'
         if config.TESTCOIN:
@@ -504,13 +504,13 @@ if __name__ == '__main__':
         util_windows.fix_win32_unicode()
     
     # Parse command-line arguments.
-    parser = argparse.ArgumentParser(prog='counterpartyd', description='the reference implementation of the Counterparty protocol')
-    parser.add_argument('-V', '--version', action='version', version="counterpartyd v%s" % config.VERSION_STRING)
+    parser = argparse.ArgumentParser(prog=config.XCP_CLIENT, description='the reference implementation of the {} protocol'.format(config.XCP_NAME))
+    parser.add_argument('-V', '--version', action='version', version="{} v{}".format(config.XCP_CLIENT, config.VERSION_STRING)
 
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='sets log level to DEBUG instead of WARNING')
     parser.add_argument('--force', action='store_true', help='don\'t check whether {} Core is caught up'.format(config.BTC_NAME))
     parser.add_argument('--testnet', action='store_true', help='use {} testnet addresses and block numbers'.format(config.BTC_NAME))
-    parser.add_argument('--testcoin', action='store_true', help='use the test Counterparty network on every blockchain')
+    parser.add_argument('--testcoin', action='store_true', help='use the test {} network on every blockchain'.format(config.XCP_NAME))
     parser.add_argument('--unsigned', action='store_true', help='print out unsigned hex of transaction; do not sign or broadcast')
     parser.add_argument('--carefulness', type=int, default=0, help='check conservation of assets after every CAREFULNESS transactions (potentially slow)')
     parser.add_argument('--unconfirmed', action='store_true', help='allow the spending of unconfirmed transaction outputs')
@@ -538,9 +538,9 @@ if __name__ == '__main__':
     parser.add_argument('--insight-port', type=int, help='the insight server port to connect to')
 
     parser.add_argument('--rpc-host', help='the IP of the interface to bind to for providing JSON-RPC API access (0.0.0.0 for all interfaces)')
-    parser.add_argument('--rpc-port', type=int, help='port on which to provide the counterpartyd JSON-RPC API')
-    parser.add_argument('--rpc-user', help='required username to use the counterpartyd JSON-RPC API (via HTTP basic auth)')
-    parser.add_argument('--rpc-password', help='required password (for rpc-user) to use the counterpartyd JSON-RPC API (via HTTP basic auth)')
+    parser.add_argument('--rpc-port', type=int, help='port on which to provide the {} JSON-RPC API'.format(config.XCP_CLIENT))
+    parser.add_argument('--rpc-user', help='required username to use the {} JSON-RPC API (via HTTP basic auth)'.format(config.XCP_CLIENT))
+    parser.add_argument('--rpc-password', help='required password (for rpc-user) to use the {} JSON-RPC API (via HTTP basic auth)'.format(config.XCP_CLIENT))
 
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
@@ -624,13 +624,13 @@ if __name__ == '__main__':
     parser_callback.add_argument('--asset', required=True, help='the asset to callback')
     parser_callback.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
-    parser_address = subparsers.add_parser('balances', help='display the balances of a Counterparty address')
+    parser_address = subparsers.add_parser('balances', help='display the balances of a {} address'.format(config.XCP_NAME))
     parser_address.add_argument('address', help='the address you are interested in')
 
-    parser_asset = subparsers.add_parser('asset', help='display the basic properties of a Counterparty asset')
+    parser_asset = subparsers.add_parser('asset', help='display the basic properties of a {} asset'.format(config.XCP_NAME))
     parser_asset.add_argument('asset', help='the asset you are interested in')
 
-    parser_wallet = subparsers.add_parser('wallet', help='list the addresses in your {} Core wallet along with their balances in all Counterparty assets'.format(config.BTC_NAME))
+    parser_wallet = subparsers.add_parser('wallet', help='list the addresses in your {} Core wallet along with their balances in all {} assets'.format(config.BTC_NAME, config.XCP_NAME))
 
     parser_pending= subparsers.add_parser('pending', help='list pending order matches awaiting {}payment from you'.format(config.BTC))
 
@@ -639,7 +639,7 @@ if __name__ == '__main__':
     parser_rollback = subparsers.add_parser('rollback', help='rollback database (WARNING: not thread‐safe)')
     parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
 
-    parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the Counterparty market')
+    parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the {} market'.format(config.XCP_NAME) )
     parser_market.add_argument('--give-asset', help='only show orders offering to sell GIVE_ASSET')
     parser_market.add_argument('--get-asset', help='only show orders offering to buy GET_ASSET')
 

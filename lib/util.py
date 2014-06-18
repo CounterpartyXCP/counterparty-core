@@ -33,7 +33,7 @@ def api (method, params):
     }
     response = requests.post(config.RPC, data=json.dumps(payload), headers=headers)
     if response == None:
-        raise exceptions.RPCError('Cannot communicate with counterpartyd server.')
+        raise exceptions.RPCError('Cannot communicate with {} server.'.format(config.XCP_CLIENT))
     elif response.status_code != 200:
         if response.status_code == 500:
             raise exceptions.RPCError('Malformed API call.')
@@ -333,13 +333,13 @@ def version_check (db):
                 passed = False
 
     if not passed:
-        raise exceptions.VersionError('Please upgrade counterpartyd to the latest version and restart the server.')
+        raise exceptions.VersionError('Please upgrade {} to the latest version and restart the server.'.format(config.XCP_CLIENT))
 
     logging.debug('Status: Version check passed.')
     return
 
 def database_check (db, blockcount):
-    """Checks Counterparty database to see if the counterpartyd server has caught up with Bitcoind."""
+    """Checks {} database to see if the {} server has caught up with Bitcoind.""".format(config.XCP_NAME, config.XCP_CLIENT)
     cursor = db.cursor()
     TRIES = 14
     for i in range(TRIES):
@@ -349,7 +349,7 @@ def database_check (db, blockcount):
             return
         print('Database not up‐to‐date. Sleeping for one second. (Try {}/{})'.format(i+1, TRIES), file=sys.stderr)
         time.sleep(1)
-    raise exceptions.DatabaseError('Counterparty database is behind Bitcoind. Is the counterpartyd server running?')
+    raise exceptions.DatabaseError('{} database is behind Bitcoind. Is the {} server running?'.format(config.XCP_NAME, config.XCP_CLIENT))
 
 
 def isodt (epoch_time):
@@ -449,7 +449,7 @@ def debit (db, block_index, address, asset, quantity, action=None, event=None):
     assert quantity >= 0
 
     if asset == config.BTC:
-        raise exceptions.BalanceError('Cannot debit bitcoins from a Counterparty address!')
+        raise exceptions.BalanceError('Cannot debit bitcoins from a {} address!'.format(config.XCP_NAME))
 
     debit_cursor.execute('''SELECT * FROM balances \
                             WHERE (address = ? AND asset = ?)''', (address, asset))

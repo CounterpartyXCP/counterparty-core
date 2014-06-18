@@ -511,7 +511,7 @@ class APIServer(threading.Thread):
             '/': {
                 'tools.trailing_slash.on': False,
                 'tools.auth_basic.on': True,
-                'tools.auth_basic.realm': 'counterpartyd',
+                'tools.auth_basic.realm': config.XCP_CLIENT,
                 'tools.auth_basic.checkpassword': checkpassword,
             },
         }
@@ -548,7 +548,7 @@ class APIServer(threading.Thread):
         try:
             server.start()
         except OSError:
-            raise Exception("Cannot start the API subsystem. Is counterpartyd"
+            raise Exception("Cannot start the API subsystem. Is {}?".format(config.XCP_CLIENT))
                 " already running, or is something else listening on port %s?" % config.RPC_PORT)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

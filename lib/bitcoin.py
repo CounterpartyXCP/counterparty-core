@@ -131,7 +131,7 @@ def rpc (method, params):
     if response == None:
         if config.TESTNET: network = 'testnet'
         else: network = 'mainnet'
-        raise exceptions.BitcoindRPCError('Cannot communicate with Bitcoind. (counterpartyd is set to run on {}, is Bitcoind?)'.format(network))
+        raise exceptions.BitcoindRPCError('Cannot communicate with {} Core. ({} is set to run on {}, is {} Core?)'.format(config.BTC_NAME, config.XCP_CLIENT, network, config.BTC_NAME))
     elif response.status_code not in (200, 500):
         raise exceptions.BitcoindRPCError(str(response.status_code) + ' ' + response.reason)
 
