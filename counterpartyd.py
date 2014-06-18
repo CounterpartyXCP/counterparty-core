@@ -158,7 +158,7 @@ def cli(method, params, unsigned):
         if bitcoin.is_mine(params['source']):
             bitcoin.wallet_unlock()
         else:
-            print('Source not in Bitcoind wallet.')
+            print('Source not in {} Core wallet.'.format(config.BTC_NAME))
             answer = input('Public key (hexadecimal) or Private key (Wallet Import Format): ')
 
             # Public key or private key?
@@ -258,16 +258,16 @@ def set_options (data_dir=None,
     # Bitcoind RPC host
     if bitcoind_rpc_connect:
         config.BITCOIND_RPC_CONNECT = bitcoind_rpc_connect
-    elif has_config and 'bitcoind-rpc-connect' in configfile['Default'] and configfile['Default']['bitcoind-rpc-connect']:
-        config.BITCOIND_RPC_CONNECT = configfile['Default']['bitcoind-rpc-connect']
+    elif has_config and '{}-rpc-connect'.format(config.BTC_CLIENT) in configfile['Default'] and configfile['Default']['{}-rpc-connect'.format(config.BTC_CLIENT)]:
+        config.BITCOIND_RPC_CONNECT = configfile['Default']['{}-rpc-connect'.format(config.BTC_CLIENT)]
     else:
         config.BITCOIND_RPC_CONNECT = 'localhost'
 
     # Bitcoind RPC port
     if bitcoind_rpc_port:
         config.BITCOIND_RPC_PORT = bitcoind_rpc_port
-    elif has_config and 'bitcoind-rpc-port' in configfile['Default'] and configfile['Default']['bitcoind-rpc-port']:
-        config.BITCOIND_RPC_PORT = configfile['Default']['bitcoind-rpc-port']
+    elif has_config and '{}-rpc-port'.format(config.BTC_CLIENT) in configfile['Default'] and configfile['Default']['{}-rpc-port'.format(config.BTC_CLIENT)]:
+        config.BITCOIND_RPC_PORT = configfile['Default']['{}-rpc-port'.format(config.BTC_CLIENT)]
     else:
         if config.TESTNET:
             config.BITCOIND_RPC_PORT = 18332
@@ -277,23 +277,23 @@ def set_options (data_dir=None,
         config.BITCOIND_RPC_PORT = int(config.BITCOIND_RPC_PORT)
         assert int(config.BITCOIND_RPC_PORT) > 1 and int(config.BITCOIND_RPC_PORT) < 65535
     except:
-        raise Exception("Please specific a valid port number bitcoind-rpc-port configuration parameter")
+        raise Exception("Please specific a valid port number {}-rpc-port configuration parameter".format(config.BTC_CLIENT))
 
     # Bitcoind RPC user
     if bitcoind_rpc_user:
         config.BITCOIND_RPC_USER = bitcoind_rpc_user
-    elif has_config and 'bitcoind-rpc-user' in configfile['Default'] and configfile['Default']['bitcoind-rpc-user']:
-        config.BITCOIND_RPC_USER = configfile['Default']['bitcoind-rpc-user']
+    elif has_config and '{}-rpc-user'.format(config.BTC_CLIENT) in configfile['Default'] and configfile['Default']['{}-rpc-user'.format(config.BTC_CLIENT)]:
+        config.BITCOIND_RPC_USER = configfile['Default']['{}-rpc-user'.format(config.BTC_CLIENT)]
     else:
         config.BITCOIND_RPC_USER = 'bitcoinrpc'
 
     # Bitcoind RPC password
     if bitcoind_rpc_password:
         config.BITCOIND_RPC_PASSWORD = bitcoind_rpc_password
-    elif has_config and 'bitcoind-rpc-password' in configfile['Default'] and configfile['Default']['bitcoind-rpc-password']:
-        config.BITCOIND_RPC_PASSWORD = configfile['Default']['bitcoind-rpc-password']
+    elif has_config and '{}-rpc-password'.format(config.BTC_CLIENT) in configfile['Default'] and configfile['Default']['{}-rpc-password'.format(config.BTC_CLIENT)]:
+        config.BITCOIND_RPC_PASSWORD = configfile['Default']['{}-rpc-password'.format(config.BTC_CLIENT)]
     else:
-        raise exceptions.ConfigurationError('bitcoind RPC password not set. (Use configuration file or --bitcoind-rpc-password=PASSWORD)')
+        raise exceptions.ConfigurationError('{} RPC password not set. (Use configuration file or --{}-rpc-password=PASSWORD)'.format(config.BTC_CLIENT, config.BTC_CLIENT))
 
     config.BITCOIND_RPC = 'http://' + config.BITCOIND_RPC_USER + ':' + config.BITCOIND_RPC_PASSWORD + '@' + config.BITCOIND_RPC_CONNECT + ':' + str(config.BITCOIND_RPC_PORT)
 
@@ -480,11 +480,11 @@ def set_options (data_dir=None,
     elif has_config and 'broadcast-tx-mainnet' in configfile['Default']:
         config.BROADCAST_TX_MAINNET = configfile['Default']['broadcast-tx-mainnet']
     else:
-        config.BROADCAST_TX_MAINNET = 'bitcoind'
+        config.BROADCAST_TX_MAINNET = '{}'.format(config.BTC_CLIENT)
 
 def balances (address):
     if not bitcoin.base58_decode(address, config.ADDRESSVERSION):
-        raise exceptions.AddressError('Not a valid Bitcoin address:',
+        raise exceptions.AddressError('Not a valid {} address:'.format(BTC_NAME),
                                              address)
     address_data = get_address(db, address=address)
     balances = address_data['balances']
@@ -508,8 +508,8 @@ if __name__ == '__main__':
     parser.add_argument('-V', '--version', action='version', version="counterpartyd v%s" % config.VERSION_STRING)
 
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='sets log level to DEBUG instead of WARNING')
-    parser.add_argument('--force', action='store_true', help='don\'t check whether Bitcoind is caught up')
-    parser.add_argument('--testnet', action='store_true', help='use Bitcoin testnet addresses and block numbers')
+    parser.add_argument('--force', action='store_true', help='don\'t check whether {} Core is caught up'.format(config.BTC_NAME))
+    parser.add_argument('--testnet', action='store_true', help='use {} testnet addresses and block numbers'.format(config.BTC_NAME))
     parser.add_argument('--testcoin', action='store_true', help='use the test Counterparty network on every blockchain')
     parser.add_argument('--unsigned', action='store_true', help='print out unsigned hex of transaction; do not sign or broadcast')
     parser.add_argument('--carefulness', type=int, default=0, help='check conservation of assets after every CAREFULNESS transactions (potentially slow)')
@@ -518,7 +518,7 @@ if __name__ == '__main__':
     parser.add_argument('--fee-per-kb', type=D, default=D(config.DEFAULT_FEE_PER_KB / config.UNIT), help='fee per kilobyte, in {}'.format(config.BTC))
     parser.add_argument('--regular-dust-size', type=D, default=D(config.DEFAULT_REGULAR_DUST_SIZE / config.UNIT), help='value for dust Pay‐to‐Pubkey‐Hash outputs, in {}'.format(config.BTC))
     parser.add_argument('--multisig-dust-size', type=D, default=D(config.DEFAULT_MULTISIG_DUST_SIZE / config.UNIT), help='for dust OP_CHECKMULTISIG outputs, in {}'.format(config.BTC))
-    parser.add_argument('--op-return-value', type=D, default=D(config.DEFAULT_OP_RETURN_VALUE / config.UNIT), help='value for OP_RETURN outputs, in {}')
+    parser.add_argument('--op-return-value', type=D, default=D(config.DEFAULT_OP_RETURN_VALUE / config.UNIT), help='value for OP_RETURN outputs, in {}'.format(config.BTC))
 
     parser.add_argument('--data-dir', help='the directory in which to keep the database, config file and log file, by default')
     parser.add_argument('--database-file', help='the location of the SQLite3 database')
@@ -528,10 +528,10 @@ if __name__ == '__main__':
     parser.add_argument('--api-num-threads', help='the number of threads created for API request processing (CherryPy WSGI, default 10)')
     parser.add_argument('--api-request-queue-size', help='the size of the API request queue (CherryPY WSGI, default 5)')
 
-    parser.add_argument('--bitcoind-rpc-connect', help='the hostname or IP of the bitcoind JSON-RPC server')
-    parser.add_argument('--bitcoind-rpc-port', type=int, help='the bitcoind JSON-RPC port to connect to')
-    parser.add_argument('--bitcoind-rpc-user', help='the username used to communicate with Bitcoind over JSON-RPC')
-    parser.add_argument('--bitcoind-rpc-password', help='the password used to communicate with Bitcoind over JSON-RPC')
+    parser.add_argument('--{}-rpc-connect'.format(config.BTC_CLIENT), help='the hostname or IP of the {} Core JSON-RPC server'.format(config.BTC_NAME))
+    parser.add_argument('--{}-rpc-port'.format(config.BTC_CLIENT), type=int, help='the {} Core JSON-RPC port to connect to'.format(config.BTC_NAME))
+    parser.add_argument('--{}-rpc-user'.format(config.BTC_CLIENT), help='the username used to communicate with {} Core over JSON-RPC'.format(config.BTC_NAME))
+    parser.add_argument('--{}-rpc-password'.format(config.BTC_CLIENT), help='the password used to communicate with {} Core over JSON-RPC'.format(config.BTC_NAME))
 
     parser.add_argument('--insight-enable', action='store_true', default=False, help='enable the use of insight, instead of blockchain.info')
     parser.add_argument('--insight-connect', help='the insight server hostname or IP to connect to')
@@ -608,7 +608,7 @@ if __name__ == '__main__':
     parser_dividend.add_argument('--dividend-asset', required=True, help='asset in which to pay the dividends')
     parser_dividend.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
-    parser_burn = subparsers.add_parser('burn', help='destroy bitcoins to earn XCP, during an initial period of time')
+    parser_burn = subparsers.add_parser('burn', help='destroy {} tm earn XCP, during an initial period of time')
     parser_burn.add_argument('--source', required=True, help='the source address')
     parser_burn.add_argument('--quantity', required=True, help='quantity of {} to be destroyed'.format(config.BTC))
     parser_burn.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
@@ -630,7 +630,7 @@ if __name__ == '__main__':
     parser_asset = subparsers.add_parser('asset', help='display the basic properties of a Counterparty asset')
     parser_asset.add_argument('asset', help='the asset you are interested in')
 
-    parser_wallet = subparsers.add_parser('wallet', help='list the addresses in your Bitcoind wallet along with their balances in all Counterparty assets')
+    parser_wallet = subparsers.add_parser('wallet', help='list the addresses in your {} Core wallet along with their balances in all Counterparty assets'.format(config.BTC_NAME))
 
     parser_pending= subparsers.add_parser('pending', help='list pending order matches awaiting {}payment from you'.format(config.BTC))
 
@@ -893,7 +893,7 @@ if __name__ == '__main__':
         try:
             bitcoin.base58_decode(args.address, config.ADDRESSVERSION)
         except Exception:
-            raise exceptions.AddressError('Invalid Bitcoin address:',
+            raise exceptions.AddressError('Invalid {} address:'.format(config.BTC_NAME),
                                                   args.address)
         balances(args.address)
 
