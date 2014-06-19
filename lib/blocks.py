@@ -998,7 +998,7 @@ def follow (db):
                         if tx_hash in old_mempool_hashes:
                             for message in old_mempool:
                                 if message['tx_hash'] == tx_hash:
-                                    Mempool.append(message)
+                                    mempool.append(message)
                                     break
                         # If new transaction not already determined to not be a
                         # Counterparty transaction, then list, parse and then
