@@ -19,10 +19,10 @@ from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, ca
 
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['credits', 'debits', 'messages'] + \
-         ['order_match_expirations', 'order_matches', 'order_expirations', 'orders'] + \
-         ['bet_match_expirations', 'bet_matches', 'bet_expirations', 'bets'] + \
-         ['broadcasts', 'btcpays', 'burns', 'callbacks', 'cancels',
-         'dividends', 'issuances', 'sends']
+          ['bet_match_resolutions', 'order_match_expirations', 'order_matches',
+          'order_expirations', 'orders', 'bet_match_expirations',
+          'bet_matches', 'bet_expirations', 'bets', 'broadcasts', 'btcpays',
+          'burns', 'callbacks', 'cancels', 'dividends', 'issuances', 'sends']
 
 def check_conservation (db):
     logging.debug('Status: Checking for conservation of assets.')
@@ -629,6 +629,21 @@ def initialise(db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       tx1_address_idx ON bet_match_expirations (tx1_address)
+                   ''')
+
+    # Bet Match Resolutions
+    cursor.execute('''CREATE TABLE IF NOT EXISTS bet_match_resolutions(
+                      bet_match_id TEXT PRIMARY KEY,
+                      bet_match_type_id INTEGER,
+                      block_index INTEGER,
+                      winner TEXT,
+                      settled BOOL,
+                      bull_credit INTEGER,
+                      bear_credit INTEGER,
+                      escrow_less_fee INTEGER,
+                      fee INTEGER,
+                      FOREIGN KEY (bet_match_id) REFERENCES bet_matches(id),
+                      FOREIGN KEY (block_index) REFERENCES blocks(block_index))
                    ''')
 
     # Messages

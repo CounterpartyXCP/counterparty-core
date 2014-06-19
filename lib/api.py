@@ -26,7 +26,7 @@ API_TABLES = ['balances', 'credits', 'debits', 'bets', 'bet_matches',
               'broadcasts', 'btcpays', 'burns', 'callbacks', 'cancels',
               'dividends', 'issuances', 'orders', 'order_matches', 'sends',
               'bet_expirations', 'order_expirations', 'bet_match_expirations',
-              'order_match_expirations', 'mempool']
+              'order_match_expirations', 'bet_match_resolutions', 'mempool']
 
 API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel', 
                     'callback', 'dividend', 'issuance', 'order', 'send']

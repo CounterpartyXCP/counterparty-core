@@ -185,6 +185,21 @@ def log (db, command, category, bindings):
 
         elif category == 'bet_match_expirations':
             logging.info('Expired Bet Match: {}'.format(bindings['bet_match_id']))
+
+        elif category == 'bet_match_resolutions':
+            # DUPE
+            cfd_type_id = BET_TYPE_ID['BullCFD'] + BET_TYPE_ID['BearCFD']
+            equal_type_id = BET_TYPE_ID['Equal'] + BET_TYPE_ID['NotEqual']
+
+            if bindings['bet_match_type_id'] == cfd_type_id:
+                if bindings['settled']:
+                    logging.info('Bet Match Settled: {} credited to the bull, {} credited to the bear, and {} credited to the feed address ({})'.format(output(bindings['bull_credit'], config.XCP), output(bindings['bear_credit'], config.XCP), output(bindings['fee'], config.XCP), bindings['bet_match_id']))
+                else:
+                    logging.info('Bet Match Force‐Liquidated: {} credited to the bull, {} credited to the bear, and {} credited to the feed address ({})'.format(output(bindings['bull_credit'], config.XCP), output(bindings['bear_credit'], config.XCP), output(bindings['fee'], config.XCP), bindings['bet_match_id']))
+
+            elif bindings['bet_match_type_id'] == equal_type_id:
+                logging.info('Bet Match Settled: {} won the pot of {}; {} credited to the feed address ({})'.format(bindings['winner'], output(bindings['escrow_less_fee'], config.XCP), output(bindings['fee'], config.XCP), bindings['bet_match_id']))
+
     cursor.close()
 
 def message (db, block_index, command, category, bindings, tx_hash=None):
