@@ -548,7 +548,6 @@ class APIServer(threading.Thread):
         try:
             server.start()
         except OSError:
-            raise Exception("Cannot start the API subsystem. Is {}?".format(config.XCP_CLIENT))
-                " already running, or is something else listening on port %s?" % config.RPC_PORT)
+            raise Exception("Cannot start the API subsystem. Is {} already running, or is something else listening on port {}?".format(config.XCP_CLIENT, config.RPC_PORT))
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

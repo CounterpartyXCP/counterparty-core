@@ -76,7 +76,7 @@ def get_mempool ():
 
 
 def bitcoind_check (db):
-    """Checks blocktime of last block to see if Bitcoind is running behind."""
+    """Checks blocktime of last block to see if {} Core is running behind.""".format(config.BTC_NAME)
     block_count = rpc('getblockcount', [])
     block_hash = rpc('getblockhash', [block_count])
     block = rpc('getblock', [block_hash])
@@ -127,7 +127,7 @@ def rpc (method, params):
         f.write(payload)
     '''
 
-    response = connect(config.BITCOIND_RPC, payload, headers)
+    response = connect(config.BACKEND_RPC, payload, headers)
     if response == None:
         if config.TESTNET: network = 'testnet'
         else: network = 'mainnet'
@@ -146,7 +146,7 @@ def rpc (method, params):
     if 'error' not in response_json.keys() or response_json['error'] == None:
         return response_json['result']
     elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
-        raise exceptions.BitcoindError('{} Is txindex enabled in Bitcoind?'.format(response_json['error']))
+        raise exceptions.BitcoindError('{} Is txindex enabled in {} Core?'.format(response_json['error'], config.BTC_NAME))
     elif response_json['error']['code'] == -4:   # Unknown private key (locked wallet?)
         # If address in wallet, attempt to unlock.
         address = params[0]
