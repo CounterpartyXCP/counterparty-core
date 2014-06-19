@@ -127,7 +127,7 @@ def rpc (method, params):
         f.write(payload)
     '''
 
-    response = connect(config.BITCOIND_RPC, payload, headers)
+    response = connect(config.BACKEND_RPC, payload, headers)
     if response == None:
         if config.TESTNET: network = 'testnet'
         else: network = 'mainnet'

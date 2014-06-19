@@ -158,7 +158,7 @@ def cli(method, params, unsigned):
         if bitcoin.is_mine(params['source']):
             bitcoin.wallet_unlock()
         else:
-            print('Source not in {} Core wallet.'.format(config.BTC_NAME))
+            print('Source not in backend wallet.')
             answer = input('Public key (hexadecimal) or Private key (Wallet Import Format): ')
 
             # Public key or private key?
@@ -188,9 +188,9 @@ def cli(method, params, unsigned):
         print('Hash of transaction (broadcasted):', bitcoin.broadcast_tx(signed_tx_hex))
 
 
-def set_options (data_dir=None, bitcoind_rpc_connect=None,
-                 bitcoind_rpc_port=None, bitcoind_rpc_user=None,
-                 bitcoind_rpc_password=None, insight_enable=None,
+def set_options (data_dir=None, backend_rpc_connect=None,
+                 backend_rpc_port=None, backend_rpc_user=None,
+                 backend_rpc_password=None, insight_enable=None,
                  insight_connect=None, insight_port=None, rpc_host=None,
                  rpc_port=None, rpc_user=None, rpc_password=None,
                  log_file=None, pid_file=None, api_num_threads=None,
@@ -260,47 +260,55 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None,
     ##############
     # THINGS WE CONNECT TO
 
-    # Bitcoin Core RPC host
-    if bitcoind_rpc_connect:
-        config.BITCOIND_RPC_CONNECT = bitcoind_rpc_connect
+    # Backend RPC host (Bitcoin Core)
+    if backend_rpc_connect:
+        config.BACKEND_RPC_CONNECT = backend_rpc_connect
+    elif has_config and 'backend-rpc-connect' in configfile['Default'] and configfile['Default']['backend-rpc-connect']:
+        config.BACKEND_RPC_CONNECT = configfile['Default']['backend-rpc-connect']
     elif has_config and 'bitcoind-rpc-connect' in configfile['Default'] and configfile['Default']['bitcoind-rpc-connect']:
-        config.BITCOIND_RPC_CONNECT = configfile['Default']['bitcoind-rpc-connect']
+        config.BACKEND_RPC_CONNECT = configfile['Default']['bitcoind-rpc-connect']
     else:
-        config.BITCOIND_RPC_CONNECT = 'localhost'
+        config.BACKEND_RPC_CONNECT = 'localhost'
 
-    # Bitcoin Core RPC port
-    if bitcoind_rpc_port:
-        config.BITCOIND_RPC_PORT = bitcoind_rpc_port
+    # Backend Core RPC port (Bitcoin Core)
+    if backend_rpc_port:
+        config.BACKEND_RPC_PORT = backend_rpc_port
+    elif has_config and 'backend-rpc-port' in configfile['Default'] and configfile['Default']['backend-rpc-port']:
+        config.backend_RPC_PORT = configfile['Default']['backend-rpc-port']
     elif has_config and 'bitcoind-rpc-port' in configfile['Default'] and configfile['Default']['bitcoind-rpc-port']:
-        config.BITCOIND_RPC_PORT = configfile['Default']['bitcoind-rpc-port']
+        config.BACKEND_RPC_PORT = configfile['Default']['bitcoind-rpc-port']
     else:
         if config.TESTNET:
-            config.BITCOIND_RPC_PORT = config.DEFAULT_BITCOIND_RPC_PORT_TESTNET
+            config.BACKEND_RPC_PORT = config.DEFAULT_BACKEND_RPC_PORT_TESTNET
         else:
-            config.BITCOIND_RPC_PORT = config.DEFAULT_BITCOIND_RPC_PORT
+            config.BACKEND_RPC_PORT = config.DEFAULT_BACKEND_RPC_PORT
     try:
-        config.BITCOIND_RPC_PORT = int(config.BITCOIND_RPC_PORT)
-        assert int(config.BITCOIND_RPC_PORT) > 1 and int(config.BITCOIND_RPC_PORT) < 65535
+        config.BACKEND_RPC_PORT = int(config.BACKEND_RPC_PORT)
+        assert int(config.BACKEND_RPC_PORT) > 1 and int(config.BACKEND_RPC_PORT) < 65535
     except:
-        raise Exception("Please specific a valid port number bitcoind-rpc-port configuration parameter")
+        raise Exception("Please specific a valid port number backend-rpc-port configuration parameter")
 
-    # Bitcoin Core RPC user
-    if bitcoind_rpc_user:
-        config.BITCOIND_RPC_USER = bitcoind_rpc_user
+    # Backend Core RPC user (Bitcoin Core)
+    if backend_rpc_user:
+        config.BACKEND_RPC_USER = backend_rpc_user
+    elif has_config and 'backend-rpc-user' in configfile['Default'] and configfile['Default']['backend-rpc-user']:
+        config.backend_RPC_USER = configfile['Default']['backend-rpc-user']
     elif has_config and 'bitcoind-rpc-user' in configfile['Default'] and configfile['Default']['bitcoind-rpc-user']:
-        config.BITCOIND_RPC_USER = configfile['Default']['bitcoind-rpc-user']
+        config.BACKEND_RPC_USER = configfile['Default']['bitcoind-rpc-user']
     else:
-        config.BITCOIND_RPC_USER = 'bitcoinrpc'
+        config.BACKEND_RPC_USER = 'bitcoinrpc'
 
-    # Bitcoin Core RPC password
-    if bitcoind_rpc_password:
-        config.BITCOIND_RPC_PASSWORD = bitcoind_rpc_password
+    # Backend Core RPC password (Bitcoin Core)
+    if backend_rpc_password:
+        config.BACKEND_RPC_PASSWORD = backend_rpc_password
+    elif has_config and 'backend-rpc-password' in configfile['Default'] and configfile['Default']['backend-rpc-password']:
+        config.backend_RPC_PASSWORD = configfile['Default']['backend-rpc-password']
     elif has_config and 'bitcoind-rpc-password' in configfile['Default'] and configfile['Default']['bitcoind-rpc-password']:
-        config.BITCOIND_RPC_PASSWORD = configfile['Default']['bitcoind-rpc-password']
+        config.BACKEND_RPC_PASSWORD = configfile['Default']['bitcoind-rpc-password']
     else:
-        raise exceptions.ConfigurationError('bitcoind RPC password not set. (Use configuration file or --bitcoind-rpc-password=PASSWORD)')
+        raise exceptions.ConfigurationError('backend RPC password not set. (Use configuration file or --backend-rpc-password=PASSWORD)')
 
-    config.BITCOIND_RPC = 'http://' + config.BITCOIND_RPC_USER + ':' + config.BITCOIND_RPC_PASSWORD + '@' + config.BITCOIND_RPC_CONNECT + ':' + str(config.BITCOIND_RPC_PORT)
+    config.BACKEND_RPC = 'http://' + config.BACKEND_RPC_USER + ':' + config.BACKEND_RPC_PASSWORD + '@' + config.BACKEND_RPC_CONNECT + ':' + str(config.BACKEND_RPC_PORT)
 
     # insight enable
     if insight_enable:
@@ -513,7 +521,7 @@ if __name__ == '__main__':
     parser.add_argument('-V', '--version', action='version', version="{} v{}".format(config.XCP_CLIENT, config.VERSION_STRING))
 
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='sets log level to DEBUG instead of WARNING')
-    parser.add_argument('--force', action='store_true', help='don\'t check whether {} Core is caught up'.format(config.BTC_NAME))
+    parser.add_argument('--force', action='store_true', help='don\'t check whether backend is caught up'.format(config.BTC_NAME))
     parser.add_argument('--testnet', action='store_true', help='use {} testnet addresses and block numbers'.format(config.BTC_NAME))
     parser.add_argument('--testcoin', action='store_true', help='use the test {} network on every blockchain'.format(config.XCP_NAME))
     parser.add_argument('--unsigned', action='store_true', help='print out unsigned hex of transaction; do not sign or broadcast')
@@ -533,10 +541,10 @@ if __name__ == '__main__':
     parser.add_argument('--api-num-threads', help='the number of threads created for API request processing (CherryPy WSGI, default 10)')
     parser.add_argument('--api-request-queue-size', help='the size of the API request queue (CherryPY WSGI, default 5)')
 
-    parser.add_argument('--bitcoind-rpc-connect', help='the hostname or IP of the {} Core JSON-RPC server'.format(config.BTC_NAME))
-    parser.add_argument('--bitcoind-rpc-port', type=int, help='the {} Core JSON-RPC port to connect to'.format(config.BTC_NAME))
-    parser.add_argument('--bitcoind-rpc-user', help='the username used to communicate with {} Core over JSON-RPC'.format(config.BTC_NAME))
-    parser.add_argument('--bitcoind-rpc-password', help='the password used to communicate with {} Core over JSON-RPC'.format(config.BTC_NAME))
+    parser.add_argument('--backend-rpc-connect', help='the hostname or IP of the backend JSON-RPC server')
+    parser.add_argument('--backend-rpc-port', type=int, help='the backend JSON-RPC port to connect to')
+    parser.add_argument('--backend-rpc-user', help='the username used to communicate with backend over JSON-RPC')
+    parser.add_argument('--backend-rpc-password', help='the password used to communicate with backend over JSON-RPC')
 
     parser.add_argument('--insight-enable', action='store_true', default=False, help='enable the use of insight, instead of blockchain.info')
     parser.add_argument('--insight-connect', help='the insight server hostname or IP to connect to')
@@ -635,7 +643,7 @@ if __name__ == '__main__':
     parser_asset = subparsers.add_parser('asset', help='display the basic properties of a {} asset'.format(config.XCP_NAME))
     parser_asset.add_argument('asset', help='the asset you are interested in')
 
-    parser_wallet = subparsers.add_parser('wallet', help='list the addresses in your {} Core wallet along with their balances in all {} assets'.format(config.BTC_NAME, config.XCP_NAME))
+    parser_wallet = subparsers.add_parser('wallet', help='list the addresses in your backend wallet along with their balances in all {} assets'.format(config.XCP_NAME))
 
     parser_pending= subparsers.add_parser('pending', help='list pending order matches awaiting {}payment from you'.format(config.BTC))
 
@@ -658,10 +666,10 @@ if __name__ == '__main__':
 
     # Configuration
     set_options(data_dir=args.data_dir,
-                bitcoind_rpc_connect=args.bitcoind_rpc_connect,
-                bitcoind_rpc_port=args.bitcoind_rpc_port,
-                bitcoind_rpc_user=args.bitcoind_rpc_user,
-                bitcoind_rpc_password=args.bitcoind_rpc_password,
+                backend_rpc_connect=args.backend_rpc_connect,
+                backend_rpc_port=args.backend_rpc_port,
+                backend_rpc_user=args.backend_rpc_user,
+                backend_rpc_password=args.backend_rpc_password,
                 insight_enable=args.insight_enable,
                 insight_connect=args.insight_connect,
                 insight_port=args.insight_port, rpc_host=args.rpc_host,
