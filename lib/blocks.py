@@ -882,6 +882,7 @@ def follow (db):
         tx_index = 0
 
     not_counterparty = []
+    mempool_initialised = False
     while True:
 
         # Get new blocks.
@@ -960,10 +961,10 @@ def follow (db):
         else:
             # Fill counterpartyd mempool.
 
-            if not not_counterparty:
-                logging.debug('Status: Initialising mempool.')
-            else:
+            if mempool_initialised:
                 logging.debug('Status: Updating mempool.')
+            else:
+                logging.debug('Status: Initialising mempool.')
 
             try:
                 with db:
@@ -997,7 +998,7 @@ def follow (db):
                         if tx_hash in old_mempool_hashes:
                             for message in old_mempool:
                                 if message['tx_hash'] == tx_hash:
-                                    mempool.append(message)
+                                    Mempool.append(message)
                                     break
                         # If new transaction not already determined to not be a
                         # Counterparty transaction, then list, parse and then
@@ -1047,6 +1048,7 @@ def follow (db):
                         cursor.execute('''INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp)''', (message))
 
             # Wait
+            mempool_initialised = True
             time.sleep(2)
 
     cursor.close()
