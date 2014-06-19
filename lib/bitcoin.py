@@ -372,7 +372,10 @@ def sort_unspent_txouts(unspent, allow_unconfirmed_inputs):
     return unspent
 
 def private_key_to_public_key (private_key_wif):
-    secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif, is_test=config.TESTNET)
+    try:
+        secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif, is_test=config.TESTNET)
+    except pycoin.encoding.EncodingError:
+        raise exceptions.AltcoinSupportError('pycoin supports only Bitcoin mainnet and testnet private keys.')
     public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
     public_key = public_pair_to_sec(public_pair, compressed=compressed)
     public_key_hex = binascii.hexlify(public_key).decode('utf-8')
@@ -387,19 +390,22 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
 
     (source, destination_outputs, data) = tx_info
 
-    if encoding == 'auto':
-        if len(data) <= 40:
-            # encoding = 'opreturn'
-            encoding = 'multisig'   # BTCGuild isn’t mining OP_RETURN?!
-        else:
-            encoding = 'multisig'
+    # Data encoding methods.
+    if data:
+        if encoding == 'auto':
+            if len(data) <= 40:
+                # encoding = 'opreturn'
+                encoding = 'multisig'   # BTCGuild isn’t mining OP_RETURN?!
+            else:
+                encoding = 'multisig'
+
+        if encoding not in ('pubkeyhash', 'multisig', 'opreturn'):
+            raise exceptions.TransactionError('Unknown encoding‐scheme.')
 
     if exact_fee and not isinstance(exact_fee, int):
         raise exceptions.TransactionError('Exact fees must be in satoshis.')
     if not isinstance(fee_provided, int):
         raise exceptions.TransactionError('Fee provided must be in satoshis.')
-    if encoding not in ('pubkeyhash', 'multisig', 'opreturn'):
-        raise exceptions.TransactionError('Unknown encoding‐scheme.')
 
     # If public key is necessary for construction of (unsigned) transaction,
     # either use the public key provided, or derive it from a private key
