@@ -41,7 +41,7 @@ bitcoin_rpc_session = None
 
 def get_block_count():
     return int(rpc('getblockcount', []))
-    
+
 def get_block_hash(block_index):
     return rpc('getblockhash', [block_index])
 
@@ -161,7 +161,7 @@ def rpc (method, params):
     elif response_json['error']['code'] == -1 and response_json['message'] == 'Block number out of range.':
         time.sleep(10)
         return rpc('getblockhash', [block_index])
-        
+
     # elif config.UNITTEST:
     #     print(method)
     else:
@@ -417,13 +417,13 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
         if not public_key_hex:
             # Get private key.
             if config.UNITTEST:
-                private_key_wif = 'cPdUqd5EbBWsjcG9xiL1hz8bEyGFiz4SW99maU9JgpL9TEcxUf3j'
+                private_key_wif = config.UNITTEST_PRIVKEY[source]
             else:
                 private_key_wif = rpc('dumpprivkey', [source])
 
             # Derive public key.
             public_key_hex = private_key_to_public_key(private_key_wif)
-            
+
         pubkeypair = bitcoin_utils.parse_as_public_pair(public_key_hex)
         if not pubkeypair:
             raise exceptions.InputError('Invalid private key.')
@@ -432,7 +432,7 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
     # Protocol change.
     if encoding == 'pubkeyhash' and get_block_count() < 293000 and not config.TESTNET:
         raise exceptions.TransactionError('pubkeyhash encoding unsupported before block 293000')
-    
+
     # Validate source and all destination addresses.
     destinations = [address for address, value in destination_outputs]
     for address in destinations + [source]:
@@ -567,7 +567,7 @@ def broadcast_tx (signed_tx_hex):
 
 def normalize_quantity(quantity, divisible=True):
     if divisible:
-        return float((D(quantity) / D(config.UNIT)).quantize(D('.00000000'), rounding=decimal.ROUND_HALF_EVEN)) 
+        return float((D(quantity) / D(config.UNIT)).quantize(D('.00000000'), rounding=decimal.ROUND_HALF_EVEN))
     else: return quantity
 
 def get_btc_balance(address, normalize=False):
@@ -592,7 +592,7 @@ def get_btc_supply(normalize=False):
     """returns the total supply of {} (based on what Bitcoin Core says the current block height is)""".format(config.BTC)
     block_count = get_block_count()
     blocks_remaining = block_count
-    total_supply = 0 
+    total_supply = 0
     reward = 50.0
     while blocks_remaining > 0:
         if blocks_remaining >= 210000:
@@ -607,7 +607,7 @@ def get_btc_supply(normalize=False):
 def get_unspent_txouts(address, normalize=False):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
-        * 
+        *
     """
 
     # Unittest

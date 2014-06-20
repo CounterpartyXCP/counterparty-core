@@ -12,15 +12,14 @@ CREATE TABLE balances(
                       address TEXT,
                       asset TEXT,
                       quantity INTEGER);
-INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',145100466046);
-INSERT INTO balances VALUES('n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',4785920824);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',145111487709);
+INSERT INTO balances VALUES('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','XCP',4774899161);
 INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',996000000);
 INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',92631);
-INSERT INTO balances VALUES('n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBB',4000000);
-INSERT INTO balances VALUES('n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',7369);
+INSERT INTO balances VALUES('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBB',4000000);
+INSERT INTO balances VALUES('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBC',7369);
 -- Triggers and indices on  balances
-CREATE INDEX address_asset_idx ON balances (address, asset)
-                   ;
+CREATE INDEX address_asset_idx ON balances (address, asset);
 
 -- Table  bet_expirations
 DROP TABLE IF EXISTS bet_expirations;
@@ -93,8 +92,7 @@ INSERT INTO bet_matches VALUES('ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05
 INSERT INTO bet_matches VALUES('4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8',14,'4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',15,'dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000100,0.0,5040,150000000,350000000,154922,154923,154923,10,10,154932,5000000,'settled');
 INSERT INTO bet_matches VALUES('c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee34a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a',16,'c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee3','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',17,'4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',2,3,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000200,1.0,5040,750000000,650000000,154924,154925,154925,10,10,154934,5000000,'settled: for notequal');
 -- Triggers and indices on  bet_matches
-CREATE INDEX valid_feed_idx ON bet_matches (feed_address, status)
-                   ;
+CREATE INDEX valid_feed_idx ON bet_matches (feed_address, status);
 
 -- Table  bets
 DROP TABLE IF EXISTS bets;
@@ -125,8 +123,7 @@ INSERT INTO bets VALUES(15,'dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923a
 INSERT INTO bets VALUES(16,'c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee3',154924,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',2,1388000200,750000000,0,650000000,0,1.0,5040,10,154934,5000000,'filled');
 INSERT INTO bets VALUES(17,'4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a',154925,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,1388000200,650000000,0,750000000,0,1.0,5040,10,154935,5000000,'filled');
 -- Triggers and indices on  bets
-CREATE INDEX feed_valid_bettype_idx ON bets (feed_address, status, bet_type)
-                   ;
+CREATE INDEX feed_valid_bettype_idx ON bets (feed_address, status, bet_type);
 
 -- Table  blocks
 DROP TABLE IF EXISTS blocks;
@@ -162,11 +159,13 @@ INSERT INTO blocks VALUES(154930,'2b7fef6e9069f1a2f44e6eb08f0f5e32033d0048fc3cfc
 INSERT INTO blocks VALUES(154931,'efd744787f5fa988aa515f4a7d14323969ab838c70a3d6d3a029ddf6eac7dd74568b09659b7756eafc7b6e410d8e5f5ba921d9a454c97f6c6b72ca7da37b5c58',1549310000000);
 INSERT INTO blocks VALUES(154932,'09614b8f64a6aacc740150eab0bbe7aaef9045825e188800d44f8a5620afd0cc71f8a354b2d061b8cf2be47434963ee9709103d46151d9c18f80366b61d33eda',1549320000000);
 INSERT INTO blocks VALUES(154933,'d08f4dd0524762d7ebb5939e2b73f98c2260c8f2314a93b468e983e13a96639477f2effcfe51395687508cf6f0cb2de65e818396e9b3adb4a499f3d8cb16a638',1549330000000);
+INSERT INTO blocks VALUES(154934,'a519de47aa8c7eafe6fc8a4df5f5f05ea4bd27e41ea67d83555417146a35bbab2529ceff400f46163eb539a2c846bd8b8ee9cc87aefcce7b17054decb392a5ea',1549340000000);
+INSERT INTO blocks VALUES(154935,'bb8f4a793ea7c9ecab809a8c210ec05858a8241939ee6d12e283e2ad119ee87ca2078f81a3c295bb527766dc2713b90793ab8a518db9fb4f2967e43f245ee0fb',1549350000000);
+INSERT INTO blocks VALUES(154936,'3af58b36490131f828a765f13708b818c0a4b7082f2e0ac7d8cccdba7cd77fef40b07f115e453279ae7e9cd47f01ccdf9a23702634ab9793be5533d67c348735',1549360000000);
+INSERT INTO blocks VALUES(154937,'0e82b767d5eef083b2547f3765bc77838ec407b1538acf5a0eb2f153665b65d9b499e7e716db7daefdb8852a411342a9d2ebfe2f4f93e9bb09d5a9ef03cb7cf4',1549370000000);
 -- Triggers and indices on  blocks
-CREATE INDEX block_index_idx ON blocks (block_index)
-                   ;
-CREATE INDEX index_hash_idx ON blocks (block_index, block_hash)
-                   ;
+CREATE INDEX block_index_idx ON blocks (block_index);
+CREATE INDEX index_hash_idx ON blocks (block_index, block_hash);
 
 -- Table  broadcasts
 DROP TABLE IF EXISTS broadcasts;
@@ -187,12 +186,9 @@ INSERT INTO broadcasts VALUES(18,'f299791cddd3d6664f6670842812ef6053eb6501bd6282
 INSERT INTO broadcasts VALUES(19,'ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2',154927,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1388000101,100.343,5000000,'Unit Test',0,'valid');
 INSERT INTO broadcasts VALUES(20,'83891d7fe85c33e52c8b4e5814c92fb6a3b9467299200538a6babaa8b452d879',154928,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1388000201,2.0,5000000,'Unit Test',0,'valid');
 -- Triggers and indices on  broadcasts
-CREATE INDEX status_source_idx ON broadcasts (status, source)
-                   ;
-CREATE INDEX status_source_index_idx ON broadcasts (status, source, tx_index)
-                   ;
-CREATE INDEX timestamp_idx ON broadcasts (timestamp)
-                   ;
+CREATE INDEX status_source_idx ON broadcasts (status, source);
+CREATE INDEX status_source_index_idx ON broadcasts (status, source, tx_index);
+CREATE INDEX timestamp_idx ON broadcasts (timestamp);
 
 -- Table  btcpays
 DROP TABLE IF EXISTS btcpays;
@@ -247,8 +243,7 @@ CREATE TABLE cancels(
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 INSERT INTO cancels VALUES(22,'7cb7c4547cf2653590d7a9ace60cc623d25148adfbc88a89aeb0ef88da7839ba',154930,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608','valid');
 -- Triggers and indices on  cancels
-CREATE INDEX cancels_block_index_idx ON cancels (block_index)
-                   ;
+CREATE INDEX cancels_block_index_idx ON cancels (block_index);
 
 -- Table  credits
 DROP TABLE IF EXISTS credits;
@@ -261,14 +256,14 @@ CREATE TABLE credits(
                       event TEXT,
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index));
 INSERT INTO credits VALUES(154908,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',93000000000,NULL,'6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d');
-INSERT INTO credits VALUES(154909,'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',50000000,NULL,'4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a');
+INSERT INTO credits VALUES(154909,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','XCP',50000000,NULL,'4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a');
 INSERT INTO credits VALUES(154912,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',100000000,NULL,NULL);
 INSERT INTO credits VALUES(154913,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',1000000000,NULL,NULL);
 INSERT INTO credits VALUES(154914,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',100000,NULL,NULL);
-INSERT INTO credits VALUES(154915,'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBB',4000000,NULL,'ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879');
-INSERT INTO credits VALUES(154916,'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',526,NULL,'beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a');
-INSERT INTO credits VALUES(154917,'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',24,NULL,NULL);
-INSERT INTO credits VALUES(154918,'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',420800,NULL,NULL);
+INSERT INTO credits VALUES(154915,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBB',4000000,NULL,'ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879');
+INSERT INTO credits VALUES(154916,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBC',526,NULL,'beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a');
+INSERT INTO credits VALUES(154917,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','XCP',24,NULL,NULL);
+INSERT INTO credits VALUES(154918,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','XCP',420800,NULL,NULL);
 INSERT INTO credits VALUES(154921,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',4250000,'filled','9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4');
 INSERT INTO credits VALUES(154923,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',0,'filled','dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8');
 INSERT INTO credits VALUES(154923,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',0,'filled','dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8');
@@ -283,9 +278,10 @@ INSERT INTO credits VALUES(154928,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',133
 INSERT INTO credits VALUES(154928,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',70000000,NULL,NULL);
 INSERT INTO credits VALUES(154930,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',50000000,NULL,'2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608');
 INSERT INTO credits VALUES(154931,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',56999886870,NULL,'8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034');
-INSERT INTO credits VALUES(154932,'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',10000,NULL,'452ba1ddef80246c48be7690193c76c1d61185906be9401014fe14f1be64b74f');
+INSERT INTO credits VALUES(154932,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBC',10000,NULL,'452ba1ddef80246c48be7690193c76c1d61185906be9401014fe14f1be64b74f');
 INSERT INTO credits VALUES(154933,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',3157,NULL,NULL);
-INSERT INTO credits VALUES(154933,'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',4735500000,NULL,NULL);
+INSERT INTO credits VALUES(154933,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','XCP',4735500000,NULL,NULL);
+INSERT INTO credits VALUES(154937,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',22043326,NULL,NULL);
 
 -- Table  debits
 DROP TABLE IF EXISTS debits;
@@ -314,12 +310,12 @@ INSERT INTO debits VALUES(154925,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',6500
 INSERT INTO debits VALUES(154929,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',50000000,NULL,'2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608');
 INSERT INTO debits VALUES(154932,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',10000,NULL,'452ba1ddef80246c48be7690193c76c1d61185906be9401014fe14f1be64b74f');
 INSERT INTO debits VALUES(154933,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',4735500000,NULL,NULL);
-INSERT INTO debits VALUES(154933,'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',3157,NULL,NULL);
+INSERT INTO debits VALUES(154933,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBC',3157,NULL,NULL);
+INSERT INTO debits VALUES(154934,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',11021663,NULL,NULL);
+INSERT INTO debits VALUES(154935,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','XCP',11021663,NULL,NULL);
 -- Triggers and indices on  debits
-CREATE INDEX address_idx ON debits (address)
-                   ;
-CREATE INDEX asset_idx ON debits (asset)
-                   ;
+CREATE INDEX address_idx ON debits (address);
+CREATE INDEX asset_idx ON debits (asset);
 
 -- Table  dividends
 DROP TABLE IF EXISTS dividends;
@@ -359,10 +355,8 @@ CREATE TABLE issuances(
 INSERT INTO issuances VALUES(5,'e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db',154913,'BBBB',1000000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'',50000000,0,'valid');
 INSERT INTO issuances VALUES(6,'67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6',154914,'BBBC',100000,0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1,17,0.015,'foobar',50000000,0,'valid');
 -- Triggers and indices on  issuances
-CREATE INDEX status_idx ON issuances (status)
-                   ;
-CREATE INDEX valid_asset_idx ON issuances (asset, status)
-                   ;
+CREATE INDEX status_idx ON issuances (status);
+CREATE INDEX valid_asset_idx ON issuances (asset, status);
 
 -- Table  mempool
 DROP TABLE IF EXISTS mempool;
@@ -472,6 +466,18 @@ INSERT INTO messages VALUES(86,154933,'insert','credits','{"action": null, "addr
 INSERT INTO messages VALUES(87,154933,'insert','debits','{"action": null, "address": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "asset": "BBBC", "block_index": 154933, "event": null, "quantity": 3157}',0);
 INSERT INTO messages VALUES(88,154933,'insert','credits','{"action": null, "address": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "asset": "XCP", "block_index": 154933, "event": null, "quantity": 4735500000}',0);
 INSERT INTO messages VALUES(89,154933,'insert','callbacks','{"asset": "BBBC", "block_index": 154933, "fraction": 0.3, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "68aa2e2ee5dff96e3355e6c7ee373e3d6a4e17f75f9518d843709c0c9bc3e3d4", "tx_index": 25}',0);
+INSERT INTO messages VALUES(90,154934,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154934, "event": null, "quantity": 11021663}',0);
+INSERT INTO messages VALUES(91,154934,'insert','rps','{"block_index": 154934, "expiration": 100, "expire_index": 155034, "move_random_hash": "6a886d74c2d4b1d7a35fd9159333ef64ba45a04d7aeeeb4538f958603c16fc5d", "possible_moves": 5, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "tx_hash": "58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d", "tx_index": 26, "wager": 11021663}',0);
+INSERT INTO messages VALUES(92,154935,'insert','debits','{"action": null, "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "asset": "XCP", "block_index": 154935, "event": null, "quantity": 11021663}',0);
+INSERT INTO messages VALUES(93,154935,'insert','rps','{"block_index": 154935, "expiration": 100, "expire_index": 155035, "move_random_hash": "6e8bf66cbd6636aca1802459b730a99548624e48e243b840e0b34a12bede17ec", "possible_moves": 5, "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "status": "open", "tx_hash": "77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd", "tx_index": 27, "wager": 11021663}',0);
+INSERT INTO messages VALUES(94,154934,'update','rps','{"status": "matched", "tx_index": 26}',0);
+INSERT INTO messages VALUES(95,154935,'update','rps','{"status": "matched", "tx_index": 27}',0);
+INSERT INTO messages VALUES(96,154935,'insert','rps_matches','{"block_index": 154935, "id": "58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd", "match_expire_index": 155034, "possible_moves": 5, "status": "pending", "tx0_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx0_block_index": 154934, "tx0_expiration": 100, "tx0_hash": "58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d", "tx0_index": 26, "tx0_move_random_hash": "6a886d74c2d4b1d7a35fd9159333ef64ba45a04d7aeeeb4538f958603c16fc5d", "tx1_address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "tx1_block_index": 154935, "tx1_expiration": 100, "tx1_hash": "77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd", "tx1_index": 27, "tx1_move_random_hash": "6e8bf66cbd6636aca1802459b730a99548624e48e243b840e0b34a12bede17ec", "wager": 11021663}',0);
+INSERT INTO messages VALUES(97,154936,'update','rps_matches','{"rps_match_id": "58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd", "status": "resolved and pending"}',0);
+INSERT INTO messages VALUES(98,154936,'insert','rpsresolves','{"block_index": 154936, "move": 3, "random": "7a4488d61ed8f2e9fa2874113fccb8b1", "rps_match_id": "58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd", "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "bd4fc42a21f1f860a1030e6eba23d53ecab71bd19297ab6c074381d4ecee0018", "tx_index": 28}',0);
+INSERT INTO messages VALUES(99,154937,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154937, "event": null, "quantity": 22043326}',0);
+INSERT INTO messages VALUES(100,154937,'update','rps_matches','{"rps_match_id": "58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd", "status": "concluded: first player wins"}',0);
+INSERT INTO messages VALUES(101,154937,'insert','rpsresolves','{"block_index": 154937, "move": 5, "random": "fa765e80203cba24a298e4458f63ff6b", "rps_match_id": "58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd", "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "status": "valid", "tx_hash": "1f18d650d205d71d934c3646ff5fac1c096ba52eba4cf758b865364f4167d3cd", "tx_index": 29}',0);
 
 -- Table  order_expirations
 DROP TABLE IF EXISTS order_expirations;
@@ -519,18 +525,12 @@ CREATE TABLE order_matches(
                       FOREIGN KEY (tx1_index, tx1_hash, tx1_block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 INSERT INTO order_matches VALUES('dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5',2,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BTC',50000000,'XCP',100000000,154910,154911,154911,10,10,154931,900000,'completed');
 -- Triggers and indices on  order_matches
-CREATE INDEX backward_status_idx ON order_matches (backward_asset, status)
-                   ;
-CREATE INDEX forward_status_idx ON order_matches (forward_asset, status)
-                   ;
-CREATE INDEX id_idx ON order_matches (id)
-                   ;
-CREATE INDEX match_expire_idx ON order_matches (status, match_expire_index)
-                   ;
-CREATE INDEX tx0_address_idx ON order_matches (tx0_address)
-                   ;
-CREATE INDEX tx1_address_idx ON order_matches (tx1_address)
-                   ;
+CREATE INDEX backward_status_idx ON order_matches (backward_asset, status);
+CREATE INDEX forward_status_idx ON order_matches (forward_asset, status);
+CREATE INDEX id_idx ON order_matches (id);
+CREATE INDEX match_expire_idx ON order_matches (status, match_expire_index);
+CREATE INDEX tx0_address_idx ON order_matches (tx0_address);
+CREATE INDEX tx1_address_idx ON order_matches (tx1_address);
 
 -- Table  orders
 DROP TABLE IF EXISTS orders;
@@ -558,14 +558,97 @@ INSERT INTO orders VALUES(2,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b7
 INSERT INTO orders VALUES(3,'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5',154911,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',105000000,5000000,'BTC',50000000,0,10,154921,900000,0,2000,2000,'open');
 INSERT INTO orders VALUES(21,'2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608',154929,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',50000000,50000000,'XCP',50000000,50000000,10,154939,0,0,2000,2000,'cancelled');
 -- Triggers and indices on  orders
-CREATE INDEX expire_idx ON orders (status, expire_index)
-                   ;
-CREATE INDEX give_asset_idx ON orders (give_asset)
-                   ;
-CREATE INDEX give_get_status_idx ON orders (get_asset, give_asset, status)
-                   ;
-CREATE INDEX give_status_idx ON orders (status, give_asset)
-                   ;
+CREATE INDEX expire_idx ON orders (status, expire_index);
+CREATE INDEX give_asset_idx ON orders (give_asset);
+CREATE INDEX give_get_status_idx ON orders (get_asset, give_asset, status);
+CREATE INDEX give_status_idx ON orders (status, give_asset);
+
+-- Table  rps
+DROP TABLE IF EXISTS rps;
+CREATE TABLE rps(
+                      tx_index INTEGER UNIQUE,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      source TEXT,
+                      possible_moves INTEGER,
+                      wager INTEGER,
+                      move_random_hash TEXT,
+                      expiration INTEGER,
+                      expire_index INTEGER,
+                      status TEXT,
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
+                      PRIMARY KEY (tx_index, tx_hash));
+INSERT INTO rps VALUES(26,'58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d',154934,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',5,11021663,'6a886d74c2d4b1d7a35fd9159333ef64ba45a04d7aeeeb4538f958603c16fc5d',100,155034,'matched');
+INSERT INTO rps VALUES(27,'77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd',154935,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',5,11021663,'6e8bf66cbd6636aca1802459b730a99548624e48e243b840e0b34a12bede17ec',100,155035,'matched');
+-- Triggers and indices on  rps
+CREATE INDEX matching_idx ON rps (wager, possible_moves);
+
+-- Table  rps_expirations
+DROP TABLE IF EXISTS rps_expirations;
+CREATE TABLE rps_expirations(
+                      rps_index INTEGER PRIMARY KEY,
+                      rps_hash TEXT UNIQUE,
+                      source TEXT,
+                      block_index INTEGER,
+                      FOREIGN KEY (block_index) REFERENCES blocks(block_index),
+                      FOREIGN KEY (rps_index, rps_hash) REFERENCES rps(tx_index, tx_hash));
+
+-- Table  rps_match_expirations
+DROP TABLE IF EXISTS rps_match_expirations;
+CREATE TABLE rps_match_expirations(
+                      rps_match_id TEXT PRIMARY KEY,
+                      tx0_address TEXT,
+                      tx1_address TEXT,
+                      block_index INTEGER,
+                      FOREIGN KEY (rps_match_id) REFERENCES rps_matches(id),
+                      FOREIGN KEY (block_index) REFERENCES blocks(block_index));
+
+-- Table  rps_matches
+DROP TABLE IF EXISTS rps_matches;
+CREATE TABLE rps_matches(
+                      id TEXT PRIMARY KEY,
+                      tx0_index INTEGER,
+                      tx0_hash TEXT,
+                      tx0_address TEXT,
+                      tx1_index INTEGER,
+                      tx1_hash TEXT,
+                      tx1_address TEXT,
+                      tx0_move_random_hash TEXT,
+                      tx1_move_random_hash TEXT,
+                      wager INTEGER,
+                      possible_moves INTEGER,
+                      tx0_block_index INTEGER,
+                      tx1_block_index INTEGER,
+                      block_index INTEGER,
+                      tx0_expiration INTEGER,
+                      tx1_expiration INTEGER,
+                      match_expire_index INTEGER,
+                      status TEXT,
+                      FOREIGN KEY (tx0_index, tx0_hash, tx0_block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
+                      FOREIGN KEY (tx1_index, tx1_hash, tx1_block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
+INSERT INTO rps_matches VALUES('58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd',26,'58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',27,'77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','6a886d74c2d4b1d7a35fd9159333ef64ba45a04d7aeeeb4538f958603c16fc5d','6e8bf66cbd6636aca1802459b730a99548624e48e243b840e0b34a12bede17ec',11021663,5,154934,154935,154935,100,100,155034,'concluded: first player wins');
+-- Triggers and indices on  rps_matches
+CREATE INDEX rps_match_expire_idx ON rps_matches (status, match_expire_index);
+CREATE INDEX rps_tx0_address_idx ON rps_matches (tx0_address);
+CREATE INDEX rps_tx1_address_idx ON rps_matches (tx1_address);
+
+-- Table  rpsresolves
+DROP TABLE IF EXISTS rpsresolves;
+CREATE TABLE rpsresolves(
+                      tx_index INTEGER PRIMARY KEY,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      source TEXT,
+                      move INTEGER,
+                      random TEXT,
+                      rps_match_id TEXT,
+                      status TEXT,
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
+                      FOREIGN KEY (rps_match_id) REFERENCES rps_matches(id));
+INSERT INTO rpsresolves VALUES(28,'bd4fc42a21f1f860a1030e6eba23d53ecab71bd19297ab6c074381d4ecee0018',154936,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,'7a4488d61ed8f2e9fa2874113fccb8b1','58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd','valid');
+INSERT INTO rpsresolves VALUES(29,'1f18d650d205d71d934c3646ff5fac1c096ba52eba4cf758b865364f4167d3cd',154937,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',5,'fa765e80203cba24a298e4458f63ff6b','58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd','valid');
+-- Triggers and indices on  rpsresolves
+CREATE INDEX rps_match_id_idx ON rpsresolves (rps_match_id);
 
 -- Table  sends
 DROP TABLE IF EXISTS sends;
@@ -579,15 +662,13 @@ CREATE TABLE sends(
                       quantity INTEGER,
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
-INSERT INTO sends VALUES(1,'4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a',154909,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',50000000,'valid');
-INSERT INTO sends VALUES(7,'ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879',154915,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBB',4000000,'valid');
-INSERT INTO sends VALUES(8,'beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a',154916,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',526,'valid');
-INSERT INTO sends VALUES(24,'452ba1ddef80246c48be7690193c76c1d61185906be9401014fe14f1be64b74f',154932,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',10000,'valid');
+INSERT INTO sends VALUES(1,'4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a',154909,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','XCP',50000000,'valid');
+INSERT INTO sends VALUES(7,'ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879',154915,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBB',4000000,'valid');
+INSERT INTO sends VALUES(8,'beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a',154916,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBC',526,'valid');
+INSERT INTO sends VALUES(24,'452ba1ddef80246c48be7690193c76c1d61185906be9401014fe14f1be64b74f',154932,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBC',10000,'valid');
 -- Triggers and indices on  sends
-CREATE INDEX destination_idx ON sends (destination)
-                   ;
-CREATE INDEX source_idx ON sends (source)
-                   ;
+CREATE INDEX destination_idx ON sends (destination);
+CREATE INDEX source_idx ON sends (source);
 
 -- Table  transactions
 DROP TABLE IF EXISTS transactions;
@@ -631,14 +712,14 @@ INSERT INTO transactions VALUES(22,'7cb7c4547cf2653590d7a9ace60cc623d25148adfbc8
 INSERT INTO transactions VALUES(23,'8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034',154931,NULL,23,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mvCounterpartyXXXXXXXXXXXXXXW24Hef',100000000,2000,X'',1);
 INSERT INTO transactions VALUES(24,'452ba1ddef80246c48be7690193c76c1d61185906be9401014fe14f1be64b74f',154932,NULL,24,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7',7800,2000,X'0000000000000000000047680000000000002710',1);
 INSERT INTO transactions VALUES(25,'68aa2e2ee5dff96e3355e6c7ee373e3d6a4e17f75f9518d843709c0c9bc3e3d4',154933,NULL,25,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',NULL,NULL,2000,X'000000153FD33333333333330000000000004768',1);
+INSERT INTO transactions VALUES(26,'58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d',154934,NULL,26,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',NULL,NULL,20000,X'0000005000050000000000A82D5F6A886D74C2D4B1D7A35FD9159333EF64BA45A04D7AEEEB4538F958603C16FC5D00000064',1);
+INSERT INTO transactions VALUES(27,'77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd',154935,NULL,27,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',NULL,NULL,20000,X'0000005000050000000000A82D5F6E8BF66CBD6636ACA1802459B730A99548624E48E243B840E0B34A12BEDE17EC00000064',1);
+INSERT INTO transactions VALUES(28,'bd4fc42a21f1f860a1030e6eba23d53ecab71bd19297ab6c074381d4ecee0018',154936,NULL,28,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',NULL,NULL,20000,X'0000005100037A4488D61ED8F2E9FA2874113FCCB8B158F7B0780592032E4D8602A3E8690FB2C701B2E1DD546E703445AABD6469734D77ADFC95029E73B173F60E556F915B0CD8850848111358B1C370FB7C154E61FD',1);
+INSERT INTO transactions VALUES(29,'1f18d650d205d71d934c3646ff5fac1c096ba52eba4cf758b865364f4167d3cd',154937,NULL,29,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',NULL,NULL,20000,X'000000510005FA765E80203CBA24A298E4458F63FF6B58F7B0780592032E4D8602A3E8690FB2C701B2E1DD546E703445AABD6469734D77ADFC95029E73B173F60E556F915B0CD8850848111358B1C370FB7C154E61FD',1);
 -- Triggers and indices on  transactions
-CREATE INDEX index_hash_index_idx ON transactions (tx_index, tx_hash, block_index)
-                   ;
-CREATE INDEX index_index_idx ON transactions (block_index, tx_index)
-                   ;
-CREATE INDEX tx_hash_idx ON transactions (tx_hash)
-                   ;
-CREATE INDEX tx_index_idx ON transactions (tx_index)
-                   ;
+CREATE INDEX index_hash_index_idx ON transactions (tx_index, tx_hash, block_index);
+CREATE INDEX index_index_idx ON transactions (block_index, tx_index);
+CREATE INDEX tx_hash_idx ON transactions (tx_hash);
+CREATE INDEX tx_index_idx ON transactions (tx_index);
 
 COMMIT TRANSACTION;

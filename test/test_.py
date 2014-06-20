@@ -28,13 +28,19 @@ CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.ex
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
 from lib import (config, api, util, exceptions, bitcoin, blocks)
-from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
+from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
 import counterpartyd
 
 # config.BLOCK_FIRST = 0
 # config.BURN_START = 0
 # config.BURN_END = 9999999
 counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/counterpartyd.unittest.db', testnet=True, testcoin=False, unittest=True, force=True)
+
+# unit tests private keys
+config.UNITTEST_PRIVKEY = {
+    'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc': 'cPdUqd5EbBWsjcG9xiL1hz8bEyGFiz4SW99maU9JgpL9TEcxUf3j',
+    'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns': 'cQ897jnCVRrawNbw8hgmjMiRNHejwzg4KbzdMCzc91iaTif8ReqX'
+}
 
 # Connect to database.
 try: os.remove(config.DATABASE)
@@ -45,8 +51,8 @@ cursor = db.cursor()
 # Each tx has a block_index equal to its tx_index
 tx_index = 0
 
-source_default = 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'
-destination_default = 'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7'
+source_default = 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc' 
+destination_default = 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'
 quantity = config.UNIT
 small = round(quantity / 2)
 expiration = 10
@@ -372,6 +378,36 @@ def test_callback ():
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
+def test_rps ():
+    unsigned_tx_hex = bitcoin.transaction(rps.compose(db, source_default, 5, 11021663, '6a886d74c2d4b1d7a35fd9159333ef64ba45a04d7aeeeb4538f958603c16fc5d', 100), encoding='multisig')
+    
+    parse_hex(unsigned_tx_hex)
+
+    output_new[inspect.stack()[0][3]] = unsigned_tx_hex
+
+def test_counter_rps ():
+    unsigned_tx_hex = bitcoin.transaction(rps.compose(db, destination_default, 5, 11021663, '6e8bf66cbd6636aca1802459b730a99548624e48e243b840e0b34a12bede17ec', 100), encoding='multisig')
+
+    parse_hex(unsigned_tx_hex)
+
+    output_new[inspect.stack()[0][3]] = unsigned_tx_hex
+
+def test_rpsresolve ():
+    rps_match_id = '58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd'
+    unsigned_tx_hex = bitcoin.transaction(rpsresolve.compose(db, source_default, 3, '7a4488d61ed8f2e9fa2874113fccb8b1', rps_match_id), encoding='multisig')
+
+    parse_hex(unsigned_tx_hex)
+
+    output_new[inspect.stack()[0][3]] = unsigned_tx_hex
+
+def test_counter_rpsresolve ():
+    rps_match_id = '58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd'
+    unsigned_tx_hex = bitcoin.transaction(rpsresolve.compose(db, destination_default, 5, 'fa765e80203cba24a298e4458f63ff6b', rps_match_id), encoding='multisig')
+    
+    parse_hex(unsigned_tx_hex)
+
+    output_new[inspect.stack()[0][3]] = unsigned_tx_hex
+
 def test_json_rpc():
 
     # TODO: Broken
@@ -519,3 +555,4 @@ def test_book_testnet():
 
 def test_book_mainnet():
     do_book(False)
+
