@@ -76,7 +76,8 @@ def parse_tx (db, tx):
                                    SET supported=? \
                                    WHERE tx_hash=?''',
                                 (False, tx['tx_hash']))
-        logging.info('Unsupported transaction: hash {}; data {}'.format(tx['tx_hash'], tx['data']))
+        if tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
+            logging.info('Unsupported transaction: hash {}; data {}'.format(tx['tx_hash'], tx['data']))
         cursor.close()
         return False
 
