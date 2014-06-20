@@ -214,7 +214,7 @@ def message (db, block_index, command, category, bindings, tx_hash=None):
     else:
         message_index = 0
 
-    # To not be misleading…
+    # Not to be misleading…
     if block_index == config.MEMPOOL_BLOCK_INDEX:
         try:
             del bindings['status']
@@ -265,13 +265,6 @@ def exectracer(cursor, sql, bindings):
     # Record alteration in database.
     if category not in ('balances', 'messages', 'mempool'):
         if not (command in ('update') and category in ('orders', 'bets', 'order_matches', 'bet_matches')):    # List message manually.
-
-            # For uniqueness of messages in mempool…
-            try:
-                tx_hash = bindings['tx_hash']
-            except KeyError:
-                tx_hash = None
-
             message(db, bindings['block_index'], command, category, bindings, tx_hash=tx_hash)
 
     return True
