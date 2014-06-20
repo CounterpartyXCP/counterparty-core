@@ -2,8 +2,8 @@ START TEST
 Credit: 930.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d>
 Burn: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 0.62 BTC for 930.0 XCP (6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d) [valid]
 Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a>
-Credit: 0.5 XCP to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 #None# <4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a>
-Send: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 (4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a) [valid]
+Credit: 0.5 XCP to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #None# <4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a>
+Send: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a) [valid]
 Order: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc ordered 0.5 BTC for 1.0 XCP in 10 blocks, with a provided fee of 0.01 BTC and a required fee of 0.0 BTC (dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986) [open]
 Debit: 1.05 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5>
 Order: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc ordered 1.05 XCP for 0.5 BTC in 10 blocks, with a provided fee of 0.0002 BTC and a required fee of 0.009 BTC (084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5) [open]
@@ -23,16 +23,16 @@ Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 100000 of asset BBBC, which is indivisible and callable from 1969-12-31T19:00:17-05:00 for 0.015 XCP/BBBC, with description ‘foobar’ (67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6) [valid]
 Credit: 100000 BBBC to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Debit: 0.04 BBBB from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879>
-Credit: 0.04 BBBB to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 #None# <ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879>
-Send: 0.04 BBBB from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 (ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879) [valid]
+Credit: 0.04 BBBB to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #None# <ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879>
+Send: 0.04 BBBB from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879) [valid]
 Debit: 526 BBBC from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a>
-Credit: 526 BBBC to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 #None# <beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a>
-Send: 526 BBBC from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 (beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a) [valid]
+Credit: 526 BBBC to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #None# <beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a>
+Send: 526 BBBC from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a) [valid]
 Debit: 0.00000024 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
-Credit: 0.00000024 XCP to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 #None# <None>
+Credit: 0.00000024 XCP to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #None# <None>
 Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 0.000006 XCP per unit of BBBB (2b4c342f5433ebe591a1da77e013d1b72475562d48578dca8b84bac6651c3cb9) [valid]
 Debit: 0.004208 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
-Credit: 0.004208 XCP to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 #None# <None>
+Credit: 0.004208 XCP to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #None# <None>
 Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 0.000008 XCP per unit of BBBC (01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b) [valid]
 Broadcast: ‘Unit Test’ = 100.0 from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T14:33:20-05:00 with a fee of 5.0% (e7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6) [valid]
 Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
@@ -95,11 +95,19 @@ Cancel: 2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608 (7cb7c4
 Credit: 569.9988687 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034>
 Burn: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 0.38 BTC for 569.9988687 XCP (8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034) [valid]
 Debit: 10000 BBBC from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <452ba1ddef80246c48be7690193c76c1d61185906be9401014fe14f1be64b74f>
-Credit: 10000 BBBC to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 #None# <452ba1ddef80246c48be7690193c76c1d61185906be9401014fe14f1be64b74f>
-Send: 10000 BBBC from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 (452ba1ddef80246c48be7690193c76c1d61185906be9401014fe14f1be64b74f) [valid]
+Credit: 10000 BBBC to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #None# <452ba1ddef80246c48be7690193c76c1d61185906be9401014fe14f1be64b74f>
+Send: 10000 BBBC from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (452ba1ddef80246c48be7690193c76c1d61185906be9401014fe14f1be64b74f) [valid]
 Debit: 47.355 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Credit: 3157 BBBC to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
-Debit: 3157 BBBC from n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 #None# <None>
-Credit: 47.355 XCP to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 #None# <None>
+Debit: 3157 BBBC from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #None# <None>
+Credit: 47.355 XCP to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #None# <None>
 Callback: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc called back 30.0% of BBBC (68aa2e2ee5dff96e3355e6c7ee373e3d6a4e17f75f9518d843709c0c9bc3e3d4) [valid]
+Debit: 0.11021663 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
+RPS: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc opens game with 5 possible moves and a wager of 0.11021663 XCP
+Debit: 0.11021663 XCP from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #None# <None>
+RPS: mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns opens game with 5 possible moves and a wager of 0.11021663 XCP
+RPS Match: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc match game with mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns, possible moves: 5, wager: 0.11021663 XCP, status: pending, match id: 58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd
+RPS Resolved: 58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd resolved, move: 3, status: resolved and pending
+Credit: 0.22043326 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
+RPS Resolved: 58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd resolved, move: 5, status: concluded: first player wins
 STOP TEST

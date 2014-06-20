@@ -41,11 +41,15 @@ def get_address (db, address):
     address_dict['bet_matches'] = util.api('get_bet_matches', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
     address_dict['dividends'] = util.api('get_dividends', {'filters': [('source', '==', address),]})
     address_dict['cancels'] = util.api('get_cancels', {'filters': [('source', '==', address),]})
+    address_dict['rps'] = util.api('get_rps', {'filters': [('source', '==', address),]})
+    address_dict['rps_matches'] = util.api('get_rps_matches', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
     address_dict['callbacks'] = util.api('get_callbacks', {'filters': [('source', '==', address),]})
     address_dict['bet_expirations'] = util.api('get_bet_expirations', {'filters': [('source', '==', address),]})
     address_dict['order_expirations'] = util.api('get_order_expirations', {'filters': [('source', '==', address),]})
+    address_dict['rps_expirations'] = util.api('get_rps_expirations', {'filters': [('source', '==', address),]})
     address_dict['bet_match_expirations'] = util.api('get_bet_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
     address_dict['order_match_expirations'] = util.api('get_order_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
+    address_dict['rps_match_expirations'] = util.api('get_rps_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
     return address_dict
 
 
@@ -99,7 +103,7 @@ def market (give_asset, get_asset):
         ('tx0_address', 'IN', addresses),
         ('tx1_address', 'IN', addresses)
     ]
-    awaiting_btcs = util.api('get_order_matches', {'filters': filters, 'filterop': 'OR', 'status': 'pending'})  
+    awaiting_btcs = util.api('get_order_matches', {'filters': filters, 'filterop': 'OR', 'status': 'pending'})
     table = PrettyTable(['Matched Order ID', 'Time Left'])
     for order_match in awaiting_btcs:
         order_match = format_order_match(db, order_match)
@@ -317,7 +321,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
         config.INSIGHT_ENABLE = configfile['Default'].getboolean('insight-enable')
     else:
         config.INSIGHT_ENABLE = False
-    
+
     if unittest:
         config.INSIGHT_ENABLE = True #override when running test suite
     if config.TESTNET:
@@ -433,7 +437,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
             config.PREFIX = b'CNTRPRTY'             # 8 bytes
     else:
         config.PREFIX = b'TESTXXXX'                 # 8 bytes
-        
+
     if api_num_threads:
         config.API_NUM_THREADS = int(api_num_threads)
     elif has_config and 'api-num-threads' in configfile['Default']:
@@ -510,12 +514,18 @@ def balances (address):
     print('Balances')
     print(table.get_string())
 
+def generate_move_random_hash(move):
+    move = int(move).to_bytes(2, byteorder='big')
+    random = os.urandom(16)
+    move_random_hash = bitcoin.dhash(random+move)
+    return binascii.hexlify(random).decode('utf8'), binascii.hexlify(move_random_hash).decode('utf8')
+
 
 if __name__ == '__main__':
     if os.name == 'nt':
         #patch up cmd.exe's "challenged" (i.e. broken/non-existent) UTF-8 logging
         util_windows.fix_win32_unicode()
-    
+
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(prog=config.XCP_CLIENT, description='the reference implementation of the {} protocol'.format(config.XCP_NAME))
     parser.add_argument('-V', '--version', action='version', version="{} v{}".format(config.XCP_CLIENT, config.VERSION_STRING))
@@ -637,6 +647,21 @@ if __name__ == '__main__':
     parser_callback.add_argument('--asset', required=True, help='the asset to callback')
     parser_callback.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
+    parser_rps = subparsers.add_parser('rps', help='open a rock-paper-scissors like game')
+    parser_rps.add_argument('--source', required=True, help='the source address')
+    parser_rps.add_argument('--wager', required=True, help='the quantity of XCP to wager')
+    parser_rps.add_argument('--move', type=int, required=True, help='the selected move')
+    parser_rps.add_argument('--possible_moves', type=int, required=True, help='the number of possible moves (odd number greater or equal than 3)')
+    parser_rps.add_argument('--expiration', type=int, required=True, help='the number of blocks for which the bet should be valid')
+    parser_rps.add_argument('--fee', help='the exact BTC fee to be paid to miners')
+
+    parser_rpsresolve = subparsers.add_parser('rpsresolve', help='resolve a rock-paper-scissors like game')
+    parser_rpsresolve.add_argument('--source', required=True, help='the source address')
+    parser_rpsresolve.add_argument('--random', type=str, required=True, help='the random number used in the corresponding rps transaction')
+    parser_rpsresolve.add_argument('--move', type=int, required=True, help='the selected move in the corresponding rps transaction')
+    parser_rpsresolve.add_argument('--rps-match-id', required=True, help='the concatenation of the hashes of the two transactions which compose the rps match')
+    parser_rpsresolve.add_argument('--fee', help='the exact BTC fee to be paid to miners')
+
     parser_address = subparsers.add_parser('balances', help='display the balances of a {} address'.format(config.XCP_NAME))
     parser_address.add_argument('address', help='the address you are interested in')
 
@@ -685,7 +710,7 @@ if __name__ == '__main__':
     pid = str(os.getpid())
     pidf = open(config.PID, 'w')
     pidf.write(pid)
-    pidf.close()    
+    pidf.close()
 
     # Database
     db = util.connect_to_db()
@@ -718,7 +743,7 @@ if __name__ == '__main__':
     urllib3_log.propagate = False
 
     if args.action == None: args.action = 'server'
-    
+
     # TODO: Keep around only as long as reparse and rollback don’t use API.
     if not config.FORCE and args.action in ('reparse', 'rollback'):
         util.version_check(db)
@@ -907,6 +932,35 @@ if __name__ == '__main__':
                                 args.op_return_value},
            args.unsigned)
 
+    elif args.action == 'rps':
+        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
+        wager = util.devise(db, args.wager, 'XCP', 'input')
+        random, move_random_hash = generate_move_random_hash(args.move)
+        print('random: {}'.format(random))
+        print('move_random_hash: {}'.format(move_random_hash))
+        cli('create_rps', {'source': args.source,
+                           'possible_moves': args.possible_moves, 'wager': wager,
+                           'move_random_hash': move_random_hash, 'expiration': args.expiration,
+                           'fee': args.fee,'allow_unconfirmed_inputs': args.unconfirmed,
+                           'encoding': args.encoding, 'fee_per_kb':
+                           args.fee_per_kb, 'regular_dust_size':
+                           args.regular_dust_size, 'multisig_dust_size':
+                           args.multisig_dust_size, 'op_return_value':
+                           args.op_return_value},
+           args.unsigned)
+
+    elif args.action == 'rpsresolve':
+        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
+        cli('create_rpsresolve', {'source': args.source,
+                                'random': args.random, 'move': args.move,
+                                'rps_match_id': args.rps_match_id, 'fee': args.fee,
+                                'allow_unconfirmed_inputs': args.unconfirmed,
+                                'encoding': args.encoding, 'fee_per_kb':
+                                args.fee_per_kb, 'regular_dust_size':
+                                args.regular_dust_size, 'multisig_dust_size':
+                                args.multisig_dust_size, 'op_return_value':
+                                args.op_return_value},
+           args.unsigned)
 
     # VIEWING (temporary)
     elif args.action == 'balances':
@@ -924,7 +978,7 @@ if __name__ == '__main__':
         else:
             print('Asset ‘{}’ not found.'.format(args.asset))
             exit(0)
-        
+
         asset_id = util.asset_id(args.asset)
         divisible = results['divisible']
         supply = util.devise(db, results['supply'], args.asset, dest='output')
@@ -969,7 +1023,7 @@ if __name__ == '__main__':
                 table.add_row([config.BTC, btc_balance])  # BTC
                 if config.BTC in totals.keys(): totals[config.BTC] += btc_balance
                 else: totals[config.BTC] = btc_balance
-                empty = False            
+                empty = False
             for balance in balances:
                 asset = balance['asset']
                 try:

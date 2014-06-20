@@ -8,7 +8,7 @@ import binascii
 import struct
 
 from . import (util, config, exceptions, bitcoin, util)
-from . import (order, bet)
+from . import (order, bet, rps)
 
 FORMAT = '>32s'
 LENGTH = 32
@@ -17,21 +17,25 @@ ID = 70
 def validate (db, source, offer_hash):
     problems = []
 
+    # TODO: make query only if necessary
     cursor = db.cursor()
     cursor.execute('''SELECT * from orders WHERE tx_hash = ?''', (offer_hash,))
     orders = list(cursor)
     cursor.execute('''SELECT * from bets WHERE tx_hash = ?''', (offer_hash,))
     bets = list(cursor)
+    cursor.execute('''SELECT * from rps WHERE tx_hash = ?''', (offer_hash,))
+    rps = list(cursor)
     cursor.close()
 
     offer_type = None
     if orders: offer_type = 'order'
     elif bets: offer_type = 'bet'
+    elif rps: offer_type = 'rps'
     else: problems = ['no open offer with that hash']
 
     offer = None
     if offer_type:
-        offers = orders + bets
+        offers = orders + bets + rps
         offer = offers[0]
         if offer['source'] != source:
             problems.append('incorrect source address')
@@ -76,6 +80,9 @@ def parse (db, tx, message):
         # Cancel if bet.
         elif offer_type == 'bet':
             bet.cancel_bet(db, offer, 'cancelled', tx['block_index'])
+        # Cancel if rps.
+        elif offer_type == 'rps':
+            rps.cancel_rps(db, offer, 'cancelled', tx['block_index'])
         # If neither order or bet, mark as invalid.
         else:
             assert False
@@ -89,7 +96,7 @@ def parse (db, tx, message):
         'offer_hash': offer_hash,
         'status': status,
     }
-    sql='insert into cancels values(:tx_index, :tx_hash, :block_index, :source, :offer_hash, :status)'
+    sql='INSERT INTO cancels VALUES (:tx_index, :tx_hash, :block_index, :source, :offer_hash, :status)'
     cursor.execute(sql, bindings)
 
     cursor.close()

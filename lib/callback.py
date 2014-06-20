@@ -19,7 +19,7 @@ def validate (db, source, fraction, asset, block_time, block_index, parse):
     problems = []
 
     # TODO
-    if not config.TESTNET: 
+    if not config.TESTNET:
         problems.append('callbacks are currently disabled on mainnet')
         return None, None, None, problems
     # TODO
