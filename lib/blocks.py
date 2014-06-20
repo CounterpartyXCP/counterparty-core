@@ -883,7 +883,7 @@ def follow (db):
     else:
         tx_index = 0
 
-    not_counterparty = []
+    not_supported = []    # No false positives.
     mempool_initialised = False
     while True:
 
@@ -961,8 +961,6 @@ def follow (db):
             block_index +=1
 
         else:
-            # Fill counterpartyd mempool.
-
             # First mempool fill for session?
             if mempool_initialised:
                 logging.debug('Status: Updating mempool.')
@@ -981,17 +979,19 @@ def follow (db):
             # a fake block, a fake transaction, capture the generated messages,
             # and then save those messages.
             # Every transaction in mempool is parsed independently. (DB is rolled back after each one.)
+            mempool = []
             for tx_hash in bitcoin.get_mempool():
-                new_mempool = []
 
-                # If already in counterpartyd mempool, skip it.
+                # If already in counterpartyd mempool, copy to new one.
                 if tx_hash in old_mempool_hashes:
-                    continue
+                    for message in old_mempool:
+                        if message['tx_hash'] == tx_hash:
+                            mempool.append((tx_hash, message))
 
-                # If new transaction not already determined to not be a
-                # Counterparty transaction, then list, parse and then
-                # save it.
-                elif tx_hash not in not_counterparty:
+                # If already skipped, skip it again.
+                elif tx_hash not in not_supported:
+
+                    # Else: list, parse and save it.
                     try:
                         with db:
                             # List the fake block.
@@ -1021,30 +1021,31 @@ def follow (db):
                                 transaction = transactions[0]
                                 supported = parse_tx(db, transaction)
                                 if not supported:
-                                    not_counterparty.append(tx_hash)
+                                    not_supported.append(tx_hash)
                             else:
                                 # If a transaction hasn’t been added to the
                                 # table `transactions`, then it’s not a
                                 # Counterparty transaction.
-                                not_counterparty.append(tx_hash)
+                                not_supported.append(tx_hash)
                                 assert False
 
                             # Save transaction and side‐effects in memory.
                             cursor.execute('''SELECT * FROM messages WHERE block_index = ?''', (config.MEMPOOL_BLOCK_INDEX,))
                             for message in list(cursor):
-                                new_mempool.append(message)
+                                mempool.append((tx_hash, message))
 
                             # Rollback.
                             assert False
                     except AssertionError:
                         pass
 
-                # Write new mempool messages to database.
-                with db:
-                    for message in new_mempool:
-                        new_message = message
-                        new_message['tx_hash'] = tx_hash
-                        cursor.execute('''INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp)''', (new_message))
+            # Re‐write mempool messages to database.
+            with db:
+                cursor.execute('''DELETE FROM mempool''')
+                for message in mempool:
+                    tx_hash, new_message = message
+                    new_message['tx_hash'] = tx_hash
+                    cursor.execute('''INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp)''', (new_message))
 
             # Wait
             mempool_initialised = True
