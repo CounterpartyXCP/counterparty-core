@@ -225,8 +225,8 @@ def message (db, block_index, command, category, bindings, tx_hash=None):
     bindings_string = json.dumps(collections.OrderedDict(sorted(bindings.items())))
     if config.UNITTEST: curr_time = 0
     else: curr_time = int(time.time())
-    cursor.execute('insert into messages values(:message_index, :tx_hash, :block_index, :command, :category, :bindings, :timestamp)',
-                   (message_index, tx_hash, block_index, command, category, bindings_string, curr_time))
+    cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings, :timestamp)',
+                   (message_index, block_index, command, category, bindings_string, curr_time))
 
     # Log only real transactions.
     if block_index != config.MEMPOOL_BLOCK_INDEX:

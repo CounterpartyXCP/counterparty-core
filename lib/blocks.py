@@ -653,7 +653,6 @@ def initialise(db):
     # Messages
     cursor.execute('''CREATE TABLE IF NOT EXISTS messages(
                       message_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT,
                       block_index INTEGER,
                       command TEXT,
                       category TEXT,
@@ -667,10 +666,9 @@ def initialise(db):
 
     # Mempool messages
     # NOTE: `status`, 'block_index` are removed from bindings.
-    # NOTE: `tx_hash` provides uniqueness.
     cursor.execute('''DROP TABLE IF EXISTS mempool''')
     cursor.execute('''CREATE TABLE mempool(
-                      tx_hash TEXT PRIMARY KEY,
+                      tx_hash TEXT,
                       command TEXT,
                       category TEXT,
                       bindings TEXT,
@@ -965,55 +963,53 @@ def follow (db):
         else:
             # Fill counterpartyd mempool.
 
+            # First mempool fill for session?
             if mempool_initialised:
                 logging.debug('Status: Updating mempool.')
             else:
                 logging.debug('Status: Initialising mempool.')
 
-            try:
-                with db:
-                    # Create fake block and fake transactions, capture (some) generated messages, then save those messages.
+            # Get old counterpartyd mempool.
+            old_mempool = list(cursor.execute('''SELECT * FROM mempool'''))
+            old_mempool_hashes = [message['tx_hash'] for message in old_mempool]
 
-                    cursor.execute('''DELETE FROM messages WHERE block_index = ?''', (config.MEMPOOL_BLOCK_INDEX,))
-                    cursor.execute('''SAVEPOINT end_of_block''')
+            # Fake values for fake block.
+            curr_time = int(time.time())
+            mempool_tx_index = tx_index
 
-                    # Fake values for fake block.
-                    curr_time = int(time.time())
-                    mempool_tx_index = tx_index
+            # For each transaction in Bitcoin Core mempool, if it’s new, create
+            # a fake block, a fake transaction, capture the generated messages,
+            # and then save those messages.
+            # Every transaction in mempool is parsed independently. (DB is rolled back after each one.)
+            for tx_hash in bitcoin.get_mempool():
+                new_mempool = []
 
-                    # List the fake block.
-                    cursor.execute('''INSERT INTO blocks(
-                                        block_index,
-                                        block_hash,
-                                        block_time) VALUES(?,?,?)''',
-                                        (config.MEMPOOL_BLOCK_INDEX,
-                                         config.MEMPOOL_BLOCK_HASH,
-                                         curr_time)
-                                  )
+                # If already in counterpartyd mempool, skip it.
+                if tx_hash in old_mempool_hashes:
+                    continue
 
-                    # Get old counterpartyd mempool.
-                    old_mempool = list(cursor.execute('''SELECT * FROM mempool'''))
-                    old_mempool_hashes = [message['tx_hash'] for message in old_mempool]
+                # If new transaction not already determined to not be a
+                # Counterparty transaction, then list, parse and then
+                # save it.
+                elif tx_hash not in not_counterparty:
+                    try:
+                        with db:
+                            # List the fake block.
+                            cursor.execute('''INSERT INTO blocks(
+                                                block_index,
+                                                block_hash,
+                                                block_time) VALUES(?,?,?)''',
+                                                (config.MEMPOOL_BLOCK_INDEX,
+                                                 config.MEMPOOL_BLOCK_HASH,
+                                                 curr_time)
+                                          )
 
-                    # Go through current Bitcoin Core mempool.
-                    mempool = []
-                    for tx_hash in bitcoin.get_mempool():
-                        # If already in counterpartyd mempool, just copy it over.
-                        if tx_hash in old_mempool_hashes:
-                            for message in old_mempool:
-                                if message['tx_hash'] == tx_hash:
-                                    mempool.append(message)
-                                    break
-                        # If new transaction not already determined to not be a
-                        # Counterparty transaction, then list, parse and then
-                        # save it.
-                        elif tx_hash not in not_counterparty:
                             # List transaction.
                             try:    # Sometimes the transactions can’t be found: `{'code': -5, 'message': 'No information available about transaction'} Is txindex enabled in Bitcoind?`
                                 list_tx(db, config.MEMPOOL_BLOCK_HASH, config.MEMPOOL_BLOCK_INDEX, curr_time, tx_hash, mempool_tx_index)
                                 mempool_tx_index += 1
                             except exceptions.BitcoindError:
-                                continue
+                                assert False
 
                             # Parse transaction.
                             cursor.execute('''SELECT * FROM transactions \
@@ -1031,28 +1027,24 @@ def follow (db):
                                 # table `transactions`, then it’s not a
                                 # Counterparty transaction.
                                 not_counterparty.append(tx_hash)
-                                continue
+                                assert False
 
-                            # Save transaction in memory.
-                            cursor.execute('''SELECT * FROM messages WHERE tx_hash = ?''', (tx_hash,))
-                            messages = list(cursor)
-                            if messages:
-                                assert len(messages) == 1
-                                mempool.append(messages[0])
-                            else:
-                                continue
+                            # Save transaction and side‐effects in memory.
+                            cursor.execute('''SELECT * FROM messages WHERE block_index = ?''', (config.MEMPOOL_BLOCK_INDEX,))
+                            for message in list(cursor):
+                                new_mempool.append(message)
 
-                    # Rollback.
-                    assert False
-            except AssertionError:
-                pass
+                            # Rollback.
+                            assert False
+                    except AssertionError:
+                        pass
 
-            # Write mempool messages to database.
-            with db:
-                cursor.execute('''DELETE FROM mempool''')
-                for message in mempool:
-                    if message['tx_hash']:  # Must be able to identify mempool messages uniquely.
-                        cursor.execute('''INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp)''', (message))
+                # Write new mempool messages to database.
+                with db:
+                    for message in new_mempool:
+                        new_message = message
+                        new_message['tx_hash'] = tx_hash
+                        cursor.execute('''INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp)''', (new_message))
 
             # Wait
             mempool_initialised = True
