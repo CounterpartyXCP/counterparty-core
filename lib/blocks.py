@@ -40,7 +40,7 @@ def check_conservation (db):
         logging.debug('Status: {} has been conserved ({} {} both issued and held)'.format(asset, util.devise(db, issued, asset, 'output'), asset))
 
 def parse_tx (db, tx):
-    parse_tx_cursor = db.cursor()
+    cursor = db.cursor()
     # Burns.
     if tx['destination'] == config.UNSPENDABLE:
         burn.parse(db, tx)
@@ -72,17 +72,20 @@ def parse_tx (db, tx):
     elif message_type_id == callback.ID:
         callback.parse(db, tx, message)
     else:
-        parse_tx_cursor.execute('''UPDATE transactions \
+        cursor.execute('''UPDATE transactions \
                                    SET supported=? \
                                    WHERE tx_hash=?''',
                                 (False, tx['tx_hash']))
         logging.info('Unsupported transaction: hash {}; data {}'.format(tx['tx_hash'], tx['data']))
+        cursor.close()
+        return False
 
     # Check for conservation of assets every CAREFULNESS transactions.
     if config.CAREFULNESS and not tx['tx_index'] % config.CAREFULNESS:
         check_conservation(db)
 
-    parse_tx_cursor.close()
+    cursor.close()
+    return True
 
 def parse_block (db, block_index, block_time):
     cursor = db.cursor()
@@ -1018,7 +1021,10 @@ def follow (db):
                             transactions = list(cursor)
                             if transactions:
                                 assert len(transactions) == 1
-                                parse_tx(db, transactions[0])
+                                transaction = transactions[0]
+                                supported = parse_tx(db, transaction)
+                                if not supported:
+                                    not_counterparty.append(tx_hash)
                             else:
                                 # If a transaction hasn’t been added to the
                                 # table `transactions`, then it’s not a
