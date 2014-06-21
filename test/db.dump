@@ -21,8 +21,6 @@ INSERT INTO balances VALUES('n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',7369);
 -- Triggers and indices on  balances
 CREATE INDEX address_asset_idx ON balances (address, asset)
                    ;
-CREATE INDEX asset_idx ON balances (asset)
-                   ;
 
 -- Table  bet_expirations
 DROP TABLE IF EXISTS bet_expirations;
@@ -43,6 +41,24 @@ CREATE TABLE bet_match_expirations(
                       block_index INTEGER,
                       FOREIGN KEY (bet_match_id) REFERENCES bet_matches(id),
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index));
+
+-- Table  bet_match_resolutions
+DROP TABLE IF EXISTS bet_match_resolutions;
+CREATE TABLE bet_match_resolutions(
+                      bet_match_id TEXT PRIMARY KEY,
+                      bet_match_type_id INTEGER,
+                      block_index INTEGER,
+                      winner TEXT,
+                      settled BOOL,
+                      bull_credit INTEGER,
+                      bear_credit INTEGER,
+                      escrow_less_fee INTEGER,
+                      fee INTEGER,
+                      FOREIGN KEY (bet_match_id) REFERENCES bet_matches(id),
+                      FOREIGN KEY (block_index) REFERENCES blocks(block_index));
+INSERT INTO bet_match_resolutions VALUES('ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c9779d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4',1,154926,'0',0,59137500,NULL,NULL,3112500);
+INSERT INTO bet_match_resolutions VALUES('4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8',1,154927,'1',159300000,315700000,NULL,NULL,25000000);
+INSERT INTO bet_match_resolutions VALUES('c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee34a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a',5,154928,NULL,NULL,NULL,'NotEqual',1330000000,70000000);
 
 -- Table  bet_matches
 DROP TABLE IF EXISTS bet_matches;
@@ -65,6 +81,7 @@ CREATE TABLE bet_matches(
                       backward_quantity INTEGER,
                       tx0_block_index INTEGER,
                       tx1_block_index INTEGER,
+                      block_index INTEGER,
                       tx0_expiration INTEGER,
                       tx1_expiration INTEGER,
                       match_expire_index INTEGER,
@@ -72,11 +89,11 @@ CREATE TABLE bet_matches(
                       status TEXT,
                       FOREIGN KEY (tx0_index, tx0_hash, tx0_block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                       FOREIGN KEY (tx1_index, tx1_hash, tx1_block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
-INSERT INTO bet_matches VALUES('ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c9779d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4',12,'ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c977','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',13,'9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000100,0.0,15120,41500000,20750000,154920,154921,10,10,154930,5000000,'settled: liquidated for bull');
-INSERT INTO bet_matches VALUES('4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8',14,'4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',15,'dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000100,0.0,5040,150000000,350000000,154922,154923,10,10,154932,5000000,'settled');
-INSERT INTO bet_matches VALUES('c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee34a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a',16,'c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee3','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',17,'4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',2,3,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000200,1.0,5040,750000000,650000000,154924,154925,10,10,154934,5000000,'settled: for notequal');
+INSERT INTO bet_matches VALUES('ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c9779d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4',12,'ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c977','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',13,'9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000100,0.0,15120,41500000,20750000,154920,154921,154921,10,10,154930,5000000,'settled: liquidated for bull');
+INSERT INTO bet_matches VALUES('4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8',14,'4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',15,'dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000100,0.0,5040,150000000,350000000,154922,154923,154923,10,10,154932,5000000,'settled');
+INSERT INTO bet_matches VALUES('c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee34a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a',16,'c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee3','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',17,'4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',2,3,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',100,1388000200,1.0,5040,750000000,650000000,154924,154925,154925,10,10,154934,5000000,'settled: for notequal');
 -- Triggers and indices on  bet_matches
-CREATE INDEX valid_feed_idx ON bet_matches (status, feed_address)
+CREATE INDEX valid_feed_idx ON bet_matches (feed_address, status)
                    ;
 
 -- Table  bets
@@ -108,8 +125,6 @@ INSERT INTO bets VALUES(15,'dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923a
 INSERT INTO bets VALUES(16,'c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee3',154924,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',2,1388000200,750000000,0,650000000,0,1.0,5040,10,154934,5000000,'filled');
 INSERT INTO bets VALUES(17,'4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a',154925,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,1388000200,650000000,0,750000000,0,1.0,5040,10,154935,5000000,'filled');
 -- Triggers and indices on  bets
-CREATE INDEX feed_status_idx ON bets (status, feed_address)
-                   ;
 CREATE INDEX feed_valid_bettype_idx ON bets (feed_address, status, bet_type)
                    ;
 
@@ -173,6 +188,10 @@ INSERT INTO broadcasts VALUES(19,'ab897fbdedfa502b2d839b6a56100887dccdc507555c28
 INSERT INTO broadcasts VALUES(20,'83891d7fe85c33e52c8b4e5814c92fb6a3b9467299200538a6babaa8b452d879',154928,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1388000201,2.0,5000000,'Unit Test',0,'valid');
 -- Triggers and indices on  broadcasts
 CREATE INDEX status_source_idx ON broadcasts (status, source)
+                   ;
+CREATE INDEX status_source_index_idx ON broadcasts (status, source, tx_index)
+                   ;
+CREATE INDEX timestamp_idx ON broadcasts (timestamp)
                    ;
 
 -- Table  btcpays
@@ -267,9 +286,6 @@ INSERT INTO credits VALUES(154931,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',569
 INSERT INTO credits VALUES(154932,'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',10000,NULL,'452ba1ddef80246c48be7690193c76c1d61185906be9401014fe14f1be64b74f');
 INSERT INTO credits VALUES(154933,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',3157,NULL,NULL);
 INSERT INTO credits VALUES(154933,'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','XCP',4735500000,NULL,NULL);
--- Triggers and indices on  credits
-CREATE INDEX address_idx ON credits (address)
-                   ;
 
 -- Table  debits
 DROP TABLE IF EXISTS debits;
@@ -300,7 +316,9 @@ INSERT INTO debits VALUES(154932,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',100
 INSERT INTO debits VALUES(154933,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',4735500000,NULL,NULL);
 INSERT INTO debits VALUES(154933,'n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',3157,NULL,NULL);
 -- Triggers and indices on  debits
-CREATE INDEX debits_address_idx ON debits (address)
+CREATE INDEX address_idx ON debits (address)
+                   ;
+CREATE INDEX asset_idx ON debits (asset)
                    ;
 
 -- Table  dividends
@@ -343,104 +361,118 @@ INSERT INTO issuances VALUES(6,'67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8be
 -- Triggers and indices on  issuances
 CREATE INDEX status_idx ON issuances (status)
                    ;
-CREATE INDEX valid_asset_idx ON issuances (status, asset)
+CREATE INDEX valid_asset_idx ON issuances (asset, status)
                    ;
+
+-- Table  mempool
+DROP TABLE IF EXISTS mempool;
+CREATE TABLE mempool(
+                      tx_hash TEXT PRIMARY KEY,
+                      command TEXT,
+                      category TEXT,
+                      bindings TEXT,
+                      timestamp INTEGER);
 
 -- Table  messages
 DROP TABLE IF EXISTS messages;
 CREATE TABLE messages(
                       message_index INTEGER PRIMARY KEY,
+                      tx_hash TEXT,
                       block_index INTEGER,
                       command TEXT,
                       category TEXT,
-                      bindings TEXT);
-INSERT INTO messages VALUES(0,154908,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154908, "event": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d", "quantity": 93000000000}');
-INSERT INTO messages VALUES(1,154908,'insert','burns','{"block_index": 154908, "burned": 62000000, "earned": 93000000000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d", "tx_index": 0}');
-INSERT INTO messages VALUES(2,154909,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154909, "event": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a", "quantity": 50000000}');
-INSERT INTO messages VALUES(3,154909,'insert','credits','{"action": null, "address": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "asset": "XCP", "block_index": 154909, "event": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a", "quantity": 50000000}');
-INSERT INTO messages VALUES(4,154909,'insert','sends','{"asset": "XCP", "block_index": 154909, "destination": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "quantity": 50000000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a", "tx_index": 1}');
-INSERT INTO messages VALUES(5,154910,'insert','orders','{"block_index": 154910, "expiration": 10, "expire_index": 154920, "fee_provided": 1000000, "fee_provided_remaining": 1000000, "fee_required": 0, "fee_required_remaining": 0, "get_asset": "XCP", "get_quantity": 100000000, "get_remaining": 100000000, "give_asset": "BTC", "give_quantity": 50000000, "give_remaining": 50000000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "tx_hash": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986", "tx_index": 2}');
-INSERT INTO messages VALUES(6,154911,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154911, "event": "084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5", "quantity": 105000000}');
-INSERT INTO messages VALUES(7,154911,'insert','orders','{"block_index": 154911, "expiration": 10, "expire_index": 154921, "fee_provided": 20000, "fee_provided_remaining": 20000, "fee_required": 900000, "fee_required_remaining": 900000, "get_asset": "BTC", "get_quantity": 50000000, "get_remaining": 50000000, "give_asset": "XCP", "give_quantity": 105000000, "give_remaining": 105000000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "tx_hash": "084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5", "tx_index": 3}');
-INSERT INTO messages VALUES(8,154911,'update','orders','{"fee_provided_remaining": 100000, "fee_required_remaining": 0, "get_remaining": 0, "give_remaining": 0, "status": "open", "tx_hash": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986"}');
-INSERT INTO messages VALUES(9,154911,'update','orders','{"fee_provided_remaining": 20000, "fee_required_remaining": 0, "get_remaining": 0, "give_remaining": 5000000, "status": "open", "tx_hash": "084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5"}');
-INSERT INTO messages VALUES(10,154911,'insert','order_matches','{"backward_asset": "XCP", "backward_quantity": 100000000, "fee_paid": 900000, "forward_asset": "BTC", "forward_quantity": 50000000, "id": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5", "match_expire_index": 154921, "status": "pending", "tx0_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx0_block_index": 154910, "tx0_expiration": 10, "tx0_hash": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986", "tx0_index": 2, "tx1_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx1_block_index": 154911, "tx1_expiration": 10, "tx1_hash": "084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5", "tx1_index": 3}');
-INSERT INTO messages VALUES(11,154912,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154912, "event": null, "quantity": 100000000}');
-INSERT INTO messages VALUES(12,154912,'update','order_matches','{"order_match_id": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5", "status": "completed"}');
-INSERT INTO messages VALUES(13,154912,'insert','btcpays','{"block_index": 154912, "btc_amount": 50000000, "destination": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "order_match_id": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5", "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71", "tx_index": 4}');
-INSERT INTO messages VALUES(14,154913,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154913, "event": null, "quantity": 50000000}');
-INSERT INTO messages VALUES(15,154913,'insert','issuances','{"asset": "BBBB", "block_index": 154913, "call_date": 0, "call_price": 0.0, "callable": false, "description": "", "divisible": true, "fee_paid": 50000000, "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "locked": false, "quantity": 1000000000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "transfer": false, "tx_hash": "e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db", "tx_index": 5}');
-INSERT INTO messages VALUES(16,154913,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBB", "block_index": 154913, "event": null, "quantity": 1000000000}');
-INSERT INTO messages VALUES(17,154914,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154914, "event": null, "quantity": 50000000}');
-INSERT INTO messages VALUES(18,154914,'insert','issuances','{"asset": "BBBC", "block_index": 154914, "call_date": 17, "call_price": 0.015, "callable": true, "description": "foobar", "divisible": false, "fee_paid": 50000000, "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "locked": false, "quantity": 100000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "transfer": false, "tx_hash": "67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6", "tx_index": 6}');
-INSERT INTO messages VALUES(19,154914,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBC", "block_index": 154914, "event": null, "quantity": 100000}');
-INSERT INTO messages VALUES(20,154915,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBB", "block_index": 154915, "event": "ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879", "quantity": 4000000}');
-INSERT INTO messages VALUES(21,154915,'insert','credits','{"action": null, "address": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "asset": "BBBB", "block_index": 154915, "event": "ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879", "quantity": 4000000}');
-INSERT INTO messages VALUES(22,154915,'insert','sends','{"asset": "BBBB", "block_index": 154915, "destination": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "quantity": 4000000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879", "tx_index": 7}');
-INSERT INTO messages VALUES(23,154916,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBC", "block_index": 154916, "event": "beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a", "quantity": 526}');
-INSERT INTO messages VALUES(24,154916,'insert','credits','{"action": null, "address": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "asset": "BBBC", "block_index": 154916, "event": "beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a", "quantity": 526}');
-INSERT INTO messages VALUES(25,154916,'insert','sends','{"asset": "BBBC", "block_index": 154916, "destination": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "quantity": 526, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a", "tx_index": 8}');
-INSERT INTO messages VALUES(26,154917,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154917, "event": null, "quantity": 24}');
-INSERT INTO messages VALUES(27,154917,'insert','credits','{"action": null, "address": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "asset": "XCP", "block_index": 154917, "event": null, "quantity": 24}');
-INSERT INTO messages VALUES(28,154917,'insert','dividends','{"asset": "BBBB", "block_index": 154917, "dividend_asset": "XCP", "quantity_per_unit": 600, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "2b4c342f5433ebe591a1da77e013d1b72475562d48578dca8b84bac6651c3cb9", "tx_index": 9}');
-INSERT INTO messages VALUES(29,154918,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154918, "event": null, "quantity": 420800}');
-INSERT INTO messages VALUES(30,154918,'insert','credits','{"action": null, "address": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "asset": "XCP", "block_index": 154918, "event": null, "quantity": 420800}');
-INSERT INTO messages VALUES(31,154918,'insert','dividends','{"asset": "BBBC", "block_index": 154918, "dividend_asset": "XCP", "quantity_per_unit": 800, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b", "tx_index": 10}');
-INSERT INTO messages VALUES(32,154919,'insert','broadcasts','{"block_index": 154919, "fee_fraction_int": 5000000, "locked": false, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "text": "Unit Test", "timestamp": 1388000000, "tx_hash": "e7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6", "tx_index": 11, "value": 100.0}');
-INSERT INTO messages VALUES(33,154920,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154920, "event": null, "quantity": 50000000}');
-INSERT INTO messages VALUES(34,154920,'insert','bets','{"bet_type": 0, "block_index": 154920, "counterwager_quantity": 25000000, "counterwager_remaining": 25000000, "deadline": 1388000100, "expiration": 10, "expire_index": 154930, "fee_fraction_int": 5000000.0, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "leverage": 15120, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "target_value": 0.0, "tx_hash": "ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c977", "tx_index": 12, "wager_quantity": 50000000, "wager_remaining": 50000000}');
-INSERT INTO messages VALUES(35,154921,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154921, "event": null, "quantity": 25000000}');
-INSERT INTO messages VALUES(36,154921,'insert','bets','{"bet_type": 1, "block_index": 154921, "counterwager_quantity": 41500000, "counterwager_remaining": 41500000, "deadline": 1388000100, "expiration": 10, "expire_index": 154931, "fee_fraction_int": 5000000.0, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "leverage": 15120, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "target_value": 0.0, "tx_hash": "9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4", "tx_index": 13, "wager_quantity": 25000000, "wager_remaining": 25000000}');
-INSERT INTO messages VALUES(37,154921,'update','bets','{"counterwager_remaining": 4250000, "status": "open", "tx_hash": "ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c977", "wager_remaining": 8500000}');
-INSERT INTO messages VALUES(38,154921,'insert','credits','{"action": "filled", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154921, "event": "9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4", "quantity": 4250000}');
-INSERT INTO messages VALUES(39,154921,'update','bets','{"counterwager_remaining": 0, "status": "filled", "tx_hash": "9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4", "wager_remaining": 4250000}');
-INSERT INTO messages VALUES(40,154921,'insert','bet_matches','{"backward_quantity": 20750000, "deadline": 1388000100, "fee_fraction_int": 5000000, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "forward_quantity": 41500000, "id": "ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c9779d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4", "initial_value": 100.0, "leverage": 15120, "match_expire_index": 154930, "status": "pending", "target_value": 0.0, "tx0_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx0_bet_type": 0, "tx0_block_index": 154920, "tx0_expiration": 10, "tx0_hash": "ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c977", "tx0_index": 12, "tx1_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx1_bet_type": 1, "tx1_block_index": 154921, "tx1_expiration": 10, "tx1_hash": "9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4", "tx1_index": 13}');
-INSERT INTO messages VALUES(41,154922,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154922, "event": null, "quantity": 150000000}');
-INSERT INTO messages VALUES(42,154922,'insert','bets','{"bet_type": 0, "block_index": 154922, "counterwager_quantity": 350000000, "counterwager_remaining": 350000000, "deadline": 1388000100, "expiration": 10, "expire_index": 154932, "fee_fraction_int": 5000000.0, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "leverage": 5040, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "target_value": 0.0, "tx_hash": "4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47", "tx_index": 14, "wager_quantity": 150000000, "wager_remaining": 150000000}');
-INSERT INTO messages VALUES(43,154923,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154923, "event": null, "quantity": 350000000}');
-INSERT INTO messages VALUES(44,154923,'insert','bets','{"bet_type": 1, "block_index": 154923, "counterwager_quantity": 150000000, "counterwager_remaining": 150000000, "deadline": 1388000100, "expiration": 10, "expire_index": 154933, "fee_fraction_int": 5000000.0, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "leverage": 5040, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "target_value": 0.0, "tx_hash": "dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8", "tx_index": 15, "wager_quantity": 350000000, "wager_remaining": 350000000}');
-INSERT INTO messages VALUES(45,154923,'insert','credits','{"action": "filled", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154923, "event": "dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8", "quantity": 0}');
-INSERT INTO messages VALUES(46,154923,'update','bets','{"counterwager_remaining": 0, "status": "filled", "tx_hash": "4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47", "wager_remaining": 0}');
-INSERT INTO messages VALUES(47,154923,'insert','credits','{"action": "filled", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154923, "event": "dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8", "quantity": 0}');
-INSERT INTO messages VALUES(48,154923,'update','bets','{"counterwager_remaining": 0, "status": "filled", "tx_hash": "dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8", "wager_remaining": 0}');
-INSERT INTO messages VALUES(49,154923,'insert','bet_matches','{"backward_quantity": 350000000, "deadline": 1388000100, "fee_fraction_int": 5000000, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "forward_quantity": 150000000, "id": "4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8", "initial_value": 100.0, "leverage": 5040, "match_expire_index": 154932, "status": "pending", "target_value": 0.0, "tx0_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx0_bet_type": 0, "tx0_block_index": 154922, "tx0_expiration": 10, "tx0_hash": "4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47", "tx0_index": 14, "tx1_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx1_bet_type": 1, "tx1_block_index": 154923, "tx1_expiration": 10, "tx1_hash": "dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8", "tx1_index": 15}');
-INSERT INTO messages VALUES(50,154924,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154924, "event": null, "quantity": 750000000}');
-INSERT INTO messages VALUES(51,154924,'insert','bets','{"bet_type": 2, "block_index": 154924, "counterwager_quantity": 650000000, "counterwager_remaining": 650000000, "deadline": 1388000200, "expiration": 10, "expire_index": 154934, "fee_fraction_int": 5000000.0, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "leverage": 5040, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "target_value": 1.0, "tx_hash": "c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee3", "tx_index": 16, "wager_quantity": 750000000, "wager_remaining": 750000000}');
-INSERT INTO messages VALUES(52,154925,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154925, "event": null, "quantity": 650000000}');
-INSERT INTO messages VALUES(53,154925,'insert','bets','{"bet_type": 3, "block_index": 154925, "counterwager_quantity": 750000000, "counterwager_remaining": 750000000, "deadline": 1388000200, "expiration": 10, "expire_index": 154935, "fee_fraction_int": 5000000.0, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "leverage": 5040, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "target_value": 1.0, "tx_hash": "4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a", "tx_index": 17, "wager_quantity": 650000000, "wager_remaining": 650000000}');
-INSERT INTO messages VALUES(54,154925,'insert','credits','{"action": "filled", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154925, "event": "4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a", "quantity": 0}');
-INSERT INTO messages VALUES(55,154925,'update','bets','{"counterwager_remaining": 0, "status": "filled", "tx_hash": "c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee3", "wager_remaining": 0}');
-INSERT INTO messages VALUES(56,154925,'insert','credits','{"action": "filled", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154925, "event": "4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a", "quantity": 0}');
-INSERT INTO messages VALUES(57,154925,'update','bets','{"counterwager_remaining": 0, "status": "filled", "tx_hash": "4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a", "wager_remaining": 0}');
-INSERT INTO messages VALUES(58,154925,'insert','bet_matches','{"backward_quantity": 650000000, "deadline": 1388000200, "fee_fraction_int": 5000000, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "forward_quantity": 750000000, "id": "c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee34a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a", "initial_value": 100.0, "leverage": 5040, "match_expire_index": 154934, "status": "pending", "target_value": 1.0, "tx0_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx0_bet_type": 2, "tx0_block_index": 154924, "tx0_expiration": 10, "tx0_hash": "c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee3", "tx0_index": 16, "tx1_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx1_bet_type": 3, "tx1_block_index": 154925, "tx1_expiration": 10, "tx1_hash": "4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a", "tx1_index": 17}');
-INSERT INTO messages VALUES(59,154926,'insert','broadcasts','{"block_index": 154926, "fee_fraction_int": 5000000, "locked": false, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "text": "Unit Test", "timestamp": 1388000050, "tx_hash": "f299791cddd3d6664f6670842812ef6053eb6501bd6282a476bbbf3ee91e750c", "tx_index": 18, "value": 99.86166}');
-INSERT INTO messages VALUES(60,154926,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154926, "event": null, "quantity": 59137500}');
-INSERT INTO messages VALUES(61,154926,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154926, "event": null, "quantity": 3112500}');
-INSERT INTO messages VALUES(62,154926,'update','bet_matches','{"bet_match_id": "ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c9779d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4", "status": "settled: liquidated for bull"}');
-INSERT INTO messages VALUES(63,154927,'insert','broadcasts','{"block_index": 154927, "fee_fraction_int": 5000000, "locked": false, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "text": "Unit Test", "timestamp": 1388000101, "tx_hash": "ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2", "tx_index": 19, "value": 100.343}');
-INSERT INTO messages VALUES(64,154927,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154927, "event": null, "quantity": 159300000}');
-INSERT INTO messages VALUES(65,154927,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154927, "event": null, "quantity": 315700000}');
-INSERT INTO messages VALUES(66,154927,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154927, "event": null, "quantity": 25000000}');
-INSERT INTO messages VALUES(67,154927,'update','bet_matches','{"bet_match_id": "4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8", "status": "settled"}');
-INSERT INTO messages VALUES(68,154928,'insert','broadcasts','{"block_index": 154928, "fee_fraction_int": 5000000, "locked": false, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "text": "Unit Test", "timestamp": 1388000201, "tx_hash": "83891d7fe85c33e52c8b4e5814c92fb6a3b9467299200538a6babaa8b452d879", "tx_index": 20, "value": 2.0}');
-INSERT INTO messages VALUES(69,154928,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154928, "event": null, "quantity": 1330000000}');
-INSERT INTO messages VALUES(70,154928,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154928, "event": null, "quantity": 70000000}');
-INSERT INTO messages VALUES(71,154928,'update','bet_matches','{"bet_match_id": "c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee34a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a", "status": "settled: for notequal"}');
-INSERT INTO messages VALUES(72,154929,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBB", "block_index": 154929, "event": "2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608", "quantity": 50000000}');
-INSERT INTO messages VALUES(73,154929,'insert','orders','{"block_index": 154929, "expiration": 10, "expire_index": 154939, "fee_provided": 20000, "fee_provided_remaining": 20000, "fee_required": 0, "fee_required_remaining": 0, "get_asset": "XCP", "get_quantity": 50000000, "get_remaining": 50000000, "give_asset": "BBBB", "give_quantity": 50000000, "give_remaining": 50000000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "tx_hash": "2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608", "tx_index": 21}');
-INSERT INTO messages VALUES(74,154930,'update','orders','{"status": "cancelled", "tx_hash": "2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608"}');
-INSERT INTO messages VALUES(75,154930,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBB", "block_index": 154930, "event": "2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608", "quantity": 50000000}');
-INSERT INTO messages VALUES(76,154930,'insert','cancels','{"block_index": 154930, "offer_hash": "2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608", "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "7cb7c4547cf2653590d7a9ace60cc623d25148adfbc88a89aeb0ef88da7839ba", "tx_index": 22}');
-INSERT INTO messages VALUES(77,154931,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154931, "event": "8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034", "quantity": 56999886870}');
-INSERT INTO messages VALUES(78,154931,'insert','burns','{"block_index": 154931, "burned": 38000000, "earned": 56999886870, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034", "tx_index": 23}');
-INSERT INTO messages VALUES(79,154932,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBC", "block_index": 154932, "event": "452ba1ddef80246c48be7690193c76c1d61185906be9401014fe14f1be64b74f", "quantity": 10000}');
-INSERT INTO messages VALUES(80,154932,'insert','credits','{"action": null, "address": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "asset": "BBBC", "block_index": 154932, "event": "452ba1ddef80246c48be7690193c76c1d61185906be9401014fe14f1be64b74f", "quantity": 10000}');
-INSERT INTO messages VALUES(81,154932,'insert','sends','{"asset": "BBBC", "block_index": 154932, "destination": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "quantity": 10000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "452ba1ddef80246c48be7690193c76c1d61185906be9401014fe14f1be64b74f", "tx_index": 24}');
-INSERT INTO messages VALUES(82,154933,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154933, "event": null, "quantity": 4735500000}');
-INSERT INTO messages VALUES(83,154933,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBC", "block_index": 154933, "event": null, "quantity": 3157}');
-INSERT INTO messages VALUES(84,154933,'insert','debits','{"action": null, "address": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "asset": "BBBC", "block_index": 154933, "event": null, "quantity": 3157}');
-INSERT INTO messages VALUES(85,154933,'insert','credits','{"action": null, "address": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "asset": "XCP", "block_index": 154933, "event": null, "quantity": 4735500000}');
-INSERT INTO messages VALUES(86,154933,'insert','callbacks','{"asset": "BBBC", "block_index": 154933, "fraction": 0.3, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "68aa2e2ee5dff96e3355e6c7ee373e3d6a4e17f75f9518d843709c0c9bc3e3d4", "tx_index": 25}');
+                      bindings TEXT,
+                      timestamp INTEGER);
+INSERT INTO messages VALUES(0,NULL,154908,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154908, "event": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d", "quantity": 93000000000}',0);
+INSERT INTO messages VALUES(1,'6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d',154908,'insert','burns','{"block_index": 154908, "burned": 62000000, "earned": 93000000000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d", "tx_index": 0}',0);
+INSERT INTO messages VALUES(2,NULL,154909,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154909, "event": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a", "quantity": 50000000}',0);
+INSERT INTO messages VALUES(3,NULL,154909,'insert','credits','{"action": null, "address": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "asset": "XCP", "block_index": 154909, "event": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a", "quantity": 50000000}',0);
+INSERT INTO messages VALUES(4,'4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a',154909,'insert','sends','{"asset": "XCP", "block_index": 154909, "destination": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "quantity": 50000000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a", "tx_index": 1}',0);
+INSERT INTO messages VALUES(5,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986',154910,'insert','orders','{"block_index": 154910, "expiration": 10, "expire_index": 154920, "fee_provided": 1000000, "fee_provided_remaining": 1000000, "fee_required": 0, "fee_required_remaining": 0, "get_asset": "XCP", "get_quantity": 100000000, "get_remaining": 100000000, "give_asset": "BTC", "give_quantity": 50000000, "give_remaining": 50000000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "tx_hash": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986", "tx_index": 2}',0);
+INSERT INTO messages VALUES(6,NULL,154911,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154911, "event": "084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5", "quantity": 105000000}',0);
+INSERT INTO messages VALUES(7,'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5',154911,'insert','orders','{"block_index": 154911, "expiration": 10, "expire_index": 154921, "fee_provided": 20000, "fee_provided_remaining": 20000, "fee_required": 900000, "fee_required_remaining": 900000, "get_asset": "BTC", "get_quantity": 50000000, "get_remaining": 50000000, "give_asset": "XCP", "give_quantity": 105000000, "give_remaining": 105000000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "tx_hash": "084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5", "tx_index": 3}',0);
+INSERT INTO messages VALUES(8,NULL,154911,'update','orders','{"fee_provided_remaining": 100000, "fee_required_remaining": 0, "get_remaining": 0, "give_remaining": 0, "status": "open", "tx_hash": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986"}',0);
+INSERT INTO messages VALUES(9,NULL,154911,'update','orders','{"fee_provided_remaining": 20000, "fee_required_remaining": 0, "get_remaining": 0, "give_remaining": 5000000, "status": "open", "tx_hash": "084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5"}',0);
+INSERT INTO messages VALUES(10,NULL,154911,'insert','order_matches','{"backward_asset": "XCP", "backward_quantity": 100000000, "block_index": 154911, "fee_paid": 900000, "forward_asset": "BTC", "forward_quantity": 50000000, "id": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5", "match_expire_index": 154921, "status": "pending", "tx0_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx0_block_index": 154910, "tx0_expiration": 10, "tx0_hash": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986", "tx0_index": 2, "tx1_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx1_block_index": 154911, "tx1_expiration": 10, "tx1_hash": "084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5", "tx1_index": 3}',0);
+INSERT INTO messages VALUES(11,NULL,154912,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154912, "event": null, "quantity": 100000000}',0);
+INSERT INTO messages VALUES(12,NULL,154912,'update','order_matches','{"order_match_id": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5", "status": "completed"}',0);
+INSERT INTO messages VALUES(13,'e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71',154912,'insert','btcpays','{"block_index": 154912, "btc_amount": 50000000, "destination": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "order_match_id": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5", "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71", "tx_index": 4}',0);
+INSERT INTO messages VALUES(14,NULL,154913,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154913, "event": null, "quantity": 50000000}',0);
+INSERT INTO messages VALUES(15,'e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db',154913,'insert','issuances','{"asset": "BBBB", "block_index": 154913, "call_date": 0, "call_price": 0.0, "callable": false, "description": "", "divisible": true, "fee_paid": 50000000, "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "locked": false, "quantity": 1000000000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "transfer": false, "tx_hash": "e77b9a9ae9e30b0dbdb6f510a264ef9de781501d7b6b92ae89eb059c5ab743db", "tx_index": 5}',0);
+INSERT INTO messages VALUES(16,NULL,154913,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBB", "block_index": 154913, "event": null, "quantity": 1000000000}',0);
+INSERT INTO messages VALUES(17,NULL,154914,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154914, "event": null, "quantity": 50000000}',0);
+INSERT INTO messages VALUES(18,'67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6',154914,'insert','issuances','{"asset": "BBBC", "block_index": 154914, "call_date": 17, "call_price": 0.015, "callable": true, "description": "foobar", "divisible": false, "fee_paid": 50000000, "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "locked": false, "quantity": 100000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "transfer": false, "tx_hash": "67586e98fad27da0b9968bc039a1ef34c939b9b8e523a8bef89d478608c5ecf6", "tx_index": 6}',0);
+INSERT INTO messages VALUES(19,NULL,154914,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBC", "block_index": 154914, "event": null, "quantity": 100000}',0);
+INSERT INTO messages VALUES(20,NULL,154915,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBB", "block_index": 154915, "event": "ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879", "quantity": 4000000}',0);
+INSERT INTO messages VALUES(21,NULL,154915,'insert','credits','{"action": null, "address": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "asset": "BBBB", "block_index": 154915, "event": "ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879", "quantity": 4000000}',0);
+INSERT INTO messages VALUES(22,'ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879',154915,'insert','sends','{"asset": "BBBB", "block_index": 154915, "destination": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "quantity": 4000000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879", "tx_index": 7}',0);
+INSERT INTO messages VALUES(23,NULL,154916,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBC", "block_index": 154916, "event": "beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a", "quantity": 526}',0);
+INSERT INTO messages VALUES(24,NULL,154916,'insert','credits','{"action": null, "address": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "asset": "BBBC", "block_index": 154916, "event": "beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a", "quantity": 526}',0);
+INSERT INTO messages VALUES(25,'beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a',154916,'insert','sends','{"asset": "BBBC", "block_index": 154916, "destination": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "quantity": 526, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a", "tx_index": 8}',0);
+INSERT INTO messages VALUES(26,NULL,154917,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154917, "event": null, "quantity": 24}',0);
+INSERT INTO messages VALUES(27,NULL,154917,'insert','credits','{"action": null, "address": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "asset": "XCP", "block_index": 154917, "event": null, "quantity": 24}',0);
+INSERT INTO messages VALUES(28,'2b4c342f5433ebe591a1da77e013d1b72475562d48578dca8b84bac6651c3cb9',154917,'insert','dividends','{"asset": "BBBB", "block_index": 154917, "dividend_asset": "XCP", "quantity_per_unit": 600, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "2b4c342f5433ebe591a1da77e013d1b72475562d48578dca8b84bac6651c3cb9", "tx_index": 9}',0);
+INSERT INTO messages VALUES(29,NULL,154918,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154918, "event": null, "quantity": 420800}',0);
+INSERT INTO messages VALUES(30,NULL,154918,'insert','credits','{"action": null, "address": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "asset": "XCP", "block_index": 154918, "event": null, "quantity": 420800}',0);
+INSERT INTO messages VALUES(31,'01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b',154918,'insert','dividends','{"asset": "BBBC", "block_index": 154918, "dividend_asset": "XCP", "quantity_per_unit": 800, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b", "tx_index": 10}',0);
+INSERT INTO messages VALUES(32,'e7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6',154919,'insert','broadcasts','{"block_index": 154919, "fee_fraction_int": 5000000, "locked": false, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "text": "Unit Test", "timestamp": 1388000000, "tx_hash": "e7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6", "tx_index": 11, "value": 100.0}',0);
+INSERT INTO messages VALUES(33,NULL,154920,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154920, "event": null, "quantity": 50000000}',0);
+INSERT INTO messages VALUES(34,'ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c977',154920,'insert','bets','{"bet_type": 0, "block_index": 154920, "counterwager_quantity": 25000000, "counterwager_remaining": 25000000, "deadline": 1388000100, "expiration": 10, "expire_index": 154930, "fee_fraction_int": 5000000.0, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "leverage": 15120, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "target_value": 0.0, "tx_hash": "ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c977", "tx_index": 12, "wager_quantity": 50000000, "wager_remaining": 50000000}',0);
+INSERT INTO messages VALUES(35,NULL,154921,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154921, "event": null, "quantity": 25000000}',0);
+INSERT INTO messages VALUES(36,'9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4',154921,'insert','bets','{"bet_type": 1, "block_index": 154921, "counterwager_quantity": 41500000, "counterwager_remaining": 41500000, "deadline": 1388000100, "expiration": 10, "expire_index": 154931, "fee_fraction_int": 5000000.0, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "leverage": 15120, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "target_value": 0.0, "tx_hash": "9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4", "tx_index": 13, "wager_quantity": 25000000, "wager_remaining": 25000000}',0);
+INSERT INTO messages VALUES(37,NULL,154921,'update','bets','{"counterwager_remaining": 4250000, "status": "open", "tx_hash": "ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c977", "wager_remaining": 8500000}',0);
+INSERT INTO messages VALUES(38,NULL,154921,'insert','credits','{"action": "filled", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154921, "event": "9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4", "quantity": 4250000}',0);
+INSERT INTO messages VALUES(39,NULL,154921,'update','bets','{"counterwager_remaining": 0, "status": "filled", "tx_hash": "9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4", "wager_remaining": 4250000}',0);
+INSERT INTO messages VALUES(40,NULL,154921,'insert','bet_matches','{"backward_quantity": 20750000, "block_index": 154921, "deadline": 1388000100, "fee_fraction_int": 5000000, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "forward_quantity": 41500000, "id": "ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c9779d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4", "initial_value": 100.0, "leverage": 15120, "match_expire_index": 154930, "status": "pending", "target_value": 0.0, "tx0_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx0_bet_type": 0, "tx0_block_index": 154920, "tx0_expiration": 10, "tx0_hash": "ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c977", "tx0_index": 12, "tx1_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx1_bet_type": 1, "tx1_block_index": 154921, "tx1_expiration": 10, "tx1_hash": "9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4", "tx1_index": 13}',0);
+INSERT INTO messages VALUES(41,NULL,154922,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154922, "event": null, "quantity": 150000000}',0);
+INSERT INTO messages VALUES(42,'4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47',154922,'insert','bets','{"bet_type": 0, "block_index": 154922, "counterwager_quantity": 350000000, "counterwager_remaining": 350000000, "deadline": 1388000100, "expiration": 10, "expire_index": 154932, "fee_fraction_int": 5000000.0, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "leverage": 5040, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "target_value": 0.0, "tx_hash": "4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47", "tx_index": 14, "wager_quantity": 150000000, "wager_remaining": 150000000}',0);
+INSERT INTO messages VALUES(43,NULL,154923,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154923, "event": null, "quantity": 350000000}',0);
+INSERT INTO messages VALUES(44,'dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8',154923,'insert','bets','{"bet_type": 1, "block_index": 154923, "counterwager_quantity": 150000000, "counterwager_remaining": 150000000, "deadline": 1388000100, "expiration": 10, "expire_index": 154933, "fee_fraction_int": 5000000.0, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "leverage": 5040, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "target_value": 0.0, "tx_hash": "dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8", "tx_index": 15, "wager_quantity": 350000000, "wager_remaining": 350000000}',0);
+INSERT INTO messages VALUES(45,NULL,154923,'insert','credits','{"action": "filled", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154923, "event": "dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8", "quantity": 0}',0);
+INSERT INTO messages VALUES(46,NULL,154923,'update','bets','{"counterwager_remaining": 0, "status": "filled", "tx_hash": "4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47", "wager_remaining": 0}',0);
+INSERT INTO messages VALUES(47,NULL,154923,'insert','credits','{"action": "filled", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154923, "event": "dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8", "quantity": 0}',0);
+INSERT INTO messages VALUES(48,NULL,154923,'update','bets','{"counterwager_remaining": 0, "status": "filled", "tx_hash": "dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8", "wager_remaining": 0}',0);
+INSERT INTO messages VALUES(49,NULL,154923,'insert','bet_matches','{"backward_quantity": 350000000, "block_index": 154923, "deadline": 1388000100, "fee_fraction_int": 5000000, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "forward_quantity": 150000000, "id": "4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8", "initial_value": 100.0, "leverage": 5040, "match_expire_index": 154932, "status": "pending", "target_value": 0.0, "tx0_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx0_bet_type": 0, "tx0_block_index": 154922, "tx0_expiration": 10, "tx0_hash": "4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47", "tx0_index": 14, "tx1_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx1_bet_type": 1, "tx1_block_index": 154923, "tx1_expiration": 10, "tx1_hash": "dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8", "tx1_index": 15}',0);
+INSERT INTO messages VALUES(50,NULL,154924,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154924, "event": null, "quantity": 750000000}',0);
+INSERT INTO messages VALUES(51,'c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee3',154924,'insert','bets','{"bet_type": 2, "block_index": 154924, "counterwager_quantity": 650000000, "counterwager_remaining": 650000000, "deadline": 1388000200, "expiration": 10, "expire_index": 154934, "fee_fraction_int": 5000000.0, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "leverage": 5040, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "target_value": 1.0, "tx_hash": "c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee3", "tx_index": 16, "wager_quantity": 750000000, "wager_remaining": 750000000}',0);
+INSERT INTO messages VALUES(52,NULL,154925,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154925, "event": null, "quantity": 650000000}',0);
+INSERT INTO messages VALUES(53,'4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a',154925,'insert','bets','{"bet_type": 3, "block_index": 154925, "counterwager_quantity": 750000000, "counterwager_remaining": 750000000, "deadline": 1388000200, "expiration": 10, "expire_index": 154935, "fee_fraction_int": 5000000.0, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "leverage": 5040, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "target_value": 1.0, "tx_hash": "4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a", "tx_index": 17, "wager_quantity": 650000000, "wager_remaining": 650000000}',0);
+INSERT INTO messages VALUES(54,NULL,154925,'insert','credits','{"action": "filled", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154925, "event": "4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a", "quantity": 0}',0);
+INSERT INTO messages VALUES(55,NULL,154925,'update','bets','{"counterwager_remaining": 0, "status": "filled", "tx_hash": "c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee3", "wager_remaining": 0}',0);
+INSERT INTO messages VALUES(56,NULL,154925,'insert','credits','{"action": "filled", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154925, "event": "4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a", "quantity": 0}',0);
+INSERT INTO messages VALUES(57,NULL,154925,'update','bets','{"counterwager_remaining": 0, "status": "filled", "tx_hash": "4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a", "wager_remaining": 0}',0);
+INSERT INTO messages VALUES(58,NULL,154925,'insert','bet_matches','{"backward_quantity": 650000000, "block_index": 154925, "deadline": 1388000200, "fee_fraction_int": 5000000, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "forward_quantity": 750000000, "id": "c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee34a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a", "initial_value": 100.0, "leverage": 5040, "match_expire_index": 154934, "status": "pending", "target_value": 1.0, "tx0_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx0_bet_type": 2, "tx0_block_index": 154924, "tx0_expiration": 10, "tx0_hash": "c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee3", "tx0_index": 16, "tx1_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx1_bet_type": 3, "tx1_block_index": 154925, "tx1_expiration": 10, "tx1_hash": "4a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a", "tx1_index": 17}',0);
+INSERT INTO messages VALUES(59,'f299791cddd3d6664f6670842812ef6053eb6501bd6282a476bbbf3ee91e750c',154926,'insert','broadcasts','{"block_index": 154926, "fee_fraction_int": 5000000, "locked": false, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "text": "Unit Test", "timestamp": 1388000050, "tx_hash": "f299791cddd3d6664f6670842812ef6053eb6501bd6282a476bbbf3ee91e750c", "tx_index": 18, "value": 99.86166}',0);
+INSERT INTO messages VALUES(60,NULL,154926,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154926, "event": null, "quantity": 59137500}',0);
+INSERT INTO messages VALUES(61,NULL,154926,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154926, "event": null, "quantity": 3112500}',0);
+INSERT INTO messages VALUES(62,NULL,154926,'insert','bet_match_resolutions','{"bear_credit": 59137500, "bet_match_id": "ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c9779d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4", "bet_match_type_id": 1, "block_index": 154926, "bull_credit": 0, "escrow_less_fee": null, "fee": 3112500, "settled": false, "winner": null}',0);
+INSERT INTO messages VALUES(63,NULL,154926,'update','bet_matches','{"bet_match_id": "ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c9779d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4", "status": "settled: liquidated for bull"}',0);
+INSERT INTO messages VALUES(64,'ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2',154927,'insert','broadcasts','{"block_index": 154927, "fee_fraction_int": 5000000, "locked": false, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "text": "Unit Test", "timestamp": 1388000101, "tx_hash": "ab897fbdedfa502b2d839b6a56100887dccdc507555c282e59589e06300a62e2", "tx_index": 19, "value": 100.343}',0);
+INSERT INTO messages VALUES(65,NULL,154927,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154927, "event": null, "quantity": 159300000}',0);
+INSERT INTO messages VALUES(66,NULL,154927,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154927, "event": null, "quantity": 315700000}',0);
+INSERT INTO messages VALUES(67,NULL,154927,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154927, "event": null, "quantity": 25000000}',0);
+INSERT INTO messages VALUES(68,NULL,154927,'insert','bet_match_resolutions','{"bear_credit": 315700000, "bet_match_id": "4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8", "bet_match_type_id": 1, "block_index": 154927, "bull_credit": 159300000, "escrow_less_fee": null, "fee": 25000000, "settled": true, "winner": null}',0);
+INSERT INTO messages VALUES(69,NULL,154927,'update','bet_matches','{"bet_match_id": "4d7b3ef7300acf70c892d8327db8272f54434adbc61a4e130a563cb59a0d0f47dc0e9c3658a1a3ed1ec94274d8b19925c93e1abb7ddba294923ad9bde30f8cb8", "status": "settled"}',0);
+INSERT INTO messages VALUES(70,'83891d7fe85c33e52c8b4e5814c92fb6a3b9467299200538a6babaa8b452d879',154928,'insert','broadcasts','{"block_index": 154928, "fee_fraction_int": 5000000, "locked": false, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "text": "Unit Test", "timestamp": 1388000201, "tx_hash": "83891d7fe85c33e52c8b4e5814c92fb6a3b9467299200538a6babaa8b452d879", "tx_index": 20, "value": 2.0}',0);
+INSERT INTO messages VALUES(71,NULL,154928,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154928, "event": null, "quantity": 1330000000}',0);
+INSERT INTO messages VALUES(72,NULL,154928,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154928, "event": null, "quantity": 70000000}',0);
+INSERT INTO messages VALUES(73,NULL,154928,'insert','bet_match_resolutions','{"bear_credit": null, "bet_match_id": "c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee34a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a", "bet_match_type_id": 5, "block_index": 154928, "bull_credit": null, "escrow_less_fee": 1330000000, "fee": 70000000, "settled": null, "winner": "NotEqual"}',0);
+INSERT INTO messages VALUES(74,NULL,154928,'update','bet_matches','{"bet_match_id": "c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee34a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a", "status": "settled: for notequal"}',0);
+INSERT INTO messages VALUES(75,NULL,154929,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBB", "block_index": 154929, "event": "2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608", "quantity": 50000000}',0);
+INSERT INTO messages VALUES(76,'2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608',154929,'insert','orders','{"block_index": 154929, "expiration": 10, "expire_index": 154939, "fee_provided": 20000, "fee_provided_remaining": 20000, "fee_required": 0, "fee_required_remaining": 0, "get_asset": "XCP", "get_quantity": 50000000, "get_remaining": 50000000, "give_asset": "BBBB", "give_quantity": 50000000, "give_remaining": 50000000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "tx_hash": "2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608", "tx_index": 21}',0);
+INSERT INTO messages VALUES(77,NULL,154930,'update','orders','{"status": "cancelled", "tx_hash": "2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608"}',0);
+INSERT INTO messages VALUES(78,NULL,154930,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBB", "block_index": 154930, "event": "2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608", "quantity": 50000000}',0);
+INSERT INTO messages VALUES(79,'7cb7c4547cf2653590d7a9ace60cc623d25148adfbc88a89aeb0ef88da7839ba',154930,'insert','cancels','{"block_index": 154930, "offer_hash": "2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608", "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "7cb7c4547cf2653590d7a9ace60cc623d25148adfbc88a89aeb0ef88da7839ba", "tx_index": 22}',0);
+INSERT INTO messages VALUES(80,NULL,154931,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154931, "event": "8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034", "quantity": 56999886870}',0);
+INSERT INTO messages VALUES(81,'8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034',154931,'insert','burns','{"block_index": 154931, "burned": 38000000, "earned": 56999886870, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034", "tx_index": 23}',0);
+INSERT INTO messages VALUES(82,NULL,154932,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBC", "block_index": 154932, "event": "452ba1ddef80246c48be7690193c76c1d61185906be9401014fe14f1be64b74f", "quantity": 10000}',0);
+INSERT INTO messages VALUES(83,NULL,154932,'insert','credits','{"action": null, "address": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "asset": "BBBC", "block_index": 154932, "event": "452ba1ddef80246c48be7690193c76c1d61185906be9401014fe14f1be64b74f", "quantity": 10000}',0);
+INSERT INTO messages VALUES(84,'452ba1ddef80246c48be7690193c76c1d61185906be9401014fe14f1be64b74f',154932,'insert','sends','{"asset": "BBBC", "block_index": 154932, "destination": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "quantity": 10000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "452ba1ddef80246c48be7690193c76c1d61185906be9401014fe14f1be64b74f", "tx_index": 24}',0);
+INSERT INTO messages VALUES(85,NULL,154933,'insert','debits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 154933, "event": null, "quantity": 4735500000}',0);
+INSERT INTO messages VALUES(86,NULL,154933,'insert','credits','{"action": null, "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "BBBC", "block_index": 154933, "event": null, "quantity": 3157}',0);
+INSERT INTO messages VALUES(87,NULL,154933,'insert','debits','{"action": null, "address": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "asset": "BBBC", "block_index": 154933, "event": null, "quantity": 3157}',0);
+INSERT INTO messages VALUES(88,NULL,154933,'insert','credits','{"action": null, "address": "n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7", "asset": "XCP", "block_index": 154933, "event": null, "quantity": 4735500000}',0);
+INSERT INTO messages VALUES(89,'68aa2e2ee5dff96e3355e6c7ee373e3d6a4e17f75f9518d843709c0c9bc3e3d4',154933,'insert','callbacks','{"asset": "BBBC", "block_index": 154933, "fraction": 0.3, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "valid", "tx_hash": "68aa2e2ee5dff96e3355e6c7ee373e3d6a4e17f75f9518d843709c0c9bc3e3d4", "tx_index": 25}',0);
 
 -- Table  order_expirations
 DROP TABLE IF EXISTS order_expirations;
@@ -478,6 +510,7 @@ CREATE TABLE order_matches(
                       backward_quantity INTEGER,
                       tx0_block_index INTEGER,
                       tx1_block_index INTEGER,
+                      block_index INTEGER,
                       tx0_expiration INTEGER,
                       tx1_expiration INTEGER,
                       match_expire_index INTEGER,
@@ -485,7 +518,7 @@ CREATE TABLE order_matches(
                       status TEXT,
                       FOREIGN KEY (tx0_index, tx0_hash, tx0_block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                       FOREIGN KEY (tx1_index, tx1_hash, tx1_block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
-INSERT INTO order_matches VALUES('dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5',2,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BTC',50000000,'XCP',100000000,154910,154911,10,10,154921,900000,'completed');
+INSERT INTO order_matches VALUES('dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5',2,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BTC',50000000,'XCP',100000000,154910,154911,154911,10,10,154921,900000,'completed');
 -- Triggers and indices on  order_matches
 CREATE INDEX backward_status_idx ON order_matches (backward_asset, status)
                    ;
@@ -494,6 +527,10 @@ CREATE INDEX forward_status_idx ON order_matches (forward_asset, status)
 CREATE INDEX id_idx ON order_matches (id)
                    ;
 CREATE INDEX match_expire_idx ON order_matches (status, match_expire_index)
+                   ;
+CREATE INDEX tx0_address_idx ON order_matches (tx0_address)
+                   ;
+CREATE INDEX tx1_address_idx ON order_matches (tx1_address)
                    ;
 
 -- Table  orders
@@ -524,9 +561,11 @@ INSERT INTO orders VALUES(21,'2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3a
 -- Triggers and indices on  orders
 CREATE INDEX expire_idx ON orders (status, expire_index)
                    ;
-CREATE INDEX give_get_status_idx ON orders (give_asset, get_asset, status)
+CREATE INDEX give_asset_idx ON orders (give_asset)
                    ;
-CREATE INDEX give_status_idx ON orders (give_asset, status)
+CREATE INDEX give_get_status_idx ON orders (get_asset, give_asset, status)
+                   ;
+CREATE INDEX give_status_idx ON orders (status, give_asset)
                    ;
 
 -- Table  sends
@@ -545,6 +584,11 @@ INSERT INTO sends VALUES(1,'4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cc
 INSERT INTO sends VALUES(7,'ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879',154915,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBB',4000000,'valid');
 INSERT INTO sends VALUES(8,'beead77994cf573341ec17b58bbf7eb34d2711c993c1d976b128b3188dc1829a',154916,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',526,'valid');
 INSERT INTO sends VALUES(24,'452ba1ddef80246c48be7690193c76c1d61185906be9401014fe14f1be64b74f',154932,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7','BBBC',10000,'valid');
+-- Triggers and indices on  sends
+CREATE INDEX destination_idx ON sends (destination)
+                   ;
+CREATE INDEX source_idx ON sends (source)
+                   ;
 
 -- Table  transactions
 DROP TABLE IF EXISTS transactions;
@@ -590,6 +634,8 @@ INSERT INTO transactions VALUES(24,'452ba1ddef80246c48be7690193c76c1d61185906be9
 INSERT INTO transactions VALUES(25,'68aa2e2ee5dff96e3355e6c7ee373e3d6a4e17f75f9518d843709c0c9bc3e3d4',154933,NULL,25,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',NULL,NULL,20000,X'000000153FD33333333333330000000000004768',1);
 -- Triggers and indices on  transactions
 CREATE INDEX index_hash_index_idx ON transactions (tx_index, tx_hash, block_index)
+                   ;
+CREATE INDEX index_index_idx ON transactions (block_index, tx_index)
                    ;
 CREATE INDEX tx_hash_idx ON transactions (tx_hash)
                    ;

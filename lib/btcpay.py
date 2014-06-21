@@ -38,14 +38,14 @@ def validate (db, source, order_match_id):
 
     # Figure out to which address the BTC are being paid.
     # Check that source address is correct.
-    if order_match['backward_asset'] == 'BTC':
+    if order_match['backward_asset'] == config.BTC:
         if source != order_match['tx1_address']:
             problems.append('incorrect source address')
         destination = order_match['tx0_address']
         btc_quantity = order_match['backward_quantity']
         escrowed_asset  = order_match['forward_asset']
         escrowed_quantity = order_match['forward_quantity']
-    elif order_match['forward_asset'] == 'BTC':
+    elif order_match['forward_asset'] == config.BTC:
         if source != order_match['tx0_address']:
             problems.append('incorrect source address')
         destination = order_match['tx1_address']

@@ -25,6 +25,9 @@ class BitcoindRPCError (BitcoindError):
 class InsightError (Exception):
     pass
 
+class AltcoinSupportError (Exception):
+    pass
+
 class FeeError (Exception):
     pass
 class BalanceError (Exception):

@@ -1,13 +1,13 @@
 #! /usr/bin/python3
 
-"""Burn BTC to earn XCP during a special period of time."""
-
 import struct
 import decimal
 D = decimal.Decimal
 from fractions import Fraction
 
 from . import (util, config, exceptions, bitcoin, util)
+
+"""Burn {} to earn {} during a special period of time.""".format(config.BTC, config.XCP)
 
 ID = 60
 
@@ -43,7 +43,7 @@ def compose (db, source, quantity, overburn=False):
     burns = list(cursor.execute('''SELECT * FROM burns WHERE (status = ? AND source = ?)''', ('valid', source)))
     already_burned = sum([burn['burned'] for burn in burns])
     if quantity > (1 * config.UNIT - already_burned) and not overburn:
-        raise exceptions.BurnError('1 BTC may be burned per address')
+        raise exceptions.BurnError('1 {} may be burned per address'.format(config.BTC))
 
     cursor.close()
     return (source, [(destination, quantity)], None)
@@ -67,8 +67,8 @@ def parse (db, tx, message=None):
         cursor.execute('''SELECT * FROM burns WHERE (status = ? AND source = ?)''', ('valid', tx['source']))
         burns = cursor.fetchall()
         already_burned = sum([burn['burned'] for burn in burns])
-        ONE_BTC = 1 * config.UNIT
-        max_burn = ONE_BTC - already_burned
+        ONE = 1 * config.UNIT
+        max_burn = ONE - already_burned
         if sent > max_burn: burned = max_burn   # Exceeded maximum burn; earn what you can.
         else: burned = sent
 
@@ -78,7 +78,7 @@ def parse (db, tx, message=None):
         earned = round(burned * multiplier)
 
         # Credit source address with earned XCP.
-        util.credit(db, tx['block_index'], tx['source'], 'XCP', earned, event=tx['tx_hash'])
+        util.credit(db, tx['block_index'], tx['source'], config.XCP, earned, event=tx['tx_hash'])
     else:
         burned = 0
         earned = 0

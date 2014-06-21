@@ -12,6 +12,7 @@ import calendar
 import configparser
 from threading import Thread
 import binascii
+from fractions import Fraction
 
 import requests
 import appdirs
@@ -98,7 +99,7 @@ def market (give_asset, get_asset):
         ('tx0_address', 'IN', addresses),
         ('tx1_address', 'IN', addresses)
     ]
-    awaiting_btcs = util.api('get_order_matches', {'filters': filters, 'filterop': 'OR', 'status': 'pending'})
+    awaiting_btcs = util.api('get_order_matches', {'filters': filters, 'filterop': 'OR', 'status': 'pending'})  
     table = PrettyTable(['Matched Order ID', 'Time Left'])
     for order_match in awaiting_btcs:
         order_match = format_order_match(db, order_match)
@@ -109,7 +110,7 @@ def market (give_asset, get_asset):
 
     # Open orders.
     orders = util.api('get_orders', {'status': 'open'})
-    table = PrettyTable(['Give Quantity', 'Give Asset', 'Price', 'Price Assets', 'Required BTC Fee', 'Provided BTC Fee', 'Time Left', 'Tx Hash'])
+    table = PrettyTable(['Give Quantity', 'Give Asset', 'Price', 'Price Assets', 'Required {} Fee'.format(config.BTC), 'Provided {} Fee'.format(config.BTC), 'Time Left', 'Tx Hash'])
     for order in orders:
         if give_asset and order['give_asset'] != give_asset: continue
         if get_asset and order['get_asset'] != get_asset: continue
@@ -157,7 +158,7 @@ def cli(method, params, unsigned):
         if bitcoin.is_mine(params['source']):
             bitcoin.wallet_unlock()
         else:
-            print('Source not in Bitcoind wallet.')
+            print('Source not in backend wallet.')
             answer = input('Public key (hexadecimal) or Private key (Wallet Import Format): ')
 
             # Public key or private key?
@@ -187,13 +188,15 @@ def cli(method, params, unsigned):
         print('Hash of transaction (broadcasted):', bitcoin.broadcast_tx(signed_tx_hex))
 
 
-def set_options (data_dir=None,
-                 bitcoind_rpc_connect=None, bitcoind_rpc_port=None,
-                 bitcoind_rpc_user=None, bitcoind_rpc_password=None,
-                 insight_enable=None, insight_connect=None, insight_port=None,
-                 rpc_host=None, rpc_port=None, rpc_user=None, rpc_password=None,
-                 log_file=None, pid_file=None, api_num_threads=None, api_request_queue_size=None,
-                 database_file=None, testnet=False, testcoin=False, unittest=False, carefulness=0, force=False,
+def set_options (data_dir=None, backend_rpc_connect=None,
+                 backend_rpc_port=None, backend_rpc_user=None,
+                 backend_rpc_password=None, insight_enable=None,
+                 insight_connect=None, insight_port=None, rpc_host=None,
+                 rpc_port=None, rpc_user=None, rpc_password=None,
+                 log_file=None, pid_file=None, api_num_threads=None,
+                 api_request_queue_size=None, config_file=None,
+                 database_file=None, testnet=False, testcoin=False,
+                 unittest=False, carefulness=0, force=False,
                  broadcast_tx_mainnet=None):
 
     # Unittests always run on testnet.
@@ -207,14 +210,17 @@ def set_options (data_dir=None,
 
     # Data directory
     if not data_dir:
-        config.DATA_DIR = appdirs.user_data_dir(appauthor='Counterparty', appname='counterpartyd', roaming=True)
+        config.DATA_DIR = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.XCP_CLIENT, roaming=True)
     else:
         config.DATA_DIR = os.path.expanduser(data_dir)
     if not os.path.isdir(config.DATA_DIR): os.mkdir(config.DATA_DIR)
 
     # Configuration file
     configfile = configparser.ConfigParser()
-    config_path = os.path.join(config.DATA_DIR, 'counterpartyd.conf')
+    if config_file:
+        config_path = config_file
+    else:
+        config_path = os.path.join(config.DATA_DIR, '{}.conf'.format(config.XCP_CLIENT))
     configfile.read(config_path)
     has_config = 'Default' in configfile
     #logging.debug("Config file: %s; Exists: %s" % (config_path, "Yes" if has_config else "No"))
@@ -235,6 +241,14 @@ def set_options (data_dir=None,
     else:
         config.TESTCOIN = False
 
+    # unittest
+    if unittest:
+        config.UNITTEST = unittest
+    elif has_config and 'unittest' in configfile['Default']:
+        config.UNITTEST = configfile['Default'].getboolean('unittest')
+    else:
+        config.UNITTEST = False
+
     # carefulness (check conservation of assets)
     if carefulness:
         config.CAREFULNESS = carefulness
@@ -246,47 +260,55 @@ def set_options (data_dir=None,
     ##############
     # THINGS WE CONNECT TO
 
-    # Bitcoind RPC host
-    if bitcoind_rpc_connect:
-        config.BITCOIND_RPC_CONNECT = bitcoind_rpc_connect
+    # Backend RPC host (Bitcoin Core)
+    if backend_rpc_connect:
+        config.BACKEND_RPC_CONNECT = backend_rpc_connect
+    elif has_config and 'backend-rpc-connect' in configfile['Default'] and configfile['Default']['backend-rpc-connect']:
+        config.BACKEND_RPC_CONNECT = configfile['Default']['backend-rpc-connect']
     elif has_config and 'bitcoind-rpc-connect' in configfile['Default'] and configfile['Default']['bitcoind-rpc-connect']:
-        config.BITCOIND_RPC_CONNECT = configfile['Default']['bitcoind-rpc-connect']
+        config.BACKEND_RPC_CONNECT = configfile['Default']['bitcoind-rpc-connect']
     else:
-        config.BITCOIND_RPC_CONNECT = 'localhost'
+        config.BACKEND_RPC_CONNECT = 'localhost'
 
-    # Bitcoind RPC port
-    if bitcoind_rpc_port:
-        config.BITCOIND_RPC_PORT = bitcoind_rpc_port
+    # Backend Core RPC port (Bitcoin Core)
+    if backend_rpc_port:
+        config.BACKEND_RPC_PORT = backend_rpc_port
+    elif has_config and 'backend-rpc-port' in configfile['Default'] and configfile['Default']['backend-rpc-port']:
+        config.backend_RPC_PORT = configfile['Default']['backend-rpc-port']
     elif has_config and 'bitcoind-rpc-port' in configfile['Default'] and configfile['Default']['bitcoind-rpc-port']:
-        config.BITCOIND_RPC_PORT = configfile['Default']['bitcoind-rpc-port']
+        config.BACKEND_RPC_PORT = configfile['Default']['bitcoind-rpc-port']
     else:
         if config.TESTNET:
-            config.BITCOIND_RPC_PORT = 18332
+            config.BACKEND_RPC_PORT = config.DEFAULT_BACKEND_RPC_PORT_TESTNET
         else:
-            config.BITCOIND_RPC_PORT = 8332
+            config.BACKEND_RPC_PORT = config.DEFAULT_BACKEND_RPC_PORT
     try:
-        config.BITCOIND_RPC_PORT = int(config.BITCOIND_RPC_PORT)
-        assert int(config.BITCOIND_RPC_PORT) > 1 and int(config.BITCOIND_RPC_PORT) < 65535
+        config.BACKEND_RPC_PORT = int(config.BACKEND_RPC_PORT)
+        assert int(config.BACKEND_RPC_PORT) > 1 and int(config.BACKEND_RPC_PORT) < 65535
     except:
-        raise Exception("Please specific a valid port number bitcoind-rpc-port configuration parameter")
+        raise Exception("Please specific a valid port number backend-rpc-port configuration parameter")
 
-    # Bitcoind RPC user
-    if bitcoind_rpc_user:
-        config.BITCOIND_RPC_USER = bitcoind_rpc_user
+    # Backend Core RPC user (Bitcoin Core)
+    if backend_rpc_user:
+        config.BACKEND_RPC_USER = backend_rpc_user
+    elif has_config and 'backend-rpc-user' in configfile['Default'] and configfile['Default']['backend-rpc-user']:
+        config.backend_RPC_USER = configfile['Default']['backend-rpc-user']
     elif has_config and 'bitcoind-rpc-user' in configfile['Default'] and configfile['Default']['bitcoind-rpc-user']:
-        config.BITCOIND_RPC_USER = configfile['Default']['bitcoind-rpc-user']
+        config.BACKEND_RPC_USER = configfile['Default']['bitcoind-rpc-user']
     else:
-        config.BITCOIND_RPC_USER = 'bitcoinrpc'
+        config.BACKEND_RPC_USER = 'bitcoinrpc'
 
-    # Bitcoind RPC password
-    if bitcoind_rpc_password:
-        config.BITCOIND_RPC_PASSWORD = bitcoind_rpc_password
+    # Backend Core RPC password (Bitcoin Core)
+    if backend_rpc_password:
+        config.BACKEND_RPC_PASSWORD = backend_rpc_password
+    elif has_config and 'backend-rpc-password' in configfile['Default'] and configfile['Default']['backend-rpc-password']:
+        config.backend_RPC_PASSWORD = configfile['Default']['backend-rpc-password']
     elif has_config and 'bitcoind-rpc-password' in configfile['Default'] and configfile['Default']['bitcoind-rpc-password']:
-        config.BITCOIND_RPC_PASSWORD = configfile['Default']['bitcoind-rpc-password']
+        config.BACKEND_RPC_PASSWORD = configfile['Default']['bitcoind-rpc-password']
     else:
-        raise exceptions.ConfigurationError('bitcoind RPC password not set. (Use configuration file or --bitcoind-rpc-password=PASSWORD)')
+        raise exceptions.ConfigurationError('backend RPC password not set. (Use configuration file or --backend-rpc-password=PASSWORD)')
 
-    config.BITCOIND_RPC = 'http://' + config.BITCOIND_RPC_USER + ':' + config.BITCOIND_RPC_PASSWORD + '@' + config.BITCOIND_RPC_CONNECT + ':' + str(config.BITCOIND_RPC_PORT)
+    config.BACKEND_RPC = 'http://' + config.BACKEND_RPC_USER + ':' + config.BACKEND_RPC_PASSWORD + '@' + config.BACKEND_RPC_CONNECT + ':' + str(config.BACKEND_RPC_PORT)
 
     # insight enable
     if insight_enable:
@@ -340,7 +362,7 @@ def set_options (data_dir=None,
     else:
         config.RPC_HOST = 'localhost'
 
-    #  counterpartyd API RPC port
+    # counterpartyd API RPC port
     if rpc_port:
         config.RPC_PORT = rpc_port
     elif has_config and 'rpc-port' in configfile['Default'] and configfile['Default']['rpc-port']:
@@ -348,14 +370,14 @@ def set_options (data_dir=None,
     else:
         if config.TESTNET:
             if config.TESTCOIN:
-                config.RPC_PORT = 14001
+                config.RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET + 1
             else:
-                config.RPC_PORT = 14000
+                config.RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET
         else:
             if config.TESTCOIN:
-                config.RPC_PORT = 4001
+                config.RPC_PORT = config.DEFAULT_RPC_PORT + 1
             else:
-                config.RPC_PORT = 4000
+                config.RPC_PORT = config.DEFAULT_RPC_PORT
     try:
         config.RPC_PORT = int(config.RPC_PORT)
         assert int(config.RPC_PORT) > 1 and int(config.RPC_PORT) < 65535
@@ -389,7 +411,7 @@ def set_options (data_dir=None,
     elif has_config and 'log-file' in configfile['Default']:
         config.LOG = configfile['Default']['log-file']
     else:
-        string = 'counterpartyd'
+        string = config.XCP_CLIENT
         if config.TESTNET:
             string += '.testnet'
         if config.TESTCOIN:
@@ -402,7 +424,7 @@ def set_options (data_dir=None,
     elif has_config and 'pid-file' in configfile['Default']:
         config.PID = configfile['Default']['pid-file']
     else:
-        config.PID = os.path.join(config.DATA_DIR, 'counterpartyd.pid')
+        config.PID = os.path.join(config.DATA_DIR, '{}.pid'.format(config.XCP_CLIENT))
 
     if not unittest:
         if config.TESTCOIN:
@@ -410,7 +432,7 @@ def set_options (data_dir=None,
         else:
             config.PREFIX = b'CNTRPRTY'             # 8 bytes
     else:
-        config.PREFIX = config.UNITTEST_PREFIX
+        config.PREFIX = b'TESTXXXX'                 # 8 bytes
         
     if api_num_threads:
         config.API_NUM_THREADS = int(api_num_threads)
@@ -430,7 +452,7 @@ def set_options (data_dir=None,
     if database_file:
         config.DATABASE = database_file
     else:
-        string = 'counterpartyd.' + str(config.VERSION_MAJOR)
+        string = '{}.'.format(config.XCP_CLIENT) + str(config.VERSION_MAJOR)
         if config.TESTNET:
             string += '.testnet'
         if config.TESTCOIN:
@@ -440,30 +462,30 @@ def set_options (data_dir=None,
     # (more) Testnet
     if config.TESTNET:
         if config.TESTCOIN:
-            config.ADDRESSVERSION = b'\x6f'
-            config.BLOCK_FIRST = 154908
-            config.BURN_START = 154908
-            config.BURN_END = 4017708   # Fifty years, at ten minutes per block.
-            config.UNSPENDABLE = 'mvCounterpartyXXXXXXXXXXXXXXW24Hef'
+            config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
+            config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET_TESTCOIN
+            config.BURN_START = config.BURN_START_TESTNET_TESTCOIN
+            config.BURN_END = config.BURN_END_TESTNET_TESTCOIN
+            config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
         else:
-            config.ADDRESSVERSION = b'\x6f'
-            config.BLOCK_FIRST = 154908
-            config.BURN_START = 154908
-            config.BURN_END = 4017708   # Fifty years, at ten minutes per block.
-            config.UNSPENDABLE = 'mvCounterpartyXXXXXXXXXXXXXXW24Hef'
+            config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
+            config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET
+            config.BURN_START = config.BURN_START_TESTNET
+            config.BURN_END = config.BURN_END_TESTNET
+            config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
     else:
         if config.TESTCOIN:
-            config.ADDRESSVERSION = b'\x00'
-            config.BLOCK_FIRST = 278270
-            config.BURN_START = 278310
-            config.BURN_END = 2500000   # A long time.
-            config.UNSPENDABLE = '1CounterpartyXXXXXXXXXXXXXXXUWLpVr'
+            config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
+            config.BLOCK_FIRST = config.BLOCK_FIRST_MAINNET_TESTCOIN
+            config.BURN_START = config.BURN_START_MAINNET_TESTCOIN
+            config.BURN_END = config.BURN_END_MAINNET_TESTCOIN
+            config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
         else:
-            config.ADDRESSVERSION = b'\x00'
-            config.BLOCK_FIRST = 278270
-            config.BURN_START = 278310
-            config.BURN_END = 283810
-            config.UNSPENDABLE = '1CounterpartyXXXXXXXXXXXXXXXUWLpVr'
+            config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
+            config.BLOCK_FIRST = config.BLOCK_FIRST_MAINNET
+            config.BURN_START = config.BURN_START_MAINNET
+            config.BURN_END = config.BURN_END_MAINNET
+            config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
 
     # method used to broadcast signed transactions. bitcoind or bci (default: bitcoind)
     if broadcast_tx_mainnet:
@@ -471,16 +493,16 @@ def set_options (data_dir=None,
     elif has_config and 'broadcast-tx-mainnet' in configfile['Default']:
         config.BROADCAST_TX_MAINNET = configfile['Default']['broadcast-tx-mainnet']
     else:
-        config.BROADCAST_TX_MAINNET = 'bitcoind'
+        config.BROADCAST_TX_MAINNET = '{}'.format(config.BTC_CLIENT)
 
 def balances (address):
     if not bitcoin.base58_decode(address, config.ADDRESSVERSION):
-        raise exceptions.AddressError('Not a valid Bitcoin address:',
+        raise exceptions.AddressError('Not a valid {} address:'.format(BTC_NAME),
                                              address)
     address_data = get_address(db, address=address)
     balances = address_data['balances']
     table = PrettyTable(['Asset', 'Amount'])
-    table.add_row(['BTC', bitcoin.get_btc_balance(address, normalize=True)])  # BTC
+    table.add_row([config.BTC, bitcoin.get_btc_balance(address, normalize=True)])  # BTC
     for balance in balances:
         asset = balance['asset']
         quantity = util.devise(db, balance['quantity'], balance['asset'], 'output')
@@ -495,16 +517,21 @@ if __name__ == '__main__':
         util_windows.fix_win32_unicode()
     
     # Parse command-line arguments.
-    parser = argparse.ArgumentParser(prog='counterpartyd', description='the reference implementation of the Counterparty protocol')
-    parser.add_argument('-V', '--version', action='version', version="counterpartyd v%s" % config.VERSION_STRING)
+    parser = argparse.ArgumentParser(prog=config.XCP_CLIENT, description='the reference implementation of the {} protocol'.format(config.XCP_NAME))
+    parser.add_argument('-V', '--version', action='version', version="{} v{}".format(config.XCP_CLIENT, config.VERSION_STRING))
 
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='sets log level to DEBUG instead of WARNING')
-    parser.add_argument('--force', action='store_true', help='don\'t check whether Bitcoind is caught up')
-    parser.add_argument('--testnet', action='store_true', help='use Bitcoin testnet addresses and block numbers')
-    parser.add_argument('--testcoin', action='store_true', help='use the test Counterparty network on every blockchain')
+    parser.add_argument('--force', action='store_true', help='don\'t check whether backend is caught up'.format(config.BTC_NAME))
+    parser.add_argument('--testnet', action='store_true', help='use {} testnet addresses and block numbers'.format(config.BTC_NAME))
+    parser.add_argument('--testcoin', action='store_true', help='use the test {} network on every blockchain'.format(config.XCP_NAME))
     parser.add_argument('--unsigned', action='store_true', help='print out unsigned hex of transaction; do not sign or broadcast')
     parser.add_argument('--carefulness', type=int, default=0, help='check conservation of assets after every CAREFULNESS transactions (potentially slow)')
     parser.add_argument('--unconfirmed', action='store_true', help='allow the spending of unconfirmed transaction outputs')
+    parser.add_argument('--encoding', default='auto', type=str, help='data encoding method')
+    parser.add_argument('--fee-per-kb', type=D, default=D(config.DEFAULT_FEE_PER_KB / config.UNIT), help='fee per kilobyte, in {}'.format(config.BTC))
+    parser.add_argument('--regular-dust-size', type=D, default=D(config.DEFAULT_REGULAR_DUST_SIZE / config.UNIT), help='value for dust Pay‐to‐Pubkey‐Hash outputs, in {}'.format(config.BTC))
+    parser.add_argument('--multisig-dust-size', type=D, default=D(config.DEFAULT_MULTISIG_DUST_SIZE / config.UNIT), help='for dust OP_CHECKMULTISIG outputs, in {}'.format(config.BTC))
+    parser.add_argument('--op-return-value', type=D, default=D(config.DEFAULT_OP_RETURN_VALUE / config.UNIT), help='value for OP_RETURN outputs, in {}'.format(config.BTC))
 
     parser.add_argument('--data-dir', help='the directory in which to keep the database, config file and log file, by default')
     parser.add_argument('--database-file', help='the location of the SQLite3 database')
@@ -514,19 +541,19 @@ if __name__ == '__main__':
     parser.add_argument('--api-num-threads', help='the number of threads created for API request processing (CherryPy WSGI, default 10)')
     parser.add_argument('--api-request-queue-size', help='the size of the API request queue (CherryPY WSGI, default 5)')
 
-    parser.add_argument('--bitcoind-rpc-connect', help='the hostname or IP of the bitcoind JSON-RPC server')
-    parser.add_argument('--bitcoind-rpc-port', type=int, help='the bitcoind JSON-RPC port to connect to')
-    parser.add_argument('--bitcoind-rpc-user', help='the username used to communicate with Bitcoind over JSON-RPC')
-    parser.add_argument('--bitcoind-rpc-password', help='the password used to communicate with Bitcoind over JSON-RPC')
+    parser.add_argument('--backend-rpc-connect', help='the hostname or IP of the backend JSON-RPC server')
+    parser.add_argument('--backend-rpc-port', type=int, help='the backend JSON-RPC port to connect to')
+    parser.add_argument('--backend-rpc-user', help='the username used to communicate with backend over JSON-RPC')
+    parser.add_argument('--backend-rpc-password', help='the password used to communicate with backend over JSON-RPC')
 
     parser.add_argument('--insight-enable', action='store_true', default=False, help='enable the use of insight, instead of blockchain.info')
     parser.add_argument('--insight-connect', help='the insight server hostname or IP to connect to')
     parser.add_argument('--insight-port', type=int, help='the insight server port to connect to')
 
     parser.add_argument('--rpc-host', help='the IP of the interface to bind to for providing JSON-RPC API access (0.0.0.0 for all interfaces)')
-    parser.add_argument('--rpc-port', type=int, help='port on which to provide the counterpartyd JSON-RPC API')
-    parser.add_argument('--rpc-user', help='required username to use the counterpartyd JSON-RPC API (via HTTP basic auth)')
-    parser.add_argument('--rpc-password', help='required password (for rpc-user) to use the counterpartyd JSON-RPC API (via HTTP basic auth)')
+    parser.add_argument('--rpc-port', type=int, help='port on which to provide the {} JSON-RPC API'.format(config.XCP_CLIENT))
+    parser.add_argument('--rpc-user', help='required username to use the {} JSON-RPC API (via HTTP basic auth)'.format(config.XCP_CLIENT))
+    parser.add_argument('--rpc-password', help='required password (for rpc-user) to use the {} JSON-RPC API (via HTTP basic auth)'.format(config.XCP_CLIENT))
 
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
@@ -537,7 +564,7 @@ if __name__ == '__main__':
     parser_send.add_argument('--destination', required=True, help='the destination address')
     parser_send.add_argument('--quantity', required=True, help='the quantity of ASSET to send')
     parser_send.add_argument('--asset', required=True, help='the ASSET of which you would like to send QUANTITY')
-    parser_send.add_argument('--fee', help='the exact BTC fee to be paid to miners')
+    parser_send.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
     parser_order = subparsers.add_parser('order', help='create and broadcast an *order* message')
     parser_order.add_argument('--source', required=True, help='the source address')
@@ -546,15 +573,15 @@ if __name__ == '__main__':
     parser_order.add_argument('--give-quantity', required=True, help='the quantity of GIVE_ASSET that you are willing to give')
     parser_order.add_argument('--give-asset', required=True, help='the asset that you would like to sell')
     parser_order.add_argument('--expiration', type=int, required=True, help='the number of blocks for which the order should be valid')
-    parser_order.add_argument('--fee-fraction-required', default=config.FEE_FRACTION_REQUIRED_DEFAULT, help='the miners’ fee required for an order to match this one, as a fraction of the BTC to be bought')
+    parser_order.add_argument('--fee-fraction-required', default=config.DEFAULT_FEE_FRACTION_REQUIRED, help='the miners’ fee required for an order to match this one, as a fraction of the {} to be bought'.format(config.BTC))
     parser_order_fees = parser_order.add_mutually_exclusive_group()
-    parser_order_fees.add_argument('--fee-fraction-provided', default=config.FEE_FRACTION_PROVIDED_DEFAULT, help='the miners’ fee provided, as a fraction of the BTC to be sold')
-    parser_order_fees.add_argument('--fee', help='the exact BTC fee to be paid to miners')
+    parser_order_fees.add_argument('--fee-fraction-provided', default=config.DEFAULT_FEE_FRACTION_PROVIDED, help='the miners’ fee provided, as a fraction of the {} to be sold'.format(config.BTC))
+    parser_order_fees.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
-    parser_btcpay= subparsers.add_parser('btcpay', help='create and broadcast a *BTCpay* message, to settle an Order Match for which you owe BTC')
+    parser_btcpay= subparsers.add_parser('{}pay'.format(config.BTC).lower(), help='create and broadcast a *{}pay* message, to settle an Order Match for which you owe {}'.format(config.BTC, config.BTC))
     parser_btcpay.add_argument('--source', required=True, help='the source address')
     parser_btcpay.add_argument('--order-match-id', required=True, help='the concatenation of the hashes of the two transactions which compose the order match')
-    parser_btcpay.add_argument('--fee', help='the exact BTC fee to be paid to miners')
+    parser_btcpay.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
     parser_issuance = subparsers.add_parser('issuance', help='issue a new asset, issue more of an existing asset or transfer the ownership of an asset')
     parser_issuance.add_argument('--source', required=True, help='the source address')
@@ -566,14 +593,14 @@ if __name__ == '__main__':
     parser_issuance.add_argument('--call-date', help='the date from which a callable asset may be called back (must agree with previous issuances)')
     parser_issuance.add_argument('--call-price', help='the price, in XCP per whole unit, at which a callable asset may be called back (must agree with previous issuances)')
     parser_issuance.add_argument('--description', type=str, required=True, help='a description of the asset (set to ‘LOCK’ to lock against further issuances with non‐zero quantitys)')
-    parser_issuance.add_argument('--fee', help='the exact BTC fee to be paid to miners')
+    parser_issuance.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
     parser_broadcast = subparsers.add_parser('broadcast', help='broadcast textual and numerical information to the network')
     parser_broadcast.add_argument('--source', required=True, help='the source address')
     parser_broadcast.add_argument('--text', type=str, required=True, help='the textual part of the broadcast (set to ‘LOCK’ to lock feed)')
     parser_broadcast.add_argument('--value', type=float, default=-1, help='numerical value of the broadcast')
     parser_broadcast.add_argument('--fee-fraction', default=0, help='the fraction of bets on this feed that go to its operator')
-    parser_broadcast.add_argument('--fee', help='the exact BTC fee to be paid to miners')
+    parser_broadcast.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
     parser_bet = subparsers.add_parser('bet', help='offer to make a bet on the value of a feed')
     parser_bet.add_argument('--source', required=True, help='the source address')
@@ -585,61 +612,74 @@ if __name__ == '__main__':
     parser_bet.add_argument('--target-value', default=0.0, help='target value for Equal/NotEqual bet')
     parser_bet.add_argument('--leverage', type=int, default=5040, help='leverage, as a fraction of 5040')
     parser_bet.add_argument('--expiration', type=int, required=True, help='the number of blocks for which the bet should be valid')
-    parser_bet.add_argument('--fee', help='the exact BTC fee to be paid to miners')
+    parser_bet.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
     parser_dividend = subparsers.add_parser('dividend', help='pay dividends to the holders of an asset (in proportion to their stake in it)')
     parser_dividend.add_argument('--source', required=True, help='the source address')
     parser_dividend.add_argument('--quantity-per-unit', required=True, help='the quantity of XCP to be paid per whole unit held of ASSET')
     parser_dividend.add_argument('--asset', required=True, help='the asset to which pay dividends')
     parser_dividend.add_argument('--dividend-asset', required=True, help='asset in which to pay the dividends')
-    parser_dividend.add_argument('--fee', help='the exact BTC fee to be paid to miners')
+    parser_dividend.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
-    parser_burn = subparsers.add_parser('burn', help='destroy bitcoins to earn XCP, during an initial period of time')
+    parser_burn = subparsers.add_parser('burn', help='destroy {} tm earn XCP, during an initial period of time')
     parser_burn.add_argument('--source', required=True, help='the source address')
-    parser_burn.add_argument('--quantity', required=True, help='quantity of BTC to be destroyed')
-    parser_burn.add_argument('--fee', help='the exact BTC fee to be paid to miners')
+    parser_burn.add_argument('--quantity', required=True, help='quantity of {} to be destroyed'.format(config.BTC))
+    parser_burn.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
     parser_cancel= subparsers.add_parser('cancel', help='cancel an open order or bet you created')
     parser_cancel.add_argument('--source', required=True, help='the source address')
     parser_cancel.add_argument('--offer-hash', required=True, help='the transaction hash of the order or bet')
-    parser_cancel.add_argument('--fee', help='the exact BTC fee to be paid to miners')
+    parser_cancel.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
     parser_callback = subparsers.add_parser('callback', help='callback a fraction of an asset')
     parser_callback.add_argument('--source', required=True, help='the source address')
     parser_callback.add_argument('--fraction', required=True, help='the fraction of ASSET to call back')
     parser_callback.add_argument('--asset', required=True, help='the asset to callback')
-    parser_callback.add_argument('--fee', help='the exact BTC fee to be paid to miners')
+    parser_callback.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
-    parser_address = subparsers.add_parser('balances', help='display the balances of a Counterparty address')
+    parser_address = subparsers.add_parser('balances', help='display the balances of a {} address'.format(config.XCP_NAME))
     parser_address.add_argument('address', help='the address you are interested in')
 
-    parser_asset = subparsers.add_parser('asset', help='display the basic properties of a Counterparty asset')
+    parser_asset = subparsers.add_parser('asset', help='display the basic properties of a {} asset'.format(config.XCP_NAME))
     parser_asset.add_argument('asset', help='the asset you are interested in')
 
-    parser_wallet = subparsers.add_parser('wallet', help='list the addresses in your Bitcoind wallet along with their balances in all Counterparty assets')
+    parser_wallet = subparsers.add_parser('wallet', help='list the addresses in your backend wallet along with their balances in all {} assets'.format(config.XCP_NAME))
 
-    parser_pending= subparsers.add_parser('pending', help='list pending order matches awaiting BTCpayment from you')
+    parser_pending= subparsers.add_parser('pending', help='list pending order matches awaiting {}payment from you'.format(config.BTC))
 
     parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database (WARNING: not thread‐safe)')
 
     parser_rollback = subparsers.add_parser('rollback', help='rollback database (WARNING: not thread‐safe)')
     parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
 
-    parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the Counterparty market')
+    parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the {} market'.format(config.XCP_NAME) )
     parser_market.add_argument('--give-asset', help='only show orders offering to sell GIVE_ASSET')
     parser_market.add_argument('--get-asset', help='only show orders offering to buy GET_ASSET')
 
     args = parser.parse_args()
 
+    # Convert.
+    args.fee_per_kb = int(args.fee_per_kb * config.UNIT)
+    args.regular_dust_size = int(args.regular_dust_size * config.UNIT)
+    args.multisig_dust_size = int(args.multisig_dust_size * config.UNIT)
+    args.op_return_value= int(args.op_return_value * config.UNIT)
+
     # Configuration
     set_options(data_dir=args.data_dir,
-                bitcoind_rpc_connect=args.bitcoind_rpc_connect, bitcoind_rpc_port=args.bitcoind_rpc_port,
-                bitcoind_rpc_user=args.bitcoind_rpc_user, bitcoind_rpc_password=args.bitcoind_rpc_password,
-                insight_enable=args.insight_enable, insight_connect=args.insight_connect, insight_port=args.insight_port,
-                rpc_host=args.rpc_host, rpc_port=args.rpc_port, rpc_user=args.rpc_user, rpc_password=args.rpc_password,
-                log_file=args.log_file, pid_file=args.pid_file, api_num_threads=args.api_num_threads,
-                api_request_queue_size=args.api_request_queue_size, database_file=args.database_file, testnet=args.testnet,
-                testcoin=args.testcoin, unittest=False, carefulness=args.carefulness, force=args.force)
+                backend_rpc_connect=args.backend_rpc_connect,
+                backend_rpc_port=args.backend_rpc_port,
+                backend_rpc_user=args.backend_rpc_user,
+                backend_rpc_password=args.backend_rpc_password,
+                insight_enable=args.insight_enable,
+                insight_connect=args.insight_connect,
+                insight_port=args.insight_port, rpc_host=args.rpc_host,
+                rpc_port=args.rpc_port, rpc_user=args.rpc_user,
+                rpc_password=args.rpc_password, log_file=args.log_file,
+                pid_file=args.pid_file, api_num_threads=args.api_num_threads,
+                api_request_queue_size=args.api_request_queue_size,
+                config_file=args.config_file, database_file=args.database_file,
+                testnet=args.testnet, testcoin=args.testcoin, unittest=False,
+                carefulness=args.carefulness, force=args.force)
 
     #Create/update pid file
     pid = str(os.getpid())
@@ -682,32 +722,38 @@ if __name__ == '__main__':
     # TODO: Keep around only as long as reparse and rollback don’t use API.
     if not config.FORCE and args.action in ('reparse', 'rollback'):
         util.version_check(db)
-        bitcoin.bitcoind_check(db)
 
     # MESSAGE CREATION
     if args.action == 'send':
-        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
+        if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
         quantity = util.devise(db, args.quantity, args.asset, 'input')
-        cli('create_send', {'source': args.source, 'destination': args.destination, 'asset': args.asset,
-                           'quantity': quantity, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed},
+        cli('create_send', {'source': args.source,
+                            'destination': args.destination, 'asset':
+                            args.asset, 'quantity': quantity, 'fee': args.fee,
+                            'allow_unconfirmed_inputs': args.unconfirmed,
+                            'encoding': args.encoding, 'fee_per_kb':
+                            args.fee_per_kb, 'regular_dust_size':
+                            args.regular_dust_size, 'multisig_dust_size':
+                            args.multisig_dust_size, 'op_return_value':
+                            args.op_return_value},
             args.unsigned)
 
     elif args.action == 'order':
-        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
+        if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
         fee_required, fee_fraction_provided = D(args.fee_fraction_required), D(args.fee_fraction_provided)
         give_quantity, get_quantity = D(args.give_quantity), D(args.get_quantity)
 
         # Fee argument is either fee_required or fee_provided, as necessary.
-        if args.give_asset == 'BTC':
+        if args.give_asset == config.BTC:
             fee_required = 0
             fee_fraction_provided = util.devise(db, fee_fraction_provided, 'fraction', 'input')
             fee_provided = round(D(fee_fraction_provided) * D(give_quantity) * D(config.UNIT))
-            print('Fee provided: {} BTC'.format(util.devise(db, fee_provided, 'BTC', 'output')))
-        elif args.get_asset == 'BTC':
+            print('Fee provided: {} {}'.format(util.devise(db, fee_provided, config.BTC, 'output'), config.BTC))
+        elif args.get_asset == config.BTC:
             fee_provided = 0
             fee_fraction_required = util.devise(db, args.fee_fraction_required, 'fraction', 'input')
             fee_required = round(D(fee_fraction_required) * D(get_quantity) * D(config.UNIT))
-            print('Fee required: {} BTC'.format(util.devise(db, fee_required, 'BTC', 'output')))
+            print('Fee required: {} {}'.format(util.devise(db, fee_required, config.BTC, 'output'), config.BTC))
         else:
             fee_required = 0
             fee_provided = 0
@@ -715,17 +761,34 @@ if __name__ == '__main__':
         give_quantity = util.devise(db, give_quantity, args.give_asset, 'input')
         get_quantity = util.devise(db, get_quantity, args.get_asset, 'input')
 
-        cli('create_order', {'source': args.source, 'give_asset': args.give_asset, 'give_quantity': give_quantity,
-                            'get_asset': args.get_asset, 'get_quantity': get_quantity, 'expiration': args.expiration,
-                            'fee_required': fee_required, 'fee_provided': fee_provided, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed},
+        cli('create_order', {'source': args.source,
+                             'give_asset': args.give_asset, 'give_quantity':
+                             give_quantity, 'get_asset': args.get_asset,
+                             'get_quantity': get_quantity, 'expiration':
+                             args.expiration, 'fee_required': fee_required,
+                             'fee_provided': fee_provided, 'fee': args.fee,
+                             'allow_unconfirmed_inputs': args.unconfirmed,
+                             'encoding': args.encoding, 'fee_per_kb':
+                             args.fee_per_kb, 'regular_dust_size':
+                             args.regular_dust_size, 'multisig_dust_size':
+                             args.multisig_dust_size, 'op_return_value':
+                             args.op_return_value},
            args.unsigned)
 
-    elif args.action == 'btcpay':
-        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
-        cli('create_btcpay', {'source': args.source, 'order_match_id': args.order_match_id, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed}, args.unsigned)
+    elif args.action == '{}pay'.format(config.BTC).lower():
+        if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
+        cli('create_btcpay', {'source': args.source,
+                              'order_match_id': args.order_match_id, 'fee':
+                              args.fee, 'allow_unconfirmed_inputs':
+                              args.unconfirmed, 'encoding': args.encoding,
+                              'fee_per_kb': args.fee_per_kb,
+                              'regular_dust_size': args.regular_dust_size,
+                              'multisig_dust_size': args.multisig_dust_size,
+                              'op_return_value': args.op_return_value},
+            args.unsigned)
 
     elif args.action == 'issuance':
-        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
+        if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
         quantity = util.devise(db, args.quantity, None, 'input',
                                divisible=args.divisible)
         if args.callable_:
@@ -738,53 +801,110 @@ if __name__ == '__main__':
         else:
             call_date, call_price = 0, 0
 
-        cli('create_issuance', {'source': args.source, 'asset': args.asset, 'quantity': quantity,
-                                'divisible': args.divisible, 'description': args.description,
-                                'callable_': args.callable_, 'call_date': call_date, 'call_price': call_price,
-                                'transfer_destination': args.transfer_destination, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed},
+        cli('create_issuance', {'source': args.source, 'asset': args.asset,
+                                'quantity': quantity, 'divisible':
+                                args.divisible, 'description':
+                                args.description, 'callable_': args.callable_,
+                                'call_date': call_date, 'call_price':
+                                call_price, 'transfer_destination':
+                                args.transfer_destination, 'fee': args.fee,
+                                'allow_unconfirmed_inputs': args.unconfirmed,
+                                'encoding': args.encoding, 'fee_per_kb':
+                                args.fee_per_kb, 'regular_dust_size':
+                                args.regular_dust_size, 'multisig_dust_size':
+                                args.multisig_dust_size, 'op_return_value':
+                                args.op_return_value},
            args.unsigned)
 
     elif args.action == 'broadcast':
-        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
+        if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
         value = util.devise(db, args.value, 'value', 'input')
         fee_fraction = util.devise(db, args.fee_fraction, 'fraction', 'input')
 
-        cli('create_broadcast', {'source': args.source, 'fee_fraction': fee_fraction, 'text': args.text,
-                                 'timestamp': int(time.time()), 'value': value, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed},
+        cli('create_broadcast', {'source': args.source,
+                                 'fee_fraction': fee_fraction, 'text':
+                                 args.text, 'timestamp': int(time.time()),
+                                 'value': value, 'fee': args.fee,
+                                 'allow_unconfirmed_inputs': args.unconfirmed,
+                                 'encoding': args.encoding, 'fee_per_kb':
+                                 args.fee_per_kb, 'regular_dust_size':
+                                 args.regular_dust_size, 'multisig_dust_size':
+                                 args.multisig_dust_size, 'op_return_value':
+                                 args.op_return_value},
            args.unsigned)
 
     elif args.action == 'bet':
-        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
+        if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
         deadline = calendar.timegm(dateutil.parser.parse(args.deadline).utctimetuple())
-        wager = util.devise(db, args.wager, 'XCP', 'input')
-        counterwager = util.devise(db, args.counterwager, 'XCP', 'input')
+        wager = util.devise(db, args.wager, config.XCP, 'input')
+        counterwager = util.devise(db, args.counterwager, config.XCP, 'input')
         target_value = util.devise(db, args.target_value, 'value', 'input')
         leverage = util.devise(db, args.leverage, 'leverage', 'input')
 
-        cli('create_bet', {'source': args.source, 'feed_address': args.feed_address, 'bet_type': args.bet_type,
-                           'deadline': deadline, 'wager': wager, 'counterwager': counterwager, 'expiration': args.expiration,
-                           'target_value': target_value, 'leverage': leverage, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed},
+        cli('create_bet', {'source': args.source,
+                           'feed_address': args.feed_address, 'bet_type':
+                           args.bet_type, 'deadline': deadline, 'wager': wager,
+                           'counterwager': counterwager, 'expiration':
+                           args.expiration, 'target_value': target_value,
+                           'leverage': leverage, 'fee': args.fee,
+                           'allow_unconfirmed_inputs': args.unconfirmed,
+                           'encoding': args.encoding, 'fee_per_kb':
+                           args.fee_per_kb, 'regular_dust_size':
+                           args.regular_dust_size, 'multisig_dust_size':
+                           args.multisig_dust_size, 'op_return_value':
+                           args.op_return_value},
             args.unsigned)
 
     elif args.action == 'dividend':
-        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
-        quantity_per_unit = util.devise(db, args.quantity_per_unit, 'XCP', 'input')
-        cli('create_dividend', {'source': args.source, 'quantity_per_unit': quantity_per_unit, 'asset': args.asset, 'dividend_asset': args.dividend_asset, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed},
+        if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
+        quantity_per_unit = util.devise(db, args.quantity_per_unit, config.XCP, 'input')
+        cli('create_dividend', {'source': args.source,
+                                'quantity_per_unit': quantity_per_unit,
+                                'asset': args.asset, 'dividend_asset':
+                                args.dividend_asset, 'fee': args.fee,
+                                'allow_unconfirmed_inputs': args.unconfirmed,
+                                'encoding': args.encoding, 'fee_per_kb':
+                                args.fee_per_kb, 'regular_dust_size':
+                                args.regular_dust_size, 'multisig_dust_size':
+                                args.multisig_dust_size, 'op_return_value':
+                                args.op_return_value},
            args.unsigned)
 
     elif args.action == 'burn':
-        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
-        quantity = util.devise(db, args.quantity, 'BTC', 'input')
-        cli('create_burn', {'source': args.source, 'quantity': quantity, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed}, args.unsigned)
+        if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
+        quantity = util.devise(db, args.quantity, config.BTC, 'input')
+        cli('create_burn', {'source': args.source, 'quantity': quantity,
+                            'fee': args.fee, 'allow_unconfirmed_inputs':
+                            args.unconfirmed, 'encoding': args.encoding,
+                            'fee_per_kb': args.fee_per_kb, 'regular_dust_size':
+                            args.regular_dust_size, 'multisig_dust_size':
+                            args.multisig_dust_size, 'op_return_value':
+                            args.op_return_value},
+        args.unsigned)
 
     elif args.action == 'cancel':
-        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
-        cli('create_cancel', {'source': args.source, 'offer_hash': args.offer_hash, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed}, args.unsigned)
+        if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
+        cli('create_cancel', {'source': args.source,
+                              'offer_hash': args.offer_hash, 'fee': args.fee,
+                              'allow_unconfirmed_inputs': args.unconfirmed,
+                              'encoding': args.encoding, 'fee_per_kb':
+                              args.fee_per_kb, 'regular_dust_size':
+                              args.regular_dust_size, 'multisig_dust_size':
+                              args.multisig_dust_size, 'op_return_value':
+                              args.op_return_value},
+        args.unsigned)
 
     elif args.action == 'callback':
-        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
-        cli('create_callback', {'source': args.source, 'fraction': util.devise(db, args.fraction,
-                                'fraction', 'input'), 'asset': args.asset, 'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed},
+        if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
+        cli('create_callback', {'source': args.source,
+                                'fraction': util.devise(db, args.fraction, 'fraction', 'input'),
+                                'asset': args.asset, 'fee': args.fee,
+                                'allow_unconfirmed_inputs': args.unconfirmed,
+                                'encoding': args.encoding, 'fee_per_kb':
+                                args.fee_per_kb, 'regular_dust_size':
+                                args.regular_dust_size, 'multisig_dust_size':
+                                args.multisig_dust_size, 'op_return_value':
+                                args.op_return_value},
            args.unsigned)
 
 
@@ -793,7 +913,7 @@ if __name__ == '__main__':
         try:
             bitcoin.base58_decode(args.address, config.ADDRESSVERSION)
         except Exception:
-            raise exceptions.AddressError('Invalid Bitcoin address:',
+            raise exceptions.AddressError('Invalid {} address:'.format(config.BTC_NAME),
                                                   args.address)
         balances(args.address)
 
@@ -821,9 +941,9 @@ if __name__ == '__main__':
         print('Call Price:', call_price)
         print('Description:', '‘' + results['description'] + '’')
 
-        if args.asset != 'BTC':
+        if args.asset != config.BTC:
             print('Shareholders:')
-            balances = util.api('get_balances', {'field': 'asset', 'op': '==', 'value': args.asset})
+            balances = util.api('get_balances', {'filters': [('asset', '==', args.asset)]})
             print('\taddress, quantity, escrow')
             for holder in util.holders(db, args.asset):
                 quantity = holder['address_quantity']
@@ -846,9 +966,9 @@ if __name__ == '__main__':
             table = PrettyTable(['Asset', 'Balance'])
             empty = True
             if btc_balance:
-                table.add_row(['BTC', btc_balance])  # BTC
-                if 'BTC' in totals.keys(): totals['BTC'] += btc_balance
-                else: totals['BTC'] = btc_balance
+                table.add_row([config.BTC, btc_balance])  # BTC
+                if config.BTC in totals.keys(): totals[config.BTC] += btc_balance
+                else: totals[config.BTC] = btc_balance
                 empty = False            
             for balance in balances:
                 asset = balance['asset']

@@ -24,6 +24,10 @@ data passed as the POST body. For more information on JSON RPC, please see the `
 
 .. _examples:
 
+Below we provide a comprehensive Python example, along with a short PHP example. Examples in other languages are welcome:
+please just `make a counterpartyd issue <https://github.com/CounterpartyXCP/counterpartyd/issues/new>`__ with your
+example code, structured in a way to be useful to other people and use standard libraries/methods. 
+
 Python Example
 ^^^^^^^^^^^^^^^
 
@@ -84,18 +88,39 @@ Python Example
       url, data=json.dumps(payload), headers=headers, auth=auth).json()
     print("GET_DEBITS RESULT: ", response)
     
-    #Send 1 XCP (specified in satoshis) from one address to another (you must have the sending address in your wallet
-    # and it will be returned as an unsigned OP_RETURN transaction in this example, as the multisig parameter is
-    # specified as False
+    
+    #Send 1 XCP (specified in satoshis) from one address to another (you must have the sending address in your bitcoind wallet
+    # and it will be broadcast as a multisig transaction
     payload = {
       "method": "create_send",
-      "params": ["1CUdFmgK9trTNZHALfqGvd8d6nUZqH2AAf", "17rRm52PYGkntcJxD2yQF9jQqRS4S2nZ7E", "XCP", 100000000, false],
+      "params": {'source': "1CUdFmgK9trTNZHALfqGvd8d6nUZqH2AAf", 'destination': "17rRm52PYGkntcJxD2yQF9jQqRS4S2nZ7E",
+                 'asset': "XCP", 'quantity': 100000000},
       "jsonrpc": "2.0",
       "id": 0,
     }
-    response = requests.post(
-      url, data=json.dumps(payload), headers=headers, auth=auth).json()
-    print("\nDO_SEND RESULT: ", response)
+    unsigned_tx = requests.post(url, data=json.dumps(payload), headers=headers, auth=auth)
+    print("\nCREATE_SEND RESULT: ", raw_hex_tx)
+
+    #2. Now sign it with a key from the wallet
+    payload = {
+      "method": "sign_tx",
+      "params": {'unsigned_tx_hex': unsigned_tx}, #could also specify an external private key to use for signing here
+      "jsonrpc": "2.0",
+      "id": 0,
+    }
+    signed_tx = requests.post(url, data=json.dumps(payload), headers=headers, auth=auth)
+    print("\nSIGN_TX RESULT: ", signed_tx)
+
+    #3. Now broadcast the signed transaction
+    payload = {
+      "method": "broadcast_tx",
+      "params": {'signed_tx_hex': signed_tx},
+      "jsonrpc": "2.0",
+      "id": 0,
+    }
+    tx_hash = requests.post(url, data=json.dumps(payload), headers=headers, auth=auth)
+    print("\BROADCAST_TX RESULT: ", tx_hash)
+    
 
 PHP Example
 ^^^^^^^^^^^^
@@ -108,7 +133,6 @@ library. Here's a simple example that will get you the asset balances for a spec
     $client = new jsonRPCClient('http://localhost:4000/jsonrpc/', array('username' => 'myusername', 'password' => 'mypass'));
     $addr = '15vA2MJ4ESG3Rt1PVQ79D1LFMBBNtcSz1f'; // BTC/XCP address you want to query
     $res = $client->get_balances(array('field' => 'address', 'op' => '==', 'value' => $addr));
-
 
 
 Terms & Conventions
@@ -409,27 +433,27 @@ Sign a transaction created with the Action/Write API.
 
 **Parameters:**
 
-  * **tx_hex (string):** A hex-encoded raw transaction (which was created via one of the ``create_`` calls below).
-  * **privkey (string):** The privkey in WIF format to use for signing the transaction. If not provided,
-    the privkey must to be known by the ``bitcoind`` wallet.
+  * **tx_hex (string):** A hex-encoded raw transaction (which was created via one of the ``create_`` calls).
+  * **privkey (string):** The private key in WIF format to use for signing the transaction. If not provided,
+    the private key must to be known by the ``bitcoind`` wallet.
   
 **Return:** 
 
-  A hex-encoded signed raw transaction ready to be broadcast with the broadcast_tx function.
+  A hex-encoded signed raw transaction ready to be broadcast with the ``broadcast_tx`` call.
 
 
 .. _broadcast_tx:
 
 broadcast_tx
 ^^^^^^^^^^^^^^
-**broadcast_tx(tx_hex)**
+**broadcast_tx(signed_tx_hex)**
 
 Broadcast a signed transaction onto the Bitcoin network.
 
 **Parameters:**
 
-  * **tx_hex (string):** A hex-encoded signed raw transaction (which was created via one of the ``create_`` calls
-    below and signed with ``sign_tx`` method).
+  * **signed_tx_hex (string):** A hex-encoded signed raw transaction (which was created via one of the ``create_`` calls
+    and signed with ``sign_tx`` method).
   
 **Return:** 
 
@@ -1013,3 +1037,36 @@ Here the list of all possible status for each table:
 * **orders**: open, filled, canceled, expired, invalid: {problem(s)}
 * **sends**: valid, invalid: {problem(s)}
   
+
+API Changes
+-------------
+
+This section documents any changes to the ``counterpartyd`` API, for version numbers where there were API-level modifications.
+
+.. _9_24_1:
+
+9.24.1
+^^^^^^^^^^^^^^^^^^^^^^^
+
+**Summary:** New API parsing engine added, as well as dynamic get_ method composition in ``api.py``: 
+
+* Added ``sql`` API method
+* Filter params: Added ``LIKE``, ``NOT LIKE`` and ``IN``
+
+.. _9_25_0:
+
+9.25.0
+^^^^^^^^^^^^^^^^^^^^^^^
+
+* new do_* methods: like create_*, but also sign and broadcast the transaction. Same parameters as create_*, plus optional privkey parameter.
+
+**backwards incompatible changes**
+
+* create_*: accept only dict as parameters
+* create_bet: ``bet_type`` must be a integer (instead string)
+* create_bet: ``wager`` and ``counterwager`` args are replaced by ``wager_quantity`` and ``counterwager_quantity``
+* create_issuance: parameter ``lock`` (boolean) removed (use LOCK in description)
+* create_issuance: parameter ``transfer_destination`` replaced by ``destination``
+
+
+
