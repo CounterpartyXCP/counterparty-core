@@ -45,6 +45,7 @@ def db_query(db, statement, bindings=(), callback=None, **callback_args):
             callback(row, **callback_args)
         results = None
     else:
+        print(statement, bindings)
         results = list(cursor.execute(statement, bindings))
     cursor.close()
     return results

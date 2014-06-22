@@ -28,7 +28,7 @@ from fractions import Fraction
 import logging
 
 from . import (util, exceptions, config, bitcoin)
-from . import (bet)
+from . import bet as _bet
 
 FORMAT = '>IdI52p'
 LENGTH = 4 + 8 + 4 + 52
@@ -126,14 +126,14 @@ def parse (db, tx, message):
                               WHERE (status = ? AND feed_address = ?)''',
                            ('open', tx['source']))
             for bet in list(cursor):
-                bet.cancel_bet(db, bet, 'dropped', tx['block_index'])
+                _bet.cancel_bet(db, bet, 'dropped', tx['block_index'])
         # Cancel Pending Bet Matches?
         if value == -3:
             cursor.execute('''SELECT * FROM bet_matches \
                               WHERE (status = ? AND feed_address = ?)''',
                            ('pending', tx['source']))
             for bet_match in list(cursor):
-                bet.cancel_bet_match(db, bet_match, 'dropped', tx['block_index'])
+                _bet.cancel_bet_match(db, bet_match, 'dropped', tx['block_index'])
         cursor.close()
         return
 
