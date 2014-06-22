@@ -125,8 +125,8 @@ def parse (db, tx, message):
             cursor.execute('''SELECT * FROM bet \
                               WHERE (status = ? AND feed_address = ?)''',
                            ('open', tx['source']))
-            for bet in list(cursor):
-                bet.cancel_bet(db, bet, 'dropped', tx['block_index'])
+            for i in list(cursor):
+                i.cancel_bet(db, i, 'dropped', tx['block_index'])
         # Cancel Pending Bet Matches?
         if value == -3:
             cursor.execute('''SELECT * FROM bet_matches \
