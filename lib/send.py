@@ -14,7 +14,7 @@ ID = 0
 def validate (db, source, destination, asset, quantity):
     problems = []
 
-    if asset == 'BTC': problems.append('cannot send bitcoins')  # Only for parsing.
+    if asset == config.BTC: problems.append('cannot send bitcoins')  # Only for parsing.
     
     if not isinstance(quantity, int):
         problems.append('quantity must be in satoshis')
@@ -28,7 +28,7 @@ def compose (db, source, destination, asset, quantity):
     cursor = db.cursor()
 
     # Just send BTC?
-    if asset == 'BTC':
+    if asset == config.BTC:
         return (source, [(destination, quantity)], None)
     
     #quantity must be in int satoshi (not float, string, etc)
@@ -68,9 +68,12 @@ def parse (db, tx, message):
         cursor.execute('''SELECT * FROM balances \
                                      WHERE (address = ? AND asset = ?)''', (tx['source'], asset))
         balances = cursor.fetchall()
-        if not balances:  quantity = 0
+        if not balances:
+            status = 'invalid: insufficient funds'
         elif balances[0]['quantity'] < quantity:
             quantity = min(balances[0]['quantity'], quantity)
+
+    if status == 'valid':
         # For SQLite3
         quantity = min(quantity, config.MAX_INT)
         problems = validate(db, tx['source'], tx['destination'], asset, quantity)

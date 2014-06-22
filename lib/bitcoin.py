@@ -71,9 +71,12 @@ def get_wallet ():
         for bunch in group:
             yield bunch
 
+def get_mempool ():
+    return rpc('getrawmempool', [])
+
 
 def bitcoind_check (db):
-    """Checks blocktime of last block to see if Bitcoind is running behind."""
+    """Checks blocktime of last block to see if {} Core is running behind.""".format(config.BTC_NAME)
     block_count = rpc('getblockcount', [])
     block_hash = rpc('getblockhash', [block_count])
     block = rpc('getblock', [block_hash])
@@ -117,23 +120,23 @@ def rpc (method, params):
     }
 
     '''
-    if config.PREFIX == config.UNITTEST_PREFIX:
+    if config.UNITTEST:
         CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
         CURR_DIR += '/../test/'
         open(CURR_DIR + '/rpc.new', 'a') as f
         f.write(payload)
     '''
 
-    response = connect(config.BITCOIND_RPC, payload, headers)
+    response = connect(config.BACKEND_RPC, payload, headers)
     if response == None:
         if config.TESTNET: network = 'testnet'
         else: network = 'mainnet'
-        raise exceptions.BitcoindRPCError('Cannot communicate with Bitcoind. (counterpartyd is set to run on {}, is Bitcoind?)'.format(network))
+        raise exceptions.BitcoindRPCError('Cannot communicate with {} Core. ({} is set to run on {}, is {} Core?)'.format(config.BTC_NAME, config.XCP_CLIENT, network, config.BTC_NAME))
     elif response.status_code not in (200, 500):
         raise exceptions.BitcoindRPCError(str(response.status_code) + ' ' + response.reason)
 
     '''
-    if config.PREFIX == config.UNITTEST_PREFIX:
+    if config.UNITTEST:
         print(response)
         f.close()
     '''
@@ -143,7 +146,7 @@ def rpc (method, params):
     if 'error' not in response_json.keys() or response_json['error'] == None:
         return response_json['result']
     elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
-        raise exceptions.BitcoindError('{} Is txindex enabled in Bitcoind?'.format(response_json['error']))
+        raise exceptions.BitcoindError('{} Is txindex enabled in {} Core?'.format(response_json['error'], config.BTC_NAME))
     elif response_json['error']['code'] == -4:   # Unknown private key (locked wallet?)
         # If address in wallet, attempt to unlock.
         address = params[0]
@@ -159,7 +162,7 @@ def rpc (method, params):
         time.sleep(10)
         return rpc('getblockhash', [block_index])
         
-    # elif config.PREFIX == config.UNITTEST_PREFIX:
+    # elif config.UNITTEST:
     #     print(method)
     else:
         raise exceptions.BitcoindError('{}'.format(response_json['error']))
@@ -340,7 +343,7 @@ def serialise (encoding, inputs, destination_outputs, data_output=None, change_o
 
 def input_value_weight(amount):
     # Prefer outputs less than dust size, then bigger is better.
-    if amount * config.UNIT <= config.REGULAR_DUST_SIZE:
+    if amount * config.UNIT <= config.DEFAULT_REGULAR_DUST_SIZE:
         return 0
     else:
         return 1 / amount
@@ -369,23 +372,40 @@ def sort_unspent_txouts(unspent, allow_unconfirmed_inputs):
     return unspent
 
 def private_key_to_public_key (private_key_wif):
-    secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif, is_test=config.TESTNET)
+    try:
+        secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif, is_test=config.TESTNET)
+    except pycoin.encoding.EncodingError:
+        raise exceptions.AltcoinSupportError('pycoin supports only Bitcoin mainnet and testnet private keys.')
     public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
     public_key = public_pair_to_sec(public_pair, compressed=compressed)
     public_key_hex = binascii.hexlify(public_key).decode('utf-8')
     return public_key_hex
 
-# Replace unittest flag with fake bitcoind JSON-RPC server.
-def transaction (tx_info, encoding, exact_fee=None, fee_provided=0, unittest=False, public_key_hex=None, allow_unconfirmed_inputs=False):
+def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
+                 regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
+                 multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
+                 op_return_value=config.DEFAULT_OP_RETURN_VALUE, exact_fee=None,
+                 fee_provided=0, public_key_hex=None,
+                 allow_unconfirmed_inputs=False):
 
     (source, destination_outputs, data) = tx_info
+
+    # Data encoding methods.
+    if data:
+        if encoding == 'auto':
+            if len(data) <= 40:
+                # encoding = 'opreturn'
+                encoding = 'multisig'   # BTCGuild isn’t mining OP_RETURN?!
+            else:
+                encoding = 'multisig'
+
+        if encoding not in ('pubkeyhash', 'multisig', 'opreturn'):
+            raise exceptions.TransactionError('Unknown encoding‐scheme.')
 
     if exact_fee and not isinstance(exact_fee, int):
         raise exceptions.TransactionError('Exact fees must be in satoshis.')
     if not isinstance(fee_provided, int):
         raise exceptions.TransactionError('Fee provided must be in satoshis.')
-    if encoding not in ('pubkeyhash', 'multisig', 'opreturn'):
-        raise exceptions.TransactionError('Unknown encoding‐scheme.')
 
     # If public key is necessary for construction of (unsigned) transaction,
     # either use the public key provided, or derive it from a private key
@@ -395,7 +415,7 @@ def transaction (tx_info, encoding, exact_fee=None, fee_provided=0, unittest=Fal
         # If no public key was provided, derive from private key.
         if not public_key_hex:
             # Get private key.
-            if unittest:
+            if config.UNITTEST:
                 private_key_wif = 'cPdUqd5EbBWsjcG9xiL1hz8bEyGFiz4SW99maU9JgpL9TEcxUf3j'
             else:
                 private_key_wif = rpc('dumpprivkey', [source])
@@ -412,8 +432,6 @@ def transaction (tx_info, encoding, exact_fee=None, fee_provided=0, unittest=Fal
     if encoding == 'pubkeyhash' and get_block_count() < 293000 and not config.TESTNET:
         raise exceptions.TransactionError('pubkeyhash encoding unsupported before block 293000')
     
-    if config.PREFIX == config.UNITTEST_PREFIX: unittest = True
-
     # Validate source and all destination addresses.
     destinations = [address for address, value in destination_outputs]
     for address in destinations + [source]:
@@ -424,7 +442,7 @@ def transaction (tx_info, encoding, exact_fee=None, fee_provided=0, unittest=Fal
                 raise exceptions.AddressError('Invalid Bitcoin address:', address)
 
     # Check that the source is in wallet.
-    if not unittest and encoding in ('multisig') and not public_key:
+    if not config.UNITTEST and encoding in ('multisig') and not public_key:
         if not rpc('validateaddress', [source])['ismine']:
             raise exceptions.AddressError('Not one of your Bitcoin addresses:', source)
 
@@ -433,12 +451,12 @@ def transaction (tx_info, encoding, exact_fee=None, fee_provided=0, unittest=Fal
     new_destination_outputs = []
     for address, value in destination_outputs:
         if encoding == 'multisig':
-            if value == None: value = config.MULTISIG_DUST_SIZE
-            if not value >= config.MULTISIG_DUST_SIZE:
+            if value == None: value = multisig_dust_size
+            if not value >= multisig_dust_size:
                 raise exceptions.TransactionError('Destination output is below the dust target value.')
         else:
-            if value == None: value = config.REGULAR_DUST_SIZE
-            if not value >= config.REGULAR_DUST_SIZE:
+            if value == None: value = regular_dust_size
+            if not value >= regular_dust_size:
                 raise exceptions.TransactionError('Destination output is below the dust target value.')
         new_destination_outputs.append((address, value))
     destination_outputs = new_destination_outputs
@@ -454,16 +472,16 @@ def transaction (tx_info, encoding, exact_fee=None, fee_provided=0, unittest=Fal
         elif encoding == 'multisig':
             data_array = list(chunks(data, 33 - 1))
         elif encoding == 'opreturn':
-            data_array = list(chunks(data, 80))
+            data_array = list(chunks(data, config.OP_RETURN_MAX_SIZE))
             assert len(data_array) == 1 # Only one OP_RETURN output currently supported (messages should all be shorter than 80 bytes, at the moment).
     else:
         data_array = []
 
     # Calculate total BTC to be sent.
     btc_out = 0
-    if encoding == 'multisig': data_value = config.MULTISIG_DUST_SIZE
-    elif encoding == 'opreturn': data_value = config.OP_RETURN_VALUE
-    else: data_value = config.REGULAR_DUST_SIZE # Pay‐to‐PubKeyHash
+    if encoding == 'multisig': data_value = multisig_dust_size
+    elif encoding == 'opreturn': data_value = op_return_value
+    else: data_value = regular_dust_size # Pay‐to‐PubKeyHash
     btc_out = sum([data_value for data_chunk in data_array])
     btc_out += sum([value for address, value in destination_outputs])
 
@@ -474,13 +492,13 @@ def transaction (tx_info, encoding, exact_fee=None, fee_provided=0, unittest=Fal
     outputs_size = ((25 + 9) * len(destination_outputs)) + (len(data_array) * data_output_size)
 
     # Get inputs.
-    unspent = get_unspent_txouts(source, normalize=True, unittest=unittest)
+    unspent = get_unspent_txouts(source, normalize=True)
     unspent = sort_unspent_txouts(unspent, allow_unconfirmed_inputs)
 
     inputs, btc_in = [], 0
     change_quantity = 0
     sufficient_funds = False
-    final_fee = config.FEE_PER_KB
+    final_fee = fee_per_kb
     for coin in unspent:
         inputs.append(coin)
         btc_in += round(coin['amount'] * config.UNIT)
@@ -490,19 +508,19 @@ def transaction (tx_info, encoding, exact_fee=None, fee_provided=0, unittest=Fal
             final_fee = exact_fee
         else:
             size = 181 * len(inputs) + outputs_size + 10
-            necessary_fee = (int(size / 10000) + 1) * config.FEE_PER_KB
+            necessary_fee = (int(size / 10000) + 1) * fee_per_kb
             final_fee = max(fee_provided, necessary_fee)
-            assert final_fee >= 1 * config.FEE_PER_KB
+            assert final_fee >= 1 * fee_per_kb
 
         # Check if good.
         change_quantity = btc_in - (btc_out + final_fee)
-        if change_quantity == 0 or change_quantity >= config.REGULAR_DUST_SIZE: # If change is necessary, must not be a dust output.
+        if change_quantity == 0 or change_quantity >= regular_dust_size: # If change is necessary, must not be a dust output.
             sufficient_funds = True
             break
     if not sufficient_funds:
         # Approximate needed change, fee by with most recently calculated quantities.
         total_btc_out = btc_out + max(change_quantity, 0) + final_fee
-        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need approximately {} BTC.)'.format(source, total_btc_out / config.UNIT))
+        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need approximately {} {}.)'.format(source, total_btc_out / config.UNIT, config.BTC))
 
     # Construct outputs.
     if data: data_output = (data_array, data_value)
@@ -553,7 +571,7 @@ def normalize_quantity(quantity, divisible=True):
 
 def get_btc_balance(address, normalize=False):
     # TODO: shows unconfirmed BTC balance, while counterpartyd shows only confirmed balances for all other assets.
-    """returns the BTC balance for a specific address"""
+    """returns the {} balance for a specific address""".format(config.BTC)
     if config.INSIGHT_ENABLE:
         r = requests.get(config.INSIGHT + '/api/addr/' + address)
         if r.status_code != 200:
@@ -570,7 +588,7 @@ def get_btc_balance(address, normalize=False):
             return normalize_quantity(int(r.text)) if normalize else int(r.text)
 
 def get_btc_supply(normalize=False):
-    """returns the total supply of BTC (based on what bitcoind says the current block height is)"""
+    """returns the total supply of {} (based on what Bitcoin Core says the current block height is)""".format(config.BTC)
     block_count = get_block_count()
     blocks_remaining = block_count
     total_supply = 0 
@@ -585,14 +603,14 @@ def get_btc_supply(normalize=False):
             blocks_remaining = 0
     return total_supply if normalize else int(total_supply * config.UNIT)
 
-def get_unspent_txouts(address, normalize=False, unittest=False):
+def get_unspent_txouts(address, normalize=False):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
         * 
     """
 
     # Unittest
-    if unittest:
+    if config.UNITTEST:
         CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
         with open(CURR_DIR + '/../test/listunspent.test.json', 'r') as listunspent_test_file:   # HACK
             wallet_unspent = json.load(listunspent_test_file)

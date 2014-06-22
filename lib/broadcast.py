@@ -190,30 +190,56 @@ def parse (db, tx, message):
                 if bull_credit >= escrow_less_fee:
                     bull_credit = escrow_less_fee
                     bear_credit = 0
-                    util.credit(db, tx['block_index'], bull_address, 'XCP', bull_credit)
+                    util.credit(db, tx['block_index'], bull_address, config.XCP, bull_credit)
                     bet_match_status = 'settled: liquidated for bear'
                 elif bull_credit <= 0:
                     bull_credit = 0
                     bear_credit = escrow_less_fee
-                    util.credit(db, tx['block_index'], bear_address, 'XCP', bear_credit)
+                    util.credit(db, tx['block_index'], bear_address, config.XCP, bear_credit)
                     bet_match_status = 'settled: liquidated for bull'
 
                 # Pay fee to feed.
-                util.credit(db, tx['block_index'], bet_match['feed_address'], 'XCP', fee)
+                util.credit(db, tx['block_index'], bet_match['feed_address'], config.XCP, fee)
 
-                logging.info('Contract Force‐Liquidated: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), bet_match_id))
+                # For logging purposes.
+                bindings = {
+                    'bet_match_id': bet_match_id,
+                    'bet_match_type_id': bet_match_type_id,
+                    'block_index': tx['block_index'],
+                    'settled': False,
+                    'bull_credit': bull_credit,
+                    'bear_credit': bear_credit,
+                    'winner': None,
+                    'escrow_less_fee': None,
+                    'fee': fee
+                }
+                sql='insert into bet_match_resolutions values(:bet_match_id, :bet_match_type_id, :block_index, :settled, :bull_credit, :bear_credit, :winner, :escrow_less_fee, :fee)'
+                cursor.execute(sql, bindings)
 
             # Settle (if not liquidated).
             elif timestamp >= bet_match['deadline']:
                 bet_match_status = 'settled'
 
-                util.credit(db, tx['block_index'], bull_address, 'XCP', bull_credit)
-                util.credit(db, tx['block_index'], bear_address, 'XCP', bear_credit)
+                util.credit(db, tx['block_index'], bull_address, config.XCP, bull_credit)
+                util.credit(db, tx['block_index'], bear_address, config.XCP, bear_credit)
 
                 # Pay fee to feed.
-                util.credit(db, tx['block_index'], bet_match['feed_address'], 'XCP', fee)
+                util.credit(db, tx['block_index'], bet_match['feed_address'], config.XCP, fee)
 
-                logging.info('Contract Settled: {} XCP credited to the bull, {} XCP credited to the bear, and {} XCP credited to the feed address ({})'.format(util.devise(db, bull_credit, 'XCP', 'output'), util.devise(db, bear_credit, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), bet_match_id))
+                # For logging purposes.
+                bindings = {
+                    'bet_match_id': bet_match_id,
+                    'bet_match_type_id': bet_match_type_id,
+                    'block_index': tx['block_index'],
+                    'settled': True,
+                    'bull_credit': bull_credit,
+                    'bear_credit': bear_credit,
+                    'winner': None,
+                    'escrow_less_fee': None,
+                    'fee': fee
+                }
+                sql='insert into bet_match_resolutions values(:bet_match_id, :bet_match_type_id, :block_index, :settled, :bull_credit, :bear_credit, :winner, :escrow_less_fee, :fee)'
+                cursor.execute(sql, bindings)
 
         # Equal[/NotEqual] bet.
         elif bet_match_type_id == equal_type_id and timestamp >= bet_match['deadline']:
@@ -229,17 +255,30 @@ def parse (db, tx, message):
             # Decide who won, and credit appropriately.
             if value == bet_match['target_value']:
                 winner = 'Equal'
-                util.credit(db, tx['block_index'], equal_address, 'XCP', escrow_less_fee)
+                util.credit(db, tx['block_index'], equal_address, config.XCP, escrow_less_fee)
                 bet_match_status = 'settled: for equal'
             else:
                 winner = 'NotEqual'
-                util.credit(db, tx['block_index'], notequal_address, 'XCP', escrow_less_fee)
+                util.credit(db, tx['block_index'], notequal_address, config.XCP, escrow_less_fee)
                 bet_match_status = 'settled: for notequal'
 
             # Pay fee to feed.
-            util.credit(db, tx['block_index'], bet_match['feed_address'], 'XCP', fee)
+            util.credit(db, tx['block_index'], bet_match['feed_address'], config.XCP, fee)
 
-            logging.info('Contract Settled: {} won the pot of {} XCP; {} XCP credited to the feed address ({})'.format(winner, util.devise(db, escrow_less_fee, 'XCP', 'output'), util.devise(db, fee, 'XCP', 'output'), bet_match_id))
+            # For logging purposes.
+            bindings = {
+                'bet_match_id': bet_match_id,
+                'bet_match_type_id': bet_match_type_id,
+                'block_index': tx['block_index'],
+                'settled': None,
+                'bull_credit': None,
+                'bear_credit': None,
+                'winner': winner,
+                'escrow_less_fee': escrow_less_fee,
+                'fee': fee
+            }
+            sql='insert into bet_match_resolutions values(:bet_match_id, :bet_match_type_id, :block_index, :settled, :bull_credit, :bear_credit, :winner, :escrow_less_fee, :fee)'
+            cursor.execute(sql, bindings)
 
         # Update the bet match’s status.
         if bet_match_status:

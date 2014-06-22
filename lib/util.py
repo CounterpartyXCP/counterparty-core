@@ -33,7 +33,7 @@ def api (method, params):
     }
     response = requests.post(config.RPC, data=json.dumps(payload), headers=headers)
     if response == None:
-        raise exceptions.RPCError('Cannot communicate with counterpartyd server.')
+        raise exceptions.RPCError('Cannot communicate with {} server.'.format(config.XCP_CLIENT))
     elif response.status_code != 200:
         if response.status_code == 500:
             raise exceptions.RPCError('Malformed API call.')
@@ -96,13 +96,13 @@ def log (db, command, category, bindings):
             logging.info('Send: {} from {} to {} ({}) [{}]'.format(output(bindings['quantity'], bindings['asset']), bindings['source'], bindings['destination'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'orders':
-            logging.info('Order: {} ordered {} for {} in {} blocks, with a provided fee of {} BTC and a required fee of {} BTC ({}) [{}]'.format(bindings['source'], output(bindings['give_quantity'], bindings['give_asset']), output(bindings['get_quantity'], bindings['get_asset']), bindings['expiration'], bindings['fee_provided'] / config.UNIT, bindings['fee_required'] / config.UNIT, bindings['tx_hash'], bindings['status']))
+            logging.info('Order: {} ordered {} for {} in {} blocks, with a provided fee of {} {} and a required fee of {} {} ({}) [{}]'.format(bindings['source'], output(bindings['give_quantity'], bindings['give_asset']), output(bindings['get_quantity'], bindings['get_asset']), bindings['expiration'], bindings['fee_provided'] / config.UNIT, config.BTC, bindings['fee_required'] / config.UNIT, config.BTC, bindings['tx_hash'], bindings['status']))
 
         elif category == 'order_matches':
             logging.info('Order Match: {} for {} ({}) [{}]'.format(output(bindings['forward_quantity'], bindings['forward_asset']), output(bindings['backward_quantity'], bindings['backward_asset']), bindings['id'], bindings['status']))
 
         elif category == 'btcpays':
-            logging.info('BTC Payment: {} paid {} to {} for order match {} ({}) [{}]'.format(bindings['source'], output(bindings['btc_amount'], 'BTC'), bindings['destination'], bindings['order_match_id'], bindings['tx_hash'], bindings['status']))
+            logging.info('{} Payment: {} paid {} to {} for order match {} ({}) [{}]'.format(config.BTC, bindings['source'], output(bindings['btc_amount'], config.BTC), bindings['destination'], bindings['order_match_id'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'issuances':
             if bindings['transfer']:
@@ -148,9 +148,9 @@ def log (db, command, category, bindings):
             end = 'in {} blocks ({}) [{}]'.format(bindings['expiration'], bindings['tx_hash'], bindings['status'])
 
             if 'CFD' not in BET_TYPE_NAME[bindings['bet_type']]:
-                log_message = 'Bet: {} against {}, by {}, on {} that ‘{}’ will {} {} at {}, {}'.format(output(bindings['wager_quantity'], 'XCP'), output(bindings['counterwager_quantity'], 'XCP'), bindings['source'], bindings['feed_address'], text, BET_TYPE_NAME[bindings['bet_type']], str(output(bindings['target_value'], 'value').split(' ')[0]), isodt(bindings['deadline']), end)
+                log_message = 'Bet: {} against {}, by {}, on {} that ‘{}’ will {} {} at {}, {}'.format(output(bindings['wager_quantity'], config.XCP), output(bindings['counterwager_quantity'], config.XCP), bindings['source'], bindings['feed_address'], text, BET_TYPE_NAME[bindings['bet_type']], str(output(bindings['target_value'], 'value').split(' ')[0]), isodt(bindings['deadline']), end)
             else:
-                log_message = 'Bet: {}, by {}, on {} for {} against {}, leveraged {}x, {}'.format(BET_TYPE_NAME[bindings['bet_type']], bindings['source'], bindings['feed_address'],output(bindings['wager_quantity'], 'XCP'), output(bindings['counterwager_quantity'], 'XCP'), output(bindings['leverage']/ 5040, 'leverage'), end)
+                log_message = 'Bet: {}, by {}, on {} for {} against {}, leveraged {}x, {}'.format(BET_TYPE_NAME[bindings['bet_type']], bindings['source'], bindings['feed_address'],output(bindings['wager_quantity'], config.XCP), output(bindings['counterwager_quantity'], config.XCP), output(bindings['leverage']/ 5040, 'leverage'), end)
 
             logging.info(log_message)
 
@@ -160,13 +160,13 @@ def log (db, command, category, bindings):
                 placeholder = ' that ' + str(output(bindings['target_value'], 'value'))
             if bindings['leverage']:
                 placeholder += ', leveraged {}x'.format(output(bindings['leverage'] / 5040, 'leverage'))
-            logging.info('Bet Match: {} for {} against {} for {} on {} at {}{} ({}) [{}]'.format(BET_TYPE_NAME[bindings['tx0_bet_type']], output(bindings['forward_quantity'], 'XCP'), BET_TYPE_NAME[bindings['tx1_bet_type']], output(bindings['backward_quantity'], 'XCP'), bindings['feed_address'], isodt(bindings['deadline']), placeholder, bindings['id'], bindings['status']))
+            logging.info('Bet Match: {} for {} against {} for {} on {} at {}{} ({}) [{}]'.format(BET_TYPE_NAME[bindings['tx0_bet_type']], output(bindings['forward_quantity'], config.XCP), BET_TYPE_NAME[bindings['tx1_bet_type']], output(bindings['backward_quantity'], config.XCP), bindings['feed_address'], isodt(bindings['deadline']), placeholder, bindings['id'], bindings['status']))
 
         elif category == 'dividends':
             logging.info('Dividend: {} paid {} per unit of {} ({}) [{}]'.format(bindings['source'], output(bindings['quantity_per_unit'], bindings['dividend_asset']), bindings['asset'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'burns':
-            logging.info('Burn: {} burned {} for {} ({}) [{}]'.format(bindings['source'], output(bindings['burned'], 'BTC'), output(bindings['earned'], 'XCP'), bindings['tx_hash'], bindings['status']))
+            logging.info('Burn: {} burned {} for {} ({}) [{}]'.format(bindings['source'], output(bindings['burned'], config.BTC), output(bindings['earned'], config.XCP), bindings['tx_hash'], bindings['status']))
 
         elif category == 'cancels':
             logging.info('Cancel: {} ({}) [{}]'.format(bindings['offer_hash'], bindings['tx_hash'], bindings['status']))
@@ -185,9 +185,24 @@ def log (db, command, category, bindings):
 
         elif category == 'bet_match_expirations':
             logging.info('Expired Bet Match: {}'.format(bindings['bet_match_id']))
+
+        elif category == 'bet_match_resolutions':
+            # DUPE
+            cfd_type_id = BET_TYPE_ID['BullCFD'] + BET_TYPE_ID['BearCFD']
+            equal_type_id = BET_TYPE_ID['Equal'] + BET_TYPE_ID['NotEqual']
+
+            if bindings['bet_match_type_id'] == cfd_type_id:
+                if bindings['settled']:
+                    logging.info('Bet Match Settled: {} credited to the bull, {} credited to the bear, and {} credited to the feed address ({})'.format(output(bindings['bull_credit'], config.XCP), output(bindings['bear_credit'], config.XCP), output(bindings['fee'], config.XCP), bindings['bet_match_id']))
+                else:
+                    logging.info('Bet Match Force‐Liquidated: {} credited to the bull, {} credited to the bear, and {} credited to the feed address ({})'.format(output(bindings['bull_credit'], config.XCP), output(bindings['bear_credit'], config.XCP), output(bindings['fee'], config.XCP), bindings['bet_match_id']))
+
+            elif bindings['bet_match_type_id'] == equal_type_id:
+                logging.info('Bet Match Settled: {} won the pot of {}; {} credited to the feed address ({})'.format(bindings['winner'], output(bindings['escrow_less_fee'], config.XCP), output(bindings['fee'], config.XCP), bindings['bet_match_id']))
+
     cursor.close()
 
-def message (db, block_index, command, category, bindings):
+def message (db, block_index, command, category, bindings, tx_hash=None):
     cursor = db.cursor()
 
     # Get last message index.
@@ -199,9 +214,23 @@ def message (db, block_index, command, category, bindings):
     else:
         message_index = 0
 
+    # Not to be misleading…
+    if block_index == config.MEMPOOL_BLOCK_INDEX:
+        try:
+            del bindings['status']
+            del bindings['block_index']
+        except KeyError:
+            pass
+
     bindings_string = json.dumps(collections.OrderedDict(sorted(bindings.items())))
-    cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings)',
-                   (message_index, block_index, command, category, bindings_string))
+    if config.UNITTEST: curr_time = 0
+    else: curr_time = int(time.time())
+    cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings, :timestamp)',
+                   (message_index, block_index, command, category, bindings_string, curr_time))
+
+    # Log only real transactions.
+    if block_index != config.MEMPOOL_BLOCK_INDEX:
+        log(db, command, category, bindings)
 
     cursor.close()
 
@@ -234,16 +263,9 @@ def exectracer(cursor, sql, bindings):
     if 'blocks' in sql or 'transactions' in sql: return True
 
     # Record alteration in database.
-    if category not in ('balances', 'messages'):
+    if category not in ('balances', 'messages', 'mempool'):
         if not (command in ('update') and category in ('orders', 'bets', 'order_matches', 'bet_matches')):    # List message manually.
-            try:
-                block_index = bindings['block_index']
-            except KeyError:
-                block_index = bindings['tx1_block_index']
-            message(db, block_index, command, category, bindings)
-
-    # Log.
-    log(db, command, category, bindings)
+            message(db, bindings['block_index'], command, category, bindings)
 
     return True
 
@@ -268,6 +290,10 @@ def connect_to_db(flags=None):
 
     # So that writers don’t block readers.
     cursor.execute('''PRAGMA journal_mode = WAL''')
+
+    # Make case sensitive the LIKE operator. 
+    # For insensitive queries use 'UPPER(fieldname) LIKE value.upper()''
+    cursor.execute('''PRAGMA case_sensitive_like = ON''')
 
     rows = list(cursor.execute('''PRAGMA foreign_key_check'''))
     if rows: raise exceptions.DatabaseError('Foreign key check failed.')
@@ -304,27 +330,34 @@ def version_check (db):
         raise exceptions.VersionError('Unable to check version. How’s your Internet access?')
  
     # Check client version.
+    passed = True
     if config.VERSION_MAJOR < versions['minimum_version_major']:
+        passed = False
+    elif config.VERSION_MAJOR == versions['minimum_version_major']:
         if config.VERSION_MINOR < versions['minimum_version_minor']:
+            passed = False
+        elif config.VERSION_MINOR == versions['minimum_version_minor']:
             if config.VERSION_REVISION < versions['minimum_version_revision']:
-                raise exceptions.VersionError('Please upgrade counterpartyd to the latest version and restart the server.')
+                passed = False
+
+    if not passed:
+        raise exceptions.VersionError('Please upgrade {} to the latest version and restart the server.'.format(config.XCP_CLIENT))
 
     logging.debug('Status: Version check passed.')
     return
 
 def database_check (db, blockcount):
-    """Checks Counterparty database to see if the counterpartyd server has caught up with Bitcoind."""
+    """Checks {} database to see if the {} server has caught up with Bitcoind.""".format(config.XCP_NAME, config.XCP_CLIENT)
     cursor = db.cursor()
     TRIES = 14
     for i in range(TRIES):
         block_index = last_block(db)['block_index']
-        logging.debug(block_index+', '+blockcount)
         if block_index == blockcount:
             cursor.close()
             return
         print('Database not up‐to‐date. Sleeping for one second. (Try {}/{})'.format(i+1, TRIES), file=sys.stderr)
         time.sleep(1)
-    raise exceptions.DatabaseError('Counterparty database is behind Bitcoind. Is the counterpartyd server running?')
+    raise exceptions.DatabaseError('{} database is behind Bitcoind. Is the {} server running?'.format(config.XCP_NAME, config.XCP_CLIENT))
 
 
 def isodt (epoch_time):
@@ -369,8 +402,8 @@ def last_message (db):
 
 def asset_id (asset):
     # Special cases.
-    if asset == 'BTC': return 0
-    elif asset == 'XCP': return 1
+    if asset == config.BTC: return 0
+    elif asset == config.XCP: return 1
 
     if asset[0] == 'A': raise exceptions.AssetNameError('starts with ‘A’')
 
@@ -397,8 +430,8 @@ def asset_id (asset):
     return n
 
 def asset_name (asset_id):
-    if asset_id == 0: return 'BTC'
-    elif asset_id == 1: return 'XCP'
+    if asset_id == 0: return config.BTC
+    elif asset_id == 1: return config.XCP
 
     if asset_id < 26**3:
         raise exceptions.AssetIDError('too low')
@@ -419,12 +452,12 @@ def asset_name (asset_id):
 
 def debit (db, block_index, address, asset, quantity, action=None, event=None):
     debit_cursor = db.cursor()
-    assert asset != 'BTC' # Never BTC.
+    assert asset != config.BTC # Never BTC.
     assert type(quantity) == int
     assert quantity >= 0
 
-    if asset == 'BTC':
-        raise exceptions.BalanceError('Cannot debit bitcoins from a Counterparty address!')
+    if asset == config.BTC:
+        raise exceptions.BalanceError('Cannot debit bitcoins from a {} address!'.format(config.XCP_NAME))
 
     debit_cursor.execute('''SELECT * FROM balances \
                             WHERE (address = ? AND asset = ?)''', (address, asset))
@@ -463,7 +496,7 @@ def debit (db, block_index, address, asset, quantity, action=None, event=None):
 
 def credit (db, block_index, address, asset, quantity, action=None, event=None):
     credit_cursor = db.cursor()
-    assert asset != 'BTC' # Never BTC.
+    assert asset != config.BTC # Never BTC.
     assert type(quantity) == int
     assert quantity >= 0
 
@@ -536,7 +569,7 @@ def devise (db, quantity, asset, dest, divisible=None):
         return norm(fraction(quantity, 1e8), 6)
 
     if divisible == None:
-        if asset in ('BTC', 'XCP'):
+        if asset in (config.BTC, config.XCP):
             divisible = True
         else:
             cursor = db.cursor()
@@ -592,7 +625,7 @@ def holders(db, asset):
         holders.append({'address': order_match['tx1_address'], 'address_quantity': order_match['backward_quantity'], 'escrow': order_match['id']})
 
     # Bets (and bet matches) only escrow XCP.
-    if asset == 'XCP':
+    if asset == config.XCP:
         cursor.execute('''SELECT * FROM bets \
                           WHERE status = ?''', ('open',))
         for bet in list(cursor):
@@ -624,7 +657,7 @@ def xcp_supply (db):
 
 def supplies (db):
     cursor = db.cursor()
-    supplies = {'XCP': xcp_supply(db)}
+    supplies = {config.XCP: xcp_supply(db)}
     cursor.execute('''SELECT * from issuances \
                       WHERE status = ?''', ('valid',))
     for issuance in list(cursor):

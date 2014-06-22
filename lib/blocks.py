@@ -11,16 +11,18 @@ import struct
 import decimal
 D = decimal.Decimal
 import logging
-import sys
 from Crypto.Cipher import ARC4
+import apsw
 
 from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
-import socket 
-if socket.gethostname() == 'l-pc':
-  sys.path.append('/home/hurin/xcpfeeds/')
-  import xcpfeeds.get
 
+# Order matters for FOREIGN KEY constraints.
+TABLES = ['credits', 'debits', 'messages'] + \
+          ['bet_match_resolutions', 'order_match_expirations', 'order_matches',
+          'order_expirations', 'orders', 'bet_match_expirations',
+          'bet_matches', 'bet_expirations', 'bets', 'broadcasts', 'btcpays',
+          'burns', 'callbacks', 'cancels', 'dividends', 'issuances', 'sends']
 
 def check_conservation (db):
     logging.debug('Status: Checking for conservation of assets.')
@@ -38,11 +40,12 @@ def check_conservation (db):
         logging.debug('Status: {} has been conserved ({} {} both issued and held)'.format(asset, util.devise(db, issued, asset, 'output'), asset))
 
 def parse_tx (db, tx):
-    parse_tx_cursor = db.cursor()
+    cursor = db.cursor()
     # Burns.
     if tx['destination'] == config.UNSPENDABLE:
         burn.parse(db, tx)
         return
+
     try:
         message_type_id = struct.unpack(config.TXTYPE_FORMAT, tx['data'][:4])[0]
     except:
@@ -69,39 +72,37 @@ def parse_tx (db, tx):
     elif message_type_id == callback.ID:
         callback.parse(db, tx, message)
     else:
-        parse_tx_cursor.execute('''UPDATE transactions \
+        cursor.execute('''UPDATE transactions \
                                    SET supported=? \
                                    WHERE tx_hash=?''',
                                 (False, tx['tx_hash']))
-        logging.info('Unsupported transaction: hash {}; data {}'.format(tx['tx_hash'], tx['data']))
+        if tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
+            logging.info('Unsupported transaction: hash {}; data {}'.format(tx['tx_hash'], tx['data']))
+        cursor.close()
+        return False
 
     # Check for conservation of assets every CAREFULNESS transactions.
     if config.CAREFULNESS and not tx['tx_index'] % config.CAREFULNESS:
         check_conservation(db)
 
-    parse_tx_cursor.close()
+    cursor.close()
+    return True
 
 def parse_block (db, block_index, block_time):
-    """This is a separate function from follow() so that changing the parsing
-    rules doesn't require a full database rebuild. If parsing rules are changed
-    (but not data identification), then just restart `counterparty.py follow`.
-
-    """
-    parse_block_cursor = db.cursor()
+    cursor = db.cursor()
 
     # Expire orders and bets.
     order.expire(db, block_index)
     bet.expire(db, block_index, block_time)
 
     # Parse transactions, sorting them by type.
-    parse_block_cursor.execute('''SELECT * FROM transactions \
-                                  WHERE block_index=? ORDER BY tx_index''',
-                               (block_index,))
-    transactions = parse_block_cursor.fetchall()
-    for tx in transactions:
+    cursor.execute('''SELECT * FROM transactions \
+                      WHERE block_index=? ORDER BY tx_index''',
+                   (block_index,))
+    for tx in list(cursor):
         parse_tx(db, tx)
 
-    parse_block_cursor.close()
+    cursor.close()
 
 def initialise(db):
     cursor = db.cursor()
@@ -144,6 +145,9 @@ def initialise(db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       tx_hash_idx ON transactions (tx_hash)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      index_index_idx ON transactions (block_index, tx_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       index_hash_index_idx ON transactions (tx_index, tx_hash, block_index)
@@ -261,19 +265,16 @@ def initialise(db):
                       expire_idx ON orders (status, expire_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      give_status_idx ON orders (give_asset, status)
+                      give_status_idx ON orders (status, give_asset)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      give_get_status_idx ON orders (give_asset, get_asset, status)
+                      give_get_status_idx ON orders (get_asset, give_asset, status)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       source_idx ON orders (source)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       give_asset_idx ON orders (give_asset)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      get_asset_idx ON orders (get_asset)
                    ''')
 
     # Order Matches
@@ -291,6 +292,7 @@ def initialise(db):
                       backward_quantity INTEGER,
                       tx0_block_index INTEGER,
                       tx1_block_index INTEGER,
+                      block_index INTEGER,
                       tx0_expiration INTEGER,
                       tx1_expiration INTEGER,
                       match_expire_index INTEGER,
@@ -365,7 +367,7 @@ def initialise(db):
                       block_index_idx ON issuances (block_index)
                     ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      valid_asset_idx ON issuances (status, asset)
+                      valid_asset_idx ON issuances (asset, status)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       status_idx ON issuances (status)
@@ -393,6 +395,9 @@ def initialise(db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       status_source_idx ON broadcasts (status, source)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      status_source_index_idx ON broadcasts (status, source, tx_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       timestamp_idx ON broadcasts (timestamp)
@@ -433,9 +438,6 @@ def initialise(db):
                       feed_valid_bettype_idx ON bets (feed_address, status, bet_type)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      feed_status_idx ON bets (status, feed_address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
                       source_idx ON bets (source)
                    ''')
 
@@ -459,6 +461,7 @@ def initialise(db):
                       backward_quantity INTEGER,
                       tx0_block_index INTEGER,
                       tx1_block_index INTEGER,
+                      block_index INTEGER,
                       tx0_expiration INTEGER,
                       tx1_expiration INTEGER,
                       match_expire_index INTEGER,
@@ -471,7 +474,7 @@ def initialise(db):
                       match_expire_idx ON bet_matches (status, match_expire_index)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      valid_feed_idx ON bet_matches (status, feed_address)
+                      valid_feed_idx ON bet_matches (feed_address, status)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       id_idx ON bet_matches (id)
@@ -632,18 +635,45 @@ def initialise(db):
                       tx1_address_idx ON bet_match_expirations (tx1_address)
                    ''')
 
+    # Bet Match Resolutions
+    cursor.execute('''CREATE TABLE IF NOT EXISTS bet_match_resolutions(
+                      bet_match_id TEXT PRIMARY KEY,
+                      bet_match_type_id INTEGER,
+                      block_index INTEGER,
+                      winner TEXT,
+                      settled BOOL,
+                      bull_credit INTEGER,
+                      bear_credit INTEGER,
+                      escrow_less_fee INTEGER,
+                      fee INTEGER,
+                      FOREIGN KEY (bet_match_id) REFERENCES bet_matches(id),
+                      FOREIGN KEY (block_index) REFERENCES blocks(block_index))
+                   ''')
+
     # Messages
     cursor.execute('''CREATE TABLE IF NOT EXISTS messages(
                       message_index INTEGER PRIMARY KEY,
                       block_index INTEGER,
                       command TEXT,
                       category TEXT,
-                      bindings TEXT)
+                      bindings TEXT,
+                      timestamp INTEGER)
                   ''')
                       # TODO: FOREIGN KEY (block_index) REFERENCES blocks(block_index) DEFERRABLE INITIALLY DEFERRED)
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       block_index_idx ON messages (block_index)
                    ''')
+
+    # Mempool messages
+    # NOTE: `status`, 'block_index` are removed from bindings.
+    cursor.execute('''DROP TABLE IF EXISTS mempool''')
+    cursor.execute('''CREATE TABLE mempool(
+                      tx_hash TEXT,
+                      command TEXT,
+                      category TEXT,
+                      bindings TEXT,
+                      timestamp INTEGER)
+                  ''')
 
     cursor.close()
 
@@ -748,6 +778,7 @@ def get_tx_info (tx, block_index):
 
     return source, destination, btc_amount, round(fee), data
 
+
 def reparse (db, block_index=None, quiet=False):
     """Reparse all transactions (atomically). If block_index is set, rollback
     to the end of that block.
@@ -759,26 +790,8 @@ def reparse (db, block_index=None, quiet=False):
     with db:
 
         # Delete all of the results of parsing.
-        cursor.execute('''DROP TABLE IF EXISTS order_expirations''')
-        cursor.execute('''DROP TABLE IF EXISTS bet_expirations''')
-        cursor.execute('''DROP TABLE IF EXISTS order_match_expirations''')
-        cursor.execute('''DROP TABLE IF EXISTS bet_match_expirations''')
-        cursor.execute('''DROP TABLE IF EXISTS debits''')
-        cursor.execute('''DROP TABLE IF EXISTS credits''')
-        cursor.execute('''DROP TABLE IF EXISTS balances''')
-        cursor.execute('''DROP TABLE IF EXISTS sends''')
-        cursor.execute('''DROP TABLE IF EXISTS orders''')
-        cursor.execute('''DROP TABLE IF EXISTS order_matches''')
-        cursor.execute('''DROP TABLE IF EXISTS btcpays''')
-        cursor.execute('''DROP TABLE IF EXISTS issuances''')
-        cursor.execute('''DROP TABLE IF EXISTS broadcasts''')
-        cursor.execute('''DROP TABLE IF EXISTS bets''')
-        cursor.execute('''DROP TABLE IF EXISTS bet_matches''')
-        cursor.execute('''DROP TABLE IF EXISTS dividends''')
-        cursor.execute('''DROP TABLE IF EXISTS burns''')
-        cursor.execute('''DROP TABLE IF EXISTS cancels''')
-        cursor.execute('''DROP TABLE IF EXISTS callbacks''')
-        cursor.execute('''DROP TABLE IF EXISTS messages''')
+        for table in TABLES + ['balances']:
+            cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
 
         # For rollbacks, just delete new blocks and then reparse what’s left.
         if block_index:
@@ -792,7 +805,7 @@ def reparse (db, block_index=None, quiet=False):
         initialise(db)
         cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
         for block in cursor.fetchall():
-            logging.info('Block (re-parse): {}'.format(str(block['block_index'])))
+            logging.info('Block (re‐parse): {}'.format(str(block['block_index'])))
             parse_block(db, block['block_index'], block['block_time'])
         if quiet:
             log.setLevel(logging.INFO)
@@ -807,11 +820,42 @@ def reparse (db, block_index=None, quiet=False):
     cursor.close()
     return
 
+def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
+    cursor = db.cursor()
+    # Get the important details about each transaction.
+    tx = bitcoin.get_raw_transaction(tx_hash)
+    logging.debug('Status: examining transaction {}'.format(tx_hash))
+    source, destination, btc_amount, fee, data = get_tx_info(tx, block_index)
+    if source and (data or destination == config.UNSPENDABLE):
+        cursor.execute('''INSERT INTO transactions(
+                            tx_index,
+                            tx_hash,
+                            block_index,
+                            block_hash,
+                            block_time,
+                            source,
+                            destination,
+                            btc_amount,
+                            fee,
+                            data) VALUES(?,?,?,?,?,?,?,?,?,?)''',
+                            (tx_index,
+                             tx_hash,
+                             block_index,
+                             block_hash,
+                             block_time,
+                             source,
+                             destination,
+                             btc_amount,
+                             fee,
+                             data)
+                      )
+    cursor.close()
+    return
 
 def follow (db):
     # TODO: This is not thread-safe!
-    follow_cursor = db.cursor()
-    
+    cursor = db.cursor()
+
     logging.info('Status: RESTART')
 
     # Initialise.
@@ -822,7 +866,7 @@ def follow (db):
         block_index = util.last_block(db)['block_index'] + 1
 
         # Reparse all transactions if minor version has changed.
-        minor_version = follow_cursor.execute('PRAGMA user_version').fetchall()[0]['user_version']
+        minor_version = cursor.execute('PRAGMA user_version').fetchall()[0]['user_version']
         if minor_version != config.VERSION_MINOR:
             logging.info('Status: client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.VERSION_MINOR))
             reparse(db, quiet=False)
@@ -832,19 +876,23 @@ def follow (db):
         block_index = config.BLOCK_FIRST
 
     # Get index of last transaction.
-    txes = list(follow_cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)'''))
+    txes = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)'''))
     if txes:
         assert len(txes) == 1
         tx_index = txes[0]['tx_index'] + 1
     else:
         tx_index = 0
 
+    not_supported = []    # No false positives.
+    mempool_initialised = False
     while True:
 
         # Get new blocks.
-        if block_index <= bitcoin.get_block_count():
+        block_count = bitcoin.get_block_count()
+        if block_index <= block_count:
+
             logging.info('Block: {}'.format(str(block_index)))
-            
+
             # Backwards check for incorrect blocks due to chain reorganisation, and stop when a common parent is found.
             c = block_index
             requires_rollback = False
@@ -857,8 +905,8 @@ def follow (db):
                 bitcoind_parent = c_block['previousblockhash']
 
                 # DB parent hash.
-                blocks = list(follow_cursor.execute('''SELECT * FROM blocks
-                                                       WHERE block_index = ?''', (c - 1,)))
+                blocks = list(cursor.execute('''SELECT * FROM blocks
+                                                WHERE block_index = ?''', (c - 1,)))
                 if len(blocks) != 1: break  # For empty DB.
                 db_parent = blocks[0]['block_hash']
 
@@ -887,7 +935,7 @@ def follow (db):
             tx_hash_list = block['tx']
             with db:
                 # List the block.
-                follow_cursor.execute('''INSERT INTO blocks(
+                cursor.execute('''INSERT INTO blocks(
                                     block_index,
                                     block_hash,
                                     block_time) VALUES(?,?,?)''',
@@ -898,60 +946,111 @@ def follow (db):
 
                 # List the transactions in the block.
                 for tx_hash in tx_hash_list:
-                    # Skip duplicate transaction entries.
-                    follow_cursor.execute('''SELECT * FROM transactions WHERE tx_hash=?''', (tx_hash,))
-                    blocks = follow_cursor.fetchall()
-                    if blocks:
-                        tx_index += 1
-                        continue
-                    # Get the important details about each transaction.
-                    tx = bitcoin.get_raw_transaction(tx_hash)
-                    logging.debug('Status: examining transaction {}'.format(tx_hash))
-                    source, destination, btc_amount, fee, data = get_tx_info(tx, block_index)
-                    if source and (data or destination == config.UNSPENDABLE):
-                        follow_cursor.execute('''INSERT INTO transactions(
-                                            tx_index,
-                                            tx_hash,
-                                            block_index,
-                                            block_hash,
-                                            block_time,
-                                            source,
-                                            destination,
-                                            btc_amount,
-                                            fee,
-                                            data) VALUES(?,?,?,?,?,?,?,?,?,?)''',
-                                            (tx_index,
-                                             tx_hash,
-                                             block_index,
-                                             block_hash,
-                                             block_time,
-                                             source,
-                                             destination,
-                                             btc_amount,
-                                             fee,
-                                             data)
-                                      )
-                        tx_index += 1
+                    list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index)
+                    tx_index += 1
 
                 # Parse the transactions in the block.
                 parse_block(db, block_index, block_time)
 
+            # When newly caught up, check for conservation of assets.
+            if block_index == block_count:
+                check_conservation(db)
+
             # Increment block index.
             block_count = bitcoin.get_block_count()
             block_index +=1
-            
-            #update site cache
-            if block_count == block_index:
-              print('running xcpfeeds cache updates...') 
-              try: 
-                xcpfeeds.get.getUpdatesXCP() 
-              except: pass
 
         else:
-            # Check for conservation of assets.
-            check_conservation(db)
+            # First mempool fill for session?
+            if mempool_initialised:
+                logging.debug('Status: Updating mempool.')
+            else:
+                logging.debug('Status: Initialising mempool.')
+
+            # Get old counterpartyd mempool.
+            old_mempool = list(cursor.execute('''SELECT * FROM mempool'''))
+            old_mempool_hashes = [message['tx_hash'] for message in old_mempool]
+
+            # Fake values for fake block.
+            curr_time = int(time.time())
+            mempool_tx_index = tx_index
+
+            # For each transaction in Bitcoin Core mempool, if it’s new, create
+            # a fake block, a fake transaction, capture the generated messages,
+            # and then save those messages.
+            # Every transaction in mempool is parsed independently. (DB is rolled back after each one.)
+            mempool = []
+            for tx_hash in bitcoin.get_mempool():
+
+                # If already in counterpartyd mempool, copy to new one.
+                if tx_hash in old_mempool_hashes:
+                    for message in old_mempool:
+                        if message['tx_hash'] == tx_hash:
+                            mempool.append((tx_hash, message))
+
+                # If already skipped, skip it again.
+                elif tx_hash not in not_supported:
+
+                    # Else: list, parse and save it.
+                    try:
+                        with db:
+                            # List the fake block.
+                            cursor.execute('''INSERT INTO blocks(
+                                                block_index,
+                                                block_hash,
+                                                block_time) VALUES(?,?,?)''',
+                                                (config.MEMPOOL_BLOCK_INDEX,
+                                                 config.MEMPOOL_BLOCK_HASH,
+                                                 curr_time)
+                                          )
+
+                            # List transaction.
+                            try:    # Sometimes the transactions can’t be found: `{'code': -5, 'message': 'No information available about transaction'} Is txindex enabled in Bitcoind?`
+                                list_tx(db, config.MEMPOOL_BLOCK_HASH, config.MEMPOOL_BLOCK_INDEX, curr_time, tx_hash, mempool_tx_index)
+                                mempool_tx_index += 1
+                            except exceptions.BitcoindError:
+                                assert False
+
+                            # Parse transaction.
+                            cursor.execute('''SELECT * FROM transactions \
+                                              WHERE tx_hash = ?''',
+                                           (tx_hash,))
+                            transactions = list(cursor)
+                            if transactions:
+                                assert len(transactions) == 1
+                                transaction = transactions[0]
+                                supported = parse_tx(db, transaction)
+                                if not supported:
+                                    not_supported.append(tx_hash)
+                            else:
+                                # If a transaction hasn’t been added to the
+                                # table `transactions`, then it’s not a
+                                # Counterparty transaction.
+                                not_supported.append(tx_hash)
+                                assert False
+
+                            # Save transaction and side‐effects in memory.
+                            cursor.execute('''SELECT * FROM messages WHERE block_index = ?''', (config.MEMPOOL_BLOCK_INDEX,))
+                            for message in list(cursor):
+                                mempool.append((tx_hash, message))
+
+                            # Rollback.
+                            assert False
+                    except AssertionError:
+                        pass
+
+            # Re‐write mempool messages to database.
+            with db:
+                cursor.execute('''DELETE FROM mempool''')
+                for message in mempool:
+                    tx_hash, new_message = message
+                    new_message['tx_hash'] = tx_hash
+                    cursor.execute('''INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp)''', (new_message))
+
+            # Wait
+            mempool_initialised = True
             time.sleep(2)
 
-    follow_cursor.close()
+    cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

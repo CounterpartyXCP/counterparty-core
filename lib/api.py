@@ -7,6 +7,7 @@ import decimal
 import time
 import json
 import re
+import requests
 import logging
 from logging import handlers as logging_handlers
 D = decimal.Decimal
@@ -20,13 +21,22 @@ from jsonrpc import dispatcher
 from . import (config, bitcoin, exceptions, util)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 
-# best place?
-API_TABLES = ['balances', 'credits', 'debits', 'bets', 'bet_matches', 'broadcasts', 'btcpays', 'burns', 
-          'callbacks', 'cancels', 'dividends', 'issuances', 'orders', 'order_matches', 'sends', 
-          'bet_expirations', 'order_expirations', 'bet_match_expirations', 'order_match_expirations']
+
+API_TABLES = ['balances', 'credits', 'debits', 'bets', 'bet_matches',
+              'broadcasts', 'btcpays', 'burns', 'callbacks', 'cancels',
+              'dividends', 'issuances', 'orders', 'order_matches', 'sends',
+              'bet_expirations', 'order_expirations', 'bet_match_expirations',
+              'order_match_expirations', 'bet_match_resolutions', 'mempool']
+
+API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel', 
+                    'callback', 'dividend', 'issuance', 'order', 'send']
+
+COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
+                'multisig_dust_size', 'op_return_value', 'pubkey',
+                'allow_unconfirmed_inputs', 'fee', 'fee_provided']
 
 
-# TODO: ALL queries EVERYWHERE should be done with this method
+# TODO: ALL queries EVERYWHERE should be done with these methods
 def db_query(db, statement, bindings=(), callback=None, **callback_args):
     cursor = db.cursor()
     if hasattr(callback, '__call__'):
@@ -39,19 +49,18 @@ def db_query(db, statement, bindings=(), callback=None, **callback_args):
     cursor.close()
     return results
 
-# best name?
-def translate(db, table=None, filters=[], filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None, 
+def get_rows(db, table, filters=[], filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None, 
               status=None, limit=1000, offset=0, show_expired=True):
     """Filters results based on a filter data structure (as used by the API)"""
+    
     def value_to_marker(value):
         # if value is an array place holder is (?,?,?,..)
         if isinstance(value, list):
-            return "({})".format(",".join(['?' for e in range(0,len(value))]))
+            return '''({})'''.format(','.join(['?' for e in range(0,len(value))]))
         else:
-            return '?'
+            return '''?'''
 
-    # TODO: Exceptions should be more specific.
-    # TODO: Document that filterop and op both can be anything that SQLite3 accepts.
+    # TODO: Document that op can be anything that SQLite3 accepts.
     if not table or table.lower() not in API_TABLES:
         raise Exception('Unknown table')
     if filterop and filterop.upper() not in ['OR', 'AND']:
@@ -60,24 +69,26 @@ def translate(db, table=None, filters=[], filterop='AND', order_by=None, order_d
         raise Exception('Invalid order direction (ASC, DESC)')
     if not isinstance(limit, int):
         raise Exception('Invalid limit')
+    elif limit > 1000:
+        raise Exception('Limit should be lower or equal to 1000')
     if not isinstance(offset, int):
         raise Exception('Invalid offset')
     # TODO: accept an object:  {'field1':'ASC', 'field2': 'DESC'}
     if order_by and not re.compile('^[a-z0-9_]+$').match(order_by):
         raise Exception('Invalid order_by, must be a field name')
 
-    ### bad idea
-    # max 1000 results 
-    #limit = min(limit, 1000)
-    
     if isinstance(filters, dict): #single filter entry, convert to a one entry list
         filters = [filters,]
+    elif not isinstance(filters, list):
+        filters = []
 
     # TODO: Document this! (Each filter can be an ordered list.)
     new_filters = []
     for filter_ in filters:
-        if type(filter_) in (list, tuple):
-            new_filters.append({'field': filter_[0], 'op': filter_[1], 'value':  filter_[2]})
+        if type(filter_) in (list, tuple) and len(filter_) in [3, 4]:
+            new_filter = {'field': filter_[0], 'op': filter_[1], 'value':  filter_[2]}
+            if len(filter_) == 4: new_filter['case_sensitive'] = filter_[3]
+            new_filters.append(new_filter)
         elif type(filter_) == dict:
             new_filters.append(filter_)
         else:
@@ -93,8 +104,10 @@ def translate(db, table=None, filters=[], filterop='AND', order_by=None, order_d
             raise Exception("Invalid value for the field '%s'" % filter_['field'])
         if isinstance(filter_['value'], list) and filter_['op'].upper() != 'IN':
             raise Exception("Invalid value for the field '%s'" % filter_['field'])
-        if filter_['op'].upper() not in ['=', '==', '!=', '>', '<', '>=', '<=', 'IN', 'LIKE', 'LIKECASE']:
-            raise Exception("Invalid operator for the field '%s'" % filter_['field'])      
+        if filter_['op'].upper() not in ['=', '==', '!=', '>', '<', '>=', '<=', 'IN', 'LIKE', 'NOT IN', 'NOT LIKE']:
+            raise Exception("Invalid operator for the field '%s'" % filter_['field'])  
+        if 'case_sensitive' in filter_ and not isinstance(filter_['case_sensitive'], bool):
+            raise Exception("case_sensitive must be a boolean")
 
     # SELECT
     statement = '''SELECT * FROM {}'''.format(table)
@@ -102,27 +115,16 @@ def translate(db, table=None, filters=[], filterop='AND', order_by=None, order_d
     bindings = []
     conditions = []
     for filter_ in filters:
+        case_sensitive = False if 'case_sensitive' not in filter_ else filter_['case_sensitive']
+        if filter_['op'] == 'LIKE' and case_sensitive == False:
+            filter_['field'] = '''UPPER({})'''.format(filter_['field'])
+            filter_['value'] = filter_['value'].upper()
         marker = value_to_marker(filter_['value'])
-        if filter_['op'] == 'LIKE':
-            conditions.append('{} {} {}'.format('UPPER(' + filter_['field'] + ')', 'LIKE', marker)) #convert to upper in case used with LIKECASE
-            if not isinstance(filter_['value'], str):
-                raise Exception("Like operator must take a string in the value field") 
-            else:
-                bindings.append('%' + filter_['value'].upper() + '%')
-        elif filter_['op'] == 'LIKECASE':
-            statement = 'PRAGMA case_sensitive_like=ON;' + statement
-            conditions.append('{} {} {}'.format(filter_['field'], 'LIKE', marker))
-            print(filter_['value'], isinstance(filter_['value'], str))
-            if not isinstance(filter_['value'], str):         
-                raise Exception("Like operator must take a string in the value field") 
-            else:
-                bindings.append('%' + filter_['value'] + '%')
+        conditions.append('''{} {} {}'''.format(filter_['field'], filter_['op'], marker))
+        if isinstance(filter_['value'], list):         
+            bindings += filter_['value']
         else:
-            conditions.append('{} {} {}'.format(filter_['field'], filter_['op'], marker))
-            if isinstance(filter_['value'], list):         
-                bindings += filter_['value']
-            else:
-                bindings.append(filter_['value'])
+            bindings.append(filter_['value'])
     # AND filters
     more_conditions = []
     if table not in ['balances', 'order_matches', 'bet_matches']:
@@ -134,33 +136,35 @@ def translate(db, table=None, filters=[], filterop='AND', order_by=None, order_d
             bindings.append(end_block)
     elif table in ['order_matches', 'bet_matches']:
         if start_block != None:
-            more_conditions.append('''(tx0_block_index >= ? OR tx1_block_index >= ?)''')
-            bindings += [start_block, start_block]
+            more_conditions.append('''tx0_block_index >= ?''')
+            bindings.append(start_block)
         if end_block != None:
-            more_conditions.append('''(tx0_block_index <= ? OR tx1_block_index <= ?)''')
-            bindings += [end_block, end_block]
+            more_conditions.append('''tx1_block_index <= ?''')
+            bindings.append(end_block)
 
-    if isinstance(status, list) and len(status)>0:
+    # status
+    if isinstance(status, list) and len(status) > 0:
         more_conditions.append('''status IN {}'''.format(value_to_marker(status)))
         bindings += status
     elif isinstance(status, str) and status != '':
         more_conditions.append('''status == ?''')
         bindings.append(status)
+
     # legacy filters
     if not show_expired and table == 'orders':
         #Ignore BTC orders one block early.
-        expire_index = util.last_block(db)['block_index'] + 1 ### currently shaving an extra block off
+        expire_index = util.last_block(db)['block_index'] + 1
         more_conditions.append('''((give_asset == ? AND expire_index > ?) OR give_asset != ?)''')
-        bindings += ['BTC', expire_index, 'BTC']
+        bindings += [config.BTC, expire_index, config.BTC]
 
     if (len(conditions) + len(more_conditions)) > 0:
         statement += ''' WHERE'''
         all_conditions = []
         if len(conditions) > 0:
-            all_conditions.append('''({})'''.format(' {} '.format(filterop.upper()).join(conditions)))
+            all_conditions.append('''({})'''.format(''' {} '''.format(filterop.upper()).join(conditions)))
         if len(more_conditions) > 0: 
-            all_conditions.append('''({})'''.format(' AND '.join(more_conditions)))
-        statement += ' {}'.format(' AND '.join(all_conditions))
+            all_conditions.append('''({})'''.format(''' AND '''.join(more_conditions)))
+        statement += ''' {}'''.format(''' AND '''.join(all_conditions))
 
     # ORDER BY
     if order_by != None:
@@ -173,10 +177,53 @@ def translate(db, table=None, filters=[], filterop='AND', order_by=None, order_d
         if offset:
             statement += ''' OFFSET {}'''.format(offset)
 
-    logging.error(statement)
     return db_query(db, statement, tuple(bindings))
 
+def compose_transaction(db, name, params,
+                        encoding='auto',
+                        fee_per_kb=config.DEFAULT_FEE_PER_KB,
+                        regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
+                        multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
+                        op_return_value=config.DEFAULT_OP_RETURN_VALUE, 
+                        pubkey=None,
+                        allow_unconfirmed_inputs=False, 
+                        fee=None,
+                        fee_provided=0):
+    tx_info = sys.modules['lib.{}'.format(name)].compose(db, **params)
+    return bitcoin.transaction(tx_info, encoding=encoding,
+                                        fee_per_kb=fee_per_kb,
+                                        regular_dust_size=regular_dust_size,
+                                        multisig_dust_size=multisig_dust_size,
+                                        op_return_value=op_return_value,
+                                        public_key_hex=pubkey,
+                                        allow_unconfirmed_inputs=allow_unconfirmed_inputs,
+                                        exact_fee=fee, 
+                                        fee_provided=fee_provided)
 
+def sign_transaction(unsigned_tx_hex, private_key_wif=None):
+    return bitcoin.sign_tx(unsigned_tx_hex, private_key_wif=private_key_wif)
+
+def broadcast_transaction(signed_tx_hex):
+    if not config.TESTNET and config.BROADCAST_TX_MAINNET in ['bci', 'bci-failover']:
+        url = "https://blockchain.info/pushtx"
+        params = {'tx': signed_tx_hex}
+        response = requests.post(url, data=params)
+        if response.text.lower() != 'transaction submitted' or response.status_code != 200:
+            if config.BROADCAST_TX_MAINNET == 'bci-failover':
+                return bitcoin.broadcast_tx(signed_tx_hex)
+            else:
+                raise Exception(response.text)
+        return response.text
+    else:
+        return bitcoin.broadcast_tx(signed_tx_hex)
+    
+def do_transaction(db, name, params, private_key_wif=None, **kwargs):
+    unsigned_tx = compose_transaction(db, name, params, **kwargs)
+    signed_tx = sign_transaction(unsigned_tx, private_key_wif=private_key_wif)
+    return broadcast_transaction(signed_tx)
+
+
+#TODO: Move to jsonrpc.py
 class APIServer(threading.Thread):
 
     def __init__ (self):
@@ -191,7 +238,7 @@ class APIServer(threading.Thread):
         # Generate dynamically get_{table} methods
         def generate_get_method(table):
             def get_method(**kwargs):
-                return translate(db, table=table, **kwargs)
+                return get_rows(db, table=table, **kwargs)
             return get_method
 
         for table in API_TABLES:
@@ -201,8 +248,55 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def sql(query, bindings=[]):
-            print(query, tuple(bindings))
             return db_query(db, query, tuple(bindings))
+
+
+        ######################
+        #WRITE/ACTION API
+
+        # Generate dynamically create_{transaction} and do_{transaction} methods
+        def generate_create_method(transaction):
+
+            def split_params(**kwargs):
+                transaction_args = {}
+                common_args = {}
+                private_key_wif = None
+                for key in kwargs:
+                    if key in COMMONS_ARGS:
+                        common_args[key] = kwargs[key]
+                    elif key == 'privkey':
+                        private_key_wif = kwargs[key]
+                    else:
+                        transaction_args[key] = kwargs[key]
+                return transaction_args, common_args, private_key_wif
+
+            def create_method(**kwargs):
+                transaction_args, common_args, private_key_wif = split_params(**kwargs)
+                return compose_transaction(db, name=transaction, params=transaction_args, **common_args)
+
+            def do_method(**kwargs):
+                transaction_args, common_args, private_key_wif = split_params(**kwargs)
+                return do_transaction(db, name=transaction, params=transaction_args, private_key_wif=private_key_wif, **common_args)
+
+            return create_method, do_method
+
+        for transaction in API_TRANSACTIONS:
+            create_method, do_method = generate_create_method(transaction)
+            create_method.__name__ = 'create_{}'.format(transaction)
+            do_method.__name__ = 'do_{}'.format(transaction)
+            dispatcher.add_method(create_method)
+            dispatcher.add_method(do_method)
+
+        @dispatcher.add_method
+        def sign_tx(unsigned_tx_hex, privkey=None):
+            return sign_transaction(unsigned_tx_hex, private_key_wif=privkey)
+                
+        @dispatcher.add_method
+        def broadcast_tx(signed_tx_hex):
+            return broadcast_transaction(signed_tx_hex)
+
+
+
         
         @dispatcher.add_method
         def get_messages(block_index):
@@ -246,8 +340,8 @@ class APIServer(threading.Thread):
             for asset in assets:
 
                 # BTC and XCP.
-                if asset in ['BTC', 'XCP']:
-                    if asset == 'BTC':
+                if asset in [config.BTC, config.XCP]:
+                    if asset == config.BTC:
                         supply = bitcoin.get_btc_supply(normalize=False)
                     else:
                         supply = util.xcp_supply(db)
@@ -309,8 +403,7 @@ class APIServer(threading.Thread):
             latestBlockIndex = bitcoin.get_block_count()
             
             try:
-                print('check cancelled')
-                #util.database_check(db, latestBlockIndex)
+                util.database_check(db, latestBlockIndex)
             except:
                 caught_up = False
             else:
@@ -367,99 +460,7 @@ class APIServer(threading.Thread):
             cursor.close()
             return names
 
-        ######################
-        #WRITE/ACTION API
-        @dispatcher.add_method
-        def create_bet(source, feed_address, bet_type, deadline, wager, counterwager, expiration, target_value=0.0,
-        leverage=5040, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
-            try:
-                bet_type_id = bet_type #util.BET_TYPE_ID[bet_type] #
-                print(bet_type_id)
-            except KeyError:
-                raise exceptions.BetError('Unknown bet type.')
-            tx_info = bet.compose(db, source, feed_address,
-                              bet_type_id, deadline, wager,
-                              counterwager, target_value,
-                              leverage, expiration)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
-
-        @dispatcher.add_method
-        def create_broadcast(source, fee_fraction, text, timestamp, value=-1, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
-            tx_info = broadcast.compose(db, source, timestamp,
-                                    value, fee_fraction, text)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
-
-        @dispatcher.add_method
-        def create_btcpay(source, order_match_id, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
-            tx_info = btcpay.compose(db, source, order_match_id)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
-
-        @dispatcher.add_method
-        def create_burn(source, quantity, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
-            tx_info = burn.compose(db, source, quantity)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
-
-        @dispatcher.add_method
-        def create_cancel(source, offer_hash, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
-            tx_info = cancel.compose(db, source, offer_hash)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
-
-        @dispatcher.add_method
-        def create_callback(source, fraction, asset, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
-            tx_info = callback.compose(db, source, fraction, asset)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
-
-        @dispatcher.add_method
-        def create_dividend(source, quantity_per_unit, asset, dividend_asset, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
-            tx_info = dividend.compose(db, source, quantity_per_unit, asset, dividend_asset)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
-
-        @dispatcher.add_method
-        def create_issuance(source, asset, quantity, divisible, description, callable_=None, call_date=None,
-        call_price=None, transfer_destination=None, lock=False, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
-            try:
-                quantity = int(quantity)
-            except ValueError:
-                raise Exception("Invalid quantity")
-            if lock:
-                description = "LOCK"
-            tx_info = issuance.compose(db, source, transfer_destination,
-                                   asset, quantity, divisible, callable_,
-                                   call_date, call_price, description)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
-
-        @dispatcher.add_method
-        def create_order(source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required=None,
-                         encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee_provided=None, fee=None):
-            if get_asset == 'BTC' and fee_required is None:
-                #since no value is passed, set a default of 1% for fee_required if buying BTC
-                fee_required = int(get_quantity / 100)
-            elif fee_required is None:
-                fee_required = 0 #no default set, but fee_required does not apply
-
-            if give_asset == 'BTC' and fee_provided is None:
-                #since no value is passed, set a default of 1% for fee_provided if selling BTC
-                fee_provided = int(give_quantity / 100)
-            elif fee_provided is None:
-                fee_provided = 0 #no default set, but fee_required does not apply
-            
-            tx_info = order.compose(db, source, give_asset, give_quantity,
-                                    get_asset, get_quantity, expiration,
-                                    fee_required)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, fee_provided=fee_provided, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
-
-        @dispatcher.add_method
-        def create_send(source, destination, asset, quantity, encoding='multisig', pubkey=None, allow_unconfirmed_inputs=False, fee=None):
-            tx_info = send.compose(db, source, destination, asset, quantity)
-            return bitcoin.transaction(tx_info, encoding=encoding, exact_fee=fee, public_key_hex=pubkey, allow_unconfirmed_inputs=allow_unconfirmed_inputs)
-
-        @dispatcher.add_method
-        def sign_tx(unsigned_tx_hex, privkey=None):
-            return bitcoin.sign_tx(unsigned_tx_hex, private_key_wif=privkey)
-                
-        @dispatcher.add_method
-        def broadcast_tx(signed_tx_hex):
-            return bitcoin.broadcast_tx(signed_tx_hex)
+        
 
         class API(object):
             @cherrypy.expose
@@ -510,7 +511,7 @@ class APIServer(threading.Thread):
             '/': {
                 'tools.trailing_slash.on': False,
                 'tools.auth_basic.on': True,
-                'tools.auth_basic.realm': 'counterpartyd',
+                'tools.auth_basic.realm': config.XCP_CLIENT,
                 'tools.auth_basic.checkpassword': checkpassword,
             },
         }
@@ -520,7 +521,7 @@ class APIServer(threading.Thread):
         application.log.access_log.propagate = False
         application.log.error_log.propagate = False
 
-        if config.PREFIX != config.UNITTEST_PREFIX:  #skip setting up logs when for the test suite
+        if not config.UNITTEST:  #skip setting up logs when for the test suite
             #set up a rotating log handler for this application
             # Remove the default FileHandlers if present.
             application.log.error_file = ""
@@ -547,7 +548,6 @@ class APIServer(threading.Thread):
         try:
             server.start()
         except OSError:
-            raise Exception("Cannot start the API subsystem. Is counterpartyd"
-                " already running, or is something else listening on port %s?" % config.RPC_PORT)
+            raise Exception("Cannot start the API subsystem. Is {} already running, or is something else listening on port {}?".format(config.XCP_CLIENT, config.RPC_PORT))
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
