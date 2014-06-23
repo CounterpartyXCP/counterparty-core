@@ -219,6 +219,7 @@ def message (db, block_index, command, category, bindings, tx_hash=None):
         try:
             del bindings['status']
             del bindings['block_index']
+            del bindings['tx_index']
         except KeyError:
             pass
 
