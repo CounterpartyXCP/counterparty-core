@@ -372,10 +372,11 @@ def sort_unspent_txouts(unspent, allow_unconfirmed_inputs):
     return unspent
 
 def private_key_to_public_key (private_key_wif):
+    # allowable_wif_prefixes = [
     try:
         secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif, is_test=config.TESTNET)
     except pycoin.encoding.EncodingError:
-        raise exceptions.AltcoinSupportError('pycoin supports only Bitcoin mainnet and testnet private keys.')
+        raise exceptions.AltcoinSupportError('pycoin: unsupported WIF prefix')
     public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
     public_key = public_pair_to_sec(public_pair, compressed=compressed)
     public_key_hex = binascii.hexlify(public_key).decode('utf-8')

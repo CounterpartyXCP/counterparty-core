@@ -51,7 +51,9 @@ UNSPENDABLE_TESTNET = 'mvCounterpartyXXXXXXXXXXXXXXW24Hef'
 UNSPENDABLE_MAINNET = '1CounterpartyXXXXXXXXXXXXXXXUWLpVr'
 
 ADDRESSVERSION_TESTNET = b'\x6f'
+# PRIVATEKEY_VERSION_TESTNET =
 ADDRESSVERSION_MAINNET = b'\x00'
+# PRIVATEKEY_VERSION_MAINNET =
 
 BLOCK_FIRST_TESTNET_TESTCOIN = 154908
 BURN_START_TESTNET_TESTCOIN = 154908
@@ -73,10 +75,11 @@ BURN_END_MAINNET = 283810
 # Protocol defaults
 # NOTE: If the DUST_SIZE constants are changed, they MUST also be changed in counterblockd/lib/config.py as well
     # TODO: This should be updated, given their new configurability.
-DEFAULT_REGULAR_DUST_SIZE = 5430        # TODO: This is just a guess. I got it down to 5530 satoshis.
-DEFAULT_MULTISIG_DUST_SIZE = 5430 * 2   # TODO: This is just a guess. I did it down to 1.4x. (Used for regular outputs in multi‐sig transactions, too.)
+# TODO: The dust values should be lowered by 90%, once transactions with smaller outputs start confirming faster: <https://github.com/mastercoin-MSC/spec/issues/192>
+DEFAULT_REGULAR_DUST_SIZE = 5430         # TODO: This is just a guess. I got it down to 5530 satoshis.
+DEFAULT_MULTISIG_DUST_SIZE = 7800        # <https://bitcointalk.org/index.php?topic=528023.msg7469941#msg7469941>
 DEFAULT_OP_RETURN_VALUE = 0
-DEFAULT_FEE_PER_KB = 20000              # Bitcoin Core default is 10000.
+DEFAULT_FEE_PER_KB = 2000                # Bitcoin Core default is 1000.
 
 
 # UI defaults
