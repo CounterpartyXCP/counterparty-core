@@ -636,8 +636,7 @@ def initialise(db):
                       random TEXT,
                       rps_match_id TEXT,
                       status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      FOREIGN KEY (rps_match_id) REFERENCES rps_matches(id))
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       block_index_idx ON rpsresolves (block_index)

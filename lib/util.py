@@ -184,10 +184,13 @@ def log (db, command, category, bindings):
 
         elif category == 'rpsresolves':
             log_message = 'RPS Resolved: {} resolved, move: {}'.format(bindings['rps_match_id'], bindings['move'])
-            rps_matches = list(cursor.execute('''SELECT * FROM rps_matches WHERE id = ?''', (bindings['rps_match_id'],)))
-            assert len(rps_matches) == 1
-            rps_match = rps_matches[0]
-            log_message = '{}, status: {}'.format(log_message, rps_match['status'])
+            if bindings['status'] == 'valid':
+                rps_matches = list(cursor.execute('''SELECT * FROM rps_matches WHERE id = ?''', (bindings['rps_match_id'],)))
+                assert len(rps_matches) == 1
+                rps_match = rps_matches[0]
+                log_message = '{}, status: {}'.format(log_message, rps_match['status'])
+            else:
+                log_message = '{}, status: {}'.format(log_message, bindings['status'])
             logging.info(log_message)
 
         elif category == 'order_expirations':
