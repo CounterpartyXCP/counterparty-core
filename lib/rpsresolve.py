@@ -3,7 +3,7 @@
 import binascii
 import struct
 
-from . import (util, config, exceptions, bitcoin, util)
+from . import (util, config, exceptions, bitcoin, util, rps)
 # move random rps_match_id
 FORMAT = '>H16s32s32s'
 LENGTH = 2 + 16 + 32 + 32
@@ -139,22 +139,12 @@ def parse (db, tx, message):
 
             if winner == 0:
                 rps_match_status = 'concluded: tie'
-                util.credit(db, tx['block_index'], counter_game['source'], 'XCP', rps_match['wager'])
-                util.credit(db, tx['block_index'], rpsresolves_bindings['source'], 'XCP', rps_match['wager'])
             elif winner == counter_game['tx_index']:
                 rps_match_status = 'concluded: {} player wins'.format('first' if counter_txn == 0 else 'second')
-                util.credit(db, tx['block_index'], counter_game['source'], 'XCP', 2 * rps_match['wager'])
             else:
                 rps_match_status = 'concluded: {} player wins'.format('first' if txn == 0 else 'second')
-                util.credit(db, tx['block_index'], rpsresolves_bindings['source'], 'XCP', 2 * rps_match['wager'])
 
-        rps_matches_bindings = {
-            'status': rps_match_status,
-            'rps_match_id': rps_match_id
-        }
-        sql = '''UPDATE rps_matches SET status = :status where id = :rps_match_id'''
-        cursor.execute(sql, rps_matches_bindings)
-        util.message(db, tx['block_index'], 'update', 'rps_matches', rps_matches_bindings)
+        rps.update_rps_match_status(db, rps_match, rps_match_status, tx['block_index'])
 
     sql = '''INSERT INTO rpsresolves VALUES (:tx_index, :tx_hash, :block_index, :source, :move, :random, :rps_match_id, :status)'''
     cursor.execute(sql, rpsresolves_bindings)
