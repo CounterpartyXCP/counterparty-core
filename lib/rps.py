@@ -93,7 +93,7 @@ def validate (db, source, possible_moves, wager, move_random_hash, expiration):
         return problems
 
     if possible_moves < 3:
-        problems.append('possible moves must be greater than 3')
+        problems.append('possible moves must be at least 3')
     if possible_moves % 2 == 0:
         problems.append('possible moves must be odd')
     if wager <= 0:
@@ -261,7 +261,8 @@ def expire (db, block_index):
         cursor.execute(sql, bindings)
 
     # Expire rps matches
-    cursor.execute('''SELECT * FROM rps_matches WHERE (status LIKE ? AND match_expire_index < ?)''', ('%pending%', block_index))
+    expire_bindings = ('pending', 'pending and resolved', 'resolved and pending', block_index)
+    cursor.execute('''SELECT * FROM rps_matches WHERE (status IN (?, ?, ?) AND match_expire_index < ?)''', expire_bindings)
     for rps_match in cursor.fetchall():
 
         new_rps_match_status = 'expired'
