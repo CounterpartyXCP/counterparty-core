@@ -53,6 +53,9 @@ def parse_tx (db, tx):
         # Mark transaction as of unsupported type.
         message_type_id = None
 
+    # Protocol change.
+    rps_enabled = tx['block_index'] >= 308000 or config.TESTNET
+
     message = tx['data'][4:]
     if message_type_id == send.ID:
         send.parse(db, tx, message)
@@ -72,9 +75,9 @@ def parse_tx (db, tx):
         cancel.parse(db, tx, message)
     elif message_type_id == callback.ID:
         callback.parse(db, tx, message)
-    elif message_type_id == rps.ID:
+    elif message_type_id == rps.ID and rps_enabled:
         rps.parse(db, tx, message)
-    elif message_type_id == rpsresolve.ID:
+    elif message_type_id == rpsresolve.ID and rps_enabled:
         rpsresolve.parse(db, tx, message)
     else:
         cursor.execute('''UPDATE transactions \
