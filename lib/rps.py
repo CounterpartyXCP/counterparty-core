@@ -265,7 +265,7 @@ def expire (db, block_index):
     for rps_match in cursor.fetchall():
 
         new_rps_match_status = 'expired'
-        # pending lose against resolved
+        # pending loses against resolved
         if rps_match['status'] == 'pending and resolved':
             new_rps_match_status = 'concluded: second player wins'
         elif rps_match['status'] == 'resolved and pending':
@@ -283,7 +283,7 @@ def expire (db, block_index):
         cursor.execute(sql, bindings)
         
         # Rematch not expired and not resolved RPS
-        if rps_match['status'] == 'pending':
+        if new_rps_match_status == 'expired':
             sql = '''SELECT * FROM rps WHERE tx_hash IN (?, ?) AND status = ? AND expire_index >= ?'''
             bindings = (rps_match['tx0_hash'], rps_match['tx1_hash'], 'matched', block_index)
             matched_rps = cursor.execute(sql, bindings)

@@ -651,7 +651,7 @@ if __name__ == '__main__':
     parser_rps.add_argument('--source', required=True, help='the source address')
     parser_rps.add_argument('--wager', required=True, help='the quantity of XCP to wager')
     parser_rps.add_argument('--move', type=int, required=True, help='the selected move')
-    parser_rps.add_argument('--possible_moves', type=int, required=True, help='the number of possible moves (odd number greater or equal than 3)')
+    parser_rps.add_argument('--possible-moves', type=int, required=True, help='the number of possible moves (odd number greater or equal than 3)')
     parser_rps.add_argument('--expiration', type=int, required=True, help='the number of blocks for which the bet should be valid')
     parser_rps.add_argument('--fee', help='the exact BTC fee to be paid to miners')
 
