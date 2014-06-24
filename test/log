@@ -108,6 +108,6 @@ Debit: 0.11021663 XCP from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #None# <None>
 RPS: mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns opens game with 5 possible moves and a wager of 0.11021663 XCP
 RPS Match: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc match game with mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns, possible moves: 5, wager: 0.11021663 XCP, status: pending, match id: 58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd
 RPS Resolved: 58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd resolved, move: 3, status: resolved and pending
-Credit: 0.22043326 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
+Credit: 0.22043326 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #wins# <58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd>
 RPS Resolved: 58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd resolved, move: 5, status: concluded: first player wins
 STOP TEST
