@@ -47,16 +47,21 @@ def cancel_rps (db, rps, status, block_index):
 
     cursor.close()
 
-def cancel_rps_match (db, rps_match, status, block_index):
+def update_rps_match_status (db, rps_match, status, block_index):
     cursor = db.cursor()
 
-    # Recredit tx0 address.
-    util.credit(db, block_index, rps_match['tx0_address'], 'XCP',
-                rps_match['wager'], action='recredit wager', event=rps_match['id'])
-
-    # Recredit tx1 address.
-    util.credit(db, block_index, rps_match['tx1_address'], 'XCP',
-                rps_match['wager'], action='recredit wager', event=rps_match['id'])
+    if status in ['expired', 'concluded: tie']:
+        # Recredit tx0 address.
+        util.credit(db, block_index, rps_match['tx0_address'], 'XCP',
+                    rps_match['wager'], action='recredit wager', event=rps_match['id'])
+        # Recredit tx1 address.
+        util.credit(db, block_index, rps_match['tx1_address'], 'XCP',
+                    rps_match['wager'], action='recredit wager', event=rps_match['id'])
+    elif status.startswith('concluded'):
+        # Credit the winner
+        winner = rps_match['tx0_address'] if status == 'concluded: first player wins' else rps_match['tx1_address']
+        util.credit(db, block_index, winner, 'XCP',
+                    2 * rps_match['wager'], action='wins', event=rps_match['id'])
 
     # Update status of rps match.
     bindings = {
@@ -226,7 +231,7 @@ def match (db, tx, block_index):
             'block_index': block_index,
             'tx0_expiration': tx0['expiration'],
             'tx1_expiration': tx1['expiration'],
-            'match_expire_index': max(10, min(tx0['expire_index'], tx1['expire_index'])),
+            'match_expire_index': 10,
             'status': 'pending'
         }
         sql = '''INSERT INTO rps_matches VALUES (:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address,
@@ -258,7 +263,14 @@ def expire (db, block_index):
     # Expire rps matches
     cursor.execute('''SELECT * FROM rps_matches WHERE (status LIKE ? AND match_expire_index < ?)''', ('%pending%', block_index))
     for rps_match in cursor.fetchall():
-        cancel_rps_match(db, rps_match, 'expired', block_index)
+
+        new_rps_match_status = 'expired'
+        # pending lose against resolved
+        if rps_match['status'] == 'pending and resolved':
+            new_rps_match_status = 'concluded: second player wins'
+        elif rps_match['status'] == 'resolved and pending':
+            new_rps_match_status = 'concluded: first player wins'
+        update_rps_match_status(db, rps_match, new_rps_match_status, block_index)
 
         # Record rps match expiration.
         bindings = {
@@ -269,23 +281,15 @@ def expire (db, block_index):
         }
         sql = '''INSERT INTO rps_match_expirations VALUES (:rps_match_id, :tx0_address, :tx1_address, :block_index)'''
         cursor.execute(sql, bindings)
-
+        
         # Rematch not expired and not resolved RPS
-        bindings = []
         if rps_match['status'] == 'pending':
-            bindings += [rps_match['tx0_hash'], rps_match['tx1_hash']]
-        elif rps_match['status'] == 'pending and resolved':
-            bindings.append(rps_match['tx0_hash'])
-        elif rps_match['status'] == 'resolved and pending':
-            bindings.append(rps_match['tx1_hash'])
-
-        if len(bindings) > 0:
-            sql = '''SELECT * FROM rps WHERE tx_hash IN ({}) AND status = ? AND expire_index >= ?'''.format(','.join(['?' for e in range(0,len(bindings))]))
-            bindings += ['matched', block_index]
+            sql = '''SELECT * FROM rps WHERE tx_hash IN (?, ?) AND status = ? AND expire_index >= ?'''
+            bindings = (rps_match['tx0_hash'], rps_match['tx1_hash'], 'matched', block_index)
             matched_rps = cursor.execute(sql, bindings)
             for rps in matched_rps:
                 cursor.execute('''UPDATE rps SET status = ? WHERE tx_index = ?''', ('open', rps['tx_index']))
-                # Re-debit XCP refund by cancel_rps_match.
+                # Re-debit XCP refund by close_rps_match.
                 util.debit(db, block_index, rps['source'], 'XCP', rps['wager'], action='reopen RPS after matching expiration', event=rps_match['id'])
                 # Rematch
                 match(db, {'tx_index': rps['tx_index']}, block_index)
