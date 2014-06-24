@@ -474,7 +474,7 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
             data_array = list(chunks(data, 33 - 1))
         elif encoding == 'opreturn':
             data_array = list(chunks(data, config.OP_RETURN_MAX_SIZE))
-            assert len(data_array) == 1 # Only one OP_RETURN output currently supported (messages should all be shorter than 80 bytes, at the moment).
+            assert len(data_array) == 1 # Only one OP_RETURN output currently supported (OP_RETURN messages should all be shorter than 40 bytes, at the moment).
     else:
         data_array = []
 
