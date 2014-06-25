@@ -442,7 +442,9 @@ def match (db, tx):
             util.message(db, tx1['block_index'], 'update', 'orders', bindings)
 
             # Calculate when the match will expire.
-            if tx1['block_index'] >= 286500 or config.TESTNET:    # Protocol change.
+            if tx1['block_index'] >= 308000 or config.TESTNET:      # Protocol change.
+                match_expire_index = max(tx0['block_index'], tx1['block_index']) + 20
+            elif tx1['block_index'] >= 286500 or config.TESTNET:    # Protocol change.
                 match_expire_index = tx1['block_index'] + 10
             else:
                 match_expire_index = min(tx0['expire_index'], tx1['expire_index'])

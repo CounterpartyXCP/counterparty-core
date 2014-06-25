@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.27.0
+	* extend order match expiration time to 20 blocks (protocol change: 308000)
 * v9.26.2
 	* currency agnosticism
 * v9.26.1

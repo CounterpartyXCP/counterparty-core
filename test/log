@@ -6,7 +6,7 @@ Credit: 0.5 XCP to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 #None# <4bf5122f344554c53b
 Send: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7 (4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a) [valid]
 Order: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc ordered 0.5 BTC for 1.0 XCP in 10 blocks, with a provided fee of 0.01 BTC and a required fee of 0.0 BTC (dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986) [open]
 Debit: 1.05 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5>
-Order: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc ordered 1.05 XCP for 0.5 BTC in 10 blocks, with a provided fee of 0.0002 BTC and a required fee of 0.009 BTC (084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5) [open]
+Order: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc ordered 1.05 XCP for 0.5 BTC in 10 blocks, with a provided fee of 2e-05 BTC and a required fee of 0.009 BTC (084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5) [open]
 Considering: dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986
 Tx0 Price: 2.0; Tx1 Inverse Price: 2.1
 Potential forward quantities: 50000000, 52500000
@@ -89,7 +89,7 @@ Credit: 0.7 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Bet Match Settled: NotEqual won the pot of 13.3 XCP; 0.7 XCP credited to the feed address (c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee34a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a)
 Database: set status of bet_match c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee34a64a107f0cb32536e5bce6c98c393db21cca7f4ea187ba8c4dca8b51d4ea80a to settled: for notequal.
 Debit: 0.5 BBBB from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608>
-Order: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc ordered 0.5 BBBB for 0.5 XCP in 10 blocks, with a provided fee of 0.0002 BTC and a required fee of 0.0 BTC (2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608) [open]
+Order: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc ordered 0.5 BBBB for 0.5 XCP in 10 blocks, with a provided fee of 2e-05 BTC and a required fee of 0.0 BTC (2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608) [open]
 Credit: 0.5 BBBB to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608>
 Cancel: 2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608 (7cb7c4547cf2653590d7a9ace60cc623d25148adfbc88a89aeb0ef88da7839ba) [valid]
 Credit: 569.9988687 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034>
