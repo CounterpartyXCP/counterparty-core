@@ -231,7 +231,7 @@ def match (db, tx, block_index):
             'block_index': block_index,
             'tx0_expiration': tx0['expiration'],
             'tx1_expiration': tx1['expiration'],
-            'match_expire_index': 10,
+            'match_expire_index': 20,
             'status': 'pending'
         }
         sql = '''INSERT INTO rps_matches VALUES (:id, :tx0_index, :tx0_hash, :tx0_address, :tx1_index, :tx1_hash, :tx1_address,
