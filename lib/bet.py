@@ -214,7 +214,7 @@ def parse (db, tx, message):
     bet_parse_cursor.execute(sql, bindings)
 
     # Match.
-    if status == 'open':
+    if status == 'open' and tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
         match(db, tx)
 
     bet_parse_cursor.close()
