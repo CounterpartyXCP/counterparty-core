@@ -515,8 +515,8 @@ def test_json_rpc():
         for attempt in range(100):  # Try until server is ready.
             try:
                 response = requests.post(url, data=json.dumps(payload), headers=headers).json()
-                print('\npayload', payload)
-                print('response', response, '\n')
+                # print('\npayload', payload)
+                # print('response', response, '\n')
                 if not response['result']:
                     raise Exception('null result')
                     assert False
