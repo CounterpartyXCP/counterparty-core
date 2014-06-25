@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.28.0
+	* add rps and rpsresolve transactions (protocol change: 308500)
 * v9.27.0
 	* extend order match expiration time to 20 blocks (protocol change: 308000)
 * v9.26.2

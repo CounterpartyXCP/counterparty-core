@@ -674,6 +674,45 @@ Send XCP or a user defined asset.
 
   The unsigned transaction, as an hex-encoded string. See :ref:`this section <encoding_param>` for more information.
 
+.. _create_rps:
+
+create_rps
+^^^^^^^^^^^^^^
+**create_rps(source, possible_moves, wager, move_random_hash, expiration, encoding='multisig', pubkey=null)**
+
+Open a Rock-Paper-Scissors like game.
+
+**Parameters:**
+
+  * **source (string):** The address that will be sending (must have the necessary quantity of the specified asset).
+  * **possible_moves (integer):** The number of possible moves. Must be an odd number greater or equal than 3.
+  * **wager (integer):** The :ref:`quantity <quantitys>` of XCP to wager.
+  * **move_random_hash (string):** A 32 bytes hex string (64 chars): sha256(sha256(random+move)). Where random is 16 bytes random number.
+  * **expiration (integer):** The number of blocks for which the game should be valid.
+  * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
+  * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
+
+**Return:** 
+
+  The unsigned transaction, as an hex-encoded string. See :ref:`this section <encoding_param>` for more information.
+
+create_rpsresolve
+^^^^^^^^^^^^^^
+**create_rpsresolve(source, move, random, rps_match_id, encoding='multisig', pubkey=null)**
+
+Resolve a RPS game.
+
+**Parameters:**
+  * **source (string):** The address that will be sending (must have the necessary quantity of the specified asset).
+  * **move (integer):** The selected move.
+  * **random (string):** A 16 bytes hex string (32 chars) used to generate the move_random_hash value.
+  * **rps_match_id (string):** The concatenation of the hashes of the two transactions which compose the rps match.
+  * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
+  * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
+
+**Return:** 
+
+  The unsigned transaction, as an hex-encoded string. See :ref:`this section <encoding_param>` for more information.
    
 Objects
 ----------

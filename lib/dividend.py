@@ -48,7 +48,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
 
         if block_index < 294500 and not config.TESTNET: # Protocol change.
             if holder['escrow']: continue
-            
+
         address = holder['address']
         address_quantity = holder['address_quantity']
         if block_index >= 296000 or config.TESTNET: # Protocol change.
