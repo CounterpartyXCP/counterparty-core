@@ -34,7 +34,7 @@ import counterpartyd
 # config.BLOCK_FIRST = 0
 # config.BURN_START = 0
 # config.BURN_END = 9999999
-counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/counterpartyd.unittest.db', testnet=True, testcoin=False, unittest=True, force=True)
+counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/counterpartyd.unittest.db', testnet=True, testcoin=False, unittest=True)
 
 # unit tests private keys
 config.UNITTEST_PRIVKEY = {
@@ -605,7 +605,7 @@ def do_book(testnet):
     # TODO: USE API
     import subprocess
     if testnet:
-        subprocess.check_call(['./counterpartyd.py', '--database-file=' + temp_db, '--testnet', '--force', 'reparse'])
+        subprocess.check_call(['./counterpartyd.py', '--database-file=' + temp_db, '--testnet', 'reparse'])
     else:
         subprocess.check_call(['./counterpartyd.py', '--database-file=' + temp_db, 'reparse'])
 
