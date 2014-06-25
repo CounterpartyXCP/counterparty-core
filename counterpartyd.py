@@ -720,7 +720,7 @@ if __name__ == '__main__':
     if args.action == None: args.action = 'server'
     
     # TODO: Keep around only as long as reparse and rollback don’t use API.
-    if not config.FORCE and args.action in ('reparse', 'rollback'):
+    if not config.FORCE and args.action in ('server', 'reparse', 'rollback'):
         util.version_check(db)
 
     # MESSAGE CREATION
