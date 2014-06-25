@@ -59,6 +59,8 @@ expiration = 10
 fee_required = 900000
 fee_provided = 1000000
 fee_multiplier_default = .05
+move_random_hash_default = '6a886d74c2d4b1d7a35fd9159333ef64ba45a04d7aeeeb4538f958603c16fc5d'
+rps_random_default = '7a4488d61ed8f2e9fa2874113fccb8b1'
 
 def parse_hex (unsigned_tx_hex):
 
@@ -125,6 +127,31 @@ def parse_hex (unsigned_tx_hex):
 
     tx_index += 1
     cursor.close()
+    return tx
+
+def block_progress(block_count):
+    global tx_index
+    for b in range(block_count):
+        block_index = config.BURN_START + tx_index
+        block_hash = hashlib.sha512(chr(block_index).encode('utf-8')).hexdigest()
+        block_time = block_index * 10000000
+
+        cursor.execute('''INSERT INTO blocks(
+                        block_index,
+                        block_hash,
+                        block_time) VALUES(?,?,?)''',
+                        (block_index,
+                        block_hash,
+                        block_time)
+                      )
+        tx_index += 1
+
+def check_movment(db, movment_type, block_index, address, asset, quantity, event):
+    sql = '''SELECT * FROM {}s WHERE block_index = ? AND address = ? AND  asset = ? AND quantity = ? AND event = ?'''
+    sql = sql.format(movment_type)
+    bindings = (block_index, address, asset, quantity, event)
+    movments = list(cursor.execute(sql, bindings))
+    assert len(movments) == 1
 
 # https://github.com/CounterpartyXCP/counterpartyd/blob/develop/test/db.dump#L23
 # some sqlite version generates spaces and line breaks too.
@@ -379,7 +406,7 @@ def test_callback ():
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_rps ():
-    unsigned_tx_hex = bitcoin.transaction(rps.compose(db, source_default, 5, 11021663, '6a886d74c2d4b1d7a35fd9159333ef64ba45a04d7aeeeb4538f958603c16fc5d', 100), encoding='multisig')
+    unsigned_tx_hex = bitcoin.transaction(rps.compose(db, source_default, 5, 11021663, move_random_hash_default, 100), encoding='multisig')
     
     parse_hex(unsigned_tx_hex)
 
@@ -394,7 +421,7 @@ def test_counter_rps ():
 
 def test_rpsresolve ():
     rps_match_id = '58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd'
-    unsigned_tx_hex = bitcoin.transaction(rpsresolve.compose(db, source_default, 3, '7a4488d61ed8f2e9fa2874113fccb8b1', rps_match_id), encoding='multisig')
+    unsigned_tx_hex = bitcoin.transaction(rpsresolve.compose(db, source_default, 3, rps_random_default, rps_match_id), encoding='multisig')
 
     parse_hex(unsigned_tx_hex)
 
@@ -407,6 +434,56 @@ def test_counter_rpsresolve ():
     parse_hex(unsigned_tx_hex)
 
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
+
+def test_rps_expiration ():
+    unsigned_tx_hex = bitcoin.transaction(rps.compose(db, source_default, 5, 11021663, move_random_hash_default, 10), encoding='multisig')
+    tx_rps = parse_hex(unsigned_tx_hex)
+    check_movment(db, 'debit', tx_rps['block_index'], source_default, 'XCP', 11021663, tx_rps['tx_hash'])
+
+    block_progress(11)
+    expiration_block = tx_rps['block_index']+11
+    rps.expire(db, expiration_block)
+
+    # re-credit expired rps
+    check_movment(db, 'credit', expiration_block, source_default, 'XCP', 11021663, tx_rps['tx_hash'])
+
+def test_pending_rps_match_expiration ():
+    unsigned_tx_hex = bitcoin.transaction(rps.compose(db, source_default, 5, 11021664, move_random_hash_default, 10), encoding='multisig')
+    rps1 = parse_hex(unsigned_tx_hex)
+    check_movment(db, 'debit', rps1['block_index'], source_default, 'XCP', 11021664, rps1['tx_hash'])
+
+    unsigned_tx_hex = bitcoin.transaction(rps.compose(db, destination_default, 5, 11021664, move_random_hash_default, 10), encoding='multisig')
+    rps2 = parse_hex(unsigned_tx_hex)
+    check_movment(db, 'debit', rps2['block_index'], destination_default, 'XCP', 11021664, rps2['tx_hash'])
+
+    block_progress(21)
+    expiration_block = rps2['block_index']+21
+    rps.expire(db, expiration_block)
+
+    # re-credit expired rps
+    check_movment(db, 'credit', expiration_block, source_default, 'XCP', 11021664, rps1['tx_hash'] + rps2['tx_hash'])
+    check_movment(db, 'credit', expiration_block, destination_default, 'XCP', 11021664, rps1['tx_hash'] + rps2['tx_hash'])
+
+def test_pending_and_resolved_rps_match_expiration ():
+    unsigned_tx_hex = bitcoin.transaction(rps.compose(db, source_default, 5, 11021665, move_random_hash_default, 10), encoding='multisig')
+    rps1 = parse_hex(unsigned_tx_hex)
+    check_movment(db, 'debit', rps1['block_index'], source_default, 'XCP', 11021665, rps1['tx_hash'])
+
+    unsigned_tx_hex = bitcoin.transaction(rps.compose(db, destination_default, 5, 11021665, move_random_hash_default, 10), encoding='multisig')
+    rps2 = parse_hex(unsigned_tx_hex)
+    check_movment(db, 'debit', rps2['block_index'], destination_default, 'XCP', 11021665, rps2['tx_hash'])
+
+    rps_match_id = rps1['tx_hash'] + rps2['tx_hash']
+    unsigned_tx_hex = bitcoin.transaction(rpsresolve.compose(db, source_default, 3, rps_random_default, rps_match_id), encoding='multisig')
+    rps_match = parse_hex(unsigned_tx_hex)
+
+    block_progress(21)
+    expiration_block = rps_match['block_index']+21
+    rps.expire(db, expiration_block)
+
+    # resolved game wins
+    check_movment(db, 'credit', expiration_block, source_default, 'XCP', 2 * 11021665, rps_match_id)
+
 
 def test_json_rpc():
 
@@ -438,8 +515,8 @@ def test_json_rpc():
         for attempt in range(100):  # Try until server is ready.
             try:
                 response = requests.post(url, data=json.dumps(payload), headers=headers).json()
-                # print('\npayload', payload)
-                # print('response', response, '\n')
+                print('\npayload', payload)
+                print('response', response, '\n')
                 if not response['result']:
                     raise Exception('null result')
                     assert False
@@ -555,4 +632,3 @@ def test_book_testnet():
 
 def test_book_mainnet():
     do_book(False)
-
