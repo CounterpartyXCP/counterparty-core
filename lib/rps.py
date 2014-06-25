@@ -212,7 +212,7 @@ def match (db, tx, block_index):
                 'tx_index': txn['tx_index']
             }
             cursor.execute('''UPDATE rps SET status = :status WHERE tx_index = :tx_index''', bindings)
-            util.message(db, txn['block_index'], 'update', 'rps', bindings)
+            util.message(db, block_index, 'update', 'rps', bindings)
 
         bindings = {
             'id': tx0['tx_hash'] + tx1['tx_hash'],
