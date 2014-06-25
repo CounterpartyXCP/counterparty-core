@@ -19,17 +19,20 @@ import jsonrpc
 from jsonrpc import dispatcher
 
 from . import (config, bitcoin, exceptions, util)
-from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
+from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
 
 
 API_TABLES = ['balances', 'credits', 'debits', 'bets', 'bet_matches',
               'broadcasts', 'btcpays', 'burns', 'callbacks', 'cancels',
               'dividends', 'issuances', 'orders', 'order_matches', 'sends',
               'bet_expirations', 'order_expirations', 'bet_match_expirations',
-              'order_match_expirations', 'bet_match_resolutions', 'mempool']
+              'order_match_expirations', 'bet_match_resolutions', 'rps',
+              'rpsresolves', 'rps_matches', 'rps_expirations', 'rps_match_expirations',
+              'mempool']
 
-API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel', 
-                    'callback', 'dividend', 'issuance', 'order', 'send']
+API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel',
+                    'callback', 'dividend', 'issuance', 'order', 'send',
+                    'rps', 'rpsresolve']
 
 COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
                 'multisig_dust_size', 'op_return_value', 'pubkey',
@@ -49,10 +52,10 @@ def db_query(db, statement, bindings=(), callback=None, **callback_args):
     cursor.close()
     return results
 
-def get_rows(db, table, filters=[], filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None, 
+def get_rows(db, table, filters=[], filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None,
               status=None, limit=1000, offset=0, show_expired=True):
     """Filters results based on a filter data structure (as used by the API)"""
-    
+
     def value_to_marker(value):
         # if value is an array place holder is (?,?,?,..)
         if isinstance(value, list):
@@ -105,7 +108,7 @@ def get_rows(db, table, filters=[], filterop='AND', order_by=None, order_dir=Non
         if isinstance(filter_['value'], list) and filter_['op'].upper() != 'IN':
             raise Exception("Invalid value for the field '%s'" % filter_['field'])
         if filter_['op'].upper() not in ['=', '==', '!=', '>', '<', '>=', '<=', 'IN', 'LIKE', 'NOT IN', 'NOT LIKE']:
-            raise Exception("Invalid operator for the field '%s'" % filter_['field'])  
+            raise Exception("Invalid operator for the field '%s'" % filter_['field'])
         if 'case_sensitive' in filter_ and not isinstance(filter_['case_sensitive'], bool):
             raise Exception("case_sensitive must be a boolean")
 
@@ -121,7 +124,7 @@ def get_rows(db, table, filters=[], filterop='AND', order_by=None, order_dir=Non
             filter_['value'] = filter_['value'].upper()
         marker = value_to_marker(filter_['value'])
         conditions.append('''{} {} {}'''.format(filter_['field'], filter_['op'], marker))
-        if isinstance(filter_['value'], list):         
+        if isinstance(filter_['value'], list):
             bindings += filter_['value']
         else:
             bindings.append(filter_['value'])
@@ -162,7 +165,7 @@ def get_rows(db, table, filters=[], filterop='AND', order_by=None, order_dir=Non
         all_conditions = []
         if len(conditions) > 0:
             all_conditions.append('''({})'''.format(''' {} '''.format(filterop.upper()).join(conditions)))
-        if len(more_conditions) > 0: 
+        if len(more_conditions) > 0:
             all_conditions.append('''({})'''.format(''' AND '''.join(more_conditions)))
         statement += ''' {}'''.format(''' AND '''.join(all_conditions))
 
@@ -184,9 +187,9 @@ def compose_transaction(db, name, params,
                         fee_per_kb=config.DEFAULT_FEE_PER_KB,
                         regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
                         multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
-                        op_return_value=config.DEFAULT_OP_RETURN_VALUE, 
+                        op_return_value=config.DEFAULT_OP_RETURN_VALUE,
                         pubkey=None,
-                        allow_unconfirmed_inputs=False, 
+                        allow_unconfirmed_inputs=False,
                         fee=None,
                         fee_provided=0):
     tx_info = sys.modules['lib.{}'.format(name)].compose(db, **params)
@@ -197,7 +200,7 @@ def compose_transaction(db, name, params,
                                         op_return_value=op_return_value,
                                         public_key_hex=pubkey,
                                         allow_unconfirmed_inputs=allow_unconfirmed_inputs,
-                                        exact_fee=fee, 
+                                        exact_fee=fee,
                                         fee_provided=fee_provided)
 
 def sign_transaction(unsigned_tx_hex, private_key_wif=None):
@@ -216,7 +219,7 @@ def broadcast_transaction(signed_tx_hex):
         return response.text
     else:
         return bitcoin.broadcast_tx(signed_tx_hex)
-    
+
 def do_transaction(db, name, params, private_key_wif=None, **kwargs):
     unsigned_tx = compose_transaction(db, name, params, **kwargs)
     signed_tx = sign_transaction(unsigned_tx, private_key_wif=private_key_wif)
@@ -290,19 +293,19 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def sign_tx(unsigned_tx_hex, privkey=None):
             return sign_transaction(unsigned_tx_hex, private_key_wif=privkey)
-                
+
         @dispatcher.add_method
         def broadcast_tx(signed_tx_hex):
             return broadcast_transaction(signed_tx_hex)
 
 
 
-        
+
         @dispatcher.add_method
         def get_messages(block_index):
             if not isinstance(block_index, int):
                 raise Exception("block_index must be an integer.")
-            
+
             cursor = db.cursor()
             cursor.execute('select * from messages where block_index = ? order by message_index asc', (block_index,))
             messages = cursor.fetchall()
@@ -312,7 +315,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_messages_by_index(message_indexes):
             """Get specific messages from the feed, based on the message_index.
-            
+
             @param message_index: A single index, or a list of one or more message indexes to retrieve.
             """
             if not isinstance(message_indexes, list):
@@ -320,7 +323,7 @@ class APIServer(threading.Thread):
             for idx in message_indexes:  #make sure the data is clean
                 if not isinstance(idx, int):
                     raise Exception("All items in message_indexes are not integers")
-                
+
             cursor = db.cursor()
             cursor.execute('SELECT * FROM messages WHERE message_index IN (%s) ORDER BY message_index ASC'
                 % (','.join([str(x) for x in message_indexes]),))
@@ -345,7 +348,7 @@ class APIServer(threading.Thread):
                         supply = bitcoin.get_btc_supply(normalize=False)
                     else:
                         supply = util.xcp_supply(db)
-                    
+
                     assetsInfo.append({
                         'asset': asset,
                         'owner': None,
@@ -359,7 +362,7 @@ class APIServer(threading.Thread):
                         'issuer': None
                     })
                     continue
-                
+
                 # User‐created asset.
                 cursor = db.cursor()
                 issuances = list(cursor.execute('''SELECT * FROM issuances WHERE (status = ? AND asset = ?) ORDER BY block_index ASC''', ('valid', asset)))
@@ -386,7 +389,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_block_info(block_index):
-            assert isinstance(block_index, int) 
+            assert isinstance(block_index, int)
             cursor = db.cursor()
             cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,))
             try:
@@ -397,11 +400,11 @@ class APIServer(threading.Thread):
                 raise exceptions.DatabaseError('No blocks found.')
             cursor.close()
             return block
-            
+
         @dispatcher.add_method
         def get_running_info():
             latestBlockIndex = bitcoin.get_block_count()
-            
+
             try:
                 util.database_check(db, latestBlockIndex)
             except:
@@ -413,12 +416,12 @@ class APIServer(threading.Thread):
                 last_block = util.last_block(db)
             except:
                 last_block = {'block_index': None, 'block_hash': None, 'block_time': None}
-            
+
             try:
                 last_message = util.last_message(db)
             except:
                 last_message = None
-            
+
             return {
                 'db_caught_up': caught_up,
                 'bitcoin_block_count': latestBlockIndex,
@@ -460,7 +463,6 @@ class APIServer(threading.Thread):
             cursor.close()
             return names
 
-        
 
         class API(object):
             @cherrypy.expose

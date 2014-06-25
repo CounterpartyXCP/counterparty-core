@@ -75,5 +75,7 @@ class CancelError (MessageError):
     pass
 class CallbackError (MessageError):
     pass
+class RpsError (MessageError):
+    pass
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

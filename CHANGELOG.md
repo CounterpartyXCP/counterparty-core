@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.27.0
+	* add rps and rpsresolve transactions (protocol change: 310000)
 * v9.26.2
 	* currency agnosticism
 * v9.26.1

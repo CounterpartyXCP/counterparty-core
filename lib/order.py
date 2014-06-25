@@ -375,7 +375,7 @@ def match (db, tx):
                         logging.debug('Tx1 fee provided remaining: {}; Fee: {}'.format(tx1_fee_provided_remaining, fee))
                         continue
                     else:
-                        tx1_fee_provided_remaining -= fee 
+                        tx1_fee_provided_remaining -= fee
                         if tx1['block_index'] >= 287800 or config.TESTNET:  # Protocol change.
                             tx0_fee_required_remaining -= fee
             else:   # Don’t deduct.
