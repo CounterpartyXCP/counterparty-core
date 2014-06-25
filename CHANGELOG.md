@@ -1,4 +1,6 @@
 ## Client Versions ##
+v9.27.0
+	* extend order match expiration time to 20 blocks (protocol change: 308000)
 * v9.24.2
 	* bug in version checking: mandatory manual upgrade
 * v9.24.1
