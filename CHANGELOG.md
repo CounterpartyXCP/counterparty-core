@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.29.0
+	* bug fixes
 * v9.28.0
 	* add rps and rpsresolve transactions (protocol change: 308500)
 * v9.27.0
