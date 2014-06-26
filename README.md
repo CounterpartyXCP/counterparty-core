@@ -46,7 +46,7 @@ However, a counterpartyd configuration file looks like this:
 	[Default]
 	bitcoind-rpc-password=PASSWORD
 
-Note the change in hyphenation between ‘rpcpassword’ and ‘rpc-password’.
+Note the change in hyphenation between `rpcpassword` and `rpc-password`.
 
 If and only if counterpartyd is to be run on the Bitcoin testnet, with the
 `--testnet` CLI option, Bitcoind must be set to do the same (`-testnet=1`).
@@ -116,7 +116,7 @@ The following examples are abridged for parsimony.
 
 	```
 	order --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=BBBC
-	--give-quantity=20 --give-asset=BTC --expiration=10 --fee_provided.001
+	--give-quantity=20 --give-asset=BTC --expiration=10 --fee_provided=0.001
 	```
 
 * Buy XCP for BBBC
@@ -142,8 +142,8 @@ The following examples are abridged for parsimony.
 	--fee-multiplier=0.001
 	```
 
-	Note: for some users counterpartyd has trouble parsing spaces in the --text argument. One workaround is to
-		add an additional set of quotes. For example, --text='"Bitcoin price feed"'
+	Note: for some users counterpartyd has trouble parsing spaces in the `--text` argument. One workaround is to
+		add an additional set of quotes. For example, `--text='"Bitcoin price feed"'`.
 
 * Bet
 	
