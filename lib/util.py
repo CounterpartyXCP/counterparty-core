@@ -179,18 +179,18 @@ def log (db, command, category, bindings):
             logging.info(log_message)
 
         elif category == 'rps_matches':
-            log_message = 'RPS Match: {} match game with {}, possible moves: {}, wager: {}, status: {}, match id: {}'.format(bindings['tx0_address'], bindings['tx1_address'], bindings['possible_moves'], output(bindings['wager'], 'XCP'), bindings['status'], bindings['id'])
+            log_message = 'RPS Match: {} is playing a {}-moves game with {} with a wager of {} ({}) [{}]'.format(bindings['tx0_address'], bindings['possible_moves'], bindings['tx1_address'], output(bindings['wager'], 'XCP'), bindings['id'], bindings['status'])
             logging.info(log_message)
 
         elif category == 'rpsresolves':
-            log_message = 'RPS Resolved: {} resolved, move: {}'.format(bindings['rps_match_id'], bindings['move'])
+            
             if bindings['status'] == 'valid':
                 rps_matches = list(cursor.execute('''SELECT * FROM rps_matches WHERE id = ?''', (bindings['rps_match_id'],)))
                 assert len(rps_matches) == 1
                 rps_match = rps_matches[0]
-                log_message = '{}, status: {}'.format(log_message, rps_match['status'])
+                log_message = 'RPS Resolved: {} is playing {} on a {}-moves game with {} with a wager of {} ({}) [{}]'.format(rps_match['tx0_address'], bindings['move'], rps_match['possible_moves'], rps_match['tx1_address'], output(rps_match['wager'], 'XCP'), rps_match['id'], rps_match['status'])
             else:
-                log_message = '{}, status: {}'.format(log_message, bindings['status'])
+                log_message = 'RPS Resolved: {} [{}]'.format(bindings['tx_hash'], bindings['status'])
             logging.info(log_message)
 
         elif category == 'order_expirations':
