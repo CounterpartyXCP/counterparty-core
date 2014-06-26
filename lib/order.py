@@ -446,7 +446,7 @@ def match (db, tx, block_index=None):
             # Calculate when the match will expire.
             if block_index >= 308000 or config.TESTNET:      # Protocol change.
                 match_expire_index = block_index + 20
-            elif tx1['block_index'] >= 286500 or config.TESTNET:    # Protocol change.
+            elif block_index >= 286500 or config.TESTNET:    # Protocol change.
                 match_expire_index = block_index + 10
             else:
                 match_expire_index = min(tx0['expire_index'], tx1['expire_index'])
