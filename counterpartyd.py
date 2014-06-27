@@ -307,7 +307,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     if backend_rpc_password:
         config.BACKEND_RPC_PASSWORD = backend_rpc_password
     elif has_config and 'backend-rpc-password' in configfile['Default'] and configfile['Default']['backend-rpc-password']:
-        config.backend_RPC_PASSWORD = configfile['Default']['backend-rpc-password']
+        config.BACKEND_RPC_PASSWORD = configfile['Default']['backend-rpc-password']
     elif has_config and 'bitcoind-rpc-password' in configfile['Default'] and configfile['Default']['bitcoind-rpc-password']:
         config.BACKEND_RPC_PASSWORD = configfile['Default']['bitcoind-rpc-password']
     else:
