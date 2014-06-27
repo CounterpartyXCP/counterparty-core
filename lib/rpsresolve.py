@@ -66,7 +66,7 @@ def validate (db, source, move, random, rps_match_id):
     elif rps_match['status'].startswith('invalid'):
         problems.append('rps match invalid')
     elif rps_match['status'] not in rps_match_status:
-        raise exceptions.RpsError('unrecognised rps match status')
+        problems.append('rps already resolved')
 
     return txn, rps_match, problems
 
