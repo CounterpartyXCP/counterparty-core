@@ -162,6 +162,7 @@ def cli(method, params, unsigned):
         if bitcoin.is_mine(params['source']):
             bitcoin.wallet_unlock()
         else:
+            # TODO: Do this only if the encoding method needs it.
             print('Source not in backend wallet.')
             answer = input('Public key (hexadecimal) or Private key (Wallet Import Format): ')
 
