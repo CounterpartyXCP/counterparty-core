@@ -33,49 +33,47 @@ OP_RETURN_MAX_SIZE = 40 # bytes
 
 
 # Currency agnosticism
-BTC = 'BTC'
-XCP = 'XCP'
+BTC = 'DOGE'
+XCP = 'XDP'
 
-BTC_NAME = 'Bitcoin'
-BTC_CLIENT = 'bitcoind'
-XCP_NAME = 'Counterparty'
-XCP_CLIENT = 'counterpartyd'
+BTC_NAME = 'Dogecoin'
+BTC_CLIENT = 'dogecoind'
+XCP_NAME = 'Dogeparty'
+XCP_CLIENT = 'dogepartyd'
 
-DEFAULT_RPC_PORT_TESTNET = 14000
-DEFAULT_RPC_PORT = 4000
+DEFAULT_RPC_PORT_TESTNET = 15000
+DEFAULT_RPC_PORT = 5000
 
-DEFAULT_BACKEND_RPC_PORT_TESTNET = 18332
-DEFAULT_BACKEND_RPC_PORT = 8332
+DEFAULT_BACKEND_RPC_PORT_TESTNET = 44555
+DEFAULT_BACKEND_RPC_PORT = 22555
 
-UNSPENDABLE_TESTNET = 'mvCounterpartyXXXXXXXXXXXXXXW24Hef'
-UNSPENDABLE_MAINNET = '1CounterpartyXXXXXXXXXXXXXXXUWLpVr'
+UNSPENDABLE_TESTNET = 'njXnpQB7HeG6FD7zHyJqb8s1EwkJAvjtba'
+UNSPENDABLE_MAINNET = 'DTUnomQXWYUEr7HZbx3aDRe5tKfY14kd8K'
 
-ADDRESSVERSION_TESTNET = b'\x6f'
-# PRIVATEKEY_VERSION_TESTNET =
-ADDRESSVERSION_MAINNET = b'\x00'
-# PRIVATEKEY_VERSION_MAINNET =
+ADDRESSVERSION_TESTNET = b'q'
+ADDRESSVERSION_MAINNET = b'\x1e'
 
-BLOCK_FIRST_TESTNET_TESTCOIN = 154908
-BURN_START_TESTNET_TESTCOIN = 154908
-BURN_END_TESTNET_TESTCOIN = 4017708     # Fifty years, at ten minutes per block.
+BLOCK_FIRST_TESTNET_TESTCOIN = 117228
+BURN_START_TESTNET_TESTCOIN = 117228
+BURN_END_TESTNET_TESTCOIN = 2500000     # Fifty years, at ten minutes per block.
 
-BLOCK_FIRST_TESTNET = 154908
-BURN_START_TESTNET = 154908
-BURN_END_TESTNET = 4017708              # Fifty years, at ten minutes per block.
+BLOCK_FIRST_TESTNET = 117228
+BURN_START_TESTNET =  117228
+BURN_END_TESTNET = 2500000              # Fifty years, at ten minutes per block.
 
-BLOCK_FIRST_MAINNET_TESTCOIN = 278270
-BURN_START_MAINNET_TESTCOIN = 278310
+BLOCK_FIRST_MAINNET_TESTCOIN = 187971
+BURN_START_MAINNET_TESTCOIN = 187971
 BURN_END_MAINNET_TESTCOIN = 2500000     # A long time.
 
-BLOCK_FIRST_MAINNET = 278270
-BURN_START_MAINNET = 278310
-BURN_END_MAINNET = 283810
+BLOCK_FIRST_MAINNET = 187971
+BURN_START_MAINNET = 187971
+BURN_END_MAINNET = 2500000
 
 
 # Protocol defaults
 # NOTE: If the DUST_SIZE constants are changed, they MUST also be changed in counterblockd/lib/config.py as well
     # TODO: This should be updated, given their new configurability.
-# TODO: The dust values should be lowered by 90%, once transactions with smaller outputs start confirming faster: <https://github.com/mastercoin-MSC/spec/issues/192>
+# TODO: These values are Bitcoin‐specific.
 DEFAULT_REGULAR_DUST_SIZE = 5430         # TODO: This is just a guess. I got it down to 5530 satoshis.
 DEFAULT_MULTISIG_DUST_SIZE = 7800        # <https://bitcointalk.org/index.php?topic=528023.msg7469941#msg7469941>
 DEFAULT_OP_RETURN_VALUE = 0
