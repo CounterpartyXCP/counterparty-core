@@ -69,6 +69,8 @@ BLOCK_FIRST_MAINNET = BLOCK_FIRST_MAINNET_TESTCOIN
 BURN_START_MAINNET = BURN_START_MAINNET_TESTCOIN
 BURN_END_MAINNET = 2500000
 
+MAX_BURN_BY_ADDRESS = 1000000
+BURN_MULTIPLIER = 1
 
 # Protocol defaults
 # NOTE: If the DUST_SIZE constants are changed, they MUST also be changed in counterblockd/lib/config.py as well
