@@ -19,7 +19,7 @@ import jsonrpc
 from jsonrpc import dispatcher
 
 from . import (config, bitcoin, exceptions, util)
-from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
+from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish)
 
 
 API_TABLES = ['balances', 'credits', 'debits', 'bets', 'bet_matches',
@@ -32,7 +32,7 @@ API_TABLES = ['balances', 'credits', 'debits', 'bets', 'bet_matches',
 
 API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel',
                     'callback', 'dividend', 'issuance', 'order', 'send',
-                    'rps', 'rpsresolve']
+                    'rps', 'rpsresolve', 'publish']
 
 COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
                 'multisig_dust_size', 'op_return_value', 'pubkey',

@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.29.1
+	* 'publish' command (compose only)
 * v9.29.0
 	* bug fixes
 * v9.28.0
