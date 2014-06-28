@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.29.2
+	* bug in fee calculation
 * v9.29.1
 	* 'publish' command (compose only)
 * v9.29.0
