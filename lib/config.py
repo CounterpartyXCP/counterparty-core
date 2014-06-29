@@ -78,11 +78,11 @@ BURN_MULTIPLIER = 1
 # Protocol defaults
 # NOTE: If the DUST_SIZE constants are changed, they MUST also be changed in counterblockd/lib/config.py as well
     # TODO: This should be updated, given their new configurability.
-# TODO: These values are Bitcoin‐specific.
-DEFAULT_REGULAR_DUST_SIZE = 5430         # TODO: This is just a guess. I got it down to 5530 satoshis.
-DEFAULT_MULTISIG_DUST_SIZE = 7800        # <https://bitcointalk.org/index.php?topic=528023.msg7469941#msg7469941>
+# TODO: Find the real dust size and default fee.
+DEFAULT_REGULAR_DUST_SIZE = UNIT         
+DEFAULT_MULTISIG_DUST_SIZE = UNIT*2        
 DEFAULT_OP_RETURN_VALUE = 0
-DEFAULT_FEE_PER_KB = 2000                # Bitcoin Core default is 1000.
+DEFAULT_FEE_PER_KB = UNIT                
 
 
 # UI defaults
