@@ -53,6 +53,9 @@ UNSPENDABLE_MAINNET = 'DTUnomQXWYUEr7HZbx3aDRe5tKfY14kd8K'
 ADDRESSVERSION_TESTNET = b'q'
 ADDRESSVERSION_MAINNET = b'\x1e'
 
+WIF_PREFIX_TESTNET = b'\xf1'
+WIF_PREFIX_MAINNET = b'\x9e'
+
 BLOCK_FIRST_TESTNET_TESTCOIN = 124678
 BURN_START_TESTNET_TESTCOIN = 124678
 BURN_END_TESTNET_TESTCOIN = 2500000     # Fifty years, at ten minutes per block.
@@ -69,15 +72,17 @@ BLOCK_FIRST_MAINNET = BLOCK_FIRST_MAINNET_TESTCOIN
 BURN_START_MAINNET = BURN_START_MAINNET_TESTCOIN
 BURN_END_MAINNET = 2500000
 
+MAX_BURN_BY_ADDRESS = 1 * UNIT 			# 1 DOGE.
+BURN_MULTIPLIER = 1 					# from 1.5 to 1 XDP by DOGE.
 
 # Protocol defaults
 # NOTE: If the DUST_SIZE constants are changed, they MUST also be changed in counterblockd/lib/config.py as well
     # TODO: This should be updated, given their new configurability.
-# TODO: These values are Bitcoin‐specific.
-DEFAULT_REGULAR_DUST_SIZE = 5430         # TODO: This is just a guess. I got it down to 5530 satoshis.
-DEFAULT_MULTISIG_DUST_SIZE = 7800        # <https://bitcointalk.org/index.php?topic=528023.msg7469941#msg7469941>
-DEFAULT_OP_RETURN_VALUE = 0
-DEFAULT_FEE_PER_KB = 2000                # Bitcoin Core default is 1000.
+# TODO: Find the real dust size and default fee.
+DEFAULT_REGULAR_DUST_SIZE = UNIT 		# 1 DOGE.     
+DEFAULT_MULTISIG_DUST_SIZE = UNIT * 2  	# 2 DOGE.   
+DEFAULT_OP_RETURN_VALUE = 0 			# 0 DOGE.
+DEFAULT_FEE_PER_KB = UNIT               # 1 DOGE.
 
 
 # UI defaults
