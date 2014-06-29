@@ -72,17 +72,17 @@ BLOCK_FIRST_MAINNET = BLOCK_FIRST_MAINNET_TESTCOIN
 BURN_START_MAINNET = BURN_START_MAINNET_TESTCOIN
 BURN_END_MAINNET = 2500000
 
-MAX_BURN_BY_ADDRESS = 1 * UNIT # 1 DOGE.
-BURN_MULTIPLIER = 1 # from 1.5 to 1 XDP by DOGE.
+MAX_BURN_BY_ADDRESS = 1 * UNIT 			# 1 DOGE.
+BURN_MULTIPLIER = 1 					# from 1.5 to 1 XDP by DOGE.
 
 # Protocol defaults
 # NOTE: If the DUST_SIZE constants are changed, they MUST also be changed in counterblockd/lib/config.py as well
     # TODO: This should be updated, given their new configurability.
 # TODO: Find the real dust size and default fee.
-DEFAULT_REGULAR_DUST_SIZE = UNIT         
-DEFAULT_MULTISIG_DUST_SIZE = UNIT*2        
-DEFAULT_OP_RETURN_VALUE = 0
-DEFAULT_FEE_PER_KB = UNIT                
+DEFAULT_REGULAR_DUST_SIZE = UNIT 		# 1 DOGE.     
+DEFAULT_MULTISIG_DUST_SIZE = UNIT * 2  	# 2 DOGE.   
+DEFAULT_OP_RETURN_VALUE = 0 			# 0 DOGE.
+DEFAULT_FEE_PER_KB = UNIT               # 1 DOGE
 
 
 # UI defaults
