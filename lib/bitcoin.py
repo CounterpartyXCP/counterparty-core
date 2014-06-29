@@ -16,7 +16,7 @@ import logging
 
 import requests
 from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
-from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec
+from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec, EncodingError as PycoinEncodingError
 from pycoin.scripts import bitcoin_utils
 from Crypto.Cipher import ARC4
 
@@ -372,10 +372,10 @@ def sort_unspent_txouts(unspent, allow_unconfirmed_inputs):
     return unspent
 
 def private_key_to_public_key (private_key_wif):
-    # allowable_wif_prefixes = [
-    try:
-        secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif, is_test=config.TESTNET)
-    except pycoin.encoding.EncodingError:
+    try: 
+        wif_prefix = config.WIF_PREFIX_TESTNET if config.TESTNET else config.WIF_PREFIX_MAINNET
+        secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif, allowable_wif_prefixes=[wif_prefix])
+    except PycoinEncodingError:
         raise exceptions.AltcoinSupportError('pycoin: unsupported WIF prefix')
     public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
     public_key = public_pair_to_sec(public_pair, compressed=compressed)
