@@ -19,8 +19,22 @@ Connecting to the API
 ----------------------
 
 By default, ``counterpartyd`` will listen on port ``4000`` (if on mainnet) or port ``14000`` (on testnet) for API
-requests. API requests are made via a HTTP POST request to ``/api/``, with JSON-encoded
-data passed as the POST body. For more information on JSON RPC, please see the `JSON RPC 2.0 specification <http://www.jsonrpc.org/specification>`__.
+requests. 
+
+Note that this API is built on JSON-RPC 2.0, not 1.1. JSON-RPC itself is pretty lightweight, and API requests
+are made via a HTTP POST request to ``/api/``, with JSON-encoded data passed as the POST body.
+
+Especially if you are getting errors like this when trying to make an API call:
+
+``Incorrect response id (request id: 1, response id: [..]``
+
+Then you need to make sure you are issuing your request as a POST request with a payload that is JSON encoded and in the format of:
+
+``{ "method": "METHOD NAME", "params": {"param1": "value1", "param2": "value2"}, "jsonrpc": "2.0", "id": 0 }``
+
+In particular, note the "jsonrpc" and "id" properties. These are requirements under the JSON-RPC 2.0 spec.
+
+For more information on JSON RPC, please see the `JSON RPC 2.0 specification <http://www.jsonrpc.org/specification>`__.
 
 .. _examples:
 
