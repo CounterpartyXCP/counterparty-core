@@ -15,8 +15,8 @@ without having to deal with the low‐level details of the protocol such as
 transaction encoding and state management.
 
 
-Connecting to the API
-----------------------
+Connecting and Making Requests
+---------------------------------
 
 By default, ``counterpartyd`` will listen on port ``4000`` (if on mainnet) or port ``14000`` (on testnet) for API
 requests. 
