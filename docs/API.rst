@@ -32,7 +32,9 @@ In particular, note the ``jsonrpc`` and ``id`` properties. These are requirement
 
 Here's an example of the POST data for a valid API request:
 
-``{
+.. code-block::
+
+    {
       "method": "get_burns",
       "params": {"order_by": 'tx_hash',
                  "order_dir": 'asc',
@@ -40,7 +42,7 @@ Here's an example of the POST data for a valid API request:
                  "end_block": 280539},
       "jsonrpc": "2.0",
       "id": 0,
-    }``
+    }
 
 You should note that the data in ``params`` is a JSON object (e.g. mapping), not an array. In other words, 
 the API only supports named arguments, not positional arguments. This is the case for safety and bug-minimzation reasons.
