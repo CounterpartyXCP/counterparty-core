@@ -24,15 +24,26 @@ requests.
 Note that this API is built on JSON-RPC 2.0, not 1.1. JSON-RPC itself is pretty lightweight, and API requests
 are made via a HTTP POST request to ``/api/``, with JSON-encoded data passed as the POST body.
 
-Especially if you are getting errors like this when trying to make an API call:
-
-``Incorrect response id (request id: 1, response id: [..]``
-
-Then you need to make sure you are issuing your request as a POST request with a payload that is JSON encoded and in the format of:
+All requests must have POST data that is JSON encoded and in the format of:
 
 ``{ "method": "METHOD NAME", "params": {"param1": "value1", "param2": "value2"}, "jsonrpc": "2.0", "id": 0 }``
 
-In particular, note the "jsonrpc" and "id" properties. These are requirements under the JSON-RPC 2.0 spec.
+In particular, note the ``jsonrpc`` and ``id`` properties. These are requirements under the JSON-RPC 2.0 spec.
+
+Here's an example of the POST data for a valid API request:
+
+``{
+      "method": "get_burns",
+      "params": {"order_by": 'tx_hash',
+                 "order_dir": 'asc',
+                 "start_block": 280537,
+                 "end_block": 280539},
+      "jsonrpc": "2.0",
+      "id": 0,
+    }``
+
+You should note that the data in ``params`` is a JSON object (e.g. mapping), not an array. In other words, 
+the API only supports named arguments, not positional arguments. This is the case for safety and bug-minimzation reasons.
 
 For more information on JSON RPC, please see the `JSON RPC 2.0 specification <http://www.jsonrpc.org/specification>`__.
 
@@ -71,7 +82,7 @@ Python Example
       "method": "get_balances",
       "params": {"filters": [{'field': 'address', 'op': '==', 'value': "14qqz8xpzzEtj6zLs3M1iASP7T4mj687yq"},
                              {'field': 'address', 'op': '==', 'value': "1bLockjTFXuSENM8fGdfNUaWqiM4GPe7V"}],
-                             "filterop": "or"},
+                 "filterop": "or"},
       "jsonrpc": "2.0",
       "id": 0,
     }
@@ -83,7 +94,12 @@ Python Example
     #With this (and the rest of the examples below) we use positional arguments, instead of keyword-based arguments
     payload = {
       "method": "get_burns",
-      "params": [{'field': 'burned', 'op': '>', 'value': 20000000}, 'AND', 'tx_hash', 'asc', 280537, 280539],
+      "params": {"filters": {'field': 'burned', 'op': '>', 'value': 20000000},
+                 "filterop": "AND",
+                 "order_by": 'tx_hash',
+                 "order_dir": 'asc',
+                 "start_block": 280537,
+                 "end_block": 280539},
       "jsonrpc": "2.0",
       "id": 0,
     }
@@ -94,7 +110,11 @@ Python Example
     #Fetch all debits for > 2 XCP between blocks 280537 and 280539, sorting the results by quantity (descending order)
     payload = {
       "method": "get_debits",
-      "params": [[{'field': 'asset', 'op': '==', 'value': "XCP"}, {'field': 'quantity', 'op': '>', 'value': 200000000}], 'AND', 'quantity', 'desc'],
+      "params": {"filters": [{'field': 'asset', 'op': '==', 'value': "XCP"},
+                             {'field': 'quantity', 'op': '>', 'value': 200000000}],
+                "filterop": 'AND',
+                "order_by": 'quantity',
+                "order_dir": 'desc'},
       "jsonrpc": "2.0",
       "id": 0,
     }
@@ -107,8 +127,10 @@ Python Example
     # and it will be broadcast as a multisig transaction
     payload = {
       "method": "create_send",
-      "params": {'source': "1CUdFmgK9trTNZHALfqGvd8d6nUZqH2AAf", 'destination': "17rRm52PYGkntcJxD2yQF9jQqRS4S2nZ7E",
-                 'asset': "XCP", 'quantity': 100000000},
+      "params": {'source': "1CUdFmgK9trTNZHALfqGvd8d6nUZqH2AAf",
+                 'destination': "17rRm52PYGkntcJxD2yQF9jQqRS4S2nZ7E",
+                 'asset': "XCP",
+                 'quantity': 100000000},
       "jsonrpc": "2.0",
       "id": 0,
     }
