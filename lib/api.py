@@ -105,7 +105,7 @@ def get_rows(db, table, filters=[], filterop='AND', order_by=None, order_dir=Non
                 raise Exception("A specified filter is missing the '%s' field" % field)
         if not isinstance(filter_['value'], (str, int, float, list)):
             raise Exception("Invalid value for the field '%s'" % filter_['field'])
-        if isinstance(filter_['value'], list) and filter_['op'].upper() != 'IN':
+        if isinstance(filter_['value'], list) and filter_['op'].upper() not in ['IN', 'NOT IN']:
             raise Exception("Invalid value for the field '%s'" % filter_['field'])
         if filter_['op'].upper() not in ['=', '==', '!=', '>', '<', '>=', '<=', 'IN', 'LIKE', 'NOT IN', 'NOT LIKE']:
             raise Exception("Invalid operator for the field '%s'" % filter_['field'])
