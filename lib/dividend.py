@@ -57,7 +57,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
         dividend_quantity = address_quantity * quantity_per_unit
         if divisible: dividend_quantity /= config.UNIT
         if not dividend_divisible: dividend_quantity /= config.UNIT
-        if dividend_asset == config.BTC and dividend_quantity < config.MULTISIG_DUST_SIZE: continue    # A bit hackish.
+        if dividend_asset == config.BTC and dividend_quantity < config.DEFAULT_MULTISIG_DUST_SIZE: continue    # A bit hackish.
         dividend_quantity = int(dividend_quantity)
 
         outputs.append({'address': address, 'address_quantity': address_quantity, 'dividend_quantity': dividend_quantity})
