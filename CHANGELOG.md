@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.29.3
+	* bug in RPS re-matching
 * v9.29.2
 	* bug in fee calculation
 * v9.29.1
