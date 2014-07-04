@@ -287,7 +287,7 @@ def expire (db, block_index):
         if new_rps_match_status == 'expired':
             sql = '''SELECT * FROM rps WHERE tx_hash IN (?, ?) AND status = ? AND expire_index >= ?'''
             bindings = (rps_match['tx0_hash'], rps_match['tx1_hash'], 'matched', block_index)
-            matched_rps = cursor.execute(sql, bindings)
+            matched_rps = list(cursor.execute(sql, bindings))
             for rps in matched_rps:
                 cursor.execute('''UPDATE rps SET status = ? WHERE tx_index = ?''', ('open', rps['tx_index']))
                 # Re-debit XCP refund by close_rps_match.
