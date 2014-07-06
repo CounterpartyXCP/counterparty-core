@@ -36,7 +36,7 @@ API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel',
 
 COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
                 'multisig_dust_size', 'op_return_value', 'pubkey',
-                'allow_unconfirmed_inputs', 'fee', 'fee_provided']
+                'allow_unconfirmed_inputs', 'fee', 'fee_provided', 'armory']
 
 
 # TODO: ALL queries EVERYWHERE should be done with these methods
@@ -191,7 +191,7 @@ def compose_transaction(db, name, params,
                         pubkey=None,
                         allow_unconfirmed_inputs=False,
                         fee=None,
-                        fee_provided=0):
+                        fee_provided=0, armory=False):
     tx_info = sys.modules['lib.{}'.format(name)].compose(db, **params)
     return bitcoin.transaction(tx_info, encoding=encoding,
                                         fee_per_kb=fee_per_kb,
@@ -201,7 +201,7 @@ def compose_transaction(db, name, params,
                                         public_key_hex=pubkey,
                                         allow_unconfirmed_inputs=allow_unconfirmed_inputs,
                                         exact_fee=fee,
-                                        fee_provided=fee_provided)
+                                        fee_provided=fee_provided, armory=armory)
 
 def sign_transaction(unsigned_tx_hex, private_key_wif=None):
     return bitcoin.sign_tx(unsigned_tx_hex, private_key_wif=private_key_wif)

@@ -167,14 +167,9 @@ def rpc (method, params):
     else:
         raise exceptions.BitcoindError('{}'.format(response_json['error']))
 
-def base58_check_encode(b, version):
-    b = binascii.unhexlify(bytes(b, 'utf-8'))
-    d = version + b   # mainnet
-
-    address_hex = d + dhash(d)[:4]
-
+def base58_encode(binary):
     # Convert big‐endian bytes to integer
-    n = int('0x0' + binascii.hexlify(address_hex).decode('utf8'), 16)
+    n = int('0x0' + binascii.hexlify(binary).decode('utf8'), 16)
 
     # Divide that integer into base58
     res = []
@@ -182,6 +177,14 @@ def base58_check_encode(b, version):
         n, r = divmod (n, 58)
         res.append(b58_digits[r])
     res = ''.join(res[::-1])
+    return res
+
+def base58_check_encode(b, version):
+    b = binascii.unhexlify(bytes(b, 'utf-8'))
+    d = version + b
+
+    binary = d + dhash(d)[:4]
+    res = base58_encode(binary)
 
     # Encode leading zeros as base58 zeros
     czero = 0
@@ -191,6 +194,7 @@ def base58_check_encode(b, version):
         else: break
     return b58_digits[0] * pad + res
 
+# TODO: This should be called base58_check_decode.
 def base58_decode (s, version):
     # Convert the string to an integer
     n = 0
@@ -387,7 +391,7 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
                  multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
                  op_return_value=config.DEFAULT_OP_RETURN_VALUE, exact_fee=None,
                  fee_provided=0, public_key_hex=None,
-                 allow_unconfirmed_inputs=False):
+                 allow_unconfirmed_inputs=False, armory=False):
 
     (source, destination_outputs, data) = tx_info
 
@@ -530,8 +534,29 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
     else: change_output = None
 
     # Serialise inputs and outputs.
-    transaction = serialise(encoding, inputs, destination_outputs, data_output, change_output, source=source, public_key=public_key)
-    unsigned_tx_hex = binascii.hexlify(transaction).decode('utf-8')
+    unsigned_tx = serialise(encoding, inputs, destination_outputs, data_output, change_output, source=source, public_key=public_key)
+    unsigned_tx_hex = binascii.hexlify(unsigned_tx).decode('utf-8')
+
+    # bip-0010
+    if armory:
+        txdp = []
+        dpid = base58_encode(hashlib.sha256(unsigned_tx).digest())[:8]
+        txdp.append(('-----BEGIN-TRANSACTION-' + dpid + '-----').ljust(80,'-'))
+
+        magic_bytes = binascii.hexlify(config.MAGIC_BYTES).decode('utf-8')
+        varIntTxSize = binascii.hexlify(len(unsigned_tx).to_bytes(2, byteorder='big')).decode('utf-8')
+        txdp.append('_TXDIST_{}_{}_{}'.format(magic_bytes, dpid, varIntTxSize))
+        for byte in range(0,len(unsigned_tx_hex),80):
+            txdp.append(unsigned_tx_hex[byte:byte+80] )
+
+        for index, coin in enumerate(inputs):
+            index_fill = str(index).zfill(2)
+            value = '{0:.8f}'.format(coin['amount'])
+            txdp.append('_TXINPUT_{}_{}'.format(index_fill, value))
+
+        txdp.append(('-----END-TRANSACTION-' + dpid + '-----').ljust(80,'-'))
+        unsigned_tx_hex = '\n'.join(txdp)
+
     return unsigned_tx_hex
 
 def sign_tx (unsigned_tx_hex, private_key_wif=None):

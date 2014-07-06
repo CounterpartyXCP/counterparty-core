@@ -155,7 +155,8 @@ def market (give_asset, get_asset):
     print(table)
 
 
-def cli(method, params, unsigned):
+def cli(method, params, unsigned, armory):
+    if armory: params['armory'] = True
 
     # Get unsigned transaction serialisation.
     if bitcoin.is_valid(params['source']):
@@ -178,10 +179,11 @@ def cli(method, params, unsigned):
         raise exceptions.AddressError('Invalid address.')
 
     unsigned_tx_hex = util.api(method, params)
+    if armory: unsigned_tx_hex = '\n' + unsigned_tx_hex
     print('Transaction (unsigned):', unsigned_tx_hex)
 
     # Ask to sign and broadcast.
-    if not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
+    if not unsigned and not armory and input('Sign and broadcast? (y/N) ') == 'y':
         if bitcoin.is_mine(params['source']):
             private_key_wif = None
         elif not private_key_wif:   # If private key was not given earlier.
@@ -466,6 +468,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
 
     # (more) Testnet
     if config.TESTNET:
+        config.MAGIC_BYTES = config.MAGIC_BYTES_TESTNET
         if config.TESTCOIN:
             config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
             config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET_TESTCOIN
@@ -479,6 +482,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
             config.BURN_END = config.BURN_END_TESTNET
             config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
     else:
+        config.MAGIC_BYTES = config.MAGIC_BYTES_MAINNET
         if config.TESTCOIN:
             config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
             config.BLOCK_FIRST = config.BLOCK_FIRST_MAINNET_TESTCOIN
@@ -535,7 +539,6 @@ if __name__ == '__main__':
     parser.add_argument('--force', action='store_true', help='don\'t check whether backend is caught up'.format(config.BTC_NAME))
     parser.add_argument('--testnet', action='store_true', help='use {} testnet addresses and block numbers'.format(config.BTC_NAME))
     parser.add_argument('--testcoin', action='store_true', help='use the test {} network on every blockchain'.format(config.XCP_NAME))
-    parser.add_argument('--unsigned', action='store_true', help='print out unsigned hex of transaction; do not sign or broadcast')
     parser.add_argument('--carefulness', type=int, default=0, help='check conservation of assets after every CAREFULNESS transactions (potentially slow)')
     parser.add_argument('--unconfirmed', action='store_true', help='allow the spending of unconfirmed transaction outputs')
     parser.add_argument('--encoding', default='auto', type=str, help='data encoding method')
@@ -543,6 +546,8 @@ if __name__ == '__main__':
     parser.add_argument('--regular-dust-size', type=D, default=D(config.DEFAULT_REGULAR_DUST_SIZE / config.UNIT), help='value for dust Pay‐to‐Pubkey‐Hash outputs, in {}'.format(config.BTC))
     parser.add_argument('--multisig-dust-size', type=D, default=D(config.DEFAULT_MULTISIG_DUST_SIZE / config.UNIT), help='for dust OP_CHECKMULTISIG outputs, in {}'.format(config.BTC))
     parser.add_argument('--op-return-value', type=D, default=D(config.DEFAULT_OP_RETURN_VALUE / config.UNIT), help='value for OP_RETURN outputs, in {}'.format(config.BTC))
+    parser.add_argument('--unsigned', action='store_true', help='print out unsigned hex of transaction; do not sign or broadcast')
+    parser.add_argument('--armory', action='store_true', help='print out unsigned hex of transaction, in the format used by Armory; do not sign or broadcast')
 
     parser.add_argument('--data-dir', help='the directory in which to keep the database, config file and log file, by default')
     parser.add_argument('--database-file', help='the location of the SQLite3 database')
@@ -767,7 +772,7 @@ if __name__ == '__main__':
                             args.regular_dust_size, 'multisig_dust_size':
                             args.multisig_dust_size, 'op_return_value':
                             args.op_return_value},
-            args.unsigned)
+            args.unsigned, args.armory)
 
     elif args.action == 'order':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -804,7 +809,7 @@ if __name__ == '__main__':
                              args.regular_dust_size, 'multisig_dust_size':
                              args.multisig_dust_size, 'op_return_value':
                              args.op_return_value},
-           args.unsigned)
+           args.unsigned, args.armory)
 
     elif args.action == '{}pay'.format(config.BTC).lower():
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -816,7 +821,7 @@ if __name__ == '__main__':
                               'regular_dust_size': args.regular_dust_size,
                               'multisig_dust_size': args.multisig_dust_size,
                               'op_return_value': args.op_return_value},
-            args.unsigned)
+            args.unsigned, args.armory)
 
     elif args.action == 'issuance':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -845,7 +850,7 @@ if __name__ == '__main__':
                                 args.regular_dust_size, 'multisig_dust_size':
                                 args.multisig_dust_size, 'op_return_value':
                                 args.op_return_value},
-           args.unsigned)
+           args.unsigned, args.armory)
 
     elif args.action == 'broadcast':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -862,7 +867,7 @@ if __name__ == '__main__':
                                  args.regular_dust_size, 'multisig_dust_size':
                                  args.multisig_dust_size, 'op_return_value':
                                  args.op_return_value},
-           args.unsigned)
+           args.unsigned, args.armory)
 
     elif args.action == 'bet':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -884,7 +889,7 @@ if __name__ == '__main__':
                            args.regular_dust_size, 'multisig_dust_size':
                            args.multisig_dust_size, 'op_return_value':
                            args.op_return_value},
-            args.unsigned)
+            args.unsigned, args.armory)
 
     elif args.action == 'dividend':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -899,7 +904,7 @@ if __name__ == '__main__':
                                 args.regular_dust_size, 'multisig_dust_size':
                                 args.multisig_dust_size, 'op_return_value':
                                 args.op_return_value},
-           args.unsigned)
+           args.unsigned, args.armory)
 
     elif args.action == 'burn':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -911,7 +916,7 @@ if __name__ == '__main__':
                             args.regular_dust_size, 'multisig_dust_size':
                             args.multisig_dust_size, 'op_return_value':
                             args.op_return_value},
-        args.unsigned)
+        args.unsigned, args.armory)
 
     elif args.action == 'cancel':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -923,7 +928,7 @@ if __name__ == '__main__':
                               args.regular_dust_size, 'multisig_dust_size':
                               args.multisig_dust_size, 'op_return_value':
                               args.op_return_value},
-        args.unsigned)
+        args.unsigned, args.armory)
 
     elif args.action == 'callback':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -936,7 +941,7 @@ if __name__ == '__main__':
                                 args.regular_dust_size, 'multisig_dust_size':
                                 args.multisig_dust_size, 'op_return_value':
                                 args.op_return_value},
-           args.unsigned)
+           args.unsigned, args.armory)
 
     elif args.action == 'rps':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
@@ -953,7 +958,7 @@ if __name__ == '__main__':
                            args.regular_dust_size, 'multisig_dust_size':
                            args.multisig_dust_size, 'op_return_value':
                            args.op_return_value},
-           args.unsigned)
+           args.unsigned, args.armory)
 
     elif args.action == 'rpsresolve':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
@@ -966,7 +971,7 @@ if __name__ == '__main__':
                                 args.regular_dust_size, 'multisig_dust_size':
                                 args.multisig_dust_size, 'op_return_value':
                                 args.op_return_value},
-           args.unsigned)
+           args.unsigned, args.armory)
 
     elif args.action == 'publish':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
@@ -977,7 +982,7 @@ if __name__ == '__main__':
                                args.fee_per_kb, 'regular_dust_size':
                                args.regular_dust_size, 'multisig_dust_size':
                                args.multisig_dust_size, 'op_return_value':
-                               args.op_return_value}, args.unsigned)
+                               args.op_return_value}, args.unsigned, args.armory)
 
 
     # VIEWING (temporary)

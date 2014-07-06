@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.29.4 (2014-07-05)
+	* Armory support
 * v9.29.3 (2014-06-26)
 	* bug in RPS re-matching
 * v9.29.2 (2014-06-26)
