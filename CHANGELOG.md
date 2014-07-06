@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.30.0 (2014-07-06)
+	* hotfix for error in block 309485
 * v9.29.4 (2014-07-05)
 	* Armory support
 * v9.29.3 (2014-06-26)

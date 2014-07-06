@@ -122,7 +122,7 @@ def parse (db, tx, message):
     if value < 0 or value == None:
         # Cancel Open Bets?
         if value == -2:
-            cursor.execute('''SELECT * FROM bet \
+            cursor.execute('''SELECT * FROM bets \
                               WHERE (status = ? AND feed_address = ?)''',
                            ('open', tx['source']))
             for i in list(cursor):
