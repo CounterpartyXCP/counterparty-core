@@ -528,7 +528,7 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
     if not sufficient_funds:
         # Approximate needed change, fee by with most recently calculated quantities.
         total_btc_out = btc_out + max(change_quantity, 0) + final_fee
-        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need approximately {} {}.)'.format(source, total_btc_out / config.UNIT, config.BTC))
+        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need approximately {} {}.) To spend unconfirmed coins, use the flag `--unconfirmed`.'.format(source, total_btc_out / config.UNIT, config.BTC))
 
     # Construct outputs.
     if data: data_output = (data_array, data_value)
