@@ -11,6 +11,7 @@ from datetime import datetime
 from dateutil.tz import tzlocal
 from operator import itemgetter
 import fractions
+import warnings
 
 from . import (config, exceptions)
 
@@ -367,7 +368,12 @@ def version_check (db):
                 passed = False
 
     if not passed:
-        raise exceptions.VersionError('Please upgrade {} to the latest version and restart the server.'.format(config.XCP_CLIENT))
+        explanation = 'Your version of counterpartyd is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: {}. Please upgrade to the latest version and restart the server.'.format(config.VERSION_STRING, versions['block_index'], versions['minimum_version_major'], versions['minimum_version_minor'], versions['minimum_version_revision'], versions['reason'])
+
+        if last_block(db)['block_index'] >= versions['block_index']:
+            raise exceptions.VersionError(explanation)
+        else:
+            warnings.warn(explanation)
 
     logging.debug('Status: Version check passed.')
     return
