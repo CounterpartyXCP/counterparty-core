@@ -498,15 +498,15 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
 
     # Get inputs.
     unspent = get_unspent_txouts(source, normalize=True)
-    logging.info('Found unspent transaction outputs: {}'.format(unspent))
     unspent = sort_unspent_txouts(unspent, allow_unconfirmed_inputs)
+    logging.info('Sorted UTXOs: {}'.format(unspent))
 
     inputs, btc_in = [], 0
     change_quantity = 0
     sufficient_funds = False
     final_fee = fee_per_kb
     for coin in unspent:
-        logging.info('Adding output to list of inputs: {}'.format(coin))
+        logging.info('New input: {}'.format(coin))
         inputs.append(coin)
         btc_in += round(coin['amount'] * config.UNIT)
 
