@@ -498,6 +498,7 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
 
     # Get inputs.
     unspent = get_unspent_txouts(source, normalize=True)
+    logging.info('Found unspent transaction outputs: {}'.format(unspent))
     unspent = sort_unspent_txouts(unspent, allow_unconfirmed_inputs)
 
     inputs, btc_in = [], 0
@@ -505,6 +506,7 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
     sufficient_funds = False
     final_fee = fee_per_kb
     for coin in unspent:
+        logging.info('Adding output to list of inputs: {}'.format(coin))
         inputs.append(coin)
         btc_in += round(coin['amount'] * config.UNIT)
 
@@ -519,6 +521,7 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
 
         # Check if good.
         change_quantity = btc_in - (btc_out + final_fee)
+        logging.info('Change quantity: {} BTC'.format(change_quantity / config.UNIT))
         if change_quantity == 0 or change_quantity >= regular_dust_size: # If change is necessary, must not be a dust output.
             sufficient_funds = True
             break
