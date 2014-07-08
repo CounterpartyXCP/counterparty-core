@@ -1077,6 +1077,10 @@ def follow (db):
             if block_index == block_count:
                 check_conservation(db)
 
+            # Clear list of non‐supported transactions every six blocks.
+            if block_index % 36 == 0:
+                non_supported = []
+
             # Increment block index.
             block_count = bitcoin.get_block_count()
             block_index +=1
