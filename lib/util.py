@@ -384,7 +384,7 @@ def database_check (db, blockcount):
     TRIES = 14
     for i in range(TRIES):
         block_index = last_block(db)['block_index']
-        if block_index == blockcount:
+        if block_index >= blockcount:
             cursor.close()
             return
         print('Database not up‐to‐date. Sleeping for one second. (Try {}/{})'.format(i+1, TRIES), file=sys.stderr)
