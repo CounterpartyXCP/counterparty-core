@@ -281,7 +281,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     if backend_rpc_port:
         config.BACKEND_RPC_PORT = backend_rpc_port
     elif has_config and 'backend-rpc-port' in configfile['Default'] and configfile['Default']['backend-rpc-port']:
-        config.backend_RPC_PORT = configfile['Default']['backend-rpc-port']
+        config.BACKEND_RPC_PORT = configfile['Default']['backend-rpc-port']
     elif has_config and 'bitcoind-rpc-port' in configfile['Default'] and configfile['Default']['bitcoind-rpc-port']:
         config.BACKEND_RPC_PORT = configfile['Default']['bitcoind-rpc-port']
     else:
