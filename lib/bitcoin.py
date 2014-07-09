@@ -54,8 +54,11 @@ def is_mine (address):
 def send_raw_transaction (tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
 
-def get_raw_transaction (tx_hash):
-    return rpc('getrawtransaction', [tx_hash, 1])
+def get_raw_transaction (tx_hash, json=True):
+    if json:
+        return rpc('getrawtransaction', [tx_hash, 1])
+    else:
+        return rpc('getrawtransaction', [tx_hash])
 
 def get_block (block_hash):
     return rpc('getblock', [block_hash])
@@ -541,24 +544,30 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
     unsigned_tx_hex = binascii.hexlify(unsigned_tx).decode('utf-8')
 
     # bip-0010
-    if armory:
-        txdp = []
-        dpid = base58_encode(hashlib.sha256(unsigned_tx).digest())[:8]
-        txdp.append(('-----BEGIN-TRANSACTION-' + dpid + '-----').ljust(80,'-'))
+    try:
+        if armory:
+            txdp = []
+            dpid = base58_encode(hashlib.sha256(unsigned_tx).digest())[:8]
+            txdp.append(('-----BEGIN-TRANSACTION-' + dpid + '-----').ljust(80,'-'))
 
-        magic_bytes = binascii.hexlify(config.MAGIC_BYTES).decode('utf-8')
-        varIntTxSize = binascii.hexlify(len(unsigned_tx).to_bytes(2, byteorder='big')).decode('utf-8')
-        txdp.append('_TXDIST_{}_{}_{}'.format(magic_bytes, dpid, varIntTxSize))
-        for byte in range(0,len(unsigned_tx_hex),80):
-            txdp.append(unsigned_tx_hex[byte:byte+80] )
+            magic_bytes = binascii.hexlify(config.MAGIC_BYTES).decode('utf-8')
+            varIntTxSize = binascii.hexlify(len(unsigned_tx).to_bytes(2, byteorder='big')).decode('utf-8')
+            txdp.append('_TXDIST_{}_{}_{}'.format(magic_bytes, dpid, varIntTxSize))
+            tx_list = unsigned_tx_hex
+            for coin in inputs:
+                tx_list += get_raw_transaction(coin['txid'], json=False)
+            for byte in range(0,len(tx_list),80):
+                txdp.append(tx_list[byte:byte+80] )
 
-        for index, coin in enumerate(inputs):
-            index_fill = str(index).zfill(2)
-            value = '{0:.8f}'.format(coin['amount'])
-            txdp.append('_TXINPUT_{}_{}'.format(index_fill, value))
+            for index, coin in enumerate(inputs):
+                index_fill = str(index).zfill(2)
+                value = '{0:.8f}'.format(coin['amount'])
+                txdp.append('_TXINPUT_{}_{}'.format(index_fill, value))
 
-        txdp.append(('-----END-TRANSACTION-' + dpid + '-----').ljust(80,'-'))
-        unsigned_tx_hex = '\n'.join(txdp)
+            txdp.append(('-----END-TRANSACTION-' + dpid + '-----').ljust(80,'-'))
+            unsigned_tx_hex = '\n'.join(txdp)
+    except Exception as e:
+        print(e)
 
     return unsigned_tx_hex
 
