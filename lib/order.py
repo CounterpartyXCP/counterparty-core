@@ -301,10 +301,14 @@ def match (db, tx, block_index=None):
         # Ignore previous matches. (Both directions, just to be sure.)
         cursor.execute('''SELECT * FROM order_matches
                           WHERE id = ? ''', (tx0['tx_hash'] + tx1['tx_hash'], ))
-        if list(cursor): continue
+        if list(cursor):
+            logging.debug('Skipping: previous match')
+            continue
         cursor.execute('''SELECT * FROM order_matches
                           WHERE id = ? ''', (tx1['tx_hash'] + tx0['tx_hash'], ))
-        if list(cursor): continue
+        if list(cursor):
+            logging.debug('Skipping: previous match')
+            continue
 
         # Get fee provided remaining.
         tx0_fee_required_remaining = tx0['fee_required_remaining']
@@ -313,25 +317,25 @@ def match (db, tx, block_index=None):
         # Make sure that that both orders still have funds remaining (if order involves BTC, and so cannot be ‘filled’).
         if tx0['give_asset'] == config.BTC or tx0['get_asset'] == config.BTC: # Gratuitous
             if tx0_give_remaining <= 0 or tx1_give_remaining <= 0:
-                logging.debug('Negative give remaining.')
+                logging.debug('Skipping: negative give quantity remaining')
                 continue
             if block_index >= 292000 or config.TESTNET:  # Protocol change
                 if tx0_get_remaining <= 0 or tx1_get_remaining <= 0:
-                    logging.debug('Negative get remaining.')
+                    logging.debug('Skipping: negative get quantity remaining')
                     continue
 
             if block_index >= 294000 or config.TESTNET:  # Protocol change.
                 if tx0['fee_required_remaining'] < 0:
-                    logging.debug('Negative tx0 fee required remaining.')
+                    logging.debug('Skipping: negative tx0 fee required remaining')
                     continue
                 if tx0['fee_provided_remaining'] < 0:
-                    logging.debug('Negative tx0 fee provided remaining.')
+                    logging.debug('Skipping: negative tx0 fee provided remaining')
                     continue
                 if tx1_fee_provided_remaining < 0:
-                    logging.debug('Negative tx1 fee provided remaining.')
+                    logging.debug('Skipping: negative tx1 fee provided remaining')
                     continue
                 if tx1_fee_required_remaining < 0:
-                    logging.debug('Negative tx1 fee required remaining.')
+                    logging.debug('Skipping: negative tx1 fee required remaining')
                     continue
 
         # If the prices agree, make the trade. The found order sets the price,
@@ -352,11 +356,11 @@ def match (db, tx, block_index=None):
             logging.debug('Backward Quantity: {}'.format(backward_quantity))
 
             if not forward_quantity:
-                logging.debug('Zero forward quantity.')
+                logging.debug('Skipping: zero forward quantity.')
                 continue
             if block_index >= 286500 or config.TESTNET:    # Protocol change.
                 if not backward_quantity:
-                    logging.debug('Zero backward quantity.')
+                    logging.debug('Skipping: zero backward quantity.')
                     continue
 
             # Check and update fee remainings.
@@ -364,8 +368,9 @@ def match (db, tx, block_index=None):
             if block_index >= 286500 or config.TESTNET: # Protocol change. Deduct fee_required from fee_provided_remaining, etc., if possible (else don’t match).
                 if tx1['get_asset'] == config.BTC:
                     fee = int(tx1['fee_required_remaining'] * util.price(forward_quantity, tx1_get_remaining, block_index))
+                    logging.debug('Tx0 fee provided remaining: {}; required fee: {}'.format(tx0_fee_provided_remaining / config.UNIT, fee / config.UNIT))
                     if tx0_fee_provided_remaining < fee:
-                        logging.debug('Tx0 fee provided remaining: {}; Fee: {}'.format(tx0_fee_provided_remaining, fee))
+                        logging.debug('Skipping: tx0 fee provided remaining is too low.')
                         continue
                     else:
                         tx0_fee_provided_remaining -= fee
@@ -373,8 +378,9 @@ def match (db, tx, block_index=None):
                             tx1_fee_required_remaining -= fee
                 elif tx1['give_asset'] == config.BTC:
                     fee = int(tx0['fee_required_remaining'] * util.price(backward_quantity, tx0_get_remaining, block_index))
+                    logging.debug('Tx1 fee provided remaining: {}; required fee: {}'.format(tx1_fee_provided_remaining / config.UNIT, fee / config.UNIT))
                     if tx1_fee_provided_remaining < fee:
-                        logging.debug('Tx1 fee provided remaining: {}; Fee: {}'.format(tx1_fee_provided_remaining, fee))
+                        logging.debug('Skipping: tx1 fee provided remaining is too low.')
                         continue
                     else:
                         tx1_fee_provided_remaining -= fee
