@@ -1,4 +1,7 @@
 ## Client Versions ##
+* v9.30.1 (2014-07-10)
+	* change fee_required calculcation for orders matching
+	* don't skeep negative get quantity remainig for orders matching
 * v9.30.0 (2014-07-06)
 	* hotfix for error in block 309485
 * v9.29.4 (2014-07-05)
