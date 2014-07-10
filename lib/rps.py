@@ -126,7 +126,7 @@ def parse(db, tx, message):
         (possible_moves, wager, move_random_hash, expiration) = struct.unpack(FORMAT, message)
         status = 'open'
     except (AssertionError, struct.error) as e:
-        (possible_moves, wager, move_random_hash, expirationn) = 0, 0, '', 0
+        (possible_moves, wager, move_random_hash, expiration) = 0, 0, '', 0
         status = 'invalid: could not unpack'
 
     if status == 'open':

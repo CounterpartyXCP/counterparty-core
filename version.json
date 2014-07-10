@@ -1,5 +1,7 @@
 {
 	"minimum_version_major": 9,
 	"minimum_version_minor": 30,
-	"minimum_version_revision": 0
+	"minimum_version_revision": 0,
+	"reason": "bug causing crash",
+	"block_index": 0
 }
