@@ -38,6 +38,8 @@ D = decimal.Decimal
 dhash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
 bitcoin_rpc_session = None
 
+def print_coin(coin):
+    return 'amount: {}; txid: {}; vout: {}; confirmations: {}'.format(coin['amount'], coin['txid'], coin['vout'], coin['confirmations']) # simplify and make deterministic
 
 def get_block_count():
     return int(rpc('getblockcount', []))
@@ -502,14 +504,14 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
     # Get inputs.
     unspent = get_unspent_txouts(source, normalize=True)
     unspent = sort_unspent_txouts(unspent, allow_unconfirmed_inputs)
-    logging.debug('Sorted UTXOs: {}'.format(unspent))
+    logging.debug('Sorted UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
 
     inputs, btc_in = [], 0
     change_quantity = 0
     sufficient_funds = False
     final_fee = fee_per_kb
     for coin in unspent:
-        logging.debug('New input: {}'.format(coin))
+        logging.debug('New input: {}'.format(print_coin(coin)))
         inputs.append(coin)
         btc_in += round(coin['amount'] * config.UNIT)
 
