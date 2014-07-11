@@ -319,7 +319,7 @@ def match (db, tx, block_index=None):
             if tx0_give_remaining <= 0 or tx1_give_remaining <= 0:
                 logging.debug('Skipping: negative give quantity remaining')
                 continue
-            if block_index >= 292000 or config.TESTNET:  # Protocol change
+            if block_index >= 292000 and block_index <= 310500 and not config.TESTNET:  # Protocol changes
                 if tx0_get_remaining <= 0 or tx1_get_remaining <= 0:
                     logging.debug('Skipping: negative get quantity remaining')
                     continue
@@ -367,7 +367,12 @@ def match (db, tx, block_index=None):
             fee = 0
             if block_index >= 286500 or config.TESTNET: # Protocol change. Deduct fee_required from fee_provided_remaining, etc., if possible (else don’t match).
                 if tx1['get_asset'] == config.BTC:
-                    fee = int(tx1['fee_required_remaining'] * util.price(forward_quantity, tx1_get_remaining, block_index))
+                    
+                    if block_index >= 310500 or config.TESTNET:     # Protocol change.
+                        fee = int(tx1['fee_required'] * util.price(backward_quantity, tx1['give_quantity'], block_index))
+                    else:
+                        fee = int(tx1['fee_required_remaining'] * util.price(forward_quantity, tx1_get_remaining, block_index))
+                    
                     logging.debug('Tx0 fee provided remaining: {}; required fee: {}'.format(tx0_fee_provided_remaining / config.UNIT, fee / config.UNIT))
                     if tx0_fee_provided_remaining < fee:
                         logging.debug('Skipping: tx0 fee provided remaining is too low.')
@@ -376,8 +381,14 @@ def match (db, tx, block_index=None):
                         tx0_fee_provided_remaining -= fee
                         if block_index >= 287800 or config.TESTNET:  # Protocol change.
                             tx1_fee_required_remaining -= fee
+
                 elif tx1['give_asset'] == config.BTC:
-                    fee = int(tx0['fee_required_remaining'] * util.price(backward_quantity, tx0_get_remaining, block_index))
+
+                    if block_index >= 310500 or config.TESTNET:      # Protocol change.
+                        fee = int(tx0['fee_required'] * util.price(backward_quantity, tx0['give_quantity'], block_index))
+                    else:   
+                        fee = int(tx0['fee_required_remaining'] * util.price(backward_quantity, tx0_get_remaining, block_index))
+
                     logging.debug('Tx1 fee provided remaining: {}; required fee: {}'.format(tx1_fee_provided_remaining / config.UNIT, fee / config.UNIT))
                     if tx1_fee_provided_remaining < fee:
                         logging.debug('Skipping: tx1 fee provided remaining is too low.')
@@ -386,6 +397,7 @@ def match (db, tx, block_index=None):
                         tx1_fee_provided_remaining -= fee
                         if block_index >= 287800 or config.TESTNET:  # Protocol change.
                             tx0_fee_required_remaining -= fee
+                            
             else:   # Don’t deduct.
                 if tx1['get_asset'] == config.BTC:
                     if tx0_fee_provided_remaining < tx1['fee_required']: continue
