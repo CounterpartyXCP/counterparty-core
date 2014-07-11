@@ -381,6 +381,7 @@ def match (db, tx, block_index=None):
                         tx0_fee_provided_remaining -= fee
                         if block_index >= 287800 or config.TESTNET:  # Protocol change.
                             tx1_fee_required_remaining -= fee
+
                 elif tx1['give_asset'] == config.BTC:
 
                     if block_index >= 310500 or config.TESTNET:      # Protocol change.
@@ -396,6 +397,7 @@ def match (db, tx, block_index=None):
                         tx1_fee_provided_remaining -= fee
                         if block_index >= 287800 or config.TESTNET:  # Protocol change.
                             tx0_fee_required_remaining -= fee
+                            
             else:   # Don’t deduct.
                 if tx1['get_asset'] == config.BTC:
                     if tx0_fee_provided_remaining < tx1['fee_required']: continue
