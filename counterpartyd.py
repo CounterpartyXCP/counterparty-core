@@ -41,11 +41,15 @@ def get_address (db, address):
     address_dict['bet_matches'] = util.api('get_bet_matches', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
     address_dict['dividends'] = util.api('get_dividends', {'filters': [('source', '==', address),]})
     address_dict['cancels'] = util.api('get_cancels', {'filters': [('source', '==', address),]})
+    address_dict['rps'] = util.api('get_rps', {'filters': [('source', '==', address),]})
+    address_dict['rps_matches'] = util.api('get_rps_matches', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
     address_dict['callbacks'] = util.api('get_callbacks', {'filters': [('source', '==', address),]})
     address_dict['bet_expirations'] = util.api('get_bet_expirations', {'filters': [('source', '==', address),]})
     address_dict['order_expirations'] = util.api('get_order_expirations', {'filters': [('source', '==', address),]})
+    address_dict['rps_expirations'] = util.api('get_rps_expirations', {'filters': [('source', '==', address),]})
     address_dict['bet_match_expirations'] = util.api('get_bet_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
     address_dict['order_match_expirations'] = util.api('get_order_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
+    address_dict['rps_match_expirations'] = util.api('get_rps_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
     return address_dict
 
 
@@ -99,7 +103,7 @@ def market (give_asset, get_asset):
         ('tx0_address', 'IN', addresses),
         ('tx1_address', 'IN', addresses)
     ]
-    awaiting_btcs = util.api('get_order_matches', {'filters': filters, 'filterop': 'OR', 'status': 'pending'})  
+    awaiting_btcs = util.api('get_order_matches', {'filters': filters, 'filterop': 'OR', 'status': 'pending'})
     table = PrettyTable(['Matched Order ID', 'Time Left'])
     for order_match in awaiting_btcs:
         order_match = format_order_match(db, order_match)
@@ -151,13 +155,15 @@ def market (give_asset, get_asset):
     print(table)
 
 
-def cli(method, params, unsigned):
+def cli(method, params, unsigned, armory):
+    if armory: params['armory'] = True
 
     # Get unsigned transaction serialisation.
     if bitcoin.is_valid(params['source']):
         if bitcoin.is_mine(params['source']):
             bitcoin.wallet_unlock()
         else:
+            # TODO: Do this only if the encoding method needs it.
             print('Source not in backend wallet.')
             answer = input('Public key (hexadecimal) or Private key (Wallet Import Format): ')
 
@@ -173,10 +179,11 @@ def cli(method, params, unsigned):
         raise exceptions.AddressError('Invalid address.')
 
     unsigned_tx_hex = util.api(method, params)
+    if armory: unsigned_tx_hex = '\n' + unsigned_tx_hex
     print('Transaction (unsigned):', unsigned_tx_hex)
 
     # Ask to sign and broadcast.
-    if not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
+    if not unsigned and not armory and input('Sign and broadcast? (y/N) ') == 'y':
         if bitcoin.is_mine(params['source']):
             private_key_wif = None
         elif not private_key_wif:   # If private key was not given earlier.
@@ -274,7 +281,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     if backend_rpc_port:
         config.BACKEND_RPC_PORT = backend_rpc_port
     elif has_config and 'backend-rpc-port' in configfile['Default'] and configfile['Default']['backend-rpc-port']:
-        config.backend_RPC_PORT = configfile['Default']['backend-rpc-port']
+        config.BACKEND_RPC_PORT = configfile['Default']['backend-rpc-port']
     elif has_config and 'bitcoind-rpc-port' in configfile['Default'] and configfile['Default']['bitcoind-rpc-port']:
         config.BACKEND_RPC_PORT = configfile['Default']['bitcoind-rpc-port']
     else:
@@ -302,7 +309,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     if backend_rpc_password:
         config.BACKEND_RPC_PASSWORD = backend_rpc_password
     elif has_config and 'backend-rpc-password' in configfile['Default'] and configfile['Default']['backend-rpc-password']:
-        config.backend_RPC_PASSWORD = configfile['Default']['backend-rpc-password']
+        config.BACKEND_RPC_PASSWORD = configfile['Default']['backend-rpc-password']
     elif has_config and 'bitcoind-rpc-password' in configfile['Default'] and configfile['Default']['bitcoind-rpc-password']:
         config.BACKEND_RPC_PASSWORD = configfile['Default']['bitcoind-rpc-password']
     else:
@@ -317,7 +324,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
         config.INSIGHT_ENABLE = configfile['Default'].getboolean('insight-enable')
     else:
         config.INSIGHT_ENABLE = False
-    
+
     if unittest:
         config.INSIGHT_ENABLE = True #override when running test suite
     if config.TESTNET:
@@ -433,7 +440,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
             config.PREFIX = b'CNTRPRTY'             # 8 bytes
     else:
         config.PREFIX = b'TESTXXXX'                 # 8 bytes
-        
+
     if api_num_threads:
         config.API_NUM_THREADS = int(api_num_threads)
     elif has_config and 'api-num-threads' in configfile['Default']:
@@ -461,6 +468,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
 
     # (more) Testnet
     if config.TESTNET:
+        config.MAGIC_BYTES = config.MAGIC_BYTES_TESTNET
         if config.TESTCOIN:
             config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
             config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET_TESTCOIN
@@ -474,6 +482,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
             config.BURN_END = config.BURN_END_TESTNET
             config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
     else:
+        config.MAGIC_BYTES = config.MAGIC_BYTES_MAINNET
         if config.TESTCOIN:
             config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
             config.BLOCK_FIRST = config.BLOCK_FIRST_MAINNET_TESTCOIN
@@ -510,12 +519,18 @@ def balances (address):
     print('Balances')
     print(table.get_string())
 
+def generate_move_random_hash(move):
+    move = int(move).to_bytes(2, byteorder='big')
+    random = os.urandom(16)
+    move_random_hash = bitcoin.dhash(random+move)
+    return binascii.hexlify(random).decode('utf8'), binascii.hexlify(move_random_hash).decode('utf8')
+
 
 if __name__ == '__main__':
     if os.name == 'nt':
         #patch up cmd.exe's "challenged" (i.e. broken/non-existent) UTF-8 logging
         util_windows.fix_win32_unicode()
-    
+
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(prog=config.XCP_CLIENT, description='the reference implementation of the {} protocol'.format(config.XCP_NAME))
     parser.add_argument('-V', '--version', action='version', version="{} v{}".format(config.XCP_CLIENT, config.VERSION_STRING))
@@ -524,7 +539,6 @@ if __name__ == '__main__':
     parser.add_argument('--force', action='store_true', help='don\'t check whether backend is caught up'.format(config.BTC_NAME))
     parser.add_argument('--testnet', action='store_true', help='use {} testnet addresses and block numbers'.format(config.BTC_NAME))
     parser.add_argument('--testcoin', action='store_true', help='use the test {} network on every blockchain'.format(config.XCP_NAME))
-    parser.add_argument('--unsigned', action='store_true', help='print out unsigned hex of transaction; do not sign or broadcast')
     parser.add_argument('--carefulness', type=int, default=0, help='check conservation of assets after every CAREFULNESS transactions (potentially slow)')
     parser.add_argument('--unconfirmed', action='store_true', help='allow the spending of unconfirmed transaction outputs')
     parser.add_argument('--encoding', default='auto', type=str, help='data encoding method')
@@ -532,6 +546,8 @@ if __name__ == '__main__':
     parser.add_argument('--regular-dust-size', type=D, default=D(config.DEFAULT_REGULAR_DUST_SIZE / config.UNIT), help='value for dust Pay‐to‐Pubkey‐Hash outputs, in {}'.format(config.BTC))
     parser.add_argument('--multisig-dust-size', type=D, default=D(config.DEFAULT_MULTISIG_DUST_SIZE / config.UNIT), help='for dust OP_CHECKMULTISIG outputs, in {}'.format(config.BTC))
     parser.add_argument('--op-return-value', type=D, default=D(config.DEFAULT_OP_RETURN_VALUE / config.UNIT), help='value for OP_RETURN outputs, in {}'.format(config.BTC))
+    parser.add_argument('--unsigned', action='store_true', help='print out unsigned hex of transaction; do not sign or broadcast')
+    parser.add_argument('--armory', action='store_true', help='print out unsigned hex of transaction, in the format used by Armory; do not sign or broadcast')
 
     parser.add_argument('--data-dir', help='the directory in which to keep the database, config file and log file, by default')
     parser.add_argument('--database-file', help='the location of the SQLite3 database')
@@ -637,6 +653,26 @@ if __name__ == '__main__':
     parser_callback.add_argument('--asset', required=True, help='the asset to callback')
     parser_callback.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
+    parser_rps = subparsers.add_parser('rps', help='open a rock-paper-scissors like game')
+    parser_rps.add_argument('--source', required=True, help='the source address')
+    parser_rps.add_argument('--wager', required=True, help='the quantity of XCP to wager')
+    parser_rps.add_argument('--move', type=int, required=True, help='the selected move')
+    parser_rps.add_argument('--possible-moves', type=int, required=True, help='the number of possible moves (odd number greater or equal than 3)')
+    parser_rps.add_argument('--expiration', type=int, required=True, help='the number of blocks for which the bet should be valid')
+    parser_rps.add_argument('--fee', help='the exact BTC fee to be paid to miners')
+
+    parser_rpsresolve = subparsers.add_parser('rpsresolve', help='resolve a rock-paper-scissors like game')
+    parser_rpsresolve.add_argument('--source', required=True, help='the source address')
+    parser_rpsresolve.add_argument('--random', type=str, required=True, help='the random number used in the corresponding rps transaction')
+    parser_rpsresolve.add_argument('--move', type=int, required=True, help='the selected move in the corresponding rps transaction')
+    parser_rpsresolve.add_argument('--rps-match-id', required=True, help='the concatenation of the hashes of the two transactions which compose the rps match')
+    parser_rpsresolve.add_argument('--fee', help='the exact BTC fee to be paid to miners')
+
+    parser_publish = subparsers.add_parser('publish', help='publish arbitrary data in the blockchain')
+    parser_publish.add_argument('--source', required=True, help='the source address')
+    parser_publish.add_argument('--data-hex', required=True, help='the hex‐encoded data')
+    parser_publish.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
+
     parser_address = subparsers.add_parser('balances', help='display the balances of a {} address'.format(config.XCP_NAME))
     parser_address.add_argument('address', help='the address you are interested in')
 
@@ -685,7 +721,7 @@ if __name__ == '__main__':
     pid = str(os.getpid())
     pidf = open(config.PID, 'w')
     pidf.write(pid)
-    pidf.close()    
+    pidf.close()
 
     # Database
     db = util.connect_to_db()
@@ -718,9 +754,9 @@ if __name__ == '__main__':
     urllib3_log.propagate = False
 
     if args.action == None: args.action = 'server'
-    
+
     # TODO: Keep around only as long as reparse and rollback don’t use API.
-    if not config.FORCE and args.action in ('reparse', 'rollback'):
+    if not config.FORCE and args.action in ('server', 'reparse', 'rollback'):
         util.version_check(db)
 
     # MESSAGE CREATION
@@ -736,7 +772,7 @@ if __name__ == '__main__':
                             args.regular_dust_size, 'multisig_dust_size':
                             args.multisig_dust_size, 'op_return_value':
                             args.op_return_value},
-            args.unsigned)
+            args.unsigned, args.armory)
 
     elif args.action == 'order':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -773,7 +809,7 @@ if __name__ == '__main__':
                              args.regular_dust_size, 'multisig_dust_size':
                              args.multisig_dust_size, 'op_return_value':
                              args.op_return_value},
-           args.unsigned)
+           args.unsigned, args.armory)
 
     elif args.action == '{}pay'.format(config.BTC).lower():
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -785,7 +821,7 @@ if __name__ == '__main__':
                               'regular_dust_size': args.regular_dust_size,
                               'multisig_dust_size': args.multisig_dust_size,
                               'op_return_value': args.op_return_value},
-            args.unsigned)
+            args.unsigned, args.armory)
 
     elif args.action == 'issuance':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -814,7 +850,7 @@ if __name__ == '__main__':
                                 args.regular_dust_size, 'multisig_dust_size':
                                 args.multisig_dust_size, 'op_return_value':
                                 args.op_return_value},
-           args.unsigned)
+           args.unsigned, args.armory)
 
     elif args.action == 'broadcast':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -831,7 +867,7 @@ if __name__ == '__main__':
                                  args.regular_dust_size, 'multisig_dust_size':
                                  args.multisig_dust_size, 'op_return_value':
                                  args.op_return_value},
-           args.unsigned)
+           args.unsigned, args.armory)
 
     elif args.action == 'bet':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -853,7 +889,7 @@ if __name__ == '__main__':
                            args.regular_dust_size, 'multisig_dust_size':
                            args.multisig_dust_size, 'op_return_value':
                            args.op_return_value},
-            args.unsigned)
+            args.unsigned, args.armory)
 
     elif args.action == 'dividend':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -868,7 +904,7 @@ if __name__ == '__main__':
                                 args.regular_dust_size, 'multisig_dust_size':
                                 args.multisig_dust_size, 'op_return_value':
                                 args.op_return_value},
-           args.unsigned)
+           args.unsigned, args.armory)
 
     elif args.action == 'burn':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -880,7 +916,7 @@ if __name__ == '__main__':
                             args.regular_dust_size, 'multisig_dust_size':
                             args.multisig_dust_size, 'op_return_value':
                             args.op_return_value},
-        args.unsigned)
+        args.unsigned, args.armory)
 
     elif args.action == 'cancel':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -892,7 +928,7 @@ if __name__ == '__main__':
                               args.regular_dust_size, 'multisig_dust_size':
                               args.multisig_dust_size, 'op_return_value':
                               args.op_return_value},
-        args.unsigned)
+        args.unsigned, args.armory)
 
     elif args.action == 'callback':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -905,7 +941,48 @@ if __name__ == '__main__':
                                 args.regular_dust_size, 'multisig_dust_size':
                                 args.multisig_dust_size, 'op_return_value':
                                 args.op_return_value},
-           args.unsigned)
+           args.unsigned, args.armory)
+
+    elif args.action == 'rps':
+        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
+        wager = util.devise(db, args.wager, 'XCP', 'input')
+        random, move_random_hash = generate_move_random_hash(args.move)
+        print('random: {}'.format(random))
+        print('move_random_hash: {}'.format(move_random_hash))
+        cli('create_rps', {'source': args.source,
+                           'possible_moves': args.possible_moves, 'wager': wager,
+                           'move_random_hash': move_random_hash, 'expiration': args.expiration,
+                           'fee': args.fee,'allow_unconfirmed_inputs': args.unconfirmed,
+                           'encoding': args.encoding, 'fee_per_kb':
+                           args.fee_per_kb, 'regular_dust_size':
+                           args.regular_dust_size, 'multisig_dust_size':
+                           args.multisig_dust_size, 'op_return_value':
+                           args.op_return_value},
+           args.unsigned, args.armory)
+
+    elif args.action == 'rpsresolve':
+        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
+        cli('create_rpsresolve', {'source': args.source,
+                                'random': args.random, 'move': args.move,
+                                'rps_match_id': args.rps_match_id, 'fee': args.fee,
+                                'allow_unconfirmed_inputs': args.unconfirmed,
+                                'encoding': args.encoding, 'fee_per_kb':
+                                args.fee_per_kb, 'regular_dust_size':
+                                args.regular_dust_size, 'multisig_dust_size':
+                                args.multisig_dust_size, 'op_return_value':
+                                args.op_return_value},
+           args.unsigned, args.armory)
+
+    elif args.action == 'publish':
+        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
+        cli('create_publish', {'source': args.source,
+                               'data_hex': args.data_hex, 'fee': args.fee,
+                               'allow_unconfirmed_inputs': args.unconfirmed,
+                               'encoding': args.encoding, 'fee_per_kb':
+                               args.fee_per_kb, 'regular_dust_size':
+                               args.regular_dust_size, 'multisig_dust_size':
+                               args.multisig_dust_size, 'op_return_value':
+                               args.op_return_value}, args.unsigned, args.armory)
 
 
     # VIEWING (temporary)
@@ -924,7 +1001,7 @@ if __name__ == '__main__':
         else:
             print('Asset ‘{}’ not found.'.format(args.asset))
             exit(0)
-        
+
         asset_id = util.asset_id(args.asset)
         divisible = results['divisible']
         supply = util.devise(db, results['supply'], args.asset, dest='output')
@@ -969,7 +1046,7 @@ if __name__ == '__main__':
                 table.add_row([config.BTC, btc_balance])  # BTC
                 if config.BTC in totals.keys(): totals[config.BTC] += btc_balance
                 else: totals[config.BTC] = btc_balance
-                empty = False            
+                empty = False
             for balance in balances:
                 asset = balance['asset']
                 try:

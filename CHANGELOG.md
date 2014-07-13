@@ -1,5 +1,24 @@
 ## Client Versions ##
-* v9.26.2
+* v9.31.0 (2014-07-10)
+	* change fee_required calculation for orders matching (protocol change: 310500)
+	* don’t skip negative get quantity remainig for orders matching (protocol change: 310500)
+* v9.30.0 (2014-07-06)
+	* hotfix for error in block 309485
+* v9.29.4 (2014-07-05)
+	* Armory support
+* v9.29.3 (2014-06-26)
+	* bug in RPS re-matching
+* v9.29.2 (2014-06-26)
+	* bug in fee calculation
+* v9.29.1 (2014-06-26)
+	* 'publish' command (compose only)
+* v9.29.0 (2014-06-26)
+	* bug fixes
+* v9.28.0 (2014-06-26)
+	* add rps and rpsresolve transactions (protocol change: 308500)
+* v9.27.0 (2014-06-25)
+	* extend order match expiration time to 20 blocks (protocol change: 308000)
+* v9.26.2 (2014-06-17)
 	* currency agnosticism
 * v9.26.1
 	* automatic transaction encoding

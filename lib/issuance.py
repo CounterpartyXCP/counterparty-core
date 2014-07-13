@@ -26,7 +26,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
 
     if call_date is None: call_date = 0
     if call_price is None: call_price = 0.0
-    
+
     if isinstance(call_price, int): call_price = float(call_price)
     #^ helps especially with calls from JS-based clients, where parseFloat(15) returns 15 (not 15.0), which json takes as an int
 
@@ -56,7 +56,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
         last_issuance = issuances[-1]
         if call_date is None: call_date = 0
         if call_price is None: call_price = 0.0
-        
+
         if last_issuance['issuer'] != source:
             problems.append('issued by another address')
         if bool(last_issuance['divisible']) != bool(divisible):
@@ -121,7 +121,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, calla
 
     asset_id = util.asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
-    data += struct.pack(FORMAT_2, asset_id, quantity, 1 if divisible else 0, 1 if callable_ else 0, 
+    data += struct.pack(FORMAT_2, asset_id, quantity, 1 if divisible else 0, 1 if callable_ else 0,
         call_date or 0, call_price or 0.0, description.encode('utf-8'))
     if len(data) > 80:
         raise exceptions.IssuanceError('Description is greater than 52 bytes.')

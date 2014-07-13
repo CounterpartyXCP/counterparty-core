@@ -11,6 +11,7 @@ from datetime import datetime
 from dateutil.tz import tzlocal
 from operator import itemgetter
 import fractions
+import warnings
 
 from . import (config, exceptions)
 
@@ -174,6 +175,25 @@ def log (db, command, category, bindings):
         elif category == 'callbacks':
             logging.info('Callback: {} called back {}% of {} ({}) [{}]'.format(bindings['source'], float(D(bindings['fraction']) * D(100)), bindings['asset'], bindings['tx_hash'], bindings['status']))
 
+        elif category == 'rps':
+            log_message = 'RPS: {} opens game with {} possible moves and a wager of {}'.format(bindings['source'], bindings['possible_moves'], output(bindings['wager'], 'XCP'))
+            logging.info(log_message)
+
+        elif category == 'rps_matches':
+            log_message = 'RPS Match: {} is playing a {}-moves game with {} with a wager of {} ({}) [{}]'.format(bindings['tx0_address'], bindings['possible_moves'], bindings['tx1_address'], output(bindings['wager'], 'XCP'), bindings['id'], bindings['status'])
+            logging.info(log_message)
+
+        elif category == 'rpsresolves':
+            
+            if bindings['status'] == 'valid':
+                rps_matches = list(cursor.execute('''SELECT * FROM rps_matches WHERE id = ?''', (bindings['rps_match_id'],)))
+                assert len(rps_matches) == 1
+                rps_match = rps_matches[0]
+                log_message = 'RPS Resolved: {} is playing {} on a {}-moves game with {} with a wager of {} ({}) [{}]'.format(rps_match['tx0_address'], bindings['move'], rps_match['possible_moves'], rps_match['tx1_address'], output(rps_match['wager'], 'XCP'), rps_match['id'], rps_match['status'])
+            else:
+                log_message = 'RPS Resolved: {} [{}]'.format(bindings['tx_hash'], bindings['status'])
+            logging.info(log_message)
+
         elif category == 'order_expirations':
             logging.info('Expired order: {}'.format(bindings['order_hash']))
 
@@ -200,6 +220,12 @@ def log (db, command, category, bindings):
             elif bindings['bet_match_type_id'] == equal_type_id:
                 logging.info('Bet Match Settled: {} won the pot of {}; {} credited to the feed address ({})'.format(bindings['winner'], output(bindings['escrow_less_fee'], config.XCP), output(bindings['fee'], config.XCP), bindings['bet_match_id']))
 
+        elif category == 'rps_expirations':
+            logging.info('Expired RPS: {}'.format(bindings['rps_hash']))
+
+        elif category == 'rps_match_expirations':
+            logging.info('Expired RPS Match: {}'.format(bindings['rps_match_id']))
+
     cursor.close()
 
 def message (db, block_index, command, category, bindings, tx_hash=None):
@@ -219,6 +245,7 @@ def message (db, block_index, command, category, bindings, tx_hash=None):
         try:
             del bindings['status']
             del bindings['block_index']
+            del bindings['tx_index']
         except KeyError:
             pass
 
@@ -234,7 +261,7 @@ def message (db, block_index, command, category, bindings, tx_hash=None):
 
     cursor.close()
 
-       
+
 def rowtracer(cursor, sql):
     """Converts fetched SQL data into dict-style"""
     dictionary = {}
@@ -264,7 +291,7 @@ def exectracer(cursor, sql, bindings):
 
     # Record alteration in database.
     if category not in ('balances', 'messages', 'mempool'):
-        if not (command in ('update') and category in ('orders', 'bets', 'order_matches', 'bet_matches')):    # List message manually.
+        if not (command in ('update') and category in ('orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches')):    # List message manually.
             message(db, bindings['block_index'], command, category, bindings)
 
     return True
@@ -291,7 +318,7 @@ def connect_to_db(flags=None):
     # So that writers don’t block readers.
     cursor.execute('''PRAGMA journal_mode = WAL''')
 
-    # Make case sensitive the LIKE operator. 
+    # Make case sensitive the LIKE operator.
     # For insensitive queries use 'UPPER(fieldname) LIKE value.upper()''
     cursor.execute('''PRAGMA case_sensitive_like = ON''')
 
@@ -328,7 +355,7 @@ def version_check (db):
         versions = json.loads(response.text)
     except Exception as e:
         raise exceptions.VersionError('Unable to check version. How’s your Internet access?')
- 
+
     # Check client version.
     passed = True
     if config.VERSION_MAJOR < versions['minimum_version_major']:
@@ -341,7 +368,12 @@ def version_check (db):
                 passed = False
 
     if not passed:
-        raise exceptions.VersionError('Please upgrade {} to the latest version and restart the server.'.format(config.XCP_CLIENT))
+        explanation = 'Your version of counterpartyd is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: ‘{}’. Please upgrade to the latest version and restart the server.'.format(config.VERSION_STRING, versions['block_index'], versions['minimum_version_major'], versions['minimum_version_minor'], versions['minimum_version_revision'], versions['reason'])
+
+        if last_block(db)['block_index'] >= versions['block_index']:
+            raise exceptions.VersionError(explanation)
+        else:
+            warnings.warn(explanation)
 
     logging.debug('Status: Version check passed.')
     return
@@ -352,7 +384,7 @@ def database_check (db, blockcount):
     TRIES = 14
     for i in range(TRIES):
         block_index = last_block(db)['block_index']
-        if block_index == blockcount:
+        if block_index >= blockcount:
             cursor.close()
             return
         print('Database not up‐to‐date. Sleeping for one second. (Try {}/{})'.format(i+1, TRIES), file=sys.stderr)
@@ -624,7 +656,7 @@ def holders(db, asset):
     for order_match in list(cursor):
         holders.append({'address': order_match['tx1_address'], 'address_quantity': order_match['backward_quantity'], 'escrow': order_match['id']})
 
-    # Bets (and bet matches) only escrow XCP.
+    # Bets and RPS (and bet/rps matches) only escrow XCP.
     if asset == config.XCP:
         cursor.execute('''SELECT * FROM bets \
                           WHERE status = ?''', ('open',))
@@ -635,6 +667,16 @@ def holders(db, asset):
         for bet_match in list(cursor):
             holders.append({'address': bet_match['tx0_address'], 'address_quantity': bet_match['forward_quantity'], 'escrow': bet_match['id']})
             holders.append({'address': bet_match['tx1_address'], 'address_quantity': bet_match['backward_quantity'], 'escrow': bet_match['id']})
+
+        cursor.execute('''SELECT * FROM rps \
+                          WHERE status = ?''', ('open',))
+        for rps in list(cursor):
+            holders.append({'address': rps['source'], 'address_quantity': rps['wager'], 'escrow': rps['tx_hash']})
+        cursor.execute('''SELECT * FROM rps_matches \
+                          WHERE status IN (?, ?, ?)''', ('pending', 'pending and resolved', 'resolved and pending'))
+        for rps_match in list(cursor):
+            holders.append({'address': rps_match['tx0_address'], 'address_quantity': rps_match['wager'], 'escrow': rps_match['id']})
+            holders.append({'address': rps_match['tx1_address'], 'address_quantity': rps_match['wager'], 'escrow': rps_match['id']})
 
     cursor.close()
     return holders
@@ -669,6 +711,6 @@ def supplies (db):
             supplies[asset] = quantity
 
     cursor.close()
-    return supplies 
+    return supplies
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

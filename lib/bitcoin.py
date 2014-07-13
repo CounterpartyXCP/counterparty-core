@@ -38,10 +38,12 @@ D = decimal.Decimal
 dhash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
 bitcoin_rpc_session = None
 
+def print_coin(coin):
+    return 'amount: {}; txid: {}; vout: {}; confirmations: {}'.format(coin['amount'], coin['txid'], coin['vout'], coin['confirmations']) # simplify and make deterministic
 
 def get_block_count():
     return int(rpc('getblockcount', []))
-    
+
 def get_block_hash(block_index):
     return rpc('getblockhash', [block_index])
 
@@ -54,8 +56,11 @@ def is_mine (address):
 def send_raw_transaction (tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
 
-def get_raw_transaction (tx_hash):
-    return rpc('getrawtransaction', [tx_hash, 1])
+def get_raw_transaction (tx_hash, json=True):
+    if json:
+        return rpc('getrawtransaction', [tx_hash, 1])
+    else:
+        return rpc('getrawtransaction', [tx_hash])
 
 def get_block (block_hash):
     return rpc('getblock', [block_hash])
@@ -161,20 +166,15 @@ def rpc (method, params):
     elif response_json['error']['code'] == -1 and response_json['message'] == 'Block number out of range.':
         time.sleep(10)
         return rpc('getblockhash', [block_index])
-        
+
     # elif config.UNITTEST:
     #     print(method)
     else:
         raise exceptions.BitcoindError('{}'.format(response_json['error']))
 
-def base58_check_encode(b, version):
-    b = binascii.unhexlify(bytes(b, 'utf-8'))
-    d = version + b   # mainnet
-
-    address_hex = d + dhash(d)[:4]
-
+def base58_encode(binary):
     # Convert big‐endian bytes to integer
-    n = int('0x0' + binascii.hexlify(address_hex).decode('utf8'), 16)
+    n = int('0x0' + binascii.hexlify(binary).decode('utf8'), 16)
 
     # Divide that integer into base58
     res = []
@@ -182,6 +182,14 @@ def base58_check_encode(b, version):
         n, r = divmod (n, 58)
         res.append(b58_digits[r])
     res = ''.join(res[::-1])
+    return res
+
+def base58_check_encode(b, version):
+    b = binascii.unhexlify(bytes(b, 'utf-8'))
+    d = version + b
+
+    binary = d + dhash(d)[:4]
+    res = base58_encode(binary)
 
     # Encode leading zeros as base58 zeros
     czero = 0
@@ -191,6 +199,7 @@ def base58_check_encode(b, version):
         else: break
     return b58_digits[0] * pad + res
 
+# TODO: This should be called base58_check_decode.
 def base58_decode (s, version):
     # Convert the string to an integer
     n = 0
@@ -372,10 +381,11 @@ def sort_unspent_txouts(unspent, allow_unconfirmed_inputs):
     return unspent
 
 def private_key_to_public_key (private_key_wif):
+    # allowable_wif_prefixes = [
     try:
         secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif, is_test=config.TESTNET)
     except pycoin.encoding.EncodingError:
-        raise exceptions.AltcoinSupportError('pycoin supports only Bitcoin mainnet and testnet private keys.')
+        raise exceptions.AltcoinSupportError('pycoin: unsupported WIF prefix')
     public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
     public_key = public_pair_to_sec(public_pair, compressed=compressed)
     public_key_hex = binascii.hexlify(public_key).decode('utf-8')
@@ -386,7 +396,7 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
                  multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
                  op_return_value=config.DEFAULT_OP_RETURN_VALUE, exact_fee=None,
                  fee_provided=0, public_key_hex=None,
-                 allow_unconfirmed_inputs=False):
+                 allow_unconfirmed_inputs=False, armory=False):
 
     (source, destination_outputs, data) = tx_info
 
@@ -416,13 +426,13 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
         if not public_key_hex:
             # Get private key.
             if config.UNITTEST:
-                private_key_wif = 'cPdUqd5EbBWsjcG9xiL1hz8bEyGFiz4SW99maU9JgpL9TEcxUf3j'
+                private_key_wif = config.UNITTEST_PRIVKEY[source]
             else:
                 private_key_wif = rpc('dumpprivkey', [source])
 
             # Derive public key.
             public_key_hex = private_key_to_public_key(private_key_wif)
-            
+
         pubkeypair = bitcoin_utils.parse_as_public_pair(public_key_hex)
         if not pubkeypair:
             raise exceptions.InputError('Invalid private key.')
@@ -431,7 +441,7 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
     # Protocol change.
     if encoding == 'pubkeyhash' and get_block_count() < 293000 and not config.TESTNET:
         raise exceptions.TransactionError('pubkeyhash encoding unsupported before block 293000')
-    
+
     # Validate source and all destination addresses.
     destinations = [address for address, value in destination_outputs]
     for address in destinations + [source]:
@@ -473,7 +483,7 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
             data_array = list(chunks(data, 33 - 1))
         elif encoding == 'opreturn':
             data_array = list(chunks(data, config.OP_RETURN_MAX_SIZE))
-            assert len(data_array) == 1 # Only one OP_RETURN output currently supported (messages should all be shorter than 80 bytes, at the moment).
+            assert len(data_array) == 1 # Only one OP_RETURN output currently supported (OP_RETURN messages should all be shorter than 40 bytes, at the moment).
     else:
         data_array = []
 
@@ -494,12 +504,14 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
     # Get inputs.
     unspent = get_unspent_txouts(source, normalize=True)
     unspent = sort_unspent_txouts(unspent, allow_unconfirmed_inputs)
+    logging.debug('Sorted UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
 
     inputs, btc_in = [], 0
     change_quantity = 0
     sufficient_funds = False
     final_fee = fee_per_kb
     for coin in unspent:
+        logging.debug('New input: {}'.format(print_coin(coin)))
         inputs.append(coin)
         btc_in += round(coin['amount'] * config.UNIT)
 
@@ -508,19 +520,20 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
             final_fee = exact_fee
         else:
             size = 181 * len(inputs) + outputs_size + 10
-            necessary_fee = (int(size / 10000) + 1) * fee_per_kb
+            necessary_fee = (int(size / 1000) + 1) * fee_per_kb
             final_fee = max(fee_provided, necessary_fee)
             assert final_fee >= 1 * fee_per_kb
 
         # Check if good.
         change_quantity = btc_in - (btc_out + final_fee)
+        logging.debug('Change quantity: {} BTC'.format(change_quantity / config.UNIT))
         if change_quantity == 0 or change_quantity >= regular_dust_size: # If change is necessary, must not be a dust output.
             sufficient_funds = True
             break
     if not sufficient_funds:
         # Approximate needed change, fee by with most recently calculated quantities.
         total_btc_out = btc_out + max(change_quantity, 0) + final_fee
-        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need approximately {} {}.)'.format(source, total_btc_out / config.UNIT, config.BTC))
+        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need approximately {} {}.) To spend unconfirmed coins, use the flag `--unconfirmed`.'.format(source, total_btc_out / config.UNIT, config.BTC))
 
     # Construct outputs.
     if data: data_output = (data_array, data_value)
@@ -529,8 +542,35 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
     else: change_output = None
 
     # Serialise inputs and outputs.
-    transaction = serialise(encoding, inputs, destination_outputs, data_output, change_output, source=source, public_key=public_key)
-    unsigned_tx_hex = binascii.hexlify(transaction).decode('utf-8')
+    unsigned_tx = serialise(encoding, inputs, destination_outputs, data_output, change_output, source=source, public_key=public_key)
+    unsigned_tx_hex = binascii.hexlify(unsigned_tx).decode('utf-8')
+
+    # bip-0010
+    try:
+        if armory:
+            txdp = []
+            dpid = base58_encode(hashlib.sha256(unsigned_tx).digest())[:8]
+            txdp.append(('-----BEGIN-TRANSACTION-' + dpid + '-----').ljust(80,'-'))
+
+            magic_bytes = binascii.hexlify(config.MAGIC_BYTES).decode('utf-8')
+            varIntTxSize = binascii.hexlify(len(unsigned_tx).to_bytes(2, byteorder='big')).decode('utf-8')
+            txdp.append('_TXDIST_{}_{}_{}'.format(magic_bytes, dpid, varIntTxSize))
+            tx_list = unsigned_tx_hex
+            for coin in inputs:
+                tx_list += get_raw_transaction(coin['txid'], json=False)
+            for byte in range(0,len(tx_list),80):
+                txdp.append(tx_list[byte:byte+80] )
+
+            for index, coin in enumerate(inputs):
+                index_fill = str(index).zfill(2)
+                value = '{0:.8f}'.format(coin['amount'])
+                txdp.append('_TXINPUT_{}_{}'.format(index_fill, value))
+
+            txdp.append(('-----END-TRANSACTION-' + dpid + '-----').ljust(80,'-'))
+            unsigned_tx_hex = '\n'.join(txdp)
+    except Exception as e:
+        print(e)
+
     return unsigned_tx_hex
 
 def sign_tx (unsigned_tx_hex, private_key_wif=None):
@@ -566,7 +606,7 @@ def broadcast_tx (signed_tx_hex):
 
 def normalize_quantity(quantity, divisible=True):
     if divisible:
-        return float((D(quantity) / D(config.UNIT)).quantize(D('.00000000'), rounding=decimal.ROUND_HALF_EVEN)) 
+        return float((D(quantity) / D(config.UNIT)).quantize(D('.00000000'), rounding=decimal.ROUND_HALF_EVEN))
     else: return quantity
 
 def get_btc_balance(address, normalize=False):
@@ -591,7 +631,7 @@ def get_btc_supply(normalize=False):
     """returns the total supply of {} (based on what Bitcoin Core says the current block height is)""".format(config.BTC)
     block_count = get_block_count()
     blocks_remaining = block_count
-    total_supply = 0 
+    total_supply = 0
     reward = 50.0
     while blocks_remaining > 0:
         if blocks_remaining >= 210000:
@@ -606,7 +646,7 @@ def get_btc_supply(normalize=False):
 def get_unspent_txouts(address, normalize=False):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
-        * 
+        *
     """
 
     # Unittest

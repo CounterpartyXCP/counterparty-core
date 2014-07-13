@@ -46,7 +46,7 @@ However, a counterpartyd configuration file looks like this:
 	[Default]
 	bitcoind-rpc-password=PASSWORD
 
-Note the change in hyphenation between ‘rpcpassword’ and ‘rpc-password’.
+Note the change in hyphenation between `rpcpassword` and `rpc-password`.
 
 If and only if counterpartyd is to be run on the Bitcoin testnet, with the
 `--testnet` CLI option, Bitcoind must be set to do the same (`-testnet=1`).
@@ -116,7 +116,7 @@ The following examples are abridged for parsimony.
 
 	```
 	order --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=BBBC
-	--give-quantity=20 --give-asset=BTC --expiration=10 --fee_provided.001
+	--give-quantity=20 --give-asset=BTC --expiration=10 --fee_provided=0.001
 	```
 
 * Buy XCP for BBBC
@@ -142,8 +142,8 @@ The following examples are abridged for parsimony.
 	--fee-multiplier=0.001
 	```
 
-	Note: for some users counterpartyd has trouble parsing spaces in the --text argument. One workaround is to
-		add an additional set of quotes. For example, --text='"Bitcoin price feed"'
+	Note: for some users counterpartyd has trouble parsing spaces in the `--text` argument. One workaround is to
+		add an additional set of quotes. For example, `--text='"Bitcoin price feed"'`.
 
 * Bet
 	
@@ -160,6 +160,22 @@ The following examples are abridged for parsimony.
 	Example: Bet on Bitcoin Price Feed. This command places a bearish (short) 1 XCP wager on the price of BTC/USD 				with 2X leverage. The bet will expire in 100 blocks and the settlement value of the bet is based 			on the first feed update after the deadline timestamp of February 3, 2014 1:39 PM US Eastern 					Standard Time (UTC-0500)
 	```
 	bet --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --feed-address=n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fH --bet-type=BearCFD --deadline=2014-02-03T13:39:00-0500 --wager=1 --counterwager=1 --leverage=10080 --expiration=100
+	```
+
+* Rock-Paper-Scissors
+	
+	Open a Rock-Paper-Scissors like game with arbitrary possible moves (Must be an odd number greater or equal than 3). Until you make an rpsresolve transaction, your move is stored as an hash and keep secret.
+	
+	Example: Play rock-paper-scissors-spock-lizard (http://en.wikipedia.org/wiki/Rock-paper-scissors-lizard-Spock):
+
+	```
+	rps --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --possible-moves=5 --move=2 --wager=1 --expiration=100
+	```
+
+	Keep well the random number generated, you need it to resolve the game after matching:
+	
+	```
+	rpsresolve --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --move=2 --random=adc5eadf9cb698ff6f2410d76131a4ee --rps-match-id=c68ffe144952977b94f8d7b49a1c7be7a4bb522c56f2ffc5aefa78ae0f9799b003b0f79d59ba660138583277b8267301a1030577790b945c4e8f845f19c23ca2
 	```
 
 * Cancel

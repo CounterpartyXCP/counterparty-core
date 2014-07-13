@@ -15,12 +15,39 @@ without having to deal with the low‐level details of the protocol such as
 transaction encoding and state management.
 
 
-Connecting to the API
-----------------------
+Connecting and Making Requests
+---------------------------------
 
 By default, ``counterpartyd`` will listen on port ``4000`` (if on mainnet) or port ``14000`` (on testnet) for API
-requests. API requests are made via a HTTP POST request to ``/api/``, with JSON-encoded
-data passed as the POST body. For more information on JSON RPC, please see the `JSON RPC 2.0 specification <http://www.jsonrpc.org/specification>`__.
+requests. 
+
+Note that this API is built on JSON-RPC 2.0, not 1.1. JSON-RPC itself is pretty lightweight, and API requests
+are made via a HTTP POST request to ``/api/``, with JSON-encoded data passed as the POST body.
+
+All requests must have POST data that is JSON encoded and in the format of:
+
+``{ "method": "METHOD NAME", "params": {"param1": "value1", "param2": "value2"}, "jsonrpc": "2.0", "id": 0 }``
+
+In particular, note the ``jsonrpc`` and ``id`` properties. These are requirements under the JSON-RPC 2.0 spec.
+
+Here's an example of the POST data for a valid API request:
+
+.. code-block::
+
+    {
+      "method": "get_burns",
+      "params": {"order_by": 'tx_hash',
+                 "order_dir": 'asc',
+                 "start_block": 280537,
+                 "end_block": 280539},
+      "jsonrpc": "2.0",
+      "id": 0,
+    }
+
+You should note that the data in ``params`` is a JSON object (e.g. mapping), not an array. In other words, 
+the API only supports named arguments, not positional arguments. This is the case for safety and bug-minimzation reasons.
+
+For more information on JSON RPC, please see the `JSON RPC 2.0 specification <http://www.jsonrpc.org/specification>`__.
 
 .. _examples:
 
@@ -57,7 +84,7 @@ Python Example
       "method": "get_balances",
       "params": {"filters": [{'field': 'address', 'op': '==', 'value': "14qqz8xpzzEtj6zLs3M1iASP7T4mj687yq"},
                              {'field': 'address', 'op': '==', 'value': "1bLockjTFXuSENM8fGdfNUaWqiM4GPe7V"}],
-                             "filterop": "or"},
+                 "filterop": "or"},
       "jsonrpc": "2.0",
       "id": 0,
     }
@@ -69,7 +96,12 @@ Python Example
     #With this (and the rest of the examples below) we use positional arguments, instead of keyword-based arguments
     payload = {
       "method": "get_burns",
-      "params": [{'field': 'burned', 'op': '>', 'value': 20000000}, 'AND', 'tx_hash', 'asc', 280537, 280539],
+      "params": {"filters": {'field': 'burned', 'op': '>', 'value': 20000000},
+                 "filterop": "AND",
+                 "order_by": 'tx_hash',
+                 "order_dir": 'asc',
+                 "start_block": 280537,
+                 "end_block": 280539},
       "jsonrpc": "2.0",
       "id": 0,
     }
@@ -80,7 +112,11 @@ Python Example
     #Fetch all debits for > 2 XCP between blocks 280537 and 280539, sorting the results by quantity (descending order)
     payload = {
       "method": "get_debits",
-      "params": [[{'field': 'asset', 'op': '==', 'value': "XCP"}, {'field': 'quantity', 'op': '>', 'value': 200000000}], 'AND', 'quantity', 'desc'],
+      "params": {"filters": [{'field': 'asset', 'op': '==', 'value': "XCP"},
+                             {'field': 'quantity', 'op': '>', 'value': 200000000}],
+                "filterop": 'AND',
+                "order_by": 'quantity',
+                "order_dir": 'desc'},
       "jsonrpc": "2.0",
       "id": 0,
     }
@@ -93,8 +129,10 @@ Python Example
     # and it will be broadcast as a multisig transaction
     payload = {
       "method": "create_send",
-      "params": {'source': "1CUdFmgK9trTNZHALfqGvd8d6nUZqH2AAf", 'destination': "17rRm52PYGkntcJxD2yQF9jQqRS4S2nZ7E",
-                 'asset': "XCP", 'quantity': 100000000},
+      "params": {'source': "1CUdFmgK9trTNZHALfqGvd8d6nUZqH2AAf",
+                 'destination': "17rRm52PYGkntcJxD2yQF9jQqRS4S2nZ7E",
+                 'asset': "XCP",
+                 'quantity': 100000000},
       "jsonrpc": "2.0",
       "id": 0,
     }
@@ -674,6 +712,45 @@ Send XCP or a user defined asset.
 
   The unsigned transaction, as an hex-encoded string. See :ref:`this section <encoding_param>` for more information.
 
+.. _create_rps:
+
+create_rps
+^^^^^^^^^^^^^^
+**create_rps(source, possible_moves, wager, move_random_hash, expiration, encoding='multisig', pubkey=null)**
+
+Open a Rock-Paper-Scissors like game.
+
+**Parameters:**
+
+  * **source (string):** The address that will be sending (must have the necessary quantity of the specified asset).
+  * **possible_moves (integer):** The number of possible moves. Must be an odd number greater or equal than 3.
+  * **wager (integer):** The :ref:`quantity <quantitys>` of XCP to wager.
+  * **move_random_hash (string):** A 32 bytes hex string (64 chars): sha256(sha256(random+move)). Where random is 16 bytes random number.
+  * **expiration (integer):** The number of blocks for which the game should be valid.
+  * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
+  * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
+
+**Return:** 
+
+  The unsigned transaction, as an hex-encoded string. See :ref:`this section <encoding_param>` for more information.
+
+create_rpsresolve
+^^^^^^^^^^^^^^
+**create_rpsresolve(source, move, random, rps_match_id, encoding='multisig', pubkey=null)**
+
+Resolve a RPS game.
+
+**Parameters:**
+  * **source (string):** The address that will be sending (must have the necessary quantity of the specified asset).
+  * **move (integer):** The selected move.
+  * **random (string):** A 16 bytes hex string (32 chars) used to generate the move_random_hash value.
+  * **rps_match_id (string):** The concatenation of the hashes of the two transactions which compose the rps match.
+  * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
+  * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
+
+**Return:** 
+
+  The unsigned transaction, as an hex-encoded string. See :ref:`this section <encoding_param>` for more information.
    
 Objects
 ----------
