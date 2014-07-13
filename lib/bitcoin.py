@@ -655,11 +655,13 @@ def get_unspent_txouts(address, normalize=False):
                 raise Exception("Can't get unspent txouts: insight returned bad status code: %s" % r.status_code)
 
             outputs = r.json()
+
+            for d in outputs: #insight may not always include the confirmations field?                
+                d['confirmations'] = d.get('confirmations', 0)
+
             if not normalize: #listed normalized by default out of insight...we need to take to satoshi
                 for d in outputs:
                     d['quantity'] = int(d['quantity'] * config.UNIT)
-            return outputs
-
         else: #use blockchain
             r = requests.get("https://blockchain.info/unspent?active=" + address)
             if r.status_code == 500 and r.text.lower() == "no free outputs to spend":
@@ -682,7 +684,7 @@ def get_unspent_txouts(address, normalize=False):
                     'amount': normalize_quantity(d['value']) if normalize else d['value'],  # This is what Bitcoin uses for a field name.
                     'confirmations': d['confirmations'],
                 })
-            return outputs
+        return outputs
 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
