@@ -259,27 +259,27 @@ def match (db, tx):
 
         # Bet types must be opposite.
         if counterbet_type != tx0['bet_type']:
-            logging.debug('Bet types disagree.')
+            logging.debug('Skipping: bet types disagree.')
             continue
 
         # Leverages must agree exactly
         if tx0['leverage'] != tx1['leverage']:
-            logging.debug('Leverages disagree.')
+            logging.debug('Skipping: leverages disagree.')
             continue
 
         # Target values must agree exactly.
         if tx0['target_value'] != tx1['target_value']:
-            logging.debug('Target values disagree.')
+            logging.debug('Skipping: target values disagree.')
             continue
 
         # Fee fractions must agree exactly.
         if tx0['fee_fraction_int'] != tx1['fee_fraction_int']:
-            logging.debug('Fee fractions disagree.')
+            logging.debug('Skipping: fee fractions disagree.')
             continue
 
         # Deadlines must agree exactly.
         if tx0['deadline'] != tx1['deadline']:
-            logging.debug('Deadlines disagree.')
+            logging.debug('Skipping: deadlines disagree.')
             continue
 
         # If the odds agree, make the trade. The found order sets the odds,
@@ -299,11 +299,11 @@ def match (db, tx):
             logging.debug('Backward Quantity: {}'.format(backward_quantity))
 
             if not forward_quantity:
-                logging.debug('Zero forward quantity.')
+                logging.debug('Skipping: zero forward quantity.')
                 continue
             if tx1['block_index'] >= 286500 or config.TESTNET:    # Protocol change.
                 if not backward_quantity:
-                    logging.debug('Zero backward quantity.')
+                    logging.debug('Skipping: zero backward quantity.')
                     continue
 
             bet_match_id = tx0['tx_hash'] + tx1['tx_hash']
