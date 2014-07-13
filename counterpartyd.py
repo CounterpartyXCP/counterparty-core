@@ -177,7 +177,6 @@ def cli(method, params, unsigned, armory):
                 params['pubkey'] = bitcoin.private_key_to_public_key(private_key_wif)
     else:
         raise exceptions.AddressError('Invalid address.')
-
     unsigned_tx_hex = util.api(method, params)
     if armory: unsigned_tx_hex = '\n' + unsigned_tx_hex
     print('Transaction (unsigned):', unsigned_tx_hex)
@@ -879,8 +878,8 @@ if __name__ == '__main__':
 
         cli('create_bet', {'source': args.source,
                            'feed_address': args.feed_address, 'bet_type':
-                           args.bet_type, 'deadline': deadline, 'wager': wager,
-                           'counterwager': counterwager, 'expiration':
+                           util.BET_TYPE_ID [args.bet_type], 'deadline': deadline, 'wager_quantity': wager,
+                           'counterwager_quantity': counterwager, 'expiration':
                            args.expiration, 'target_value': target_value,
                            'leverage': leverage, 'fee': args.fee,
                            'allow_unconfirmed_inputs': args.unconfirmed,
