@@ -298,7 +298,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     if backend_rpc_user:
         config.BACKEND_RPC_USER = backend_rpc_user
     elif has_config and 'backend-rpc-user' in configfile['Default'] and configfile['Default']['backend-rpc-user']:
-        config.backend_RPC_USER = configfile['Default']['backend-rpc-user']
+        config.BACKEND_RPC_USER = configfile['Default']['backend-rpc-user']
     elif has_config and 'bitcoind-rpc-user' in configfile['Default'] and configfile['Default']['bitcoind-rpc-user']:
         config.BACKEND_RPC_USER = configfile['Default']['bitcoind-rpc-user']
     else:
