@@ -199,9 +199,8 @@ def set_options (data_dir=None, backend_rpc_connect=None,
                  backend_rpc_port=None, backend_rpc_user=None,
                  backend_rpc_password=None, insight_enable=None,
                  insight_connect=None, insight_port=None, rpc_host=None,
-                 rpc_port=None, rpc_user=None, rpc_password=None,
-                 log_file=None, pid_file=None, api_num_threads=None,
-                 api_request_queue_size=None, config_file=None,
+                 rpc_port=None, rpc_user=None, rpc_password=None, rpc_allow_cors=None,
+                 log_file=None, pid_file=None, config_file=None,
                  database_file=None, testnet=False, testcoin=False,
                  unittest=False, carefulness=0, force=False,
                  broadcast_tx_mainnet=None):
@@ -409,6 +408,14 @@ def set_options (data_dir=None, backend_rpc_connect=None,
 
     config.RPC = 'http://' + config.RPC_USER + ':' + config.RPC_PASSWORD + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT)
 
+     # RPC CORS
+    if rpc_allow_cors:
+        config.RPC_ALLOW_CORS = rpc_allow_cors
+    elif has_config and 'rpc-allow-cors' in configfile['Default']:
+        config.RPC_ALLOW_CORS = configfile['Default']['rpc-allow-cors']
+    else:
+        config.RPC_ALLOW_CORS = True
+
     ##############
     # OTHER SETTINGS
 
@@ -433,6 +440,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     else:
         config.PID = os.path.join(config.DATA_DIR, '{}.pid'.format(config.XCP_CLIENT))
 
+    # Encoding prefix
     if not unittest:
         if config.TESTCOIN:
             config.PREFIX = b'XX'                   # 2 bytes (possibly accidentally created)
@@ -440,20 +448,6 @@ def set_options (data_dir=None, backend_rpc_connect=None,
             config.PREFIX = b'CNTRPRTY'             # 8 bytes
     else:
         config.PREFIX = b'TESTXXXX'                 # 8 bytes
-
-    if api_num_threads:
-        config.API_NUM_THREADS = int(api_num_threads)
-    elif has_config and 'api-num-threads' in configfile['Default']:
-        config.API_NUM_THREADS = int(configfile['Default']['api-num-threads'])
-    else:
-        config.API_NUM_THREADS = 15 #(not suitable for multiuser, high-performance production)
-
-    if api_request_queue_size:
-        config.API_REQUEST_QUEUE_SIZE = int(api_request_queue_size)
-    elif has_config and 'api-request-queue-size' in configfile['Default']:
-        config.API_REQUEST_QUEUE_SIZE = int(configfile['Default']['api-request-queue-size'])
-    else:
-        config.API_REQUEST_QUEUE_SIZE = 20 #(not suitable for multiuser, high-performance production)
 
     # Database
     if database_file:
@@ -554,8 +548,6 @@ if __name__ == '__main__':
     parser.add_argument('--config-file', help='the location of the configuration file')
     parser.add_argument('--log-file', help='the location of the log file')
     parser.add_argument('--pid-file', help='the location of the pid file')
-    parser.add_argument('--api-num-threads', help='the number of threads created for API request processing (CherryPy WSGI, default 10)')
-    parser.add_argument('--api-request-queue-size', help='the size of the API request queue (CherryPY WSGI, default 5)')
 
     parser.add_argument('--backend-rpc-connect', help='the hostname or IP of the backend JSON-RPC server')
     parser.add_argument('--backend-rpc-port', type=int, help='the backend JSON-RPC port to connect to')
@@ -570,6 +562,7 @@ if __name__ == '__main__':
     parser.add_argument('--rpc-port', type=int, help='port on which to provide the {} JSON-RPC API'.format(config.XCP_CLIENT))
     parser.add_argument('--rpc-user', help='required username to use the {} JSON-RPC API (via HTTP basic auth)'.format(config.XCP_CLIENT))
     parser.add_argument('--rpc-password', help='required password (for rpc-user) to use the {} JSON-RPC API (via HTTP basic auth)'.format(config.XCP_CLIENT))
+    parser.add_argument('--rpc-allow-cors', action='store_true', default=True, help='Allow ajax cross domain request')
 
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
@@ -710,9 +703,8 @@ if __name__ == '__main__':
                 insight_connect=args.insight_connect,
                 insight_port=args.insight_port, rpc_host=args.rpc_host,
                 rpc_port=args.rpc_port, rpc_user=args.rpc_user,
-                rpc_password=args.rpc_password, log_file=args.log_file,
-                pid_file=args.pid_file, api_num_threads=args.api_num_threads,
-                api_request_queue_size=args.api_request_queue_size,
+                rpc_password=args.rpc_password, rpc_allow_cors=args.rpc_allow_cors, 
+                log_file=args.log_file, pid_file=args.pid_file, 
                 config_file=args.config_file, database_file=args.database_file,
                 testnet=args.testnet, testcoin=args.testcoin, unittest=False,
                 carefulness=args.carefulness, force=args.force)
@@ -1096,6 +1088,10 @@ if __name__ == '__main__':
         blocks.reparse(db, block_index=args.block_index)
 
     elif args.action == 'server':
+        api_status_poller = api.APIStatusPoller()
+        api_status_poller.daemon = True
+        api_status_poller.start()
+        
         api_server = api.APIServer()
         api_server.daemon = True
         api_server.start()

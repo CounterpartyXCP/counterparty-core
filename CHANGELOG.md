@@ -1,4 +1,10 @@
 ## Client Versions ##
+* v9.32.0 (2014-07-15)
+    * API underlying library changed from cherrypy to flask
+    * "/" supported as an API endpoint
+    * "/api" with no trailing slash no longer supported as an API endpoint (use "/" or "/api/" instead)
+    * per-request API checks taken out to their own thread to improve performance and prevent dogpiling
+    * new dependencies: tornado, flask and Flask-HTTPAuth. cherrypy dependency removed
 * v9.31.0 (2014-07-10)
 	* change fee_required calculation for orders matching (protocol change: 310500)
 	* don’t skip negative get quantity remainig for orders matching (protocol change: 310500)

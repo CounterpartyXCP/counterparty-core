@@ -22,7 +22,7 @@ By default, ``counterpartyd`` will listen on port ``4000`` (if on mainnet) or po
 requests. 
 
 Note that this API is built on JSON-RPC 2.0, not 1.1. JSON-RPC itself is pretty lightweight, and API requests
-are made via a HTTP POST request to ``/api/``, with JSON-encoded data passed as the POST body.
+are made via a HTTP POST request to ``/api/`` (note the trailing slash), with JSON-encoded data passed as the POST body.
 
 All requests must have POST data that is JSON encoded and in the format of:
 
@@ -45,7 +45,8 @@ Here's an example of the POST data for a valid API request:
     }
 
 You should note that the data in ``params`` is a JSON object (e.g. mapping), not an array. In other words, 
-the API only supports named arguments, not positional arguments. This is the case for safety and bug-minimzation reasons.
+**the API only supports named arguments, not positional arguments** (e.g. use
+{"argument1": "value1", "argument2": "value2"} instead of ["value1", "value2"]). This is the case for safety and bug-minimzation reasons.
 
 For more information on JSON RPC, please see the `JSON RPC 2.0 specification <http://www.jsonrpc.org/specification>`__.
 
@@ -1120,6 +1121,18 @@ API Changes
 
 This section documents any changes to the ``counterpartyd`` API, for version numbers where there were API-level modifications.
 
+.. _9_32_0:
+
+9.32.0
+^^^^^^^^^^^^^^^^^^^^^^^
+
+**Summary:** API framework overhaul for performance and simplicity 
+
+* "/api" with no trailing slash no longer supported as an API endpoint (use "/" or "/api/" instead)
+* We now consistently reject positional arguments with all API methods. Make sure your API calls do not use positional
+  arguments (e.g. use {"argument1": "value1", "argument2": "value2"} instead of ["value1", "value2"])
+
+
 .. _9_24_1:
 
 9.24.1
@@ -1129,6 +1142,7 @@ This section documents any changes to the ``counterpartyd`` API, for version num
 
 * Added ``sql`` API method
 * Filter params: Added ``LIKE``, ``NOT LIKE`` and ``IN``
+
 
 .. _9_25_0:
 
@@ -1144,6 +1158,3 @@ This section documents any changes to the ``counterpartyd`` API, for version num
 * create_bet: ``wager`` and ``counterwager`` args are replaced by ``wager_quantity`` and ``counterwager_quantity``
 * create_issuance: parameter ``lock`` (boolean) removed (use LOCK in description)
 * create_issuance: parameter ``transfer_destination`` replaced by ``destination``
-
-
-
