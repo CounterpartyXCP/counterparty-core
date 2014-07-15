@@ -39,7 +39,7 @@ dhash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
 bitcoin_rpc_session = None
 
 def print_coin(coin):
-    return 'amount: {}; txid: {}; vout: {}; confirmations: {}'.format(coin['amount'], coin['txid'], coin['vout'], coin['confirmations']) # simplify and make deterministic
+    return 'amount: {}; txid: {}; vout: {}; confirmations: {}'.format(coin['amount'], coin['txid'], coin['vout'], coin.get('confirmations', '?')) # simplify and make deterministic
 
 def get_block_count():
     return int(rpc('getblockcount', []))
