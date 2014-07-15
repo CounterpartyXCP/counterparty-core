@@ -39,7 +39,7 @@ dhash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
 bitcoin_rpc_session = None
 
 def print_coin(coin):
-    return 'amount: {}; txid: {}; vout: {}; confirmations: {}'.format(coin['amount'], coin['txid'], coin['vout'], coin['confirmations']) # simplify and make deterministic
+    return 'amount: {}; txid: {}; vout: {}; confirmations: {}'.format(coin['amount'], coin['txid'], coin['vout'], coin.get('confirmations', '?')) # simplify and make deterministic
 
 def get_block_count():
     return int(rpc('getblockcount', []))
@@ -666,9 +666,6 @@ def get_unspent_txouts(address, normalize=False):
                 raise Exception("Can't get unspent txouts: insight returned bad status code: %s" % r.status_code)
 
             outputs = r.json()
-
-            for d in outputs: #insight may not always include the confirmations field?                
-                d['confirmations'] = d.get('confirmations', 0)
 
             if not normalize: #listed normalized by default out of insight...we need to take to satoshi
                 for d in outputs:
