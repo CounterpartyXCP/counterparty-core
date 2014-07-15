@@ -136,7 +136,7 @@ def market (give_asset, get_asset):
     print('\n')
 
     # Feeds
-    broadcasts = util.api('get_broadcasts', {'status': 'valid'})
+    broadcasts = util.api('get_broadcasts', {'status': 'valid', 'order_by': 'timestamp', 'order_dir': 'desc'})
     table = PrettyTable(['Feed Address', 'Timestamp', 'Text', 'Value', 'Fee Fraction'])
     seen_addresses = []
     for broadcast in broadcasts:
@@ -177,7 +177,6 @@ def cli(method, params, unsigned, armory):
                 params['pubkey'] = bitcoin.private_key_to_public_key(private_key_wif)
     else:
         raise exceptions.AddressError('Invalid address.')
-
     unsigned_tx_hex = util.api(method, params)
     if armory: unsigned_tx_hex = '\n' + unsigned_tx_hex
     print('Transaction (unsigned):', unsigned_tx_hex)
@@ -298,7 +297,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     if backend_rpc_user:
         config.BACKEND_RPC_USER = backend_rpc_user
     elif has_config and 'backend-rpc-user' in configfile['Default'] and configfile['Default']['backend-rpc-user']:
-        config.backend_RPC_USER = configfile['Default']['backend-rpc-user']
+        config.BACKEND_RPC_USER = configfile['Default']['backend-rpc-user']
     elif has_config and 'bitcoind-rpc-user' in configfile['Default'] and configfile['Default']['bitcoind-rpc-user']:
         config.BACKEND_RPC_USER = configfile['Default']['bitcoind-rpc-user']
     else:
@@ -871,8 +870,8 @@ if __name__ == '__main__':
 
         cli('create_bet', {'source': args.source,
                            'feed_address': args.feed_address, 'bet_type':
-                           args.bet_type, 'deadline': deadline, 'wager': wager,
-                           'counterwager': counterwager, 'expiration':
+                           util.BET_TYPE_ID [args.bet_type], 'deadline': deadline, 'wager_quantity': wager,
+                           'counterwager_quantity': counterwager, 'expiration':
                            args.expiration, 'target_value': target_value,
                            'leverage': leverage, 'fee': args.fee,
                            'allow_unconfirmed_inputs': args.unconfirmed,
