@@ -527,14 +527,14 @@ Issue a bet against a feed.
 
 create_broadcast
 ^^^^^^^^^^^^^^
-**create_broadcast(source, fee_multiplier, text, value=0, encoding='multisig', pubkey=null)**
+**create_broadcast(source, fee_fraction, text, value=0, encoding='multisig', pubkey=null)**
 
 Broadcast textual and numerical information to the network.
 
 **Parameters:**
 
   * **source (string):** The address that will be sending (must have the necessary quantity of the specified asset).
-  * **fee_multiplier (float):** How much of every bet on this feed should go to its operator; a fraction of 1, (i.e. .05 is five percent).
+  * **fee_fraction (float):** How much of every bet on this feed should go to its operator; a fraction of 1, (i.e. .05 is five percent).
   * **text (string):** The textual part of the broadcast.
   * **timestamp (integer):** The timestamp of the broadcast, in Unix time.
   * **value (float):** Numerical value of the broadcast.
