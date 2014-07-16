@@ -279,6 +279,9 @@ then have two approaches with respect to broadcasting the transaction on the net
   the private key string to it, and ``counterpartyd`` will sign it for you). In either case, once you have the signed,
   hex-encoded transaction string, you can then call the ``broadcast_tx`` API method, which will then broadcast the transaction on the
   Bitcoin network for you.
+  
+**Note that you can also use a :ref:`do_ call instead <do_table>`, which will take care of creating the transaction,
+signing it, and broadcasting it, all in one step.**
 
 
 .. _read_api:
@@ -296,7 +299,8 @@ limit=1000, offset=0, show_expired=True)**
 **{table}** must be one of the following values:
 ``balances``, ``credits``, ``debits``, ``bets``, ``bet_matches``, ``broadcasts``, ``btcpays``, ``burns``, 
 ``callbacks``, ``cancels``, ``dividends``, ``issuances``, ``orders``, ``order_matches``, ``sends``, 
-``bet_expirations``, ``order_expirations``, ``bet_match_expirations``, or ``order_match_expirations``.
+``bet_expirations``, ``order_expirations``, ``bet_match_expirations``, ``order_match_expirations``,
+``rps``, ``rps_expirations``, ``rps_matches``, ``rps_match_expirations``, or ``rpsresolves``.
 
 For example: ``get_balances``, ``get_credits``, ``get_debits``, etc are all valid API methods.
 
@@ -327,7 +331,7 @@ For example: ``get_balances``, ``get_credits``, ``get_debits``, etc are all vali
 
 **Return:**
 
-  A list of objects with attributes corresponding to the queried table fields
+  A list of objects with attributes corresponding to the queried table fields.
 
 **Examples:**
 
@@ -719,7 +723,7 @@ create_rps
 ^^^^^^^^^^^^^^
 **create_rps(source, possible_moves, wager, move_random_hash, expiration, encoding='multisig', pubkey=null)**
 
-Open a Rock-Paper-Scissors like game.
+Open a Rock-Paper-Scissors (RPS) like game.
 
 **Parameters:**
 
@@ -736,10 +740,10 @@ Open a Rock-Paper-Scissors like game.
   The unsigned transaction, as an hex-encoded string. See :ref:`this section <encoding_param>` for more information.
 
 create_rpsresolve
-^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^
 **create_rpsresolve(source, move, random, rps_match_id, encoding='multisig', pubkey=null)**
 
-Resolve a RPS game.
+Resolve a Rock-Paper-Scissors game.
 
 **Parameters:**
   * **source (string):** The address that will be sending (must have the necessary quantity of the specified asset).
@@ -752,7 +756,37 @@ Resolve a RPS game.
 **Return:** 
 
   The unsigned transaction, as an hex-encoded string. See :ref:`this section <encoding_param>` for more information.
-   
+
+.. _do_table:
+
+do_{table}
+^^^^^^^^^^^^^^
+**do_{table}(VARIABLE)**
+
+This method is a simplified alternative to the appropriate ``create_`` method. Instead of returning just an unsigned
+raw transaction, which you must then sign and broadcast, this call will create the transaction, then sign it and broadcast
+it automatically.
+
+**{table}** must be one of the following values:
+``balances``, ``credits``, ``debits``, ``bets``, ``bet_matches``, ``broadcasts``, ``btcpays``, ``burns``, 
+``callbacks``, ``cancels``, ``dividends``, ``issuances``, ``orders``, ``order_matches``, ``sends``, 
+``bet_expirations``, ``order_expirations``, ``bet_match_expirations``, ``order_match_expirations``,
+``rps``, ``rps_expirations``, ``rps_matches``, ``rps_match_expirations``, or ``rpsresolves``.
+
+For example: ``do_balances``, ``do_credits``, ``do_debits``, etc are all valid API methods.
+
+**Parameters:**
+
+  * **privkey (string):** The private key in WIF format to use for signing the transaction. If not provided,
+    the private key must to be known by the ``bitcoind`` wallet.
+  * The other parameters for a given ``do_`` method are the same as the corresponding ``create_`` call.
+
+**Return:**
+
+  The created transaction's id on the Bitcoin network, or an error if the transaction is invalid for any reason.
+
+
+
 Objects
 ----------
 
