@@ -396,7 +396,7 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
                  multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
                  op_return_value=config.DEFAULT_OP_RETURN_VALUE, exact_fee=None,
                  fee_provided=0, public_key_hex=None,
-                 allow_unconfirmed_inputs=False, armory=False):
+                 allow_unconfirmed_inputs=False):
 
     (source, destination_outputs, data) = tx_info
 
@@ -544,33 +544,6 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
     # Serialise inputs and outputs.
     unsigned_tx = serialise(encoding, inputs, destination_outputs, data_output, change_output, source=source, public_key=public_key)
     unsigned_tx_hex = binascii.hexlify(unsigned_tx).decode('utf-8')
-
-    # bip-0010
-    try:
-        if armory:
-            txdp = []
-            dpid = base58_encode(hashlib.sha256(unsigned_tx).digest())[:8]
-            txdp.append(('-----BEGIN-TRANSACTION-' + dpid + '-----').ljust(80,'-'))
-
-            magic_bytes = binascii.hexlify(config.MAGIC_BYTES).decode('utf-8')
-            varIntTxSize = binascii.hexlify(len(unsigned_tx).to_bytes(2, byteorder='big')).decode('utf-8')
-            txdp.append('_TXDIST_{}_{}_{}'.format(magic_bytes, dpid, varIntTxSize))
-            tx_list = unsigned_tx_hex
-            for coin in inputs:
-                tx_list += get_raw_transaction(coin['txid'], json=False)
-            for byte in range(0,len(tx_list),80):
-                txdp.append(tx_list[byte:byte+80] )
-
-            for index, coin in enumerate(inputs):
-                index_fill = str(index).zfill(2)
-                value = '{0:.8f}'.format(coin['amount'])
-                txdp.append('_TXINPUT_{}_{}'.format(index_fill, value))
-
-            txdp.append(('-----END-TRANSACTION-' + dpid + '-----').ljust(80,'-'))
-            unsigned_tx_hex = '\n'.join(txdp)
-    except Exception as e:
-        print(e)
-
     return unsigned_tx_hex
 
 def sign_tx (unsigned_tx_hex, private_key_wif=None):
