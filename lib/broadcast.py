@@ -178,10 +178,20 @@ def parse (db, tx, message):
                 bear_escrow = bet_match['forward_quantity']
 
             leverage = Fraction(bet_match['leverage'], 5040)
-            initial_value = bet_match['initial_value']
 
-            bear_credit = bear_escrow - (value - initial_value) * leverage * config.UNIT
-            bull_credit = escrow_less_fee - bear_credit
+            initial_value = bet_match['initial_value']
+            if bet_match['tx1_index'] > config.CFD_CHANGE:
+                #directional movement version
+                if value >= initial_value: 
+                    bear_credit = bear_escrow - (bear_escrow/intitial_value) * (value - initial_value) * config.UNIT
+                    bull_credit = total_escrow - bear_credit 
+                else: 
+                    bull_credit = bull_escrow + (bull_escrow/initial_value) * (value - initial_value) * config.UNIT
+                    bear_credit = total_escrow - bull_credit
+            #Old
+            else:
+                bear_credit = bear_escrow - (value - initial_value) * leverage * config.UNIT
+                bull_credit = escrow_less_fee - bear_credit
             bear_credit = round(bear_credit)
             bull_credit = round(bull_credit)
 
