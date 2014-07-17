@@ -39,7 +39,7 @@ API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel',
 
 COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
                 'multisig_dust_size', 'op_return_value', 'pubkey',
-                'allow_unconfirmed_inputs', 'fee', 'fee_provided', 'armory']
+                'allow_unconfirmed_inputs', 'fee', 'fee_provided']
 API_MAX_LOG_SIZE = 10 * 1024 * 1024 #max log size of 20 MB before rotation (make configurable later)
 API_MAX_LOG_COUNT = 10
 
@@ -199,7 +199,7 @@ def compose_transaction(db, name, params,
                         pubkey=None,
                         allow_unconfirmed_inputs=False,
                         fee=None,
-                        fee_provided=0, armory=False):
+                        fee_provided=0):
     tx_info = sys.modules['lib.{}'.format(name)].compose(db, **params)
     return bitcoin.transaction(tx_info, encoding=encoding,
                                         fee_per_kb=fee_per_kb,
@@ -209,7 +209,7 @@ def compose_transaction(db, name, params,
                                         public_key_hex=pubkey,
                                         allow_unconfirmed_inputs=allow_unconfirmed_inputs,
                                         exact_fee=fee,
-                                        fee_provided=fee_provided, armory=armory)
+                                        fee_provided=fee_provided)
 
 def sign_transaction(unsigned_tx_hex, private_key_wif=None):
     return bitcoin.sign_tx(unsigned_tx_hex, private_key_wif=private_key_wif)
