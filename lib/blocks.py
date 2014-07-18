@@ -28,16 +28,18 @@ TABLES = ['credits', 'debits', 'messages'] + \
 def check_conservation (db):
     logging.debug('Status: Checking for conservation of assets.')
 
-    supplies = util.supplies(db)
-    for asset in supplies.keys():
-        extant = supplies[asset]
+    creations = util.creations(db)
+    destructions = util.destructions(db)
+    for asset in creations.keys():
+        created = creations[asset]
+        destroyed = destructions['asset']
         held = sum([holder['address_quantity'] for holder in util.holders(db, asset)])
         # import json
         # json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
         # json_print(util.holders(db, asset))
-        if held != extant
-            raise exceptions.SanityError('{} {} extant ≠ {} {} held'.format(util.devise(db, extant, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
-        logging.debug('Status: {} has been conserved ({} {} both extant and held)'.format(asset, util.devise(db, issued, asset, 'output'), asset))
+        if held != issued - burned:
+            raise exceptions.SanityError('{} {} created - {} {} destroyed ≠ {} {} held'.format(util.devise(db, created, asset, 'output'), asset, util.devise(db, destroyed, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
+        logging.debug('Status: {} has been conserved ({} {} created - {} {} destroyed = {} {} held'.format(util.devise(db, created, asset, 'output'), asset, util.devise(db, destroyed, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
 
 def parse_tx (db, tx):
     cursor = db.cursor()

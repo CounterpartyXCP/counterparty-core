@@ -44,7 +44,8 @@ def compose (db, source, asset, quantity, overburn=False):
 
     if asset == config.BTC: 
         # Check that a maximum of 1 BTC total is burned per address.
-        already_burned = util.burns(db)[asset]
+        burns = list(cursor.execute('''SELECT * FROM burns WHERE (status = ? AND source = ? AND asset = ?)''', ('valid', source, config.BTC)))
+        already_burned = sum([burn['burned'] for burn in burns])
         if quantity > (1 * config.UNIT - already_burned) and not overburn:  # Overburn is for test suite.
             raise exceptions.BurnError('1 {} may be burned per address'.format(config.BTC))
         cursor.close()

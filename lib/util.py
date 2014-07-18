@@ -681,50 +681,59 @@ def holders(db, asset):
     cursor.close()
     return holders
 
-def xcp_supply (db):
+def xcp_created (db):
     cursor = db.cursor()
-
-    # Add BTC burns.
     cursor.execute('''SELECT * FROM burns \
-                      WHERE status = ?''', ('valid',))
-    burn_total = sum([burn['earned'] for burn in cursor.fetchall()])
+                      WHERE (status = ? AND asset = ?)''', ('valid', config.BTC))
+    return sum([burn['earned'] for burn in list(cursor)])
 
-    # Subtract issuance fees.
+def xcp_destroyed (db):
+    # Issuance fees.
     cursor.execute('''SELECT * FROM issuances\
                       WHERE status = ?''', ('valid',))
     fee_total = sum([issuance['fee_paid'] for issuance in cursor.fetchall()])
 
-    # Subtract XCP burns.
-    burned = burns(db)['XCP']
+    # Burns
+    return burns(db)[config.XCP] - fee_total
 
-    cursor.close()
-    return burn_total - fee_total - burned
+def xcp_supply (db):
+    return xcp_created(db) - xcp_destroyed(db)
 
-def supplies (db):
+def creations (db):
     cursor = db.cursor()
-    supplies = {config.XCP: xcp_supply(db)}
+    creations = {config.XCP: xcp_created(db)}
     cursor.execute('''SELECT * from issuances \
                       WHERE status = ?''', ('valid',))
     for issuance in list(cursor):
         asset = issuance['asset']
         quantity = issuance['quantity']
-        if asset in supplies.keys():
-            supplies[asset] += quantity
+        if asset in creations.keys():
+            creations[asset] += quantity
         else:
-            supplies[asset] = quantity
+            creations[asset] = quantity
 
+    cursor.close()
+    return creations
+
+def destructions (db):
+    cursor = db.cursor()
+    destructions = {config.XCP: xcp_destroyed(db)}
     cursor.execute('''SELECT * from burns \
-                      WHERE status = ?''', ('valid',))
+                      WHERE (status = ? AND asset != ?)''', ('valid', config.XCP))
     for burn in list(cursor):
         asset = burn['asset']
         quantity = burn['quantity']
-        if asset in supplies.keys():
-            supplies[asset] -= quantity
+        if asset in destructions.keys():
+            destructions[asset] += quantity
         else
-            supplies[asset] = quantity
+            destructions[asset] = quantity
 
     cursor.close()
-    return supplies
+    return destructions
+
+# TODO: Unoptimised.
+def asset_supply (db, asset):
+    return creations(db)[asset] - destructions(db)[asset]
 
 def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
     try:
