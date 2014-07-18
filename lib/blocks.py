@@ -29,17 +29,15 @@ def check_conservation (db):
     logging.debug('Status: Checking for conservation of assets.')
 
     supplies = util.supplies(db)
-    burns = util.burns(db)
     for asset in supplies.keys():
-        issued = supplies[asset]
-        burned = burns['asset']
+        extant = supplies[asset]
         held = sum([holder['address_quantity'] for holder in util.holders(db, asset)])
         # import json
         # json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
         # json_print(util.holders(db, asset))
-        if held != issued - burned:
-            raise exceptions.SanityError('{} {} issued - {} {} burned ≠ {} {} held'.format(util.devise(db, issued, asset, 'output'), asset, util.devise(db, burned, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
-        logging.debug('Status: {} has been conserved ({} {} both issued and held + burned)'.format(asset, util.devise(db, issued, asset, 'output'), asset))
+        if held != extant
+            raise exceptions.SanityError('{} {} extant ≠ {} {} held'.format(util.devise(db, extant, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
+        logging.debug('Status: {} has been conserved ({} {} both extant and held)'.format(asset, util.devise(db, issued, asset, 'output'), asset))
 
 def parse_tx (db, tx):
     cursor = db.cursor()

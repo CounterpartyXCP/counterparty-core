@@ -9,6 +9,7 @@ from fractions import Fraction
 
 from . import (util, config, exceptions, bitcoin, util)
 
+# TODO: reason
 FORMAT = '>QQ'
 LENGTH = 8 + 8
 ID = 60

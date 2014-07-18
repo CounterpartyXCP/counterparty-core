@@ -684,7 +684,7 @@ def holders(db, asset):
 def xcp_supply (db):
     cursor = db.cursor()
 
-    # Add burns.
+    # Add BTC burns.
     cursor.execute('''SELECT * FROM burns \
                       WHERE status = ?''', ('valid',))
     burn_total = sum([burn['earned'] for burn in cursor.fetchall()])
@@ -694,8 +694,11 @@ def xcp_supply (db):
                       WHERE status = ?''', ('valid',))
     fee_total = sum([issuance['fee_paid'] for issuance in cursor.fetchall()])
 
+    # Subtract XCP burns.
+    burned = burns(db)['XCP']
+
     cursor.close()
-    return burn_total - fee_total
+    return burn_total - fee_total - burned
 
 def supplies (db):
     cursor = db.cursor()
@@ -710,25 +713,18 @@ def supplies (db):
         else:
             supplies[asset] = quantity
 
-    cursor.close()
-    return supplies
-
-def burns (db):
-    cursor = db.cursor()
-    burns = {}
     cursor.execute('''SELECT * from burns \
                       WHERE status = ?''', ('valid',))
     for burn in list(cursor):
         asset = burn['asset']
         quantity = burn['quantity']
-        if asset in burns.keys():
-            burns[asset] += quantity
+        if asset in supplies.keys():
+            supplies[asset] -= quantity
         else
-            burns[asset] = quantity
+            supplies[asset] = quantity
 
     cursor.close()
-    return burns
-        
+    return supplies
 
 def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
     try:
