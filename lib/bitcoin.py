@@ -20,7 +20,7 @@ from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_p
 from pycoin.scripts import bitcoin_utils
 from Crypto.Cipher import ARC4
 
-from . import (config, exceptions, util)
+from . import config, exceptions, util, blockchain
 
 # Constants
 OP_RETURN = b'\x6a'
