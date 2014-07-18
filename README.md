@@ -53,6 +53,13 @@ If and only if counterpartyd is to be run on the Bitcoin testnet, with the
 counterpartyd may run with the `--testcoin` option on any blockchain,
 however.
 
+# Updating your requirements
+
+Sometimes the underlying package requirements may change for `counterpartyd`. If you build and installed it from scratch,
+you can manually update these requirements by executing something like:
+
+    ```pip install --upgrade -r pip-requirements.txt```
+
 # Test suite
 
 The test suite is invoked with `py.test` in the root directory of the repository.
