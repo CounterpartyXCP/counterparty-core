@@ -18,7 +18,7 @@ import requests
 import appdirs
 from prettytable import PrettyTable
 
-from lib import (config, api, util, exceptions, bitcoin, blocks)
+from lib import config, api, util, exceptions, bitcoin, blocks, blockchain
 if os.name == 'nt':
     from lib import util_windows
 
@@ -192,10 +192,9 @@ def cli(method, params, unsigned):
 
 
 def set_options (data_dir=None, backend_rpc_connect=None,
-                 backend_rpc_port=None, backend_rpc_user=None,
-                 backend_rpc_password=None, insight_enable=None,
-                 insight_connect=None, insight_port=None, rpc_host=None,
-                 rpc_port=None, rpc_user=None, rpc_password=None, rpc_allow_cors=None,
+                 backend_rpc_port=None, backend_rpc_user=None, backend_rpc_password=None,
+                 blockchain_service_name=None, blockchain_service_connect=None, 
+                 rpc_host=None, rpc_port=None, rpc_user=None, rpc_password=None, rpc_allow_cors=None,
                  log_file=None, pid_file=None, config_file=None,
                  database_file=None, testnet=False, testcoin=False,
                  unittest=False, carefulness=0, force=False,
@@ -312,46 +311,23 @@ def set_options (data_dir=None, backend_rpc_connect=None,
 
     config.BACKEND_RPC = 'http://' + config.BACKEND_RPC_USER + ':' + config.BACKEND_RPC_PASSWORD + '@' + config.BACKEND_RPC_CONNECT + ':' + str(config.BACKEND_RPC_PORT)
 
-    # insight enable
-    if insight_enable:
-        config.INSIGHT_ENABLE = insight_enable
-    elif has_config and 'insight-enable' in configfile['Default']:
-        config.INSIGHT_ENABLE = configfile['Default'].getboolean('insight-enable')
+    # blockchain service name
+    if blockchain_service_name:
+        config.BLOCKCHAIN_SERVICE_NAME = blockchain_service_name
+    elif has_config and 'blockchain-service-name' in configfile['Default'] and configfile['Default']['blockchain-service-name']:
+        config.BLOCKCHAIN_SERVICE_NAME = configfile['Default'].getboolean('blockchain-service-name')
     else:
-        config.INSIGHT_ENABLE = False
+        config.BLOCKCHAIN_SERVICE_NAME = 'blockr'
 
-    if unittest:
-        config.INSIGHT_ENABLE = True #override when running test suite
-    if config.TESTNET:
-        config.INSIGHT_ENABLE = True
-
-    # insight API host
-    if insight_connect:
-        config.INSIGHT_CONNECT = insight_connect
-    elif has_config and 'insight-connect' in configfile['Default'] and configfile['Default']['insight-connect']:
-        config.INSIGHT_CONNECT = configfile['Default']['insight-connect']
-    elif config.TESTNET:
-        config.INSIGHT_CONNECT = 'test.insight.is'
+    # custom blockchain service API endpoint
+    # leave blank to use the default. if specified, include the scheme prefix and port, without a trailing slash (e.g. http://localhost:3001)
+    if blockchain_service_connect:
+        config.BLOCKCHAIN_SERVICE_CONNECT = blockchain_service_connect
+    elif has_config and 'blockchain-service-connect' in configfile['Default'] and configfile['Default']['blockchain-service-connect']:
+        config.BLOCKCHAIN_SERVICE_CONNECT = configfile['Default']['blockchain-service-connect']
     else:
-        config.INSIGHT_CONNECT = 'live.insight.is'
+        config.BLOCKCHAIN_SERVICE_CONNECT = None #use default specified by the library
 
-    # insight API port
-    if insight_port:
-        config.INSIGHT_PORT = insight_port
-    elif has_config and 'insight-port' in configfile['Default'] and configfile['Default']['insight-port']:
-        config.INSIGHT_PORT = configfile['Default']['insight-port']
-    else:
-        if config.TESTNET:
-            config.INSIGHT_PORT = 3001
-        else:
-            config.INSIGHT_PORT = 3000
-    try:
-        config.INSIGHT_PORT = int(config.INSIGHT_PORT)
-        assert int(config.INSIGHT_PORT) > 1 and int(config.INSIGHT_PORT) < 65535
-    except:
-        raise Exception("Please specific a valid port number insight-port configuration parameter")
-
-    config.INSIGHT = 'http://' + config.INSIGHT_CONNECT + ':' + str(config.INSIGHT_PORT)
 
     ##############
     # THINGS WE SERVE
@@ -549,9 +525,8 @@ if __name__ == '__main__':
     parser.add_argument('--backend-rpc-user', help='the username used to communicate with backend over JSON-RPC')
     parser.add_argument('--backend-rpc-password', help='the password used to communicate with backend over JSON-RPC')
 
-    parser.add_argument('--insight-enable', action='store_true', default=False, help='enable the use of insight, instead of blockchain.info')
-    parser.add_argument('--insight-connect', help='the insight server hostname or IP to connect to')
-    parser.add_argument('--insight-port', type=int, help='the insight server port to connect to')
+    parser.add_argument('--blockchain-service-name', help='the blockchain service name to connect to')
+    parser.add_argument('--blockchain-service-connect', help='the blockchain service server URL base to connect to, if not default')
 
     parser.add_argument('--rpc-host', help='the IP of the interface to bind to for providing JSON-RPC API access (0.0.0.0 for all interfaces)')
     parser.add_argument('--rpc-port', type=int, help='port on which to provide the {} JSON-RPC API'.format(config.XCP_CLIENT))
@@ -694,10 +669,9 @@ if __name__ == '__main__':
                 backend_rpc_port=args.backend_rpc_port,
                 backend_rpc_user=args.backend_rpc_user,
                 backend_rpc_password=args.backend_rpc_password,
-                insight_enable=args.insight_enable,
-                insight_connect=args.insight_connect,
-                insight_port=args.insight_port, rpc_host=args.rpc_host,
-                rpc_port=args.rpc_port, rpc_user=args.rpc_user,
+                blockchain_service_name=args.blockchain_service_name,
+                blockchain_service_connect=args.blockchain_service_connect,
+                rpc_host=args.rpc_host, rpc_port=args.rpc_port, rpc_user=args.rpc_user,
                 rpc_password=args.rpc_password, rpc_allow_cors=args.rpc_allow_cors, 
                 log_file=args.log_file, pid_file=args.pid_file, 
                 config_file=args.config_file, database_file=args.database_file,
@@ -1092,19 +1066,9 @@ if __name__ == '__main__':
         api_server.daemon = True
         api_server.start()
 
-        # Check that Insight works if enabled.
-        if config.INSIGHT_ENABLE and not config.FORCE:
-            try:
-                r = requests.get(config.INSIGHT + '/api/sync/')
-                if r.status_code != 200:
-                    raise ValueError("Bad status code returned from insight: %s" % r.status_code)
-                result = r.json()
-                if result['status'] == 'error':
-                    raise exceptions.InsightError('Insight reports error: %s' % result['error'])
-                if result['status'] == 'syncing':
-                    logging.warning("WARNING: Insight is not fully synced to the blockchain: %s%% complete" % result['syncPercentage'])
-            except Exception as e:
-                raise exceptions.InsightError('Could not connect to Insight server: %s' % e)
+        # Check if our blockchain backend is up
+        if not config.FORCE:
+            blockchain.check()
 
         blocks.follow(db)
 
