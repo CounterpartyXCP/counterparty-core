@@ -63,7 +63,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
             problems.append('cannot change divisibility')
         if bool(last_issuance['callable']) != bool(callable_):
             problems.append('cannot change callability')
-        if (last_issuance['callable'] or block_index < 312000) and last_issuance['call_date'] > call_date:  # Protocol change.
+        if ((last_issuance['callable'] or block_index < 312000) or config.TESTNET) and last_issuance['call_date'] > call_date:  # Protocol change.
             problems.append('cannot advance call date')
         if last_issuance['call_price'] > call_price:
             problems.append('cannot reduce call price')
@@ -99,7 +99,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
             problems.append('call date for non‐callable asset')
         if call_price and not callable_:
             problems.append('call price for non‐callable asset')
-    elif not callable_ and block_index >= 312000:  # Protocol change.
+    elif not callable_ and (block_index >= 312000 or config.TESTNET):  # Protocol change.
         call_date = 0
         call_price = 0.0
 
