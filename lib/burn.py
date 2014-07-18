@@ -1,13 +1,13 @@
 #! /usr/bin/python3
 
-"""Burn an asset. Burn {} to earn {} during a special period of time.""".format(config.BTC, config.XCP)
+"""Burn an asset. Burn BTC to earn XCP during a special period of time."""
 
 import struct
 import decimal
 D = decimal.Decimal
 from fractions import Fraction
 
-from . import (util, config, exceptions, bitcoin, util)
+from . import (util, config, exceptions, bitcoin)
 
 FORMAT = '>QQ8p'
 LENGTH = 8 + 8 + 8
@@ -79,6 +79,7 @@ def parse (db, tx, message=None):
             quantity = tx['btc_amount']
         asset = config.BTC
         status = 'valid'
+        tag = 'ProofOfBurn'
     else:
         # Unpack message.
         try:
@@ -98,6 +99,7 @@ def parse (db, tx, message=None):
     # Bitcoin?
     if asset == config.BTC:
         if status == 'valid':
+            sent = quantity
             # Calculate quantity of XCP earned. (Maximum 1 BTC in total, ever.)
             cursor = db.cursor()
             cursor.execute('''SELECT * FROM burns WHERE (status = ? AND source = ?)''', ('valid', tx['source']))
@@ -105,8 +107,8 @@ def parse (db, tx, message=None):
             already_burned = sum([burn['burned'] for burn in burns])
             ONE = 1 * config.UNIT
             max_burn = ONE - already_burned
-            if sent > max_burn: burned = max_burn   # Exceeded maximum burn; earn what you can.
-            else: burned = sent
+            if quantity > max_burn: burned = max_burn   # Exceeded maximum burn; earn what you can.
+            else: burned = quantity
 
             total_time = config.BURN_END - config.BURN_START
             partial_time = config.BURN_END - tx['block_index']
@@ -116,8 +118,8 @@ def parse (db, tx, message=None):
             # Credit source address with earned XCP.
             util.credit(db, tx['block_index'], tx['source'], config.XCP, earned, event=tx['tx_hash'])
         else:
-            burned = 0
-            earned = 0
+            burned = None
+            earned = None
     else:
         # Overburn
         cursor.execute('''SELECT * FROM balances \
@@ -129,11 +131,12 @@ def parse (db, tx, message=None):
             quantity = min(balances[0]['quantity'], quantity)
 
         # Debit address.
-        util.debit(db, tx['block_index'], tx['source'], asset, burned, event=tx['tx_hash'])
+        if status == 'valid':
+            util.debit(db, tx['block_index'], tx['source'], asset, quantity, event=tx['tx_hash'])
 
-        sent = 0
         burned = quantity
-        earned = 0
+        sent = None
+        earned = None
 
     # Add parsed transaction to message-type–specific table.
     bindings = {
@@ -150,6 +153,7 @@ def parse (db, tx, message=None):
     }
     sql='insert into burns values(:tx_index, :tx_hash, :block_index, :source, :asset, :sent, :burned, :earned, :tag, :status)'
     cursor.execute(sql, bindings)
+
 
     cursor.close()
 

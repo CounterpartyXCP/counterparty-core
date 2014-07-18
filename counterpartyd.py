@@ -875,7 +875,7 @@ if __name__ == '__main__':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
         quantity = util.devise(db, args.quantity, config.BTC, 'input')
         cli('create_burn', {'source': args.source, 'quantity': quantity,
-                            'asset': args.asset, 'tag', args.tag, 'fee':
+                            'asset': args.asset, 'tag': args.tag, 'fee':
                             args.fee, 'allow_unconfirmed_inputs':
                             args.unconfirmed, 'encoding': args.encoding,
                             'fee_per_kb': args.fee_per_kb, 'regular_dust_size':

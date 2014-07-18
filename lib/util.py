@@ -72,6 +72,8 @@ def log (db, command, category, bindings):
             return '<AssetError>'
         except decimal.DivisionByZero:
             return '<DivisionByZero>'
+        except TypeError:
+            return '<Invalid>'
 
     if command == 'update':
         if category == 'order':
@@ -167,7 +169,10 @@ def log (db, command, category, bindings):
             logging.info('Dividend: {} paid {} per unit of {} ({}) [{}]'.format(bindings['source'], output(bindings['quantity_per_unit'], bindings['dividend_asset']), bindings['asset'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'burns':
-            logging.info('Burn: {} burned {} for {} ({}) [{}]'.format(bindings['source'], output(bindings['burned'], config.BTC), output(bindings['earned'], config.XCP), bindings['tx_hash'], bindings['status']))
+            if bindings['asset'] == config.BTC:
+                logging.info('Burn: {} burned {} for {} ({}) [{}]'.format(bindings['source'], output(bindings['burned'], config.BTC), output(bindings['earned'], config.XCP), bindings['tx_hash'], bindings['status']))
+            else:
+                logging.info('Burn: {} burned {} ({}) [{}]'.format(bindings['source'], output(bindings['burned'], config.BTC), bindings['tx_hash'], bindings['status']))
 
         elif category == 'cancels':
             logging.info('Cancel: {} ({}) [{}]'.format(bindings['offer_hash'], bindings['tx_hash'], bindings['status']))
@@ -685,16 +690,24 @@ def xcp_created (db):
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM burns \
                       WHERE (status = ? AND asset = ?)''', ('valid', config.BTC))
-    return sum([burn['earned'] for burn in list(cursor)])
+    total = sum([burn['earned'] for burn in list(cursor)])
+    cursor.close()
+    return total
 
 def xcp_destroyed (db):
+    cursor = db.cursor()
     # Issuance fees.
     cursor.execute('''SELECT * FROM issuances\
                       WHERE status = ?''', ('valid',))
     fee_total = sum([issuance['fee_paid'] for issuance in cursor.fetchall()])
 
     # Burns
-    return burns(db)[config.XCP] - fee_total
+    cursor.execute('''SELECT * FROM burns \
+                      WHERE (status = ? AND asset = ?)''', ('valid', config.XCP))
+    burn_total = sum([burn['burned'] for burn in list(cursor)])
+
+    cursor.close()
+    return fee_total + burn_total
 
 def xcp_supply (db):
     return xcp_created(db) - xcp_destroyed(db)
@@ -722,10 +735,10 @@ def destructions (db):
                       WHERE (status = ? AND asset != ?)''', ('valid', config.XCP))
     for burn in list(cursor):
         asset = burn['asset']
-        quantity = burn['quantity']
+        quantity = burn['burned']
         if asset in destructions.keys():
             destructions[asset] += quantity
-        else
+        else:
             destructions[asset] = quantity
 
     cursor.close()

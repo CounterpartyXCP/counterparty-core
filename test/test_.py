@@ -228,7 +228,7 @@ def test_initialise ():
     cursor.close()
 
 def test_burn ():
-    unsigned_tx_hex = bitcoin.transaction(burn.compose(db, source_default, int(.62 * quantity)), encoding='multisig')
+    unsigned_tx_hex = bitcoin.transaction(burn.compose(db, source_default, 'BTC', int(.62 * quantity)), '', encoding='multisig')
 
     parse_hex(unsigned_tx_hex)
 

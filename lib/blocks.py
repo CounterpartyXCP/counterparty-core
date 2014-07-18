@@ -32,14 +32,15 @@ def check_conservation (db):
     destructions = util.destructions(db)
     for asset in creations.keys():
         created = creations[asset]
-        destroyed = destructions['asset']
+        try: destroyed = destructions[asset]
+        except KeyError: destroyed = 0  # TODO: Include every asset in output from util.destructions(), instead.
         held = sum([holder['address_quantity'] for holder in util.holders(db, asset)])
         # import json
         # json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
         # json_print(util.holders(db, asset))
-        if held != issued - burned:
+        if held != created - destroyed:
             raise exceptions.SanityError('{} {} created - {} {} destroyed ≠ {} {} held'.format(util.devise(db, created, asset, 'output'), asset, util.devise(db, destroyed, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
-        logging.debug('Status: {} has been conserved ({} {} created - {} {} destroyed = {} {} held'.format(util.devise(db, created, asset, 'output'), asset, util.devise(db, destroyed, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
+        logging.debug('Status: {} has been conserved ({} {} created - {} {} destroyed = {} {} held'.format(asset, util.devise(db, created, asset, 'output'), asset, util.devise(db, destroyed, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
 
 def parse_tx (db, tx):
     cursor = db.cursor()
