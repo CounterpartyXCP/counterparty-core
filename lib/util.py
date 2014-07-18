@@ -72,8 +72,6 @@ def log (db, command, category, bindings):
             return '<AssetError>'
         except decimal.DivisionByZero:
             return '<DivisionByZero>'
-        except TypeError:
-            return '<Invalid>'
 
     if command == 'update':
         if category == 'order':
