@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.34.0 (2014-07-18)
+	* allow burning of arbitrary assets
 * v9.33.0 (2014-07-18)
 	* bug in call_date and call_price sanity checks (protocol change: 312000)
 * v9.32.0 (2014-07-15)

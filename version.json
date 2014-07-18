@@ -1,7 +1,7 @@
 {
 	"minimum_version_major": 9,
-	"minimum_version_minor": 33,
+	"minimum_version_minor": 34,
 	"minimum_version_revision": 0,
-	"reason": "call_date and call_price sanity checks",
-	"block_index": 312000
+	"reason": "burn arbitrary assets",
+	"block_index": 312500
 }

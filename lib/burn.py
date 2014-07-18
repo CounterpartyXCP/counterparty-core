@@ -17,6 +17,10 @@ ID = 60
 def validate (db, source, asset, quantity, block_index):
     problems = []
 
+    if block_index < 312500 and not config.TESTNET: # Protocol change.
+        if asset != config.BTC:
+            problems.append('feature not live yet')
+
     if not isinstance(quantity, int):
         problems.append('quantity must be in satoshis')
         return problems
