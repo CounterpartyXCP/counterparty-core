@@ -383,8 +383,8 @@ def set_options (data_dir=None, backend_rpc_connect=None,
      # RPC CORS
     if rpc_allow_cors:
         config.RPC_ALLOW_CORS = rpc_allow_cors
-    elif has_config and 'rpc-allow-cors' in configfile['Default']:
-        config.RPC_ALLOW_CORS = configfile['Default']['rpc-allow-cors']
+    elif has_config and 'rpc-allow-cors' in configfile['Default'] and configfile['Default']['rpc-allow-cors']:
+        config.RPC_ALLOW_CORS = configfile['Default'].getboolean('rpc-allow-cors')
     else:
         config.RPC_ALLOW_CORS = True
 
@@ -394,7 +394,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     # Log
     if log_file:
         config.LOG = log_file
-    elif has_config and 'log-file' in configfile['Default']:
+    elif has_config and 'log-file' in configfile['Default'] and configfile['Default']['log-file']:
         config.LOG = configfile['Default']['log-file']
     else:
         string = config.XCP_CLIENT
@@ -407,7 +407,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     # PID file
     if pid_file:
         config.PID = pid_file
-    elif has_config and 'pid-file' in configfile['Default']:
+    elif has_config and 'pid-file' in configfile['Default'] and configfile['Default']['pid-file']:
         config.PID = configfile['Default']['pid-file']
     else:
         config.PID = os.path.join(config.DATA_DIR, '{}.pid'.format(config.XCP_CLIENT))
@@ -424,6 +424,8 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     # Database
     if database_file:
         config.DATABASE = database_file
+    elif has_config and 'database-file' in configfile['Default'] and configfile['Default']['database-file']:
+        config.DATABASE = configfile['Default']['database-file']
     else:
         string = '{}.'.format(config.XCP_CLIENT) + str(config.VERSION_MAJOR)
         if config.TESTNET:
