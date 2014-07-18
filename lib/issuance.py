@@ -63,7 +63,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
             problems.append('cannot change divisibility')
         if bool(last_issuance['callable']) != bool(callable_):
             problems.append('cannot change callability')
-        if last_issuance['call_date'] > call_date:
+        if (last_issuance['callable'] or (block_index < 312000 and not config.TESTNET)) and last_issuance['call_date'] > call_date:  # Protocol change.
             problems.append('cannot advance call date')
         if last_issuance['call_price'] > call_price:
             problems.append('cannot reduce call price')
@@ -100,8 +100,9 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
         if call_price and not callable_:
             problems.append('call price for non‐callable asset')
     elif not callable_:
+        if block_index >= 312000 or config.TESTNET:  # Protocol change.
             call_date = 0
-            call_price = 0
+            call_price = 0.0
 
     # For SQLite3
     call_date = min(call_date, config.MAX_INT)
@@ -113,10 +114,10 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     if destination and quantity:
         problems.append('cannot issue and transfer simultaneously')
 
-    return problems, fee
+    return call_date, call_price, problems, fee
 
 def compose (db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description):
-    problems, fee = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.last_block(db)['block_index'])
+    call_date, call_price, problems, fee = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.last_block(db)['block_index'])
     if problems: raise exceptions.IssuanceError(problems)
 
     asset_id = util.asset_id(asset)
@@ -158,8 +159,7 @@ def parse (db, tx, message):
 
     fee = 0
     if status == 'valid':
-        if not callable_: calldate, call_price = 0, 0.0
-        problems, fee = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, callable_, call_date, call_price, description, block_index=tx['block_index'])
+        call_date, call_price, problems, fee = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, callable_, call_date, call_price, description, block_index=tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
         if 'total quantity overflow' in problems:
             quantity = 0
