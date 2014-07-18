@@ -957,7 +957,7 @@ if __name__ == '__main__':
         balances(args.address)
 
     elif args.action == 'asset':
-        results = util.api('get_asset_info', ([args.asset],))
+        results = util.api('get_asset_info', {'assets': [args.asset]})
         if results:
             results = results[0]    # HACK
         else:
