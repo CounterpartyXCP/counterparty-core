@@ -31,11 +31,7 @@ def compose (db, source, destination, asset, quantity):
     if asset == config.BTC:
         return (source, [(destination, quantity)], None)
 
-    #quantity must be in int satoshi (not float, string, etc)
-    if not isinstance(quantity, int):
-        raise exceptions.SendError('quantity must be an int (in satoshi)')
-
-    # Only for outgoing (incoming will overburn).
+    # Only for outgoing (incoming will oversend).
     balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, asset)))
     if not balances or balances[0]['quantity'] < quantity:
         raise exceptions.SendError('insufficient funds')
@@ -66,7 +62,7 @@ def parse (db, tx, message):
     if status == 'valid':
         # Oversend
         cursor.execute('''SELECT * FROM balances \
-                                     WHERE (address = ? AND asset = ?)''', (tx['source'], asset))
+                          WHERE (address = ? AND asset = ?)''', (tx['source'], asset))
         balances = cursor.fetchall()
         if not balances:
             status = 'invalid: insufficient funds'

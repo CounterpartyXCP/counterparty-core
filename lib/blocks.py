@@ -29,16 +29,17 @@ def check_conservation (db):
     logging.debug('Status: Checking for conservation of assets.')
 
     supplies = util.supplies(db)
+    burns = util.burns(db)
     for asset in supplies.keys():
-
         issued = supplies[asset]
+        burned = burns['asset']
         held = sum([holder['address_quantity'] for holder in util.holders(db, asset)])
         # import json
         # json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
         # json_print(util.holders(db, asset))
-        if held != issued:
-            raise exceptions.SanityError('{} {} issued ≠ {} {} held'.format(util.devise(db, issued, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
-        logging.debug('Status: {} has been conserved ({} {} both issued and held)'.format(asset, util.devise(db, issued, asset, 'output'), asset))
+        if held != issued - burned:
+            raise exceptions.SanityError('{} {} issued - {} {} burned ≠ {} {} held'.format(util.devise(db, issued, asset, 'output'), asset, util.devise(db, burned, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
+        logging.debug('Status: {} has been conserved ({} {} both issued and held + burned)'.format(asset, util.devise(db, issued, asset, 'output'), asset))
 
 def parse_tx (db, tx):
     cursor = db.cursor()
@@ -523,6 +524,8 @@ def initialise(db):
                       tx_hash TEXT UNIQUE,
                       block_index INTEGER,
                       source TEXT,
+                      asset TEXT,
+                      sent INTEGER,
                       burned INTEGER,
                       earned INTEGER,
                       status TEXT,

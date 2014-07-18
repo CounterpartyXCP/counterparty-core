@@ -713,6 +713,23 @@ def supplies (db):
     cursor.close()
     return supplies
 
+def burns (db):
+    cursor = db.cursor()
+    burns = {}
+    cursor.execute('''SELECT * from burns \
+                      WHERE status = ?''', ('valid',))
+    for burn in list(cursor):
+        asset = burn['asset']
+        quantity = burn['quantity']
+        if asset in burns.keys():
+            burns[asset] += quantity
+        else
+            burns[asset] = quantity
+
+    cursor.close()
+    return burns
+        
+
 def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
     try:
         r = requests.get(url, timeout=fetch_timeout)
