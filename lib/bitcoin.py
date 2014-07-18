@@ -582,24 +582,6 @@ def normalize_quantity(quantity, divisible=True):
         return float((D(quantity) / D(config.UNIT)).quantize(D('.00000000'), rounding=decimal.ROUND_HALF_EVEN))
     else: return quantity
 
-def get_btc_balance(address, normalize=False):
-    # TODO: shows unconfirmed BTC balance, while counterpartyd shows only confirmed balances for all other assets.
-    """returns the {} balance for a specific address""".format(config.BTC)
-    if config.INSIGHT_ENABLE:
-        r = requests.get(config.INSIGHT + '/api/addr/' + address)
-        if r.status_code != 200:
-            return "???"
-        else:
-            data = r.json()
-            return data['balance'] if normalize else data['balanceSat']
-    else: #use blockchain
-        r = requests.get("https://blockchain.info/q/addressbalance/" + address)
-        # ^any other services that provide this?? (blockexplorer.com doesn't...)
-        if r.status_code != 200:
-            return "???"
-        else:
-            return normalize_quantity(int(r.text)) if normalize else int(r.text)
-
 def get_btc_supply(normalize=False):
     """returns the total supply of {} (based on what Bitcoin Core says the current block height is)""".format(config.BTC)
     block_count = get_block_count()

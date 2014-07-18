@@ -479,7 +479,7 @@ def balances (address):
     address_data = get_address(db, address=address)
     balances = address_data['balances']
     table = PrettyTable(['Asset', 'Amount'])
-    table.add_row([config.BTC, bitcoin.get_btc_balance(address, normalize=True)])  # BTC
+    table.add_row([config.BTC, blockchain.getaddressinfo(address)['balance']])  # BTC
     for balance in balances:
         asset = balance['asset']
         quantity = util.devise(db, balance['quantity'], balance['asset'], 'output')
