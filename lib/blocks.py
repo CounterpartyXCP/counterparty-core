@@ -60,6 +60,8 @@ def parse_tx (db, tx):
     message = tx['data'][4:]
     if message_type_id == send.ID:
         send.parse(db, tx, message)
+    elif message_type_id == burn.ID:
+        burn.parse(db, tx, message)
     elif message_type_id == order.ID:
         order.parse(db, tx, message)
     elif message_type_id == btcpay.ID:
