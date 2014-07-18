@@ -315,7 +315,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     if blockchain_service_name:
         config.BLOCKCHAIN_SERVICE_NAME = blockchain_service_name
     elif has_config and 'blockchain-service-name' in configfile['Default'] and configfile['Default']['blockchain-service-name']:
-        config.BLOCKCHAIN_SERVICE_NAME = configfile['Default'].getboolean('blockchain-service-name')
+        config.BLOCKCHAIN_SERVICE_NAME = configfile['Default']['blockchain-service-name']
     else:
         config.BLOCKCHAIN_SERVICE_NAME = 'blockr'
 
