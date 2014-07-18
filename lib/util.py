@@ -381,14 +381,10 @@ def version_check (db):
 def database_check (db, blockcount):
     """Checks {} database to see if the {} server has caught up with Bitcoind.""".format(config.XCP_NAME, config.XCP_CLIENT)
     cursor = db.cursor()
-    TRIES = 14
-    for i in range(TRIES):
-        block_index = last_block(db)['block_index']
-        if block_index >= blockcount:
-            cursor.close()
-            return
-        print('Database not up‐to‐date. Sleeping for one second. (Try {}/{})'.format(i+1, TRIES), file=sys.stderr)
-        time.sleep(1)
+    block_index = last_block(db)['block_index']
+    if block_index >= blockcount:
+        cursor.close()
+        return
     raise exceptions.DatabaseError('{} database is behind Bitcoind. Is the {} server running?'.format(config.XCP_NAME, config.XCP_CLIENT))
 
 

@@ -452,7 +452,7 @@ class APIServer(threading.Thread):
 
             try:
                 util.database_check(db, latestBlockIndex)
-            except:
+            except exceptions.DatabaseError as e:
                 caught_up = False
             else:
                 caught_up = True
