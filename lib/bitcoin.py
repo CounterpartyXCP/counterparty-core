@@ -633,39 +633,6 @@ def get_unspent_txouts(address, normalize=False):
         wallet_unspent = rpc('listunspent', [0, 999999])
         return [output for output in wallet_unspent if output['address'] == address]
     else:
-        if config.INSIGHT_ENABLE:
-            r = requests.get(config.INSIGHT + '/api/addr/' + address + '/utxo')
-            if r.status_code != 200:
-                raise Exception("Can't get unspent txouts: insight returned bad status code: %s" % r.status_code)
-
-            outputs = r.json()
-
-            if not normalize: #listed normalized by default out of insight...we need to take to satoshi
-                for d in outputs:
-                    d['quantity'] = int(d['quantity'] * config.UNIT)
-        else: #use blockchain
-            r = requests.get("https://blockchain.info/unspent?active=" + address)
-            if r.status_code == 500 and r.text.lower() == "no free outputs to spend":
-                return []
-            elif r.status_code != 200:
-                raise Exception("Bad status code returned from blockchain.info: %s" % r.status_code)
-            data = r.json()['unspent_outputs']
-            outputs = []
-            for d in data:
-                #blockchain.info lists the txhash in some weird reversed string notation with character pairs fipped...fun
-                d['tx_hash'] = d['tx_hash'][::-1] #reverse string
-                d['tx_hash'] = ''.join([d['tx_hash'][i:i+2][::-1] for i in range(0, len(d['tx_hash']), 2)]) #flip the character pairs within the string
-                outputs.append({
-                    'account': "",
-                    'address': address,
-                    'txid': d['tx_hash'],
-                    'vout': d['tx_output_n'],
-                    'ts': None,
-                    'scriptPubKey': d['script'],
-                    'amount': normalize_quantity(d['value']) if normalize else d['value'],  # This is what Bitcoin uses for a field name.
-                    'confirmations': d['confirmations'],
-                })
-        return outputs
-
+        outputs = blockchain.listunspent(address)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

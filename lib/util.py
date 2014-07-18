@@ -713,4 +713,15 @@ def supplies (db):
     cursor.close()
     return supplies
 
+def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
+    try:
+        r = requests.get(url, timeout=fetch_timeout)
+    except Exception as e:
+        raise Exception("Got get_url request error: %s" % e)
+    else:
+        if r.status_code != 200 and abort_on_error:
+            raise Exception("Bad status code returned: '%s'. result body: '%s'." % (r.status_code, r.text))
+        result = json.loads(r.text) if is_json else r.text
+    return result
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
