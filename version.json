@@ -3,5 +3,5 @@
 	"minimum_version_minor": 33,
 	"minimum_version_revision": 0,
 	"reason": "call_date and call_price sanity checks",
-	"block_index": 0
+	"block_index": 312000
 }
