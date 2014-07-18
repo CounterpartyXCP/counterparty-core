@@ -78,10 +78,10 @@ def gettransaction(tx_hash):
             'txid': tx_hash,
             'version': tx['data']['tx']['version'],
             'locktime': tx['data']['tx']['locktime'],
-            'blockhash': tx['data']['tx']['blockhash'],
-            'confirmations': tx['data']['tx']['confirmations'],
-            'time': tx['data']['tx']['time'],
-            'blocktime': tx['data']['tx']['blocktime'],
+            'blockhash': tx['data']['tx'].get('blockhash', None), #will be None if not confirmed yet...
+            'confirmations': tx['data']['tx'].get('confirmations', None),
+            'time': tx['data']['tx'].get('time', None),
+            'blocktime': tx['data']['tx'].get('blocktime', None),
             'valueOut': valueOut,
             'vin': tx['data']['tx']['vin'],
             'vout': tx['data']['tx']['vout']
