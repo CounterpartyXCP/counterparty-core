@@ -9,9 +9,8 @@ from fractions import Fraction
 
 from . import (util, config, exceptions, bitcoin, util)
 
-# TODO: reason
-FORMAT = '>QQ'
-LENGTH = 8 + 8
+FORMAT = '>QQ8p'
+LENGTH = 8 + 8 + 8
 ID = 60
 
 
@@ -36,8 +35,9 @@ def validate (db, source, asset, quantity, block_index):
 
     return quantity, problems
 
-def compose (db, source, asset, quantity, overburn=False):
+def compose (db, source, asset, quantity, tag, overburn=False):
     cursor = db.cursor()
+    if not tag: tag = ''
 
     quantity, problems = validate(db, source, asset, quantity, util.last_block(db)['block_index'])
     if problems: raise exceptions.BurnError(problems)
@@ -59,7 +59,7 @@ def compose (db, source, asset, quantity, overburn=False):
 
         asset_id = util.asset_id(asset)
         data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
-        data += struct.pack(FORMAT, asset_id, quantity)
+        data += struct.pack(FORMAT, asset_id, quantity, tag)
         cursor.close()
         return (source, [], data)
 
@@ -79,11 +79,11 @@ def parse (db, tx, message=None):
         # Unpack message.
         try:
             assert len(message) == LENGTH
-            asset_id, quantity = struct.unpack(FORMAT, message)
+            asset_id, quantity, tag = struct.unpack(FORMAT, message)
             asset = util.asset_name(asset_id)
             status = 'valid'
         except (AssertionError, struct.error) as e:
-            asset, quantity = None, None
+            asset, quantity, tag = None, None, None
             status = 'invalid: could not unpack'
 
     if status == 'valid':
@@ -141,9 +141,10 @@ def parse (db, tx, message=None):
         'sent': sent,
         'burned': burned,
         'earned': earned,
+        'tag': tag,
         'status': status,
     }
-    sql='insert into burns values(:tx_index, :tx_hash, :block_index, :source, :asset, :sent, :burned, :earned, :status)'
+    sql='insert into burns values(:tx_index, :tx_hash, :block_index, :source, :asset, :sent, :burned, :earned, :tag, :status)'
     cursor.execute(sql, bindings)
 
     cursor.close()

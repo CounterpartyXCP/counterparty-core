@@ -606,6 +606,7 @@ if __name__ == '__main__':
     parser_burn.add_argument('--source', required=True, help='the source address')
     parser_burn.add_argument('--asset', required=True, help='the asset to burn')
     parser_burn.add_argument('--quantity', required=True, help='quantity of {} to be destroyed'.format(config.BTC))
+    parser_burn.add_argument('--tag', type=str, help='the reason')
     parser_burn.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
     parser_cancel= subparsers.add_parser('cancel', help='cancel an open order or bet you created')
@@ -874,14 +875,14 @@ if __name__ == '__main__':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
         quantity = util.devise(db, args.quantity, config.BTC, 'input')
         cli('create_burn', {'source': args.source, 'quantity': quantity,
-                            'asset': args.asset, 'fee': args.fee,
-                            'allow_unconfirmed_inputs': args.unconfirmed,
-                            'encoding': args.encoding, 'fee_per_kb':
-                            args.fee_per_kb, 'regular_dust_size':
+                            'asset': args.asset, 'tag', args.tag, 'fee':
+                            args.fee, 'allow_unconfirmed_inputs':
+                            args.unconfirmed, 'encoding': args.encoding,
+                            'fee_per_kb': args.fee_per_kb, 'regular_dust_size':
                             args.regular_dust_size, 'multisig_dust_size':
                             args.multisig_dust_size, 'op_return_value':
                             args.op_return_value},
-        args.unsigned)
+            args.unsigned)
 
     elif args.action == 'cancel':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -893,7 +894,7 @@ if __name__ == '__main__':
                               args.regular_dust_size, 'multisig_dust_size':
                               args.multisig_dust_size, 'op_return_value':
                               args.op_return_value},
-        args.unsigned)
+            args.unsigned)
 
     elif args.action == 'callback':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')

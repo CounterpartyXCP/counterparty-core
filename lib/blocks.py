@@ -530,6 +530,7 @@ def initialise(db):
                       sent INTEGER,
                       burned INTEGER,
                       earned INTEGER,
+                      tag TEXT,
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
