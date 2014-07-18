@@ -228,7 +228,7 @@ def test_initialise ():
     cursor.close()
 
 def test_burn ():
-    unsigned_tx_hex = bitcoin.transaction(burn.compose(db, source_default, 'BTC', int(.62 * quantity)), '', encoding='multisig')
+    unsigned_tx_hex = bitcoin.transaction(burn.compose(db, source_default, 'BTC', int(.62 * quantity), ''), encoding='multisig')
 
     parse_hex(unsigned_tx_hex)
 
@@ -390,7 +390,7 @@ def test_cancel ():
     output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_overburn ():
-    unsigned_tx_hex = bitcoin.transaction(burn.compose(db, source_default, (1 * config.UNIT), overburn=True), encoding='multisig')  # Try to burn a whole 'nother BTC.
+    unsigned_tx_hex = bitcoin.transaction(burn.compose(db, source_default, 'BTC', (1 * config.UNIT), '', overburn=True), encoding='multisig')  # Try to burn a whole 'nother BTC.
 
     parse_hex(unsigned_tx_hex)
 

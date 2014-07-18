@@ -98,8 +98,8 @@ def parse (db, tx, message=None):
     # TODO: from here…
     # Bitcoin?
     if asset == config.BTC:
+        sent = quantity
         if status == 'valid':
-            sent = quantity
             # Calculate quantity of XCP earned. (Maximum 1 BTC in total, ever.)
             cursor = db.cursor()
             cursor.execute('''SELECT * FROM burns WHERE (status = ? AND source = ?)''', ('valid', tx['source']))
