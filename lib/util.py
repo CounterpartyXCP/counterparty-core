@@ -380,7 +380,7 @@ def version_check (db):
 
 def database_check (db, blockcount):
     """Checks {} database to see if the {} server has caught up with Bitcoind.""".format(config.XCP_NAME, config.XCP_CLIENT)
-    if last_block(db)['block_index'] < blockcount:
+    if last_block(db)['block_index'] + 1 < blockcount:
         raise exceptions.DatabaseError('{} database is behind Bitcoind. Is the {} server running?'.format(config.XCP_NAME, config.XCP_CLIENT))
     return
 
