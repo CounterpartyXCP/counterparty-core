@@ -63,7 +63,7 @@ def compose (db, source, asset, quantity, tag, overburn=False):
 
         asset_id = util.asset_id(asset)
         data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
-        data += struct.pack(FORMAT, asset_id, quantity, tag)
+        data += struct.pack(FORMAT, asset_id, quantity, tag.encode('utf-8'))
         cursor.close()
         return (source, [], data)
 
@@ -85,28 +85,31 @@ def parse (db, tx, message=None):
         try:
             assert len(message) == LENGTH
             asset_id, quantity, tag = struct.unpack(FORMAT, message)
+            tag = tag.decode('utf-8')
             asset = util.asset_name(asset_id)
             status = 'valid'
         except (AssertionError, struct.error) as e:
             asset, quantity, tag = None, None, None
             status = 'invalid: could not unpack'
+        except (UnicodeDecodeError,) as e:
+            tag = ''
 
     if status == 'valid':
         quantity, problems = validate(db, tx['source'], asset, quantity, tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
 
-    # TODO: from here…
     # Bitcoin?
     if asset == config.BTC:
         sent = quantity
         if status == 'valid':
             # Calculate quantity of XCP earned. (Maximum 1 BTC in total, ever.)
             cursor = db.cursor()
-            cursor.execute('''SELECT * FROM burns WHERE (status = ? AND source = ?)''', ('valid', tx['source']))
+            cursor.execute('''SELECT * FROM burns WHERE (status = ? AND source = ? AND asset = ?)''', ('valid', tx['source'], config.BTC))
             burns = cursor.fetchall()
             already_burned = sum([burn['burned'] for burn in burns])
             ONE = 1 * config.UNIT
             max_burn = ONE - already_burned
+            assert max_burn >= 0
             if quantity > max_burn: burned = max_burn   # Exceeded maximum burn; earn what you can.
             else: burned = quantity
 

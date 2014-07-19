@@ -170,9 +170,9 @@ def log (db, command, category, bindings):
 
         elif category == 'burns':
             if bindings['asset'] == config.BTC:
-                logging.info('Burn: {} burned {} for {} ({}) [{}]'.format(bindings['source'], output(bindings['burned'], config.BTC), output(bindings['earned'], config.XCP), bindings['tx_hash'], bindings['status']))
+                logging.info('Burn: {} burned {} for {} with tag ‘{}’ ({}) [{}]'.format(bindings['source'], output(bindings['burned'], config.BTC), output(bindings['earned'], config.XCP), bindings['tag'], bindings['tx_hash'], bindings['status']))
             else:
-                logging.info('Burn: {} burned {} ({}) [{}]'.format(bindings['source'], output(bindings['burned'], config.BTC), bindings['tx_hash'], bindings['status']))
+                logging.info('Burn: {} burned {} with tag ‘{}’ ({}) [{}]'.format(bindings['source'], output(bindings['burned'], bindings['asset']), bindings['tag'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'cancels':
             logging.info('Cancel: {} ({}) [{}]'.format(bindings['offer_hash'], bindings['tx_hash'], bindings['status']))
