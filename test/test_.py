@@ -486,6 +486,12 @@ def test_pending_and_resolved_rps_match_expiration ():
     # resolved game wins
     check_movment(db, 'credit', expiration_block, source_default, 'XCP', 2 * 11021665, rps_match_id)
 
+def test_burn_userasset ():
+    unsigned_tx_hex = bitcoin.transaction(burn.compose(db, source_default, 'BBBC', 1, 'noreason'), encoding='multisig')
+
+    parse_hex(unsigned_tx_hex)
+
+    output_new[inspect.stack()[0][3]] = unsigned_tx_hex
 
 def test_json_rpc():
 

@@ -3,7 +3,7 @@ Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Change quantity: 1.3789914 BTC
 Credit: 930.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d>
-Burn: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 0.62 BTC for 930.0 XCP (6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d) [valid]
+Burn: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 0.62 BTC for 930.0 XCP with tag ‘ProofOfBurn’ (6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d) [valid]
 Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Change quantity: 1.9988354 BTC
@@ -166,7 +166,7 @@ Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Change quantity: 0.9989914 BTC
 Credit: 569.9988687 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034>
-Burn: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 0.38 BTC for 569.9988687 XCP (8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034) [valid]
+Burn: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 0.38 BTC for 569.9988687 XCP with tag ‘ProofOfBurn’ (8f11b05da785e43e713d03774c6bd3405d99cd3024af334ffd68db663aa37034) [valid]
 Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Change quantity: 1.9988354 BTC
@@ -244,4 +244,9 @@ Change quantity: 1.9987574 BTC
 RPS Resolved: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc is playing 3 on a 5-moves game with mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns with a wager of 0.11021665 XCP (a83dd0ccbffe39d071cc317ddf6e97f5c6b1c87af91919271f9fa140b0508c6c6da43b944e494e885e69af021f93c6d9331c78aa228084711429160a5bbd15b5) [resolved and pending]
 Credit: 0.2204333 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #wins# <a83dd0ccbffe39d071cc317ddf6e97f5c6b1c87af91919271f9fa140b0508c6c6da43b944e494e885e69af021f93c6d9331c78aa228084711429160a5bbd15b5>
 Expired RPS Match: a83dd0ccbffe39d071cc317ddf6e97f5c6b1c87af91919271f9fa140b0508c6c6da43b944e494e885e69af021f93c6d9331c78aa228084711429160a5bbd15b5
+Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
+New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
+Change quantity: 1.9988354 BTC
+Debit: 1 BBBC from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <3f79bb7b435b05321651daefd374cdc681dc06faa65e374e38337b88ca046dea>
+Burn: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 1 BBBC with tag ‘noreaso’ (3f79bb7b435b05321651daefd374cdc681dc06faa65e374e38337b88ca046dea) [valid]
 STOP TEST
