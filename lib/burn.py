@@ -19,7 +19,7 @@ def validate (db, source, asset, quantity, block_index):
 
     if block_index < 312500 and not config.TESTNET: # Protocol change.
         if asset != config.BTC:
-            problems.append('feature not live yet')
+            problems.append('feature live with block 312500')
 
     if not isinstance(quantity, int):
         problems.append('quantity must be in satoshis')
