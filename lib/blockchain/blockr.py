@@ -70,7 +70,7 @@ def getaddressinfo(address):
 
 def gettransaction(tx_hash):
     tx = util.get_url(get_host() + '/api/v1/tx/raw/{}'.format(tx_hash), abort_on_error=True)
-    if 'status' in infos and infos['status'] == 'success':
+    if 'status' in tx and tx['status'] == 'success':
         valueOut = 0
         for vout in tx['data']['tx']['vout']:
             valueOut += vout['value']
@@ -78,10 +78,10 @@ def gettransaction(tx_hash):
             'txid': tx_hash,
             'version': tx['data']['tx']['version'],
             'locktime': tx['data']['tx']['locktime'],
-            'blockhash': tx['data']['tx']['blockhash'],
-            'confirmations': tx['data']['tx']['confirmations'],
-            'time': tx['data']['tx']['time'],
-            'blocktime': tx['data']['tx']['blocktime'],
+            'blockhash': tx['data']['tx'].get('blockhash', None), #will be None if not confirmed yet...
+            'confirmations': tx['data']['tx'].get('confirmations', None),
+            'time': tx['data']['tx'].get('time', None),
+            'blocktime': tx['data']['tx'].get('blocktime', None),
             'valueOut': valueOut,
             'vin': tx['data']['tx']['vin'],
             'vout': tx['data']['tx']['vout']

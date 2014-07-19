@@ -16,11 +16,10 @@ import logging
 
 import requests
 from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
-from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec
-from pycoin.scripts import bitcoin_utils
+from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec, is_sec_compressed, EncodingError
 from Crypto.Cipher import ARC4
 
-from . import (config, exceptions, util)
+from . import config, exceptions, util, blockchain
 
 # Constants
 OP_RETURN = b'\x6a'
@@ -433,10 +432,13 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
             # Derive public key.
             public_key_hex = private_key_to_public_key(private_key_wif)
 
-        pubkeypair = bitcoin_utils.parse_as_public_pair(public_key_hex)
-        if not pubkeypair:
+        #convert public key hex into public key pair (sec)
+        try:
+            sec = binascii.unhexlify(public_key_hex)
+            is_compressed = is_sec_compressed(sec)
+            public_key = sec
+        except (EncodingError, binascii.Error):
             raise exceptions.InputError('Invalid private key.')
-        public_key = public_pair_to_sec(pubkeypair, compressed=True)
 
     # Protocol change.
     if encoding == 'pubkeyhash' and get_block_count() < 293000 and not config.TESTNET:
@@ -601,10 +603,7 @@ def get_btc_supply(normalize=False):
 def get_unspent_txouts(address, normalize=False):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
-        *
     """
-
-    # Unittest
     if config.UNITTEST:
         CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
         with open(CURR_DIR + '/../test/listunspent.test.json', 'r') as listunspent_test_file:   # HACK
@@ -615,6 +614,6 @@ def get_unspent_txouts(address, normalize=False):
         wallet_unspent = rpc('listunspent', [0, 999999])
         return [output for output in wallet_unspent if output['address'] == address]
     else:
-        outputs = blockchain.listunspent(address)
+        return blockchain.listunspent(address)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
