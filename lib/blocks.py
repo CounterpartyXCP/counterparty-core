@@ -1080,8 +1080,7 @@ def follow (db):
             if block_index == block_count:
                 check_conservation(db)
 
-            # Clear list of non‐supported transactions every ten blocks.
-            # Remove any transactions in the not_supported list older than ten blocks
+            # Remove any non‐supported transactions older than ten blocks.
             if len(not_supported_sorted):
                 #logging.debug("First in list: %s. block_index: %s, block_count: %s" % (
                 #    not_supported_sorted[0], block_index, block_count))
