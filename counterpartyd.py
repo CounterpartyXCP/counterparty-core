@@ -602,7 +602,7 @@ if __name__ == '__main__':
     parser_dividend.add_argument('--dividend-asset', required=True, help='asset in which to pay the dividends')
     parser_dividend.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
-    parser_burn = subparsers.add_parser('burn', help='destroy {} tm earn XCP, during an initial period of time')
+    parser_burn = subparsers.add_parser('burn', help='destroy some quantity of an asset; destroy BTC to earn XCP, during an initial period of time')
     parser_burn.add_argument('--source', required=True, help='the source address')
     parser_burn.add_argument('--asset', required=True, help='the asset to burn')
     parser_burn.add_argument('--quantity', required=True, help='quantity of {} to be destroyed'.format(config.BTC))
