@@ -45,15 +45,15 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     if call_date < 0: problems.append('negative call date')
 
     # Callable, or not.
-    if block_index >= 310000 or config.TESTNET: # Protocol change.
-        if call_date and not callable_:
-            problems.append('call date for non‐callable asset')
-        if call_price and not callable_:
-            problems.append('call price for non‐callable asset')
-    elif not callable_:
-        if block_index >= 312500 or config.TESTNET:  # Protocol change.
+    if not callable_:
+        if block_index >= 312500 or config.TESTNET: # Protocol change.
             call_date = 0
             call_price = 0.0
+        elif block_index >= 310000:                 # Protocol change.
+            if call_date:
+                problems.append('call date for non‐callable asset')
+            if call_price:
+                problems.append('call price for non‐callable asset')
 
     # Valid re-issuance?
     cursor = db.cursor()
