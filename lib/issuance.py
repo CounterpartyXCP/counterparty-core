@@ -44,6 +44,17 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     if call_price < 0: problems.append('negative call price')
     if call_date < 0: problems.append('negative call date')
 
+    # Callable, or not.
+    if block_index >= 310000 or config.TESTNET: # Protocol change.
+        if call_date and not callable_:
+            problems.append('call date for non‐callable asset')
+        if call_price and not callable_:
+            problems.append('call price for non‐callable asset')
+    elif not callable_:
+        if block_index >= 312500 or config.TESTNET:  # Protocol change.
+            call_date = 0
+            call_price = 0.0
+
     # Valid re-issuance?
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM issuances \
@@ -63,7 +74,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
             problems.append('cannot change divisibility')
         if bool(last_issuance['callable']) != bool(callable_):
             problems.append('cannot change callability')
-        if (last_issuance['callable'] or (block_index < 312500 and not config.TESTNET)) and last_issuance['call_date'] > call_date:  # Protocol change.
+        if last_issuance['call_date'] > call_date and call_date != 0:
             problems.append('cannot advance call date')
         if last_issuance['call_price'] > call_price:
             problems.append('cannot reduce call price')
@@ -92,17 +103,6 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
                 fee = 5
             if fee and (not balances or balances[0]['quantity'] < fee):
                 problems.append('insufficient funds')
-
-    # Callable, or not.
-    if block_index >= 310000 or config.TESTNET: # Protocol change.
-        if call_date and not callable_:
-            problems.append('call date for non‐callable asset')
-        if call_price and not callable_:
-            problems.append('call price for non‐callable asset')
-    elif not callable_:
-        if block_index >= 312500 or config.TESTNET:  # Protocol change.
-            call_date = 0
-            call_price = 0.0
 
     # For SQLite3
     call_date = min(call_date, config.MAX_INT)
