@@ -368,7 +368,7 @@ def version_check (db):
                 passed = False
 
     if not passed:
-        explanation = 'Your version of counterpartyd is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: {}. Please upgrade to the latest version and restart the server.'.format(config.VERSION_STRING, versions['block_index'], versions['minimum_version_major'], versions['minimum_version_minor'], versions['minimum_version_revision'], versions['reason'])
+        explanation = 'Your version of counterpartyd is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: ‘{}’. Please upgrade to the latest version and restart the server.'.format(config.VERSION_STRING, versions['block_index'], versions['minimum_version_major'], versions['minimum_version_minor'], versions['minimum_version_revision'], versions['reason'])
 
         if last_block(db)['block_index'] >= versions['block_index']:
             raise exceptions.VersionError(explanation)
@@ -380,16 +380,9 @@ def version_check (db):
 
 def database_check (db, blockcount):
     """Checks {} database to see if the {} server has caught up with Bitcoind.""".format(config.XCP_NAME, config.XCP_CLIENT)
-    cursor = db.cursor()
-    TRIES = 14
-    for i in range(TRIES):
-        block_index = last_block(db)['block_index']
-        if block_index >= blockcount:
-            cursor.close()
-            return
-        print('Database not up‐to‐date. Sleeping for one second. (Try {}/{})'.format(i+1, TRIES), file=sys.stderr)
-        time.sleep(1)
-    raise exceptions.DatabaseError('{} database is behind Bitcoind. Is the {} server running?'.format(config.XCP_NAME, config.XCP_CLIENT))
+    if last_block(db)['block_index'] + 1 < blockcount:
+        raise exceptions.DatabaseError('{} database is behind Bitcoind. Is the {} server running?'.format(config.XCP_NAME, config.XCP_CLIENT))
+    return
 
 
 def isodt (epoch_time):
@@ -712,5 +705,16 @@ def supplies (db):
 
     cursor.close()
     return supplies
+
+def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
+    try:
+        r = requests.get(url, timeout=fetch_timeout)
+    except Exception as e:
+        raise Exception("Got get_url request error: %s" % e)
+    else:
+        if r.status_code != 200 and abort_on_error:
+            raise Exception("Bad status code returned: '%s'. result body: '%s'." % (r.status_code, r.text))
+        result = json.loads(r.text) if is_json else r.text
+    return result
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

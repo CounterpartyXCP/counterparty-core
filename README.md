@@ -10,7 +10,7 @@ The Counterparty protocol specification may be found at
 
 # Dependencies
 * [Python 3](http://python.org)
-* Python 3 packages: apsw, requests, appdirs, prettytable, python-dateutil, json-rpc, cherrypy, pycoin, pyzmq(v2.2+), pycrypto (see [this link](https://github.com/CounterpartyXCP/counterpartyd_build/blob/master/dist/reqs.txt) for exact working versions)
+* Python 3 packages: apsw, requests, appdirs, prettytable, python-dateutil, json-rpc, tornado, flask, Flask-HTTPAuth, pycoin, pyzmq(v2.2+), pycrypto (see [this link](https://github.com/CounterpartyXCP/counterpartyd_build/blob/master/dist/reqs.txt) for exact working versions)
 * Bitcoind
 
 # Installation
@@ -52,6 +52,13 @@ If and only if counterpartyd is to be run on the Bitcoin testnet, with the
 `--testnet` CLI option, Bitcoind must be set to do the same (`-testnet=1`).
 counterpartyd may run with the `--testcoin` option on any blockchain,
 however.
+
+# Updating your requirements
+
+Sometimes the underlying package requirements may change for `counterpartyd`. If you build and installed it from scratch,
+you can manually update these requirements by executing something like:
+
+    ```pip install --upgrade -r pip-requirements.txt```
 
 # Test suite
 
@@ -152,7 +159,7 @@ The following examples are abridged for parsimony.
 	Example: Bet on Super Bowl Feed. Denver vs. Seattle. Feed value of 1 means Seattle Wins. Feed value of 2 means 	        	Denver Wins. This command places a 1 XCP bet on the Super Bowl Feed for Seattle to win, paying out 2 to         	1. The bet will expire in 100 blocks and the settlement value of the bet is based on the first feed 	                update after the deadline timestamp of February 3, 2014 1:39 PM US Eastern Standard Time (UTC-0500)
 	```
 	bet --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --feed-address=n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fH --bet-type=Equal
-	--deadline=2014-02-03T13:39:00-0500 --wager=1 --counterwager=2 --target-value=1 --leverage=5040 --expiration=100
+	--deadline=2014-02-03T13:39:00-0500 --wager=1 --counterwager=2 --target-value=1 --expiration=100
 	```
 
 	Contract for Difference:

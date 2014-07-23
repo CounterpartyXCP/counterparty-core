@@ -13,8 +13,11 @@ from logging import handlers as logging_handlers
 D = decimal.Decimal
 
 import apsw
-import cherrypy
-from cherrypy import wsgiserver
+import flask
+from flask.ext.httpauth import HTTPBasicAuth
+from tornado.wsgi import WSGIContainer
+from tornado.httpserver import HTTPServer
+from tornado.ioloop import IOLoop
 import jsonrpc
 from jsonrpc import dispatcher
 
@@ -36,7 +39,12 @@ API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel',
 
 COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
                 'multisig_dust_size', 'op_return_value', 'pubkey',
-                'allow_unconfirmed_inputs', 'fee', 'fee_provided', 'armory']
+                'allow_unconfirmed_inputs', 'fee', 'fee_provided']
+API_MAX_LOG_SIZE = 10 * 1024 * 1024 #max log size of 20 MB before rotation (make configurable later)
+API_MAX_LOG_COUNT = 10
+
+current_api_status_code = None #is updated by the APIStatusPoller
+current_api_status_response_json = None #is updated by the APIStatusPoller
 
 
 # TODO: ALL queries EVERYWHERE should be done with these methods
@@ -191,7 +199,7 @@ def compose_transaction(db, name, params,
                         pubkey=None,
                         allow_unconfirmed_inputs=False,
                         fee=None,
-                        fee_provided=0, armory=False):
+                        fee_provided=0):
     tx_info = sys.modules['lib.{}'.format(name)].compose(db, **params)
     return bitcoin.transaction(tx_info, encoding=encoding,
                                         fee_per_kb=fee_per_kb,
@@ -201,7 +209,7 @@ def compose_transaction(db, name, params,
                                         public_key_hex=pubkey,
                                         allow_unconfirmed_inputs=allow_unconfirmed_inputs,
                                         exact_fee=fee,
-                                        fee_provided=fee_provided, armory=armory)
+                                        fee_provided=fee_provided)
 
 def sign_transaction(unsigned_tx_hex, private_key_wif=None):
     return bitcoin.sign_tx(unsigned_tx_hex, private_key_wif=private_key_wif)
@@ -225,15 +233,55 @@ def do_transaction(db, name, params, private_key_wif=None, **kwargs):
     signed_tx = sign_transaction(unsigned_tx, private_key_wif=private_key_wif)
     return broadcast_transaction(signed_tx)
 
+class APIStatusPoller(threading.Thread):
+    """Poll every few seconds for the length of time since the last version check, as well as the bitcoin status"""
+    def __init__(self):
+        self.last_check = 0
+        threading.Thread.__init__(self)
+        
+    def run(self):
+        global current_api_status_code, current_api_status_response_json
+        db = util.connect_to_db(flags='SQLITE_OPEN_READONLY')
+        
+        while True:
+            try:
+                # Check version.
+                if time.time() - self.last_check >= 4 * 3600: # Four hours since last check.
+                    code = 10
+                    util.version_check(db)
+                # Check that bitcoind is running, communicable, and caught up with the blockchain.
+                # Check that the database has caught up with bitcoind.                    
+                if time.time() - self.last_check > 10 * 60: # Ten minutes since last check.
+                    code = 11
+                    bitcoin.bitcoind_check(db)
+                    code = 12
+                    util.database_check(db, bitcoin.get_block_count())  # TODO: If not reparse or rollback, once those use API.
+                self.last_check = time.time()
+            except Exception as e:
+                exception_name = e.__class__.__name__
+                exception_text = str(e)
+                jsonrpc_response = jsonrpc.exceptions.JSONRPCServerError(message=exception_name, data=exception_text)
+                current_api_status_code = code
+                current_api_status_response_json = jsonrpc_response.json.encode()
+            else:
+                current_api_status_code = None
+                current_api_status_response_json = None
+            time.sleep(2)
 
-#TODO: Move to jsonrpc.py
 class APIServer(threading.Thread):
-
-    def __init__ (self):
+    def __init__(self):
         threading.Thread.__init__(self)
 
-    def run (self):
+    def run(self):
         db = util.connect_to_db(flags='SQLITE_OPEN_READONLY')
+        app = flask.Flask(__name__)
+        auth = HTTPBasicAuth()
+
+        @auth.get_password
+        def get_pw(username):
+            if username == config.RPC_USER:
+                return config.RPC_PASSWORD
+            return None        
 
         ######################
         #READ API
@@ -297,9 +345,6 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def broadcast_tx(signed_tx_hex):
             return broadcast_transaction(signed_tx_hex)
-
-
-
 
         @dispatcher.add_method
         def get_messages(block_index):
@@ -407,7 +452,7 @@ class APIServer(threading.Thread):
 
             try:
                 util.database_check(db, latestBlockIndex)
-            except:
+            except exceptions.DatabaseError as e:
                 caught_up = False
             else:
                 caught_up = True
@@ -463,92 +508,58 @@ class APIServer(threading.Thread):
             cursor.close()
             return names
 
+        def _set_cors_headers(response):
+            if config.RPC_ALLOW_CORS:
+                response.headers['Access-Control-Allow-Origin'] = '*'
+                response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+                response.headers['Access-Control-Allow-Headers'] = 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type';
+    
+        @app.route('/', methods=["OPTIONS",])
+        @app.route('/api/', methods=["OPTIONS",])
+        def handle_options():
+            response = flask.Response('', 204)
+            _set_cors_headers(response)
+            return response
 
-        class API(object):
-            @cherrypy.expose
-            def index(self):
-                try:
-                    data = cherrypy.request.body.read().decode('utf-8')
-                except ValueError:
-                    raise cherrypy.HTTPError(400, 'Invalid JSON document')
+        @app.route('/', methods=["POST",])
+        @app.route('/api/', methods=["POST",])
+        @auth.login_required
+        def handle_post():
+            try:
+                request_json = flask.request.get_data().decode('utf-8')
+                request_data = json.loads(request_json)
+                assert 'id' in request_data and request_data['jsonrpc'] == "2.0" and request_data['method']
+                # params may be omitted 
+            except:
+                obj_error = jsonrpc.exceptions.JSONRPCInvalidRequest(data="Invalid JSON-RPC 2.0 request format")
+                return flask.Response(obj_error.json.encode(), 200, mimetype='application/json')
+            
+            #only arguments passed as a dict are supported
+            if request_data.get('params', None) and not isinstance(request_data['params'], dict):
+                obj_error = jsonrpc.exceptions.JSONRPCInvalidRequest(
+                    data='Arguments must be passed as a JSON object (list of unnamed arguments not supported)')
+                return flask.Response(obj_error.json.encode(), 200, mimetype='application/json')
+            
+            #return an error if API fails checks
+            if not config.FORCE and current_api_status_code:
+                return flask.Response(current_api_status_response_json, 200, mimetype='application/json')
 
-                cherrypy.response.headers["Content-Type"] = "application/json"
-                #CORS logic is handled in the nginx config
-
-                # Check version.
-                # Check that bitcoind is running, communicable, and caught up with the blockchain.
-                # Check that the database has caught up with bitcoind.
-                if not config.FORCE:
-                    try: self.last_check
-                    except: self.last_check = 0
-                    try:
-                        if time.time() - self.last_check >= 4 * 3600: # Four hours since last check.
-                            code = 10
-                            util.version_check(db)
-                        if time.time() - self.last_check > 10 * 60: # Ten minutes since last check.
-                            code = 11
-                            bitcoin.bitcoind_check(db)
-                            code = 12
-                            util.database_check(db, bitcoin.get_block_count())  # TODO: If not reparse or rollback, once those use API.
-                        self.last_check = time.time()
-                    except Exception as e:
-                        exception_name = e.__class__.__name__
-                        exception_text = str(e)
-                        response = jsonrpc.exceptions.JSONRPCError(code=code, message=exception_name, data=exception_text)
-                        return response.json.encode()
-
-                response = jsonrpc.JSONRPCResponseManager.handle(data, dispatcher)
-                return response.json.encode()
-
-        cherrypy.config.update({
-            'log.screen': False,
-            "environment": "embedded",
-            'log.error_log.propagate': False,
-            'log.access_log.propagate': False,
-            "server.logToScreen" : False
-        })
-        checkpassword = cherrypy.lib.auth_basic.checkpassword_dict(
-            {config.RPC_USER: config.RPC_PASSWORD})
-        app_config = {
-            '/': {
-                'tools.trailing_slash.on': False,
-                'tools.auth_basic.on': True,
-                'tools.auth_basic.realm': config.XCP_CLIENT,
-                'tools.auth_basic.checkpassword': checkpassword,
-            },
-        }
-        application = cherrypy.Application(API(), script_name="/api", config=app_config)
-
-        #disable logging of the access and error logs to the screen
-        application.log.access_log.propagate = False
-        application.log.error_log.propagate = False
+            jsonrpc_response = jsonrpc.JSONRPCResponseManager.handle(request_json, dispatcher)
+            response = flask.Response(jsonrpc_response.json.encode(), 200, mimetype='application/json')
+            _set_cors_headers(response)
+            return response
 
         if not config.UNITTEST:  #skip setting up logs when for the test suite
-            #set up a rotating log handler for this application
-            # Remove the default FileHandlers if present.
-            application.log.error_file = ""
-            application.log.access_file = ""
-            maxBytes = getattr(application.log, "rot_maxBytes", 10000000)
-            backupCount = getattr(application.log, "rot_backupCount", 1000)
-            # Make a new RotatingFileHandler for the error log.
-            fname = getattr(application.log, "rot_error_file", os.path.join(config.DATA_DIR, "api.error.log"))
-            h = logging_handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
-            h.setLevel(logging.DEBUG)
-            h.setFormatter(cherrypy._cplogging.logfmt)
-            application.log.error_log.addHandler(h)
-            # Make a new RotatingFileHandler for the access log.
-            fname = getattr(application.log, "rot_access_file", os.path.join(config.DATA_DIR, "api.access.log"))
-            h = logging_handlers.RotatingFileHandler(fname, 'a', maxBytes, backupCount)
-            h.setLevel(logging.DEBUG)
-            h.setFormatter(cherrypy._cplogging.logfmt)
-            application.log.access_log.addHandler(h)
+            api_logger = logging.getLogger("tornado")
+            h = logging_handlers.RotatingFileHandler(os.path.join(config.DATA_DIR, "api.access.log"), 'a', API_MAX_LOG_SIZE, API_MAX_LOG_COUNT)
+            api_logger.setLevel(logging.INFO)
+            api_logger.addHandler(h)
+            api_logger.propagate = False
 
-        #start up the API listener/handler
-        server = wsgiserver.CherryPyWSGIServer((config.RPC_HOST, config.RPC_PORT), application,
-            numthreads=config.API_NUM_THREADS, request_queue_size=config.API_REQUEST_QUEUE_SIZE)
-        #logging.debug("Initializing API interface…")
+        http_server = HTTPServer(WSGIContainer(app), xheaders=True)
         try:
-            server.start()
+            http_server.listen(config.RPC_PORT, address=config.RPC_HOST)
+            IOLoop.instance().start()        
         except OSError:
             raise Exception("Cannot start the API subsystem. Is {} already running, or is something else listening on port {}?".format(config.XCP_CLIENT, config.RPC_PORT))
 

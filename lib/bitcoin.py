@@ -16,11 +16,10 @@ import logging
 
 import requests
 from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
-from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec
-from pycoin.scripts import bitcoin_utils
+from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec, is_sec_compressed, EncodingError
 from Crypto.Cipher import ARC4
 
-from . import (config, exceptions, util)
+from . import config, exceptions, util, blockchain
 
 # Constants
 OP_RETURN = b'\x6a'
@@ -396,7 +395,7 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
                  multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
                  op_return_value=config.DEFAULT_OP_RETURN_VALUE, exact_fee=None,
                  fee_provided=0, public_key_hex=None,
-                 allow_unconfirmed_inputs=False, armory=False):
+                 allow_unconfirmed_inputs=False):
 
     (source, destination_outputs, data) = tx_info
 
@@ -433,10 +432,13 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
             # Derive public key.
             public_key_hex = private_key_to_public_key(private_key_wif)
 
-        pubkeypair = bitcoin_utils.parse_as_public_pair(public_key_hex)
-        if not pubkeypair:
+        #convert public key hex into public key pair (sec)
+        try:
+            sec = binascii.unhexlify(public_key_hex)
+            is_compressed = is_sec_compressed(sec)
+            public_key = sec
+        except (EncodingError, binascii.Error):
             raise exceptions.InputError('Invalid private key.')
-        public_key = public_pair_to_sec(pubkeypair, compressed=True)
 
     # Protocol change.
     if encoding == 'pubkeyhash' and get_block_count() < 293000 and not config.TESTNET:
@@ -544,33 +546,6 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
     # Serialise inputs and outputs.
     unsigned_tx = serialise(encoding, inputs, destination_outputs, data_output, change_output, source=source, public_key=public_key)
     unsigned_tx_hex = binascii.hexlify(unsigned_tx).decode('utf-8')
-
-    # bip-0010
-    try:
-        if armory:
-            txdp = []
-            dpid = base58_encode(hashlib.sha256(unsigned_tx).digest())[:8]
-            txdp.append(('-----BEGIN-TRANSACTION-' + dpid + '-----').ljust(80,'-'))
-
-            magic_bytes = binascii.hexlify(config.MAGIC_BYTES).decode('utf-8')
-            varIntTxSize = binascii.hexlify(len(unsigned_tx).to_bytes(2, byteorder='big')).decode('utf-8')
-            txdp.append('_TXDIST_{}_{}_{}'.format(magic_bytes, dpid, varIntTxSize))
-            tx_list = unsigned_tx_hex
-            for coin in inputs:
-                tx_list += get_raw_transaction(coin['txid'], json=False)
-            for byte in range(0,len(tx_list),80):
-                txdp.append(tx_list[byte:byte+80] )
-
-            for index, coin in enumerate(inputs):
-                index_fill = str(index).zfill(2)
-                value = '{0:.8f}'.format(coin['amount'])
-                txdp.append('_TXINPUT_{}_{}'.format(index_fill, value))
-
-            txdp.append(('-----END-TRANSACTION-' + dpid + '-----').ljust(80,'-'))
-            unsigned_tx_hex = '\n'.join(txdp)
-    except Exception as e:
-        print(e)
-
     return unsigned_tx_hex
 
 def sign_tx (unsigned_tx_hex, private_key_wif=None):
@@ -609,24 +584,6 @@ def normalize_quantity(quantity, divisible=True):
         return float((D(quantity) / D(config.UNIT)).quantize(D('.00000000'), rounding=decimal.ROUND_HALF_EVEN))
     else: return quantity
 
-def get_btc_balance(address, normalize=False):
-    # TODO: shows unconfirmed BTC balance, while counterpartyd shows only confirmed balances for all other assets.
-    """returns the {} balance for a specific address""".format(config.BTC)
-    if config.INSIGHT_ENABLE:
-        r = requests.get(config.INSIGHT + '/api/addr/' + address)
-        if r.status_code != 200:
-            return "???"
-        else:
-            data = r.json()
-            return data['balance'] if normalize else data['balanceSat']
-    else: #use blockchain
-        r = requests.get("https://blockchain.info/q/addressbalance/" + address)
-        # ^any other services that provide this?? (blockexplorer.com doesn't...)
-        if r.status_code != 200:
-            return "???"
-        else:
-            return normalize_quantity(int(r.text)) if normalize else int(r.text)
-
 def get_btc_supply(normalize=False):
     """returns the total supply of {} (based on what Bitcoin Core says the current block height is)""".format(config.BTC)
     block_count = get_block_count()
@@ -646,10 +603,7 @@ def get_btc_supply(normalize=False):
 def get_unspent_txouts(address, normalize=False):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
-        *
     """
-
-    # Unittest
     if config.UNITTEST:
         CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
         with open(CURR_DIR + '/../test/listunspent.test.json', 'r') as listunspent_test_file:   # HACK
@@ -660,40 +614,6 @@ def get_unspent_txouts(address, normalize=False):
         wallet_unspent = rpc('listunspent', [0, 999999])
         return [output for output in wallet_unspent if output['address'] == address]
     else:
-        if config.INSIGHT_ENABLE:
-            r = requests.get(config.INSIGHT + '/api/addr/' + address + '/utxo')
-            if r.status_code != 200:
-                raise Exception("Can't get unspent txouts: insight returned bad status code: %s" % r.status_code)
-
-            outputs = r.json()
-            if not normalize: #listed normalized by default out of insight...we need to take to satoshi
-                for d in outputs:
-                    d['quantity'] = int(d['quantity'] * config.UNIT)
-            return outputs
-
-        else: #use blockchain
-            r = requests.get("https://blockchain.info/unspent?active=" + address)
-            if r.status_code == 500 and r.text.lower() == "no free outputs to spend":
-                return []
-            elif r.status_code != 200:
-                raise Exception("Bad status code returned from blockchain.info: %s" % r.status_code)
-            data = r.json()['unspent_outputs']
-            outputs = []
-            for d in data:
-                #blockchain.info lists the txhash in some weird reversed string notation with character pairs fipped...fun
-                d['tx_hash'] = d['tx_hash'][::-1] #reverse string
-                d['tx_hash'] = ''.join([d['tx_hash'][i:i+2][::-1] for i in range(0, len(d['tx_hash']), 2)]) #flip the character pairs within the string
-                outputs.append({
-                    'account': "",
-                    'address': address,
-                    'txid': d['tx_hash'],
-                    'vout': d['tx_output_n'],
-                    'ts': None,
-                    'scriptPubKey': d['script'],
-                    'amount': normalize_quantity(d['value']) if normalize else d['value'],  # This is what Bitcoin uses for a field name.
-                    'confirmations': d['confirmations'],
-                })
-            return outputs
-
+        return blockchain.listunspent(address)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

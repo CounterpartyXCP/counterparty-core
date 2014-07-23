@@ -18,7 +18,7 @@ import requests
 import appdirs
 from prettytable import PrettyTable
 
-from lib import (config, api, util, exceptions, bitcoin, blocks)
+from lib import config, api, util, exceptions, bitcoin, blocks, blockchain
 if os.name == 'nt':
     from lib import util_windows
 
@@ -136,7 +136,7 @@ def market (give_asset, get_asset):
     print('\n')
 
     # Feeds
-    broadcasts = util.api('get_broadcasts', {'status': 'valid'})
+    broadcasts = util.api('get_broadcasts', {'status': 'valid', 'order_by': 'timestamp', 'order_dir': 'desc'})
     table = PrettyTable(['Feed Address', 'Timestamp', 'Text', 'Value', 'Fee Fraction'])
     seen_addresses = []
     for broadcast in broadcasts:
@@ -155,9 +155,7 @@ def market (give_asset, get_asset):
     print(table)
 
 
-def cli(method, params, unsigned, armory):
-    if armory: params['armory'] = True
-
+def cli(method, params, unsigned):
     # Get unsigned transaction serialisation.
     if bitcoin.is_valid(params['source']):
         if bitcoin.is_mine(params['source']):
@@ -177,13 +175,11 @@ def cli(method, params, unsigned, armory):
                 params['pubkey'] = bitcoin.private_key_to_public_key(private_key_wif)
     else:
         raise exceptions.AddressError('Invalid address.')
-
     unsigned_tx_hex = util.api(method, params)
-    if armory: unsigned_tx_hex = '\n' + unsigned_tx_hex
     print('Transaction (unsigned):', unsigned_tx_hex)
 
     # Ask to sign and broadcast.
-    if not unsigned and not armory and input('Sign and broadcast? (y/N) ') == 'y':
+    if not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
         if bitcoin.is_mine(params['source']):
             private_key_wif = None
         elif not private_key_wif:   # If private key was not given earlier.
@@ -196,12 +192,10 @@ def cli(method, params, unsigned, armory):
 
 
 def set_options (data_dir=None, backend_rpc_connect=None,
-                 backend_rpc_port=None, backend_rpc_user=None,
-                 backend_rpc_password=None, insight_enable=None,
-                 insight_connect=None, insight_port=None, rpc_host=None,
-                 rpc_port=None, rpc_user=None, rpc_password=None,
-                 log_file=None, pid_file=None, api_num_threads=None,
-                 api_request_queue_size=None, config_file=None,
+                 backend_rpc_port=None, backend_rpc_user=None, backend_rpc_password=None,
+                 blockchain_service_name=None, blockchain_service_connect=None, 
+                 rpc_host=None, rpc_port=None, rpc_user=None, rpc_password=None, rpc_allow_cors=None,
+                 log_file=None, pid_file=None, config_file=None,
                  database_file=None, testnet=False, testcoin=False,
                  unittest=False, carefulness=0, force=False,
                  broadcast_tx_mainnet=None):
@@ -317,46 +311,23 @@ def set_options (data_dir=None, backend_rpc_connect=None,
 
     config.BACKEND_RPC = 'http://' + config.BACKEND_RPC_USER + ':' + config.BACKEND_RPC_PASSWORD + '@' + config.BACKEND_RPC_CONNECT + ':' + str(config.BACKEND_RPC_PORT)
 
-    # insight enable
-    if insight_enable:
-        config.INSIGHT_ENABLE = insight_enable
-    elif has_config and 'insight-enable' in configfile['Default']:
-        config.INSIGHT_ENABLE = configfile['Default'].getboolean('insight-enable')
+    # blockchain service name
+    if blockchain_service_name:
+        config.BLOCKCHAIN_SERVICE_NAME = blockchain_service_name
+    elif has_config and 'blockchain-service-name' in configfile['Default'] and configfile['Default']['blockchain-service-name']:
+        config.BLOCKCHAIN_SERVICE_NAME = configfile['Default']['blockchain-service-name']
     else:
-        config.INSIGHT_ENABLE = False
+        config.BLOCKCHAIN_SERVICE_NAME = 'blockr'
 
-    if unittest:
-        config.INSIGHT_ENABLE = True #override when running test suite
-    if config.TESTNET:
-        config.INSIGHT_ENABLE = True
-
-    # insight API host
-    if insight_connect:
-        config.INSIGHT_CONNECT = insight_connect
-    elif has_config and 'insight-connect' in configfile['Default'] and configfile['Default']['insight-connect']:
-        config.INSIGHT_CONNECT = configfile['Default']['insight-connect']
-    elif config.TESTNET:
-        config.INSIGHT_CONNECT = 'test.insight.is'
+    # custom blockchain service API endpoint
+    # leave blank to use the default. if specified, include the scheme prefix and port, without a trailing slash (e.g. http://localhost:3001)
+    if blockchain_service_connect:
+        config.BLOCKCHAIN_SERVICE_CONNECT = blockchain_service_connect
+    elif has_config and 'blockchain-service-connect' in configfile['Default'] and configfile['Default']['blockchain-service-connect']:
+        config.BLOCKCHAIN_SERVICE_CONNECT = configfile['Default']['blockchain-service-connect']
     else:
-        config.INSIGHT_CONNECT = 'live.insight.is'
+        config.BLOCKCHAIN_SERVICE_CONNECT = None #use default specified by the library
 
-    # insight API port
-    if insight_port:
-        config.INSIGHT_PORT = insight_port
-    elif has_config and 'insight-port' in configfile['Default'] and configfile['Default']['insight-port']:
-        config.INSIGHT_PORT = configfile['Default']['insight-port']
-    else:
-        if config.TESTNET:
-            config.INSIGHT_PORT = 3001
-        else:
-            config.INSIGHT_PORT = 3000
-    try:
-        config.INSIGHT_PORT = int(config.INSIGHT_PORT)
-        assert int(config.INSIGHT_PORT) > 1 and int(config.INSIGHT_PORT) < 65535
-    except:
-        raise Exception("Please specific a valid port number insight-port configuration parameter")
-
-    config.INSIGHT = 'http://' + config.INSIGHT_CONNECT + ':' + str(config.INSIGHT_PORT)
 
     ##############
     # THINGS WE SERVE
@@ -409,13 +380,21 @@ def set_options (data_dir=None, backend_rpc_connect=None,
 
     config.RPC = 'http://' + config.RPC_USER + ':' + config.RPC_PASSWORD + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT)
 
+     # RPC CORS
+    if rpc_allow_cors:
+        config.RPC_ALLOW_CORS = rpc_allow_cors
+    elif has_config and 'rpc-allow-cors' in configfile['Default'] and configfile['Default']['rpc-allow-cors']:
+        config.RPC_ALLOW_CORS = configfile['Default'].getboolean('rpc-allow-cors')
+    else:
+        config.RPC_ALLOW_CORS = True
+
     ##############
     # OTHER SETTINGS
 
     # Log
     if log_file:
         config.LOG = log_file
-    elif has_config and 'log-file' in configfile['Default']:
+    elif has_config and 'log-file' in configfile['Default'] and configfile['Default']['log-file']:
         config.LOG = configfile['Default']['log-file']
     else:
         string = config.XCP_CLIENT
@@ -428,11 +407,12 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     # PID file
     if pid_file:
         config.PID = pid_file
-    elif has_config and 'pid-file' in configfile['Default']:
+    elif has_config and 'pid-file' in configfile['Default'] and configfile['Default']['pid-file']:
         config.PID = configfile['Default']['pid-file']
     else:
         config.PID = os.path.join(config.DATA_DIR, '{}.pid'.format(config.XCP_CLIENT))
 
+    # Encoding prefix
     if not unittest:
         if config.TESTCOIN:
             config.PREFIX = b'XX'                   # 2 bytes (possibly accidentally created)
@@ -441,23 +421,11 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     else:
         config.PREFIX = b'TESTXXXX'                 # 8 bytes
 
-    if api_num_threads:
-        config.API_NUM_THREADS = int(api_num_threads)
-    elif has_config and 'api-num-threads' in configfile['Default']:
-        config.API_NUM_THREADS = int(configfile['Default']['api-num-threads'])
-    else:
-        config.API_NUM_THREADS = 15 #(not suitable for multiuser, high-performance production)
-
-    if api_request_queue_size:
-        config.API_REQUEST_QUEUE_SIZE = int(api_request_queue_size)
-    elif has_config and 'api-request-queue-size' in configfile['Default']:
-        config.API_REQUEST_QUEUE_SIZE = int(configfile['Default']['api-request-queue-size'])
-    else:
-        config.API_REQUEST_QUEUE_SIZE = 20 #(not suitable for multiuser, high-performance production)
-
     # Database
     if database_file:
         config.DATABASE = database_file
+    elif has_config and 'database-file' in configfile['Default'] and configfile['Default']['database-file']:
+        config.DATABASE = configfile['Default']['database-file']
     else:
         string = '{}.'.format(config.XCP_CLIENT) + str(config.VERSION_MAJOR)
         if config.TESTNET:
@@ -511,7 +479,7 @@ def balances (address):
     address_data = get_address(db, address=address)
     balances = address_data['balances']
     table = PrettyTable(['Asset', 'Amount'])
-    table.add_row([config.BTC, bitcoin.get_btc_balance(address, normalize=True)])  # BTC
+    table.add_row([config.BTC, blockchain.getaddressinfo(address)['balance']])  # BTC
     for balance in balances:
         asset = balance['asset']
         quantity = util.devise(db, balance['quantity'], balance['asset'], 'output')
@@ -547,29 +515,26 @@ if __name__ == '__main__':
     parser.add_argument('--multisig-dust-size', type=D, default=D(config.DEFAULT_MULTISIG_DUST_SIZE / config.UNIT), help='for dust OP_CHECKMULTISIG outputs, in {}'.format(config.BTC))
     parser.add_argument('--op-return-value', type=D, default=D(config.DEFAULT_OP_RETURN_VALUE / config.UNIT), help='value for OP_RETURN outputs, in {}'.format(config.BTC))
     parser.add_argument('--unsigned', action='store_true', help='print out unsigned hex of transaction; do not sign or broadcast')
-    parser.add_argument('--armory', action='store_true', help='print out unsigned hex of transaction, in the format used by Armory; do not sign or broadcast')
 
     parser.add_argument('--data-dir', help='the directory in which to keep the database, config file and log file, by default')
     parser.add_argument('--database-file', help='the location of the SQLite3 database')
     parser.add_argument('--config-file', help='the location of the configuration file')
     parser.add_argument('--log-file', help='the location of the log file')
     parser.add_argument('--pid-file', help='the location of the pid file')
-    parser.add_argument('--api-num-threads', help='the number of threads created for API request processing (CherryPy WSGI, default 10)')
-    parser.add_argument('--api-request-queue-size', help='the size of the API request queue (CherryPY WSGI, default 5)')
 
     parser.add_argument('--backend-rpc-connect', help='the hostname or IP of the backend JSON-RPC server')
     parser.add_argument('--backend-rpc-port', type=int, help='the backend JSON-RPC port to connect to')
     parser.add_argument('--backend-rpc-user', help='the username used to communicate with backend over JSON-RPC')
     parser.add_argument('--backend-rpc-password', help='the password used to communicate with backend over JSON-RPC')
 
-    parser.add_argument('--insight-enable', action='store_true', default=False, help='enable the use of insight, instead of blockchain.info')
-    parser.add_argument('--insight-connect', help='the insight server hostname or IP to connect to')
-    parser.add_argument('--insight-port', type=int, help='the insight server port to connect to')
+    parser.add_argument('--blockchain-service-name', help='the blockchain service name to connect to')
+    parser.add_argument('--blockchain-service-connect', help='the blockchain service server URL base to connect to, if not default')
 
     parser.add_argument('--rpc-host', help='the IP of the interface to bind to for providing JSON-RPC API access (0.0.0.0 for all interfaces)')
     parser.add_argument('--rpc-port', type=int, help='port on which to provide the {} JSON-RPC API'.format(config.XCP_CLIENT))
     parser.add_argument('--rpc-user', help='required username to use the {} JSON-RPC API (via HTTP basic auth)'.format(config.XCP_CLIENT))
     parser.add_argument('--rpc-password', help='required password (for rpc-user) to use the {} JSON-RPC API (via HTTP basic auth)'.format(config.XCP_CLIENT))
+    parser.add_argument('--rpc-allow-cors', action='store_true', default=True, help='Allow ajax cross domain request')
 
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
@@ -706,13 +671,11 @@ if __name__ == '__main__':
                 backend_rpc_port=args.backend_rpc_port,
                 backend_rpc_user=args.backend_rpc_user,
                 backend_rpc_password=args.backend_rpc_password,
-                insight_enable=args.insight_enable,
-                insight_connect=args.insight_connect,
-                insight_port=args.insight_port, rpc_host=args.rpc_host,
-                rpc_port=args.rpc_port, rpc_user=args.rpc_user,
-                rpc_password=args.rpc_password, log_file=args.log_file,
-                pid_file=args.pid_file, api_num_threads=args.api_num_threads,
-                api_request_queue_size=args.api_request_queue_size,
+                blockchain_service_name=args.blockchain_service_name,
+                blockchain_service_connect=args.blockchain_service_connect,
+                rpc_host=args.rpc_host, rpc_port=args.rpc_port, rpc_user=args.rpc_user,
+                rpc_password=args.rpc_password, rpc_allow_cors=args.rpc_allow_cors, 
+                log_file=args.log_file, pid_file=args.pid_file, 
                 config_file=args.config_file, database_file=args.database_file,
                 testnet=args.testnet, testcoin=args.testcoin, unittest=False,
                 carefulness=args.carefulness, force=args.force)
@@ -772,7 +735,7 @@ if __name__ == '__main__':
                             args.regular_dust_size, 'multisig_dust_size':
                             args.multisig_dust_size, 'op_return_value':
                             args.op_return_value},
-            args.unsigned, args.armory)
+            args.unsigned)
 
     elif args.action == 'order':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -809,7 +772,7 @@ if __name__ == '__main__':
                              args.regular_dust_size, 'multisig_dust_size':
                              args.multisig_dust_size, 'op_return_value':
                              args.op_return_value},
-           args.unsigned, args.armory)
+           args.unsigned)
 
     elif args.action == '{}pay'.format(config.BTC).lower():
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -821,7 +784,7 @@ if __name__ == '__main__':
                               'regular_dust_size': args.regular_dust_size,
                               'multisig_dust_size': args.multisig_dust_size,
                               'op_return_value': args.op_return_value},
-            args.unsigned, args.armory)
+            args.unsigned)
 
     elif args.action == 'issuance':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -850,7 +813,7 @@ if __name__ == '__main__':
                                 args.regular_dust_size, 'multisig_dust_size':
                                 args.multisig_dust_size, 'op_return_value':
                                 args.op_return_value},
-           args.unsigned, args.armory)
+           args.unsigned)
 
     elif args.action == 'broadcast':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -867,7 +830,7 @@ if __name__ == '__main__':
                                  args.regular_dust_size, 'multisig_dust_size':
                                  args.multisig_dust_size, 'op_return_value':
                                  args.op_return_value},
-           args.unsigned, args.armory)
+           args.unsigned)
 
     elif args.action == 'bet':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -879,8 +842,8 @@ if __name__ == '__main__':
 
         cli('create_bet', {'source': args.source,
                            'feed_address': args.feed_address, 'bet_type':
-                           args.bet_type, 'deadline': deadline, 'wager': wager,
-                           'counterwager': counterwager, 'expiration':
+                           util.BET_TYPE_ID [args.bet_type], 'deadline': deadline, 'wager_quantity': wager,
+                           'counterwager_quantity': counterwager, 'expiration':
                            args.expiration, 'target_value': target_value,
                            'leverage': leverage, 'fee': args.fee,
                            'allow_unconfirmed_inputs': args.unconfirmed,
@@ -889,7 +852,7 @@ if __name__ == '__main__':
                            args.regular_dust_size, 'multisig_dust_size':
                            args.multisig_dust_size, 'op_return_value':
                            args.op_return_value},
-            args.unsigned, args.armory)
+            args.unsigned)
 
     elif args.action == 'dividend':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -904,7 +867,7 @@ if __name__ == '__main__':
                                 args.regular_dust_size, 'multisig_dust_size':
                                 args.multisig_dust_size, 'op_return_value':
                                 args.op_return_value},
-           args.unsigned, args.armory)
+           args.unsigned)
 
     elif args.action == 'burn':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -916,7 +879,7 @@ if __name__ == '__main__':
                             args.regular_dust_size, 'multisig_dust_size':
                             args.multisig_dust_size, 'op_return_value':
                             args.op_return_value},
-        args.unsigned, args.armory)
+        args.unsigned)
 
     elif args.action == 'cancel':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -928,7 +891,7 @@ if __name__ == '__main__':
                               args.regular_dust_size, 'multisig_dust_size':
                               args.multisig_dust_size, 'op_return_value':
                               args.op_return_value},
-        args.unsigned, args.armory)
+        args.unsigned)
 
     elif args.action == 'callback':
         if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
@@ -941,7 +904,7 @@ if __name__ == '__main__':
                                 args.regular_dust_size, 'multisig_dust_size':
                                 args.multisig_dust_size, 'op_return_value':
                                 args.op_return_value},
-           args.unsigned, args.armory)
+           args.unsigned)
 
     elif args.action == 'rps':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
@@ -958,7 +921,7 @@ if __name__ == '__main__':
                            args.regular_dust_size, 'multisig_dust_size':
                            args.multisig_dust_size, 'op_return_value':
                            args.op_return_value},
-           args.unsigned, args.armory)
+           args.unsigned)
 
     elif args.action == 'rpsresolve':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
@@ -971,7 +934,7 @@ if __name__ == '__main__':
                                 args.regular_dust_size, 'multisig_dust_size':
                                 args.multisig_dust_size, 'op_return_value':
                                 args.op_return_value},
-           args.unsigned, args.armory)
+           args.unsigned)
 
     elif args.action == 'publish':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
@@ -982,7 +945,8 @@ if __name__ == '__main__':
                                args.fee_per_kb, 'regular_dust_size':
                                args.regular_dust_size, 'multisig_dust_size':
                                args.multisig_dust_size, 'op_return_value':
-                               args.op_return_value}, args.unsigned, args.armory)
+                               args.op_return_value},
+            args.unsigned)
 
 
     # VIEWING (temporary)
@@ -995,7 +959,7 @@ if __name__ == '__main__':
         balances(args.address)
 
     elif args.action == 'asset':
-        results = util.api('get_asset_info', ([args.asset],))
+        results = util.api('get_asset_info', {'assets': [args.asset]})
         if results:
             results = results[0]    # HACK
         else:
@@ -1096,23 +1060,17 @@ if __name__ == '__main__':
         blocks.reparse(db, block_index=args.block_index)
 
     elif args.action == 'server':
+        api_status_poller = api.APIStatusPoller()
+        api_status_poller.daemon = True
+        api_status_poller.start()
+        
         api_server = api.APIServer()
         api_server.daemon = True
         api_server.start()
 
-        # Check that Insight works if enabled.
-        if config.INSIGHT_ENABLE and not config.FORCE:
-            try:
-                r = requests.get(config.INSIGHT + '/api/sync/')
-                if r.status_code != 200:
-                    raise ValueError("Bad status code returned from insight: %s" % r.status_code)
-                result = r.json()
-                if result['status'] == 'error':
-                    raise exceptions.InsightError('Insight reports error: %s' % result['error'])
-                if result['status'] == 'syncing':
-                    logging.warning("WARNING: Insight is not fully synced to the blockchain: %s%% complete" % result['syncPercentage'])
-            except Exception as e:
-                raise exceptions.InsightError('Could not connect to Insight server: %s' % e)
+        # Check if our blockchain backend is up
+        if not config.FORCE:
+            blockchain.check()
 
         blocks.follow(db)
 

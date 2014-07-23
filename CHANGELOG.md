@@ -1,7 +1,19 @@
 ## Client Versions ##
+* v9.33.1 (2014-07-21)
+	* moved Armory support to Counterwallet (allow use of uncompressed keys)
+	* improved performance of mempool population
+	* new ‘blockchain’ backend
+* v9.33.0 (2014-07-18)
+	* bug in call_date and call_price sanity checks (protocol change: 312500)
+* v9.32.0 (2014-07-15)
+	* API underlying library changed from cherrypy to flask
+	* "/" supported as an API endpoint
+	* "/api" with no trailing slash no longer supported as an API endpoint (use "/" or "/api/" instead)
+	* per-request API checks taken out to their own thread to improve performance and prevent dogpiling
+	* new dependencies: tornado, flask and Flask-HTTPAuth. cherrypy dependency removed
 * v9.31.0 (2014-07-10)
 	* change fee_required calculation for orders matching (protocol change: 310500)
-	* don’t skip negative get quantity remainig for orders matching (protocol change: 310500)
+	* don’t skip negative get quantity remaining for orders matching (protocol change: 310500)
 * v9.30.0 (2014-07-06)
 	* hotfix for error in block 309485
 * v9.29.4 (2014-07-05)

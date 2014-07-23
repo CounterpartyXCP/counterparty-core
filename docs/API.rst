@@ -22,7 +22,7 @@ By default, ``counterpartyd`` will listen on port ``4000`` (if on mainnet) or po
 requests. 
 
 Note that this API is built on JSON-RPC 2.0, not 1.1. JSON-RPC itself is pretty lightweight, and API requests
-are made via a HTTP POST request to ``/api/``, with JSON-encoded data passed as the POST body.
+are made via a HTTP POST request to ``/api/`` (note the trailing slash), with JSON-encoded data passed as the POST body.
 
 All requests must have POST data that is JSON encoded and in the format of:
 
@@ -45,7 +45,8 @@ Here's an example of the POST data for a valid API request:
     }
 
 You should note that the data in ``params`` is a JSON object (e.g. mapping), not an array. In other words, 
-the API only supports named arguments, not positional arguments. This is the case for safety and bug-minimzation reasons.
+**the API only supports named arguments, not positional arguments** (e.g. use
+{"argument1": "value1", "argument2": "value2"} instead of ["value1", "value2"]). This is the case for safety and bug-minimzation reasons.
 
 For more information on JSON RPC, please see the `JSON RPC 2.0 specification <http://www.jsonrpc.org/specification>`__.
 
@@ -278,6 +279,9 @@ then have two approaches with respect to broadcasting the transaction on the net
   the private key string to it, and ``counterpartyd`` will sign it for you). In either case, once you have the signed,
   hex-encoded transaction string, you can then call the ``broadcast_tx`` API method, which will then broadcast the transaction on the
   Bitcoin network for you.
+  
+**Note that you can also use a :ref:`do_ call instead <do_table>`, which will take care of creating the transaction,
+signing it, and broadcasting it, all in one step.**
 
 
 .. _read_api:
@@ -295,7 +299,8 @@ limit=1000, offset=0, show_expired=True)**
 **{table}** must be one of the following values:
 ``balances``, ``credits``, ``debits``, ``bets``, ``bet_matches``, ``broadcasts``, ``btcpays``, ``burns``, 
 ``callbacks``, ``cancels``, ``dividends``, ``issuances``, ``orders``, ``order_matches``, ``sends``, 
-``bet_expirations``, ``order_expirations``, ``bet_match_expirations``, or ``order_match_expirations``.
+``bet_expirations``, ``order_expirations``, ``bet_match_expirations``, ``order_match_expirations``,
+``rps``, ``rps_expirations``, ``rps_matches``, ``rps_match_expirations``, or ``rpsresolves``.
 
 For example: ``get_balances``, ``get_credits``, ``get_debits``, etc are all valid API methods.
 
@@ -326,7 +331,7 @@ For example: ``get_balances``, ``get_credits``, ``get_debits``, etc are all vali
 
 **Return:**
 
-  A list of objects with attributes corresponding to the queried table fields
+  A list of objects with attributes corresponding to the queried table fields.
 
 **Examples:**
 
@@ -526,14 +531,14 @@ Issue a bet against a feed.
 
 create_broadcast
 ^^^^^^^^^^^^^^
-**create_broadcast(source, fee_multiplier, text, value=0, encoding='multisig', pubkey=null)**
+**create_broadcast(source, fee_fraction, text, value=0, encoding='multisig', pubkey=null)**
 
 Broadcast textual and numerical information to the network.
 
 **Parameters:**
 
   * **source (string):** The address that will be sending (must have the necessary quantity of the specified asset).
-  * **fee_multiplier (float):** How much of every bet on this feed should go to its operator; a fraction of 1, (i.e. .05 is five percent).
+  * **fee_fraction (float):** How much of every bet on this feed should go to its operator; a fraction of 1, (i.e. .05 is five percent).
   * **text (string):** The textual part of the broadcast.
   * **timestamp (integer):** The timestamp of the broadcast, in Unix time.
   * **value (float):** Numerical value of the broadcast.
@@ -718,7 +723,7 @@ create_rps
 ^^^^^^^^^^^^^^
 **create_rps(source, possible_moves, wager, move_random_hash, expiration, encoding='multisig', pubkey=null)**
 
-Open a Rock-Paper-Scissors like game.
+Open a Rock-Paper-Scissors (RPS) like game.
 
 **Parameters:**
 
@@ -735,10 +740,10 @@ Open a Rock-Paper-Scissors like game.
   The unsigned transaction, as an hex-encoded string. See :ref:`this section <encoding_param>` for more information.
 
 create_rpsresolve
-^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^
 **create_rpsresolve(source, move, random, rps_match_id, encoding='multisig', pubkey=null)**
 
-Resolve a RPS game.
+Resolve a Rock-Paper-Scissors game.
 
 **Parameters:**
   * **source (string):** The address that will be sending (must have the necessary quantity of the specified asset).
@@ -751,7 +756,37 @@ Resolve a RPS game.
 **Return:** 
 
   The unsigned transaction, as an hex-encoded string. See :ref:`this section <encoding_param>` for more information.
-   
+
+.. _do_table:
+
+do_{table}
+^^^^^^^^^^^^^^
+**do_{table}(VARIABLE)**
+
+This method is a simplified alternative to the appropriate ``create_`` method. Instead of returning just an unsigned
+raw transaction, which you must then sign and broadcast, this call will create the transaction, then sign it and broadcast
+it automatically.
+
+**{table}** must be one of the following values:
+``balances``, ``credits``, ``debits``, ``bets``, ``bet_matches``, ``broadcasts``, ``btcpays``, ``burns``, 
+``callbacks``, ``cancels``, ``dividends``, ``issuances``, ``orders``, ``order_matches``, ``sends``, 
+``bet_expirations``, ``order_expirations``, ``bet_match_expirations``, ``order_match_expirations``,
+``rps``, ``rps_expirations``, ``rps_matches``, ``rps_match_expirations``, or ``rpsresolves``.
+
+For example: ``do_balances``, ``do_credits``, ``do_debits``, etc are all valid API methods.
+
+**Parameters:**
+
+  * **privkey (string):** The private key in WIF format to use for signing the transaction. If not provided,
+    the private key must to be known by the ``bitcoind`` wallet.
+  * The other parameters for a given ``do_`` method are the same as the corresponding ``create_`` call.
+
+**Return:**
+
+  The created transaction's id on the Bitcoin network, or an error if the transaction is invalid for any reason.
+
+
+
 Objects
 ----------
 
@@ -1120,6 +1155,18 @@ API Changes
 
 This section documents any changes to the ``counterpartyd`` API, for version numbers where there were API-level modifications.
 
+.. _9_32_0:
+
+9.32.0
+^^^^^^^^^^^^^^^^^^^^^^^
+
+**Summary:** API framework overhaul for performance and simplicity 
+
+* "/api" with no trailing slash no longer supported as an API endpoint (use "/" or "/api/" instead)
+* We now consistently reject positional arguments with all API methods. Make sure your API calls do not use positional
+  arguments (e.g. use {"argument1": "value1", "argument2": "value2"} instead of ["value1", "value2"])
+
+
 .. _9_24_1:
 
 9.24.1
@@ -1129,6 +1176,7 @@ This section documents any changes to the ``counterpartyd`` API, for version num
 
 * Added ``sql`` API method
 * Filter params: Added ``LIKE``, ``NOT LIKE`` and ``IN``
+
 
 .. _9_25_0:
 
@@ -1144,6 +1192,4 @@ This section documents any changes to the ``counterpartyd`` API, for version num
 * create_bet: ``wager`` and ``counterwager`` args are replaced by ``wager_quantity`` and ``counterwager_quantity``
 * create_issuance: parameter ``lock`` (boolean) removed (use LOCK in description)
 * create_issuance: parameter ``transfer_destination`` replaced by ``destination``
-
-
-
+* DatabaseError: now a DatabaseError is returned immediately if the counterpartyd database is behind the backend, instead of after fourteen seconds

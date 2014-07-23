@@ -11,6 +11,7 @@ import struct
 import decimal
 D = decimal.Decimal
 import logging
+import collections
 from Crypto.Cipher import ARC4
 import apsw
 
@@ -1004,7 +1005,9 @@ def follow (db):
     else:
         tx_index = 0
 
-    not_supported = []    # No false positives.
+    not_supported = {}   # No false positives. Use a dict to allow for O(1) lookups
+    not_supported_sorted = collections.deque()
+    # ^ Entries in form of (block_index, tx_hash), oldest first. Allows for easy removal of past, unncessary entries 
     mempool_initialised = False
     while True:
 
@@ -1077,10 +1080,14 @@ def follow (db):
             if block_index == block_count:
                 check_conservation(db)
 
-            # Clear list of non‐supported transactions every six blocks.
-            if block_index % 36 == 0:
-                not_supported = []
-
+            # Remove any non‐supported transactions older than ten blocks.
+            if len(not_supported_sorted):
+                #logging.debug("First in list: %s. block_index: %s, block_count: %s" % (
+                #    not_supported_sorted[0], block_index, block_count))
+                while not_supported_sorted[0][0] <= block_index - 10:
+                    (i, tx_h) = not_supported_sorted.popleft()
+                    del not_supported[tx_h]
+            
             # Increment block index.
             block_count = bitcoin.get_block_count()
             block_index +=1
@@ -1146,12 +1153,14 @@ def follow (db):
                                 transaction = transactions[0]
                                 supported = parse_tx(db, transaction)
                                 if not supported:
-                                    not_supported.append(tx_hash)
+                                    not_supported[tx_hash] = ''
+                                    not_supported_sorted.append((block_index, tx_hash))
                             else:
                                 # If a transaction hasn’t been added to the
                                 # table `transactions`, then it’s not a
                                 # Counterparty transaction.
-                                not_supported.append(tx_hash)
+                                not_supported[tx_hash] = ''
+                                not_supported_sorted.append((block_index, tx_hash))
                                 assert False
 
                             # Save transaction and side‐effects in memory.

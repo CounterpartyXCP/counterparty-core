@@ -1,0 +1,30 @@
+#counterparty dependencies (installed via pip)
+
+appdirs==1.2.0
+#helps locate OS-specific directories (user data dir, etc)
+
+prettytable==0.7.2
+
+python-dateutil==2.2
+
+flask==0.10.1
+
+json-rpc==1.6.0
+
+pytest==2.5.1
+
+#############
+#counterpartyd specific deps
+
+pycoin==0.26
+
+requests==2.3.0
+
+Flask-HTTPAuth==2.2.1
+
+tornado==4.0
+
+pycrypto>=2.6
+#^ on windows, this will skip as the windows pycrypto installer should have been run
+# One of available download locations is: 
+# http://www.voidspace.org.uk/python/modules.shtml#pycrypto
