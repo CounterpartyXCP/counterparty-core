@@ -1,5 +1,5 @@
 ## Client Versions ##
-* v9.33.1 (2014-07-21)
+* v9.33.1 (2014-07-23)
 	* moved Armory support to Counterwallet (allow use of uncompressed keys)
 	* improved performance of mempool population
 	* new ‘blockchain’ backend
