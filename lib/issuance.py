@@ -74,7 +74,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
             problems.append('cannot change divisibility')
         if bool(last_issuance['callable']) != bool(callable_):
             problems.append('cannot change callability')
-        if last_issuance['call_date'] > call_date and call_date != 0:
+        if last_issuance['call_date'] > call_date and (call_date != 0 or (block_index < 312500 and not config.TESTNET)):
             problems.append('cannot advance call date')
         if last_issuance['call_price'] > call_price:
             problems.append('cannot reduce call price')

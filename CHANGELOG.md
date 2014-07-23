@@ -13,7 +13,7 @@
 	* new dependencies: tornado, flask and Flask-HTTPAuth. cherrypy dependency removed
 * v9.31.0 (2014-07-10)
 	* change fee_required calculation for orders matching (protocol change: 310500)
-	* don’t skip negative get quantity remainig for orders matching (protocol change: 310500)
+	* don’t skip negative get quantity remaining for orders matching (protocol change: 310500)
 * v9.30.0 (2014-07-06)
 	* hotfix for error in block 309485
 * v9.29.4 (2014-07-05)
