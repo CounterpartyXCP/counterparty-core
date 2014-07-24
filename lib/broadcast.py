@@ -191,12 +191,12 @@ def parse (db, tx, message):
                     bull_credit = escrow_less_fee
                     bear_credit = 0
                     util.credit(db, tx['block_index'], bull_address, config.XCP, bull_credit)
-                    bet_match_status = 'settled: liquidated for bear'
+                    bet_match_status = 'settled: liquidated for bull'
                 elif bull_credit <= 0:
                     bull_credit = 0
                     bear_credit = escrow_less_fee
                     util.credit(db, tx['block_index'], bear_address, config.XCP, bear_credit)
-                    bet_match_status = 'settled: liquidated for bull'
+                    bet_match_status = 'settled: liquidated for bear'
 
                 # Pay fee to feed.
                 util.credit(db, tx['block_index'], bet_match['feed_address'], config.XCP, fee)
