@@ -134,7 +134,7 @@ Broadcast: ‘Unit Test’ = 99.86166 from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at
 Credit: 0.591375 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Credit: 0.031125 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #None# <None>
 Bet Match Force‐Liquidated: 0.0 XCP credited to the bull, 0.591375 XCP credited to the bear, and 0.031125 XCP credited to the feed address (ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c9779d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4)
-Database: set status of bet_match ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c9779d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4 to settled: liquidated for bull.
+Database: set status of bet_match ef6cbd2161eaea7943ce8693b9824d23d1793ffb1c0fca05b600d3899b44c9779d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4 to settled: liquidated for bear.
 Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Change quantity: 1.9987574 BTC
