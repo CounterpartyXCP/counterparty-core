@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.34.0 (2014-07-24)
+	* CFDs temporarily disabled
 * v9.33.1 (2014-07-23)
 	* moved Armory support to Counterwallet (allow use of uncompressed keys)
 	* improved performance of mempool population

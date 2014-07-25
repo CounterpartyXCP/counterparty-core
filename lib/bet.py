@@ -80,7 +80,7 @@ def get_fee_fraction (db, feed_address):
         return 0
 
 def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
-              counterwager_quantity, target_value, leverage, expiration):
+              counterwager_quantity, target_value, leverage, expiration, block_index):
     problems = []
 
     # Look at feed to be bet on.
@@ -102,6 +102,10 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
         problems.append('leverage used with Equal or NotEqual')
     if leverage < 5040 and not bet_type in (0,1):   # BullCFD, BearCFD (fractional leverage makes sense precisely with CFDs)
         problems.append('leverage level too low')
+
+    if bet_type in (0,1):   # BullCFD, BearCFD
+        if block_index >= 312350:   # Protocol change.
+            problems.append('CFDs temporarily disabled')
 
     if not isinstance(wager_quantity, int):
         problems.append('wager_quantity must be in satoshis')
@@ -135,7 +139,7 @@ def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
             counterwager_quantity, target_value, leverage, expiration):
 
     problems = validate(db, source, feed_address, bet_type, deadline, wager_quantity,
-                        counterwager_quantity, target_value, leverage, expiration)
+                        counterwager_quantity, target_value, leverage, expiration, util.last_block(db)['block_index'])
     if deadline <= time.time() and not config.UNITTEST:
         problems.append('deadline passed')
     if problems: raise exceptions.BetError(problems)
@@ -183,7 +187,7 @@ def parse (db, tx, message):
                 counterwager_quantity = int(util.price(wager_quantity, odds, tx['block_index']))
 
         problems = validate(db, tx['source'], feed_address, bet_type, deadline, wager_quantity,
-                            counterwager_quantity, target_value, leverage, expiration)
+                            counterwager_quantity, target_value, leverage, expiration, tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
 
     # Debit quantity wagered. (Escrow.)
