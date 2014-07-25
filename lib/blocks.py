@@ -1081,12 +1081,9 @@ def follow (db):
                 check_conservation(db)
 
             # Remove any non‐supported transactions older than ten blocks.
-            if len(not_supported_sorted):
-                #logging.debug("First in list: %s. block_index: %s, block_count: %s" % (
-                #    not_supported_sorted[0], block_index, block_count))
-                while not_supported_sorted[0][0] <= block_index - 10:
-                    (i, tx_h) = not_supported_sorted.popleft()
-                    del not_supported[tx_h]
+            while len(not_supported_sorted) and not_supported_sorted[0][0] <= block_index - 10:
+                (i, tx_h) = not_supported_sorted.popleft()
+                del not_supported[tx_h]
             
             # Increment block index.
             block_count = bitcoin.get_block_count()
