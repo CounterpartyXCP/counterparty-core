@@ -1009,6 +1009,9 @@ def follow (db):
     not_supported_sorted = collections.deque()
     # ^ Entries in form of (block_index, tx_hash), oldest first. Allows for easy removal of past, unncessary entries 
     mempool_initialised = False
+    # a reorg can happen without the block count increasing, or even for that
+        # matter, with the block count decreasing. This should only delay
+        # processing of the new blocks a bit.
     while True:
 
         # Get new blocks.
