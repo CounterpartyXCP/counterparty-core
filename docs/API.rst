@@ -367,6 +367,20 @@ Gets information on an issued asset.
   - **description** (*string*): The asset's current description
   - **issuer** (*string*): The asset's original owner (i.e. issuer)
 
+.. _get_asset_names:
+
+get_asset_names
+^^^^^^^^^^^^^^^^
+**get_asset_names()**
+
+Returns a list of all existing Counterparty assets. 
+
+**Parameters:** None
+
+**Return:**
+
+  A list of existing Counterparty asset names.
+
 .. _get_messages:
 
 get_messages
