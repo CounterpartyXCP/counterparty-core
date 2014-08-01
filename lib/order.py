@@ -14,6 +14,29 @@ FORMAT = '>QQQQHQ'
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8
 ID = 10
 
+def exact_penalty (db, address, block_index):
+    # Penalize addresses that don’t make BTC payments. If an address lets an
+    # order match expire, kill sell BTC orders and order matches from that
+    # address.
+
+    if not(config.TESTNET or True):  # Protocol change.  # TODO
+        return
+
+    cursor = db.cursor()
+    bad_orders = list(cursor.execute('''SELECT * FROM orders \
+                                        WHERE (source = ?)''',
+                                     (address,))) # TODO: BTC
+    for bad_order in bad_orders:
+        print('PENALTY: ', bad_order['tx_hash'])    # TODO
+        cancel_order(db, bad_order, 'penalty', block_index)
+
+
+    # TODO: Bad order matches!
+
+    cursor.close()
+    return
+
+
 def cancel_order (db, order, status, block_index):
     cursor = db.cursor()
 
@@ -60,6 +83,8 @@ def cancel_order_match (db, order_match, status, block_index):
             util.credit(db, block_index, order_match['tx0_address'],
                         order_match['forward_asset'],
                         order_match['forward_quantity'], event=order_match['id'])
+        # TODO: if tx0_order['status'] == 'expired' and order_match['forward_asset'] == config.BTC:
+            # TODO: exact_penalty(db, order_match['tx0_address'], block_index)
     else:
         tx0_give_remaining = tx0_order['give_remaining'] + order_match['forward_quantity']
         tx0_get_remaining = tx0_order['get_remaining'] + order_match['backward_quantity']
@@ -91,6 +116,9 @@ def cancel_order_match (db, order_match, status, block_index):
             util.credit(db, block_index, order_match['tx1_address'],
                         order_match['backward_asset'],
                         order_match['backward_quantity'], event=order_match['id'])
+        if tx1_order['status'] == 'expired' and order_match['backward_asset'] == config.BTC:
+            exact_penalty(db, order_match['tx1_address'], block_index)
+
     else:
         tx1_give_remaining = tx1_order['give_remaining'] + order_match['backward_quantity']
         tx1_get_remaining = tx1_order['get_remaining'] + order_match['forward_quantity']
