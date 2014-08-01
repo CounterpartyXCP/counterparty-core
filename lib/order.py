@@ -23,22 +23,23 @@ def exact_penalty (db, address, block_index):
         return
     cursor = db.cursor()
 
+    # Orders.
     bad_orders = list(cursor.execute('''SELECT * FROM orders \
                                         WHERE (source = ? AND give_asset = ?)''',
                                      (address, config.BTC)))
     for bad_order in bad_orders:
         print('PENALTY: ', bad_order['tx_hash'])    # TODO
+        sleep(1)    # TODO
         cancel_order(db, bad_order, 'penalty', block_index)
 
-    bad_order_matches = list(cursor.execute('''SELECT * FROM orders \
-                                        WHERE (source = ? AND give_asset = ?)''',
-                                     (address, config.BTC)))
-    for bad_order in bad_orders:
+    # Order matches.
+    bad_order_matches = list(cursor.execute('''SELECT * FROM order_matches \
+                                               WHERE (tx0_address = ? AND forward_asset = ?) OR (tx1_address = ? AND backward_asset = ?)''',
+                                     (address, config.BTC, address, config.BTC)))
+    for bad_order_match in bad_order_matches:
         print('PENALTY: ', bad_order['tx_hash'])    # TODO
-        cancel_order(db, bad_order, 'penalty', block_index)
-
-
-    # TODO: Bad order matches!
+        sleep(1)    # TODO
+        cancel_order_match(db, bad_order_match, 'penalty', block_index)
 
     cursor.close()
     return
@@ -90,8 +91,6 @@ def cancel_order_match (db, order_match, status, block_index):
             util.credit(db, block_index, order_match['tx0_address'],
                         order_match['forward_asset'],
                         order_match['forward_quantity'], event=order_match['id'])
-        if tx0_order['status'] == 'expired' and order_match['forward_asset'] == config.BTC:
-            exact_penalty(db, order_match['tx0_address'], block_index)
     else:
         tx0_give_remaining = tx0_order['give_remaining'] + order_match['forward_quantity']
         tx0_get_remaining = tx0_order['get_remaining'] + order_match['backward_quantity']
@@ -123,8 +122,6 @@ def cancel_order_match (db, order_match, status, block_index):
             util.credit(db, block_index, order_match['tx1_address'],
                         order_match['backward_asset'],
                         order_match['backward_quantity'], event=order_match['id'])
-        if tx1_order['status'] == 'expired' and order_match['backward_asset'] == config.BTC:
-            exact_penalty(db, order_match['tx1_address'], block_index)
 
     else:
         tx1_give_remaining = tx1_order['give_remaining'] + order_match['backward_quantity']
@@ -150,6 +147,12 @@ def cancel_order_match (db, order_match, status, block_index):
         tx0_order_time_left = tx0_order['expire_index'] - block_index
         tx1_order_time_left = tx1_order['expire_index'] - block_index
         assert tx0_order_time_left or tx1_order_time_left
+
+    # Penalize tardiness.
+    if tx0_order['status'] == 'expired' and order_match['forward_asset'] == config.BTC:
+        exact_penalty(db, order_match['tx0_address'], block_index)
+    if tx1_order['status'] == 'expired' and order_match['backward_asset'] == config.BTC:
+        exact_penalty(db, order_match['tx1_address'], block_index)
 
     # Re‐match.                 # Protocol change
     if block_index >= 310000 or config.TESTNET:
