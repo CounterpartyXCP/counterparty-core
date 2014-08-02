@@ -365,7 +365,7 @@ def match (db, tx, block_index=None):
 
             forward_asset, backward_asset = tx1['get_asset'], tx1['give_asset']
 
-            if block_index >= 313800 or config.TESTNET: # Protocol change.
+            if block_index >= 313900 or config.TESTNET: # Protocol change.
                 min_btc_quantity = 0.001 * config.UNIT  # 0.001 BTC
                 if (forward_asset == config.BTC and forward_quantity <= min_btc_quantity) or (backward_asset == config.BTC and backward_quantity <= min_btc_quantity):
                     logging.debug('Skipping: below minimum {} quantity'.format(config.BTC))

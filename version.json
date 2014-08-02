@@ -3,5 +3,5 @@
 	"minimum_version_minor": 35,
 	"minimum_version_revision": 0,
 	"reason": "tweak BTC order, BTCpay logic",
-	"block_index": 313800
+	"block_index": 313900
 }
