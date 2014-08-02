@@ -1,7 +1,7 @@
 {
 	"minimum_version_major": 9,
-	"minimum_version_minor": 36,
+	"minimum_version_minor": 37,
 	"minimum_version_revision": 0,
-	"reason": "tweak BTC order, BTCpay logic",
+	"reason": "penalize failure to make BTC payments",
 	"block_index": 313900
 }

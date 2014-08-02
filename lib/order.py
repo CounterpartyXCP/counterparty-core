@@ -160,7 +160,7 @@ def cancel_order_match (db, order_match, status, block_index):
         assert tx0_order_time_left or tx1_order_time_left
 
     # Penalize tardiness.
-    if config.TESTNET or True:  # Protocol change.  # TODO
+    if block_index >= 313900 or config.TESTNET:  # Protocol change.
         if tx0_order['status'] == 'expired' and order_match['forward_asset'] == config.BTC:
             exact_penalty(db, order_match['tx0_address'], block_index, order_match['id'])
         if tx1_order['status'] == 'expired' and order_match['backward_asset'] == config.BTC:
