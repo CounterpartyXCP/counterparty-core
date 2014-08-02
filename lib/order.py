@@ -425,6 +425,14 @@ def match (db, tx, block_index=None):
                     logging.debug('Skipping: zero backward quantity.')
                     continue
 
+            forward_asset, backward_asset = tx1['get_asset'], tx1['give_asset']
+
+            if block_index >= 313900 or config.TESTNET: # Protocol change.
+                min_btc_quantity = 0.001 * config.UNIT  # 0.001 BTC
+                if (forward_asset == config.BTC and forward_quantity <= min_btc_quantity) or (backward_asset == config.BTC and backward_quantity <= min_btc_quantity):
+                    logging.debug('Skipping: below minimum {} quantity'.format(config.BTC))
+                    continue
+
             # Check and update fee remainings.
             fee = 0
             if block_index >= 286500 or config.TESTNET: # Protocol change. Deduct fee_required from fee_provided_remaining, etc., if possible (else don’t match).
@@ -465,8 +473,6 @@ def match (db, tx, block_index=None):
                     if tx0_fee_provided_remaining < tx1['fee_required']: continue
                 elif tx1['give_asset'] == config.BTC:
                     if tx1_fee_provided_remaining < tx0['fee_required']: continue
-
-            forward_asset, backward_asset = tx1['get_asset'], tx1['give_asset']
 
             if config.BTC in (tx1['give_asset'], tx1['get_asset']):
                 status = 'pending'

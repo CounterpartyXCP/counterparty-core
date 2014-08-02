@@ -1,4 +1,8 @@
 ## Client Versions ##
+* v9.36.0 (2014-08-02)
+	* version mismatch
+* v9.35.0 (2014-08-02)
+	* minimum BTC order match size; don’t check source address of BTCpay (protocol change: 313900)
 * v9.34.0 (2014-07-24)
 	* CFDs temporarily disabled
 * v9.33.1 (2014-07-23)
