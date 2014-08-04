@@ -1,7 +1,7 @@
 {
 	"minimum_version_major": 9,
-	"minimum_version_minor": 34,
+	"minimum_version_minor": 37,
 	"minimum_version_revision": 0,
-	"reason": "temporarily disabling CFDs",
-	"block_index": 312350
+	"reason": "penalize failure to make BTC payments",
+	"block_index": 313900
 }

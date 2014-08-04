@@ -480,13 +480,6 @@ class APIServer(threading.Thread):
             }
 
         @dispatcher.add_method
-        def asset_names():
-            cursor = db.cursor()
-            names = [row['asset'] for row in cursor.execute("SELECT DISTINCT asset FROM issuances WHERE status = 'valid' ORDER BY asset ASC")]
-            cursor.close()
-            return names
-
-        @dispatcher.add_method
         def get_element_counts():
             counts = {}
             cursor = db.cursor()

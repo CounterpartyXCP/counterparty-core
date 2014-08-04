@@ -14,6 +14,30 @@ FORMAT = '>QQQQHQ'
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8
 ID = 10
 
+def exact_penalty (db, address, block_index, order_match_id):
+    # Penalize addresses that don’t make BTC payments. If an address lets an
+    # order match expire, expire sell BTC orders and order matches from that
+    # address.
+    cursor = db.cursor()
+
+    # Orders.
+    bad_orders = list(cursor.execute('''SELECT * FROM orders \
+                                        WHERE (source = ? AND give_asset = ? AND status = ?)''',
+                                     (address, config.BTC, 'open')))
+    for bad_order in bad_orders:
+        cancel_order(db, bad_order, 'expired', block_index)
+
+    # Order matches.
+    bad_order_matches = list(cursor.execute('''SELECT * FROM order_matches \
+                                               WHERE ((tx0_address = ? AND forward_asset = ?) OR (tx1_address = ? AND backward_asset = ?)) AND (status = ?)''',
+                                     (address, config.BTC, address, config.BTC, 'pending')))
+    for bad_order_match in bad_order_matches:
+        cancel_order_match(db, bad_order_match, 'expired', block_index)
+
+    cursor.close()
+    return
+
+
 def cancel_order (db, order, status, block_index):
     cursor = db.cursor()
 
@@ -29,6 +53,17 @@ def cancel_order (db, order, status, block_index):
     if order['give_asset'] != config.BTC:    # Can’t credit BTC.
         util.credit(db, block_index, order['source'], order['give_asset'], order['give_remaining'], event=order['tx_hash'])
 
+    if status == 'expired':
+        # Record offer expiration.
+        bindings = {
+            'order_index': order['tx_index'],
+            'order_hash': order['tx_hash'],
+            'source': order['source'],
+            'block_index': block_index
+        }
+        sql='insert into order_expirations values(:order_index, :order_hash, :source, :block_index)'
+        cursor.execute(sql, bindings)
+
     cursor.close()
 
 def cancel_order_match (db, order_match, status, block_index):
@@ -36,6 +71,14 @@ def cancel_order_match (db, order_match, status, block_index):
     May only be cancelled by callbacks.'''
 
     cursor = db.cursor()
+
+    # Skip order matches just expired as a penalty. (Not very efficient.)
+    order_matches = list(cursor.execute('''SELECT * FROM order_matches \
+                                           WHERE (id = ? AND status = ?)''',
+                                        (order_match['id'], 'expired')))
+    if order_matches:
+        cursor.close()
+        return
 
     # Update status of order match.
     bindings = {
@@ -116,6 +159,13 @@ def cancel_order_match (db, order_match, status, block_index):
         tx1_order_time_left = tx1_order['expire_index'] - block_index
         assert tx0_order_time_left or tx1_order_time_left
 
+    # Penalize tardiness.
+    if block_index >= 313900 or config.TESTNET:  # Protocol change.
+        if tx0_order['status'] == 'expired' and order_match['forward_asset'] == config.BTC:
+            exact_penalty(db, order_match['tx0_address'], block_index, order_match['id'])
+        if tx1_order['status'] == 'expired' and order_match['backward_asset'] == config.BTC:
+            exact_penalty(db, order_match['tx1_address'], block_index, order_match['id'])
+
     # Re‐match.                 # Protocol change
     if block_index >= 310000 or config.TESTNET:
         cursor.execute('''SELECT * FROM transactions\
@@ -124,6 +174,18 @@ def cancel_order_match (db, order_match, status, block_index):
         cursor.execute('''SELECT * FROM transactions\
                           WHERE tx_hash = ?''', (tx1_order['tx_hash'],))
         match(db, list(cursor)[0], block_index)
+
+
+    if status == 'expired':
+        # Record order match expiration.
+        bindings = {
+            'order_match_id': order_match['id'],
+            'tx0_address': order_match['tx0_address'],
+            'tx1_address': order_match['tx1_address'],
+            'block_index': block_index
+        }
+        sql='insert into order_match_expirations values(:order_match_id, :tx0_address, :tx1_address, :block_index)'
+        cursor.execute(sql, bindings)
 
     cursor.close()
 
@@ -363,6 +425,14 @@ def match (db, tx, block_index=None):
                     logging.debug('Skipping: zero backward quantity.')
                     continue
 
+            forward_asset, backward_asset = tx1['get_asset'], tx1['give_asset']
+
+            if block_index >= 313900 or config.TESTNET: # Protocol change.
+                min_btc_quantity = 0.001 * config.UNIT  # 0.001 BTC
+                if (forward_asset == config.BTC and forward_quantity <= min_btc_quantity) or (backward_asset == config.BTC and backward_quantity <= min_btc_quantity):
+                    logging.debug('Skipping: below minimum {} quantity'.format(config.BTC))
+                    continue
+
             # Check and update fee remainings.
             fee = 0
             if block_index >= 286500 or config.TESTNET: # Protocol change. Deduct fee_required from fee_provided_remaining, etc., if possible (else don’t match).
@@ -403,8 +473,6 @@ def match (db, tx, block_index=None):
                     if tx0_fee_provided_remaining < tx1['fee_required']: continue
                 elif tx1['give_asset'] == config.BTC:
                     if tx1_fee_provided_remaining < tx0['fee_required']: continue
-
-            forward_asset, backward_asset = tx1['get_asset'], tx1['give_asset']
 
             if config.BTC in (tx1['give_asset'], tx1['get_asset']):
                 status = 'pending'
@@ -509,32 +577,11 @@ def expire (db, block_index):
     for order in cursor.fetchall():
         cancel_order(db, order, 'expired', block_index)
 
-        # Record offer expiration.
-        bindings = {
-            'order_index': order['tx_index'],
-            'order_hash': order['tx_hash'],
-            'source': order['source'],
-            'block_index': block_index
-        }
-        sql='insert into order_expirations values(:order_index, :order_hash, :source, :block_index)'
-        cursor.execute(sql, bindings)
-
-
     # Expire order_matches for BTC with no BTC.
     cursor.execute('''SELECT * FROM order_matches \
                       WHERE (status = ? and match_expire_index < ?)''', ('pending', block_index))
     for order_match in cursor.fetchall():
         cancel_order_match(db, order_match, 'expired', block_index)
-
-        # Record order match expiration.
-        bindings = {
-            'order_match_id': order_match['id'],
-            'tx0_address': order_match['tx0_address'],
-            'tx1_address': order_match['tx1_address'],
-            'block_index': block_index
-        }
-        sql='insert into order_match_expirations values(:order_match_id, :tx0_address, :tx1_address, :block_index)'
-        cursor.execute(sql, bindings)
 
     cursor.close()
 
