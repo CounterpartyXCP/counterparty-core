@@ -193,13 +193,13 @@ def cli(method, params, unsigned):
 
 def set_options (data_dir=None, backend_rpc_connect=None,
                  backend_rpc_port=None, backend_rpc_user=None, backend_rpc_password=None,
-                 backend_rpc_ssl=False, blockchain_service_name=None,
-                 blockchain_service_connect=None, rpc_host=None, rpc_port=None,
-                 rpc_user=None, rpc_password=None, rpc_allow_cors=None,
-                 log_file=None, pid_file=None, config_file=None,
-                 database_file=None, testnet=False, testcoin=False,
-                 unittest=False, carefulness=0, force=False,
-                 broadcast_tx_mainnet=None):
+                 backend_rpc_ssl=False, backend_rpc_ssl_verify=True,
+                 blockchain_service_name=None, blockchain_service_connect=None,
+                 rpc_host=None, rpc_port=None, rpc_user=None,
+                 rpc_password=None, rpc_allow_cors=None, log_file=None,
+                 pid_file=None, config_file=None, database_file=None,
+                 testnet=False, testcoin=False, unittest=False, carefulness=0,
+                 force=False, broadcast_tx_mainnet=None):
 
     # Unittests always run on testnet.
     if unittest and not testnet:
@@ -318,6 +318,15 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     else:
         config.BACKEND_RPC_SSL = False  # Default to off.
 
+    # Backend Core RPC SSL Verify
+    if backend_rpc_ssl_verify:
+        config.BACKEND_RPC_SSL_VERIFY = backend_rpc_ssl_verify
+    elif has_config and 'backend-rpc-ssl-verify' in configfile['Default'] and configfile['Default']['backend-rpc-ssl-verify']:
+        config.BACKEND_RPC_SSL_VERIFY = configfile['Default']['backend-rpc-ssl-verify']
+    else:
+        config.BACKEND_RPC_SSL_VERIFY = False # Default to off (support self‐signed certificates)
+
+    # Construct backend URL.
     config.BACKEND_RPC = config.BACKEND_RPC_USER + ':' + config.BACKEND_RPC_PASSWORD + '@' + config.BACKEND_RPC_CONNECT + ':' + str(config.BACKEND_RPC_PORT)
     if config.BACKEND_RPC_SSL:
         config.BACKEND_RPC = 'https://' + config.BACKEND_RPC
@@ -540,6 +549,7 @@ if __name__ == '__main__':
     parser.add_argument('--backend-rpc-user', help='the username used to communicate with backend over JSON-RPC')
     parser.add_argument('--backend-rpc-password', help='the password used to communicate with backend over JSON-RPC')
     parser.add_argument('--backend-rpc-ssl', action='store_true', help='use SSL to connect to backend (default: false)')
+    parser.add_argument('--backend-rpc-ssl-verify', action='store_true', help='verify SSL certificate of backend; disallow use of self‐signed certificates (default: false)')
 
     parser.add_argument('--blockchain-service-name', help='the blockchain service name to connect to')
     parser.add_argument('--blockchain-service-connect', help='the blockchain service server URL base to connect to, if not default')
@@ -686,6 +696,7 @@ if __name__ == '__main__':
                 backend_rpc_user=args.backend_rpc_user,
                 backend_rpc_password=args.backend_rpc_password,
                 backend_rpc_ssl=args.backend_rpc_ssl,
+                backend_rpc_ssl_verify=args.backend_rpc_ssl_verify,
                 blockchain_service_name=args.blockchain_service_name,
                 blockchain_service_connect=args.blockchain_service_connect,
                 rpc_host=args.rpc_host, rpc_port=args.rpc_port, rpc_user=args.rpc_user,

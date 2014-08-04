@@ -94,7 +94,7 @@ def connect (host, payload, headers):
     TRIES = 12
     for i in range(TRIES):
         try:
-            response = bitcoin_rpc_session.post(host, data=json.dumps(payload), headers=headers, verify=config.BACKEND_RPC_SSL)
+            response = bitcoin_rpc_session.post(host, data=json.dumps(payload), headers=headers, verify=config.BACKEND_RPC_SSL_VERIFY)
             if i > 0: print('Successfully connected.', file=sys.stderr)
             return response
         except requests.exceptions.SSLError as e:
