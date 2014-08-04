@@ -94,9 +94,11 @@ def connect (host, payload, headers):
     TRIES = 12
     for i in range(TRIES):
         try:
-            response = bitcoin_rpc_session.post(host, data=json.dumps(payload), headers=headers)
+            response = bitcoin_rpc_session.post(host, data=json.dumps(payload), headers=headers, verify=config.BACKEND_RPC_SSL)
             if i > 0: print('Successfully connected.', file=sys.stderr)
             return response
+        except requests.exceptions.SSLError as e:
+            raise e
         except requests.exceptions.ConnectionError:
             print('Could not connect to Bitcoind. Sleeping for five seconds. (Try {}/{})'.format(i+1, TRIES), file=sys.stderr)
             time.sleep(5)
