@@ -535,7 +535,7 @@ if __name__ == '__main__':
     parser.add_argument('--log-file', help='the location of the log file')
     parser.add_argument('--pid-file', help='the location of the pid file')
 
-    parser.add_argument('--backend-rpc-connect', help='the hostname or IP of the backend JSON-RPC server')
+    parser.add_argument('--backend-rpc-connect', help='the hostname or IP of the backend bitcoind JSON-RPC server')
     parser.add_argument('--backend-rpc-port', type=int, help='the backend JSON-RPC port to connect to')
     parser.add_argument('--backend-rpc-user', help='the username used to communicate with backend over JSON-RPC')
     parser.add_argument('--backend-rpc-password', help='the password used to communicate with backend over JSON-RPC')
