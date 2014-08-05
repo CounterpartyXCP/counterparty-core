@@ -258,7 +258,7 @@ def op_push (i):
     else:
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
-def serialise (block_index, encoding, inputs, destination_outputs, data_output=None, change_output=None, source=None, public_key=None):
+def serialise (block_index, encoding, inputs, destination_outputs, data_output=None, change_output=None, source=None, self_public_key=None):
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
     # Number of inputs.
@@ -320,9 +320,9 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
             # Construct script.
             script = op_required                                # Required signatures
             for address in addresses:
-                public_key = binascii.unhexlify(address) # TODO
-                script += op_push(len(public_key))              # Push bytes of public key
-                script += public_key                            # Data chunk (fake) public key
+                destination_public_key = binascii.unhexlify(address) # TODO
+                script += op_push(len(destination_public_key))  # Push bytes of public key
+                script += destinationpublic_key                 # Data chunk (fake) public key
             script += op_total                                  # Total signatures
             script += OP_CHECKMULTISIG                          # OP_CHECKMULTISIG
 
@@ -355,8 +355,8 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
                 data_pubkey = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
                 # Construct script.
                 script = OP_1                                   # OP_1
-                script += op_push(len(public_key))              # Push bytes of source public key
-                script += public_key                            # Source public key
+                script += op_push(len(self_public_key))         # Push bytes of source public key
+                script += self_public_key                       # Source public key
                 script += op_push(33)                           # Push bytes of data chunk (fake) public key    (1/2)
                 script += data_pubkey[:33]                      # Data chunk (fake) public key                  (1/2)
                 script += op_push(33)                           # Push bytes of data chunk (fake) public key    (2/2)
@@ -369,8 +369,8 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
                 data_pubkey = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
                 # Construct script.
                 script = OP_1                                   # OP_1
-                script += op_push(len(public_key))              # Push bytes of source public key
-                script += public_key                            # Source public key
+                script += op_push(len(self_public_key))         # Push bytes of source public key
+                script += self_public_key                       # Source public key
                 script += op_push(len(data_pubkey))             # Push bytes of data chunk (fake) public key
                 script += data_pubkey                           # Data chunk (fake) public key
                 script += OP_2                                  # OP_2
@@ -487,10 +487,10 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     # If public key is necessary for construction of (unsigned) transaction,
     # either use the public key provided, or derive it from a private key
     # retrieved from wallet.
-    public_key = None
+    self_public_key = None
     if encoding in ('multisig', 'pubkeyhash'):
         # If no public key was provided, derive from private key.
-        if not public_key_hex:
+        if not self_public_key_hex:
             # Get private key.
             if config.UNITTEST:
                 private_key_wif = config.UNITTEST_PRIVKEY[source]
@@ -498,13 +498,13 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
                 private_key_wif = rpc('dumpprivkey', [source])
 
             # Derive public key.
-            public_key_hex = private_key_to_public_key(private_key_wif)
+            self_public_key_hex = private_key_to_public_key(private_key_wif)
 
         #convert public key hex into public key pair (sec)
         try:
-            sec = binascii.unhexlify(public_key_hex)
+            sec = binascii.unhexlify(self_public_key_hex)
             is_compressed = is_sec_compressed(sec)
-            public_key = sec
+            self_public_key = sec
         except (EncodingError, binascii.Error):
             raise exceptions.InputError('Invalid private key.')
 
@@ -533,7 +533,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
                     
 
     # Check that the source is in wallet.
-    if not config.UNITTEST and encoding in ('multisig') and not public_key:
+    if not config.UNITTEST and encoding in ('multisig') and not self_public_key:
         if not rpc('validateaddress', [source])['ismine']:
             raise exceptions.AddressError('Not one of your Bitcoin addresses:', source)
 
@@ -631,7 +631,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     else: change_output = None
 
     # Serialise inputs and outputs.
-    unsigned_tx = serialise(block_index, encoding, inputs, destination_outputs, data_output, change_output, source=source, public_key=public_key)
+    unsigned_tx = serialise(block_index, encoding, inputs, destination_outputs, data_output, change_output, source=source, public_key=self_public_key)
     unsigned_tx_hex = binascii.hexlify(unsigned_tx).decode('utf-8')
     return unsigned_tx_hex
 
