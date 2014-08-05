@@ -945,11 +945,11 @@ def get_tx_info2 (tx, block_index):
             pubkeyhash = get_opreturn(asm)
             if not pubkeyhash: continue
             
-            chunk = pubkeyhash
-            if chunk[1:9] == config.PREFIX:                             # Data
+            chunk = get_binary(pubkeyhash)
+            if chunk[:len(config.PREFIX)] == config.PREFIX:                             # Data
                 data += chunk[len(config.PREFIX):]
             else:
-                continue                                                # Cannot store destination.
+                continue                                                # Cannot store destination, change.
 
         elif asm[-1] == 'OP_CHECKSIG':
             pubkeyhash = get_checksig(asm)
@@ -966,6 +966,8 @@ def get_tx_info2 (tx, block_index):
                 data += chunk[len(config.PREFIX):]
             elif not destination:                                       # Destination
                 destination = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
+            else:                                                       # Change
+                break
 
         elif asm[-1] == 'OP_CHECKMULTISIG':
             pubkeys = get_checkmultisig(asm)
@@ -980,6 +982,8 @@ def get_tx_info2 (tx, block_index):
             elif not destination:                                       # Destination
                 pubkeyhashes = [bitcoin.hash160(pubkey) for pubkey in pubkeys]
                 destination = ''.join([bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes])
+            else:                                                       # Cannot store change.
+                continue
         else:
             continue
 
@@ -1070,7 +1074,7 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
         tx_info = get_tx_info(tx, block_index)
 
     # TODO
-    if tx_hash == '365fe1729711b307b0e09b9225a3e8011dda8c3b1516f27efb7a92b99b71af18':
+    if tx_hash == '1a56b2ad97544cd282ca3725bc4cad2287fb6e46b9bad585dd00580c806f0cec':
         print(tx_info)
 
     source, destination, btc_amount, fee, data = tx_info
