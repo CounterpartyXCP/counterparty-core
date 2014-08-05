@@ -288,7 +288,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
 
     # Destination output.
     for destination, value in destination_outputs:
-        addresses = destination.split(' ')
+        addresses = destination.split('_')
         required_signatures = int(addresses[0])
         total_signatures = int(addresses[-1])
         addresses = sorted(addresses[1:-1])
@@ -516,7 +516,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     destinations = [address for address, value in destination_outputs]
     for destination in destinations + [source]:
         if destination:
-            addresses = destination.split(' ')[1:-1]
+            addresses = destination.split('_')[1:-1]
             if len(addresses) == 1:  # Pubkeyhashes, and not pubkeys.
                 try:
                     base58_decode(addresses[0], config.ADDRESSVERSION)

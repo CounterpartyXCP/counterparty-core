@@ -988,7 +988,7 @@ def get_tx_info2 (tx, block_index):
             elif not destination:                                       # Destination
                 pubkeyhashes = [bitcoin.hash160(binascii.unhexlify(bytes(pubkey, 'utf-8'))) for pubkey in pubkeys]
                 addresses = [bitcoin.base58_check_encode(binascii.hexlify(pubkeyhash).decode('utf-8'), config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes]
-                destination = ' '.join([str(required_signatures)] + sorted(addresses) + [str(len(addresses))])
+                destination = '_'.join([str(required_signatures)] + sorted(addresses) + [str(len(addresses))])
             else:                                                       # Cannot store change.
                 continue
         else:
@@ -1016,7 +1016,7 @@ def get_tx_info2 (tx, block_index):
             if not pubkeys: return INVALID
             pubkeyhashes = [bitcoin.hash160(binascii.unhexlify(bytes(pubkey, 'utf-8'))) for pubkey in pubkeys]
             addresses = [bitcoin.base58_check_encode(binascii.hexlify(pubkeyhash).decode('utf-8'), config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes]
-            source = ' '.join([str(required_signatures)] + sorted(addresses) + [str(len(addresses))])
+            source = '_'.join([str(required_signatures)] + sorted(addresses) + [str(len(addresses))])
 
         else:
             source = None
