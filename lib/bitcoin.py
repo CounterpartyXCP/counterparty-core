@@ -16,7 +16,7 @@ import logging
 
 import requests
 from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
-from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec, is_sec_compressed, EncodingError
+from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec, is_sec_compressed
 from Crypto.Cipher import ARC4
 
 from . import config, exceptions, util, blockchain
@@ -505,7 +505,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
             sec = binascii.unhexlify(public_key_hex)
             is_compressed = is_sec_compressed(sec)
             public_key = sec
-        except (EncodingError, binascii.Error):
+        except (pycoin.encoding.EncodingError, binascii.Error):
             raise exceptions.InputError('Invalid private key.')
 
     # Protocol change.
