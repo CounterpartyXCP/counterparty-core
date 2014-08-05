@@ -288,6 +288,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
         # TODO
         required_signatures = 1
 
+        s += value.to_bytes(8, byteorder='little')          # Value
         if len(addresses) > 1:
             # Required signatures.
             if required_signatures == 1:
@@ -321,7 +322,6 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
         else:
             # Construct script.
             pubkeyhash = base58_decode(addresses[0], config.ADDRESSVERSION)
-            s += value.to_bytes(8, byteorder='little')          # Value
             script = OP_DUP                                     # OP_DUP
             script += OP_HASH160                                # OP_HASH160
             script += op_push(20)                               # Push 0x14 bytes
