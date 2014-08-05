@@ -18,6 +18,8 @@ import apsw
 from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
 
+INVALID = b'', None, None, None, None, None
+
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['credits', 'debits', 'messages'] + \
          ['bet_match_resolutions', 'order_match_expirations',
@@ -140,6 +142,8 @@ def initialise(db):
                       block_time INTEGER,
                       source TEXT,
                       destination TEXT,
+                      required_signatures INTEGER,
+                      total_signatures INTEGER,
                       btc_amount INTEGER,
                       fee INTEGER,
                       data BLOB,
@@ -849,7 +853,7 @@ def get_tx_info (tx, block_index):
             try: pubkeyhash = binascii.unhexlify(bytes(pubkeyhash_string, 'utf-8'))
             except binascii.Error: continue
 
-            if 'coinbase' in tx['vin'][0]: return b'', None, None, None, None
+            if 'coinbase' in tx['vin'][0]: return INVALID
             obj1 = ARC4.new(binascii.unhexlify(bytes(tx['vin'][0]['txid'], 'utf-8')))
             data_pubkey = obj1.decrypt(pubkeyhash)
             if data_pubkey[1:9] == config.PREFIX or pubkeyhash_encoding:
@@ -875,37 +879,35 @@ def get_tx_info (tx, block_index):
     elif data[:len(config.PREFIX)] == config.PREFIX:
         data = data[len(config.PREFIX):]
     else:
-        return b'', None, None, None, None
+        return INVALID
 
     # Only look for source if data were found or destination is UNSPENDABLE, for speed.
     if not data and destination != config.UNSPENDABLE:
-        return b'', None, None, None, None
+        return INVALID
 
     # Collect all possible source addresses; ignore coinbase transactions and anything but the simplest Pay‐to‐PubkeyHash inputs.
     source_list = []
     for vin in tx['vin']:                                               # Loop through input transactions.
-        if 'coinbase' in vin: return b'', None, None, None, None
+        if 'coinbase' in vin: return INVALID
         vin_tx = bitcoin.get_raw_transaction(vin['txid'])     # Get the full transaction data for this input transaction.
         vout = vin_tx['vout'][vin['vout']]
         fee += vout['value'] * config.UNIT
 
         address = get_address(vout['scriptPubKey'])
-        if not address: return b'', None, None, None, None
+        if not address: return INVALID
         else: source_list.append(address)
 
     # Require that all possible source addresses be the same.
     if all(x == source_list[0] for x in source_list): source = source_list[0]
     else: source = None
 
-    return source, destination, btc_amount, round(fee), data
+    return source, destination, None, btc_amount, round(fee), data
 
 def get_tx_info2 (tx, block_index):
     """
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
-
-    failure = b'', None, None, None, None
 
     def get_binary (hexadecimal):
         # TODO Get rid of exception handling here.
@@ -939,7 +941,7 @@ def get_tx_info2 (tx, block_index):
     fee = 0
 
     # Get destination and data outputs.
-    btc_amount, destination, data = None, None, b''
+    btc_amount, destination, required_signatures, destination_required_signatures, data = None, None, None, None, b''
     for vout in tx['vout']:
         fee -= vout['value'] * config.UNIT
 
@@ -958,7 +960,7 @@ def get_tx_info2 (tx, block_index):
         elif asm[-1] == 'OP_CHECKSIG':
             pubkeyhash = get_checksig(asm)
             if not pubkeyhash: continue
-            if 'coinbase' in tx['vin'][0]: return failure
+            if 'coinbase' in tx['vin'][0]: return INVALID
 
             # Data or destination?
             obj1 = ARC4.new(binascii.unhexlify(bytes(tx['vin'][0]['txid'], 'utf-8')))
@@ -995,12 +997,13 @@ def get_tx_info2 (tx, block_index):
             continue
 
         if destination:
+            destination_required_signatures = required_signatures
             btc_amount = round(vout['value'] * config.UNIT) # Floats are awful.
 
     # Collect all possible source addresses; ignore coinbase transactions.
     source_list = []
     for vin in tx['vin']:                                           # Loop through input transactions.
-        if 'coinbase' in vin: return failure
+        if 'coinbase' in vin: return INVALID
         vin_tx = bitcoin.get_raw_transaction(vin['txid'])           # Get the full transaction data for this input transaction.
         vout = vin_tx['vout'][vin['vout']]
         fee += vout['value'] * config.UNIT
@@ -1008,12 +1011,12 @@ def get_tx_info2 (tx, block_index):
         asm = vout['scriptPubKey']['asm'].split(' ')
         if asm[-1] == 'OP_CHECKSIG':
             pubkeyhash = get_checksig(asm)
-            if not pubkeyhash: return failure
+            if not pubkeyhash: return INVALID
             source = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
 
         elif asm[-1] == 'OP_CHECKMULTISIG':
             pubkeys, required_signatures = get_checkmultisig(asm)
-            if not pubkeys: return failure
+            if not pubkeys: return INVALID
             pubkeyhashes = [bitcoin.hash160(binascii.unhexlify(bytes(pubkey, 'utf-8'))) for pubkey in pubkeys]
             addresses = [bitcoin.base58_check_encode(binascii.hexlify(pubkeyhash).decode('utf-8'), config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes]
             source = ' '.join(sorted(addresses))
@@ -1024,13 +1027,13 @@ def get_tx_info2 (tx, block_index):
         if source:
             source_list.append(source)
         else:
-            return failure
+            return INVALID
 
     # Require that all possible source addresses be the same.
     if all(x == source_list[0] for x in source_list): source = source_list[0]
     else: source = None
 
-    return source, destination, btc_amount, round(fee), data
+    return source, destination, destination_required_signatures, btc_amount, round(fee), data
 
 
 def reparse (db, block_index=None, quiet=False):
@@ -1089,8 +1092,9 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     if tx_hash == '1a56b2ad97544cd282ca3725bc4cad2287fb6e46b9bad585dd00580c806f0cec':
         print(tx_info)
 
-    source, destination, btc_amount, fee, data = tx_info
+    source, destination, required_signatures, btc_amount, fee, data = tx_info
     if source and (data or destination == config.UNSPENDABLE):
+        total_signatures = len(destination.split(' '))
         cursor.execute('''INSERT INTO transactions(
                             tx_index,
                             tx_hash,
@@ -1099,9 +1103,11 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
                             block_time,
                             source,
                             destination,
+                            required_signatures,
+                            total_signatures,
                             btc_amount,
                             fee,
-                            data) VALUES(?,?,?,?,?,?,?,?,?,?)''',
+                            data) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)''',
                             (tx_index,
                              tx_hash,
                              block_index,
@@ -1109,6 +1115,8 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
                              block_time,
                              source,
                              destination,
+                             required_signatures,
+                             total_signatures,
                              btc_amount,
                              fee,
                              data)
