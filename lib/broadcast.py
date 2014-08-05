@@ -66,7 +66,7 @@ def compose (db, source, timestamp, value, fee_fraction, text):
     problems = validate(db, source, timestamp, value, fee_fraction_int, text)
     if problems: raise exceptions.BroadcastError(problems)
 
-    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
+    data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, timestamp, value, fee_fraction_int,
                         text.encode('utf-8'))
     if len(data) > 80:

@@ -84,7 +84,7 @@ def compose (db, source, quantity_per_unit, asset, dividend_asset):
 
     asset_id = util.asset_id(asset)
     dividend_asset_id = util.asset_id(dividend_asset)
-    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
+    data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT_2, quantity_per_unit, asset_id, dividend_asset_id)
     return (source, [], data)
 

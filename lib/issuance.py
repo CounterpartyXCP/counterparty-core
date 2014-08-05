@@ -121,7 +121,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, calla
     if problems: raise exceptions.IssuanceError(problems)
 
     asset_id = util.asset_id(asset)
-    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
+    data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT_2, asset_id, quantity, 1 if divisible else 0, 1 if callable_ else 0,
         call_date or 0, call_price or 0.0, description.encode('utf-8'))
     if len(data) > 80:
