@@ -926,7 +926,7 @@ def get_tx_info2 (tx, block_index):
         return False
     def get_checkmultisig (asm):
         # N‐of‐3 only
-        if len(asm) == 6 and asm[0] == '1' and asm[4] == '4' and asm[5] == 'OP_CHECKMULTISIG':
+        if len(asm) == 6 and asm[0] == '1' and asm[4] == '3' and asm[5] == 'OP_CHECKMULTISIG':
             pubkey_self_hex, pubkey_2_hex, pubkey_3_hex = asm[1:4]
             return (pubkey_2_hex, pubkey_3_hex)
         return False
@@ -947,7 +947,7 @@ def get_tx_info2 (tx, block_index):
             
             chunk = pubkeyhash
             if chunk[1:9] == config.PREFIX:                             # Data
-                data += chunk
+                data += chunk[len(config.PREFIX):]
             else:
                 continue                                                # Cannot store destination.
 
@@ -963,7 +963,7 @@ def get_tx_info2 (tx, block_index):
             if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
                 chunk_length = chunk[0]             # TODO
                 chunk = chunk[1:chunk_length + 1]   # TODO
-                data += chunk
+                data += chunk[len(config.PREFIX):]
             elif not destination:                                       # Destination
                 destination = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
 
@@ -972,14 +972,16 @@ def get_tx_info2 (tx, block_index):
             if not pubkeys: continue
 
             # Data or destinations?
-            chunk = get_binary(pubkey[0]) + get_binary(pubkey[1])
+            chunk = get_binary(pubkeys[0]) + get_binary(pubkeys[1])
             if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
                 chunk_length = chunk[0]             # TODO
                 chunk = chunk[1:chunk_length + 1]   # TODO
-                data += chunk
+                data += chunk[len(config.PREFIX):]
             elif not destination:                                       # Destination
                 pubkeyhashes = [bitcoin.hash160(pubkey) for pubkey in pubkeys]
                 destination = ''.join([bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes])
+        else:
+            continue
 
         if destination:
             btc_amount = round(vout['value'] * config.UNIT) # Floats are awful.
@@ -1067,6 +1069,10 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     else:
         tx_info = get_tx_info(tx, block_index)
 
+    # TODO
+    if tx_hash == '365fe1729711b307b0e09b9225a3e8011dda8c3b1516f27efb7a92b99b71af18':
+        print(tx_info)
+
     source, destination, btc_amount, fee, data = tx_info
     if source and (data or destination == config.UNSPENDABLE):
         cursor.execute('''INSERT INTO transactions(
@@ -1116,7 +1122,7 @@ def follow (db):
     except exceptions.DatabaseError:
         logging.warning('Status: NEW DATABASE')
         block_index = config.BLOCK_FIRST
-        block_index = 271900    # TODO
+        block_index = 271915    # TODO
 
     # Get index of last transaction.
     txes = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)'''))
