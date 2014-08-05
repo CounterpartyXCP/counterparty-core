@@ -982,7 +982,8 @@ def get_tx_info2 (tx, block_index):
                 data += chunk[len(config.PREFIX):]
             elif not destination:                                       # Destination
                 pubkeyhashes = [bitcoin.hash160(pubkey) for pubkey in pubkeys]
-                destination = ''.join([bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes])
+                addresses = [bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes]
+                destination = ''.join(sorted(addresses))
             else:                                                       # Cannot store change.
                 continue
         else:
@@ -1009,7 +1010,8 @@ def get_tx_info2 (tx, block_index):
             pubkeys = get_checkmultisig(asm)
             if not pubkeys: return failure
             pubkeyhashes = [bitcoin.hash160(pubkey) for pubkey in pubkeys]
-            source = ''.join([bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes])
+            addresses = [bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes]
+            source = ''.join(sorted(addresses))
 
         else:
             source = None

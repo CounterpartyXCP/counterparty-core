@@ -283,7 +283,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
 
     # Destination output.
     for destination, value in destination_outputs:
-        addresses = destination.split(' ')
+        addresses = sorted(destination.split(' '))
 
         # TODO
         required_signatures = 1
