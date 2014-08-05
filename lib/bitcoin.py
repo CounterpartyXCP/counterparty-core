@@ -481,10 +481,18 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
             """ Yield successive n‐sized chunks from l.
             """
             for i in range(0, len(l), n): yield l[i:i+n]
+        if not (config.TESTNET and block_index >= 0): # TODO: Protocol change.
+            data = config.PREFIX + data
         if encoding == 'pubkeyhash':
-            data_array = list(chunks(data + config.PREFIX, 20 - 1)) # Prefix is also a suffix here.
+            if config.TESTNET and block_index >= 0: # TODO: Protocol change.
+                data_array = list(chunks(data, 20 - 1 - 8)) # Prefix is also a suffix here.
+            else:
+                data_array = list(chunks(data + config.PREFIX, 20 - 1)) # Prefix is also a suffix here.
         elif encoding == 'multisig':
-            data_array = list(chunks(data, 33 - 1))
+            if config.TESTNET and block_index >= 0: # TODO: Protocol change.
+                data_array = list(chunks(data, (33 * 2) - 1 - 8))
+            else:
+                data_array = list(chunks(data, 33 - 1))
         elif encoding == 'opreturn':
             data_array = list(chunks(data, config.OP_RETURN_MAX_SIZE))
             assert len(data_array) == 1 # Only one OP_RETURN output currently supported (OP_RETURN messages should all be shorter than 40 bytes, at the moment).
