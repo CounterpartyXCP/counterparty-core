@@ -925,10 +925,13 @@ def get_tx_info2 (tx, block_index):
             return pubkeyhash_hex
         return False
     def get_checkmultisig (asm):
-        # N‐of‐3 only
-        if len(asm) == 6 and asm[0] == '1' and asm[4] == '3' and asm[5] == 'OP_CHECKMULTISIG':
-            pubkey_self_hex, pubkey_2_hex, pubkey_3_hex = asm[1:4]
-            return (pubkey_2_hex, pubkey_3_hex)
+        # N‐of‐2
+        if len(asm) == 5 and asm[3] == '2' and asm[4] == 'OP_CHECKMULTISIG':
+            return asm[1:3], int(asm[0])
+
+        # N‐of‐3
+        if len(asm) == 6 and asm[4] == '3' and asm[5] == 'OP_CHECKMULTISIG':
+            return asm[1:4], int(asm[0])
         return False
 
 
@@ -971,19 +974,21 @@ def get_tx_info2 (tx, block_index):
                 break
 
         elif asm[-1] == 'OP_CHECKMULTISIG':
-            pubkeys = get_checkmultisig(asm)
+            pubkeys, required_signatures = get_checkmultisig(asm)
             if not pubkeys: continue
 
             # Data or destinations?
-            chunk = get_binary(pubkeys[0]) + get_binary(pubkeys[1])
+            chunk = b''
+            for pubkey in pubkeys[1:]:      # (No data in first pubkey.)
+                chunk += get_binary(pubkey)
             if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
                 chunk_length = chunk[0]             # TODO
                 chunk = chunk[1:chunk_length + 1]   # TODO
                 data += chunk[len(config.PREFIX):]
             elif not destination:                                       # Destination
-                pubkeyhashes = [bitcoin.hash160(pubkey) for pubkey in pubkeys]
-                addresses = [bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes]
-                destination = ''.join(sorted(addresses))
+                pubkeyhashes = [bitcoin.hash160(binascii.unhexlify(bytes(pubkey, 'utf-8'))) for pubkey in pubkeys]
+                addresses = [bitcoin.base58_check_encode(binascii.hexlify(pubkeyhash).decode('utf-8'), config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes]
+                destination = ' '.join(sorted(addresses))
             else:                                                       # Cannot store change.
                 continue
         else:
@@ -1007,11 +1012,11 @@ def get_tx_info2 (tx, block_index):
             source = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
 
         elif asm[-1] == 'OP_CHECKMULTISIG':
-            pubkeys = get_checkmultisig(asm)
+            pubkeys, required_signatures = get_checkmultisig(asm)
             if not pubkeys: return failure
-            pubkeyhashes = [bitcoin.hash160(pubkey) for pubkey in pubkeys]
-            addresses = [bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes]
-            source = ''.join(sorted(addresses))
+            pubkeyhashes = [bitcoin.hash160(binascii.unhexlify(bytes(pubkey, 'utf-8'))) for pubkey in pubkeys]
+            addresses = [bitcoin.base58_check_encode(binascii.hexlify(pubkeyhash).decode('utf-8'), config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes]
+            source = ' '.join(sorted(addresses))
 
         else:
             source = None
@@ -1133,7 +1138,7 @@ def follow (db):
     except exceptions.DatabaseError:
         logging.warning('Status: NEW DATABASE')
         block_index = config.BLOCK_FIRST
-        block_index = 271915    # TODO
+        block_index = 272053    # TODO
 
     # Get index of last transaction.
     txes = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)'''))

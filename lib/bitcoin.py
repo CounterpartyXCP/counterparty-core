@@ -36,6 +36,11 @@ b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
 D = decimal.Decimal
 dhash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
+def hash160(x):
+    x = hashlib.sha256(x).digest()
+    m = hashlib.new('ripemd160')
+    m.update(x)
+    return m.digest()
 bitcoin_rpc_session = None
 
 def print_coin(coin):
