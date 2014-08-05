@@ -30,6 +30,7 @@ OP_EQUALVERIFY = b'\x88'
 OP_CHECKSIG = b'\xac'
 OP_1 = b'\x51'
 OP_2 = b'\x52'
+OP_3 = b'\x53'
 OP_CHECKMULTISIG = b'\xae'
 b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
@@ -298,19 +299,37 @@ def serialise (encoding, inputs, destination_outputs, data_output=None, change_o
         data_array, value = data_output # DUPE
         s += value.to_bytes(8, byteorder='little')        # Value
 
+        if config.TESTNET and block_index >= 0: # TODO: Protocol change.
+            data_chunk = config.PREFIX + data_chunk
+
         if encoding == 'multisig':
             # Get data (fake) public key.
-            pad_length = 33 - 1 - len(data_chunk)
-            assert pad_length >= 0
-            data_pubkey = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
-            # Construct script.
-            script = OP_1                                   # OP_1
-            script += op_push(len(public_key))              # Push bytes of source public key
-            script += public_key                            # Source public key
-            script += op_push(len(data_pubkey))             # Push bytes of data chunk (fake) public key
-            script += data_pubkey                           # Data chunk (fake) public key
-            script += OP_2                                  # OP_2
-            script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
+            if config.TESTNET and block_index >= 0: # TODO: Protocol change.
+                pad_length = (33 * 2) - 1 - len(data_chunk)
+                assert pad_length >= 0
+                data_pubkey = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
+                # Construct script.
+                script = OP_1                                   # OP_1
+                script += op_push(len(public_key))              # Push bytes of source public key
+                script += public_key                            # Source public key
+                script += op_push(33)                           # Push bytes of data chunk (fake) public key    (1/2)
+                script += data_pubkey[:33]                      # Data chunk (fake) public key                  (1/2)
+                script += op_push(33)                           # Push bytes of data chunk (fake) public key    (2/2)
+                script += data_pubkey[33:]                      # Data chunk (fake) public key                  (2/2)
+                script += OP_3                                  # OP_3
+                script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
+            else:
+                pad_length = 33 - 1 - len(data_chunk)
+                assert pad_length >= 0
+                data_pubkey = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
+                # Construct script.
+                script = OP_1                                   # OP_1
+                script += op_push(len(public_key))              # Push bytes of source public key
+                script += public_key                            # Source public key
+                script += op_push(len(data_pubkey))             # Push bytes of data chunk (fake) public key
+                script += data_pubkey                           # Data chunk (fake) public key
+                script += OP_2                                  # OP_2
+                script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
         elif encoding == 'opreturn':
             script = OP_RETURN                              # OP_RETURN
             script += op_push(len(data_chunk))              # Push bytes of data chunk (NOTE: OP_SMALLDATA?)
