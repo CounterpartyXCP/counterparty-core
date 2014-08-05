@@ -946,7 +946,7 @@ def get_tx_info2 (tx, block_index):
             if not pubkeyhash: continue
             
             chunk = get_binary(pubkeyhash)
-            if chunk[:len(config.PREFIX)] == config.PREFIX:                             # Data
+            if chunk[:len(config.PREFIX)] == config.PREFIX:             # Data
                 data += chunk[len(config.PREFIX):]
             else:
                 continue                                                # Cannot store destination, change.
@@ -1001,11 +1001,15 @@ def get_tx_info2 (tx, block_index):
         asm = vout['scriptPubKey']['asm'].split(' ')
         if asm[-1] == 'OP_CHECKSIG':
             pubkeyhash = get_checksig(asm)
+            if not pubkeyhash: return failure
             source = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
+
         elif asm[-1] == 'OP_CHECKMULTISIG':
             pubkeys = get_checkmultisig(asm)
+            if not pubkeys: return failure
             pubkeyhashes = [bitcoin.hash160(pubkey) for pubkey in pubkeys]
             source = ''.join([bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes])
+
         else:
             source = None
 
