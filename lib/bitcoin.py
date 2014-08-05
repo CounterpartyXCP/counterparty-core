@@ -16,7 +16,7 @@ import logging
 
 import requests
 from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
-from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec, is_sec_compressed
+from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec, is_sec_compressed, EncodingError
 from Crypto.Cipher import ARC4
 
 from . import config, exceptions, util, blockchain
@@ -449,7 +449,7 @@ def private_key_to_public_key (private_key_wif):
     # allowable_wif_prefixes = [
     try:
         secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif, is_test=config.TESTNET)
-    except pycoin.encoding.EncodingError:
+    except EncodingError:
         raise exceptions.AltcoinSupportError('pycoin: unsupported WIF prefix')
     public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
     public_key = public_pair_to_sec(public_pair, compressed=compressed)
@@ -505,7 +505,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
             sec = binascii.unhexlify(public_key_hex)
             is_compressed = is_sec_compressed(sec)
             public_key = sec
-        except (pycoin.encoding.EncodingError, binascii.Error):
+        except (EncodingError, binascii.Error):
             raise exceptions.InputError('Invalid private key.')
 
     # Protocol change.
