@@ -253,7 +253,7 @@ def op_push (i):
     else:
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
-def serialise (encoding, inputs, destination_outputs, data_output=None, change_output=None, source=None, public_key=None):
+def serialise (block_index, encoding, inputs, destination_outputs, data_output=None, change_output=None, source=None, public_key=None):
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
     # Number of inputs.
@@ -411,12 +411,14 @@ def private_key_to_public_key (private_key_wif):
     public_key_hex = binascii.hexlify(public_key).decode('utf-8')
     return public_key_hex
 
-def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
+def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
                  regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
                  multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
                  op_return_value=config.DEFAULT_OP_RETURN_VALUE, exact_fee=None,
                  fee_provided=0, public_key_hex=None,
                  allow_unconfirmed_inputs=False):
+
+    block_index = util.last_block(db)['block_index']
 
     (source, destination_outputs, data) = tx_info
 
@@ -573,7 +575,7 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
     else: change_output = None
 
     # Serialise inputs and outputs.
-    unsigned_tx = serialise(encoding, inputs, destination_outputs, data_output, change_output, source=source, public_key=public_key)
+    unsigned_tx = serialise(block_index, encoding, inputs, destination_outputs, data_output, change_output, source=source, public_key=public_key)
     unsigned_tx_hex = binascii.hexlify(unsigned_tx).decode('utf-8')
     return unsigned_tx_hex
 

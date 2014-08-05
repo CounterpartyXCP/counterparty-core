@@ -201,7 +201,7 @@ def compose_transaction(db, name, params,
                         fee=None,
                         fee_provided=0):
     tx_info = sys.modules['lib.{}'.format(name)].compose(db, **params)
-    return bitcoin.transaction(tx_info, encoding=encoding,
+    return bitcoin.transaction(db, tx_info, encoding=encoding,
                                         fee_per_kb=fee_per_kb,
                                         regular_dust_size=regular_dust_size,
                                         multisig_dust_size=multisig_dust_size,
