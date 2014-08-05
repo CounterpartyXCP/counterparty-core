@@ -900,6 +900,119 @@ def get_tx_info (tx, block_index):
 
     return source, destination, btc_amount, round(fee), data
 
+def get_tx_info2 (tx, block_index):
+    """
+    The destinations, if they exists, always comes before the data output; the
+    change, if it exists, always comes after.
+    """
+
+    def get_binary (hexadecimal):
+        try: binary = binascii.unhexlify(bytes(hexadecimal, 'utf-8'))
+        except (binascii.Error, IndexError): return False
+        return binary
+
+    def get_opreturn (asm):
+        if len(asm) == 2 and asm[0] == 'OP_RETURN':
+            pubkeyhash_hex = asm[2]
+            return get_binary(pubkeyhash_hex)
+        return False
+    def get_checksig (asm):
+        if len(asm) == 5 and asm[0] == 'OP_DUP' and asm[1] == 'OP_HASH160' and asm[3] == 'OP_EQUALVERIFY' and asm[4] == 'OP_CHECKSIG':
+            pubkeyhash_hex = asm[2]
+            return get_binary(pubkeyhash_hex)
+        return False
+    def get_checkmultisig (asm):
+        # N‐of‐3 only
+        if len(asm) == 6 and asm[0] == '1' and asm[4] == '4' and asm[5] == 'OP_CHECKMULTISIG':
+            pubkey_self_hex, pubkey_2_hex, pubkey_3_hex = asm[1:4]
+            return (get_binary(pubkey_2_hex), extract(pubkey_3_hex))
+        return False
+
+    def pubkeys_to_address (pubkeys):
+        addresses = []
+        for pubkey in pubkeys:
+            pubkeyhash = bitcoin.hash160(pubkey)
+            addresses.append(bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION))
+        address = ' '.join(addresses)
+        return address
+
+    # Fee is the input values minus output values.
+    fee = 0
+
+    # Get destination and data outputs.
+    btc_amount, destination, data = None, None, b''
+    for vout in tx['vout']:
+        fee -= vout['value'] * config.UNIT
+
+        asm = vout['scriptPubKey']['asm'].split(' ')
+        if asm[0] == 'OP_RETURN':
+            if len(asm) != 2: continue
+            try: data_chunk = binascii.unhexlify(bytes(asm[1], 'utf-8'))
+            except (binascii.Error, IndexError): continue
+
+            if data_chunk[1:9] == config.PREFIX:   # Data
+                data += data_chunk
+
+        elif asm[-1] == 'OP_CHECKSIG':
+            pubkeyhash = get_checksig(asm)
+            if not pubkeyhash: continue
+
+            # Data or destination?
+            key = ARC4.new(binascii.unhexlify(bytes(tx['vin'][0]['txid'], 'utf-8')))
+            chunk = key.decrypt(pubkeyhash)
+            if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:   # Data
+                chunk_length = chunk[0]             # TODO
+                chunk = chunk[1:chunk_length + 1]   # TODO
+                data += chunk
+            else:
+                destination = pubkeyhash
+
+        elif asm[-1] == 'OP_CHECKMULTISIG':
+            pubkeys = get_checkmultisig(asm)
+            if not pubkeys: continue
+
+            # Data or destinations?
+            if pubkeys[0][1:len(config.PREFIX) + 1] == config.PREFIX:
+                chunk = b''.join(pubkeys)
+                chunk_length = chunk[0]             # TODO
+                chunk = chunk[1:chunk_length + 1]   # TODO
+                data += chunk
+            else:
+                destination = pubkeys_to_address(pubkeys)
+
+        if destination:
+            btc_amount = round(vout['value'] * config.UNIT) # Floats are awful.
+
+    # Collect all possible source addresses; ignore coinbase transactions.
+    source_list = []
+    for vin in tx['vin']:                                           # Loop through input transactions.
+        if 'coinbase' in vin: return b'', None, None, None, None
+        vin_tx = bitcoin.get_raw_transaction(vin['txid'])           # Get the full transaction data for this input transaction.
+        vout = vin_tx['vout'][vin['vout']]
+        fee += vout['value'] * config.UNIT
+
+        asm = vout['scriptPubKey']['asm'].split(' ')
+        if asm[-1] == 'OP_CHECKSIG':
+            source = get_checksig(asm)
+        elif asm[-1] == 'OP_CHECKMULTISIG':
+            pubkeys = get_checkmultisig(asm)
+            addresses = 
+            for pubkey in pubkeys:
+                source = pubkeys_to_address(pubkeys)
+        else:
+            source = None
+
+        if source:
+            source_list.append(source)
+        else:
+            return b'', None, None, None, None
+
+    # Require that all possible source addresses be the same.
+    if all(x == source_list[0] for x in source_list): source = source_list[0]
+    else: source = None
+
+    return source, destination, btc_amount, round(fee), data
+
 
 def reparse (db, block_index=None, quiet=False):
     """Reparse all transactions (atomically). If block_index is set, rollback
@@ -947,7 +1060,13 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     # Get the important details about each transaction.
     tx = bitcoin.get_raw_transaction(tx_hash)
     logging.debug('Status: examining transaction {}'.format(tx_hash))
-    source, destination, btc_amount, fee, data = get_tx_info(tx, block_index)
+
+    if (config.TESTNET and block_index >= 0): # TODO Protocol change.
+        tx_info = get_tx_info2(tx, block_index)
+    else:
+        tx_info = get_tx_info(tx, block_index)
+
+    source, destination, btc_amount, fee, data = tx_info
     if source and (data or destination == config.UNSPENDABLE):
         cursor.execute('''INSERT INTO transactions(
                             tx_index,
