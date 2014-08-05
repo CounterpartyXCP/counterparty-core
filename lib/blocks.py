@@ -946,6 +946,7 @@ def get_tx_info2 (tx, block_index):
             if not pubkeyhash: continue
             
             chunk = get_binary(pubkeyhash)
+            if not chunk: continue
             if chunk[:len(config.PREFIX)] == config.PREFIX:             # Data
                 data += chunk[len(config.PREFIX):]
             else:

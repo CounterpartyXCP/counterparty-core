@@ -164,7 +164,7 @@ def rpc (method, params):
             else:   # When will this happen?
                 raise exceptions.BitcoindError('Source address not in wallet.')
         else:
-            raise exceptions.AddressError('Invalid address.')
+            raise exceptions.AddressError('Invalid address. (Multi‐signature?)')
     elif response_json['error']['code'] == -1 and response_json['message'] == 'Block number out of range.':
         time.sleep(10)
         return rpc('getblockhash', [block_index])
@@ -282,15 +282,53 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
     s += var_int(n)
 
     # Destination output.
-    for address, value in destination_outputs:
-        pubkeyhash = base58_decode(address, config.ADDRESSVERSION)
-        s += value.to_bytes(8, byteorder='little')          # Value
-        script = OP_DUP                                     # OP_DUP
-        script += OP_HASH160                                # OP_HASH160
-        script += op_push(20)                               # Push 0x14 bytes
-        script += pubkeyhash                                # pubKeyHash
-        script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
-        script += OP_CHECKSIG                               # OP_CHECKSIG
+    for destination, value in destination_outputs:
+        addresses = destination.split(' ')
+
+        # TODO
+        required_signatures = 1
+
+        if len(addresses) > 1:
+            # Required signatures.
+            if required_signatures == 1:
+                op_required = OP_1
+            elif required_signatures == 2:
+                op_required = OP_2
+            elif required_signatures == 3:
+                op_required = OP_3
+            else:
+                raise exceptions.InputError('Required signatures must be 1, 2 or 3.')
+
+            # Required signatures.
+            if len(addresses) == 1:
+                op_total = OP_1
+            elif len(addresses) == 2:
+                op_total = OP_2
+            elif len(addresses) == 3:
+                op_total = OP_3
+            else:
+                raise exceptions.InputError('Total possible signatures must be 1, 2 or 3.')
+
+            # Construct script.
+            script = op_required                                # Required signatures
+            for address in addresses:
+                public_key = binascii.unhexlify(address) # TODO
+                script += op_push(len(public_key))              # Push bytes of public key
+                script += public_key                            # Data chunk (fake) public key
+            script += op_total                                  # Total signatures
+            script += OP_CHECKMULTISIG                          # OP_CHECKMULTISIG
+
+        else:
+            # Construct script.
+            pubkeyhash = base58_decode(addresses[0], config.ADDRESSVERSION)
+            s += value.to_bytes(8, byteorder='little')          # Value
+            script = OP_DUP                                     # OP_DUP
+            script += OP_HASH160                                # OP_HASH160
+            script += op_push(20)                               # Push 0x14 bytes
+            script += pubkeyhash                                # pubKeyHash
+            script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
+            script += OP_CHECKSIG                               # OP_CHECKSIG
+
         s += var_int(int(len(script)))                      # Script length
         s += script
 
@@ -469,12 +507,14 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
 
     # Validate source and all destination addresses.
     destinations = [address for address, value in destination_outputs]
-    for address in destinations + [source]:
-        if address:
-            try:
-                base58_decode(address, config.ADDRESSVERSION)
-            except Exception:   # TODO
-                raise exceptions.AddressError('Invalid Bitcoin address:', address)
+    for destination in destinations + [source]:
+        if destination:
+            addresses = destination.split(' ')
+            if len(addresses) == 1:  # Pubkeyhashes, and not pubkeys.
+                try:
+                    base58_decode(addresses[0], config.ADDRESSVERSION)
+                except Exception:   # TODO
+                    raise exceptions.AddressError('Invalid address:', addresses[0])
 
     # Check that the source is in wallet.
     if not config.UNITTEST and encoding in ('multisig') and not public_key:
