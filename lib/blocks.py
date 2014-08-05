@@ -18,7 +18,7 @@ import apsw
 from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
 
-INVALID = b'', None, None, None, None, None
+INVALID = b'', None, None, None, None
 
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['credits', 'debits', 'messages'] + \
@@ -142,8 +142,6 @@ def initialise(db):
                       block_time INTEGER,
                       source TEXT,
                       destination TEXT,
-                      required_signatures INTEGER,
-                      total_signatures INTEGER,
                       btc_amount INTEGER,
                       fee INTEGER,
                       data BLOB,
@@ -901,7 +899,7 @@ def get_tx_info (tx, block_index):
     if all(x == source_list[0] for x in source_list): source = source_list[0]
     else: source = None
 
-    return source, destination, None, btc_amount, round(fee), data
+    return source, destination, btc_amount, round(fee), data
 
 def get_tx_info2 (tx, block_index):
     """
@@ -941,7 +939,7 @@ def get_tx_info2 (tx, block_index):
     fee = 0
 
     # Get destination and data outputs.
-    btc_amount, destination, required_signatures, destination_required_signatures, data = None, None, None, None, b''
+    btc_amount, destination, data = None, None, b''
     for vout in tx['vout']:
         fee -= vout['value'] * config.UNIT
 
@@ -990,14 +988,13 @@ def get_tx_info2 (tx, block_index):
             elif not destination:                                       # Destination
                 pubkeyhashes = [bitcoin.hash160(binascii.unhexlify(bytes(pubkey, 'utf-8'))) for pubkey in pubkeys]
                 addresses = [bitcoin.base58_check_encode(binascii.hexlify(pubkeyhash).decode('utf-8'), config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes]
-                destination = ' '.join(sorted(addresses))
+                destination = ' '.join([str(required_signatures)] + sorted(addresses) + [str(len(addresses))])
             else:                                                       # Cannot store change.
                 continue
         else:
             continue
 
         if destination:
-            destination_required_signatures = required_signatures
             btc_amount = round(vout['value'] * config.UNIT) # Floats are awful.
 
     # Collect all possible source addresses; ignore coinbase transactions.
@@ -1019,7 +1016,7 @@ def get_tx_info2 (tx, block_index):
             if not pubkeys: return INVALID
             pubkeyhashes = [bitcoin.hash160(binascii.unhexlify(bytes(pubkey, 'utf-8'))) for pubkey in pubkeys]
             addresses = [bitcoin.base58_check_encode(binascii.hexlify(pubkeyhash).decode('utf-8'), config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes]
-            source = ' '.join(sorted(addresses))
+            source = ' '.join([str(required_signatures)] + sorted(addresses) + [str(len(addresses))])
 
         else:
             source = None
@@ -1033,7 +1030,7 @@ def get_tx_info2 (tx, block_index):
     if all(x == source_list[0] for x in source_list): source = source_list[0]
     else: source = None
 
-    return source, destination, destination_required_signatures, btc_amount, round(fee), data
+    return source, destination, btc_amount, round(fee), data
 
 
 def reparse (db, block_index=None, quiet=False):
@@ -1088,13 +1085,8 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     else:
         tx_info = get_tx_info(tx, block_index)
 
-    # TODO
-    if tx_hash == '1a56b2ad97544cd282ca3725bc4cad2287fb6e46b9bad585dd00580c806f0cec':
-        print(tx_info)
-
-    source, destination, required_signatures, btc_amount, fee, data = tx_info
+    source, destination, btc_amount, fee, data = tx_info
     if source and (data or destination == config.UNSPENDABLE):
-        total_signatures = len(destination.split(' '))
         cursor.execute('''INSERT INTO transactions(
                             tx_index,
                             tx_hash,
@@ -1103,11 +1095,9 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
                             block_time,
                             source,
                             destination,
-                            required_signatures,
-                            total_signatures,
                             btc_amount,
                             fee,
-                            data) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)''',
+                            data) VALUES(?,?,?,?,?,?,?,?,?,?)''',
                             (tx_index,
                              tx_hash,
                              block_index,
@@ -1115,8 +1105,6 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
                              block_time,
                              source,
                              destination,
-                             required_signatures,
-                             total_signatures,
                              btc_amount,
                              fee,
                              data)
@@ -1146,7 +1134,7 @@ def follow (db):
     except exceptions.DatabaseError:
         logging.warning('Status: NEW DATABASE')
         block_index = config.BLOCK_FIRST
-        block_index = 272053    # TODO
+        block_index = 271915    # TODO
 
     # Get index of last transaction.
     txes = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)'''))
