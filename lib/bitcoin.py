@@ -521,7 +521,16 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
                 try:
                     base58_decode(addresses[0], config.ADDRESSVERSION)
                 except Exception:   # TODO
-                    raise exceptions.AddressError('Invalid address:', addresses[0])
+                    raise exceptions.AddressError('Invalid destination address:', addresses[0])
+            else:
+                try:
+                    assert addresses[0] in (1,2,3) 
+                    assert addresses[-1] in (1,2,3) 
+                    for pubkey in addresses[1:-1]:
+                        binascii.unhexlify(bytes(pubkey, 'utf-8'))
+                except (AssertionError, Exception): # TODO
+                    raise exceptions.AddressError('Invalid multi‐signature destination string:', destination)
+                    
 
     # Check that the source is in wallet.
     if not config.UNITTEST and encoding in ('multisig') and not public_key:
