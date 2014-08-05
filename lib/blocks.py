@@ -798,30 +798,29 @@ def initialise(db):
                   ''')
 
     cursor.close()
-
-def get_pubkeyhash (scriptpubkey):
-    asm = scriptpubkey['asm'].split(' ')
-    if len(asm) != 5 or asm[0] != 'OP_DUP' or asm[1] != 'OP_HASH160' or asm[3] != 'OP_EQUALVERIFY' or asm[4] != 'OP_CHECKSIG':
-        return False
-    return asm[2]
-
-def get_address (scriptpubkey):
-    pubkeyhash = get_pubkeyhash(scriptpubkey)
-    if not pubkeyhash: return False
-
-    address = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
-
-    # Test decoding of address.
-    if address != config.UNSPENDABLE and binascii.unhexlify(bytes(pubkeyhash, 'utf-8')) != bitcoin.base58_decode(address, config.ADDRESSVERSION):
-        return False
-
-    return address
-
 def get_tx_info (tx, block_index):
     """
     The destination, if it exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
+
+    def get_pubkeyhash (scriptpubkey):
+        asm = scriptpubkey['asm'].split(' ')
+        if len(asm) != 5 or asm[0] != 'OP_DUP' or asm[1] != 'OP_HASH160' or asm[3] != 'OP_EQUALVERIFY' or asm[4] != 'OP_CHECKSIG':
+            return False
+        return asm[2]
+
+    def get_address (scriptpubkey):
+        pubkeyhash = get_pubkeyhash(scriptpubkey)
+        if not pubkeyhash: return False
+
+        address = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
+
+        # Test decoding of address.
+        if address != config.UNSPENDABLE and binascii.unhexlify(bytes(pubkeyhash, 'utf-8')) != bitcoin.base58_decode(address, config.ADDRESSVERSION):
+            return False
+
+        return address
 
     # Fee is the input values minus output values.
     fee = 0
@@ -906,6 +905,8 @@ def get_tx_info2 (tx, block_index):
     change, if it exists, always comes after.
     """
 
+    failure = b'', None, None, None, None
+
     def get_binary (hexadecimal):
         # TODO Get rid of exception handling here.
         try:
@@ -916,18 +917,18 @@ def get_tx_info2 (tx, block_index):
     def get_opreturn (asm):
         if len(asm) == 2 and asm[0] == 'OP_RETURN':
             pubkeyhash_hex = asm[1]
-            return get_binary(pubkeyhash_hex)
+            return pubkeyhash_hex
         return False
     def get_checksig (asm):
         if len(asm) == 5 and asm[0] == 'OP_DUP' and asm[1] == 'OP_HASH160' and asm[3] == 'OP_EQUALVERIFY' and asm[4] == 'OP_CHECKSIG':
             pubkeyhash_hex = asm[2]
-            return get_binary(pubkeyhash_hex)
+            return pubkeyhash_hex
         return False
     def get_checkmultisig (asm):
         # N‐of‐3 only
         if len(asm) == 6 and asm[0] == '1' and asm[4] == '4' and asm[5] == 'OP_CHECKMULTISIG':
             pubkey_self_hex, pubkey_2_hex, pubkey_3_hex = asm[1:4]
-            return (get_binary(pubkey_2_hex), extract(pubkey_3_hex))
+            return (pubkey_2_hex, pubkey_3_hex)
         return False
 
 
@@ -953,25 +954,25 @@ def get_tx_info2 (tx, block_index):
         elif asm[-1] == 'OP_CHECKSIG':
             pubkeyhash = get_checksig(asm)
             if not pubkeyhash: continue
-            if 'coinbase' in tx['vin'][0]: return b'', None, None, None, None
+            if 'coinbase' in tx['vin'][0]: return failure
 
             # Data or destination?
             obj1 = ARC4.new(binascii.unhexlify(bytes(tx['vin'][0]['txid'], 'utf-8')))
             key = ARC4.new(binascii.unhexlify(bytes(tx['vin'][0]['txid'], 'utf-8')))
-            chunk = key.decrypt(pubkeyhash)
+            chunk = key.decrypt(get_binary(pubkeyhash))
             if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
                 chunk_length = chunk[0]             # TODO
                 chunk = chunk[1:chunk_length + 1]   # TODO
                 data += chunk
             else:                                                       # Destination
-                destination = pubkeyhash
+                destination = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
 
         elif asm[-1] == 'OP_CHECKMULTISIG':
             pubkeys = get_checkmultisig(asm)
             if not pubkeys: continue
 
             # Data or destinations?
-            chunk = b''.join(pubkeys)
+            chunk = get_binary(pubkey[0]) + get_binary(pubkey[1])
             if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
                 chunk_length = chunk[0]             # TODO
                 chunk = chunk[1:chunk_length + 1]   # TODO
@@ -986,14 +987,15 @@ def get_tx_info2 (tx, block_index):
     # Collect all possible source addresses; ignore coinbase transactions.
     source_list = []
     for vin in tx['vin']:                                           # Loop through input transactions.
-        if 'coinbase' in vin: return b'', None, None, None, None
+        if 'coinbase' in vin: return failure
         vin_tx = bitcoin.get_raw_transaction(vin['txid'])           # Get the full transaction data for this input transaction.
         vout = vin_tx['vout'][vin['vout']]
         fee += vout['value'] * config.UNIT
 
         asm = vout['scriptPubKey']['asm'].split(' ')
         if asm[-1] == 'OP_CHECKSIG':
-            source = get_checksig(asm)
+            pubkeyhash = get_checksig(asm)
+            source = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
         elif asm[-1] == 'OP_CHECKMULTISIG':
             pubkeys = get_checkmultisig(asm)
             pubkeyhashes = [bitcoin.hash160(pubkey) for pubkey in pubkeys]
@@ -1004,7 +1006,7 @@ def get_tx_info2 (tx, block_index):
         if source:
             source_list.append(source)
         else:
-            return b'', None, None, None, None
+            return failure
 
     # Require that all possible source addresses be the same.
     if all(x == source_list[0] for x in source_list): source = source_list[0]
