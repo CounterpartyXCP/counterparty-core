@@ -964,7 +964,7 @@ def get_tx_info2 (tx, block_index):
                 chunk_length = chunk[0]             # TODO
                 chunk = chunk[1:chunk_length + 1]   # TODO
                 data += chunk
-            else:                                                       # Destination
+            elif not destination:                                       # Destination
                 destination = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
 
         elif asm[-1] == 'OP_CHECKMULTISIG':
@@ -977,7 +977,7 @@ def get_tx_info2 (tx, block_index):
                 chunk_length = chunk[0]             # TODO
                 chunk = chunk[1:chunk_length + 1]   # TODO
                 data += chunk
-            else:                                                       # Destination
+            elif not destination:                                       # Destination
                 pubkeyhashes = [bitcoin.hash160(pubkey) for pubkey in pubkeys]
                 destination = ''.join([bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes])
 
