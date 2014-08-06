@@ -41,6 +41,10 @@ def hash160(x):
     m = hashlib.new('ripemd160')
     m.update(x)
     return m.digest()
+def pubkey_to_address(pubkey):
+    pubkeyhash = hash160(binascii.unhexlify(bytes(pubkey, 'utf-8')))
+    return base58_check_encode(binascii.hexlify(pubkeyhash).decode('utf-8'), config.ADDRESSVERSION)
+
 bitcoin_rpc_session = None
 
 def print_coin(coin):

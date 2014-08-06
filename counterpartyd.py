@@ -158,24 +158,15 @@ def market (give_asset, get_asset):
 def cli(method, params, unsigned):
     # Get unsigned transaction serialisation.
 
-    # Pick an address from the multi‐sig input to use for signing.
+    # Multi‐sig: the first source address is the one used for signing.
+    # TODO: Must support constructing transactions for multiple signatures!
     array = params['source'].split('_')
-    if len(array) > 1:
-        required_signatures = array[0]
-        addresses = array[1:-1]
-        print(addresses)
-        answer = input('Which address would you like to sign with? ({} signatures required)'.format(required_signatures))
-        if answer in addresses:
-            signing_source = answer
-        else:
-            raise exceptions.AddressError('Invalid address.')
-    else:
-        signing_source = params['source']
+    source = array[1]
 
-    # Get public key for signing source (for spendability of data outputs).
-    if not bitcoin.is_valid(signing_source):
+    # Get public key for source.
+    if not bitcoin.is_valid(source):
         raise exceptions.AddressError('Invalid address.')
-    if bitcoin.is_mine(signing_source):
+    if bitcoin.is_mine(source):
         bitcoin.wallet_unlock()
     else:
         # TODO: Do this only if the encoding method needs it.
@@ -195,9 +186,11 @@ def cli(method, params, unsigned):
     unsigned_tx_hex = util.api(method, params)
     print('Transaction (unsigned):', unsigned_tx_hex)
 
-    # Ask to sign and broadcast.
-    if not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
-        if bitcoin.is_mine(signing_source):
+    # Ask to sign and broadcast (if not multi‐sig).
+    if len(array) > 1:
+        print('Multi‐sig transactions are signed and broadcasted separately.')
+    elif not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
+        if bitcoin.is_mine(source):
             private_key_wif = None
         elif not private_key_wif:   # If private key was not given earlier.
             private_key_wif = input('Private key (Wallet Import Format): ')
