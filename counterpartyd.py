@@ -172,24 +172,26 @@ def cli(method, params, unsigned):
     else:
         signing_source = params['source']
 
-    if bitcoin.is_valid(signing_source):
-        if bitcoin.is_mine(signing_source):
-            bitcoin.wallet_unlock()
-        else:
-            # TODO: Do this only if the encoding method needs it.
-            print('Source not in backend wallet.')
-            answer = input('Public key (hexadecimal) or Private key (Wallet Import Format): ')
-
-            # Public key or private key?
-            try:
-                binascii.unhexlify(answer)  # Check if hex.
-                params['pubkey'] = answer   # If hex, assume public key.
-                private_key_wif = None
-            except binascii.Error:
-                private_key_wif = answer    # Else, assume private key.
-                params['pubkey'] = bitcoin.private_key_to_public_key(private_key_wif)
-    else:
+    # Get public key for signing source (for spendability of data outputs).
+    if not bitcoin.is_valid(signing_source):
         raise exceptions.AddressError('Invalid address.')
+    if bitcoin.is_mine(signing_source):
+        bitcoin.wallet_unlock()
+    else:
+        # TODO: Do this only if the encoding method needs it.
+        print('Source not in backend wallet.')
+        answer = input('Public key (hexadecimal) or Private key (Wallet Import Format): ')
+
+        # Public key or private key?
+        try:
+            binascii.unhexlify(answer)  # Check if hex.
+            params['pubkey'] = answer   # If hex, assume public key.
+            private_key_wif = None
+        except binascii.Error:
+            private_key_wif = answer    # Else, assume private key.
+            params['pubkey'] = bitcoin.private_key_to_public_key(private_key_wif)
+
+    # Construct transaction.
     unsigned_tx_hex = util.api(method, params)
     print('Transaction (unsigned):', unsigned_tx_hex)
 
