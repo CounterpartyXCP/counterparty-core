@@ -157,8 +157,23 @@ def market (give_asset, get_asset):
 
 def cli(method, params, unsigned):
     # Get unsigned transaction serialisation.
-    if bitcoin.is_valid(params['source']):
-        if bitcoin.is_mine(params['source']):
+
+    # Pick an address from the multi‐sig input to use for signing.
+    array = params['source'].split('_')
+    if len(array) > 1:
+        required_signatures = array[0]
+        addresses = array[1:-1]
+        print(addresses)
+        answer = input('Which address would you like to sign with? ({} signatures required)'.format(required_signatures))
+        if answer in addresses:
+            signing_source = answer
+        else:
+            raise exceptions.AddressError('Invalid address.')
+    else:
+        signing_source = params['source']
+
+    if bitcoin.is_valid(signing_source):
+        if bitcoin.is_mine(signing_source):
             bitcoin.wallet_unlock()
         else:
             # TODO: Do this only if the encoding method needs it.
@@ -180,7 +195,7 @@ def cli(method, params, unsigned):
 
     # Ask to sign and broadcast.
     if not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
-        if bitcoin.is_mine(params['source']):
+        if bitcoin.is_mine(signing_source):
             private_key_wif = None
         elif not private_key_wif:   # If private key was not given earlier.
             private_key_wif = input('Private key (Wallet Import Format): ')
