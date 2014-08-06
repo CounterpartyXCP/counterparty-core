@@ -16,8 +16,7 @@ ID = 10
 
 def exact_penalty (db, address, block_index, order_match_id):
     # Penalize addresses that don’t make BTC payments. If an address lets an
-    # order match expire, expire sell BTC orders and order matches from that
-    # address.
+    # order match expire, expire sell BTC orders from that address.
     cursor = db.cursor()
 
     # Orders.
@@ -27,12 +26,13 @@ def exact_penalty (db, address, block_index, order_match_id):
     for bad_order in bad_orders:
         cancel_order(db, bad_order, 'expired', block_index)
 
-    # Order matches.
-    bad_order_matches = list(cursor.execute('''SELECT * FROM order_matches \
-                                               WHERE ((tx0_address = ? AND forward_asset = ?) OR (tx1_address = ? AND backward_asset = ?)) AND (status = ?)''',
-                                     (address, config.BTC, address, config.BTC, 'pending')))
-    for bad_order_match in bad_order_matches:
-        cancel_order_match(db, bad_order_match, 'expired', block_index)
+    if not (block_index >= 314250 or config.TESTNET):   # Protocol change.
+        # Order matches.
+        bad_order_matches = list(cursor.execute('''SELECT * FROM order_matches \
+                                                   WHERE ((tx0_address = ? AND forward_asset = ?) OR (tx1_address = ? AND backward_asset = ?)) AND (status = ?)''',
+                                         (address, config.BTC, address, config.BTC, 'pending')))
+        for bad_order_match in bad_order_matches:
+            cancel_order_match(db, bad_order_match, 'expired', block_index)
 
     cursor.close()
     return
@@ -73,12 +73,13 @@ def cancel_order_match (db, order_match, status, block_index):
     cursor = db.cursor()
 
     # Skip order matches just expired as a penalty. (Not very efficient.)
-    order_matches = list(cursor.execute('''SELECT * FROM order_matches \
-                                           WHERE (id = ? AND status = ?)''',
-                                        (order_match['id'], 'expired')))
-    if order_matches:
-        cursor.close()
-        return
+    if not (block_index >= 314250 or config.TESTNET):   # Protocol change.
+        order_matches = list(cursor.execute('''SELECT * FROM order_matches \
+                                               WHERE (id = ? AND status = ?)''',
+                                            (order_match['id'], 'expired')))
+        if order_matches:
+            cursor.close()
+            return
 
     # Update status of order match.
     bindings = {
