@@ -1,6 +1,8 @@
 ## Client Versions ##
+* v9.39.0 (2014-08-06)
+	* re‐match expired order matches from a new block all at once (protocol change: 314800)
 * v9.38.0 (2014-08-05)
-	* don’t close order matches
+	* don’t close order matches when penalizing (protocol change: 314250)
 * v9.37.0 (2014-08-02)
 	* close sell BTC orders and order_matches of addresses that fail to make a BTC payment (protocol change: 313900)
 * v9.36.0 (2014-08-02)
