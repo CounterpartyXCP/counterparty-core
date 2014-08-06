@@ -106,7 +106,7 @@ def parse (db, tx, message):
         else:
             assert False
     except (AssertionError, struct.error) as e:
-        quantity_per_unit, asset = None, None
+        dividend_asset, quantity_per_unit, asset = None, None, None
         status = 'invalid: could not unpack'
 
     if dividend_asset == config.BTC:
