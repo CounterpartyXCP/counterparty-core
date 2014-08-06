@@ -173,6 +173,16 @@ library. Here's a simple example that will get you the asset balances for a spec
     $addr = '15vA2MJ4ESG3Rt1PVQ79D1LFMBBNtcSz1f'; // BTC/XCP address you want to query
     $res = $client->get_balances(array('field' => 'address', 'op' => '==', 'value' => $addr));
 
+curl Example
+^^^^^^^^^^^^^
+
+Here's an example using ``curl`` to make an API call to the ``get_running_info`` method.
+
+.. code-block::
+
+    curl http://127.0.0.2:4000/ --user rpcuser:rpcpassword -H 'Content-Type: application/json; charset=UTF-8' 
+        -H 'Accept: application/json, text/javascript' --data-binary '{"jsonrpc":"2.0","id":0,"method":"get_running_info"}
+
 
 Terms & Conventions
 ---------------------
@@ -284,6 +294,7 @@ then have two approaches with respect to broadcasting the transaction on the net
 signing it, and broadcasting it, all in one step.**
 
 
+
 .. _read_api:
 
 Read API Function Reference
@@ -338,6 +349,12 @@ For example: ``get_balances``, ``get_credits``, ``get_debits``, etc are all vali
   * To get a listing of bets, call ``get_bets``. This method will return a list of one or more :ref:`bet objects <bet-object>` .
   * To get a listing all open orders for a given address like 1Ayw5aXXTnqYfS3LbguMCf9dxRqzbTVbjf, you could call
     ``get_orders`` with the appropriate parameters. This method will return a list of one or more :ref:`order objects <order-object>`.
+
+**Notes:**
+
+  * Please note that the ``get_balances`` API call will not return balances for BTC itself. It only returns balances
+    for XCP and other Counterparty assets. To get BTC-based balances, use an existing system such as Insight, blockr.io,
+    or blockchain.info.
 
 
 .. _get_asset_info:
@@ -396,7 +413,7 @@ database actions and allows for lower-level state tracking for applications that
 
 **Return:** 
   
-  A list of one or more :ref:`message <message-object>` if there was any activity in the block, otherwise ``[]`` (empty list).
+  A list of one or more :ref:`messages <message-object>` if there was any activity in the block, otherwise ``[]`` (empty list).
 
 .. _get_messages_by_index:
 
@@ -450,6 +467,31 @@ Gets some basic information on a specific block.
   - **block_index** (*integer*): The block index (i.e. block height). Should match what was specified for the *block_index* input parameter). 
   - **block_hash** (*string*): The block hash identifier
   - **block_time** (*integer*): A UNIX timestamp of when the block was processed by the network 
+
+
+.. _get_blocks:
+
+get_blocks
+^^^^^^^^^^^^^^^^^
+
+**get_blocks(block_indexes)**
+
+Gets block and message data (for each block) in a bulk fashon. If fetching info and messages for multiple blocks, this
+is much quicker than using multiple ``get_block_info()`` and ``get_messages()`` calls.
+
+**Parameters:**
+
+  * **block_index (list)**: A list of 1 or more block indexes for which to retrieve the data.
+
+**Return:**
+
+  A list of objects, one object for each valid block index specified, in order from first block index to last.
+  Each object has the following parameters:
+
+  - **block_index** (*integer*): The block index (i.e. block height). Should match what was specified for the *block_index* input parameter). 
+  - **block_hash** (*string*): The block hash identifier
+  - **block_time** (*integer*): A UNIX timestamp of when the block was processed by the network
+  - **_messages** (*list*): A list of one or more :ref:`messages <message-object>` if there was any activity in the block, otherwise ``[]`` (empty list).
 
 .. _get_running_info:
 
@@ -775,19 +817,17 @@ Resolve a Rock-Paper-Scissors game.
 
 do_{table}
 ^^^^^^^^^^^^^^
-**do_{table}(VARIABLE)**
+**do_{entity}(VARIABLE)**
 
 This method is a simplified alternative to the appropriate ``create_`` method. Instead of returning just an unsigned
 raw transaction, which you must then sign and broadcast, this call will create the transaction, then sign it and broadcast
 it automatically.
 
-**{table}** must be one of the following values:
-``balances``, ``credits``, ``debits``, ``bets``, ``bet_matches``, ``broadcasts``, ``btcpays``, ``burns``, 
-``callbacks``, ``cancels``, ``dividends``, ``issuances``, ``orders``, ``order_matches``, ``sends``, 
-``bet_expirations``, ``order_expirations``, ``bet_match_expirations``, ``order_match_expirations``,
-``rps``, ``rps_expirations``, ``rps_matches``, ``rps_match_expirations``, or ``rpsresolves``.
+**{entity}** must be one of the following values:
+``bet``, ``broadcast``, ``btcpay``, ``burn``,  ``callback``, ``cancel``, ``dividend``, ``issuance``,
+``order``, ``send``,  ``rps``, ``rpsresolve``.
 
-For example: ``do_balances``, ``do_credits``, ``do_debits``, etc are all valid API methods.
+For example: ``do_bet``, ``do_burn``, ``do_dividend``, etc are all valid API methods.
 
 **Parameters:**
 

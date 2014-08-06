@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.38.0 (2014-08-05)
+	* don’t close order matches
 * v9.37.0 (2014-08-02)
 	* close sell BTC orders and order_matches of addresses that fail to make a BTC payment (protocol change: 313900)
 * v9.36.0 (2014-08-02)

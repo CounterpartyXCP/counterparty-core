@@ -94,9 +94,11 @@ def connect (host, payload, headers):
     TRIES = 12
     for i in range(TRIES):
         try:
-            response = bitcoin_rpc_session.post(host, data=json.dumps(payload), headers=headers)
+            response = bitcoin_rpc_session.post(host, data=json.dumps(payload), headers=headers, verify=config.BACKEND_RPC_SSL_VERIFY)
             if i > 0: print('Successfully connected.', file=sys.stderr)
             return response
+        except requests.exceptions.SSLError as e:
+            raise e
         except requests.exceptions.ConnectionError:
             print('Could not connect to Bitcoind. Sleeping for five seconds. (Try {}/{})'.format(i+1, TRIES), file=sys.stderr)
             time.sleep(5)
@@ -381,9 +383,8 @@ def sort_unspent_txouts(unspent, allow_unconfirmed_inputs):
 
 def private_key_to_public_key (private_key_wif):
     try:
-        wif_prefix = config.WIF_PREFIX_TESTNET if config.TESTNET else config.WIF_PREFIX_MAINNET
-        secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif, allowable_wif_prefixes=[wif_prefix])
-    except PycoinEncodingError:
+        secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(private_key_wif, is_test=config.TESTNET)
+    except EncodingError:
         raise exceptions.AltcoinSupportError('pycoin: unsupported WIF prefix')
     public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
     public_key = public_pair_to_sec(public_pair, compressed=compressed)
