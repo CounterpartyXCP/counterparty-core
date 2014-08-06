@@ -787,6 +787,9 @@ def initialise(db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       block_index_idx ON messages (block_index)
                    ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      block_index_message_index_idx ON messages (block_index, message_index)
+                   ''')
 
     # Mempool messages
     # NOTE: `status`, 'block_index` are removed from bindings.

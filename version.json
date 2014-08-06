@@ -1,7 +1,7 @@
 {
 	"minimum_version_major": 9,
-	"minimum_version_minor": 37,
+	"minimum_version_minor": 38,
 	"minimum_version_revision": 0,
-	"reason": "penalize failure to make BTC payments",
-	"block_index": 313900
+	"reason": "don’t penalize order matches",
+	"block_index": 314250
 }
