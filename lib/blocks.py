@@ -986,7 +986,7 @@ def get_tx_info2 (tx, block_index):
                 chunk = chunk[1:chunk_length + 1]   # TODO
                 data += chunk[len(config.PREFIX):]
             elif not destination:                                       # Destination
-                addresses = [bitcoin.pubkey_to_address(pubkey for pubkey in pubkeys)]
+                addresses = [bitcoin.pubkey_to_address(pubkey) for pubkey in pubkeys]
                 destination = '_'.join([str(required_signatures)] + sorted(addresses) + [str(len(addresses))])
             else:                                                       # Cannot store change.
                 continue
@@ -1013,7 +1013,7 @@ def get_tx_info2 (tx, block_index):
         elif asm[-1] == 'OP_CHECKMULTISIG':
             pubkeys, required_signatures = get_checkmultisig(asm)
             if not pubkeys: return INVALID
-            addresses = [bitcoin.pubkey_to_address(pubkey for pubkey in pubkeys)]
+            addresses = [bitcoin.pubkey_to_address(pubkey) for pubkey in pubkeys]
             source = '_'.join([str(required_signatures)] + sorted(addresses) + [str(len(addresses))])
 
         else:
