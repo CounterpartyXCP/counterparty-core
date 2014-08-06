@@ -8,6 +8,7 @@ import time
 import json
 import re
 import requests
+import collections
 import logging
 from logging import handlers as logging_handlers
 D = decimal.Decimal
@@ -445,6 +446,34 @@ class APIServer(threading.Thread):
                 raise exceptions.DatabaseError('No blocks found.')
             cursor.close()
             return block
+        
+        @dispatcher.add_method
+        def get_blocks(block_indexes):
+            """fetches block info and messages for the specified block indexes"""
+            if not isinstance(block_indexes, (list, tuple)):
+                raise Exception("block_indexes must be a list of integers.")
+            if len(block_indexes) >= 250:
+                raise Exception("can only specify up to 250 indexes at a time.")
+
+            block_indexes_str = ','.join([str(x) for x in block_indexes])
+            cursor = db.cursor()
+            
+            cursor.execute('SELECT * FROM blocks WHERE block_index IN (%s) ORDER BY block_index ASC'
+                % (block_indexes_str,))
+            blocks = cursor.fetchall()
+                
+            cursor.execute('SELECT * FROM messages WHERE block_index IN (%s) ORDER BY block_index ASC, message_index ASC'
+                % (block_indexes_str,))
+            messages = collections.deque(cursor.fetchall())
+            
+            for block in blocks:
+                messages_in_block = []
+                block['_messages'] = []
+                while len(messages) and messages[0]['block_index'] == block['block_index']:
+                    block['_messages'].append(messages.popleft())
+            
+            cursor.close()
+            return blocks
 
         @dispatcher.add_method
         def get_running_info():

@@ -413,7 +413,7 @@ database actions and allows for lower-level state tracking for applications that
 
 **Return:** 
   
-  A list of one or more :ref:`message <message-object>` if there was any activity in the block, otherwise ``[]`` (empty list).
+  A list of one or more :ref:`messages <message-object>` if there was any activity in the block, otherwise ``[]`` (empty list).
 
 .. _get_messages_by_index:
 
@@ -467,6 +467,31 @@ Gets some basic information on a specific block.
   - **block_index** (*integer*): The block index (i.e. block height). Should match what was specified for the *block_index* input parameter). 
   - **block_hash** (*string*): The block hash identifier
   - **block_time** (*integer*): A UNIX timestamp of when the block was processed by the network 
+
+
+.. _get_blocks:
+
+get_blocks
+^^^^^^^^^^^^^^^^^
+
+**get_blocks(block_indexes)**
+
+Gets block and message data (for each block) in a bulk fashon. If fetching info and messages for multiple blocks, this
+is much quicker than using multiple ``get_block_info()`` and ``get_messages()`` calls.
+
+**Parameters:**
+
+  * **block_index (list)**: A list of 1 or more block indexes for which to retrieve the data.
+
+**Return:**
+
+  A list of objects, one object for each valid block index specified, in order from first block index to last.
+  Each object has the following parameters:
+
+  - **block_index** (*integer*): The block index (i.e. block height). Should match what was specified for the *block_index* input parameter). 
+  - **block_hash** (*string*): The block hash identifier
+  - **block_time** (*integer*): A UNIX timestamp of when the block was processed by the network
+  - **_messages** (*list*): A list of one or more :ref:`messages <message-object>` if there was any activity in the block, otherwise ``[]`` (empty list).
 
 .. _get_running_info:
 
