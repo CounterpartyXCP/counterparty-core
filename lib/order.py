@@ -264,7 +264,6 @@ def parse (db, tx, message):
     except (AssertionError, struct.error) as e:
         give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required = 0, 0, 0, 0, 0, 0
         status = 'invalid: could not unpack'
-        exit(0) # TODO
 
     price = 0
     if status == 'open':
