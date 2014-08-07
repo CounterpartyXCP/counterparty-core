@@ -2,6 +2,6 @@
 	"minimum_version_major": 9,
 	"minimum_version_minor": 39,
 	"minimum_version_revision": 0,
-	"reason": "re‐match all at once",
-	"block_index": 314800
+	"reason": "re‐match all at once; bug in issuance fee",
+	"block_index": 315000
 }

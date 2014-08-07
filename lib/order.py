@@ -169,7 +169,7 @@ def cancel_order_match (db, order_match, status, block_index):
 
     # Re‐match.
     if block_index >= 310000 or config.TESTNET: # Protocol change.
-        if not (block_index >= 314800 or config.TESTNET):   # Protocol change.
+        if not (block_index >= 315000 or config.TESTNET):   # Protocol change.
             cursor.execute('''SELECT * FROM transactions\
                               WHERE tx_hash = ?''', (tx0_order['tx_hash'],))
             match(db, list(cursor)[0], block_index)
@@ -585,7 +585,7 @@ def expire (db, block_index):
     order_matches = list(cursor)
     for order_match in order_matches:
         cancel_order_match(db, order_match, 'expired', block_index)
-    if block_index >= 314800 or config.TESTNET: # Protocol change.
+    if block_index >= 315000 or config.TESTNET: # Protocol change.
         # Re‐match.
         for order_match in order_matches:
             cursor.execute('''SELECT * FROM transactions\
