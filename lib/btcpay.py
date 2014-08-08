@@ -86,7 +86,7 @@ def parse (db, tx, message):
         order_match_id = tx0_hash + tx1_hash
         status = 'valid'
     except (AssertionError, struct.error) as e:
-        tx0_hash, tx1_hash = None, None
+        tx0_hash, tx1_hash, order_match_id = None, None, None
         status = 'invalid: could not unpack'
 
     if status == 'valid':
