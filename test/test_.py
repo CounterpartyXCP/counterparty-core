@@ -34,7 +34,7 @@ import counterpartyd
 # config.BLOCK_FIRST = 0
 # config.BURN_START = 0
 # config.BURN_END = 9999999
-counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/counterpartyd.unittest.db', testnet=True, testcoin=False, unittest=True)
+counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/counterpartyd.unittest.db', testnet=True, testcoin=False, unittest=True, backend_rpc_ssl_verify=False)
 
 # unit tests private keys
 config.UNITTEST_PRIVKEY = {
@@ -516,7 +516,8 @@ def test_json_rpc():
     for payload in payloads:
         for attempt in range(100):  # Try until server is ready.
             try:
-                response = requests.post(url, data=json.dumps(payload), headers=headers).json()
+                response = requests.post(url, data=json.dumps(payload), headers=headers, verify=False).json()
+                print(response)
                 # print('\npayload', payload)
                 # print('response', response, '\n')
                 if not response['result']:
@@ -526,6 +527,9 @@ def test_json_rpc():
                 assert response['id'] == 0
                 output_new['rpc.' + payload['method']] = response['result']
                 break
+            except KeyError as e:
+                print(response, file=sys.stderr)
+                exit(1)
             except requests.exceptions.ConnectionError:
                 time.sleep(.05)
         if attempt == 99: exit(1)   # Fail

@@ -1,7 +1,7 @@
 {
 	"minimum_version_major": 9,
-	"minimum_version_minor": 38,
+	"minimum_version_minor": 39,
 	"minimum_version_revision": 0,
-	"reason": "don’t penalize order matches",
-	"block_index": 314250
+	"reason": "re‐match all at once; bug in issuance fee",
+	"block_index": 315000
 }
