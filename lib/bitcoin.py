@@ -464,7 +464,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
                  regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
                  multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
                  op_return_value=config.DEFAULT_OP_RETURN_VALUE, exact_fee=None,
-                 fee_provided=0, public_key_hex=None,
+                 fee_provided=0, self_public_key_hex=None,
                  allow_unconfirmed_inputs=False):
 
     block_index = util.last_block(db)['block_index']
@@ -596,6 +596,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
 
     # Get inputs.
     unspent = get_unspent_txouts(source, normalize=True)
+    print(unspent)  # TODO
     unspent = sort_unspent_txouts(unspent, allow_unconfirmed_inputs)
     logging.debug('Sorted UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
 

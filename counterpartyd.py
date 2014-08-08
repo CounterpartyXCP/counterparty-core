@@ -161,7 +161,10 @@ def cli(method, params, unsigned):
     # Multi‐sig: the first source address is the one used for signing.
     # TODO: Must support constructing transactions for multiple signatures!
     array = params['source'].split('_')
-    source = array[1]
+    if len(array) > 1:
+        source = array[1]
+    else:
+        source = array[0]
 
     # Get public key for source.
     if not bitcoin.is_valid(source):
