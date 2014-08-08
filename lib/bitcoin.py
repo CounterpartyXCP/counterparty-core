@@ -41,9 +41,29 @@ def hash160(x):
     m = hashlib.new('ripemd160')
     m.update(x)
     return m.digest()
-def pubkey_to_address(pubkey):
+def pubkey_to_pubkeyhash(pubkey):
     pubkeyhash = hash160(binascii.unhexlify(bytes(pubkey, 'utf-8')))
-    return base58_check_encode(binascii.hexlify(pubkeyhash).decode('utf-8'), config.ADDRESSVERSION)
+    pubkey = base58_check_encode(binascii.hexlify(pubkeyhash).decode('utf-8'), config.ADDRESSVERSION)
+    return pubkey
+def pubkeyhash_to_pubkey(pubkeyhash):
+    raw_transactions = search_raw_transactions(pubkeyhash)
+    for tx in raw_transactions:
+        for vin in tx['vin']:
+            scriptsig = vin['scriptSig']
+            asm = scriptsig['asm'].split(' ')
+            pubkey = asm[1]
+            if pubkeyhash == pubkey_to_pubkeyhash(pubkey):
+                return pubkey
+    raise exceptions.AddressError('Public key for address ‘{}’ not published in blockchain.'.format(pubkeyhash))
+def multisig_pubkeyhashes_to_pubkeys(address):
+    array = address.split('_')
+    required_signatures = int(array[0])
+    total_signatures = int(array[-1])
+    pubkeyhashes = array[1:-1]
+
+    pubkeys = [pubkeyhash_to_pubkey(pubkeyhash) for pubkeyhash in pubkeyhashes]
+    address = '_'.join([str(required_signatures)] + sorted(pubkeys) + [str(len(pubkeys))])
+    return address
 
 bitcoin_rpc_session = None
 
@@ -79,6 +99,9 @@ def get_block_hash (block_index):
 
 def decode_raw_transaction (unsigned_tx_hex):
     return rpc('decoderawtransaction', [unsigned_tx_hex])
+
+def search_raw_transactions (address):
+    return rpc('searchrawtransactions', [address])
 
 def get_wallet ():
     for group in rpc('listaddressgroupings', []):
@@ -182,6 +205,22 @@ def rpc (method, params):
     #     print(method)
     else:
         raise exceptions.BitcoindError('{}'.format(response_json['error']))
+
+def validate_address(address):
+    addresses = address.split('_')
+    if len(addresses) > 1:
+        try:
+            assert int(addresses[0]) in (1,2,3) 
+            assert int(addresses[-1]) in (1,2,3) 
+        except (AssertionError):
+            raise exceptions.AddressError('Invalid multi‐signature address:', address)
+        addresses = addresses[1:-1]
+
+    for address in addresses:
+        try:
+            base58_decode(address, config.ADDRESSVERSION)
+        except Exception:   # TODO
+            raise exceptions.AddressError('Invalid address:', addresses)
 
 def base58_encode(binary):
     # Convert big‐endian bytes to integer
@@ -293,14 +332,16 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
     # Destination output.
     for destination, value in destination_outputs:
         addresses = destination.split('_')
-        required_signatures = int(addresses[0])
-        total_signatures = int(addresses[-1])
-        addresses = sorted(addresses[1:-1])
-        if total_signatures != len(addresses):
-            raise exceptions.InputError('Incorrect number of public keys in multi‐signature destination.')
-
         s += value.to_bytes(8, byteorder='little')          # Value
+
         if len(addresses) > 1:
+            # Unpack multi‐sig address.
+            required_signatures = int(addresses[0])
+            total_signatures = int(addresses[-1])
+            addresses = sorted(addresses[1:-1])
+            if total_signatures != len(addresses):
+                raise exceptions.InputError('Incorrect number of public keys in multi‐signature destination.')
+
             # Required signatures.
             if required_signatures == 1:
                 op_required = OP_1
@@ -326,7 +367,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
             for address in addresses:
                 destination_public_key = binascii.unhexlify(address) # TODO
                 script += op_push(len(destination_public_key))  # Push bytes of public key
-                script += destinationpublic_key                 # Data chunk (fake) public key
+                script += destination_public_key                # Data chunk (fake) public key
             script += op_total                                  # Total signatures
             script += OP_CHECKMULTISIG                          # OP_CHECKMULTISIG
 
@@ -520,21 +561,15 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     destinations = [address for address, value in destination_outputs]
     for destination in destinations + [source]:
         if destination:
-            addresses = destination.split('_')[1:-1]
-            if len(addresses) == 1:  # Pubkeyhashes, and not pubkeys.
-                try:
-                    base58_decode(addresses[0], config.ADDRESSVERSION)
-                except Exception:   # TODO
-                    raise exceptions.AddressError('Invalid destination address:', addresses[0])
-            else:
-                try:
-                    assert addresses[0] in (1,2,3) 
-                    assert addresses[-1] in (1,2,3) 
-                    for pubkey in addresses[1:-1]:
-                        binascii.unhexlify(bytes(pubkey, 'utf-8'))
-                except (AssertionError, Exception): # TODO
-                    raise exceptions.AddressError('Invalid multi‐signature destination string:', destination)
-                    
+            try:
+                validate_address(destination)
+            except exceptions.AddressError as e:
+                raise exceptions.AddressError('Invalid destination address:', address)
+
+    # Replace multi‐sig addresses with multi‐sig pubkeys.
+    if len(source.split('_')) > 1:
+        source = multisig_pubkeyhashes_to_pubkeys(source)
+    destination_outputs = [(multisig_pubkeyhashes_to_pubkeys(destination), value) for (destination, value) in destination_outputs if len(destination.split('_')) > 1]
 
     # Check that the source is in wallet.
     if not config.UNITTEST and encoding in ('multisig') and not self_public_key:
@@ -596,7 +631,8 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
 
     # Get inputs.
     unspent = get_unspent_txouts(source, normalize=True)
-    print(unspent)  # TODO
+    json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))   # TODO
+    json_print(unspent)  # TODO
     unspent = sort_unspent_txouts(unspent, allow_unconfirmed_inputs)
     logging.debug('Sorted UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
 
@@ -636,7 +672,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     else: change_output = None
 
     # Serialise inputs and outputs.
-    unsigned_tx = serialise(block_index, encoding, inputs, destination_outputs, data_output, change_output, source=source, public_key=self_public_key)
+    unsigned_tx = serialise(block_index, encoding, inputs, destination_outputs, data_output, change_output, source=source, self_public_key=self_public_key)
     unsigned_tx_hex = binascii.hexlify(unsigned_tx).decode('utf-8')
     return unsigned_tx_hex
 
@@ -702,10 +738,17 @@ def get_unspent_txouts(address, normalize=False):
             wallet_unspent = json.load(listunspent_test_file)
             return [output for output in wallet_unspent if output['address'] == address]
 
-    if rpc('validateaddress', [address])['ismine']:
-        wallet_unspent = rpc('listunspent', [0, 999999])
-        return [output for output in wallet_unspent if output['address'] == address]
+    addresses = address.split('_')
+    if len(addresses) > 1:
+        rawtransactions = search_raw_transactions(addresses[1])
+        print(rawtransactions)
     else:
-        return blockchain.listunspent(address)
+        if rpc('validateaddress', [address])['ismine']:
+            wallet_unspent = rpc('listunspent', [0, 999999])
+            unspent = [output for output in wallet_unspent if output['address'] == address]
+        else:
+            unspent = blockchain.listunspent(address)
+
+    return unspent
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
