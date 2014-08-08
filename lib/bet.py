@@ -163,7 +163,7 @@ def parse (db, tx, message):
     except (AssertionError, struct.error) as e:
         (bet_type, deadline, wager_quantity,
          counterwager_quantity, target_value, leverage,
-         expiration) = 0, 0, 0, 0, 0, 0, 0
+         expiration, fee_fraction_int) = 0, 0, 0, 0, 0, 0, 0, 0
         status = 'invalid: could not unpack'
 
     odds, fee_fraction = 0, 0
