@@ -162,6 +162,7 @@ def cli(method, params, unsigned):
     # TODO: Must support constructing transactions for multiple signatures!
     array = params['source'].split('_')
     if len(array) > 1:
+        params['source'] = '_'.join([array[0]] + sorted(array[1:-1]) + [array[-1]]) # Sort source array.
         source = array[1]
     else:
         source = array[0]
