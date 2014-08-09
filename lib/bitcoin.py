@@ -674,7 +674,15 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     if multisig_source:
         source = multisig_pubkeyhashes_to_pubkeys(source)
         self_public_key = binascii.unhexlify(source.split('_')[1])
-    destination_outputs = [(multisig_pubkeyhashes_to_pubkeys(destination), value) for (destination, value) in destination_outputs if len(destination.split('_')) > 1]
+    destination_outputs_new = []
+    for (destination, value) in destination_outputs:
+        if len(destination.split('_')) > 1:
+            destination_outputs_new.append((multisig_pubkeyhashes_to_pubkeys(destination), value))
+        else:
+            destination_outputs_new.append((destination, value))
+    if len(destination_outputs) != len(destination_outputs_new):
+        raise exceptions.AddressError('Could not convert destination pubkeyhashes to pubkeys.')
+    destination_outputs = destination_outputs_new
 
     # Serialise inputs and outputs.
     unsigned_tx = serialise(block_index, encoding, inputs, destination_outputs, data_output, change_output, source=source, self_public_key=self_public_key)
