@@ -660,16 +660,21 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
         total_btc_out = btc_out + max(change_quantity, 0) + final_fee
         raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need approximately {} {}.) To spend unconfirmed coins, use the flag `--unconfirmed`.'.format(source, total_btc_out / config.UNIT, config.BTC))
 
-    # Replace multi‐sig addresses with multi‐sig pubkeys.
-    if multisig_source:
-        source = multisig_pubkeyhashes_to_pubkeys(source)
-    destination_outputs = [(multisig_pubkeyhashes_to_pubkeys(destination), value) for (destination, value) in destination_outputs if len(destination.split('_')) > 1]
-
     # Construct outputs.
     if data: data_output = (data_array, data_value)
     else: data_output = None
-    if change_quantity: change_output = (source, change_quantity)
+    if change_quantity:
+        if multisig_source:
+            change_output = (source.split('_')[1], change_quantity)
+        else:
+            change_output = (source, change_quantity)
     else: change_output = None
+
+    # Replace multi‐sig addresses with multi‐sig pubkeys.
+    if multisig_source:
+        source = multisig_pubkeyhashes_to_pubkeys(source)
+        self_public_key = binascii.unhexlify(source.split('_')[1])
+    destination_outputs = [(multisig_pubkeyhashes_to_pubkeys(destination), value) for (destination, value) in destination_outputs if len(destination.split('_')) > 1]
 
     # Serialise inputs and outputs.
     unsigned_tx = serialise(block_index, encoding, inputs, destination_outputs, data_output, change_output, source=source, self_public_key=self_public_key)
