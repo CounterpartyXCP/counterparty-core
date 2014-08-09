@@ -756,7 +756,7 @@ def get_unspent_txouts(source, normalize=False):
     else:
         if rpc('validateaddress', [source])['ismine']:
             wallet_unspent = rpc('listunspent', [0, 999999])
-            unspent = [output for output in wallet_unspent if output['address'] == sourcen]
+            unspent = [output for output in wallet_unspent if output['address'] == source]
         else:
             unspent = blockchain.listunspent(source)
 
