@@ -158,35 +158,34 @@ def market (give_asset, get_asset):
 def cli(method, params, unsigned):
     # Get unsigned transaction serialisation.
 
-    # Multi‐sig: the first source address is the one used for signing.
-    # TODO: Must support constructing transactions for multiple signatures!
     array = params['source'].split('_')
     if len(array) > 1:
-        params['source'] = '_'.join([array[0]] + sorted(array[1:-1]) + [array[-1]]) # Sort source array.
-        source = array[1]
-    else:
-        source = array[0]
+        required_signatures, total_signatures = array[0], array[-1]
+        params['source'] = '_'.join([required_signatures] + sorted(array[1:-1]) + [total_signatures]) # Sort source array.
 
-    # Get public key for source.
-    pubkey = None
-    if not bitcoin.is_valid(source):
-        raise exceptions.AddressError('Invalid address.')
-    if bitcoin.is_mine(source):
         bitcoin.wallet_unlock()
     else:
-        # TODO: Do this only if the encoding method needs it.
-        print('Source not in backend wallet.')
-        answer = input('Public key (hexadecimal) or Private key (Wallet Import Format): ')
+        # Get public key for source.
+        source = array[0]
+        pubkey = None
+        if not bitcoin.is_valid(source):
+            raise exceptions.AddressError('Invalid address.')
+        if bitcoin.is_mine(source):
+            bitcoin.wallet_unlock()
+        else:
+            # TODO: Do this only if the encoding method needs it.
+            print('Source not in backend wallet.')
+            answer = input('Public key (hexadecimal) or Private key (Wallet Import Format): ')
 
-        # Public key or private key?
-        try:
-            binascii.unhexlify(answer)  # Check if hex.
-            pubkey = answer   # If hex, assume public key.
-            private_key_wif = None
-        except binascii.Error:
-            private_key_wif = answer    # Else, assume private key.
-            pubkey = bitcoin.private_key_to_public_key(private_key_wif)
-    params['pubkey'] = pubkey
+            # Public key or private key?
+            try:
+                binascii.unhexlify(answer)  # Check if hex.
+                pubkey = answer   # If hex, assume public key.
+                private_key_wif = None
+            except binascii.Error:
+                private_key_wif = answer    # Else, assume private key.
+                pubkey = bitcoin.private_key_to_public_key(private_key_wif)
+        params['pubkey'] = pubkey
 
     # TODO
     tx_info = sys.modules['lib.send'].compose(db, params['source'], params['destination'], params['asset'], params['quantity'])
@@ -205,17 +204,23 @@ def cli(method, params, unsigned):
 
     # Ask to sign and broadcast (if not multi‐sig).
     if len(array) > 1:
-        print('Multi‐sig transactions are signed and broadcasted separately.')
+        # Check if capable of signing.
+        capable_signatures = 0
+        for source in array[1:-1]:
+            if bitcoin.is_mine(source):
+                capable_signatures += 1
+        if capable_signatures < required_signatures:
+            raise exceptions.AddressError('Cannot complete signatures with addresses in Bitcoin Core wallet.')    # TODO
     elif not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
         if bitcoin.is_mine(source):
             private_key_wif = None
         elif not private_key_wif:   # If private key was not given earlier.
             private_key_wif = input('Private key (Wallet Import Format): ')
 
-        # Sign and broadcast.
-        signed_tx_hex = bitcoin.sign_tx(unsigned_tx_hex, private_key_wif=private_key_wif)
-        print('Transaction (signed):', signed_tx_hex)
-        print('Hash of transaction (broadcasted):', bitcoin.broadcast_tx(signed_tx_hex))
+    # Sign and broadcast.
+    signed_tx_hex = bitcoin.sign_tx(unsigned_tx_hex, private_key_wif=private_key_wif)
+    print('Transaction (signed):', signed_tx_hex)
+    print('Hash of transaction (broadcasted):', bitcoin.broadcast_tx(signed_tx_hex))
 
 
 def set_options (data_dir=None, backend_rpc_connect=None,
