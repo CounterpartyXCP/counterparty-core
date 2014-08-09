@@ -186,6 +186,7 @@ def cli(method, params, unsigned):
                 pubkey = bitcoin.private_key_to_public_key(private_key_wif)
         params['pubkey'] = pubkey
 
+    """
     # TODO
     tx_info = sys.modules['lib.send'].compose(db, params['source'], params['destination'], params['asset'], params['quantity'])
     print(bitcoin.transaction(db, tx_info, encoding=params['encoding'],
@@ -195,7 +196,9 @@ def cli(method, params, unsigned):
                                         op_return_value=params['op_return_value'],
                                         self_public_key_hex=pubkey,
                                         allow_unconfirmed_inputs=params['allow_unconfirmed_inputs']))
+    exit(0)
     # TODO
+    """
 
     # Construct transaction.
     unsigned_tx_hex = util.api(method, params)
@@ -203,7 +206,7 @@ def cli(method, params, unsigned):
 
     # Ask to sign and broadcast (if not multi‐sig).
     if len(array) > 1:
-        print('Multi‐sig transactions are signed and broadcasted separately.')
+        print('Multi‐signature transactions are signed and broadcasted manually.')
     elif not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
         if bitcoin.is_mine(source):
             private_key_wif = None

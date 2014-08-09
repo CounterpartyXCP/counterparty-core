@@ -101,7 +101,7 @@ def decode_raw_transaction (unsigned_tx_hex):
     return rpc('decoderawtransaction', [unsigned_tx_hex])
 
 def search_raw_transactions (address):
-    return rpc('searchrawtransactions', [address])
+    return rpc('searchrawtransactions', [address, 1, 0, 9999999])
 
 def get_wallet ():
     for group in rpc('listaddressgroupings', []):
@@ -365,7 +365,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
             # Construct script.
             script = op_required                                # Required signatures
             for address in addresses:
-                destination_public_key = binascii.unhexlify(address) # TODO
+                destination_public_key = binascii.unhexlify(address)
                 script += op_push(len(destination_public_key))  # Push bytes of public key
                 script += destination_public_key                # Data chunk (fake) public key
             script += op_total                                  # Total signatures
@@ -470,6 +470,7 @@ def input_value_weight(amount):
 def sort_unspent_txouts(unspent, allow_unconfirmed_inputs):
     # Get deterministic results (for multiAPIConsensus type requirements), sort by timestamp and vout index.
     # (Oldest to newest so the nodes don’t have to be exactly caught up to each other for consensus to be achieved.)
+    # searchrawtransactions doesn’t support unconfirmed transactions
     try:
         unspent = sorted(unspent, key=util.sortkeypicker(['ts', 'vout']))
     except KeyError: # If timestamp isn’t given.
@@ -627,8 +628,6 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
 
     # Get inputs.
     unspent = get_unspent_txouts(source, normalize=True)
-    json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))   # TODO
-    json_print(unspent)  # TODO
     unspent = sort_unspent_txouts(unspent, allow_unconfirmed_inputs)
     logging.debug('Sorted UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
 
@@ -740,20 +739,27 @@ def get_unspent_txouts(source, normalize=False):
             return [output for output in wallet_unspent if output['address'] == source]
 
     addresses = source.split('_')
+    unspent = []
     if len(addresses) > 1:
-        raw_transactions = search_raw_transactions(addresses[1])
+        raw_transactions = search_raw_transactions('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc')
         for tx in raw_transactions:
             for vout in tx['vout']:
                 scriptpubkey = vout['scriptPubKey']
-                if 'addresses' in scriptpubkey:
+                if scriptpubkey['type'] == 'multisig' and 'addresses' in scriptpubkey.keys():
                     found = True
-                    for source in addresses:
-                        if not source in scriptpubkey['addresses']:
+                    for address in addresses[1:-1]:
+                        if not address in scriptpubkey['addresses']:
                             found = False
                     if found:
-                        print(scriptpubkey)
-        # TODO
+                        coin = {'amount': vout['value'],
+                                'confirmations': tx['confirmations'],
+                                'scriptPubKey': scriptpubkey['hex'],
+                                'txid': tx['txid'],
+                                'vout': vout['n']
+                               }
+                        unspent.append(coin)
     else:
+        # TODO: remove account (and address?) fields
         if rpc('validateaddress', [source])['ismine']:
             wallet_unspent = rpc('listunspent', [0, 999999])
             unspent = [output for output in wallet_unspent if output['address'] == source]
