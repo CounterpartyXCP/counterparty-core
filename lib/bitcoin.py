@@ -57,12 +57,12 @@ def pubkeyhash_to_pubkey(pubkeyhash):
     raise exceptions.AddressError('Public key for address ‘{}’ not published in blockchain.'.format(pubkeyhash))
 def multisig_pubkeyhashes_to_pubkeys(address):
     array = address.split('_')
-    required_signatures = int(array[0])
-    total_signatures = int(array[-1])
+    signatures_required = int(array[0])
+    signatures_possible = int(array[-1])
     pubkeyhashes = array[1:-1]
 
     pubkeys = [pubkeyhash_to_pubkey(pubkeyhash) for pubkeyhash in pubkeyhashes]
-    address = '_'.join([str(required_signatures)] + sorted(pubkeys) + [str(len(pubkeys))])
+    address = '_'.join([str(signatures_required)] + sorted(pubkeys) + [str(len(pubkeys))])
     return address
 
 bitcoin_rpc_session = None
@@ -336,18 +336,18 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
 
         if len(addresses) > 1:
             # Unpack multi‐sig address.
-            required_signatures = int(addresses[0])
-            total_signatures = int(addresses[-1])
+            signatures_required = int(addresses[0])
+            signatures_possible = int(addresses[-1])
             addresses = sorted(addresses[1:-1])
-            if total_signatures != len(addresses):
+            if signatures_possible != len(addresses):
                 raise exceptions.InputError('Incorrect number of public keys in multi‐signature destination.')
 
             # Required signatures.
-            if required_signatures == 1:
+            if signatures_required == 1:
                 op_required = OP_1
-            elif required_signatures == 2:
+            elif signatures_required == 2:
                 op_required = OP_2
-            elif required_signatures == 3:
+            elif signatures_required == 3:
                 op_required = OP_3
             else:
                 raise exceptions.InputError('Required signatures must be 1, 2 or 3.')
@@ -511,6 +511,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     block_index = util.last_block(db)['block_index']
 
     (source, destination_outputs, data) = tx_info
+    multisig_source = len(source.split('_')) > 1
 
     # Data encoding methods.
     if data:
@@ -533,7 +534,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     # either use the public key provided, or derive it from a private key
     # retrieved from wallet.
     self_public_key = None
-    if encoding in ('multisig', 'pubkeyhash'):
+    if encoding in ('multisig', 'pubkeyhash') and not multisig_source:
         # If no public key was provided, derive from private key.
         if not self_public_key_hex:
             # Get private key.
@@ -566,13 +567,8 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
             except exceptions.AddressError as e:
                 raise exceptions.AddressError('Invalid destination address:', address)
 
-    # Replace multi‐sig addresses with multi‐sig pubkeys.
-    if len(source.split('_')) > 1:
-        source = multisig_pubkeyhashes_to_pubkeys(source)
-    destination_outputs = [(multisig_pubkeyhashes_to_pubkeys(destination), value) for (destination, value) in destination_outputs if len(destination.split('_')) > 1]
-
     # Check that the source is in wallet.
-    if not config.UNITTEST and encoding in ('multisig') and not self_public_key:
+    if not config.UNITTEST and encoding in ('multisig') and not self_public_key and not multisig_source:
         if not rpc('validateaddress', [source])['ismine']:
             raise exceptions.AddressError('Not one of your Bitcoin addresses:', source)
 
@@ -665,6 +661,11 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
         total_btc_out = btc_out + max(change_quantity, 0) + final_fee
         raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need approximately {} {}.) To spend unconfirmed coins, use the flag `--unconfirmed`.'.format(source, total_btc_out / config.UNIT, config.BTC))
 
+    # Replace multi‐sig addresses with multi‐sig pubkeys.
+    if multisig_source:
+        source = multisig_pubkeyhashes_to_pubkeys(source)
+    destination_outputs = [(multisig_pubkeyhashes_to_pubkeys(destination), value) for (destination, value) in destination_outputs if len(destination.split('_')) > 1]
+
     # Construct outputs.
     if data: data_output = (data_array, data_value)
     else: data_output = None
@@ -728,7 +729,7 @@ def get_btc_supply(normalize=False):
             blocks_remaining = 0
     return total_supply if normalize else int(total_supply * config.UNIT)
 
-def get_unspent_txouts(address, normalize=False):
+def get_unspent_txouts(source, normalize=False):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
     """
@@ -736,18 +737,28 @@ def get_unspent_txouts(address, normalize=False):
         CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
         with open(CURR_DIR + '/../test/listunspent.test.json', 'r') as listunspent_test_file:   # HACK
             wallet_unspent = json.load(listunspent_test_file)
-            return [output for output in wallet_unspent if output['address'] == address]
+            return [output for output in wallet_unspent if output['address'] == source]
 
-    addresses = address.split('_')
+    addresses = source.split('_')
     if len(addresses) > 1:
-        rawtransactions = search_raw_transactions(addresses[1])
-        print(rawtransactions)
+        raw_transactions = search_raw_transactions(addresses[1])
+        for tx in raw_transactions:
+            for vout in tx['vout']:
+                scriptpubkey = vout['scriptPubKey']
+                if 'addresses' in scriptpubkey:
+                    found = True
+                    for source in addresses:
+                        if not source in scriptpubkey['addresses']:
+                            found = False
+                    if found:
+                        print(scriptpubkey)
+        # TODO
     else:
-        if rpc('validateaddress', [address])['ismine']:
+        if rpc('validateaddress', [source])['ismine']:
             wallet_unspent = rpc('listunspent', [0, 999999])
-            unspent = [output for output in wallet_unspent if output['address'] == address]
+            unspent = [output for output in wallet_unspent if output['address'] == sourcen]
         else:
-            unspent = blockchain.listunspent(address)
+            unspent = blockchain.listunspent(source)
 
     return unspent
 

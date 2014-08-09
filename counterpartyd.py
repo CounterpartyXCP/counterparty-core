@@ -160,10 +160,9 @@ def cli(method, params, unsigned):
 
     array = params['source'].split('_')
     if len(array) > 1:
-        required_signatures, total_signatures = array[0], array[-1]
-        params['source'] = '_'.join([required_signatures] + sorted(array[1:-1]) + [total_signatures]) # Sort source array.
-
-        bitcoin.wallet_unlock()
+        signatures_required, signatures_possible = array[0], array[-1]
+        params['source'] = '_'.join([signatures_required] + sorted(array[1:-1]) + [signatures_possible]) # Sort source array.
+        pubkey = None
     else:
         # Get public key for source.
         source = array[0]
@@ -204,23 +203,17 @@ def cli(method, params, unsigned):
 
     # Ask to sign and broadcast (if not multi‐sig).
     if len(array) > 1:
-        # Check if capable of signing.
-        capable_signatures = 0
-        for source in array[1:-1]:
-            if bitcoin.is_mine(source):
-                capable_signatures += 1
-        if capable_signatures < required_signatures:
-            raise exceptions.AddressError('Cannot complete signatures with addresses in Bitcoin Core wallet.')    # TODO
+        print('Multi‐sig transactions are signed and broadcasted separately.')
     elif not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
         if bitcoin.is_mine(source):
             private_key_wif = None
         elif not private_key_wif:   # If private key was not given earlier.
             private_key_wif = input('Private key (Wallet Import Format): ')
 
-    # Sign and broadcast.
-    signed_tx_hex = bitcoin.sign_tx(unsigned_tx_hex, private_key_wif=private_key_wif)
-    print('Transaction (signed):', signed_tx_hex)
-    print('Hash of transaction (broadcasted):', bitcoin.broadcast_tx(signed_tx_hex))
+        # Sign and broadcast.
+        signed_tx_hex = bitcoin.sign_tx(unsigned_tx_hex, private_key_wif=private_key_wif)
+        print('Transaction (signed):', signed_tx_hex)
+        print('Hash of transaction (broadcasted):', bitcoin.broadcast_tx(signed_tx_hex))
 
 
 def set_options (data_dir=None, backend_rpc_connect=None,

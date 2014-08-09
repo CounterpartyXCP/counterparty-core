@@ -977,7 +977,7 @@ def get_tx_info2 (tx, block_index):
                 break
 
         elif asm[-1] == 'OP_CHECKMULTISIG':
-            pubkeys, required_signatures = get_checkmultisig(asm)
+            pubkeys, signatures_required = get_checkmultisig(asm)
             if not pubkeys: continue
 
             # Data or destinations?
@@ -990,7 +990,7 @@ def get_tx_info2 (tx, block_index):
                 data += chunk[len(config.PREFIX):]
             elif not destination:                                       # Destination
                 pubkeyhashes = [bitcoin.pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
-                destination = '_'.join([str(required_signatures)] + sorted(pubkeyhashes) + [str(len(pubkeyhashes))])
+                destination = '_'.join([str(signatures_required)] + sorted(pubkeyhashes) + [str(len(pubkeyhashes))])
             else:                                                       # Cannot store change.
                 continue
         else:
@@ -1014,10 +1014,10 @@ def get_tx_info2 (tx, block_index):
             source = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
 
         elif asm[-1] == 'OP_CHECKMULTISIG':
-            pubkeys, required_signatures = get_checkmultisig(asm)
+            pubkeys, signatures_required = get_checkmultisig(asm)
             if not pubkeys: return INVALID
             pubkeyhashes = [bitcoin.pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
-            source = '_'.join([str(required_signatures)] + sorted(pubkeyhashes) + [str(len(pubkeyhashes))])
+            source = '_'.join([str(signatures_required)] + sorted(pubkeyhashes) + [str(len(pubkeyhashes))])
 
         else:
             source = None
