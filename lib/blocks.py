@@ -1081,7 +1081,7 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     tx = bitcoin.get_raw_transaction(tx_hash)
     logging.debug('Status: examining transaction {}'.format(tx_hash))
 
-    if (config.TESTNET and block_index >= 0): # TODO Protocol change.
+    if (config.TESTNET and block_index >= 271000):  # Protocol change.
         tx_info = get_tx_info2(tx, block_index)
     else:
         tx_info = get_tx_info(tx, block_index)
@@ -1135,7 +1135,6 @@ def follow (db):
     except exceptions.DatabaseError:
         logging.warning('Status: NEW DATABASE')
         block_index = config.BLOCK_FIRST
-        block_index = 271915    # TODO
 
     # Get index of last transaction.
     txes = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)'''))

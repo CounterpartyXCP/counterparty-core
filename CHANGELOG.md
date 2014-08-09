@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v10.0.0 (2014-08-09)
+	* multi‐signature support (testnet protocol change: 271000)
 * v9.39.0 (2014-08-06)
 	* re‐match expired order matches from a new block all at once (protocol change: 315000)
 	* bug in issuance fee (protocol change: 315000)
