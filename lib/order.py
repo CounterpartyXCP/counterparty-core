@@ -167,15 +167,15 @@ def cancel_order_match (db, order_match, status, block_index):
         if tx1_order['status'] == 'expired' and order_match['backward_asset'] == config.BTC:
             exact_penalty(db, order_match['tx1_address'], block_index, order_match['id'])
 
-    # Re‐match.                 # Protocol change
-    if block_index >= 310000 or config.TESTNET:
-        cursor.execute('''SELECT * FROM transactions\
-                          WHERE tx_hash = ?''', (tx0_order['tx_hash'],))
-        match(db, list(cursor)[0], block_index)
-        cursor.execute('''SELECT * FROM transactions\
-                          WHERE tx_hash = ?''', (tx1_order['tx_hash'],))
-        match(db, list(cursor)[0], block_index)
-
+    # Re‐match.
+    if block_index >= 310000 or config.TESTNET: # Protocol change.
+        if not (block_index >= 315000 or config.TESTNET):   # Protocol change.
+            cursor.execute('''SELECT * FROM transactions\
+                              WHERE tx_hash = ?''', (tx0_order['tx_hash'],))
+            match(db, list(cursor)[0], block_index)
+            cursor.execute('''SELECT * FROM transactions\
+                              WHERE tx_hash = ?''', (tx1_order['tx_hash'],))
+            match(db, list(cursor)[0], block_index)
 
     if status == 'expired':
         # Record order match expiration.
@@ -575,14 +575,25 @@ def expire (db, block_index):
     # Expire orders and give refunds for the quantity give_remaining (if non-zero; if not BTC).
     cursor.execute('''SELECT * FROM orders \
                       WHERE (status = ? AND expire_index < ?)''', ('open', block_index))
-    for order in cursor.fetchall():
+    orders = list(cursor)
+    for order in orders:
         cancel_order(db, order, 'expired', block_index)
 
     # Expire order_matches for BTC with no BTC.
     cursor.execute('''SELECT * FROM order_matches \
                       WHERE (status = ? and match_expire_index < ?)''', ('pending', block_index))
-    for order_match in cursor.fetchall():
+    order_matches = list(cursor)
+    for order_match in order_matches:
         cancel_order_match(db, order_match, 'expired', block_index)
+    if block_index >= 315000 or config.TESTNET: # Protocol change.
+        # Re‐match.
+        for order_match in order_matches:
+            cursor.execute('''SELECT * FROM transactions\
+                              WHERE tx_hash = ?''', (order_match['tx0_hash'],))
+            match(db, list(cursor)[0], block_index)
+            cursor.execute('''SELECT * FROM transactions\
+                              WHERE tx_hash = ?''', (order_match['tx1_hash'],))
+            match(db, list(cursor)[0], block_index)
 
     cursor.close()
 

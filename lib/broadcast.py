@@ -83,7 +83,7 @@ def parse (db, tx, message):
         text = text.decode('utf-8')
         status = 'valid'
     except (AssertionError, struct.error) as e:
-        timestamp, value, fee_fraction_int, text = None, None, None, None
+        timestamp, value, fee_fraction_int, text = 0, None, 0, None
         status = 'invalid: could not unpack'
 
     if status == 'valid':
@@ -98,7 +98,7 @@ def parse (db, tx, message):
     lock = False
     if text and text.lower() == 'lock':
         lock = True
-        timestamp, value, fee_fraction_int, text = None, None, None, None
+        timestamp, value, fee_fraction_int, text = 0, None, None, None
     else:
         lock = False
 
@@ -119,7 +119,7 @@ def parse (db, tx, message):
     cursor.execute(sql, bindings)
 
     # Negative values (default to ignore).
-    if value < 0 or value == None:
+    if value == None or value < 0:
         # Cancel Open Bets?
         if value == -2:
             cursor.execute('''SELECT * FROM bets \
