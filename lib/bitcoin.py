@@ -752,9 +752,10 @@ def get_unspent_txouts(source, normalize=False):
             return [output for output in wallet_unspent if output['address'] == source]
 
     addresses = source.split('_')
-    unspent = []
     if len(addresses) > 1:
+        outputs = []
         raw_transactions = search_raw_transactions('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc')
+        # Get all coins.
         for tx in raw_transactions:
             for vout in tx['vout']:
                 scriptpubkey = vout['scriptPubKey']
@@ -770,7 +771,17 @@ def get_unspent_txouts(source, normalize=False):
                                 'txid': tx['txid'],
                                 'vout': vout['n']
                                }
-                        unspent.append(coin)
+                        outputs.append(coin)
+        # Prune away spent coins.
+        unspent = []
+        for output in outputs:
+            spent = False
+            for tx in raw_transactions:
+                for vin in tx['vin']:
+                    if (vin['txid'], vin['vout']) == (output['txid'], output['vout']):
+                        spent = True
+            if not spent:
+                unspent.append(output)
     else:
         # TODO: remove account (and address?) fields
         if rpc('validateaddress', [source])['ismine']:
