@@ -81,12 +81,10 @@ BURN_MULTIPLIER = 1 					# from 1.5 to 1 XDP by DOGE.
 
 # Protocol defaults
 # NOTE: If the DUST_SIZE constants are changed, they MUST also be changed in counterblockd/lib/config.py as well
-    # TODO: This should be updated, given their new configurability.
-# TODO: Find the real dust size and default fee.
-DEFAULT_REGULAR_DUST_SIZE = UNIT 		# 1 DOGE.
-DEFAULT_MULTISIG_DUST_SIZE = UNIT * 2  	# 2 DOGE.
-DEFAULT_OP_RETURN_VALUE = 0 			# 0 DOGE.
-DEFAULT_FEE_PER_KB = UNIT               # 1 DOGE.
+DEFAULT_REGULAR_DUST_SIZE = UNIT 		  # 1 DOGE; there is not dust limit in Dogecoin, but every txout < 1 DOGE, cost 1 DOGE in fee
+DEFAULT_MULTISIG_DUST_SIZE = UNIT * 2 # 2 DOGE.
+DEFAULT_OP_RETURN_VALUE = 0 			    # 0 DOGE.
+DEFAULT_FEE_PER_KB = UNIT             # 1 DOGE.
 
 
 # UI defaults
