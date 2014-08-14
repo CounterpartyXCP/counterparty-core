@@ -24,6 +24,9 @@ requests.
 Note that this API is built on JSON-RPC 2.0, not 1.1. JSON-RPC itself is pretty lightweight, and API requests
 are made via a HTTP POST request to ``/api/`` (note the trailing slash), with JSON-encoded data passed as the POST body.
 
+General Format
+^^^^^^^^^^^^^^^
+
 All requests must have POST data that is JSON encoded and in the format of:
 
 ``{ "method": "METHOD NAME", "params": {"param1": "value1", "param2": "value2"}, "jsonrpc": "2.0", "id": 0 }``
@@ -49,6 +52,12 @@ You should note that the data in ``params`` is a JSON object (e.g. mapping), not
 {"argument1": "value1", "argument2": "value2"} instead of ["value1", "value2"]). This is the case for safety and bug-minimzation reasons.
 
 For more information on JSON RPC, please see the `JSON RPC 2.0 specification <http://www.jsonrpc.org/specification>`__.
+
+Authentication
+^^^^^^^^^^^^^^^
+Also note that the ``counterpartyd`` API interface requires HTTP basic authentication to use. The username and password required
+are stored in the ``counterpartyd.conf`` file, as ``rpc-user`` and ``rpc-password``, respectively. You can also modify
+``rpc-host`` and ``rpc-port`` to change what interface and port number ``counterpartyd`` binds to from the defaults.
 
 .. _examples:
 
@@ -169,19 +178,21 @@ library. Here's a simple example that will get you the asset balances for a spec
 
 .. code-block:: php
 
-    $client = new jsonRPCClient('http://localhost:4000/jsonrpc/', array('username' => 'myusername', 'password' => 'mypass'));
+    $client = new jsonRPCClient('http://localhost:4000/api/', array('username' => 'myusername', 'password' => 'mypass'));
     $addr = '15vA2MJ4ESG3Rt1PVQ79D1LFMBBNtcSz1f'; // BTC/XCP address you want to query
     $res = $client->get_balances(array('field' => 'address', 'op' => '==', 'value' => $addr));
 
 curl Example
 ^^^^^^^^^^^^^
 
-Here's an example using ``curl`` to make an API call to the ``get_running_info`` method.
+Here's an example using ``curl`` to make an API call to the ``get_running_info`` method on mainnet.
 
 .. code-block::
 
-    curl http://127.0.0.2:4000/ --user rpcuser:rpcpassword -H 'Content-Type: application/json; charset=UTF-8' 
-        -H 'Accept: application/json, text/javascript' --data-binary '{"jsonrpc":"2.0","id":0,"method":"get_running_info"}
+    curl http://127.0.0.1:4000/api/ --user rpcuser:rpcpassword -H 'Content-Type: application/json; charset=UTF-8' 
+        -H 'Accept: application/json, text/javascript' --data-binary '{"jsonrpc":"2.0","id":0,"method":"get_running_info"}'
+
+For testnet, you could use the example above, but change the port to ``14000`` and change the username and password as necessary.
 
 
 Terms & Conventions
