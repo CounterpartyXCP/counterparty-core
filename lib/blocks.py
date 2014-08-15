@@ -949,7 +949,7 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     cursor = db.cursor()
     # Get the important details about each transaction.
     tx = bitcoin.get_raw_transaction(tx_hash)
-    logging.debug('Status: examining transaction {}'.format(tx_hash))
+    logging.debug('Status: Examining transaction {}.'.format(tx_hash))
     source, destination, btc_amount, fee, data = get_tx_info(tx, block_index)
     if source and (data or destination == config.UNSPENDABLE):
         cursor.execute('''INSERT INTO transactions(
@@ -981,8 +981,6 @@ def follow (db):
     # TODO: This is not thread-safe!
     cursor = db.cursor()
 
-    logging.info('Status: RESTART')
-
     # Initialise.
     initialise(db)
 
@@ -995,9 +993,12 @@ def follow (db):
         if minor_version != config.VERSION_MINOR:
             logging.info('Status: client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.VERSION_MINOR))
             reparse(db, quiet=False)
+        logging.info('Status: Checking backend.')
+        bitcoin.get_info()
+        logging.info('Status: Resuming parsing.')
 
     except exceptions.DatabaseError:
-        logging.warning('Status: NEW DATABASE')
+        logging.warning('Status: New database.')
         block_index = config.BLOCK_FIRST
 
     # Get index of last transaction.

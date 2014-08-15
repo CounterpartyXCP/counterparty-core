@@ -78,6 +78,8 @@ def get_wallet ():
 def get_mempool ():
     return rpc('getrawmempool', [])
 
+def get_info():
+    return rpc('getinfo', [])
 
 def bitcoind_check (db):
     """Checks blocktime of last block to see if {} Core is running behind.""".format(config.BTC_NAME)
@@ -100,12 +102,12 @@ def connect (host, payload, headers):
         except requests.exceptions.SSLError as e:
             raise e
         except requests.exceptions.ConnectionError:
-            print('Could not connect to Bitcoind. Sleeping for five seconds. (Try {}/{})'.format(i+1, TRIES), file=sys.stderr)
+            logging.debug('Could not connect to Bitcoind. (Try {}/{})'.format(i+1, TRIES))
             time.sleep(5)
     return None
 
 def wallet_unlock ():
-    getinfo = rpc('getinfo', [])
+    getinfo = get_info()
     if 'unlocked_until' in getinfo:
         if getinfo['unlocked_until'] >= 60:
             return True # Wallet is unlocked for at least the next 60 seconds.
