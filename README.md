@@ -6,7 +6,7 @@ repository, `dogepartyd`, constitute the reference implementation of the
 protocol.
 
 The Counterparty protocol specification may be found at
-<https://github.com/CounterpartyXDP/Counterparty>.
+<https://github.com/CounterpartyXCP/Counterparty>.
 
 # Dependencies
 * [Python 3](http://python.org)
