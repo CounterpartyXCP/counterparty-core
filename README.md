@@ -1,16 +1,16 @@
 # Description
-Counterparty is a protocol for the creation and use of decentralised financial
+Dogeparty is a fork of Counterparty, a protocol for the creation and use of decentralised financial
 instruments such as asset exchanges, contracts for difference and dividend
 payments. It uses Dogecoin as a transport layer. The contents of this
 repository, `dogepartyd`, constitute the reference implementation of the
 protocol.
 
 The Counterparty protocol specification may be found at
-<https://github.com/CounterpartyXCP/Counterparty>.
+<https://github.com/CounterpartyXDP/Counterparty>.
 
 # Dependencies
 * [Python 3](http://python.org)
-* Python 3 packages: apsw, requests, appdirs, prettytable, python-dateutil, json-rpc, tornado, flask, Flask-HTTPAuth, pycoin, pyzmq(v2.2+), pycrypto (see [this link](https://github.com/CounterpartyXCP/counterpartyd/blob/master/pip-requirements.txt) for exact working versions)
+* Python 3 packages: apsw, requests, appdirs, prettytable, python-dateutil, json-rpc, tornado, flask, Flask-HTTPAuth, pycoin, pyzmq(v2.2+), pycrypto (see [this link](https://github.com/Dogeparty/dogepartyd/blob/master/pip-requirements.txt) for exact working versions)
 * Dogecoind
 
 # Installation
@@ -35,7 +35,7 @@ settings in a configuration file specific to dogepartyd.
 Note that the syntaxes for the countpartyd and the Dogecoind configuraion
 files are not the same. A Dogecoind configuration file looks like this:
 
-	rpcuser=bitcoinrpc
+	rpcuser=dogecoinrpc
 	rpcpassword=PASSWORD
 	testnet=1
 	txindex=1
@@ -44,7 +44,7 @@ files are not the same. A Dogecoind configuration file looks like this:
 However, a dogepartyd configuration file looks like this:
 
 	[Default]
-	bitcoind-rpc-password=PASSWORD
+	dogecoind-rpc-password=PASSWORD
 
 Note the change in hyphenation between `rpcpassword` and `rpc-password`.
 
@@ -64,7 +64,7 @@ you can manually update these requirements by executing something like:
 
 The test suite is invoked with `py.test` in the root directory of the repository.
 Dogecoind testnet and mainnet must run on the default ports and use the same rpcuser and rpcpassword. 
-Do not include the following values ​​in dogepartyd.conf: bitcoind-rpc-connect, bitcoind-rpc-port, rpc-host, rpc-port and testnet.
+Do not include the following values ​​in dogepartyd.conf: dogecoind-rpc-connect, bitcoind-rpc-port, rpc-host, rpc-port and testnet.
 
 # Usage
 The command‐line syntax of dogepartyd is generally that of
@@ -112,27 +112,27 @@ The following examples are abridged for parsimony.
 	--to=n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fHM7
 	```
 
-* Buy BTC for XCP
+* Buy DOGE for XDP
 	
 	```
-	order --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=BTC
-	--give-quantity=20 --give-asset=XCP --expiration=10 --fee_required=.001
+	order --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=DOGE
+	--give-quantity=20 --give-asset=XDP --expiration=10 --fee_required=.001
 	```
 
-* Buy BBBC for BTC
+* Buy BBBC for DOGE
 
 	```
 	order --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=BBBC
-	--give-quantity=20 --give-asset=BTC --expiration=10 --fee_provided=0.001
+	--give-quantity=20 --give-asset=DOGE --expiration=10 --fee_provided=0.001
 	```
 
-* Buy XCP for BBBC
+* Buy XDP for BBBC
 	```
-	order --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=XCP
+	order --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=XDP
 	--give-quantity=20 --give-asset=BBBC --expiration=10
 	```
 
-* BTCPay
+* DOGEPay
 	```
 	btcpay --source=-source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --order-match-id=092f15d36786136c4d868c33356ec3c9b5a0c77de54ed0e96a8dbdd8af160c23
 	```
@@ -156,7 +156,7 @@ The following examples are abridged for parsimony.
 	
 	Equal/Not Equal Bet:
 	
-	Example: Bet on Super Bowl Feed. Denver vs. Seattle. Feed value of 1 means Seattle Wins. Feed value of 2 means 	        	Denver Wins. This command places a 1 XCP bet on the Super Bowl Feed for Seattle to win, paying out 2 to         	1. The bet will expire in 100 blocks and the settlement value of the bet is based on the first feed 	                update after the deadline timestamp of February 3, 2014 1:39 PM US Eastern Standard Time (UTC-0500)
+	Example: Bet on Super Bowl Feed. Denver vs. Seattle. Feed value of 1 means Seattle Wins. Feed value of 2 means 	        	Denver Wins. This command places a 1 XDP bet on the Super Bowl Feed for Seattle to win, paying out 2 to         	1. The bet will expire in 100 blocks and the settlement value of the bet is based on the first feed 	                update after the deadline timestamp of February 3, 2014 1:39 PM US Eastern Standard Time (UTC-0500)
 	```
 	bet --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --feed-address=n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fH --bet-type=Equal
 	--deadline=2014-02-03T13:39:00-0500 --wager=1 --counterwager=2 --target-value=1 --expiration=100
@@ -164,7 +164,7 @@ The following examples are abridged for parsimony.
 
 	Contract for Difference:
 	
-	Example: Bet on Dogecoin Price Feed. This command places a bearish (short) 1 XCP wager on the price of BTC/USD 				with 2X leverage. The bet will expire in 100 blocks and the settlement value of the bet is based 			on the first feed update after the deadline timestamp of February 3, 2014 1:39 PM US Eastern 					Standard Time (UTC-0500)
+	Example: Bet on Dogecoin Price Feed. This command places a bearish (short) 1 XDP wager on the price of DOGE/USD 				with 2X leverage. The bet will expire in 100 blocks and the settlement value of the bet is based 			on the first feed update after the deadline timestamp of February 3, 2014 1:39 PM US Eastern 					Standard Time (UTC-0500)
 	```
 	bet --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --feed-address=n3BrDB6zDiEPWEE6wLxywFb4Yp9ZY5fH --bet-type=BearCFD --deadline=2014-02-03T13:39:00-0500 --wager=1 --counterwager=1 --leverage=10080 --expiration=100
 	```
@@ -203,19 +203,19 @@ The following examples are abridged for parsimony.
 	
 	Example:
 	
-	To filter the market to only show offers to sell (give) BTC:
+	To filter the market to only show offers to sell (give) DOGE:
 	```
-	market --give-asset=BTC
-	```
-	
-	To filter the market to only show offers to buy (get) BTC:
-	```
-	market --get-asset=BTC
+	market --give-asset=DOGE
 	```
 	
-	To filter the market to only show offers to sell BTC for XCP:
+	To filter the market to only show offers to buy (get) DOGE:
 	```
-	market --give-asset=BTC --get-asset=XCP
+	market --get-asset=DOGE
+	```
+	
+	To filter the market to only show offers to sell DOGE for XDP:
+	```
+	market --give-asset=DOGE --get-asset=XDP
 	```
 
 * Asset
