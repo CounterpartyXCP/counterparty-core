@@ -473,6 +473,7 @@ class APIServer(threading.Thread):
                 block['_messages'] = []
                 while len(messages) and messages[0]['block_index'] == block['block_index']:
                     block['_messages'].append(messages.popleft())
+            assert not len(messages) #should have been cleared out
             
             cursor.close()
             return blocks
