@@ -1,3 +1,5 @@
+Status: Creating connection to `counterpartyd.unittest.db`.
+Status: Checking database integrity.
 START TEST
 Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
@@ -244,4 +246,6 @@ Change quantity: 1.9987574 BTC
 RPS Resolved: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc is playing 3 on a 5-moves game with mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns with a wager of 0.11021665 XCP (a83dd0ccbffe39d071cc317ddf6e97f5c6b1c87af91919271f9fa140b0508c6c6da43b944e494e885e69af021f93c6d9331c78aa228084711429160a5bbd15b5) [resolved and pending]
 Credit: 0.2204333 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #wins# <a83dd0ccbffe39d071cc317ddf6e97f5c6b1c87af91919271f9fa140b0508c6c6da43b944e494e885e69af021f93c6d9331c78aa228084711429160a5bbd15b5>
 Expired RPS Match: a83dd0ccbffe39d071cc317ddf6e97f5c6b1c87af91919271f9fa140b0508c6c6da43b944e494e885e69af021f93c6d9331c78aa228084711429160a5bbd15b5
+Status: Creating connection to `counterpartyd.unittest.db`.
+Status: Checking database integrity.
 STOP TEST
