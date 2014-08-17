@@ -42,6 +42,18 @@ config.UNITTEST_PRIVKEY = {
     'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns': 'cQ897jnCVRrawNbw8hgmjMiRNHejwzg4KbzdMCzc91iaTif8ReqX'
 }
 
+# Logs.
+try: os.remove(CURR_DIR + '/log.new')
+except: pass
+logging.basicConfig(filename=CURR_DIR + '/log.new', level=logging.DEBUG, format='%(message)s')
+requests_log = logging.getLogger("requests")
+requests_log.setLevel(logging.WARNING)
+
+# Output.
+output_new = {}
+with open(CURR_DIR + '/output.json', 'r') as output_file:
+    output = json.load(output_file)
+
 # Connect to database.
 try: os.remove(config.DATABASE)
 except: pass
@@ -195,17 +207,6 @@ def setup_function(function):
 def teardown_function(function):
     cursor.execute('''END''')
 
-# Logs.
-try: os.remove(CURR_DIR + '/log.new')
-except: pass
-logging.basicConfig(filename=CURR_DIR + '/log.new', level=logging.DEBUG, format='%(message)s')
-requests_log = logging.getLogger("requests")
-requests_log.setLevel(logging.WARNING)
-
-# Output.
-output_new = {}
-with open(CURR_DIR + '/output.json', 'r') as output_file:
-    output = json.load(output_file)
 
 # TODO: replace inspect.stack()[0][3] with inspect.currentframe().f_code.co_name?
 

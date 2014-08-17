@@ -298,7 +298,7 @@ def exectracer(cursor, sql, bindings):
 
 def connect_to_db(flags=None):
     """Connects to the SQLite database, returning a db Connection object"""
-    logging.debug('Status: Creating connection to `{}`.'.format(config.DATABASE))
+    logging.debug('Status: Creating connection to `{}`.'.format(config.DATABASE.split('/').pop()))
 
     if flags == None:
         db = apsw.Connection(config.DATABASE)
