@@ -131,6 +131,13 @@ def initialise(db):
                       index_hash_idx ON blocks (block_index, block_hash)
                    ''')
 
+    # Check that first block in DB is BLOCK_FIRST.
+    cursor.execute('''SELECT * from blocks ORDER BY block_index''')
+    blocks = list(cursor)
+    if len(blocks):
+        if blocks[0]['block_index'] != config.BLOCK_FIRST:
+            raise exceptions.DatabaseError('First block in database is not block {}.'.format(config.BLOCK_FIRST))
+
     # Transactions
     cursor.execute('''CREATE TABLE IF NOT EXISTS transactions(
                       tx_index INTEGER UNIQUE,

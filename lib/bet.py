@@ -121,8 +121,10 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
     if counterwager_quantity <= 0: problems.append('non‐positive counterwager')
     if target_value < 0: problems.append('negative target value')
     if deadline < 0: problems.append('negative deadline')
-    if expiration <= 0: problems.append('non‐positive expiration')
-
+    if expiration < 0: problems.append('negative expiration')
+    if expiration == 0 and not (block_index >= 317000 or config.TESTNET):   # Protocol change.
+        problems.append('zero expiration')                                      
+ 
     if target_value and bet_type in (0,1):   # BullCFD, BearCFD
         problems.append('CFDs have no target value')
 
@@ -139,7 +141,7 @@ def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
             counterwager_quantity, target_value, leverage, expiration):
 
     problems = validate(db, source, feed_address, bet_type, deadline, wager_quantity,
-                        counterwager_quantity, target_value, leverage, expiration, util.last_block(db)['block_index'])
+                        counterwager_quantity, target_value, leverage, expiration, util.last_block(db)['block_index'], util.last_block(db)['block_index'])
     if deadline <= time.time() and not config.UNITTEST:
         problems.append('deadline passed')
     if problems: raise exceptions.BetError(problems)

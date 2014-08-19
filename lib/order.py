@@ -191,7 +191,7 @@ def cancel_order_match (db, order_match, status, block_index):
     cursor.close()
 
 
-def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required):
+def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, block_index):
     problems = []
     cursor = db.cursor()
 
@@ -214,7 +214,9 @@ def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, ex
     if give_quantity <= 0: problems.append('non‐positive give quantity')
     if get_quantity <= 0: problems.append('non‐positive get quantity')
     if fee_required < 0: problems.append('negative fee_required')
-    if expiration <= 0: problems.append('non‐positive expiration')
+    if expiration < 0: problems.append('negative expiration')
+    if expiration == 0 and not (block_index >= 317000 or config.TESTNET):   # Protocol change.
+        problems.append('zero expiration')
 
     if not give_quantity or not get_quantity:
         problems.append('zero give or zero get')
@@ -240,7 +242,7 @@ def compose (db, source, give_asset, give_quantity, get_asset, get_quantity, exp
     if give_asset != config.BTC and (not balances or balances[0]['quantity'] < give_quantity):
         raise exceptions.OrderError('insufficient funds')
 
-    problems = validate(db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required)
+    problems = validate(db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, util.last_block(db)['block_index'])
     if problems: raise exceptions.OrderError(problems)
 
     give_id = util.asset_id(give_asset)
@@ -283,7 +285,7 @@ def parse (db, tx, message):
                     give_quantity = balance
                     get_quantity = int(price * give_quantity)
 
-        problems = validate(db, tx['source'], give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required)
+        problems = validate(db, tx['source'], give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
 
     # Debit give quantity. (Escrow.)

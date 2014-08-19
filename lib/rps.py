@@ -74,7 +74,7 @@ def update_rps_match_status (db, rps_match, status, block_index):
 
     cursor.close()
 
-def validate (db, source, possible_moves, wager, move_random_hash, expiration):
+def validate (db, source, possible_moves, wager, move_random_hash, expiration, block_index):
     problems = []
 
     if not isinstance(possible_moves, int):
@@ -98,8 +98,9 @@ def validate (db, source, possible_moves, wager, move_random_hash, expiration):
         problems.append('possible moves must be odd')
     if wager <= 0:
         problems.append('non‐positive wager')
-    if expiration <= 0:
-        problems.append('non‐positive expiration')
+    if expiration < 0: problems.append('negative expiration')
+    if expiration == 0 and not (block_index >= 317000 or config.TESTNET):   # Protocol change.
+        problems.append('zero expiration')
     if expiration > config.MAX_EXPIRATION:
         problems.append('expiration overflow')
     if len(move_random_hash_bytes) != 32:
@@ -109,7 +110,7 @@ def validate (db, source, possible_moves, wager, move_random_hash, expiration):
 
 def compose(db, source, possible_moves, wager, move_random_hash, expiration):
 
-    problems = validate(db, source, possible_moves, wager, move_random_hash, expiration)
+    problems = validate(db, source, possible_moves, wager, move_random_hash, expiration, util.last_block(db)['block_index'])
 
     if problems: raise exceptions.RpsError(problems)
 
@@ -142,7 +143,7 @@ def parse(db, tx, message):
             if balance < wager:
                 wager = balance
 
-        problems = validate(db, tx['source'], possible_moves, wager, move_random_hash, expiration)
+        problems = validate(db, tx['source'], possible_moves, wager, move_random_hash, expiration, tx['block_index'])
         if problems: status = 'invalid: {}'.format(', '.join(problems))
 
     # Debit quantity wagered. (Escrow.)
