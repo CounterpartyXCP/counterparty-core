@@ -297,7 +297,9 @@ def match (db, tx):
         if tx['block_index'] < 286000: tx0_inverse_odds = util.price(1, tx0_odds, tx1['block_index']) # Protocol change.
 
         logging.debug('Tx0 Inverse Odds: {}; Tx1 Odds: {}'.format(float(tx0_inverse_odds), float(tx1_odds)))
-        if tx0_inverse_odds <= tx1_odds:
+        if tx0_inverse_odds > tx1_odds:
+            logging.debug('Skipping: price mismatch.')
+        else:
             logging.debug('Potential forward quantities: {}, {}'.format(tx0_wager_remaining, int(util.price(tx1_wager_remaining, tx1_odds, tx1['block_index']))))
             forward_quantity = int(min(tx0_wager_remaining, int(util.price(tx1_wager_remaining, tx1_odds, tx1['block_index']))))
             logging.debug('Forward Quantity: {}'.format(forward_quantity))

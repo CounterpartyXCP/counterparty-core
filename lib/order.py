@@ -413,7 +413,9 @@ def match (db, tx, block_index=None):
         if tx['block_index'] < 286000: tx1_inverse_price = util.price(1, tx1_price, block_index)
 
         logging.debug('Tx0 Price: {}; Tx1 Inverse Price: {}'.format(float(tx0_price), float(tx1_inverse_price)))
-        if tx0_price <= tx1_inverse_price:
+        if tx0_price > tx1_inverse_price:
+            logging.debug('Skipping: price mismatch.')
+        else:
             logging.debug('Potential forward quantities: {}, {}'.format(tx0_give_remaining, int(util.price(tx1_give_remaining, tx0_price, block_index))))
             forward_quantity = int(min(tx0_give_remaining, int(util.price(tx1_give_remaining, tx0_price, block_index))))
             logging.debug('Forward Quantity: {}'.format(forward_quantity))
