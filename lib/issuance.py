@@ -15,6 +15,7 @@ LENGTH_1 = 8 + 8 + 1
 FORMAT_2 = '>QQ??If'
 LENGTH_2 = 8 + 8 + 1 + 1 + 4 + 4
 ID = 20
+# NOTE: Pascal strings are used for storing descriptions for backwards‐compatibility.
 
 
 def validate (db, source, destination, asset, quantity, divisible, callable_, call_date, call_price, description, block_index):
@@ -140,7 +141,7 @@ def parse (db, tx, message):
             curr_format = FORMAT_2 + '{}p'.format(len(message) - LENGTH_2)
             asset_id, quantity, divisible, callable_, call_date, call_price, description = struct.unpack(curr_format, message)
             if not (tx['block_index'] >= 317000 or config.TESTNET):  # Protocol change.
-                assert len(description) == 42
+                assert len(description) <= 42
 
             call_price = round(call_price, 6) # TODO: arbitrary
             try:

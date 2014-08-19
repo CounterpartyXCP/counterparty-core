@@ -33,6 +33,7 @@ from . import (bet)
 FORMAT = '>IdI'
 LENGTH = 4 + 8 + 4
 ID = 30
+# NOTE: Pascal strings are used for storing texts for backwards‐compatibility.
 
 
 def validate (db, source, timestamp, value, fee_fraction_int, text):
@@ -80,7 +81,7 @@ def parse (db, tx, message):
         curr_format = FORMAT + '{}p'.format(len(message) - LENGTH)
         timestamp, value, fee_fraction_int, text = struct.unpack(curr_format, message)
         if not (tx['block_index'] >= 317000 or config.TESTNET):  # Protocol change.
-            assert len(text) == 52
+            assert len(text) <= 52
 
         try:
             text = text.decode('utf-8')
