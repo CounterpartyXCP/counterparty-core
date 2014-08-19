@@ -10,7 +10,7 @@ LENGTH = 32 + 32
 ID = 11
 
 
-def validate (db, source, order_match_id):
+def validate (db, source, order_match_id, block_index):
     problems = []
     order_match = None
 
@@ -60,7 +60,7 @@ def validate (db, source, order_match_id):
 def compose (db, source, order_match_id):
     tx0_hash, tx1_hash = order_match_id[:64], order_match_id[64:] # UTF-8 encoding means that the indices are doubled.
 
-    destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(db, source, order_match_id)
+    destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(db, source, order_match_id, util.last_block(db)['block_index'])
     if problems: raise exceptions.BTCPayError(problems)
 
     # Warn if down to the wire.
@@ -90,7 +90,7 @@ def parse (db, tx, message):
         status = 'invalid: could not unpack'
 
     if status == 'valid':
-        destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(db, tx['source'], order_match_id)
+        destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(db, tx['source'], order_match_id, tx['block_index'])
         if problems:
             order_match = None
             status = 'invalid: ' + '; '.join(problems)
