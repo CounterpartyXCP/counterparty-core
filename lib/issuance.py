@@ -123,7 +123,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, calla
 
     asset_id = util.asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
-    curr_format = FORMAT_2 + '{}p'.format(len(description) + 1))
+    curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
     data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if callable_ else 0,
         call_date or 0, call_price or 0.0, description.encode('utf-8'))
     if transfer_destination:
