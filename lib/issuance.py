@@ -12,8 +12,8 @@ from . import (config, util, exceptions, bitcoin, util)
 
 FORMAT_1 = '>QQ?'
 LENGTH_1 = 8 + 8 + 1
-FORMAT_2 = '>QQ??If42p'
-LENGTH_2 = 8 + 8 + 1 + 1 + 4 + 4 + 42
+FORMAT_2 = '>QQ??If'
+LENGTH_2 = 8 + 8 + 1 + 1 + 4 + 4
 ID = 20
 
 
@@ -124,8 +124,6 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, calla
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT_2, asset_id, quantity, 1 if divisible else 0, 1 if callable_ else 0,
         call_date or 0, call_price or 0.0, description.encode('utf-8'))
-    if len(data) > 80:
-        raise exceptions.IssuanceError('Description is greater than 52 bytes.')
     if transfer_destination:
         destination_outputs = [(transfer_destination, None)]
     else:
@@ -137,8 +135,12 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
-        if (tx['block_index'] > 283271 or config.TESTNET) and len(message) == LENGTH_2: # Protocol change.
+        if (tx['block_index'] > 283271 or config.TESTNET) and len(message) >= LENGTH_2: # Protocol change.
+            FORMAT_2 += '{}p'.format(len(message) - LENGTH_2)
             asset_id, quantity, divisible, callable_, call_date, call_price, description = struct.unpack(FORMAT_2, message)
+            if not (tx['block_index'] >= 317000 or config.TESTNET):  # Protocol change.
+                assert len(description) == 42
+
             call_price = round(call_price, 6) # TODO: arbitrary
             try:
                 description = description.decode('utf-8')
