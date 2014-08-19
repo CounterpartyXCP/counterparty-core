@@ -66,9 +66,9 @@ def compose (db, source, timestamp, value, fee_fraction, text):
     problems = validate(db, source, timestamp, value, fee_fraction_int, text)
     if problems: raise exceptions.BroadcastError(problems)
 
-    FORMAT_2 += '{}p'.format(len(text))
+    curr_format = FORMAT_2 + '{}p'.format(len(text))
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
-    data += struct.pack(FORMAT, timestamp, value, fee_fraction_int,
+    data += struct.pack(curr_format, timestamp, value, fee_fraction_int,
                         text.encode('utf-8'))
     return (source, [], data)
 
@@ -77,8 +77,8 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
-        FORMAT += '{}p'.format(len(message) - LENGTH)
-        timestamp, value, fee_fraction_int, text = struct.unpack(FORMAT, message)
+        curr_format = FORMAT + '{}p'.format(len(message) - LENGTH)
+        timestamp, value, fee_fraction_int, text = struct.unpack(curr_format, message)
         if not (tx['block_index'] >= 317000 or config.TESTNET):  # Protocol change.
             assert len(text) == 52
 

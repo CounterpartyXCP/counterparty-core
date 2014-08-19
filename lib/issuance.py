@@ -122,8 +122,8 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, calla
 
     asset_id = util.asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
-    FORMAT += '{}p'.format(len(description))
-    data += struct.pack(FORMAT_2, asset_id, quantity, 1 if divisible else 0, 1 if callable_ else 0,
+    curr_format = FORMAT_2 + '{}p'.format(len(description))
+    data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if callable_ else 0,
         call_date or 0, call_price or 0.0, description.encode('utf-8'))
     if transfer_destination:
         destination_outputs = [(transfer_destination, None)]
@@ -137,8 +137,8 @@ def parse (db, tx, message):
     # Unpack message.
     try:
         if (tx['block_index'] > 283271 or config.TESTNET) and len(message) >= LENGTH_2: # Protocol change.
-            FORMAT_2 += '{}p'.format(len(message) - LENGTH_2)
-            asset_id, quantity, divisible, callable_, call_date, call_price, description = struct.unpack(FORMAT_2, message)
+            curr_format = FORMAT_2 + '{}p'.format(len(message) - LENGTH_2)
+            asset_id, quantity, divisible, callable_, call_date, call_price, description = struct.unpack(curr_format, message)
             if not (tx['block_index'] >= 317000 or config.TESTNET):  # Protocol change.
                 assert len(description) == 42
 
