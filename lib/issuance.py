@@ -140,7 +140,7 @@ def parse (db, tx, message):
         if (tx['block_index'] > 283271 or config.TESTNET) and len(message) >= LENGTH_2: # Protocol change.
             curr_format = FORMAT_2 + '{}p'.format(len(message) - LENGTH_2)
             asset_id, quantity, divisible, callable_, call_date, call_price, description = struct.unpack(curr_format, message)
-            if not (tx['block_index'] >= 317000 or config.TESTNET):  # Protocol change.
+            if not (tx['block_index'] >= 317500 or config.TESTNET):  # Protocol change.
                 assert len(description) <= 42
 
             call_price = round(call_price, 6) # TODO: arbitrary

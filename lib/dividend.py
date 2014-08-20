@@ -21,7 +21,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
 
     if asset == config.BTC:
         problems.append('cannot pay dividends to holders of {}'.format(config.BTC))
-    if asset == config.XCP and not (block_index >= 317000 or config.TESTNET):   # Protocol change.
+    if asset == config.XCP and not (block_index >= 317500 or config.TESTNET):   # Protocol change.
         problems.append('cannot pay dividends to holders of {}'.format(config.XCP))
 
     if quantity_per_unit <= 0: problems.append('non‐positive quantity per unit')

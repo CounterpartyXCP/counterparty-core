@@ -122,7 +122,7 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
     if target_value < 0: problems.append('negative target value')
     if deadline < 0: problems.append('negative deadline')
     if expiration < 0: problems.append('negative expiration')
-    if expiration == 0 and not (block_index >= 317000 or config.TESTNET):   # Protocol change.
+    if expiration == 0 and not (block_index >= 317500 or config.TESTNET):   # Protocol change.
         problems.append('zero expiration')
 
     if target_value and bet_type in (0,1):   # BullCFD, BearCFD

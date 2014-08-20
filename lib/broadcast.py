@@ -80,7 +80,7 @@ def parse (db, tx, message):
     try:
         curr_format = FORMAT + '{}p'.format(len(message) - LENGTH)
         timestamp, value, fee_fraction_int, text = struct.unpack(curr_format, message)
-        if not (tx['block_index'] >= 317000 or config.TESTNET):  # Protocol change.
+        if not (tx['block_index'] >= 317500 or config.TESTNET):  # Protocol change.
             assert len(text) <= 52
 
         try:

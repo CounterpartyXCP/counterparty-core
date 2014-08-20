@@ -215,7 +215,7 @@ def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, ex
     if get_quantity <= 0: problems.append('non‐positive get quantity')
     if fee_required < 0: problems.append('negative fee_required')
     if expiration < 0: problems.append('negative expiration')
-    if expiration == 0 and not (block_index >= 317000 or config.TESTNET):   # Protocol change.
+    if expiration == 0 and not (block_index >= 317500 or config.TESTNET):   # Protocol change.
         problems.append('zero expiration')
 
     if not give_quantity or not get_quantity:
