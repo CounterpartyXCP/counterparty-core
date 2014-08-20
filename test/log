@@ -249,7 +249,3 @@ Expired RPS Match: a83dd0ccbffe39d071cc317ddf6e97f5c6b1c87af91919271f9fa140b0508
 Status: Creating connection to `counterpartyd.unittest.db`.
 Status: Checking database integrity.
 STOP TEST
-Status: Creating connection to `counterpartyd.9.testnet.db`.
-Status: Checking database integrity.
-Status: Creating connection to `counterpartyd.9.db`.
-Status: Checking database integrity.
