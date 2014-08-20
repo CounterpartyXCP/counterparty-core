@@ -279,10 +279,13 @@ def initialise(db):
                       index_hash_idx ON orders (tx_index, tx_hash)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      expire_idx ON orders (status, expire_index)
+                      expire_idx ON orders (expire_index, status)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      give_status_idx ON orders (status, give_asset)
+                      give_status_idx ON orders (give_asset, status)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      source_give_status_idx ON orders (source, give_asset, status)
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       give_get_status_idx ON orders (get_asset, give_asset, status)
@@ -457,6 +460,9 @@ def initialise(db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       source_idx ON bets (source)
                    ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      status_idx ON bets (status)
+                   ''')
 
     # Bet Matches
     cursor.execute('''CREATE TABLE IF NOT EXISTS bet_matches(
@@ -501,6 +507,9 @@ def initialise(db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       tx1_address_idx ON bet_matches (tx1_address)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      status_idx ON bet_matches (status)
                    ''')
 
     # Dividends
@@ -603,6 +612,9 @@ def initialise(db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       matching_idx ON rps (wager, possible_moves)
                    ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      status_idx ON rps (status)
+                   ''')
 
     # RPS Matches
     cursor.execute('''CREATE TABLE IF NOT EXISTS rps_matches(
@@ -635,6 +647,9 @@ def initialise(db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       rps_tx1_address_idx ON rps_matches (tx1_address)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      status_idx ON rps_matches (status)
                    ''')
 
     # RPS Resolves
