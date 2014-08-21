@@ -105,6 +105,10 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
             if fee and (not balances or balances[0]['quantity'] < fee):
                 problems.append('insufficient funds')
 
+    if not (block_index >= 317500 or config.TESTNET):  # Protocol change.
+        if len(description) > 42:
+            problems.append('description too long')
+
     # For SQLite3
     call_date = min(call_date, config.MAX_INT)
     total = sum([issuance['quantity'] for issuance in issuances])
@@ -123,7 +127,10 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, calla
 
     asset_id = util.asset_id(asset)
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
-    curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
+    if len(description) <= 42:
+        curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
+    else:
+        curr_format = FORMAT_2 + '{}s'.format(len(description))
     data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if callable_ else 0,
         call_date or 0, call_price or 0.0, description.encode('utf-8'))
     if transfer_destination:
@@ -138,10 +145,11 @@ def parse (db, tx, message):
     # Unpack message.
     try:
         if (tx['block_index'] > 283271 or config.TESTNET) and len(message) >= LENGTH_2: # Protocol change.
-            curr_format = FORMAT_2 + '{}p'.format(len(message) - LENGTH_2)
+            if len(message) - LENGTH_2 <= 42:
+                curr_format = FORMAT_2 + '{}p'.format(len(message) - LENGTH_2)
+            else:
+                curr_format = FORMAT_2 + '{}s'.format(len(message) - LENGTH_2)
             asset_id, quantity, divisible, callable_, call_date, call_price, description = struct.unpack(curr_format, message)
-            if not (tx['block_index'] >= 317500 or config.TESTNET):  # Protocol change.
-                assert len(description) <= 42
 
             call_price = round(call_price, 6) # TODO: arbitrary
             try:

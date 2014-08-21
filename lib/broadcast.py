@@ -36,7 +36,7 @@ ID = 30
 # NOTE: Pascal strings are used for storing texts for backwards‐compatibility.
 
 
-def validate (db, source, timestamp, value, fee_fraction_int, text):
+def validate (db, source, timestamp, value, fee_fraction_int, text, block_index):
     problems = []
 
     if fee_fraction_int > 4294967295:
@@ -57,6 +57,10 @@ def validate (db, source, timestamp, value, fee_fraction_int, text):
         elif timestamp <= last_broadcast['timestamp']:
             problems.append('feed timestamps not monotonically increasing')
 
+    if not (block_index >= 317500 or config.TESTNET):  # Protocol change.
+        if len(text) > 52:
+            problems.append('text too long')
+
     return problems
 
 def compose (db, source, timestamp, value, fee_fraction, text):
@@ -64,10 +68,13 @@ def compose (db, source, timestamp, value, fee_fraction, text):
     # Store the fee fraction as an integer.
     fee_fraction_int = int(fee_fraction * 1e8)
 
-    problems = validate(db, source, timestamp, value, fee_fraction_int, text)
+    problems = validate(db, source, timestamp, value, fee_fraction_int, text, util.last_block(db)['block_index'])
     if problems: raise exceptions.BroadcastError(problems)
 
-    curr_format = FORMAT + '{}p'.format(len(text) + 1)
+    if len(text) <= 52:
+        curr_format = FORMAT + '{}p'.format(len(text) + 1)
+    else:
+        curr_format = FORMAT + '{}s'.format(len(text))
     data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(curr_format, timestamp, value, fee_fraction_int,
                         text.encode('utf-8'))
@@ -78,10 +85,11 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
-        curr_format = FORMAT + '{}p'.format(len(message) - LENGTH)
+        if len(message) - LENGTH <= 52:
+            curr_format = FORMAT + '{}p'.format(len(message) - LENGTH)
+        else:
+            curr_format = FORMAT + '{}s'.format(len(message) - LENGTH)
         timestamp, value, fee_fraction_int, text = struct.unpack(curr_format, message)
-        if not (tx['block_index'] >= 317500 or config.TESTNET):  # Protocol change.
-            assert len(text) <= 52
 
         try:
             text = text.decode('utf-8')
@@ -97,7 +105,7 @@ def parse (db, tx, message):
         timestamp = min(timestamp, config.MAX_INT)
         value = min(value, config.MAX_INT)
 
-        problems = validate(db, tx['source'], timestamp, value, fee_fraction_int, text)
+        problems = validate(db, tx['source'], timestamp, value, fee_fraction_int, text, tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
 
     # Lock?

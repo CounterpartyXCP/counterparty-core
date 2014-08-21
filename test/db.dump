@@ -701,13 +701,15 @@ INSERT INTO orders VALUES(2,'dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b7
 INSERT INTO orders VALUES(3,'084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5',154911,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',105000000,5000000,'BTC',50000000,0,10,154921,900000,42858,10000,10000,'expired');
 INSERT INTO orders VALUES(21,'2f0fd1e89b8de1d57292742ec380ea47066e307ad645f5bc3adad8a06ff58608',154929,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',50000000,50000000,'XCP',50000000,50000000,10,154939,0,0,10000,10000,'cancelled');
 -- Triggers and indices on  orders
-CREATE INDEX expire_idx ON orders (status, expire_index)
+CREATE INDEX expire_idx ON orders (expire_index, status)
                    ;
 CREATE INDEX give_asset_idx ON orders (give_asset)
                    ;
 CREATE INDEX give_get_status_idx ON orders (get_asset, give_asset, status)
                    ;
-CREATE INDEX give_status_idx ON orders (status, give_asset)
+CREATE INDEX give_status_idx ON orders (give_asset, status)
+                   ;
+CREATE INDEX source_give_status_idx ON orders (source, give_asset, status)
                    ;
 
 -- Table  rps
