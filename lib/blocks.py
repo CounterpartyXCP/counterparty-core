@@ -994,7 +994,8 @@ def get_tx_info2 (tx, block_index):
             else:                                                       # Cannot store change.
                 continue
         else:
-            continue
+            # Stop looking for destination and data at first unrecognizable output.
+            break
 
         if destination:
             btc_amount = round(vout['value'] * config.UNIT) # Floats are awful.
@@ -1028,6 +1029,7 @@ def get_tx_info2 (tx, block_index):
             return INVALID
 
     # Require that all possible source addresses be the same.
+    # NOTE: Necessary because of issue #220.
     if all(x == source_list[0] for x in source_list): source = source_list[0]
     else: source = None
 
