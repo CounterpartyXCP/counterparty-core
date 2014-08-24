@@ -751,7 +751,7 @@ Issue a dividend on a specific user defined asset.
 create_issuance
 ^^^^^^^^^^^^^^^^^
 **create_issuance(source, asset, quantity, divisible, description, callable_=false, call_date=null, call_price=null,
-transfer_destination=null, lock=false, encoding='multisig', pubkey=null, allow_unconfirmed_inputs=false, fee=null, fee_per_kb=10000)**
+transfer_destination=null, encoding='multisig', pubkey=null, allow_unconfirmed_inputs=false, fee=null, fee_per_kb=10000)**
 
 Issue a new asset, issue more of an existing asset, lock an asset, or transfer the ownership of an asset (note that you can only do one of these operations in a given create_issuance call).
 
@@ -766,7 +766,6 @@ Issue a new asset, issue more of an existing asset, lock an asset, or transfer t
   * **call_price (float):** The :ref:`price <floats>` per unit XCP at which the asset may be called back, on or after the specified call_date. Only valid for callable assets.
   * **description (string):** A textual description for the asset. 52 bytes max.
   * **transfer_destination (string):** The address to receive the asset (only used when *transferring* assets -- leave set to ``null`` if issuing an asset).
-  * **lock (boolean):** Set to ``true`` if this asset should be locked with this API call. Only valid if the asset is not already locked. To keep as-is, set this to ``false``, or simply do not specify it. 
   * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
   * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
   * **allow_unconfirmed_inputs (boolean):** Set to ``true`` to allow this transaction to utilize unconfirmed UTXOs as inputs.
@@ -776,6 +775,13 @@ Issue a new asset, issue more of an existing asset, lock an asset, or transfer t
 **Return:** 
 
   The unsigned transaction, as an hex-encoded string. See :ref:`this section <encoding_param>` for more information.
+
+**Notes:**
+
+  * To lock the issuance of the asset, specify "LOCK" for the ``description`` field. It's a special keyword that will
+    not change the actual description, but will simply lock the asset quantity and not allow additional quantity to be
+    issued for the asset.
+
 
 .. _create_order:
 
