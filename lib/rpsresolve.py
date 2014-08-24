@@ -100,7 +100,7 @@ def parse (db, tx, message):
         random = binascii.hexlify(random).decode('utf-8')
         status = 'valid'
     except (AssertionError, struct.error) as e:
-        move, random, tx0_hash, tx1_hash = None, None, None, None
+        move, random, tx0_hash, tx1_hash, rps_match_id = None, None, None, None, None
         status = 'invalid: could not unpack'
 
     if status == 'valid':

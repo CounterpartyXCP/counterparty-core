@@ -1,4 +1,12 @@
 ## Client Versions ##
+* v9.41.0 (2014-08-21)
+	* fixed bug in new text and descriptions
+* v9.40.0 (2014-08-20)
+	* allow dividends to be paid to XCP holders (protocol change: 317500)
+	* fixed bug in BTCpay validation
+	* allow null expirations (protocol change: 317500)
+	* assert first block in database is BLOCK_FIRST
+	* arbitrarily long asset descriptions and broadcast texts (protocol change: 317500)
 * v9.39.0 (2014-08-06)
 	* re‐match expired order matches from a new block all at once (protocol change: 315000)
 	* bug in issuance fee (protocol change: 315000)

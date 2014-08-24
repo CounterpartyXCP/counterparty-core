@@ -61,9 +61,8 @@ are stored in the ``counterpartyd.conf`` file, as ``rpc-user`` and ``rpc-passwor
 
 .. _examples:
 
-Below we provide a comprehensive Python example, along with a short PHP example. Examples in other languages are welcome:
-please just `make a counterpartyd issue <https://github.com/CounterpartyXCP/counterpartyd/issues/new>`__ with your
-example code, structured in a way to be useful to other people and use standard libraries/methods. 
+Below we provide a few examples of using the ``counterpartyd`` API. Examples in other languages are welcome,
+if you'd like to submit them to us, structured in a way to be useful to other people and use standard libraries/methods. 
 
 Python Example
 ^^^^^^^^^^^^^^^
@@ -147,7 +146,7 @@ Python Example
       "id": 0,
     }
     unsigned_tx = requests.post(url, data=json.dumps(payload), headers=headers, auth=auth)
-    print("\nCREATE_SEND RESULT: ", raw_hex_tx)
+    print("\nCREATE_SEND RESULT: ", unsigned_tx)
 
     #2. Now sign it with a key from the wallet
     payload = {
@@ -173,14 +172,17 @@ Python Example
 PHP Example
 ^^^^^^^^^^^^
 
-With PHP, you can connect and query ``counterpartyd`` using the `json-rpc2php <https://github.com/subutux/json-rpc2php>`__
+With PHP, you can connect and query ``counterpartyd`` using the `JsonRPC <https://github.com/fguillot/JsonRPC>`__
 library. Here's a simple example that will get you the asset balances for a specific address:
 
 .. code-block:: php
 
-    $client = new jsonRPCClient('http://localhost:4000/api/', array('username' => 'myusername', 'password' => 'mypass'));
+    require 'JsonRPC/Client.php';
+    use JsonRPC\Client;
+    $client = new Client('http://localhost:4000/api/');
+    $client->authentication('rpcuser', 'rpcpassword');
     $addr = '15vA2MJ4ESG3Rt1PVQ79D1LFMBBNtcSz1f'; // BTC/XCP address you want to query
-    $res = $client->get_balances(array('field' => 'address', 'op' => '==', 'value' => $addr));
+    $result = $client->execute('get_balances', array('field' => 'address', 'op' => '==', 'value' => $addr));
 
 curl Example
 ^^^^^^^^^^^^^
