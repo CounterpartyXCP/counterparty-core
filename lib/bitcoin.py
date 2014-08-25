@@ -385,10 +385,10 @@ def sort_unspent_txouts(unspent, allow_unconfirmed_inputs):
     return unspent
 
 def private_key_to_public_key (private_key_wif):
-    allowable_wif_prefixes = [b'x80', b'\xef'] # Bitcoin mainnet, testnet3
+    allowable_wif_prefixes = [ b'\x80', b'\xef' ] 
     try:
         secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(
-                private_key_wif, allowable_wif_prefixes)
+                private_key_wif, allowable_wif_prefixes=allowable_wif_prefixes)
     except EncodingError:
         raise exceptions.AltcoinSupportError('pycoin: unsupported WIF prefix')
     public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
@@ -575,7 +575,7 @@ def sign_tx (unsigned_tx_hex, private_key_wif=None):
             raise exceptions.TransactionError('Could not sign transaction with pybtctool.')
 
     else:   # Assume source is in wallet and wallet is unlocked.
-        result = rpc('signrawtransaction', [unsigned_tx_hex])
+        result = yield from rpc('signrawtransaction', [unsigned_tx_hex])
         if result['complete']:
             signed_tx_hex = result['hex']
         else:
@@ -616,9 +616,9 @@ def get_unspent_txouts(address, normalize=False):
         with open(CURR_DIR + '/../test/listunspent.test.json', 'r') as listunspent_test_file:   # HACK
             wallet_unspent = json.load(listunspent_test_file)
             return [output for output in wallet_unspent if output['address'] == address]
-
-    if rpc('validateaddress', [address])['ismine']:
-        wallet_unspent = rpc('listunspent', [0, 999999])
+    rpcv = yield from rpc('validateaddress', [address])
+    if rpcv['ismine']:
+        wallet_unspent = yield from rpc('listunspent', [0, 999999])
         return [output for output in wallet_unspent if output['address'] == address]
     else:
         return blockchain.listunspent(address)
