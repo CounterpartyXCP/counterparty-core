@@ -1047,8 +1047,6 @@ def follow (db):
         block_count = yield from bitcoin.get_block_count()
         if block_index <= block_count:
 
-            #logging.info('Block: {}'.format(str(block_index)))
-
             # Backwards check for incorrect blocks due to chain reorganisation, and stop when a common parent is found.
             c = block_index
             requires_rollback = False
@@ -1117,6 +1115,7 @@ def follow (db):
                 (i, tx_h) = not_supported_sorted.popleft()
                 del not_supported[tx_h]
             
+            logging.info('Block: %s took %ss'%(str(block_index), time.time()-starttime))
             # Increment block index.
             block_count = yield from bitcoin.get_block_count()
             block_index +=1
@@ -1215,7 +1214,6 @@ def follow (db):
             mempool_initialised = True
             time.sleep(2)
 
-        logging.info('Block: %s took %ss'%(str(block_index), time.time()-starttime))
 
     cursor.close()
 
