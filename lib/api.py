@@ -7,7 +7,7 @@ import decimal
 import time
 import json
 import re
-import requests
+import asyncio, aiohttp
 import collections
 import logging
 from logging import handlers as logging_handlers
@@ -202,7 +202,7 @@ def compose_transaction(db, name, params,
                         fee=None,
                         fee_provided=0):
     tx_info = sys.modules['lib.{}'.format(name)].compose(db, **params)
-    return bitcoin.transaction(tx_info, encoding=encoding,
+    return util.aiorun(bitcoin.transaction(tx_info, encoding=encoding,
                                         fee_per_kb=fee_per_kb,
                                         regular_dust_size=regular_dust_size,
                                         multisig_dust_size=multisig_dust_size,
@@ -210,24 +210,26 @@ def compose_transaction(db, name, params,
                                         public_key_hex=pubkey,
                                         allow_unconfirmed_inputs=allow_unconfirmed_inputs,
                                         exact_fee=fee,
-                                        fee_provided=fee_provided)
+                                        fee_provided=fee_provided))
 
 def sign_transaction(unsigned_tx_hex, private_key_wif=None):
-    return bitcoin.sign_tx(unsigned_tx_hex, private_key_wif=private_key_wif)
+    return util.aiorun(bitcoin.sign_tx(unsigned_tx_hex,
+        private_key_wif=private_key_wif))
 
 def broadcast_transaction(signed_tx_hex):
     if not config.TESTNET and config.BROADCAST_TX_MAINNET in ['bci', 'bci-failover']:
         url = "https://blockchain.info/pushtx"
         params = {'tx': signed_tx_hex}
-        response = requests.post(url, data=params)
-        if response.text.lower() != 'transaction submitted' or response.status_code != 200:
+        response = util.aiorun(aiohttp.request('POST', url, data=params))
+        data = util.aiorun(response.read())
+        if data.lower() != 'transaction submitted' or response.status != 200:
             if config.BROADCAST_TX_MAINNET == 'bci-failover':
-                return bitcoin.broadcast_tx(signed_tx_hex)
+                return util.aiorun(bitcoin.broadcast_tx(signed_tx_hex))
             else:
                 raise Exception(response.text)
-        return response.text
+        return data
     else:
-        return bitcoin.broadcast_tx(signed_tx_hex)
+        return util.aiorun(bitcoin.broadcast_tx(signed_tx_hex))
 
 def do_transaction(db, name, params, private_key_wif=None, **kwargs):
     unsigned_tx = compose_transaction(db, name, params, **kwargs)
@@ -244,6 +246,8 @@ class APIStatusPoller(threading.Thread):
     def run(self):
         global current_api_status_code, current_api_status_response_json
         db = util.connect_to_db(flags='SQLITE_OPEN_READONLY')
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         
         while True:
             try:
@@ -256,9 +260,9 @@ class APIStatusPoller(threading.Thread):
                 # Check that the database has caught up with bitcoind.                    
                 if time.time() - self.last_database_check > 10 * 60: # Ten minutes since last check.
                     code = 11
-                    bitcoin.bitcoind_check(db)
+                    util.aiorun(bitcoin.bitcoind_check(db))
                     code = 12
-                    util.database_check(db, bitcoin.get_block_count())  # TODO: If not reparse or rollback, once those use API.
+                    util.database_check(db, util.aiorun(bitcoin.get_block_count()))  # TODO: If not reparse or rollback, once those use API.
                     self.last_database_check = time.time()
             except Exception as e:
                 exception_name = e.__class__.__name__
@@ -279,6 +283,8 @@ class APIServer(threading.Thread):
         db = util.connect_to_db(flags='SQLITE_OPEN_READONLY')
         app = flask.Flask(__name__)
         auth = HTTPBasicAuth()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
         @auth.get_password
         def get_pw(username):
@@ -393,7 +399,7 @@ class APIServer(threading.Thread):
                 # BTC and XCP.
                 if asset in [config.BTC, config.XCP]:
                     if asset == config.BTC:
-                        supply = bitcoin.get_btc_supply(normalize=False)
+                        supply = util.aiorun(bitcoin.get_btc_supply(normalize=False))
                     else:
                         supply = util.xcp_supply(db)
 
@@ -480,7 +486,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_running_info():
-            latestBlockIndex = bitcoin.get_block_count()
+            latestBlockIndex = util.aiorun(bitcoin.get_block_count())
 
             try:
                 util.database_check(db, latestBlockIndex)

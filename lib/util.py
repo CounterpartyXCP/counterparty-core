@@ -6,7 +6,7 @@ import logging
 import apsw
 import collections
 import inspect
-import requests
+import asyncio, aiohttp
 from datetime import datetime
 from dateutil.tz import tzlocal
 from operator import itemgetter
@@ -22,6 +22,11 @@ b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
 BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
 
+def aiorun(x, timeout=5):
+    """ Run an asynchronous generator <x> as though it was synchronous.  (i.e.
+        wait for it to complete), with an optional timeout """
+    return asyncio.get_event_loop().run_until_complete(
+            asyncio.wait_for(x, timeout=timeout))
 
 # TODO: This doesn’t timeout properly. (If server hangs, then unhangs, no result.)
 def api (method, params):
@@ -32,16 +37,17 @@ def api (method, params):
         "jsonrpc": "2.0",
         "id": 0,
     }
-    response = requests.post(config.RPC, data=json.dumps(payload), headers=headers)
+    response = aiorun(aiohttp.request('POST', config.RPC,
+        data=json.dumps(payload), headers=headers))
+    response_json = aiorun(response.json())
     if response == None:
         raise exceptions.RPCError('Cannot communicate with {} server.'.format(config.XCP_CLIENT))
-    elif response.status_code != 200:
-        if response.status_code == 500:
+    elif response.status != 200:
+        if response.status == 500:
             raise exceptions.RPCError('Malformed API call.')
         else:
-            raise exceptions.RPCError(str(response.status_code) + ' ' + response.reason)
+            raise exceptions.RPCError(str(response.status) + ' ' + response.reason)
 
-    response_json = response.json()
     if 'error' not in response_json.keys() or response_json['error'] == None:
         try:
             return response_json['result']
@@ -353,8 +359,9 @@ def connect_to_db(flags=None):
 def version_check (db):
     try:
         host = 'https://raw2.github.com/CounterpartyXCP/counterpartyd/master/version.json'
-        response = requests.get(host, headers={'cache-control': 'no-cache'})
-        versions = json.loads(response.text)
+        response = aiorun(aiohttp.request('GET', host, headers={'cache-control':
+            'no-cache'}))
+        versions = aiorun(response.json())
     except Exception as e:
         raise exceptions.VersionError('Unable to check version. How’s your Internet access?')
 
@@ -710,13 +717,15 @@ def supplies (db):
 
 def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
     try:
-        r = requests.get(url, timeout=fetch_timeout)
+        r = aiorun(aiohttp.request('GET', url), timeout=fetch_timeout)
+        if is_json: result = aiorun(r.json())
+        else: result = aiorun(r.read())
     except Exception as e:
         raise Exception("Got get_url request error: %s" % e)
     else:
-        if r.status_code != 200 and abort_on_error:
-            raise Exception("Bad status code returned: '%s'. result body: '%s'." % (r.status_code, r.text))
-        result = json.loads(r.text) if is_json else r.text
+        if r.status != 200 and abort_on_error:
+            raise Exception("Bad status code returned: '%s'. result body: '%s'."%(
+                r.status, result))
     return result
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

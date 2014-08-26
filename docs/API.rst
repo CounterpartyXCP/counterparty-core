@@ -177,22 +177,29 @@ library. Here's a simple example that will get you the asset balances for a spec
 
 .. code-block:: php
 
-    require 'JsonRPC/Client.php';
+    <?php
+    require 'JsonRPC/src/JsonRPC/Client.php';
     use JsonRPC\Client;
     $client = new Client('http://localhost:4000/api/');
     $client->authentication('rpcuser', 'rpcpassword');
-    $addr = '15vA2MJ4ESG3Rt1PVQ79D1LFMBBNtcSz1f'; // BTC/XCP address you want to query
-    $result = $client->execute('get_balances', array('field' => 'address', 'op' => '==', 'value' => $addr));
-
+    
+    $result = $client->execute('get_balances', array('filters' => array('field' => 'address', 'op' => '==', 'value' => '1NFeBp9s5aQ1iZ26uWyiK2AYUXHxs7bFmB')));
+    print("get_balances result:\n");
+    var_dump($result);
+    
+    $result2 = $client->execute('get_running_info');
+    print("get_running_info result:\n");
+    var_dump($result2);
+    ?>
+    
 curl Example
 ^^^^^^^^^^^^^
 
 Here's an example using ``curl`` to make an API call to the ``get_running_info`` method on mainnet.
 
-.. code-block::
+.. code-block:: none
 
-    curl http://127.0.0.1:4000/api/ --user rpcuser:rpcpassword -H 'Content-Type: application/json; charset=UTF-8' 
-        -H 'Accept: application/json, text/javascript' --data-binary '{"jsonrpc":"2.0","id":0,"method":"get_running_info"}'
+    curl http://127.0.0.1:4000/api/ --user rpcuser:rpcpassword -H 'Content-Type: application/json; charset=UTF-8' -H 'Accept: application/json, text/javascript' --data-binary '{"jsonrpc":"2.0","id":0,"method":"get_running_info"}'
 
 For testnet, you could use the example above, but change the port to ``14000`` and change the username and password as necessary.
 
@@ -743,8 +750,16 @@ Issue a dividend on a specific user defined asset.
 
 create_issuance
 ^^^^^^^^^^^^^^^^^
-**create_issuance(source, asset, quantity, divisible, description, callable=false, call_date=null, call_price=null,
+**create_issuance(source, asset, quantity, divisible, description, callable_=false, call_date=null, call_price=null,
+<<<<<<< HEAD
+<<<<<<< HEAD
+transfer_destination=null, encoding='multisig', pubkey=null, allow_unconfirmed_inputs=false, fee=null, fee_per_kb=10000)**
+=======
 transfer_destination=null, lock=false, encoding='multisig', pubkey=null, allow_unconfirmed_inputs=false, fee=null, fee_per_kb=10000)**
+>>>>>>> updated API docs
+=======
+transfer_destination=null, encoding='multisig', pubkey=null, allow_unconfirmed_inputs=false, fee=null, fee_per_kb=10000)**
+>>>>>>> more doc tweaks with lock param for create_issuance
 
 Issue a new asset, issue more of an existing asset, lock an asset, or transfer the ownership of an asset (note that you can only do one of these operations in a given create_issuance call).
 
@@ -754,12 +769,11 @@ Issue a new asset, issue more of an existing asset, lock an asset, or transfer t
   * **quantity (integer):** The :ref:`quantity <quantitys>` of the asset to issue (set to 0 if *transferring* an asset).
   * **asset (string):** The :ref:`asset <assets>` to issue or transfer.
   * **divisible (boolean):** Whether this asset is divisible or not (if a transfer, this value must match the value specified when the asset was originally issued).
-  * **callable (boolean):** Whether the asset is callable or not.
+  * **callable_ (boolean):** Whether the asset is callable or not.
   * **call_date (integer):** The timestamp at which the asset may be called back, in Unix time. Only valid for callable assets.
   * **call_price (float):** The :ref:`price <floats>` per unit XCP at which the asset may be called back, on or after the specified call_date. Only valid for callable assets.
   * **description (string):** A textual description for the asset. 52 bytes max.
   * **transfer_destination (string):** The address to receive the asset (only used when *transferring* assets -- leave set to ``null`` if issuing an asset).
-  * **lock (boolean):** Set to ``true`` if this asset should be locked with this API call. Only valid if the asset is not already locked. To keep as-is, set this to ``false``, or simply do not specify it. 
   * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
   * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
   * **allow_unconfirmed_inputs (boolean):** Set to ``true`` to allow this transaction to utilize unconfirmed UTXOs as inputs.
@@ -769,6 +783,13 @@ Issue a new asset, issue more of an existing asset, lock an asset, or transfer t
 **Return:** 
 
   The unsigned transaction, as an hex-encoded string. See :ref:`this section <encoding_param>` for more information.
+
+**Notes:**
+
+  * To lock the issuance of the asset, specify "LOCK" for the ``description`` field. It's a special keyword that will
+    not change the actual description, but will simply lock the asset quantity and not allow additional quantity to be
+    issued for the asset.
+
 
 .. _create_order:
 
