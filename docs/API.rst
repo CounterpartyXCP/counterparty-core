@@ -606,8 +606,10 @@ Issue a bet against a feed.
 
 create_broadcast
 ^^^^^^^^^^^^^^
-**create_broadcast(source, fee_fraction, text, value=0, encoding='multisig', pubkey=null,
+**create_broadcast(source, fee_fraction, text, timestamp=current-time, value=0, encoding='multisig', pubkey=null,
 allow_unconfirmed_inputs=false, fee=null, fee_per_kb=10000)**
+
+*WARNING: There's currently a bug requiring you to provide some of the optional arguments. value and timestamp should be provided.*
 
 Broadcast textual and numerical information to the network.
 
@@ -743,8 +745,10 @@ Issue a dividend on a specific user defined asset.
 
 create_issuance
 ^^^^^^^^^^^^^^^^^
-**create_issuance(source, asset, quantity, divisible, description, callable=false, call_date=null, call_price=null,
+**create_issuance(source, asset, quantity, divisible, description, callable_=false, call_date=null, call_price=null,
 transfer_destination=null, lock=false, encoding='multisig', pubkey=null, allow_unconfirmed_inputs=false, fee=null, fee_per_kb=10000)**
+
+*WARNING: There's currently a bug requiring you to provide many of optional arguments. callable_, call_date, call_price and transfer_destination should be provided even if null.*
 
 Issue a new asset, issue more of an existing asset, lock an asset, or transfer the ownership of an asset (note that you can only do one of these operations in a given create_issuance call).
 
@@ -754,7 +758,7 @@ Issue a new asset, issue more of an existing asset, lock an asset, or transfer t
   * **quantity (integer):** The :ref:`quantity <quantitys>` of the asset to issue (set to 0 if *transferring* an asset).
   * **asset (string):** The :ref:`asset <assets>` to issue or transfer.
   * **divisible (boolean):** Whether this asset is divisible or not (if a transfer, this value must match the value specified when the asset was originally issued).
-  * **callable (boolean):** Whether the asset is callable or not.
+  * **callable_ (boolean):** Whether the asset is callable or not.
   * **call_date (integer):** The timestamp at which the asset may be called back, in Unix time. Only valid for callable assets.
   * **call_price (float):** The :ref:`price <floats>` per unit XCP at which the asset may be called back, on or after the specified call_date. Only valid for callable assets.
   * **description (string):** A textual description for the asset. 52 bytes max.
