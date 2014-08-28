@@ -606,8 +606,10 @@ Issue a bet against a feed.
 
 create_broadcast
 ^^^^^^^^^^^^^^
-**create_broadcast(source, fee_fraction, text, value=0, encoding='multisig', pubkey=null,
+**create_broadcast(source, fee_fraction, text, timestamp=current-time, value=0, encoding='multisig', pubkey=null,
 allow_unconfirmed_inputs=false, fee=null, fee_per_kb=10000)**
+
+*WARNING: There's currently a bug requiring you to provide some of the optional arguments. value and timestamp should be provided.*
 
 Broadcast textual and numerical information to the network.
 
