@@ -22,7 +22,7 @@ b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
 BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
 
-def aiorun(x, timeout=5):
+def aio_wait_for(x, timeout=5):
     """ Run an asynchronous generator <x> as though it was synchronous.  (i.e.
         wait for it to complete), with an optional timeout """
     return asyncio.get_event_loop().run_until_complete(
@@ -37,9 +37,9 @@ def api (method, params):
         "jsonrpc": "2.0",
         "id": 0,
     }
-    response = aiorun(aiohttp.request('POST', config.RPC,
+    response = aio_wait_for(aiohttp.request('POST', config.RPC,
         data=json.dumps(payload), headers=headers))
-    response_json = aiorun(response.json())
+    response_json = aio_wait_for(response.json())
     if response == None:
         raise exceptions.RPCError('Cannot communicate with {} server.'.format(config.XCP_CLIENT))
     elif response.status != 200:
@@ -359,9 +359,9 @@ def connect_to_db(flags=None):
 def version_check (db):
     try:
         host = 'https://raw2.github.com/CounterpartyXCP/counterpartyd/master/version.json'
-        response = aiorun(aiohttp.request('GET', host, headers={'cache-control':
+        response = aio_wait_for(aiohttp.request('GET', host, headers={'cache-control':
             'no-cache'}))
-        versions = aiorun(response.json())
+        versions = aio_wait_for(response.json())
     except Exception as e:
         raise exceptions.VersionError('Unable to check version. How’s your Internet access?')
 
@@ -717,9 +717,9 @@ def supplies (db):
 
 def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
     try:
-        r = aiorun(aiohttp.request('GET', url), timeout=fetch_timeout)
-        if is_json: result = aiorun(r.json())
-        else: result = aiorun(r.read())
+        r = aio_wait_for(aiohttp.request('GET', url), timeout=fetch_timeout)
+        if is_json: result = aio_wait_for(r.json())
+        else: result = aio_wait_for(r.read())
     except Exception as e:
         raise Exception("Got get_url request error: %s" % e)
     else:

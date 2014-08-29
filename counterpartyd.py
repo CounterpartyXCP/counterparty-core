@@ -97,7 +97,7 @@ def market (give_asset, get_asset):
 
     # Your Pending Orders Matches.
     addresses = []
-    for bunch in util.aiorun(bitcoin.get_wallet()):
+    for bunch in util.aio_wait_for(bitcoin.get_wallet()):
         addresses.append(bunch[:2][0])
     filters = [
         ('tx0_address', 'IN', addresses),
@@ -1030,7 +1030,7 @@ if __name__ == '__main__':
         totals = {}
 
         print()
-        for bunch in util.aiorun(bitcoin.get_wallet()):
+        for bunch in util.aio_wait_for(bitcoin.get_wallet()):
             address, btc_balance = bunch[:2]
             address_data = get_address(db, address=address)
             balances = address_data['balances']
@@ -1065,7 +1065,7 @@ if __name__ == '__main__':
 
     elif args.action == 'pending':
         addresses = []
-        for bunch in util.aiorun(bitcoin.get_wallet()):
+        for bunch in util.aio_wait_for(bitcoin.get_wallet()):
             addresses.append(bunch[:2][0])
         filters = [
             ('tx0_address', 'IN', addresses),
