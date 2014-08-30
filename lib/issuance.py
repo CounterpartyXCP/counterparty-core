@@ -186,7 +186,7 @@ def parse (db, tx, message):
 
     # Debit fee.
     if status == 'valid':
-        util.debit(db, tx['block_index'], tx['source'], config.XCP, fee)
+        util.debit(db, tx['block_index'], tx['source'], config.XCP, fee, action="issuance fee", event=tx['tx_hash'])
 
     # Lock?
     lock = False
@@ -225,7 +225,7 @@ def parse (db, tx, message):
 
     # Credit.
     if status == 'valid' and quantity:
-        util.credit(db, tx['block_index'], tx['source'], asset, quantity)
+        util.credit(db, tx['block_index'], tx['source'], asset, quantity, action="issuance", event=tx['tx_hash'])
 
     issuance_parse_cursor.close()
 
