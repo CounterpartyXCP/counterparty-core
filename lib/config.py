@@ -8,13 +8,8 @@ UNIT = 100000000        # The same across assets.
 
 
 # Versions
-<<<<<<< HEAD
 VERSION_MAJOR = 10 
 VERSION_MINOR = 0
-=======
-VERSION_MAJOR = 9
-VERSION_MINOR = 41
->>>>>>> develop
 VERSION_REVISION = 0
 VERSION_STRING = str(VERSION_MAJOR) + '.' + str(VERSION_MINOR) + '.' + str(VERSION_REVISION)
 
