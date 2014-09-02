@@ -965,8 +965,12 @@ def get_tx_info2 (tx, block_index):
 
     # Get destination and data outputs.
     btc_amount, destination, data = None, None, b''
-    for vout in tx['vout']:
+    for index, vout in enumerate(tx['vout']):
         fee -= vout['value'] * config.UNIT
+
+        # First output is either the destination or first data output. (Reduce mutability.)
+        if index > 0 and not destination and not data:
+            return INVALID
 
         asm = vout['scriptPubKey']['asm'].split(' ')
         if asm[0] == 'OP_RETURN':
@@ -990,8 +994,9 @@ def get_tx_info2 (tx, block_index):
             key = ARC4.new(binascii.unhexlify(bytes(tx['vin'][0]['txid'], 'utf-8')))
             chunk = key.decrypt(get_binary(pubkeyhash))
             if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
-                chunk_length = chunk[0]             # TODO
-                chunk = chunk[1:chunk_length + 1]   # TODO
+                # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
+                chunk_length = chunk[0]
+                chunk = chunk[1:chunk_length + 1]
                 data += chunk[len(config.PREFIX):]
             elif not destination:                                       # Destination
                 destination = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
@@ -1007,8 +1012,9 @@ def get_tx_info2 (tx, block_index):
             for pubkey in pubkeys[1:]:      # (No data in first pubkey.)
                 chunk += get_binary(pubkey)
             if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
-                chunk_length = chunk[0]             # TODO
-                chunk = chunk[1:chunk_length + 1]   # TODO
+                # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
+                chunk_length = chunk[0]
+                chunk = chunk[1:chunk_length + 1]
                 data += chunk[len(config.PREFIX):]
             elif not destination:                                       # Destination
                 pubkeyhashes = [bitcoin.pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
