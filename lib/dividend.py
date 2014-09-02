@@ -123,11 +123,11 @@ def parse (db, tx, message):
 
     if status == 'valid':
         # Debit.
-        util.debit(db, tx['block_index'], tx['source'], dividend_asset, dividend_total)
+        util.debit(db, tx['block_index'], tx['source'], dividend_asset, dividend_total, action='dividend', event=tx['tx_hash'])
 
         # Credit.
         for output in outputs:
-            util.credit(db, tx['block_index'], output['address'], dividend_asset, output['dividend_quantity'])
+            util.credit(db, tx['block_index'], output['address'], dividend_asset, output['dividend_quantity'], action='dividend', event=tx['tx_hash'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

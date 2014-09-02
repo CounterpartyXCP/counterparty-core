@@ -194,7 +194,7 @@ def parse (db, tx, message):
 
     # Debit quantity wagered. (Escrow.)
     if status == 'open':
-        util.debit(db, tx['block_index'], tx['source'], config.XCP, wager_quantity)
+        util.debit(db, tx['block_index'], tx['source'], config.XCP, wager_quantity, action='bet', event=tx['tx_hash'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

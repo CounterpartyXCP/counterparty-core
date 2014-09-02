@@ -127,14 +127,14 @@ def parse (db, tx, message):
     if status == 'valid':
         # Issuer.
         assert call_price * callback_total == int(call_price * callback_total)
-        util.debit(db, tx['block_index'], tx['source'], config.XCP, int(call_price * callback_total))
-        util.credit(db, tx['block_index'], tx['source'], asset, callback_total)
+        util.debit(db, tx['block_index'], tx['source'], config.XCP, int(call_price * callback_total), action='callback', event=tx['tx_hash'])
+        util.credit(db, tx['block_index'], tx['source'], asset, callback_total, action='callback', event=tx['tx_hash'])
 
         # Holders.
         for output in outputs:
             assert call_price * output['callback_quantity'] == int(call_price * output['callback_quantity'])
-            util.debit(db, tx['block_index'], output['address'], asset, output['callback_quantity'])
-            util.credit(db, tx['block_index'], output['address'], config.XCP, int(call_price * output['callback_quantity']))
+            util.debit(db, tx['block_index'], output['address'], asset, output['callback_quantity'], action='callback', event=tx['tx_hash'])
+            util.credit(db, tx['block_index'], output['address'], config.XCP, int(call_price * output['callback_quantity']), action='callback', event=tx['tx_hash'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {
