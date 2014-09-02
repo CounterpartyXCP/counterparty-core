@@ -2,12 +2,14 @@
 Proxy API to make queries to popular blockchains explorer
 '''
 import sys
+import logging
 
 from lib import config
 from lib.blockchain import blockr, insight, sochain
 
 # http://test.insight.is/api/sync
 def check():
+    logging.info('Status: Connecting to block explorer.')
     return sys.modules['lib.blockchain.{}'.format(config.BLOCKCHAIN_SERVICE_NAME)].check()
 
 # http://test.insight.is/api/status?q=getInfo

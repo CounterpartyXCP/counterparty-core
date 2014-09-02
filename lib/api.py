@@ -237,7 +237,8 @@ def do_transaction(db, name, params, private_key_wif=None, **kwargs):
 class APIStatusPoller(threading.Thread):
     """Poll every few seconds for the length of time since the last version check, as well as the bitcoin status"""
     def __init__(self):
-        self.last_check = 0
+        self.last_version_check = 0
+        self.last_database_check = 0
         threading.Thread.__init__(self)
         
     def run(self):
@@ -247,17 +248,18 @@ class APIStatusPoller(threading.Thread):
         while True:
             try:
                 # Check version.
-                if time.time() - self.last_check >= 4 * 3600: # Four hours since last check.
+                if time.time() - self.last_version_check >= 10: # Four hours since last check.
                     code = 10
                     util.version_check(db)
+                    self.last_version_check = time.time()
                 # Check that bitcoind is running, communicable, and caught up with the blockchain.
                 # Check that the database has caught up with bitcoind.                    
-                if time.time() - self.last_check > 10 * 60: # Ten minutes since last check.
+                if time.time() - self.last_database_check > 10 * 60: # Ten minutes since last check.
                     code = 11
                     bitcoin.bitcoind_check(db)
                     code = 12
                     util.database_check(db, bitcoin.get_block_count())  # TODO: If not reparse or rollback, once those use API.
-                self.last_check = time.time()
+                    self.last_database_check = time.time()
             except Exception as e:
                 exception_name = e.__class__.__name__
                 exception_text = str(e)
@@ -471,6 +473,7 @@ class APIServer(threading.Thread):
                 block['_messages'] = []
                 while len(messages) and messages[0]['block_index'] == block['block_index']:
                     block['_messages'].append(messages.popleft())
+            assert not len(messages) #should have been cleared out
             
             cursor.close()
             return blocks

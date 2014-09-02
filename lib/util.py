@@ -298,6 +298,7 @@ def exectracer(cursor, sql, bindings):
 
 def connect_to_db(flags=None):
     """Connects to the SQLite database, returning a db Connection object"""
+    logging.debug('Status: Creating connection to `{}`.'.format(config.DATABASE.split('/').pop()))
 
     if flags == None:
         db = apsw.Connection(config.DATABASE)
@@ -329,6 +330,7 @@ def connect_to_db(flags=None):
     integral = False
     for i in range(10): # DUPE
         try:
+            logging.debug('Status: Checking database integrity.')
             cursor.execute('''PRAGMA integrity_check''')
             rows = cursor.fetchall()
             if not (len(rows) == 1 and rows[0][0] == 'ok'):

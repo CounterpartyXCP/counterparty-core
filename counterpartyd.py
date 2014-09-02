@@ -739,9 +739,6 @@ if __name__ == '__main__':
     pidf.write(pid)
     pidf.close()
 
-    # Database
-    db = util.connect_to_db()
-
     # Logging (to file and console).
     logger = logging.getLogger() #get root logger
     logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
@@ -769,10 +766,16 @@ if __name__ == '__main__':
     urllib3_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
     urllib3_log.propagate = False
 
+    # Database
+    logging.info('Status: Running v{} of counterpartyd.'.format(config.VERSION_STRING, config.XCP_CLIENT))
+    logging.info('Status: Connecting to database.')
+    db = util.connect_to_db()
+
     if args.action == None: args.action = 'server'
 
     # TODO: Keep around only as long as reparse and rollback don’t use API.
     if not config.FORCE and args.action in ('server', 'reparse', 'rollback'):
+        logging.info('Status: Checking version.')
         util.version_check(db)
 
     # MESSAGE CREATION
@@ -1116,9 +1119,21 @@ if __name__ == '__main__':
         api_server.daemon = True
         api_server.start()
 
-        # Check if our blockchain backend is up
+        # Check blockchain explorer.
         if not config.FORCE:
-            blockchain.check()
+            time_wait = 10
+            num_tries = 10
+            for i in range(1, num_tries + 1):
+                try:
+                    blockchain.check()
+                except:
+                    logging.warn("Blockchain backend (%s) not yet initialized. Waiting %i seconds and trying again (try %i of %i)..." % (
+                        config.BLOCKCHAIN_SERVICE_NAME, time_wait, i, num_tries))
+                    time.sleep(time_wait)
+                else: break
+            else:
+                raise Exception("Blockchain backend (%s) not initialized! Aborting startup after %i tries." % (
+                    config.BLOCKCHAIN_SERVICE_NAME, num_tries))
 
         blocks.follow(db)
 

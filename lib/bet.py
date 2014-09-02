@@ -121,7 +121,9 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
     if counterwager_quantity <= 0: problems.append('non‐positive counterwager')
     if target_value < 0: problems.append('negative target value')
     if deadline < 0: problems.append('negative deadline')
-    if expiration <= 0: problems.append('non‐positive expiration')
+    if expiration < 0: problems.append('negative expiration')
+    if expiration == 0 and not (block_index >= 317500 or config.TESTNET):   # Protocol change.
+        problems.append('zero expiration')
 
     if target_value and bet_type in (0,1):   # BullCFD, BearCFD
         problems.append('CFDs have no target value')
@@ -295,7 +297,9 @@ def match (db, tx):
         if tx['block_index'] < 286000: tx0_inverse_odds = util.price(1, tx0_odds, tx1['block_index']) # Protocol change.
 
         logging.debug('Tx0 Inverse Odds: {}; Tx1 Odds: {}'.format(float(tx0_inverse_odds), float(tx1_odds)))
-        if tx0_inverse_odds <= tx1_odds:
+        if tx0_inverse_odds > tx1_odds:
+            logging.debug('Skipping: price mismatch.')
+        else:
             logging.debug('Potential forward quantities: {}, {}'.format(tx0_wager_remaining, int(util.price(tx1_wager_remaining, tx1_odds, tx1['block_index']))))
             forward_quantity = int(min(tx0_wager_remaining, int(util.price(tx1_wager_remaining, tx1_odds, tx1['block_index']))))
             logging.debug('Forward Quantity: {}'.format(forward_quantity))
