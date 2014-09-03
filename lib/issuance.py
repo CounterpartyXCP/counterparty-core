@@ -127,8 +127,6 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, calla
 
     asset_id = util.asset_id(asset)
     data = struct.pack(config.TXTYPE_FORMAT, ID)
-    data += struct.pack(FORMAT_2, asset_id, quantity, 1 if divisible else 0, 1 if callable_ else 0,
-    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     if len(description) <= 42:
         curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
     else:

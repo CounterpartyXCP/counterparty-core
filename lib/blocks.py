@@ -48,7 +48,8 @@ def parse_tx (db, tx):
 
     # Only one source and one destination allowed for now.
     tx['source'] = tx['source'].split('-')[0]
-    tx['destination'] = tx['destination'].split('-')[0]
+    if tx['destination']:
+        tx['destination'] = tx['destination'].split('-')[0]
 
     # Burns.
     if tx['destination'] == config.UNSPENDABLE:
@@ -1007,7 +1008,7 @@ def get_tx_info2 (tx, block_index):
             destination, data = None, chunk[len(config.PREFIX):]
         else:                                                       # Destination
             pubkeyhashes = [bitcoin.pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
-            destination, data = '_'.join([str(signatures_required)] + sorted(pubkeyhashes) + [str(len(pubkeyhashes))])), None
+            destination, data = '_'.join([str(signatures_required)] + sorted(pubkeyhashes) + [str(len(pubkeyhashes))]), None
 
         return destination, data
 
