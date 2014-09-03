@@ -18,8 +18,6 @@ import apsw
 from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
 
-INVALID = b'', None, None, None, None
-
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['credits', 'debits', 'messages'] + \
          ['bet_match_resolutions', 'order_match_expirations',
@@ -882,7 +880,7 @@ def get_tx_info (tx, block_index):
             try: pubkeyhash = binascii.unhexlify(bytes(pubkeyhash_string, 'utf-8'))
             except binascii.Error: continue
 
-            if 'coinbase' in tx['vin'][0]: return INVALID
+            if 'coinbase' in tx['vin'][0]: raise exceptions.DecodeError('coinbase transaction')
             obj1 = ARC4.new(binascii.unhexlify(bytes(tx['vin'][0]['txid'], 'utf-8')))
             data_pubkey = obj1.decrypt(pubkeyhash)
             if data_pubkey[1:9] == config.PREFIX or pubkeyhash_encoding:
@@ -908,22 +906,22 @@ def get_tx_info (tx, block_index):
     elif data[:len(config.PREFIX)] == config.PREFIX:
         data = data[len(config.PREFIX):]
     else:
-        return INVALID
+        raise exceptions.DecodeError('no prefix')
 
     # Only look for source if data were found or destination is UNSPENDABLE, for speed.
     if not data and destination != config.UNSPENDABLE:
-        return INVALID
+        raise exceptions.DecodeError('no data and not unspendable')
 
     # Collect all possible source addresses; ignore coinbase transactions and anything but the simplest Pay‐to‐PubkeyHash inputs.
     source_list = []
     for vin in tx['vin']:                                               # Loop through input transactions.
-        if 'coinbase' in vin: return INVALID
+        if 'coinbase' in vin: raise exceptions.DecodeError('coinbase transaction')
         vin_tx = bitcoin.get_raw_transaction(vin['txid'])     # Get the full transaction data for this input transaction.
         vout = vin_tx['vout'][vin['vout']]
         fee += vout['value'] * config.UNIT
 
         address = get_address(vout['scriptPubKey'])
-        if not address: return INVALID
+        if not address: raise exceptions.DecodeError('invalid scriptpubkey')
         else: source_list.append(address)
 
     # Require that all possible source addresses be the same.
@@ -980,9 +978,9 @@ def get_tx_info2 (tx, block_index):
 
     def decode_checksig (asm):
         pubkeyhash = get_checksig(asm)
+        chunk = get_binary(pubkeyhash)
         obj1 = ARC4.new(binascii.unhexlify(bytes(tx['vin'][0]['txid'], 'utf-8')))
         key = ARC4.new(binascii.unhexlify(bytes(tx['vin'][0]['txid'], 'utf-8')))
-        chunk = get_binary(pubkeyhash)
         chunk = key.decrypt(chunk)
         if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
             # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
@@ -991,7 +989,7 @@ def get_tx_info2 (tx, block_index):
             destination, data = None, chunk[len(config.PREFIX):]
         else:                                                       # Destination
             destination, data = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION), None
-            if pubkeyhash != bitcoin.base58_decode(destination, config.ADDRESSVERSION): raise exceptions.DecodeError('invalid pubkeyhash')     # Check that encoding worked.
+            if bytes(pubkeyhash, 'utf-8') != binascii.hexlify(bitcoin.base58_decode(destination, config.ADDRESSVERSION)): raise exceptions.DecodeError('invalid pubkeyhash')     # Check that encoding worked.
 
         return destination, data
 
@@ -999,8 +997,7 @@ def get_tx_info2 (tx, block_index):
         pubkeys, signatures_required = get_checkmultisig(asm)
         chunk = b''
         for pubkey in pubkeys[1:]:      # (No data in first pubkey.)
-            chunk = get_binary(pubkey)
-            chunk += get_binary(chunk)
+            chunk += get_binary(pubkey)
         if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
             # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
             chunk_length = chunk[0]
@@ -1013,30 +1010,29 @@ def get_tx_info2 (tx, block_index):
         return destination, data
 
     # Ignore coinbase transactions.
-    if 'coinbase' in tx['vin'][0]: return INVALID
+    if 'coinbase' in tx['vin'][0]: raise exceptions.DecodeError('coinbase transaction')
 
     # Get destinations and data outputs.
-    destinations, btc_amount, fee, data = [], None, 0, b''
+    destinations, btc_amount, fee, data = [], 0, 0, b''
     for vout in tx['vout']:
 
         # Fee is the input values minus output values.
         output_value = vout['value'] * config.UNIT
         fee -= output_value
 
-        try:
-            asm = vout['scriptPubKey']['asm'].split(' ')
-            if asm[0] == 'OP_RETURN':
-                new_destination, new_data = decode_opreturn(asm)
-            if asm[-1] == 'OP_CHECKSIG':
-                new_destination, new_data = decode_checksig(asm)
-            elif asm[-1] == 'OP_CHECKMULTISIG':
-                new_destination, new_data = decode_checkmultisig(asm)
-            assert not (new_destination and new_data)
-        except exceptions.DecodeError:
-            return INVALID
+        asm = vout['scriptPubKey']['asm'].split(' ')
+        if asm[0] == 'OP_RETURN':
+            new_destination, new_data = decode_opreturn(asm)
+        if asm[-1] == 'OP_CHECKSIG':
+            new_destination, new_data = decode_checksig(asm)
+        elif asm[-1] == 'OP_CHECKMULTISIG':
+            new_destination, new_data = decode_checkmultisig(asm)
+        else:
+            raise exceptions.DecodeError('unrecognised output type')
+        assert not (new_destination and new_data)
 
         # All destinations come before all data.
-        if not data and not new_data:
+        if not data and not new_data and destinations != [config.UNSPENDABLE,]:
             destinations.append(new_destination)
             btc_amount += round(output_value) # Floats are awful.
         else:
@@ -1049,7 +1045,7 @@ def get_tx_info2 (tx, block_index):
     sources = []
     for vin in tx['vin']:                                           # Loop through inputs.
         # Ignore coinbase transactions.
-        if 'coinbase' in vin: return INVALID
+        if 'coinbase' in vin: raise exceptions.DecodeError('coinbase transaction')
 
         vin_tx = bitcoin.get_raw_transaction(vin['txid'])           # Get the full transaction data for this input transaction.
         vout = vin_tx['vout'][vin['vout']]
@@ -1058,19 +1054,16 @@ def get_tx_info2 (tx, block_index):
         asm = vout['scriptPubKey']['asm'].split(' ')
         if asm[-1] == 'OP_CHECKSIG':
             source, data = decode_checksig(asm)
-            if data or not source: return INVALID
+            if data or not source: raise exceptions.DecodeError('data in source')
         elif asm[-1] == 'OP_CHECKMULTISIG':
             source, data = decode_checkmultisig(asm)
-            if data or not source: return INVALID
+            if data or not source: raise exceptions.DecodeError('data in source')
         else:
-            source = None
+            raise exceptions.DecodeError('unrecognised source type')
 
-        if source:
-            # Collect unique sources.
-            if source not in sources:
-                sources.append(source)
-        else:
-            return INVALID
+        # Collect unique sources.
+        if source not in sources:
+            sources.append(source)
 
     sources = '-'.join(sources)
     destinations = '-'.join(destinations)
@@ -1122,15 +1115,18 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     cursor = db.cursor()
     # Get the important details about each transaction.
     tx = bitcoin.get_raw_transaction(tx_hash)
-    logging.debug('Status: examining transaction {}'.format(tx_hash))
+    logging.debug('Status: Examining transaction {}'.format(tx_hash))
 
-    if (config.TESTNET and block_index >= 271000):  # Protocol change.
-        tx_info = get_tx_info2(tx, block_index)
-    else:
-        tx_info = get_tx_info(tx, block_index)
+    try:
+        if (config.TESTNET and block_index >= 271000):  # Protocol change.
+            tx_info = get_tx_info2(tx, block_index)
+        else:
+            tx_info = get_tx_info(tx, block_index)
+    except exceptions.DecodeError as e:
+        logging.debug('Could not decode: ' + str(e))
+        tx_info = b'', None, None, None, None
     source, destination, btc_amount, fee, data = tx_info
 
-    logging.debug('Status: Examining transaction {}.'.format(tx_hash))
     if source and (data or destination == config.UNSPENDABLE):
         cursor.execute('''INSERT INTO transactions(
                             tx_index,
@@ -1154,6 +1150,9 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
                              fee,
                              data)
                       )
+    else:
+        logging.debug('Skipping: ' + tx_hash)
+
     cursor.close()
     return
 
