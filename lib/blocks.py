@@ -1053,17 +1053,17 @@ def get_tx_info2 (tx, block_index):
 
         asm = vout['scriptPubKey']['asm'].split(' ')
         if asm[-1] == 'OP_CHECKSIG':
-            source, data = decode_checksig(asm)
-            if data or not source: raise exceptions.DecodeError('data in source')
+            new_source, new_data = decode_checksig(asm)
+            if new_data or not new_source: raise exceptions.DecodeError('data in source')
         elif asm[-1] == 'OP_CHECKMULTISIG':
-            source, data = decode_checkmultisig(asm)
-            if data or not source: raise exceptions.DecodeError('data in source')
+            new_source, new_data = decode_checkmultisig(asm)
+            if new_data or not new_source: raise exceptions.DecodeError('data in source')
         else:
             raise exceptions.DecodeError('unrecognised source type')
 
         # Collect unique sources.
-        if source not in sources:
-            sources.append(source)
+        if new_source not in sources:
+            sources.append(new_source)
 
     sources = '-'.join(sources)
     destinations = '-'.join(destinations)
