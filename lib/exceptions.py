@@ -12,6 +12,8 @@ class VersionError (Exception):
 
 class TransactionError(Exception):
     pass
+class DecodeError(Exception):
+    pass
 class InputError(Exception):
     pass
 
