@@ -1028,7 +1028,7 @@ def get_tx_info2 (tx, block_index):
         if destination:
             btc_amount = round(vout['value'] * config.UNIT) # Floats are awful.
 
-    # Collect all possible source addresses; ignore coinbase transactions.
+    # Collect all source addresses; ignore coinbase transactions.
     source_list = []
     for vin in tx['vin']:                                           # Loop through input transactions.
         if 'coinbase' in vin: return INVALID
@@ -1051,15 +1051,11 @@ def get_tx_info2 (tx, block_index):
         else:
             source = None
 
-        if source:
+        if source and if source not in source_list:
             source_list.append(source)
         else:
             return INVALID
-
-    # Require that all possible source addresses be the same.
-    # NOTE: Necessary because of issue #220.
-    if all(x == source_list[0] for x in source_list): source = source_list[0]
-    else: source = None
+    source = '-'.join(sorted(source_list))
 
     return source, destination, btc_amount, round(fee), data
 
