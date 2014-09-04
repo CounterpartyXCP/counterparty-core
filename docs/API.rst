@@ -753,9 +753,7 @@ Issue a dividend on a specific user defined asset.
 create_issuance
 ^^^^^^^^^^^^^^^^^
 
-**create_issuance(source, asset, quantity, divisible, description, callable_=false, call_date=null, call_price=null,
-
-transfer_destination=null, encoding='multisig', pubkey=null, allow_unconfirmed_inputs=false, fee=null, fee_per_kb=10000)**
+**create_issuance(source, asset, quantity, divisible, description, callable_=false, call_date=null, call_price=null, transfer_destination=null, encoding='multisig', pubkey=null, allow_unconfirmed_inputs=false, fee=null, fee_per_kb=10000)**
 
 Issue a new asset, issue more of an existing asset, lock an asset, or transfer the ownership of an asset (note that you can only do one of these operations in a given create_issuance call).
 
