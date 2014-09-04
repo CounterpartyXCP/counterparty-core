@@ -16,9 +16,9 @@ pytest==2.5.1
 #############
 #counterpartyd specific deps
 
-pycoin==0.26
+pycoin==0.51
 
-requests==2.3.0
+aiohttp>=0.9.0
 
 Flask-HTTPAuth==2.2.1
 
