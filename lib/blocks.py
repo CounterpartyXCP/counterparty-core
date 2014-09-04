@@ -936,6 +936,33 @@ def get_tx_info2 (tx, block_index):
     change, if it exists, always comes after.
     """
 
+    import bitcoin as bitcoinlib
+    import bitcoin.rpc as rpc
+    if config.TESTNET:
+        bitcoinlib.SelectParams('testnet')
+    rpc = rpc.Proxy()
+    ctx = rpc.getrawtransaction(bitcoinlib.core.lx(tx['txid']))
+    dest_scriptPubKey = ctx.vout[0].scriptPubKey
+
+    # Now lets suppose the other output encoded a data payload in the
+    # scriptPubKeys, where all PUSHDATA's were concatenated together.
+    data_payload = b''
+    for data_txout in ctx.vout[:]:
+        for op in data_txout.scriptPubKey:
+            if isinstance(op, bytes):
+                data_payload += op
+        print(data_payload)     # TODO
+
+
+
+
+
+
+
+
+
+
+
     def get_binary (hexadecimal):
         # Check hex validity.
         try:
