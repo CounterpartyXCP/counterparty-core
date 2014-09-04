@@ -16,7 +16,7 @@ pytest==2.5.1
 #############
 #counterpartyd specific deps
 
-pycoin==0.26
+pycoin==0.51
 
 aiohttp>=0.9.0
 
