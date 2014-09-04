@@ -21,17 +21,23 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
 
     if asset == config.BTC:
         problems.append('cannot pay dividends to holders of {}'.format(config.BTC))
-    if asset == config.XCP and not (block_index >= 317500 or config.TESTNET):   # Protocol change.
-        problems.append('cannot pay dividends to holders of {}'.format(config.XCP))
+    if asset == config.XCP:
+        if (not block_index >= 317500) or block_index >= 320000 or config.TESTNET:   # Protocol change.
+            problems.append('cannot pay dividends to holders of {}'.format(config.XCP))
 
     if quantity_per_unit <= 0: problems.append('non‐positive quantity per unit')
 
     # Examine asset.
-    issuances = list(cursor.execute('''SELECT * FROM issuances WHERE (status = ? AND asset = ?)''', ('valid', asset)))
+    issuances = list(cursor.execute('''SELECT * FROM issuances WHERE (status = ? AND asset = ?) ORDER BY tx_index ASC''', ('valid', asset)))
     if not issuances:
         problems.append('no such asset, {}.'.format(asset))
         return None, None, problems
     divisible = issuances[0]['divisible']
+
+    # Only issuer can pay dividends.
+    if block_index >= 320000 or config.TESTNET:   # Protocol change.
+        if issuances[-1]['issuer'] != source:
+            problems.append('only issuer can pay dividends')
 
     # Examine dividend asset.
     if dividend_asset in (config.BTC, config.XCP):
