@@ -10,7 +10,8 @@ from lib import (config, api, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
 import counterpartyd
 
-from fixtures.unittest_vector import DEFAULT_PARAMS as DP
+from fixtures.fixtures import DEFAULT_PARAMS as DP
+from fixtures.fixtures import UNITEST_FIXTURE, INTEGRATION_SCENARIOS
 
 D = decimal.Decimal
 
@@ -22,17 +23,33 @@ locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 # unit tests private keys
 config.UNITTEST_PRIVKEY = {
     DP['address_1']: DP['address_1_privkey'],
-    DP['address_2']: DP['address_2_privkey']
+    DP['address_2']: DP['address_2_privkey'],
+    DP['address_3']: DP['address_3_privkey']
 }
 
-def dump_database(database_filename, dump_filename):
-    output=io.StringIO()
-    shell=apsw.Shell(stdout=output, args=(database_filename,))
+def dump_database(db):
+    # TEMPORARY
+    # .dump command bugs when aspw.Shell is used with 'db' args instead 'args'
+    # but this way keep 20x faster than to run scenario with file db
+    db_filename = CURR_DIR + '/fixtures/tmpforbackup.db'
+    if os.path.isfile(db_filename):
+        os.remove(db_filename)
+    filecon=apsw.Connection(db_filename)
+    with filecon.backup("main", db, "main") as backup:
+        backup.step()
+
+    output = io.StringIO()
+    shell = apsw.Shell(stdout=output, args=(db_filename,))
+    #shell = apsw.Shell(stdout=output, db=db)
     shell.process_command(".dump")
-    with open(dump_filename, 'w') as f:
-        lines = output.getvalue().split('\n')[8:]
-        new_data = '\n'.join(lines)
-        f.writelines(new_data)
+    lines = output.getvalue().split('\n')[8:]
+    new_data = '\n'.join(lines)
+    #clean ; in new line
+    new_data = re.sub('\)[\n\s]+;', ');', new_data)
+
+    os.remove(db_filename)
+
+    return new_data
 
 def restore_database(database_filename, dump_filename):
     if os.path.isfile(database_filename):
@@ -43,24 +60,34 @@ def restore_database(database_filename, dump_filename):
         cursor.execute(sql_dump.read())
     cursor.close()
 
-def insert_raw_transaction(raw_transaction, db):
+def create_next_block(db, block_index=None, parse_block=False):
     cursor = db.cursor()
-    tx_index = list(cursor.execute("SELECT COUNT(*) AS c FROM transactions"))[0]['c'] + 1
-
-    tx = bitcoin.decode_raw_transaction(raw_transaction)
-    tx_hash = hashlib.sha256(chr(tx_index).encode('utf-8')).hexdigest()
-    block_index = config.BURN_START + tx_index
+    if not block_index:
+        block_index = list(cursor.execute("SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1"))[0]['block_index'] + 1
     block_hash = hashlib.sha512(chr(block_index).encode('utf-8')).hexdigest()
     block_time = block_index * 10000000
-    source, destination, btc_amount, fee, data = blocks.get_tx_info(tx, block_index)
-
     block = (block_index, block_hash, block_time)
     cursor.execute('''INSERT INTO blocks VALUES (?,?,?)''', block)
+    cursor.close()
+    if parse_block:
+        blocks.parse_block(db, block_index, block_time)
+    return block_index, block_hash, block_time
+
+def insert_raw_transaction(raw_transaction, db):
+    # one transaction per block
+    block_index, block_hash, block_time = create_next_block(db)
+
+    cursor = db.cursor()
+    tx_index = block_index - config.BURN_START + 1
+    tx = bitcoin.decode_raw_transaction(raw_transaction)
+    tx_hash = hashlib.sha256(chr(tx_index).encode('utf-8')).hexdigest()
+    source, destination, btc_amount, fee, data = blocks.get_tx_info(tx, block_index)
     transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
     cursor.execute('''INSERT INTO transactions VALUES (?,?,?,?,?,?,?,?,?,?,?)''', transaction)
-
     tx = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = ?''', (tx_index,)))[0]
-    blocks.parse_tx(db, tx)
+    cursor.close()
+
+    blocks.parse_block(db, block_index, block_time)
     return tx
 
 def insert_transaction(transaction, db):
@@ -69,26 +96,60 @@ def insert_transaction(transaction, db):
     cursor.execute('''INSERT INTO blocks VALUES (?,?,?)''', block)
     keys = ",".join(transaction.keys())
     cursor.execute('''INSERT INTO transactions ({}) VALUES (?,?,?,?,?,?,?,?,?,?,?)'''.format(keys), tuple(transaction.values()))
+    cursor.close()
 
-def generate_unit_test_fixture():
-    counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/fixtures/fixtures.unittest.db', 
-                              testnet=True, testcoin=False, unittest=True, backend_rpc_ssl_verify=False)
-    
-    if os.path.isfile(config.DATABASE):
-        os.remove(config.DATABASE)
-
-    db = util.connect_to_db()
+def initialise_db(db):
     blocks.initialise(db)
     cursor = db.cursor()
     first_block = (config.BURN_START - 1, 'foobar', 1337)
     cursor.execute('''INSERT INTO blocks VALUES (?,?,?)''', first_block)
-
-    unsigned_tx_hex = bitcoin.transaction(burn.compose(db, DP['address_1'], DP['burn_quantity']), encoding='multisig')
-    insert_raw_transaction(unsigned_tx_hex, db)
-
-    dump_database(config.DATABASE, CURR_DIR + '/fixtures/unittest_fixture.sql')
     cursor.close()
-    os.remove(config.DATABASE)
+
+def run_scenario(scenario):
+    counterpartyd.set_options(rpc_port=9999, database_file=':memory:',
+                              testnet=True, testcoin=False, unittest=True, backend_rpc_ssl_verify=False)
+
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    logger_buff = io.StringIO()
+    handler = logging.StreamHandler(logger_buff)
+    handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    requests_log = logging.getLogger("requests")
+    requests_log.setLevel(logging.WARNING)
+
+    db = util.connect_to_db()
+    initialise_db(db)
+    for transaction in scenario:
+        if transaction[0] != 'create_next_block':
+            module = sys.modules['lib.{}'.format(transaction[0])]
+            compose = getattr(module, 'compose')
+            unsigned_tx_hex = bitcoin.transaction(compose(db, *transaction[1]), **transaction[2])
+            insert_raw_transaction(unsigned_tx_hex, db)
+        else:
+            create_next_block(db, block_index=config.BURN_START + transaction[1], parse_block=True)
+
+    dump = dump_database(db)
+    log = logger_buff.getvalue()
+
+    db.close()
+    return dump, log
+
+def save_scenario(scenario_name):
+    dump, log = run_scenario(INTEGRATION_SCENARIOS[scenario_name])
+    with open(CURR_DIR + '/fixtures/' + scenario_name + '.sql', 'w') as f:
+        f.writelines(dump)
+    with open(CURR_DIR + '/fixtures/' + scenario_name + '.log', 'w') as f:
+        f.writelines(log)
+
+def load_scenario_ouput(scenario_name):
+    with open(CURR_DIR + '/fixtures/' + scenario_name + '.sql', 'r') as f:
+        dump = ("").join(f.readlines())
+    with open(CURR_DIR + '/fixtures/' + scenario_name + '.log', 'r') as f:
+        log = ("").join(f.readlines())
+    return dump, log
 
 def check_record(record, counterpartyd_db):
     sql  = '''SELECT COUNT(*) AS c FROM {} '''.format(record['table'])
@@ -121,6 +182,12 @@ def vector_to_args(vector, functions=[]):
                     args.append((tx_name, method, params['in'], outputs, error, records))
     return args
 
+def exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db):
+    if tx_name == 'bitcoin' and method == 'transaction':
+        return tested_method(inputs[0], **inputs[1])
+    else:
+        return tested_method(counterpartyd_db, *inputs)
+
 def check_ouputs(tx_name, method, inputs, outputs, error, records, counterpartyd_db):
     tested_module = sys.modules['lib.{}'.format(tx_name)]
     tested_method = getattr(tested_module, method)
@@ -128,9 +195,20 @@ def check_ouputs(tx_name, method, inputs, outputs, error, records, counterpartyd
     test_outputs = None
     if error is not None:
         with pytest.raises(getattr(exceptions, error[0])) as exception:
-            test_outputs = tested_method(counterpartyd_db, *inputs)
+            test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db)
     else:
-        test_outputs = tested_method(counterpartyd_db, *inputs)
+        test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db)
+        if pytest.config.option.gentxhex and method == 'compose':
+            print('')
+            tx_params = {
+                'encoding': 'multisig'
+            }
+            if tx_name == 'order' and inputs[1]=='BTC':
+                print('give btc')
+                tx_params['fee_provided'] = DP['fee_provided']
+            unsigned_tx_hex = bitcoin.transaction(test_outputs, **tx_params)
+            print(tx_name)
+            print(unsigned_tx_hex)
 
     if outputs is not None:
         assert outputs == test_outputs
@@ -140,6 +218,14 @@ def check_ouputs(tx_name, method, inputs, outputs, error, records, counterpartyd
         for record in records:
             check_record(record, counterpartyd_db)
 
+def compare_strings(string1, string2):
+    diff = list(difflib.unified_diff(string1.splitlines(1), string2.splitlines(1), n=0))
+    if len(diff):
+        print("\nDifferences:")
+        print("".join(diff))
+    assert not len(diff)
 
-#generate_unit_test_fixture()
+if __name__ == '__main__':
+    #save_scenario('unittest_fixture')
+    save_scenario('scenario_1')
 
