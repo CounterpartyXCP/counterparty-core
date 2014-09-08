@@ -227,7 +227,7 @@ def compare_strings(string1, string2):
         print("".join(diff))
     assert not len(diff)
 
-if __name__ == '__main__':
+#if __name__ == '__main__':
     #save_scenario('unittest_fixture')
     #save_scenario('scenario_1')
 
