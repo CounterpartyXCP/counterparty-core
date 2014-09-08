@@ -79,9 +79,9 @@ def insert_raw_transaction(raw_transaction, db):
 
     cursor = db.cursor()
     tx_index = block_index - config.BURN_START + 1
-    tx = bitcoin.decode_raw_transaction(raw_transaction)
+    tx = util.aio_run_synch(bitcoin.decode_raw_transaction(raw_transaction))
     tx_hash = hashlib.sha256(chr(tx_index).encode('utf-8')).hexdigest()
-    source, destination, btc_amount, fee, data = yield from blocks.get_tx_info(tx, block_index)
+    source, destination, btc_amount, fee, data = util.aio_run_synch(blocks.get_tx_info(tx, block_index))
     transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
     cursor.execute('''INSERT INTO transactions VALUES (?,?,?,?,?,?,?,?,?,?,?)''', transaction)
     tx = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = ?''', (tx_index,)))[0]
@@ -119,6 +119,8 @@ def run_scenario(scenario):
     logger.addHandler(handler)
     requests_log = logging.getLogger("requests")
     requests_log.setLevel(logging.WARNING)
+    asyncio_log = logging.getLogger('asyncio')
+    asyncio_log.setLevel(logging.ERROR)
 
     db = util.connect_to_db()
     initialise_db(db)

@@ -365,7 +365,7 @@ SCENARIO_1 = [
 ]
 
 INTEGRATION_SCENARIOS = {
-    'unittest_fixture': UNITEST_FIXTURE#,
-    #'scenario_1': SCENARIO_1
+    'unittest_fixture': UNITEST_FIXTURE,
+    'scenario_1': SCENARIO_1
 }
 
