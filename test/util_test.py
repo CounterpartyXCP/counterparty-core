@@ -229,5 +229,5 @@ def compare_strings(string1, string2):
 
 if __name__ == '__main__':
     #save_scenario('unittest_fixture')
-    save_scenario('scenario_1')
+    #save_scenario('scenario_1')
 

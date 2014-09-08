@@ -21,7 +21,7 @@ Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Change quantity: 1.9988354 BTC
 Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance fee# <e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71>
-Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 0.00001 of asset CALLABLE, which is divisible and callable from 2014-08-30T12:04:11+00:00 for 100000000.0 XCP/CALLABLE, with description ‘Callable asset’ (e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71) [valid]
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 0.00001 of asset CALLABLE, which is divisible and callable from 2014-08-30T12:04:11 for 100000000.0 XCP/CALLABLE, with description ‘Callable asset’ (e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71) [valid]
 Credit: 0.00001 CALLABLE to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance# <e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71>
 Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
