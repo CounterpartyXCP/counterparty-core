@@ -395,7 +395,11 @@ def database_check (db, blockcount):
 
 
 def isodt (epoch_time):
-    return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
+    if config.UNITTEST:
+        #TODO: replace this ugly 'if' by a tzlocal() mock
+        return datetime.utcfromtimestamp(epoch_time).isoformat()
+    else:
+        return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
 
 def sortkeypicker(keynames):
     """http://stackoverflow.com/a/1143719"""
