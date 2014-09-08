@@ -361,7 +361,7 @@ def version_check (db):
         host = 'https://raw2.github.com/CounterpartyXCP/counterpartyd/master/version.json'
         response = aio_run_synch(aiohttp.request('GET', host, headers={'cache-control':
             'no-cache'}))
-        versions = aio_run_synch(response.json())
+        versions = json.loads(aio_run_synch(response.text()))
     except Exception as e:
         raise exceptions.VersionError('Unable to check version. How’s your Internet access?')
 
