@@ -10,6 +10,7 @@ import time
 import dateutil.parser
 import calendar
 import configparser
+import traceback
 from threading import Thread
 import binascii
 from fractions import Fraction
@@ -750,7 +751,11 @@ if __name__ == '__main__':
     # TODO: Keep around only as long as reparse and rollback don’t use API.
     if not config.FORCE and args.action in ('server', 'reparse', 'rollback'):
         logging.info('Status: Checking version.')
-        util.version_check(db)
+        try:
+            util.version_check(db)
+        except exceptions.VersionUpdateRequiredError as e:
+            traceback.print_exc(file=sys.stdout)
+            sys.exit(config.EXITCODE_UPDATE_REQUIRED)
 
     # MESSAGE CREATION
     if args.action == 'send':

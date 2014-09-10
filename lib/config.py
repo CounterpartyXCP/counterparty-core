@@ -87,3 +87,7 @@ DEFAULT_FEE_PER_KB = 10000                # Bitcoin Core default is 10000.  # TO
 # UI defaults
 DEFAULT_FEE_FRACTION_REQUIRED = .009   # 0.90%
 DEFAULT_FEE_FRACTION_PROVIDED = .01    # 1.00%
+
+
+# Custom exit codes
+EXITCODE_UPDATE_REQUIRED = 5

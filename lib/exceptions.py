@@ -9,6 +9,8 @@ class DatabaseError (Exception):
     pass
 class VersionError (Exception):
     pass
+class VersionUpdateRequiredError (Exception):
+    pass
 
 class TransactionError(Exception):
     pass
