@@ -47,6 +47,8 @@ except: pass
 logging.basicConfig(filename=CURR_DIR + '/log.new', level=logging.DEBUG, format='%(message)s')
 requests_log = logging.getLogger("requests")
 requests_log.setLevel(logging.DEBUG)
+asyncio_log = logging.getLogger('asyncio')
+asyncio_log.setLevel(logging.ERROR)
 
 # Output.
 output_new = {}
