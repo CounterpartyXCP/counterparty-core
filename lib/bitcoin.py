@@ -96,12 +96,13 @@ def connect (url, payload, headers):
     TRIES = 12
     for i in range(TRIES):
         try:
-            response = yield from asyncio.Task(aiohttp.request('POST', url, data=json.dumps(payload),
-                headers=headers))
+            response = yield from asyncio.Task(aiohttp.request('POST', url,
+                                               data=json.dumps(payload),
+                                               headers=headers))
             if i > 0: print('Successfully connected.', file=sys.stderr)
             return response
-        except aiohttp.ConnectionError:
-            print('Could not connect to Bitcoind. Sleeping for five seconds. (Try {}/{})'.format(i+1, TRIES), file=sys.stderr)
+        except aiohttp.ConnectionError as e:
+            print('Could not connect to Bitcoind. Sleeping.'.format(i+1, TRIES), file=sys.stderr)
             time.sleep(5)
     return None
 
