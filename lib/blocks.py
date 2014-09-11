@@ -1115,7 +1115,7 @@ def follow (db):
                 (i, tx_h) = not_supported_sorted.popleft()
                 del not_supported[tx_h]
             
-            logging.info('Block: %s (%ss)'%(str(block_index), round(time.time() - starttime, 3)))
+            logging.info('Block: %s (%ss)'%(str(block_index), "{:.2f}".format(time.time() - starttime, 3)))
             # Increment block index.
             block_count = yield from bitcoin.get_block_count()
             block_index +=1
