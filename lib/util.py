@@ -361,7 +361,7 @@ def version_check (db):
         host = 'https://raw2.github.com/CounterpartyXCP/counterpartyd/master/version.json'
         response = aio_run_synch(aiohttp.request('GET', host, headers={'cache-control':
             'no-cache'}))
-        versions = aio_run_synch(response.json())
+        versions = json.loads(aio_run_synch(response.text()))
     except Exception as e:
         raise exceptions.VersionError('Unable to check version. How’s your Internet access?')
 
@@ -377,10 +377,11 @@ def version_check (db):
                 passed = False
 
     if not passed:
-        explanation = 'Your version of counterpartyd is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: ‘{}’. Please upgrade to the latest version and restart the server.'.format(config.VERSION_STRING, versions['block_index'], versions['minimum_version_major'], versions['minimum_version_minor'], versions['minimum_version_revision'], versions['reason'])
-
+        explanation = 'Your version of counterpartyd is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: ‘{}’. Please upgrade to the latest version and restart the server.'.format(
+            config.VERSION_STRING, versions['block_index'], versions['minimum_version_major'], versions['minimum_version_minor'],
+            versions['minimum_version_revision'], versions['reason'])
         if last_block(db)['block_index'] >= versions['block_index']:
-            raise exceptions.VersionError(explanation)
+            raise exceptions.VersionUpdateRequiredError(explanation)
         else:
             warnings.warn(explanation)
 
@@ -395,7 +396,11 @@ def database_check (db, blockcount):
 
 
 def isodt (epoch_time):
-    return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
+    if config.UNITTEST:
+        #TODO: replace this ugly 'if' by a tzlocal() mock
+        return datetime.utcfromtimestamp(epoch_time).isoformat()
+    else:
+        return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
 
 def sortkeypicker(keynames):
     """http://stackoverflow.com/a/1143719"""

@@ -584,7 +584,7 @@ Broadcast a signed transaction onto the Bitcoin network.
 
 create_bet
 ^^^^^^^^^^^^^^
-**create_bet(source, feed_address, bet_type, deadline, wager, counterwager, target_value=0.0, leverage=5040, encoding='auto', pubkey=null,
+**create_bet(source, feed_address, bet_type, deadline, wager, counterwager, expiration, target_value=0.0, leverage=5040, encoding='auto', pubkey=null,
 allow_unconfirmed_inputs=false, fee=null, fee_per_kb=10000)**
 
 Issue a bet against a feed.
@@ -597,6 +597,7 @@ Issue a bet against a feed.
   * **deadline (integer):** The time at which the bet should be decided/settled, in Unix time.
   * **wager (integer):** The :ref:`quantity <quantitys>` of XCP to wager.
   * **counterwager (integer):** The minimum :ref:`quantity <quantitys>` of XCP to be wagered against, for the bets to match.
+  * **expiration (integer):** The number of blocks after which the bet expires if it's still unmatched.
   * **target_value (float):** Target value for Equal/NotEqual bet
   * **leverage (integer):** Leverage, as a fraction of 5040
   * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
