@@ -91,3 +91,14 @@ DEFAULT_FEE_FRACTION_PROVIDED = .01    # 1.00%
 
 # Custom exit codes
 EXITCODE_UPDATE_REQUIRED = 5
+
+MOVEMENTS_HASH_SEED = 'We can only see a short distance ahead, but we can see plenty there that needs to be done.'
+
+CHECKPOINTS_MAINNET = {
+    280000: '4047b7b04e5b34d49f4a788163af682bed6b79c8d68a1c371dd742f0aaa56391',
+    290000: 'f800cf62ca7ab855083d9bccb3b8a057726e26aa3b51b149e82fb884a4516981',
+    300000: '1359c49d25e3df5fead50272f745a1b4d4b6a0e0bd45f636fcf0752c87875e41',
+    310000: 'e4869e7183f4b8c7eb0fcc93ec6ebbd885f37d9551803859b536360fd0559656',
+    320000: '0c587b0a435dc33a87ae5eafa351935a982a4d8db132d397475da61da42ceae9',
+}
+

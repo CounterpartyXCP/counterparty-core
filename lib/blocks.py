@@ -7,6 +7,7 @@ Sieve blockchain for Counterparty transactions, and add them to the database.
 import os
 import time
 import binascii
+import hashlib
 import struct
 import decimal
 D = decimal.Decimal
@@ -98,6 +99,46 @@ def parse_tx (db, tx):
     cursor.close()
     return True
 
+def generate_movement_hash(db, block_index):
+    cursor = db.cursor()
+
+    dhash = lambda x: binascii.hexlify(hashlib.sha256(hashlib.sha256(bytes(x, 'utf-8')).digest()).digest()).decode()
+
+    # get previous hash
+    if block_index == config.BLOCK_FIRST:
+        previous_hash = dhash(config.MOVEMENTS_HASH_SEED)
+    else:
+        previous_hash = list(cursor.execute('''SELECT movements_hash FROM blocks WHERE block_index=?''', (block_index - 1,)))[0]['movements_hash']
+
+    # concatenate movements
+    movements_string = ''
+
+    sql = '''SELECT (rowid || block_index || address || asset || quantity) AS movement_string 
+             FROM credits
+             WHERE block_index = ?
+             ORDER BY rowid'''
+    credits_movements = cursor.execute(sql, (block_index,))
+    for credits_movement in credits_movements:
+        movements_string += credits_movement['movement_string']
+
+    sql = '''SELECT (rowid || block_index || address || asset || quantity) AS movement_string 
+             FROM debits
+             WHERE block_index = ?
+             ORDER BY rowid'''
+    debits_movements = cursor.execute(sql, (block_index,))
+    for debits_movement in debits_movements:
+        movements_string += debits_movement['movement_string']
+
+    # generate block movements hash
+    movements_hash = dhash(previous_hash + movements_string)
+
+    if block_index in config.CHECKPOINTS_MAINNET and config.CHECKPOINTS_MAINNET[block_index] != movements_hash:
+        raise exceptions.ConsensusError('Invalid movements_hash for block {}'.format(block_index))
+    else:
+        cursor.execute('''UPDATE blocks SET movements_hash = ? WHERE block_index = ?''', (movements_hash, block_index))
+
+    cursor.close()
+
 def parse_block (db, block_index, block_time):
     cursor = db.cursor()
 
@@ -115,6 +156,8 @@ def parse_block (db, block_index, block_time):
 
     cursor.close()
 
+    generate_movement_hash(db, block_index)
+
 def initialise(db):
     cursor = db.cursor()
 
@@ -131,6 +174,15 @@ def initialise(db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       index_hash_idx ON blocks (block_index, block_hash)
                    ''')
+
+    # sqlite don't manage ALTER TABLE IF COLUMN NOT EXISTS
+    columns = cursor.execute('''PRAGMA table_info(blocks)''')
+    movements_hash_exists = False
+    for column in columns:
+        if column['name'] == 'movements_hash':
+            movements_hash_exists = True
+    if not movements_hash_exists:
+        cursor.execute('''ALTER TABLE blocks ADD COLUMN movements_hash TEXT''')
 
     # Check that first block in DB is BLOCK_FIRST.
     cursor.execute('''SELECT * from blocks ORDER BY block_index''')
