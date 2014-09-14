@@ -100,42 +100,37 @@ def parse_tx (db, tx):
     return True
 
 def generate_movement_hash(db, block_index):
-    cursor = db.cursor()
-
     dhash = lambda x: binascii.hexlify(hashlib.sha256(hashlib.sha256(bytes(x, 'utf-8')).digest()).digest()).decode()
+    cursor = db.cursor()
 
     # get previous hash
     if block_index == config.BLOCK_FIRST:
         previous_hash = dhash(config.MOVEMENTS_HASH_SEED)
     else:
-        previous_hash = list(cursor.execute('''SELECT movements_hash FROM blocks WHERE block_index=?''', (block_index - 1,)))[0]['movements_hash']
+        sql = '''SELECT movements_hash FROM blocks WHERE block_index = ?'''
+        previous_hash = list(cursor.execute(sql, (block_index - 1,)))[0]['movements_hash']
 
     # concatenate movements
     movements_string = ''
-
-    sql = '''SELECT (rowid || block_index || address || asset || quantity) AS movement_string 
-             FROM credits
-             WHERE block_index = ?
-             ORDER BY rowid'''
-    credits_movements = cursor.execute(sql, (block_index,))
-    for credits_movement in credits_movements:
-        movements_string += credits_movement['movement_string']
-
-    sql = '''SELECT (rowid || block_index || address || asset || quantity) AS movement_string 
-             FROM debits
-             WHERE block_index = ?
-             ORDER BY rowid'''
-    debits_movements = cursor.execute(sql, (block_index,))
-    for debits_movement in debits_movements:
-        movements_string += debits_movement['movement_string']
+    for movement_table in ['credits', 'debits']:
+        sql = '''SELECT (rowid || block_index || address || asset || quantity) AS movement_string 
+                 FROM {}
+                 WHERE block_index = ?
+                 ORDER BY rowid'''.format(movement_table)
+        movements = cursor.execute(sql, (block_index,))
+        for movement in movements:
+            movements_string += movement['movement_string']
 
     # generate block movements hash
     movements_hash = dhash(previous_hash + movements_string)
 
-    if block_index in config.CHECKPOINTS_MAINNET and config.CHECKPOINTS_MAINNET[block_index] != movements_hash:
+    # check checkpoints and save block movements_hash
+    checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
+    if block_index in checkpoints and checkpoints[block_index] != movements_hash:
         raise exceptions.ConsensusError('Invalid movements_hash for block {}'.format(block_index))
     else:
-        cursor.execute('''UPDATE blocks SET movements_hash = ? WHERE block_index = ?''', (movements_hash, block_index))
+        sql = '''UPDATE blocks SET movements_hash = ? WHERE block_index = ?'''
+        cursor.execute(sql, (movements_hash, block_index))
 
     cursor.close()
 

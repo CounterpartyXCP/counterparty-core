@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.43.0 (2014-09-14)
+	* generate movements hash for each block (start at block: 322000)
 * v9.42.0 (2014-09-04)
 	* disable dividends to XCP holders (protocol change: 320000)
 	* allow dividends only from issuers (protocol change: 320000)
