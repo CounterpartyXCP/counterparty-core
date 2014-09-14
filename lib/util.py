@@ -12,6 +12,8 @@ from dateutil.tz import tzlocal
 from operator import itemgetter
 import fractions
 import warnings
+import binascii
+import hashlib
 
 from . import (config, exceptions)
 
@@ -732,5 +734,8 @@ def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
             raise Exception("Bad status code returned: '%s'. result body: '%s'."%(
                 r.status, result))
     return result
+
+def double_hash_string(text):
+    return binascii.hexlify(hashlib.sha256(hashlib.sha256(bytes(text, 'utf-8')).digest()).digest()).decode()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

@@ -100,12 +100,11 @@ def parse_tx (db, tx):
     return True
 
 def generate_movement_hash(db, block_index):
-    dhash = lambda x: binascii.hexlify(hashlib.sha256(hashlib.sha256(bytes(x, 'utf-8')).digest()).digest()).decode()
     cursor = db.cursor()
 
     # get previous hash
     if block_index == config.BLOCK_FIRST:
-        previous_hash = dhash(config.MOVEMENTS_HASH_SEED)
+        previous_hash = util.double_hash_string(config.MOVEMENTS_HASH_SEED)
     else:
         sql = '''SELECT movements_hash FROM blocks WHERE block_index = ?'''
         previous_hash = list(cursor.execute(sql, (block_index - 1,)))[0]['movements_hash']
@@ -122,7 +121,7 @@ def generate_movement_hash(db, block_index):
             movements_string += movement['movement_string']
 
     # generate block movements hash
-    movements_hash = dhash(previous_hash + movements_string)
+    movements_hash = util.double_hash_string(previous_hash + movements_string)
 
     # check checkpoints and save block movements_hash
     checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
