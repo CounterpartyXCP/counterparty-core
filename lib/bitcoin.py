@@ -40,57 +40,53 @@ bitcoin_rpc_session = None
 def print_coin(coin):
     return 'amount: {}; txid: {}; vout: {}; confirmations: {}'.format(coin['amount'], coin['txid'], coin['vout'], coin.get('confirmations', '?')) # simplify and make deterministic
 
-def get_block_count():
-    count= yield from rpc('getblockcount', [])
-    return int(count)
 
+# ASYNCH
+def get_block_count():
+    count = yield from rpc('getblockcount', [])
+    return int(count)
 def get_block_hash(block_index):
     return(yield from rpc('getblockhash', [block_index]))
-
-def is_valid (address):
-    return((yield from rpc('validateaddress', [address]))['isvalid'])
-
-def is_mine (address):
-    return(yield from rpc('validateaddress', [address])['ismine'])
-
-def send_raw_transaction (tx_hex):
-    return(yield from rpc('sendrawtransaction', [tx_hex]))
-
-def get_raw_transaction (tx_hash, json=True):
-    if json:
-        return(yield from rpc('getrawtransaction', [tx_hash, 1]))
-    else:
-        return(yield from rpc('getrawtransaction', [tx_hash]))
-
+def get_raw_transaction (tx_hash):
+    return(yield from rpc('getrawtransaction', [tx_hash, 1]))
 def get_block (block_hash):
     return(yield from rpc('getblock', [block_hash]))
-
 def get_block_hash (block_index):
     return(yield from rpc('getblockhash', [block_index]))
-
 def decode_raw_transaction (unsigned_tx_hex):
     return(yield from rpc('decoderawtransaction', [unsigned_tx_hex]))
+def get_info():
+    return(yield from rpc('getinfo', []))
 
+# SYNCH
+def is_valid (address):
+    return((yield from rpc('validateaddress', [address]))['isvalid'])
+def is_mine (address):
+    return(yield from rpc('validateaddress', [address])['ismine'])
+def sign_raw_transaction (unsigned_tx_hex):
+    return(yield from rpc('signrawtransaction', [unsigned_tx_hex]))
+def send_raw_transaction (tx_hex):
+    return(yield from rpc('sendrawtransaction', [tx_hex]))
+def get_private_key (address):
+    return(yield from rpc('dumpprivkey', [source]))
 def get_wallet ():
     addressgroupings = yield from rpc('listaddressgroupings', [])
     for group in addressgroupings:
         for bunch in group:
             yield bunch
-
 def get_mempool ():
     return(yield from rpc('getrawmempool', []))
-
-def get_info():
-    return(yield from rpc('getinfo', []))
-
-def bitcoind_check (db):
+def list_unspent ():
+    return(yield from rpc('listunspent', [0, 999999]))
+def backend_check (db):
     """Checks blocktime of last block to see if {} Core is running behind.""".format(config.BTC_NAME)
-    block_count = yield from rpc('getblockcount', [])
-    block_hash = yield from rpc('getblockhash', [block_count])
-    block = yield from rpc('getblock', [block_hash])
-    time_behind = time.time() - block['time']   # How reliable is the block time?!
+    block_count = yield from get_block_count()
+    block_hash = yield from get_block_hash(block_count)
+    block = yield from get_block(block_hash)
+    time_behind = time.time() - block['time']   # TODO: Block times are not very reliable.
     if time_behind > 60 * 60 * 2:   # Two hours.
         raise exceptions.BitcoindError('Bitcoind is running about {} seconds behind.'.format(round(time_behind)))
+
 
 def connect (url, payload, headers):
     TRIES = 12
@@ -114,7 +110,7 @@ def wallet_unlock ():
         else:
             passphrase = getpass.getpass('Enter your Bitcoind[‐Qt] wallet passhrase: ')
             print('Unlocking wallet for 60 (more) seconds.')
-            yield from rpc('walletpassphrase', [passphrase, 60])
+            rpc('walletpassphrase', [passphrase, 60])
     else:
         return True    # Wallet is unencrypted.
 
@@ -160,9 +156,8 @@ def rpc (method, params):
     elif response_json['error']['code'] == -4:   # Unknown private key (locked wallet?)
         # If address in wallet, attempt to unlock.
         address = params[0]
-        validate_address = yield from rpc('validateaddress', [address])
-        if validate_address['isvalid']:
-            if validate_address['ismine']:
+        if is_valid(address):
+            if is_mine(address):
                 raise exceptions.BitcoindError('Wallet is locked.')
             else:   # When will this happen?
                 raise exceptions.BitcoindError('Source address not in wallet.')
@@ -170,7 +165,7 @@ def rpc (method, params):
             raise exceptions.AddressError('Invalid address.')
     elif response_json['error']['code'] == -1 and response_json['message'] == 'Block number out of range.':
         time.sleep(10)
-        return(yield from rpc('getblockhash', [block_index]))
+        return get_block_hash(block_index)
 
     # elif config.UNITTEST:
     #     print(method)
@@ -437,7 +432,7 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
             if config.UNITTEST:
                 private_key_wif = config.UNITTEST_PRIVKEY[source]
             else:
-                private_key_wif = yield from rpc('dumpprivkey', [source])
+                private_key_wif = get_private_key(source)
 
             # Derive public key.
             public_key_hex = private_key_to_public_key(private_key_wif)
@@ -465,8 +460,7 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
 
     # Check that the source is in wallet.
     if not config.UNITTEST and encoding in ('multisig') and not public_key:
-        ismine = yield from rpc('validateaddress', [source])
-        if not ismine['ismine']:
+        if not is_mine(source):
             raise exceptions.AddressError('Not one of your Bitcoin addresses:', source)
 
     # Check that the destination output isn't a dust output.
@@ -579,7 +573,7 @@ def sign_tx (unsigned_tx_hex, private_key_wif=None):
             raise exceptions.TransactionError('Could not sign transaction with pybtctool.')
 
     else:   # Assume source is in wallet and wallet is unlocked.
-        result = yield from rpc('signrawtransaction', [unsigned_tx_hex])
+        result = sign_raw_transaction(unsigned_tx_hex)
         if result['complete']:
             signed_tx_hex = result['hex']
         else:
@@ -620,9 +614,8 @@ def get_unspent_txouts(address, normalize=False):
         with open(CURR_DIR + '/../test/listunspent.test.json', 'r') as listunspent_test_file:   # HACK
             wallet_unspent = json.load(listunspent_test_file)
             return [output for output in wallet_unspent if output['address'] == address]
-    rpcv = yield from rpc('validateaddress', [address])
-    if rpcv['ismine']:
-        wallet_unspent = yield from rpc('listunspent', [0, 999999])
+    if is_mine[address]:
+        wallet_unspent = yield from list_unspent()
         return [output for output in wallet_unspent if output['address'] == address]
     else:
         return blockchain.listunspent(address)
