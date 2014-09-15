@@ -735,7 +735,7 @@ def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
                 r.status, result))
     return result
 
-def double_hash_string(text):
+def dhash_string(text):
     return binascii.hexlify(hashlib.sha256(hashlib.sha256(bytes(text, 'utf-8')).digest()).digest()).decode()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

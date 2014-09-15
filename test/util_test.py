@@ -109,7 +109,7 @@ def insert_transaction(transaction, db):
 def initialise_db(db):
     blocks.initialise(db)
     cursor = db.cursor()
-    first_block = (config.BURN_START - 1, 'foobar', 1337, util.double_hash_string(config.MOVEMENTS_HASH_SEED))
+    first_block = (config.BURN_START - 1, 'foobar', 1337, util.dhash_string(config.MOVEMENTS_HASH_SEED))
     cursor.execute('''INSERT INTO blocks VALUES (?,?,?,?)''', first_block)
     cursor.close()
 

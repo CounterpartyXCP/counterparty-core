@@ -228,7 +228,7 @@ def test_initialise ():
                         (config.BURN_START - 1,
                         'foobar',
                         1337,
-                        util.double_hash_string(config.MOVEMENTS_HASH_SEED))
+                        util.dhash_string(config.MOVEMENTS_HASH_SEED))
                   )
     cursor.close()
 

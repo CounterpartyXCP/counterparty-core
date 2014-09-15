@@ -100,13 +100,13 @@ def parse_tx (db, tx):
 
 def generate_movement_hash(db, block_index):
     cursor = db.cursor()
+    get_hash = lambda i: list(cursor.execute('''SELECT movements_hash FROM blocks WHERE block_index = ?''', (i,)))[0]['movements_hash']
 
     # get previous hash
     if block_index == config.BLOCK_FIRST:
-        previous_hash = util.double_hash_string(config.MOVEMENTS_HASH_SEED)
-    else:
-        sql = '''SELECT movements_hash FROM blocks WHERE block_index = ?'''
-        previous_hash = list(cursor.execute(sql, (block_index - 1,)))[0]['movements_hash']
+        previous_hash = util.dhash_string(config.MOVEMENTS_HASH_SEED)
+    else: 
+        previous_hash = get_hash(block_index - 1)
 
     # concatenate movements
     movements_string = ''
@@ -120,13 +120,13 @@ def generate_movement_hash(db, block_index):
             movements_string += movement['movement_string']
 
     # generate block movements hash
-    movements_hash = util.double_hash_string(previous_hash + movements_string)
+    movements_hash = util.dhash_string(previous_hash + movements_string)
 
     # check checkpoints and save block movements_hash
     checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
     if block_index in checkpoints and checkpoints[block_index] != movements_hash:
         raise exceptions.ConsensusError('Invalid movements_hash for block {}'.format(block_index))
-    else:
+    elif not get_hash(block_index):
         sql = '''UPDATE blocks SET movements_hash = ? WHERE block_index = ?'''
         cursor.execute(sql, (movements_hash, block_index))
 
@@ -170,11 +170,7 @@ def initialise(db):
 
     # sqlite don't manage ALTER TABLE IF COLUMN NOT EXISTS
     columns = cursor.execute('''PRAGMA table_info(blocks)''')
-    movements_hash_exists = False
-    for column in columns:
-        if column['name'] == 'movements_hash':
-            movements_hash_exists = True
-    if not movements_hash_exists:
+    if 'movements_hash' not in [column['name'] for column in columns]:
         cursor.execute('''ALTER TABLE blocks ADD COLUMN movements_hash TEXT''')
 
     # Check that first block in DB is BLOCK_FIRST.
