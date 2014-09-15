@@ -41,7 +41,7 @@ def print_coin(coin):
     return 'amount: {}; txid: {}; vout: {}; confirmations: {}'.format(coin['amount'], coin['txid'], coin['vout'], coin.get('confirmations', '?')) # simplify and make deterministic
 
 
-# ASYNCH
+# COMMON
 def get_block_count():
     count = yield from rpc('getblockcount', [])
     return int(count)
@@ -58,7 +58,7 @@ def decode_raw_transaction (unsigned_tx_hex):
 def get_info():
     return(yield from rpc('getinfo', []))
 
-# SYNCH
+# UNCOMMON
 def is_valid (address):
     return((yield from rpc('validateaddress', [address]))['isvalid'])
 def is_mine (address):

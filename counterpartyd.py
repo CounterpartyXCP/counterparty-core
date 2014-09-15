@@ -1121,10 +1121,7 @@ if __name__ == '__main__':
                 raise Exception("Blockchain backend (%s) not initialized! Aborting startup after %i tries." % (
                     config.BLOCKCHAIN_SERVICE_NAME, num_tries))
 
-        asyncio.async(asyncio.Task(blocks.follow(db)))
-        loop.run_forever() # Go do everything
-
-
+        loop.run_until_complete(blocks.follow(db))
 
     else:
         parser.print_help()

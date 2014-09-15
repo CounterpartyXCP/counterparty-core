@@ -1255,7 +1255,6 @@ def follow (db):
             mempool_initialised = True
             time.sleep(2)
 
-
     cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
