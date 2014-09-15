@@ -1003,6 +1003,7 @@ if __name__ == '__main__':
 
         asset_id = util.asset_id(args.asset)
         divisible = results['divisible']
+        locked = results['locked']
         supply = util.devise(db, results['supply'], args.asset, dest='output')
         call_date = util.isodt(results['call_date']) if results['call_date'] else results['call_date']
         call_price = str(results['call_price']) + ' XCP' if results['call_price'] else results['call_price']
@@ -1010,6 +1011,7 @@ if __name__ == '__main__':
         print('Asset Name:', args.asset)
         print('Asset ID:', asset_id)
         print('Divisible:', divisible)
+        print('Locked:', locked)
         print('Supply:', supply)
         print('Issuer:', results['issuer'])
         print('Callable:', results['callable'])
