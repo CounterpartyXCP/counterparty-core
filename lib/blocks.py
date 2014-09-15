@@ -7,7 +7,6 @@ Sieve blockchain for Counterparty transactions, and add them to the database.
 import os
 import time
 import binascii
-import hashlib
 import struct
 import decimal
 D = decimal.Decimal
