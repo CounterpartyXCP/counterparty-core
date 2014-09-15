@@ -98,6 +98,40 @@ def parse_tx (db, tx):
     cursor.close()
     return True
 
+def generate_movement_hash(db, block_index):
+    cursor = db.cursor()
+    get_hash = lambda i: list(cursor.execute('''SELECT movements_hash FROM blocks WHERE block_index = ?''', (i,)))[0]['movements_hash']
+
+    # get previous hash
+    if block_index == config.BLOCK_FIRST:
+        previous_hash = util.dhash_string(config.MOVEMENTS_HASH_SEED)
+    else: 
+        previous_hash = get_hash(block_index - 1)
+
+    # concatenate movements
+    movements_string = ''
+    for movement_table in ['credits', 'debits']:
+        sql = '''SELECT (rowid || block_index || address || asset || quantity) AS movement_string 
+                 FROM {}
+                 WHERE block_index = ?
+                 ORDER BY rowid'''.format(movement_table)
+        movements = cursor.execute(sql, (block_index,))
+        for movement in movements:
+            movements_string += movement['movement_string']
+
+    # generate block movements hash
+    movements_hash = util.dhash_string(previous_hash + movements_string)
+
+    # check checkpoints and save block movements_hash
+    checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
+    if block_index in checkpoints and checkpoints[block_index] != movements_hash:
+        raise exceptions.ConsensusError('Invalid movements_hash for block {}'.format(block_index))
+    elif not get_hash(block_index):
+        sql = '''UPDATE blocks SET movements_hash = ? WHERE block_index = ?'''
+        cursor.execute(sql, (movements_hash, block_index))
+
+    cursor.close()
+
 def parse_block (db, block_index, block_time):
     cursor = db.cursor()
 
@@ -115,6 +149,8 @@ def parse_block (db, block_index, block_time):
 
     cursor.close()
 
+    generate_movement_hash(db, block_index)
+
 def initialise(db):
     cursor = db.cursor()
 
@@ -131,6 +167,11 @@ def initialise(db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       index_hash_idx ON blocks (block_index, block_hash)
                    ''')
+
+    # sqlite don't manage ALTER TABLE IF COLUMN NOT EXISTS
+    columns = cursor.execute('''PRAGMA table_info(blocks)''')
+    if 'movements_hash' not in [column['name'] for column in columns]:
+        cursor.execute('''ALTER TABLE blocks ADD COLUMN movements_hash TEXT''')
 
     # Check that first block in DB is BLOCK_FIRST.
     cursor.execute('''SELECT * from blocks ORDER BY block_index''')
