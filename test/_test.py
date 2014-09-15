@@ -124,6 +124,7 @@ def parse_hex (unsigned_tx_hex):
     assert len(txes) == 1
     tx = txes[0]
     blocks.parse_tx(db, tx)
+    blocks.generate_movement_hash(db, block_index)
 
     # After parsing every transaction, check that the credits, debits sum properly.
     cursor.execute('''SELECT * FROM balances''')
@@ -162,6 +163,7 @@ def block_progress(block_count):
         order.expire(db, block_index)
         bet.expire(db, block_index, block_time)
         rps.expire(db, block_index)
+        blocks.generate_movement_hash(db, block_index)
 
         tx_index += 1
 
@@ -221,10 +223,12 @@ def test_initialise ():
     cursor.execute('''INSERT INTO blocks(
                         block_index,
                         block_hash,
-                        block_time) VALUES(?,?,?)''',
+                        block_time,
+                        movements_hash) VALUES(?,?,?,?)''',
                         (config.BURN_START - 1,
                         'foobar',
-                        1337)
+                        1337,
+                        util.dhash_string(config.MOVEMENTS_HASH_SEED))
                   )
     cursor.close()
 

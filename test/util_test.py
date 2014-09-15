@@ -60,18 +60,26 @@ def restore_database(database_filename, dump_filename):
         cursor.execute(sql_dump.read())
     cursor.close()
 
-def create_next_block(db, block_index=None, parse_block=False):
+def insert_block(db, block_index, parse_block=False):
     cursor = db.cursor()
-    if not block_index:
-        block_index = list(cursor.execute("SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1"))[0]['block_index'] + 1
     block_hash = hashlib.sha512(chr(block_index).encode('utf-8')).hexdigest()
     block_time = block_index * 10000000
-    block = (block_index, block_hash, block_time)
-    cursor.execute('''INSERT INTO blocks VALUES (?,?,?)''', block)
+    block = (block_index, block_hash, block_time, None)
+    cursor.execute('''INSERT INTO blocks VALUES (?,?,?,?)''', block)
     cursor.close()
     if parse_block:
         blocks.parse_block(db, block_index, block_time)
     return block_index, block_hash, block_time
+
+def create_next_block(db, block_index=None, parse_block=False):
+    cursor = db.cursor()  
+    last_block_index = list(cursor.execute("SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1"))[0]['block_index']
+    if not block_index:
+        block_index = last_block_index + 1
+    for index in range(last_block_index + 1, block_index + 1):
+        inserted_block_index, block_hash, block_time = insert_block(db, index, parse_block=parse_block)
+    cursor.close()
+    return inserted_block_index, block_hash, block_time
 
 def insert_raw_transaction(raw_transaction, db):
     # one transaction per block
@@ -92,8 +100,8 @@ def insert_raw_transaction(raw_transaction, db):
 
 def insert_transaction(transaction, db):
     cursor = db.cursor()
-    block = (transaction['block_index'], transaction['block_hash'], transaction['block_time'])
-    cursor.execute('''INSERT INTO blocks VALUES (?,?,?)''', block)
+    block = (transaction['block_index'], transaction['block_hash'], transaction['block_time'], None)
+    cursor.execute('''INSERT INTO blocks VALUES (?,?,?,?)''', block)
     keys = ",".join(transaction.keys())
     cursor.execute('''INSERT INTO transactions ({}) VALUES (?,?,?,?,?,?,?,?,?,?,?)'''.format(keys), tuple(transaction.values()))
     cursor.close()
@@ -101,8 +109,8 @@ def insert_transaction(transaction, db):
 def initialise_db(db):
     blocks.initialise(db)
     cursor = db.cursor()
-    first_block = (config.BURN_START - 1, 'foobar', 1337)
-    cursor.execute('''INSERT INTO blocks VALUES (?,?,?)''', first_block)
+    first_block = (config.BURN_START - 1, 'foobar', 1337, util.dhash_string(config.MOVEMENTS_HASH_SEED))
+    cursor.execute('''INSERT INTO blocks VALUES (?,?,?,?)''', first_block)
     cursor.close()
 
 def run_scenario(scenario):
@@ -141,9 +149,9 @@ def run_scenario(scenario):
 
 def save_scenario(scenario_name):
     dump, log = run_scenario(INTEGRATION_SCENARIOS[scenario_name])
-    with open(CURR_DIR + '/fixtures/' + scenario_name + '.sql', 'w') as f:
+    with open(CURR_DIR + '/fixtures/' + scenario_name + '.new.sql', 'w') as f:
         f.writelines(dump)
-    with open(CURR_DIR + '/fixtures/' + scenario_name + '.log', 'w') as f:
+    with open(CURR_DIR + '/fixtures/' + scenario_name + '.new.log', 'w') as f:
         f.writelines(log)
 
 def load_scenario_ouput(scenario_name):
@@ -227,7 +235,7 @@ def compare_strings(string1, string2):
         print("".join(diff))
     assert not len(diff)
 
-#if __name__ == '__main__':
-    #save_scenario('unittest_fixture')
-    #save_scenario('scenario_1')
+if __name__ == '__main__':
+    save_scenario('unittest_fixture')
+    save_scenario('scenario_1')
 
