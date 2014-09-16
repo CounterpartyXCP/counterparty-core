@@ -15,7 +15,6 @@ import collections
 from Crypto.Cipher import ARC4
 import apsw
 
-import asyncio
 from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
 
@@ -953,7 +952,7 @@ def get_tx_info (tx, block_index):
     source_list = []
     for vin in tx['vin']:                                               # Loop through input transactions.
         if 'coinbase' in vin: return b'', None, None, None, None
-        vin_tx = yield from bitcoin.get_raw_transaction(vin['txid'])     # Get the full transaction data for this input transaction.
+        vin_tx = bitcoin.get_raw_transaction(vin['txid'])     # Get the full transaction data for this input transaction.
         vout = vin_tx['vout'][vin['vout']]
         fee += vout['value'] * config.UNIT
 
@@ -1009,13 +1008,12 @@ def reparse (db, block_index=None, quiet=False):
     cursor.close()
     return
 
-@asyncio.coroutine
 def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     cursor = db.cursor()
     # Get the important details about each transaction.
-    tx = yield from bitcoin.get_raw_transaction(tx_hash)
+    tx = bitcoin.get_raw_transaction(tx_hash)
     logging.debug('Status: examining transaction {}.'.format(tx_hash))
-    source, destination, btc_amount, fee, data = yield from get_tx_info(tx, block_index)
+    source, destination, btc_amount, fee, data = get_tx_info(tx, block_index)
     if source and (data or destination == config.UNSPENDABLE):
         cursor.execute('''INSERT INTO transactions(
                             tx_index,
@@ -1042,7 +1040,6 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     cursor.close()
     return
 
-@asyncio.coroutine
 def follow (db):
     # TODO: This is not thread-safe!
     cursor = db.cursor()
@@ -1085,7 +1082,7 @@ def follow (db):
     while True:
         starttime = time.time()
         # Get new blocks.
-        block_count = yield from bitcoin.get_block_count()
+        block_count = bitcoin.get_block_count()
         if block_index <= block_count:
 
             # Backwards check for incorrect blocks due to chain reorganisation, and stop when a common parent is found.
@@ -1095,8 +1092,8 @@ def follow (db):
                 if c == config.BLOCK_FIRST: break
 
                 # Bitcoind parent hash.
-                c_hash = yield from bitcoin.get_block_hash(c)
-                c_block = yield from bitcoin.get_block(c_hash)
+                c_hash = bitcoin.get_block_hash(c)
+                c_block = bitcoin.get_block(c_hash)
                 bitcoind_parent = c_block['previousblockhash']
 
                 # DB parent hash.
@@ -1124,8 +1121,8 @@ def follow (db):
                 continue
 
             # Get and parse transactions in this block (atomically).
-            block_hash = yield from bitcoin.get_block_hash(block_index)
-            block = yield from bitcoin.get_block(block_hash)
+            block_hash = bitcoin.get_block_hash(block_index)
+            block = bitcoin.get_block(block_hash)
             block_time = block['time']
             tx_hash_list = block['tx']
             with db:
@@ -1141,7 +1138,7 @@ def follow (db):
 
                 # List the transactions in the block.
                 for tx_hash in tx_hash_list:
-                    yield from list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index)
+                    list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index)
                     tx_index += 1
 
                 # Parse the transactions in the block.
@@ -1158,7 +1155,7 @@ def follow (db):
             
             logging.info('Block: %s (%ss)'%(str(block_index), "{:.2f}".format(time.time() - starttime, 3)))
             # Increment block index.
-            block_count = yield from bitcoin.get_block_count()
+            block_count = bitcoin.get_block_count()
             block_index +=1
 
         else:
@@ -1181,8 +1178,7 @@ def follow (db):
             # and then save those messages.
             # Every transaction in mempool is parsed independently. (DB is rolled back after each one.)
             mempool = []
-            bitcoinmempool = yield from bitcoin.get_mempool()
-            for tx_hash in bitcoinmempool:
+            for tx_hash in bitcoin.get_mempool():
 
                 # If already in counterpartyd mempool, copy to new one.
                 if tx_hash in old_mempool_hashes:
@@ -1208,7 +1204,7 @@ def follow (db):
 
                             # List transaction.
                             try:    # Sometimes the transactions can’t be found: `{'code': -5, 'message': 'No information available about transaction'} Is txindex enabled in Bitcoind?`
-                                yield from list_tx(db, config.MEMPOOL_BLOCK_HASH, config.MEMPOOL_BLOCK_INDEX, curr_time, tx_hash, mempool_tx_index)
+                                list_tx(db, config.MEMPOOL_BLOCK_HASH, config.MEMPOOL_BLOCK_INDEX, curr_time, tx_hash, mempool_tx_index)
                                 mempool_tx_index += 1
                             except exceptions.BitcoindError:
                                 assert False

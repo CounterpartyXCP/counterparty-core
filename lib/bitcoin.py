@@ -14,7 +14,7 @@ import getpass
 import decimal
 import logging
 
-import asyncio, aiohttp
+import requests
 from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
 from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec, is_sec_compressed, EncodingError
 from Crypto.Cipher import ARC4
@@ -43,67 +43,67 @@ def print_coin(coin):
 
 # COMMON
 def get_block_count():
-    count = yield from rpc('getblockcount', [])
-    return int(count)
+    return int(rpc('getblockcount', []))
 def get_block_hash(block_index):
-    return(yield from rpc('getblockhash', [block_index]))
+    return rpc('getblockhash', [block_index])
 def get_raw_transaction (tx_hash):
-    return(yield from rpc('getrawtransaction', [tx_hash, 1]))
+    return rpc('getrawtransaction', [tx_hash, 1])
 def get_block (block_hash):
-    return(yield from rpc('getblock', [block_hash]))
+    return rpc('getblock', [block_hash])
 def get_block_hash (block_index):
-    return(yield from rpc('getblockhash', [block_index]))
+    return rpc('getblockhash', [block_index])
 def decode_raw_transaction (unsigned_tx_hex):
-    return(yield from rpc('decoderawtransaction', [unsigned_tx_hex]))
+    return rpc('decoderawtransaction', [unsigned_tx_hex])
 def get_info():
-    return(yield from rpc('getinfo', []))
+    return rpc('getinfo', [])
 
 # UNCOMMON
 def is_valid (address):
-    return((yield from rpc('validateaddress', [address]))['isvalid'])
+    return rpc('validateaddress', [address])['isvalid']
 def is_mine (address):
-    return(yield from rpc('validateaddress', [address])['ismine'])
+    return rpc('validateaddress', [address])['ismine']
 def sign_raw_transaction (unsigned_tx_hex):
-    return(yield from rpc('signrawtransaction', [unsigned_tx_hex]))
+    return rpc('signrawtransaction', [unsigned_tx_hex])
 def send_raw_transaction (tx_hex):
-    return(yield from rpc('sendrawtransaction', [tx_hex]))
+    return rpc('sendrawtransaction', [tx_hex])
 def get_private_key (address):
-    return(yield from rpc('dumpprivkey', [source]))
+    return rpc('dumpprivkey', [source])
 def get_wallet ():
-    addressgroupings = yield from rpc('listaddressgroupings', [])
-    for group in addressgroupings:
+    for group in rpc('listaddressgroupings', []):
         for bunch in group:
             yield bunch
 def get_mempool ():
-    return(yield from rpc('getrawmempool', []))
+    return rpc('getrawmempool', [])
 def list_unspent ():
-    return(yield from rpc('listunspent', [0, 999999]))
+    return rpc('listunspent', [0, 999999])
 def backend_check (db):
     """Checks blocktime of last block to see if {} Core is running behind.""".format(config.BTC_NAME)
-    block_count = yield from get_block_count()
-    block_hash = yield from get_block_hash(block_count)
-    block = yield from get_block(block_hash)
+    block_count = get_block_count()
+    block_hash = get_block_hash(block_count)
+    block = get_block(block_hash)
     time_behind = time.time() - block['time']   # TODO: Block times are not very reliable.
     if time_behind > 60 * 60 * 2:   # Two hours.
         raise exceptions.BitcoindError('Bitcoind is running about {} seconds behind.'.format(round(time_behind)))
 
 
 def connect (url, payload, headers):
+    global bitcoin_rpc_session
+    if not bitcoin_rpc_session: bitcoin_rpc_session = requests.Session()
     TRIES = 12
     for i in range(TRIES):
         try:
-            response = yield from asyncio.Task(aiohttp.request('POST', url,
-                                               data=json.dumps(payload),
-                                               headers=headers))
+            response = bitcoin_rpc_session.post(url, data=json.dumps(payload), headers=headers, verify=config.BACKEND_RPC_SSL_VERIFY)
             if i > 0: print('Successfully connected.', file=sys.stderr)
             return response
-        except aiohttp.ConnectionError as e:
-            print('Could not connect to Bitcoind. Sleeping.'.format(i+1, TRIES), file=sys.stderr)
+        except requests.exceptions.SSLError as e:
+            raise e
+        except requests.exceptions.ConnectionError:
+            logging.debug('Could not connect to Bitcoind. (Try {}/{})'.format(i+1, TRIES))
             time.sleep(5)
     return None
 
 def wallet_unlock ():
-    getinfo = yield from get_info()
+    getinfo = get_info()
     if 'unlocked_until' in getinfo:
         if getinfo['unlocked_until'] >= 60:
             return True # Wallet is unlocked for at least the next 60 seconds.
@@ -114,7 +114,6 @@ def wallet_unlock ():
     else:
         return True    # Wallet is unencrypted.
 
-@asyncio.coroutine
 def rpc (method, params):
     starttime = time.time()
     headers = {'content-type': 'application/json'}
@@ -133,13 +132,13 @@ def rpc (method, params):
         f.write(payload)
     '''
 
-    response = yield from connect(config.BACKEND_RPC, payload, headers)
+    response = connect(config.BACKEND_RPC, payload, headers)
     if response == None:
         if config.TESTNET: network = 'testnet'
         else: network = 'mainnet'
         raise exceptions.BitcoindRPCError('Cannot communicate with {} Core. ({} is set to run on {}, is {} Core?)'.format(config.BTC_NAME, config.XCP_CLIENT, network, config.BTC_NAME))
-    elif response.status not in (200, 500):
-        raise exceptions.BitcoindRPCError(str(response.status) + ' ' + response.reason)
+    elif response.status_code not in (200, 500):
+        raise exceptions.BitcoindRPCError(str(response.status_code) + ' ' + response.reason)
 
     '''
     if config.UNITTEST:
@@ -148,7 +147,7 @@ def rpc (method, params):
     '''
 
     # Return result, with error handling.
-    response_json = yield from response.json()
+    response_json = response.json()
     if 'error' not in response_json.keys() or response_json['error'] == None:
         return response_json['result']
     elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
@@ -509,7 +508,7 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
     outputs_size = ((25 + 9) * len(destination_outputs)) + (len(data_array) * data_output_size)
 
     # Get inputs.
-    unspent = yield from get_unspent_txouts(source, normalize=True)
+    unspent = get_unspent_txouts(source, normalize=True)
     unspent = sort_unspent_txouts(unspent, allow_unconfirmed_inputs)
     logging.debug('Sorted UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
 
@@ -615,7 +614,7 @@ def get_unspent_txouts(address, normalize=False):
             wallet_unspent = json.load(listunspent_test_file)
             return [output for output in wallet_unspent if output['address'] == address]
     if is_mine[address]:
-        wallet_unspent = yield from list_unspent()
+        wallet_unspent = list_unspent()
         return [output for output in wallet_unspent if output['address'] == address]
     else:
         return blockchain.listunspent(address)

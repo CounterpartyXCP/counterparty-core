@@ -15,7 +15,7 @@ from threading import Thread
 import binascii
 from fractions import Fraction
 
-import asyncio, aiohttp
+import requests
 import appdirs
 from prettytable import PrettyTable
 
@@ -98,7 +98,7 @@ def market (give_asset, get_asset):
 
     # Your Pending Orders Matches.
     addresses = []
-    for bunch in util.aio_run_synch(bitcoin.get_wallet()):
+    for bunch in bitcoin.get_wallet():
         addresses.append(bunch[:2][0])
     filters = [
         ('tx0_address', 'IN', addresses),
@@ -522,7 +522,6 @@ if __name__ == '__main__':
         #patch up cmd.exe's "challenged" (i.e. broken/non-existent) UTF-8 logging
         util_windows.fix_win32_unicode()
 
-    loop = asyncio.get_event_loop()
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(prog=config.XCP_CLIENT, description='the reference implementation of the {} protocol'.format(config.XCP_NAME))
     parser.add_argument('-V', '--version', action='version', version="{} v{}".format(config.XCP_CLIENT, config.VERSION_STRING))
@@ -1037,7 +1036,7 @@ if __name__ == '__main__':
         totals = {}
 
         print()
-        for bunch in util.aio_run_synch(bitcoin.get_wallet()):
+        for bunch in bitcoin.get_wallet():
             address, btc_balance = bunch[:2]
             address_data = get_address(db, address=address)
             balances = address_data['balances']
@@ -1072,7 +1071,7 @@ if __name__ == '__main__':
 
     elif args.action == 'pending':
         addresses = []
-        for bunch in util.aio_run_synch(bitcoin.get_wallet()):
+        for bunch in bitcoin.get_wallet():
             addresses.append(bunch[:2][0])
         filters = [
             ('tx0_address', 'IN', addresses),
@@ -1121,7 +1120,7 @@ if __name__ == '__main__':
                 raise Exception("Blockchain backend (%s) not initialized! Aborting startup after %i tries." % (
                     config.BLOCKCHAIN_SERVICE_NAME, num_tries))
 
-        loop.run_until_complete(blocks.follow(db))
+        blocks.follow(db)
 
     else:
         parser.print_help()
