@@ -67,7 +67,7 @@ def sign_raw_transaction (unsigned_tx_hex):
 def send_raw_transaction (tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
 def get_private_key (address):
-    return rpc('dumpprivkey', [source])
+    return rpc('dumpprivkey', [address])
 def get_wallet ():
     for group in rpc('listaddressgroupings', []):
         for bunch in group:
