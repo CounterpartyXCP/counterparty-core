@@ -201,6 +201,7 @@ def compose_transaction(db, name, params,
                         allow_unconfirmed_inputs=False,
                         fee=None,
                         fee_provided=0):
+    # try:  # NOTE: For debugging, e.g. with `Invalid Params` error.
     tx_info = sys.modules['lib.{}'.format(name)].compose(db, **params)
     return bitcoin.transaction(tx_info, encoding=encoding,
                                         fee_per_kb=fee_per_kb,
@@ -211,6 +212,9 @@ def compose_transaction(db, name, params,
                                         allow_unconfirmed_inputs=allow_unconfirmed_inputs,
                                         exact_fee=fee,
                                         fee_provided=fee_provided)
+    # except:
+        # import traceback
+        # traceback.print_exc()
 
 def sign_transaction(unsigned_tx_hex, private_key_wif=None):
     return bitcoin.sign_tx(unsigned_tx_hex,

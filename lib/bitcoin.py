@@ -613,7 +613,7 @@ def get_unspent_txouts(address, normalize=False):
         with open(CURR_DIR + '/../test/listunspent.test.json', 'r') as listunspent_test_file:   # HACK
             wallet_unspent = json.load(listunspent_test_file)
             return [output for output in wallet_unspent if output['address'] == address]
-    if is_mine[address]:
+    if is_mine(address):
         wallet_unspent = list_unspent()
         return [output for output in wallet_unspent if output['address'] == address]
     else:
