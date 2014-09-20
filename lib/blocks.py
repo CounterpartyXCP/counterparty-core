@@ -936,52 +936,26 @@ def get_tx_info2 (tx, block_index):
     change, if it exists, always comes after.
     """
 
+    # TODO
     import bitcoin as bitcoinlib
     import bitcoin.rpc as rpc
+
+    # Decode transaction binary.
     if config.TESTNET:
         bitcoinlib.SelectParams('testnet')
     rpc = rpc.Proxy()
     ctx = rpc.getrawtransaction(bitcoinlib.core.lx(tx['txid']))
-    dest_scriptPubKey = ctx.vout[0].scriptPubKey
-
-    # Now lets suppose the other output encoded a data payload in the
-    # scriptPubKeys, where all PUSHDATA's were concatenated together.
-    data_payload = b''
-    for data_txout in ctx.vout[:]:
-        for op in data_txout.scriptPubKey:
-            if isinstance(op, bytes):
-                data_payload += op
-        print(data_payload)     # TODO
-
-
-
-
-
-
-
-
-
-
-
-    def get_binary (hexadecimal):
-        # Check hex validity.
-        try:
-            int(hexadecimal, 16)
-        except ValueError:
-            raise exceptions.DecodeError('invalid hexadecimal string')
-
-        return binascii.unhexlify(bytes(hexadecimal, 'utf-8'))
 
     def get_opreturn (asm):
         if len(asm) == 2 and asm[0] == 'OP_RETURN':
-            pubkeyhash_hex = asm[1]
-            return pubkeyhash_hex
+            pubkeyhash = asm[1]
+            return pubkeyhash
         raise exceptions.DecodeError('invalid OP_RETURN')
 
     def get_checksig (asm):
         if len(asm) == 5 and asm[0] == 'OP_DUP' and asm[1] == 'OP_HASH160' and asm[3] == 'OP_EQUALVERIFY' and asm[4] == 'OP_CHECKSIG':
-            pubkeyhash_hex = asm[2]
-            return pubkeyhash_hex
+            pubkeyhash = asm[2]
+            return pubkeyhash
         raise exceptions.DecodeError('invalid OP_CHECKSIG')
 
     def get_checkmultisig (asm):
@@ -994,8 +968,7 @@ def get_tx_info2 (tx, block_index):
         raise exceptions.DecodeError('invalid OP_CHECKMULTISIG')
 
     def decode_opreturn (asm):
-        pubkeyhash = get_opreturn(asm)
-        chunk = get_binary(pubkeyhash)
+        chunk = get_opreturn(asm)
         if chunk[:len(config.PREFIX)] == config.PREFIX:             # Data
             destination, data = None, chunk[len(config.PREFIX):]
         else:
@@ -1004,8 +977,7 @@ def get_tx_info2 (tx, block_index):
         return destination, data
 
     def decode_checksig (asm):
-        pubkeyhash = get_checksig(asm)
-        chunk = get_binary(pubkeyhash)
+        chunk = get_checksig(asm)
         obj1 = ARC4.new(binascii.unhexlify(bytes(tx['vin'][0]['txid'], 'utf-8')))
         key = ARC4.new(binascii.unhexlify(bytes(tx['vin'][0]['txid'], 'utf-8')))
         chunk = key.decrypt(chunk)
@@ -1024,7 +996,7 @@ def get_tx_info2 (tx, block_index):
         pubkeys, signatures_required = get_checkmultisig(asm)
         chunk = b''
         for pubkey in pubkeys[1:]:      # (No data in first pubkey.)
-            chunk += get_binary(pubkey)
+            chunk += pubkey
         if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
             # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
             chunk_length = chunk[0]
@@ -1037,17 +1009,17 @@ def get_tx_info2 (tx, block_index):
         return destination, data
 
     # Ignore coinbase transactions.
-    if 'coinbase' in tx['vin'][0]: raise exceptions.DecodeError('coinbase transaction')
+    if ctx.is_coinbase(): raise exceptions.DecodeError('coinbase transaction')
 
     # Get destinations and data outputs.
     destinations, btc_amount, fee, data = [], 0, 0, b''
-    for vout in tx['vout']:
+    for vout in ctx.vout[:]:
 
         # Fee is the input values minus output values.
-        output_value = vout['value'] * config.UNIT
+        output_value = vout.nValue
         fee -= output_value
 
-        asm = vout['scriptPubKey']['asm'].split(' ')
+        asm = [op for op in vout.scriptPubKey]
         if asm[0] == 'OP_RETURN':
             new_destination, new_data = decode_opreturn(asm)
         if asm[-1] == 'OP_CHECKSIG':
@@ -1061,7 +1033,7 @@ def get_tx_info2 (tx, block_index):
         # All destinations come before all data.
         if not data and not new_data and destinations != [config.UNSPENDABLE,]:
             destinations.append(new_destination)
-            btc_amount += round(output_value) # Floats are awful.
+            btc_amount += output_value
         else:
             if new_destination:     # Change.
                 break
@@ -1070,13 +1042,10 @@ def get_tx_info2 (tx, block_index):
 
     # Collect all (unique) source addresses.
     sources = []
-    for vin in tx['vin']:                                           # Loop through inputs.
-        # Ignore coinbase transactions.
-        if 'coinbase' in vin: raise exceptions.DecodeError('coinbase transaction')
-
-        vin_tx = bitcoin.get_raw_transaction(vin['txid'])           # Get the full transaction data for this input transaction.
-        vout = vin_tx['vout'][vin['vout']]
-        fee += vout['value'] * config.UNIT
+    for vin in ctx.vin[:]:                                           # Loop through inputs.
+        vin_ctx = rpc.getrawtransaction(bitcoinlib.core.lx(tx['txid'])) # Get the full transaction data for this input transaction.
+        vout = vin_ctx.vout[vin.prevout.n]
+        fee += vout.nValue
 
         asm = vout['scriptPubKey']['asm'].split(' ')
         if asm[-1] == 'OP_CHECKSIG':
