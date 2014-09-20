@@ -21,6 +21,7 @@ from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 import jsonrpc
 from jsonrpc import dispatcher
+import inspect
 
 from . import (config, bitcoin, exceptions, util)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish)
@@ -41,6 +42,11 @@ API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel',
 COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
                 'multisig_dust_size', 'op_return_value', 'pubkey',
                 'allow_unconfirmed_inputs', 'fee', 'fee_provided']
+
+ARGS_ALIAS = {
+    'callable': 'callable_'
+}
+
 API_MAX_LOG_SIZE = 10 * 1024 * 1024 #max log size of 20 MB before rotation (make configurable later)
 API_MAX_LOG_COUNT = 10
 
@@ -201,7 +207,17 @@ def compose_transaction(db, name, params,
                         allow_unconfirmed_inputs=False,
                         fee=None,
                         fee_provided=0):
-    tx_info = sys.modules['lib.{}'.format(name)].compose(db, **params)
+    for param in ARGS_ALIAS:
+        if param in params:
+            params[ARGS_ALIAS[param]] = params.pop(param)
+
+    compose_method = sys.modules['lib.{}'.format(name)].compose
+    compose_params = inspect.getargspec(compose_method)[0]
+    missing_params = [p for p in compose_params if p not in params and p != 'db']
+    for param in missing_params:
+        params[param] = None
+
+    tx_info = compose_method(db, **params)
     return util.aio_run_synch(bitcoin.transaction(tx_info, encoding=encoding,
                                         fee_per_kb=fee_per_kb,
                                         regular_dust_size=regular_dust_size,
