@@ -42,17 +42,18 @@ def hash160(x):
     m.update(x)
     return m.digest()
 def pubkey_to_pubkeyhash(pubkey):
-    pubkeyhash = hash160(binascii.unhexlify(bytes(pubkey, 'utf-8')))
+    pubkeyhash = hash160(pubkey)
     pubkey = base58_check_encode(binascii.hexlify(pubkeyhash).decode('utf-8'), config.ADDRESSVERSION)
     return pubkey
 def pubkeyhash_to_pubkey(pubkeyhash):
+    # TODO: convert to python-bitcoinlib.
     raw_transactions = search_raw_transactions(pubkeyhash)
     for tx in raw_transactions:
         for vin in tx['vin']:
             scriptsig = vin['scriptSig']
             asm = scriptsig['asm'].split(' ')
             pubkey = asm[1]
-            if pubkeyhash == pubkey_to_pubkeyhash(pubkey):
+            if pubkeyhash == pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
                 return pubkey
     raise exceptions.AddressError('Public key for address ‘{}’ not published in blockchain.'.format(pubkeyhash))
 def multisig_pubkeyhashes_to_pubkeys(address):

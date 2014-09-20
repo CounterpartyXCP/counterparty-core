@@ -14,6 +14,8 @@ import logging
 import collections
 from Crypto.Cipher import ARC4
 import apsw
+import bitcoin as bitcoinlib
+import bitcoin.rpc as bitcoinlib_rpc
 
 from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
@@ -936,14 +938,10 @@ def get_tx_info2 (tx, block_index):
     change, if it exists, always comes after.
     """
 
-    # TODO
-    import bitcoin as bitcoinlib
-    import bitcoin.rpc as rpc
-
     # Decode transaction binary.
     if config.TESTNET:
         bitcoinlib.SelectParams('testnet')
-    rpc = rpc.Proxy()
+    rpc = bitcoinlib_rpc.Proxy()
     ctx = rpc.getrawtransaction(bitcoinlib.core.lx(tx['txid']))
 
     def get_opreturn (asm):
@@ -960,11 +958,11 @@ def get_tx_info2 (tx, block_index):
 
     def get_checkmultisig (asm):
         # N‐of‐2
-        if len(asm) == 5 and asm[3] == '2' and asm[4] == 'OP_CHECKMULTISIG':
-            return asm[1:3], int(asm[0])
+        if len(asm) == 5 and asm[3] == 2 and asm[4] == 'OP_CHECKMULTISIG':
+            return asm[1:3], asm[0]
         # N‐of‐3
-        if len(asm) == 6 and asm[4] == '3' and asm[5] == 'OP_CHECKMULTISIG':
-            return asm[1:4], int(asm[0])
+        if len(asm) == 6 and asm[4] == 3 and asm[5] == 'OP_CHECKMULTISIG':
+            return asm[1:4], asm[0]
         raise exceptions.DecodeError('invalid OP_CHECKMULTISIG')
 
     def decode_opreturn (asm):
@@ -977,16 +975,17 @@ def get_tx_info2 (tx, block_index):
         return destination, data
 
     def decode_checksig (asm):
-        chunk = get_checksig(asm)
+        pubkeyhash = get_checksig(asm)
         obj1 = ARC4.new(binascii.unhexlify(bytes(tx['vin'][0]['txid'], 'utf-8')))
         key = ARC4.new(binascii.unhexlify(bytes(tx['vin'][0]['txid'], 'utf-8')))
-        chunk = key.decrypt(chunk)
+        chunk = key.decrypt(pubkeyhash)
         if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
             # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
             chunk_length = chunk[0]
             chunk = chunk[1:chunk_length + 1]
             destination, data = None, chunk[len(config.PREFIX):]
         else:                                                       # Destination
+            pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')   # TODO
             destination, data = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION), None
             if bytes(pubkeyhash, 'utf-8') != binascii.hexlify(bitcoin.base58_decode(destination, config.ADDRESSVERSION)): raise exceptions.DecodeError('invalid pubkeyhash')     # Check that encoding worked.
 
@@ -1010,7 +1009,12 @@ def get_tx_info2 (tx, block_index):
 
     def get_asm(scriptpubkey):
         try:
-            asm = [op for op in scriptpubkey]
+            asm = []
+            for op in scriptpubkey:
+                if type(op) == bitcoinlib.core.script.CScriptOp:
+                    asm.append(str(op))
+                else:
+                    asm.append(op)
         except bitcoinlib.core.script.CScriptTruncatedPushDataError:
             raise exceptions.DecodeError('invalid pushdata due to truncation')
         if not asm:
@@ -1052,7 +1056,7 @@ def get_tx_info2 (tx, block_index):
     # Collect all (unique) source addresses.
     sources = []
     for vin in ctx.vin[:]:                                              # Loop through inputs.
-        vin_ctx = rpc.getrawtransaction(bitcoinlib.core.lx(tx['txid'])) # Get the full transaction data for this input transaction.
+        vin_ctx = rpc.getrawtransaction(vin.prevout.hash) # Get the full transaction data for this input transaction.
         vout = vin_ctx.vout[vin.prevout.n]
         fee += vout.nValue
 
