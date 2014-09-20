@@ -1008,6 +1008,15 @@ def get_tx_info2 (tx, block_index):
 
         return destination, data
 
+    def get_asm(scriptpubkey):
+        try:
+            asm = [op for op in scriptpubkey]
+        except bitcoinlib.core.script.CScriptTruncatedPushDataError:
+            raise exceptions.DecodeError('invalid pushdata due to truncation')
+        if not asm:
+            raise exceptions.DecodeError('empty output')
+        return asm
+
     # Ignore coinbase transactions.
     if ctx.is_coinbase(): raise exceptions.DecodeError('coinbase transaction')
 
@@ -1019,7 +1028,7 @@ def get_tx_info2 (tx, block_index):
         output_value = vout.nValue
         fee -= output_value
 
-        asm = [op for op in vout.scriptPubKey]
+        asm = get_asm(vout.scriptPubKey)
         if asm[0] == 'OP_RETURN':
             new_destination, new_data = decode_opreturn(asm)
         if asm[-1] == 'OP_CHECKSIG':
@@ -1042,12 +1051,12 @@ def get_tx_info2 (tx, block_index):
 
     # Collect all (unique) source addresses.
     sources = []
-    for vin in ctx.vin[:]:                                           # Loop through inputs.
+    for vin in ctx.vin[:]:                                              # Loop through inputs.
         vin_ctx = rpc.getrawtransaction(bitcoinlib.core.lx(tx['txid'])) # Get the full transaction data for this input transaction.
         vout = vin_ctx.vout[vin.prevout.n]
         fee += vout.nValue
 
-        asm = vout['scriptPubKey']['asm'].split(' ')
+        asm = get_asm(vout.scriptPubKey)
         if asm[-1] == 'OP_CHECKSIG':
             new_source, new_data = decode_checksig(asm)
             if new_data or not new_source: raise exceptions.DecodeError('data in source')
