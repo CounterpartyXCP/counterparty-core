@@ -22,7 +22,7 @@ DEFAULT_PARAMS = {
     'burn_end': 4017708,
     'burn_quantity': int(.62 * UNIT)
 }
-DEFAULT_PARAMS['privkey'] = {ad:pr for (ad,pr) in DEFAULT_PARAMS['addresses']}
+DEFAULT_PARAMS['privkey'] = {ad: pr for (ad, pr) in DEFAULT_PARAMS['addresses']}
 ADDR = [a[0] for a in DEFAULT_PARAMS['addresses']]
 DP = DEFAULT_PARAMS
 
