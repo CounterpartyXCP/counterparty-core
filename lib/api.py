@@ -26,7 +26,6 @@ import inspect
 from . import (config, bitcoin, exceptions, util)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish)
 
-
 API_TABLES = ['balances', 'credits', 'debits', 'bets', 'bet_matches',
               'broadcasts', 'btcpays', 'burns', 'callbacks', 'cancels',
               'dividends', 'issuances', 'orders', 'order_matches', 'sends',
@@ -52,7 +51,6 @@ API_MAX_LOG_COUNT = 10
 
 current_api_status_code = None #is updated by the APIStatusPoller
 current_api_status_response_json = None #is updated by the APIStatusPoller
-
 
 # TODO: ALL queries EVERYWHERE should be done with these methods
 def db_query(db, statement, bindings=(), callback=None, **callback_args):
@@ -251,6 +249,13 @@ def do_transaction(db, name, params, private_key_wif=None, **kwargs):
     unsigned_tx = compose_transaction(db, name, params, **kwargs)
     signed_tx = sign_transaction(unsigned_tx, private_key_wif=private_key_wif)
     return broadcast_transaction(signed_tx)
+
+def init_api_access_log():
+    api_logger = logging.getLogger("tornado")
+    h = logging_handlers.RotatingFileHandler(os.path.join(config.DATA_DIR, "api.access.log"), 'a', API_MAX_LOG_SIZE, API_MAX_LOG_COUNT)
+    api_logger.setLevel(logging.INFO)
+    api_logger.addHandler(h)
+    api_logger.propagate = False
 
 class APIStatusPoller(threading.Thread):
     """Poll every few seconds for the length of time since the last version check, as well as the bitcoin status"""
@@ -596,12 +601,7 @@ class APIServer(threading.Thread):
             _set_cors_headers(response)
             return response
 
-        if not config.UNITTEST:  #skip setting up logs when for the test suite
-            api_logger = logging.getLogger("tornado")
-            h = logging_handlers.RotatingFileHandler(os.path.join(config.DATA_DIR, "api.access.log"), 'a', API_MAX_LOG_SIZE, API_MAX_LOG_COUNT)
-            api_logger.setLevel(logging.INFO)
-            api_logger.addHandler(h)
-            api_logger.propagate = False
+        init_api_access_log()
 
         http_server = HTTPServer(WSGIContainer(app), xheaders=True)
         try:

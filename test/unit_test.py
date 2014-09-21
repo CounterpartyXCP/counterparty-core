@@ -9,7 +9,7 @@ from lib import (config, util)
 import counterpartyd
 
 def setup_module():
-    counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR + '/fixtures/fixtures.unittest.db', testnet=True, testcoin=False, unittest=True, backend_rpc_ssl_verify=False)
+    counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR + '/fixtures/fixtures.unittest.db', testnet=True, testcoin=False, backend_rpc_ssl_verify=False)
     util_test.restore_database(config.DATABASE, CURR_DIR + '/fixtures/unittest_fixture.sql')
 
 def teardown_module(function):

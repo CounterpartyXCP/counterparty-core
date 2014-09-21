@@ -258,10 +258,8 @@ def message (db, block_index, command, category, bindings, tx_hash=None):
             pass
 
     bindings_string = json.dumps(collections.OrderedDict(sorted(bindings.items())))
-    if config.UNITTEST: curr_time = 0
-    else: curr_time = int(time.time())
     cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings, :timestamp)',
-                   (message_index, block_index, command, category, bindings_string, curr_time))
+                   (message_index, block_index, command, category, bindings_string, curr_time()))
 
     # Log only real transactions.
     if block_index != config.MEMPOOL_BLOCK_INDEX:
@@ -396,13 +394,14 @@ def database_check (db, blockcount):
         raise exceptions.DatabaseError('{} database is behind Bitcoind. Is the {} server running?'.format(config.XCP_NAME, config.XCP_CLIENT))
     return
 
-
 def isodt (epoch_time):
-    if config.UNITTEST:
-        #TODO: replace this ugly 'if' by a tzlocal() mock
-        return datetime.utcfromtimestamp(epoch_time).isoformat()
-    else:
-        return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
+    return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
+
+def curr_time():
+    return int(time.time())
+
+def date_passed(date):
+    return date <= time.time()
 
 def sortkeypicker(keynames):
     """http://stackoverflow.com/a/1143719"""
