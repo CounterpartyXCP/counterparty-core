@@ -125,14 +125,6 @@ def rpc (method, params):
         "id": 0,
     }
 
-    '''
-    if config.UNITTEST:
-        CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
-        CURR_DIR += '/../test/'
-        open(CURR_DIR + '/rpc.new', 'a') as f
-        f.write(payload)
-    '''
-
     response = yield from connect(config.BACKEND_RPC, payload, headers)
     if response == None:
         if config.TESTNET: network = 'testnet'
@@ -140,12 +132,6 @@ def rpc (method, params):
         raise exceptions.BitcoindRPCError('Cannot communicate with {} Core. ({} is set to run on {}, is {} Core?)'.format(config.BTC_NAME, config.XCP_CLIENT, network, config.BTC_NAME))
     elif response.status not in (200, 500):
         raise exceptions.BitcoindRPCError(str(response.status) + ' ' + response.reason)
-
-    '''
-    if config.UNITTEST:
-        print(response)
-        f.close()
-    '''
 
     # Return result, with error handling.
     response_json = yield from response.json()
@@ -166,9 +152,6 @@ def rpc (method, params):
     elif response_json['error']['code'] == -1 and response_json['message'] == 'Block number out of range.':
         time.sleep(10)
         return get_block_hash(block_index)
-
-    # elif config.UNITTEST:
-    #     print(method)
     else:
         raise exceptions.BitcoindError('{}'.format(response_json['error']))
 
@@ -429,10 +412,7 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
         # If no public key was provided, derive from private key.
         if not public_key_hex:
             # Get private key.
-            if config.UNITTEST:
-                private_key_wif = config.UNITTEST_PRIVKEY[source]
-            else:
-                private_key_wif = get_private_key(source)
+            private_key_wif = get_private_key(source)
 
             # Derive public key.
             public_key_hex = private_key_to_public_key(private_key_wif)
@@ -459,7 +439,7 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
                 raise exceptions.AddressError('Invalid Bitcoin address:', address)
 
     # Check that the source is in wallet.
-    if not config.UNITTEST and encoding in ('multisig') and not public_key:
+    if encoding in ('multisig') and not public_key:
         if not is_mine(source):
             raise exceptions.AddressError('Not one of your Bitcoin addresses:', source)
 
@@ -509,7 +489,7 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
     outputs_size = ((25 + 9) * len(destination_outputs)) + (len(data_array) * data_output_size)
 
     # Get inputs.
-    unspent = yield from get_unspent_txouts(source, normalize=True)
+    unspent = yield from get_unspent_txouts(source)
     unspent = sort_unspent_txouts(unspent, allow_unconfirmed_inputs)
     logging.debug('Sorted UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
 
@@ -605,15 +585,10 @@ def get_btc_supply(normalize=False):
             blocks_remaining = 0
     return total_supply if normalize else int(total_supply * config.UNIT)
 
-def get_unspent_txouts(address, normalize=False):
+def get_unspent_txouts(address):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
     """
-    if config.UNITTEST:
-        CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
-        with open(CURR_DIR + '/../test/listunspent.test.json', 'r') as listunspent_test_file:   # HACK
-            wallet_unspent = json.load(listunspent_test_file)
-            return [output for output in wallet_unspent if output['address'] == address]
     if is_mine[address]:
         wallet_unspent = yield from list_unspent()
         return [output for output in wallet_unspent if output['address'] == address]

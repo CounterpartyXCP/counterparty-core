@@ -20,13 +20,6 @@ os.environ['TZ'] = 'EST'
 time.tzset()
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
-# unit tests private keys
-config.UNITTEST_PRIVKEY = {
-    DP['address_1']: DP['address_1_privkey'],
-    DP['address_2']: DP['address_2_privkey'],
-    DP['address_3']: DP['address_3_privkey']
-}
-
 def dump_database(db):
     # TEMPORARY
     # .dump command bugs when aspw.Shell is used with 'db' args instead 'args'
@@ -115,7 +108,7 @@ def initialise_db(db):
 
 def run_scenario(scenario):
     counterpartyd.set_options(rpc_port=9999, database_file=':memory:',
-                              testnet=True, testcoin=False, unittest=True, backend_rpc_ssl_verify=False)
+                              testnet=True, testcoin=False, backend_rpc_ssl_verify=False)
 
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)

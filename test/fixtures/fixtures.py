@@ -7,9 +7,11 @@ DEFAULT_PARAMS = {
     'address_1': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
     'address_2': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
     'address_3': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH',
-    'address_1_privkey': 'cPdUqd5EbBWsjcG9xiL1hz8bEyGFiz4SW99maU9JgpL9TEcxUf3j',
-    'address_2_privkey': 'cQ897jnCVRrawNbw8hgmjMiRNHejwzg4KbzdMCzc91iaTif8ReqX',
-    'address_3_privkey': 'cRNnyC1h5qjv3tHkkt74Y5wowknM1BBDK5Ft2hj5SzfV3mgwPvC3',
+    'privkey': {
+        'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc': 'cPdUqd5EbBWsjcG9xiL1hz8bEyGFiz4SW99maU9JgpL9TEcxUf3j',
+        'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns': 'cQ897jnCVRrawNbw8hgmjMiRNHejwzg4KbzdMCzc91iaTif8ReqX',
+        'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH': 'cRNnyC1h5qjv3tHkkt74Y5wowknM1BBDK5Ft2hj5SzfV3mgwPvC3'
+    },
     'quantity': UNIT,
     'small': round(UNIT / 2),
     'expiration': 10,

@@ -142,7 +142,7 @@ def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
 
     problems = validate(db, source, feed_address, bet_type, deadline, wager_quantity,
                         counterwager_quantity, target_value, leverage, expiration, util.last_block(db)['block_index'])
-    if deadline <= time.time() and not config.UNITTEST:
+    if util.date_passed(deadline):
         problems.append('deadline passed')
     if problems: raise exceptions.BetError(problems)
 
