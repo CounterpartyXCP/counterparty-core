@@ -944,6 +944,26 @@ def get_tx_info2 (tx, block_index):
     rpc = bitcoinlib_rpc.Proxy()
     ctx = rpc.getrawtransaction(bitcoinlib.core.lx(tx['txid']))
 
+    # Un‐obfuscate.
+    def arc4_decrypt (cyphertext, decryption_key_hex):
+        obj1 = ARC4.new(binascii.unhexlify(bytes(decryption_key_hex, 'utf-8')))
+        key = ARC4.new(binascii.unhexlify(bytes(decryption_key_hex, 'utf-8')))
+        return key.decrypt(pubkeyhash)
+
+    def get_asm(scriptpubkey):
+        try:
+            asm = []
+            for op in scriptpubkey:
+                if type(op) == bitcoinlib.core.script.CScriptOp:
+                    asm.append(str(op))
+                else:
+                    asm.append(op)
+        except bitcoinlib.core.script.CScriptTruncatedPushDataError:
+            raise exceptions.DecodeError('invalid pushdata due to truncation')
+        if not asm:
+            raise exceptions.DecodeError('empty output')
+        return asm
+
     def get_opreturn (asm):
         if len(asm) == 2 and asm[0] == 'OP_RETURN':
             pubkeyhash = asm[1]
@@ -967,6 +987,7 @@ def get_tx_info2 (tx, block_index):
 
     def decode_opreturn (asm):
         chunk = get_opreturn(asm)
+        chunk = arc4_decrypt(chunk, tx['vin'][0]['txid'])
         if chunk[:len(config.PREFIX)] == config.PREFIX:             # Data
             destination, data = None, chunk[len(config.PREFIX):]
         else:
@@ -976,16 +997,14 @@ def get_tx_info2 (tx, block_index):
 
     def decode_checksig (asm):
         pubkeyhash = get_checksig(asm)
-        obj1 = ARC4.new(binascii.unhexlify(bytes(tx['vin'][0]['txid'], 'utf-8')))
-        key = ARC4.new(binascii.unhexlify(bytes(tx['vin'][0]['txid'], 'utf-8')))
-        chunk = key.decrypt(pubkeyhash)
+        chunk = arc4_decrypt(pubkeyhash, tx['vin'][0]['txid'])
         if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
             # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
             chunk_length = chunk[0]
             chunk = chunk[1:chunk_length + 1]
             destination, data = None, chunk[len(config.PREFIX):]
         else:                                                       # Destination
-            pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')   # TODO
+            pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
             destination, data = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION), None
             if bytes(pubkeyhash, 'utf-8') != binascii.hexlify(bitcoin.base58_decode(destination, config.ADDRESSVERSION)): raise exceptions.DecodeError('invalid pubkeyhash')     # Check that encoding worked.
 
@@ -996,6 +1015,7 @@ def get_tx_info2 (tx, block_index):
         chunk = b''
         for pubkey in pubkeys[1:]:      # (No data in first pubkey.)
             chunk += pubkey
+        chunk = arc4_decrypt(chunk, tx['vin'][0]['txid'])
         if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
             # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
             chunk_length = chunk[0]
@@ -1006,20 +1026,6 @@ def get_tx_info2 (tx, block_index):
             destination, data = '_'.join([str(signatures_required)] + sorted(pubkeyhashes) + [str(len(pubkeyhashes))]), None
 
         return destination, data
-
-    def get_asm(scriptpubkey):
-        try:
-            asm = []
-            for op in scriptpubkey:
-                if type(op) == bitcoinlib.core.script.CScriptOp:
-                    asm.append(str(op))
-                else:
-                    asm.append(op)
-        except bitcoinlib.core.script.CScriptTruncatedPushDataError:
-            raise exceptions.DecodeError('invalid pushdata due to truncation')
-        if not asm:
-            raise exceptions.DecodeError('empty output')
-        return asm
 
     # Ignore coinbase transactions.
     if ctx.is_coinbase(): raise exceptions.DecodeError('coinbase transaction')
