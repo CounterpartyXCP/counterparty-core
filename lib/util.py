@@ -323,7 +323,8 @@ def connect_to_db(flags=None):
     cursor.execute('''PRAGMA defer_foreign_keys = ON''')
 
     # So that writers don’t block readers.
-    cursor.execute('''PRAGMA journal_mode = WAL''')
+    if flags != 'SQLITE_OPEN_READONLY':
+        cursor.execute('''PRAGMA journal_mode = WAL''')
 
     # Make case sensitive the LIKE operator.
     # For insensitive queries use 'UPPER(fieldname) LIKE value.upper()''
