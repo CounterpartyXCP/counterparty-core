@@ -387,6 +387,9 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
         s += var_int(int(len(script)))                      # Script length
         s += script
 
+    # Initialise encryption.
+    obj1 = ARC4.new(binascii.unhexlify(inputs[0]['txid']))  # Arbitrary, easy‐to‐find, unique key.
+
     # Data output.
     for data_chunk in data_array:
         data_array, value = data_output # DUPE
@@ -400,44 +403,45 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
             if config.TESTNET and block_index >= 271000:    # Protocol change.
                 pad_length = (33 * 2) - 1 - len(data_chunk)
                 assert pad_length >= 0
-                data_pubkey = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
+                data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
+                data_chunk = obj1.encrypt(data_chunk)
                 # Construct script.
                 script = OP_1                                   # OP_1
                 script += op_push(len(self_public_key))         # Push bytes of source public key
                 script += self_public_key                       # Source public key
                 script += op_push(33)                           # Push bytes of data chunk (fake) public key    (1/2)
-                script += data_pubkey[:33]                      # Data chunk (fake) public key                  (1/2)
+                script += data_chunk[:33]                       # (Fake) public key                  (1/2)
                 script += op_push(33)                           # Push bytes of data chunk (fake) public key    (2/2)
-                script += data_pubkey[33:]                      # Data chunk (fake) public key                  (2/2)
+                script += data_chunk[33:]                       # (Fake) public key                  (2/2)
                 script += OP_3                                  # OP_3
                 script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
             else:
                 pad_length = 33 - 1 - len(data_chunk)
                 assert pad_length >= 0
-                data_pubkey = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
+                data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
                 # Construct script.
                 script = OP_1                                   # OP_1
                 script += op_push(len(self_public_key))         # Push bytes of source public key
                 script += self_public_key                       # Source public key
                 script += op_push(len(data_pubkey))             # Push bytes of data chunk (fake) public key
-                script += data_pubkey                           # Data chunk (fake) public key
+                script += data_chunk                            # (Fake) public key
                 script += OP_2                                  # OP_2
                 script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
         elif encoding == 'opreturn':
+            data_chunk = obj1.encrypt(data_chunk)
             script = OP_RETURN                              # OP_RETURN
             script += op_push(len(data_chunk))              # Push bytes of data chunk (NOTE: OP_SMALLDATA?)
-            script += data_chunk                            # Data chunk
+            script += data_chunk                            # Data
         elif encoding == 'pubkeyhash':
             pad_length = 20 - 1 - len(data_chunk)
             assert pad_length >= 0
-            obj1 = ARC4.new(binascii.unhexlify(inputs[0]['txid']))  # Arbitrary, easy‐to‐find, unique key.
-            pubkeyhash = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
-            pubkeyhash_encrypted = obj1.encrypt(pubkeyhash)
+            data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
+            data_chunk = obj1.encrypt(data_chunk)
             # Construct script.
             script = OP_DUP                                     # OP_DUP
             script += OP_HASH160                                # OP_HASH160
             script += op_push(20)                               # Push 0x14 bytes
-            script += pubkeyhash_encrypted                      # pubKeyHash
+            script += data_chunk                                # (Fake) pubKeyHash
             script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
             script += OP_CHECKSIG                               # OP_CHECKSIG
         else:
