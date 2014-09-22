@@ -188,6 +188,8 @@ def vector_to_args(vector, functions=[]):
 def exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db):
     if tx_name == 'bitcoin' and method == 'transaction':
         return util.aio_run_synch(tested_method(inputs[0], **inputs[1]))
+    elif tx_name == 'util' and method == 'api':
+        return tested_method(*inputs)
     else:
         return tested_method(counterpartyd_db, *inputs)
 

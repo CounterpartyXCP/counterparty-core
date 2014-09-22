@@ -298,6 +298,7 @@ class APIStatusPoller(threading.Thread):
 
 class APIServer(threading.Thread):
     def __init__(self):
+        self.is_ready = False
         threading.Thread.__init__(self)
 
     def run(self):
@@ -606,6 +607,7 @@ class APIServer(threading.Thread):
         http_server = HTTPServer(WSGIContainer(app), xheaders=True)
         try:
             http_server.listen(config.RPC_PORT, address=config.RPC_HOST)
+            self.is_ready = True
             IOLoop.instance().start()        
         except OSError:
             raise Exception("Cannot start the API subsystem. Is {} already running, or is something else listening on port {}?".format(config.XCP_CLIENT, config.RPC_PORT))
