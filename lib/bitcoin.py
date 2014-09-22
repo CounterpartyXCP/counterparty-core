@@ -387,9 +387,6 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
         s += var_int(int(len(script)))                      # Script length
         s += script
 
-    # Initialise encryption key.
-    key = ARC4.new(binascii.unhexlify(inputs[0]['txid']))  # Arbitrary, easy‐to‐find, unique key.
-
     # Data output.
     for data_chunk in data_array:
         data_array, value = data_output # DUPE
@@ -397,6 +394,9 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
 
         if config.TESTNET and block_index >= 271000:    # Protocol change.
             data_chunk = config.PREFIX + data_chunk
+
+        # Initialise encryption key (once per output).
+        key = ARC4.new(binascii.unhexlify(inputs[0]['txid']))  # Arbitrary, easy‐to‐find, unique key.
 
         if encoding == 'multisig':
             # Get data (fake) public key.
