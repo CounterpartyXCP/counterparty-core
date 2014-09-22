@@ -991,7 +991,7 @@ def get_tx_info2 (tx, block_index):
         if chunk[:len(config.PREFIX)] == config.PREFIX:             # Data
             destination, data = None, chunk[len(config.PREFIX):]
         else:
-            destination, data = None, None
+            raise exceptions.DecodeError('unrecognised OP_RETURN output')
 
         return destination, data
 
@@ -1033,7 +1033,6 @@ def get_tx_info2 (tx, block_index):
     # Get destinations and data outputs.
     destinations, btc_amount, fee, data = [], 0, 0, b''
     for vout in ctx.vout[:]:
-
         # Fee is the input values minus output values.
         output_value = vout.nValue
         fee -= output_value
@@ -1041,13 +1040,14 @@ def get_tx_info2 (tx, block_index):
         asm = get_asm(vout.scriptPubKey)
         if asm[0] == 'OP_RETURN':
             new_destination, new_data = decode_opreturn(asm)
-        if asm[-1] == 'OP_CHECKSIG':
+        elif asm[-1] == 'OP_CHECKSIG':
             new_destination, new_data = decode_checksig(asm)
         elif asm[-1] == 'OP_CHECKMULTISIG':
             new_destination, new_data = decode_checkmultisig(asm)
         else:
             raise exceptions.DecodeError('unrecognised output type')
         assert not (new_destination and new_data)
+        assert new_destination or new_data
 
         # All destinations come before all data.
         if not data and not new_data and destinations != [config.UNSPENDABLE,]:
@@ -1339,7 +1339,7 @@ def follow (db):
                                 list_tx(db, config.MEMPOOL_BLOCK_HASH, config.MEMPOOL_BLOCK_INDEX, curr_time, tx_hash, mempool_tx_index)
                                 mempool_tx_index += 1
                             except exceptions.BitcoindError:
-                                assert False
+                                raise exceptions.MempoolError
 
                             # Parse transaction.
                             cursor.execute('''SELECT * FROM transactions \
@@ -1359,7 +1359,7 @@ def follow (db):
                                 # Counterparty transaction.
                                 not_supported[tx_hash] = ''
                                 not_supported_sorted.append((block_index, tx_hash))
-                                assert False
+                                raise exceptions.MempoolError
 
                             # Save transaction and side‐effects in memory.
                             cursor.execute('''SELECT * FROM messages WHERE block_index = ?''', (config.MEMPOOL_BLOCK_INDEX,))
@@ -1367,8 +1367,8 @@ def follow (db):
                                 mempool.append((tx_hash, message))
 
                             # Rollback.
-                            assert False
-                    except AssertionError:
+                            raise exceptions.MempoolError
+                    except exceptions.MempoolError:
                         pass
 
             # Re‐write mempool messages to database.

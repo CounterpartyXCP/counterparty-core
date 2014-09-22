@@ -429,9 +429,9 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
                 script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
         elif encoding == 'opreturn':
             data_chunk = obj1.encrypt(data_chunk)
-            script = OP_RETURN                              # OP_RETURN
-            script += op_push(len(data_chunk))              # Push bytes of data chunk (NOTE: OP_SMALLDATA?)
-            script += data_chunk                            # Data
+            script = OP_RETURN                                  # OP_RETURN
+            script += op_push(len(data_chunk))                  # Push bytes of data chunk (NOTE: OP_SMALLDATA?)
+            script += data_chunk                                # Data
         elif encoding == 'pubkeyhash':
             pad_length = 20 - 1 - len(data_chunk)
             assert pad_length >= 0
