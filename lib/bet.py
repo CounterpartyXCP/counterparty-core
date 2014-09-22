@@ -157,12 +157,13 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
-        assert len(message) == LENGTH
+        if len(message) != LENGTH:
+            raise exceptions.UnpackError
         (bet_type, deadline, wager_quantity,
          counterwager_quantity, target_value, leverage,
          expiration) = struct.unpack(FORMAT, message)
         status = 'open'
-    except (AssertionError, struct.error) as e:
+    except (exceptions.UnpackError, struct.error):
         (bet_type, deadline, wager_quantity,
          counterwager_quantity, target_value, leverage,
          expiration, fee_fraction_int) = 0, 0, 0, 0, 0, 0, 0, 0
@@ -171,8 +172,7 @@ def parse (db, tx, message):
     odds, fee_fraction = 0, 0
     feed_address = tx['destination']
     if status == 'open':
-        try: odds = util.price(wager_quantity, counterwager_quantity, tx['block_index'])
-        except Exception as e: pass
+        odds = util.price(wager_quantity, counterwager_quantity, tx['block_index'])
 
         fee_fraction = get_fee_fraction(db, feed_address)
 

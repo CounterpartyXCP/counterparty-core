@@ -454,7 +454,7 @@ def transaction (tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
         if address:
             try:
                 base58_decode(address, config.ADDRESSVERSION)
-            except Exception:   # TODO
+            except exceptions.AddressError:
                 raise exceptions.AddressError('Invalid Bitcoin address:', address)
 
     # Check that the source is in wallet.

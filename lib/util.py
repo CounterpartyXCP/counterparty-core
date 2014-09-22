@@ -47,7 +47,7 @@ def api (method, params):
         try:
             return response_json['result']
         except KeyError:
-            raise Exception(response_json)
+            raise NoResultError(response_json)
     else:
         raise exceptions.RPCError('{}'.format(response_json['error']))
 
@@ -124,7 +124,7 @@ def log (db, command, category, bindings):
                     callability = 'uncallable'
                 try:
                     quantity = devise(db, bindings['quantity'], None, dest='output', divisible=bindings['divisible'])
-                except:
+                except Exception as e:
                     quantity = '?'
                 logging.info('Issuance: {} created {} of asset {}, which is {} and {}, with description ‘{}’ ({}) [{}]'.format(bindings['issuer'], quantity, bindings['asset'], divisibility, callability, bindings['description'], bindings['tx_hash'], bindings['status']))
 
@@ -306,7 +306,7 @@ def connect_to_db(flags=None):
     elif flags == 'SQLITE_OPEN_READONLY':
         db = apsw.Connection(config.DATABASE, flags=0x00000001)
     else:
-        raise Exception # TODO
+        raise exceptions.DatabaseError
 
     cursor = db.cursor()
 
@@ -338,7 +338,7 @@ def connect_to_db(flags=None):
                 raise exceptions.DatabaseError('Integrity check failed.')
             integral = True
             break
-        except Exception:
+        except exceptions.DatabaseIntegrityError:
             time.sleep(1)
             continue
     if not integral:
@@ -548,7 +548,7 @@ def credit (db, block_index, address, asset, quantity, action=None, event=None):
         sql='insert into balances values(:address, :asset, :quantity)'
         credit_cursor.execute(sql, bindings)
     elif len(balances) > 1:
-        raise Exception
+        assert False
     else:
         old_balance = balances[0]['quantity']
         assert type(old_balance) == int
@@ -718,10 +718,10 @@ def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
     try:
         r = requests.get(url, timeout=fetch_timeout)
     except Exception as e:
-        raise Exception("Got get_url request error: %s" % e)
+        raise GetURLError("Got get_url request error: %s" % e)
     else:
         if r.status_code != 200 and abort_on_error:
-            raise Exception("Bad status code returned: '%s'. result body: '%s'." % (r.status_code, r.text))
+            raise GetURLError("Bad status code returned: '%s'. result body: '%s'." % (r.status_code, r.text))
         result = json.loads(r.text) if is_json else r.text
     return result
 

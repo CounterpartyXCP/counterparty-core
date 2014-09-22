@@ -157,15 +157,17 @@ def parse (db, tx, message):
             except UnicodeDecodeError:
                 description = ''
         else:
+            if len(message) != LENGTH_1:
+                raise exceptions.UnpackError
             asset_id, quantity, divisible = struct.unpack(FORMAT_1, message)
             callable_, call_date, call_price, description = False, 0, 0.0, ''
         try:
             asset = util.asset_name(asset_id)
-        except:
+        except exceptions.AssetNameError:
             asset = None
             status = 'invalid: bad asset name'
         status = 'valid'
-    except (AssertionError, struct.error) as e:
+    except exceptions.UnpackError as e:
         asset, quantity, divisible, callable_, call_date, call_price, description = None, None, None, None, None, None, None
         status = 'invalid: could not unpack'
 

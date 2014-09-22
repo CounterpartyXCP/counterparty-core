@@ -60,11 +60,12 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
-        assert len(message) == LENGTH
+        if len(message) != LENGTH:
+            raise exceptions.UnpackError
         offer_hash_bytes = struct.unpack(FORMAT, message)[0]
         offer_hash = binascii.hexlify(offer_hash_bytes).decode('utf-8')
         status = 'valid'
-    except (AssertionError, struct.error) as e:
+    except (exceptions.UnpackError, struct.error) as e:
         offer_hash = None
         status = 'invalid: could not unpack'
 

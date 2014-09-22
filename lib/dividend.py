@@ -112,8 +112,8 @@ def parse (db, tx, message):
             dividend_asset = config.XCP
             status = 'valid'
         else:
-            assert False
-    except (AssertionError, struct.error) as e:
+            raise exceptions.UnpackError
+    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
         dividend_asset, quantity_per_unit, asset = None, None, None
         status = 'invalid: could not unpack'
 

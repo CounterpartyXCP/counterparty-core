@@ -258,19 +258,19 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
-        assert len(message) == LENGTH
+        if len(message) != LENGTH:
+            raise exceptions.UnpackError
         give_id, give_quantity, get_id, get_quantity, expiration, fee_required = struct.unpack(FORMAT, message)
         give_asset = util.asset_name(give_id)
         get_asset = util.asset_name(get_id)
         status = 'open'
-    except (AssertionError, struct.error) as e:
+    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
         give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required = 0, 0, 0, 0, 0, 0
         status = 'invalid: could not unpack'
 
     price = 0
     if status == 'open':
-        try: price = util.price(get_quantity, give_quantity, tx['block_index'])
-        except Exception as e: pass
+        price = util.price(get_quantity, give_quantity, tx['block_index'])
 
         # Overorder
         order_parse_cursor.execute('''SELECT * FROM balances \

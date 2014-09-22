@@ -1122,11 +1122,12 @@ if __name__ == '__main__':
                 for i in range(1, num_tries + 1):
                     try:
                         blockchain.check()
-                    except:
+                    except: # TODO
                         logging.warn("Blockchain backend (%s) not yet initialized. Waiting %i seconds and trying again (try %i of %i)..." % (
                             config.BLOCKCHAIN_SERVICE_NAME, time_wait, i, num_tries))
                         time.sleep(time_wait)
-                    else: break
+                    else:
+                        break
                 else:
                     raise Exception("Blockchain backend (%s) not initialized! Aborting startup after %i tries." % (
                         config.BLOCKCHAIN_SERVICE_NAME, num_tries))

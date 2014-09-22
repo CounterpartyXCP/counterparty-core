@@ -48,10 +48,12 @@ def parse_tx (db, tx):
         burn.parse(db, tx)
         return
 
-    try:
-        message_type_id = struct.unpack(config.TXTYPE_FORMAT, tx['data'][:4])[0]
-    except:
-        # Mark transaction as of unsupported type.
+    if len(tx['data']) > 4:
+        try:
+            message_type_id = struct.unpack(config.TXTYPE_FORMAT, tx['data'][:4])[0]
+        except struct.error:    # Deterministically raised.
+            message_type_id = None
+    else:
         message_type_id = None
 
     # Protocol change.

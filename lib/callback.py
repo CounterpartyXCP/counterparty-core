@@ -112,11 +112,12 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
-        assert len(message) == LENGTH
+        if len(message) != LENGTH:
+            raise exceptions.UnpackError
         fraction, asset_id = struct.unpack(FORMAT, message)
         asset = util.asset_name(asset_id)
         status = 'valid'
-    except (AssertionError, struct.error) as e:
+    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
         fraction, asset = None, None
         status = 'invalid: could not unpack'
 
