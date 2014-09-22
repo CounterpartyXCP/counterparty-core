@@ -270,7 +270,10 @@ def parse (db, tx, message):
 
     price = 0
     if status == 'open':
-        price = util.price(get_quantity, give_quantity, tx['block_index'])
+        try:
+            price = util.price(get_quantity, give_quantity, tx['block_index'])
+        except ZeroDivisionError:
+            price = 0
 
         # Overorder
         order_parse_cursor.execute('''SELECT * FROM balances \

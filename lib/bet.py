@@ -172,7 +172,10 @@ def parse (db, tx, message):
     odds, fee_fraction = 0, 0
     feed_address = tx['destination']
     if status == 'open':
-        odds = util.price(wager_quantity, counterwager_quantity, tx['block_index'])
+        try:
+            odds = util.price(wager_quantity, counterwager_quantity, tx['block_index'])
+        except ZeroDivisionError:
+            odds = 0
 
         fee_fraction = get_fee_fraction(db, feed_address)
 
