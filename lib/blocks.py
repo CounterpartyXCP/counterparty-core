@@ -971,7 +971,6 @@ def reparse (db, block_index=None, quiet=False):
     """Reparse all transactions (atomically). If block_index is set, rollback
     to the end of that block.
     """
-    # TODO: This is not thread-safe!
     logging.warning('Status: Reparsing all transactions.')
     cursor = db.cursor()
 
@@ -1041,7 +1040,6 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     return
 
 def follow (db):
-    # TODO: This is not thread-safe!
     cursor = db.cursor()
 
     # Initialise.

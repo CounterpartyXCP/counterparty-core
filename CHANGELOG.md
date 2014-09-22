@@ -1,4 +1,7 @@
 ## Client Versions ##
+* v9.44.0 (2014-09-22)
+	* server action requires `server` positional argument
+	* lockfile
 * v9.43.0 (2014-09-14)
 	* generate movements hash for each block (start at block: 322000)
 * v9.42.0 (2014-09-04)
