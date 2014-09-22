@@ -1,7 +1,12 @@
 #! /usr/bin/python3
 
+import json
+from asyncio import coroutine
+from datetime import datetime
+
 import pytest, util_test
-from fixtures.fixtures import UNITTEST_VECTOR, INTEGRATION_SCENARIOS
+from fixtures.fixtures import UNITTEST_VECTOR, INTEGRATION_SCENARIOS, DEFAULT_PARAMS
+from lib import config
 
 def pytest_generate_tests(metafunc):
     if metafunc.function.__name__ == 'test_vector':
@@ -18,3 +23,42 @@ def pytest_addoption(parser):
     parser.addoption("--function", action="append", default=[], help="list of functions to test")
     parser.addoption("--scenario", action="append", default=[], help="list of scenarios to test")
     parser.addoption("--gentxhex", action='store_true', default=False, help="generate and print unsigned hex for *.compose() tests")
+
+
+@pytest.fixture(autouse=True)
+def init_mock_functions(monkeypatch):
+
+    @coroutine
+    def get_unspent_txouts(address):
+        with open(util_test.CURR_DIR + '/fixtures/listunspent.test.json', 'r') as listunspent_test_file:
+            wallet_unspent = json.load(listunspent_test_file)
+            unspent_txouts = [output for output in wallet_unspent if output['address'] == address]
+            return unspent_txouts
+
+    def get_private_key(source):
+        return DEFAULT_PARAMS['privkey'][source]
+
+    def is_mine(address):
+        return address in DEFAULT_PARAMS['privkey']
+
+    def isodt(epoch_time):
+        return datetime.utcfromtimestamp(epoch_time).isoformat()
+
+    def curr_time():
+        return 0
+
+    def date_passed(date):
+        return False
+
+    def init_api_access_log():
+        pass
+
+    monkeypatch.setattr('lib.bitcoin.get_unspent_txouts', get_unspent_txouts)
+    monkeypatch.setattr('lib.bitcoin.get_private_key', get_private_key)
+    monkeypatch.setattr('lib.bitcoin.is_mine', is_mine)
+    monkeypatch.setattr('lib.util.isodt', isodt)
+    monkeypatch.setattr('lib.util.curr_time', curr_time)
+    monkeypatch.setattr('lib.util.date_passed', date_passed)
+    monkeypatch.setattr('lib.api.init_api_access_log', init_api_access_log)
+    if hasattr(config, 'PREFIX'):
+        monkeypatch.setattr('lib.config.PREFIX', b'TESTXXXX')

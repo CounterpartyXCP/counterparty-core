@@ -34,13 +34,7 @@ import counterpartyd
 # config.BLOCK_FIRST = 0
 # config.BURN_START = 0
 # config.BURN_END = 9999999
-counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/counterpartyd.unittest.db', testnet=True, testcoin=False, unittest=True, backend_rpc_ssl_verify=False)
-
-# unit tests private keys
-config.UNITTEST_PRIVKEY = {
-    'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc': 'cPdUqd5EbBWsjcG9xiL1hz8bEyGFiz4SW99maU9JgpL9TEcxUf3j',
-    'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns': 'cQ897jnCVRrawNbw8hgmjMiRNHejwzg4KbzdMCzc91iaTif8ReqX'
-}
+counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/counterpartyd.unittest.db', testnet=True, testcoin=False, backend_rpc_ssl_verify=False)
 
 # Logs.
 try: os.remove(CURR_DIR + '/log.new')

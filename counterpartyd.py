@@ -55,7 +55,6 @@ def get_address (db, address):
     address_dict['rps_match_expirations'] = util.api('get_rps_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
     return address_dict
 
-
 def format_order (order):
     give_quantity = util.devise(db, D(order['give_quantity']), order['give_asset'], 'output')
     get_quantity = util.devise(db, D(order['get_quantity']), order['get_asset'], 'output')
@@ -193,7 +192,6 @@ def cli(method, params, unsigned):
         print('Transaction (signed):', signed_tx_hex)
         print('Hash of transaction (broadcasted):', bitcoin.broadcast_tx(signed_tx_hex))
 
-
 def set_options (data_dir=None, backend_rpc_connect=None,
                  backend_rpc_port=None, backend_rpc_user=None, backend_rpc_password=None,
                  backend_rpc_ssl=False, backend_rpc_ssl_verify=True,
@@ -201,12 +199,8 @@ def set_options (data_dir=None, backend_rpc_connect=None,
                  rpc_host=None, rpc_port=None, rpc_user=None,
                  rpc_password=None, rpc_allow_cors=None, log_file=None,
                  pid_file=None, config_file=None, database_file=None,
-                 testnet=False, testcoin=False, unittest=False, carefulness=0,
+                 testnet=False, testcoin=False, carefulness=0,
                  force=False, broadcast_tx_mainnet=None):
-
-    # Unittests always run on testnet.
-    if unittest and not testnet:
-        raise Exception # TODO
 
     if force:
         config.FORCE = force
@@ -245,14 +239,6 @@ def set_options (data_dir=None, backend_rpc_connect=None,
         config.TESTCOIN = configfile['Default'].getboolean('testcoin')
     else:
         config.TESTCOIN = False
-
-    # unittest
-    if unittest:
-        config.UNITTEST = unittest
-    elif has_config and 'unittest' in configfile['Default']:
-        config.UNITTEST = configfile['Default'].getboolean('unittest')
-    else:
-        config.UNITTEST = False
 
     # carefulness (check conservation of assets)
     if carefulness:
@@ -437,14 +423,11 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     else:
         config.PID = os.path.join(config.DATA_DIR, '{}.pid'.format(config.XCP_CLIENT))
 
-    # Encoding prefix
-    if not unittest:
-        if config.TESTCOIN:
-            config.PREFIX = b'XX'                   # 2 bytes (possibly accidentally created)
-        else:
-            config.PREFIX = b'CNTRPRTY'             # 8 bytes
+    # Encoding
+    if config.TESTCOIN:
+        config.PREFIX = b'XX'                   # 2 bytes (possibly accidentally created)
     else:
-        config.PREFIX = b'TESTXXXX'                 # 8 bytes
+        config.PREFIX = b'CNTRPRTY'             # 8 bytes
 
     # Database
     if database_file:
@@ -712,7 +695,7 @@ if __name__ == '__main__':
                 rpc_password=args.rpc_password, rpc_allow_cors=args.rpc_allow_cors, 
                 log_file=args.log_file, pid_file=args.pid_file, 
                 config_file=args.config_file, database_file=args.database_file,
-                testnet=args.testnet, testcoin=args.testcoin, unittest=False,
+                testnet=args.testnet, testcoin=args.testcoin,
                 carefulness=args.carefulness, force=args.force)
 
     #Create/update pid file
