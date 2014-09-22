@@ -387,8 +387,8 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
         s += var_int(int(len(script)))                      # Script length
         s += script
 
-    # Initialise encryption.
-    obj1 = ARC4.new(binascii.unhexlify(inputs[0]['txid']))  # Arbitrary, easy‐to‐find, unique key.
+    # Initialise encryption key.
+    key = ARC4.new(binascii.unhexlify(inputs[0]['txid']))  # Arbitrary, easy‐to‐find, unique key.
 
     # Data output.
     for data_chunk in data_array:
@@ -404,7 +404,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
                 pad_length = (33 * 2) - 1 - len(data_chunk)
                 assert pad_length >= 0
                 data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
-                data_chunk = obj1.encrypt(data_chunk)
+                data_chunk = key.encrypt(data_chunk)
                 # Construct script.
                 script = OP_1                                   # OP_1
                 script += op_push(len(self_public_key))         # Push bytes of source public key
@@ -428,7 +428,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
                 script += OP_2                                  # OP_2
                 script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
         elif encoding == 'opreturn':
-            data_chunk = obj1.encrypt(data_chunk)
+            data_chunk = key.encrypt(data_chunk)
             script = OP_RETURN                                  # OP_RETURN
             script += op_push(len(data_chunk))                  # Push bytes of data chunk (NOTE: OP_SMALLDATA?)
             script += data_chunk                                # Data
@@ -436,7 +436,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
             pad_length = 20 - 1 - len(data_chunk)
             assert pad_length >= 0
             data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
-            data_chunk = obj1.encrypt(data_chunk)
+            data_chunk = key.encrypt(data_chunk)
             # Construct script.
             script = OP_DUP                                     # OP_DUP
             script += OP_HASH160                                # OP_HASH160

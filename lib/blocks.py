@@ -944,12 +944,6 @@ def get_tx_info2 (tx, block_index):
     rpc = bitcoinlib_rpc.Proxy()
     ctx = rpc.getrawtransaction(bitcoinlib.core.lx(tx['txid']))
 
-    # Un‐obfuscate.
-    def arc4_decrypt (cyphertext, decryption_key_hex):
-        obj1 = ARC4.new(binascii.unhexlify(bytes(decryption_key_hex, 'utf-8')))
-        key = ARC4.new(binascii.unhexlify(bytes(decryption_key_hex, 'utf-8')))
-        return key.decrypt(cyphertext)
-
     def get_asm(scriptpubkey):
         try:
             asm = []
@@ -987,7 +981,7 @@ def get_tx_info2 (tx, block_index):
 
     def decode_opreturn (asm):
         chunk = get_opreturn(asm)
-        chunk = arc4_decrypt(chunk, tx['vin'][0]['txid'])
+        chunk = key.decrypt(chunk)
         if chunk[:len(config.PREFIX)] == config.PREFIX:             # Data
             destination, data = None, chunk[len(config.PREFIX):]
         else:
@@ -997,7 +991,7 @@ def get_tx_info2 (tx, block_index):
 
     def decode_checksig (asm):
         pubkeyhash = get_checksig(asm)
-        chunk = arc4_decrypt(pubkeyhash, tx['vin'][0]['txid'])
+        chunk = key.decrypt(pubkeyhash)
         if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
             # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
             chunk_length = chunk[0]
@@ -1015,7 +1009,7 @@ def get_tx_info2 (tx, block_index):
         chunk = b''
         for pubkey in pubkeys[1:]:      # (No data in first pubkey.)
             chunk += pubkey
-        chunk = arc4_decrypt(chunk, tx['vin'][0]['txid'])
+        chunk = key.decrypt(chunk)
         if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
             # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
             chunk_length = chunk[0]
@@ -1029,6 +1023,9 @@ def get_tx_info2 (tx, block_index):
 
     # Ignore coinbase transactions.
     if ctx.is_coinbase(): raise exceptions.DecodeError('coinbase transaction')
+
+    # Initalise decryption key.
+    key = ARC4.new(ctx.vin[0].prevout.hash[::-1])
 
     # Get destinations and data outputs.
     destinations, btc_amount, fee, data = [], 0, 0, b''
