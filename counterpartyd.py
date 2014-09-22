@@ -736,7 +736,7 @@ if __name__ == '__main__':
     if config.FORCE:
         lock = threading.RLock()                                        # This won’t lock!
     else:
-        lock = LockFile(os.path.join(config.DATA_DIR, 'counterpartyd')) # This will!
+        lock = LockFile(config.DATABASE) # This will!
 
     # Database
     logging.info('Status: Connecting to database.')

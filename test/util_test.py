@@ -108,7 +108,7 @@ def initialise_db(db):
 
 def run_scenario(scenario):
     counterpartyd.set_options(rpc_port=9999, database_file=':memory:',
-                              testnet=True, testcoin=False, backend_rpc_ssl_verify=False)
+                              testnet=True, testcoin=False)
 
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)

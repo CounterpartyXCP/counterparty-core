@@ -217,7 +217,7 @@ def compose_transaction(db, name, params,
 
     # try:  # NOTE: For debugging, e.g. with `Invalid Params` error.
     tx_info = compose_method(db, **params)
-    return util.aio_run_synch(bitcoin.transaction(tx_info, encoding=encoding,
+    return bitcoin.transaction(tx_info, encoding=encoding,
                                         fee_per_kb=fee_per_kb,
                                         regular_dust_size=regular_dust_size,
                                         multisig_dust_size=multisig_dust_size,

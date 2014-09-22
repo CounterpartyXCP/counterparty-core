@@ -1,7 +1,6 @@
 #! /usr/bin/python3
 
 import json
-from asyncio import coroutine
 from datetime import datetime
 
 import pytest, util_test
@@ -28,7 +27,6 @@ def pytest_addoption(parser):
 @pytest.fixture(autouse=True)
 def init_mock_functions(monkeypatch):
 
-    @coroutine
     def get_unspent_txouts(address):
         with open(util_test.CURR_DIR + '/fixtures/listunspent.test.json', 'r') as listunspent_test_file:
             wallet_unspent = json.load(listunspent_test_file)
