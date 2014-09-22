@@ -15,7 +15,11 @@ def setup_module():
     api_server = api.APIServer()
     api_server.daemon = True
     api_server.start()
+    attempt = 0
     while not api_server.is_ready:
+        attempt += 1
+        if attempt>5000:
+            raise Exception("Timeout: RPC server not ready after 5s")
         time.sleep(0.001) # wait until server is ready.
 
 def teardown_module(function):
