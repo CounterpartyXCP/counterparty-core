@@ -948,7 +948,7 @@ def get_tx_info2 (tx, block_index):
     def arc4_decrypt (cyphertext, decryption_key_hex):
         obj1 = ARC4.new(binascii.unhexlify(bytes(decryption_key_hex, 'utf-8')))
         key = ARC4.new(binascii.unhexlify(bytes(decryption_key_hex, 'utf-8')))
-        return key.decrypt(pubkeyhash)
+        return key.decrypt(cyphertext)
 
     def get_asm(scriptpubkey):
         try:
