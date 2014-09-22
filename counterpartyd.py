@@ -676,9 +676,11 @@ if __name__ == '__main__':
     parser_pending= subparsers.add_parser('pending', help='list pending order matches awaiting {}payment from you'.format(config.BTC))
 
     parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database')
+    parser_reparse.add_argument('--force', action='store_true', help='skip backend check, version check, lockfile check')
 
     parser_rollback = subparsers.add_parser('rollback', help='rollback database')
     parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
+    parser_rollback.add_argument('--force', action='store_true', help='skip backend check, version check, lockfile check')
 
     parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the {} market'.format(config.XCP_NAME) )
     parser_market.add_argument('--give-asset', help='only show orders offering to sell GIVE_ASSET')
@@ -691,6 +693,10 @@ if __name__ == '__main__':
     args.regular_dust_size = int(args.regular_dust_size * config.UNIT)
     args.multisig_dust_size = int(args.multisig_dust_size * config.UNIT)
     args.op_return_value= int(args.op_return_value * config.UNIT)
+
+    # Hack
+    try: args.force
+    except NameError: args.force = None
 
     # Configuration
     set_options(data_dir=args.data_dir,
