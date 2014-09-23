@@ -1005,7 +1005,6 @@ def get_tx_info2 (tx, block_index):
         else:                                                       # Destination
             pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
             destination, data = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION), None
-            if bytes(pubkeyhash, 'utf-8') != binascii.hexlify(bitcoin.base58_decode(destination, config.ADDRESSVERSION)): raise exceptions.DecodeError('invalid pubkeyhash')     # Check that encoding worked.
 
         return destination, data
 

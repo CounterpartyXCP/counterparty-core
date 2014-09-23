@@ -235,10 +235,11 @@ def base58_encode(binary):
         n, r = divmod (n, 58)
         res.append(b58_digits[r])
     res = ''.join(res[::-1])
+
     return res
 
-def base58_check_encode(b, version):
-    b = binascii.unhexlify(bytes(b, 'utf-8'))
+def base58_check_encode(original, version):
+    b = binascii.unhexlify(bytes(original, 'utf-8'))
     d = version + b
 
     binary = d + dhash(d)[:4]
@@ -250,7 +251,13 @@ def base58_check_encode(b, version):
     for c in d:
         if c == czero: pad += 1
         else: break
-    return b58_digits[0] * pad + res
+
+    address = b58_digits[0] * pad + res
+
+    if bytes(original, 'utf-8') != binascii.hexlify(base58_decode(address, version)):
+        raise exceptions.AddressError('encoded address does not decode properly')
+
+    return address
 
 # TODO: This should be called base58_check_decode.
 def base58_decode (s, version):
