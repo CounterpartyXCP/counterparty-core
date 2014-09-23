@@ -126,7 +126,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, calla
     if problems: raise exceptions.IssuanceError(problems)
 
     asset_id = util.asset_id(asset)
-    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
+    data = struct.pack(config.TXTYPE_FORMAT, ID)
     if len(description) <= 42:
         curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
     else:

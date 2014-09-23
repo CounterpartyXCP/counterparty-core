@@ -71,11 +71,11 @@ def compose (db, source, timestamp, value, fee_fraction, text):
     problems = validate(db, source, timestamp, value, fee_fraction_int, text, util.last_block(db)['block_index'])
     if problems: raise exceptions.BroadcastError(problems)
 
+    data = struct.pack(config.TXTYPE_FORMAT, ID)
     if len(text) <= 52:
         curr_format = FORMAT + '{}p'.format(len(text) + 1)
     else:
         curr_format = FORMAT + '{}s'.format(len(text))
-    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(curr_format, timestamp, value, fee_fraction_int,
                         text.encode('utf-8'))
     return (source, [], data)

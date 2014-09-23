@@ -17,7 +17,11 @@ class VersionUpdateRequiredError (Exception):
 
 class TransactionError(Exception):
     pass
+class DecodeError(Exception):
+    pass
 class InputError(Exception):
+    pass
+class MempoolError (TransactionError):
     pass
 
 class RPCError (Exception):

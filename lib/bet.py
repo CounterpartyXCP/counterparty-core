@@ -146,7 +146,7 @@ def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
         problems.append('deadline passed')
     if problems: raise exceptions.BetError(problems)
 
-    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
+    data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, bet_type, deadline,
                         wager_quantity, counterwager_quantity, target_value,
                         leverage, expiration)

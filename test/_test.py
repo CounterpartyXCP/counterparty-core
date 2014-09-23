@@ -635,7 +635,7 @@ def test_output():
 def test_log():
     compare('log')
 
-def test_base58_decode():
+def test_base58_check_decode():
     """
     mainnet addresses here
 
@@ -643,7 +643,7 @@ def test_base58_decode():
     <http://www.bitcoinsecurity.org/wp-content/uploads/2012/07/tx_binary_map.png>.
     """
     address = '16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM'
-    pubkeyhash = bitcoin.base58_decode(address, b'\x00')
+    pubkeyhash = bitcoin.base58_check_decode(address, b'\x00')
     assert binascii.hexlify(pubkeyhash).decode('utf-8') == '010966776006953D5567439E5E39F86A0D273BEE'.lower()
     assert len(pubkeyhash) == 20
 
