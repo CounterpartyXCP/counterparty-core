@@ -1173,7 +1173,7 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     logging.debug('Status: examining transaction {}.'.format(tx_hash))
 
     try:
-        if (config.TESTNET and block_index >= 282000):  # Protocol change.
+        if (config.TESTNET and block_index >= 281000):  # Protocol change.
             tx_info = get_tx_info2(tx, block_index)
         else:
             tx_info = get_tx_info(tx, block_index)
