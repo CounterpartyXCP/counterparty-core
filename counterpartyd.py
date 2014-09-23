@@ -681,7 +681,7 @@ if __name__ == '__main__':
 
     # Hack
     try: args.force
-    except NameError: args.force = None
+    except (NameError, AttributeError): args.force = None
 
     # Configuration
     set_options(data_dir=args.data_dir,
