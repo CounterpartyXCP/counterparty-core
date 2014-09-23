@@ -275,7 +275,8 @@ def set_options (data_dir=None, backend_rpc_connect=None,
             config.BACKEND_RPC_PORT = config.DEFAULT_BACKEND_RPC_PORT
     try:
         config.BACKEND_RPC_PORT = int(config.BACKEND_RPC_PORT)
-        assert int(config.BACKEND_RPC_PORT) > 1 and int(config.BACKEND_RPC_PORT) < 65535
+        if not (int(config.BACKEND_RPC_PORT) > 1 and int(config.BACKEND_RPC_PORT) < 65535):
+            raise exceptions.ConfigurationError('invalid backend API port number') 
     except:
         raise Exception("Please specific a valid port number backend-rpc-port configuration parameter")
 
@@ -369,7 +370,8 @@ def set_options (data_dir=None, backend_rpc_connect=None,
                 config.RPC_PORT = config.DEFAULT_RPC_PORT
     try:
         config.RPC_PORT = int(config.RPC_PORT)
-        assert int(config.RPC_PORT) > 1 and int(config.RPC_PORT) < 65535
+        if not (int(config.BACKEND_RPC_PORT) > 1 and int(config.BACKEND_RPC_PORT) < 65535):
+            raise exceptions.ConfigurationError('invalid counterpartyd API port number') 
     except:
         raise Exception("Please specific a valid port number rpc-port configuration parameter")
 
