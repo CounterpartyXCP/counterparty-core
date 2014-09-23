@@ -221,7 +221,7 @@ def validate_address(address):
 
     for address in addresses:
         try:
-            base58_decode(address, config.ADDRESSVERSION)
+            base58_check_decode(address, config.ADDRESSVERSION)
         except Exception:   # TODO
             raise exceptions.AddressError('Invalid address:', addresses)
 
@@ -254,13 +254,12 @@ def base58_check_encode(original, version):
 
     address = b58_digits[0] * pad + res
 
-    if bytes(original, 'utf-8') != binascii.hexlify(base58_decode(address, version)):
+    if bytes(original, 'utf-8') != binascii.hexlify(base58_check_decode(address, version)):
         raise exceptions.AddressError('encoded address does not decode properly')
 
     return address
 
-# TODO: This should be called base58_check_decode.
-def base58_decode (s, version):
+def base58_check_decode (s, version):
     # Convert the string to an integer
     n = 0
     for c in s:
@@ -383,7 +382,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
 
         else:
             # Construct script.
-            pubkeyhash = base58_decode(addresses[0], config.ADDRESSVERSION)
+            pubkeyhash = base58_check_decode(addresses[0], config.ADDRESSVERSION)
             script = OP_DUP                                     # OP_DUP
             script += OP_HASH160                                # OP_HASH160
             script += op_push(20)                               # Push 0x14 bytes
@@ -460,7 +459,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
     # Change output.
     if change_output:
         address, value = change_output
-        pubkeyhash = base58_decode(address, config.ADDRESSVERSION)
+        pubkeyhash = base58_check_decode(address, config.ADDRESSVERSION)
         s += value.to_bytes(8, byteorder='little')          # Value
         script = OP_DUP                                     # OP_DUP
         script += OP_HASH160                                # OP_HASH160
