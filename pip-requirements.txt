@@ -29,4 +29,4 @@ pycrypto>=2.6
 # One of available download locations is: 
 # http://www.voidspace.org.uk/python/modules.shtml#pycrypto
 
-python-bitcoinlib==0.2
+python-bitcoinlib==0.2.1
