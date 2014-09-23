@@ -1,7 +1,6 @@
 ## Client Versions ##
-* v10.0.0 (2014-08-09)
-	* multiple sources, destinations (testnet protocol change: 271000)
-	* multi‐signature support (testnet protocol change: 271000)
+	* multiple sources, destinations (testnet protocol change: 282000)
+	* multi‐signature support (testnet protocol change: 282000)
 * v9.41.0 (2014-08-21)
 	* fixed bug in new text and descriptions
 * v9.40.0 (2014-08-20)

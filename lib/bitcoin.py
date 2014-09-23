@@ -398,7 +398,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
         data_array, value = data_output # DUPE
         s += value.to_bytes(8, byteorder='little')        # Value
 
-        if config.TESTNET and block_index >= 271000:    # Protocol change.
+        if config.TESTNET and block_index >= 282000:    # Protocol change.
             data_chunk = config.PREFIX + data_chunk
 
         # Initialise encryption key (once per output).
@@ -406,7 +406,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
 
         if encoding == 'multisig':
             # Get data (fake) public key.
-            if config.TESTNET and block_index >= 271000:    # Protocol change.
+            if config.TESTNET and block_index >= 282000:    # Protocol change.
                 pad_length = (33 * 2) - 1 - len(data_chunk)
                 assert pad_length >= 0
                 data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
@@ -610,7 +610,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
             """ Yield successive n‐sized chunks from l.
             """
             for i in range(0, len(l), n): yield l[i:i+n]
-        if config.TESTNET and block_index >= 271000:    # Protocol change.
+        if config.TESTNET and block_index >= 282000:    # Protocol change.
             if encoding == 'pubkeyhash':
                 data_array = list(chunks(data, 20 - 1 - 8)) # Prefix is also a suffix here.
             elif encoding == 'multisig':
