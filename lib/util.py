@@ -47,7 +47,7 @@ def api (method, params):
         try:
             return response_json['result']
         except KeyError:
-            raise NoResultError(response_json)
+            raise exceptions.RPCError(response_json)
     else:
         raise exceptions.RPCError('{}'.format(response_json['error']))
 
