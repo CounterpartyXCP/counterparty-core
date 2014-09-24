@@ -203,6 +203,7 @@ Here's an example using ``curl`` to make an API call to the ``get_running_info``
 
 For testnet, you could use the example above, but change the port to ``14000`` and change the username and password as necessary.
 
+**NOTE:** On Windows, the command may need to be formatted differently due to problems Windows has with escapes.
 
 Terms & Conventions
 ---------------------
