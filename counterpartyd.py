@@ -198,9 +198,9 @@ def set_options (data_dir=None, backend_rpc_connect=None,
                  blockchain_service_name=None, blockchain_service_connect=None,
                  rpc_host=None, rpc_port=None, rpc_user=None,
                  rpc_password=None, rpc_allow_cors=None, log_file=None,
-                 pid_file=None, config_file=None, database_file=None,
-                 testnet=False, testcoin=False, carefulness=0,
-                 force=False, broadcast_tx_mainnet=None):
+                 config_file=None, database_file=None, testnet=False,
+                 testcoin=False, carefulness=0, force=False,
+                 broadcast_tx_mainnet=None):
 
     if force:
         config.FORCE = force
@@ -417,14 +417,6 @@ def set_options (data_dir=None, backend_rpc_connect=None,
             string += '.testcoin'
         config.LOG = os.path.join(config.DATA_DIR, string + '.log')
 
-    # PID file
-    if pid_file:
-        config.PID = pid_file
-    elif has_config and 'pid-file' in configfile['Default'] and configfile['Default']['pid-file']:
-        config.PID = configfile['Default']['pid-file']
-    else:
-        config.PID = os.path.join(config.DATA_DIR, '{}.pid'.format(config.XCP_CLIENT))
-
     # Encoding
     if config.TESTCOIN:
         config.PREFIX = b'XX'                   # 2 bytes (possibly accidentally created)
@@ -529,7 +521,6 @@ if __name__ == '__main__':
     parser.add_argument('--database-file', help='the location of the SQLite3 database')
     parser.add_argument('--config-file', help='the location of the configuration file')
     parser.add_argument('--log-file', help='the location of the log file')
-    parser.add_argument('--pid-file', help='the location of the pid file')
 
     parser.add_argument('--backend-rpc-connect', help='the hostname or IP of the backend bitcoind JSON-RPC server')
     parser.add_argument('--backend-rpc-port', type=int, help='the backend JSON-RPC port to connect to')
@@ -695,16 +686,10 @@ if __name__ == '__main__':
                 blockchain_service_connect=args.blockchain_service_connect,
                 rpc_host=args.rpc_host, rpc_port=args.rpc_port, rpc_user=args.rpc_user,
                 rpc_password=args.rpc_password, rpc_allow_cors=args.rpc_allow_cors, 
-                log_file=args.log_file, pid_file=args.pid_file, 
-                config_file=args.config_file, database_file=args.database_file,
-                testnet=args.testnet, testcoin=args.testcoin,
-                carefulness=args.carefulness, force=args.force)
-
-    #Create/update pid file
-    pid = str(os.getpid())
-    pidf = open(config.PID, 'w')
-    pidf.write(pid)
-    pidf.close()
+                log_file=args.log_file, config_file=args.config_file,
+                database_file=args.database_file, testnet=args.testnet,
+                testcoin=args.testcoin, carefulness=args.carefulness,
+                force=args.force)
 
     # Logging (to file and console).
     logger = logging.getLogger() #get root logger
