@@ -7,7 +7,6 @@ import struct
 import decimal
 D = decimal.Decimal
 import logging
-import warning
 
 from . import (util, config, exceptions, bitcoin, util, blockchain)
 
