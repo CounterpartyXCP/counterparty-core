@@ -192,8 +192,8 @@ def validate_address(address):
     addresses = address.split('_')
     if len(addresses) > 1:
         try:
-            assert int(addresses[0]) in (1,2,3) 
-            assert int(addresses[-1]) in (1,2,3) 
+            assert int(addresses[0]) in (1,2,3)
+            assert int(addresses[-1]) in (1,2,3)
         except (AssertionError):
             raise exceptions.AddressError('Invalid multi‐signature address:', address)
         addresses = addresses[1:-1]
