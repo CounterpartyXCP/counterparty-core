@@ -129,7 +129,7 @@ def run_scenario(scenario):
         if transaction[0] != 'create_next_block':
             module = sys.modules['lib.{}'.format(transaction[0])]
             compose = getattr(module, 'compose')
-            unsigned_tx_hex = bitcoin.transaction(compose(db, *transaction[1]), **transaction[2])
+            unsigned_tx_hex = bitcoin.transaction(db, compose(db, *transaction[1]), **transaction[2])
             insert_raw_transaction(unsigned_tx_hex, db)
         else:
             create_next_block(db, block_index=config.BURN_START + transaction[1], parse_block=True)
@@ -211,7 +211,7 @@ def check_ouputs(tx_name, method, inputs, outputs, error, records, counterpartyd
             if tx_name == 'order' and inputs[1]=='BTC':
                 print('give btc')
                 tx_params['fee_provided'] = DP['fee_provided']
-            unsigned_tx_hex = bitcoin.transaction(test_outputs, **tx_params)
+            unsigned_tx_hex = bitcoin.transaction(counterpartyd_db, test_outputs, **tx_params)
             print(tx_name)
             print(unsigned_tx_hex)
 
