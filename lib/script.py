@@ -109,7 +109,7 @@ def coerce_to_int(x):
 
 class PBLogger(object):
     def __init__(self):
-        return True
+        return None
     def log(self, name, **kargs):
         print(name, kargs)
 pblogger = PBLogger()
@@ -262,8 +262,7 @@ def apply_transaction(block, tx):
 
     pblogger.log("TX APPLIED", result=result, gas_remained=gas_remained,
                                 data=''.join(map(chr, data)).encode('hex'))
-    if pblogger.log_block:
-        pblogger.log('BLOCK', block=block.to_dict(with_state=True, full_transactions=True))
+    # NOTE: pblogger.log('BLOCK', block=block.to_dict(with_state=True, full_transactions=True))
 
 
     if not result:  # 0 = OOG failure in both cases
@@ -321,8 +320,7 @@ def decode_datalist(arr):
 def apply_msg(block, tx, msg, code):
     pblogger.log("MSG APPLY", tx=tx.hex_hash(), sender=msg.sender, to=msg.to,
                                   gas=msg.gas, value=msg.value, data=msg.data.encode('hex'))
-    if pblogger.log_pre_state:
-        pblogger.log('MSG PRE STATE', account=msg.to, state=block.account_to_dict(msg.to))
+    # NOTE: pblogger.log('MSG PRE STATE', account=msg.to, state=block.account_to_dict(msg.to))
 
     # NOTE
     # Transfer value, instaquit if not enough
@@ -336,7 +334,7 @@ def apply_msg(block, tx, msg, code):
 
     # NOTE
     # snapshot = block.snapshot()
-    print('code', code)
+    print('CODE', code)
     compustate = Compustate(gas=msg.gas)
     t, ops = time.time(), 0
     if code in code_cache:
@@ -345,7 +343,7 @@ def apply_msg(block, tx, msg, code):
         processed_code = [opcodes.get(ord(c), ['INVALID', 0, 0, [], 0]) +
                           [ord(c)] for c in code]
         code_cache[code] = processed_code
-    # print('processed_code', processed_code)
+    # print('PROCESSED_CODE', processed_code)
     # Main loop
     while 1:
         o = apply_op(block, tx, msg, processed_code, compustate)
@@ -354,9 +352,8 @@ def apply_msg(block, tx, msg, code):
             pblogger.log('MSG APPLIED', result=o, gas_remained=compustate.gas,
                         sender=msg.sender, to=msg.to, ops=ops,
                         time_per_op=(time.time() - t) / ops)
-            if pblogger.log_post_state:
-                    pblogger.log('MSG POST STATE', account=msg.to,
-                        state=block.account_to_dict(msg.to))
+            # NOTE: pblogger.log('MSG POST STATE', account=msg.to,
+            #              state=block.account_to_dict(msg.to))
 
             if o == OUT_OF_GAS:
                 block.revert(snapshot)
@@ -422,7 +419,10 @@ def apply_op(block, tx, msg, processed_code, compustate):
     if compustate.pc >= len(processed_code):
         return []
     op, in_args, out_args, mem_grabs, fee, opcode = processed_code[compustate.pc]
-    print('applying op, inargs, compustate.stack', op, in_args, compustate.stack)
+    print()
+    # print('APPLYING OP', op)
+    # print('INARGS', in_args)
+    # print('COMPUSTATE.STACK', compustate.stack)
     # empty stack error
     if in_args > len(compustate.stack):
         pblogger.log('INSUFFICIENT STACK ERROR', op=op, needed=in_args,
@@ -433,31 +433,26 @@ def apply_op(block, tx, msg, processed_code, compustate):
     if fee > compustate.gas:
         return out_of_gas_exception('base_gas', fee, compustate, op)
 
-    if pblogger.log_apply_op:
-        if pblogger.log_stack:
-            pblogger.log('STK', stk=list(reversed(compustate.stack)))
+    pblogger.log('STK', stk=list(reversed(compustate.stack)))
 
-        if pblogger.log_memory:
-            for i in range(0, len(compustate.memory), 16):
-                memblk = compustate.memory[i:i+16]
-                memline = ' '.join([chr(x).encode('hex') for x in memblk])
-                pblogger.log('MEM', mem=memline)
+    for i in range(0, len(compustate.memory), 16):
+        memblk = compustate.memory[i:i+16]
+        memline = ' '.join([chr(x).encode('hex') for x in memblk])
+        pblogger.log('MEM', mem=memline)
 
-        if pblogger.log_storage:
-            pblogger.log('STORAGE', storage=block.account_to_dict(msg.to))
+    # NOTE: pblogger.log('STORAGE', storage=block.account_to_dict(msg.to))
 
-        if pblogger.log_op:
-            log_args = dict(pc=compustate.pc,
-                            op=op,
-                            stackargs=compustate.stack[-1:-in_args-1:-1],
-                            gas=compustate.gas)
-            if op[:4] == 'PUSH':
-                ind = compustate.pc + 1
-                log_args['value'] = \
-                    bytearray_to_int([x[-1] for x in processed_code[ind: ind + int(op[4:])]])
-            elif op == 'CALLDATACOPY':
-                log_args['data'] = msg.data.encode('hex')
-            pblogger.log('OP', **log_args)
+    log_args = dict(pc=compustate.pc,
+                    op=op,
+                    stackargs=compustate.stack[-1:-in_args-1:-1],
+                    gas=compustate.gas)
+    if op[:4] == 'PUSH':
+        ind = compustate.pc + 1
+        log_args['value'] = \
+            bytearray_to_int([x[-1] for x in processed_code[ind: ind + int(op[4:])]])
+    elif op == 'CALLDATACOPY':
+        log_args['data'] = msg.data.encode('hex')
+    pblogger.log('OP', **log_args)
 
     # Apply operation
     compustate.gas -= fee
