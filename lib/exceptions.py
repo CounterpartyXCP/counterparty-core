@@ -94,7 +94,5 @@ class ConsensusError (Exception):
 
 class GetURLError (Exception):
     pass
-class NoResultError (Exception):
-    pass
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

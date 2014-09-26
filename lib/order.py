@@ -8,7 +8,7 @@ import decimal
 D = decimal.Decimal
 import logging
 
-from . import (util, config, exceptions, bitcoin, util)
+from . import (util, config, exceptions, bitcoin, util, blockchain)
 
 FORMAT = '>QQQQHQ'
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8
@@ -238,9 +238,15 @@ def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, ex
 
 def compose (db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required):
     cursor = db.cursor()
-    balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, give_asset)))
-    if give_asset != config.BTC and (not balances or balances[0]['quantity'] < give_quantity):
-        raise exceptions.OrderError('insufficient funds')
+
+    # Check balance.
+    if give_asset == config.BTC:
+        if blockchain.getaddressinfo(source)['balance'] * config.UNIT < give_quantity:
+            print('WARNING: insufficient funds for {}pay.'.format(config.BTC))
+    else:
+        balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, give_asset)))
+        if (not balances or balances[0]['quantity'] < give_quantity):
+            raise exceptions.OrderError('insufficient funds')
 
     problems = validate(db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, util.last_block(db)['block_index'])
     if problems: raise exceptions.OrderError(problems)
