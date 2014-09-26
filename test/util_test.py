@@ -13,6 +13,9 @@ import counterpartyd
 from fixtures.fixtures import DEFAULT_PARAMS as DP
 from fixtures.fixtures import UNITEST_FIXTURE, INTEGRATION_SCENARIOS
 
+import bitcoin as bitcoinlib
+import binascii
+
 D = decimal.Decimal
 
 # Set test environment
@@ -27,7 +30,7 @@ def dump_database(db):
     db_filename = CURR_DIR + '/fixtures/tmpforbackup.db'
     if os.path.isfile(db_filename):
         os.remove(db_filename)
-    filecon=apsw.Connection(db_filename)
+    filecon = apsw.Connection(db_filename)
     with filecon.backup("main", db, "main") as backup:
         backup.step()
 
@@ -81,7 +84,11 @@ def insert_raw_transaction(raw_transaction, db):
     cursor = db.cursor()
     tx_index = block_index - config.BURN_START + 1
     tx = bitcoin.decode_raw_transaction(raw_transaction)
+    
     tx_hash = hashlib.sha256(chr(tx_index).encode('utf-8')).hexdigest()
+    tx['txid'] = tx_hash
+    save_getrawtransaction_data(db, tx_hash, raw_transaction)
+
     source, destination, btc_amount, fee, data = blocks.get_tx_info2(tx, block_index)
     transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
     cursor.execute('''INSERT INTO transactions VALUES (?,?,?,?,?,?,?,?,?,?,?)''', transaction)
@@ -98,6 +105,37 @@ def insert_transaction(transaction, db):
     keys = ",".join(transaction.keys())
     cursor.execute('''INSERT INTO transactions ({}) VALUES (?,?,?,?,?,?,?,?,?,?,?)'''.format(keys), tuple(transaction.values()))
     cursor.close()
+
+# table uses for getrawtransaction mock.
+# we use the same database (in memory) for speed
+def initialise_getrawtransaction_data(db):
+    cursor = db.cursor()
+    cursor.execute('''DROP TABLE  IF EXISTS raw_transactions''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS raw_transactions(
+                      tx_hash TEXT UNIQUE,
+                      tx_hex TEXT)''')
+    with open(CURR_DIR + '/fixtures/listunspent.test.json', 'r') as listunspent_test_file:
+            wallet_unspent = json.load(listunspent_test_file)
+            for output in wallet_unspent:
+                txid = binascii.hexlify(bitcoinlib.core.lx(output['txid'])).decode()
+                cursor.execute('''INSERT INTO raw_transactions VALUES (?, ?)''', (txid, output['txhex']))
+    cursor.close()
+
+def save_getrawtransaction_data(db, tx_hash, tx_hex):
+    cursor = db.cursor()
+    try:
+        txid = binascii.hexlify(bitcoinlib.core.lx(tx_hash)).decode()
+        cursor.execute('''INSERT INTO raw_transactions VALUES (?, ?)''', (txid, tx_hex))
+    except Exception as e:
+        pass
+    cursor.close()
+
+def get_getrawtransaction_data(db, txid):
+    cursor = db.cursor()
+    txid = binascii.hexlify(txid).decode()
+    tx_hex = list(cursor.execute('''SELECT tx_hex FROM raw_transactions WHERE tx_hash = ?''', (txid,)))[0]['tx_hex']
+    cursor.close()
+    return tx_hex
 
 def initialise_db(db):
     blocks.initialise(db)
@@ -124,7 +162,9 @@ def run_scenario(scenario):
     asyncio_log.setLevel(logging.ERROR)
 
     db = util.connect_to_db()
+    config.TEMP_DB = db
     initialise_db(db)
+    initialise_getrawtransaction_data(db)
     for transaction in scenario:
         if transaction[0] != 'create_next_block':
             module = sys.modules['lib.{}'.format(transaction[0])]
