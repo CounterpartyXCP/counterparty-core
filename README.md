@@ -10,8 +10,8 @@ The Counterparty protocol specification may be found at
 
 # Dependencies
 * [Python 3](http://python.org)
-* Python 3 packages: apsw, requests, appdirs, prettytable, python-dateutil, json-rpc, tornado, flask, Flask-HTTPAuth, pycoin, pyzmq(v2.2+), pycrypto, lockfile, python-bitcoinlib (see [this link](https://github.com/CounterpartyXCP/counterpartyd/blob/master/pip-requirements.txt) for exact working versions)
-* Bitcoind
+* Python 3 packages: apsw, requests, appdirs, prettytable, python-dateutil, json-rpc, tornado, flask, Flask-HTTPAuth, pycoin, pyzmq(v2.2+), pycrypto, lockfile, python-bitcoinlib, ethereum-serpent ([exact working versions](https://github.com/CounterpartyXCP/counterpartyd/blob/master/pip-requirements.txt))
+* Bitcoin Core
 
 # Installation
 
@@ -19,21 +19,21 @@ The Counterparty protocol specification may be found at
 an automated approach to counterpartyd installation for Windows and Linux, see [this link](http://counterpartyd-build.readthedocs.org/en/latest/).**
 
 In order for counterpartyd to function, it must be able to communicate with a
-running instance of Bitcoind or Bitcoin-Qt, which handles many Bitcoin‐specific
+running instance of Bitcoin Core or Bitcoin-Qt, which handles many Bitcoin‐specific
 matters on its behalf, including all wallet and private key management. For
-such interoperability, Bitcoind must be run with the following options:
+such interoperability, Bitcoin Core must be run with the following options:
 `-txindex=1` `-server=1`. This may require the setting of a JSON‐RPC password,
-which may be saved in Bitcoind’s configuration file.
+which may be saved in Bitcoin Core’s configuration file.
 
-counterpartyd needs to know at least the JSON‐RPC password of the Bitcoind with
+counterpartyd needs to know at least the JSON‐RPC password of the Bitcoin Core with
 which it is supposed to communicate. The simplest way to set this is to
 include it in all command‐line invocations of counterpartyd, such as
 `./counterpartyd.py --rpc-password=PASSWORD ACTION`. To make this and other
 options persistent across counterpartyd sessions, one may store the desired
 settings in a configuration file specific to counterpartyd.
 
-Note that the syntaxes for the countpartyd and the Bitcoind configuraion
-files are not the same. A Bitcoind configuration file looks like this:
+Note that the syntaxes for the countpartyd and the Bitcoin Core configuraion
+files are not the same. A Bitcoin Core configuration file looks like this:
 
 	rpcuser=bitcoinrpc
 	rpcpassword=PASSWORD
@@ -49,7 +49,7 @@ However, a counterpartyd configuration file looks like this:
 Note the change in hyphenation between `rpcpassword` and `rpc-password`.
 
 If and only if counterpartyd is to be run on the Bitcoin testnet, with the
-`--testnet` CLI option, Bitcoind must be set to do the same (`-testnet=1`).
+`--testnet` CLI option, Bitcoin Core must be set to do the same (`-testnet=1`).
 counterpartyd may run with the `--testcoin` option on any blockchain,
 however.
 
@@ -63,7 +63,7 @@ you can manually update these requirements by executing something like:
 # Test suite
 
 The test suite is invoked with `py.test` in the root directory of the repository.
-Bitcoind testnet and mainnet must run on the default ports and use the same rpcuser and rpcpassword. 
+Bitcoin Core testnet and mainnet must run on the default ports and use the same rpcuser and rpcpassword. 
 Do not include the following values ​​in counterpartyd.conf: bitcoind-rpc-connect, bitcoind-rpc-port, rpc-host, rpc-port and testnet.
 
 # Usage
@@ -99,7 +99,7 @@ The following examples are abridged for parsimony.
 
 * Server
 
-	The `server` command should always be running in the background. All other commands will fail if the index of the last block in the database is less than that of the last block seen by Bitcoind.
+	The `server` command should always be running in the background. All other commands will fail if the index of the last block in the database is less than that of the last block seen by Bitcoin Core.
 
 * Burn
 
