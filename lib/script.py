@@ -1,6 +1,7 @@
-import util_rlp
+from lib import util_rlp
 
 import time
+import binascii
 
 
 
@@ -82,7 +83,7 @@ def sha3(seed):
     return sha3_256(seed).digest()
 def encode_int(v):
     '''encodes an integer into serialization'''
-    if not isinstance(v, (int, long)) or v < 0 or v >= 2 ** 256:
+    if not isinstance(v, int) or v < 0 or v >= 2 ** 256:
         raise Exception("Integer invalid or out of range")
     return util_rlp.int_to_big_endian(v)
 def bytearray_to_int(arr):
@@ -91,20 +92,24 @@ def bytearray_to_int(arr):
         o = o * 256 + a
     return o
 def coerce_addr_to_hex(x):
-    if isinstance(x, (int, long)):
-        return zpad(util_rlp.int_to_big_endian(x), 20).encode('hex')
+    if isinstance(x, int):
+        return binascii.hexlify(zpad(util_rlp.int_to_big_endian(x), 20))
     elif len(x) == 40 or len(x) == 0:
         return x
     else:
-        return zpad(x, 20)[-20:].encode('hex')
+        return binascii.hexlify(zpad(x, 20)[-20:])
 def coerce_to_int(x):
-    if isinstance(x, (int, long)):
+    if isinstance(x, int):
         return x
     elif len(x) == 40:
-        return util_rlp.big_endian_to_int(x.decode('hex'))
+        return util_rlp.big_endian_to_int(binascii.unhexlify(x))
     else:
         return util_rlp.big_endian_to_int(x)
 
+def hexprint(data):
+    line = binascii.hexlify(bytes(data))
+    line = ' '.join([line[i:i+2].decode('ascii') for i in range(0, len(line), 2)])
+    return line
 
 
 class PBLogger(object):
@@ -261,7 +266,7 @@ def apply_transaction(block, tx):
     assert gas_remained >= 0
 
     pblogger.log("TX APPLIED", result=result, gas_remained=gas_remained,
-                                data=''.join(map(chr, data)).encode('hex'))
+                                data=hexprint(data))
     # NOTE: pblogger.log('BLOCK', block=block.to_dict(with_state=True, full_transactions=True))
 
 
@@ -319,7 +324,7 @@ def decode_datalist(arr):
 
 def apply_msg(block, tx, msg, code):
     pblogger.log("MSG APPLY", tx=tx.hex_hash(), sender=msg.sender, to=msg.to,
-                                  gas=msg.gas, value=msg.value, data=msg.data.encode('hex'))
+                                  gas=msg.gas, value=msg.value, data=binascii.hexlify(msg.data))
     # NOTE: pblogger.log('MSG PRE STATE', account=msg.to, state=block.account_to_dict(msg.to))
 
     # NOTE
@@ -334,14 +339,14 @@ def apply_msg(block, tx, msg, code):
 
     # NOTE
     # snapshot = block.snapshot()
-    print('CODE', code)
+    print('CODE', hexprint(code))
     compustate = Compustate(gas=msg.gas)
     t, ops = time.time(), 0
     if code in code_cache:
         processed_code = code_cache[code]
     else:
-        processed_code = [opcodes.get(ord(c), ['INVALID', 0, 0, [], 0]) +
-                          [ord(c)] for c in code]
+        processed_code = [opcodes.get(c, ['INVALID', 0, 0, [], 0]) +
+                          [c] for c in code]
         code_cache[code] = processed_code
     # print('PROCESSED_CODE', processed_code)
     # Main loop
@@ -349,7 +354,7 @@ def apply_msg(block, tx, msg, code):
         o = apply_op(block, tx, msg, processed_code, compustate)
         ops += 1
         if o is not None:
-            pblogger.log('MSG APPLIED', result=o, gas_remained=compustate.gas,
+            pblogger.log('MSG APPLIED', result=hexprint(o), gas_remained=compustate.gas,
                         sender=msg.sender, to=msg.to, ops=ops,
                         time_per_op=(time.time() - t) / ops)
             # NOTE: pblogger.log('MSG POST STATE', account=msg.to,
@@ -363,11 +368,11 @@ def apply_msg(block, tx, msg, code):
 
 
 def create_contract(block, tx, msg):
-    sender = msg.sender.decode('hex') if len(msg.sender) == 40 else msg.sender
+    sender = binascii.unhexlify(msg.sender) if len(msg.sender) == 40 else msg.sender
     if tx.sender != msg.sender:
         block.increment_nonce(msg.sender)
     nonce = encode_int(block.get_nonce(msg.sender) - 1)
-    msg.to = sha3(util_rlp.encode([sender, nonce]))[12:].encode('hex')
+    msg.to = binascii.hexlify(sha3(util_rlp.encode([sender, nonce]))[12:])
     assert not block.get_code(msg.to)
     res, gas, dat = apply_msg(block, tx, msg, msg.data)
     if res:
@@ -437,8 +442,7 @@ def apply_op(block, tx, msg, processed_code, compustate):
 
     for i in range(0, len(compustate.memory), 16):
         memblk = compustate.memory[i:i+16]
-        memline = ' '.join([chr(x).encode('hex') for x in memblk])
-        pblogger.log('MEM', mem=memline)
+        pblogger.log('MEM', mem=hexprint(memblk))
 
     # NOTE: pblogger.log('STORAGE', storage=block.account_to_dict(msg.to))
 
@@ -451,7 +455,7 @@ def apply_op(block, tx, msg, processed_code, compustate):
         log_args['value'] = \
             bytearray_to_int([x[-1] for x in processed_code[ind: ind + int(op[4:])]])
     elif op == 'CALLDATACOPY':
-        log_args['data'] = msg.data.encode('hex')
+        log_args['data'] = binascii.hexlify(msg.data)
     pblogger.log('OP', **log_args)
 
     # Apply operation
@@ -575,7 +579,7 @@ def apply_op(block, tx, msg, processed_code, compustate):
     elif op == 'PREVHASH':
         stk.append(util_rlp.big_endian_to_int(block.prevhash))
     elif op == 'COINBASE':
-        stk.append(util_rlp.big_endian_to_int(block.coinbase.decode('hex')))
+        stk.append(util_rlp.big_endian_to_int(binascii.unhexlify(block.coinbase)))
     elif op == 'TIMESTAMP':
         stk.append(block.timestamp)
     elif op == 'NUMBER':
@@ -662,7 +666,7 @@ def apply_op(block, tx, msg, processed_code, compustate):
         if not mem_extend(mem, compustate, op, mstart + msz):
             return OUT_OF_GAS
         data = ''.join(map(chr, mem[mstart: mstart + msz]))
-        pblogger.log('SUB CONTRACT NEW', sender=msg.to, value=value, data=data.encode('hex'))
+        pblogger.log('SUB CONTRACT NEW', sender=msg.to, value=value, data=binascii.hexlify(data))
         create_msg = Message(msg.to, '', value, compustate.gas, data)
         addr, gas, code = create_contract(block, tx, create_msg)
         pblogger.log('SUB CONTRACT OUT', address=addr, code=code)
@@ -682,9 +686,9 @@ def apply_op(block, tx, msg, processed_code, compustate):
             return out_of_gas_exception('subcall gas', gas, compustate, op)
         compustate.gas -= gas
         to = encode_int(to)
-        to = (('\x00' * (32 - len(to))) + to)[12:].encode('hex')
+        to = binascii.hexlify((('\x00' * (32 - len(to))) + to)[12:])
         data = ''.join(map(chr, mem[meminstart: meminstart + meminsz]))
-        pblogger.log('SUB CALL NEW', sender=msg.to, to=to, value=value, gas=gas, data=data.encode('hex'))
+        pblogger.log('SUB CALL NEW', sender=msg.to, to=to, value=value, gas=gas, data=binascii.hexlify(data))
         call_msg = Message(msg.to, to, value, gas, data)
         result, gas, data = apply_msg_send(block, tx, call_msg)
         pblogger.log('SUB CALL OUT', result=result, data=data, length=len(data), expected=memoutsz)
@@ -709,9 +713,9 @@ def apply_op(block, tx, msg, processed_code, compustate):
             return out_of_gas_exception('subcall gas', gas, compustate, op)
         compustate.gas -= gas
         to = encode_int(to)
-        to = (('\x00' * (32 - len(to))) + to)[12:].encode('hex')
+        to = binascii.hexlify((('\x00' * (32 - len(to))) + to)[12:])
         data = ''.join(map(chr, mem[meminstart: meminstart + meminsz]))
-        pblogger.log('POST NEW', sender=msg.to, to=to, value=value, gas=gas, data=data.encode('hex'))
+        pblogger.log('POST NEW', sender=msg.to, to=to, value=value, gas=gas, data=binascii.hexlify(data))
         post_msg = Message(msg.to, to, value, gas, data)
         block.postqueue.append(post_msg)
     elif op == 'CALL_STATELESS':
@@ -724,9 +728,9 @@ def apply_op(block, tx, msg, processed_code, compustate):
             return out_of_gas_exception('subcall gas', gas, compustate, op)
         compustate.gas -= gas
         to = encode_int(to)
-        to = (('\x00' * (32 - len(to))) + to)[12:].encode('hex')
+        to = binascii.hexlify((('\x00' * (32 - len(to))) + to)[12:])
         data = ''.join(map(chr, mem[meminstart: meminstart + meminsz]))
-        pblogger.log('SUB CALL NEW', sender=msg.to, to=to, value=value, gas=gas, data=data.encode('hex'))
+        pblogger.log('SUB CALL NEW', sender=msg.to, to=to, value=value, gas=gas, data=binascii.hexlify(data))
         call_msg = Message(msg.to, msg.to, value, gas, data)
         result, gas, data = apply_msg(block, tx, call_msg, block.get_code(to))
         pblogger.log('SUB CALL OUT', result=result, data=data, length=len(data), expected=memoutsz)
@@ -739,9 +743,9 @@ def apply_op(block, tx, msg, processed_code, compustate):
                 mem[memoutstart + i] = data[i]
     elif op == 'SUICIDE':
         to = encode_int(stk.pop())
-        to = (('\x00' * (32 - len(to))) + to)[12:].encode('hex')
+        to = binascii.hexlify((('\x00' * (32 - len(to))) + to)[12:])
         block.transfer_value(msg.to, to, block.get_balance(msg.to))
         block.suicides.append(msg.to)
         return []
     for a in stk:
-        assert isinstance(a, (int, long))
+        assert isinstance(a, int)
