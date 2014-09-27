@@ -53,9 +53,6 @@ def init_mock_functions(monkeypatch):
     def init_api_access_log():
         pass
 
-    def ident(x):
-        return x
-
     class RpcProxy():
         def getrawtransaction(self, txid):
             tx_hex = util_test.get_getrawtransaction_data(config.TEMP_DB, txid)
