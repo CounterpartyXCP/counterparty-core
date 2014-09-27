@@ -18,7 +18,7 @@ import bitcoin as bitcoinlib
 import bitcoin.rpc as bitcoinlib_rpc
 
 from . import (config, exceptions, util, bitcoin)
-from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
+from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish)
 
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['credits', 'debits', 'messages'] + \

@@ -229,6 +229,9 @@ def log (db, command, category, bindings):
         elif category == 'rps_match_expirations':
             logging.info('Expired RPS Match: {}'.format(bindings['rps_match_id']))
 
+        elif category == 'contracts':
+            logging.info('New Contract: {}'.format(bindings['code']))
+
     cursor.close()
 
 def message (db, block_index, command, category, bindings, tx_hash=None):
@@ -252,7 +255,15 @@ def message (db, block_index, command, category, bindings, tx_hash=None):
         except KeyError:
             pass
 
-    bindings_string = json.dumps(collections.OrderedDict(sorted(bindings.items())))
+    # Handle binary data.
+    items = []
+    for item in sorted(bindings.items()):
+        if type(item[1]) == bytes:
+            items.append((item[0], binascii.hexlify(item[1]).decode('ascii')))
+        else:
+            items.append(item)
+
+    bindings_string = json.dumps(collections.OrderedDict(items))
     cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings, :timestamp)',
                    (message_index, block_index, command, category, bindings_string, curr_time()))
 

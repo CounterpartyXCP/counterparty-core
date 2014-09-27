@@ -9,10 +9,10 @@ from . import (util, config, exceptions, bitcoin, util)
 
 ID = 100
 
-def compose (db, source, contract_hex):
+def compose (db, source, code_hex):
 
     data = struct.pack(config.TXTYPE_FORMAT, ID)
-    data += binascii.unhexlify(contract_hex)
+    data += binascii.unhexlify(code_hex)
 
     return (source, [], data)
 
@@ -30,10 +30,6 @@ def parse (db, tx, message):
     }
     sql='insert into contracts values(:tx_index, :tx_hash, :block_index, :source, :code)'
     cursor.execute(sql, bindings)
-
-    # TODO
-    cursor.execute('''select * from contracts where tx_hash = ?''', (tx['tx_hash'],))
-    print(list(cursor))
 
     cursor.close()
 
