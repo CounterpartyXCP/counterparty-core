@@ -22,11 +22,12 @@ from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, ca
 
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['credits', 'debits', 'messages'] + \
-         ['bet_match_resolutions', 'order_match_expirations',
-          'order_matches', 'order_expirations', 'orders', 'bet_match_expirations',
-          'bet_matches', 'bet_expirations', 'bets', 'broadcasts', 'btcpays',
-          'burns', 'callbacks', 'cancels', 'dividends', 'issuances', 'sends',
-          'rps_match_expirations', 'rps_expirations', 'rpsresolves', 'rps_matches', 'rps']
+         ['bet_match_resolutions', 'order_match_expirations', 'order_matches',
+         'order_expirations', 'orders', 'bet_match_expirations', 'bet_matches',
+         'bet_expirations', 'bets', 'broadcasts', 'btcpays', 'burns',
+         'callbacks', 'cancels', 'dividends', 'issuances', 'sends',
+         'rps_match_expirations', 'rps_expirations', 'rpsresolves',
+         'rps_matches', 'rps', 'contracts']
 
 def check_conservation (db):
     logging.debug('Status: Checking for conservation of assets.')
@@ -88,6 +89,8 @@ def parse_tx (db, tx):
         rps.parse(db, tx, message)
     elif message_type_id == rpsresolve.ID and rps_enabled:
         rpsresolve.parse(db, tx, message)
+    elif message_type_id == publish.ID:
+        publish.parse(db, tx, message)
     else:
         cursor.execute('''UPDATE transactions \
                                    SET supported=? \
@@ -841,6 +844,23 @@ def initialise(db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       tx1_address_idx ON rps_match_expirations (tx1_address)
+                   ''')
+
+    # Contracts
+    cursor.execute('''CREATE TABLE IF NOT EXISTS contracts(
+                      tx_index INTEGER UNIQUE,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      source TEXT,
+                      code BLOB,
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
+                      PRIMARY KEY (tx_index, tx_hash))
+                  ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      source_idx ON contracts (source)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      tx_hash_idx ON contracts (tx_hash)
                    ''')
 
     # Messages

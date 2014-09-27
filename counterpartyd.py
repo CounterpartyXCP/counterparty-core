@@ -444,7 +444,8 @@ def set_options (data_dir=None, backend_rpc_connect=None,
 
     # Encoding
     if config.TESTCOIN:
-        config.PREFIX = b'XX'                   # 2 bytes (possibly accidentally created)
+        # config.PREFIX = b'XX'                   # 2 bytes (possibly accidentally created)
+        config.PREFIX = b'OwKWTVmzg'    # TODO
     else:
         config.PREFIX = b'CNTRPRTY'             # 8 bytes
 
@@ -660,9 +661,9 @@ if __name__ == '__main__':
     parser_rpsresolve.add_argument('--rps-match-id', required=True, help='the concatenation of the hashes of the two transactions which compose the rps match')
     parser_rpsresolve.add_argument('--fee', help='the exact BTC fee to be paid to miners')
 
-    parser_publish = subparsers.add_parser('publish', help='publish arbitrary data in the blockchain')
+    parser_publish = subparsers.add_parser('publish', help='publish contract code in the blockchain')
     parser_publish.add_argument('--source', required=True, help='the source address')
-    parser_publish.add_argument('--data-hex', required=True, help='the hex‐encoded data')
+    parser_publish.add_argument('--contract-hex', required=True, help='the hex‐encoded contract')
     parser_publish.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
     parser_address = subparsers.add_parser('balances', help='display the balances of a {} address'.format(config.XCP_NAME))
@@ -980,7 +981,7 @@ if __name__ == '__main__':
     elif args.action == 'publish':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
         cli('create_publish', {'source': args.source,
-                               'data_hex': args.data_hex, 'fee': args.fee,
+                               'contract_hex': args.contract_hex, 'fee': args.fee,
                                'allow_unconfirmed_inputs': args.unconfirmed,
                                'encoding': args.encoding, 'fee_per_kb':
                                args.fee_per_kb, 'regular_dust_size':

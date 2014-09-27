@@ -1,6 +1,6 @@
 #! /usr/bin/python3
 
-"""Store arbitrary data in the block chain."""
+"""Store arbitrary data in the blockchain."""
 
 import struct
 import binascii
@@ -9,11 +9,32 @@ from . import (util, config, exceptions, bitcoin, util)
 
 ID = 100
 
-def compose (db, source, data_hex):
+def compose (db, source, contract_hex):
 
     data = struct.pack(config.TXTYPE_FORMAT, ID)
-    data += binascii.unhexlify(data_hex)
+    data += binascii.unhexlify(contract_hex)
 
     return (source, [], data)
+
+
+def parse (db, tx, message):
+    cursor = db.cursor()
+
+    # Add parsed transaction to message-type–specific table.
+    bindings = {
+        'tx_index': tx['tx_index'],
+        'tx_hash': tx['tx_hash'],
+        'block_index': tx['block_index'],
+        'source': tx['source'],
+        'code': message,
+    }
+    sql='insert into contracts values(:tx_index, :tx_hash, :block_index, :source, :code)'
+    cursor.execute(sql, bindings)
+
+    # TODO
+    cursor.execute('''select * from contracts where tx_hash = ?''', (tx['tx_hash'],))
+    print(list(cursor))
+
+    cursor.close()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
