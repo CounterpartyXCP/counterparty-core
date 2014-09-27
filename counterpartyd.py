@@ -26,7 +26,6 @@ if os.name == 'nt':
     from lib import util_windows
 
 D = decimal.Decimal
-json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
 def get_address (db, address):
     address_dict = {}

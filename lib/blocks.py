@@ -36,9 +36,7 @@ def check_conservation (db):
 
         issued = supplies[asset]
         held = sum([holder['address_quantity'] for holder in util.holders(db, asset)])
-        # import json
-        # json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
-        # json_print(util.holders(db, asset))
+        # util.json_print(util.holders(db, asset))
         if held != issued:
             raise exceptions.SanityError('{} {} issued ≠ {} {} held'.format(util.devise(db, issued, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
         logging.debug('Status: {} has been conserved ({} {} both issued and held)'.format(asset, util.devise(db, issued, asset, 'output'), asset))

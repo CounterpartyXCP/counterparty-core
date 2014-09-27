@@ -1,4 +1,4 @@
-from lib import util_rlp
+from lib import (util, util_rlp)
 
 import time
 import binascii
