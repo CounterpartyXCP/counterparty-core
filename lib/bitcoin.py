@@ -731,7 +731,7 @@ def get_btc_supply(normalize=False):
             blocks_remaining = 0
     return total_supply if normalize else int(total_supply * config.UNIT)
 
-def get_unspent_txouts(address):
+def get_unspent_txouts(source):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
     """
@@ -739,7 +739,7 @@ def get_unspent_txouts(address):
     addresses = source.split('_')
     if len(addresses) > 1:
         outputs = []
-        raw_transactions = search_raw_transactions('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc')
+        raw_transactions = search_raw_transactions(addresses[1])
         # Get all coins.
         for tx in raw_transactions:
             for vout in tx['vout']:
@@ -769,11 +769,11 @@ def get_unspent_txouts(address):
                 unspent.append(output)
     else:
         # TODO: remove account (and address?) fields
-        if is_mine(address):
+        if is_mine(source):
             wallet_unspent = list_unspent()
-            unspent = [output for output in wallet_unspent if output['address'] == address]
+            unspent = [output for output in wallet_unspent if output['address'] == source]
         else:
-            unspent = blockchain.listunspent(address)
+            unspent = blockchain.listunspent(source)
 
     return unspent
 
