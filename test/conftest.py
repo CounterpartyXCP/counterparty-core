@@ -68,6 +68,4 @@ def init_mock_functions(monkeypatch):
     monkeypatch.setattr('lib.api.init_api_access_log', init_api_access_log)
     if hasattr(config, 'PREFIX'):
         monkeypatch.setattr('lib.config.PREFIX', b'TESTXXXX')
-
-
     monkeypatch.setattr('bitcoin.rpc.Proxy', RpcProxy)
