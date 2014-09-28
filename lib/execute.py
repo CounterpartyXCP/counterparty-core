@@ -8,73 +8,11 @@ import time
 
 from lib import (util, config, exceptions, bitcoin, util, util_rlp)
 
-FORMAT = '>32s'
+FORMAT = '>32sQQQ'
 LENGTH = 32
 ID = 101
 
-def validate (db, source, contract_id, block_index):
-    problems = []
-    code = None
 
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM contracts WHERE tx_hash = ?''', (contract_id,))
-    contracts = list(cursor)
-    if not contracts:
-        problems.append('no such contract')
-    else:
-        code = contracts[0]['code']
-
-    cursor.close()
-    return code, problems
-
-
-def compose (db, source, contract_id):
-
-    code, problems = validate(db, source, contract_id, util.last_block(db)['block_index'])
-    if problems: raise exceptions.ExecuteError(problems)
-
-    data = struct.pack(config.TXTYPE_FORMAT, ID)
-    data += struct.pack(FORMAT, binascii.unhexlify(contract_id))
-
-    return (source, [], data)
-
-
-def parse (db, tx, message):
-    cursor = db.cursor()
-
-    # Unpack message.
-    try:
-        if len(message) != LENGTH:
-            raise exceptions.UnpackError
-        contract_id, = struct.unpack(FORMAT, message)
-        contract_id = binascii.hexlify(contract_id).decode('utf-8')
-        status = 'valid'
-    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
-        asset, quantity = None, None
-        status = 'invalid: could not unpack'
-
-    code, problems = validate(db, tx['source'], contract_id, tx['block_index'])
-    if problems: raise exceptions.ExecuteError(problems)
-
-    # Add parsed transaction to message-type–specific table.
-    bindings = {
-        'tx_index': tx['tx_index'],
-        'tx_hash': tx['tx_hash'],
-        'block_index': tx['block_index'],
-        'source': tx['source'],
-        'contract_id': contract_id,
-        'status': status,
-    }
-    sql='insert into executions values(:tx_index, :tx_hash, :block_index, :source, :contract_id, :status)'
-    cursor.execute(sql, bindings)
-
-    cursor.close()
-
-    # Don’t commit. TODO
-    raise Exception
-
-
-'''
 # schema: [opcode, ins, outs, memuses, gas]
 # memuses are written as an array of (start, len) pairs; values less than
 # zero are taken as stackarg indices and values zero or greater are taken
@@ -147,10 +85,7 @@ reverse_opcodes = {}
 for o in opcodes:
     reverse_opcodes[opcodes[o][0]] = o
 
-
-
-def sha3(seed):
-    return sha3_256(seed).digest()
+sha3 = lambda x: sha3_256(x).digest()
 def encode_int(v):
     # encodes an integer into serialization
     if not isinstance(v, int) or v < 0 or v >= 2 ** 256:
@@ -161,219 +96,197 @@ def bytearray_to_int(arr):
     for a in arr:
         o = o * 256 + a
     return o
-def coerce_addr_to_hex(x):
-    if isinstance(x, int):
-        return binascii.hexlify(zpad(util_rlp.int_to_big_endian(x), 20))
-    elif len(x) == 40 or len(x) == 0:
-        return x
-    else:
-        return binascii.hexlify(zpad(x, 20)[-20:])
-def coerce_to_int(x):
-    if isinstance(x, int):
-        return x
-    elif len(x) == 40:
-        return util_rlp.big_endian_to_int(binascii.unhexlify(x))
-    else:
-        return util_rlp.big_endian_to_int(x)
-
 def hexprint(data):
     line = binascii.hexlify(bytes(data))
     line = ' '.join([line[i:i+2].decode('ascii') for i in range(0, len(line), 2)])
     return line
 
 
-class PBLogger(object):
-    def __init__(self):
-        return None
-    def log(self, name, **kargs):
-        print(name, kargs)
-pblogger = PBLogger()
-
-code_cache = {}
-
-GDEFAULT = 1
-GMEMORY = 1
-GSTORAGE = 100
-GTXDATA = 5
-GTXCOST = 500
-TT255 = 2**255
-TT256 = 2**256
-
-OUT_OF_GAS = -1
-
-
-# contract creating transactions send to an empty address
-CREATE_CONTRACT_ADDRESS = ''
-
-
-class VerificationFailed(Exception):
-    pass
-class InvalidTransaction(Exception):
-    pass
-class UnsignedTransaction(InvalidTransaction):
-    pass
-class InvalidNonce(InvalidTransaction):
-    pass
-class InsufficientBalance(InvalidTransaction):
-    pass
-class InsufficientStartGas(InvalidTransaction):
-    pass
-class BlockGasLimitReached(InvalidTransaction):
-    pass
-class GasPriceTooLow(InvalidTransaction):
-    pass
-
-
-def verify(block, parent):
-    def must_equal(what, a, b):
-        if not a == b: raise VerificationFailed(what, a, '==', b)
-
-    if not block.timestamp >= parent.timestamp:
-        raise VerificationFailed('timestamp', block.timestamp, '>=', parent.timestamp)
-    if not block.timestamp <= time.time() + 900:
-        raise VerificationFailed('timestamps', block.timestamp, '<=', time.time() + 900)
-
-    block2 = blocks.Block.init_from_parent(parent,
-                                           block.coinbase,
-                                           extra_data=block.extra_data,
-                                           timestamp=block.timestamp,
-                                           uncles=block.uncles)
-    must_equal('difficulty', block2.difficulty, block.difficulty)
-    must_equal('gas limit', block2.gas_limit, block.gas_limit)
-    for i in range(block.transaction_count):
-        tx, s, g = util_rlp.decode(
-            block.transactions.get(util_rlp.encode(utils.encode_int(i))))
-        tx = transactions.Transaction.create(tx)
-        if not tx.startgas + block2.gas_used <= block.gas_limit:
-            raise VerificationFailed('gas_limit', tx.startgas + block2.gas_used, '<=', block.gas_limit)
-        apply_transaction(block2, tx)
-        must_equal('tx state root', s, block2.state.root_hash)
-        must_equal('tx gas used', g, utils.encode_int(block2.gas_used))
-    block2.finalize()
-    must_equal('block state root', block2.state.root_hash, block.state.root_hash)
-    must_equal('block gas used', block2.gas_used, block.gas_used)
-    return True
-
-
-class Message(object):
-
-    def __init__(self, sender, to, value, gas, data):
-        self.sender = sender
-        self.to = to
-        self.value = value
-        self.gas = gas
-        self.data = data
-
-    def __repr__(self):
-        return '<Message(to:%s...)>' % self.to[:8]
 
 
 
-def apply_transaction(block, tx):
+def validate (db, source, contract_id, block_index):
+    problems = []
+    code = None
 
-    def rp(actual, target):
-        return '%r, actual:%r target:%r' % (tx, actual, target)
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM contracts WHERE tx_hash = ?''', (contract_id,))
+    contracts = list(cursor)
+    if not contracts:
+        problems.append('no such contract')
+    else:
+        code = contracts[0]['code']
+
+    cursor.close()
+    return code, problems
+
+
+def compose (db, source, contract_id, gas_price, gas_start, value, data):
+
+    code, problems = validate(db, source, contract_id, util.last_block(db)['block_index'])
+    if problems: raise exceptions.ExecuteError(problems)
+
+    data = struct.pack(config.TXTYPE_FORMAT, ID)
+    curr_format = FORMAT + '{}s'.format(len(data))
+    data += struct.pack(curr_format, binascii.unhexlify(contract_id))
+
+    return (source, [], data)
+
+
+def parse (db, tx, message):
+    cursor = db.cursor()
+
+    # Unpack message.
+    try:
+        if len(message) != LENGTH:
+            raise exceptions.UnpackError
+        curr_format = FORMAT + '{}s'.format(len(message) - LENGTH)
+        contract_id, gas_price, gas_start, value, data = struct.unpack(FORMAT, message)
+        contract_id = binascii.hexlify(contract_id).decode('utf-8')
+        status = 'valid'
+    except (exceptions.UnpackError, struct.error) as e:
+        asset, quantity = None, None
+        status = 'invalid: could not unpack'
+
+    code, problems = validate(db, tx['source'], contract_id, tx['block_index'])
+    if problems: raise exceptions.ExecuteError(problems)
+
+    # Add parsed transaction to message-type–specific table.
+    bindings = {
+        'tx_index': tx['tx_index'],
+        'tx_hash': tx['tx_hash'],
+        'block_index': tx['block_index'],
+        'source': tx['source'],
+        'contract_id': contract_id,
+        'gas_price': gas_price,
+        'gas_start': gas_start,
+        'value': value,
+        'data': data,
+        'status': status
+    }
+    sql='insert into executions values(:tx_index, :tx_hash, :block_index, :source, :contract_id, :gas_price, :gas_start, :value, :data, :status)'
+    cursor.execute(sql, bindings)
+
+    cursor.close()
+
+    # Don’t commit. TODO
+    raise Exception
+
+
+    # TODO: gas_price is an int
+
+
+
+
+    GDEFAULT = 1
+    GMEMORY = 1
+    GSTORAGE = 100
+    GTXDATA = 5
+    GTXCOST = 500
+    TT255 = 2**255
+    TT256 = 2**256
+
+    OUT_OF_GAS = -1
+
+
+    # TODO: Where does this go?
+    code_cache = {}
+
+    class Message(object):
+
+        def __init__(self, sender, to, value, gas, data):
+            self.sender = sender
+            self.to = to
+            self.value = value
+            self.gas = gas
+            self.data = data
+
+        def __repr__(self):
+            return '<Message(to:%s...)>' % self.to[:8]
+
+
+
+
+
+
 
     # TODO
     # (2) the transaction nonce is valid (equivalent to the
     #     sender account's current nonce);
-    # acctnonce = block.get_nonce(tx.sender)
-    # if acctnonce != tx.nonce:
-    #     raise InvalidNonce(rp(tx.nonce, acctnonce))
+    # acctnonce = block.get_nonce(tx['source'])
+    # if acctnonce != tx['nonce']:
+    #     raise InvalidNonce(rp(tx['nonce'], acctnonce))
 
     # (3) the gas limit is no smaller than the intrinsic gas,
     # g0, used by the transaction;
-    intrinsic_gas_used = GTXDATA * len(tx.data) + GTXCOST
-    if tx.startgas < intrinsic_gas_used:
-        raise InsufficientStartGas(rp(tx.startgas, intrinsic_gas_used))
+    intrinsic_gas_used = GTXDATA * len(tx['data']) + GTXCOST
+    if tx['gas_start'] < intrinsic_gas_used:
+        raise InsufficientStartGas(rp(tx['gas_start'], intrinsic_gas_used))
 
     # (4) the sender account balance contains at least the
     # cost, v0, required in up-front payment.
-    total_cost = tx.value + tx.gasprice * tx.startgas
-    if block.get_balance(tx.sender) < total_cost:
+    total_cost = tx.value + tx['gas_price'] * tx['gas_start']
+    if block.get_balance(tx['source']) < total_cost:
         raise InsufficientBalance(
-            rp(block.get_balance(tx.sender), total_cost))
+            rp(block.get_balance(tx['source']), total_cost))
 
     # check offered gas price is enough
-    if tx.gasprice < block.min_gas_price:
-        raise GasPriceTooLow(rp(tx.gasprice, block.min_gas_price))
+    if tx['gas_price'] < block.min_gas_price:
+        raise GasPriceTooLow(rp(tx['gas_price'], block.min_gas_price))
 
     # check block gas limit
-    if block.gas_used + tx.startgas > block.gas_limit:
-        raise BlockGasLimitReached(rp(block.gas_used + tx.startgas, block.gas_limit))
+    if block.gas_used + tx['gas_start'] > block.gas_limit:
+        raise BlockGasLimitReached(rp(block.gas_used + tx['gas_start'], block.gas_limit))
 
-
-    pblogger.log('TX NEW', tx='deadbeef', tx_dict=tx.as_dict())
+    pblogger.log('TX NEW', tx=tx['tx_hash'], tx_dict=tx.as_dict())
 
     # start transacting #################
-    block.increment_nonce(tx.sender)
+    block.increment_nonce(tx['source'])
 
-    # TODO: destroy tx.sender's (tx.gasprice * tx.startgas)
+    # TODO: destroy tx['source']'s (tx['gas_price'] * tx['gas_start'])
 
-    message_gas = tx.startgas - intrinsic_gas_used
-    message = Message(tx.sender, tx.to, tx.value, message_gas, tx.data)
+    message_gas = tx['gas_start'] - intrinsic_gas_used
+    message = Message(tx['source'], tx.to, tx.value, message_gas, tx['data'])
 
-    block.postqueue = [ message ]
-    primary_result = None
-    while len(block.postqueue):
-        message = block.postqueue.pop(0)
-        # MESSAGE
-        if tx.to and tx.to != CREATE_CONTRACT_ADDRESS:
-            # TODO: code = get_contract(msg.to)
-            import binascii
-            print(message)
-            # code_hex = '6103e8335761007580610013600039610088586001602036040e0f610022596000356000546000535660205460206020f261007558336040546040535660605460003560805460203560a05460a0536060530c0f0f61006b5960a053606053036040535760a053608053560160805357600160c054602060c0f261007558600060e054602060e0f26000f2'
-            code_hex = '600e80600b60003960195860026000350260005460206000f26000f2'
-            code = binascii.unhexlify(code_hex)
-            result, gas_remained, data = apply_msg(block, tx, message, code)
-        else:  # CREATE
-            result, gas_remained, data = create_contract(block, tx, message)
-            if result > 0:
-                result = coerce_addr_to_hex(result)
-        if not primary_result:
-            primary_result = result, gas_remained, data
+    try:
+        import binascii
+        result, gas_remaining, data = apply_msg(block, tx, message, code)
+        assert gas_remaining >= 0
 
-    result, gas_remained, data = primary_result
-
-    assert gas_remained >= 0
-
-    pblogger.log("TX APPLIED", result=result, gas_remained=gas_remained,
-                                data=hexprint(data))
-    # NOTE: pblogger.log('BLOCK', block=block.to_dict(with_state=True, full_transactions=True))
-
-
-    if not result:  # 0 = OOG failure in both cases
-        pblogger.log('TX FAILED', reason='out of gas', startgas=tx.startgas, gas_remained=gas_remained)
-        block.gas_used += tx.startgas
-        output = OUT_OF_GAS
-    else:
-        pblogger.log('TX SUCCESS')
-        gas_used = tx.startgas - gas_remained
-
-        # TODO: return remaining gas to tx.sender
-
-        block.gas_used += gas_used
-        if tx.to:
-            output = ''.join(map(chr, data))
+        logging.debug('TX APPLIED', '(result: {}, gas_remaining: {}, data: {})'.format(result, gas_remaining, hexprint(data)))
+        if not result:  # 0 = OOG failure in both cases
+            block.gas_used += tx['gas_start']
+            raise exceptions.OutOfGas
         else:
-            output = result
+            logging.debug('TX SUCCESS')
+            gas_used = tx['gas_start'] - gas_remaining
+            # TODO: block.gas_used += gas_used
 
-    # TODO: Commit state.
-    # block.commit_state()
+            # Return remaining gas to source.
+            util.credit(db, tx['block_index'], tx['source'], config.XCP, gas_remaining, action='gas remaining', event=tx['tx_hash'])
 
-    # NOTE
-    # suicides = block.suicides
-    # block.suicides = []
-    # for s in suicides:
-    #     block.del_account(s)
-    # block.add_transaction_to_list(tx)
+            output = ''.join(map(chr, data))
 
-    success = output is not OUT_OF_GAS
-    return success, output if success else ''
+        # TODO: Commit state.
+        # block.commit_state()
+
+        # NOTE
+        # suicides = block.suicides
+        # block.suicides = []
+        # for s in suicides:
+        #     block.del_account(s)
+        # block.add_transaction_to_list(tx)
+
+        return True, output
+
+    except exceptions.OUT_OF_GAS:
+        logging.debug('TX FAILED', 'out_of_gas', '(gas_start: {}, gas_remaining: {})'.format(tx['gas_start'], gas_remaining)
+        return False, ''
+
+
 
 
 class Compustate():
-
     def __init__(self, **kwargs):
         self.memory = []
         self.stack = []
@@ -381,16 +294,6 @@ class Compustate():
         self.gas = 0
         for kw in kwargs:
             setattr(self, kw, kwargs[kw])
-
-
-def decode_datalist(arr):
-    if isinstance(arr, list):
-        arr = ''.join(map(chr, arr))
-    o = []
-    for i in range(0, len(arr), 32):
-        o.append(util_rlp.big_endian_to_int(arr[i:i + 32]))
-    return o
-
 
 def apply_msg(block, tx, msg, code):
     pblogger.log("MSG APPLY", tx=tx.hex_hash(), sender=msg.sender, to=msg.to,
@@ -437,43 +340,18 @@ def apply_msg(block, tx, msg, code):
                 return 1, compustate.gas, o
 
 
-def create_contract(block, tx, msg):
-    sender = binascii.unhexlify(msg.sender) if len(msg.sender) == 40 else msg.sender
-    if tx.sender != msg.sender:
-        block.increment_nonce(msg.sender)
-    nonce = encode_int(block.get_nonce(msg.sender) - 1)
-    msg.to = binascii.hexlify(sha3(util_rlp.encode([sender, nonce]))[12:])
-    assert not block.get_code(msg.to)
-    res, gas, dat = apply_msg(block, tx, msg, msg.data)
-    if res:
-        block.set_code(msg.to, ''.join(map(chr, dat)))
-        return coerce_to_int(msg.to), gas, dat
-    else:
-        if tx.sender != msg.sender:
-            block.decrement_nonce(msg.sender)
-        block.del_account(msg.to)
-        return res, gas, dat
-
 
 def get_opcode(code, index):
     return ord(code[index]) if index < len(code) else 0
-
-
 def get_op_data(code, index):
     opcode = ord(code[index]) if index < len(code) else 0
     return opcodes.get(opcode, ['INVALID', 0, 0, [], 0])
-
-
 def ceil32(x):
     return x if x % 32 == 0 else x + 32 - (x % 32)
-
-
 def out_of_gas_exception(expense, fee, compustate, op):
     pblogger.log('OUT OF GAS', expense=expense, needed=fee, available=compustate.gas,
                  op=op, stack=list(reversed(compustate.stack)))
     return OUT_OF_GAS
-
-
 def mem_extend(mem, compustate, op, newsize):
     if len(mem) < ceil32(newsize):
         m_extend = ceil32(newsize) - len(mem)
@@ -484,8 +362,6 @@ def mem_extend(mem, compustate, op, newsize):
             out_of_gas_exception('mem_extend', memfee, compustate, op)
             return False
     return True
-
-
 def to_signed(i):
     return i if i < TT255 else i - TT256
 
@@ -682,6 +558,7 @@ def apply_op(block, tx, msg, processed_code, compustate):
     elif op == 'SLOAD':
         stk.append(block.get_storage_data(msg.to, stk.pop()))
     elif op == 'SSTORE':
+        pass
         # NOTE
         # s0, s1 = stk.pop(), stk.pop()
         # pre_occupied = GSTORAGE if block.get_storage_data(msg.to, s0) else 0
@@ -817,6 +694,6 @@ def apply_op(block, tx, msg, processed_code, compustate):
         return []
     for a in stk:
         assert isinstance(a, int)
-'''
+
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

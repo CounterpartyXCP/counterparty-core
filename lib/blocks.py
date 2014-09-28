@@ -855,6 +855,7 @@ def initialise(db):
                       block_index INTEGER,
                       source TEXT,
                       code BLOB,
+                      balance integer,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                       PRIMARY KEY (tx_index, tx_hash))
                   ''')
@@ -872,6 +873,10 @@ def initialise(db):
                       block_index INTEGER,
                       source TEXT,
                       contract_id BLOB,
+                      gas_price INTEGER,
+                      gas_start INTEGER,
+                      value INTEGER,
+                      data BLOB,
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                       FOREIGN KEY (contract_id) REFERENCES contracts(tx_hash),

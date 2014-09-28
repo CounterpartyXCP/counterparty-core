@@ -97,4 +97,22 @@ class ConsensusError (Exception):
 class GetURLError (Exception):
     pass
 
+
+
+
+class InvalidNonce(Exception):
+    pass
+class InsufficientBalance(Exception):
+    pass
+class InsufficientStartGas(Exception):
+    pass
+class BlockGasLimitReached(Exception):
+    pass
+class GasPriceTooLow(Exception):
+    pass
+
+class OutOfGas(Exception):
+    pass
+
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
