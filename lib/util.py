@@ -230,7 +230,7 @@ def log (db, command, category, bindings):
             logging.info('Expired RPS Match: {}'.format(bindings['rps_match_id']))
 
         elif category == 'contracts':
-            logging.info('New Contract: {}'.format(bindings['code']))
+            logging.info('New Contract: {} ({})'.format(binascii.hexlify(bindings['code']).decode('ascii'), bindings['tx_hash']))
 
     cursor.close()
 
