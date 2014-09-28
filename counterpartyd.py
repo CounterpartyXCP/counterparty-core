@@ -666,6 +666,11 @@ if __name__ == '__main__':
     parser_publish.add_argument('--code-hex', required=True, help='the hex‐encoded contract')
     parser_publish.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
+    parser_execute = subparsers.add_parser('execute', help='execute contract code in the blockchain')
+    parser_execute.add_argument('--source', required=True, help='the source address')
+    parser_execute.add_argument('--contract_id', required=True, help='the txid of the contract’s publication')
+    parser_execute.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
+
     parser_address = subparsers.add_parser('balances', help='display the balances of a {} address'.format(config.XCP_NAME))
     parser_address.add_argument('address', help='the address you are interested in')
 
@@ -989,6 +994,19 @@ if __name__ == '__main__':
                                args.multisig_dust_size, 'op_return_value':
                                args.op_return_value},
             args.unsigned)
+
+    elif args.action == 'execute':
+        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
+        cli('create_execute', {'source': args.source,
+                               'contract_id': args.contract_id, 'fee':
+                               args.fee, 'allow_unconfirmed_inputs':
+                               args.unconfirmed, 'encoding': args.encoding,
+                               'fee_per_kb': args.fee_per_kb,
+                               'regular_dust_size': args.regular_dust_size,
+                               'multisig_dust_size': args.multisig_dust_size,
+                               'op_return_value': args.op_return_value},
+            args.unsigned)
+
 
 
     # VIEWING (temporary)

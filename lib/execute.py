@@ -1,10 +1,80 @@
-from lib import (util, util_rlp)
+#! /usr/bin/python3
 
-import time
+"""Execute arbitrary data as a smart contract."""
+
+import struct
 import binascii
+import time
+
+from lib import (util, config, exceptions, bitcoin, util, util_rlp)
+
+FORMAT = '>32s'
+LENGTH = 32
+ID = 101
+
+def validate (db, source, contract_id, block_index):
+    problems = []
+    code = None
+
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM contracts WHERE tx_hash = ?''', (contract_id,))
+    contracts = list(cursor)
+    if not contracts:
+        problems.append('no such contract')
+    else:
+        code = contracts[0]['code']
+
+    cursor.close()
+    return code, problems
 
 
+def compose (db, source, contract_id):
 
+    code, problems = validate(db, source, contract_id, util.last_block(db)['block_index'])
+    if problems: raise exceptions.ExecuteError(problems)
+
+    data = struct.pack(config.TXTYPE_FORMAT, ID)
+    data += struct.pack(FORMAT, binascii.unhexlify(contract_id))
+
+    return (source, [], data)
+
+
+def parse (db, tx, message):
+    cursor = db.cursor()
+
+    # Unpack message.
+    try:
+        if len(message) != LENGTH:
+            raise exceptions.UnpackError
+        contract_id, = struct.unpack(FORMAT, message)
+        contract_id = binascii.hexlify(contract_id).decode('utf-8')
+        status = 'valid'
+    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
+        asset, quantity = None, None
+        status = 'invalid: could not unpack'
+
+    code, problems = validate(db, tx['source'], contract_id, tx['block_index'])
+    if problems: raise exceptions.ExecuteError(problems)
+
+    # Add parsed transaction to message-type–specific table.
+    bindings = {
+        'tx_index': tx['tx_index'],
+        'tx_hash': tx['tx_hash'],
+        'block_index': tx['block_index'],
+        'source': tx['source'],
+        'contract_id': contract_id,
+        'status': status,
+    }
+    sql='insert into executions values(:tx_index, :tx_hash, :block_index, :source, :contract_id, :status)'
+    cursor.execute(sql, bindings)
+
+    cursor.close()
+
+    # Don’t commit. TODO
+    raise Exception
+
+
+'''
 # schema: [opcode, ins, outs, memuses, gas]
 # memuses are written as an array of (start, len) pairs; values less than
 # zero are taken as stackarg indices and values zero or greater are taken
@@ -82,7 +152,7 @@ for o in opcodes:
 def sha3(seed):
     return sha3_256(seed).digest()
 def encode_int(v):
-    '''encodes an integer into serialization'''
+    # encodes an integer into serialization
     if not isinstance(v, int) or v < 0 or v >= 2 ** 256:
         raise Exception("Integer invalid or out of range")
     return util_rlp.int_to_big_endian(v)
@@ -292,13 +362,11 @@ def apply_transaction(block, tx):
     # block.commit_state()
 
     # NOTE
-    """
-    suicides = block.suicides
-    block.suicides = []
-    for s in suicides:
-        block.del_account(s)
-    block.add_transaction_to_list(tx)
-    """
+    # suicides = block.suicides
+    # block.suicides = []
+    # for s in suicides:
+    #     block.del_account(s)
+    # block.add_transaction_to_list(tx)
 
     success = output is not OUT_OF_GAS
     return success, output if success else ''
@@ -615,16 +683,14 @@ def apply_op(block, tx, msg, processed_code, compustate):
         stk.append(block.get_storage_data(msg.to, stk.pop()))
     elif op == 'SSTORE':
         # NOTE
-        """
-        s0, s1 = stk.pop(), stk.pop()
-        pre_occupied = GSTORAGE if block.get_storage_data(msg.to, s0) else 0
-        post_occupied = GSTORAGE if s1 else 0
-        gascost = GSTORAGE + post_occupied - pre_occupied
-        if compustate.gas < gascost:
-            out_of_gas_exception('sstore trie expansion', gascost, compustate, op)
-        compustate.gas -= gascost
-        block.set_storage_data(msg.to, s0, s1)
-        """
+        # s0, s1 = stk.pop(), stk.pop()
+        # pre_occupied = GSTORAGE if block.get_storage_data(msg.to, s0) else 0
+        # post_occupied = GSTORAGE if s1 else 0
+        # gascost = GSTORAGE + post_occupied - pre_occupied
+        # if compustate.gas < gascost:
+        #     out_of_gas_exception('sstore trie expansion', gascost, compustate, op)
+        # compustate.gas -= gascost
+        # block.set_storage_data(msg.to, s0, s1)
     elif op == 'JUMP':
         compustate.pc = stk.pop()
     elif op == 'JUMPI':
@@ -751,3 +817,6 @@ def apply_op(block, tx, msg, processed_code, compustate):
         return []
     for a in stk:
         assert isinstance(a, int)
+'''
+
+# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

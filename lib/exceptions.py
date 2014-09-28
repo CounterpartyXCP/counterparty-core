@@ -88,6 +88,8 @@ class CallbackError (MessageError):
     pass
 class RpsError (MessageError):
     pass
+class ExecuteError(MessageError):
+    pass
 
 class ConsensusError (Exception):
     pass

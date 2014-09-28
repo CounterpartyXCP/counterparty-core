@@ -18,7 +18,7 @@ import bitcoin as bitcoinlib
 import bitcoin.rpc as bitcoinlib_rpc
 
 from . import (config, exceptions, util, bitcoin)
-from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish)
+from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute)
 
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['credits', 'debits', 'messages'] + \
@@ -91,6 +91,8 @@ def parse_tx (db, tx):
         rpsresolve.parse(db, tx, message)
     elif message_type_id == publish.ID:
         publish.parse(db, tx, message)
+    elif message_type_id == execute.ID:
+        execute.parse(db, tx, message)
     else:
         cursor.execute('''UPDATE transactions \
                                    SET supported=? \
@@ -861,6 +863,25 @@ def initialise(db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       tx_hash_idx ON contracts (tx_hash)
+                   ''')
+
+    # Executions
+    cursor.execute('''CREATE TABLE IF NOT EXISTS executions(
+                      tx_index INTEGER UNIQUE,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      source TEXT,
+                      contract_id BLOB,
+                      status TEXT,
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
+                      FOREIGN KEY (contract_id) REFERENCES contracts(tx_hash),
+                      PRIMARY KEY (tx_index, tx_hash))
+                  ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      source_idx ON executions(source)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      tx_hash_idx ON executions(tx_hash)
                    ''')
 
     # Messages

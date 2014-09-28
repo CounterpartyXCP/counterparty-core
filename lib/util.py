@@ -232,7 +232,11 @@ def log (db, command, category, bindings):
         elif category == 'contracts':
             logging.info('New Contract: {} ({})'.format(binascii.hexlify(bindings['code']).decode('ascii'), bindings['tx_hash']))
 
+        elif category == 'executions':
+            logging.info('Execution: {} ({}) [{}]'.format(bindings['contract_id'], bindings['tx_hash'], bindings['status']))
+
     cursor.close()
+
 
 def message (db, block_index, command, category, bindings, tx_hash=None):
     cursor = db.cursor()
