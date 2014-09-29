@@ -27,7 +27,7 @@ TABLES = ['credits', 'debits', 'messages'] + \
          'bet_expirations', 'bets', 'broadcasts', 'btcpays', 'burns',
          'callbacks', 'cancels', 'dividends', 'issuances', 'sends',
          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
-         'rps_matches', 'rps', 'contracts']
+         'rps_matches', 'rps', 'executions', 'contracts']
 
 def check_conservation (db):
     logging.debug('Status: Checking for conservation of assets.')
@@ -875,8 +875,11 @@ def initialise(db):
                       contract_id BLOB,
                       gas_price INTEGER,
                       gas_start INTEGER,
+                      gas_cost INTEGER,
+                      gas_remaining INTEGER,
                       value INTEGER,
                       data BLOB,
+                      output BLOB,
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                       FOREIGN KEY (contract_id) REFERENCES contracts(tx_hash),

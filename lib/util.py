@@ -64,6 +64,12 @@ def price (numerator, denominator, block_index):
 def log (db, command, category, bindings):
     cursor = db.cursor()
 
+    for element in bindings.keys():
+        try:
+            str(bindings[element])
+        except Exception:
+            bindings[element] = '<Error>'
+
     # Slow?!
     def output (quantity, asset):
         try:
@@ -75,6 +81,8 @@ def log (db, command, category, bindings):
             return '<AssetError>'
         except decimal.DivisionByZero:
             return '<DivisionByZero>'
+        except TypeError:
+            return '<None>'
 
     if command == 'update':
         if category == 'order':
@@ -91,10 +99,10 @@ def log (db, command, category, bindings):
     elif command == 'insert':
 
         if category == 'credits':
-            logging.debug('Credit: {} to {} #{}# <{}>'.format(output(bindings['quantity'], bindings['asset']), bindings['address'], bindings['action'], bindings['event']))
+            logging.debug('\tCredit: {} to {} #{}# <{}>'.format(output(bindings['quantity'], bindings['asset']), bindings['address'], bindings['action'], bindings['event']))
 
         elif category == 'debits':
-            logging.debug('Debit: {} from {} #{}# <{}>'.format(output(bindings['quantity'], bindings['asset']), bindings['address'], bindings['action'], bindings['event']))
+            logging.debug('\tDebit: {} from {} #{}# <{}>'.format(output(bindings['quantity'], bindings['asset']), bindings['address'], bindings['action'], bindings['event']))
 
         elif category == 'sends':
             logging.info('Send: {} from {} to {} ({}) [{}]'.format(output(bindings['quantity'], bindings['asset']), bindings['source'], bindings['destination'], bindings['tx_hash'], bindings['status']))
@@ -230,10 +238,21 @@ def log (db, command, category, bindings):
             logging.info('Expired RPS Match: {}'.format(bindings['rps_match_id']))
 
         elif category == 'contracts':
-            logging.info('New Contract: {} ({})'.format(binascii.hexlify(bindings['code']).decode('ascii'), bindings['tx_hash']))
+            logging.info('New Contract: {} created contract {} ({})'.format(bindings['source'], binascii.hexlify(bindings['code']).decode('ascii'), bindings['tx_hash']))
 
         elif category == 'executions':
-            logging.info('Execution: {} ({}) [{}]'.format(bindings['contract_id'], bindings['tx_hash'], bindings['status']))
+            """
+            try:
+                payload_hex = binascii.hexlify(bindings['payload']).decode('ascii')
+            except TypeError:
+                payload_hex = '<None>'
+            try:
+                output_hex = binascii.hexlify(bindings['output']).decode('ascii')
+            except TypeError:
+                output_hex = '<None>'
+            logging.info('Execution: {} executed contract {}, funded with {}, at a price of {} (?), at a final cost of {}, reclaiming {}, and also sending {}, with a data payload of {}, yielding {} ({}) [{}]'.format(bindings['source'], bindings['contract_id'], output(bindings['gas_start'], config.XCP), bindings['gas_price'], output(bindings['gas_cost'], config.XCP), output(bindings['gas_remaining'], config.XCP), output(bindings['value'], config.XCP), payload_hex, output_hex, bindings['tx_hash'], bindings['status']))
+            """
+            logging.info('Execution: {} executed contract {} ({}) [{}]'.format(bindings['source'], bindings['contract_id'], bindings['tx_hash'], bindings['status']))
 
     cursor.close()
 

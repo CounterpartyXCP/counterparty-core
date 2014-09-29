@@ -5,11 +5,12 @@
 import struct
 import binascii
 import time
+import logging
 
 from lib import (util, config, exceptions, bitcoin, util, util_rlp)
 
 FORMAT = '>32sQQQ'
-LENGTH = 32
+LENGTH = 56
 ID = 101
 
 
@@ -121,14 +122,16 @@ def validate (db, source, contract_id, block_index):
     return code, problems
 
 
-def compose (db, source, contract_id, gas_price, gas_start, value, data):
+def compose (db, source, contract_id, gas_price, gas_start, value, payload_hex):
 
     code, problems = validate(db, source, contract_id, util.last_block(db)['block_index'])
     if problems: raise exceptions.ExecuteError(problems)
 
+    payload = binascii.unhexlify(payload_hex)
+
     data = struct.pack(config.TXTYPE_FORMAT, ID)
-    curr_format = FORMAT + '{}s'.format(len(data))
-    data += struct.pack(curr_format, binascii.unhexlify(contract_id))
+    curr_format = FORMAT + '{}s'.format(len(payload))
+    data += struct.pack(curr_format, binascii.unhexlify(contract_id), gas_price, gas_start, value, payload)
 
     return (source, [], data)
 
@@ -138,43 +141,25 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
-        if len(message) != LENGTH:
-            raise exceptions.UnpackError
         curr_format = FORMAT + '{}s'.format(len(message) - LENGTH)
-        contract_id, gas_price, gas_start, value, data = struct.unpack(FORMAT, message)
+        contract_id, gas_price, gas_start, value, payload = struct.unpack(curr_format, message)
         contract_id = binascii.hexlify(contract_id).decode('utf-8')
         status = 'valid'
     except (exceptions.UnpackError, struct.error) as e:
-        asset, quantity = None, None
+        contract_id, gas_price, gas_start, value, payload = None, None, None, None, None
         status = 'invalid: could not unpack'
 
-    code, problems = validate(db, tx['source'], contract_id, tx['block_index'])
-    if problems: raise exceptions.ExecuteError(problems)
-
-    # Add parsed transaction to message-type–specific table.
-    bindings = {
-        'tx_index': tx['tx_index'],
-        'tx_hash': tx['tx_hash'],
-        'block_index': tx['block_index'],
-        'source': tx['source'],
-        'contract_id': contract_id,
-        'gas_price': gas_price,
-        'gas_start': gas_start,
-        'value': value,
-        'data': data,
-        'status': status
-    }
-    sql='insert into executions values(:tx_index, :tx_hash, :block_index, :source, :contract_id, :gas_price, :gas_start, :value, :data, :status)'
-    cursor.execute(sql, bindings)
-
-    cursor.close()
-
-    # Don’t commit. TODO
-    raise Exception
+    if status == 'valid':
+        code, problems = validate(db, tx['source'], contract_id, tx['block_index'])
+        if problems: raise exceptions.ExecuteError(problems)
 
 
     # TODO: gas_price is an int
 
+
+    if status != 'valid': 
+        cursor.close()
+        return  # TODO
 
 
 
@@ -194,17 +179,14 @@ def parse (db, tx, message):
 
     class Message(object):
 
-        def __init__(self, sender, to, value, gas, data):
+        def __init__(self, sender, value, gas, payload):
             self.sender = sender
-            self.to = to
             self.value = value
             self.gas = gas
-            self.data = data
+            self.payload = payload
 
         def __repr__(self):
             return '<Message(to:%s...)>' % self.to[:8]
-
-
 
 
 
@@ -219,47 +201,48 @@ def parse (db, tx, message):
 
     # (3) the gas limit is no smaller than the intrinsic gas,
     # g0, used by the transaction;
-    intrinsic_gas_used = GTXDATA * len(tx['data']) + GTXCOST
-    if tx['gas_start'] < intrinsic_gas_used:
-        raise InsufficientStartGas(rp(tx['gas_start'], intrinsic_gas_used))
+    intrinsic_gas_used = GTXDATA * len(payload) + GTXCOST
+    if gas_start < intrinsic_gas_used:
+        raise InsufficientStartGas(rp(gas_start, intrinsic_gas_used))
 
     # (4) the sender account balance contains at least the
     # cost, v0, required in up-front payment.
-    total_cost = tx.value + tx['gas_price'] * tx['gas_start']
-    if block.get_balance(tx['source']) < total_cost:
-        raise InsufficientBalance(
-            rp(block.get_balance(tx['source']), total_cost))
+    total_cost = value + gas_price * gas_start
+
+    balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (tx['source'], config.XCP)))
+    # if not balances or balances[0]['quantity'] < total_cost:
+    #     TODO raise exceptions.InsufficientBalance()
 
     # check offered gas price is enough
-    if tx['gas_price'] < block.min_gas_price:
-        raise GasPriceTooLow(rp(tx['gas_price'], block.min_gas_price))
+    # if tx['gas_price'] < block.min_gas_price:
+    #     raise GasPriceTooLow(rp(tx['gas_price'], block.min_gas_price))
 
     # check block gas limit
-    if block.gas_used + tx['gas_start'] > block.gas_limit:
-        raise BlockGasLimitReached(rp(block.gas_used + tx['gas_start'], block.gas_limit))
+    # if block.gas_used + gas_start > block.gas_limit:
+    #     raise BlockGasLimitReached(rp(block.gas_used + gas_start, block.gas_limit))
 
-    pblogger.log('TX NEW', tx=tx['tx_hash'], tx_dict=tx.as_dict())
+    logging.debug('\tTX NEW (tx_hash: {})'.format(tx['tx_hash']), tx)
 
     # start transacting #################
-    block.increment_nonce(tx['source'])
+    # block.increment_nonce(tx['source'])
 
     # TODO: destroy tx['source']'s (tx['gas_price'] * tx['gas_start'])
 
-    message_gas = tx['gas_start'] - intrinsic_gas_used
-    message = Message(tx['source'], tx.to, tx.value, message_gas, tx['data'])
+    message_gas = gas_start - intrinsic_gas_used
+    message = Message(tx['source'], value, message_gas, payload)
 
     try:
-        import binascii
-        result, gas_remaining, data = apply_msg(block, tx, message, code)
+        # TODO result, gas_remaining, data = apply_msg(tx, message, code)
+        result, gas_remaining, data = 'foo', 0, b'baz'
         assert gas_remaining >= 0
 
-        logging.debug('TX APPLIED', '(result: {}, gas_remaining: {}, data: {})'.format(result, gas_remaining, hexprint(data)))
+        logging.debug('\tTX APPLIED (result: {}, gas_remaining: {}, data: {})'.format(result, gas_remaining, hexprint(data)))
         if not result:  # 0 = OOG failure in both cases
-            block.gas_used += tx['gas_start']
+            block.gas_used += gas_start
             raise exceptions.OutOfGas
         else:
-            logging.debug('TX SUCCESS')
-            gas_used = tx['gas_start'] - gas_remaining
+            logging.debug('\tTX SUCCESS')
+            gas_used = gas_start - gas_remaining
             # TODO: block.gas_used += gas_used
 
             # Return remaining gas to source.
@@ -277,11 +260,45 @@ def parse (db, tx, message):
         #     block.del_account(s)
         # block.add_transaction_to_list(tx)
 
-        return True, output
+        status = 'finished'
 
-    except exceptions.OUT_OF_GAS:
-        logging.debug('TX FAILED', 'out_of_gas', '(gas_start: {}, gas_remaining: {})'.format(tx['gas_start'], gas_remaining)
-        return False, ''
+    except exceptions.OutOfGas:
+        logging.debug('\tTX FAILED out_of_gas (gas_start: {}, gas_remaining: {})'.format(gas_start, gas_remaining))
+        status = 'unfinished'
+        output = ''
+
+
+    # TODO
+    gas_cost = -1
+    gas_remaining = -1
+
+    # Add parsed transaction to message-type–specific table.
+    bindings = {
+        'tx_index': tx['tx_index'],
+        'tx_hash': tx['tx_hash'],
+        'block_index': tx['block_index'],
+        'source': tx['source'],
+        'contract_id': contract_id,
+        'gas_price': gas_price,
+        'gas_start': gas_start,
+        'gas_cost': gas_cost,
+        'gas_remaining': gas_remaining,
+        'value': value,
+        'payload': payload,
+        'output': output,
+        'status': status
+    }
+    sql='insert into executions values(:tx_index, :tx_hash, :block_index, :source, :contract_id, :gas_price, :gas_start, :gas_cost, :gas_remaining, :value, :data, :output, :status)'
+    cursor.execute(sql, bindings)
+
+
+
+
+    # Don’t commit. TODO
+    cursor.close()
+    raise Exception
+
+
 
 
 
@@ -295,7 +312,7 @@ class Compustate():
         for kw in kwargs:
             setattr(self, kw, kwargs[kw])
 
-def apply_msg(block, tx, msg, code):
+def apply_msg(tx, msg, code):
     pblogger.log("MSG APPLY", tx=tx.hex_hash(), sender=msg.sender, to=msg.to,
                                   gas=msg.gas, value=msg.value, data=binascii.hexlify(msg.data))
     # NOTE: pblogger.log('MSG PRE STATE', account=msg.to, state=block.account_to_dict(msg.to))

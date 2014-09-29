@@ -668,11 +668,11 @@ if __name__ == '__main__':
 
     parser_execute = subparsers.add_parser('execute', help='execute contract code in the blockchain')
     parser_execute.add_argument('--source', required=True, help='the source address')
-    parser_execute.add_argument('--contract_id', required=True, help='the txid of the contract’s publication')
-    parser_execute.add_argument('--gas_price', required=True, type=int, help='the price of gas')
-    parser_execute.add_argument('--gas_start', required=True, type=int, help='the maximum quantity of gas to be used to pay for the execution')
+    parser_execute.add_argument('--contract-id', required=True, help='the txid of the contract’s publication')
+    parser_execute.add_argument('--gas-price', required=True, type=int, help='the price of gas')
+    parser_execute.add_argument('--gas-start', required=True, type=int, help='the maximum quantity of gas to be used to pay for the execution')
     parser_execute.add_argument('--value', required=True, type=int, help='quantity of {} to be transfered to the contract'.format(config.XCP))
-    parser_execute.add_argument('--data', required=True, type=str, help='data to be provided to the contract')
+    parser_execute.add_argument('--payload-hex', required=True, type=str, help='data to be provided to the contract')
     parser_execute.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
     parser_address = subparsers.add_parser('balances', help='display the balances of a {} address'.format(config.XCP_NAME))
@@ -1002,10 +1002,11 @@ if __name__ == '__main__':
     elif args.action == 'execute':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
         value = util.devise(db, args.value, 'XCP', 'input')
+        gas_start = util.devise(db, args.gas_start, 'XCP', 'input')
         cli('create_execute', {'source': args.source,
                                'contract_id': args.contract_id, 'gas_price':
                                args.gas_price, 'gas_start': args.gas_start,
-                               'value': value, 'data': args.data, 'fee':
+                               'value': value, 'payload_hex': args.payload_hex, 'fee':
                                args.fee, 'allow_unconfirmed_inputs':
                                args.unconfirmed, 'encoding': args.encoding,
                                'fee_per_kb': args.fee_per_kb,
