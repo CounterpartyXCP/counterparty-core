@@ -238,7 +238,7 @@ def log (db, command, category, bindings):
             logging.info('Expired RPS Match: {}'.format(bindings['rps_match_id']))
 
         elif category == 'contracts':
-            logging.info('New Contract: {} created contract {} ({})'.format(bindings['source'], binascii.hexlify(bindings['code']).decode('ascii'), bindings['tx_hash']))
+            logging.info('New Contract: {} published a contract ({})'.format(bindings['source'], bindings['tx_hash']))
 
         elif category == 'executions':
             """

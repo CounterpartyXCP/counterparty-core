@@ -103,6 +103,7 @@ def hexprint(data):
     return line
 
 
+
 GDEFAULT = 1
 GMEMORY = 1
 GSTORAGE = 100
@@ -161,7 +162,7 @@ def parse (db, tx, message):
 
     if status == 'valid':
         code, problems = validate(db, tx['source'], contract_id, tx['block_index'])
-        if problems: raise exceptions.ExecuteError(problems)
+        if problems: status = 'invalid: ' + '; '.join(problems)
 
 
     # TODO: gas_price is an int
@@ -173,6 +174,11 @@ def parse (db, tx, message):
 
 
 
+    # TODO: HAAAAAACK
+    # TODO: ENDIANNESS
+    payload = binascii.unhexlify('000000000000000000000000000000000000000000000000000000000000002a')
+    print(payload)
+
 
     class Message(object):
 
@@ -180,7 +186,7 @@ def parse (db, tx, message):
             self.sender = sender
             self.value = value
             self.gas = gas
-            self.payload = payload
+            self.data = payload
 
         def __repr__(self):
             return '<Message(to:%s...)>' % self.to[:8]
@@ -265,7 +271,7 @@ def parse (db, tx, message):
         status = 'finished'
 
     except exceptions.OutOfGas:
-        logging.debug('TX FAILED out_of_gas (gas_start: {}, gas_remaining: {})'.format(gas_start, gas_remaining))
+        logging.debug('TX OUT_OF_GAS (gas_start: {}, gas_remaining: {})'.format(gas_start, gas_remaining))
         status = 'unfinished'
         output = ''
 
@@ -296,9 +302,9 @@ def parse (db, tx, message):
 
 
 
-    # Don’t commit. TODO
     cursor.close()
-    raise Exception
+    # Don’t commit. TODO
+    # raise Exception
 
 
 
@@ -329,7 +335,7 @@ def apply_msg(tx, msg, code):
 
     # NOTE
     # snapshot = block.snapshot()
-    print('CODE', hexprint(code))
+    print('CODE', '0x' + binascii.hexlify(code).decode('ascii'))
     compustate = Compustate(gas=msg.gas)
     t, ops = time.time(), 0
 
@@ -348,14 +354,10 @@ def apply_msg(tx, msg, code):
         o = apply_op(tx, msg, processed_code, compustate)
         ops += 1
         if o is not None:
-            logging.debug('MSG APPLIED', result=hexprint(o), gas_remained=compustate.gas,
-                          sender=msg.sender, ops=ops,
-                          time_per_op=(time.time() - t) / ops)
-            logging.debug('MSG APPLIED', result=hexprint(o), gas_remained=compustate.gas,
-                        sender=msg.sender, ops=ops,
-                        time_per_op=(time.time() - t) / ops)
-            # NOTE: pblogger.log('MSG POST STATE', account=msg.to,
-            #              state=block.account_to_dict(msg.to))
+            # print('o', o)
+            # print(compustate)
+            logging.debug('MSG APPLIED (result: {}, gas_remained: {}, ops: {}, time_per_op: {})'.format(binascii.hexlify(bytes(o)), compustate.gas,
+                          ops, (time.time() - t) / ops))
 
             if o == OUT_OF_GAS:
                 block.revert(snapshot)
@@ -380,7 +382,7 @@ def mem_extend(mem, compustate, op, newsize):
     if len(mem) < ceil32(newsize):
         m_extend = ceil32(newsize) - len(mem)
         mem.extend([0] * m_extend)
-        memfee = GMEMORY * (m_extend / 32)
+        memfee = GMEMORY * (m_extend // 32)
         compustate.gas -= memfee
         if compustate.gas < 0:
             out_of_gas_exception('mem_extend', memfee, compustate, op)
@@ -442,13 +444,13 @@ def apply_op(tx, msg, processed_code, compustate):
         stk.append((stk.pop() * stk.pop()) % TT256)
     elif op == 'DIV':
         s0, s1 = stk.pop(), stk.pop()
-        stk.append(0 if s1 == 0 else s0 / s1)
+        stk.append(0 if s1 == 0 else s0 // s1)
     elif op == 'MOD':
         s0, s1 = stk.pop(), stk.pop()
         stk.append(0 if s1 == 0 else s0 % s1)
     elif op == 'SDIV':
         s0, s1 = to_signed(stk.pop()), to_signed(stk.pop())
-        stk.append(0 if s1 == 0 else (s0 / s1) % TT256)
+        stk.append(0 if s1 == 0 else (s0 // s1) % TT256)
     elif op == 'SMOD':
         s0, s1 = to_signed(stk.pop()), to_signed(stk.pop())
         stk.append(0 if s1 == 0 else (s0 % s1) % TT256)
@@ -481,7 +483,7 @@ def apply_op(tx, msg, processed_code, compustate):
         if s0 >= 32:
             stk.append(0)
         else:
-            stk.append((s1 / 256 ** (31 - s0)) % 256)
+            stk.append((s1 // 256 ** (31 - s0)) % 256)
     elif op == 'ADDMOD':
         s0, s1, s2 = stk.pop(), stk.pop(), stk.pop()
         stk.append((s0 + s1) % s2 if s2 else 0)
@@ -510,7 +512,7 @@ def apply_op(tx, msg, processed_code, compustate):
             stk.append(0)
         else:
             dat = msg.data[s0: s0 + 32]
-            stk.append(util_rlp.big_endian_to_int(dat + '\x00' * (32 - len(dat))))
+            stk.append(util_rlp.big_endian_to_int(dat + b'\x00' * (32 - len(dat))))
     elif op == 'CALLDATASIZE':
         stk.append(len(msg.data))
     elif op == 'CALLDATACOPY':
@@ -572,7 +574,7 @@ def apply_op(tx, msg, processed_code, compustate):
         v = s1
         for i in range(31, -1, -1):
             mem[s0 + i] = v % 256
-            v /= 256
+            v //= 256
     elif op == 'MSTORE8':
         s0, s1 = stk.pop(), stk.pop()
         if not mem_extend(mem, compustate, op, s0 + 1):
@@ -654,7 +656,7 @@ def apply_op(tx, msg, processed_code, compustate):
             return out_of_gas_exception('subcall gas', gas, compustate, op)
         compustate.gas -= gas
         to = encode_int(to)
-        to = binascii.hexlify((('\x00' * (32 - len(to))) + to)[12:])
+        to = binascii.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
         data = ''.join(map(chr, mem[meminstart: meminstart + meminsz]))
         pblogger.log('SUB CALL NEW', sender=msg.to, to=to, value=value, gas=gas, data=binascii.hexlify(data))
         call_msg = Message(msg.to, to, value, gas, data)
@@ -681,7 +683,7 @@ def apply_op(tx, msg, processed_code, compustate):
             return out_of_gas_exception('subcall gas', gas, compustate, op)
         compustate.gas -= gas
         to = encode_int(to)
-        to = binascii.hexlify((('\x00' * (32 - len(to))) + to)[12:])
+        to = binascii.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
         data = ''.join(map(chr, mem[meminstart: meminstart + meminsz]))
         pblogger.log('POST NEW', sender=msg.to, to=to, value=value, gas=gas, data=binascii.hexlify(data))
         post_msg = Message(msg.to, to, value, gas, data)
@@ -696,7 +698,7 @@ def apply_op(tx, msg, processed_code, compustate):
             return out_of_gas_exception('subcall gas', gas, compustate, op)
         compustate.gas -= gas
         to = encode_int(to)
-        to = binascii.hexlify((('\x00' * (32 - len(to))) + to)[12:])
+        to = binascii.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
         data = ''.join(map(chr, mem[meminstart: meminstart + meminsz]))
         pblogger.log('SUB CALL NEW', sender=msg.to, to=to, value=value, gas=gas, data=binascii.hexlify(data))
         call_msg = Message(msg.to, msg.to, value, gas, data)
@@ -711,7 +713,7 @@ def apply_op(tx, msg, processed_code, compustate):
                 mem[memoutstart + i] = data[i]
     elif op == 'SUICIDE':
         to = encode_int(stk.pop())
-        to = binascii.hexlify((('\x00' * (32 - len(to))) + to)[12:])
+        to = binascii.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
         block.transfer_value(msg.to, to, block.get_balance(msg.to))
         block.suicides.append(msg.to)
         return []
