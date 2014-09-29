@@ -97,11 +97,18 @@ def bytearray_to_int(arr):
     for a in arr:
         o = o * 256 + a
     return o
-def hexprint(data):
+def decode_datalist(arr):
+    if isinstance(arr, list):
+        arr = ''.join(map(chr, arr))
+    o = []
+    for i in range(0, len(arr), 32):
+        o.append(util_rlp.big_endian_to_int(arr[i:i + 32]))
+    return o
+def memprint(data):
     line = binascii.hexlify(bytes(data))
     line = ' '.join([line[i:i+2].decode('ascii') for i in range(0, len(line), 2)])
     return line
-
+hexprint = lambda x: '0x' + binascii.hexlify(bytes(x)).decode('ascii')
 
 
 GDEFAULT = 1
@@ -177,7 +184,7 @@ def parse (db, tx, message):
     # TODO: HAAAAAACK
     # TODO: ENDIANNESS
     payload = binascii.unhexlify('000000000000000000000000000000000000000000000000000000000000002a')
-    print(payload)
+    print('HAACK', payload)
 
 
     class Message(object):
@@ -243,7 +250,10 @@ def parse (db, tx, message):
         # result, gas_remaining, data = 'foo', 0, b'baz'
         assert gas_remaining >= 0
 
-        logging.debug('TX APPLIED (result: {}, gas_remaining: {}, data: {})'.format(result, gas_remaining, hexprint(data)))
+        # redundant logging.debug('TX APPLIED (result: {}, gas_remaining: {}, data: {})'.format(result, gas_remaining, hexprint(data)))
+        logging.debug('RESULT {}'.format(result))
+        logging.debug('DATA {}'.format(decode_datalist(bytes(data))))
+
         if not result:  # 0 = OOG failure in both cases
             block.gas_used += gas_start
             raise exceptions.OutOfGas
@@ -321,7 +331,8 @@ class Compustate():
             setattr(self, kw, kwargs[kw])
 
 def apply_msg(tx, msg, code):
-    # NOTE: pblogger.log('MSG PRE STATE', account=msg.to, state=block.account_to_dict(msg.to))
+    # TODO: pblogger.log('MSG PRE STATE', account=msg.to, state=block.account_to_dict(msg.to))
+        # Print balance, storage of contract
 
     # NOTE
     # Transfer value, instaquit if not enough
@@ -335,7 +346,8 @@ def apply_msg(tx, msg, code):
 
     # NOTE
     # snapshot = block.snapshot()
-    print('CODE', '0x' + binascii.hexlify(code).decode('ascii'))
+    logging.debug('DATA {}'.format(decode_datalist(bytes(msg.data))))
+    print('CODE', hexprint(code))
     compustate = Compustate(gas=msg.gas)
     t, ops = time.time(), 0
 
@@ -354,10 +366,10 @@ def apply_msg(tx, msg, code):
         o = apply_op(tx, msg, processed_code, compustate)
         ops += 1
         if o is not None:
-            # print('o', o)
-            # print(compustate)
-            logging.debug('MSG APPLIED (result: {}, gas_remained: {}, ops: {}, time_per_op: {})'.format(binascii.hexlify(bytes(o)), compustate.gas,
+            logging.debug('MSG APPLIED (result: {}, gas_remained: {}, ops: {}, time_per_op: {})'.format(hexprint(o), compustate.gas,
                           ops, (time.time() - t) / ops))
+
+            # TODO: MSG POST STATE, print balance, storage of contract
 
             if o == OUT_OF_GAS:
                 block.revert(snapshot)
@@ -413,7 +425,7 @@ def apply_op(tx, msg, processed_code, compustate):
 
     for i in range(0, len(compustate.memory), 16):
         memblk = compustate.memory[i:i+16]
-        logging.debug('MEM {}'.format(hexprint(memblk)))
+        logging.debug('MEM {}'.format(memprint(memblk)))
 
     # NOTE: pblogger.log('STORAGE', storage=block.account_to_dict(msg.to))
 
