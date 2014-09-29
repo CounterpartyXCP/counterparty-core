@@ -854,8 +854,8 @@ def initialise(db):
                       tx_hash TEXT UNIQUE,
                       block_index INTEGER,
                       source TEXT,
-                      code BLOB,
                       balance integer,
+                      code BLOB,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                       PRIMARY KEY (tx_index, tx_hash))
                   ''')

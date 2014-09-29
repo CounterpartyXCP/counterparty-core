@@ -103,6 +103,16 @@ def hexprint(data):
     return line
 
 
+GDEFAULT = 1
+GMEMORY = 1
+GSTORAGE = 100
+GTXDATA = 5
+GTXCOST = 500
+TT255 = 2**255
+TT256 = 2**256
+
+OUT_OF_GAS = -1
+
 
 
 
@@ -163,19 +173,6 @@ def parse (db, tx, message):
 
 
 
-    GDEFAULT = 1
-    GMEMORY = 1
-    GSTORAGE = 100
-    GTXDATA = 5
-    GTXCOST = 500
-    TT255 = 2**255
-    TT256 = 2**256
-
-    OUT_OF_GAS = -1
-
-
-    # TODO: Where does this go?
-    code_cache = {}
 
     class Message(object):
 
@@ -187,9 +184,6 @@ def parse (db, tx, message):
 
         def __repr__(self):
             return '<Message(to:%s...)>' % self.to[:8]
-
-
-
 
 
     # TODO
@@ -221,7 +215,14 @@ def parse (db, tx, message):
     # if block.gas_used + gas_start > block.gas_limit:
     #     raise BlockGasLimitReached(rp(block.gas_used + gas_start, block.gas_limit))
 
-    logging.debug('\tTX NEW (tx_hash: {})'.format(tx['tx_hash']), tx)
+    tx_dict = {'source': tx['source'],
+               'payload': binascii.hexlify(payload), 
+               'tx_hash': tx['tx_hash'],
+               'contract_id': contract_id,
+               'gas_price': gas_price,
+               'gas_start': gas_start
+              }
+    logging.debug('TX NEW {}'.format(tx_dict))
 
     # start transacting #################
     # block.increment_nonce(tx['source'])
@@ -232,20 +233,21 @@ def parse (db, tx, message):
     message = Message(tx['source'], value, message_gas, payload)
 
     try:
-        # TODO result, gas_remaining, data = apply_msg(tx, message, code)
-        result, gas_remaining, data = 'foo', 0, b'baz'
+        result, gas_remaining, data = apply_msg(tx, message, code)
+        # result, gas_remaining, data = 'foo', 0, b'baz'
         assert gas_remaining >= 0
 
-        logging.debug('\tTX APPLIED (result: {}, gas_remaining: {}, data: {})'.format(result, gas_remaining, hexprint(data)))
+        logging.debug('TX APPLIED (result: {}, gas_remaining: {}, data: {})'.format(result, gas_remaining, hexprint(data)))
         if not result:  # 0 = OOG failure in both cases
             block.gas_used += gas_start
             raise exceptions.OutOfGas
         else:
-            logging.debug('\tTX SUCCESS')
+            logging.debug('TX SUCCESS')
             gas_used = gas_start - gas_remaining
             # TODO: block.gas_used += gas_used
 
             # Return remaining gas to source.
+            gas_remaining = int(gas_remaining)  # TODO: BAD
             util.credit(db, tx['block_index'], tx['source'], config.XCP, gas_remaining, action='gas remaining', event=tx['tx_hash'])
 
             output = ''.join(map(chr, data))
@@ -263,7 +265,7 @@ def parse (db, tx, message):
         status = 'finished'
 
     except exceptions.OutOfGas:
-        logging.debug('\tTX FAILED out_of_gas (gas_start: {}, gas_remaining: {})'.format(gas_start, gas_remaining))
+        logging.debug('TX FAILED out_of_gas (gas_start: {}, gas_remaining: {})'.format(gas_start, gas_remaining))
         status = 'unfinished'
         output = ''
 
@@ -313,8 +315,6 @@ class Compustate():
             setattr(self, kw, kwargs[kw])
 
 def apply_msg(tx, msg, code):
-    pblogger.log("MSG APPLY", tx=tx.hex_hash(), sender=msg.sender, to=msg.to,
-                                  gas=msg.gas, value=msg.value, data=binascii.hexlify(msg.data))
     # NOTE: pblogger.log('MSG PRE STATE', account=msg.to, state=block.account_to_dict(msg.to))
 
     # NOTE
@@ -332,6 +332,10 @@ def apply_msg(tx, msg, code):
     print('CODE', hexprint(code))
     compustate = Compustate(gas=msg.gas)
     t, ops = time.time(), 0
+
+    # TODO: Where does this go?
+    code_cache = {}
+
     if code in code_cache:
         processed_code = code_cache[code]
     else:
@@ -341,11 +345,14 @@ def apply_msg(tx, msg, code):
     # print('PROCESSED_CODE', processed_code)
     # Main loop
     while 1:
-        o = apply_op(block, tx, msg, processed_code, compustate)
+        o = apply_op(tx, msg, processed_code, compustate)
         ops += 1
         if o is not None:
-            pblogger.log('MSG APPLIED', result=hexprint(o), gas_remained=compustate.gas,
-                        sender=msg.sender, to=msg.to, ops=ops,
+            logging.debug('MSG APPLIED', result=hexprint(o), gas_remained=compustate.gas,
+                          sender=msg.sender, ops=ops,
+                          time_per_op=(time.time() - t) / ops)
+            logging.debug('MSG APPLIED', result=hexprint(o), gas_remained=compustate.gas,
+                        sender=msg.sender, ops=ops,
                         time_per_op=(time.time() - t) / ops)
             # NOTE: pblogger.log('MSG POST STATE', account=msg.to,
             #              state=block.account_to_dict(msg.to))
@@ -383,11 +390,10 @@ def to_signed(i):
     return i if i < TT255 else i - TT256
 
 # Does not include paying opfee
-def apply_op(block, tx, msg, processed_code, compustate):
+def apply_op(tx, msg, processed_code, compustate):
     if compustate.pc >= len(processed_code):
         return []
     op, in_args, out_args, mem_grabs, fee, opcode = processed_code[compustate.pc]
-    print()
     # print('APPLYING OP', op)
     # print('INARGS', in_args)
     # print('COMPUSTATE.STACK', compustate.stack)
@@ -401,11 +407,11 @@ def apply_op(block, tx, msg, processed_code, compustate):
     if fee > compustate.gas:
         return out_of_gas_exception('base_gas', fee, compustate, op)
 
-    pblogger.log('STK', stk=list(reversed(compustate.stack)))
+    logging.debug('STK {}'.format(list(reversed(compustate.stack))))
 
     for i in range(0, len(compustate.memory), 16):
         memblk = compustate.memory[i:i+16]
-        pblogger.log('MEM', mem=hexprint(memblk))
+        logging.debug('MEM {}'.format(hexprint(memblk)))
 
     # NOTE: pblogger.log('STORAGE', storage=block.account_to_dict(msg.to))
 
@@ -419,7 +425,7 @@ def apply_op(block, tx, msg, processed_code, compustate):
             bytearray_to_int([x[-1] for x in processed_code[ind: ind + int(op[4:])]])
     elif op == 'CALLDATACOPY':
         log_args['data'] = binascii.hexlify(msg.data)
-    pblogger.log('OP', **log_args)
+    logging.debug('OP {}'.format(log_args))
 
     # Apply operation
     compustate.gas -= fee
