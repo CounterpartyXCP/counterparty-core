@@ -856,6 +856,7 @@ def initialise(db):
                       source TEXT,
                       code BLOB,
                       storage BLOB,
+                      alive BOOL,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                       PRIMARY KEY (tx_index, tx_hash))
                   ''')

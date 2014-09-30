@@ -28,8 +28,9 @@ def parse (db, tx, message):
         'source': tx['source'],
         'code': message,
         'storage': b'',
+        'alive': True,
     }
-    sql='insert into contracts values(:tx_index, :tx_hash, :block_index, :source, :code, :storage)'
+    sql='insert into contracts values(:tx_index, :tx_hash, :block_index, :source, :code, :storage, :alive)'
     cursor.execute(sql, bindings)
 
     cursor.close()

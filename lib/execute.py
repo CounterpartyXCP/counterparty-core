@@ -9,23 +9,7 @@ import binascii
 import time
 import logging
 
-from lib import (util, config, bitcoin, util, util_rlp)
-
-class ExecuteError(MessageError):
-    pass
-
-class HaltExecution(Exception):
-    pass
-class GasPriceTooLow(HaltExecution):
-    pass
-class InsufficientBalance(HaltExecution):
-    pass
-class InsufficientStartGas(HaltExecution):
-    pass
-class BlockGasLimitReached(HaltExecution):
-    pass
-class OutOfGas(HaltExecution):
-    pass
+from lib import (util, config, exceptions, bitcoin, util, util_rlp)
 
 FORMAT = '>32sQQQ'
 LENGTH = 56
@@ -151,11 +135,22 @@ def compose (db, source, contract_id, gas_price, gas_start, value, payload_hex):
     return (source, [], data)
 
 
+class HaltExecution(Exception): pass
+class GasPriceTooLow(HaltExecution): pass
+class InsufficientBalance(HaltExecution): pass
+class InsufficientStartGas(HaltExecution): pass
+class BlockGasLimitReached(HaltExecution): pass
+class OutOfGas(HaltExecution): pass
+suicidal = False
+
 def parse (db, tx, message):
     gas_cost = 0
     gas_remaining = 0
     output = None
     status = 'valid'
+
+    global suicidal
+    suicidal = False
 
     # TODO: unit tests!
 
@@ -165,7 +160,7 @@ def parse (db, tx, message):
         try:
             contract_id, gas_price, gas_start, value, payload = struct.unpack(curr_format, message)
         except (struct.error) as e:
-            raise UnpackError()
+            raise exceptions.UnpackError()
 
         contract_id = binascii.hexlify(contract_id).decode('utf-8')
         code = util.get_code(db, contract_id)
@@ -205,22 +200,22 @@ def parse (db, tx, message):
                 self.data = payload
         message = Message(tx['source'], contract_id, value, message_gas, payload)
 
-        # TODO: Make snapshot.
-        logging.debug('SNAPSHOTTING')
+        ### BEGIN Computation ###
+        logging.debug('SNAPSHOT')
         logging.debug('CONTRACT PRE STATE (balance: {}, storage: {})'.format(util.devise(db, util.get_balance(db, contract_id, config.XCP), config.XCP, 'output'), hexprint(util.get_storage(db, contract_id))))
+        with db:
+            # Apply message!
+            result, gas_remaining, data = apply_msg(db, tx, message, code)
+            assert gas_remaining >= 0
 
-        # Apply message!
-        result, gas_remaining, data = apply_msg(db, tx, message, code)
-        assert gas_remaining >= 0
-        logging.debug('RESULT {}'.format(result))
-        logging.debug('DATA {}'.format(hexprint(data)))
-        logging.debug('DECODED DATA {}'.format(util_rlp.decode_datalist(bytes(data))))
+            logging.debug('RESULT {}'.format(result))
+            logging.debug('DATA {}'.format(hexprint(data)))
+            logging.debug('DECODED DATA {}'.format(util_rlp.decode_datalist(bytes(data))))
 
-        if not result:  # 0 = OOG failure in both cases
-            # TODO: Revert to snapshot.
-            logging.debug('REVERTING')
-            raise OutOfGas
-        logging.debug('CONTRACT POST STATE (balance: {}, storage: {})'.format(util.devise(db, util.get_balance(db, contract_id, config.XCP), config.XCP, 'output'), hexprint(util.get_storage(db, contract_id))))
+            if not result:  # 0 = OOG failure in both cases
+                logging.debug('REVERTING')  # Rollback.
+                raise OutOfGas
+        ### END Computation ###
 
         logging.debug('TX SUCCESS')
         gas_remaining = int(gas_remaining)  # TODO: BAD
@@ -231,21 +226,20 @@ def parse (db, tx, message):
         util.credit(db, tx['block_index'], tx['source'], config.XCP, gas_remaining, action='gas remaining', event=tx['tx_hash'])
 
         output = ''.join(map(chr, data))
-
-        # TODO: Commit state. (Just don’t revert?!)
         status = 'finished'
 
-        # NOTE
-        # suicides = block.suicides
-        # block.suicides = []
-        # for s in suicides:
-        #     block.del_account(s)
+        # Kill suicidal contract.
+        if suicidal:
+            cursor = db.cursor()
+            logging.debug('CONTRACT SUICIDE')
+            cursor.execute('''UPDATE contracts SET alive = False WHERE tx_hash = ?''', (contract_id,))
+            cursor.close()
 
-    except UnpackError as e:
+    except exceptions.UnpackError as e:
         contract_id, gas_price, gas_start, value, payload = None, None, None, None, None
         status = 'invalid: could not unpack'
         output = None
-    except ContractError as e:
+    except util.ContractError as e:
         status = 'invalid: no such contract'
         output = None
     except InsufficientStartGas as e:
@@ -263,8 +257,13 @@ def parse (db, tx, message):
         status = 'out of gas'
         output = None
     finally:
-        if status == 'valid':   # TODO: eh…
+
+        # TODO: eh…
+        if status == 'valid':
             logging.debug('TX FINISHED (gas_remaining: {})'.format(gas_remaining))
+        if not status.startswith('invalid'):
+            logging.debug('CONTRACT POST STATE (balance: {}, storage: {})'.format(util.devise(db, util.get_balance(db, contract_id, config.XCP), config.XCP, 'output'), hexprint(util.get_storage(db, contract_id))))
+
         # Add parsed transaction to message-type–specific table.
         bindings = {
             'tx_index': tx['tx_index'],
@@ -296,7 +295,7 @@ class Compustate():
         for kw in kwargs:
             setattr(self, kw, kwargs[kw])
 def apply_msg(db, tx, msg, code):
-    # Transfer value, instaquit if not enough
+    # Transfer value (instaquit if there isn’t enough).
     try:
         util.debit(db, tx['block_index'], tx['source'], config.XCP, msg.value, action='transfer value', event=tx['tx_hash'])
     except BalanceError as e:
@@ -315,14 +314,19 @@ def apply_msg(db, tx, msg, code):
     t = time.time()
     ops = 0
     while True:
-        o = apply_op(db, tx, msg, processed_code, compustate)
+        data = apply_op(db, tx, msg, processed_code, compustate)
         ops += 1
-        if o is not None:
-            logging.debug('MSG APPLIED (result: {}, gas_remained: {}, ops: {}, time_per_op: {})'.format(hexprint(o), compustate.gas, ops, (time.time() - t) / ops))
-            if o == OUT_OF_GAS:
-                return 0, compustate.gas, []
+        if data is not None:
+            gas_remaining = compustate.gas           
+
+            if data == OUT_OF_GAS:
+                result = 0
+                data = []
             else:
-                return 1, compustate.gas, o
+                result = 1
+
+            logging.debug('MSG APPLIED (result: {}, data: {}, gas_remained: {}, ops: {}, time_per_op: {})'.format(result, hexprint(data), compustate.gas, ops, (time.time() - t) / ops))
+            return result, gas_remaining, data
 
 
 def get_opcode(code, index):
@@ -671,8 +675,11 @@ def apply_op(db, tx, msg, processed_code, compustate):
     elif op == 'SUICIDE':
         to = encode_int(stk.pop())
         to = binascii.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
-        block.transfer_value(msg.to, to, block.get_balance(msg.to))
-        block.suicides.append(msg.to)
+        transfer_value = util. get_balance(db, msg.to, config.XCP)
+        util.debit(db, tx['block_index'], msg.to, config.XCP, transfer_value, action='suicide', event=tx['tx_hash'])
+        util.credit(db, tx['block_index'], to, config.XCP, transfer_value, action='suicide', event=tx['tx_hash'])
+        global suicidal
+        suicidal = True
         return []
     for a in stk:
         assert isinstance(a, int)

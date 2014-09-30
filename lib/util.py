@@ -790,16 +790,24 @@ class ContractError(Exception):
 def get_storage (db, contract_id):
     cursor = db.cursor()
     contracts = list(cursor.execute('''SELECT * FROM contracts WHERE (tx_hash = ?)''', (contract_id,)))
+
     if not contracts: raise ContractError('no such contract')
-    else: return contracts[0]['storage']
+    elif not contracts[0]['alive']: raise ContractError('dead contract')
+    else: storage = contracts[0]['storage']
+
+    cursor.close()
+    return storage
+
 def get_code (db, contract_id):
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM contracts WHERE tx_hash = ?''', (contract_id,))
     contracts = list(cursor)
+
     if not contracts:
         raise exceptions.ContractError('no such contract')
-    else:
-        code = contracts[0]['code']
+    elif not contracts[0]['alive']: raise ContractError('dead contract')
+    else: code = contracts[0]['code']
+
     cursor.close()
     return code
 
