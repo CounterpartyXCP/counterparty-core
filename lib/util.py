@@ -784,11 +784,22 @@ def get_balance (db, address, asset):
     if not balances: return 0
     else: return balances[0]['quantity']
 
+# Scripting
 def get_storage (db, contract_id):
     cursor = db.cursor()
     contracts = list(cursor.execute('''SELECT * FROM contracts WHERE (tx_hash = ?)''', (contract_id,)))
     if not contracts: return b''
     else: return contracts[0]['storage']
+def get_code (db, contract_id):
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM contracts WHERE tx_hash = ?''', (contract_id,))
+    contracts = list(cursor)
+    if not contracts:
+        raise exceptions.ContractError('no such contract')
+    else:
+        code = contracts[0]['code']
+    cursor.close()
+    return code
 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

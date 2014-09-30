@@ -116,100 +116,47 @@ TT256 = 2**256
 OUT_OF_GAS = -1
 
 
-def validate (db, source, contract_id, block_index):
-    problems = []
-    code = None
-
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM contracts WHERE tx_hash = ?''', (contract_id,))
-    contracts = list(cursor)
-    if not contracts:
-        problems.append('no such contract')
-    else:
-        code = contracts[0]['code']
-
-    cursor.close()
-    return code, problems
-
-
 def compose (db, source, contract_id, gas_price, gas_start, value, payload_hex):
-
-    code, problems = validate(db, source, contract_id, util.last_block(db)['block_index'])
-    if problems: raise exceptions.ExecuteError(problems)
-
+    code = util.get_code(db, contract_id)
     payload = binascii.unhexlify(payload_hex)
+    # TODO: Check start_gas, gas_price here?
 
+    # Pack.
     data = struct.pack(config.TXTYPE_FORMAT, ID)
     curr_format = FORMAT + '{}s'.format(len(payload))
     data += struct.pack(curr_format, binascii.unhexlify(contract_id), gas_price, gas_start, value, payload)
-
-    # TODO: Check start_gas, gas_price here?
 
     return (source, [], data)
 
 
 def parse (db, tx, message):
-    cursor = db.cursor()
-
-    # Unpack message.
-    try:
-        curr_format = FORMAT + '{}s'.format(len(message) - LENGTH)
-        contract_id, gas_price, gas_start, value, payload = struct.unpack(curr_format, message)
-        contract_id = binascii.hexlify(contract_id).decode('utf-8')
-        status = 'valid'
-    except (exceptions.UnpackError, struct.error) as e:
-        contract_id, gas_price, gas_start, value, payload = None, None, None, None, None
-        status = 'invalid: could not unpack'
-
-    if status == 'valid':
-        code, problems = validate(db, tx['source'], contract_id, tx['block_index'])
-        if problems: status = 'invalid: ' + '; '.join(problems)
-
-    # TODO: gas_price is an int
-
-    if status != 'valid': 
-        cursor.close()
-        return
-
     gas_cost = 0
     gas_remaining = 0
-
-    class Message(object):
-
-        def __init__(self, source, contract_id, value, gas, payload):
-            self.source = source
-            self.contract_id = contract_id
-            self.value = value
-            self.gas = gas
-            self.data = payload
-
+    output = None
+    status = 'valid'
 
     try:
+        # Unpack message.
+        curr_format = FORMAT + '{}s'.format(len(message) - LENGTH)
+        try:
+            contract_id, gas_price, gas_start, value, payload = struct.unpack(curr_format, message)
+        except (struct.error) as e:
+            raise exceptions.UnpackError()
 
-        # the transaction nonce is valid (equivalent to the
-        #     sender account's current nonce);
-        # acctnonce = block.get_nonce(tx['source'])
-        # if acctnonce != tx['nonce']:
-        #     raise InvalidNonce(rp(tx['nonce'], acctnonce))
+        contract_id = binascii.hexlify(contract_id).decode('utf-8')
+        code = util.get_code(db, contract_id)
+        # TODO: gas_price is an int
 
-        # the gas limit is no smaller than the intrinsic gas, g0, used by the transaction;
+        # Check intrinsic gas used by contract.
         intrinsic_gas_used = GTXDATA * len(payload) + GTXCOST
         if gas_start < intrinsic_gas_used:
-            raise InsufficientStartGas('have {}, need {}'.format(gas_start, intrinsic_gas_used))
+            raise exceptions.InsufficientStartGas(gas_start, intrinsic_gas_used)
 
-        # the sender account balance contains at least the cost, v0, required in up-front payment.
+        # Check cost required for down payment.
         total_initial_cost = value + gas_price * gas_start
         balance = util.get_balance(db, tx['source'], config.XCP) 
         if balance < total_initial_cost:
-            raise exceptions.InsufficientBalance('have {}, need {}'.format(balance, total_initial_cost))
-
-        # check offered gas price is enough
-        # if tx['gas_price'] < block.min_gas_price:
-        #     raise GasPriceTooLow(rp(tx['gas_price'], block.min_gas_price))
-
-        # check block gas limit
-        # if block.gas_used + gas_start > block.gas_limit:
-        #     raise BlockGasLimitReached(rp(block.gas_used + gas_start, block.gas_limit))
+            raise exceptions.InsufficientBalance(balance, total_initial_cost)
 
         tx_dict = {'source': tx['source'],
                    'payload': binascii.hexlify(payload), 
@@ -221,81 +168,92 @@ def parse (db, tx, message):
                   }
         logging.debug('TX NEW {}'.format(tx_dict))
 
-
-        ##### START TRANSACTING #####
-
-        # block.increment_nonce(tx['source'])
         util.debit(db, tx['block_index'], tx['source'], config.XCP, gas_price * gas_start, action='start execution', event=tx['tx_hash'])
         gas_cost += gas_price * gas_start
 
         message_gas = gas_start - intrinsic_gas_used
+        class Message(object):
+            def __init__(self, source, contract_id, value, gas, payload):
+                self.source = source
+                self.contract_id = contract_id
+                self.value = value
+                self.gas = gas
+                self.data = payload
         message = Message(tx['source'], contract_id, value, message_gas, payload)
 
-        try:
-            result, gas_remaining, data = apply_msg(db, tx, message, code)
-            assert gas_remaining >= 0
+        # Apply message!
+        result, gas_remaining, data = apply_msg(db, tx, message, code)
+        assert gas_remaining >= 0
+        logging.debug('RESULT {}'.format(result))
+        logging.debug('DATA {}'.format(hexprint(data)))
+        logging.debug('DECODED DATA {}'.format(util_rlp.decode_datalist(bytes(data))))
 
-            logging.debug('RESULT {}'.format(result))
-            logging.debug('DATA {}'.format(hexprint(data)))
-            logging.debug('DECODED DATA {}'.format(util_rlp.decode_datalist(bytes(data))))
+        # TODO: Use exception handling?
+        if not result:  # 0 = OOG failure in both cases
+            raise exceptions.OutOfGas
+        else:
+            logging.debug('TX SUCCESS')
+            gas_remaining = int(gas_remaining)  # TODO: BAD
+            gas_used = gas_start - gas_remaining
+            gas_cost -= gas_remaining
 
-            if not result:  # 0 = OOG failure in both cases
-                # block.gas_used += gas_start
-                raise exceptions.OutOfGas
-            else:
-                logging.debug('TX SUCCESS')
-                gas_used = gas_start - gas_remaining
-                # TODO: block.gas_used += gas_used
+            # Return remaining gas to source.
+            util.credit(db, tx['block_index'], tx['source'], config.XCP, gas_remaining, action='gas remaining', event=tx['tx_hash'])
 
-                # Return remaining gas to source.
-                gas_remaining = int(gas_remaining)  # TODO: BAD
-                util.credit(db, tx['block_index'], tx['source'], config.XCP, gas_remaining, action='gas remaining', event=tx['tx_hash'])
-                gas_cost -= gas_remaining
+            output = ''.join(map(chr, data))
 
-                output = ''.join(map(chr, data))
+        # TODO: Commit state.
 
-            # TODO: Commit state.
-            # block.commit_state()
+        # NOTE
+        # suicides = block.suicides
+        # block.suicides = []
+        # for s in suicides:
+        #     block.del_account(s)
 
-            # NOTE
-            # suicides = block.suicides
-            # block.suicides = []
-            # for s in suicides:
-            #     block.del_account(s)
-            # block.add_transaction_to_list(tx)
+        status = 'finished'
 
-            status = 'finished'
-
-        except exceptions.OutOfGas:
-            logging.debug('TX OUT_OF_GAS (gas_start: {}, gas_remaining: {})'.format(gas_start, gas_remaining))
-            status = 'unfinished'
-            output = b''
-
-    except exceptions.InsufficientBalance:
+    except exceptions.UnpackError as e:
+        contract_id, gas_price, gas_start, value, payload = None, None, None, None, None
+        status = 'invalid: could not unpack'
+        output = None
+    except exceptions.ContractError as e:
+        status = 'invalid: no such contract'
+        output = None
+    except exceptions.InsufficientStartGas as e:
+        have, need = e.args
+        logging.debug('Insufficient start gas: have {} and need {}'.format(have, need))
+        status = 'invalid: insufficient start gas'
+        output = None
+    except exceptions.InsufficientBalance as e:
+        have, need = e.args
+        logging.debug('Insufficient balance: have {} and need {}'.format(have, need))
         status = 'invalid: insufficient balance'
         output = None
-
-
-    # Add parsed transaction to message-type–specific table.
-    bindings = {
-        'tx_index': tx['tx_index'],
-        'tx_hash': tx['tx_hash'],
-        'block_index': tx['block_index'],
-        'source': tx['source'],
-        'contract_id': contract_id,
-        'gas_price': gas_price,
-        'gas_start': gas_start,
-        'gas_cost': gas_cost,
-        'gas_remaining': gas_remaining,
-        'value': value,
-        'payload': payload,
-        'output': output,
-        'status': status
-    }
-    sql='insert into executions values(:tx_index, :tx_hash, :block_index, :source, :contract_id, :gas_price, :gas_start, :gas_cost, :gas_remaining, :value, :data, :output, :status)'
-    cursor.execute(sql, bindings)
-    cursor.close()
-
+    except exceptions.OutOfGas as e:
+        logging.debug('TX OUT_OF_GAS (gas_start: {}, gas_remaining: {})'.format(gas_start, gas_remaining))
+        status = 'out of gas'
+        output = None
+    finally:
+        # Add parsed transaction to message-type–specific table.
+        bindings = {
+            'tx_index': tx['tx_index'],
+            'tx_hash': tx['tx_hash'],
+            'block_index': tx['block_index'],
+            'source': tx['source'],
+            'contract_id': contract_id,
+            'gas_price': gas_price,
+            'gas_start': gas_start,
+            'gas_cost': gas_cost,
+            'gas_remaining': gas_remaining,
+            'value': value,
+            'payload': payload,
+            'output': output,
+            'status': status
+        }
+        sql='insert into executions values(:tx_index, :tx_hash, :block_index, :source, :contract_id, :gas_price, :gas_start, :gas_cost, :gas_remaining, :value, :data, :output, :status)'
+        cursor = db.cursor()
+        cursor.execute(sql, bindings)
+        cursor.close()
 
 
 
@@ -339,6 +297,7 @@ def apply_msg(db, tx, msg, code):
             logging.debug('MSG APPLIED (result: {}, gas_remained: {}, ops: {}, time_per_op: {})'.format(hexprint(o), compustate.gas, ops, (time.time() - t) / ops))
             logging.debug('CONTRACT POST STATE (balance: {}, storage: {})'.format(util.devise(db, util.get_balance(db, msg.contract_id, config.XCP), config.XCP, 'output'), hexprint(util.get_storage(db, msg.contract_id))))
 
+            # TODO: Use exception handling?
             if o == OUT_OF_GAS:
                 block.revert(snapshot)
                 return 0, compustate.gas, []

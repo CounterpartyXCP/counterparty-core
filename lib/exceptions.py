@@ -97,19 +97,20 @@ class ConsensusError (Exception):
 class GetURLError (Exception):
     pass
 
-
-
-
-class InsufficientBalance(Exception):
-    pass
-class InsufficientStartGas(Exception):
-    pass
-class BlockGasLimitReached(Exception):
-    pass
-class GasPriceTooLow(Exception):
+class ContractError(Exception):
     pass
 
-class OutOfGas(Exception):
+class HaltExecution(Exception):
+    pass
+class GasPriceTooLow(HaltExecution):
+    pass
+class InsufficientBalance(HaltExecution):
+    pass
+class InsufficientStartGas(HaltExecution):
+    pass
+class BlockGasLimitReached(HaltExecution):
+    pass
+class OutOfGas(HaltExecution):
     pass
 
 
