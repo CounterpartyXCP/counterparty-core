@@ -525,6 +525,10 @@ def debit (db, block_index, address, asset, quantity, action=None, event=None):
     assert type(quantity) == int
     assert quantity >= 0
 
+    # Contracts can only hold XCP balances. # TODO?!
+    if len(address) == 64:
+        assert asset == config.XCP
+
     if asset == config.BTC:
         raise exceptions.BalanceError('Cannot debit bitcoins from a {} address!'.format(config.XCP_NAME))
 
@@ -568,6 +572,10 @@ def credit (db, block_index, address, asset, quantity, action=None, event=None):
     assert asset != config.BTC # Never BTC.
     assert type(quantity) == int
     assert quantity >= 0
+
+    # Contracts can only hold XCP balances. # TODO?!
+    if len(address) == 64:
+        assert asset == config.XCP
 
     credit_cursor.execute('''SELECT * FROM balances \
                              WHERE (address = ? AND asset = ?)''', (address, asset))
@@ -715,6 +723,10 @@ def holders(db, asset):
             holders.append({'address': rps_match['tx0_address'], 'address_quantity': rps_match['wager'], 'escrow': rps_match['id']})
             holders.append({'address': rps_match['tx1_address'], 'address_quantity': rps_match['wager'], 'escrow': rps_match['id']})
 
+        cursor.execute('''SELECT * FROM executions''')
+        for execution in list(cursor):
+            holders.append({'address': execution['source'], 'address_quantity': execution['gas_cost'], 'escrow': None})
+
     cursor.close()
     return holders
 
@@ -763,5 +775,20 @@ def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
 
 def dhash_string(text):
     return binascii.hexlify(hashlib.sha256(hashlib.sha256(bytes(text, 'utf-8')).digest()).digest()).decode()
+
+def get_balance (db, address, asset):
+    # Get balance of contract or address.
+    cursor = db.cursor()
+    balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (address, asset)))
+    cursor.close()
+    if not balances: return 0
+    else: return balances[0]['quantity']
+
+def get_storage (db, contract_id):
+    cursor = db.cursor()
+    contracts = list(cursor.execute('''SELECT * FROM contracts WHERE (tx_hash = ?)''', (contract_id,)))
+    if not contracts: return b''
+    else: return contracts[0]['storage']
+
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

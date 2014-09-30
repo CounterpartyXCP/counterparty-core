@@ -100,8 +100,6 @@ class GetURLError (Exception):
 
 
 
-class InvalidNonce(Exception):
-    pass
 class InsufficientBalance(Exception):
     pass
 class InsufficientStartGas(Exception):

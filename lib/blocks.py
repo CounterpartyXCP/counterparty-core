@@ -32,8 +32,6 @@ TABLES = ['credits', 'debits', 'messages'] + \
 def check_conservation (db):
     logging.debug('Status: Checking for conservation of assets.')
 
-    return # TODO TODO
-
     supplies = util.supplies(db)
     for asset in supplies.keys():
 
@@ -856,8 +854,8 @@ def initialise(db):
                       tx_hash TEXT UNIQUE,
                       block_index INTEGER,
                       source TEXT,
-                      balance integer,
                       code BLOB,
+                      storage BLOB,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                       PRIMARY KEY (tx_index, tx_hash))
                   ''')

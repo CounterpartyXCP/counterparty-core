@@ -663,16 +663,16 @@ if __name__ == '__main__':
 
     parser_publish = subparsers.add_parser('publish', help='publish contract code in the blockchain')
     parser_publish.add_argument('--source', required=True, help='the source address')
-    parser_publish.add_argument('--code-hex', required=True, type=str, help='the hex‐encoded contract')
+    parser_publish.add_argument('--code-hex', required=True, type=str, help='the hex‐encoded contract (returned by `serpent compile`)')
     parser_publish.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
     parser_execute = subparsers.add_parser('execute', help='execute contract code in the blockchain')
     parser_execute.add_argument('--source', required=True, help='the source address')
-    parser_execute.add_argument('--contract-id', required=True, help='the txid of the contract’s publication')
+    parser_execute.add_argument('--contract-id', required=True, help='the transaction ID of the contract’s publication')
     parser_execute.add_argument('--gas-price', required=True, type=int, help='the price of gas')
     parser_execute.add_argument('--gas-start', required=True, type=int, help='the maximum quantity of gas to be used to pay for the execution')
     parser_execute.add_argument('--value', required=True, type=int, help='quantity of {} to be transfered to the contract'.format(config.XCP))
-    parser_execute.add_argument('--payload-hex', required=True, type=str, help='data to be provided to the contract')
+    parser_execute.add_argument('--payload-hex', required=True, type=str, help='data to be provided to the contract (returned by `serpent encode_datalist`)')
     parser_execute.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
     parser_address = subparsers.add_parser('balances', help='display the balances of a {} address'.format(config.XCP_NAME))
