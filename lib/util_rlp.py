@@ -34,6 +34,15 @@ First byte of an encoded item
 '''
 
 
+def decode_datalist(arr):
+    if isinstance(arr, list):
+        arr = ''.join(map(chr, arr))
+    o = []
+    for i in range(0, len(arr), 32):
+        o.append(big_endian_to_int(arr[i:i + 32]))
+    return o
+
+
 def int_to_big_endian(integer):
     '''convert a integer to big endian binary string'''
     # 0 is a special case, treated same as ''

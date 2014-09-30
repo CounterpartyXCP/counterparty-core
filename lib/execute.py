@@ -97,13 +97,6 @@ def bytearray_to_int(arr):
     for a in arr:
         o = o * 256 + a
     return o
-def decode_datalist(arr):
-    if isinstance(arr, list):
-        arr = ''.join(map(chr, arr))
-    o = []
-    for i in range(0, len(arr), 32):
-        o.append(util_rlp.big_endian_to_int(arr[i:i + 32]))
-    return o
 def memprint(data):
     line = binascii.hexlify(bytes(data))
     line = ' '.join([line[i:i+2].decode('ascii') for i in range(0, len(line), 2)])
@@ -180,13 +173,6 @@ def parse (db, tx, message):
         return  # TODO
 
 
-
-    # TODO: HAAAAAACK
-    # TODO: ENDIANNESS
-    payload = binascii.unhexlify('000000000000000000000000000000000000000000000000000000000000002a')
-    print('HAACK', payload)
-
-
     class Message(object):
 
         def __init__(self, sender, value, gas, payload):
@@ -252,7 +238,8 @@ def parse (db, tx, message):
 
         # redundant logging.debug('TX APPLIED (result: {}, gas_remaining: {}, data: {})'.format(result, gas_remaining, hexprint(data)))
         logging.debug('RESULT {}'.format(result))
-        logging.debug('DATA {}'.format(decode_datalist(bytes(data))))
+        logging.debug('DATA {}'.format(hexprint(data)))
+        logging.debug('DECODED DATA {}'.format(util_rlp.decode_datalist(bytes(data))))
 
         if not result:  # 0 = OOG failure in both cases
             block.gas_used += gas_start
@@ -313,10 +300,6 @@ def parse (db, tx, message):
 
 
     cursor.close()
-    # Don’t commit. TODO
-    # raise Exception
-
-
 
 
 
@@ -346,8 +329,9 @@ def apply_msg(tx, msg, code):
 
     # NOTE
     # snapshot = block.snapshot()
-    logging.debug('DATA {}'.format(decode_datalist(bytes(msg.data))))
-    print('CODE', hexprint(code))
+    logging.debug('DATA {}'.format(hexprint(msg.data)))
+    logging.debug('DECODED DATA {}'.format(util_rlp.decode_datalist(msg.data))) # TODO: This can confuse endianness.
+    logging.debug('CODE {}'.format(hexprint(code)))
     compustate = Compustate(gas=msg.gas)
     t, ops = time.time(), 0
 
@@ -523,8 +507,12 @@ def apply_op(tx, msg, processed_code, compustate):
         if s0 >= len(msg.data):
             stk.append(0)
         else:
+            # print('msg.data', msg.data)
+            # print('s0', s0)
             dat = msg.data[s0: s0 + 32]
+            # print('dat', dat)
             stk.append(util_rlp.big_endian_to_int(dat + b'\x00' * (32 - len(dat))))
+            # print('stk', stk)
     elif op == 'CALLDATASIZE':
         stk.append(len(msg.data))
     elif op == 'CALLDATACOPY':
