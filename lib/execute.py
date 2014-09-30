@@ -102,7 +102,13 @@ def memprint(data):
     line = binascii.hexlify(bytes(data))
     line = ' '.join([line[i:i+2].decode('ascii') for i in range(0, len(line), 2)])
     return line
-hexprint = lambda x: '0x' + binascii.hexlify(bytes(x)).decode('ascii')
+def hexprint(x):
+    if not x:
+        return '<None>'
+    if x != -1:
+        return ('0x' + binascii.hexlify(bytes(x)).decode('ascii'))
+    else:
+        return 'OUT OF GAS'
 
 
 GDEFAULT = 1
@@ -181,6 +187,9 @@ def parse (db, tx, message):
                 self.data = payload
         message = Message(tx['source'], contract_id, value, message_gas, payload)
 
+        # TODO: Make snapshot.
+        logging.debug('CONTRACT PRE STATE (balance: {}, storage: {})'.format(util.devise(db, util.get_balance(db, contract_id, config.XCP), config.XCP, 'output'), hexprint(util.get_storage(db, contract_id))))
+
         # Apply message!
         result, gas_remaining, data = apply_msg(db, tx, message, code)
         assert gas_remaining >= 0
@@ -188,29 +197,29 @@ def parse (db, tx, message):
         logging.debug('DATA {}'.format(hexprint(data)))
         logging.debug('DECODED DATA {}'.format(util_rlp.decode_datalist(bytes(data))))
 
-        # TODO: Use exception handling?
         if not result:  # 0 = OOG failure in both cases
+            # TODO: Revert to snapshot.
             raise exceptions.OutOfGas
-        else:
-            logging.debug('TX SUCCESS')
-            gas_remaining = int(gas_remaining)  # TODO: BAD
-            gas_used = gas_start - gas_remaining
-            gas_cost -= gas_remaining
+        logging.debug('CONTRACT POST STATE (balance: {}, storage: {})'.format(util.devise(db, util.get_balance(db, contract_id, config.XCP), config.XCP, 'output'), hexprint(util.get_storage(db, contract_id))))
 
-            # Return remaining gas to source.
-            util.credit(db, tx['block_index'], tx['source'], config.XCP, gas_remaining, action='gas remaining', event=tx['tx_hash'])
+        logging.debug('TX SUCCESS')
+        gas_remaining = int(gas_remaining)  # TODO: BAD
+        gas_used = gas_start - gas_remaining
+        gas_cost -= gas_remaining
 
-            output = ''.join(map(chr, data))
+        # Return remaining gas to source.
+        util.credit(db, tx['block_index'], tx['source'], config.XCP, gas_remaining, action='gas remaining', event=tx['tx_hash'])
 
-        # TODO: Commit state.
+        output = ''.join(map(chr, data))
+
+        # TODO: Commit state. (Just don’t revert?!)
+        status = 'finished'
 
         # NOTE
         # suicides = block.suicides
         # block.suicides = []
         # for s in suicides:
         #     block.del_account(s)
-
-        status = 'finished'
 
     except exceptions.UnpackError as e:
         contract_id, gas_price, gas_start, value, payload = None, None, None, None, None
@@ -234,6 +243,8 @@ def parse (db, tx, message):
         status = 'out of gas'
         output = None
     finally:
+        if status == 'valid':   # TODO: eh…
+            logging.debug('TX FINISHED (gas_remaining: {})'.format(gas_remaining))
         # Add parsed transaction to message-type–specific table.
         bindings = {
             'tx_index': tx['tx_index'],
@@ -265,10 +276,7 @@ class Compustate():
         self.gas = 0
         for kw in kwargs:
             setattr(self, kw, kwargs[kw])
-
 def apply_msg(db, tx, msg, code):
-    logging.debug('CONTRACT PRE STATE (balance: {}, storage: {})'.format(util.devise(db, util.get_balance(db, msg.contract_id, config.XCP), config.XCP, 'output'), hexprint(util.get_storage(db, msg.contract_id))))
-
     # Transfer value, instaquit if not enough
     try:
         util.debit(db, tx['block_index'], tx['source'], config.XCP, msg.value, action='transfer value', event=tx['tx_hash'])
@@ -276,30 +284,23 @@ def apply_msg(db, tx, msg, code):
         return 1, msg.gas, []
     util.credit(db, tx['block_index'], msg.contract_id, config.XCP, msg.value, action='transfer value', event=tx['tx_hash'])
 
-    # TODO: Snapshot
-
-    # NOTE
-    # snapshot = block.snapshot()
     logging.debug('DATA {}'.format(hexprint(msg.data)))
     logging.debug('DECODED DATA {}'.format(util_rlp.decode_datalist(msg.data))) # TODO: This can confuse endianness.
     logging.debug('CODE {}'.format(hexprint(code)))
     compustate = Compustate(gas=msg.gas)
-    t, ops = time.time(), 0
 
     processed_code = [opcodes.get(c, ['INVALID', 0, 0, [], 0]) + [c] for c in code]
     # logging.debug('PROCESSED_CODE {}'.format(processed_code))
 
     # Main loop
-    while 1:
+    t = time.time()
+    ops = 0
+    while True:
         o = apply_op(db, tx, msg, processed_code, compustate)
         ops += 1
         if o is not None:
             logging.debug('MSG APPLIED (result: {}, gas_remained: {}, ops: {}, time_per_op: {})'.format(hexprint(o), compustate.gas, ops, (time.time() - t) / ops))
-            logging.debug('CONTRACT POST STATE (balance: {}, storage: {})'.format(util.devise(db, util.get_balance(db, msg.contract_id, config.XCP), config.XCP, 'output'), hexprint(util.get_storage(db, msg.contract_id))))
-
-            # TODO: Use exception handling?
             if o == OUT_OF_GAS:
-                block.revert(snapshot)
                 return 0, compustate.gas, []
             else:
                 return 1, compustate.gas, o
@@ -313,8 +314,7 @@ def get_op_data(code, index):
 def ceil32(x):
     return x if x % 32 == 0 else x + 32 - (x % 32)
 def out_of_gas_exception(expense, fee, compustate, op):
-    pblogger.log('OUT OF GAS', expense=expense, needed=fee, available=compustate.gas,
-                 op=op, stack=list(reversed(compustate.stack)))
+    logging.debug('OUT OF GAS (expense: {}, needed: {}, available: {}, op: {}, stack: {})'.format(expense, fee, compustate.gas, op, list(reversed(compustate.stack))))
     return OUT_OF_GAS
 def mem_extend(mem, compustate, op, newsize):
     if len(mem) < ceil32(newsize):
@@ -328,9 +328,9 @@ def mem_extend(mem, compustate, op, newsize):
     return True
 def to_signed(i):
     return i if i < TT255 else i - TT256
-
-# Does not include paying opfee
 def apply_op(db, tx, msg, processed_code, compustate):
+    # Does not include paying opfee.
+
     if compustate.pc >= len(processed_code):
         return []
     op, in_args, out_args, mem_grabs, fee, opcode = processed_code[compustate.pc]
