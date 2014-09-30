@@ -88,8 +88,6 @@ class CallbackError (MessageError):
     pass
 class RpsError (MessageError):
     pass
-class ExecuteError(MessageError):
-    pass
 
 class ConsensusError (Exception):
     pass
@@ -97,21 +95,6 @@ class ConsensusError (Exception):
 class GetURLError (Exception):
     pass
 
-class ContractError(Exception):
-    pass
-
-class HaltExecution(Exception):
-    pass
-class GasPriceTooLow(HaltExecution):
-    pass
-class InsufficientBalance(HaltExecution):
-    pass
-class InsufficientStartGas(HaltExecution):
-    pass
-class BlockGasLimitReached(HaltExecution):
-    pass
-class OutOfGas(HaltExecution):
-    pass
 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

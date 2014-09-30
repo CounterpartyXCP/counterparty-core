@@ -785,10 +785,12 @@ def get_balance (db, address, asset):
     else: return balances[0]['quantity']
 
 # Scripting
+class ContractError(Exception):
+    pass
 def get_storage (db, contract_id):
     cursor = db.cursor()
     contracts = list(cursor.execute('''SELECT * FROM contracts WHERE (tx_hash = ?)''', (contract_id,)))
-    if not contracts: return b''
+    if not contracts: raise ContractError('no such contract')
     else: return contracts[0]['storage']
 def get_code (db, contract_id):
     cursor = db.cursor()

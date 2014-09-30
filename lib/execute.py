@@ -9,7 +9,23 @@ import binascii
 import time
 import logging
 
-from lib import (util, config, exceptions, bitcoin, util, util_rlp)
+from lib import (util, config, bitcoin, util, util_rlp)
+
+class ExecuteError(MessageError):
+    pass
+
+class HaltExecution(Exception):
+    pass
+class GasPriceTooLow(HaltExecution):
+    pass
+class InsufficientBalance(HaltExecution):
+    pass
+class InsufficientStartGas(HaltExecution):
+    pass
+class BlockGasLimitReached(HaltExecution):
+    pass
+class OutOfGas(HaltExecution):
+    pass
 
 FORMAT = '>32sQQQ'
 LENGTH = 56
@@ -141,13 +157,15 @@ def parse (db, tx, message):
     output = None
     status = 'valid'
 
+    # TODO: unit tests!
+
     try:
         # Unpack message.
         curr_format = FORMAT + '{}s'.format(len(message) - LENGTH)
         try:
             contract_id, gas_price, gas_start, value, payload = struct.unpack(curr_format, message)
         except (struct.error) as e:
-            raise exceptions.UnpackError()
+            raise UnpackError()
 
         contract_id = binascii.hexlify(contract_id).decode('utf-8')
         code = util.get_code(db, contract_id)
@@ -156,13 +174,13 @@ def parse (db, tx, message):
         # Check intrinsic gas used by contract.
         intrinsic_gas_used = GTXDATA * len(payload) + GTXCOST
         if gas_start < intrinsic_gas_used:
-            raise exceptions.InsufficientStartGas(gas_start, intrinsic_gas_used)
+            raise InsufficientStartGas(gas_start, intrinsic_gas_used)
 
         # Check cost required for down payment.
         total_initial_cost = value + gas_price * gas_start
         balance = util.get_balance(db, tx['source'], config.XCP) 
         if balance < total_initial_cost:
-            raise exceptions.InsufficientBalance(balance, total_initial_cost)
+            raise InsufficientBalance(balance, total_initial_cost)
 
         tx_dict = {'source': tx['source'],
                    'payload': binascii.hexlify(payload), 
@@ -181,13 +199,14 @@ def parse (db, tx, message):
         class Message(object):
             def __init__(self, source, contract_id, value, gas, payload):
                 self.source = source
-                self.contract_id = contract_id
+                self.to = contract_id
                 self.value = value
                 self.gas = gas
                 self.data = payload
         message = Message(tx['source'], contract_id, value, message_gas, payload)
 
         # TODO: Make snapshot.
+        logging.debug('SNAPSHOTTING')
         logging.debug('CONTRACT PRE STATE (balance: {}, storage: {})'.format(util.devise(db, util.get_balance(db, contract_id, config.XCP), config.XCP, 'output'), hexprint(util.get_storage(db, contract_id))))
 
         # Apply message!
@@ -199,7 +218,8 @@ def parse (db, tx, message):
 
         if not result:  # 0 = OOG failure in both cases
             # TODO: Revert to snapshot.
-            raise exceptions.OutOfGas
+            logging.debug('REVERTING')
+            raise OutOfGas
         logging.debug('CONTRACT POST STATE (balance: {}, storage: {})'.format(util.devise(db, util.get_balance(db, contract_id, config.XCP), config.XCP, 'output'), hexprint(util.get_storage(db, contract_id))))
 
         logging.debug('TX SUCCESS')
@@ -221,24 +241,24 @@ def parse (db, tx, message):
         # for s in suicides:
         #     block.del_account(s)
 
-    except exceptions.UnpackError as e:
+    except UnpackError as e:
         contract_id, gas_price, gas_start, value, payload = None, None, None, None, None
         status = 'invalid: could not unpack'
         output = None
-    except exceptions.ContractError as e:
+    except ContractError as e:
         status = 'invalid: no such contract'
         output = None
-    except exceptions.InsufficientStartGas as e:
+    except InsufficientStartGas as e:
         have, need = e.args
         logging.debug('Insufficient start gas: have {} and need {}'.format(have, need))
         status = 'invalid: insufficient start gas'
         output = None
-    except exceptions.InsufficientBalance as e:
+    except InsufficientBalance as e:
         have, need = e.args
         logging.debug('Insufficient balance: have {} and need {}'.format(have, need))
         status = 'invalid: insufficient balance'
         output = None
-    except exceptions.OutOfGas as e:
+    except OutOfGas as e:
         logging.debug('TX OUT_OF_GAS (gas_start: {}, gas_remaining: {})'.format(gas_start, gas_remaining))
         status = 'out of gas'
         output = None
@@ -267,7 +287,6 @@ def parse (db, tx, message):
         cursor.close()
 
 
-
 class Compustate():
     def __init__(self, **kwargs):
         self.memory = []
@@ -280,9 +299,9 @@ def apply_msg(db, tx, msg, code):
     # Transfer value, instaquit if not enough
     try:
         util.debit(db, tx['block_index'], tx['source'], config.XCP, msg.value, action='transfer value', event=tx['tx_hash'])
-    except exceptions.BalanceError as e:
+    except BalanceError as e:
         return 1, msg.gas, []
-    util.credit(db, tx['block_index'], msg.contract_id, config.XCP, msg.value, action='transfer value', event=tx['tx_hash'])
+    util.credit(db, tx['block_index'], msg.to, config.XCP, msg.value, action='transfer value', event=tx['tx_hash'])
 
     logging.debug('DATA {}'.format(hexprint(msg.data)))
     logging.debug('DECODED DATA {}'.format(util_rlp.decode_datalist(msg.data))) # TODO: This can confuse endianness.
@@ -334,9 +353,11 @@ def apply_op(db, tx, msg, processed_code, compustate):
     if compustate.pc >= len(processed_code):
         return []
     op, in_args, out_args, mem_grabs, fee, opcode = processed_code[compustate.pc]
+
     # print('APPLYING OP', op)
     # print('INARGS', in_args)
     # print('COMPUSTATE.STACK', compustate.stack)
+
     # empty stack error
     if in_args > len(compustate.stack):
         pblogger.log('INSUFFICIENT STACK ERROR', op=op, needed=in_args,
@@ -353,7 +374,7 @@ def apply_op(db, tx, msg, processed_code, compustate):
         memblk = compustate.memory[i:i+16]
         logging.debug('MEM {}'.format(memprint(memblk)))
 
-    logging.debug('STORAGE {}'.format(hexprint(util.get_storage(db, msg.contract_id))))
+    logging.debug('STORAGE {}'.format(hexprint(util.get_storage(db, msg.to))))
 
     log_args = dict(pc=compustate.pc,
                     op=op,
@@ -521,16 +542,14 @@ def apply_op(db, tx, msg, processed_code, compustate):
     elif op == 'SLOAD':
         stk.append(block.get_storage_data(msg.to, stk.pop()))
     elif op == 'SSTORE':
-        pass
-        # NOTE
-        # s0, s1 = stk.pop(), stk.pop()
-        # pre_occupied = GSTORAGE if block.get_storage_data(msg.to, s0) else 0
-        # post_occupied = GSTORAGE if s1 else 0
-        # gascost = GSTORAGE + post_occupied - pre_occupied
-        # if compustate.gas < gascost:
-        #     out_of_gas_exception('sstore trie expansion', gascost, compustate, op)
-        # compustate.gas -= gascost
-        # block.set_storage_data(msg.to, s0, s1)
+        s0, s1 = stk.pop(), stk.pop()
+        pre_occupied = GSTORAGE if block.get_storage_data(msg.to, s0) else 0
+        post_occupied = GSTORAGE if s1 else 0
+        gascost = GSTORAGE + post_occupied - pre_occupied
+        if compustate.gas < gascost:
+            out_of_gas_exception('sstore trie expansion', gascost, compustate, op)
+        compustate.gas -= gascost
+        block.set_storage_data(msg.to, s0, s1)
     elif op == 'JUMP':
         compustate.pc = stk.pop()
     elif op == 'JUMPI':
@@ -657,6 +676,5 @@ def apply_op(db, tx, msg, processed_code, compustate):
         return []
     for a in stk:
         assert isinstance(a, int)
-
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
