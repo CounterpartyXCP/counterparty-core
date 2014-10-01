@@ -78,6 +78,13 @@ opcodes = {
     0xf4: ['CALL_STATELESS', 7, 1, [[-4, -5], [-6, -7]], 20],
     0xff: ['SUICIDE', 1, 1, [], 0],
 }
+
+# TODO: Counterparty‐specific `OP_CODE`s
+    # balance‐check
+    # send
+    # CPBAL
+    # CPSEND
+
 for i in range(1, 33):
     opcodes[0x5f + i] = ['PUSH' + str(i), 0, 1, [], 1]
 for i in range(1, 17):
@@ -143,6 +150,13 @@ class BlockGasLimitReached(HaltExecution): pass
 class OutOfGas(HaltExecution): pass
 suicidal = False
 
+class Message(object):
+    def __init__(self, source, contract_id, value, gas, payload):
+        self.source = source
+        self.to = contract_id
+        self.value = value
+        self.gas = gas
+        self.data = payload
 def parse (db, tx, message):
     gas_cost = 0
     gas_remaining = 0
@@ -191,13 +205,6 @@ def parse (db, tx, message):
         gas_cost += gas_price * gas_start
 
         message_gas = gas_start - intrinsic_gas_used
-        class Message(object):
-            def __init__(self, source, contract_id, value, gas, payload):
-                self.source = source
-                self.to = contract_id
-                self.value = value
-                self.gas = gas
-                self.data = payload
         message = Message(tx['source'], contract_id, value, message_gas, payload)
 
         ### BEGIN Computation ###
