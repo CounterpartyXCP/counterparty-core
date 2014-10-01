@@ -30,3 +30,5 @@ pycrypto>=2.6
 # http://www.voidspace.org.uk/python/modules.shtml#pycrypto
 
 lockfile==0.10.2
+
+python-bitcoinlib==0.2.1

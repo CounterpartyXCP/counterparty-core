@@ -217,12 +217,12 @@ def compose_transaction(db, name, params,
 
     # try:  # NOTE: For debugging, e.g. with `Invalid Params` error.
     tx_info = compose_method(db, **params)
-    return bitcoin.transaction(tx_info, encoding=encoding,
+    return bitcoin.transaction(db, tx_info, encoding=encoding,
                                         fee_per_kb=fee_per_kb,
                                         regular_dust_size=regular_dust_size,
                                         multisig_dust_size=multisig_dust_size,
                                         op_return_value=op_return_value,
-                                        public_key_hex=pubkey,
+                                        self_public_key_hex=pubkey,
                                         allow_unconfirmed_inputs=allow_unconfirmed_inputs,
                                         exact_fee=fee,
                                         fee_provided=fee_provided)

@@ -44,7 +44,7 @@ def compose (db, source, destination, asset, quantity):
     if problems: raise exceptions.SendError(problems)
 
     asset_id = util.asset_id(asset)
-    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
+    data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, quantity)
 
     cursor.close()

@@ -159,8 +159,19 @@ def market (give_asset, get_asset):
 
 def cli(method, params, unsigned):
     # Get unsigned transaction serialisation.
-    if bitcoin.is_valid(params['source']):
-        if bitcoin.is_mine(params['source']):
+
+    array = params['source'].split('_')
+    if len(array) > 1:
+        signatures_required, signatures_possible = array[0], array[-1]
+        params['source'] = '_'.join([signatures_required] + sorted(array[1:-1]) + [signatures_possible]) # Sort source array.
+        pubkey = None
+    else:
+        # Get public key for source.
+        source = array[0]
+        pubkey = None
+        if not bitcoin.is_valid(source):
+            raise exceptions.AddressError('Invalid address.')
+        if bitcoin.is_mine(source):
             bitcoin.wallet_unlock()
         else:
             # TODO: Do this only if the encoding method needs it.
@@ -170,19 +181,34 @@ def cli(method, params, unsigned):
             # Public key or private key?
             try:
                 binascii.unhexlify(answer)  # Check if hex.
-                params['pubkey'] = answer   # If hex, assume public key.
+                pubkey = answer   # If hex, assume public key.
                 private_key_wif = None
             except binascii.Error:
                 private_key_wif = answer    # Else, assume private key.
-                params['pubkey'] = bitcoin.private_key_to_public_key(private_key_wif)
-    else:
-        raise exceptions.AddressError('Invalid address.')
+                pubkey = bitcoin.private_key_to_public_key(private_key_wif)
+        params['pubkey'] = pubkey
+
+    """  # NOTE: For debugging, e.g. with `Invalid Params` error.
+    tx_info = sys.modules['lib.send'].compose(db, params['source'], params['destination'], params['asset'], params['quantity'])
+    print(bitcoin.transaction(db, tx_info, encoding=params['encoding'],
+                                        fee_per_kb=params['fee_per_kb'],
+                                        regular_dust_size=params['regular_dust_size'],
+                                        multisig_dust_size=params['multisig_dust_size'],
+                                        op_return_value=params['op_return_value'],
+                                        self_public_key_hex=pubkey,
+                                        allow_unconfirmed_inputs=params['allow_unconfirmed_inputs']))
+    exit(0)
+    """
+
+    # Construct transaction.
     unsigned_tx_hex = util.api(method, params)
     print('Transaction (unsigned):', unsigned_tx_hex)
 
-    # Ask to sign and broadcast.
-    if not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
-        if bitcoin.is_mine(params['source']):
+    # Ask to sign and broadcast (if not multi‐sig).
+    if len(array) > 1:
+        print('Multi‐signature transactions are signed and broadcasted manually.')
+    elif not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
+        if bitcoin.is_mine(source):
             private_key_wif = None
         elif not private_key_wif:   # If private key was not given earlier.
             private_key_wif = input('Private key (Wallet Import Format): ')
@@ -475,9 +501,8 @@ def set_options (data_dir=None, backend_rpc_connect=None,
         config.BROADCAST_TX_MAINNET = '{}'.format(config.BTC_CLIENT)
 
 def balances (address):
-    if not bitcoin.base58_decode(address, config.ADDRESSVERSION):
-        raise exceptions.AddressError('Not a valid {} address:'.format(BTC_NAME),
-                                             address)
+    bitcoin.validate_address(address)
+
     address_data = get_address(db, address=address)
     balances = address_data['balances']
     table = PrettyTable(['Asset', 'Amount'])
@@ -968,11 +993,6 @@ if __name__ == '__main__':
 
     # VIEWING (temporary)
     elif args.action == 'balances':
-        try:
-            bitcoin.base58_decode(args.address, config.ADDRESSVERSION)
-        except Exception:
-            raise exceptions.AddressError('Invalid {} address:'.format(config.BTC_NAME),
-                                                  args.address)
         balances(args.address)
 
     elif args.action == 'asset':

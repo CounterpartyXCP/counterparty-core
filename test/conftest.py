@@ -1,11 +1,13 @@
 #! /usr/bin/python3
 
-import json
+import json, binascii
 from datetime import datetime
 
 import pytest, util_test
 from fixtures.fixtures import UNITTEST_VECTOR, INTEGRATION_SCENARIOS, DEFAULT_PARAMS
 from lib import config
+
+import bitcoin as bitcoinlib
 
 def pytest_generate_tests(metafunc):
     if metafunc.function.__name__ == 'test_vector':
@@ -51,6 +53,12 @@ def init_mock_functions(monkeypatch):
     def init_api_access_log():
         pass
 
+    class RpcProxy():
+        def getrawtransaction(self, txid):
+            tx_hex = util_test.get_getrawtransaction_data(config.TEMP_DB, txid)
+            ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
+            return ctx
+
     monkeypatch.setattr('lib.bitcoin.get_unspent_txouts', get_unspent_txouts)
     monkeypatch.setattr('lib.bitcoin.get_private_key', get_private_key)
     monkeypatch.setattr('lib.bitcoin.is_mine', is_mine)
@@ -60,3 +68,4 @@ def init_mock_functions(monkeypatch):
     monkeypatch.setattr('lib.api.init_api_access_log', init_api_access_log)
     if hasattr(config, 'PREFIX'):
         monkeypatch.setattr('lib.config.PREFIX', b'TESTXXXX')
+    monkeypatch.setattr('bitcoin.rpc.Proxy', RpcProxy)

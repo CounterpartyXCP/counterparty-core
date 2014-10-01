@@ -103,7 +103,7 @@ def compose (db, source, fraction, asset):
     print('Total quantity to be called back:', util.devise(db, callback_total, asset, 'output'), asset)
 
     asset_id = util.asset_id(asset)
-    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
+    data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, fraction, asset_id)
     return (source, [], data)
 

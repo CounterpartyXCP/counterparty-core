@@ -253,7 +253,7 @@ def compose (db, source, give_asset, give_quantity, get_asset, get_quantity, exp
 
     give_id = util.asset_id(give_asset)
     get_id = util.asset_id(get_asset)
-    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
+    data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, give_id, give_quantity, get_id, get_quantity,
                         expiration, fee_required)
     cursor.close()
