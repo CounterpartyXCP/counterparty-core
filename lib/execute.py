@@ -110,6 +110,7 @@ def memprint(data):
     line = ' '.join([line[i:i+2].decode('ascii') for i in range(0, len(line), 2)])
     return line
 def hexprint(x):
+    assert type(x) in (bytes, list)
     if not x:
         return '<None>'
     if x != -1:
@@ -152,6 +153,7 @@ suicidal = False
 
 class Message(object):
     def __init__(self, source, contract_id, value, gas, payload):
+        assert type(payload) == bytes
         self.source = source
         self.to = contract_id
         self.value = value
@@ -305,7 +307,7 @@ def apply_msg(db, tx, msg, code):
     # Transfer value (instaquit if there isn’t enough).
     try:
         util.debit(db, tx['block_index'], tx['source'], config.XCP, msg.value, action='transfer value', event=tx['tx_hash'])
-    except BalanceError as e:
+    except exceptions.BalanceError as e:
         return 1, msg.gas, []
     util.credit(db, tx['block_index'], msg.to, config.XCP, msg.value, action='transfer value', event=tx['tx_hash'])
 

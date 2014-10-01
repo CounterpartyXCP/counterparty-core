@@ -27,7 +27,7 @@ startgas = 10000
 ### Counterparty compatibility ###
 
 import counterpartyd
-from lib import (execute, util)
+from lib import (execute, util, config)
 
 import subprocess   # Serpent is Python 2‐incompatible.
 import binascii
@@ -46,7 +46,9 @@ cursor = db.cursor()
 
 class serpent(object):
     def compile(code):
-        return subprocess.check_output(['serpent', 'compile', code], universal_newlines=True)
+        evmcode = subprocess.check_output(['serpent', 'compile', code])
+        evmcode = evmcode[:-1] # Strip newline.
+        return bytes(evmcode)
 
 class tester(object):
     class state(object):
@@ -56,7 +58,7 @@ class tester(object):
             global code
             code = evmcode
 
-            return 'CONTRACTID' # TODO: contract_id
+            return 'CONTRACTID'
 
         def send (self, sender, to, value, data=[]):
             # Actually just check `apply_msg()`.
@@ -64,10 +66,14 @@ class tester(object):
             gas_price = 1
             gas_start = 100000
 
-            payload = subprocess.check_output(['serpent', 'encode_datalist', ' '.join([str(a) for a in data])], universal_newlines=True)
+            # Encode data.
+            payload = subprocess.check_output(['serpent', 'encode_datalist', ' '.join([str(a) for a in data])])
+            payload = payload[:-1]  # Strip newline.
+            payload = bytes(payload)
 
             # Construct `tx`.
             tx = {'source': sender,
+                   'block_index': 0,
                    'payload': payload,
                    'tx_hash': 'deadbeef',
                    'contract_id': to,
@@ -79,12 +85,29 @@ class tester(object):
             # Construct message.
             intrinsic_gas_used = execute.GTXDATA * len(payload) + execute.GTXCOST
             message_gas = gas_start - intrinsic_gas_used
-            message = execute.Message(privtoaddr(sender), to, value, message_gas, payload)
+            message = execute.Message(privtoaddr(sender), to, value, message_gas, binascii.unhexlify(payload))
+
+            # Prepare database.
+            from lib import blocks
+            blocks.initialise(db)
+            cursor = db.cursor()
+            cursor.execute('''INSERT INTO blocks( block_index, block_hash, block_time) VALUES(?,?,?)''', (0, 'deaddead', 0))
+            cursor.execute('''INSERT INTO transactions( tx_index, tx_hash, block_index, block_time, source, destination, btc_amount, fee, data) VALUES(?,?,?,?,?,?,?,?,?)''', (0, 'facefeed', 0, 0, 'foo', 'bar', 0, 0, b''))
+            cursor.execute('''INSERT INTO transactions( tx_index, tx_hash, block_index, block_time, source, destination, btc_amount, fee, data) VALUES(?,?,?,?,?,?,?,?,?)''', (1, 'CONTRACTID', 0, 0, to, None, 0, 0, b''))
+            bindings = { 'tx_index': 1, 'tx_hash': 'CONTRACTID', 'block_index': 0, 'source': to, 'code': code, 'storage': b'', 'alive': True, }
+            sql='insert into contracts values(:tx_index, :tx_hash, :block_index, :source, :code, :storage, :alive)'
+            cursor.execute(sql, bindings)
+            cursor.close
+            util.credit(db, 0, sender, config.XCP, 10*config.UNIT, action='unit test', event='facefeed')
+
+            code = util.get_code(db, 'CONTRACTID')  # Redundant?!
 
             # Apply msg.
+            global code
             result, gas_remaining, data = execute.apply_msg(db, tx, message, code)
             print('result', result) # TODO
 
+            # Get, decode, return result.
             r = result
             o = subprocess.check_output(['serpent', 'decode_datalist', r], universal_newlines=True)
             return map(lambda x: x-2**256 if x > 2**255 else x, o)
