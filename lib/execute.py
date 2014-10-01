@@ -8,6 +8,7 @@ import struct
 import binascii
 import time
 import logging
+import string
 
 from lib import (util, config, exceptions, bitcoin, util, util_rlp)
 
@@ -154,7 +155,7 @@ suicidal = False
 class Message(object):
     def __init__(self, source, contract_id, value, gas, payload):
         assert type(payload) == bytes
-        self.source = source
+        self.sender = source
         self.to = contract_id
         self.value = value
         self.gas = gas
@@ -304,6 +305,8 @@ class Compustate():
         for kw in kwargs:
             setattr(self, kw, kwargs[kw])
 def apply_msg(db, tx, msg, code):
+    logging.debug('MSG APPLY (sender: {}, tx: {}, gas: {}, value: {}, to: {}, data {})'.format(msg.sender, tx['tx_hash'], msg.to, msg.gas, msg.value, hexprint(msg.data)))
+
     # Transfer value (instaquit if there isn’t enough).
     try:
         util.debit(db, tx['block_index'], tx['source'], config.XCP, msg.value, action='transfer value', event=tx['tx_hash'])
@@ -351,6 +354,7 @@ def out_of_gas_exception(expense, fee, compustate, op):
 def mem_extend(mem, compustate, op, newsize):
     if len(mem) < ceil32(newsize):
         m_extend = ceil32(newsize) - len(mem)
+        print('AAAAAAAAAAAAAAAAAAAAAAAAAA', m_extend)
         mem.extend([0] * m_extend)
         memfee = GMEMORY * (m_extend // 32)
         compustate.gas -= memfee
@@ -360,6 +364,15 @@ def mem_extend(mem, compustate, op, newsize):
     return True
 def to_signed(i):
     return i if i < TT255 else i - TT256
+
+def coerce_to_int(x):
+    if isinstance(x, int):
+        return x
+    else:
+        if type(x) != bytes:
+            x = bytes(x, 'ascii')   # For addresses.
+        return util_rlp.big_endian_to_int(x)
+
 def apply_op(db, tx, msg, processed_code, compustate):
     # Does not include paying opfee.
 
@@ -471,7 +484,7 @@ def apply_op(db, tx, msg, processed_code, compustate):
     elif op == 'ADDRESS':
         stk.append(coerce_to_int(msg.to))
     elif op == 'BALANCE':
-        stk.append(block.get_balance(coerce_addr_to_hex(stk.pop())))
+        stk.append(util.get_balance(coerce_addr_to_hex(stk.pop()), config.XCP))
     elif op == 'ORIGIN':
         stk.append(coerce_to_int(tx.sender))
     elif op == 'CALLER':
@@ -508,10 +521,10 @@ def apply_op(db, tx, msg, processed_code, compustate):
             else:
                 mem[s0 + i] = 0
     elif op == 'EXTCODESIZE':
-        stk.append(len(block.get_code(stk.pop()) or ''))
+        stk.append(len(util.get_code(db, stk.pop()) or ''))
     elif op == 'EXTCODECOPY':
         addr, s1, s2, s3 = stk.pop(), stk.pop(), stk.pop(), stk.pop()
-        extcode = block.get_code(addr) or ''
+        extcode = util.get_code(db, addr) or ''
         if not mem_extend(mem, compustate, op, s1 + s3):
             return OUT_OF_GAS
         for i in range(s3):
@@ -553,10 +566,10 @@ def apply_op(db, tx, msg, processed_code, compustate):
             return OUT_OF_GAS
         mem[s0] = s1 % 256
     elif op == 'SLOAD':
-        stk.append(block.get_storage_data(msg.to, stk.pop()))
+        stk.append(util.get_storage(db, msg.to, stk.pop()))
     elif op == 'SSTORE':
         s0, s1 = stk.pop(), stk.pop()
-        pre_occupied = GSTORAGE if block.get_storage_data(msg.to, s0) else 0
+        pre_occupied = GSTORAGE if util.get_storage(db, msg.to, s0) else 0
         post_occupied = GSTORAGE if s1 else 0
         gascost = GSTORAGE + post_occupied - pre_occupied
         if compustate.gas < gascost:
@@ -672,7 +685,7 @@ def apply_op(db, tx, msg, processed_code, compustate):
         data = ''.join(map(chr, mem[meminstart: meminstart + meminsz]))
         pblogger.log('SUB CALL NEW', sender=msg.to, to=to, value=value, gas=gas, data=binascii.hexlify(data))
         call_msg = Message(msg.to, msg.to, value, gas, data)
-        result, gas, data = apply_msg(db, block, tx, call_msg, block.get_code(to))
+        result, gas, data = apply_msg(db, block, tx, call_msg, util.get_code(db, to))
         pblogger.log('SUB CALL OUT', result=result, data=data, length=len(data), expected=memoutsz)
         if result == 0:
             stk.append(0)
