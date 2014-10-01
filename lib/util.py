@@ -804,7 +804,7 @@ def get_code (db, contract_id):
     contracts = list(cursor)
 
     if not contracts:
-        raise exceptions.ContractError('no such contract')
+        raise ContractError('no such contract')
     elif not contracts[0]['alive']: raise ContractError('dead contract')
     else: code = contracts[0]['code']
 

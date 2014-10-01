@@ -27,7 +27,7 @@ startgas = 10000
 ### Counterparty compatibility ###
 
 import counterpartyd
-from lib import (execute, util, config)
+from lib import (execute, util, config, util_rlp)
 
 import subprocess   # Serpent is Python 2‐incompatible.
 import binascii
@@ -55,9 +55,38 @@ class serpent(object):
         return binascii.unhexlify(bytes(evmcode))
 
 class tester(object):
+    class serpent(object):
+        def compile_lll(lll_code):
+            code = subprocess.check_output(['serpent', 'compile_lll', lll_code])
+            code = code[:-1] # Strip newline.
+            return binascii.unhexlify(bytes(code))
+            
     class state(object):
-        def send (self, sender, to, value, data=[]):
-            # Actually just check `apply_msg()`.
+        def contract(self, code):
+            to = 'foo'
+
+            # For FOREIGN KEY checks.
+            from lib import blocks
+            blocks.initialise(db)
+            cursor = db.cursor()
+            cursor.execute('''INSERT INTO blocks( block_index, block_hash, block_time) VALUES(?,?,?)''', (0, 'deaddead', 0))
+            cursor.execute('''INSERT INTO transactions( tx_index, tx_hash, block_index, block_time, source, destination, btc_amount, fee, data) VALUES(?,?,?,?,?,?,?,?,?)''', (0, 'facefeed', 0, 0, to, None, 0, 0, b''))
+
+            # Create contract with provided code.
+            cursor.execute('''INSERT INTO transactions( tx_index, tx_hash, block_index, block_time, source, destination, btc_amount, fee, data) VALUES(?,?,?,?,?,?,?,?,?)''', (1, 'CONTRACT_ID', 0, 0, to, code, 0, 0, b''))
+            bindings = {'tx_index': 1, 'tx_hash': 'CONTRACT_ID', 'block_index': 0, 'source': to, 'code': code, 'storage': b'', 'alive': True}
+            sql='insert into contracts values(:tx_index, :tx_hash, :block_index, :source, :code, :storage, :alive)'
+            cursor.execute(sql, bindings)
+            cursor.close
+
+            # Give code publisher an XCP balance.
+            util.credit(db, 0, to, config.XCP, 10*config.UNIT, action='unit test', event='facefeed')
+
+            # Return contract_id.
+            return 'CONTRACT_ID'
+
+        def send (self, sender, contract_id, value, data=[]):
+            # Don’t actually ‘send’—just ‘apply_msg’.
 
             gas_price = 1
             gas_start = 100000
@@ -68,11 +97,11 @@ class tester(object):
             payload = payload.decode('utf-8')
 
             # Construct `tx`.
-            tx = {'source': sender,
+            tx = { 'source': sender,
                    'block_index': 0,
                    'payload': payload,
                    'tx_hash': 'deadbeef',
-                   'contract_id': to,
+                   'contract_id': contract_id,
                    'gas_price': gas_price,
                    'gas_start': gas_start,
                    'value': value
@@ -80,32 +109,29 @@ class tester(object):
 
             # Construct message.
             payload = binascii.unhexlify(payload)
-            intrinsic_gas_used = execute.GTXDATA * len(payload) + execute.GTXCOST # Payload is still hex string here.
+            intrinsic_gas_used = execute.GTXDATA * len(payload) + execute.GTXCOST
             message_gas = gas_start - intrinsic_gas_used
-            message = execute.Message(privtoaddr(sender), to, value, message_gas, payload)
+            message = execute.Message(privtoaddr(sender), 'CONTRACT_ID', value, message_gas, payload)
 
-            # Prepare database.
-            from lib import blocks
-            blocks.initialise(db)
-            cursor = db.cursor()
-            cursor.execute('''INSERT INTO blocks( block_index, block_hash, block_time) VALUES(?,?,?)''', (0, 'deaddead', 0))
-            cursor.execute('''INSERT INTO transactions( tx_index, tx_hash, block_index, block_time, source, destination, btc_amount, fee, data) VALUES(?,?,?,?,?,?,?,?,?)''', (0, 'facefeed', 0, 0, 'foo', 'bar', 0, 0, b''))
-            cursor.execute('''INSERT INTO transactions( tx_index, tx_hash, block_index, block_time, source, destination, btc_amount, fee, data) VALUES(?,?,?,?,?,?,?,?,?)''', (1, 'CONTRACTID', 0, 0, to, None, 0, 0, b''))
-            bindings = { 'tx_index': 1, 'tx_hash': 'CONTRACTID', 'block_index': 0, 'source': to, 'code': code, 'storage': b'', 'alive': True, }
-            sql='insert into contracts values(:tx_index, :tx_hash, :block_index, :source, :code, :storage, :alive)'
-            cursor.execute(sql, bindings)
-            cursor.close
-            util.credit(db, 0, sender, config.XCP, 10*config.UNIT, action='unit test', event='facefeed')
+            # Get code.
+            code = util.get_code(db, 'CONTRACT_ID')
 
             # Apply msg.
             result, gas_remaining, data = execute.apply_msg(db, tx, message, code)
-            print('result', result) # TODO
 
-            # Get, decode, return result.
-            r = result
-            o = subprocess.check_output(['serpent', 'decode_datalist', str(r)], universal_newlines=True)
-            return map(lambda x: x-2**256 if x > 2**255 else x, o)
+            # Decode, return result.
+            assert result == 1
+            assert gas_remaining >= 0
+            return util_rlp.decode_datalist(bytes(data))
 
+        class block(object):
+            def set_code(contract_id, code):
+                cursor = db.cursor()
+                bindings = {'block_index': 0, 'code': code, 'tx_hash': contract_id}
+                sql='''update contracts set code = :code where tx_hash = :tx_hash'''
+                cursor.execute(sql, bindings)
+                cursor.close()
+            
 def privtoaddr(x):
     x = binascii.unhexlify(x)
     return binascii.hexlify(x[::-1]).decode('utf-8')
@@ -116,7 +142,6 @@ for i in range(10):
     import hashlib
     keys.append(hashlib.sha256(str(i).encode('utf-8')).hexdigest())
     accounts.append(privtoaddr(keys[-1]))
-
     exec('tester.k{} = keys[i]'.format(i))
     exec('tester.a{} = accounts[i]'.format(i))
 
