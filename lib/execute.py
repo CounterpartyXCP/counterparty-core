@@ -480,7 +480,8 @@ def apply_op(db, tx, msg, processed_code, compustate):
         s0, s1 = stk.pop(), stk.pop()
         if not mem_extend(mem, compustate, op, s0 + s1):
             return OUT_OF_GAS
-        data = ''.join(map(chr, mem[s0: s0 + s1]))
+        # NOTE data = ''.join(map(chr, mem[s0: s0 + s1]))
+        data = bytes(mem[s0: s0 + s1])
         stk.append(util_rlp.big_endian_to_int(sha3(data)))
     elif op == 'ADDRESS':
         stk.append(coerce_to_int(msg.to))
@@ -551,7 +552,8 @@ def apply_op(db, tx, msg, processed_code, compustate):
         s0 = stk.pop()
         if not mem_extend(mem, compustate, op, s0 + 32):
             return OUT_OF_GAS
-        data = ''.join(map(chr, mem[s0: s0 + 32]))
+        # NOTE data = ''.join(map(chr, mem[s0: s0 + 32]))
+        data = bytes(chr, mem[s0: s0 + 32])
         stk.append(util_rlp.big_endian_to_int(data))
     elif op == 'MSTORE':
         s0, s1 = stk.pop(), stk.pop()
@@ -619,11 +621,15 @@ def apply_op(db, tx, msg, processed_code, compustate):
         value, mstart, msz = stk.pop(), stk.pop(), stk.pop()
         if not mem_extend(mem, compustate, op, mstart + msz):
             return OUT_OF_GAS
-        data = ''.join(map(chr, mem[mstart: mstart + msz]))
-        pblogger.log('SUB CONTRACT NEW', sender=msg.to, value=value, data=binascii.hexlify(data))
+        # NOTE data = ''.join(map(chr, mem[mstart: mstart + msz]))
+        data = bytes(mem[mstart: mstart + msz])
+        print(data, type(data))
+
+        logging.debug('SUB CONTRACT NEW (sender: {}, value: {}, data: {})'.format(msg.to, value, binascii.hexlify(data)))
         create_msg = Message(msg.to, '', value, compustate.gas, data)
         addr, gas, code = create_contract(block, tx, create_msg)
-        pblogger.log('SUB CONTRACT OUT', address=addr, code=code)
+        logging.debug('SUB CONTRACT OUT (address: {}, code: {}})'.format(addr, code))
+
         if addr:
             stk.append(addr)
             compustate.gas = gas
@@ -641,7 +647,8 @@ def apply_op(db, tx, msg, processed_code, compustate):
         compustate.gas -= gas
         to = encode_int(to)
         to = binascii.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
-        data = ''.join(map(chr, mem[meminstart: meminstart + meminsz]))
+        # NOTE data = ''.join(map(chr, mem[meminstart: meminstart + meminsz]))
+        data = bytes(mem[meminstart: meminstart + meminsz])
         pblogger.log('SUB CALL NEW', sender=msg.to, to=to, value=value, gas=gas, data=binascii.hexlify(data))
         call_msg = Message(msg.to, to, value, gas, data)
         result, gas, data = apply_msg_send(db, block, tx, call_msg)
@@ -668,7 +675,8 @@ def apply_op(db, tx, msg, processed_code, compustate):
         compustate.gas -= gas
         to = encode_int(to)
         to = binascii.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
-        data = ''.join(map(chr, mem[meminstart: meminstart + meminsz]))
+        # NOTE data = ''.join(map(chr, mem[meminstart: meminstart + meminsz]))
+        data = bytes(mem[meminstart: meminstart + meminsz])
         pblogger.log('POST NEW', sender=msg.to, to=to, value=value, gas=gas, data=binascii.hexlify(data))
         post_msg = Message(msg.to, to, value, gas, data)
         block.postqueue.append(post_msg)
@@ -683,7 +691,8 @@ def apply_op(db, tx, msg, processed_code, compustate):
         compustate.gas -= gas
         to = encode_int(to)
         to = binascii.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
-        data = ''.join(map(chr, mem[meminstart: meminstart + meminsz]))
+        # NOTE data = ''.join(map(chr, mem[meminstart: meminstart + meminsz]))
+        data = bytes(mem[meminstart: meminstart + meminsz])
         pblogger.log('SUB CALL NEW', sender=msg.to, to=to, value=value, gas=gas, data=binascii.hexlify(data))
         call_msg = Message(msg.to, msg.to, value, gas, data)
         result, gas, data = apply_msg(db, block, tx, call_msg, util.get_code(db, to))
