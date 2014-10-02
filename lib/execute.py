@@ -202,7 +202,6 @@ def parse (db, tx, message):
 
         ### BEGIN Computation ###
         logging.debug('SNAPSHOT')
-        logging.debug('CONTRACT PRE STATE (balance: {}, storage: {})'.format(util.devise(db, util.get_balance(db, contract_id, config.XCP), config.XCP, 'output'), hexprint(util.get_storage(db, contract_id))))
         with db:
             # Apply message!
             result, gas_remaining, data = run(db, tx, code, tx['source'], contract_id, value, gas_available, payload)
@@ -261,8 +260,6 @@ def parse (db, tx, message):
         # TODO: eh…
         if status == 'valid':
             logging.debug('TX FINISHED (gas_remaining: {})'.format(gas_remaining))
-        if not status.startswith('invalid'):
-            logging.debug('CONTRACT POST STATE (balance: {}, storage: {})'.format(util.devise(db, util.get_balance(db, contract_id, config.XCP), config.XCP, 'output'), hexprint(util.get_storage(db, contract_id))))
 
         # Add parsed transaction to message-type–specific table.
         bindings = {
@@ -302,6 +299,7 @@ class Compustate():
         for kw in kwargs:
             setattr(self, kw, kwargs[kw])
 def run(db, tx, code, source, contract_id, value, gas, payload):
+    logging.debug('CONTRACT PRE STATE (balance: {}, storage: {})'.format(util.devise(db, util.get_balance(db, contract_id, config.XCP), config.XCP, 'output'), hexprint(util.get_storage(db, contract_id))))
     logging.debug('BEGIN RUN (tx: {}, source: {}, contract_id: {}, value: {}, gas: {}, data {})'.format(tx['tx_hash'], source, contract_id, value, gas, hexprint(payload)))
 
     # Transfer value (instaquit if there isn’t enough).
@@ -337,7 +335,10 @@ def run(db, tx, code, source, contract_id, value, gas, payload):
             else:
                 result = 1
 
+            balance = util.devise(db, util.get_balance(db, contract_id, config.XCP), config.XCP, 'output')
+            storage = hexprint(util.get_storage(db, contract_id))
             logging.debug('END RUN (result: {}, data: {}, gas_remained: {}, ops: {}, time_per_op: {})'.format(result, hexprint(data), compustate.gas, ops, (time.time() - t) / ops))
+            logging.debug('CONTRACT POST STATE (balance: {}, storage: {})'.format(util.devise(db, util.get_balance(db, contract_id, config.XCP), config.XCP, 'output'), hexprint(util.get_storage(db, contract_id))))
             return result, gas_remaining, data
 
 

@@ -59,8 +59,14 @@ class tester(object):
         def contract(self, code):
             to = 'foo'
 
+            if code:
+                code = serpent.compile(code)[14:]   # Strip contract creation code.
+            else:
+                code = b''
+
             # Create contract with provided code.
             cursor = db.cursor()
+            print('PUBLISHING {} with code {}'.format('CONTRACT_ID', binascii.hexlify(code)))
             bindings = {'tx_index': 1, 'tx_hash': 'CONTRACT_ID', 'block_index': 0, 'source': to, 'code': code, 'storage': b'', 'alive': True}
             sql='insert into contracts values(:tx_index, :tx_hash, :block_index, :source, :code, :storage, :alive)'
             cursor.execute(sql, bindings)
@@ -99,6 +105,7 @@ class tester(object):
             intrinsic_gas_used = execute.GTXDATA * len(payload) + execute.GTXCOST
             gas_available = gas_start - intrinsic_gas_used
             code = util.get_code(db, 'CONTRACT_ID')
+            print('retreived code', binascii.hexlify(code))
 
             # Run.
             result, gas_remaining, data = execute.run(db, tx, code, privtoaddr(sender), 'CONTRACT_ID', value, gas_available, payload)
