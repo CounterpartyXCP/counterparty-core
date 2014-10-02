@@ -42,12 +42,6 @@ counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/counterpartyd.
 import logging
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 
-# Connect to database.
-try: os.remove(config.DATABASE)
-except: pass
-db = util.connect_to_db()
-cursor = db.cursor()
-
 class serpent(object):
     def compile(code):
         evmcode = subprocess.check_output(['serpent', 'compile', code])
@@ -65,15 +59,8 @@ class tester(object):
         def contract(self, code):
             to = 'foo'
 
-            # For FOREIGN KEY checks.
-            from lib import blocks
-            blocks.initialise(db)
-            cursor = db.cursor()
-            cursor.execute('''INSERT INTO blocks( block_index, block_hash, block_time) VALUES(?,?,?)''', (0, 'deaddead', 0))
-            cursor.execute('''INSERT INTO transactions( tx_index, tx_hash, block_index, block_time, source, destination, btc_amount, fee, data) VALUES(?,?,?,?,?,?,?,?,?)''', (0, 'facefeed', 0, 0, to, None, 0, 0, b''))
-
             # Create contract with provided code.
-            cursor.execute('''INSERT INTO transactions( tx_index, tx_hash, block_index, block_time, source, destination, btc_amount, fee, data) VALUES(?,?,?,?,?,?,?,?,?)''', (1, 'CONTRACT_ID', 0, 0, to, code, 0, 0, b''))
+            cursor = db.cursor()
             bindings = {'tx_index': 1, 'tx_hash': 'CONTRACT_ID', 'block_index': 0, 'source': to, 'code': code, 'storage': b'', 'alive': True}
             sql='insert into contracts values(:tx_index, :tx_hash, :block_index, :source, :code, :storage, :alive)'
             cursor.execute(sql, bindings)
@@ -86,7 +73,7 @@ class tester(object):
             return 'CONTRACT_ID'
 
         def send (self, sender, contract_id, value, data=[]):
-            # Don’t actually ‘send’—just ‘apply_msg’.
+            # Don’t actually ‘send’—just run the code.
 
             gas_price = 1
             gas_start = 100000
@@ -107,17 +94,14 @@ class tester(object):
                    'value': value
                  }
 
-            # Construct message.
+            # Variables!
             payload = binascii.unhexlify(payload)
             intrinsic_gas_used = execute.GTXDATA * len(payload) + execute.GTXCOST
-            message_gas = gas_start - intrinsic_gas_used
-            message = execute.Message(privtoaddr(sender), 'CONTRACT_ID', value, message_gas, payload)
-
-            # Get code.
+            gas_available = gas_start - intrinsic_gas_used
             code = util.get_code(db, 'CONTRACT_ID')
 
-            # Apply msg.
-            result, gas_remaining, data = execute.apply_msg(db, tx, message, code)
+            # Run.
+            result, gas_remaining, data = execute.run(db, tx, code, privtoaddr(sender), 'CONTRACT_ID', value, gas_available, payload)
 
             # Decode, return result.
             assert result == 1
@@ -144,6 +128,30 @@ for i in range(10):
     accounts.append(privtoaddr(keys[-1]))
     exec('tester.k{} = keys[i]'.format(i))
     exec('tester.a{} = accounts[i]'.format(i))
+
+def setup_function(function):
+    try:
+        os.remove(config.DATABASE)
+    except:
+        pass
+
+    # Connect to database.
+    global db
+    db = util.connect_to_db()
+
+    # For FOREIGN KEY checks.
+    from lib import blocks
+    blocks.initialise(db)
+    cursor = db.cursor()
+    cursor.execute('''INSERT INTO blocks( block_index, block_hash, block_time) VALUES(?,?,?)''', (0, 'deaddead', 0))
+    cursor.execute('''INSERT INTO transactions( tx_index, tx_hash, block_index, block_time, source, destination, btc_amount, fee, data) VALUES(?,?,?,?,?,?,?,?,?)''', (0, 'facefeed', 0, 0, 'foo', None, 0, 0, b''))
+    cursor.execute('''INSERT INTO transactions( tx_index, tx_hash, block_index, block_time, source, destination, btc_amount, fee, data) VALUES(?,?,?,?,?,?,?,?,?)''', (1, 'CONTRACT_ID', 0, 0, 'foo', None, 0, 0, b''))
+    cursor.close()
+
+def teardown_function(function):
+    global db
+    del db
+    os.remove(config.DATABASE)
 
 ### Counterparty compatibility ###
 
