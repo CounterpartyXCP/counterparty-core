@@ -152,14 +152,6 @@ class BlockGasLimitReached(HaltExecution): pass
 class OutOfGas(HaltExecution): pass
 suicidal = False
 
-class Message(object):
-    def __init__(self, source, contract_id, value, gas, payload):
-        assert type(payload) == bytes
-        self.sender = source
-        self.to = contract_id
-        self.value = value
-        self.gas = gas
-        self.data = payload
 def parse (db, tx, message):
     gas_cost = 0
     gas_remaining = 0
@@ -187,6 +179,7 @@ def parse (db, tx, message):
         intrinsic_gas_used = GTXDATA * len(payload) + GTXCOST
         if gas_start < intrinsic_gas_used:
             raise InsufficientStartGas(gas_start, intrinsic_gas_used)
+        gas_available = gas_start - intrinsic_gas_used
 
         # Check cost required for down payment.
         total_initial_cost = value + gas_price * gas_start
@@ -207,15 +200,12 @@ def parse (db, tx, message):
         util.debit(db, tx['block_index'], tx['source'], config.XCP, gas_price * gas_start, action='start execution', event=tx['tx_hash'])
         gas_cost += gas_price * gas_start
 
-        message_gas = gas_start - intrinsic_gas_used
-        message = Message(tx['source'], contract_id, value, message_gas, payload)
-
         ### BEGIN Computation ###
         logging.debug('SNAPSHOT')
         logging.debug('CONTRACT PRE STATE (balance: {}, storage: {})'.format(util.devise(db, util.get_balance(db, contract_id, config.XCP), config.XCP, 'output'), hexprint(util.get_storage(db, contract_id))))
         with db:
             # Apply message!
-            result, gas_remaining, data = apply_msg(db, tx, message, code)
+            result, gas_remaining, data = run(db, tx, code, tx['source'], contract_id, value, gas_available, payload)
             assert gas_remaining >= 0
 
             logging.debug('RESULT {}'.format(result))
@@ -295,7 +285,14 @@ def parse (db, tx, message):
         cursor.execute(sql, bindings)
         cursor.close()
 
-
+class Message(object):
+    def __init__(self, source, contract_id, value, gas, payload):
+        assert type(payload) == bytes
+        self.sender = source
+        self.to = contract_id
+        self.value = value
+        self.gas = gas
+        self.data = payload
 class Compustate():
     def __init__(self, **kwargs):
         self.memory = []
@@ -304,23 +301,26 @@ class Compustate():
         self.gas = 0
         for kw in kwargs:
             setattr(self, kw, kwargs[kw])
-def apply_msg(db, tx, msg, code):
-    logging.debug('MSG APPLY (sender: {}, tx: {}, gas: {}, value: {}, to: {}, data {})'.format(msg.sender, tx['tx_hash'], msg.to, msg.gas, msg.value, hexprint(msg.data)))
+def run(db, tx, code, source, contract_id, value, gas, payload):
+    logging.debug('BEGIN RUN (tx: {}, source: {}, contract_id: {}, value: {}, gas: {}, data {})'.format(tx['tx_hash'], source, contract_id, value, gas, hexprint(payload)))
 
     # Transfer value (instaquit if there isn’t enough).
     try:
-        util.debit(db, tx['block_index'], tx['source'], config.XCP, msg.value, action='transfer value', event=tx['tx_hash'])
+        util.debit(db, tx['block_index'], tx['source'], config.XCP, value, action='transfer value', event=tx['tx_hash'])
     except exceptions.BalanceError as e:
-        return 1, msg.gas, []
-    util.credit(db, tx['block_index'], msg.to, config.XCP, msg.value, action='transfer value', event=tx['tx_hash'])
+        return 1, gas, []
+    util.credit(db, tx['block_index'], contract_id, config.XCP, value, action='transfer value', event=tx['tx_hash'])
 
-    logging.debug('DATA {}'.format(hexprint(msg.data)))
-    logging.debug('DECODED DATA {}'.format(util_rlp.decode_datalist(msg.data))) # TODO: This can confuse endianness.
+    logging.debug('PAYLOAD {}'.format(hexprint(payload)))
+    logging.debug('DECODED PAYLOAD {}'.format(util_rlp.decode_datalist(payload))) # TODO: This can confuse endianness.
     logging.debug('CODE {}'.format(hexprint(code)))
-    compustate = Compustate(gas=msg.gas)
 
     processed_code = [opcodes.get(c, ['INVALID', 0, 0, [], 0]) + [c] for c in code]
     # logging.debug('PROCESSED_CODE {}'.format(processed_code))
+
+    # Message, Compustate.
+    msg = Message(tx['source'], contract_id, value, gas, payload)
+    compustate = Compustate(gas=gas)
 
     # Main loop
     t = time.time()
@@ -337,7 +337,7 @@ def apply_msg(db, tx, msg, code):
             else:
                 result = 1
 
-            logging.debug('MSG APPLIED (result: {}, data: {}, gas_remained: {}, ops: {}, time_per_op: {})'.format(result, hexprint(data), compustate.gas, ops, (time.time() - t) / ops))
+            logging.debug('END RUN (result: {}, data: {}, gas_remained: {}, ops: {}, time_per_op: {})'.format(result, hexprint(data), compustate.gas, ops, (time.time() - t) / ops))
             return result, gas_remaining, data
 
 
