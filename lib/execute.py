@@ -10,7 +10,7 @@ import time
 import logging
 import string
 
-from lib import (util, config, exceptions, bitcoin, util, util_rlp)
+from lib import (util, config, exceptions, bitcoin, util, util_rlp, publish)
 
 FORMAT = '>32sQQQ'
 LENGTH = 56
@@ -388,8 +388,8 @@ def apply_op(db, tx, msg, processed_code, compustate):
 
     # empty stack error
     if in_args > len(compustate.stack):
-        pblogger.log('INSUFFICIENT STACK ERROR', op=op, needed=in_args,
-                     available=len(compustate.stack))
+        logging.debug('INSUFFICIENT STACK ERROR (op: {}, needed: {}, available: {})'.format(op, in_args,
+                     len(compustate.stack)))
         return []
 
     # out of gas error
@@ -554,7 +554,7 @@ def apply_op(db, tx, msg, processed_code, compustate):
         if not mem_extend(mem, compustate, op, s0 + 32):
             return OUT_OF_GAS
         # NOTE data = ''.join(map(chr, mem[s0: s0 + 32]))
-        data = bytes(chr, mem[s0: s0 + 32])
+        data = bytes(mem[s0: s0 + 32])
         stk.append(util_rlp.big_endian_to_int(data))
     elif op == 'MSTORE':
         s0, s1 = stk.pop(), stk.pop()
@@ -624,12 +624,12 @@ def apply_op(db, tx, msg, processed_code, compustate):
             return OUT_OF_GAS
         # NOTE data = ''.join(map(chr, mem[mstart: mstart + msz]))
         data = bytes(mem[mstart: mstart + msz])
-        print(data, type(data))
-
         logging.debug('SUB CONTRACT NEW (sender: {}, value: {}, data: {})'.format(msg.to, value, binascii.hexlify(data)))
-        create_msg = Message(msg.to, '', value, compustate.gas, data)
-        addr, gas, code = create_contract(block, tx, create_msg)
-        logging.debug('SUB CONTRACT OUT (address: {}, code: {}})'.format(addr, code))
+        code = data
+        gas = compustate.gas    # TODO!!!
+        addr = publish.create_contract(db, None, None, tx['block_index'], '', code)    # TODO: WHAT IF THIS FAILS?! (duplicate code created)
+        addr = coerce_to_int(addr)  # TODO
+        logging.debug('SUB CONTRACT OUT (address: {}, code: {})'.format(addr, code))
 
         if addr:
             stk.append(addr)
@@ -647,13 +647,14 @@ def apply_op(db, tx, msg, processed_code, compustate):
             return out_of_gas_exception('subcall gas', gas, compustate, op)
         compustate.gas -= gas
         to = encode_int(to)
-        to = binascii.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
+        to = binascii.hexlify(((b'\x00' * (32 - len(to))) + to)[12:]).decode('ascii')
         # NOTE data = ''.join(map(chr, mem[meminstart: meminstart + meminsz]))
         data = bytes(mem[meminstart: meminstart + meminsz])
-        pblogger.log('SUB CALL NEW', sender=msg.to, to=to, value=value, gas=gas, data=binascii.hexlify(data))
-        call_msg = Message(msg.to, to, value, gas, data)
-        result, gas, data = apply_msg_send(db, block, tx, call_msg)
-        pblogger.log('SUB CALL OUT', result=result, data=data, length=len(data), expected=memoutsz)
+        logging.debug('SUB CALL NEW (sender: {}, to: {}, value: {}, gas: {}, data: {})'.format(msg.to, to, value, gas, binascii.hexlify(data)))
+        to = '4051b175ef6be86bd1e8453a680d9c557820d565ccf75e23adbccb5b48ba99b1'
+        code = util.get_code(db, to)[14:]   # TODO!!!
+        result, gas, data = run(db, tx, code, '', to, value, gas, data)
+        logging.debug('SUB CALL OUT (result: {}, data: {}, length: {}, expected: {}'.format(result, data, len(data), memoutsz))
         if result == 0:
             stk.append(0)
         else:
@@ -694,10 +695,9 @@ def apply_op(db, tx, msg, processed_code, compustate):
         to = binascii.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
         # NOTE data = ''.join(map(chr, mem[meminstart: meminstart + meminsz]))
         data = bytes(mem[meminstart: meminstart + meminsz])
-        pblogger.log('SUB CALL NEW', sender=msg.to, to=to, value=value, gas=gas, data=binascii.hexlify(data))
-        call_msg = Message(msg.to, msg.to, value, gas, data)
-        result, gas, data = apply_msg(db, block, tx, call_msg, util.get_code(db, to))
-        pblogger.log('SUB CALL OUT', result=result, data=data, length=len(data), expected=memoutsz)
+        logging.debug('SUB CALL NEW (sender: {}, to: {}, value: {}, gas: {}, data: {})'.format(msg.to, to, value, gas, binascii.hexlify(data)))
+        result, gas, data = run(db, tx, util.get_code(db, to), '', to, value, gas, data)
+        logging.debug('SUB CALL OUT (result: {}, data: {}, length: {}, expected: {}'.format(result, data, len(data), memoutsz))
         if result == 0:
             stk.append(0)
         else:

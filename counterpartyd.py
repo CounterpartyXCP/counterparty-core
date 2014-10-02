@@ -668,7 +668,7 @@ if __name__ == '__main__':
 
     parser_execute = subparsers.add_parser('execute', help='execute contract code in the blockchain')
     parser_execute.add_argument('--source', required=True, help='the source address')
-    parser_execute.add_argument('--contract-id', required=True, help='the transaction ID of the contract’s publication')
+    parser_execute.add_argument('--contract-id', required=True, help='the contract ID of the contract to be executed')
     parser_execute.add_argument('--gas-price', required=True, type=int, help='the price of gas')
     parser_execute.add_argument('--gas-start', required=True, type=int, help='the maximum quantity of gas to be used to pay for the execution')
     parser_execute.add_argument('--value', required=True, type=int, help='quantity of {} to be transfered to the contract'.format(config.XCP))

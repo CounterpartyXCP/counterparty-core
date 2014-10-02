@@ -47,11 +47,15 @@ def int_to_big_endian(integer):
     '''convert a integer to big endian binary string'''
     # 0 is a special case, treated same as ''
     if integer == 0:
-        return ''
+        return b''
+    """
+    NOTE
     s = '%x' % integer
     if len(s) & 1:
         s = '0' + s
-    return s.decode('hex')
+    return binascii.unhexlify(s).decode('ascii')
+    """
+    return (integer).to_bytes((integer.bit_length() // 8) + 1, byteorder='big')
 
 
 def big_endian_to_int(string):
