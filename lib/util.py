@@ -238,7 +238,7 @@ def log (db, command, category, bindings):
             logging.info('Expired RPS Match: {}'.format(bindings['rps_match_id']))
 
         elif category == 'contracts':
-            logging.info('New Contract: {} published a contract ({})'.format(bindings['source'], bindings['tx_hash']))
+            logging.info('New Contract: {} published contract {} ({})'.format(bindings['source'], bindings['contract_id'], bindings['tx_hash']))
 
         elif category == 'executions':
             """
@@ -789,7 +789,7 @@ class ContractError(Exception):
     pass
 def get_storage (db, contract_id):
     cursor = db.cursor()
-    contracts = list(cursor.execute('''SELECT * FROM contracts WHERE (tx_hash = ?)''', (contract_id,)))
+    contracts = list(cursor.execute('''SELECT * FROM contracts WHERE (contract_id = ?)''', (contract_id,)))
 
     if not contracts: raise ContractError('no such contract')
     elif not contracts[0]['alive']: raise ContractError('dead contract')
@@ -800,7 +800,7 @@ def get_storage (db, contract_id):
 
 def get_code (db, contract_id):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM contracts WHERE tx_hash = ?''', (contract_id,))
+    cursor.execute('''SELECT * FROM contracts WHERE contract_id = ?''', (contract_id,))
     contracts = list(cursor)
 
     if not contracts:

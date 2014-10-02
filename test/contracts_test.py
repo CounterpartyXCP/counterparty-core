@@ -63,20 +63,21 @@ class tester(object):
                 code = serpent.compile(code)[14:]   # Strip contract creation code.
             else:
                 code = b''
+            contract_id = hashlib.sha256(code).hexdigest()
 
             # Create contract with provided code.
             cursor = db.cursor()
-            print('PUBLISHING {} with code {}'.format('CONTRACT_ID', binascii.hexlify(code)))
-            bindings = {'tx_index': 1, 'tx_hash': 'CONTRACT_ID', 'block_index': 0, 'source': to, 'code': code, 'storage': b'', 'alive': True}
-            sql='insert into contracts values(:tx_index, :tx_hash, :block_index, :source, :code, :storage, :alive)'
+            print('PUBLISHING {} with code {}'.format(contract_id, binascii.hexlify(code)))
+            bindings = {'contract_id': contract_id, 'tx_index': 1, 'tx_hash': 'feedface', 'block_index': 0, 'source': to, 'code': code, 'storage': b'', 'alive': True}
+            sql='insert into contracts values(:contract_id, :tx_index, :tx_hash, :block_index, :source, :code, :storage, :alive)'
             cursor.execute(sql, bindings)
             cursor.close
 
             # Give code publisher an XCP balance.
-            util.credit(db, 0, to, config.XCP, 10*config.UNIT, action='unit test', event='facefeed')
+            util.credit(db, 0, to, config.XCP, 10 * config.UNIT, action='unit test', event='facefeed')
 
             # Return contract_id.
-            return 'CONTRACT_ID'
+            return contract_id
 
         def send (self, sender, contract_id, value, data=[]):
             # Don’t actually ‘send’—just run the code.
@@ -104,11 +105,11 @@ class tester(object):
             payload = binascii.unhexlify(payload)
             intrinsic_gas_used = execute.GTXDATA * len(payload) + execute.GTXCOST
             gas_available = gas_start - intrinsic_gas_used
-            code = util.get_code(db, 'CONTRACT_ID')
+            code = util.get_code(db, contract_id)
             print('retreived code', binascii.hexlify(code))
 
             # Run.
-            result, gas_remaining, data = execute.run(db, tx, code, privtoaddr(sender), 'CONTRACT_ID', value, gas_available, payload)
+            result, gas_remaining, data = execute.run(db, tx, code, privtoaddr(sender), contract_id, value, gas_available, payload)
 
             # Decode, return result.
             assert result == 1
@@ -118,8 +119,8 @@ class tester(object):
         class block(object):
             def set_code(contract_id, code):
                 cursor = db.cursor()
-                bindings = {'block_index': 0, 'code': code, 'tx_hash': contract_id}
-                sql='''update contracts set code = :code where tx_hash = :tx_hash'''
+                bindings = {'block_index': 0, 'code': code, 'contract_id': contract_id}
+                sql='''update contracts set code = :code where contract_id = :contract_id'''
                 cursor.execute(sql, bindings)
                 cursor.close()
             
@@ -152,7 +153,7 @@ def setup_function(function):
     cursor = db.cursor()
     cursor.execute('''INSERT INTO blocks( block_index, block_hash, block_time) VALUES(?,?,?)''', (0, 'deaddead', 0))
     cursor.execute('''INSERT INTO transactions( tx_index, tx_hash, block_index, block_time, source, destination, btc_amount, fee, data) VALUES(?,?,?,?,?,?,?,?,?)''', (0, 'facefeed', 0, 0, 'foo', None, 0, 0, b''))
-    cursor.execute('''INSERT INTO transactions( tx_index, tx_hash, block_index, block_time, source, destination, btc_amount, fee, data) VALUES(?,?,?,?,?,?,?,?,?)''', (1, 'CONTRACT_ID', 0, 0, 'foo', None, 0, 0, b''))
+    cursor.execute('''INSERT INTO transactions( tx_index, tx_hash, block_index, block_time, source, destination, btc_amount, fee, data) VALUES(?,?,?,?,?,?,?,?,?)''', (1, 'feedface', 0, 0, 'foo', None, 0, 0, b''))
     cursor.close()
 
 def teardown_function(function):

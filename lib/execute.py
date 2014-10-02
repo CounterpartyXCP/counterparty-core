@@ -240,6 +240,7 @@ def parse (db, tx, message):
         output = None
     except util.ContractError as e:
         status = 'invalid: no such contract'
+        contract_id = None
         output = None
     except InsufficientStartGas as e:
         have, need = e.args

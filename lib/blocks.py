@@ -850,6 +850,7 @@ def initialise(db):
 
     # Contracts
     cursor.execute('''CREATE TABLE IF NOT EXISTS contracts(
+                      contract_id TEXT PRIMARY KEY,
                       tx_index INTEGER UNIQUE,
                       tx_hash TEXT UNIQUE,
                       block_index INTEGER,
@@ -857,8 +858,7 @@ def initialise(db):
                       code BLOB,
                       storage BLOB,
                       alive BOOL,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      PRIMARY KEY (tx_index, tx_hash))
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                   ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       source_idx ON contracts (source)
@@ -873,7 +873,7 @@ def initialise(db):
                       tx_hash TEXT UNIQUE,
                       block_index INTEGER,
                       source TEXT,
-                      contract_id BLOB,
+                      contract_id TEXT,
                       gas_price INTEGER,
                       gas_start INTEGER,
                       gas_cost INTEGER,
@@ -883,8 +883,7 @@ def initialise(db):
                       output BLOB,
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      FOREIGN KEY (contract_id) REFERENCES contracts(tx_hash),
-                      PRIMARY KEY (tx_index, tx_hash))
+                      FOREIGN KEY (contract_id) REFERENCES contracts(contract_id))
                   ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       source_idx ON executions(source)

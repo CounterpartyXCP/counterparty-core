@@ -4,10 +4,30 @@
 
 import struct
 import binascii
+import hashlib
 
 from . import (util, config, exceptions, bitcoin, util)
 
 ID = 100
+
+def create_contract (db, contract_id, tx_index, tx_hash, block_index, source, code):
+    cursor = db.cursor()
+
+    # Add parsed transaction to message-type–specific table.
+    bindings = {
+        'contract_id': contract_id,
+        'tx_index': tx_index,
+        'tx_hash': tx_hash,
+        'block_index': block_index,
+        'source': source,
+        'code': code,
+        'storage': b'',
+        'alive': True,
+    }
+    sql='insert into contracts values(:contract_id, :tx_index, :tx_hash, :block_index, :source, :code, :storage, :alive)'
+    cursor.execute(sql, bindings)
+
+    cursor.close()
 
 def compose (db, source, code_hex):
 
@@ -18,21 +38,7 @@ def compose (db, source, code_hex):
 
 
 def parse (db, tx, message):
-    cursor = db.cursor()
 
-    # Add parsed transaction to message-type–specific table.
-    bindings = {
-        'tx_index': tx['tx_index'],
-        'tx_hash': tx['tx_hash'],
-        'block_index': tx['block_index'],
-        'source': tx['source'],
-        'code': message,
-        'storage': b'',
-        'alive': True,
-    }
-    sql='insert into contracts values(:tx_index, :tx_hash, :block_index, :source, :code, :storage, :alive)'
-    cursor.execute(sql, bindings)
-
-    cursor.close()
+    create_contract(db, hashlib.sha256(message).hexdigest(), tx['tx_index'], tx['tx_hash'], tx['block_index'], tx['source'], message)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
