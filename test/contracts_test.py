@@ -56,6 +56,7 @@ class tester(object):
             code = subprocess.check_output(['serpent', 'compile_lll', lll_code])
             code = code[:-1] # Strip newline.
             return binascii.unhexlify(bytes(code))
+
             
     class state(object):
         def create_contract(self, code):
@@ -77,16 +78,10 @@ class tester(object):
 
             return contract_id
 
-        def contract(self, code):
 
-            # Compile fake code.
-            if code:
-                code = serpent.compile(code)
-            else:
-                code = b''
-
+        def evm(self, evmcode):
             # Get real code.
-            contract_id = tester.state.create_contract(self, code)
+            contract_id = tester.state.create_contract(self, evmcode)
             result, gas_remaining, data = tester.state.do_send(self, '', contract_id, 0, data=[])
             real_code = bytes(data)
 
@@ -95,6 +90,17 @@ class tester(object):
 
             # Return contract_id.
             return real_contract_id
+
+        def contract(self, code):
+
+            # Compile fake code.
+            if code:
+                evmcode = serpent.compile(code)
+            else:
+                evmcode = b''
+
+            return tester.state.evm(self, evmcode)
+
 
         def do_send (self, sender, contract_id, value, data=[]):
             # Don’t actually ‘send’—just run the code.
@@ -139,11 +145,13 @@ class tester(object):
             assert gas_remaining >= 0
             return result, gas_remaining, data
 
+
         def send (self, sender, contract_id, value, data=[]):
             # Execute contract.
             result, gas_remaining, data= tester.state.do_send(self, '', contract_id, 0, data=data)
             decoded_data = util_rlp.decode_datalist(bytes(data))
             return decoded_data
+
 
         class block(object):
             def set_code(contract_id, code):
@@ -152,6 +160,7 @@ class tester(object):
                 sql='''update contracts set code = :code where contract_id = :contract_id'''
                 cursor.execute(sql, bindings)
                 cursor.close()
+
             
 def privtoaddr(x):
     x = binascii.unhexlify(x)
@@ -190,7 +199,6 @@ def teardown_function(function):
 serpent_code = 'return(msg.data[0] ^ msg.data[1])'
 evm_code = serpent.compile(serpent_code)
 
-@pytest.mark.skipif(True, reason='Counterparty creates contracts differently.')
 def test_evm():
     s = tester.state()
     c = s.evm(evm_code)
