@@ -27,7 +27,7 @@ ADDR = [a[0] for a in DEFAULT_PARAMS['addresses']]
 DP = DEFAULT_PARAMS
 MULTISIGADDR = [
     '1_{}_{}_2'.format(ADDR[0], ADDR[1]),
-    '1_{}_{}_2'.format(ADDR[1], ADDR[2]),
+    '1_{}_{}_2'.format(ADDR[2], ADDR[1]),
     '1_{}_{}_2'.format(ADDR[0], ADDR[2])
 ]
 
@@ -139,7 +139,7 @@ UNITTEST_VECTOR = {
             'out': ('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', [('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00')
         }, {
             'in': (MULTISIGADDR[0], MULTISIGADDR[1], 'XCP', DP['quantity']),
-            'out': ('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', [('1_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_2', None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00')
+            'out': ('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', [('1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00')
         }],
         'parse': [{
             'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': 155409, 'fee': 10000, 'block_time': 1554090000000, 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
@@ -406,7 +406,7 @@ UNITTEST_VECTOR = {
             'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff03781e0000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac781e0000000000006951210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b02134caf7ca87f0fd78a01d9a0d68221e55beef3722da8be72d254dd351c26108bc1421528340c27d005aa9e2913fd8c032ffa94625307a450077125d580099b5c8255d0e53ae007df505000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'send source and dest multisig',
-            'in': (('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', [('1_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_2', None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00'), {'encoding': 'multisig'}),
+            'in': (('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', [('1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00'), {'encoding': 'multisig'}),
             'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff03781e0000000000004751210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b977210378ee11c3fb97054877a809ce083db292b16d971bcdc6aa4c8f92087133729d8b52ae781e0000000000006951210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b02134caf7ca87f0fd78a01d9a0d68221e55beef3722da8be72d254dd351c26108bc1421528340c27d005aa9e2913fd8c032ffa94625307a450077125d580099b5c8255d0e53ae007df505000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'comment': 'issuance',
@@ -526,8 +526,50 @@ SCENARIO_1 = [
     ['create_next_block', 101]
 ]
 
+SCENARIO_2 = [
+    ['burn', (MULTISIGADDR[0], int(.62 * DP['quantity'])), {'encoding': 'multisig'}],
+    ['send', (MULTISIGADDR[0], MULTISIGADDR[1], 'XCP', DP['small']), {'encoding': 'multisig'}],
+    ['order', (MULTISIGADDR[0], 'BTC', DP['small'], 'XCP', DP['small'] * 2, DP['expiration'], 0), {'encoding': 'multisig', 'fee_provided': DP['fee_provided']}],
+    ['order', (MULTISIGADDR[0], 'XCP', round(DP['small'] * 2.1), 'BTC', DP['small'], DP['expiration'], DP['fee_required']), {'encoding': 'multisig'}],
+    ['btcpay', (MULTISIGADDR[0], '084fed08b978af4d7d196a7446a86b58009e636b611db16211b65a9aadff29c5e52d9c508c502347344d8c07ad91cbd6068afc75ff6292f062a09ca381c89e71'), {'encoding': 'multisig'}],
+    ['issuance', (MULTISIGADDR[0], None, 'BBBB', DP['quantity'] * 10, True, False, 0, 0.0, ''), {'encoding': 'multisig'}],
+    ['issuance', (MULTISIGADDR[0], None, 'BBBC', round(DP['quantity'] / 1000), False, True, 17, 0.015, 'foobar'), {'encoding': 'multisig'}],
+    ['send', (MULTISIGADDR[0], MULTISIGADDR[1], 'BBBB', round(DP['quantity'] / 25)), {'encoding': 'multisig'}],
+    ['send', (MULTISIGADDR[0], MULTISIGADDR[1], 'BBBC', round(DP['quantity'] / 190000)), {'encoding': 'multisig'}],
+    ['dividend', (MULTISIGADDR[0], 600, 'BBBB', 'XCP'), {'encoding': 'multisig'}],
+    ['dividend', (MULTISIGADDR[0], 800, 'BBBC', 'XCP'), {'encoding': 'multisig'}],
+    ['broadcast', (MULTISIGADDR[0], 1388000000, 100, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],
+    ['bet', (MULTISIGADDR[0], MULTISIGADDR[0], 0, 1388000100, DP['small'], round(DP['small'] / 2), 0.0, 15120, DP['expiration']), {'encoding': 'multisig'}],
+    ['bet', (MULTISIGADDR[0], MULTISIGADDR[0], 1, 1388000100, round(DP['small'] / 2), round(DP['small'] * .83), 0.0, 15120, DP['expiration']), {'encoding': 'multisig'}],
+    ['bet', (MULTISIGADDR[0], MULTISIGADDR[0], 0, 1388000100, DP['small'] * 3, DP['small'] * 7, 0.0, 5040, DP['expiration']), {'encoding': 'multisig'}],
+    ['bet', (MULTISIGADDR[0], MULTISIGADDR[0], 1, 1388000100, DP['small'] * 7, DP['small'] * 3, 0.0, 5040, DP['expiration']), {'encoding': 'multisig'}],
+    ['bet', (MULTISIGADDR[0], MULTISIGADDR[0], 2, 1388000200, DP['small'] * 15, DP['small'] * 13, 1, 5040, DP['expiration']), {'encoding': 'multisig'}],
+    ['bet', (MULTISIGADDR[0], MULTISIGADDR[0], 3, 1388000200, DP['small'] * 13, DP['small'] * 15, 1, 5040, DP['expiration']), {'encoding': 'multisig'}],
+    ['broadcast', (MULTISIGADDR[0], 1388000050, round(100 - (.415/3) - .00001, 5), DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],
+    ['broadcast', (MULTISIGADDR[0], 1388000101, 100.343, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],
+    ['broadcast', (MULTISIGADDR[0], 1388000201, 2, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],
+    ['order', (MULTISIGADDR[0], 'BBBB', DP['small'], 'XCP', DP['small'], DP['expiration'], 0), {'encoding': 'multisig'}],
+    ['burn', (MULTISIGADDR[0], int(.62 * DP['quantity']), True), {'encoding': 'multisig'}],  # Try to burn a whole 'nother BTC.
+    ['send', (MULTISIGADDR[0], MULTISIGADDR[1], 'BBBC', 10000), {'encoding': 'multisig'}],
+    ['callback', (MULTISIGADDR[0], .3, 'BBBC'), {'encoding': 'multisig'}],
+    ['rps', (MULTISIGADDR[0], 5, 11021663, DP['move_random_hash'], 100), {'encoding': 'multisig'}],
+    ['rps', (MULTISIGADDR[1], 5, 11021663, '6e8bf66cbd6636aca1802459b730a99548624e48e243b840e0b34a12bede17ec', 100), {'encoding': 'multisig'}],
+    ['rpsresolve', (MULTISIGADDR[0], 3, DP['rps_random'], '58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd'), {'encoding': 'multisig'}],
+    ['rpsresolve', (MULTISIGADDR[1], 5, 'fa765e80203cba24a298e4458f63ff6b', '58f7b0780592032e4d8602a3e8690fb2c701b2e1dd546e703445aabd6469734d77adfc95029e73b173f60e556f915b0cd8850848111358b1c370fb7c154e61fd'), {'encoding': 'multisig'}],
+    ['rps', (MULTISIGADDR[0], 5, 11021663, DP['move_random_hash'], 10), {'encoding': 'multisig'}],
+    ['create_next_block', 46],
+    ['rps', (MULTISIGADDR[0], 5, 11021664, DP['move_random_hash'], 10), {'encoding': 'multisig'}],
+    ['rps', (MULTISIGADDR[1], 5, 11021664, DP['move_random_hash'], 10), {'encoding': 'multisig'}],
+    ['create_next_block', 73],
+    ['rps', (MULTISIGADDR[0], 5, 11021665, DP['move_random_hash'], 10), {'encoding': 'multisig'}],
+    ['rps', (MULTISIGADDR[1], 5, 11021665, DP['move_random_hash'], 10), {'encoding': 'multisig'}],
+    ['rpsresolve', (MULTISIGADDR[0], 3, DP['rps_random'], '86be9a55762d316a3026c2836d044f5fc76e34da10e1b45feee5f18be7edb17772dfcfb0c470ac255cde83fb8fe38de8a128188e03ea5ba5b2a93adbea1062fa'), {'encoding': 'multisig'}],
+    ['create_next_block', 101]
+]
+
 INTEGRATION_SCENARIOS = {
     'unittest_fixture': UNITEST_FIXTURE,
-    'scenario_1': SCENARIO_1
+    'scenario_1': SCENARIO_1,
+    'scenario_2': SCENARIO_2
 }
 
