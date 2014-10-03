@@ -356,7 +356,6 @@ def out_of_gas_exception(expense, fee, compustate, op):
 def mem_extend(mem, compustate, op, newsize):
     if len(mem) < ceil32(newsize):
         m_extend = ceil32(newsize) - len(mem)
-        print('AAAAAAAAAAAAAAAAAAAAAAAAAA', m_extend)
         mem.extend([0] * m_extend)
         memfee = GMEMORY * (m_extend // 32)
         compustate.gas -= memfee

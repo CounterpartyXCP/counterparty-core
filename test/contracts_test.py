@@ -60,7 +60,8 @@ class tester(object):
             to = 'foo'
 
             if code:
-                code = serpent.compile(code)[14:]   # Strip contract creation code.
+                code = serpent.compile(code)
+                code = code[14:]   # Strip contract creation code.
             else:
                 code = b''
             contract_id = hashlib.sha256(code).hexdigest()
