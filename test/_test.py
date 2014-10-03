@@ -29,7 +29,7 @@ sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
 from lib import (config, api, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
-import counterpartyd
+import counterpartyd, util_test
 
 # config.BLOCK_FIRST = 0
 # config.BURN_START = 0
@@ -52,7 +52,9 @@ with open(CURR_DIR + '/output.json', 'r') as output_file:
 try: os.remove(config.DATABASE)
 except: pass
 db = util.connect_to_db()
+config.TEMP_DB = db
 cursor = db.cursor()
+util_test.initialise_getrawtransaction_data(db)
 
 # Each tx has a block_index equal to its tx_index
 tx_index = 0
@@ -78,9 +80,9 @@ def parse_hex (unsigned_tx_hex):
     block_index = config.BURN_START + tx_index
     block_hash = hashlib.sha512(chr(block_index).encode('utf-8')).hexdigest()
     block_time = block_index * 10000000
-
-    source, destination, btc_amount, fee, data = blocks.get_tx_info(tx,
-        block_index)
+    tx['txid'] = tx_hash
+    util_test.save_getrawtransaction_data(db, tx_hash, unsigned_tx_hex)
+    source, destination, btc_amount, fee, data = blocks.get_tx_info2(tx, block_index)
 
     cursor.execute('''INSERT INTO blocks(
                         block_index,
@@ -547,7 +549,6 @@ def test_pending_and_resolved_rps_match_expiration ():
     # resolved game wins
     check_movment(db, 'credit', expiration_block, source_default, 'XCP', 2 * 11021665, rps_match_id)
 
-
 def test_json_rpc():
 
     # TODO: Broken
@@ -569,7 +570,7 @@ def test_json_rpc():
 #     })
     payloads.append({
         "method": "create_send",
-        "params": {'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': destination_default, 'asset': config.XCP, 'quantity': 1, 'encoding': 'pubkeyhash', 'pubkey': '0319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b977'},
+        "params": {'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': destination_default, 'asset': config.XCP, 'quantity': 1, 'encoding': 'pubkeyhash', 'pubkey': '0282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0'},
         "jsonrpc": "2.0",
         "id": 0,
     })
