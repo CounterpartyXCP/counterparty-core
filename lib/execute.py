@@ -137,6 +137,8 @@ TT256 = 2**256
 
 OUT_OF_GAS = -1
 
+# TODO: Make fees proportional to money supply.
+
 
 def compose (db, source, contract_id, gas_price, gas_start, value, payload_hex):
     code = util.get_code(db, contract_id)
