@@ -59,11 +59,11 @@ class tester(object):
 
             
     class state(object):
-        def create_contract(self, code):
+        def create_contract(self, code, endowment=0):
             to = 'foo'
             global i
             i += 1
-            contract_id = hashlib.sha256(code).hexdigest() + str(i)
+            contract_id = util.contract_sha3(code + bytes(i))
             tx_hash = contract_id
 
             # Create contract with provided code.
@@ -73,25 +73,30 @@ class tester(object):
             cursor.execute(sql, bindings)
             cursor.close
 
-            # Give code publisher an XCP balance.
-            util.credit(db, 0, to, config.XCP, 10 * config.UNIT, action='unit test', event='facefeed')
+            # Endowment.
+            if not endowment:
+                endowment = 10 * config.UNIT
+            util.credit(db, 0, contract_id, config.XCP, endowment, action='unit test', event='endowment')
+
+            # Give XCP to sender.
+            util.credit(db, 0, to, config.XCP, endowment, action='unit test', event='facefeed')
 
             return contract_id
 
 
-        def evm(self, evmcode):
+        def evm(self, evmcode, endowment=0):
             # Get real code.
             contract_id = tester.state.create_contract(self, evmcode)
             result, gas_remaining, data = tester.state.do_send(self, '', contract_id, 0, data=[])
             real_code = bytes(data)
 
             # Publish real code.
-            real_contract_id = tester.state.create_contract(self, real_code)
+            real_contract_id = tester.state.create_contract(self, real_code, endowment=endowment)
 
             # Return contract_id.
             return real_contract_id
 
-        def contract(self, code):
+        def contract(self, code, sender='', endowment=0):
 
             # Compile fake code.
             if code:
@@ -99,7 +104,7 @@ class tester(object):
             else:
                 evmcode = b''
 
-            return tester.state.evm(self, evmcode)
+            return tester.state.evm(self, evmcode, endowment=endowment)
 
 
         def do_send (self, sender, contract_id, value, data=[]):

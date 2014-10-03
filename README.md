@@ -10,7 +10,7 @@ The Counterparty protocol specification may be found at
 
 # Dependencies
 * [Python 3](http://python.org)
-* Python 3 packages: apsw, requests, appdirs, prettytable, python-dateutil, json-rpc, tornado, flask, Flask-HTTPAuth, pycoin, pyzmq(v2.2+), pycrypto, lockfile, python-bitcoinlib, ethereum-serpent ([exact working versions](https://github.com/CounterpartyXCP/counterpartyd/blob/master/pip-requirements.txt))
+* Python 3 packages: See [pip-requirements.txt](https://github.com/CounterpartyXCP/counterpartyd/blob/master/pip-requirements.txt))
 * Bitcoin Core
 
 # Installation

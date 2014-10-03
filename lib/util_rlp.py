@@ -60,7 +60,7 @@ def int_to_big_endian(integer):
 def big_endian_to_int(string):
     '''convert a big endian binary string to integer'''
     # '' is a special case, treated same as 0
-    string = string or '\x00'
+    string = string or b'\x00'
     s = binascii.hexlify(string)
     return int(s, 16)
 
@@ -187,7 +187,7 @@ def encode_length(L, offset):
 
 def encode(s):
     # if not s:
-    #     return '\x80' if s == '' else '\xc0'
+    #     return b'\x80' if s == '' else b'\xc0'
     if isinstance(s, (str, unicode)):
         s = str(s)
         if len(s) == 1 and ord(s) < 128:

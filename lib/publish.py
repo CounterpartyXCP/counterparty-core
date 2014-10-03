@@ -13,7 +13,7 @@ ID = 100
 def create_contract (db, tx_index, tx_hash, block_index, source, code):
     cursor = db.cursor()
 
-    contract_id = hashlib.sha256(source.encode('utf-8') + code).hexdigest()   # TODO: collisions?!
+    contract_id = util.contract_sha3(source.encode('utf-8') + code)   # TODO: collisions?!
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

@@ -181,6 +181,7 @@ def parse (db, tx, message):
             raise exceptions.UnpackError()
 
         contract_id = binascii.hexlify(contract_id).decode('utf-8')
+        print('FOOB', contract_id)
         code = util.get_code(db, contract_id)
         # TODO: gas_price is an int
 
@@ -493,6 +494,7 @@ def apply_op(db, tx, msg, processed_code, compustate):
         data = bytes(mem[s0: s0 + s1])
         stk.append(util_rlp.big_endian_to_int(sha3(data)))
     elif op == 'ADDRESS':
+        print('ADDRESS', msg.to)   # TODO
         stk.append(coerce_to_int(msg.to))
     elif op == 'BALANCE':
         stk.append(util.get_balance(coerce_addr_to_hex(stk.pop()), config.XCP))
@@ -659,8 +661,7 @@ def apply_op(db, tx, msg, processed_code, compustate):
         # NOTE data = ''.join(map(chr, mem[meminstart: meminstart + meminsz]))
         data = bytes(mem[meminstart: meminstart + meminsz])
         logging.debug('SUB CALL NEW (sender: {}, to: {}, value: {}, gas: {}, data: {})'.format(msg.to, to, value, gas, binascii.hexlify(data)))
-        to = '4051b175ef6be86bd1e8453a680d9c557820d565ccf75e23adbccb5b48ba99b1'
-        code = util.get_code(db, to)[14:]   # TODO!!!
+        code = util.get_code(db, to)    # TODO
         result, gas, data = run(db, tx, code, '', to, value, gas, data)
         logging.debug('SUB CALL OUT (result: {}, data: {}, length: {}, expected: {}'.format(result, data, len(data), memoutsz))
         if result == 0:

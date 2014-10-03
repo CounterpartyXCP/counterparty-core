@@ -14,6 +14,7 @@ import fractions
 import warnings
 import binascii
 import hashlib
+import sha3
 
 from . import (config, exceptions)
 
@@ -812,5 +813,9 @@ def get_code (db, contract_id):
     cursor.close()
     return code
 
+def contract_sha3 (b):
+    contract_id = hashlib.sha3_256(b).digest()[12:]
+    contract_id = binascii.hexlify(contract_id).decode('ascii')
+    return contract_id
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
