@@ -119,6 +119,13 @@ def hexprint(x):
     else:
         return 'OUT OF GAS'
 
+# TODO: Castrated.
+def get_storage_data(db, address, index):
+    t = util.get_storage(db, address)
+    key = index.to_bytes(32, byteorder='big')
+    print('baz', t.get(key))
+    val = rlp.decode(t.get(key))
+    return util_rlp.big_endian_to_int(val) if val else 0
 
 GDEFAULT = 1
 GMEMORY = 1
@@ -569,10 +576,10 @@ def apply_op(db, tx, msg, processed_code, compustate):
             return OUT_OF_GAS
         mem[s0] = s1 % 256
     elif op == 'SLOAD':
-        stk.append(util.get_storage(db, msg.to, stk.pop()))
+        stk.append(get_storage_data(db, msg.to, stk.pop()))
     elif op == 'SSTORE':
         s0, s1 = stk.pop(), stk.pop()
-        pre_occupied = GSTORAGE if util.get_storage(db, msg.to, s0) else 0
+        pre_occupied = GSTORAGE if get_storage_data(db, msg.to, s0) else 0
         post_occupied = GSTORAGE if s1 else 0
         gascost = GSTORAGE + post_occupied - pre_occupied
         if compustate.gas < gascost:

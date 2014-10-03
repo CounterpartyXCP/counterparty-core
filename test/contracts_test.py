@@ -60,10 +60,10 @@ class tester(object):
     class state(object):
         def create_contract(self, code):
             to = 'foo'
-            contract_id = hashlib.sha256(code).hexdigest()
-            tx_hash = contract_id
             global i
             i += 1
+            contract_id = hashlib.sha256(code).hexdigest() + str(i)
+            tx_hash = contract_id
 
             # Create contract with provided code.
             cursor = db.cursor()
@@ -103,7 +103,14 @@ class tester(object):
             gas_start = 100000
 
             # Encode data.
-            payload = subprocess.check_output(['serpent', 'encode_datalist', ' '.join([str(a) for a in data])])
+            # TODO: using serpent over CLI
+            if data:    # TODO
+                data = ' '.join([str(a) for a in data])
+                print(data)
+                cmd = '''serpent encode_datalist "''' + data + '''"'''
+                payload = subprocess.check_output(cmd, shell=True)
+            else:
+                payload = subprocess.check_output(['serpent', 'encode_datalist', ' '.join([str(a) for a in data])])
             payload = payload[:-1]  # Strip newline.
             payload = payload.decode('utf-8')
 
@@ -255,7 +262,7 @@ else:
 def test_namecoin():
     s = tester.state()
     c = s.contract(namecoin_code)
-    o1 = s.send(tester.k0, c, 0, ['"george"', 45])
+    o1 = s.send(tester.k0, c, 0, ['\'\\"george\\"\'', 45])  # TODO: using serpent over CLI
     assert o1 == [1]
     o2 = s.send(tester.k0, c, 0, ['"george"', 20])
     assert o2 == [0]

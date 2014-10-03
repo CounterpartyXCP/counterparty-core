@@ -33,7 +33,6 @@ First byte of an encoded item
 0xff == 255
 '''
 
-
 def decode_datalist(arr):
     if isinstance(arr, list):
         arr = ''.join(map(chr, arr))
