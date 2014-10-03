@@ -331,7 +331,7 @@ def exectracer(cursor, sql, bindings):
 
     return True
 
-def connect_to_db(flags=None):
+def connect_to_db(flags=None, foreign_keys=True):
     """Connects to the SQLite database, returning a db Connection object"""
     logging.debug('Status: Creating connection to `{}`.'.format(config.DATABASE.split('/').pop()))
 
@@ -348,8 +348,9 @@ def connect_to_db(flags=None):
     cursor.execute('''PRAGMA count_changes = OFF''')
 
     # For integrity, security.
-    cursor.execute('''PRAGMA foreign_keys = ON''')
-    cursor.execute('''PRAGMA defer_foreign_keys = ON''')
+    if foreign_keys:
+        cursor.execute('''PRAGMA foreign_keys = ON''')
+        cursor.execute('''PRAGMA defer_foreign_keys = ON''')
 
     # So that writers don’t block readers.
     if flags != 'SQLITE_OPEN_READONLY':

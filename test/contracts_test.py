@@ -42,6 +42,8 @@ counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/counterpartyd.
 import logging
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 
+i = 0
+
 class serpent(object):
     def compile(code):
         evmcode = subprocess.check_output(['serpent', 'compile', code])
@@ -56,20 +58,16 @@ class tester(object):
             return binascii.unhexlify(bytes(code))
             
     class state(object):
-        def contract(self, code):
+        def create_contract(self, code):
             to = 'foo'
-
-            if code:
-                code = serpent.compile(code)
-                code = code[14:]   # Strip contract creation code.
-            else:
-                code = b''
             contract_id = hashlib.sha256(code).hexdigest()
+            tx_hash = contract_id
+            global i
+            i += 1
 
             # Create contract with provided code.
             cursor = db.cursor()
-            print('PUBLISHING {} with code {}'.format(contract_id, binascii.hexlify(code)))
-            bindings = {'contract_id': contract_id, 'tx_index': 1, 'tx_hash': 'feedface', 'block_index': 0, 'source': to, 'code': code, 'storage': b'', 'alive': True}
+            bindings = {'contract_id': contract_id, 'tx_index': i, 'tx_hash': tx_hash, 'block_index': 0, 'source': to, 'code': code, 'storage': b'', 'alive': True}
             sql='insert into contracts values(:contract_id, :tx_index, :tx_hash, :block_index, :source, :code, :storage, :alive)'
             cursor.execute(sql, bindings)
             cursor.close
@@ -77,10 +75,28 @@ class tester(object):
             # Give code publisher an XCP balance.
             util.credit(db, 0, to, config.XCP, 10 * config.UNIT, action='unit test', event='facefeed')
 
-            # Return contract_id.
             return contract_id
 
-        def send (self, sender, contract_id, value, data=[]):
+        def contract(self, code):
+
+            # Compile fake code.
+            if code:
+                code = serpent.compile(code)
+            else:
+                code = b''
+
+            # Get real code.
+            contract_id = tester.state.create_contract(self, code)
+            result, gas_remaining, data = tester.state.do_send(self, '', contract_id, 0, data=[])
+            real_code = bytes(data)
+
+            # Publish real code.
+            real_contract_id = tester.state.create_contract(self, real_code)
+
+            # Return contract_id.
+            return real_contract_id
+
+        def do_send (self, sender, contract_id, value, data=[]):
             # Don’t actually ‘send’—just run the code.
 
             gas_price = 1
@@ -95,7 +111,7 @@ class tester(object):
             tx = { 'source': sender,
                    'block_index': 0,
                    'payload': payload,
-                   'tx_hash': 'deadbeef',
+                   'tx_hash': contract_id, 
                    'contract_id': contract_id,
                    'gas_price': gas_price,
                    'gas_start': gas_start,
@@ -107,7 +123,6 @@ class tester(object):
             intrinsic_gas_used = execute.GTXDATA * len(payload) + execute.GTXCOST
             gas_available = gas_start - intrinsic_gas_used
             code = util.get_code(db, contract_id)
-            print('retreived code', binascii.hexlify(code))
 
             # Run.
             result, gas_remaining, data = execute.run(db, tx, code, privtoaddr(sender), contract_id, value, gas_available, payload)
@@ -115,7 +130,13 @@ class tester(object):
             # Decode, return result.
             assert result == 1
             assert gas_remaining >= 0
-            return util_rlp.decode_datalist(bytes(data))
+            return result, gas_remaining, data
+
+        def send (self, sender, contract_id, value, data=[]):
+            # Execute contract.
+            result, gas_remaining, data= tester.state.do_send(self, '', contract_id, 0, data=data)
+            decoded_data = util_rlp.decode_datalist(bytes(data))
+            return decoded_data
 
         class block(object):
             def set_code(contract_id, code):
@@ -146,16 +167,9 @@ def setup_function(function):
 
     # Connect to database.
     global db
-    db = util.connect_to_db()
-
-    # For FOREIGN KEY checks.
+    db = util.connect_to_db(foreign_keys=False)
     from lib import blocks
     blocks.initialise(db)
-    cursor = db.cursor()
-    cursor.execute('''INSERT INTO blocks( block_index, block_hash, block_time) VALUES(?,?,?)''', (0, 'deaddead', 0))
-    cursor.execute('''INSERT INTO transactions( tx_index, tx_hash, block_index, block_time, source, destination, btc_amount, fee, data) VALUES(?,?,?,?,?,?,?,?,?)''', (0, 'facefeed', 0, 0, 'foo', None, 0, 0, b''))
-    cursor.execute('''INSERT INTO transactions( tx_index, tx_hash, block_index, block_time, source, destination, btc_amount, fee, data) VALUES(?,?,?,?,?,?,?,?,?)''', (1, 'feedface', 0, 0, 'foo', None, 0, 0, b''))
-    cursor.close()
 
 def teardown_function(function):
     global db
