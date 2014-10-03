@@ -771,7 +771,13 @@ def get_unspent_txouts(source):
         # TODO: remove account (and address?) fields
         if is_mine(source):
             wallet_unspent = list_unspent()
-            unspent = [output for output in wallet_unspent if output['address'] == source]
+            unspent = []
+            for output in wallet_unspent:
+                try:
+                    if output['address'] == source:
+                        unspent.append(output)
+                except KeyError:
+                    pass
         else:
             unspent = blockchain.listunspent(source)
 
