@@ -10,8 +10,8 @@ from lib import (config, api, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
 import counterpartyd
 
-from fixtures.fixtures import DEFAULT_PARAMS as DP
-from fixtures.fixtures import UNITEST_FIXTURE, INTEGRATION_SCENARIOS
+from fixtures.params import DEFAULT_PARAMS as DP
+from fixtures.scenarios import UNITEST_FIXTURE, INTEGRATION_SCENARIOS
 
 import bitcoin as bitcoinlib
 import binascii
@@ -26,10 +26,9 @@ locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 def dump_database(db):
     # TEMPORARY
     # .dump command bugs when aspw.Shell is used with 'db' args instead 'args'
-    # but this way keep 20x faster than to run scenario with file db
-    db_filename = CURR_DIR + '/fixtures/tmpforbackup.db'
-    if os.path.isfile(db_filename):
-        os.remove(db_filename)
+    # but this way stay 20x faster than running scenario with file db
+    db_filename = tempfile.gettempdir() + '/tmpforbackup.db'
+    remove_database_files(db_filename)
     filecon = apsw.Connection(db_filename)
     with filecon.backup("main", db, "main") as backup:
         backup.step()
@@ -42,19 +41,25 @@ def dump_database(db):
     new_data = '\n'.join(lines)
     #clean ; in new line
     new_data = re.sub('\)[\n\s]+;', ');', new_data)
+    # apsw oddness: follwing sentence not always generated!
+    new_data = new_data.replace('-- The values of various per-database settings\n', '')
 
-    os.remove(db_filename)
+    remove_database_files(db_filename)
 
     return new_data
 
 def restore_database(database_filename, dump_filename):
-    if os.path.isfile(database_filename):
-        os.remove(database_filename)
+    remove_database_files(database_filename)
     db = apsw.Connection(database_filename)
     cursor = db.cursor()
     with open(dump_filename, 'r') as sql_dump:
         cursor.execute(sql_dump.read())
     cursor.close()
+
+def remove_database_files(database_filename):
+    for path in [database_filename, '{}-shm'.format(database_filename), '{}-wal'.format(database_filename)]:
+        if os.path.isfile(path):
+            os.remove(path)
 
 def insert_block(db, block_index, parse_block=False):
     cursor = db.cursor()
@@ -114,7 +119,7 @@ def initialise_getrawtransaction_data(db):
     cursor = db.cursor()
     cursor.execute('DROP TABLE  IF EXISTS raw_transactions')
     cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT)')
-    with open(CURR_DIR + '/fixtures/listunspent.test.json', 'r') as listunspent_test_file:
+    with open(CURR_DIR + '/fixtures/unspent_outputs.json', 'r') as listunspent_test_file:
             wallet_unspent = json.load(listunspent_test_file)
             for output in wallet_unspent:
                 txid = binascii.hexlify(bitcoinlib.core.lx(output['txid'])).decode()
@@ -180,15 +185,15 @@ def run_scenario(scenario, getrawtransaction_db):
 
 def save_scenario(scenario_name, getrawtransaction_db):
     dump, log = run_scenario(INTEGRATION_SCENARIOS[scenario_name], getrawtransaction_db)
-    with open(CURR_DIR + '/fixtures/' + scenario_name + '.new.sql', 'w') as f:
+    with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.new.sql', 'w') as f:
         f.writelines(dump)
-    with open(CURR_DIR + '/fixtures/' + scenario_name + '.new.log', 'w') as f:
+    with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.new.log', 'w') as f:
         f.writelines(log)
 
 def load_scenario_ouput(scenario_name):
-    with open(CURR_DIR + '/fixtures/' + scenario_name + '.sql', 'r') as f:
+    with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.sql', 'r') as f:
         dump = ("").join(f.readlines())
-    with open(CURR_DIR + '/fixtures/' + scenario_name + '.log', 'r') as f:
+    with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.log', 'r') as f:
         log = ("").join(f.readlines())
     return dump, log
 

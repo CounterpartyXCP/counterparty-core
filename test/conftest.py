@@ -4,7 +4,11 @@ import json, binascii, apsw
 from datetime import datetime
 
 import pytest, util_test
-from fixtures.fixtures import UNITTEST_VECTOR, INTEGRATION_SCENARIOS, DEFAULT_PARAMS
+
+from fixtures.vectors import UNITTEST_VECTOR
+from fixtures.params import DEFAULT_PARAMS
+from fixtures.scenarios import INTEGRATION_SCENARIOS
+
 from lib import config
 
 import bitcoin as bitcoinlib
@@ -26,10 +30,11 @@ def pytest_addoption(parser):
     parser.addoption("--gentxhex", action='store_true', default=False, help="generate and print unsigned hex for *.compose() tests")
     parser.addoption("--saverawtransactions", action='store_true', default=False, help="populate raw transactions db")
     parser.addoption("--initrawtransactions", action='store_true', default=False, help="initialize raw transactions db")
+    parser.addoption("--savescenarios", action='store_true', default=False, help="generate sql dump and log in .new files")
 
 @pytest.fixture(scope="module")
 def getrawtransaction_db(request):
-    db = apsw.Connection(util_test.CURR_DIR + '/fixtures/getrawtransaction.db')
+    db = apsw.Connection(util_test.CURR_DIR + '/fixtures/rawtransactions.db')
     if pytest.config.option.initrawtransactions:
         util_test.initialise_getrawtransaction_data(db)
     return db
@@ -38,7 +43,7 @@ def getrawtransaction_db(request):
 def init_mock_functions(monkeypatch, getrawtransaction_db):
 
     def get_unspent_txouts(address):
-        with open(util_test.CURR_DIR + '/fixtures/listunspent.test.json', 'r') as listunspent_test_file:
+        with open(util_test.CURR_DIR + '/fixtures/unspent_outputs.json', 'r') as listunspent_test_file:
             wallet_unspent = json.load(listunspent_test_file)
             unspent_txouts = [output for output in wallet_unspent if output['address'] == address]
             return unspent_txouts
@@ -62,6 +67,9 @@ def init_mock_functions(monkeypatch, getrawtransaction_db):
         pass
 
     class RpcProxy():
+        def __init__(self, service_url=None):
+            pass
+
         def getrawtransaction(self, txid):
             tx_hex = util_test.get_getrawtransaction_data(getrawtransaction_db, txid)
             ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
