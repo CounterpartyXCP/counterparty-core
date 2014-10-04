@@ -1,6 +1,6 @@
 #! /usr/bin/python3
 
-import json, binascii
+import json, binascii, apsw
 from datetime import datetime
 
 import pytest, util_test
@@ -24,10 +24,18 @@ def pytest_addoption(parser):
     parser.addoption("--function", action="append", default=[], help="list of functions to test")
     parser.addoption("--scenario", action="append", default=[], help="list of scenarios to test")
     parser.addoption("--gentxhex", action='store_true', default=False, help="generate and print unsigned hex for *.compose() tests")
+    parser.addoption("--saverawtransactions", action='store_true', default=False, help="populate raw transactions db")
+    parser.addoption("--initrawtransactions", action='store_true', default=False, help="initialize raw transactions db")
 
+@pytest.fixture(scope="module")
+def getrawtransaction_db(request):
+    db = apsw.Connection(util_test.CURR_DIR + '/fixtures/getrawtransaction.db')
+    if pytest.config.option.initrawtransactions:
+        util_test.initialise_getrawtransaction_data(db)
+    return db
 
 @pytest.fixture(autouse=True)
-def init_mock_functions(monkeypatch):
+def init_mock_functions(monkeypatch, getrawtransaction_db):
 
     def get_unspent_txouts(address):
         with open(util_test.CURR_DIR + '/fixtures/listunspent.test.json', 'r') as listunspent_test_file:
@@ -55,7 +63,7 @@ def init_mock_functions(monkeypatch):
 
     class RpcProxy():
         def getrawtransaction(self, txid):
-            tx_hex = util_test.get_getrawtransaction_data(config.TEMP_DB, txid)
+            tx_hex = util_test.get_getrawtransaction_data(getrawtransaction_db, txid)
             ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
             return ctx
 
