@@ -984,7 +984,7 @@ def get_tx_info2 (tx, block_index):
     # Decode transaction binary.
     if config.TESTNET:
         bitcoinlib.SelectParams('testnet')
-    rpc = bitcoinlib_rpc.Proxy()
+    rpc = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC)
     ctx = rpc.getrawtransaction(bitcoinlib.core.lx(tx['txid']))
 
     def arc4_decrypt (cyphertext):
