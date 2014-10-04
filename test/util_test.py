@@ -77,7 +77,7 @@ def create_next_block(db, block_index=None, parse_block=False):
     cursor.close()
     return inserted_block_index, block_hash, block_time
 
-def insert_raw_transaction(raw_transaction, db):
+def insert_raw_transaction(raw_transaction, db, getrawtransaction_db):
     # one transaction per block
     block_index, block_hash, block_time = create_next_block(db)
 
@@ -85,9 +85,11 @@ def insert_raw_transaction(raw_transaction, db):
     tx_index = block_index - config.BURN_START + 1
     tx = bitcoin.decode_raw_transaction(raw_transaction)
     
-    tx_hash = hashlib.sha256(chr(tx_index).encode('utf-8')).hexdigest()
+    tx_hash = hashlib.sha256('{}{}'.format(tx_index,raw_transaction).encode('utf-8')).hexdigest()
+    #print(tx_hash)
     tx['txid'] = tx_hash
-    save_getrawtransaction_data(db, tx_hash, raw_transaction)
+    if pytest.config.option.saverawtransactions:
+        save_getrawtransaction_data(getrawtransaction_db, tx_hash, raw_transaction)
 
     source, destination, btc_amount, fee, data = blocks.get_tx_info2(tx, block_index)
     transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
@@ -110,15 +112,13 @@ def insert_transaction(transaction, db):
 # we use the same database (in memory) for speed
 def initialise_getrawtransaction_data(db):
     cursor = db.cursor()
-    cursor.execute('''DROP TABLE  IF EXISTS raw_transactions''')
-    cursor.execute('''CREATE TABLE IF NOT EXISTS raw_transactions(
-                      tx_hash TEXT UNIQUE,
-                      tx_hex TEXT)''')
+    cursor.execute('DROP TABLE  IF EXISTS raw_transactions')
+    cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT)')
     with open(CURR_DIR + '/fixtures/listunspent.test.json', 'r') as listunspent_test_file:
             wallet_unspent = json.load(listunspent_test_file)
             for output in wallet_unspent:
                 txid = binascii.hexlify(bitcoinlib.core.lx(output['txid'])).decode()
-                cursor.execute('''INSERT INTO raw_transactions VALUES (?, ?)''', (txid, output['txhex']))
+                cursor.execute('INSERT INTO raw_transactions VALUES (?, ?)', (txid, output['txhex']))
     cursor.close()
 
 def save_getrawtransaction_data(db, tx_hash, tx_hex):
@@ -133,7 +133,7 @@ def save_getrawtransaction_data(db, tx_hash, tx_hex):
 def get_getrawtransaction_data(db, txid):
     cursor = db.cursor()
     txid = binascii.hexlify(txid).decode()
-    tx_hex = list(cursor.execute('''SELECT tx_hex FROM raw_transactions WHERE tx_hash = ?''', (txid,)))[0]['tx_hex']
+    tx_hex = list(cursor.execute('''SELECT tx_hex FROM raw_transactions WHERE tx_hash = ?''', (txid,)))[0][0]
     cursor.close()
     return tx_hex
 
@@ -144,7 +144,7 @@ def initialise_db(db):
     cursor.execute('''INSERT INTO blocks VALUES (?,?,?,?)''', first_block)
     cursor.close()
 
-def run_scenario(scenario):
+def run_scenario(scenario, getrawtransaction_db):
     counterpartyd.set_options(rpc_port=9999, database_file=':memory:',
                               testnet=True, testcoin=False)
     config.PREFIX = b'TESTXXXX'
@@ -162,15 +162,13 @@ def run_scenario(scenario):
     asyncio_log.setLevel(logging.ERROR)
 
     db = util.connect_to_db()
-    config.TEMP_DB = db
     initialise_db(db)
-    initialise_getrawtransaction_data(db)
     for transaction in scenario:
         if transaction[0] != 'create_next_block':
             module = sys.modules['lib.{}'.format(transaction[0])]
             compose = getattr(module, 'compose')
             unsigned_tx_hex = bitcoin.transaction(db, compose(db, *transaction[1]), **transaction[2])
-            insert_raw_transaction(unsigned_tx_hex, db)
+            insert_raw_transaction(unsigned_tx_hex, db, getrawtransaction_db)
         else:
             create_next_block(db, block_index=config.BURN_START + transaction[1], parse_block=True)
 
@@ -180,8 +178,8 @@ def run_scenario(scenario):
     db.close()
     return dump, log
 
-def save_scenario(scenario_name):
-    dump, log = run_scenario(INTEGRATION_SCENARIOS[scenario_name])
+def save_scenario(scenario_name, getrawtransaction_db):
+    dump, log = run_scenario(INTEGRATION_SCENARIOS[scenario_name], getrawtransaction_db)
     with open(CURR_DIR + '/fixtures/' + scenario_name + '.new.sql', 'w') as f:
         f.writelines(dump)
     with open(CURR_DIR + '/fixtures/' + scenario_name + '.new.log', 'w') as f:
@@ -195,6 +193,8 @@ def load_scenario_ouput(scenario_name):
     return dump, log
 
 def check_record(record, counterpartyd_db):
+    cursor = counterpartyd_db.cursor()
+
     sql  = '''SELECT COUNT(*) AS c FROM {} '''.format(record['table'])
     sql += '''WHERE '''
     bindings = []
@@ -204,10 +204,11 @@ def check_record(record, counterpartyd_db):
             conditions.append('''{} = ?'''.format(field))
             bindings.append(record['values'][field])
     sql += " AND ".join(conditions)
-
-    cursor = counterpartyd_db.cursor()
+    
     count = list(cursor.execute(sql, tuple(bindings)))[0]['c']
-    assert count == 1
+    if count != 1:
+        print(list(cursor.execute('''SELECT * FROM {} WHERE block_index = ?'''.format(record['table']), (record['values']['block_index'],))))
+        assert False
 
 def vector_to_args(vector, functions=[]):
     args = []
