@@ -66,13 +66,6 @@ class tester(object):
             contract_id = util.contract_sha3(code + bytes(i))
             tx_hash = contract_id
 
-            # Create contract with provided code.
-            cursor = db.cursor()
-            bindings = {'contract_id': contract_id, 'tx_index': i, 'tx_hash': tx_hash, 'block_index': 0, 'source': to, 'code': code, 'storage': b'', 'alive': True}
-            sql='insert into contracts values(:contract_id, :tx_index, :tx_hash, :block_index, :source, :code, :storage, :alive)'
-            cursor.execute(sql, bindings)
-            cursor.close
-
             # Endowment.
             if not endowment:
                 endowment = 10 * config.UNIT
@@ -81,20 +74,21 @@ class tester(object):
             # Give XCP to sender.
             util.credit(db, 0, to, config.XCP, endowment, action='unit test', event='facefeed')
 
+            success, data = tester.state.do_send(self, '', '', 0, data=code)
+            print('create_contract data', data)
+
+            # TODO
+            contract_id = data
+
             return contract_id
 
 
         def evm(self, evmcode, endowment=0):
-            # Get real code.
-            contract_id = tester.state.create_contract(self, evmcode)
-            result, gas_remaining, data = tester.state.do_send(self, '', contract_id, 0, data=[])
-            real_code = bytes(data)
-
-            # Publish real code.
-            real_contract_id = tester.state.create_contract(self, real_code, endowment=endowment)
+            # Publish code.
+            contract_id = tester.state.create_contract(self, evmcode, endowment=endowment)
 
             # Return contract_id.
-            return real_contract_id
+            return contract_id
 
         def contract(self, code, sender='', endowment=0):
 
@@ -104,14 +98,45 @@ class tester(object):
             else:
                 evmcode = b''
 
-            return tester.state.evm(self, evmcode, endowment=endowment)
+            foobar = tester.state.evm(self, evmcode, endowment=endowment)
+            return foobar
 
 
-        def do_send (self, sender, contract_id, value, data=[]):
-            # Don’t actually ‘send’—just run the code.
+        def do_send (self, sender, to, value, data=[]):
+
+            if not sender:
+                sender = 'foo'
+
 
             gas_price = 1
             gas_start = 100000
+
+            # Construct `tx`.
+            tx = { 'source': sender,
+                   'block_index': 0,
+                   'data': data,
+                   'tx_hash': to, 
+                   'contract_id': to,
+                   'gas_price': gas_price,
+                   'gas_start': gas_start,
+                   'value': value
+                 }
+
+            # Variables!
+            intrinsic_gas_used = execute.GTXDATA * len(data) + execute.GTXCOST
+            gas_available = gas_start - intrinsic_gas_used
+
+            # Run.
+            print('to to apply', to)
+            print('data to apply', data, type(data))
+            success, data = execute.apply_transaction(db, tx, to, gas_price, gas_start, value, data) 
+
+            # Decode, return result.
+            return success, data
+
+
+        def send (self, sender, to, value, data=[]):
+            print('tuple', sender, to, value, data)
 
             # Encode data.
             # TODO: using serpent over CLI
@@ -125,35 +150,11 @@ class tester(object):
             payload = payload[:-1]  # Strip newline.
             payload = payload.decode('utf-8')
 
-            # Construct `tx`.
-            tx = { 'source': sender,
-                   'block_index': 0,
-                   'payload': payload,
-                   'tx_hash': contract_id, 
-                   'contract_id': contract_id,
-                   'gas_price': gas_price,
-                   'gas_start': gas_start,
-                   'value': value
-                 }
+            data = payload
+            data = bytes(data, 'ascii')
 
-            # Variables!
-            payload = binascii.unhexlify(payload)
-            intrinsic_gas_used = execute.GTXDATA * len(payload) + execute.GTXCOST
-            gas_available = gas_start - intrinsic_gas_used
-            code = util.get_code(db, contract_id)
-
-            # Run.
-            result, gas_remaining, data = execute.run(db, tx, code, privtoaddr(sender), contract_id, value, gas_available, payload)
-
-            # Decode, return result.
-            assert result == 1
-            assert gas_remaining >= 0
-            return result, gas_remaining, data
-
-
-        def send (self, sender, contract_id, value, data=[]):
             # Execute contract.
-            result, gas_remaining, data= tester.state.do_send(self, '', contract_id, 0, data=data)
+            success, data = tester.state.do_send(self, '', to, 0, data=data)
             decoded_data = util_rlp.decode_datalist(bytes(data))
             return decoded_data
 

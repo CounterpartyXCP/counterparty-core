@@ -818,4 +818,8 @@ def contract_sha3 (b):
     contract_id = binascii.hexlify(contract_id).decode('ascii')
     return contract_id
 
+# Why on Earth does `binascii.hexlify()` return bytes?!
+def hexlify(x):
+    return binascii.hexlify(x).decode('ascii')
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
