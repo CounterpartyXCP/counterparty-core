@@ -246,6 +246,8 @@ class Message(object):
 CREATE_CONTRACT_ADDRESS = ''
 
 def apply_transaction(db, tx, to, gas_price, gas_start, value, payload):
+    assert type(payload) == bytes
+
     gas_remaining = 0
     gas_cost = 0
 

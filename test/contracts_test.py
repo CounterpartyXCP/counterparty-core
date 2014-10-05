@@ -152,8 +152,10 @@ class tester(object):
 
             data = payload
             data = bytes(data, 'ascii')
+            data = binascii.unhexlify(data)
 
             # Execute contract.
+            print('qux', data, type(data))
             success, data = tester.state.do_send(self, '', to, 0, data=data)
             decoded_data = util_rlp.decode_datalist(bytes(data))
             return decoded_data
