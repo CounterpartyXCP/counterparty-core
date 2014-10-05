@@ -386,6 +386,13 @@ UNITTEST_VECTOR = {
             'comment': 'multisig order',
             'in': (('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', [], b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x06B,@\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\n\x00\x00\x00\x00\x00\r\xbb\xa0'), {'encoding': 'multisig'}),
             'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff02781e0000000000006951210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0211ecaf7ca87f0fd78a01d9a0d62221e55beef3722da8be72d254e649c826108bc1421528340c27d005aa9e06bcf58c038ffa946253077fea077125d580099b5c8255d0e53ae789bf505000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+        }],
+        'base58_check_decode': [{
+            'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM', b'\x00'),
+            'out': '010966776006953d5567439e5e39f86a0d273bee'
+        }, {
+            'in': (ADDR[0], b'\x6f'),
+            'out': '4838d8b3588c4c7ba7c1d06f866e9b3739c63037'
         }]
     },
     'util': {
