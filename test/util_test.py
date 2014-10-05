@@ -168,11 +168,13 @@ def run_scenario(scenario, getrawtransaction_db):
 
     db = util.connect_to_db()
     initialise_db(db)
+    raw_transactions = []
     for transaction in scenario:
         if transaction[0] != 'create_next_block':
             module = sys.modules['lib.{}'.format(transaction[0])]
             compose = getattr(module, 'compose')
             unsigned_tx_hex = bitcoin.transaction(db, compose(db, *transaction[1]), **transaction[2])
+            raw_transactions.append({transaction[0]: unsigned_tx_hex})
             insert_raw_transaction(unsigned_tx_hex, db, getrawtransaction_db)
         else:
             create_next_block(db, block_index=config.BURN_START + transaction[1], parse_block=True)
@@ -181,21 +183,25 @@ def run_scenario(scenario, getrawtransaction_db):
     log = logger_buff.getvalue()
 
     db.close()
-    return dump, log
+    return dump, log, json.dumps(raw_transactions, indent=4)
 
 def save_scenario(scenario_name, getrawtransaction_db):
-    dump, log = run_scenario(INTEGRATION_SCENARIOS[scenario_name], getrawtransaction_db)
+    dump, log, raw_transactions = run_scenario(INTEGRATION_SCENARIOS[scenario_name], getrawtransaction_db)
     with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.new.sql', 'w') as f:
         f.writelines(dump)
     with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.new.log', 'w') as f:
         f.writelines(log)
+    with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.new.json', 'w') as f:
+        f.writelines(raw_transactions)
 
 def load_scenario_ouput(scenario_name):
     with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.sql', 'r') as f:
         dump = ("").join(f.readlines())
     with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.log', 'r') as f:
         log = ("").join(f.readlines())
-    return dump, log
+    with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.json', 'r') as f:
+        raw_transactions = ("").join(f.readlines())
+    return dump, log, raw_transactions
 
 def check_record(record, counterpartyd_db):
     cursor = counterpartyd_db.cursor()
