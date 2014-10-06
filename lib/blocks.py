@@ -27,7 +27,7 @@ TABLES = ['credits', 'debits', 'messages'] + \
          'bet_expirations', 'bets', 'broadcasts', 'btcpays', 'burns',
          'callbacks', 'cancels', 'dividends', 'issuances', 'sends',
          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
-         'rps_matches', 'rps', 'executions', 'contracts']
+         'rps_matches', 'rps', 'executions', 'contracts', 'storage']
 
 def check_conservation (db):
     logging.debug('Status: Checking for conservation of assets.')
@@ -860,7 +860,6 @@ def initialise(db):
                       block_index INTEGER,
                       source TEXT,
                       code BLOB,
-                      storage BLOB,
                       alive BOOL,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                   ''')
@@ -894,6 +893,17 @@ def initialise(db):
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       tx_hash_idx ON executions(tx_hash)
+                   ''')
+
+    # Contract Storage
+    cursor.execute('''CREATE TABLE IF NOT EXISTS storage(
+                      contract_id TEXT,
+                      key INTEGER,
+                      value BLOB,
+                      FOREIGN KEY (contract_id) REFERENCES contracts(contract_id))
+                  ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      contract_id_idx ON contracts(contract_id)
                    ''')
 
     # Messages

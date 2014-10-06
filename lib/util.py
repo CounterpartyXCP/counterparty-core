@@ -326,7 +326,7 @@ def exectracer(cursor, sql, bindings):
     if 'blocks' in sql or 'transactions' in sql: return True
 
     # Record alteration in database.
-    if category not in ('balances', 'messages', 'mempool'):
+    if category not in ('balances', 'messages', 'mempool', 'storage'):
         if not (command in ('update') and category in ('orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches')):    # List message manually.
             message(db, bindings['block_index'], command, category, bindings)
 
@@ -785,33 +785,6 @@ def get_balance (db, address, asset):
     cursor.close()
     if not balances: return 0
     else: return balances[0]['quantity']
-
-# Scripting
-class ContractError(Exception):
-    pass
-def get_storage (db, contract_id):
-    cursor = db.cursor()
-    contracts = list(cursor.execute('''SELECT * FROM contracts WHERE (contract_id = ?)''', (contract_id,)))
-
-    if not contracts: raise ContractError('no such contract')
-    elif not contracts[0]['alive']: raise ContractError('dead contract')
-    else: storage = contracts[0]['storage']
-
-    cursor.close()
-    return storage
-
-def get_code (db, contract_id):
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM contracts WHERE contract_id = ?''', (contract_id,))
-    contracts = list(cursor)
-
-    if not contracts:
-        raise ContractError('no such contract')
-    elif not contracts[0]['alive']: raise ContractError('dead contract')
-    else: code = contracts[0]['code']
-
-    cursor.close()
-    return code
 
 def contract_sha3 (b):
     contract_id = hashlib.sha3_256(b).digest()[12:]

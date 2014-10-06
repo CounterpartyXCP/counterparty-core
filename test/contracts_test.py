@@ -162,6 +162,9 @@ class tester(object):
 
 
         class block(object):
+            def to_dict():
+                return True # NOTE: Not applicable.
+
             def set_code(contract_id, code):
                 cursor = db.cursor()
                 bindings = {'block_index': 0, 'code': code, 'contract_id': contract_id}
@@ -278,11 +281,14 @@ else:
 def test_namecoin():
     s = tester.state()
     c = s.contract(namecoin_code)
+    # o1 = s.send(tester.k0, c, 0, ['"george"', 45])
     o1 = s.send(tester.k0, c, 0, ['\'\\"george\\"\'', 45])  # TODO: using serpent over CLI
     assert o1 == [1]
-    o2 = s.send(tester.k0, c, 0, ['"george"', 20])
+    # o2 = s.send(tester.k0, c, 0, ['"george"', 20])
+    o2 = s.send(tester.k0, c, 0, ['\'\\"george\\"\'', 20])  # TODO: using serpent over CLI
     assert o2 == [0]
-    o3 = s.send(tester.k0, c, 0, ['"harry"', 60])
+    # o3 = s.send(tester.k0, c, 0, ['"harry"', 60])
+    o3 = s.send(tester.k0, c, 0, ['\'\\"harry\\"\'', 60])   # TODO: using serpent over CLI
     assert o3 == [1]
 
     assert s.block.to_dict()

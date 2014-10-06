@@ -119,13 +119,61 @@ def hexprint(x):
     else:
         return 'OUT OF GAS'
 
-# TODO: Castrated.
-def get_storage_data(db, address, index):
-    t = util.get_storage(db, address)
-    key = index.to_bytes(32, byteorder='big')
-    print('baz', t.get(key))
-    val = rlp.decode(t.get(key))
-    return util_rlp.big_endian_to_int(val) if val else 0
+class ContractError(Exception):
+    pass
+
+def get_code (db, contract_id):
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM contracts WHERE contract_id = ?''', (contract_id,))
+    contracts = list(cursor)
+
+    if not contracts:
+        raise ContractError('no such contract')
+    elif not contracts[0]['alive']: raise ContractError('dead contract')
+    else: code = contracts[0]['code']
+
+    cursor.close()
+    return code
+
+def set_storage_data(db, contract_id, key, value):
+    # TODO
+    # value = util_rlp.int_to_big_endian(value)
+    # value = util_rlp.encode(value)
+
+    cursor = db.cursor()
+    bindings = {
+        'contract_id': contract_id,
+        'key': key,
+        'value': value
+        }
+    sql='insert into storage values(:contract_id, :key, :value)'
+    cursor.execute(sql, bindings)
+
+    cursor.close()
+
+    return value
+
+def get_storage_data(db, contract_id, key=None):
+    cursor = db.cursor()
+
+    if key == None:
+        cursor.execute('''SELECT * FROM storage WHERE contract_id = ?''', (contract_id,))
+        storages = list(cursor)
+        cursor.close()
+        return storages
+
+    cursor.execute('''SELECT * FROM storage WHERE contract_id = ? AND key = ?''', (contract_id, key))
+    storages = list(cursor)
+    cursor.close()
+    if not storages:
+        return 0
+    value = storages[0]['value']
+
+    # TODO
+    # value = util_rlp.decode(value)
+    # value = util_rlp.big_endian_to_int(value)
+
+    return value
 
 GDEFAULT = 1
 GMEMORY = 1
@@ -141,7 +189,7 @@ OUT_OF_GAS = -1
 
 
 def compose (db, source, contract_id, gas_price, gas_start, value, payload_hex):
-    code = util.get_code(db, contract_id)
+    code = get_code(db, contract_id)
     payload = binascii.unhexlify(payload_hex)
     # TODO: Check start_gas, gas_price here?
 
@@ -308,7 +356,7 @@ def apply_transaction(db, tx, to, gas_price, gas_start, value, payload):
     while len(postqueue):
         message = postqueue.pop(0)
         if to and to != CREATE_CONTRACT_ADDRESS:
-            result, gas_remained, data = apply_msg(db, tx, message, util.get_code(db, message.to))  # NOTE: apply_msg_send
+            result, gas_remained, data = apply_msg(db, tx, message, get_code(db, message.to))  # NOTE: apply_msg_send
         else:
             result, gas_remained, data = create_contract(db, tx, message)
         if not primary_result:
@@ -345,7 +393,7 @@ def apply_transaction(db, tx, to, gas_price, gas_start, value, payload):
 def create_contract(db, tx, msg):
     code = msg.data
 
-    # assert not util.get_code(db, contract_id) # TODO: check for duplicate contracts
+    # assert not get_code(db, contract_id) # TODO: check for duplicate contracts
 
     res, gas, dat = apply_msg(db, tx, msg, code)
     """
@@ -362,8 +410,8 @@ def create_contract(db, tx, msg):
     # Create contract with provided code.
     cursor = db.cursor()
     contract_id = util.contract_sha3(bytes(dat))
-    bindings = {'contract_id': contract_id, 'tx_index': None, 'tx_hash': None, 'block_index': 0, 'source': None, 'code': bytes(dat), 'storage': b'', 'alive': True}
-    sql='insert into contracts values(:contract_id, :tx_index, :tx_hash, :block_index, :source, :code, :storage, :alive)'
+    bindings = {'contract_id': contract_id, 'tx_index': None, 'tx_hash': None, 'block_index': 0, 'source': None, 'code': bytes(dat), 'alive': True}
+    sql='insert into contracts values(:contract_id, :tx_index, :tx_hash, :block_index, :source, :code, :alive)'
     cursor.execute(sql, bindings)
     cursor.close
     return True, gas, contract_id
@@ -615,10 +663,10 @@ def apply_op(db, tx, msg, processed_code, compustate):
             else:
                 mem[s0 + i] = 0
     elif op == 'EXTCODESIZE':
-        stk.append(len(util.get_code(db, stk.pop()) or ''))
+        stk.append(len(get_code(db, stk.pop()) or ''))
     elif op == 'EXTCODECOPY':
         addr, s1, s2, s3 = stk.pop(), stk.pop(), stk.pop(), stk.pop()
-        extcode = util.get_code(db, addr) or ''
+        extcode = get_code(db, addr) or ''
         if not mem_extend(mem, compustate, op, s1 + s3):
             return OUT_OF_GAS
         for i in range(s3):
@@ -670,7 +718,7 @@ def apply_op(db, tx, msg, processed_code, compustate):
         if compustate.gas < gascost:
             out_of_gas_exception('sstore trie expansion', gascost, compustate, op)
         compustate.gas -= gascost
-        block.set_storage_data(msg.to, s0, s1)
+        set_storage_data(db, msg.to, s0, s1)
     elif op == 'JUMP':
         compustate.pc = stk.pop()
     elif op == 'JUMPI':
@@ -743,7 +791,7 @@ def apply_op(db, tx, msg, processed_code, compustate):
         data = bytes(mem[meminstart: meminstart + meminsz])
         logging.debug('SUB CALL NEW (sender: {}, to: {}, value: {}, gas: {}, data: {})'.format(msg.to, to, value, gas, util.hexlify(data)))
         call_msg = Message(msg.to, to, value, gas, data)
-        code = util.get_code(db, call_msg.to)
+        code = get_code(db, call_msg.to)
         result, gas, data = apply_msg(db, tx, call_msg, code)
         logging.debug('SUB CALL OUT (result: {}, data: {}, length: {}, expected: {}'.format(result, data, len(data), memoutsz))
         if result == 0:
@@ -787,7 +835,7 @@ def apply_op(db, tx, msg, processed_code, compustate):
         # NOTE data = ''.join(map(chr, mem[meminstart: meminstart + meminsz]))
         data = bytes(mem[meminstart: meminstart + meminsz])
         logging.debug('SUB CALL NEW (sender: {}, to: {}, value: {}, gas: {}, data: {})'.format(msg.to, to, value, gas, util.hexlify(data)))
-        result, gas, data = apply_msg(db, tx, util.get_code(db, to), '', to, value, gas, data)
+        result, gas, data = apply_msg(db, tx, get_code(db, to), '', to, value, gas, data)
         logging.debug('SUB CALL OUT (result: {}, data: {}, length: {}, expected: {}'.format(result, data, len(data), memoutsz))
         if result == 0:
             stk.append(0)
