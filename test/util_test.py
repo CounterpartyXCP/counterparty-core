@@ -8,6 +8,7 @@ sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
 from lib import (config, api, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
+from lib.exceptions import ConsensusError
 import counterpartyd
 
 from fixtures.params import DEFAULT_PARAMS as DP
@@ -168,6 +169,7 @@ def run_scenario(scenario, getrawtransaction_db):
 
     db = util.connect_to_db()
     initialise_db(db)
+
     raw_transactions = []
     for transaction in scenario:
         if transaction[0] != 'create_next_block':
@@ -281,10 +283,50 @@ def compare_strings(string1, string2):
     diff = list(difflib.unified_diff(string1.splitlines(1), string2.splitlines(1), n=0))
     if len(diff):
         print("\nDifferences:")
-        print("".join(diff))
-    assert not len(diff)
+        print("\n".join(diff))
+    return len(diff)
 
-if __name__ == '__main__':
-    save_scenario('unittest_fixture')
-    save_scenario('scenario_1')
+def get_block_movements(db, block_index):
+    cursor = db.cursor()
+    debits = list(cursor.execute('''SELECT * FROM debits WHERE block_index = ?''', (block_index,)))
+    credits = list(cursor.execute('''SELECT * FROM credits WHERE block_index = ?''', (block_index,)))
+    debits = [json.dumps(m).replace('"', '\'') for m in debits]
+    credits = [json.dumps(m).replace('"', '\'') for m in credits]
+    movements = json.dumps(debits + credits, indent=4)
+    return movements
 
+def reparse(testnet=True):
+    counterpartyd.set_options(rpc_port=9999, database_file=':memory:', testnet=testnet, testcoin=False)
+    
+    if testnet:
+        config.PREFIX = b'TESTXXXX'
+
+    memory_db = util.connect_to_db()
+    initialise_db(memory_db)
+    
+    prod_db_path = os.path.join(config.DATA_DIR, '{}.{}{}.db'.format(config.XCP_CLIENT, str(config.VERSION_MAJOR), '.testnet' if testnet else ''))
+    prod_db = apsw.Connection(prod_db_path)
+    prod_db.setrowtrace(util.rowtracer)
+
+    with memory_db.backup("main", prod_db, "main") as backup:
+        backup.step()
+
+    # here we don't use block.reparse() because it reparse db in transaction (`with db`)
+    memory_cursor = memory_db.cursor()
+    for table in blocks.TABLES + ['balances']:
+        memory_cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
+    blocks.initialise(memory_db)
+    previous_hash = None
+    memory_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
+    for block in memory_cursor.fetchall():
+        try:
+            previous_hash = blocks.parse_block(memory_db, block['block_index'], block['block_time'], previous_hash)
+        except ConsensusError as e:
+            new_movements = get_block_movements(memory_db, block['block_index'])
+            old_movements = get_block_movements(prod_db, block['block_index'])
+            compare_strings(new_movements, old_movements)
+            raise(e)
+
+    
+
+        

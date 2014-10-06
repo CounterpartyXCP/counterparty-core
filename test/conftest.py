@@ -23,6 +23,16 @@ def pytest_generate_tests(metafunc):
             if pytest.config.option.scenario == [] or scenario_name in pytest.config.option.scenario:
                 args.append((scenario_name, INTEGRATION_SCENARIOS[scenario_name]))
         metafunc.parametrize('scenario_name, transactions', args)
+    elif metafunc.function.__name__ == 'test_book':
+        if pytest.config.option.skiptestbook == 'all':
+            args = []
+        elif pytest.config.option.skiptestbook == 'testnet':
+            args = [False]
+        elif pytest.config.option.skiptestbook == 'mainnet':
+            args = [True]
+        else:
+            args = [True, False]
+        metafunc.parametrize('testnet', args)
 
 def pytest_addoption(parser):
     parser.addoption("--function", action="append", default=[], help="list of functions to test")
@@ -31,6 +41,7 @@ def pytest_addoption(parser):
     parser.addoption("--saverawtransactions", action='store_true', default=False, help="populate raw transactions db")
     parser.addoption("--initrawtransactions", action='store_true', default=False, help="initialize raw transactions db")
     parser.addoption("--savescenarios", action='store_true', default=False, help="generate sql dump and log in .new files")
+    parser.addoption("--skiptestbook", default='no', help="skip test book(s) (use with one of the following values: `all`, `testnet` or `mainnet`)")
 
 @pytest.fixture(scope="module")
 def getrawtransaction_db(request):
