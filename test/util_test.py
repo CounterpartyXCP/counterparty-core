@@ -152,7 +152,7 @@ def initialise_db(db):
 
 def run_scenario(scenario, getrawtransaction_db):
     counterpartyd.set_options(rpc_port=9999, database_file=':memory:',
-                              testnet=True, testcoin=False)
+                              testnet=True, testcoin=False, backend_rpc_ssl_verify=False)
     config.PREFIX = b'TESTXXXX'
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
@@ -296,7 +296,7 @@ def get_block_movements(db, block_index):
     return movements
 
 def reparse(testnet=True):
-    counterpartyd.set_options(rpc_port=9999, database_file=':memory:', testnet=testnet, testcoin=False)
+    counterpartyd.set_options(rpc_port=9999, database_file=':memory:', testnet=testnet, testcoin=False, backend_rpc_ssl_verify=False)
     
     if testnet:
         config.PREFIX = b'TESTXXXX'
