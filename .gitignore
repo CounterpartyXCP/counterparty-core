@@ -23,6 +23,6 @@ test/counterpartyd.unittest.db-shm
 test/counterpartyd.unittest.db-wal
 test/db.dump.new
 test/output.json.new
-test/fixtures/*.new.*
+test/fixtures/scenarios/*.new.*
 test/fixtures/*.db-shm
 test/fixtures/*.db-wal

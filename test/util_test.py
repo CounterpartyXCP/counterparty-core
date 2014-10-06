@@ -8,10 +8,11 @@ sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
 from lib import (config, api, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
+from lib.exceptions import ConsensusError
 import counterpartyd
 
-from fixtures.fixtures import DEFAULT_PARAMS as DP
-from fixtures.fixtures import UNITEST_FIXTURE, INTEGRATION_SCENARIOS
+from fixtures.params import DEFAULT_PARAMS as DP
+from fixtures.scenarios import UNITEST_FIXTURE, INTEGRATION_SCENARIOS
 
 import bitcoin as bitcoinlib
 import binascii
@@ -26,10 +27,9 @@ locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 def dump_database(db):
     # TEMPORARY
     # .dump command bugs when aspw.Shell is used with 'db' args instead 'args'
-    # but this way keep 20x faster than to run scenario with file db
-    db_filename = CURR_DIR + '/fixtures/tmpforbackup.db'
-    if os.path.isfile(db_filename):
-        os.remove(db_filename)
+    # but this way stay 20x faster than running scenario with file db
+    db_filename = tempfile.gettempdir() + '/tmpforbackup.db'
+    remove_database_files(db_filename)
     filecon = apsw.Connection(db_filename)
     with filecon.backup("main", db, "main") as backup:
         backup.step()
@@ -42,19 +42,25 @@ def dump_database(db):
     new_data = '\n'.join(lines)
     #clean ; in new line
     new_data = re.sub('\)[\n\s]+;', ');', new_data)
+    # apsw oddness: follwing sentence not always generated!
+    new_data = new_data.replace('-- The values of various per-database settings\n', '')
 
-    os.remove(db_filename)
+    remove_database_files(db_filename)
 
     return new_data
 
 def restore_database(database_filename, dump_filename):
-    if os.path.isfile(database_filename):
-        os.remove(database_filename)
+    remove_database_files(database_filename)
     db = apsw.Connection(database_filename)
     cursor = db.cursor()
     with open(dump_filename, 'r') as sql_dump:
         cursor.execute(sql_dump.read())
     cursor.close()
+
+def remove_database_files(database_filename):
+    for path in [database_filename, '{}-shm'.format(database_filename), '{}-wal'.format(database_filename)]:
+        if os.path.isfile(path):
+            os.remove(path)
 
 def insert_block(db, block_index, parse_block=False):
     cursor = db.cursor()
@@ -114,7 +120,7 @@ def initialise_getrawtransaction_data(db):
     cursor = db.cursor()
     cursor.execute('DROP TABLE  IF EXISTS raw_transactions')
     cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT)')
-    with open(CURR_DIR + '/fixtures/listunspent.test.json', 'r') as listunspent_test_file:
+    with open(CURR_DIR + '/fixtures/unspent_outputs.json', 'r') as listunspent_test_file:
             wallet_unspent = json.load(listunspent_test_file)
             for output in wallet_unspent:
                 txid = binascii.hexlify(bitcoinlib.core.lx(output['txid'])).decode()
@@ -163,11 +169,14 @@ def run_scenario(scenario, getrawtransaction_db):
 
     db = util.connect_to_db()
     initialise_db(db)
+
+    raw_transactions = []
     for transaction in scenario:
         if transaction[0] != 'create_next_block':
             module = sys.modules['lib.{}'.format(transaction[0])]
             compose = getattr(module, 'compose')
             unsigned_tx_hex = bitcoin.transaction(db, compose(db, *transaction[1]), **transaction[2])
+            raw_transactions.append({transaction[0]: unsigned_tx_hex})
             insert_raw_transaction(unsigned_tx_hex, db, getrawtransaction_db)
         else:
             create_next_block(db, block_index=config.BURN_START + transaction[1], parse_block=True)
@@ -176,21 +185,25 @@ def run_scenario(scenario, getrawtransaction_db):
     log = logger_buff.getvalue()
 
     db.close()
-    return dump, log
+    return dump, log, json.dumps(raw_transactions, indent=4)
 
 def save_scenario(scenario_name, getrawtransaction_db):
-    dump, log = run_scenario(INTEGRATION_SCENARIOS[scenario_name], getrawtransaction_db)
-    with open(CURR_DIR + '/fixtures/' + scenario_name + '.new.sql', 'w') as f:
+    dump, log, raw_transactions = run_scenario(INTEGRATION_SCENARIOS[scenario_name], getrawtransaction_db)
+    with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.new.sql', 'w') as f:
         f.writelines(dump)
-    with open(CURR_DIR + '/fixtures/' + scenario_name + '.new.log', 'w') as f:
+    with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.new.log', 'w') as f:
         f.writelines(log)
+    with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.new.json', 'w') as f:
+        f.writelines(raw_transactions)
 
 def load_scenario_ouput(scenario_name):
-    with open(CURR_DIR + '/fixtures/' + scenario_name + '.sql', 'r') as f:
+    with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.sql', 'r') as f:
         dump = ("").join(f.readlines())
-    with open(CURR_DIR + '/fixtures/' + scenario_name + '.log', 'r') as f:
+    with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.log', 'r') as f:
         log = ("").join(f.readlines())
-    return dump, log
+    with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.json', 'r') as f:
+        raw_transactions = ("").join(f.readlines())
+    return dump, log, raw_transactions
 
 def check_record(record, counterpartyd_db):
     cursor = counterpartyd_db.cursor()
@@ -231,6 +244,8 @@ def exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db)
         return tested_method(counterpartyd_db, inputs[0], **inputs[1])
     elif tx_name == 'util' and method == 'api':
         return tested_method(*inputs)
+    elif tx_name == 'bitcoin' and method == 'base58_check_decode':
+        return binascii.hexlify(tested_method(*inputs)).decode('utf-8')
     else:
         return tested_method(counterpartyd_db, *inputs)
 
@@ -268,10 +283,50 @@ def compare_strings(string1, string2):
     diff = list(difflib.unified_diff(string1.splitlines(1), string2.splitlines(1), n=0))
     if len(diff):
         print("\nDifferences:")
-        print("".join(diff))
-    assert not len(diff)
+        print("\n".join(diff))
+    return len(diff)
 
-if __name__ == '__main__':
-    save_scenario('unittest_fixture')
-    save_scenario('scenario_1')
+def get_block_movements(db, block_index):
+    cursor = db.cursor()
+    debits = list(cursor.execute('''SELECT * FROM debits WHERE block_index = ?''', (block_index,)))
+    credits = list(cursor.execute('''SELECT * FROM credits WHERE block_index = ?''', (block_index,)))
+    debits = [json.dumps(m).replace('"', '\'') for m in debits]
+    credits = [json.dumps(m).replace('"', '\'') for m in credits]
+    movements = json.dumps(debits + credits, indent=4)
+    return movements
 
+def reparse(testnet=True):
+    counterpartyd.set_options(rpc_port=9999, database_file=':memory:', testnet=testnet, testcoin=False)
+    
+    if testnet:
+        config.PREFIX = b'TESTXXXX'
+
+    memory_db = util.connect_to_db()
+    initialise_db(memory_db)
+    
+    prod_db_path = os.path.join(config.DATA_DIR, '{}.{}{}.db'.format(config.XCP_CLIENT, str(config.VERSION_MAJOR), '.testnet' if testnet else ''))
+    prod_db = apsw.Connection(prod_db_path)
+    prod_db.setrowtrace(util.rowtracer)
+
+    with memory_db.backup("main", prod_db, "main") as backup:
+        backup.step()
+
+    # here we don't use block.reparse() because it reparse db in transaction (`with db`)
+    memory_cursor = memory_db.cursor()
+    for table in blocks.TABLES + ['balances']:
+        memory_cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
+    blocks.initialise(memory_db)
+    previous_hash = None
+    memory_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
+    for block in memory_cursor.fetchall():
+        try:
+            previous_hash = blocks.parse_block(memory_db, block['block_index'], block['block_time'], previous_hash)
+        except ConsensusError as e:
+            new_movements = get_block_movements(memory_db, block['block_index'])
+            old_movements = get_block_movements(prod_db, block['block_index'])
+            compare_strings(new_movements, old_movements)
+            raise(e)
+
+    
+
+        
