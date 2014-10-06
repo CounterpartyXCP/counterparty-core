@@ -107,15 +107,16 @@ def parse_tx (db, tx):
     cursor.close()
     return True
 
-def generate_movement_hash(db, block_index):
+def generate_movement_hash(db, block_index, previous_hash=None):
     cursor = db.cursor()
     get_hash = lambda i: list(cursor.execute('''SELECT movements_hash FROM blocks WHERE block_index = ?''', (i,)))[0]['movements_hash']
 
     # get previous hash
-    if block_index == config.BLOCK_FIRST:
-        previous_hash = util.dhash_string(config.MOVEMENTS_HASH_SEED)
-    else: 
-        previous_hash = get_hash(block_index - 1)
+    if not previous_hash:
+      if block_index == config.BLOCK_FIRST:
+          previous_hash = util.dhash_string(config.MOVEMENTS_HASH_SEED)
+      else: 
+          previous_hash = get_hash(block_index - 1)
 
     # concatenate movements
     movements_string = ''
@@ -132,16 +133,19 @@ def generate_movement_hash(db, block_index):
     movements_hash = util.dhash_string(previous_hash + movements_string)
 
     # check checkpoints and save block movements_hash
+    current_hash = get_hash(block_index)
     checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
-    if block_index in checkpoints and checkpoints[block_index] != movements_hash:
+    if (block_index in checkpoints and checkpoints[block_index] != movements_hash) or (current_hash and current_hash != movements_hash):
         raise exceptions.ConsensusError('Invalid movements_hash for block {}'.format(block_index))
-    elif not get_hash(block_index):
+    elif not current_hash:
         sql = '''UPDATE blocks SET movements_hash = ? WHERE block_index = ?'''
         cursor.execute(sql, (movements_hash, block_index))
 
     cursor.close()
 
-def parse_block (db, block_index, block_time):
+    return movements_hash
+
+def parse_block (db, block_index, block_time, previous_hash=None):
     cursor = db.cursor()
 
     # Expire orders, bets and rps.
@@ -158,7 +162,7 @@ def parse_block (db, block_index, block_time):
 
     cursor.close()
 
-    generate_movement_hash(db, block_index)
+    return generate_movement_hash(db, block_index, previous_hash)
 
 def initialise(db):
     cursor = db.cursor()
@@ -1149,10 +1153,11 @@ def reparse (db, block_index=None, quiet=False):
             log = logging.getLogger('')
             log.setLevel(logging.WARNING)
         initialise(db)
+        previous_hash = None
         cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
         for block in cursor.fetchall():
             logging.info('Block (re‐parse): {}'.format(str(block['block_index'])))
-            parse_block(db, block['block_index'], block['block_time'])
+            previous_hash = parse_block(db, block['block_index'], block['block_time'], previous_hash)
         if quiet:
             log.setLevel(logging.INFO)
 
