@@ -1,4 +1,3 @@
--- The values of various per-database settings
 -- PRAGMA page_size=1024;
 -- PRAGMA encoding='UTF-8';
 -- PRAGMA auto_vacuum=NONE;

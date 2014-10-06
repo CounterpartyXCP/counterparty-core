@@ -1,16 +1,17 @@
 #! /usr/bin/python3
-import sys, os, time
+import sys, os, time, tempfile
 import pytest
 import util_test
 from util_test import CURR_DIR
-from fixtures.fixtures import UNITTEST_VECTOR, DEFAULT_PARAMS as DP
+from fixtures.vectors import UNITTEST_VECTOR
+from fixtures.params import DEFAULT_PARAMS as DP
 
 from lib import (config, util, api)
 import counterpartyd
 
 def setup_module():
-    counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR + '/fixtures/fixtures.unittest.db', testnet=True, testcoin=False, backend_rpc_ssl_verify=False)
-    util_test.restore_database(config.DATABASE, CURR_DIR + '/fixtures/unittest_fixture.sql')
+    counterpartyd.set_options(rpc_port=9999, database_file=tempfile.gettempdir() + '/fixtures.unittest.db', testnet=True, testcoin=False, backend_rpc_ssl_verify=False)
+    util_test.restore_database(config.DATABASE, CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql')
     # start RPC server
     api_server = api.APIServer()
     api_server.daemon = True
@@ -24,7 +25,7 @@ def setup_module():
             time.sleep(0.001)
 
 def teardown_module(function):
-    os.remove(config.DATABASE)
+    util_test.remove_database_files(config.DATABASE)
 
 @pytest.fixture
 def counterpartyd_db(request):

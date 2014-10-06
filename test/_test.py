@@ -50,8 +50,7 @@ with open(CURR_DIR + '/output.json', 'r') as output_file:
     output = json.load(output_file)
 
 # Connect to database.
-try: os.remove(config.DATABASE)
-except: pass
+util_test.remove_database_files(config.DATABASE)
 db = util.connect_to_db()
 cursor = db.cursor()
 
@@ -693,7 +692,7 @@ def do_book(testnet):
 
     # Clean up.
     cursor.close()
-    os.remove(temp_db)
+    util_test.remove_database_files(temp_db)
 
 def test_book_testnet():
     do_book(True)
