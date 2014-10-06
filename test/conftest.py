@@ -77,6 +77,14 @@ def init_mock_functions(monkeypatch, getrawtransaction_db):
     def init_api_access_log():
         pass
 
+    def multisig_pubkeyhashes_to_pubkeys(address):
+        array = address.split('_')
+        signatures_required = int(array[0])
+        pubkeyhashes = array[1:-1]
+        pubkeys = [DEFAULT_PARAMS['pubkey'][pubkeyhash] for pubkeyhash in pubkeyhashes]
+        address = '_'.join([str(signatures_required)] + sorted(pubkeys) + [str(len(pubkeys))])
+        return address
+
     class RpcProxy():
         def __init__(self, service_url=None):
             pass
@@ -95,4 +103,5 @@ def init_mock_functions(monkeypatch, getrawtransaction_db):
     monkeypatch.setattr('lib.api.init_api_access_log', init_api_access_log)
     if hasattr(config, 'PREFIX'):
         monkeypatch.setattr('lib.config.PREFIX', b'TESTXXXX')
+    monkeypatch.setattr('lib.bitcoin.multisig_pubkeyhashes_to_pubkeys', multisig_pubkeyhashes_to_pubkeys)
     monkeypatch.setattr('bitcoin.rpc.Proxy', RpcProxy)
