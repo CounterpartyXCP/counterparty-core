@@ -63,7 +63,7 @@ def generate_standard_scenario(address1, address2, order_matches, rps_matches):
     ]
 
 standard_scenarios_params = {
-    'scenario_1' : {
+    'simplesig' : {
         'address1': ADDR[0],
         'address2': ADDR[1], 
         'order_matches': [
@@ -74,7 +74,7 @@ standard_scenarios_params = {
             '2501cd2ee7e1c5f407e970b75a05ccbee4be74e605781de5dd3a6838a165f7bf72fe4a5e983752587b92edbb5da26c67c7f2968d2dde2e0f930acfce1ab9b669'
         ]
     }, 
-    'scenario_2': {
+    'multisig_1_of_2': {
         'address1': MULTISIGADDR[0],
         'address2': MULTISIGADDR[1],
         'order_matches': [
@@ -85,7 +85,7 @@ standard_scenarios_params = {
             '640f166066e9396abc163df5826a5184631fbccb470ce0724ef3349ed452fb62ce4d806a2f6266051585fc979e3a89f4c7b6a18ea0b41f51bfb26336137c4f26'
         ]
     }, 
-    'scenario_3': {
+    'multisig_2_of_2': {
         'address1': MULTISIGADDR[3],
         'address2': MULTISIGADDR[4],
         'order_matches': [
@@ -96,7 +96,7 @@ standard_scenarios_params = {
             '31c71e187fc92b453d3d7cf6bbb4dde8755c40ef0cc08b2781b41b26f4e67d4f7a96ab193c6236d79834e90625cefc3cabcebb9d889663e3e137d6e546055ec5'
         ]
     }, 
-    'scenario_4': {
+    'multisig_1_of_3': {
         'address1': MULTISIGADDR[5],
         'address2': MULTISIGADDR[6],
         'order_matches': [
@@ -107,7 +107,7 @@ standard_scenarios_params = {
             '1514d02df03b5126de43e78d7cc2f879d0688fbfea67eb64cfbda0add0aa412e539801eca19ca1c68f479b6ec9db353445481f921ec8cde51f4c042c3f41923a'
         ]
     }, 
-    'scenario_5': {
+    'multisig_2_of_3': {
         'address1': MULTISIGADDR[7],
         'address2': MULTISIGADDR[8],
         'order_matches': [
@@ -118,7 +118,7 @@ standard_scenarios_params = {
             '9feb47e813a167025c4d4ac9527a0a1067dd1774db20b16ae4732a39525b72ddb473bef4fad6f9fce39ed5be529539fbed0c41c3f6451018e70455875b6fa93b'
         ]
     }, 
-    'scenario_6': {
+    'multisig_3_of_3': {
         'address1': MULTISIGADDR[9],
         'address2': MULTISIGADDR[10],
         'order_matches': [
