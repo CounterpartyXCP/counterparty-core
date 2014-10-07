@@ -50,6 +50,31 @@ class serpent(object):
         evmcode = evmcode[:-1] # Strip newline.
         return binascii.unhexlify(bytes(evmcode))
 
+
+    def encode_datalist(vals):
+        def enc(n):
+            if type(n) == int:
+                return n.to_bytes(32, byteorder='big')
+            elif type(n) == str and len(n) == 40:
+                return b'\x00' * 12 + binascii.unhexlify(n)
+            elif type(n) == str:
+                return b'\x00' * (32 - len(n)) + n.encode('utf-8')  # TODO: ugly (and multi‐byte characters)
+            elif n is True:
+                return 1
+            elif n is False or n is None:
+                return 0
+        def henc(n):
+            return util.hexlify(enc(n))
+        if isinstance(vals, (tuple, list)):
+            return ''.join(map(henc, vals))
+        elif vals == '':
+            return b''
+        else:
+            assert False
+            # Assume you're getting in numbers or 0x...
+            # return ''.join(map(enc, list(map(numberize, vals.split(' ')))))
+
+
 class tester(object):
     class serpent(object):
         def compile_lll(lll_code):
@@ -60,7 +85,7 @@ class tester(object):
             
     class state(object):
         def create_contract(self, code, endowment=0):
-            to = 'foo'
+            to = util.contract_sha3('foo'.encode('utf-8'))
             global i
             i += 1
             contract_id = util.contract_sha3(code + bytes(i))
@@ -100,7 +125,7 @@ class tester(object):
         def do_send (self, sender, to, value, data=[]):
 
             if not sender:
-                sender = 'foo'
+                sender = util.contract_sha3('foo'.encode('utf-8'))
 
 
             gas_price = 1
@@ -134,19 +159,7 @@ class tester(object):
             print('tuple', sender, to, value, data)
 
             # Encode data.
-            # TODO: using serpent over CLI
-            if data:    # TODO
-                data = ' '.join([str(a) for a in data])
-                print(data)
-                cmd = '''serpent encode_datalist "''' + data + '''"'''
-                payload = subprocess.check_output(cmd, shell=True)
-            else:
-                payload = subprocess.check_output(['serpent', 'encode_datalist', ' '.join([str(a) for a in data])])
-            payload = payload[:-1]  # Strip newline.
-            payload = payload.decode('utf-8')
-
-            data = payload
-            data = bytes(data, 'ascii')
+            data = serpent.encode_datalist(data)
             data = binascii.unhexlify(data)
 
             # Execute contract.
@@ -282,14 +295,11 @@ else:
 def test_namecoin():
     s = tester.state()
     c = s.contract(namecoin_code)
-    # o1 = s.send(tester.k0, c, 0, ['"george"', 45])
-    o1 = s.send(tester.k0, c, 0, ['\'\\"george\\"\'', 45])  # TODO: using serpent over CLI
+    o1 = s.send(tester.k0, c, 0, ['"george"', 45])
     assert o1 == [1]
-    # o2 = s.send(tester.k0, c, 0, ['"george"', 20])
-    o2 = s.send(tester.k0, c, 0, ['\'\\"george\\"\'', 20])  # TODO: using serpent over CLI
+    o2 = s.send(tester.k0, c, 0, ['"george"', 20])
     assert o2 == [0]
-    # o3 = s.send(tester.k0, c, 0, ['"harry"', 60])
-    o3 = s.send(tester.k0, c, 0, ['\'\\"harry\\"\'', 60])   # TODO: using serpent over CLI
+    o3 = s.send(tester.k0, c, 0, ['"harry"', 60])
     assert o3 == [1]
 
     assert s.block.to_dict()
@@ -320,17 +330,13 @@ code:
 def test_currency():
     s = tester.state()
     c = s.contract(currency_code, sender=tester.k0)
-    # o1 = s.send(tester.k0, c, 0, [tester.a2, 200])
-    o1 = s.send(tester.k0, c, 0, ['\'\\' + tester.a2 +'\'\\', 200])
+    o1 = s.send(tester.k0, c, 0, [tester.a2, 200])
     assert o1 == [1]
-    # o2 = s.send(tester.k0, c, 0, [tester.a2, 900])
-    o2 = s.send(tester.k0, c, 0, ['\'\\' + tester.a2 +'\'\\', 900])
+    o2 = s.send(tester.k0, c, 0, [tester.a2, 900])
     assert o2 == [0]
-    # o3 = s.send(tester.k0, c, 0, [tester.a0])
-    o3 = s.send(tester.k0, c, 0, ["'" + tester.a0 + "'"])
+    o3 = s.send(tester.k0, c, 0, [tester.a0])
     assert o3 == [800]
-    # o4 = s.send(tester.k0, c, 0, [tester.a2])
-    o4 = s.send(tester.k0, c, 0, ["'" + tester.a2 + "'"])
+    o4 = s.send(tester.k0, c, 0, [tester.a2])
     assert o4 == [200]
 
 # Test a data feed

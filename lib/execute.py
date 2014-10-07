@@ -179,11 +179,11 @@ def get_storage_data(db, contract_id, key=None):
         storages = list(cursor)
         return storages
 
+    print('prekey', key)
     key = key.to_bytes(32, byteorder='big')
     cursor.execute('''SELECT * FROM storage WHERE contract_id = ? AND key = ?''', (contract_id, key))
     storages = list(cursor)
     print('key', key)
-    print('strges', storages)
     if not storages:
         return 0
     value = storages[0]['value']
@@ -686,6 +686,15 @@ def apply_op(db, tx, msg, processed_code, compustate):
             stk.append(0)
         else:
             dat = msg.data[s0: s0 + 32]
+            """
+            try:
+                dat = binascii.unhexlify(dat.decode('ascii'))   # TODO
+                dat = dat[::-1]
+            except Exception:
+                pass    # TODO
+            print('DAT', dat)   # TODO
+            print('DATA', dat, '\n\n\n\n\n')
+            """
             stk.append(util_rlp.big_endian_to_int(dat + b'\x00' * (32 - len(dat))))
     elif op == 'CALLDATASIZE':
         stk.append(len(msg.data))
