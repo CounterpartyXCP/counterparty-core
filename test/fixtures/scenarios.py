@@ -84,7 +84,7 @@ SCENARIO_2 = [
     ['broadcast', (MULTISIGADDR[0], 1388000101, 100.343, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],
     ['broadcast', (MULTISIGADDR[0], 1388000201, 2, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],
     ['order', (MULTISIGADDR[0], 'BBBB', DP['small'], 'XCP', DP['small'], DP['expiration'], 0), {'encoding': 'multisig'}],
-    ['burn', (MULTISIGADDR[0], int(.62 * DP['quantity']), True), {'encoding': 'multisig'}],  # Try to burn a whole 'nother BTC.
+    ['burn', (MULTISIGADDR[0], int(1 * DP['quantity']), True), {'encoding': 'multisig'}],  # Try to burn a whole 'nother BTC.
     ['send', (MULTISIGADDR[0], MULTISIGADDR[1], 'BBBC', 10000), {'encoding': 'multisig'}],
     ['callback', (MULTISIGADDR[0], .3, 'BBBC'), {'encoding': 'multisig'}],
     ['rps', (MULTISIGADDR[0], 5, 11021663, DP['move_random_hash'], 100), {'encoding': 'multisig'}],

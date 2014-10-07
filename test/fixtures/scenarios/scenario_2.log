@@ -162,9 +162,11 @@ Debit: 0.5 BBBB from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiW
 Order: 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 ordered 0.5 BBBB for 0.5 XCP in 10 blocks, with a provided fee of 0.0001 BTC and a required fee of 0.0 BTC (561ae1027a51bab1aa5c6b93926bcf426faba4ff59f94a0f392a17189ad5d64b) [open]
 Sorted UTXOs: ['amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6', 'amount: 1.0; txid: 9d34af75fca5282eb97f1aba6cf0f23e78556e6fc04a16e013351d841093d539; vout: 0; confirmations: 6']
 New input: amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6
-Change quantity: 0.3799 BTC
-Credit: 569.99891788 XCP to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #burn# <58e78a0b1d8cc17a7f686caafdfe881f2005c7e63b127a695a72359dec3595e2>
-Burn: 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 burned 0.38 BTC for 569.99891788 XCP (58e78a0b1d8cc17a7f686caafdfe881f2005c7e63b127a695a72359dec3595e2) [valid]
+Change quantity: -0.0001 BTC
+New input: amount: 1.0; txid: 9d34af75fca5282eb97f1aba6cf0f23e78556e6fc04a16e013351d841093d539; vout: 0; confirmations: 6
+Change quantity: 0.9999 BTC
+Credit: 569.99891788 XCP to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #burn# <dec55df3d3122a297e13b586bf56ffdf56722c4424ad9d165eaba8dba673b9d2>
+Burn: 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 burned 0.38 BTC for 569.99891788 XCP (dec55df3d3122a297e13b586bf56ffdf56722c4424ad9d165eaba8dba673b9d2) [valid]
 Sorted UTXOs: ['amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6', 'amount: 1.0; txid: 9d34af75fca5282eb97f1aba6cf0f23e78556e6fc04a16e013351d841093d539; vout: 0; confirmations: 6']
 New input: amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6
 Change quantity: 0.999744 BTC
