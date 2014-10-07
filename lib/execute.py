@@ -134,10 +134,11 @@ def get_code (db, contract_id):
     elif not contracts[0]['alive']: raise ContractError('dead contract')
     else: code = contracts[0]['code']
 
-    cursor.close()
     return code
 
 def set_storage_data(db, contract_id, key, value):
+    # TODO: This could all be done more elegantly, I think.
+
     # TODO
     # value = util_rlp.int_to_big_endian(value)
     # value = util_rlp.encode(value)
@@ -145,15 +146,28 @@ def set_storage_data(db, contract_id, key, value):
     key = key.to_bytes(32, byteorder='big')
 
     cursor = db.cursor()
-    bindings = {
-        'contract_id': contract_id,
-        'key': key,
-        'value': value
-        }
-    sql='insert into storage values(:contract_id, :key, :value)'
-    cursor.execute(sql, bindings)
 
-    cursor.close()
+    cursor.execute('''SELECT * FROM storage WHERE contract_id = ? AND key = ?''', (contract_id, key))
+    storages = list(cursor)
+    if storages:    # Update value.
+        bindings = {
+            'contract_id': contract_id,
+            'key': key,
+            'value': value
+            }
+        sql='update storage set value = :value where contract_id = :contract_id and key = :key'
+        cursor.execute(sql, bindings)
+    else:           # Insert value.
+        bindings = {
+            'contract_id': contract_id,
+            'key': key,
+            'value': value
+            }
+        sql='insert into storage values(:contract_id, :key, :value)'
+        cursor.execute(sql, bindings)
+
+    storages = cursor.execute('''SELECT * FROM storage WHERE contract_id = ? AND key = ?''', (contract_id, key))
+
 
     return value
 
@@ -163,13 +177,13 @@ def get_storage_data(db, contract_id, key=None):
     if key == None:
         cursor.execute('''SELECT * FROM storage WHERE contract_id = ?''', (contract_id,))
         storages = list(cursor)
-        cursor.close()
         return storages
 
     key = key.to_bytes(32, byteorder='big')
     cursor.execute('''SELECT * FROM storage WHERE contract_id = ? AND key = ?''', (contract_id, key))
     storages = list(cursor)
-    cursor.close()
+    print('key', key)
+    print('strges', storages)
     if not storages:
         return 0
     value = storages[0]['value']
@@ -283,7 +297,6 @@ def parse (db, tx, message):
         sql='insert into executions values(:tx_index, :tx_hash, :block_index, :source, :contract_id, :gas_price, :gas_start, :gas_cost, :gas_remaining, :value, :data, :output, :status)'
         cursor = db.cursor()
         cursor.execute(sql, bindings)
-        cursor.close()
 
 
 class Message(object):
@@ -389,7 +402,6 @@ def apply_transaction(db, tx, to, gas_price, gas_start, value, payload):
         cursor = db.cursor()
         logging.debug('CONTRACT SUICIDE')
         cursor.execute('''UPDATE contracts SET alive = False WHERE tx_hash = ?''', (contract_id,))
-        cursor.close()
 
     return True, output
 
@@ -397,14 +409,12 @@ def apply_transaction(db, tx, to, gas_price, gas_start, value, payload):
 def get_nonce(db, contract_id):
     cursor = db.cursor()
     contracts = list(cursor.execute('''SELECT * FROM contracts WHERE (contract_id = ?)''', (contract_id,)))
-    cursor.close()
     if not contracts: return 0  # TODO: correct?!
     else: return contracts[0]['nonce']
 
 def increment_nonce(db, contract_id):
     cursor = db.cursor()
     contracts = list(cursor.execute('''UPDATE contracts SET nonce = nonce + 1 WHERE (contract_id = :contract_id)''', {'contract_id': contract_id}))
-    cursor.close()
 
 def create_contract(db, tx, msg):
     if 'txid' in tx.keys():
@@ -436,7 +446,6 @@ def create_contract(db, tx, msg):
     bindings = {'contract_id': contract_id, 'tx_index': None, 'tx_hash': None, 'block_index': 0, 'source': None, 'code': bytes(dat), 'nonce': 0, 'alive': True}
     sql='insert into contracts values(:contract_id, :tx_index, :tx_hash, :block_index, :source, :code, :nonce, :alive)'
     cursor.execute(sql, bindings)
-    cursor.close
     return True, gas, contract_id
 
 
@@ -575,13 +584,11 @@ def apply_op(db, tx, msg, processed_code, compustate):
 
     for i in range(0, len(compustate.memory), 16):
         memblk = compustate.memory[i:i+16]
-        logging.debug('MEM {}'.format(memprint(memblk)))
+        # logging.debug('MEM {}'.format(memprint(memblk)))
 
     storage = []
     for line in get_storage_data(db, msg.to):
-        storage.append({'key': line['key'], 'value': line['value']})
-    logging.debug('STORAGE {}'.format(storage))
-    logging.debug('baaaaalance {}'.format(util.get_balance(db, '549267555c1a0e3881d93a3623794e8b408d453f', config.XCP)))     # TODO
+        logging.debug('STORAGE {}: {}'.format(util.hexlify(line['key']), line['value']))
 
     log_args = dict(pc=compustate.pc,
                     op=op,

@@ -320,13 +320,17 @@ code:
 def test_currency():
     s = tester.state()
     c = s.contract(currency_code, sender=tester.k0)
-    o1 = s.send(tester.k0, c, 0, [tester.a2, 200])
+    # o1 = s.send(tester.k0, c, 0, [tester.a2, 200])
+    o1 = s.send(tester.k0, c, 0, ['\'\\' + tester.a2 +'\'\\', 200])
     assert o1 == [1]
-    o2 = s.send(tester.k0, c, 0, [tester.a2, 900])
+    # o2 = s.send(tester.k0, c, 0, [tester.a2, 900])
+    o2 = s.send(tester.k0, c, 0, ['\'\\' + tester.a2 +'\'\\', 900])
     assert o2 == [0]
-    o3 = s.send(tester.k0, c, 0, [tester.a0])
+    # o3 = s.send(tester.k0, c, 0, [tester.a0])
+    o3 = s.send(tester.k0, c, 0, ["'" + tester.a0 + "'"])
     assert o3 == [800]
-    o4 = s.send(tester.k0, c, 0, [tester.a2])
+    # o4 = s.send(tester.k0, c, 0, [tester.a2])
+    o4 = s.send(tester.k0, c, 0, ["'" + tester.a2 + "'"])
     assert o4 == [200]
 
 # Test a data feed
