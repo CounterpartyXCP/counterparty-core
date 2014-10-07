@@ -95,6 +95,17 @@ standard_scenarios_params = {
             '3b5d38ad9a5470b642b4281483180a2368f2bc32f82e842fcec508d5f9341afe2b9193f719d4aaa4234a04a7a8e52a7584bd9e69dac2ea0dbd32b5eac8801aad',
             '31c71e187fc92b453d3d7cf6bbb4dde8755c40ef0cc08b2781b41b26f4e67d4f7a96ab193c6236d79834e90625cefc3cabcebb9d889663e3e137d6e546055ec5'
         ]
+    }, 
+    'scenario_4': {
+        'address1': MULTISIGADDR[5],
+        'address2': MULTISIGADDR[6],
+        'order_matches': [
+            'f744c1d46e9da6abb4768c8b44ee63a44b5513f86eabbbd4784bc6c961d566e508fe83094e172ee642271aac7b75980974d6b9f7ec614dbb380323892a4f1a46'
+        ], 
+        'rps_matches': [
+            '35947f8727ab7834eab73084906d49dbd1ca50464efd17f602b3b942d6bbb34c7c9c7932b4c7410f0a7d4a5e8906ead88628b6ef25adc7a8f0e944764fb2bb3e',
+            '1514d02df03b5126de43e78d7cc2f879d0688fbfea67eb64cfbda0add0aa412e539801eca19ca1c68f479b6ec9db353445481f921ec8cde51f4c042c3f41923a'
+        ]
     }
 }
 

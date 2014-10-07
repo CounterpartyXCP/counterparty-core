@@ -28,6 +28,16 @@ MULTISIGADDR = [
     '1_{}_{}_2'.format(ADDR[0], ADDR[1]),
     '1_{}_{}_2'.format(ADDR[2], ADDR[1]),
     '1_{}_{}_2'.format(ADDR[0], ADDR[2]),
+
     '2_{}_{}_2'.format(ADDR[0], ADDR[1]),
-    '2_{}_{}_2'.format(ADDR[2], ADDR[1])
+    '2_{}_{}_2'.format(ADDR[2], ADDR[1]),
+
+    '1_{}_{}_{}_3'.format(ADDR[0], ADDR[2], ADDR[1]),
+    '1_{}_{}_{}_3'.format(ADDR[0], ADDR[2], ADDR[3]),
+
+    '2_{}_{}_{}_3'.format(ADDR[0], ADDR[2], ADDR[1]),
+    '2_{}_{}_{}_3'.format(ADDR[0], ADDR[2], ADDR[3]),
+
+    '3_{}_{}_{}_3'.format(ADDR[0], ADDR[2], ADDR[1]),
+    '3_{}_{}_{}_3'.format(ADDR[0], ADDR[2], ADDR[3])
 ]
