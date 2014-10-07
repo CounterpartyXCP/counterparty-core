@@ -327,8 +327,11 @@ def exectracer(cursor, sql, bindings):
 
     # Record alteration in database.
     if category not in ('balances', 'messages', 'mempool', 'storage'):
-        if not (command in ('update') and category in ('orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches')):    # List message manually.
-            message(db, bindings['block_index'], command, category, bindings)
+        if not (command in ('update') and category in ('orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches', 'contracts')):    # List message manually.
+            try:
+                message(db, bindings['block_index'], command, category, bindings)
+            except TypeError:
+                raise TypeError('SQLite3 statements must used named arguments.')
 
     return True
 

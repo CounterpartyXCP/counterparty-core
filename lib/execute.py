@@ -399,22 +399,22 @@ def get_nonce(db, contract_id):
     cursor = db.cursor()
     contracts = list(cursor.execute('''SELECT * FROM contracts WHERE (contract_id = ?)''', (contract_id,)))
     cursor.close()
-    if not contracts: raise ContractError
+    if not contracts: return 0  # TODO: correct?!
     else: return contracts[0]['nonce']
 
 def increment_nonce(db, contract_id):
     cursor = db.cursor()
-    contracts = list(cursor.execute('''UPDATE contracts SET (nonce = nonce + 1) WHERE (contract_id = ?)''', (contract_id,)))
+    contracts = list(cursor.execute('''UPDATE contracts SET nonce = nonce + 1 WHERE (contract_id = :contract_id)''', {'contract_id': contract_id}))
     cursor.close()
 
 def create_contract(db, tx, msg):
     if len(msg.sender) == 40:
-        contract_id_seed = sender + tx['txid']
-        contract_id_seed = contract_id_seed.decode('ascii')
+        contract_id_seed = msg.sender + tx['txid']
+        contract_id_seed = contract_id_seed.decode('ascii') # TODO
     else:
-        contract_id_seed = sender + get_nonce(db, sender)
-        increment_nonce(db, sender)
-    contract_id = util.contract_sha3(contract_id_seed)
+        contract_id_seed = msg.sender + str(get_nonce(db, msg.sender))  # TODO
+        increment_nonce(db, msg.sender)
+    contract_id = util.contract_sha3(contract_id_seed.encode('utf-8'))
     msg.to = contract_id
     code = msg.data
 
@@ -434,8 +434,8 @@ def create_contract(db, tx, msg):
 
     # Create contract with provided code.
     cursor = db.cursor()
-    bindings = {'contract_id': contract_id, 'tx_index': None, 'tx_hash': None, 'block_index': 0, 'source': None, 'code': bytes(dat), 'alive': True}
-    sql='insert into contracts values(:contract_id, :tx_index, :tx_hash, :block_index, :source, :code, :alive)'
+    bindings = {'contract_id': contract_id, 'tx_index': None, 'tx_hash': None, 'block_index': 0, 'source': None, 'code': bytes(dat), 'nonce': 0, 'alive': True}
+    sql='insert into contracts values(:contract_id, :tx_index, :tx_hash, :block_index, :source, :code, :nonce, :alive)'
     cursor.execute(sql, bindings)
     cursor.close
     return True, gas, contract_id
