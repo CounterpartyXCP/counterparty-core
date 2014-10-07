@@ -10,7 +10,7 @@ import time
 import logging
 import string
 
-from lib import (util, config, exceptions, bitcoin, util, util_rlp, publish)
+from lib import (util, config, exceptions, bitcoin, util, util_rlp)
 
 FORMAT = '>32sQQQ'
 LENGTH = 56
@@ -395,12 +395,25 @@ def apply_transaction(db, tx, to, gas_price, gas_start, value, payload):
     return True, output
 
 
+def get_nonce(db, contract_id):
+    cursor = db.cursor()
+    contracts = list(cursor.execute('''SELECT * FROM contracts WHERE (contract_id = ?)''', (contract_id,)))
+    cursor.close()
+    if not contracts: raise ContractError
+    else: return contracts[0]['nonce']
+
+def increment_nonce(db, contract_id):
+    cursor = db.cursor()
+    contracts = list(cursor.execute('''UPDATE contracts SET (nonce = nonce + 1) WHERE (contract_id = ?)''', (contract_id,)))
+    cursor.close()
+
 def create_contract(db, tx, msg):
     if len(msg.sender) == 40:
-        contract_id_seed = tx['source'] + tx['txid']
+        contract_id_seed = sender + tx['txid']
         contract_id_seed = contract_id_seed.decode('ascii')
     else:
-        contract_id_seed = 
+        contract_id_seed = sender + get_nonce(db, sender)
+        increment_nonce(db, sender)
     contract_id = util.contract_sha3(contract_id_seed)
     msg.to = contract_id
     code = msg.data

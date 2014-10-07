@@ -23,9 +23,10 @@ def create_contract (db, tx_index, tx_hash, block_index, source, code):
         'block_index': block_index,
         'source': source,
         'code': code,
+        'nonce': 0,
         'alive': True,
     }
-    sql='insert into contracts values(:contract_id, :tx_index, :tx_hash, :block_index, :source, :code, :alive)'
+    sql='insert into contracts values(:contract_id, :tx_index, :tx_hash, :block_index, :source, :code, :nonce, :alive)'
     cursor.execute(sql, bindings)
 
     cursor.close()
