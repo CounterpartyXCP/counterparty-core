@@ -66,15 +66,10 @@ class tester(object):
             contract_id = util.contract_sha3(code + bytes(i))
             tx_hash = contract_id
 
-            # Endowment.
-            if not endowment:
-                endowment = 10 * config.UNIT
-            util.credit(db, 0, contract_id, config.XCP, endowment, action='unit test', event='endowment')
-
             # Give XCP to sender.
-            util.credit(db, 0, to, config.XCP, endowment, action='unit test', event='facefeed')
+            util.credit(db, 0, to, config.XCP, endowment*2, action='unit test', event='facefeed')
 
-            success, data = tester.state.do_send(self, '', '', 0, data=code)
+            success, data = tester.state.do_send(self, '', '', endowment, data=code)
             print('create_contract data', data)
 
             # TODO
@@ -156,7 +151,7 @@ class tester(object):
 
             # Execute contract.
             print('qux', data, type(data))
-            success, data = tester.state.do_send(self, '', to, 0, data=data)
+            success, data = tester.state.do_send(self, '', to, value, data=data)
             decoded_data = util_rlp.decode_datalist(bytes(data))
             return decoded_data
 
@@ -171,6 +166,12 @@ class tester(object):
                 sql='''update contracts set code = :code where contract_id = :contract_id'''
                 cursor.execute(sql, bindings)
                 cursor.close()
+
+            def get_storage_data(contract_id, key):
+                return execute.get_storage_data(db, contract_id, key)
+
+            def get_balance(address):
+                return util.get_balance(db, address, config.XCP)
 
             
 def privtoaddr(x):

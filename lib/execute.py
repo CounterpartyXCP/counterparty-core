@@ -111,6 +111,7 @@ def memprint(data):
     line = ' '.join([line[i:i+2].decode('ascii') for i in range(0, len(line), 2)])
     return line
 def hexprint(x):
+    print(x)
     assert type(x) in (bytes, list)
     if not x:
         return '<None>'
@@ -128,7 +129,8 @@ def get_code (db, contract_id):
     contracts = list(cursor)
 
     if not contracts:
-        raise ContractError('no such contract')
+        return b''
+        # TODO: IMPORTANT raise ContractError('no such contract')
     elif not contracts[0]['alive']: raise ContractError('dead contract')
     else: code = contracts[0]['code']
 
@@ -139,6 +141,8 @@ def set_storage_data(db, contract_id, key, value):
     # TODO
     # value = util_rlp.int_to_big_endian(value)
     # value = util_rlp.encode(value)
+
+    key = key.to_bytes(32, byteorder='big')
 
     cursor = db.cursor()
     bindings = {
@@ -162,6 +166,7 @@ def get_storage_data(db, contract_id, key=None):
         cursor.close()
         return storages
 
+    key = key.to_bytes(32, byteorder='big')
     cursor.execute('''SELECT * FROM storage WHERE contract_id = ? AND key = ?''', (contract_id, key))
     storages = list(cursor)
     cursor.close()
@@ -391,6 +396,13 @@ def apply_transaction(db, tx, to, gas_price, gas_start, value, payload):
 
 
 def create_contract(db, tx, msg):
+    if len(msg.sender) == 40:
+        contract_id_seed = tx['source'] + tx['txid']
+        contract_id_seed = contract_id_seed.decode('ascii')
+    else:
+        contract_id_seed = 
+    contract_id = util.contract_sha3(contract_id_seed)
+    msg.to = contract_id
     code = msg.data
 
     # assert not get_code(db, contract_id) # TODO: check for duplicate contracts
@@ -409,7 +421,6 @@ def create_contract(db, tx, msg):
 
     # Create contract with provided code.
     cursor = db.cursor()
-    contract_id = util.contract_sha3(bytes(dat))
     bindings = {'contract_id': contract_id, 'tx_index': None, 'tx_hash': None, 'block_index': 0, 'source': None, 'code': bytes(dat), 'alive': True}
     sql='insert into contracts values(:contract_id, :tx_index, :tx_hash, :block_index, :source, :code, :alive)'
     cursor.execute(sql, bindings)
@@ -427,13 +438,15 @@ class Compustate():
         for kw in kwargs:
             setattr(self, kw, kwargs[kw])
 def apply_msg(db, tx, msg, code):
-    # TODO logging.debug('CONTRACT PRE STATE (balance: {}, storage: {})'.format(util.devise(db, util.get_balance(db, msg.to, config.XCP), config.XCP, 'output'), hexprint(util.get_storage(db, msg.to))))
+    logging.debug('CONTRACT PRE STATE (balance: {}, storage: {})'.format(util.devise(db, util.get_balance(db, msg.to, config.XCP), config.XCP, 'output'), get_storage_data(db, msg.to)))
     logging.debug('BEGIN RUN (tx: {}, source: {}, contract_id: {}, value: {}, gas: {}, data {})'.format(tx['tx_hash'], msg.sender, msg.to, msg.value, msg.gas, hexprint(msg.data)))
 
     # Transfer value (instaquit if there isn’t enough).
     try:
         util.debit(db, tx['block_index'], msg.sender, config.XCP, msg.value, action='transfer value', event=tx['tx_hash'])
     except exceptions.BalanceError as e:
+        print('balance_error')  # TODO
+        raise e # TODO
         return 1, msg.gas, []
     util.credit(db, tx['block_index'], msg.to, config.XCP, msg.value, action='transfer value', event=tx['tx_hash'])
 
@@ -444,30 +457,40 @@ def apply_msg(db, tx, msg, code):
     processed_code = [opcodes.get(c, ['INVALID', 0, 0, [], 0]) + [c] for c in code]
     # logging.debug('PROCESSED_CODE {}'.format(processed_code))
 
-    # Initialise compustate.
-    compustate = Compustate(gas=msg.gas)
+    # Snapshot.
+    logging.debug('SNAPSHOT')
+    try:
+        with db:
 
-    # Main loop
-    t = time.time()
-    ops = 0
-    while True:
-        data = apply_op(db, tx, msg, processed_code, compustate)
-        ops += 1
-        if data is not None:
-            gas_remaining = compustate.gas
+            # Initialise compustate.
+            compustate = Compustate(gas=msg.gas)
 
-            if data == OUT_OF_GAS:
-                result = 0
-                data = []
-            else:
-                result = 1
+            # Main loop
+            t = time.time()
+            ops = 0
+            while True:
+                data = apply_op(db, tx, msg, processed_code, compustate)
+                ops += 1
+                if data is not None:
+                    gas_remaining = compustate.gas
 
-            balance = util.devise(db, util.get_balance(db, msg.to, config.XCP), config.XCP, 'output')
-            # TODO storage = hexprint(util.get_storage(db, msg.to))
-            storage = None
-            logging.debug('END RUN (result: {}, data: {}, gas_remained: {}, ops: {}, time_per_op: {})'.format(result, hexprint(data), compustate.gas, ops, (time.time() - t) / ops))
-            # TODO logging.debug('CONTRACT POST STATE (balance: {}, storage: {})'.format(util.devise(db, util.get_balance(db, msg.to, config.XCP), config.XCP, 'output'), hexprint(util.get_storage(db, msg.to))))
-            return result, gas_remaining, data
+                    if data == OUT_OF_GAS:
+                        logging.debug('REVERTING')
+                        raise OutOfGas
+                        result = 0
+                        data = []
+                    else:
+                        result = 1
+
+                    balance = util.devise(db, util.get_balance(db, msg.to, config.XCP), config.XCP, 'output')
+                    logging.debug('END RUN (result: {}, data: {}, gas_remained: {}, ops: {}, time_per_op: {})'.format(result, hexprint(data), compustate.gas, ops, (time.time() - t) / ops))
+                    logging.debug('CONTRACT POST STATE (balance: {}, storage: {})'.format(util.devise(db, util.get_balance(db, msg.to, config.XCP), config.XCP, 'output'), get_storage_data(db, msg.to)))
+                    return result, gas_remaining, data
+    except OutOfGas as e:
+        result = 0
+        data = []
+        return result, gas_remaining, data
+        
 
 
 def get_opcode(code, index):
@@ -496,6 +519,8 @@ def to_signed(i):
 def coerce_to_int(x):
     if isinstance(x, int):
         return x
+    elif len(x) == 40:  # TODO
+        return util_rlp.big_endian_to_int(binascii.unhexlify(x))
     else:
         if type(x) != bytes:
             x = bytes(x, 'ascii')   # For addresses.
@@ -507,8 +532,8 @@ def zpad(x, l):
 def coerce_to_hex(x):
     if isinstance(x, int):
         return util.hexlify(zpad(util_rlp.int_to_big_endian(x), 20))
-    # elif len(x) == 40 or len(x) == 0:
-    #     return x
+    elif len(x) == 40 or len(x) == 0:   # TODO
+        return x
     else:
         return util.hexlify(zpad(x, 20)[-20:])
 
@@ -540,7 +565,11 @@ def apply_op(db, tx, msg, processed_code, compustate):
         memblk = compustate.memory[i:i+16]
         logging.debug('MEM {}'.format(memprint(memblk)))
 
-    # TODO: logging.debug('STORAGE {}'.format(hexprint(util.get_storage(db, msg.to))))
+    storage = []
+    for line in get_storage_data(db, msg.to):
+        storage.append({'key': line['key'], 'value': line['value']})
+    logging.debug('STORAGE {}'.format(storage))
+    logging.debug('baaaaalance {}'.format(util.get_balance(db, '549267555c1a0e3881d93a3623794e8b408d453f', config.XCP)))     # TODO
 
     log_args = dict(pc=compustate.pc,
                     op=op,
@@ -623,7 +652,6 @@ def apply_op(db, tx, msg, processed_code, compustate):
         data = bytes(mem[s0: s0 + s1])
         stk.append(util_rlp.big_endian_to_int(sha3(data)))
     elif op == 'ADDRESS':
-        print('ADDRESS', msg.to)   # TODO
         stk.append(coerce_to_int(msg.to))
     elif op == 'BALANCE':
         stk.append(util.get_balance(coerce_addr_to_hex(stk.pop()), config.XCP))

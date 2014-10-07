@@ -898,7 +898,7 @@ def initialise(db):
     # Contract Storage
     cursor.execute('''CREATE TABLE IF NOT EXISTS storage(
                       contract_id TEXT,
-                      key INTEGER,
+                      key BLOB,
                       value BLOB,
                       FOREIGN KEY (contract_id) REFERENCES contracts(contract_id))
                   ''')
