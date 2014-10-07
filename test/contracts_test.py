@@ -67,9 +67,9 @@ class tester(object):
             tx_hash = contract_id
 
             # Give XCP to sender.
-            util.credit(db, 0, to, config.XCP, endowment*2, action='unit test', event='facefeed')
+            util.credit(db, 0, to, config.XCP, max(endowment*2, 100000000), action='unit test', event='facefeed')
 
-            success, data = tester.state.do_send(self, '', '', endowment, data=code)
+            success, data = tester.state.do_send(self, to, '', endowment, data=code)
             print('create_contract data', data)
 
             # TODO

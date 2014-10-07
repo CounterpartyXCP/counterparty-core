@@ -314,7 +314,6 @@ def apply_transaction(db, tx, to, gas_price, gas_start, value, payload):
 
     # Check cost required for down payment.
     total_initial_cost = value + gas_price * gas_start
-    print('source', tx['source'])
     balance = util.get_balance(db, tx['source'], config.XCP) 
     if balance < total_initial_cost:
         raise InsufficientBalance(balance, total_initial_cost)
@@ -408,7 +407,7 @@ def increment_nonce(db, contract_id):
     cursor.close()
 
 def create_contract(db, tx, msg):
-    if len(msg.sender) == 40:
+    if 'txid' in tx.keys():
         contract_id_seed = msg.sender + tx['txid']
         contract_id_seed = contract_id_seed.decode('ascii') # TODO
     else:
