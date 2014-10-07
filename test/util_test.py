@@ -83,7 +83,7 @@ def create_next_block(db, block_index=None, parse_block=False):
     cursor.close()
     return inserted_block_index, block_hash, block_time
 
-def insert_raw_transaction(raw_transaction, db, getrawtransaction_db):
+def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
     # one transaction per block
     block_index, block_hash, block_time = create_next_block(db)
 
@@ -95,7 +95,7 @@ def insert_raw_transaction(raw_transaction, db, getrawtransaction_db):
     #print(tx_hash)
     tx['txid'] = tx_hash
     if pytest.config.option.saverawtransactions:
-        save_getrawtransaction_data(getrawtransaction_db, tx_hash, raw_transaction)
+        save_rawtransaction(rawtransactions_db, tx_hash, raw_transaction, json.dumps(tx))
 
     source, destination, btc_amount, fee, data = blocks.get_tx_info2(tx, block_index)
     transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
@@ -116,32 +116,41 @@ def insert_transaction(transaction, db):
 
 # table uses for getrawtransaction mock.
 # we use the same database (in memory) for speed
-def initialise_getrawtransaction_data(db):
-    cursor = db.cursor()
-    cursor.execute('DROP TABLE  IF EXISTS raw_transactions')
-    cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT)')
-    with open(CURR_DIR + '/fixtures/unspent_outputs.json', 'r') as listunspent_test_file:
-            wallet_unspent = json.load(listunspent_test_file)
-            for output in wallet_unspent:
-                txid = binascii.hexlify(bitcoinlib.core.lx(output['txid'])).decode()
-                cursor.execute('INSERT INTO raw_transactions VALUES (?, ?)', (txid, output['txhex']))
-    cursor.close()
+def initialise_rawtransactions_db(db):
+    if pytest.config.option.initrawtransactions:
+        counterpartyd.set_options(testnet=True, testcoin=False, backend_rpc_ssl_verify=False)
+        cursor = db.cursor()
+        cursor.execute('DROP TABLE  IF EXISTS raw_transactions')
+        cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT, tx_json TEXT)')
+        with open(CURR_DIR + '/fixtures/unspent_outputs.json', 'r') as listunspent_test_file:
+                wallet_unspent = json.load(listunspent_test_file)
+                for output in wallet_unspent:
+                    txid = binascii.hexlify(bitcoinlib.core.lx(output['txid'])).decode()
+                    tx = bitcoin.decode_raw_transaction(output['txhex'])
+                    cursor.execute('INSERT INTO raw_transactions VALUES (?, ?, ?)', (txid, output['txhex'], json.dumps(tx)))
+        cursor.close()
 
-def save_getrawtransaction_data(db, tx_hash, tx_hex):
+def save_rawtransaction(db, tx_hash, tx_hex, tx_json):
     cursor = db.cursor()
     try:
         txid = binascii.hexlify(bitcoinlib.core.lx(tx_hash)).decode()
-        cursor.execute('''INSERT INTO raw_transactions VALUES (?, ?)''', (txid, tx_hex))
+        cursor.execute('''INSERT INTO raw_transactions VALUES (?, ?, ?)''', (txid, tx_hex, tx_json))
     except Exception as e:
         pass
     cursor.close()
 
-def get_getrawtransaction_data(db, txid):
+def getrawtransaction(db, txid):
     cursor = db.cursor()
     txid = binascii.hexlify(txid).decode()
     tx_hex = list(cursor.execute('''SELECT tx_hex FROM raw_transactions WHERE tx_hash = ?''', (txid,)))[0][0]
     cursor.close()
     return tx_hex
+
+def decoderawtransaction(db, tx_hex):
+    cursor = db.cursor()
+    tx_json = list(cursor.execute('''SELECT tx_json FROM raw_transactions WHERE tx_hex = ?''', (tx_hex,)))[0][0]
+    cursor.close()
+    return json.loads(tx_json)
 
 def initialise_db(db):
     blocks.initialise(db)
@@ -150,7 +159,7 @@ def initialise_db(db):
     cursor.execute('''INSERT INTO blocks VALUES (?,?,?,?)''', first_block)
     cursor.close()
 
-def run_scenario(scenario, getrawtransaction_db):
+def run_scenario(scenario, rawtransactions_db):
     counterpartyd.set_options(rpc_port=9999, database_file=':memory:',
                               testnet=True, testcoin=False, backend_rpc_ssl_verify=False)
     config.PREFIX = b'TESTXXXX'
@@ -177,7 +186,7 @@ def run_scenario(scenario, getrawtransaction_db):
             compose = getattr(module, 'compose')
             unsigned_tx_hex = bitcoin.transaction(db, compose(db, *transaction[1]), **transaction[2])
             raw_transactions.append({transaction[0]: unsigned_tx_hex})
-            insert_raw_transaction(unsigned_tx_hex, db, getrawtransaction_db)
+            insert_raw_transaction(unsigned_tx_hex, db, rawtransactions_db)
         else:
             create_next_block(db, block_index=config.BURN_START + transaction[1], parse_block=True)
 
@@ -187,8 +196,8 @@ def run_scenario(scenario, getrawtransaction_db):
     db.close()
     return dump, log, json.dumps(raw_transactions, indent=4)
 
-def save_scenario(scenario_name, getrawtransaction_db):
-    dump, log, raw_transactions = run_scenario(INTEGRATION_SCENARIOS[scenario_name], getrawtransaction_db)
+def save_scenario(scenario_name, rawtransactions_db):
+    dump, log, raw_transactions = run_scenario(INTEGRATION_SCENARIOS[scenario_name], rawtransactions_db)
     with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.new.sql', 'w') as f:
         f.writelines(dump)
     with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.new.log', 'w') as f:
