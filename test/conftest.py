@@ -9,7 +9,7 @@ from fixtures.vectors import UNITTEST_VECTOR
 from fixtures.params import DEFAULT_PARAMS
 from fixtures.scenarios import INTEGRATION_SCENARIOS
 
-from lib import config
+from lib import config, bitcoin
 
 import bitcoin as bitcoinlib
 
@@ -44,14 +44,14 @@ def pytest_addoption(parser):
     parser.addoption("--skiptestbook", default='no', help="skip test book(s) (use with one of the following values: `all`, `testnet` or `mainnet`)")
 
 @pytest.fixture(scope="module")
-def getrawtransaction_db(request):
+def rawtransactions_db(request):
     db = apsw.Connection(util_test.CURR_DIR + '/fixtures/rawtransactions.db')
-    if pytest.config.option.initrawtransactions:
-        util_test.initialise_getrawtransaction_data(db)
+    if (request.module.__name__ == 'integration_test'):
+        util_test.initialise_rawtransactions_db(db)
     return db
 
 @pytest.fixture(autouse=True)
-def init_mock_functions(monkeypatch, getrawtransaction_db):
+def init_mock_functions(monkeypatch, rawtransactions_db):
 
     def get_unspent_txouts(address):
         with open(util_test.CURR_DIR + '/fixtures/unspent_outputs.json', 'r') as listunspent_test_file:
@@ -77,12 +77,26 @@ def init_mock_functions(monkeypatch, getrawtransaction_db):
     def init_api_access_log():
         pass
 
+    def multisig_pubkeyhashes_to_pubkeys(address):
+        array = address.split('_')
+        signatures_required = int(array[0])
+        pubkeyhashes = array[1:-1]
+        pubkeys = [DEFAULT_PARAMS['pubkey'][pubkeyhash] for pubkeyhash in pubkeyhashes]
+        address = '_'.join([str(signatures_required)] + sorted(pubkeys) + [str(len(pubkeys))])
+        return address
+
+    def decode_raw_transaction(raw_transaction):
+        if pytest.config.option.initrawtransactions or pytest.config.option.saverawtransactions:
+            return bitcoin.rpc('decoderawtransaction', [raw_transaction])
+        else:
+            return util_test.decoderawtransaction(rawtransactions_db, raw_transaction)
+
     class RpcProxy():
         def __init__(self, service_url=None):
             pass
 
         def getrawtransaction(self, txid):
-            tx_hex = util_test.get_getrawtransaction_data(getrawtransaction_db, txid)
+            tx_hex = util_test.getrawtransaction(rawtransactions_db, txid)
             ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
             return ctx
 
@@ -95,4 +109,6 @@ def init_mock_functions(monkeypatch, getrawtransaction_db):
     monkeypatch.setattr('lib.api.init_api_access_log', init_api_access_log)
     if hasattr(config, 'PREFIX'):
         monkeypatch.setattr('lib.config.PREFIX', b'TESTXXXX')
+    monkeypatch.setattr('lib.bitcoin.multisig_pubkeyhashes_to_pubkeys', multisig_pubkeyhashes_to_pubkeys)
+    monkeypatch.setattr('lib.bitcoin.decode_raw_transaction', decode_raw_transaction)
     monkeypatch.setattr('bitcoin.rpc.Proxy', RpcProxy)

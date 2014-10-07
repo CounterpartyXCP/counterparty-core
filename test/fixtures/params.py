@@ -2,9 +2,9 @@ UNIT = 100000000
 
 DEFAULT_PARAMS = {
     'addresses': [
-        ['mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'cPdUqd5EbBWsjcG9xiL1hz8bEyGFiz4SW99maU9JgpL9TEcxUf3j'],
-        ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'cQ897jnCVRrawNbw8hgmjMiRNHejwzg4KbzdMCzc91iaTif8ReqX'],
-        ['mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'cRNnyC1h5qjv3tHkkt74Y5wowknM1BBDK5Ft2hj5SzfV3mgwPvC3']
+        ['mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'cPdUqd5EbBWsjcG9xiL1hz8bEyGFiz4SW99maU9JgpL9TEcxUf3j', '0282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0'],
+        ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'cQ897jnCVRrawNbw8hgmjMiRNHejwzg4KbzdMCzc91iaTif8ReqX', '0319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b977'],
+        ['mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'cRNnyC1h5qjv3tHkkt74Y5wowknM1BBDK5Ft2hj5SzfV3mgwPvC3', '0378ee11c3fb97054877a809ce083db292b16d971bcdc6aa4c8f92087133729d8b']
     ],
     'quantity': UNIT,
     'small': round(UNIT / 2),
@@ -19,7 +19,8 @@ DEFAULT_PARAMS = {
     'burn_end': 4017708,
     'burn_quantity': int(.62 * UNIT)
 }
-DEFAULT_PARAMS['privkey'] = {addr: priv for (addr, priv) in DEFAULT_PARAMS['addresses']}
+DEFAULT_PARAMS['privkey'] = {addr: priv for (addr, priv, pub) in DEFAULT_PARAMS['addresses']}
+DEFAULT_PARAMS['pubkey'] = {addr: pub for (addr, priv, pub) in DEFAULT_PARAMS['addresses']}
 ADDR = [a[0] for a in DEFAULT_PARAMS['addresses']]
 DP = DEFAULT_PARAMS
 MULTISIGADDR = [
