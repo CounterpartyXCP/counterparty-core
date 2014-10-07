@@ -132,7 +132,7 @@ standard_scenarios_params = {
 }
 
 INTEGRATION_SCENARIOS = {
-    'unittest_fixture': UNITEST_FIXTURE
+    'unittest_fixture': (UNITEST_FIXTURE, 'unittest_fixture')
 }
 for scenario_name in standard_scenarios_params:
-    INTEGRATION_SCENARIOS[scenario_name] = generate_standard_scenario(**standard_scenarios_params[scenario_name])
+    INTEGRATION_SCENARIOS[scenario_name] = (generate_standard_scenario(**standard_scenarios_params[scenario_name]), 'simplesig')
