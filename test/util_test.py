@@ -118,7 +118,7 @@ def insert_transaction(transaction, db):
 # we use the same database (in memory) for speed
 def initialise_rawtransactions_db(db):
     if pytest.config.option.initrawtransactions:
-        counterpartyd.set_options(testnet=True, testcoin=False, backend_rpc_ssl_verify=False)
+        counterpartyd.set_options(testnet=True, testcoin=False, backend_rpc_ssl_verify=False, data_dir=tempfile.gettempdir(), rpc_port=9999, rpc_password="pass", backend_rpc_port=8888, backend_rpc_password='pass')
         cursor = db.cursor()
         cursor.execute('DROP TABLE  IF EXISTS raw_transactions')
         cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT, tx_json TEXT)')
@@ -160,8 +160,8 @@ def initialise_db(db):
     cursor.close()
 
 def run_scenario(scenario, rawtransactions_db):
-    counterpartyd.set_options(rpc_port=9999, database_file=':memory:',
-                              testnet=True, testcoin=False, backend_rpc_ssl_verify=False)
+    counterpartyd.set_options(database_file=':memory:', testnet=True, testcoin=False, backend_rpc_ssl_verify=False,
+                              data_dir=tempfile.gettempdir(), rpc_port=9999, rpc_password="pass", backend_rpc_port=8888, backend_rpc_password='pass')
     config.PREFIX = b'TESTXXXX'
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
@@ -312,7 +312,8 @@ def get_block_movements(db, block_index):
     return movements
 
 def reparse(testnet=True):
-    counterpartyd.set_options(rpc_port=9999, database_file=':memory:', testnet=testnet, testcoin=False, backend_rpc_ssl_verify=False)
+    counterpartyd.set_options(database_file=':memory:', testnet=testnet, testcoin=False, backend_rpc_ssl_verify=False,
+                              data_dir=tempfile.gettempdir(), rpc_port=9999, rpc_password="pass", backend_rpc_port=8888, backend_rpc_password='pass')
     
     if testnet:
         config.PREFIX = b'TESTXXXX'
