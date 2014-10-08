@@ -326,7 +326,7 @@ def exectracer(cursor, sql, bindings):
     if 'blocks' in sql or 'transactions' in sql: return True
 
     # Record alteration in database.
-    if category not in ('balances', 'messages', 'mempool', 'storage', 'contracts', 'suicides'): # TODO: review
+    if category not in ('balances', 'messages', 'mempool', 'storage', 'contracts', 'suicides', 'nonces'): # TODO: review
         if not (command in ('update') and category in ('orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches', 'contracts')):    # List message manually.
             try:
                 message(db, bindings['block_index'], command, category, bindings)

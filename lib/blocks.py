@@ -912,6 +912,13 @@ def initialise(db):
                       FOREIGN KEY (contract_id) REFERENCES contracts(contract_id))
                   ''')
 
+    # Nonces
+    cursor.execute('''CREATE TABLE IF NOT EXISTS nonces(
+                      contract_id TEXT PRIMARY KEY,
+                      nonce INTEGER,
+                      FOREIGN KEY (contract_id) REFERENCES contracts(contract_id))
+                  ''')
+
     # Messages
     cursor.execute('''CREATE TABLE IF NOT EXISTS messages(
                       message_index INTEGER PRIMARY KEY,

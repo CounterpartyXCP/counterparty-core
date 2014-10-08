@@ -444,25 +444,27 @@ def new_suicide(db, contract_id):
 
 def get_nonce(db, contract_id):
     cursor = db.cursor()
-    contracts = list(cursor.execute('''SELECT * FROM contracts WHERE (contract_id = ?)''', (contract_id,)))
-    if not contracts: return 0  # TODO: correct?!
-    else: return contracts[0]['nonce']
+    nonces = list(cursor.execute('''SELECT * FROM nonces WHERE (contract_id = ?)''', (contract_id,)))
+    if not nonces: return 0
+    else: return nonces[0]['nonce']
 
-def increment_nonce(db, contract_id):
-    # TODO is this working!?
+def set_nonce(db, contract_id, nonce):
     cursor = db.cursor()
-    contracts = cursor.execute('''UPDATE contracts SET nonce = nonce + 1 WHERE (contract_id = :contract_id)''', {'contract_id': contract_id})
-    return
+    cursor.execute('''SELECT * FROM nonces WHERE (contract_id = :contract_id)''', {'contract_id': contract_id})
+    nonces = list(cursor)
+    if not nonces:
+        cursor.execute('''INSERT INTO nonces VALUES(:contract_id, :nonce)''', {'contract_id': contract_id, 'nonce': nonce})
+    else:
+        cursor.execute('''UPDATE contracts SET nonce = :nonce WHERE (contract_id = :contract_id)''', {'nonce': nonce, 'contract_id': contract_id})
 
 def create_contract(db, tx, msg):
     if 'txid' in tx.keys():
         contract_id_seed = msg.sender + tx['txid']
         contract_id_seed = contract_id_seed.decode('ascii') # TODO
     else:
-        print('FOOBAR', msg.sender, get_nonce(db, msg.sender))
-        contract_id_seed = msg.sender + str(get_nonce(db, msg.sender))  # TODO
-        increment_nonce(db, msg.sender)
-        print('FOOBAR', msg.sender, get_nonce(db, msg.sender))
+        nonce = get_nonce(db, msg.sender)
+        contract_id_seed = msg.sender + str(nonce)  # TODO
+        set_nonce(db, msg.sender, nonce + 1)
     contract_id = util.contract_sha3(contract_id_seed.encode('utf-8'))
     msg.to = contract_id
     code = msg.data
@@ -934,7 +936,8 @@ def apply_op(db, tx, msg, processed_code, compustate):
         to = binascii.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
         # NOTE data = ''.join(map(chr, mem[meminstart: meminstart + meminsz]))
         data = bytes(mem[meminstart: meminstart + meminsz])
-        pblogger.log('POST NEW', sender=msg.to, to=to, value=value, gas=gas, data=util.hexlify(data))
+        post_dict = {'sender': msg.to, 'to': to, 'value': value, 'gas': gas, 'data': util.hexlify(data)}
+        log('POST NEW', post_dict)
         post_msg = Message(msg.to, to, value, gas, data)
         block.postqueue.append(post_msg)
     elif op == 'CALL_STATELESS':
