@@ -12,7 +12,7 @@ from lib.exceptions import ConsensusError
 import counterpartyd
 
 from fixtures.params import DEFAULT_PARAMS as DP
-from fixtures.scenarios import UNITEST_FIXTURE, INTEGRATION_SCENARIOS
+from fixtures.scenarios import UNITEST_FIXTURE, INTEGRATION_SCENARIOS, standard_scenarios_params
 
 import bitcoin as bitcoinlib
 import binascii
@@ -197,7 +197,7 @@ def run_scenario(scenario, rawtransactions_db):
     return dump, log, json.dumps(raw_transactions, indent=4)
 
 def save_scenario(scenario_name, rawtransactions_db):
-    dump, log, raw_transactions = run_scenario(INTEGRATION_SCENARIOS[scenario_name], rawtransactions_db)
+    dump, log, raw_transactions = run_scenario(INTEGRATION_SCENARIOS[scenario_name][0], rawtransactions_db)
     with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.new.sql', 'w') as f:
         f.writelines(dump)
     with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.new.log', 'w') as f:
@@ -213,6 +213,13 @@ def load_scenario_ouput(scenario_name):
     with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.json', 'r') as f:
         raw_transactions = ("").join(f.readlines())
     return dump, log, raw_transactions
+
+def clean_scenario_dump(scenario_name, dump):
+    dump = dump.replace(standard_scenarios_params[scenario_name]['address1'], 'address1')
+    dump = dump.replace(standard_scenarios_params[scenario_name]['address2'], 'address2')
+    dump = re.sub('[a-f0-9]{64}', 'hash', dump)
+    dump = re.sub('X\'[A-F0-9]+\',1\);', '\'data\',1)', dump)
+    return dump
 
 def check_record(record, counterpartyd_db):
     cursor = counterpartyd_db.cursor()

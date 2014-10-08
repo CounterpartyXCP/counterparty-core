@@ -21,8 +21,8 @@ def pytest_generate_tests(metafunc):
         args = []
         for scenario_name in INTEGRATION_SCENARIOS:
             if pytest.config.option.scenario == [] or scenario_name in pytest.config.option.scenario:
-                args.append((scenario_name, INTEGRATION_SCENARIOS[scenario_name]))
-        metafunc.parametrize('scenario_name, transactions', args)
+                args.append((scenario_name, INTEGRATION_SCENARIOS[scenario_name][1], INTEGRATION_SCENARIOS[scenario_name][0]))
+        metafunc.parametrize('scenario_name, base_scenario_name, transactions', args)
     elif metafunc.function.__name__ == 'test_book':
         if pytest.config.option.skiptestbook == 'all':
             args = []
