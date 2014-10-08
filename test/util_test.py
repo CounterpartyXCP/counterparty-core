@@ -24,6 +24,16 @@ os.environ['TZ'] = 'EST'
 time.tzset()
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
+COUNTERPARTYD_OPTIONS = {
+    'testcoin': False, 
+    'backend_rpc_ssl_verify': False, 
+    'data_dir': tempfile.gettempdir(), 
+    'rpc_port': 9999, 
+    'rpc_password': 'pass', 
+    'backend_rpc_port': 8888, 
+    'backend_rpc_password': 'pass'
+}
+
 def dump_database(db):
     # TEMPORARY
     # .dump command bugs when aspw.Shell is used with 'db' args instead 'args'
@@ -118,7 +128,7 @@ def insert_transaction(transaction, db):
 # we use the same database (in memory) for speed
 def initialise_rawtransactions_db(db):
     if pytest.config.option.initrawtransactions:
-        counterpartyd.set_options(testnet=True, testcoin=False, backend_rpc_ssl_verify=False, data_dir=tempfile.gettempdir(), rpc_port=9999, rpc_password="pass", backend_rpc_port=8888, backend_rpc_password='pass')
+        counterpartyd.set_options(testnet=True, **COUNTERPARTYD_OPTIONS)
         cursor = db.cursor()
         cursor.execute('DROP TABLE  IF EXISTS raw_transactions')
         cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT, tx_json TEXT)')
@@ -160,8 +170,7 @@ def initialise_db(db):
     cursor.close()
 
 def run_scenario(scenario, rawtransactions_db):
-    counterpartyd.set_options(database_file=':memory:', testnet=True, testcoin=False, backend_rpc_ssl_verify=False,
-                              data_dir=tempfile.gettempdir(), rpc_port=9999, rpc_password="pass", backend_rpc_port=8888, backend_rpc_password='pass')
+    counterpartyd.set_options(database_file=':memory:', testnet=True, **COUNTERPARTYD_OPTIONS)
     config.PREFIX = b'TESTXXXX'
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
@@ -312,8 +321,7 @@ def get_block_movements(db, block_index):
     return movements
 
 def reparse(testnet=True):
-    counterpartyd.set_options(database_file=':memory:', testnet=testnet, testcoin=False, backend_rpc_ssl_verify=False,
-                              data_dir=tempfile.gettempdir(), rpc_port=9999, rpc_password="pass", backend_rpc_port=8888, backend_rpc_password='pass')
+    counterpartyd.set_options(database_file=':memory:', testnet=testnet, **COUNTERPARTYD_OPTIONS)
     
     if testnet:
         config.PREFIX = b'TESTXXXX'
