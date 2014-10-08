@@ -10,7 +10,7 @@ from lib import (config, util, api)
 import counterpartyd
 
 def setup_module():
-    counterpartyd.set_options(rpc_port=9999, database_file=tempfile.gettempdir() + '/fixtures.unittest.db', testnet=True, testcoin=False, backend_rpc_ssl_verify=False)
+    counterpartyd.set_options(database_file=tempfile.gettempdir() + '/fixtures.unittest.db', testnet=True, **util_test.COUNTERPARTYD_OPTIONS)
     util_test.restore_database(config.DATABASE, CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql')
     # start RPC server
     api_server = api.APIServer()
