@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/CounterpartyXCP/counterpartyd.svg?branch=develop)](https://travis-ci.org/CounterpartyXCP/counterpartyd)
+
 # Description
 Counterparty is a protocol for the creation and use of decentralised financial
 instruments such as asset exchanges, contracts for difference and dividend
