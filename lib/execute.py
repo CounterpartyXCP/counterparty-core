@@ -220,10 +220,17 @@ def log (name, obj):
         if type(obj[key]) == str and len(obj[key]) > 120:
             obj[key] = obj[key][:60] + '…' + obj[key][-60:]
 
-    lines = ['{}: {}'.format(str(key), str(obj[key])) for key in obj.keys()]
+    # Sort
+    if name == 'OP':
+        keyorder = ['pc', 'op', 'sargs', 'value', 'gas', 'stack']
+        obj = sorted(obj.items(), key=lambda i:keyorder.index(i[0]))
+    else:
+        obj = sorted(obj.items())
+    lines = ['{}: {}'.format(pair[0], pair[1]) for pair in obj]
+
     if 'op' == name.lower():
-        string = str(sorted(lines))
-        logging.info('\tOP ' + string.replace("'", "")[1:-1])
+        string = str(lines).replace("'", "")[1:-1]
+        logging.info('\tOP ' + string)
     else:
         if name:
             logging.info(name)
@@ -475,7 +482,7 @@ def create_contract(db, tx, msg):
 
 def get_msg_state(db, msg, code):
     msg_state = {}
-    msg_state['contract'] = msg.to
+    # msg_state['contract'] = msg.to
     msg_state['balance'] = util.get_balance(db, msg.to, config.XCP)
     storages = ['{}: {}'.format(hexprint(storage['key']), storage['value']) for storage in get_storage_data(db, msg.to)]
     msg_state['storage'] = storages
@@ -526,10 +533,10 @@ def apply_msg(db, tx, msg, code):
                 if data is not None:
                     gas_remaining = compustate.gas
 
-                    msg_applied = {'result': bytes(data),
+                    msg_applied = {'data (result)': bytes(data),
                                    'sender': msg.sender,
                                    'to': msg.to,
-                                   'gas_remaining': gas_remaining}
+                                   'gas': gas_remaining}
                     new_dict = msg_applied.copy()
                     new_dict.update(get_msg_state(db, msg, code))
                     logging.info('')

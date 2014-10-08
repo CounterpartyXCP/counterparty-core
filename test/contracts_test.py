@@ -195,7 +195,7 @@ accounts = []
 keys = []
 for i in range(10):
     import hashlib
-    keys.append(hashlib.sha256(str(i).encode('utf-8')).hexdigest())
+    keys.append(util.contract_sha3(str(i).encode('utf-8')))
     accounts.append(privtoaddr(keys[-1]))
     exec('tester.k{} = keys[i]'.format(i))
     exec('tester.a{} = accounts[i]'.format(i))
