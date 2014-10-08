@@ -40,7 +40,7 @@ sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/counterpartyd.unittest.db', testnet=True, testcoin=False, backend_rpc_ssl_verify=False)
 
 import logging
-logging.basicConfig(level=logging.INFO, format='%(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 
 i = 0
 
@@ -76,6 +76,8 @@ class serpent(object):
 
 
 class tester(object):
+    gas_limit = 100000
+
     class serpent(object):
         def compile_lll(lll_code):
             code = subprocess.check_output(['serpent', 'compile_lll', lll_code])
@@ -128,7 +130,8 @@ class tester(object):
 
 
             gas_price = 1
-            gas_start = 100000
+            gas_start = tester.gas_limit
+            print(tester.gas_limit)
 
             # Construct `tx`.
             tx = { 'source': sender,

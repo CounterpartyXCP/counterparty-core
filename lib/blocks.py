@@ -861,7 +861,6 @@ def initialise(db):
                       source TEXT,
                       code BLOB,
                       nonce INTEGER,
-                      alive BOOL,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                   ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -906,6 +905,12 @@ def initialise(db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       contract_id_idx ON contracts(contract_id)
                    ''')
+
+    # Suicides
+    cursor.execute('''CREATE TABLE IF NOT EXISTS suicides(
+                      contract_id TEXT PRIMARY KEY,
+                      FOREIGN KEY (contract_id) REFERENCES contracts(contract_id))
+                  ''')
 
     # Messages
     cursor.execute('''CREATE TABLE IF NOT EXISTS messages(

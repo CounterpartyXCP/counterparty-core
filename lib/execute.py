@@ -120,7 +120,6 @@ def get_code (db, contract_id):
     if not contracts:
         return b''
         # TODO: IMPORTANT raise ContractError('no such contract')
-    elif not contracts[0]['alive']: raise ContractError('dead contract')
     else: code = contracts[0]['code']
 
     return code
@@ -164,7 +163,7 @@ def get_storage_data(db, contract_id, key=None):
     cursor = db.cursor()
 
     if key == None:
-        cursor.execute('''SELECT * FROM storage WHERE contract_id = ?''', (contract_id,))
+        cursor.execute('''SELECT * FROM storage WHERE contract_id = ? ''', (contract_id,))
         storages = list(cursor)
         return storages
 
@@ -222,7 +221,7 @@ def log (name, obj):
 
     # Sort
     if name == 'OP':
-        keyorder = ['pc', 'op', 'sargs', 'value', 'gas', 'stack']
+        keyorder = ['pc', 'gas', 'op', 'stackargs', 'value', 'stack']
         obj = sorted(obj.items(), key=lambda i:keyorder.index(i[0]))
     else:
         obj = sorted(obj.items())
@@ -230,12 +229,12 @@ def log (name, obj):
 
     if 'op' == name.lower():
         string = str(lines).replace("'", "")[1:-1]
-        logging.info('\tOP ' + string)
+        logging.debug('\tOP ' + string)
     else:
         if name:
-            logging.info(name)
+            logging.debug(name)
         for line in lines:
-            logging.info('\t' + str(line))
+            logging.debug('\t' + str(line))
 
 
 def compose (db, source, contract_id, gasprice, startgas, value, payload_hex):
@@ -257,7 +256,6 @@ class InsufficientBalance(HaltExecution): pass
 class InsufficientStartGas(HaltExecution): pass
 class BlockGasLimitReached(HaltExecution): pass
 class OutOfGas(HaltExecution): pass
-suicidal = False
 
 def parse (db, tx, message):
     output = None
@@ -349,9 +347,6 @@ def apply_transaction(db, tx, to, gasprice, startgas, value, payload):
     gas_remaining = 0
     gas_cost = 0
 
-    global suicidal
-    suicidal = False
-
     # Check intrinsic gas used by contract.
     intrinsic_gas_used = GTXDATA * len(payload) + GTXCOST
     if startgas < intrinsic_gas_used:
@@ -429,13 +424,22 @@ def apply_transaction(db, tx, to, gasprice, startgas, value, payload):
     status = 'finished'
 
     # Kill suicidal contract.
-    if suicidal:
-        cursor = db.cursor()
-        logging.debug('CONTRACT SUICIDE')
-        cursor.execute('''UPDATE contracts SET alive = False WHERE tx_hash = ?''', (contract_id,))
+    cursor = db.cursor()
+    suicides = list(cursor.execute('''SELECT * FROM suicides'''))
+    for suicide in suicides:
+        contract_id = suicide['contract_id']
+        logging.debug('SUICIDING {}'.format(contract_id))
+        cursor.execute('''DELETE FROM contracts WHERE contract_id = :contract_id''', {'contract_id': contract_id})
+        cursor.execute('''DELETE FROM storage WHERE contract_id = :contract_id''', {'contract_id': contract_id})
+    cursor.execute('''DELETE FROM suicides''')
 
     return True, output
 
+
+def new_suicide(db, contract_id):
+    cursor = db.cursor()
+    cursor.execute('''INSERT INTO suicides VALUES(:contract_id)''', {'contract_id': contract_id})
+    
 
 def get_nonce(db, contract_id):
     cursor = db.cursor()
@@ -444,16 +448,20 @@ def get_nonce(db, contract_id):
     else: return contracts[0]['nonce']
 
 def increment_nonce(db, contract_id):
+    # TODO is this working!?
     cursor = db.cursor()
-    contracts = list(cursor.execute('''UPDATE contracts SET nonce = nonce + 1 WHERE (contract_id = :contract_id)''', {'contract_id': contract_id}))
+    contracts = cursor.execute('''UPDATE contracts SET nonce = nonce + 1 WHERE (contract_id = :contract_id)''', {'contract_id': contract_id})
+    return
 
 def create_contract(db, tx, msg):
     if 'txid' in tx.keys():
         contract_id_seed = msg.sender + tx['txid']
         contract_id_seed = contract_id_seed.decode('ascii') # TODO
     else:
+        print('FOOBAR', msg.sender, get_nonce(db, msg.sender))
         contract_id_seed = msg.sender + str(get_nonce(db, msg.sender))  # TODO
         increment_nonce(db, msg.sender)
+        print('FOOBAR', msg.sender, get_nonce(db, msg.sender))
     contract_id = util.contract_sha3(contract_id_seed.encode('utf-8'))
     msg.to = contract_id
     code = msg.data
@@ -474,8 +482,8 @@ def create_contract(db, tx, msg):
 
     # Create contract with provided code.
     cursor = db.cursor()
-    bindings = {'contract_id': contract_id, 'tx_index': None, 'tx_hash': None, 'block_index': 0, 'source': None, 'code': bytes(dat), 'nonce': 0, 'alive': True}
-    sql='insert into contracts values(:contract_id, :tx_index, :tx_hash, :block_index, :source, :code, :nonce, :alive)'
+    bindings = {'contract_id': contract_id, 'tx_index': None, 'tx_hash': None, 'block_index': 0, 'source': None, 'code': bytes(dat), 'nonce': 0}
+    sql='insert into contracts values(:contract_id, :tx_index, :tx_hash, :block_index, :source, :code, :nonce)'
     cursor.execute(sql, bindings)
     return True, gas, contract_id
 
@@ -502,7 +510,7 @@ def apply_msg(db, tx, msg, code):
     logging.debug('\n')
     new_dict = vars(msg).copy()
     new_dict.update(get_msg_state(db, msg, code))
-    logging.info('\nBEGIN MESSAGE') # TODO
+    logging.debug('\nBEGIN MESSAGE') # TODO
     log('', new_dict)
 
     # Transfer value (instaquit if there isn’t enough).
@@ -526,22 +534,28 @@ def apply_msg(db, tx, msg, code):
             # Main loop
             t = time.time()
             ops = 0
-            logging.info('')
+            logging.debug('')
             while True:
                 data = apply_op(db, tx, msg, processed_code, compustate)
                 ops += 1
                 if data is not None:
                     gas_remaining = compustate.gas
 
-                    msg_applied = {'data (result)': bytes(data),
+                    # TODO: ugly
+                    if data == OUT_OF_GAS:
+                        data_printable = -1
+                    else:
+                        data_printable = bytes(data)
+
+                    msg_applied = {'data (result)': data_printable,
                                    'sender': msg.sender,
                                    'to': msg.to,
                                    'gas': gas_remaining}
                     new_dict = msg_applied.copy()
                     new_dict.update(get_msg_state(db, msg, code))
-                    logging.info('')
+                    logging.debug('')
                     log('', new_dict)
-                    logging.info('END MESSAGE\n')
+                    logging.debug('END MESSAGE\n')
 
                     if data == OUT_OF_GAS:
                         logging.debug('### REVERTING ###')
@@ -631,12 +645,13 @@ def apply_op(db, tx, msg, processed_code, compustate):
 
     storage = []
     for line in get_storage_data(db, msg.to):
-        logging.debug('STORAGE {}: {}'.format(util.hexlify(line['key']), line['value']))
+        # logging.debug('STORAGE {}: {}'.format(util.hexlify(line['key']), line['value']))
+        pass
 
     # Log operation
     log_args = dict(pc=str(compustate.pc).zfill(3),
                     op=op,
-                    sargs=compustate.stack[-1:-in_args-1:-1],
+                    stackargs=compustate.stack[-1:-in_args-1:-1],
                     stack=list(reversed(compustate.stack)),
                     gas=compustate.gas)
     if op[:4] == 'PUSH':
@@ -952,8 +967,7 @@ def apply_op(db, tx, msg, processed_code, compustate):
         transfer_value = util. get_balance(db, msg.to, config.XCP)
         util.debit(db, tx['block_index'], msg.to, config.XCP, transfer_value, action='suicide', event=tx['tx_hash'])
         util.credit(db, tx['block_index'], to, config.XCP, transfer_value, action='suicide', event=tx['tx_hash'])
-        global suicidal
-        suicidal = True
+        new_suicide(db, msg.to)
         return []
     for a in stk:
         assert isinstance(a, int)
