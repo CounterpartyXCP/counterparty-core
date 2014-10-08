@@ -132,6 +132,7 @@ def set_storage_data(db, contract_id, key, value):
     # value = util_rlp.encode(value)
 
     key = key.to_bytes(32, byteorder='big')
+    value = value.to_bytes(32, byteorder='big')
 
     cursor = db.cursor()
 
@@ -177,8 +178,8 @@ def get_storage_data(db, contract_id, key=None):
     value = storages[0]['value']
 
     # TODO
+    value = util_rlp.big_endian_to_int(value)
     # value = util_rlp.decode(value)
-    # value = util_rlp.big_endian_to_int(value)
 
     return value
 
@@ -492,7 +493,7 @@ def get_msg_state(db, msg, code):
     msg_state = {}
     # msg_state['contract'] = msg.to
     msg_state['balance'] = util.get_balance(db, msg.to, config.XCP)
-    storages = ['{}: {}'.format(hexprint(storage['key']), storage['value']) for storage in get_storage_data(db, msg.to)]
+    storages = ['{}: {}'.format(hexprint(storage['key']), hexprint(storage['value'])) for storage in get_storage_data(db, msg.to)]
     msg_state['storage'] = storages
     msg_state['code'] = code
     return msg_state

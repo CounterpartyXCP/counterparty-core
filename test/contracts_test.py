@@ -131,7 +131,6 @@ class tester(object):
 
             gas_price = 1
             gas_start = tester.gas_limit
-            print(tester.gas_limit)
 
             # Construct `tx`.
             tx = { 'source': sender,
