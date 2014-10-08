@@ -137,6 +137,7 @@ def get_code (db, contract_id):
     return code
 
 def set_storage_data(db, contract_id, key, value):
+    print('SET', contract_id, key, value)
     # TODO: This could all be done more elegantly, I think.
 
     # TODO
@@ -172,6 +173,7 @@ def set_storage_data(db, contract_id, key, value):
     return value
 
 def get_storage_data(db, contract_id, key=None):
+    print('GET', contract_id, key)
     cursor = db.cursor()
 
     if key == None:
@@ -460,7 +462,7 @@ class Compustate():
             setattr(self, kw, kwargs[kw])
 def apply_msg(db, tx, msg, code):
     logging.debug('CONTRACT PRE STATE (balance: {}, storage: {})'.format(util.devise(db, util.get_balance(db, msg.to, config.XCP), config.XCP, 'output'), get_storage_data(db, msg.to)))
-    logging.debug('BEGIN RUN (tx: {}, source: {}, contract_id: {}, value: {}, gas: {}, data {})'.format(tx['tx_hash'], msg.sender, msg.to, msg.value, msg.gas, hexprint(msg.data)))
+    logging.debug('BEGIN RUN (tx: {}, sender: {}, to: {}, value: {}, gas: {}, data {})'.format(tx['tx_hash'], msg.sender, msg.to, msg.value, msg.gas, hexprint(msg.data)))
 
     # Transfer value (instaquit if there isn’t enough).
     try:
@@ -887,11 +889,13 @@ def apply_op(db, tx, msg, processed_code, compustate):
             return out_of_gas_exception('subcall gas', gas, compustate, op)
         compustate.gas -= gas
         to = encode_int(to)
-        to = binascii.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
+        to = util.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
         # NOTE data = ''.join(map(chr, mem[meminstart: meminstart + meminsz]))
         data = bytes(mem[meminstart: meminstart + meminsz])
         logging.debug('SUB CALL NEW (sender: {}, to: {}, value: {}, gas: {}, data: {})'.format(msg.to, to, value, gas, util.hexlify(data)))
-        result, gas, data = apply_msg(db, tx, get_code(db, to), '', to, value, gas, data)
+        call_msg = Message(msg.to, to, value, gas, data)
+        code = get_code(db, call_msg.to)
+        result, gas, data = apply_msg(db, tx, call_msg, code)
         logging.debug('SUB CALL OUT (result: {}, data: {}, length: {}, expected: {}'.format(result, data, len(data), memoutsz))
         if result == 0:
             stk.append(0)
