@@ -9,6 +9,8 @@ import binascii
 import time
 import logging
 import string
+import json
+import pprint
 
 from lib import (util, config, exceptions, bitcoin, util, util_rlp)
 
@@ -106,19 +108,6 @@ def bytearray_to_int(arr):
     for a in arr:
         o = o * 256 + a
     return o
-def memprint(data):
-    line = binascii.hexlify(bytes(data))
-    line = ' '.join([line[i:i+2].decode('ascii') for i in range(0, len(line), 2)])
-    return line
-def hexprint(x):
-    print(x)
-    assert type(x) in (bytes, list)
-    if not x:
-        return '<None>'
-    if x != -1:
-        return ('0x' + util.hexlify(bytes(x)))
-    else:
-        return 'OUT OF GAS'
 
 class ContractError(Exception):
     pass
@@ -137,7 +126,6 @@ def get_code (db, contract_id):
     return code
 
 def set_storage_data(db, contract_id, key, value):
-    print('SET', contract_id, key, value)
     # TODO: This could all be done more elegantly, I think.
 
     # TODO
@@ -173,7 +161,6 @@ def set_storage_data(db, contract_id, key, value):
     return value
 
 def get_storage_data(db, contract_id, key=None):
-    print('GET', contract_id, key)
     cursor = db.cursor()
 
     if key == None:
@@ -181,11 +168,11 @@ def get_storage_data(db, contract_id, key=None):
         storages = list(cursor)
         return storages
 
-    print('prekey', key)
+    # print('prekey', key)
     key = key.to_bytes(32, byteorder='big')
     cursor.execute('''SELECT * FROM storage WHERE contract_id = ? AND key = ?''', (contract_id, key))
     storages = list(cursor)
-    print('key', key)
+    # print('key', key)
     if not storages:
         return 0
     value = storages[0]['value']
@@ -208,16 +195,51 @@ OUT_OF_GAS = -1
 
 # TODO: Make fees proportional to money supply.
 
+def memprint(data):
+    line = binascii.hexlify(bytes(data))
+    line = ' '.join([line[i:i+2].decode('ascii') for i in range(0, len(line), 2)])
+    return line
+def hexprint(x):
+    assert type(x) in (bytes, list)
+    if not x:
+        return '<None>'
+    if x != -1:
+        return ('0x' + util.hexlify(bytes(x)))
+    else:
+        return 'OUT OF GAS'
+def log (name, obj):
+    assert type(obj) == dict
 
-def compose (db, source, contract_id, gas_price, gas_start, value, payload_hex):
+    # Convert binary.
+    for key in obj.keys():
+        if type(obj[key]) == bytes:
+            obj[key] = hexprint(obj[key])
+
+    # Truncate long lines.
+    for key in obj.keys():
+        if type(obj[key]) == str and len(obj[key]) > 120:
+            obj[key] = obj[key][:60] + '…' + obj[key][-60:]
+
+    lines = ['{}: {}'.format(str(key), str(obj[key])) for key in obj.keys()]
+    if 'op' == name.lower():
+        string = str(sorted(lines))
+        logging.info('\tOP ' + string.replace("'", "")[1:-1])
+    else:
+        if name:
+            logging.info(name)
+        for line in lines:
+            logging.info('\t' + str(line))
+
+
+def compose (db, source, contract_id, gasprice, startgas, value, payload_hex):
     code = get_code(db, contract_id)
     payload = binascii.unhexlify(payload_hex)
-    # TODO: Check start_gas, gas_price here?
+    # TODO: Check start_gas, gasprice here?
 
     # Pack.
     data = struct.pack(config.TXTYPE_FORMAT, ID)
     curr_format = FORMAT + '{}s'.format(len(payload))
-    data += struct.pack(curr_format, binascii.unhexlify(contract_id), gas_price, gas_start, value, payload)
+    data += struct.pack(curr_format, binascii.unhexlify(contract_id), gasprice, startgas, value, payload)
 
     return (source, [], data)
 
@@ -241,18 +263,18 @@ def parse (db, tx, message):
         # Unpack message.
         curr_format = FORMAT + '{}s'.format(len(message) - LENGTH)
         try:
-            contract_id, gas_price, gas_start, value, payload = struct.unpack(curr_format, message)
+            contract_id, gasprice, startgas, value, payload = struct.unpack(curr_format, message)
         except (struct.error) as e:
             raise exceptions.UnpackError()
 
         contract_id = util.hexlify(contract_id)
-        # TODO: gas_price is an int
+        # TODO: gasprice is an int
 
         # ‘Apply transaction’!
-        apply_transaction(db, tx, contract_id, gas_price, gas_start, value, payload)
+        apply_transaction(db, tx, contract_id, gasprice, startgas, value, payload)
 
     except exceptions.UnpackError as e:
-        contract_id, gas_price, gas_start, value, payload = None, None, None, None, None
+        contract_id, gasprice, startgas, value, payload = None, None, None, None, None
         status = 'invalid: could not unpack'
         output = None
     except util.ContractError as e:
@@ -271,7 +293,7 @@ def parse (db, tx, message):
         print(contract_id)
         output = None
     except OutOfGas as e:
-        logging.debug('TX OUT_OF_GAS (gas_start: {}, gas_remaining: {})'.format(gas_start, gas_remaining))
+        logging.debug('TX OUT_OF_GAS (startgas: {}, gas_remaining: {})'.format(startgas, gas_remaining))
         status = 'out of gas'
         output = None
     finally:
@@ -287,8 +309,8 @@ def parse (db, tx, message):
             'block_index': tx['block_index'],
             'source': tx['source'],
             'contract_id': contract_id,
-            'gas_price': gas_price,
-            'gas_start': gas_start,
+            'gasprice': gasprice,
+            'startgas': startgas,
             'gas_cost': gas_cost,
             'gas_remaining': gas_remaining,
             'value': value,
@@ -296,7 +318,7 @@ def parse (db, tx, message):
             'output': output,
             'status': status
         }
-        sql='insert into executions values(:tx_index, :tx_hash, :block_index, :source, :contract_id, :gas_price, :gas_start, :gas_cost, :gas_remaining, :value, :data, :output, :status)'
+        sql='insert into executions values(:tx_index, :tx_hash, :block_index, :source, :contract_id, :gasprice, :startgas, :gas_cost, :gas_remaining, :value, :data, :output, :status)'
         cursor = db.cursor()
         cursor.execute(sql, bindings)
 
@@ -310,10 +332,11 @@ class Message(object):
         self.value = value
         self.gas = gas
         self.data = data
+        # TODO: self.decoded_data = util_rlp.decode_datalist(data) # TODO: This can confuse endianness.
 
 CREATE_CONTRACT_ADDRESS = ''
 
-def apply_transaction(db, tx, to, gas_price, gas_start, value, payload):
+def apply_transaction(db, tx, to, gasprice, startgas, value, payload):
     assert type(payload) == bytes
 
     gas_remaining = 0
@@ -324,27 +347,26 @@ def apply_transaction(db, tx, to, gas_price, gas_start, value, payload):
 
     # Check intrinsic gas used by contract.
     intrinsic_gas_used = GTXDATA * len(payload) + GTXCOST
-    if gas_start < intrinsic_gas_used:
-        raise InsufficientStartGas(gas_start, intrinsic_gas_used)
+    if startgas < intrinsic_gas_used:
+        raise InsufficientStartGas(startgas, intrinsic_gas_used)
 
     # Check cost required for down payment.
-    total_initial_cost = value + gas_price * gas_start
+    total_initial_cost = value + gasprice * startgas
     balance = util.get_balance(db, tx['source'], config.XCP) 
     if balance < total_initial_cost:
         raise InsufficientBalance(balance, total_initial_cost)
 
-    tx_dict = {'source': tx['source'],
-               'payload': util.hexlify(payload), 
-               'tx_hash': tx['tx_hash'],
+    tx_dict = {'sender': tx['source'],
+               'data': util.hexlify(payload), 
                'to': to,
-               'gas_price': gas_price,
-               'gas_start': util.devise(db, gas_start, config.XCP, 'output'),
-               'value': util.devise(db, value, config.XCP, 'output'),
-              }
-    logging.debug('TX NEW {}'.format(tx_dict))
+               'gasprice': gasprice,
+               'startgas': startgas,
+               'value': value}
+    log('\nTX NEW', tx_dict)
+    
 
-    util.debit(db, tx['block_index'], tx['source'], config.XCP, gas_price * gas_start, action='start execution', event=tx['tx_hash'])
-    gas_cost += gas_price * gas_start
+    util.debit(db, tx['block_index'], tx['source'], config.XCP, gasprice * startgas, action='start execution', event=tx['tx_hash'])
+    gas_cost += gasprice * startgas
 
     # TODO
     """
@@ -366,7 +388,7 @@ def apply_transaction(db, tx, to, gas_price, gas_start, value, payload):
     """
 
     ### NEW ###
-    message_gas = gas_start - intrinsic_gas_used
+    message_gas = startgas - intrinsic_gas_used
     message = Message(tx['source'], to, value, message_gas, payload)
 
     global postqueue    # TODO: Yuck
@@ -388,9 +410,9 @@ def apply_transaction(db, tx, to, gas_price, gas_start, value, payload):
     assert gas_remained >= 0
     ### NEW ###
 
-    logging.debug('TX SUCCESS')
+    logging.debug('TX SUCCESS\n\n\n')
     gas_remaining = int(gas_remaining)  # TODO: BAD
-    gas_used = gas_start - gas_remaining
+    gas_used = startgas - gas_remaining
     gas_cost -= gas_remaining
 
     # Return remaining gas to source.
@@ -451,6 +473,15 @@ def create_contract(db, tx, msg):
     return True, gas, contract_id
 
 
+def get_msg_state(db, msg, code):
+    msg_state = {}
+    msg_state['contract'] = msg.to
+    msg_state['balance'] = util.get_balance(db, msg.to, config.XCP)
+    storages = ['{}: {}'.format(hexprint(storage['key']), storage['value']) for storage in get_storage_data(db, msg.to)]
+    msg_state['storage'] = storages
+    msg_state['code'] = code
+    return msg_state
+    
 
 class Compustate():
     def __init__(self, **kwargs):
@@ -461,27 +492,24 @@ class Compustate():
         for kw in kwargs:
             setattr(self, kw, kwargs[kw])
 def apply_msg(db, tx, msg, code):
-    logging.debug('CONTRACT PRE STATE (balance: {}, storage: {})'.format(util.devise(db, util.get_balance(db, msg.to, config.XCP), config.XCP, 'output'), get_storage_data(db, msg.to)))
-    logging.debug('BEGIN RUN (tx: {}, sender: {}, to: {}, value: {}, gas: {}, data {})'.format(tx['tx_hash'], msg.sender, msg.to, msg.value, msg.gas, hexprint(msg.data)))
+    logging.debug('\n')
+    new_dict = vars(msg).copy()
+    new_dict.update(get_msg_state(db, msg, code))
+    logging.info('\nBEGIN MESSAGE') # TODO
+    log('', new_dict)
 
     # Transfer value (instaquit if there isn’t enough).
     try:
         util.debit(db, tx['block_index'], msg.sender, config.XCP, msg.value, action='transfer value', event=tx['tx_hash'])
     except exceptions.BalanceError as e:
-        print('balance_error')  # TODO
-        raise e # TODO
+        raise e # TODO (avoid instaquit for debugging purposes)
         return 1, msg.gas, []
     util.credit(db, tx['block_index'], msg.to, config.XCP, msg.value, action='transfer value', event=tx['tx_hash'])
-
-    logging.debug('PAYLOAD {}'.format(hexprint(msg.data)))
-    logging.debug('DECODED PAYLOAD {}'.format(util_rlp.decode_datalist(msg.data))) # TODO: This can confuse endianness.
-    logging.debug('CODE {}'.format(hexprint(code)))
 
     processed_code = [opcodes.get(c, ['INVALID', 0, 0, [], 0]) + [c] for c in code]
     # logging.debug('PROCESSED_CODE {}'.format(processed_code))
 
     # Snapshot.
-    logging.debug('SNAPSHOT')
     try:
         with db:
 
@@ -491,23 +519,31 @@ def apply_msg(db, tx, msg, code):
             # Main loop
             t = time.time()
             ops = 0
+            logging.info('')
             while True:
                 data = apply_op(db, tx, msg, processed_code, compustate)
                 ops += 1
                 if data is not None:
                     gas_remaining = compustate.gas
 
+                    msg_applied = {'result': bytes(data),
+                                   'sender': msg.sender,
+                                   'to': msg.to,
+                                   'gas_remaining': gas_remaining}
+                    new_dict = msg_applied.copy()
+                    new_dict.update(get_msg_state(db, msg, code))
+                    logging.info('')
+                    log('', new_dict)
+                    logging.info('END MESSAGE\n')
+
                     if data == OUT_OF_GAS:
-                        logging.debug('REVERTING')
+                        logging.debug('### REVERTING ###')
                         raise OutOfGas
                         result = 0
                         data = []
                     else:
                         result = 1
 
-                    balance = util.devise(db, util.get_balance(db, msg.to, config.XCP), config.XCP, 'output')
-                    logging.debug('END RUN (result: {}, data: {}, gas_remained: {}, ops: {}, time_per_op: {})'.format(result, hexprint(data), compustate.gas, ops, (time.time() - t) / ops))
-                    logging.debug('CONTRACT POST STATE (balance: {}, storage: {})'.format(util.devise(db, util.get_balance(db, msg.to, config.XCP), config.XCP, 'output'), get_storage_data(db, msg.to)))
                     return result, gas_remaining, data
     except OutOfGas as e:
         result = 0
@@ -582,8 +618,6 @@ def apply_op(db, tx, msg, processed_code, compustate):
     if fee > compustate.gas:
         return out_of_gas_exception('base_gas', fee, compustate, op)
 
-    logging.debug('STK {}'.format(list(reversed(compustate.stack))))
-
     for i in range(0, len(compustate.memory), 16):
         memblk = compustate.memory[i:i+16]
         # logging.debug('MEM {}'.format(memprint(memblk)))
@@ -592,9 +626,11 @@ def apply_op(db, tx, msg, processed_code, compustate):
     for line in get_storage_data(db, msg.to):
         logging.debug('STORAGE {}: {}'.format(util.hexlify(line['key']), line['value']))
 
-    log_args = dict(pc=compustate.pc,
+    # Log operation
+    log_args = dict(pc=str(compustate.pc).zfill(3),
                     op=op,
-                    stackargs=compustate.stack[-1:-in_args-1:-1],
+                    sargs=compustate.stack[-1:-in_args-1:-1],
+                    stack=list(reversed(compustate.stack)),
                     gas=compustate.gas)
     if op[:4] == 'PUSH':
         ind = compustate.pc + 1
@@ -602,7 +638,7 @@ def apply_op(db, tx, msg, processed_code, compustate):
             bytearray_to_int([x[-1] for x in processed_code[ind: ind + int(op[4:])]])
     elif op == 'CALLDATACOPY':
         log_args['data'] = binascii.hexlify(msg.data)
-    logging.debug('OP {}'.format(log_args))
+    log('OP', log_args)
 
     # Apply operation
     compustate.gas -= fee
@@ -824,7 +860,7 @@ def apply_op(db, tx, msg, processed_code, compustate):
         logging.debug('SUB CONTRACT NEW (sender: {}, value: {}, data: {})'.format(msg.to, value, util.hexlify(data)))
         create_msg = Message(msg.to, '', value, compustate.gas, data)
         result, gas, data = create_contract(db, tx, create_msg)
-        print('addr data', binascii.unhexlify(data))
+        # print('addr data', binascii.unhexlify(data))
         addr = coerce_to_int(binascii.unhexlify(data))
         logging.debug('SUB CONTRACT OUT (address: {}, code: {})'.format(addr, data))
         if addr:
@@ -844,7 +880,6 @@ def apply_op(db, tx, msg, processed_code, compustate):
         compustate.gas -= gas
         to = encode_int(to)
         to = util.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
-        print('22222222222', to)
         # NOTE data = ''.join(map(chr, mem[meminstart: meminstart + meminsz]))
         data = bytes(mem[meminstart: meminstart + meminsz])
         logging.debug('SUB CALL NEW (sender: {}, to: {}, value: {}, gas: {}, data: {})'.format(msg.to, to, value, gas, util.hexlify(data)))

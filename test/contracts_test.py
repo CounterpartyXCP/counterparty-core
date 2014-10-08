@@ -40,7 +40,7 @@ sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/counterpartyd.unittest.db', testnet=True, testcoin=False, backend_rpc_ssl_verify=False)
 
 import logging
-logging.basicConfig(level=logging.DEBUG, format='%(message)s')
+logging.basicConfig(level=logging.INFO, format='%(message)s')
 
 i = 0
 
@@ -91,11 +91,10 @@ class tester(object):
             contract_id = util.contract_sha3(code + bytes(i))
             tx_hash = contract_id
 
-            # Give XCP to sender.
             util.credit(db, 0, to, config.XCP, max(endowment*2, 100000000), action='unit test', event='facefeed')
 
             success, data = tester.state.do_send(self, to, '', endowment, data=code)
-            print('create_contract data', data)
+            # print('create_contract data', data)
 
             # TODO
             contract_id = data
@@ -147,8 +146,8 @@ class tester(object):
             gas_available = gas_start - intrinsic_gas_used
 
             # Run.
-            print('to to apply', to)
-            print('data to apply', data, type(data))
+            # print('to to apply', to)
+            # print('data to apply', data, type(data))
             success, data = execute.apply_transaction(db, tx, to, gas_price, gas_start, value, data) 
 
             # Decode, return result.
@@ -156,15 +155,16 @@ class tester(object):
 
 
         def send (self, sender, to, value, data=[]):
-            print('tuple', sender, to, value, data)
+            # print('tuple', sender, to, value, data)
 
             # Encode data.
             data = serpent.encode_datalist(data)
             data = binascii.unhexlify(data)
 
             # Execute contract.
-            print('qux', data, type(data))
-            success, data = tester.state.do_send(self, '', to, value, data=data)
+            # print('qux', data, type(data))
+            util.credit(db, 0, sender, config.XCP, 100000000, action='unit test', event='facefeed')
+            success, data = tester.state.do_send(self, sender, to, value, data=data)
             decoded_data = util_rlp.decode_datalist(bytes(data))
             return decoded_data
 
