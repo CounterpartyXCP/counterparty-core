@@ -10,7 +10,7 @@ import time
 import logging
 import string
 import json
-import pprint
+import pickle
 
 from lib import (util, config, exceptions, bitcoin, util, util_rlp)
 
@@ -331,8 +331,8 @@ def parse (db, tx, message):
 
 class Message(object):
     def __init__(self, sender, to, value, gas, data):
-        # print('init msg.data', data)
-        import time; time.sleep(3)
+        assert type(sender) == str
+        assert type(to) == str
         self.sender = sender
         self.to = to
         self.value = value
@@ -394,11 +394,20 @@ def apply_transaction(db, tx, to, gasprice, startgas, value, payload):
     message_gas = startgas - intrinsic_gas_used
     message = Message(tx['source'], to, value, message_gas, payload)
 
-    global postqueue    # TODO: Yuck
-    postqueue = [ message ]
     primary_result = None
-    while len(postqueue):
-        message = postqueue.pop(0)
+
+    # Postqueue
+    cursor = db.cursor()
+    cursor.execute('''DELETE FROM postqueue''')
+    cursor.execute('''INSERT INTO postqueue VALUES(:message)''', {'message': pickle.dumps(message)})
+    def postqueue_pop():
+        postqueues = list(cursor.execute('''SELECT * FROM postqueue ORDER BY rowid ASC'''))
+        first_message_pickled = postqueues[0]['message']                                                # Get first entry.
+        cursor.execute('''DELETE FROM postqueue WHERE rowid = (SELECT MIN(rowid) FROM postqueue)''')    # Delete first entry.
+        return pickle.loads(first_message_pickled)
+
+    while list(cursor.execute('''SELECT * FROM postqueue''')):
+        message = postqueue_pop()
         if to and to != CREATE_CONTRACT_ADDRESS:
             result, gas_remained, data = apply_msg(db, tx, message, get_code(db, message.to))  # NOTE: apply_msg_send
         else:
@@ -933,13 +942,14 @@ def apply_op(db, tx, msg, processed_code, compustate):
             return out_of_gas_exception('subcall gas', gas, compustate, op)
         compustate.gas -= gas
         to = encode_int(to)
-        to = binascii.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
+        to = util.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
         # NOTE data = ''.join(map(chr, mem[meminstart: meminstart + meminsz]))
         data = bytes(mem[meminstart: meminstart + meminsz])
         post_dict = {'sender': msg.to, 'to': to, 'value': value, 'gas': gas, 'data': util.hexlify(data)}
         log('POST NEW', post_dict)
         post_msg = Message(msg.to, to, value, gas, data)
-        block.postqueue.append(post_msg)
+        cursor = db.cursor()
+        cursor.execute('''INSERT INTO postqueue VALUES(:message)''', {'message': pickle.dumps(post_msg)})
     elif op == 'CALL_STATELESS':
         gas, to, value, meminstart, meminsz, memoutstart, memoutsz = \
             stk.pop(), stk.pop(), stk.pop(), stk.pop(), stk.pop(), stk.pop(), stk.pop()

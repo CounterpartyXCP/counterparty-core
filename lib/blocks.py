@@ -27,7 +27,7 @@ TABLES = ['credits', 'debits', 'messages'] + \
          'bet_expirations', 'bets', 'broadcasts', 'btcpays', 'burns',
          'callbacks', 'cancels', 'dividends', 'issuances', 'sends',
          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
-         'rps_matches', 'rps', 'executions', 'contracts', 'storage']
+         'rps_matches', 'rps', 'executions', 'contracts', 'storage', 'suicides', 'nonces', 'postqueue']
 
 def check_conservation (db):
     logging.debug('Status: Checking for conservation of assets.')
@@ -917,6 +917,11 @@ def initialise(db):
                       contract_id TEXT PRIMARY KEY,
                       nonce INTEGER,
                       FOREIGN KEY (contract_id) REFERENCES contracts(contract_id))
+                  ''')
+
+    # Postqueu
+    cursor.execute('''CREATE TABLE IF NOT EXISTS postqueue(
+                      message BLOB)
                   ''')
 
     # Messages
