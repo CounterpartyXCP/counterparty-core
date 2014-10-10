@@ -851,6 +851,7 @@ def apply_op(db, tx, msg, processed_code, compustate):
             out_of_gas_exception('sstore trie expansion', gascost, compustate, op)
         compustate.gas -= gascost
         set_storage_data(db, msg.to, s0, s1)
+        print('SSTORE', msg.to, s0, s1)
     elif op == 'JUMP':
         compustate.pc = stk.pop()
     elif op == 'JUMPI':

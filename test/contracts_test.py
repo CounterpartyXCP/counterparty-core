@@ -34,6 +34,7 @@ import binascii
 import os
 import sys
 import pytest
+import time
 
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
@@ -86,6 +87,16 @@ class tester(object):
 
             
     class state(object):
+        def snapshot(self):
+            cursor = db.cursor()
+            name = 'xyz'
+            cursor.execute('''SAVEPOINT {}'''.format(name))
+            return name
+
+        def revert(self, name):
+            cursor = db.cursor()
+            cursor.execute('''ROLLBACK TO SAVEPOINT {}'''.format(name))
+
         def create_contract(self, code, endowment=0, sender=''):
             if not sender:
                 sender = util.contract_sha3('foo'.encode('utf-8'))
@@ -143,7 +154,7 @@ class tester(object):
                    'gas_price': gas_price,
                    'gas_start': gas_start,
                    'value': value,
-                   'timestamp': 1412952832
+                   'timestamp': round(time.time())
                  }
 
             # Variables!
