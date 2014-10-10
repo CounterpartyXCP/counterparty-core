@@ -142,7 +142,8 @@ class tester(object):
                    'contract_id': to,
                    'gas_price': gas_price,
                    'gas_start': gas_start,
-                   'value': value
+                   'value': value,
+                   'timestamp': 1412952832
                  }
 
             # Variables!
@@ -167,7 +168,7 @@ class tester(object):
 
             # Execute contract.
             # print('qux', data, type(data))
-            util.credit(db, 0, sender, config.XCP, 100000000, action='unit test', event='facefeed')
+            util.credit(db, 0, sender, config.XCP, value + 100000000, action='unit test', event='facefeed')
             success, data = tester.state.do_send(self, sender, to, value, data=data)
             decoded_data = util_rlp.decode_datalist(bytes(data))
             return decoded_data

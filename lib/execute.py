@@ -742,7 +742,9 @@ def apply_op(db, tx, msg, processed_code, compustate):
     elif op == 'ADDRESS':
         stk.append(coerce_to_int(msg.to))
     elif op == 'BALANCE':
-        stk.append(util.get_balance(coerce_addr_to_hex(stk.pop()), config.XCP))
+        addr = stk.pop()
+        addr = util.hexlify(addr.to_bytes(32, byteorder='big'))
+        stk.append(util.get_balance(db, addr, config.XCP))
     elif op == 'ORIGIN':
         stk.append(coerce_to_int(tx['source']))
     elif op == 'CALLER':
@@ -800,16 +802,21 @@ def apply_op(db, tx, msg, processed_code, compustate):
             else:
                 mem[s1 + i] = 0
     elif op == 'PREVHASH':
+        # TODO
         stk.append(util_rlp.big_endian_to_int(block.prevhash))
     elif op == 'COINBASE':
+        # TODO
         stk.append(util_rlp.big_endian_to_int(binascii.unhexlify(block.coinbase)))
     elif op == 'TIMESTAMP':
-        stk.append(block.timestamp)
+        stk.append(tx['timestamp'])
     elif op == 'NUMBER':
+        # TODO
         stk.append(block.number)
     elif op == 'DIFFICULTY':
+        # TODO
         stk.append(block.difficulty)
     elif op == 'GASLIMIT':
+        # TODO
         stk.append(block.gas_limit)
     elif op == 'POP':
         stk.pop()
@@ -888,7 +895,7 @@ def apply_op(db, tx, msg, processed_code, compustate):
             return OUT_OF_GAS
         # NOTE data = ''.join(map(chr, mem[mstart: mstart + msz]))
         data = bytes(mem[mstart: mstart + msz])
-        log('SUB CONTRACT NEW', {'sender': msg.to, 'to': to, 'value': value, 'data': util.hexlify(data)})
+        log('SUB CONTRACT NEW', {'sender': msg.to, 'value': value, 'data': util.hexlify(data)})
         create_msg = Message(msg.to, '', value, compustate.gas, data)
         result, gas, data = create_contract(db, tx, create_msg)
         # print('addr data', binascii.unhexlify(data))
