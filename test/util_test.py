@@ -355,7 +355,7 @@ def reparse(testnet=True):
     for block in memory_cursor.fetchall():
         try:
             logger.info('Block (re‐parse): {}'.format(str(block['block_index'])))
-            previous_hash = blocks.parse_block(memory_db, block['block_index'], block['block_time'], previous_hash)
+            previous_hash = blocks.parse_block(memory_db, block['block_index'], block['block_time'], previous_hash, block['movements_hash'])
         except ConsensusError as e:
             new_movements = get_block_movements(memory_db, block['block_index'])
             old_movements = get_block_movements(prod_db, block['block_index'])
