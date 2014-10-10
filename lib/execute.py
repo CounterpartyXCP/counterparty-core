@@ -225,7 +225,7 @@ def log (name, obj):
 
 
 def compose (db, source, contract_id, gasprice, startgas, value, payload_hex):
-    code = get_code(db, contract_id)
+    code = block.get_code(db, contract_id)
     payload = binascii.unhexlify(payload_hex)
     # TODO: Check start_gas, gasprice here?
 
@@ -379,7 +379,7 @@ class rlp(object):
     def encode(s):
         sender, nonce = s[0], s[1]
         if nonce == b'': nonce_byte = b'\x80'
-        else: nonce_byte = nonce.to_bytes(1, byteorder='big')
+        else: nonce_byte = nonce
         return b'\xd6\x94' + bytes(s[0]) + nonce_byte
     # TODO
 
@@ -531,7 +531,8 @@ def apply_transaction(db, tx):
         block.transfer_value(
             db, tx, None, tx.sender, tx.gasprice * gas_remained)
         if tx.to:
-            output = ''.join(map(chr, data))
+            # output = ''.join(map(chr, data))
+            output = bytes(data)
         else:
             output = result
     # TODO: block.commit_state()
@@ -540,7 +541,7 @@ def apply_transaction(db, tx):
     cursor = db.cursor()
     suicides = list(cursor.execute('''SELECT * FROM suicides'''))
     for s in suicides:
-        block.del_account(s)
+        block.del_account(db, s)
     cursor.execute('''DELETE FROM suicides''')
     success = output is not OUT_OF_GAS
     return success, output if success else ''
@@ -869,15 +870,15 @@ def apply_op(db, tx, msg, processed_code, compustate):
         data = bytes(mem[s0: s0 + s1])
         stk.append(util_rlp.big_endian_to_int(sha3(data)))
     elif op == 'ADDRESS':
-        stk.append(coerce_to_int(msg.to))
+        stk.append(utils.coerce_to_int(msg.to))
     elif op == 'BALANCE':
         addr = stk.pop()
         addr = util.hexlify(addr.to_bytes(32, byteorder='big'))
         stk.append(util.get_balance(db, addr, config.XCP))
     elif op == 'ORIGIN':
-        stk.append(coerce_to_int(tx['source']))
+        stk.append(utils.coerce_to_int(tx.sender))
     elif op == 'CALLER':
-        stk.append(coerce_to_int(msg.sender))
+        stk.append(utils.coerce_to_int(msg.sender))
     elif op == 'CALLVALUE':
         stk.append(msg.value)
     elif op == 'CALLDATALOAD':
@@ -908,7 +909,7 @@ def apply_op(db, tx, msg, processed_code, compustate):
             else:
                 mem[s0 + i] = 0
     elif op == 'GASPRICE':
-        stk.append(tx['gasprice'])
+        stk.append(tx.gasprice)
     elif op == 'CODECOPY':
         s0, s1, s2 = stk.pop(), stk.pop(), stk.pop()
         if not mem_extend(mem, compustate, op, s0 + s2):
@@ -922,7 +923,7 @@ def apply_op(db, tx, msg, processed_code, compustate):
         stk.append(len(get_code(db, stk.pop()) or ''))
     elif op == 'EXTCODECOPY':
         addr, s1, s2, s3 = stk.pop(), stk.pop(), stk.pop(), stk.pop()
-        extcode = get_code(db, addr) or ''
+        extcode = block.get_code(db, addr) or ''
         if not mem_extend(mem, compustate, op, s1 + s3):
             return OUT_OF_GAS
         for i in range(s3):
@@ -937,7 +938,7 @@ def apply_op(db, tx, msg, processed_code, compustate):
         # TODO
         stk.append(util_rlp.big_endian_to_int(binascii.unhexlify(block.coinbase)))
     elif op == 'TIMESTAMP':
-        stk.append(tx['timestamp'])
+        stk.append(tx.timestamp)
     elif op == 'NUMBER':
         # TODO
         stk.append(block.number)
@@ -1031,7 +1032,7 @@ def apply_op(db, tx, msg, processed_code, compustate):
         address = result
         code = block.get_code(db, address)
         log('SUB CONTRACT OUT', {'address': address, 'code': code})
-        addr = util.coerce_to_int(address)
+        addr = utils.coerce_to_int(address)
         if addr:
             stk.append(addr)
             compustate.gas = gas
@@ -1076,7 +1077,7 @@ def apply_op(db, tx, msg, processed_code, compustate):
         if compustate.gas < gas:
             return out_of_gas_exception('subcall gas', gas, compustate, op)
         compustate.gas -= gas
-        to = encode_int(to)
+        to = utils.encode_int(to)
         to = util.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
         # NOTE data = ''.join(map(chr, mem[meminstart: meminstart + meminsz]))
         data = bytes(mem[meminstart: meminstart + meminsz])
@@ -1094,13 +1095,13 @@ def apply_op(db, tx, msg, processed_code, compustate):
         if compustate.gas < gas:
             return out_of_gas_exception('subcall gas', gas, compustate, op)
         compustate.gas -= gas
-        to = encode_int(to)
+        to = utils.encode_int(to)
         to = util.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
         # NOTE data = ''.join(map(chr, mem[meminstart: meminstart + meminsz]))
         data = bytes(mem[meminstart: meminstart + meminsz])
         logging.debug('SUB CALL NEW (sender: {}, to: {}, value: {}, gas: {}, data: {})'.format(msg.to, to, value, gas, util.hexlify(data)))
         call_msg = Message(msg.to, to, value, gas, data)
-        code = get_code(db, call_msg.to)
+        code = block.get_code(db, call_msg.to)
         result, gas, data = apply_msg(db, tx, call_msg, code)
         logging.debug('SUB CALL OUT (result: {}, data: {}, length: {}, expected: {}'.format(result, data, len(data), memoutsz))
         if result == 0:
@@ -1111,11 +1112,9 @@ def apply_op(db, tx, msg, processed_code, compustate):
             for i in range(min(len(data), memoutsz)):
                 mem[memoutstart + i] = data[i]
     elif op == 'SUICIDE':
-        to = encode_int(stk.pop())
+        to = utils.encode_int(stk.pop())
         to = binascii.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
-        transfer_value = util. get_balance(db, msg.to, config.XCP)
-        util.debit(db, tx['block_index'], msg.to, config.XCP, transfer_value, action='suicide', event=tx['tx_hash'])
-        util.credit(db, tx['block_index'], to, config.XCP, transfer_value, action='suicide', event=tx['tx_hash'])
+        block.transfer_value(db, tx, msg.to, to, util.get_balance(db, msg.to, config.XCP))
         new_suicide(db, msg.to)
         return []
     for a in stk:

@@ -163,8 +163,7 @@ class tester(object):
             # print('qux', data, type(data))
             util.credit(db, 0, sender, config.XCP, value + 100000000, action='unit test', event='facefeed')
             success, data = tester.state.do_send(self, sender, to, value, data=data)
-            decoded_data = util_rlp.decode_datalist(bytes(data, 'ascii'))
-            return decoded_data
+            return util_rlp.decode_datalist(bytes(data))
 
 
         class block(object):
@@ -182,7 +181,7 @@ class tester(object):
                 return execute.get_storage_data(db, contract_id, key)
 
             def get_balance(address):
-                return util.get_balance(db, address, config.XCP)
+                return execute.block.get_balance(db, address)
 
             
 def privtoaddr(x):
@@ -201,7 +200,10 @@ for i in range(10):
     exec('tester.a{} = keys[i]'.format(i))
 """
 tester.k0 = '82a978b3f5962a5b0957d9ee9eef472ee55b42f1'
-# ('a', '7d577a597b2742b498cb5cf0c26cdcd726d39e6e', 'dceceaf3fc5c0a63d195d69b1a90011b7b19650d', 'dceceaf3fc5c0a63d195d69b1a90011b7b19650d')
+tester.k1 = '7d577a597b2742b498cb5cf0c26cdcd726d39e6e'
+tester.a0 = '82a978b3f5962a5b0957d9ee9eef472ee55b42f1'
+tester.a1 = 'dceceaf3fc5c0a63d195d69b1a90011b7b19650d'
+tester.a2 = 'dceceaf3fc5c0a63d195d69b1a90011b7b19650d'
 
 
 def setup_function(function):
