@@ -178,7 +178,7 @@ class tester(object):
                 cursor.close()
 
             def get_storage_data(contract_id, key):
-                return execute.get_storage_data(db, contract_id, key)
+                return execute.block.get_storage_data(db, contract_id, key)
 
             def get_balance(address):
                 return execute.block.get_balance(db, address)
@@ -201,6 +201,7 @@ for i in range(10):
 """
 tester.k0 = '82a978b3f5962a5b0957d9ee9eef472ee55b42f1'
 tester.k1 = '7d577a597b2742b498cb5cf0c26cdcd726d39e6e'
+tester.k2 = '82a978b3f5962a5b0957d9ee9eef472ee55b42f1'
 tester.a0 = '82a978b3f5962a5b0957d9ee9eef472ee55b42f1'
 tester.a1 = 'dceceaf3fc5c0a63d195d69b1a90011b7b19650d'
 tester.a2 = 'dceceaf3fc5c0a63d195d69b1a90011b7b19650d'

@@ -145,29 +145,6 @@ def set_storage_data(db, contract_id, key, value):
 
     return value
 
-def get_storage_data(db, contract_id, key=None):
-    cursor = db.cursor()
-
-    if key == None:
-        cursor.execute('''SELECT * FROM storage WHERE contract_id = ? ''', (contract_id,))
-        storages = list(cursor)
-        return storages
-
-    # print('prekey', key)
-    key = key.to_bytes(32, byteorder='big')
-    cursor.execute('''SELECT * FROM storage WHERE contract_id = ? AND key = ?''', (contract_id, key))
-    storages = list(cursor)
-    # print('key', key)
-    if not storages:
-        return 0
-    value = storages[0]['value']
-
-    # TODO
-    value = util_rlp.big_endian_to_int(value)
-    # value = util_rlp.decode(value)
-
-    return value
-
 GDEFAULT = 1
 GMEMORY = 1
 GSTORAGE = 100
@@ -255,6 +232,7 @@ class transaction(object):
         self.gasprice = gasprice
         self.startgas = startgas
         self.value = value
+        self.timestamp = tx['timestamp']
     def hex_hash(self):
         return self.tx_hash
     def to_dict(self):
@@ -387,6 +365,36 @@ class rlp(object):
 
 class block(object):
     # TODO: use global `db`
+
+    # TODO: don’t use `with` for snapshots?!?!
+    def revert(snapshot):
+        logging.debug('### REVERTING ###')
+
+    def get_storage_data(db, contract_id, key=None):
+        cursor = db.cursor()
+
+        if key == None:
+            cursor.execute('''SELECT * FROM storage WHERE contract_id = ? ''', (contract_id,))
+            storages = list(cursor)
+            return storages
+
+        # print('prekey', key)
+        key = key.to_bytes(32, byteorder='big')
+        cursor.execute('''SELECT * FROM storage WHERE contract_id = ? AND key = ?''', (contract_id, key))
+        storages = list(cursor)
+        # print('key', key)
+        if not storages:
+            return 0
+        value = storages[0]['value']
+
+        # TODO
+        value = util_rlp.big_endian_to_int(value)
+        # value = util_rlp.decode(value)
+
+        return value
+
+    def account_to_dict(db, address):
+        return {'nonce': block.get_nonce(db, address), 'balance': block.get_balance(db, address),'storage': block.get_storage_data(db, address), 'code': block.get_code(db, address)}
 
     def get_code (db, contract_id):
         cursor = db.cursor()
@@ -662,7 +670,7 @@ def get_msg_state(db, msg, code):
     msg_state = {}
     # msg_state['contract'] = msg.to
     msg_state['balance'] = util.get_balance(db, msg.to, config.XCP)
-    storages = ['{}: {}'.format(hexprint(storage['key']), hexprint(storage['value'])) for storage in get_storage_data(db, msg.to)]
+    storages = ['{}: {}'.format(hexprint(storage['key']), hexprint(storage['value'])) for storage in block.get_storage_data(db, msg.to)]
     msg_state['storage'] = storages
     msg_state['code'] = code
     return msg_state
@@ -676,35 +684,45 @@ class Compustate():
         self.gas = 0
         for kw in kwargs:
             setattr(self, kw, kwargs[kw])
+
+
+
 def apply_msg(db, tx, msg, code):
+    """
     logging.debug('\n')
     new_dict = vars(msg).copy()
     new_dict.update(get_msg_state(db, msg, code))
     logging.debug('\nBEGIN MESSAGE') # TODO
     log('', new_dict)
+    """
 
-    # TRANSFER TODO
+    pblogger.log("MSG APPLY", tx=tx.hex_hash(), sender=msg.sender, to=msg.to,
+                                  gas=msg.gas, value=msg.value, data=hexprint(msg.data))
+    pblogger.log('MSG PRE STATE', account=msg.to, state=block.account_to_dict(db, msg.to))
+    # Transfer value, instaquit if not enough
+    o = block.transfer_value(db, tx, msg.sender, msg.to, msg.value)
+    if not o:
+        return 1, msg.gas, []
 
     processed_code = [opcodes.get(c, ['INVALID', 0, 0, [], 0]) + [c] for c in code]
     # logging.debug('PROCESSED_CODE {}'.format(processed_code))
 
-    # Snapshot.
     try:
+        # Snapshot.
         with db:
 
             # Initialise compustate.
             compustate = Compustate(gas=msg.gas)
+            t, ops = time.time(), 0
 
             # Main loop
-            t = time.time()
-            ops = 0
-            logging.debug('')
+            # logging.debug('')
             while True:
-                data = apply_op(db, tx, msg, processed_code, compustate)
+                o = apply_op(db, tx, msg, processed_code, compustate)
                 ops += 1
-                if data is not None:
-                    gas_remaining = compustate.gas
 
+                if o is not None:
+                    """"
                     # TODO: ugly
                     if data == OUT_OF_GAS:
                         data_printable = -1
@@ -720,21 +738,29 @@ def apply_msg(db, tx, msg, code):
                     logging.debug('')
                     log('', new_dict)
                     logging.debug('END MESSAGE\n')
+                    """
 
-                    if data == OUT_OF_GAS:
-                        logging.debug('### REVERTING ###')
+                    pblogger.log('MSG APPLIED', result=o, gas_remained=compustate.gas,
+                                sender=msg.sender, to=msg.to, ops=ops,
+                                time_per_op=(time.time() - t) / ops)
+                    pblogger.log('MSG POST STATE', account=msg.to,
+                                state=block.account_to_dict(db, msg.to))
+
+                    if o == OUT_OF_GAS:
                         raise OutOfGas
-                        result = 0
-                        data = []
+                        block.revert(snapshot)
                     else:
-                        result = 1
+                        return 1, compustate.gas, o
 
-                    return result, gas_remaining, data
+    # When out of gas, break out of the `with` and then `return`.
     except OutOfGas as e:
         result = 0
         data = []
-        return result, gas_remaining, data
+        gas_remained = compustate.gas
+        return result, gas_remained, data
         
+
+            
 
 
 def get_opcode(code, index):
@@ -785,7 +811,7 @@ def apply_op(db, tx, msg, processed_code, compustate):
         memblk = compustate.memory[i:i+16]
         # logging.debug('MEM {}'.format(memprint(memblk)))
 
-    # logging.debug('\tSTORAGE\n\t\t' + '\n\t\t'.join(['{}: {}'.format(hexprint(storage['key']), hexprint(storage['value'])) for storage in get_storage_data(db, msg.to)]))
+    # logging.debug('\tSTORAGE\n\t\t' + '\n\t\t'.join(['{}: {}'.format(hexprint(storage['key']), hexprint(storage['value'])) for storage in block.get_storage_data(db, msg.to)]))
 
     # Log operation
     log_args = dict(pc=str(compustate.pc).zfill(3),
@@ -920,7 +946,7 @@ def apply_op(db, tx, msg, processed_code, compustate):
             else:
                 mem[s0 + i] = 0
     elif op == 'EXTCODESIZE':
-        stk.append(len(get_code(db, stk.pop()) or ''))
+        stk.append(len(block.get_code(db, stk.pop()) or ''))
     elif op == 'EXTCODECOPY':
         addr, s1, s2, s3 = stk.pop(), stk.pop(), stk.pop(), stk.pop()
         extcode = block.get_code(db, addr) or ''
@@ -971,17 +997,16 @@ def apply_op(db, tx, msg, processed_code, compustate):
             return OUT_OF_GAS
         mem[s0] = s1 % 256
     elif op == 'SLOAD':
-        stk.append(get_storage_data(db, msg.to, stk.pop()))
+        stk.append(block.get_storage_data(db, msg.to, stk.pop()))
     elif op == 'SSTORE':
         s0, s1 = stk.pop(), stk.pop()
-        pre_occupied = GSTORAGE if get_storage_data(db, msg.to, s0) else 0
+        pre_occupied = GSTORAGE if block.get_storage_data(db, msg.to, s0) else 0
         post_occupied = GSTORAGE if s1 else 0
         gascost = GSTORAGE + post_occupied - pre_occupied
         if compustate.gas < gascost:
             out_of_gas_exception('sstore trie expansion', gascost, compustate, op)
         compustate.gas -= gascost
         set_storage_data(db, msg.to, s0, s1)
-        print('SSTORE', msg.to, s0, s1)
     elif op == 'JUMP':
         compustate.pc = stk.pop()
     elif op == 'JUMPI':
