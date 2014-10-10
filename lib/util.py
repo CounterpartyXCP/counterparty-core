@@ -16,7 +16,7 @@ import binascii
 import hashlib
 import sha3
 
-from . import (config, exceptions)
+from . import (config, exceptions, util_rlp)
 
 D = decimal.Decimal
 b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -798,5 +798,14 @@ def contract_sha3 (b):
 # Why on Earth does `binascii.hexlify()` return bytes?!
 def hexlify(x):
     return binascii.hexlify(x).decode('ascii')
+
+
+
+def encode_int(v):
+    # encodes an integer into serialization
+    if not isinstance(v, int) or v < 0 or v >= 2 ** 256:
+        raise Exception("Integer invalid or out of range")
+    return util_rlp.int_to_big_endian(v)
+
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

@@ -99,7 +99,7 @@ class tester(object):
 
         def create_contract(self, code, endowment=0, sender=''):
             if not sender:
-                sender = util.contract_sha3('foo'.encode('utf-8'))
+                sender = '82a978b3f5962a5b0957d9ee9eef472ee55b42f1' # PyEthereum uses ECDSA to derive this string from `sender = 0`.
 
             global i
             i += 1
@@ -109,7 +109,6 @@ class tester(object):
             util.credit(db, 0, sender, config.XCP, max(endowment*2, 100000000), action='unit test', event='facefeed')
 
             success, data = tester.state.do_send(self, sender, '', endowment, data=code)
-            # print('create_contract data', data)
 
             # TODO
             contract_id = data
@@ -142,29 +141,19 @@ class tester(object):
                 sender = util.contract_sha3('foo'.encode('utf-8'))
 
 
-            gas_price = 1
-            gas_start = tester.gas_limit
+            gasprice = 1
+            startgas = tester.gas_limit
 
             # Construct `tx`.
             tx = { 'source': sender,
                    'block_index': 0,
-                   'data': data,
                    'tx_hash': to, 
-                   'contract_id': to,
-                   'gas_price': gas_price,
-                   'gas_start': gas_start,
-                   'value': value,
                    'timestamp': round(time.time())
                  }
-
-            # Variables!
-            intrinsic_gas_used = execute.GTXDATA * len(data) + execute.GTXCOST
-            gas_available = gas_start - intrinsic_gas_used
+            tx_obj = execute.transaction(tx, to, gasprice, startgas, value, data)
 
             # Run.
-            # print('to to apply', to)
-            # print('data to apply', data, type(data))
-            success, data = execute.apply_transaction(db, tx, to, gas_price, gas_start, value, data) 
+            success, data = execute.apply_transaction(db, tx_obj)
 
             # Decode, return result.
             return success, data
@@ -207,6 +196,7 @@ def privtoaddr(x):
     x = binascii.unhexlify(x)
     return binascii.hexlify(x[::-1]).decode('utf-8')
 
+"""
 accounts = []
 keys = []
 for i in range(10):
@@ -216,6 +206,10 @@ for i in range(10):
     exec('tester.k{} = keys[i]'.format(i))
     # exec('tester.a{} = accounts[i]'.format(i))
     exec('tester.a{} = keys[i]'.format(i))
+"""
+tester.k0 = '82a978b3f5962a5b0957d9ee9eef472ee55b42f1'
+# ('a', '7d577a597b2742b498cb5cf0c26cdcd726d39e6e', 'dceceaf3fc5c0a63d195d69b1a90011b7b19650d', 'dceceaf3fc5c0a63d195d69b1a90011b7b19650d')
+
 
 def setup_function(function):
     try:
