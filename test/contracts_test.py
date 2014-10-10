@@ -86,16 +86,18 @@ class tester(object):
 
             
     class state(object):
-        def create_contract(self, code, endowment=0):
-            to = util.contract_sha3('foo'.encode('utf-8'))
+        def create_contract(self, code, endowment=0, sender=''):
+            if not sender:
+                sender = util.contract_sha3('foo'.encode('utf-8'))
+
             global i
             i += 1
             contract_id = util.contract_sha3(code + bytes(i))
             tx_hash = contract_id
 
-            util.credit(db, 0, to, config.XCP, max(endowment*2, 100000000), action='unit test', event='facefeed')
+            util.credit(db, 0, sender, config.XCP, max(endowment*2, 100000000), action='unit test', event='facefeed')
 
-            success, data = tester.state.do_send(self, to, '', endowment, data=code)
+            success, data = tester.state.do_send(self, sender, '', endowment, data=code)
             # print('create_contract data', data)
 
             # TODO
@@ -104,9 +106,9 @@ class tester(object):
             return contract_id
 
 
-        def evm(self, evmcode, endowment=0):
+        def evm(self, evmcode, endowment=0, sender=''):
             # Publish code.
-            contract_id = tester.state.create_contract(self, evmcode, endowment=endowment)
+            contract_id = tester.state.create_contract(self, evmcode, endowment=endowment, sender=sender)
 
             # Return contract_id.
             return contract_id
@@ -119,7 +121,7 @@ class tester(object):
             else:
                 evmcode = b''
 
-            foobar = tester.state.evm(self, evmcode, endowment=endowment)
+            foobar = tester.state.evm(self, evmcode, endowment=endowment, sender=sender)
             return foobar
 
 
@@ -200,7 +202,8 @@ for i in range(10):
     keys.append(util.contract_sha3(str(i).encode('utf-8')))
     accounts.append(privtoaddr(keys[-1]))
     exec('tester.k{} = keys[i]'.format(i))
-    exec('tester.a{} = accounts[i]'.format(i))
+    # exec('tester.a{} = accounts[i]'.format(i))
+    exec('tester.a{} = keys[i]'.format(i))
 
 def setup_function(function):
     try:

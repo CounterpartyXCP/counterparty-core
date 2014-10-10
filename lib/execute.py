@@ -655,10 +655,7 @@ def apply_op(db, tx, msg, processed_code, compustate):
         memblk = compustate.memory[i:i+16]
         # logging.debug('MEM {}'.format(memprint(memblk)))
 
-    storage = []
-    for line in get_storage_data(db, msg.to):
-        # logging.debug('STORAGE {}: {}'.format(util.hexlify(line['key']), line['value']))
-        pass
+    # logging.debug('\tSTORAGE\n\t\t' + '\n\t\t'.join(['{}: {}'.format(hexprint(storage['key']), hexprint(storage['value'])) for storage in get_storage_data(db, msg.to)]))
 
     # Log operation
     log_args = dict(pc=str(compustate.pc).zfill(3),
