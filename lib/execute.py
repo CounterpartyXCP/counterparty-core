@@ -888,12 +888,12 @@ def apply_op(db, tx, msg, processed_code, compustate):
             return OUT_OF_GAS
         # NOTE data = ''.join(map(chr, mem[mstart: mstart + msz]))
         data = bytes(mem[mstart: mstart + msz])
-        logging.debug('SUB CONTRACT NEW (sender: {}, value: {}, data: {})'.format(msg.to, value, util.hexlify(data)))
+        log('SUB CONTRACT NEW', {'sender': msg.to, 'to': to, 'value': value, 'data': util.hexlify(data)})
         create_msg = Message(msg.to, '', value, compustate.gas, data)
         result, gas, data = create_contract(db, tx, create_msg)
         # print('addr data', binascii.unhexlify(data))
         addr = coerce_to_int(binascii.unhexlify(data))
-        logging.debug('SUB CONTRACT OUT (address: {}, code: {})'.format(addr, data))
+        log('SUB CONTRACT OUT', {'address': addr, 'code': data})
         if addr:
             stk.append(addr)
             compustate.gas = gas
@@ -913,11 +913,11 @@ def apply_op(db, tx, msg, processed_code, compustate):
         to = util.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
         # NOTE data = ''.join(map(chr, mem[meminstart: meminstart + meminsz]))
         data = bytes(mem[meminstart: meminstart + meminsz])
-        logging.debug('SUB CALL NEW (sender: {}, to: {}, value: {}, gas: {}, data: {})'.format(msg.to, to, value, gas, util.hexlify(data)))
+        log('SUB CALL NEW', {'sender': msg.to, 'to': to, 'value': value, 'gas': gas, 'data': util.hexlify(data)})
         call_msg = Message(msg.to, to, value, gas, data)
         code = get_code(db, call_msg.to)
         result, gas, data = apply_msg(db, tx, call_msg, code)
-        logging.debug('SUB CALL OUT (result: {}, data: {}, length: {}, expected: {}'.format(result, data, len(data), memoutsz))
+        log('SUB CALL OUT', {'result': result, 'data': data, 'length': data, 'expected': memoutsz})
         if result == 0:
             stk.append(0)
         else:
