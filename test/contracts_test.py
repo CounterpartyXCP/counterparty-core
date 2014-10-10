@@ -101,16 +101,9 @@ class tester(object):
             if not sender:
                 sender = '82a978b3f5962a5b0957d9ee9eef472ee55b42f1' # PyEthereum uses ECDSA to derive this string from `sender = 0`.
 
-            global i
-            i += 1
-            contract_id = util.contract_sha3(code + bytes(i))
-            tx_hash = contract_id
-
             util.credit(db, 0, sender, config.XCP, max(endowment*2, 100000000), action='unit test', event='facefeed')
 
             success, data = tester.state.do_send(self, sender, '', endowment, data=code)
-
-            # TODO
             contract_id = data
 
             return contract_id
@@ -170,7 +163,7 @@ class tester(object):
             # print('qux', data, type(data))
             util.credit(db, 0, sender, config.XCP, value + 100000000, action='unit test', event='facefeed')
             success, data = tester.state.do_send(self, sender, to, value, data=data)
-            decoded_data = util_rlp.decode_datalist(bytes(data))
+            decoded_data = util_rlp.decode_datalist(bytes(data, 'ascii'))
             return decoded_data
 
 

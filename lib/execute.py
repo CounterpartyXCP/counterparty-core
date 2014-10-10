@@ -109,18 +109,6 @@ def bytearray_to_int(arr):
 class ContractError(Exception):
     pass
 
-def get_code (db, contract_id):
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM contracts WHERE contract_id = ?''', (contract_id,))
-    contracts = list(cursor)
-
-    if not contracts:
-        return b''
-        # TODO: IMPORTANT raise ContractError('no such contract')
-    else: code = contracts[0]['code']
-
-    return code
-
 def set_storage_data(db, contract_id, key, value):
     # TODO: This could all be done more elegantly, I think.
 
@@ -376,11 +364,7 @@ class rlp(object):
                 raise Exception("input too long")
 
     def encode(s):
-        print('s', s)
-        # if not s:
-        #     return '\x80' if s == '' else '\xc0'
         if isinstance(s, str):
-            s = str(s)
             if len(s) == 1 and ord(s) < 128:
                 return s
             else:
@@ -390,10 +374,31 @@ class rlp(object):
 
         raise TypeError("Encoding of %s not supported" % type(s))
 
+    # TODO
+    # TODO: TERRIBLE HACK, but only using rlp.encode for addresses of one size and small nonces for testing.
+    def encode(s):
+        sender, nonce = s[0], s[1]
+        if nonce == b'': nonce_byte = b'\x80'
+        else: nonce_byte = nonce.to_bytes(1, byteorder='big')
+        return b'\xd6\x94' + bytes(s[0]) + nonce_byte
+    # TODO
+
 
 
 class block(object):
     # TODO: use global `db`
+
+    def get_code (db, contract_id):
+        cursor = db.cursor()
+        cursor.execute('''SELECT * FROM contracts WHERE contract_id = ?''', (contract_id,))
+        contracts = list(cursor)
+
+        if not contracts:
+            return b''
+            # TODO: IMPORTANT raise ContractError('no such contract')
+        else: code = contracts[0]['code']
+
+        return code
 
     def get_nonce(db, address):
         cursor = db.cursor()
@@ -408,7 +413,7 @@ class block(object):
         if not nonces:
             cursor.execute('''INSERT INTO nonces VALUES(:address, :nonce)''', {'address': address, 'nonce': nonce})
         else:
-            cursor.execute('''UPDATE contracts SET nonce = :nonce WHERE (address = :address)''', {'nonce': nonce, 'address': address})
+            cursor.execute('''UPDATE nonces SET nonce = :nonce WHERE (address = :address)''', {'nonce': nonce, 'address': address})
 
     def increment_nonce(db, address):
         nonce = block.get_nonce(db, address)
@@ -435,8 +440,8 @@ class block(object):
 
 
 
-def apply_msg_send(db, block, tx, msg):
-    return apply_msg(db, block, tx, msg, block.get_code(msg.to))
+def apply_msg_send(db, tx, msg):
+    return apply_msg(db, tx, msg, block.get_code(db, msg.to))
 
 class Message(object):
     def __init__(self, sender, to, value, gas, data):
@@ -529,7 +534,7 @@ def apply_transaction(db, tx):
             output = ''.join(map(chr, data))
         else:
             output = result
-    block.commit_state()
+    # TODO: block.commit_state()
 
     # Kill suicidal contract.
     cursor = db.cursor()
@@ -633,39 +638,23 @@ def create_contract(db, tx, msg):
     if tx.sender != msg.sender:
         block.increment_nonce(db, msg.sender)
     nonce = utils.encode_int(block.get_nonce(db, msg.sender) - 1)
-    print('nonce', nonce)
-    print('rlp', rlp.encode([sender, nonce]))
-    msg.to = utils.sha3(rlp.encode([sender, nonce]))[12:].encode('hex')
-    print(msg.to)
-    exit(0) # TODO
-    assert not block.get_code(msg.to)
+    # msg.to = utils.sha3(rlp.encode([sender, nonce]))[12:].encode('hex')
+    msg.to = util.contract_sha3(rlp.encode([sender, nonce]))
+    assert not block.get_code(db, msg.to)
 
-
-    contract_id_seed = msg.sender + str(nonce)  # TODO
-    contract_id = util.contract_sha3(contract_id_seed.encode('utf-8'))
-    msg.to = contract_id
-    code = msg.data
-
-    # assert not get_code(db, contract_id) # TODO: check for duplicate contracts
-
-    res, gas, dat = apply_msg(db, tx, msg, code)
-    """
+    res, gas, dat = apply_msg(db, tx, msg, msg.data)
     if res:
-        block.set_code(msg.to, ''.join(map(chr, dat)))
-        return utils.coerce_to_int(msg.to), gas, dat
+        # block.set_code(msg.to, ''.join(map(chr, dat)))
+        cursor = db.cursor()
+        bindings = {'contract_id': msg.to, 'tx_index': None, 'tx_hash': None, 'block_index': 0, 'source': None, 'code': bytes(dat), 'nonce': 0}
+        sql='insert into contracts values(:contract_id, :tx_index, :tx_hash, :block_index, :source, :code, :nonce)'
+        cursor.execute(sql, bindings)
+        return msg.to, gas, dat
     else:
         if tx.sender != msg.sender:
-            block.decrement_nonce(msg.sender)
-        block.del_account(msg.to)
+            block.decrement_nonce(msg.sender)   # TODO
+        block.del_account(msg.to)   # TODO
         return res, gas, dat
-    """
-
-    # Create contract with provided code.
-    cursor = db.cursor()
-    bindings = {'contract_id': contract_id, 'tx_index': None, 'tx_hash': None, 'block_index': 0, 'source': None, 'code': bytes(dat), 'nonce': 0}
-    sql='insert into contracts values(:contract_id, :tx_index, :tx_hash, :block_index, :source, :code, :nonce)'
-    cursor.execute(sql, bindings)
-    return True, gas, contract_id
 
 
 def get_msg_state(db, msg, code):
@@ -769,28 +758,6 @@ def mem_extend(mem, compustate, op, newsize):
     return True
 def to_signed(i):
     return i if i < TT255 else i - TT256
-
-def coerce_to_int(x):
-    if isinstance(x, int):
-        return x
-    elif len(x) == 40:  # TODO
-        return util_rlp.big_endian_to_int(binascii.unhexlify(x))
-    else:
-        if type(x) != bytes:
-            x = bytes(x, 'ascii')   # For addresses.
-        return util_rlp.big_endian_to_int(x)
-
-def zpad(x, l):
-    return b'\x00' * max(0, l - len(x)) + x
-
-def coerce_to_hex(x):
-    if isinstance(x, int):
-        return util.hexlify(zpad(util_rlp.int_to_big_endian(x), 20))
-    elif len(x) == 40 or len(x) == 0:   # TODO
-        return x
-    else:
-        return util.hexlify(zpad(x, 20)[-20:])
-
 
 def apply_op(db, tx, msg, processed_code, compustate):
     # Does not include paying opfee.
@@ -1061,9 +1028,10 @@ def apply_op(db, tx, msg, processed_code, compustate):
         log('SUB CONTRACT NEW', {'sender': msg.to, 'value': value, 'data': util.hexlify(data)})
         create_msg = Message(msg.to, '', value, compustate.gas, data)
         result, gas, data = create_contract(db, tx, create_msg)
-        # print('addr data', binascii.unhexlify(data))
-        addr = coerce_to_int(binascii.unhexlify(data))
-        log('SUB CONTRACT OUT', {'address': addr, 'code': data})
+        address = result
+        code = block.get_code(db, address)
+        log('SUB CONTRACT OUT', {'address': address, 'code': code})
+        addr = util.coerce_to_int(address)
         if addr:
             stk.append(addr)
             compustate.gas = gas
@@ -1085,7 +1053,7 @@ def apply_op(db, tx, msg, processed_code, compustate):
         data = bytes(mem[meminstart: meminstart + meminsz])
         log('SUB CALL NEW', {'sender': msg.to, 'to': to, 'value': value, 'gas': gas, 'data': util.hexlify(data)})
         call_msg = Message(msg.to, to, value, gas, data)
-        code = get_code(db, call_msg.to)
+        code = block.get_code(db, call_msg.to)
         result, gas, data = apply_msg(db, tx, call_msg, code)
         log('SUB CALL OUT', {'result': result, 'data': data, 'length': data, 'expected': memoutsz})
         if result == 0:
