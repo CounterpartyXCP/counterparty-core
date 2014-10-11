@@ -107,8 +107,9 @@ def parse_tx (db, tx):
     cursor.close()
     return True
 
-def generate_movement_hash(db, block_index, previous_hash=None):
+def generate_movement_hash(db, block_index, previous_hash=None, current_hash=None):
     cursor = db.cursor()
+
     get_hash = lambda i: list(cursor.execute('''SELECT movements_hash FROM blocks WHERE block_index = ?''', (i,)))[0]['movements_hash']
 
     # get previous hash
@@ -119,21 +120,15 @@ def generate_movement_hash(db, block_index, previous_hash=None):
           previous_hash = get_hash(block_index - 1)
 
     # concatenate movements
-    movements_string = ''
-    for movement_table in ['credits', 'debits']:
-        sql = '''SELECT (rowid || block_index || address || asset || quantity) AS movement_string 
-                 FROM {}
-                 WHERE block_index = ?
-                 ORDER BY rowid'''.format(movement_table)
-        movements = cursor.execute(sql, (block_index,))
-        for movement in movements:
-            movements_string += movement['movement_string']
+    movements_string = ''.join(util.BLOCK_MOVEMENTS)
 
     # generate block movements hash
     movements_hash = util.dhash_string(previous_hash + movements_string)
 
+    if not current_hash:
+      current_hash = get_hash(block_index)
+
     # check checkpoints and save block movements_hash
-    current_hash = get_hash(block_index)
     checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
     if (block_index in checkpoints and checkpoints[block_index] != movements_hash) or (current_hash and current_hash != movements_hash):
         raise exceptions.ConsensusError('Invalid movements_hash for block {}'.format(block_index))
@@ -143,9 +138,11 @@ def generate_movement_hash(db, block_index, previous_hash=None):
 
     cursor.close()
 
+    util.BLOCK_MOVEMENTS = []
+
     return movements_hash
 
-def parse_block (db, block_index, block_time, previous_hash=None):
+def parse_block (db, block_index, block_time, previous_hash=None, current_hash=None):
     cursor = db.cursor()
 
     # Expire orders, bets and rps.
@@ -162,7 +159,7 @@ def parse_block (db, block_index, block_time, previous_hash=None):
 
     cursor.close()
 
-    return generate_movement_hash(db, block_index, previous_hash)
+    return generate_movement_hash(db, block_index, previous_hash, current_hash)
 
 def initialise(db):
     cursor = db.cursor()
@@ -1157,7 +1154,7 @@ def reparse (db, block_index=None, quiet=False):
         cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
         for block in cursor.fetchall():
             logging.info('Block (re‐parse): {}'.format(str(block['block_index'])))
-            previous_hash = parse_block(db, block['block_index'], block['block_time'], previous_hash)
+            previous_hash = parse_block(db, block['block_index'], block['block_time'], previous_hash, block['movements_hash'])
         if quiet:
             log.setLevel(logging.INFO)
 
