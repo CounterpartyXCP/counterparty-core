@@ -228,3 +228,13 @@ The following examples are abridged for parsimony.
 
 	The `address` action displays the details of of all transactions involving the Counterparty address which is its argument.
 
+
+# Terms of Use
+
+The “websites” (Counterparty.io and Counterwallet.io) are owned and operated by The Counterparty Developers. By visiting the websites you agree to have read and understood these Terms of Use and agree to abide by them.
+
+As Counterparty is a global Internet-based technology, please be aware of the laws of your jurisdiction before using Counterparty technology. The Counterparty Developers do not condone the use of this technology for activities that may be unlawful in a particular jurisdiction, and explicitly disclaim responsibility for the independent actions of any third party utilizing this software.
+
+Counterparty.io and Counterwallet.io do not make investment recommendations and do not provide financial, tax or legal advice. Any asset or other financial contract displayed is for illustrative and informational purposes only and is not intended to act as a recommendation to buy or sell a particular asset or contract. Peer-to-peer trading is inherently risky. 
+
+System and network response and access times may vary due to market conditions, system and network performance, and other factors. Peer-to-peer assets and financial contracts involve substantial risk and are not suitable for all individuals. Please understand these and other risks prior to using peer-to-peer networks such as the Counterparty Protocol.
