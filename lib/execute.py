@@ -249,7 +249,7 @@ def apply_transaction(block, tx):
         if tx.to and tx.to != CREATE_CONTRACT_ADDRESS:
             result, gas_remained, data = apply_msg_send(block, tx, message)
         else:  # CREATE
-            result, gas_remained, data = create_contract(tx, message)
+            result, gas_remained, data = create_contract(block, tx, message)
         if not primary_result:
             primary_result = result, gas_remained, data
     ### Rather different ###
@@ -381,7 +381,7 @@ def apply_msg(block, tx, msg, code):
 def apply_msg_send(tx, msg):
     return apply_msg(tx, msg, block.get_code(msg.to))
 
-def create_contract(tx, msg):
+def create_contract(block, tx, msg):
     sender = binascii.unhexlify(msg.sender) if len(msg.sender) == 40 else msg.sender
     if tx.sender != msg.sender:
         block.increment_nonce(msg.sender)
@@ -682,7 +682,7 @@ def apply_op(tx, msg, processed_code, compustate):
         data = bytes(mem[mstart: mstart + msz])
         log('SUB CONTRACT NEW', {'sender': msg.to, 'value': value, 'data': util.hexlify(data)})
         create_msg = Message(msg.to, '', value, compustate.gas, data)
-        address, gas, code = create_contract(tx, create_msg)
+        address, gas, code = create_contract(block, tx, create_msg)
         log('SUB CONTRACT OUT', {'address': address, 'code': block.get_code(address)})
         addr = utils.coerce_to_int(address)
         if addr:

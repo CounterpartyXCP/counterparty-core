@@ -2,6 +2,8 @@
 
 from lib import (util, config)
 
+import pickle
+
 # TODO: use global `db`
 
 class block(object):
@@ -20,13 +22,14 @@ class block(object):
 
     def postqueue_get(self):
         cursor = self.db.cursor()
-        return list(cursor.execute('''SELECT * FROM postqueue''')):
+        return list(cursor.execute('''SELECT * FROM postqueue'''))
 
     def postqueue_append(self, post_msg):
         cursor = self.db.cursor()
         cursor.execute('''INSERT INTO postqueue VALUES(:message)''', {'message': pickle.dumps(post_msg)})
 
     def postqueue_pop(self):
+        cursor = self.db.cursor()
         postqueues = list(cursor.execute('''SELECT * FROM postqueue ORDER BY rowid ASC'''))
         first_message_pickled = postqueues[0]['message']                                                # Get first entry.
         cursor.execute('''DELETE FROM postqueue WHERE rowid = (SELECT MIN(rowid) FROM postqueue)''')    # Delete first entry.

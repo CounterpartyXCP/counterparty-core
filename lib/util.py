@@ -16,7 +16,7 @@ import binascii
 import hashlib
 import sha3
 
-from . import (config, exceptions, util_rlp)
+from . import (config, exceptions)
 
 D = decimal.Decimal
 b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'

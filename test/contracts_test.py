@@ -27,7 +27,7 @@ startgas = 10000
 ### Counterparty compatibility ###
 
 import counterpartyd
-from lib import (execute, util, config, util_rlp)
+from lib import (execute, util, config)
 from lib.scriptlib import blocks
 
 import subprocess   # Serpent is Python 2‐incompatible.
