@@ -28,6 +28,7 @@ startgas = 10000
 
 import counterpartyd
 from lib import (execute, util, config, util_rlp)
+from lib.scriptlib import blocks
 
 import subprocess   # Serpent is Python 2‐incompatible.
 import binascii
@@ -146,7 +147,9 @@ class tester(object):
             tx_obj = execute.transaction(tx, to, gasprice, startgas, value, data)
 
             # Run.
-            success, data = execute.apply_transaction(db, tx_obj)
+
+            block_obj = blocks.block(db)
+            success, data = execute.apply_transaction(block_obj, tx_obj)
 
             # Decode, return result.
             return success, data
