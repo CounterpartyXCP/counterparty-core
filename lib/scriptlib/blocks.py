@@ -1,7 +1,9 @@
 #! /usr/bin/python3
 
 from lib import (util, config)
+from lib.scriptlib import rlp
 
+import logging
 import pickle
 
 # TODO: use global `db`
@@ -70,8 +72,8 @@ class block(object):
         value = storages[0]['value']
 
         # TODO
-        value = util_rlp.big_endian_to_int(value)
-        # value = util_rlp.decode(value)
+        value = rlp.big_endian_to_int(value)
+        # value = rlp.decode(value)
 
         return value
 
@@ -79,8 +81,8 @@ class block(object):
         # TODO: This could all be done more elegantly, I think.
 
         # TODO
-        # value = util_rlp.int_to_big_endian(value)
-        # value = util_rlp.encode(value)
+        # value = rlp.int_to_big_endian(value)
+        # value = rlp.encode(value)
 
         key = key.to_bytes(32, byteorder='big')
         value = value.to_bytes(32, byteorder='big')
@@ -113,7 +115,7 @@ class block(object):
 
 
     def account_to_dict(self, address):
-        return {'nonce': block.get_nonce(address), 'balance': block.get_balance(address),'storage': block.get_storage_data(address), 'code': block.get_code(address)}
+        return {'nonce': block.get_nonce(self, address), 'balance': block.get_balance(self, address),'storage': block.get_storage_data(self, address), 'code': block.get_code(self, address)}
 
     def get_code (self, contract_id):
         cursor = self.db.cursor()

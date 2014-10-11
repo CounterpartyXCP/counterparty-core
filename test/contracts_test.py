@@ -28,7 +28,7 @@ startgas = 10000
 
 import counterpartyd
 from lib import (execute, util, config)
-from lib.scriptlib import blocks
+from lib.scriptlib import (blocks, rlp)
 
 import subprocess   # Serpent is Python 2‐incompatible.
 import binascii
@@ -149,7 +149,7 @@ class tester(object):
             # Run.
 
             block_obj = blocks.block(db)
-            success, data = execute.apply_transaction(block_obj, tx_obj)
+            success, data = execute.apply_transaction(db, block_obj, tx_obj)
 
             # Decode, return result.
             return success, data
@@ -166,7 +166,7 @@ class tester(object):
             # print('qux', data, type(data))
             util.credit(db, 0, sender, config.XCP, value + 100000000, action='unit test', event='facefeed')
             success, data = tester.state.do_send(self, sender, to, value, data=data)
-            return util_rlp.decode_datalist(bytes(data))
+            return rlp.decode_datalist(bytes(data))
 
 
         class block(object):
@@ -181,10 +181,12 @@ class tester(object):
                 cursor.close()
 
             def get_storage_data(contract_id, key):
-                return execute.block.get_storage_data(db, contract_id, key)
+                block = blocks.block(db)
+                return block.get_storage_data(contract_id, key)
 
             def get_balance(address):
-                return execute.block.get_balance(db, address)
+                block = blocks.block(db)
+                return block.get_balance(address)
 
             
 def privtoaddr(x):

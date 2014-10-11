@@ -139,7 +139,7 @@ def parse (db, tx, message):
         # ‘Apply transaction’!
         tx_obj = transaction(tx, contract_id, gasprice, startgas, value, payload)
         block_obj = blocks.block(db)
-        apply_transaction(block_obj, tx_obj)
+        apply_transaction(db, block_obj, tx_obj)
 
     except exceptions.UnpackError as e:
         contract_id, gasprice, startgas, value, payload = None, None, None, None, None
@@ -206,7 +206,7 @@ class HaltExecution(Exception): pass
 class InsufficientBalance(HaltExecution): pass
 class InsufficientStartGas(HaltExecution): pass
 class OutOfGas(HaltExecution): pass
-def apply_transaction(block, tx):
+def apply_transaction(db, block, tx):
     def rp(actual, target):
         return '%r, actual:%r target:%r' % (tx, actual, target)
 
@@ -247,9 +247,9 @@ def apply_transaction(block, tx):
         message = block.postqueue_pop()
         # MESSAGE
         if tx.to and tx.to != CREATE_CONTRACT_ADDRESS:
-            result, gas_remained, data = apply_msg_send(block, tx, message)
+            result, gas_remained, data = apply_msg_send(db, block, tx, message)
         else:  # CREATE
-            result, gas_remained, data = create_contract(block, tx, message)
+            result, gas_remained, data = create_contract(db, block, tx, message)
         if not primary_result:
             primary_result = result, gas_remained, data
     ### Rather different ###
@@ -283,7 +283,7 @@ def apply_transaction(block, tx):
     # Kill suicidal contract.
     for s in block.suicides_get():
         block.del_account(s)
-    block.suicides_delete(s)
+    block.suicides_delete()
     success = output is not OUT_OF_GAS
     return success, output if success else ''
 
@@ -306,7 +306,7 @@ class Compustate():
         for kw in kwargs:
             setattr(self, kw, kwargs[kw])
 
-def apply_msg(block, tx, msg, code):
+def apply_msg(db, block, tx, msg, code):
     """
     logging.debug('\n')
     new_dict = vars(msg).copy()
@@ -323,7 +323,7 @@ def apply_msg(block, tx, msg, code):
     if not o:
         return 1, msg.gas, []
 
-    processed_code = [opcodes.get(c, ['INVALID', 0, 0, [], 0]) + [c] for c in code]
+    processed_code = [opcodes.opcodes.get(c, ['INVALID', 0, 0, [], 0]) + [c] for c in code]
     # logging.debug('PROCESSED_CODE {}'.format(processed_code))
 
     try:
@@ -337,7 +337,7 @@ def apply_msg(block, tx, msg, code):
             # Main loop
             # logging.debug('')
             while True:
-                o = apply_op(tx, msg, processed_code, compustate)
+                o = apply_op(db, block, tx, msg, processed_code, compustate)
                 ops += 1
 
                 if o is not None:
@@ -378,10 +378,10 @@ def apply_msg(block, tx, msg, code):
         gas_remained = compustate.gas
         return result, gas_remained, data
 
-def apply_msg_send(tx, msg):
-    return apply_msg(tx, msg, block.get_code(msg.to))
+def apply_msg_send(db, block, tx, msg):
+    return apply_msg(db, block, tx, msg, block.get_code(msg.to))
 
-def create_contract(block, tx, msg):
+def create_contract(db, block, tx, msg):
     sender = binascii.unhexlify(msg.sender) if len(msg.sender) == 40 else msg.sender
     if tx.sender != msg.sender:
         block.increment_nonce(msg.sender)
@@ -390,7 +390,7 @@ def create_contract(block, tx, msg):
     msg.to = utils.contract_sha3(rlp.encode([sender, nonce]))
     assert not block.get_code(msg.to)
 
-    res, gas, dat = apply_msg(tx, msg, msg.data)
+    res, gas, dat = apply_msg(db, block, tx, msg, msg.data)
     if res:
         # block.set_code(msg.to, ''.join(map(chr, dat)))
         cursor = db.cursor()
@@ -428,7 +428,7 @@ def mem_extend(mem, compustate, op, newsize):
 def to_signed(i):
     return i if i < TT255 else i - TT256
 
-def apply_op(tx, msg, processed_code, compustate):
+def apply_op(db, block, tx, msg, processed_code, compustate):
     # Does not include paying opfee.
 
     if compustate.pc >= len(processed_code):
@@ -535,13 +535,13 @@ def apply_op(tx, msg, processed_code, compustate):
         if not mem_extend(mem, compustate, op, s0 + s1):
             return OUT_OF_GAS
         data = bytes(mem[s0: s0 + s1])
-        stk.append(utils.big_endian_to_int(utils.sha3(data)))
+        stk.append(rlp.big_endian_to_int(utils.sha3(data)))
     elif op == 'ADDRESS':
         stk.append(utils.coerce_to_int(msg.to))
     elif op == 'BALANCE':
         addr = stk.pop()
         addr = util.hexlify(addr.to_bytes(32, byteorder='big'))
-        stk.append(util.get_balance(addr, config.XCP))
+        stk.append(block.get_balance(addr))
     elif op == 'ORIGIN':
         stk.append(utils.coerce_to_int(tx.sender))
     elif op == 'CALLER':
@@ -554,7 +554,7 @@ def apply_op(tx, msg, processed_code, compustate):
             stk.append(0)
         else:
             dat = msg.data[s0: s0 + 32]
-            stk.append(utils.big_endian_to_int(dat + b'\x00' * (32 - len(dat))))
+            stk.append(rlp.big_endian_to_int(dat + b'\x00' * (32 - len(dat))))
     elif op == 'CALLDATASIZE':
         stk.append(len(msg.data))
     elif op == 'CALLDATACOPY':
@@ -591,10 +591,10 @@ def apply_op(tx, msg, processed_code, compustate):
                 mem[s1 + i] = 0
     elif op == 'PREVHASH':
         # TODO
-        stk.append(utils.big_endian_to_int(block.prevhash))
+        stk.append(rlp.big_endian_to_int(block.prevhash))
     elif op == 'COINBASE':
         # TODO
-        stk.append(utils.big_endian_to_int(binascii.unhexlify(block.coinbase)))
+        stk.append(rlp.big_endian_to_int(binascii.unhexlify(block.coinbase)))
     elif op == 'TIMESTAMP':
         stk.append(tx.timestamp)
     elif op == 'NUMBER':
@@ -613,7 +613,7 @@ def apply_op(tx, msg, processed_code, compustate):
         if not mem_extend(mem, compustate, op, s0 + 32):
             return OUT_OF_GAS
         data = bytes(mem[s0: s0 + 32])
-        stk.append(utils.big_endian_to_int(data))
+        stk.append(rlp.big_endian_to_int(data))
     elif op == 'MSTORE':
         s0, s1 = stk.pop(), stk.pop()
         if not mem_extend(mem, compustate, op, s0 + 32):
@@ -682,7 +682,7 @@ def apply_op(tx, msg, processed_code, compustate):
         data = bytes(mem[mstart: mstart + msz])
         log('SUB CONTRACT NEW', {'sender': msg.to, 'value': value, 'data': util.hexlify(data)})
         create_msg = Message(msg.to, '', value, compustate.gas, data)
-        address, gas, code = create_contract(block, tx, create_msg)
+        address, gas, code = create_contract(db, block, tx, create_msg)
         log('SUB CONTRACT OUT', {'address': address, 'code': block.get_code(address)})
         addr = utils.coerce_to_int(address)
         if addr:
@@ -705,7 +705,7 @@ def apply_op(tx, msg, processed_code, compustate):
         data = bytes(mem[meminstart: meminstart + meminsz])
         log('SUB CALL NEW', {'sender': msg.to, 'to': to, 'value': value, 'gas': gas, 'data': util.hexlify(data)})
         call_msg = Message(msg.to, to, value, gas, data)
-        result, gas, data = apply_msg(tx, call_msg, block.get_code(call_msg.to))
+        result, gas, data = apply_msg_send(db, block, tx, call_msg)
         log('SUB CALL OUT', {'result': result, 'data': data, 'length': data, 'expected': memoutsz})
         if result == 0:
             stk.append(0)
@@ -748,7 +748,7 @@ def apply_op(tx, msg, processed_code, compustate):
         data = bytes(mem[meminstart: meminstart + meminsz])
         logging.debug('SUB CALL NEW (sender: {}, to: {}, value: {}, gas: {}, data: {})'.format(msg.to, to, value, gas, util.hexlify(data)))
         call_msg = Message(msg.to, to, value, gas, data)
-        result, gas, data = apply_msg(tx, call_msg, block.get_code(call_msg.to))
+        result, gas, data = apply_msg_send(db, block, tx, call_msg)
         logging.debug('SUB CALL OUT (result: {}, data: {}, length: {}, expected: {}'.format(result, data, len(data), memoutsz))
         if result == 0:
             stk.append(0)
