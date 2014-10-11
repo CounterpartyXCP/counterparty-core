@@ -321,10 +321,19 @@ def get_block_movements(db, block_index):
     return movements
 
 def reparse(testnet=True):
-    counterpartyd.set_options(database_file=':memory:', testnet=testnet, **COUNTERPARTYD_OPTIONS)
+    options = dict(COUNTERPARTYD_OPTIONS)
+    options.pop('data_dir')
+    counterpartyd.set_options(database_file=':memory:', testnet=testnet, **options)
     
     if testnet:
         config.PREFIX = b'TESTXXXX'
+
+    logger = logging.getLogger()
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(message)s')
+    console.setFormatter(formatter)
+    logger.addHandler(console)
 
     memory_db = util.connect_to_db()
     initialise_db(memory_db)
@@ -345,13 +354,10 @@ def reparse(testnet=True):
     memory_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
     for block in memory_cursor.fetchall():
         try:
-            previous_hash = blocks.parse_block(memory_db, block['block_index'], block['block_time'], previous_hash)
+            logger.info('Block (re‐parse): {}'.format(str(block['block_index'])))
+            previous_hash = blocks.parse_block(memory_db, block['block_index'], block['block_time'], previous_hash, block['movements_hash'])
         except ConsensusError as e:
             new_movements = get_block_movements(memory_db, block['block_index'])
             old_movements = get_block_movements(prod_db, block['block_index'])
             compare_strings(new_movements, old_movements)
             raise(e)
-
-    
-
-        

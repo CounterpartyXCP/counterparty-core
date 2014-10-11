@@ -27,6 +27,8 @@ json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
 BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
 
+BLOCK_MOVEMENTS = []
+
 # TODO: This doesn’t timeout properly. (If server hangs, then unhangs, no result.)
 def api (method, params):
     headers = {'content-type': 'application/json'}
@@ -570,8 +572,9 @@ def debit (db, block_index, address, asset, quantity, action=None, event=None):
     }
     sql='insert into debits values(:block_index, :address, :asset, :quantity, :action, :event)'
     debit_cursor.execute(sql, bindings)
-
     debit_cursor.close()
+
+    BLOCK_MOVEMENTS.append('{}{}{}{}'.format(block_index, address, asset, quantity))
 
 def credit (db, block_index, address, asset, quantity, action=None, event=None):
     credit_cursor = db.cursor()
@@ -625,6 +628,8 @@ def credit (db, block_index, address, asset, quantity, action=None, event=None):
     sql='insert into credits values(:block_index, :address, :asset, :quantity, :action, :event)'
     credit_cursor.execute(sql, bindings)
     credit_cursor.close()
+
+    BLOCK_MOVEMENTS.append('{}{}{}{}'.format(block_index, address, asset, quantity))
 
 def devise (db, quantity, asset, dest, divisible=None):
 
