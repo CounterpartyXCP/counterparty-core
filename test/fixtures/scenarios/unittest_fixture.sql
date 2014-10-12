@@ -752,6 +752,7 @@ CREATE TABLE dividends(
                       asset TEXT,
                       dividend_asset TEXT,
                       quantity_per_unit INTEGER,
+                      fee_paid INTEGER,
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 

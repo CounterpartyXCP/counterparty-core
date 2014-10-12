@@ -142,7 +142,7 @@ def parse (db, tx, message):
     if status == 'valid':
         # Debit.
         util.debit(db, tx['block_index'], tx['source'], dividend_asset, dividend_total, action='dividend', event=tx['tx_hash'])
-        if block_index > 327000 or config.TESTNET: # Protocol change.
+        if tx['block_index'] > 327000 or config.TESTNET: # Protocol change.
             util.debit(db, tx['block_index'], tx['source'], config.XCP, fee, action='dividend fee', event=tx['tx_hash'])
 
         # Credit.
@@ -161,7 +161,7 @@ def parse (db, tx, message):
         'fee_paid': fee,
         'status': status,
     }
-    sql='insert into dividends values(:tx_index, :tx_hash, :block_index, :source, :asset, :dividend_asset, :quantity_per_unit, :status)'
+    sql='insert into dividends values(:tx_index, :tx_hash, :block_index, :source, :asset, :dividend_asset, :quantity_per_unit, :fee_paid, :status)'
     dividend_parse_cursor.execute(sql, bindings)
 
     dividend_parse_cursor.close()
