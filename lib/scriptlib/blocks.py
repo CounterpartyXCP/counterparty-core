@@ -1,14 +1,12 @@
 #! /usr/bin/python3
 
 from lib import (util, config)
-from lib.scriptlib import rlp
+from lib.scriptlib import (rlp, utils)
 
 import logging
 import pickle
 
-# TODO: use global `db`
-
-class block(object):
+class Block(object):
 
     def __init__(self, db):
         self.db = db
@@ -115,7 +113,7 @@ class block(object):
 
 
     def account_to_dict(self, address):
-        return {'nonce': block.get_nonce(self, address), 'balance': block.get_balance(self, address),'storage': block.get_storage_data(self, address), 'code': block.get_code(self, address)}
+        return {'nonce': Block.get_nonce(self, address), 'balance': Block.get_balance(self, address), 'storage': Block.get_storage_data(self, address), 'code': utils.hexprint(Block.get_code(self, address))}
 
     def get_code (self, contract_id):
         cursor = self.db.cursor()
@@ -145,8 +143,8 @@ class block(object):
             cursor.execute('''UPDATE nonces SET nonce = :nonce WHERE (address = :address)''', {'nonce': nonce, 'address': address})
 
     def increment_nonce(self, address):
-        nonce = block.get_nonce(self, address)
-        block.set_nonce(self, address, nonce + 1)
+        nonce = Block.get_nonce(self, address)
+        Block.set_nonce(self, address, nonce + 1)
 
     def get_balance(self, address):
         return util.get_balance(self.db, address, config.XCP)

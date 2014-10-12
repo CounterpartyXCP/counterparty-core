@@ -46,4 +46,18 @@ def coerce_to_hex(x):
     else:
         return util.hexlify(zpad(x, 20)[-20:])
 
+def memprint(data):
+    line = util.hexlify(bytes(data))
+    line = ' '.join([line[i:i+2] for i in range(0, len(line), 2)])
+    return line
+
+def hexprint(x):
+    assert type(x) in (bytes, list)
+    if not x:
+        return '<None>'
+    if x != -1:
+        return ('0x' + util.hexlify(bytes(x)))
+    else:
+        return 'OUT OF GAS'
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

@@ -42,7 +42,8 @@ sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/counterpartyd.unittest.db', testnet=True, testcoin=False, backend_rpc_ssl_verify=False)
 
 import logging
-logging.basicConfig(level=logging.DEBUG, format='%(message)s')
+logging.basicConfig(level=logging.INFO, format='%(message)s')
+# TODO: logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 
 i = 0
 
@@ -144,11 +145,11 @@ class tester(object):
                    'tx_hash': to, 
                    'timestamp': round(time.time())
                  }
-            tx_obj = execute.transaction(tx, to, gasprice, startgas, value, data)
+            tx_obj = execute.Transaction(tx, to, gasprice, startgas, value, data)
 
             # Run.
 
-            block_obj = blocks.block(db)
+            block_obj = blocks.Block(db)
             success, data = execute.apply_transaction(db, block_obj, tx_obj)
 
             # Decode, return result.
@@ -181,11 +182,11 @@ class tester(object):
                 cursor.close()
 
             def get_storage_data(contract_id, key):
-                block = blocks.block(db)
+                block = blocks.Block(db)
                 return block.get_storage_data(contract_id, key)
 
             def get_balance(address):
-                block = blocks.block(db)
+                block = blocks.Block(db)
                 return block.get_balance(address)
 
             

@@ -19,23 +19,20 @@ FORMAT = '>32sQQQ'
 LENGTH = 56
 ID = 101
 
-def memprint(data):
-    line = util.hexlify(bytes(data))
-    line = ' '.join([line[i:i+2] for i in range(0, len(line), 2)])
-    return line
-
-def hexprint(x):
-    assert type(x) in (bytes, list)
-    if not x:
-        return '<None>'
-    if x != -1:
-        return ('0x' + util.hexlify(bytes(x)))
-    else:
-        return 'OUT OF GAS'
-
 class PBLogger(object):
     def log(self, name, **kargs):
-        order = dict(pc=-2, op=-1, stackargs=1, data=2, code=3)
+        if name == 'TX NEW':
+            order = dict(nonce=-10, sender=-9, startgas=-8, value=-7, to=-6, data=-5, gasprice=-4)
+        elif name in ('OP', 'STK'):
+            order = dict(pc=-2, op=-1, gas=0, value=.5, stackargs=1, data=2, code=3)
+        elif name == 'SUB CALL NEW':
+            order = dict(to=-2, gas=-1, sender=0, value=1, data=2)
+        elif name == 'MSG APPLY':
+            order = dict(sender=-2, tx=-1, gas=0, value=1, to=2, data=3)
+        elif name == 'MSG PRE STATE':
+            order = dict(nonce=-2, balance=-1, storage=0, code=1, to=2, data=3)
+        else:
+            order = dict()
         items = sorted(kargs.items(), key=lambda x: order.get(x[0], 0))
         msg = ", ".join("%s=%s" % (k,v) for k,v in items)
         logging.info("%s: %s", name.ljust(15), msg)
@@ -48,7 +45,7 @@ def log (name, obj):
     # Convert binary.
     for key in obj.keys():
         if type(obj[key]) == bytes:
-            obj[key] = hexprint(obj[key])
+            obj[key] = utils.hexprint(obj[key])
 
     # Truncate long lines.
     for key in obj.keys():
@@ -100,7 +97,7 @@ def compose (db, source, contract_id, gasprice, startgas, value, payload_hex):
 
     return (source, [], data)
 
-class transaction(object):
+class Transaction(object):
     def __init__(self, tx, to, gasprice, startgas, value, data):
         assert type(data) == bytes
         self.block_index = tx['block_index']
@@ -113,9 +110,17 @@ class transaction(object):
         self.value = value
         self.timestamp = tx['timestamp']
     def hex_hash(self):
-        return self.tx_hash
+        return '<None>'
     def to_dict(self):
-        return vars(self)
+        dict_ = {
+                 'sender': self.sender,
+                 'data': utils.hexprint(self.data),
+                 'to': self.to,
+                 'gasprice': self.gasprice,
+                 'startgas': self.startgas,
+                 'value': self.value
+                }
+        return dict_
 
 class ContractError(Exception): pass
 def parse (db, tx, message):
@@ -137,8 +142,8 @@ def parse (db, tx, message):
         # TODO: gasprice is an int
 
         # ‘Apply transaction’!
-        tx_obj = transaction(tx, contract_id, gasprice, startgas, value, payload)
-        block_obj = blocks.block(db)
+        tx_obj = Transaction(tx, contract_id, gasprice, startgas, value, payload)
+        block_obj = blocks.Block(db)
         apply_transaction(db, block_obj, tx_obj)
 
     except exceptions.UnpackError as e:
@@ -258,8 +263,8 @@ def apply_transaction(db, block, tx):
 
     assert gas_remained >= 0
 
-    # pblogger.log("TX APPLIED", result=result, gas_remained=gas_remained,
-    #                             data=''.join(map(chr, data)).encode('hex'))
+    pblogger.log("TX APPLIED", result=result, gas_remained=gas_remained,
+                 data=util.hexlify(bytes(data)))
     # if pblogger.log_block:
     #     pblogger.log('BLOCK', block=block.to_dict(with_state=True, full_transactions=True))
 
@@ -292,7 +297,7 @@ def get_msg_state(block, msg, code):
     msg_state = {}
     # msg_state['contract'] = msg.to
     msg_state['balance'] = block.get_balance(msg.to)
-    storages = ['{}: {}'.format(hexprint(storage['key']), hexprint(storage['value'])) for storage in block.get_storage_data(msg.to)]
+    storages = ['{}: {}'.format(utils.hexprint(storage['key']), utils.hexprint(storage['value'])) for storage in block.get_storage_data(msg.to)]
     msg_state['storage'] = storages
     msg_state['code'] = code
     return msg_state
@@ -316,7 +321,7 @@ def apply_msg(db, block, tx, msg, code):
     """
 
     pblogger.log("MSG APPLY", tx=tx.hex_hash(), sender=msg.sender, to=msg.to,
-                                  gas=msg.gas, value=msg.value, data=hexprint(msg.data))
+                                  gas=msg.gas, value=msg.value, data=utils.hexprint(msg.data))
     pblogger.log('MSG PRE STATE', account=msg.to, state=block.account_to_dict(msg.to))
     # Transfer value, instaquit if not enough
     o = block.transfer_value(tx, msg.sender, msg.to, msg.value)
@@ -449,17 +454,19 @@ def apply_op(db, block, tx, msg, processed_code, compustate):
     if fee > compustate.gas:
         return out_of_gas_exception('base_gas', fee, compustate, op)
 
+    pblogger.log('STK', stk=list(reversed(compustate.stack)))
+
     for i in range(0, len(compustate.memory), 16):
         memblk = compustate.memory[i:i+16]
         # logging.debug('MEM {}'.format(memprint(memblk)))
 
-    # logging.debug('\tSTORAGE\n\t\t' + '\n\t\t'.join(['{}: {}'.format(hexprint(storage['key']), hexprint(storage['value'])) for storage in block.get_storage_data(msg.to)]))
+    # logging.debug('\tSTORAGE\n\t\t' + '\n\t\t'.join(['{}: {}'.format(utils.hexprint(storage['key']), utils.hexprint(storage['value'])) for storage in block.get_storage_data(msg.to)]))
 
     # Log operation
     log_args = dict(pc=str(compustate.pc).zfill(3),
                     op=op,
                     stackargs=compustate.stack[-1:-in_args-1:-1],
-                    stack=list(reversed(compustate.stack)),
+    # TODO                stack=list(reversed(compustate.stack)),
                     gas=compustate.gas)
     if op[:4] == 'PUSH':
         ind = compustate.pc + 1
@@ -467,7 +474,8 @@ def apply_op(db, block, tx, msg, processed_code, compustate):
             utils.bytearray_to_int([x[-1] for x in processed_code[ind: ind + int(op[4:])]])
     elif op == 'CALLDATACOPY':
         log_args['data'] = binascii.hexlify(msg.data)
-    log('OP', log_args)
+    # log('OP', log_args)
+    pblogger.log('OP', **log_args)
 
     # Apply operation
     compustate.gas -= fee
@@ -680,11 +688,13 @@ def apply_op(db, block, tx, msg, processed_code, compustate):
         if not mem_extend(mem, compustate, op, mstart + msz):
             return OUT_OF_GAS
         data = bytes(mem[mstart: mstart + msz])
-        log('SUB CONTRACT NEW', {'sender': msg.to, 'value': value, 'data': util.hexlify(data)})
+        # TODO: log('SUB CONTRACT NEW', {'sender': msg.to, 'value': value, 'data': util.hexlify(data)})
+        pblogger.log('SUB CONTRACT NEW', sender=msg.to, value=value, data=util.hexlify(data))
         create_msg = Message(msg.to, '', value, compustate.gas, data)
         address, gas, code = create_contract(db, block, tx, create_msg)
-        log('SUB CONTRACT OUT', {'address': address, 'code': block.get_code(address)})
+        # TODO: log('SUB CONTRACT OUT', {'address': address, 'code': block.get_code(address)})
         addr = utils.coerce_to_int(address)
+        pblogger.log('SUB CONTRACT OUT', address=addr, code=code)
         if addr:
             stk.append(addr)
             compustate.gas = gas
@@ -703,10 +713,12 @@ def apply_op(db, block, tx, msg, processed_code, compustate):
         to = utils.encode_int(to)
         to = util.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
         data = bytes(mem[meminstart: meminstart + meminsz])
-        log('SUB CALL NEW', {'sender': msg.to, 'to': to, 'value': value, 'gas': gas, 'data': util.hexlify(data)})
+        # TODO: log('SUB CALL NEW', {'sender': msg.to, 'to': to, 'value': value, 'gas': gas, 'data': util.hexlify(data)})
+        pblogger.log('SUB CALL NEW', sender=msg.to, to=to, value=value, gas=gas, data=util.hexlify(data))
         call_msg = Message(msg.to, to, value, gas, data)
         result, gas, data = apply_msg_send(db, block, tx, call_msg)
-        log('SUB CALL OUT', {'result': result, 'data': data, 'length': data, 'expected': memoutsz})
+        # TODO: log('SUB CALL OUT', {'result': result, 'data': data, 'length': data, 'expected': memoutsz})
+        pblogger.log('SUB CALL OUT', result=result, data=data, length=len(data), expected=memoutsz)
         if result == 0:
             stk.append(0)
         else:
@@ -746,10 +758,12 @@ def apply_op(db, block, tx, msg, processed_code, compustate):
         to = utils.encode_int(to)
         to = util.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
         data = bytes(mem[meminstart: meminstart + meminsz])
-        logging.debug('SUB CALL NEW (sender: {}, to: {}, value: {}, gas: {}, data: {})'.format(msg.to, to, value, gas, util.hexlify(data)))
+        # TODO: logging.debug('SUB CALL NEW (sender: {}, to: {}, value: {}, gas: {}, data: {})'.format(msg.to, to, value, gas, util.hexlify(data)))
+        pblogger.log('SUB CALL NEW', sender=msg.to, to=to, value=value, gas=gas, data=util.hexlify(data))
         call_msg = Message(msg.to, to, value, gas, data)
         result, gas, data = apply_msg_send(db, block, tx, call_msg)
-        logging.debug('SUB CALL OUT (result: {}, data: {}, length: {}, expected: {}'.format(result, data, len(data), memoutsz))
+        # TODO: logging.debug('SUB CALL OUT (result: {}, data: {}, length: {}, expected: {}'.format(result, data, len(data), memoutsz))
+        pblogger.log('SUB CALL OUT', result=result, data=data, length=len(data), expected=memoutsz)
         if result == 0:
             stk.append(0)
         else:
