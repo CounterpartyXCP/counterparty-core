@@ -53,6 +53,7 @@ class Block(object):
         logging.debug('### REVERTING ###')
 
     def get_storage_data(self, contract_id, key=None):
+        # logging.info('GET {}, {}'.format(contract_id, key)) # TODO            
         cursor = self.db.cursor()
 
         if key == None:

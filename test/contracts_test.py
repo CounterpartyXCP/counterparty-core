@@ -167,7 +167,10 @@ class tester(object):
             # print('qux', data, type(data))
             util.credit(db, 0, sender, config.XCP, value + 100000000, action='unit test', event='facefeed')
             success, data = tester.state.do_send(self, sender, to, value, data=data)
-            return rlp.decode_datalist(bytes(data))
+            if data:
+                return rlp.decode_datalist(bytes(data))
+            else:
+                return []
 
 
         class block(object):

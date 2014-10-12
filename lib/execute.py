@@ -38,6 +38,7 @@ class PBLogger(object):
         logging.info("%s: %s", name.ljust(15), msg)
 
 pblogger = PBLogger()
+code_cache = {}
 
 def log (name, obj):
     assert type(obj) == dict
@@ -328,8 +329,14 @@ def apply_msg(db, block, tx, msg, code):
     if not o:
         return 1, msg.gas, []
 
-    processed_code = [opcodes.opcodes.get(c, ['INVALID', 0, 0, [], 0]) + [c] for c in code]
-    # logging.debug('PROCESSED_CODE {}'.format(processed_code))
+    # logging.info('CODE {}'.format(util.hexlify(code)))
+    if code in code_cache:
+        processed_code = code_cache[code]
+    else:
+        processed_code = [opcodes.opcodes.get(c, ['INVALID', 0, 0, [], 0]) +
+                          [c] for c in code]
+        code_cache[code] = processed_code
+    # logging.info('PROCESSED_CODE {}'.format(processed_code))
 
     try:
         # Snapshot.
@@ -646,6 +653,7 @@ def apply_op(db, block, tx, msg, processed_code, compustate):
             out_of_gas_exception('sstore trie expansion', gascost, compustate, op)
         compustate.gas -= gascost
         block.set_storage_data(msg.to, s0, s1)
+        logging.info('SET {}, {}, {}'.format(msg.to, s0, s1)) # TODO
     elif op == 'JUMP':
         compustate.pc = stk.pop()
     elif op == 'JUMPI':
@@ -759,9 +767,9 @@ def apply_op(db, block, tx, msg, processed_code, compustate):
         to = util.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
         data = bytes(mem[meminstart: meminstart + meminsz])
         # TODO: logging.debug('SUB CALL NEW (sender: {}, to: {}, value: {}, gas: {}, data: {})'.format(msg.to, to, value, gas, util.hexlify(data)))
-        pblogger.log('SUB CALL NEW', sender=msg.to, to=to, value=value, gas=gas, data=util.hexlify(data))
-        call_msg = Message(msg.to, to, value, gas, data)
-        result, gas, data = apply_msg_send(db, block, tx, call_msg)
+        pblogger.log('SUB CALL NEW', sender=msg.to, to=msg.to, value=value, gas=gas, data=util.hexlify(data))
+        call_msg = Message(msg.to, msg.to, value, gas, data)
+        result, gas, data = apply_msg(db, block, tx, call_msg, block.get_code(to))
         # TODO: logging.debug('SUB CALL OUT (result: {}, data: {}, length: {}, expected: {}'.format(result, data, len(data), memoutsz))
         pblogger.log('SUB CALL OUT', result=result, data=data, length=len(data), expected=memoutsz)
         if result == 0:
