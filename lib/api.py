@@ -467,12 +467,13 @@ class APIServer(threading.Thread):
             assert isinstance(block_index, int)
             cursor = db.cursor()
             cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,))
-            try:
-                blocks = list(cursor)
-                assert len(blocks) == 1
+            blocks = list(cursor)
+            if len(blocks) == 1:
                 block = blocks[0]
-            except IndexError:
+            elif len(blocks) == 0:
                 raise exceptions.DatabaseError('No blocks found.')
+            else:
+                assert False
             cursor.close()
             return block
         
