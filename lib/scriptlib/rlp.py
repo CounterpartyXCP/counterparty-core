@@ -1,5 +1,6 @@
 #! /usr/bin/python3
 
+import math 
 """
 def concat(s):
     '''
@@ -107,7 +108,8 @@ def int_to_big_endian(integer):
         s = '0' + s
     return binascii.unhexlify(s).decode('ascii')
     """
-    return (integer).to_bytes((integer.bit_length() // 8) + 1, byteorder='big')
+    byte_length = math.ceil(integer.bit_length() / 8)
+    return (integer).to_bytes(byte_length, byteorder='big')
 
 
 def big_endian_to_int(string):

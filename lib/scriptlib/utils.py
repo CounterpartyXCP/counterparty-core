@@ -38,7 +38,6 @@ def zpad(x, l):
     return b'\x00' * max(0, l - len(x)) + x
 
 def coerce_to_hex(x):
-    print('X', x)
     if isinstance(x, int):
         return util.hexlify(zpad(rlp.int_to_big_endian(x), 20))
     elif len(x) == 40 or len(x) == 0:   # TODO

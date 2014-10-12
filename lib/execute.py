@@ -340,6 +340,8 @@ def apply_msg(db, block, tx, msg, code):
 
     try:
         # Snapshot.
+        # NOTE: if I use explicit savepoints and rollbacks instead of this `with`,
+        # then I can stop passing around `db`.
         with db:
 
             # Initialise compustate.
@@ -555,7 +557,7 @@ def apply_op(db, block, tx, msg, processed_code, compustate):
         stk.append(utils.coerce_to_int(msg.to))
     elif op == 'BALANCE':
         addr = stk.pop()
-        addr = util.hexlify(addr.to_bytes(32, byteorder='big'))
+        addr = utils.coerce_to_hex(addr)
         stk.append(block.get_balance(addr))
     elif op == 'ORIGIN':
         stk.append(utils.coerce_to_int(tx.sender))

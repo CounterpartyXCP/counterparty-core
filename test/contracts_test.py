@@ -77,6 +77,7 @@ class serpent(object):
             # Assume you're getting in numbers or 0x...
             # return ''.join(map(enc, list(map(numberize, vals.split(' ')))))
 
+TIMESTAMP = 1410973349
 
 class tester(object):
     gas_limit = 100000
@@ -89,6 +90,12 @@ class tester(object):
 
             
     class state(object):
+
+        # N/A
+        def mine (self, n, coinbase):
+            global TIMESTAMP
+            TIMESTAMP += 50000
+
         def snapshot(self):
             cursor = db.cursor()
             name = 'xyz'
@@ -143,7 +150,7 @@ class tester(object):
             tx = { 'source': sender,
                    'block_index': 0,
                    'tx_hash': to, 
-                   'timestamp': round(time.time())
+                   'timestamp': TIMESTAMP
                  }
             tx_obj = execute.Transaction(tx, to, gasprice, startgas, value, data)
 
@@ -214,6 +221,7 @@ tester.k2 = '82a978b3f5962a5b0957d9ee9eef472ee55b42f1'
 tester.a0 = '82a978b3f5962a5b0957d9ee9eef472ee55b42f1'
 tester.a1 = 'dceceaf3fc5c0a63d195d69b1a90011b7b19650d'
 tester.a2 = 'dceceaf3fc5c0a63d195d69b1a90011b7b19650d'
+tester.a3 = '598443f1880ef585b21f1d7585bd0577402861e5'
 
 
 def setup_function(function):
