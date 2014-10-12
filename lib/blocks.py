@@ -1141,6 +1141,10 @@ def reparse (db, block_index=None, quiet=False):
         for table in TABLES + ['balances']:
             cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
 
+        # clean movements_hash in case of protocol change.
+        if config.TESTNET:
+            cursor.execute('''UPDATE blocks SET movements_hash = NULL''')
+
         # For rollbacks, just delete new blocks and then reparse what’s left.
         if block_index:
             cursor.execute('''DELETE FROM transactions WHERE block_index > ?''', (block_index,))
