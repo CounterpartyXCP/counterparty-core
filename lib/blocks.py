@@ -573,6 +573,7 @@ def initialise(db):
                       asset TEXT,
                       dividend_asset TEXT,
                       quantity_per_unit INTEGER,
+                      fee_paid INTEGER,
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
@@ -1139,6 +1140,10 @@ def reparse (db, block_index=None, quiet=False):
         # Delete all of the results of parsing.
         for table in TABLES + ['balances']:
             cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
+
+        # clean movements_hash in case of protocol change.
+        if config.TESTNET:
+            cursor.execute('''UPDATE blocks SET movements_hash = NULL''')
 
         # For rollbacks, just delete new blocks and then reparse what’s left.
         if block_index:
