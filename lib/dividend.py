@@ -52,6 +52,8 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     # Calculate dividend quantities.
     holders = util.holders(db, asset)
     outputs = []
+    dividend_total = 0
+    holder_count = 0
     for holder in holders:
 
         if block_index < 294500 and not config.TESTNET: # Protocol change.
@@ -69,21 +71,31 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
         dividend_quantity = int(dividend_quantity)
 
         outputs.append({'address': address, 'address_quantity': address_quantity, 'dividend_quantity': dividend_quantity})
+        dividend_total += dividend_quantity
+        holder_count += 1
 
-    dividend_total = sum([output['dividend_quantity'] for output in outputs])
     if not dividend_total: problems.append('zero dividend')
 
     if dividend_asset != config.BTC:
         balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, dividend_asset)))
         if not balances or balances[0]['quantity'] < dividend_total:
-            problems.append('insufficient funds')
+            problems.append('insufficient funds ({})'.format(dividend_asset))
+
+    fee = 0
+    if not problems and dividend_asset != config.BTC:
+        if block_index > 327000 or config.TESTNET: # Protocol change.
+            fee = int(0.0002 * config.UNIT * holder_count)
+        if fee:
+            balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, config.XCP)))
+            if not balances or balances[0]['quantity'] < fee:
+                problems.append('insufficient funds ({})'.format(config.XCP))
 
     cursor.close()
-    return dividend_total, outputs, problems
+    return dividend_total, outputs, problems, fee
 
 def compose (db, source, quantity_per_unit, asset, dividend_asset):
 
-    dividend_total, outputs, problems = validate(db, source, quantity_per_unit, asset, dividend_asset, util.last_block(db)['block_index'])
+    dividend_total, outputs, problems, fee = validate(db, source, quantity_per_unit, asset, dividend_asset, util.last_block(db)['block_index'])
     if problems: raise exceptions.DividendError(problems)
     print('Total quantity to be distributed in dividends:', util.devise(db, dividend_total, dividend_asset, 'output'), dividend_asset)
 
@@ -124,12 +136,14 @@ def parse (db, tx, message):
         # For SQLite3
         quantity_per_unit = min(quantity_per_unit, config.MAX_INT)
 
-        dividend_total, outputs, problems = validate(db, tx['source'], quantity_per_unit, asset, dividend_asset, block_index=tx['block_index'])
+        dividend_total, outputs, problems, fee = validate(db, tx['source'], quantity_per_unit, asset, dividend_asset, block_index=tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
 
     if status == 'valid':
         # Debit.
         util.debit(db, tx['block_index'], tx['source'], dividend_asset, dividend_total, action='dividend', event=tx['tx_hash'])
+        if block_index > 327000 or config.TESTNET: # Protocol change.
+            util.debit(db, tx['block_index'], tx['source'], config.XCP, fee, action='dividend fee', event=tx['tx_hash'])
 
         # Credit.
         for output in outputs:
@@ -144,6 +158,7 @@ def parse (db, tx, message):
         'asset': asset,
         'dividend_asset': dividend_asset,
         'quantity_per_unit': quantity_per_unit,
+        'fee_paid': fee,
         'status': status,
     }
     sql='insert into dividends values(:tx_index, :tx_hash, :block_index, :source, :asset, :dividend_asset, :quantity_per_unit, :status)'

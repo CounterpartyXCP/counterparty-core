@@ -698,10 +698,15 @@ def xcp_supply (db):
     # Subtract issuance fees.
     cursor.execute('''SELECT * FROM issuances\
                       WHERE status = ?''', ('valid',))
-    fee_total = sum([issuance['fee_paid'] for issuance in cursor.fetchall()])
+    issuance_fee_total = sum([issuance['fee_paid'] for issuance in cursor.fetchall()])
+
+    # Subtract dividend fees.
+    cursor.execute('''SELECT * FROM dividends\
+                      WHERE status = ?''', ('valid',))
+    divident_fee_total = sum([dividend['fee_paid'] for dividend in cursor.fetchall()])
 
     cursor.close()
-    return burn_total - fee_total
+    return burn_total - issuance_fee_total - divident_fee_total
 
 def supplies (db):
     cursor = db.cursor()
