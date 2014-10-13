@@ -1,8 +1,8 @@
 #! /usr/bin/python3
 
-# TODO: Ethereum (and Serpent?) licence
-
 """Execute arbitrary data as a smart contract."""
+
+"""Based on pyethereum <https://github.com/ethereum/pyethereum>."""
 
 import struct
 import binascii

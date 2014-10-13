@@ -1,5 +1,7 @@
 #! /usr/bin/python3
 
+"""Based on pyethereum <https://github.com/ethereum/pyethereum>."""
+
 from lib import (util, config)
 from lib.scriptlib import (rlp, utils)
 

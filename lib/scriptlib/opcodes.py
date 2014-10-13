@@ -1,5 +1,7 @@
 #! /usr/bin/python3
 
+"""Based on pyethereum <https://github.com/ethereum/pyethereum>."""
+
 # schema: [opcode, ins, outs, memuses, gas]
 # memuses are written as an array of (start, len) pairs; values less than
 # zero are taken as stackarg indices and values zero or greater are taken
