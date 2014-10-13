@@ -5,8 +5,8 @@
 	* server action requires `server` positional argument
 	* lockfile
 	* made `--force` server‐side only, moved after `server` argument
-	* multiple sources, destinations (testnet protocol change: 281000)
-	* multi‐signature support (testnet protocol change: 281000)
+	* multiple sources, destinations (testnet protocol change: 303000)
+	* multi‐signature support (testnet protocol change: 303000)
 * v9.43.0 (2014-09-14)
 	* generate movements hash for each block (start at block: 322000)
 * v9.42.0 (2014-09-04)
