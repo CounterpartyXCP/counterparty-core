@@ -190,7 +190,10 @@ def rpc (method, params):
 
 def validate_address(address):
     addresses = address.split('_')
-    if len(addresses) > 1:
+    multisig = len(addresses) > 1
+    if multisig:
+        if not config.TESTNET: 
+            raise exceptions.AddressError('Multi‐signature addresses currently disabled on mainnet.')
         try:
             assert int(addresses[0]) in (1,2,3)
             assert int(addresses[-1]) in (1,2,3)
