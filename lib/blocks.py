@@ -131,7 +131,7 @@ def generate_movement_hash(db, block_index, previous_hash=None, current_hash=Non
     # check checkpoints and save block movements_hash
     checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
     if (block_index in checkpoints and checkpoints[block_index] != movements_hash) or (current_hash and current_hash != movements_hash):
-        raise exceptions.ConsensusError('Invalid movements_hash for block {}'.format(block_index))
+        raise exceptions.ConsensusError('Incorrect movements_hash for block {}.'.format(block_index))
     elif not current_hash:
         sql = '''UPDATE blocks SET movements_hash = ? WHERE block_index = ?'''
         cursor.execute(sql, (movements_hash, block_index))
