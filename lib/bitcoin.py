@@ -558,9 +558,9 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     for destination in destinations + [source]:
         if destination:
             try:
-                validate_address(destination)
+                validate_address(destination, block_index)
             except exceptions.AddressError as e:
-                raise exceptions.AddressError('Invalid destination address:', address)
+                raise exceptions.AddressError('Invalid destination address:', destination)
 
     # Check that the source is in wallet.
     if encoding in ('multisig') and not self_public_key and not multisig_source:
