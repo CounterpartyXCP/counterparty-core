@@ -61,12 +61,14 @@ Sorted UTXOs: ['amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46
 New input: amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46fb574af7fd86fd417bc; vout: 0; confirmations: 6
 Change quantity: 2.999822 BTC
 Debit: 0.00000024 XCP from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #dividend# <19d6c36abe5e3f08992ad07d6f91984155af573276e24e6a257a9039dbc6ed0b>
+Debit: 0.0002 XCP from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #dividend fee# <19d6c36abe5e3f08992ad07d6f91984155af573276e24e6a257a9039dbc6ed0b>
 Credit: 0.00000024 XCP to 2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #dividend# <19d6c36abe5e3f08992ad07d6f91984155af573276e24e6a257a9039dbc6ed0b>
 Dividend: 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 paid 0.000006 XCP per unit of BBBB (19d6c36abe5e3f08992ad07d6f91984155af573276e24e6a257a9039dbc6ed0b) [valid]
 Sorted UTXOs: ['amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46fb574af7fd86fd417bc; vout: 0; confirmations: 6']
 New input: amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46fb574af7fd86fd417bc; vout: 0; confirmations: 6
 Change quantity: 2.999822 BTC
 Debit: 0.004208 XCP from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #dividend# <4201328d526f755f7bd58b7d338a2f3502da890fa1a7286809bbab75279fcaa8>
+Debit: 0.0002 XCP from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #dividend fee# <4201328d526f755f7bd58b7d338a2f3502da890fa1a7286809bbab75279fcaa8>
 Credit: 0.004208 XCP to 2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #dividend# <4201328d526f755f7bd58b7d338a2f3502da890fa1a7286809bbab75279fcaa8>
 Dividend: 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 paid 0.000008 XCP per unit of BBBC (4201328d526f755f7bd58b7d338a2f3502da890fa1a7286809bbab75279fcaa8) [valid]
 Sorted UTXOs: ['amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46fb574af7fd86fd417bc; vout: 0; confirmations: 6']

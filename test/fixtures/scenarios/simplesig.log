@@ -61,12 +61,14 @@ Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Change quantity: 1.9989134 BTC
 Debit: 0.00000024 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #dividend# <42e34c582e6f07034144fcef5aeed791df319315912f08af70b3b0c10652d4ea>
+Debit: 0.0002 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #dividend fee# <42e34c582e6f07034144fcef5aeed791df319315912f08af70b3b0c10652d4ea>
 Credit: 0.00000024 XCP to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #dividend# <42e34c582e6f07034144fcef5aeed791df319315912f08af70b3b0c10652d4ea>
 Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 0.000006 XCP per unit of BBBB (42e34c582e6f07034144fcef5aeed791df319315912f08af70b3b0c10652d4ea) [valid]
 Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Change quantity: 1.9989134 BTC
 Debit: 0.004208 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #dividend# <e678aa9e703de30b013335d96d1099b82fe1a8f3c588e62f19483dea9421804e>
+Debit: 0.0002 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #dividend fee# <e678aa9e703de30b013335d96d1099b82fe1a8f3c588e62f19483dea9421804e>
 Credit: 0.004208 XCP to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #dividend# <e678aa9e703de30b013335d96d1099b82fe1a8f3c588e62f19483dea9421804e>
 Dividend: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc paid 0.000008 XCP per unit of BBBC (e678aa9e703de30b013335d96d1099b82fe1a8f3c588e62f19483dea9421804e) [valid]
 Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
