@@ -59,8 +59,9 @@ however.
 
 Sometimes the underlying package requirements may change for `counterpartyd`. If you build and installed it from scratch,
 you can manually update these requirements by executing something like:
-
-    ```pip install --upgrade -r pip-requirements.txt```
+```
+    pip install --upgrade -r pip-requirements.txt 
+```
 
 # Test suite
 
