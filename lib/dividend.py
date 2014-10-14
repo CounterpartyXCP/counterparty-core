@@ -52,8 +52,8 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     # Calculate dividend quantities.
     holders = util.holders(db, asset)
     outputs = []
+    addresses = []
     dividend_total = 0
-    holder_count = 0
     for holder in holders:
 
         if block_index < 294500 and not config.TESTNET: # Protocol change.
@@ -71,8 +71,8 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
         dividend_quantity = int(dividend_quantity)
 
         outputs.append({'address': address, 'address_quantity': address_quantity, 'dividend_quantity': dividend_quantity})
+        addresses.append(address)
         dividend_total += dividend_quantity
-        holder_count += 1
 
     if not dividend_total: problems.append('zero dividend')
 
@@ -83,6 +83,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
 
     fee = 0
     if not problems and dividend_asset != config.BTC:
+        holder_count = len(set(addresses))
         if block_index >= 328000 or config.TESTNET: # Protocol change.
             fee = int(0.0002 * config.UNIT * holder_count)
         if fee:
