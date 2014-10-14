@@ -4,32 +4,22 @@
 
 import struct
 import binascii
-import hashlib
 
-from . import (util, config, exceptions, bitcoin, util)
+from . import (util, config, exceptions, bitcoin, util, execute)
+from lib.scriptlib import(blocks)
 
 ID = 100
 
-def create_contract (db, tx_index, tx_hash, block_index, source, code):
-    cursor = db.cursor()
 
-    contract_id = util.contract_sha3(source.encode('utf-8') + code)   # TODO: collisions?!
 
-    # Add parsed transaction to message-type–specific table.
-    bindings = {
-        'contract_id': contract_id,
-        'tx_index': tx_index,
-        'tx_hash': tx_hash,
-        'block_index': block_index,
-        'source': source,
-        'code': code,
-        'nonce': 0,
-    }
-    sql='insert into contracts values(:contract_id, :tx_index, :tx_hash, :block_index, :source, :code, :nonce)'
-    cursor.execute(sql, bindings)
+def do_create_contract(db, tx, message, endowment=0):
+    code = message
+    gasprice = 1                # TODO
+    startgas = 100000           # TODO
+    tx_obj = execute.Transaction(tx, '', gasprice, startgas, endowment, code)
 
-    cursor.close()
-    return contract_id
+    success, contract_id = execute.apply_transaction(db, tx_obj)
+
 
 def compose (db, source, code_hex):
 
@@ -41,6 +31,7 @@ def compose (db, source, code_hex):
 
 def parse (db, tx, message):
 
-    create_contract(db, tx['tx_index'], tx['tx_hash'], tx['block_index'], tx['source'], message)
+    endowment = 0   # TODO
+    do_create_contract(db, tx, message, endowment=endowment)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

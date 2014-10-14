@@ -913,8 +913,7 @@ def initialise(db):
     # Nonces
     cursor.execute('''CREATE TABLE IF NOT EXISTS nonces(
                       address TEXT PRIMARY KEY,
-                      nonce INTEGER,
-                      FOREIGN KEY (address) REFERENCES contracts(contract_id))
+                      nonce INTEGER)
                   ''')
 
     # Postqueu

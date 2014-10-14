@@ -109,7 +109,7 @@ class Transaction(object):
         self.gasprice = gasprice
         self.startgas = startgas
         self.value = value
-        self.timestamp = tx['timestamp']
+        self.timestamp = tx['block_time']
     def hex_hash(self):
         return '<None>'
     def to_dict(self):
@@ -212,7 +212,9 @@ class HaltExecution(Exception): pass
 class InsufficientBalance(HaltExecution): pass
 class InsufficientStartGas(HaltExecution): pass
 class OutOfGas(HaltExecution): pass
-def apply_transaction(db, block, tx):
+def apply_transaction(db, tx):
+    block = blocks.Block(db)
+
     def rp(actual, target):
         return '%r, actual:%r target:%r' % (tx, actual, target)
 
@@ -396,7 +398,11 @@ def apply_msg_send(db, block, tx, msg):
     return apply_msg(db, block, tx, msg, block.get_code(msg.to))
 
 def create_contract(db, block, tx, msg):
-    sender = binascii.unhexlify(msg.sender) if len(msg.sender) == 40 else msg.sender
+    if len(msg.sender) == 40:   # Sender is contract.
+        sender = binascii.unhexlify(msg.sender)
+    else:                       # Sender is regular address.
+        sender = bitcoin.base58_check_decode(msg.sender, config.ADDRESSVERSION)
+        
     if tx.sender != msg.sender:
         block.increment_nonce(msg.sender)
     nonce = utils.encode_int(block.get_nonce(msg.sender) - 1)

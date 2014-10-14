@@ -150,14 +150,13 @@ class tester(object):
             tx = { 'source': sender,
                    'block_index': 0,
                    'tx_hash': to, 
-                   'timestamp': TIMESTAMP
+                   'block_time': TIMESTAMP
                  }
             tx_obj = execute.Transaction(tx, to, gasprice, startgas, value, data)
 
             # Run.
 
-            block_obj = blocks.Block(db)
-            success, data = execute.apply_transaction(db, block_obj, tx_obj)
+            success, data = execute.apply_transaction(db, tx_obj)
 
             # Decode, return result.
             return success, data
