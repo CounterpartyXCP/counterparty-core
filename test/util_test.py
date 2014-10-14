@@ -321,6 +321,13 @@ def get_block_movements(db, block_index):
     movements = json.dumps(debits + credits, indent=4)
     return movements
 
+def get_block_transactions(db, block_index):
+    cursor = db.cursor()
+    transactions = list(cursor.execute('''SELECT * FROM transactions WHERE block_index = ?''', (block_index,)))
+    transactions = [json.dumps(m).replace('"', '\'') for m in transactions]
+    transactions = json.dumps(transactions, indent=4)
+    return transactions
+
 def reparse(testnet=True):
     options = dict(COUNTERPARTYD_OPTIONS)
     options.pop('data_dir')
@@ -361,7 +368,13 @@ def reparse(testnet=True):
                                                                                     previous_movements_hash, block['movements_hash'],
                                                                                     previous_transaction_hash, block['transactions_hash'])
         except ConsensusError as e:
-            new_movements = get_block_movements(memory_db, block['block_index'])
-            old_movements = get_block_movements(prod_db, block['block_index'])
-            compare_strings(new_movements, old_movements)
+            message = str(e)
+            if message.find('movements_hash') != -1:
+                new_movements = get_block_movements(memory_db, block['block_index'])
+                old_movements = get_block_movements(prod_db, block['block_index'])
+                compare_strings(old_movements, new_movements)
+            elif message.find('transactions_hash') != -1:
+                new_transactions = get_block_transactions(memory_db, block['block_index'])
+                old_transactions = get_block_transactions(prod_db, block['block_index'])
+                compare_strings(old_transactions, new_transactions)
             raise(e)
