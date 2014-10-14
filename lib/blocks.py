@@ -1156,13 +1156,16 @@ def reparse (db, block_index=None, quiet=False):
         for table in TABLES + ['balances']:
             cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
 
-        # clean movements_hash in case of protocol change.
-        if config.TESTNET:
-            columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(blocks)''')]
-            if 'movements_hash' in columns:
-                cursor.execute('''UPDATE blocks SET movements_hash = NULL''')
-            if 'transactions_hash' in columns:
-                cursor.execute('''UPDATE blocks SET transactions_hash = NULL''')
+        # clean consensus hashes if first block hash don't match with checkpoint.
+        checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
+        columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(blocks)''')]
+        for field, check_hash_pos in [('movements_hash', 0), ('transactions_hash', 1)]:
+            if field in columns:
+                sql = '''SELECT {} FROM blocks  WHERE block_index = ?'''.format(field)
+                first_hash = list(cursor.execute(sql, (config.BLOCK_FIRST,)))[0][field]
+                if first_hash != checkpoints[config.BLOCK_FIRST][check_hash_pos]:
+                    logging.info('First hash changed. Cleaning {}.'.format(field))
+                    cursor.execute('''UPDATE blocks SET {} = NULL'''.format(field))
 
         # For rollbacks, just delete new blocks and then reparse what’s left.
         if block_index:
