@@ -31,7 +31,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     issuances = list(cursor.execute('''SELECT * FROM issuances WHERE (status = ? AND asset = ?) ORDER BY tx_index ASC''', ('valid', asset)))
     if not issuances:
         problems.append('no such asset, {}.'.format(asset))
-        return None, None, problems
+        return None, None, problems, 0
     divisible = issuances[0]['divisible']
 
     # Only issuer can pay dividends.
@@ -46,7 +46,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
         issuances = list(cursor.execute('''SELECT * FROM issuances WHERE (status = ? AND asset = ?)''', ('valid', dividend_asset)))
         if not issuances:
             problems.append('no such dividend asset, {}.'.format(dividend_asset))
-            return None, None, problems
+            return None, None, problems, 0
         dividend_divisible = issuances[0]['divisible']
 
     # Calculate dividend quantities.
