@@ -76,8 +76,8 @@ def insert_block(db, block_index, parse_block=False):
     cursor = db.cursor()
     block_hash = hashlib.sha512(chr(block_index).encode('utf-8')).hexdigest()
     block_time = block_index * 10000000
-    block = (block_index, block_hash, block_time, None)
-    cursor.execute('''INSERT INTO blocks VALUES (?,?,?,?)''', block)
+    block = (block_index, block_hash, block_time, None, None)
+    cursor.execute('''INSERT INTO blocks VALUES (?,?,?,?,?)''', block)
     cursor.close()
     if parse_block:
         blocks.parse_block(db, block_index, block_time)
@@ -118,8 +118,8 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
 
 def insert_transaction(transaction, db):
     cursor = db.cursor()
-    block = (transaction['block_index'], transaction['block_hash'], transaction['block_time'], None)
-    cursor.execute('''INSERT INTO blocks VALUES (?,?,?,?)''', block)
+    block = (transaction['block_index'], transaction['block_hash'], transaction['block_time'], None, None)
+    cursor.execute('''INSERT INTO blocks VALUES (?,?,?,?,?)''', block)
     keys = ",".join(transaction.keys())
     cursor.execute('''INSERT INTO transactions ({}) VALUES (?,?,?,?,?,?,?,?,?,?,?)'''.format(keys), tuple(transaction.values()))
     cursor.close()
@@ -165,8 +165,8 @@ def decoderawtransaction(db, tx_hex):
 def initialise_db(db):
     blocks.initialise(db)
     cursor = db.cursor()
-    first_block = (config.BURN_START - 1, 'foobar', 1337, util.dhash_string(config.MOVEMENTS_HASH_SEED))
-    cursor.execute('''INSERT INTO blocks VALUES (?,?,?,?)''', first_block)
+    first_block = (config.BURN_START - 1, 'foobar', 1337, util.dhash_string(config.BLOCK_HASH_SEED), util.dhash_string(config.BLOCK_HASH_SEED))
+    cursor.execute('''INSERT INTO blocks VALUES (?,?,?,?,?)''', first_block)
     cursor.close()
 
 def run_scenario(scenario, rawtransactions_db):
@@ -351,12 +351,15 @@ def reparse(testnet=True):
     for table in blocks.TABLES + ['balances']:
         memory_cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
     blocks.initialise(memory_db)
-    previous_hash = None
+    previous_movements_hash = None
+    previous_transaction_hash = None
     memory_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
     for block in memory_cursor.fetchall():
         try:
             logger.info('Block (re‐parse): {}'.format(str(block['block_index'])))
-            previous_hash = blocks.parse_block(memory_db, block['block_index'], block['block_time'], previous_hash, block['movements_hash'])
+            previous_movements_hash, previous_transaction_hash = blocks.parse_block(memory_db, block['block_index'], block['block_time'], 
+                                                                                    previous_movements_hash, block['movements_hash'],
+                                                                                    previous_transaction_hash, block['transactions_hash'])
         except ConsensusError as e:
             new_movements = get_block_movements(memory_db, block['block_index'])
             old_movements = get_block_movements(prod_db, block['block_index'])
