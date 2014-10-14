@@ -1143,7 +1143,9 @@ def reparse (db, block_index=None, quiet=False):
 
         # clean movements_hash in case of protocol change.
         if config.TESTNET:
-            cursor.execute('''UPDATE blocks SET movements_hash = NULL''')
+            columns = cursor.execute('''PRAGMA table_info(blocks)''')
+            if 'movements_hash' in [column['name'] for column in columns]:
+                cursor.execute('''UPDATE blocks SET movements_hash = NULL''')
 
         # For rollbacks, just delete new blocks and then reparse what’s left.
         if block_index:
