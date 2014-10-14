@@ -240,8 +240,8 @@ def log (db, command, category, bindings):
         elif category == 'rps_match_expirations':
             logging.info('Expired RPS Match: {}'.format(bindings['rps_match_id']))
 
-        # elif category == 'contracts':
-        #     logging.info('New Contract: {} published contract {} ({})'.format(bindings['source'], bindings['contract_id'], bindings['tx_hash']))
+        elif category == 'contracts':
+            logging.info('New Contract: {}'.format(bindings['contract_id']))
 
         elif category == 'executions':
             """
@@ -255,7 +255,11 @@ def log (db, command, category, bindings):
                 output_hex = '<None>'
             logging.info('Execution: {} executed contract {}, funded with {}, at a price of {} (?), at a final cost of {}, reclaiming {}, and also sending {}, with a data payload of {}, yielding {} ({}) [{}]'.format(bindings['source'], bindings['contract_id'], output(bindings['gas_start'], config.XCP), bindings['gas_price'], output(bindings['gas_cost'], config.XCP), output(bindings['gas_remaining'], config.XCP), output(bindings['value'], config.XCP), payload_hex, output_hex, bindings['tx_hash'], bindings['status']))
             """
-            logging.info('Execution: {} executed contract {} ({}) [{}]'.format(bindings['source'], bindings['contract_id'], bindings['tx_hash'], bindings['status']))
+            if bindings['contract_id']:
+                contract = bindings['contract_id']
+            else:
+                contract = '<NewContract>'
+            logging.info('Execution: {} executed contract {} ({}) [{}]'.format(bindings['source'], contract, bindings['tx_hash'], bindings['status']))
 
     cursor.close()
 
@@ -329,7 +333,7 @@ def exectracer(cursor, sql, bindings):
 
     # Record alteration in database.
     if category not in ('balances', 'messages', 'mempool'):
-        if category not in ('storage', 'contracts', 'suicides', 'nonces', 'postqueue'): # TODO: review
+        if category not in ('storage', 'suicides', 'nonces', 'postqueue'): # TODO: review
             if not (command in ('update') and category in ('orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches', 'contracts')):    # List message manually.
                 try:
                     message(db, bindings['block_index'], command, category, bindings)

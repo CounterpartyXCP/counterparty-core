@@ -669,8 +669,8 @@ if __name__ == '__main__':
     parser_execute = subparsers.add_parser('execute', help='execute contract code in the blockchain')
     parser_execute.add_argument('--source', required=True, help='the source address')
     parser_execute.add_argument('--contract-id', required=True, help='the contract ID of the contract to be executed')
-    parser_execute.add_argument('--gas-price', required=True, type=int, help='the price of gas')
-    parser_execute.add_argument('--gas-start', required=True, type=int, help='the maximum quantity of gas to be used to pay for the execution')
+    parser_execute.add_argument('--gasprice', required=True, type=int, help='the price of gas')
+    parser_execute.add_argument('--startgas', required=True, type=int, help='the maximum quantity of gas to be used to pay for the execution')
     parser_execute.add_argument('--value', required=True, type=int, help='quantity of {} to be transfered to the contract'.format(config.XCP))
     parser_execute.add_argument('--payload-hex', required=True, type=str, help='data to be provided to the contract (returned by `serpent encode_datalist`)')
     parser_execute.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
@@ -1002,10 +1002,10 @@ if __name__ == '__main__':
     elif args.action == 'execute':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
         value = util.devise(db, args.value, 'XCP', 'input')
-        gas_start = util.devise(db, args.gas_start, 'XCP', 'input')
+        startgas = util.devise(db, args.startgas, 'XCP', 'input')
         cli('create_execute', {'source': args.source,
-                               'contract_id': args.contract_id, 'gas_price':
-                               args.gas_price, 'gas_start': args.gas_start,
+                               'contract_id': args.contract_id, 'gasprice':
+                               args.gasprice, 'startgas': args.startgas,
                                'value': value, 'payload_hex': args.payload_hex, 'fee':
                                args.fee, 'allow_unconfirmed_inputs':
                                args.unconfirmed, 'encoding': args.encoding,

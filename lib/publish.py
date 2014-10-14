@@ -13,12 +13,19 @@ ID = 100
 
 
 def do_create_contract(db, tx, message, endowment=0):
-    code = message
-    gasprice = 1                # TODO
-    startgas = 100000           # TODO
-    tx_obj = execute.Transaction(tx, '', gasprice, startgas, endowment, code)
 
-    success, contract_id = execute.apply_transaction(db, tx_obj)
+    # TODO
+    gasprice = 1
+    startgas = 100000
+    value = 0
+
+    code = message
+
+    source, destination, data = execute.compose(db, tx['source'], '', gasprice, startgas, value, util.hexlify(code))
+    message = data[4:]
+
+    # Execute transaction upon publication, for actual creation of contract.
+    execute.parse(db, tx, message)
 
 
 def compose (db, source, code_hex):

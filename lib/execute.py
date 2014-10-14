@@ -4,6 +4,8 @@
 
 """Based on pyethereum <https://github.com/ethereum/pyethereum>."""
 
+# startgas is just the number of operations: total gas cost = gasprice * startgas
+
 import struct
 import binascii
 import time
@@ -15,8 +17,8 @@ import pickle
 from lib import (util, config, exceptions, bitcoin, util)
 from lib.scriptlib import (rlp, utils, opcodes, blocks)
 
-FORMAT = '>32sQQQ'
-LENGTH = 56
+FORMAT = '>20sQQQ'
+LENGTH = 44
 ID = 101
 
 class PBLogger(object):
@@ -87,7 +89,8 @@ CREATE_CONTRACT_ADDRESS = ''
 
 
 def compose (db, source, contract_id, gasprice, startgas, value, payload_hex):
-    code = blocks.block.get_code(db, contract_id)
+    block = blocks.Block(db)
+    code = block.get_code(contract_id)
     payload = binascii.unhexlify(payload_hex)
     # TODO: Check start_gas, gasprice here?
 
@@ -128,7 +131,6 @@ def parse (db, tx, message):
     output = None
     status = 'valid'
 
-
     # TODO: unit tests!
 
     try:
@@ -139,19 +141,22 @@ def parse (db, tx, message):
         except (struct.error) as e:
             raise exceptions.UnpackError()
 
-        contract_id = util.hexlify(contract_id)
         # TODO: gasprice is an int
+        gas_remained = startgas # TODO
+
+        contract_id = util.hexlify(contract_id)
+        if contract_id == '0000000000000000000000000000000000000000':    # TODO: HACK
+            contract_id = ''
 
         # ‘Apply transaction’!
         tx_obj = Transaction(tx, contract_id, gasprice, startgas, value, payload)
-        block_obj = blocks.Block(db)
-        apply_transaction(db, block_obj, tx_obj)
+        success, output, gas_remained = apply_transaction(db, tx_obj)
 
     except exceptions.UnpackError as e:
         contract_id, gasprice, startgas, value, payload = None, None, None, None, None
         status = 'invalid: could not unpack'
         output = None
-    except util.ContractError as e:
+    except ContractError as e:
         status = 'invalid: no such contract'
         contract_id = None
         output = None
@@ -167,14 +172,14 @@ def parse (db, tx, message):
         print(contract_id)
         output = None
     except OutOfGas as e:
-        logging.debug('TX OUT_OF_GAS (startgas: {}, gas_remaining: {})'.format(startgas, gas_remaining))
+        logging.debug('TX OUT_OF_GAS (startgas: {}, gas_remained: {})'.format(startgas, gas_remained))
         status = 'out of gas'
         output = None
     finally:
 
         # TODO: eh…
         if status == 'valid':
-            logging.debug('TX FINISHED (gas_remaining: {})'.format(gas_remaining))
+            logging.debug('TX FINISHED (gas_remained: {})'.format(gas_remained))
 
         # Add parsed transaction to message-type–specific table.
         bindings = {
@@ -185,14 +190,14 @@ def parse (db, tx, message):
             'contract_id': contract_id,
             'gasprice': gasprice,
             'startgas': startgas,
-            'gas_cost': gas_cost,
-            'gas_remaining': gas_remaining,
+            'gas_cost': gasprice * (startgas - gas_remained),
+            'gas_remained': gas_remained,
             'value': value,
             'payload': payload,
             'output': output,
             'status': status
         }
-        sql='insert into executions values(:tx_index, :tx_hash, :block_index, :source, :contract_id, :gasprice, :startgas, :gas_cost, :gas_remaining, :value, :data, :output, :status)'
+        sql='insert into executions values(:tx_index, :tx_hash, :block_index, :source, :contract_id, :gasprice, :startgas, :gas_cost, :gas_remained, :value, :data, :output, :status)'
         cursor = db.cursor()
         cursor.execute(sql, bindings)
 
@@ -222,7 +227,7 @@ def apply_transaction(db, tx):
     # g0, used by the transaction;
     intrinsic_gas_used = GTXDATA * len(tx.data) + GTXCOST
     if tx.startgas < intrinsic_gas_used:
-        raise InsufficientStartGas(rp(tx.startgas, intrinsic_gas_used))
+        raise InsufficientStartGas(tx.startgas, intrinsic_gas_used)
 
     # (4) the sender account balance contains at least the
     # cost, v0, required in up-front payment.
@@ -292,9 +297,14 @@ def apply_transaction(db, tx):
     for s in block.suicides_get():
         block.del_account(s)
     block.suicides_delete()
-    success = output is not OUT_OF_GAS
-    return success, output if success else ''
-
+    # success = output is not OUT_OF_GAS
+    # return success, output if success else ''
+    if output == OUT_OF_GAS:
+        success = False
+        output = ''
+    else:
+        success = True
+    return success, output, gas_remained
 
 def get_msg_state(block, msg, code):
     msg_state = {}
@@ -478,7 +488,7 @@ def apply_op(db, block, tx, msg, processed_code, compustate):
     # logging.debug('\tSTORAGE\n\t\t' + '\n\t\t'.join(['{}: {}'.format(utils.hexprint(storage['key']), utils.hexprint(storage['value'])) for storage in block.get_storage_data(msg.to)]))
 
     # Log operation
-    log_args = dict(pc=str(compustate.pc).zfill(3),
+    log_args = dict(pc=str(compustate.pc),
                     op=op,
                     stackargs=compustate.stack[-1:-in_args-1:-1],
     # TODO                stack=list(reversed(compustate.stack)),

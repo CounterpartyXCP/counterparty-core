@@ -156,10 +156,10 @@ class tester(object):
 
             # Run.
 
-            success, data = execute.apply_transaction(db, tx_obj)
+            success, output, gas_remained = execute.apply_transaction(db, tx_obj)
 
             # Decode, return result.
-            return success, data
+            return success, output
 
 
         def send (self, sender, to, value, data=[]):
@@ -172,9 +172,9 @@ class tester(object):
             # Execute contract.
             # print('qux', data, type(data))
             util.credit(db, 0, sender, config.XCP, value + 100000000, action='unit test', event='facefeed')
-            success, data = tester.state.do_send(self, sender, to, value, data=data)
-            if data:
-                return rlp.decode_datalist(bytes(data))
+            success, output = tester.state.do_send(self, sender, to, value, data=data)
+            if output:
+                return rlp.decode_datalist(bytes(output))
             else:
                 return []
 

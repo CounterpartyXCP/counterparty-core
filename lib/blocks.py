@@ -878,13 +878,12 @@ def initialise(db):
                       gas_price INTEGER,
                       gas_start INTEGER,
                       gas_cost INTEGER,
-                      gas_remaining INTEGER,
+                      gas_remained INTEGER,
                       value INTEGER,
                       data BLOB,
                       output BLOB,
                       status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      FOREIGN KEY (contract_id) REFERENCES contracts(contract_id))
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                   ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       source_idx ON executions(source)
