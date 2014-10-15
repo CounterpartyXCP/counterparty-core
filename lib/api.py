@@ -561,6 +561,14 @@ class APIServer(threading.Thread):
             cursor.close()
             return names
 
+        @dispatcher.add_method
+        def get_holder_count(asset):
+            holders = util.holders(db, asset)
+            addresses = []
+            for holder in holders:
+                addresses.append(holder['address'])
+            return { asset: len(set(addresses)) }
+
         def _set_cors_headers(response):
             if config.RPC_ALLOW_CORS:
                 response.headers['Access-Control-Allow-Origin'] = '*'

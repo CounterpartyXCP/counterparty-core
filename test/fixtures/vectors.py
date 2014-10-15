@@ -242,19 +242,19 @@ UNITTEST_VECTOR = {
             'out': (1100000000000, [{'address_quantity': 100000000, 'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'dividend_quantity': 100000000000}, {'address_quantity': 1000000000, 'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'dividend_quantity': 1000000000000}], ['insufficient funds (XCP)'], 0)
         }, { 
             'in': (ADDR[0], DP['quantity'], 'BTC', 'XCP', 155409),
-            'out': (None, None, ['cannot pay dividends to holders of BTC', 'no such asset, BTC.'])
+            'out': (None, None, ['cannot pay dividends to holders of BTC', 'no such asset, BTC.'], 0)
         }, { 
             'in': (ADDR[0], DP['quantity'], 'XCP', 'XCP', 155409),
-            'out': (None, None, ['cannot pay dividends to holders of XCP', 'no such asset, XCP.'])
+            'out': (None, None, ['cannot pay dividends to holders of XCP', 'no such asset, XCP.'], 0)
         }, { 
             'in': (ADDR[0], DP['quantity'], 'NOASSET', 'XCP', 155409),
-            'out': (None, None, ['no such asset, NOASSET.'])
+            'out': (None, None, ['no such asset, NOASSET.'], 0)
         }, { 
             'in': (ADDR[1], DP['quantity'], 'DIVISIBLE', 'XCP', 155409),
             'out': (99900000000, [{'dividend_quantity': 98900000000, 'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'address_quantity': 98900000000}, {'dividend_quantity': 1000000000, 'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'address_quantity': 1000000000}], ['only issuer can pay dividends', 'insufficient funds (XCP)'], 0)
         }, { 
             'in': (ADDR[0], DP['quantity'], 'DIVISIBLE', 'NOASSET', 155409),
-            'out': (None, None, ['no such dividend asset, NOASSET.'])
+            'out': (None, None, ['no such dividend asset, NOASSET.'], 0)
         }],
         'compose': [{
             'in': (ADDR[0], DP['quantity'], 'DIVISIBLE', 'XCP'),
