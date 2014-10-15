@@ -164,10 +164,7 @@ def decoderawtransaction(db, tx_hex):
 
 def initialise_db(db):
     blocks.initialise(db)
-    cursor = db.cursor()
-    first_block = (config.BURN_START - 1, 'foobar', 1337, util.dhash_string(config.CONSENSUS_HASH_SEED), util.dhash_string(config.CONSENSUS_HASH_SEED))
-    cursor.execute('''INSERT INTO blocks VALUES (?,?,?,?,?)''', first_block)
-    cursor.close()
+    insert_block(db, config.BURN_START - 1)
 
 def run_scenario(scenario, rawtransactions_db):
     counterpartyd.set_options(database_file=':memory:', testnet=True, **COUNTERPARTYD_OPTIONS)
