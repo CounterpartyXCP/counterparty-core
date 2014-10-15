@@ -4,8 +4,6 @@
 
 """Based on pyethereum <https://github.com/ethereum/pyethereum>."""
 
-# startgas is just the number of operations: total gas cost = gasprice * startgas
-
 import struct
 import binascii
 import time
@@ -13,6 +11,8 @@ import logging
 import string
 import json
 import pickle
+import fractions
+import math
 
 from lib import (util, config, exceptions, bitcoin, util)
 from lib.scriptlib import (rlp, utils, opcodes, blocks)
@@ -40,7 +40,6 @@ class PBLogger(object):
         logging.info("%s: %s", name.ljust(15), msg)
 
 pblogger = PBLogger()
-code_cache = {}
 
 def log (name, obj):
     assert type(obj) == dict
@@ -72,20 +71,13 @@ def log (name, obj):
         for line in lines:
             logging.debug('\t' + str(line))
 
-GDEFAULT = 1
-GMEMORY = 1
-GSTORAGE = 100
-GTXDATA = 5
-GTXCOST = 500
+code_cache = {}
+
 TT255 = 2**255
 TT256 = 2**256
 
 OUT_OF_GAS = -1
-
 CREATE_CONTRACT_ADDRESS = ''
-
-# TODO: Make fees proportional to money supply.
-
 
 
 def compose (db, source, contract_id, gasprice, startgas, value, payload_hex):
@@ -219,6 +211,26 @@ class InsufficientStartGas(HaltExecution): pass
 class OutOfGas(HaltExecution): pass
 def apply_transaction(db, tx):
     block = blocks.Block(db)
+
+    ### Make fees proportional to money supply. ###
+    # Set initial values. Calculate price multiplier.
+    # Multiply prices by multiplier, then by 100; make global variables.
+    prices = {
+              'GDEFAULT': 1,
+              'GMEMORY': 1,
+              'GSTORAGE': 100,
+              'GTXDATA': 5,
+              'GTXCOST': 500
+             }
+    if config.TESTNET:
+        supply = 2600001 * config.UNIT
+    else:
+        supply = util.xcp_supply(db)
+    MULTIPLIER = fractions.Fraction(supply, 2700000 * config.UNIT)
+    for key in prices.keys():
+        prices[key] = fractions.Fraction(prices[key]) * MULTIPLIER * 100
+        prices[key] = math.floor(prices[key].__round__(2))
+        exec('''global {}; {} = prices['{}']'''.format(key, key, key))
 
     # (3) the gas limit is no smaller than the intrinsic gas,
     # g0, used by the transaction;
