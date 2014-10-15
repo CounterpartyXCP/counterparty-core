@@ -92,9 +92,9 @@ DEFAULT_FEE_FRACTION_PROVIDED = .01    # 1.00%
 # Custom exit codes
 EXITCODE_UPDATE_REQUIRED = 5
 
-BLOCK_HASH_SEED = 'We can only see a short distance ahead, but we can see plenty there that needs to be done.'
+CONSENSUS_HASH_SEED = 'We can only see a short distance ahead, but we can see plenty there that needs to be done.'
 
-# (movements_hash, transactions_hash)
+# (ledger_hash, txlist_hash)
 CHECKPOINTS_MAINNET = {
     278270: ('538b3c4512b8f85d7f5d1d44bcad36a86dcf7d735610dcd17ff906ff74c914ab', '538b3c4512b8f85d7f5d1d44bcad36a86dcf7d735610dcd17ff906ff74c914ab'),
     280000: ('44171ad53b349a46ca167580f59b5e65f74597877f2f9e61aba1797811e5954e', '237f1c6720441cd6d69317e7d76a1118685022089012625e8525dcf550895cdf'),

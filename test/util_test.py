@@ -165,7 +165,7 @@ def decoderawtransaction(db, tx_hex):
 def initialise_db(db):
     blocks.initialise(db)
     cursor = db.cursor()
-    first_block = (config.BURN_START - 1, 'foobar', 1337, util.dhash_string(config.BLOCK_HASH_SEED), util.dhash_string(config.BLOCK_HASH_SEED))
+    first_block = (config.BURN_START - 1, 'foobar', 1337, util.dhash_string(config.CONSENSUS_HASH_SEED), util.dhash_string(config.CONSENSUS_HASH_SEED))
     cursor.execute('''INSERT INTO blocks VALUES (?,?,?,?,?)''', first_block)
     cursor.close()
 
@@ -313,21 +313,21 @@ def compare_strings(string1, string2):
         print("\n".join(diff))
     return len(diff)
 
-def get_block_movements(db, block_index):
+def get_block_ledger(db, block_index):
     cursor = db.cursor()
     debits = list(cursor.execute('''SELECT * FROM debits WHERE block_index = ?''', (block_index,)))
     credits = list(cursor.execute('''SELECT * FROM credits WHERE block_index = ?''', (block_index,)))
     debits = [json.dumps(m).replace('"', '\'') for m in debits]
     credits = [json.dumps(m).replace('"', '\'') for m in credits]
-    movements = json.dumps(debits + credits, indent=4)
-    return movements
+    ledger = json.dumps(debits + credits, indent=4)
+    return ledger
 
-def get_block_transactions(db, block_index):
+def get_block_txlist(db, block_index):
     cursor = db.cursor()
-    transactions = list(cursor.execute('''SELECT * FROM transactions WHERE block_index = ?''', (block_index,)))
-    transactions = [json.dumps(m).replace('"', '\'') for m in transactions]
-    transactions = json.dumps(transactions, indent=4)
-    return transactions
+    txlist = list(cursor.execute('''SELECT * FROM transactions WHERE block_index = ?''', (block_index,)))
+    txlist = [json.dumps(m).replace('"', '\'') for m in txlist]
+    txlist = json.dumps(txlist, indent=4)
+    return txlist
 
 def reparse(testnet=True):
     options = dict(COUNTERPARTYD_OPTIONS)
@@ -359,23 +359,23 @@ def reparse(testnet=True):
     for table in blocks.TABLES + ['balances']:
         memory_cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
     blocks.initialise(memory_db)
-    previous_movements_hash = None
-    previous_transaction_hash = None
+    previous_ledger_hash = None
+    previous_txlist_hash = None
     memory_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
     for block in memory_cursor.fetchall():
         try:
             logger.info('Block (re‐parse): {}'.format(str(block['block_index'])))
-            previous_movements_hash, previous_transaction_hash = blocks.parse_block(memory_db, block['block_index'], block['block_time'], 
-                                                                                    previous_movements_hash, block['movements_hash'],
-                                                                                    previous_transaction_hash, block['transactions_hash'])
+            previous_ledger_hash, previous_txlist_hash = blocks.parse_block(memory_db, block['block_index'], block['block_time'], 
+                                                                                    previous_ledger_hash, block['ledger_hash'],
+                                                                                    previous_txlist_hash, block['txlist_hash'])
         except ConsensusError as e:
             message = str(e)
-            if message.find('movements_hash') != -1:
-                new_movements = get_block_movements(memory_db, block['block_index'])
-                old_movements = get_block_movements(prod_db, block['block_index'])
-                compare_strings(old_movements, new_movements)
-            elif message.find('transactions_hash') != -1:
-                new_transactions = get_block_transactions(memory_db, block['block_index'])
-                old_transactions = get_block_transactions(prod_db, block['block_index'])
-                compare_strings(old_transactions, new_transactions)
+            if message.find('ledger_hash') != -1:
+                new_ledger = get_block_ledger(memory_db, block['block_index'])
+                old_ledger = get_block_ledger(prod_db, block['block_index'])
+                compare_strings(old_ledger, new_ledger)
+            elif message.find('txlist_hash') != -1:
+                new_txlist = get_block_txlist(memory_db, block['block_index'])
+                old_txlist = get_block_txlist(prod_db, block['block_index'])
+                compare_strings(old_txlist, new_txlist)
             raise(e)

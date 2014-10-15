@@ -130,7 +130,7 @@ DROP TABLE IF EXISTS blocks;
 CREATE TABLE blocks(
                       block_index INTEGER UNIQUE,
                       block_hash TEXT UNIQUE,
-                      block_time INTEGER, movements_hash TEXT, transactions_hash TEXT,
+                      block_time INTEGER, ledger_hash TEXT, txlist_hash TEXT,
                       PRIMARY KEY (block_index, block_hash));
 INSERT INTO blocks VALUES(154907,'foobar',1337,'9ffe2080311b3241d224cc1f23564acb9f95a94424729cb910babead79dfa84e','9ffe2080311b3241d224cc1f23564acb9f95a94424729cb910babead79dfa84e');
 INSERT INTO blocks VALUES(154908,'cab26004a25bf4f3f706d147cc1a6b4ae35d4e2177acbb3a5e1347205fab75cc93c2cfdda0f9e01252776bdaccd4a9dc2cc2e2264af588dbe306734293c1c8c4',1549080000000,'72e409b1ac16de411f5a71cf73daaa08b54a0357e97110e8b0993c529daf8259','d6be75bad4c19a2b8cf0767fcdb56c0834ae112a0a28f2ed9caf5c4e9ea8f085');
