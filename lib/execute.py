@@ -220,9 +220,6 @@ class OutOfGas(HaltExecution): pass
 def apply_transaction(db, tx):
     block = blocks.Block(db)
 
-    def rp(actual, target):
-        return '%r, actual:%r target:%r' % (tx, actual, target)
-
     # (3) the gas limit is no smaller than the intrinsic gas,
     # g0, used by the transaction;
     intrinsic_gas_used = GTXDATA * len(tx.data) + GTXCOST
@@ -233,8 +230,7 @@ def apply_transaction(db, tx):
     # cost, v0, required in up-front payment.
     total_cost = tx.value + tx.gasprice * tx.startgas
     if block.get_balance(tx.sender) < total_cost:
-        raise InsufficientBalance(
-            rp(block.get_balance(tx.sender), total_cost))
+        raise InsufficientBalance(block.get_balance(tx.sender), total_cost)
 
     pblogger.log('TX NEW', tx=tx.hex_hash(), tx_dict=tx.to_dict())
     # log('TX NEW', tx_dict)
