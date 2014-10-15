@@ -1176,7 +1176,6 @@ def reparse (db, block_index=None, quiet=False):
     return
 
 def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
-    cursor = db.cursor()
     # Get the important details about each transaction.
     tx = bitcoin.get_raw_transaction(tx_hash)
     logging.debug('Status: examining transaction {}.'.format(tx_hash))
@@ -1191,7 +1190,13 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
         tx_info = b'', None, None, None, None
     source, destination, btc_amount, fee, data = tx_info
 
+    # For mempool
+    if block_hash == None:
+        block_hash = config.MEMPOOL_BLOCK_HASH
+        block_index = config.MEMPOOL_BLOCK_INDEX
+
     if source and (data or destination == config.UNSPENDABLE):
+        cursor = db.cursor()
         cursor.execute('''INSERT INTO transactions(
                             tx_index,
                             tx_hash,
@@ -1214,10 +1219,10 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
                              fee,
                              data)
                       )
+        cursor.close()
     else:
         logging.debug('Skipping: ' + tx_hash)
 
-    cursor.close()
     return
 
 def follow (db):
@@ -1383,7 +1388,7 @@ def follow (db):
 
                             # List transaction.
                             try:    # Sometimes the transactions can’t be found: `{'code': -5, 'message': 'No information available about transaction'} Is txindex enabled in Bitcoind?`
-                                list_tx(db, config.MEMPOOL_BLOCK_HASH, config.MEMPOOL_BLOCK_INDEX, curr_time, tx_hash, mempool_tx_index)
+                                list_tx(db, None, block_index, curr_time, tx_hash, mempool_tx_index)
                                 mempool_tx_index += 1
                             except exceptions.BitcoindError:
                                 raise exceptions.MempoolError
