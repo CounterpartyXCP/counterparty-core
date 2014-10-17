@@ -80,7 +80,7 @@ class serpent(object):
 TIMESTAMP = 1410973349
 
 class tester(object):
-    gas_limit = 100000
+    gas_limit = 100000 * 100
 
     class serpent(object):
         def compile_lll(lll_code):
@@ -154,9 +154,19 @@ class tester(object):
                  }
             tx_obj = execute.Transaction(tx, to, gasprice, startgas, value, data)
 
-            # Run.
+            # Force block init.
+            def fake_block_init(self, db):
+                self.db = db
+                self.timestamp = TIMESTAMP
+                self.number = 'deadbeef'
+                self.prevhash = 'facefeed'
+                self.difficulty = 1337
+                return
+            blocks.Block.__init__ = fake_block_init
+            block_obj = blocks.Block(db)
 
-            success, output, gas_remained = execute.apply_transaction(db, tx_obj)
+            # Run.
+            success, output, gas_remained = execute.apply_transaction(db, tx_obj, block_obj)
 
             # Decode, return result.
             return success, output
@@ -191,11 +201,11 @@ class tester(object):
                 cursor.close()
 
             def get_storage_data(contract_id, key):
-                block = blocks.Block(db)
+                block = blocks.Block(db, util.last_block(db)['block_hash'])
                 return block.get_storage_data(contract_id, key)
 
             def get_balance(address):
-                block = blocks.Block(db)
+                block = blocks.Block(db, util.last_block(db)['block_hash'])
                 return block.get_balance(address)
 
             

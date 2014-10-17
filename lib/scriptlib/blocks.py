@@ -7,11 +7,26 @@ from lib.scriptlib import (rlp, utils)
 
 import logging
 import pickle
+import bitcoin as bitcoinlib
+import bitcoin.rpc as bitcoinlib_rpc
 
 class Block(object):
 
-    def __init__(self, db):
+    def __init__(self, db, block_hash):
         self.db = db
+
+        cursor = db.cursor()
+        block = list(cursor.execute('''SELECT * FROM blocks WHERE block_hash = ?''', (block_hash,)))[0]
+        self.timestamp = block['block_time']
+        self.number = block['block_index']
+
+        if config.TESTNET:
+            bitcoinlib.SelectParams('testnet')
+        rpc = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC)
+        cblock = rpc.getblock(bitcoinlib.core.lx(block_hash))
+        self.prevhash = cblock.hashPrevBlock
+        self.difficulty = cblock.difficulty
+
         return
 
     def postqueue_delete(self):
@@ -148,6 +163,10 @@ class Block(object):
     def increment_nonce(self, address):
         nonce = Block.get_nonce(self, address)
         Block.set_nonce(self, address, nonce + 1)
+
+    def decrement_nonce(self, address):
+        nonce = Block.get_nonce(self, address)
+        Block.set_nonce(self, address, nonce - 1)
 
     def get_balance(self, address):
         return util.get_balance(self.db, address, config.XCP)

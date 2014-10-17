@@ -42,11 +42,11 @@ opcodes = {
     0x39: ['CODECOPY', 3, 0, [[-1, -3]], 1],
     0x3a: ['GASPRICE', 0, 1, [], 1],
     0x40: ['PREVHASH', 0, 1, [], 1],
-    0x41: ['COINBASE', 0, 1, [], 1],
+#    0x41: ['COINBASE', 0, 1, [], 1],   # NOTE: Disabled
     0x42: ['TIMESTAMP', 0, 1, [], 1],
     0x43: ['NUMBER', 0, 1, [], 1],
     0x44: ['DIFFICULTY', 0, 1, [], 1],
-    0x45: ['GASLIMIT', 0, 1, [], 1],
+#    0x45: ['GASLIMIT', 0, 1, [], 1],   # NOTE: Disabled
     0x50: ['POP', 1, 0, [], 1],
     0x53: ['MLOAD', 1, 1, [[-1, 32]], 1],
     0x54: ['MSTORE', 2, 0, [[-1, 32]], 1],

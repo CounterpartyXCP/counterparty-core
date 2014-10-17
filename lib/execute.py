@@ -81,7 +81,7 @@ CREATE_CONTRACT_ADDRESS = ''
 
 
 def compose (db, source, contract_id, gasprice, startgas, value, payload_hex):
-    block = blocks.Block(db)
+    block = blocks.Block(db, util.last_block(db)['block_hash'])
     code = block.get_code(contract_id)
     payload = binascii.unhexlify(payload_hex)
     # TODO: Check start_gas, gasprice here?
@@ -123,8 +123,6 @@ def parse (db, tx, message):
     output = None
     status = 'valid'
 
-    # TODO: unit tests!
-
     try:
         # Unpack message.
         curr_format = FORMAT + '{}s'.format(len(message) - LENGTH)
@@ -142,7 +140,8 @@ def parse (db, tx, message):
 
         # ‘Apply transaction’!
         tx_obj = Transaction(tx, contract_id, gasprice, startgas, value, payload)
-        success, output, gas_remained = apply_transaction(db, tx_obj)
+        block_obj = blocks.Block(db, tx['block_hash'])
+        success, output, gas_remained = apply_transaction(db, tx_obj, block_obj)
 
     except exceptions.UnpackError as e:
         contract_id, gasprice, startgas, value, payload = None, None, None, None, None
@@ -203,14 +202,13 @@ class Message(object):
         self.value = value
         self.gas = gas
         self.data = data
-        # TODO: self.decoded_data = utils.decode_datalist(data) # TODO: This can confuse endianness.
+        # self.decoded_data = utils.decode_datalist(data) # TODO: This can confuse endianness.
 
 class HaltExecution(Exception): pass
 class InsufficientBalance(HaltExecution): pass
 class InsufficientStartGas(HaltExecution): pass
 class OutOfGas(HaltExecution): pass
-def apply_transaction(db, tx):
-    block = blocks.Block(db)
+def apply_transaction(db, tx, block):
 
     ### Make fees proportional to money supply. ###
     # Set initial values. Calculate price multiplier.
@@ -258,7 +256,6 @@ def apply_transaction(db, tx):
     message = Message(tx.sender, tx.to, tx.value, message_gas, tx.data)
 
 
-    ### Rather different ###
     primary_result = None
 
     # Postqueue
@@ -273,7 +270,6 @@ def apply_transaction(db, tx):
             result, gas_remained, data = create_contract(db, block, tx, message)
         if not primary_result:
             primary_result = result, gas_remained, data
-    ### Rather different ###
 
     result, gas_remained, data = primary_result
 
@@ -290,7 +286,8 @@ def apply_transaction(db, tx):
         output = OUT_OF_GAS
     else:
         pblogger.log('TX SUCCESS')
-        gas_remained = int(gas_remained)  # TODO: BAD
+        assert gas_remained == int(gas_remained)
+        gas_remained = int(gas_remained)
         # sell remaining gas
         block.transfer_value(
             tx, None, tx.sender, tx.gasprice * gas_remained)
@@ -299,7 +296,7 @@ def apply_transaction(db, tx):
             output = bytes(data)
         else:
             output = result
-    # TODO: block.commit_state()
+    # block.commit_state()
 
     # Kill suicidal contract.
     for s in block.suicides_get():
@@ -337,7 +334,7 @@ def apply_msg(db, block, tx, msg, code):
     logging.debug('\n')
     new_dict = vars(msg).copy()
     new_dict.update(get_msg_state(block, msg, code))
-    logging.debug('\nBEGIN MESSAGE') # TODO
+    logging.debug('\nBEGIN MESSAGE')
     log('', new_dict)
     """
 
@@ -360,7 +357,7 @@ def apply_msg(db, block, tx, msg, code):
 
     try:
         # Snapshot.
-        # NOTE: if I use explicit savepoints and rollbacks instead of this `with`,
+        # NOTE: If I use explicit savepoints and rollbacks instead of this `with`,
         # then I can stop passing around `db`.
         with db:
 
@@ -376,7 +373,6 @@ def apply_msg(db, block, tx, msg, code):
 
                 if o is not None:
                     """"
-                    # TODO: ugly
                     if data == OUT_OF_GAS:
                         data_printable = -1
                     else:
@@ -430,7 +426,6 @@ def create_contract(db, block, tx, msg):
 
     res, gas, dat = apply_msg(db, block, tx, msg, msg.data)
     if res:
-        # block.set_code(msg.to, ''.join(map(chr, dat)))
         cursor = db.cursor()
         bindings = {'contract_id': msg.to, 'tx_index': None, 'tx_hash': None, 'block_index': 0, 'source': None, 'code': bytes(dat), 'nonce': 0}
         sql='insert into contracts values(:contract_id, :tx_index, :tx_hash, :block_index, :source, :code, :nonce)'
@@ -438,8 +433,8 @@ def create_contract(db, block, tx, msg):
         return msg.to, gas, dat
     else:
         if tx.sender != msg.sender:
-            block.decrement_nonce(msg.sender)   # TODO
-        block.del_account(msg.to)   # TODO
+            block.decrement_nonce(msg.sender)
+        block.del_account(msg.to)
         return res, gas, dat
 
 
@@ -499,7 +494,7 @@ def apply_op(db, block, tx, msg, processed_code, compustate):
     log_args = dict(pc=str(compustate.pc),
                     op=op,
                     stackargs=compustate.stack[-1:-in_args-1:-1],
-    # TODO                stack=list(reversed(compustate.stack)),
+    #               stack=list(reversed(compustate.stack)),
                     gas=compustate.gas)
     if op[:4] == 'PUSH':
         ind = compustate.pc + 1
@@ -631,22 +626,17 @@ def apply_op(db, block, tx, msg, processed_code, compustate):
             else:
                 mem[s1 + i] = 0
     elif op == 'PREVHASH':
-        # TODO
         stk.append(rlp.big_endian_to_int(block.prevhash))
-    elif op == 'COINBASE':
-        # TODO
-        stk.append(rlp.big_endian_to_int(binascii.unhexlify(block.coinbase)))
+#    elif op == 'COINBASE':
+#        stk.append(rlp.big_endian_to_int(binascii.unhexlify(block.coinbase)))
     elif op == 'TIMESTAMP':
-        stk.append(tx.timestamp)
+        stk.append(block.timestamp)
     elif op == 'NUMBER':
-        # TODO
         stk.append(block.number)
     elif op == 'DIFFICULTY':
-        # TODO
         stk.append(block.difficulty)
-    elif op == 'GASLIMIT':
-        # TODO
-        stk.append(block.gas_limit)
+#    elif op == 'GASLIMIT':
+#        stk.append(block.gas_limit)
     elif op == 'POP':
         stk.pop()
     elif op == 'MLOAD':
@@ -679,7 +669,6 @@ def apply_op(db, block, tx, msg, processed_code, compustate):
             out_of_gas_exception('sstore trie expansion', gascost, compustate, op)
         compustate.gas -= gascost
         block.set_storage_data(msg.to, s0, s1)
-        logging.info('SET {}, {}, {}'.format(msg.to, s0, s1)) # TODO
     elif op == 'JUMP':
         compustate.pc = stk.pop()
     elif op == 'JUMPI':
@@ -722,11 +711,11 @@ def apply_op(db, block, tx, msg, processed_code, compustate):
         if not mem_extend(mem, compustate, op, mstart + msz):
             return OUT_OF_GAS
         data = bytes(mem[mstart: mstart + msz])
-        # TODO: log('SUB CONTRACT NEW', {'sender': msg.to, 'value': value, 'data': util.hexlify(data)})
+        # log('SUB CONTRACT NEW', {'sender': msg.to, 'value': value, 'data': util.hexlify(data)})
         pblogger.log('SUB CONTRACT NEW', sender=msg.to, value=value, data=util.hexlify(data))
         create_msg = Message(msg.to, '', value, compustate.gas, data)
         address, gas, code = create_contract(db, block, tx, create_msg)
-        # TODO: log('SUB CONTRACT OUT', {'address': address, 'code': block.get_code(address)})
+        # log('SUB CONTRACT OUT', {'address': address, 'code': block.get_code(address)})
         addr = utils.coerce_to_int(address)
         pblogger.log('SUB CONTRACT OUT', address=addr, code=code)
         if addr:
@@ -747,11 +736,11 @@ def apply_op(db, block, tx, msg, processed_code, compustate):
         to = utils.encode_int(to)
         to = util.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
         data = bytes(mem[meminstart: meminstart + meminsz])
-        # TODO: log('SUB CALL NEW', {'sender': msg.to, 'to': to, 'value': value, 'gas': gas, 'data': util.hexlify(data)})
+        # log('SUB CALL NEW', {'sender': msg.to, 'to': to, 'value': value, 'gas': gas, 'data': util.hexlify(data)})
         pblogger.log('SUB CALL NEW', sender=msg.to, to=to, value=value, gas=gas, data=util.hexlify(data))
         call_msg = Message(msg.to, to, value, gas, data)
         result, gas, data = apply_msg_send(db, block, tx, call_msg)
-        # TODO: log('SUB CALL OUT', {'result': result, 'data': data, 'length': data, 'expected': memoutsz})
+        # log('SUB CALL OUT', {'result': result, 'data': data, 'length': data, 'expected': memoutsz})
         pblogger.log('SUB CALL OUT', result=result, data=data, length=len(data), expected=memoutsz)
         if result == 0:
             stk.append(0)
@@ -792,11 +781,11 @@ def apply_op(db, block, tx, msg, processed_code, compustate):
         to = utils.encode_int(to)
         to = util.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
         data = bytes(mem[meminstart: meminstart + meminsz])
-        # TODO: logging.debug('SUB CALL NEW (sender: {}, to: {}, value: {}, gas: {}, data: {})'.format(msg.to, to, value, gas, util.hexlify(data)))
+        # logging.debug('SUB CALL NEW (sender: {}, to: {}, value: {}, gas: {}, data: {})'.format(msg.to, to, value, gas, util.hexlify(data)))
         pblogger.log('SUB CALL NEW', sender=msg.to, to=msg.to, value=value, gas=gas, data=util.hexlify(data))
         call_msg = Message(msg.to, msg.to, value, gas, data)
         result, gas, data = apply_msg(db, block, tx, call_msg, block.get_code(to))
-        # TODO: logging.debug('SUB CALL OUT (result: {}, data: {}, length: {}, expected: {}'.format(result, data, len(data), memoutsz))
+        # logging.debug('SUB CALL OUT (result: {}, data: {}, length: {}, expected: {}'.format(result, data, len(data), memoutsz))
         pblogger.log('SUB CALL OUT', result=result, data=data, length=len(data), expected=memoutsz)
         if result == 0:
             stk.append(0)
