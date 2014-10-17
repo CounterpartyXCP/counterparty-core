@@ -73,6 +73,8 @@ def log (name, obj):
 
 code_cache = {}
 
+MULTIPLIER_CONSTANT_FACTOR = 100
+
 TT255 = 2**255
 TT256 = 2**256
 
@@ -224,9 +226,9 @@ def apply_transaction(db, tx, block):
         supply = 2600001 * config.UNIT
     else:
         supply = util.xcp_supply(db)
-    MULTIPLIER = fractions.Fraction(supply, 2700000 * config.UNIT)
+    MULTIPLIER = fractions.Fraction(supply, 2700000 * config.UNIT) * MULTIPLIER_CONSTANT_FACTOR
     for key in prices.keys():
-        prices[key] = fractions.Fraction(prices[key]) * MULTIPLIER * 100
+        prices[key] = fractions.Fraction(prices[key]) * MULTIPLIER
         prices[key] = math.floor(prices[key].__round__(2))
         exec('''global {}; {} = prices['{}']'''.format(key, key, key))
 
