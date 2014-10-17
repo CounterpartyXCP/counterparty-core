@@ -29,7 +29,7 @@ def encode_int(v):
 def coerce_to_int(x):
     if isinstance(x, int):
         return x
-    elif len(x) == 40:  # TODO
+    elif len(x) == 40:
         return rlp.big_endian_to_int(binascii.unhexlify(x))
     else:
         if type(x) != bytes:
@@ -42,7 +42,7 @@ def zpad(x, l):
 def coerce_to_hex(x):
     if isinstance(x, int):
         return util.hexlify(zpad(rlp.int_to_big_endian(x), 20))
-    elif len(x) == 40 or len(x) == 0:   # TODO
+    elif len(x) == 40 or len(x) == 0:
         return x
     else:
         return util.hexlify(zpad(x, 20)[-20:])

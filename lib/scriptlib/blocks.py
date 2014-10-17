@@ -65,12 +65,10 @@ class Block(object):
         cursor = self.db.cursor()
         cursor.execute('''DELETE FROM suicides''')
 
-    # TODO: don’t use `with` for snapshots?!?!
     def revert(snapshot):
         logging.debug('### REVERTING ###')
 
     def get_storage_data(self, contract_id, key=None):
-        # logging.info('GET {}, {}'.format(contract_id, key)) # TODO            
         cursor = self.db.cursor()
 
         if key == None:
@@ -87,24 +85,16 @@ class Block(object):
             return 0
         value = storages[0]['value']
 
-        # TODO
         value = rlp.big_endian_to_int(value)
-        # value = rlp.decode(value)
-
         return value
 
     def set_storage_data(self, contract_id, key, value):
-        # TODO: This could all be done more elegantly, I think.
-
-        # TODO
-        # value = rlp.int_to_big_endian(value)
-        # value = rlp.encode(value)
+        # NOTE: This could all be done more elegantly, I think.
 
         key = key.to_bytes(32, byteorder='big')
         value = value.to_bytes(32, byteorder='big')
 
         cursor = self.db.cursor()
-
         cursor.execute('''SELECT * FROM storage WHERE contract_id = ? AND key = ?''', (contract_id, key))
         storages = list(cursor)
         if storages:    # Update value.
@@ -140,7 +130,6 @@ class Block(object):
 
         if not contracts:
             return b''
-            # TODO: IMPORTANT raise ContractError('no such contract')
         else: code = contracts[0]['code']
 
         return code
