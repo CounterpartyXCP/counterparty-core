@@ -110,42 +110,51 @@ def parse_tx (db, tx):
     cursor.close()
     return True
 
-def generate_movement_hash(db, block_index, previous_hash=None, current_hash=None):
+def generate_consensus_hash(db, block_index, field, strings, check_hash_pos, previous_hash=None, current_hash=None):
     cursor = db.cursor()
 
-    get_hash = lambda i: list(cursor.execute('''SELECT movements_hash FROM blocks WHERE block_index = ?''', (i,)))[0]['movements_hash']
+    get_hash = lambda i: list(cursor.execute('''SELECT {} FROM blocks WHERE block_index = ?'''.format(field), (i,)))[0][field]
 
     # get previous hash
     if not previous_hash:
       if block_index == config.BLOCK_FIRST:
-          previous_hash = util.dhash_string(config.MOVEMENTS_HASH_SEED)
+          previous_hash = util.dhash_string(config.CONSENSUS_HASH_SEED)
       else: 
           previous_hash = get_hash(block_index - 1)
 
-    # concatenate movements
-    movements_string = ''.join(util.BLOCK_MOVEMENTS)
+    # concatenate strings
+    block_string = ''.join(strings)
 
-    # generate block movements hash
-    movements_hash = util.dhash_string(previous_hash + movements_string)
+    # generate block hash
+    block_hash = util.dhash_string(previous_hash + block_string)
 
     if not current_hash:
       current_hash = get_hash(block_index)
 
-    # check checkpoints and save block movements_hash
+    # check checkpoints and save block block_hash
     checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
-    if (block_index in checkpoints and checkpoints[block_index] != movements_hash) or (current_hash and current_hash != movements_hash):
-        raise exceptions.ConsensusError('Incorrect movements_hash for block {}.'.format(block_index))
+    if (block_index in checkpoints and checkpoints[block_index][check_hash_pos] != block_hash) or (current_hash and current_hash != block_hash):
+        raise exceptions.ConsensusError('Incorrect {} for block {}.'.format(field, block_index))
     elif not current_hash:
-        sql = '''UPDATE blocks SET movements_hash = ? WHERE block_index = ?'''
-        cursor.execute(sql, (movements_hash, block_index))
+        sql = '''UPDATE blocks SET {} = ? WHERE block_index = ?'''.format(field)
+        cursor.execute(sql, (block_hash, block_index))
 
     cursor.close()
 
-    util.BLOCK_MOVEMENTS = []
+    return block_hash
 
-    return movements_hash
+def generate_ledger_hash(db, block_index, previous_hash=None, current_hash=None):
+    ledger_hash = generate_consensus_hash(db, block_index, 'ledger_hash', util.BLOCK_LEDGER, 0, previous_hash, current_hash)
+    util.BLOCK_LEDGER = []
+    return ledger_hash
 
-def parse_block (db, block_index, block_time, previous_hash=None, current_hash=None):
+def generate_txlist_hash(db, block_index, txlist, previous_hash=None, current_hash=None):
+    txlist_hash = generate_consensus_hash(db, block_index, 'txlist_hash', txlist, 1, previous_hash, current_hash)
+    return txlist_hash
+
+def parse_block (db, block_index, block_time, 
+                 previous_ledger_hash=None, current_ledger_hash=None,
+                 previous_txlist_hash=None, current_txlist_hash=None):
     cursor = db.cursor()
 
     # Expire orders, bets and rps.
@@ -157,12 +166,16 @@ def parse_block (db, block_index, block_time, previous_hash=None, current_hash=N
     cursor.execute('''SELECT * FROM transactions \
                       WHERE block_index=? ORDER BY tx_index''',
                    (block_index,))
+    txlist = []
     for tx in list(cursor):
         parse_tx(db, tx)
+        txlist.append(tx['tx_hash'])
 
     cursor.close()
 
-    return generate_movement_hash(db, block_index, previous_hash, current_hash)
+    ledger_hash = generate_ledger_hash(db, block_index, previous_ledger_hash, current_ledger_hash)
+    txlist_hash = generate_txlist_hash(db, block_index, txlist, previous_txlist_hash, current_txlist_hash)
+    return ledger_hash, txlist_hash
 
 def initialise(db):
     cursor = db.cursor()
@@ -182,9 +195,11 @@ def initialise(db):
                    ''')
 
     # sqlite don't manage ALTER TABLE IF COLUMN NOT EXISTS
-    columns = cursor.execute('''PRAGMA table_info(blocks)''')
-    if 'movements_hash' not in [column['name'] for column in columns]:
-        cursor.execute('''ALTER TABLE blocks ADD COLUMN movements_hash TEXT''')
+    columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(blocks)''')]
+    if 'ledger_hash' not in columns:
+        cursor.execute('''ALTER TABLE blocks ADD COLUMN ledger_hash TEXT''')
+    if 'txlist_hash' not in columns:
+        cursor.execute('''ALTER TABLE blocks ADD COLUMN txlist_hash TEXT''')
 
     # Check that first block in DB is BLOCK_FIRST.
     cursor.execute('''SELECT * from blocks ORDER BY block_index''')
@@ -1214,11 +1229,16 @@ def reparse (db, block_index=None, quiet=False):
         for table in TABLES + ['balances']:
             cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
 
-        # clean movements_hash in case of protocol change.
-        if config.TESTNET:
-            columns = cursor.execute('''PRAGMA table_info(blocks)''')
-            if 'movements_hash' in [column['name'] for column in columns]:
-                cursor.execute('''UPDATE blocks SET movements_hash = NULL''')
+        # clean consensus hashes if first block hash don't match with checkpoint.
+        checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
+        columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(blocks)''')]
+        for field, check_hash_pos in [('ledger_hash', 0), ('txlist_hash', 1)]:
+            if field in columns:
+                sql = '''SELECT {} FROM blocks  WHERE block_index = ?'''.format(field)
+                first_hash = list(cursor.execute(sql, (config.BLOCK_FIRST,)))[0][field]
+                if first_hash != checkpoints[config.BLOCK_FIRST][check_hash_pos]:
+                    logging.info('First hash changed. Cleaning {}.'.format(field))
+                    cursor.execute('''UPDATE blocks SET {} = NULL'''.format(field))
 
         # For rollbacks, just delete new blocks and then reparse what’s left.
         if block_index:
@@ -1230,11 +1250,14 @@ def reparse (db, block_index=None, quiet=False):
             log = logging.getLogger('')
             log.setLevel(logging.WARNING)
         initialise(db)
-        previous_hash = None
+        previous_ledger_hash = None
+        previous_txlist_hash = None
         cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
         for block in cursor.fetchall():
             logging.info('Block (re‐parse): {}'.format(str(block['block_index'])))
-            previous_hash = parse_block(db, block['block_index'], block['block_time'], previous_hash, block['movements_hash'])
+            previous_ledger_hash, previous_txlist_hash = parse_block(db, block['block_index'], block['block_time'], 
+                                                                     previous_ledger_hash, block['ledger_hash'],
+                                                                     previous_txlist_hash, block['txlist_hash'])
         if quiet:
             log.setLevel(logging.INFO)
 

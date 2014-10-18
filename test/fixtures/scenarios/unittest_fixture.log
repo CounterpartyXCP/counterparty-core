@@ -95,6 +95,12 @@ Send: 10 NODIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to 1_mn6q3dS2EnDUx3
 Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Change quantity: 1.9989134 BTC
+Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance fee# <a65d30bff1db429b39f36c56e84c3685ac2ab48d08854e5c256fb1185b722d14>
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 92233720368.54775807 of asset MAXI, which is divisible and uncallable, with description ‘Maximum quantity’ (a65d30bff1db429b39f36c56e84c3685ac2ab48d08854e5c256fb1185b722d14) [valid]
+Credit: 92233720368.54775807 MAXI to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance# <a65d30bff1db429b39f36c56e84c3685ac2ab48d08854e5c256fb1185b722d14>
+Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
+New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
+Change quantity: 1.9989134 BTC
 Debit: 1.0 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #open order# <14e6392380beb28a3354ad7015d9f0318ba9d23f410e5fbc967ff812f4b58bb8>
 Order: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc ordered 1.0 XCP for 0.008 BTC in 2000 blocks, with a provided fee of 0.0001 BTC and a required fee of 0.009 BTC (14e6392380beb28a3354ad7015d9f0318ba9d23f410e5fbc967ff812f4b58bb8) [open]
 Considering: de1e76e8172a0a3811d6c0d8be4a289547bb94b63b01ab7a175fc33ec8ddb43f
