@@ -537,8 +537,8 @@ def debit (db, block_index, address, asset, quantity, action=None, event=None):
     assert type(quantity) == int
     assert quantity >= 0
 
-    # Contracts can only hold XCP balances. # TODO?!
-    if len(address) == 64:
+    # Contracts can only hold XCP balances.
+    if len(address) == 40:
         assert asset == config.XCP
 
     if asset == config.BTC:
@@ -586,8 +586,8 @@ def credit (db, block_index, address, asset, quantity, action=None, event=None):
     assert type(quantity) == int
     assert quantity >= 0
 
-    # Contracts can only hold XCP balances. # TODO?!
-    if len(address) == 64:
+    # Contracts can only hold XCP balances.
+    if len(address) == 40:
         assert asset == config.XCP
 
     credit_cursor.execute('''SELECT * FROM balances \

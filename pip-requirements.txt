@@ -33,6 +33,4 @@ lockfile==0.10.2
 
 python-bitcoinlib==0.2.1
 
-serpent=1.6.5
-
 pysha3=0.3

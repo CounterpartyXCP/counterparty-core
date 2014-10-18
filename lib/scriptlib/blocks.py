@@ -56,7 +56,7 @@ class Block(object):
     def suicides_append(self, contract_id):
         cursor = self.db.cursor()
         cursor.execute('''INSERT INTO suicides VALUES(:contract_id)''', {'contract_id': contract_id})
-        
+
     def suicides_get(self):
         cursor = self.db.cursor()
         return list(cursor.execute('''SELECT * FROM suicides'''))
@@ -115,7 +115,6 @@ class Block(object):
             cursor.execute(sql, bindings)
 
         storages = cursor.execute('''SELECT * FROM storage WHERE contract_id = ? AND key = ?''', (contract_id, key))
-
 
         return value
 

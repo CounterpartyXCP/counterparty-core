@@ -26,8 +26,8 @@ def parse (db, tx, message):
     try:
         gasprice, startgas, endowment = struct.unpack(FORMAT, message[:LENGTH])
     except struct.UnpackError:
-        gasprice, startgas, endowment = 0, 0, 0 # TODO: Is this ideal?
-        
+        gasprice, startgas, endowment = 0, 0, 0 # TODO: Is this ideal 
+
     code = util.hexlify(message[LENGTH:])
     source, destination, data = execute.compose(db, tx['source'], '', gasprice, startgas, endowment, code)
     message = data[4:]

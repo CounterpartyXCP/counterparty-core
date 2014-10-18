@@ -930,7 +930,7 @@ def initialise(db):
                       nonce INTEGER)
                   ''')
 
-    # Postqueu
+    # Postqueue
     cursor.execute('''CREATE TABLE IF NOT EXISTS postqueue(
                       message BLOB)
                   ''')

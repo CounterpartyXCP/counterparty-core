@@ -81,7 +81,7 @@ class tester(object):
             code = subprocess.check_output(['serpent', 'compile_lll', lll_code])
             code = code[:-1] # Strip newline.
             return binascii.unhexlify(bytes(code))
-            
+
     class state(object):
 
         # N/A

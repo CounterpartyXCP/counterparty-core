@@ -2,7 +2,7 @@
 
 """Based on pyethereum <https://github.com/ethereum/pyethereum>."""
 
-import math 
+import math
 import binascii
 
 '''
