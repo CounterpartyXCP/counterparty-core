@@ -418,7 +418,7 @@ def create_contract(db, block, tx, msg):
     if len(msg.sender) == 40:   # Sender is contract.
         sender = binascii.unhexlify(msg.sender)
     else:                       # Sender is regular address.
-        sender = bitcoin.base58_check_decode(msg.sender, config.ADDRESSVERSION 
+        sender = bitcoin.base58_check_decode(msg.sender, config.ADDRESSVERSION )
 
     if tx.sender != msg.sender:
         block.increment_nonce(msg.sender)
