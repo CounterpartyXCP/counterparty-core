@@ -13,6 +13,7 @@ import bitcoin.rpc as bitcoinlib_rpc
 class Block(object):
 
     def __init__(self, db, block_hash):
+        # TODO: must always have access to Bitcoin Core: storing all fields locally in table `blocks` would require full DB rebuild.
         self.db = db
 
         cursor = db.cursor()
