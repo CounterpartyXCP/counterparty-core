@@ -256,10 +256,9 @@ def log (db, command, category, bindings):
             logging.info('Execution: {} executed contract {}, funded with {}, at a price of {} (?), at a final cost of {}, reclaiming {}, and also sending {}, with a data payload of {}, yielding {} ({}) [{}]'.format(bindings['source'], bindings['contract_id'], output(bindings['gas_start'], config.XCP), bindings['gas_price'], output(bindings['gas_cost'], config.XCP), output(bindings['gas_remaining'], config.XCP), output(bindings['value'], config.XCP), payload_hex, output_hex, bindings['tx_hash'], bindings['status']))
             """
             if bindings['contract_id']:
-                contract = bindings['contract_id']
+                logging.info('Execution: {} executed contract {} ({}) [{}]'.format(bindings['source'], bindings['contract_id'], bindings['tx_hash'], bindings['status']))
             else:
-                contract = '<NewContract>'
-            logging.info('Execution: {} executed contract {} ({}) [{}]'.format(bindings['source'], contract, bindings['tx_hash'], bindings['status']))
+                logging.info('Execution: {} created contract {} ({}) [{}]'.format(bindings['source'], bindings['output'], bindings['tx_hash'], bindings['status']))
 
     cursor.close()
 
