@@ -7,26 +7,18 @@ from lib.scriptlib import (rlp, utils)
 
 import logging
 import pickle
-import bitcoin as bitcoinlib
-import bitcoin.rpc as bitcoinlib_rpc
 
 class Block(object):
 
     def __init__(self, db, block_hash):
-        # TODO: must always have access to Bitcoin Core: storing all fields locally in table `blocks` would require full DB rebuild.
         self.db = db
 
         cursor = db.cursor()
         block = list(cursor.execute('''SELECT * FROM blocks WHERE block_hash = ?''', (block_hash,)))[0]
         self.timestamp = block['block_time']
         self.number = block['block_index']
-
-        if config.TESTNET:
-            bitcoinlib.SelectParams('testnet')
-        rpc = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC)
-        cblock = rpc.getblock(bitcoinlib.core.lx(block_hash))
-        self.prevhash = cblock.hashPrevBlock
-        self.difficulty = cblock.difficulty
+        self.prevhash = block['previous_block_hash']
+        self.difficulty = block['difficulty']
 
         return
 

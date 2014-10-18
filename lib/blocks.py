@@ -185,6 +185,8 @@ def initialise(db):
                       block_index INTEGER UNIQUE,
                       block_hash TEXT UNIQUE,
                       block_time INTEGER,
+                      previous_block_hash TEXT UNIQUE,
+                      difficulty INTEGER,
                       PRIMARY KEY (block_index, block_hash))
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -1410,10 +1412,14 @@ def follow (db):
                 cursor.execute('''INSERT INTO blocks(
                                     block_index,
                                     block_hash,
-                                    block_time) VALUES(?,?,?)''',
+                                    block_time,
+                                    previous_block_hash,
+                                    difficulty) VALUES(?,?,?,?,?)''',
                                     (block_index,
                                     block_hash,
-                                    block_time)
+                                    block_time,
+                                    block['previousblockhash'],
+                                    block['difficulty'])
                               )
 
                 # List the transactions in the block.
