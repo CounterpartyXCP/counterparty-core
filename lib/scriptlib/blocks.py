@@ -157,8 +157,8 @@ class Block(object):
         nonce = Block.get_nonce(self, address)
         Block.set_nonce(self, address, nonce - 1)
 
-    def get_balance(self, address):
-        return util.get_balance(self.db, address, config.XCP)
+    def get_balance(self, address, asset=config.XCP):
+        return util.get_balance(self.db, address)
 
     def transfer_value(self, tx, source, destination, quantity):
         if source:

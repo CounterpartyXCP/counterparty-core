@@ -581,6 +581,11 @@ def apply_op(db, block, tx, msg, processed_code, compustate):
         addr = stk.pop()
         addr = utils.coerce_to_hex(addr)
         stk.append(block.get_balance(addr))
+    elif op == 'ASSET_BALANCE':
+        addr, asset_id = stk.pop(), stk.pop()
+        addr = utils.coerce_to_hex(addr)
+        asset_name = util.asset_name(asset_id)
+        stk.append(block.get_balance(addr, asset=asset_name))
     elif op == 'ORIGIN':
         stk.append(utils.coerce_to_int(tx.sender))
     elif op == 'CALLER':
