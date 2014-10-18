@@ -81,12 +81,17 @@ TT256 = 2**256
 OUT_OF_GAS = -1
 CREATE_CONTRACT_ADDRESS = ''
 
+class ContractError(Exception): pass
 
 def compose (db, source, contract_id, gasprice, startgas, value, payload_hex):
     block = blocks.Block(db, util.last_block(db)['block_hash'])
     code = block.get_code(contract_id)
     payload = binascii.unhexlify(payload_hex)
-    # TODO: Check start_gas, gasprice here?
+
+    if startgas < 0:
+        raise ContractError('negative startgas')
+    if gasprice < 0:
+        raise ContractError('negative gasprice')
 
     # Pack.
     data = struct.pack(config.TXTYPE_FORMAT, ID)
@@ -120,7 +125,6 @@ class Transaction(object):
                 }
         return dict_
 
-class ContractError(Exception): pass
 def parse (db, tx, message):
     output = None
     status = 'valid'
@@ -133,11 +137,10 @@ def parse (db, tx, message):
         except (struct.error) as e:
             raise exceptions.UnpackError()
 
-        # TODO: gasprice is an int
-        gas_remained = startgas # TODO
+        gas_remained = startgas
 
         contract_id = util.hexlify(contract_id)
-        if contract_id == '0000000000000000000000000000000000000000':    # TODO: HACK
+        if contract_id == '0000000000000000000000000000000000000000':
             contract_id = ''
 
         # ‘Apply transaction’!
@@ -162,7 +165,6 @@ def parse (db, tx, message):
         have, need = e.args
         logging.debug('Insufficient balance: have {} and need {}'.format(have, need))
         status = 'invalid: insufficient balance'
-        print(contract_id)
         output = None
     except OutOfGas as e:
         logging.debug('TX OUT_OF_GAS (startgas: {}, gas_remained: {})'.format(startgas, gas_remained))
@@ -170,7 +172,6 @@ def parse (db, tx, message):
         output = None
     finally:
 
-        # TODO: eh…
         if status == 'valid':
             logging.debug('TX FINISHED (gas_remained: {})'.format(gas_remained))
 

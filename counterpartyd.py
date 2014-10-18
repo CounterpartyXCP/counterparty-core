@@ -663,6 +663,9 @@ if __name__ == '__main__':
 
     parser_publish = subparsers.add_parser('publish', help='publish contract code in the blockchain')
     parser_publish.add_argument('--source', required=True, help='the source address')
+    parser_publish.add_argument('--gasprice', required=True, type=int, help='the price of gas')
+    parser_publish.add_argument('--startgas', required=True, type=int, help='the maximum quantity of {} to be used to pay for the execution (satoshis)'.format(config.XCP))
+    parser_publish.add_argument('--endowment', required=True, type=int, help='quantity of {} to be transfered to the contract (satoshis)'.format(config.XCP))
     parser_publish.add_argument('--code-hex', required=True, type=str, help='the hex‐encoded contract (returned by `serpent compile`)')
     parser_publish.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
@@ -670,8 +673,8 @@ if __name__ == '__main__':
     parser_execute.add_argument('--source', required=True, help='the source address')
     parser_execute.add_argument('--contract-id', required=True, help='the contract ID of the contract to be executed')
     parser_execute.add_argument('--gasprice', required=True, type=int, help='the price of gas')
-    parser_execute.add_argument('--startgas', required=True, type=int, help='the maximum quantity of gas to be used to pay for the execution')
-    parser_execute.add_argument('--value', required=True, type=int, help='quantity of {} to be transfered to the contract'.format(config.XCP))
+    parser_execute.add_argument('--startgas', required=True, type=int, help='the maximum quantity of {} to be used to pay for the execution (satoshis)'.format(config.XCP))
+    parser_execute.add_argument('--value', required=True, type=int, help='quantity of {} to be transfered to the contract (satoshis)'.format(config.XCP))
     parser_execute.add_argument('--payload-hex', required=True, type=str, help='data to be provided to the contract (returned by `serpent encode_datalist`)')
     parser_execute.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
@@ -990,14 +993,15 @@ if __name__ == '__main__':
     elif args.action == 'publish':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
         cli('create_publish', {'source': args.source,
+                               'gasprice': args.gasprice, 'startgas':
+                               args.startgas, 'endowment': args.endowment,
                                'code_hex': args.code_hex, 'fee': args.fee,
                                'allow_unconfirmed_inputs': args.unconfirmed,
                                'encoding': args.encoding, 'fee_per_kb':
                                args.fee_per_kb, 'regular_dust_size':
                                args.regular_dust_size, 'multisig_dust_size':
                                args.multisig_dust_size, 'op_return_value':
-                               args.op_return_value},
-            args.unsigned)
+                               args.op_return_value}, args.unsigned)
 
     elif args.action == 'execute':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')

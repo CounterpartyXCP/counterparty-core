@@ -30,29 +30,25 @@ import counterpartyd
 from lib import (execute, util, config)
 from lib.scriptlib import (blocks, rlp)
 
-import subprocess   # Serpent is Python 2‐incompatible.
+import subprocess   # Serpent is Python 3‐incompatible.
 import binascii
 import os
 import sys
-import pytest
-import time
+import logging
 
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/counterpartyd.unittest.db', testnet=True, testcoin=False, backend_rpc_ssl_verify=False)
 
-import logging
-logging.basicConfig(level=logging.INFO, format='%(message)s')
-# TODO: logging.basicConfig(level=logging.DEBUG, format='%(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 
-i = 0
+TIMESTAMP = 1410973349
 
 class serpent(object):
     def compile(code):
         evmcode = subprocess.check_output(['serpent', 'compile', code])
         evmcode = evmcode[:-1] # Strip newline.
         return binascii.unhexlify(bytes(evmcode))
-
 
     def encode_datalist(vals):
         def enc(n):
@@ -77,8 +73,6 @@ class serpent(object):
             # Assume you're getting in numbers or 0x...
             # return ''.join(map(enc, list(map(numberize, vals.split(' ')))))
 
-TIMESTAMP = 1410973349
-
 class tester(object):
     gas_limit = 100000
 
@@ -87,7 +81,6 @@ class tester(object):
             code = subprocess.check_output(['serpent', 'compile_lll', lll_code])
             code = code[:-1] # Strip newline.
             return binascii.unhexlify(bytes(code))
-
             
     class state(object):
 
@@ -114,9 +107,7 @@ class tester(object):
 
             success, data = tester.state.do_send(self, sender, '', endowment, data=code)
             contract_id = data
-
             return contract_id
-
 
         def evm(self, evmcode, endowment=0, sender=''):
             # Publish code.
@@ -133,18 +124,12 @@ class tester(object):
             else:
                 evmcode = b''
 
-            foobar = tester.state.evm(self, evmcode, endowment=endowment, sender=sender)
-            return foobar
-
+            return tester.state.evm(self, evmcode, endowment=endowment, sender=sender)
 
         def do_send (self, sender, to, value, data=[]):
 
             if not sender:
                 sender = util.contract_sha3('foo'.encode('utf-8'))
-
-
-            gasprice = 1
-            startgas = tester.gas_limit
 
             # Construct `tx`.
             tx = { 'source': sender,
@@ -152,7 +137,7 @@ class tester(object):
                    'tx_hash': to, 
                    'block_time': TIMESTAMP
                  }
-            tx_obj = execute.Transaction(tx, to, gasprice, startgas, value, data)
+            tx_obj = execute.Transaction(tx, to, 1, tester.gas_limit, value, data)
 
             # Force block init.
             def fake_block_init(self, db):
@@ -172,7 +157,6 @@ class tester(object):
             # Decode, return result.
             return success, output
 
-
         def send (self, sender, to, value, data=[]):
             # print('tuple', sender, to, value, data)
 
@@ -188,7 +172,6 @@ class tester(object):
                 return rlp.decode_datalist(bytes(output))
             else:
                 return []
-
 
         class block(object):
             def to_dict():
@@ -209,22 +192,6 @@ class tester(object):
                 block = blocks.Block(db)
                 return block.get_balance(address)
 
-            
-def privtoaddr(x):
-    x = binascii.unhexlify(x)
-    return binascii.hexlify(x[::-1]).decode('utf-8')
-
-"""
-accounts = []
-keys = []
-for i in range(10):
-    import hashlib
-    keys.append(util.contract_sha3(str(i).encode('utf-8')))
-    accounts.append(privtoaddr(keys[-1]))
-    exec('tester.k{} = keys[i]'.format(i))
-    # exec('tester.a{} = accounts[i]'.format(i))
-    exec('tester.a{} = keys[i]'.format(i))
-"""
 tester.k0 = '82a978b3f5962a5b0957d9ee9eef472ee55b42f1'
 tester.k1 = '7d577a597b2742b498cb5cf0c26cdcd726d39e6e'
 tester.k2 = '82a978b3f5962a5b0957d9ee9eef472ee55b42f1'
@@ -232,7 +199,6 @@ tester.a0 = '82a978b3f5962a5b0957d9ee9eef472ee55b42f1'
 tester.a1 = 'dceceaf3fc5c0a63d195d69b1a90011b7b19650d'
 tester.a2 = 'dceceaf3fc5c0a63d195d69b1a90011b7b19650d'
 tester.a3 = '598443f1880ef585b21f1d7585bd0577402861e5'
-
 
 def setup_function(function):
     try:

@@ -89,9 +89,9 @@ def parse_tx (db, tx):
         rps.parse(db, tx, message)
     elif message_type_id == rpsresolve.ID and rps_enabled:
         rpsresolve.parse(db, tx, message)
-    elif message_type_id == publish.ID:
+    elif message_type_id == publish.ID and tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
         publish.parse(db, tx, message)
-    elif message_type_id == execute.ID:
+    elif message_type_id == execute.ID and tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
         execute.parse(db, tx, message)
     else:
         cursor.execute('''UPDATE transactions \
