@@ -317,10 +317,11 @@ def exectracer(cursor, sql, bindings):
 
     # Parse SQL.
     array = sql.split('(')[0].split(' ')
+    command = array[0]
     if 'insert' in sql:
-        command, category = array[0], array[2]
+        category = array[2]
     elif 'update' in sql:
-        command, category = array[0], array[1]
+        category = array[1]
     else:
         return True
 
@@ -331,13 +332,14 @@ def exectracer(cursor, sql, bindings):
     if 'blocks' in sql or 'transactions' in sql: return True
 
     # Record alteration in database.
-    if category not in ('balances', 'messages', 'mempool'):
-        if category not in ('storage', 'suicides', 'nonces', 'postqueue'): # TODO: review
-            if not (command in ('update') and category in ('orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches', 'contracts')):    # List message manually.
-                try:
-                    message(db, bindings['block_index'], command, category, bindings)
-                except TypeError:
-                    raise TypeError('SQLite3 statements must used named arguments.')
+    if category not in ('balances', 'messages', 'mempool', ):
+        if category not in ('suicides', 'postqueue'):  # These tables are ephemeral.
+            if category not in ('nonces', 'storage'):  # List message manually.
+                if not (command in ('update') and category in ('orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches', 'contracts')):    # List message manually.
+                    try:
+                        message(db, bindings['block_index'], command, category, bindings)
+                    except TypeError:
+                        raise TypeError('SQLite3 statements must used named arguments.')
 
     return True
 

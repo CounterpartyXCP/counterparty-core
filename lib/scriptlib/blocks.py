@@ -8,6 +8,8 @@ from lib.scriptlib import (rlp, utils)
 import logging
 import pickle
 
+# NOTE: Not logging most of the specifics here.
+
 class Block(object):
 
     def __init__(self, db, block_hash):
@@ -96,6 +98,7 @@ class Block(object):
                 'key': key,
                 'value': value
                 }
+            util.message(self.db, self.number, 'update', 'storage', bindings)
             sql='update storage set value = :value where contract_id = :contract_id and key = :key'
             cursor.execute(sql, bindings)
         else:           # Insert value.
@@ -104,6 +107,7 @@ class Block(object):
                 'key': key,
                 'value': value
                 }
+            util.message(self.db, self.number, 'insert', 'storage', bindings)
             sql='insert into storage values(:contract_id, :key, :value)'
             cursor.execute(sql, bindings)
 
@@ -136,10 +140,13 @@ class Block(object):
         cursor = self.db.cursor()
         cursor.execute('''SELECT * FROM nonces WHERE (address = :address)''', {'address': address})
         nonces = list(cursor)
+        bindings = {'address': address, 'nonce': nonce}
         if not nonces:
-            cursor.execute('''INSERT INTO nonces VALUES(:address, :nonce)''', {'address': address, 'nonce': nonce})
+            util.message(self.db, self.number, 'insert', 'nonces', bindings)
+            cursor.execute('''INSERT INTO nonces VALUES(:address, :nonce)''', bindings)
         else:
-            cursor.execute('''UPDATE nonces SET nonce = :nonce WHERE (address = :address)''', {'nonce': nonce, 'address': address})
+            util.message(self.db, self.number, 'update', 'nonces', bindings)
+            cursor.execute('''UPDATE nonces SET nonce = :nonce WHERE (address = :address)''', bindings)
 
     def increment_nonce(self, address):
         nonce = Block.get_nonce(self, address)
@@ -163,7 +170,10 @@ class Block(object):
         cursor = self.db.cursor()
         contract_id = suicide['contract_id']
         logging.debug('SUICIDING {}'.format(contract_id))
-        cursor.execute('''DELETE FROM contracts WHERE contract_id = :contract_id''', {'contract_id': contract_id})
-        cursor.execute('''DELETE FROM storage WHERE contract_id = :contract_id''', {'contract_id': contract_id})
+        bindings = {'contract_id': contract_id}
+        util.message(self.db, self.number, 'delete', 'contracts', bindings)
+        cursor.execute('''DELETE FROM contracts WHERE contract_id = :contract_id''', bindings)
+        util.message(self.db, self.number, 'delete', 'storage', bindings)
+        cursor.execute('''DELETE FROM storage WHERE contract_id = :contract_id''', bindings)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
