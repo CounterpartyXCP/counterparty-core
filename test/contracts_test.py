@@ -27,8 +27,8 @@ startgas = 10000
 ### Counterparty compatibility ###
 
 import counterpartyd
-from lib import (execute, util, config)
-from lib.scriptlib import (blocks, rlp)
+from lib import (util, config, execute)
+from lib.scriptlib import (blocks, rlp, processblock)
 
 import subprocess   # Serpent is Python 3‐incompatible.
 import binascii
@@ -151,8 +151,8 @@ class tester(object):
             block_obj = blocks.Block(db)
 
             # Run.
-            execute.MULTIPLIER_CONSTANT_FACTOR = 1
-            success, output, gas_remained = execute.apply_transaction(db, tx_obj, block_obj)
+            processblock.MULTIPLIER_CONSTANT_FACTOR = 1
+            success, output, gas_remained = processblock.apply_transaction(db, tx_obj, block_obj)
 
             # Decode, return result.
             return success, output
