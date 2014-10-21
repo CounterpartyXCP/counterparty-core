@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/CounterpartyXCP/counterpartyd.svg?branch=develop)](https://travis-ci.org/CounterpartyXCP/counterpartyd)
+
 # Description
 Counterparty is a protocol for the creation and use of decentralised financial
 instruments such as asset exchanges, contracts for difference and dividend
@@ -16,7 +18,7 @@ The Counterparty protocol specification may be found at
 # Installation
 
 **NOTE: This section covers manual installation of counterpartyd. If you want more of
-an automated approach to counterpartyd installation for Windows and Linux, see [this link](http://counterpartyd-build.readthedocs.org/en/latest/).**
+an automated approach to counterpartyd installation for Windows and Linux, see [this link](http://counterparty.io/docs/build-system/).**
 
 In order for counterpartyd to function, it must be able to communicate with a
 running instance of Bitcoind or Bitcoin-Qt, which handles many Bitcoin‐specific
@@ -57,8 +59,9 @@ however.
 
 Sometimes the underlying package requirements may change for `counterpartyd`. If you build and installed it from scratch,
 you can manually update these requirements by executing something like:
-
-    ```pip install --upgrade -r pip-requirements.txt```
+```
+    pip install --upgrade -r pip-requirements.txt 
+```
 
 # Test suite
 
@@ -81,7 +84,7 @@ For a summary of the command‐line arguments and options, see
 # Versioning
 * Major version changes require a full rebuild of the database.
 * Minor version changes require a database reparse.
-* All protocol changes are retroactive on testnet.
+* Most protocol changes are retroactive on testnet.
 
 ## Input and Output
 * Quantities of divisible assets are written to eight decimal places.

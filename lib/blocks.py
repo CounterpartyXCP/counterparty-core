@@ -107,45 +107,51 @@ def parse_tx (db, tx):
     cursor.close()
     return True
 
-def generate_movement_hash(db, block_index, previous_hash=None):
+def generate_consensus_hash(db, block_index, field, strings, check_hash_pos, previous_hash=None, current_hash=None):
     cursor = db.cursor()
-    get_hash = lambda i: list(cursor.execute('''SELECT movements_hash FROM blocks WHERE block_index = ?''', (i,)))[0]['movements_hash']
+
+    get_hash = lambda i: list(cursor.execute('''SELECT {} FROM blocks WHERE block_index = ?'''.format(field), (i,)))[0][field]
 
     # get previous hash
     if not previous_hash:
       if block_index == config.BLOCK_FIRST:
-          previous_hash = util.dhash_string(config.MOVEMENTS_HASH_SEED)
+          previous_hash = util.dhash_string(config.CONSENSUS_HASH_SEED)
       else: 
           previous_hash = get_hash(block_index - 1)
 
-    # concatenate movements
-    movements_string = ''
-    for movement_table in ['credits', 'debits']:
-        sql = '''SELECT (rowid || block_index || address || asset || quantity) AS movement_string 
-                 FROM {}
-                 WHERE block_index = ?
-                 ORDER BY rowid'''.format(movement_table)
-        movements = cursor.execute(sql, (block_index,))
-        for movement in movements:
-            movements_string += movement['movement_string']
+    # concatenate strings
+    block_string = ''.join(strings)
 
-    # generate block movements hash
-    movements_hash = util.dhash_string(previous_hash + movements_string)
+    # generate block hash
+    block_hash = util.dhash_string(previous_hash + block_string)
 
-    # check checkpoints and save block movements_hash
-    current_hash = get_hash(block_index)
+    if not current_hash:
+      current_hash = get_hash(block_index)
+
+    # check checkpoints and save block block_hash
     checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
-    if (block_index in checkpoints and checkpoints[block_index] != movements_hash) or (current_hash and current_hash != movements_hash):
-        raise exceptions.ConsensusError('Invalid movements_hash for block {}'.format(block_index))
+    if (block_index in checkpoints and checkpoints[block_index][check_hash_pos] != block_hash) or (current_hash and current_hash != block_hash):
+        raise exceptions.ConsensusError('Incorrect {} for block {}.'.format(field, block_index))
     elif not current_hash:
-        sql = '''UPDATE blocks SET movements_hash = ? WHERE block_index = ?'''
-        cursor.execute(sql, (movements_hash, block_index))
+        sql = '''UPDATE blocks SET {} = ? WHERE block_index = ?'''.format(field)
+        cursor.execute(sql, (block_hash, block_index))
 
     cursor.close()
 
-    return movements_hash
+    return block_hash
 
-def parse_block (db, block_index, block_time, previous_hash=None):
+def generate_ledger_hash(db, block_index, previous_hash=None, current_hash=None):
+    ledger_hash = generate_consensus_hash(db, block_index, 'ledger_hash', util.BLOCK_LEDGER, 0, previous_hash, current_hash)
+    util.BLOCK_LEDGER = []
+    return ledger_hash
+
+def generate_txlist_hash(db, block_index, txlist, previous_hash=None, current_hash=None):
+    txlist_hash = generate_consensus_hash(db, block_index, 'txlist_hash', txlist, 1, previous_hash, current_hash)
+    return txlist_hash
+
+def parse_block (db, block_index, block_time, 
+                 previous_ledger_hash=None, current_ledger_hash=None,
+                 previous_txlist_hash=None, current_txlist_hash=None):
     cursor = db.cursor()
 
     # Expire orders, bets and rps.
@@ -157,12 +163,16 @@ def parse_block (db, block_index, block_time, previous_hash=None):
     cursor.execute('''SELECT * FROM transactions \
                       WHERE block_index=? ORDER BY tx_index''',
                    (block_index,))
+    txlist = []
     for tx in list(cursor):
         parse_tx(db, tx)
+        txlist.append(tx['tx_hash'])
 
     cursor.close()
 
-    return generate_movement_hash(db, block_index, previous_hash)
+    ledger_hash = generate_ledger_hash(db, block_index, previous_ledger_hash, current_ledger_hash)
+    txlist_hash = generate_txlist_hash(db, block_index, txlist, previous_txlist_hash, current_txlist_hash)
+    return ledger_hash, txlist_hash
 
 def initialise(db):
     cursor = db.cursor()
@@ -182,9 +192,11 @@ def initialise(db):
                    ''')
 
     # sqlite don't manage ALTER TABLE IF COLUMN NOT EXISTS
-    columns = cursor.execute('''PRAGMA table_info(blocks)''')
-    if 'movements_hash' not in [column['name'] for column in columns]:
-        cursor.execute('''ALTER TABLE blocks ADD COLUMN movements_hash TEXT''')
+    columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(blocks)''')]
+    if 'ledger_hash' not in columns:
+        cursor.execute('''ALTER TABLE blocks ADD COLUMN ledger_hash TEXT''')
+    if 'txlist_hash' not in columns:
+        cursor.execute('''ALTER TABLE blocks ADD COLUMN txlist_hash TEXT''')
 
     # Check that first block in DB is BLOCK_FIRST.
     cursor.execute('''SELECT * from blocks ORDER BY block_index''')
@@ -576,6 +588,7 @@ def initialise(db):
                       asset TEXT,
                       dividend_asset TEXT,
                       quantity_per_unit INTEGER,
+                      fee_paid INTEGER,
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    ''')
@@ -1143,6 +1156,17 @@ def reparse (db, block_index=None, quiet=False):
         for table in TABLES + ['balances']:
             cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
 
+        # clean consensus hashes if first block hash don't match with checkpoint.
+        checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
+        columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(blocks)''')]
+        for field, check_hash_pos in [('ledger_hash', 0), ('txlist_hash', 1)]:
+            if field in columns:
+                sql = '''SELECT {} FROM blocks  WHERE block_index = ?'''.format(field)
+                first_hash = list(cursor.execute(sql, (config.BLOCK_FIRST,)))[0][field]
+                if first_hash != checkpoints[config.BLOCK_FIRST][check_hash_pos]:
+                    logging.info('First hash changed. Cleaning {}.'.format(field))
+                    cursor.execute('''UPDATE blocks SET {} = NULL'''.format(field))
+
         # For rollbacks, just delete new blocks and then reparse what’s left.
         if block_index:
             cursor.execute('''DELETE FROM transactions WHERE block_index > ?''', (block_index,))
@@ -1153,11 +1177,14 @@ def reparse (db, block_index=None, quiet=False):
             log = logging.getLogger('')
             log.setLevel(logging.WARNING)
         initialise(db)
-        previous_hash = None
+        previous_ledger_hash = None
+        previous_txlist_hash = None
         cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
         for block in cursor.fetchall():
             logging.info('Block (re‐parse): {}'.format(str(block['block_index'])))
-            previous_hash = parse_block(db, block['block_index'], block['block_time'], previous_hash)
+            previous_ledger_hash, previous_txlist_hash = parse_block(db, block['block_index'], block['block_time'], 
+                                                                     previous_ledger_hash, block['ledger_hash'],
+                                                                     previous_txlist_hash, block['txlist_hash'])
         if quiet:
             log.setLevel(logging.INFO)
 
@@ -1172,13 +1199,12 @@ def reparse (db, block_index=None, quiet=False):
     return
 
 def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
-    cursor = db.cursor()
     # Get the important details about each transaction.
     tx = bitcoin.get_raw_transaction(tx_hash)
     logging.debug('Status: examining transaction {}.'.format(tx_hash))
 
     try:
-        if (config.TESTNET and block_index >= 281000):  # Protocol change.
+        if (config.TESTNET and block_index >= config.FIRST_MULTISIG_BLOCK_TESTNET):  # Protocol change.
             tx_info = get_tx_info2(tx, block_index)
         else:
             tx_info = get_tx_info(tx, block_index)
@@ -1187,7 +1213,13 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
         tx_info = b'', None, None, None, None
     source, destination, btc_amount, fee, data = tx_info
 
+    # For mempool
+    if block_hash == None:
+        block_hash = config.MEMPOOL_BLOCK_HASH
+        block_index = config.MEMPOOL_BLOCK_INDEX
+
     if source and (data or destination == config.UNSPENDABLE):
+        cursor = db.cursor()
         cursor.execute('''INSERT INTO transactions(
                             tx_index,
                             tx_hash,
@@ -1210,10 +1242,10 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
                              fee,
                              data)
                       )
+        cursor.close()
     else:
         logging.debug('Skipping: ' + tx_hash)
 
-    cursor.close()
     return
 
 def follow (db):
@@ -1379,7 +1411,7 @@ def follow (db):
 
                             # List transaction.
                             try:    # Sometimes the transactions can’t be found: `{'code': -5, 'message': 'No information available about transaction'} Is txindex enabled in Bitcoind?`
-                                list_tx(db, config.MEMPOOL_BLOCK_HASH, config.MEMPOOL_BLOCK_INDEX, curr_time, tx_hash, mempool_tx_index)
+                                list_tx(db, None, block_index, curr_time, tx_hash, mempool_tx_index)
                                 mempool_tx_index += 1
                             except exceptions.BitcoindError:
                                 raise exceptions.MempoolError

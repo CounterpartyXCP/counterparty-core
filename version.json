@@ -1,7 +1,7 @@
 {
 	"minimum_version_major": 9,
-	"minimum_version_minor": 43,
+	"minimum_version_minor": 45,
 	"minimum_version_revision": 0,
-	"reason": "misc.",
-	"block_index": 322000
+	"reason": "dividend fees",
+	"block_index": 328000
 }

@@ -24,6 +24,8 @@ b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
 BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
 
+BLOCK_LEDGER = []
+
 # TODO: This doesn’t timeout properly. (If server hangs, then unhangs, no result.)
 def api (method, params):
     headers = {'content-type': 'application/json'}
@@ -524,8 +526,9 @@ def debit (db, block_index, address, asset, quantity, action=None, event=None):
     }
     sql='insert into debits values(:block_index, :address, :asset, :quantity, :action, :event)'
     debit_cursor.execute(sql, bindings)
-
     debit_cursor.close()
+
+    BLOCK_LEDGER.append('{}{}{}{}'.format(block_index, address, asset, quantity))
 
 def credit (db, block_index, address, asset, quantity, action=None, event=None):
     credit_cursor = db.cursor()
@@ -575,6 +578,8 @@ def credit (db, block_index, address, asset, quantity, action=None, event=None):
     sql='insert into credits values(:block_index, :address, :asset, :quantity, :action, :event)'
     credit_cursor.execute(sql, bindings)
     credit_cursor.close()
+
+    BLOCK_LEDGER.append('{}{}{}{}'.format(block_index, address, asset, quantity))
 
 def devise (db, quantity, asset, dest, divisible=None):
 
@@ -693,10 +698,15 @@ def xcp_supply (db):
     # Subtract issuance fees.
     cursor.execute('''SELECT * FROM issuances\
                       WHERE status = ?''', ('valid',))
-    fee_total = sum([issuance['fee_paid'] for issuance in cursor.fetchall()])
+    issuance_fee_total = sum([issuance['fee_paid'] for issuance in cursor.fetchall()])
+
+    # Subtract dividend fees.
+    cursor.execute('''SELECT * FROM dividends\
+                      WHERE status = ?''', ('valid',))
+    dividend_fee_total = sum([dividend['fee_paid'] for dividend in cursor.fetchall()])
 
     cursor.close()
-    return burn_total - fee_total
+    return burn_total - issuance_fee_total - dividend_fee_total
 
 def supplies (db):
     cursor = db.cursor()

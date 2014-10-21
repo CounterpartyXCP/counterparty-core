@@ -467,12 +467,13 @@ class APIServer(threading.Thread):
             assert isinstance(block_index, int)
             cursor = db.cursor()
             cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,))
-            try:
-                blocks = list(cursor)
-                assert len(blocks) == 1
+            blocks = list(cursor)
+            if len(blocks) == 1:
                 block = blocks[0]
-            except IndexError:
+            elif len(blocks) == 0:
                 raise exceptions.DatabaseError('No blocks found.')
+            else:
+                assert False
             cursor.close()
             return block
         
@@ -559,6 +560,14 @@ class APIServer(threading.Thread):
             names = [row['asset'] for row in cursor.execute("SELECT DISTINCT asset FROM issuances WHERE status = 'valid' ORDER BY asset ASC")]
             cursor.close()
             return names
+
+        @dispatcher.add_method
+        def get_holder_count(asset):
+            holders = util.holders(db, asset)
+            addresses = []
+            for holder in holders:
+                addresses.append(holder['address'])
+            return { asset: len(set(addresses)) }
 
         def _set_cors_headers(response):
             if config.RPC_ALLOW_CORS:

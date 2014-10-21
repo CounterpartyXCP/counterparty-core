@@ -188,9 +188,12 @@ def rpc (method, params):
     else:
         raise exceptions.BitcoindError('{}'.format(response_json['error']))
 
-def validate_address(address):
+def validate_address(address, block_index):
     addresses = address.split('_')
-    if len(addresses) > 1:
+    multisig = len(addresses) > 1
+    if multisig:
+        if not (config.TESTNET and block_index >= config.FIRST_MULTISIG_BLOCK_TESTNET):
+            raise exceptions.AddressError('Multi‐signature addresses currently disabled on mainnet.')
         try:
             assert int(addresses[0]) in (1,2,3)
             assert int(addresses[-1]) in (1,2,3)
@@ -375,7 +378,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
         data_array, value = data_output # DUPE
         s += value.to_bytes(8, byteorder='little')        # Value
 
-        if config.TESTNET:    # Protocol change.
+        if config.TESTNET and block_index >= config.FIRST_MULTISIG_BLOCK_TESTNET:   # Protocol change.
             data_chunk = config.PREFIX + data_chunk
 
         # Initialise encryption key (once per output).
@@ -383,7 +386,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
 
         if encoding == 'multisig':
             # Get data (fake) public key.
-            if config.TESTNET:    # Protocol change.
+            if config.TESTNET and block_index >= config.FIRST_MULTISIG_BLOCK_TESTNET:   # Protocol change.
                 pad_length = (33 * 2) - 1 - len(data_chunk)
                 assert pad_length >= 0
                 data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
@@ -555,9 +558,9 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     for destination in destinations + [source]:
         if destination:
             try:
-                validate_address(destination)
+                validate_address(destination, block_index)
             except exceptions.AddressError as e:
-                raise exceptions.AddressError('Invalid destination address:', address)
+                raise exceptions.AddressError('Invalid destination address:', destination)
 
     # Check that the source is in wallet.
     if encoding in ('multisig') and not self_public_key and not multisig_source:
@@ -585,7 +588,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
             """ Yield successive n‐sized chunks from l.
             """
             for i in range(0, len(l), n): yield l[i:i+n]
-        if config.TESTNET:    # Protocol change.
+        if config.TESTNET and block_index >= config.FIRST_MULTISIG_BLOCK_TESTNET:   # Protocol change.
             if encoding == 'pubkeyhash':
                 data_array = list(chunks(data, 20 - 1 - 8)) # Prefix is also a suffix here.
             elif encoding == 'multisig':
