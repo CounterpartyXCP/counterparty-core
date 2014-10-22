@@ -78,6 +78,7 @@ def get_block_count():
 def get_block_hash(block_index):
     return rpc('getblockhash', [block_index])
 def get_raw_transaction (tx_hash):
+    print("get_raw_transaction %s" % str(tx_hash))
     return rpc('getrawtransaction', [tx_hash, 1])
 def get_block (block_hash):
     return rpc('getblock', [block_hash])
@@ -168,6 +169,7 @@ def rpc (method, params):
 
     # Return result, with error handling.
     response_json = response.json()
+    logging.debug("response_json keys: %s  values:%s", response_json.keys(), response_json.values())
     if 'error' not in response_json.keys() or response_json['error'] == None:
         return response_json['result']
     elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
