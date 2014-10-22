@@ -343,6 +343,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
         config.BACKEND_RPC_SSL_VERIFY = False # Default to off (support self‐signed certificates)
 
     # Construct backend URL.
+    print ("config.BACKEND_RPC_PORT: %s\n" % str(config.BACKEND_RPC_PORT))    
     config.BACKEND_RPC = config.BACKEND_RPC_USER + ':' + config.BACKEND_RPC_PASSWORD + '@' + config.BACKEND_RPC_CONNECT + ':' + str(config.BACKEND_RPC_PORT)
     if config.BACKEND_RPC_SSL:
         config.BACKEND_RPC = 'https://' + config.BACKEND_RPC
@@ -401,6 +402,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     except:
         raise Exception("Please specific a valid port number rpc-port configuration parameter")
 
+    print ("config.RPC_PORT: %s\n" % str(config.RPC_PORT))
     #  counterpartyd API RPC user
     if rpc_user:
         config.RPC_USER = rpc_user
@@ -417,6 +419,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     else:
         raise exceptions.ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
 
+    print ("config.RPC_PORT: %s\n" % str(config.RPC_PORT))
     config.RPC = 'http://' + config.RPC_USER + ':' + config.RPC_PASSWORD + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT)
 
      # RPC CORS
@@ -630,7 +633,7 @@ if __name__ == '__main__':
     parser_dividend.add_argument('--dividend-asset', required=True, help='asset in which to pay the dividends')
     parser_dividend.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
-    parser_burn = subparsers.add_parser('burn', help='destroy {} to earn XCP, during an initial period of time')
+    parser_burn = subparsers.add_parser('burn', help='destroy {} tm earn XCP, during an initial period of time')
     parser_burn.add_argument('--source', required=True, help='the source address')
     parser_burn.add_argument('--quantity', required=True, help='quantity of {} to be destroyed'.format(config.BTC))
     parser_burn.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))

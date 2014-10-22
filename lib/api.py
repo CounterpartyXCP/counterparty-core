@@ -614,6 +614,7 @@ class APIServer(threading.Thread):
 
         http_server = HTTPServer(WSGIContainer(app), xheaders=True)
         try:
+            print("Port: %s, Address: %s" % (config.RPC_PORT, config.RPC_HOST))
             http_server.listen(config.RPC_PORT, address=config.RPC_HOST)
             self.is_ready = True
             IOLoop.instance().start()        
