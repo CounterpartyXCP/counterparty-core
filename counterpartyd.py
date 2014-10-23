@@ -683,6 +683,11 @@ if __name__ == '__main__':
     parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
     parser_rollback.add_argument('--force', action='store_true', help='skip backend check, version check, lockfile check')
 
+    parser_initialise = subparsers.add_parser('initialise', help='initialise database')
+    parser_initialise.add_argument('--bitcoind_dir', required=True, help='Bitcoind data directory')
+    parser_initialise.add_argument('--first_block_hash', help='first block hash to initialise')
+    parser_initialise.add_argument('--last_block_hash', help='last block hash to initialise')
+
     parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the {} market'.format(config.XCP_NAME) )
     parser_market.add_argument('--give-asset', help='only show orders offering to sell GIVE_ASSET')
     parser_market.add_argument('--get-asset', help='only show orders offering to buy GET_ASSET')
@@ -1099,6 +1104,11 @@ if __name__ == '__main__':
     elif args.action == 'rollback':
         with lock:
             blocks.reparse(db, block_index=args.block_index)
+
+    elif args.action == 'initialise':
+        blocks.initialise_transactions(db, bitcoind_dir=args.bitcoind_dir, 
+                                           first_hash=args.first_block_hash, 
+                                           last_hash=args.last_block_hash)
 
     elif args.action == 'server':
 
