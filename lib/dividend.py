@@ -84,7 +84,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     fee = 0
     if not problems and dividend_asset != config.BTC:
         holder_count = len(set(addresses))
-        if block_index >= 328000 or config.TESTNET: # Protocol change.
+        if block_index >= 330000 or config.TESTNET: # Protocol change.
             fee = int(0.0002 * config.UNIT * holder_count)
         if fee:
             balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, config.XCP)))
@@ -143,7 +143,7 @@ def parse (db, tx, message):
     if status == 'valid':
         # Debit.
         util.debit(db, tx['block_index'], tx['source'], dividend_asset, dividend_total, action='dividend', event=tx['tx_hash'])
-        if tx['block_index'] >= 328000 or config.TESTNET: # Protocol change.
+        if tx['block_index'] >= 330000 or config.TESTNET: # Protocol change.
             util.debit(db, tx['block_index'], tx['source'], config.XCP, fee, action='dividend fee', event=tx['tx_hash'])
 
         # Credit.
