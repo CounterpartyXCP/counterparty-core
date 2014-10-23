@@ -4,7 +4,7 @@
 
 import struct
 
-from . import (util, config, bitcoin, util)
+from . import (util, config)
 from exceptions import *
 
 FORMAT = '>QQ'
