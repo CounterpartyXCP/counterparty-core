@@ -11,6 +11,11 @@ FORMAT = '>QQ'
 LENGTH = 8 + 8
 ID = 1
 
+def pack(asset, quantity):
+    data = struct.pack(config.TXTYPE_FORMAT, ID)
+    data += struct.pack(FORMAT, util.asset_id(asset), quantity)
+    return data
+
 def unpack(message):
     try:
         asset_id, quantity = struct.unpack(FORMAT, message)
@@ -62,9 +67,7 @@ def compose (db, source, destination, asset, quantity):
         return (source, [(destination, quantity)], None)
 
     validate(db, source, destination, asset, quantity, util.last_block['block_index'])
-
-    data = struct.pack(config.TXTYPE_FORMAT, ID)
-    data += struct.pack(FORMAT, util.asset_id(asset), quantity)
+    data = pack(asset, quantity)
 
     return (source, [(destination, None)], data)
 
