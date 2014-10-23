@@ -1258,86 +1258,7 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     return
 
 def initialise_transactions(db, bitcoind_dir, first_hash=None, last_hash=None):
-
-    def prepare_db(db, first_index):
-        logging.info('preparing database...')
-        start_prepare = time.time()
-        cursor = db.cursor()
-        for table in TABLES + ['balances']:
-            cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
-        cursor.execute('''DELETE FROM transactions WHERE block_index >= ?''', (first_index,))
-        cursor.execute('''DELETE FROM blocks WHERE block_index >= ?''', (first_index,))
-        initialise(db)
-        logging.info('database prepared in {:.3f}'.format(time.time() - start_prepare))
-        return cursor
-
-    def check_tx(tx, block_index, block_parser):
-        try:
-            if (config.TESTNET and block_index >= config.FIRST_MULTISIG_BLOCK_TESTNET):  # Protocol change.
-                tx_info = get_tx_info2(tx, block_index)
-            else:
-                tx_info = get_tx_info(tx, block_index, block_parser)
-        except exceptions.DecodeError as e:
-            logging.debug('Could not decode: ' + str(e))
-            tx_info = b'', None, None, None, None
-
-        return tx_info
-
-    def check_block(block_hash, block_parser):
-        start_block = time.time()
-        block = block_parser.read_raw_block(block_hash)
-
-        transactions = []
-        for tx in block['transactions']:
-            source, destination, btc_amount, fee, data  = check_tx(tx, block['block_index'], block_parser)
-            if source and (data or destination == config.UNSPENDABLE):
-                transactions.append((
-                    tx['tx_hash'], block['block_index'], block['block_hash'], block['block_time'],
-                    source, destination, btc_amount, fee, data
-                ))
-                logging.info('Valid transaction: {}'.format(tx['tx_hash']))
-
-        logging.info('Block {} ({}): {}/{} saved in {:.3f}s'.format(
-                      block['block_index'], block['block_hash'],
-                      len(transactions), len(block['transactions']),
-                      time.time() - start_block))
-
-        return block, transactions
-
-    def insert_block(cursor, block, transactions, next_tx_index):
-        cursor.execute('''INSERT INTO blocks(
-                                    block_index,
-                                    block_hash,
-                                    block_time) VALUES(?,?,?)''',
-                                    (block['block_index'],
-                                    block['block_hash'],
-                                    block['block_time']))
-
-        if len(transactions):
-            sql = '''INSERT INTO transactions
-                        (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data) 
-                     VALUES '''
-
-            bindings = ()
-            bindings_place = []
-            # negative tx_index from -1 and inverse order for fast reordering
-            for tx in reversed(transactions):
-                bindings += (-(next_tx_index + 1),) + tx
-                bindings_place.append('''(?,?,?,?,?,?,?,?,?,?)''')
-                next_tx_index += 1
-
-            sql += ', '.join(bindings_place)
-            cursor.execute(sql, bindings)
-
-        return next_tx_index
-
-    def reorder_tx_index(db, next_tx_index):
-        logging.info('reordering tx_index...')
-        start_reindex = time.time()
-        cursor.execute('''UPDATE transactions SET tx_index = tx_index + ?''', (next_tx_index,))
-        logging.info('tx_index reordered in {:.3f}'.format(time.time() - start_reindex))
-
-    start = time.time()
+    start_time_total = time.time()
 
     if not first_hash:
         first_hash = config.BLOCK_FIRST_TESTNET_HASH if config.TESTNET else config.BLOCK_FIRST_MAINNET_HASH
@@ -1347,29 +1268,93 @@ def initialise_transactions(db, bitcoind_dir, first_hash=None, last_hash=None):
         chain_parser.close()
 
     block_parser = BlockchainParser(os.path.join(bitcoind_dir, 'blocks'), os.path.join(bitcoind_dir, 'blocks/index'));
-    first_block = block_parser.read_raw_block(first_hash)
-    last_block = block_parser.read_raw_block(last_hash)
+    cursor = db.cursor()
 
-    # step 2: prepare sqlite database
-    cursor = prepare_db(db, first_block['block_index'])
+    # prepare sqlite database
+    logging.info('preparing database...')
+    start_time = time.time()
+    for table in TABLES + ['balances']:
+        cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
+    first_block = block_parser.read_raw_block(first_hash)
+    cursor.execute('''DELETE FROM transactions WHERE block_index >= ?''', (first_block['block_index'],))
+    cursor.execute('''DELETE FROM blocks WHERE block_index >= ?''', (first_block['block_index'],))
+    initialise(db)
+    logging.info('database prepared in {:.3f}'.format(time.time() - start_time))
+
     current_hash = last_hash
     tx_index = 0
     with db:
-        # step 3: parse all blocks backward
+        # parse all blocks backward
         while current_hash != None:
-            block, transactions = check_block(current_hash, block_parser)
-            tx_index = insert_block(cursor, block, transactions, tx_index)
+            start_time = time.time()
+            block = block_parser.read_raw_block(current_hash)
+            transactions = []
+
+            # get tx infos for all transactions of the block
+            for tx in block['transactions']:
+                tx_info = b'', None, None, None, None
+                try:
+                    if (config.TESTNET and block['block_index'] >= config.FIRST_MULTISIG_BLOCK_TESTNET):  # Protocol change.
+                        tx_info = get_tx_info2(tx, block['block_index'])
+                    else:
+                        tx_info = get_tx_info(tx, block['block_index'], block_parser)
+                except exceptions.DecodeError as e:
+                    logging.debug('Could not decode: ' + str(e))
+
+                source, destination, btc_amount, fee, data  = tx_info
+
+                if source and (data or destination == config.UNSPENDABLE):
+                    transactions.append((
+                        tx['tx_hash'], block['block_index'], block['block_hash'], block['block_time'],
+                        source, destination, btc_amount, fee, data
+                    ))
+                    logging.info('Valid transaction: {}'.format(tx['tx_hash']))
+
+            # insert block and transaction in the database
+            cursor.execute('''INSERT INTO blocks(
+                                    block_index,
+                                    block_hash,
+                                    block_time) VALUES(?,?,?)''',
+                                    (block['block_index'],
+                                    block['block_hash'],
+                                    block['block_time']))
+
+            if len(transactions):
+                sql = '''INSERT INTO transactions
+                            (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data) 
+                         VALUES '''
+                bindings = ()
+                bindings_place = []
+                # negative tx_index from -1 and inverse order for fast reordering
+                for tx in reversed(transactions):
+                    bindings += (-(tx_index + 1),) + tx
+                    bindings_place.append('''(?,?,?,?,?,?,?,?,?,?)''')
+                    tx_index += 1
+
+                sql += ', '.join(bindings_place)
+                cursor.execute(sql, bindings)
+
+            logging.info('Block {} ({}): {}/{} saved in {:.3f}s'.format(
+                          block['block_index'], block['block_hash'],
+                          len(transactions), len(block['transactions']),
+                          time.time() - start_time))
+
+            # next block to parse
             current_hash = block['hash_prev'] if current_hash != first_hash else None
+
         block_parser.close()
         
-        # step 4: reorder transactions
-        reorder_tx_index(db, tx_index)
+        # reorder transactions
+        logging.info('reordering tx_index...')
+        start_time = time.time()
+        cursor.execute('''UPDATE transactions SET tx_index = tx_index + ?''', (tx_index,))
+        logging.info('tx_index reordered in {:.3f}'.format(time.time() - start_time))
         
-        # step 5: parse transactions
+        # parse transactions
         reparse(db)
 
     cursor.close()
-    logging.info('duration total: {:.3f}s'.format(time.time() - start))
+    logging.info('duration total: {:.3f}s'.format(time.time() - start_time_total))
 
 def follow (db):
     cursor = db.cursor()
