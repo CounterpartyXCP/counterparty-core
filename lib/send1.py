@@ -78,10 +78,10 @@ def parse (db, tx, message):
 
     except UnpackError as e:
         asset, quantity = None, None
-        status = 'invalid: ' + e.args
+        status = 'invalid: ' + ''.join(e.args)
 
     except ValidateError as e:
-        status = 'invalid: ' + e.args
+        status = 'invalid: ' + ''.join(e.args)
 
     finally:
         bindings = {
