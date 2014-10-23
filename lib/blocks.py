@@ -21,6 +21,9 @@ from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
 from . import (send1)
 
+class DecodeError(Exception):
+    pass
+
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['credits', 'debits', 'messages'] + \
          ['bet_match_resolutions', 'order_match_expirations',
@@ -29,6 +32,7 @@ TABLES = ['credits', 'debits', 'messages'] + \
           'burns', 'callbacks', 'cancels', 'dividends', 'issuances', 'sends',
           'rps_match_expirations', 'rps_expirations', 'rpsresolves', 'rps_matches', 'rps']
 
+class SanityError (Exception): pass
 def check_conservation (db):
     logging.debug('Status: Checking for conservation of assets.')
 
@@ -41,7 +45,7 @@ def check_conservation (db):
         # json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
         # json_print(util.holders(db, asset))
         if held != issued:
-            raise exceptions.SanityError('{} {} issued ≠ {} {} held'.format(util.devise(db, issued, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
+            raise SanityError('{} {} issued ≠ {} {} held'.format(util.devise(db, issued, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
         logging.debug('Status: {} has been conserved ({} {} both issued and held)'.format(asset, util.devise(db, issued, asset, 'output'), asset))
 
 def parse_tx (db, tx):
@@ -109,6 +113,7 @@ def parse_tx (db, tx):
     cursor.close()
     return True
 
+class ConsensusError (Exception): pass
 def generate_consensus_hash(db, block_index, field, strings, check_hash_pos, previous_hash=None, current_hash=None):
     cursor = db.cursor()
 
@@ -944,7 +949,7 @@ def get_tx_info (tx, block_index):
             try: pubkeyhash = binascii.unhexlify(bytes(pubkeyhash_string, 'utf-8'))
             except binascii.Error: continue
 
-            if 'coinbase' in tx['vin'][0]: raise exceptions.DecodeError('coinbase transaction')
+            if 'coinbase' in tx['vin'][0]: raise DecodeError('coinbase transaction')
             obj1 = ARC4.new(binascii.unhexlify(bytes(tx['vin'][0]['txid'], 'utf-8')))
             data_pubkey = obj1.decrypt(pubkeyhash)
             if data_pubkey[1:9] == config.PREFIX or pubkeyhash_encoding:
@@ -970,22 +975,22 @@ def get_tx_info (tx, block_index):
     elif data[:len(config.PREFIX)] == config.PREFIX:
         data = data[len(config.PREFIX):]
     else:
-        raise exceptions.DecodeError('no prefix')
+        raise DecodeError('no prefix')
 
     # Only look for source if data were found or destination is UNSPENDABLE, for speed.
     if not data and destination != config.UNSPENDABLE:
-        raise exceptions.DecodeError('no data and not unspendable')
+        raise DecodeError('no data and not unspendable')
 
     # Collect all possible source addresses; ignore coinbase transactions and anything but the simplest Pay‐to‐PubkeyHash inputs.
     source_list = []
     for vin in tx['vin']:                                               # Loop through input transactions.
-        if 'coinbase' in vin: raise exceptions.DecodeError('coinbase transaction')
+        if 'coinbase' in vin: raise DecodeError('coinbase transaction')
         vin_tx = bitcoin.get_raw_transaction(vin['txid'])     # Get the full transaction data for this input transaction.
         vout = vin_tx['vout'][vin['vout']]
         fee += vout['value'] * config.UNIT
 
         address = get_address(vout['scriptPubKey'])
-        if not address: raise exceptions.DecodeError('invalid scriptpubkey')
+        if not address: raise DecodeError('invalid scriptpubkey')
         else: source_list.append(address)
 
     # Require that all possible source addresses be the same.
@@ -1020,22 +1025,22 @@ def get_tx_info2 (tx, block_index):
                 else:
                     asm.append(op)
         except bitcoinlib.core.script.CScriptTruncatedPushDataError:
-            raise exceptions.DecodeError('invalid pushdata due to truncation')
+            raise DecodeError('invalid pushdata due to truncation')
         if not asm:
-            raise exceptions.DecodeError('empty output')
+            raise DecodeError('empty output')
         return asm
 
     def get_opreturn (asm):
         if len(asm) == 2 and asm[0] == 'OP_RETURN':
             pubkeyhash = asm[1]
             return pubkeyhash
-        raise exceptions.DecodeError('invalid OP_RETURN')
+        raise DecodeError('invalid OP_RETURN')
 
     def get_checksig (asm):
         if len(asm) == 5 and asm[0] == 'OP_DUP' and asm[1] == 'OP_HASH160' and asm[3] == 'OP_EQUALVERIFY' and asm[4] == 'OP_CHECKSIG':
             pubkeyhash = asm[2]
             return pubkeyhash
-        raise exceptions.DecodeError('invalid OP_CHECKSIG')
+        raise DecodeError('invalid OP_CHECKSIG')
 
     def get_checkmultisig (asm):
         # N‐of‐2
@@ -1044,7 +1049,7 @@ def get_tx_info2 (tx, block_index):
         # N‐of‐3
         if len(asm) == 6 and asm[4] == 3 and asm[5] == 'OP_CHECKMULTISIG':
             return asm[1:4], asm[0]
-        raise exceptions.DecodeError('invalid OP_CHECKMULTISIG')
+        raise DecodeError('invalid OP_CHECKMULTISIG')
 
     def decode_opreturn (asm):
         chunk = get_opreturn(asm)
@@ -1052,7 +1057,7 @@ def get_tx_info2 (tx, block_index):
         if chunk[:len(config.PREFIX)] == config.PREFIX:             # Data
             destination, data = None, chunk[len(config.PREFIX):]
         else:
-            raise exceptions.DecodeError('unrecognised OP_RETURN output')
+            raise DecodeError('unrecognised OP_RETURN output')
 
         return destination, data
 
@@ -1088,7 +1093,7 @@ def get_tx_info2 (tx, block_index):
         return destination, data
 
     # Ignore coinbase transactions.
-    if ctx.is_coinbase(): raise exceptions.DecodeError('coinbase transaction')
+    if ctx.is_coinbase(): raise DecodeError('coinbase transaction')
 
     # Get destinations and data outputs.
     destinations, btc_amount, fee, data = [], 0, 0, b''
@@ -1105,7 +1110,7 @@ def get_tx_info2 (tx, block_index):
         elif asm[-1] == 'OP_CHECKMULTISIG':
             new_destination, new_data = decode_checkmultisig(asm)
         else:
-            raise exceptions.DecodeError('unrecognised output type')
+            raise DecodeError('unrecognised output type')
         assert not (new_destination and new_data)
         assert new_destination or new_data
 
@@ -1129,12 +1134,12 @@ def get_tx_info2 (tx, block_index):
         asm = get_asm(vout.scriptPubKey)
         if asm[-1] == 'OP_CHECKSIG':
             new_source, new_data = decode_checksig(asm)
-            if new_data or not new_source: raise exceptions.DecodeError('data in source')
+            if new_data or not new_source: raise DecodeError('data in source')
         elif asm[-1] == 'OP_CHECKMULTISIG':
             new_source, new_data = decode_checkmultisig(asm)
-            if new_data or not new_source: raise exceptions.DecodeError('data in source')
+            if new_data or not new_source: raise DecodeError('data in source')
         else:
-            raise exceptions.DecodeError('unrecognised source type')
+            raise DecodeError('unrecognised source type')
 
         # Collect unique sources.
         if new_source not in sources:
@@ -1210,7 +1215,7 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
             tx_info = get_tx_info2(tx, block_index)
         else:
             tx_info = get_tx_info(tx, block_index)
-    except exceptions.DecodeError as e:
+    except DecodeError as e:
         logging.debug('Could not decode: ' + str(e))
         tx_info = b'', None, None, None, None
     source, destination, btc_amount, fee, data = tx_info
@@ -1250,6 +1255,7 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
 
     return
 
+class MempoolError (exceptions.TransactionError): pass
 def follow (db):
     cursor = db.cursor()
 
@@ -1416,7 +1422,7 @@ def follow (db):
                                 list_tx(db, None, block_index, curr_time, tx_hash, mempool_tx_index)
                                 mempool_tx_index += 1
                             except exceptions.BitcoindError:
-                                raise exceptions.MempoolError
+                                raise MempoolError
 
                             # Parse transaction.
                             cursor.execute('''SELECT * FROM transactions \
@@ -1436,7 +1442,7 @@ def follow (db):
                                 # Counterparty transaction.
                                 not_supported[tx_hash] = ''
                                 not_supported_sorted.append((block_index, tx_hash))
-                                raise exceptions.MempoolError
+                                raise MempoolError
 
                             # Save transaction and side‐effects in memory.
                             cursor.execute('''SELECT * FROM messages WHERE block_index = ?''', (config.MEMPOOL_BLOCK_INDEX,))
@@ -1444,8 +1450,8 @@ def follow (db):
                                 mempool.append((tx_hash, message))
 
                             # Rollback.
-                            raise exceptions.MempoolError
-                    except exceptions.MempoolError:
+                            raise MempoolError
+                    except MempoolError:
                         pass
 
             # Re‐write mempool messages to database.

@@ -24,7 +24,7 @@ def unpack(message):
     except struct.error:
         raise UnpackError('could not unpack')
 
-    except AssetNameError:
+    except util.AssetNameError:
         raise UnpackError('asset id invalid')
 
     return asset, quantity

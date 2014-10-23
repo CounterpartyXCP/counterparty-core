@@ -21,6 +21,9 @@ from Crypto.Cipher import ARC4
 
 from . import (config, exceptions, util, blockchain)
 
+class InputError(Exception):
+    pass
+
 # Constants
 OP_RETURN = b'\x6a'
 OP_PUSHDATA1 = b'\x4c'
@@ -148,6 +151,7 @@ def wallet_unlock ():
     else:
         return True    # Wallet is unencrypted.
 
+class BitcoindRPCError (exceptions.BitcoindError): pass
 def rpc (method, params):
     starttime = time.time()
     headers = {'content-type': 'application/json'}
@@ -162,31 +166,31 @@ def rpc (method, params):
     if response == None:
         if config.TESTNET: network = 'testnet'
         else: network = 'mainnet'
-        raise exceptions.BitcoindRPCError('Cannot communicate with {} Core. ({} is set to run on {}, is {} Core?)'.format(config.BTC_NAME, config.XCP_CLIENT, network, config.BTC_NAME))
+        raise BitcoindRPCError('Cannot communicate with {} Core. ({} is set to run on {}, is {} Core?)'.format(config.BTC_NAME, config.XCP_CLIENT, network, config.BTC_NAME))
     elif response.status_code not in (200, 500):
-        raise exceptions.BitcoindRPCError(str(response.status_code) + ' ' + response.reason)
+        raise BitcoindRPCError(str(response.status_code) + ' ' + response.reason)
 
     # Return result, with error handling.
     response_json = response.json()
     if 'error' not in response_json.keys() or response_json['error'] == None:
         return response_json['result']
     elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
-        raise exceptions.BitcoindError('{} Is txindex enabled in {} Core?'.format(response_json['error'], config.BTC_NAME))
+        raise BitcoindError('{} Is txindex enabled in {} Core?'.format(response_json['error'], config.BTC_NAME))
     elif response_json['error']['code'] == -4:   # Unknown private key (locked wallet?)
         # If address in wallet, attempt to unlock.
         address = params[0]
         if is_valid(address):
             if is_mine(address):
-                raise exceptions.BitcoindError('Wallet is locked.')
+                raise BitcoindError('Wallet is locked.')
             else:   # When will this happen?
-                raise exceptions.BitcoindError('Source address not in wallet.')
+                raise BitcoindError('Source address not in wallet.')
         else:
             raise exceptions.AddressError('Invalid address. (Multi‐signature?)')
     elif response_json['error']['code'] == -1 and response_json['message'] == 'Block number out of range.':
         time.sleep(10)
         return get_block_hash(block_index)
     else:
-        raise exceptions.BitcoindError('{}'.format(response_json['error']))
+        raise BitcoindError('{}'.format(response_json['error']))
 
 # TODO: really should be in util.py
 def validate_address(address, block_index):
@@ -240,13 +244,18 @@ def base58_check_encode(original, version):
 
     return address
 
+class VersionByteError (exceptions.AddressError): pass
+class Base58Error (exceptions.AddressError): pass
+class Base58ChecksumError (Base58Error): pass
+class InvalidBase58Error (Base58Error): pass
+
 def base58_check_decode (s, version):
     # Convert the string to an integer
     n = 0
     for c in s:
         n *= 58
         if c not in b58_digits:
-            raise exceptions.InvalidBase58Error('Not a valid base58 character:', c)
+            raise InvalidBase58Error('Not a valid base58 character:', c)
         digit = b58_digits.index(c)
         n += digit
 
@@ -265,10 +274,10 @@ def base58_check_decode (s, version):
 
     addrbyte, data, chk0 = k[0:1], k[1:-4], k[-4:]
     if addrbyte != version:
-        raise exceptions.VersionByteError('incorrect version byte')
+        raise VersionByteError('incorrect version byte')
     chk1 = dhash(addrbyte + data)[:4]
     if chk0 != chk1:
-        raise exceptions.Base58ChecksumError('Checksum mismatch: %r ≠ %r' % (chk0, chk1))
+        raise Base58ChecksumError('Checksum mismatch: %r ≠ %r' % (chk0, chk1))
     return data
 
 def var_int (i):
@@ -330,7 +339,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
             signatures_possible = int(addresses[-1])
             addresses = sorted(addresses[1:-1])
             if signatures_possible != len(addresses):
-                raise exceptions.InputError('Incorrect number of public keys in multi‐signature destination.')
+                raise InputError('Incorrect number of public keys in multi‐signature destination.')
 
             # Required signatures.
             if signatures_required == 1:
@@ -340,7 +349,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
             elif signatures_required == 3:
                 op_required = OP_3
             else:
-                raise exceptions.InputError('Required signatures must be 1, 2 or 3.')
+                raise InputError('Required signatures must be 1, 2 or 3.')
 
             # Required signatures.
             if len(addresses) == 1:
@@ -350,7 +359,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
             elif len(addresses) == 3:
                 op_total = OP_3
             else:
-                raise exceptions.InputError('Total possible signatures must be 1, 2 or 3.')
+                raise InputError('Total possible signatures must be 1, 2 or 3.')
 
             # Construct script.
             script = op_required                                # Required signatures
@@ -485,6 +494,7 @@ def sort_unspent_txouts(unspent, allow_unconfirmed_inputs):
 
     return unspent
 
+class AltcoinSupportError (Exception): pass
 def private_key_to_public_key (private_key_wif):
     if config.TESTNET:
         allowable_wif_prefixes = [config.PRIVATEKEY_VERSION_TESTNET]
@@ -494,12 +504,13 @@ def private_key_to_public_key (private_key_wif):
         secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(
                 private_key_wif, allowable_wif_prefixes=allowable_wif_prefixes)
     except EncodingError:
-        raise exceptions.AltcoinSupportError('pycoin: unsupported WIF prefix')
+        raise AltcoinSupportError('pycoin: unsupported WIF prefix')
     public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
     public_key = public_pair_to_sec(public_pair, compressed=compressed)
     public_key_hex = binascii.hexlify(public_key).decode('utf-8')
     return public_key_hex
 
+class BalanceError (Exception): pass
 def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
                  regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
                  multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
@@ -548,7 +559,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
             is_compressed = is_sec_compressed(sec)
             self_public_key = sec
         except (EncodingError, binascii.Error):
-            raise exceptions.InputError('Invalid private key.')
+            raise InputError('Invalid private key.')
 
     # Protocol change.
     if encoding == 'pubkeyhash' and get_block_count() < 293000 and not config.TESTNET:
