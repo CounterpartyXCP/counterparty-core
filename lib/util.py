@@ -738,4 +738,13 @@ def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
 def dhash_string(text):
     return binascii.hexlify(hashlib.sha256(hashlib.sha256(bytes(text, 'utf-8')).digest()).digest()).decode()
 
+def transfer(db, block_index, source, destination, asset, quantity, action, event):
+    util.debit(db, block_index, source, asset, quantity, action=action, event=event)
+    util.credit(db, block_index, destination, asset, quantity, action=action, event=event)
+
+def insert(db, table, bindings):
+    cursor = db.cursor()
+    cursor.execute('insert into {} values({})'.format(*MAGIC*), bindings)   # TODO
+
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

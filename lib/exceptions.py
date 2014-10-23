@@ -66,6 +66,8 @@ class MessageError (Exception):
     pass
 class UnpackError (MessageError):
     pass
+def ValidateError(MessageError):
+    pass
 class BurnError (MessageError):
     pass
 class SendError (MessageError):
