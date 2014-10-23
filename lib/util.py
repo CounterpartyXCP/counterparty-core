@@ -485,8 +485,6 @@ def asset_name (asset_id):
     return asset_name
 
 def debit (db, block_index, address, asset, quantity, action=None, event=None):
-    debit_cursor = db.cursor()
-
     if type(quantity) != int:
         raise exceptions.DebitError
     if quantity < 0:
@@ -494,9 +492,7 @@ def debit (db, block_index, address, asset, quantity, action=None, event=None):
     if asset == config.BTC:
         raise exceptions.DebitError
 
-    if asset == config.BTC:
-        raise exceptions.BalanceError('Cannot debit bitcoins from a {} address!'.format(config.XCP_NAME))
-
+    debit_cursor = db.cursor()
     debit_cursor.execute('''SELECT * FROM balances \
                             WHERE (address = ? AND asset = ?)''', (address, asset))
     balances = debit_cursor.fetchall()
@@ -504,7 +500,7 @@ def debit (db, block_index, address, asset, quantity, action=None, event=None):
     else: old_balance = balances[0]['quantity']
 
     if old_balance < quantity:
-        raise exceptions.BalanceError('Insufficient funds.')
+        raise exceptions.DebitError('Insufficient funds.')
 
     balance = round(old_balance - quantity)
     balance = min(balance, config.MAX_INT)
@@ -534,8 +530,6 @@ def debit (db, block_index, address, asset, quantity, action=None, event=None):
     BLOCK_LEDGER.append('{}{}{}{}'.format(block_index, address, asset, quantity))
 
 def credit (db, block_index, address, asset, quantity, action=None, event=None):
-    credit_cursor = db.cursor()
-
     if type(quantity) != int:
         raise exceptions.CreditError
     if quantity < 0:
@@ -543,6 +537,7 @@ def credit (db, block_index, address, asset, quantity, action=None, event=None):
     if asset == config.BTC:
         raise exceptions.CreditError
 
+    credit_cursor = db.cursor()
     credit_cursor.execute('''SELECT * FROM balances \
                              WHERE (address = ? AND asset = ?)''', (address, asset))
     balances = credit_cursor.fetchall()

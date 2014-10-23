@@ -66,24 +66,6 @@ def multisig_pubkeyhashes_to_pubkeys(address):
     address = '_'.join([str(signatures_required)] + sorted(pubkeys) + [str(len(pubkeys))])
     return address
 
-# TODO: really should be in util.py
-def validate_address(address, block_index):
-    addresses = address.split('_')
-    multisig = len(addresses) > 1
-    if multisig:
-        if not (config.TESTNET and block_index >= config.FIRST_MULTISIG_BLOCK_TESTNET):
-            raise exceptions.AddressError('Multi‐signature addresses currently disabled on mainnet.')
-        try:
-            assert int(addresses[0]) in (1,2,3)
-            assert int(addresses[-1]) in (1,2,3)
-        except (AssertionError):
-            raise exceptions.AddressError('Invalid multi‐signature address:', address)
-        addresses = addresses[1:-1]
-
-    # Check validity by attempting to decode.
-    for address in addresses:
-        base58_check_decode(address, config.ADDRESSVERSION)
-
 bitcoin_rpc_session = None
 
 def print_coin(coin):
@@ -205,6 +187,24 @@ def rpc (method, params):
         return get_block_hash(block_index)
     else:
         raise exceptions.BitcoindError('{}'.format(response_json['error']))
+
+# TODO: really should be in util.py
+def validate_address(address, block_index):
+    addresses = address.split('_')
+    multisig = len(addresses) > 1
+    if multisig:
+        if not (config.TESTNET and block_index >= config.FIRST_MULTISIG_BLOCK_TESTNET):
+            raise exceptions.AddressError('Multi‐signature addresses currently disabled on mainnet.')
+        try:
+            assert int(addresses[0]) in (1,2,3)
+            assert int(addresses[-1]) in (1,2,3)
+        except (AssertionError):
+            raise exceptions.AddressError('Invalid multi‐signature address:', address)
+        addresses = addresses[1:-1]
+
+    # Check validity by attempting to decode.
+    for address in addresses:
+        base58_check_decode(address, config.ADDRESSVERSION)
 
 def base58_encode(binary):
     # Convert big‐endian bytes to integer
