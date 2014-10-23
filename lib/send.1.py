@@ -24,7 +24,6 @@ def unpack(message):
 
     return asset, quantity
 
-
 def validate (db, source, destination, asset, quantity, block_index):
 
     # TODO: check asset name or asset id?
@@ -57,7 +56,6 @@ def validate (db, source, destination, asset, quantity, block_index):
 
     if util.get_balance(db, source, asset) < quantity:
         raise ValidateError('balance insufficient')
-
 
 def compose (db, source, destination, asset, quantity):
 
