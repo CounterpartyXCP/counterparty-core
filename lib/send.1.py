@@ -11,9 +11,19 @@ FORMAT = '>QQ'
 LENGTH = 8 + 8
 ID = 1
 
-class send(object):
-    def __init__(self, source, destination, asset, quantity):
-        self.source = source
+def unpack(message):
+    try:
+        asset_id, quantity = struct.unpack(FORMAT, message)
+        asset = util.asset_name(asset_id)
+
+    except struct.error:
+        raise UnpackError('could not unpack')
+
+    except AssetNameError:
+        raise UnpackError('asset id invalid')
+
+    return asset, quantity
+
 
 def validate (db, source, destination, asset, quantity, block_index):
 
@@ -64,22 +74,16 @@ def parse (db, tx, message):
     status = 'valid'
 
     try:
-        asset_id, quantity = struct.unpack(FORMAT, message)
-        asset = util.asset_name(asset_id)
-
+        asset, quantity = unpack(message)
         validate(db, tx['source'], tx['destination'], asset, quantity, tx['block_index'])
         util.transfer(db, tx['block_index'], tx['source'], tx['destination'], asset, quantity, 'send', tx['tx_hash'])
 
-    except struct.error:
+    except UnpackError as e:
         asset, quantity = None, None
-        status = 'invalid: could not unpack'
-
-    except AssetNameError:
-        asset, quantity = None, None
-        status = 'invalid: asset name invalid'
+        status = 'invalid: ' + e.args
 
     except ValidateError as e:
-        status = 'invalid: ' + e.args)
+        status = 'invalid: ' + e.args
 
     finally:
         bindings = {
