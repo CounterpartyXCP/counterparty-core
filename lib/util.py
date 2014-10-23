@@ -484,12 +484,15 @@ def asset_name (asset_id):
     """
     return asset_name
 
-
 def debit (db, block_index, address, asset, quantity, action=None, event=None):
     debit_cursor = db.cursor()
-    assert asset != config.BTC # Never BTC.
-    assert type(quantity) == int
-    assert quantity >= 0
+
+    if type(quantity) != int:
+        raise exceptions.DebitError
+    if quantity < 0:
+        raise exceptions.DebitError
+    if asset == config.BTC:
+        raise exceptions.DebitError
 
     if asset == config.BTC:
         raise exceptions.BalanceError('Cannot debit bitcoins from a {} address!'.format(config.XCP_NAME))
@@ -532,9 +535,13 @@ def debit (db, block_index, address, asset, quantity, action=None, event=None):
 
 def credit (db, block_index, address, asset, quantity, action=None, event=None):
     credit_cursor = db.cursor()
-    assert asset != config.BTC # Never BTC.
-    assert type(quantity) == int
-    assert quantity >= 0
+
+    if type(quantity) != int:
+        raise exceptions.CreditError
+    if quantity < 0:
+        raise exceptions.CreditError
+    if asset == config.BTC:
+        raise exceptions.CreditError
 
     credit_cursor.execute('''SELECT * FROM balances \
                              WHERE (address = ? AND asset = ?)''', (address, asset))
@@ -741,6 +748,23 @@ def dhash_string(text):
 def transfer(db, block_index, source, destination, asset, quantity, action, event):
     util.debit(db, block_index, source, asset, quantity, action=action, event=event)
     util.credit(db, block_index, destination, asset, quantity, action=action, event=event)
+
+def check_address(address, block_index):
+    addresses = address.split('_')
+    multisig = len(addresses) > 1
+    if multisig:
+        if not (config.TESTNET and block_index >= config.FIRST_MULTISIG_BLOCK_TESTNET):
+            raise exceptions.AddressError('Multi‐signature addresses currently disabled on mainnet.')
+        try:
+            assert int(addresses[0]) in (1,2,3)
+            assert int(addresses[-1]) in (1,2,3)
+        except (AssertionError):
+            raise exceptions.AddressError('Invalid multi‐signature address:', address)
+        addresses = addresses[1:-1]
+
+    # Check validity by attempting to decode.
+    for address in addresses:
+        base58_check_decode(address, config.ADDRESSVERSION)
 
 def insert(db, table, bindings):
     cursor = db.cursor()

@@ -11,7 +11,26 @@ FORMAT = '>QQ'
 LENGTH = 8 + 8
 ID = 1
 
-def validate (db, source, destination, asset, quantity):
+class send(object):
+    def __init__(self, source, destination, asset, quantity):
+        self.source = source
+
+def validate (db, source, destination, asset, quantity, block_index):
+
+    try:
+        asset_id(asset)
+    except AssetError:
+        raise ValidateAssetError('asset invalid')
+
+    try:
+        util.validate_address(source, block_index):
+    except AddressError:
+        raise ValidateError('source address invalid')
+
+    try:
+        util.validate_address(destination, block_index):
+    except AddressError:
+        raise ValidateError('destination address invalid')
 
     if asset == config.BTC:
         raise ValidateError('cannot send {}'.format(config.BTC))
@@ -28,12 +47,13 @@ def validate (db, source, destination, asset, quantity):
     if util.get_balance(db, source, asset) < quantity:
         raise ValidateError('balance insufficient')
 
+
 def compose (db, source, destination, asset, quantity):
 
     if asset == config.BTC:
         return (source, [(destination, quantity)], None)
 
-    validate(db, source, destination, asset, quantity)
+    validate(db, source, destination, asset, quantity, util.last_block['block_index'])
 
     data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, util.asset_id(asset), quantity)
@@ -47,12 +67,16 @@ def parse (db, tx, message):
         asset_id, quantity = struct.unpack(FORMAT, message)
         asset = util.asset_name(asset_id)
 
-        validate(db, tx['source'], tx['destination'], asset, quantity)
-        util.transfer(db, tx['block_index'], tx['destination'], asset, quantity, action='send', event=tx['tx_hash'])
+        validate(db, tx['source'], tx['destination'], asset, quantity, tx['block_index'])
+        util.transfer(db, tx['block_index'], tx['source'], tx['destination'], asset, quantity, 'send', tx['tx_hash'])
 
-    except (AssetNameError, struct.error):
+    except struct.error:
         asset, quantity = None, None
         status = 'invalid: could not unpack'
+
+    except AssetNameError:
+        asset, quantity = None, None
+        status = 'invalid: asset name invalid'
 
     except ValidateError as e:
         status = 'invalid: ' + e.args)

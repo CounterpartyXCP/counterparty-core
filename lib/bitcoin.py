@@ -188,23 +188,6 @@ def rpc (method, params):
     else:
         raise exceptions.BitcoindError('{}'.format(response_json['error']))
 
-def validate_address(address, block_index):
-    addresses = address.split('_')
-    multisig = len(addresses) > 1
-    if multisig:
-        if not (config.TESTNET and block_index >= config.FIRST_MULTISIG_BLOCK_TESTNET):
-            raise exceptions.AddressError('Multi‐signature addresses currently disabled on mainnet.')
-        try:
-            assert int(addresses[0]) in (1,2,3)
-            assert int(addresses[-1]) in (1,2,3)
-        except (AssertionError):
-            raise exceptions.AddressError('Invalid multi‐signature address:', address)
-        addresses = addresses[1:-1]
-
-    # Check validity by attempting to decode.
-    for address in addresses:
-        base58_check_decode(address, config.ADDRESSVERSION)
-
 def base58_encode(binary):
     # Convert big‐endian bytes to integer
     n = int('0x0' + binascii.hexlify(binary).decode('utf8'), 16)
@@ -558,7 +541,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     for destination in destinations + [source]:
         if destination:
             try:
-                validate_address(destination, block_index)
+                util.check_address(destination, block_index)
             except exceptions.AddressError as e:
                 raise exceptions.AddressError('Invalid destination address:', destination)
 

@@ -41,6 +41,10 @@ class FeeError (Exception):
     pass
 class BalanceError (Exception):
     pass
+class DebitError (Exception):
+    pass
+class CreditError (Exception):
+    pass
 class QuantityError(Exception):
     pass
 
@@ -96,5 +100,6 @@ class ConsensusError (Exception):
 
 class GetURLError (Exception):
     pass
+
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
