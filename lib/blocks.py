@@ -1353,31 +1353,38 @@ def initialise_transactions(db, bitcoind_dir, first_hash=None, last_hash=None):
 
     start = time.time()
 
+    # step 1: copy bitcoin leveldb database in tmp directory
     blocks_index_path, chainstate_index_path = copy_leveldb(bitcoind_dir)
 
     if not first_hash:
         first_hash = config.BLOCK_FIRST_TESTNET_HASH if config.TESTNET else config.BLOCK_FIRST_MAINNET_HASH
-
     if not last_hash:
         chain_parser = ChainstateParser(chainstate_index_path)
         last_hash = chain_parser.get_last_block_hash()
         chain_parser.close()
-        print('last_hash: ' + last_hash)
 
     block_parser = BlockchainParser(os.path.join(bitcoind_dir, 'blocks'), blocks_index_path);
     first_block = block_parser.read_raw_block(first_hash)
     last_block = block_parser.read_raw_block(last_hash)
+
+    # step 2: prepare sqlite database
     cursor = prepare_db(db, first_block['block_index'])
     current_hash = last_hash
     tx_index = 0
     with db:
+        # step 3: parse all blocks backward
         while current_hash != None:
             block, transactions = check_block(current_hash, block_parser)
             tx_index = insert_block(cursor, block, transactions, tx_index)
             current_hash = block['hash_prev'] if current_hash != first_hash else None
         block_parser.close()
+        # step 4: reorder transactions
         reorder_tx_index(db, tx_index)
+        # step 5: parse transactions
         reparse(db)
+
+    # step 6: delete bitcoind leveldb database from tmp directory
+    rmtree(os.path.join(tempfile.gettempdir(), 'cp_bitcoind_data'), ignore_errors=True)
 
     cursor.close()
     logging.info('duration total: {:.3f}s'.format(time.time() - start))
