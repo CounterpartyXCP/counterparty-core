@@ -749,7 +749,7 @@ def transfer(db, block_index, source, destination, asset, quantity, action, even
     util.debit(db, block_index, source, asset, quantity, action=action, event=event)
     util.credit(db, block_index, destination, asset, quantity, action=action, event=event)
 
-def check_address(address, block_index):
+def validate_address(address, block_index):
     addresses = address.split('_')
     multisig = len(addresses) > 1
     if multisig:

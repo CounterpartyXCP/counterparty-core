@@ -541,7 +541,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     for destination in destinations + [source]:
         if destination:
             try:
-                util.check_address(destination, block_index)
+                util.validate_address(destination, block_index)
             except exceptions.AddressError as e:
                 raise exceptions.AddressError('Invalid destination address:', destination)
 
