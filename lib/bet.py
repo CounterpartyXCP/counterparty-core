@@ -142,11 +142,11 @@ def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
 
     problems = validate(db, source, feed_address, bet_type, deadline, wager_quantity,
                         counterwager_quantity, target_value, leverage, expiration, util.last_block(db)['block_index'])
-    if deadline <= time.time() and not config.UNITTEST:
+    if util.date_passed(deadline):
         problems.append('deadline passed')
     if problems: raise exceptions.BetError(problems)
 
-    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
+    data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, bet_type, deadline,
                         wager_quantity, counterwager_quantity, target_value,
                         leverage, expiration)
@@ -157,12 +157,13 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
-        assert len(message) == LENGTH
+        if len(message) != LENGTH:
+            raise exceptions.UnpackError
         (bet_type, deadline, wager_quantity,
          counterwager_quantity, target_value, leverage,
          expiration) = struct.unpack(FORMAT, message)
         status = 'open'
-    except (AssertionError, struct.error) as e:
+    except (exceptions.UnpackError, struct.error):
         (bet_type, deadline, wager_quantity,
          counterwager_quantity, target_value, leverage,
          expiration, fee_fraction_int) = 0, 0, 0, 0, 0, 0, 0, 0
@@ -171,8 +172,10 @@ def parse (db, tx, message):
     odds, fee_fraction = 0, 0
     feed_address = tx['destination']
     if status == 'open':
-        try: odds = util.price(wager_quantity, counterwager_quantity, tx['block_index'])
-        except Exception as e: pass
+        try:
+            odds = util.price(wager_quantity, counterwager_quantity, tx['block_index'])
+        except ZeroDivisionError:
+            odds = 0
 
         fee_fraction = get_fee_fraction(db, feed_address)
 
@@ -194,7 +197,7 @@ def parse (db, tx, message):
 
     # Debit quantity wagered. (Escrow.)
     if status == 'open':
-        util.debit(db, tx['block_index'], tx['source'], config.XCP, wager_quantity)
+        util.debit(db, tx['block_index'], tx['source'], config.XCP, wager_quantity, action='bet', event=tx['tx_hash'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

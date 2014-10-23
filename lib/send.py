@@ -44,7 +44,7 @@ def compose (db, source, destination, asset, quantity):
     if problems: raise exceptions.SendError(problems)
 
     asset_id = util.asset_id(asset)
-    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
+    data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, quantity)
 
     cursor.close()
@@ -55,11 +55,12 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
-        assert len(message) == LENGTH
+        if len(message) != LENGTH:
+            raise exceptions.UnpackError
         asset_id, quantity = struct.unpack(FORMAT, message)
         asset = util.asset_name(asset_id)
         status = 'valid'
-    except (AssertionError, struct.error) as e:
+    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
         asset, quantity = None, None
         status = 'invalid: could not unpack'
 
@@ -80,8 +81,8 @@ def parse (db, tx, message):
         if problems: status = 'invalid: ' + '; '.join(problems)
 
     if status == 'valid':
-        util.debit(db, tx['block_index'], tx['source'], asset, quantity, event=tx['tx_hash'])
-        util.credit(db, tx['block_index'], tx['destination'], asset, quantity, event=tx['tx_hash'])
+        util.debit(db, tx['block_index'], tx['source'], asset, quantity, action='send', event=tx['tx_hash'])
+        util.credit(db, tx['block_index'], tx['destination'], asset, quantity, action='send', event=tx['tx_hash'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

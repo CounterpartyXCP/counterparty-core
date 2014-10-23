@@ -1,7 +1,7 @@
 {
 	"minimum_version_major": 9,
-	"minimum_version_minor": 42,
+	"minimum_version_minor": 45,
 	"minimum_version_revision": 0,
-	"reason": "tweak dividend rules",
-	"block_index": 320000
+	"reason": "dividend fees",
+	"block_index": 330000
 }

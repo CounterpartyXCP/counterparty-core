@@ -12,6 +12,8 @@ from dateutil.tz import tzlocal
 from operator import itemgetter
 import fractions
 import warnings
+import binascii
+import hashlib
 
 from . import (config, exceptions)
 
@@ -22,6 +24,7 @@ b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
 BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
 
+BLOCK_LEDGER = []
 
 # TODO: This doesn’t timeout properly. (If server hangs, then unhangs, no result.)
 def api (method, params):
@@ -46,7 +49,7 @@ def api (method, params):
         try:
             return response_json['result']
         except KeyError:
-            raise Exception(response_json)
+            raise exceptions.RPCError(response_json)
     else:
         raise exceptions.RPCError('{}'.format(response_json['error']))
 
@@ -123,7 +126,7 @@ def log (db, command, category, bindings):
                     callability = 'uncallable'
                 try:
                     quantity = devise(db, bindings['quantity'], None, dest='output', divisible=bindings['divisible'])
-                except:
+                except Exception as e:
                     quantity = '?'
                 logging.info('Issuance: {} created {} of asset {}, which is {} and {}, with description ‘{}’ ({}) [{}]'.format(bindings['issuer'], quantity, bindings['asset'], divisibility, callability, bindings['description'], bindings['tx_hash'], bindings['status']))
 
@@ -250,10 +253,8 @@ def message (db, block_index, command, category, bindings, tx_hash=None):
             pass
 
     bindings_string = json.dumps(collections.OrderedDict(sorted(bindings.items())))
-    if config.UNITTEST: curr_time = 0
-    else: curr_time = int(time.time())
     cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings, :timestamp)',
-                   (message_index, block_index, command, category, bindings_string, curr_time))
+                   (message_index, block_index, command, category, bindings_string, curr_time()))
 
     # Log only real transactions.
     if block_index != config.MEMPOOL_BLOCK_INDEX:
@@ -305,7 +306,7 @@ def connect_to_db(flags=None):
     elif flags == 'SQLITE_OPEN_READONLY':
         db = apsw.Connection(config.DATABASE, flags=0x00000001)
     else:
-        raise Exception # TODO
+        raise exceptions.DatabaseError
 
     cursor = db.cursor()
 
@@ -317,7 +318,8 @@ def connect_to_db(flags=None):
     cursor.execute('''PRAGMA defer_foreign_keys = ON''')
 
     # So that writers don’t block readers.
-    cursor.execute('''PRAGMA journal_mode = WAL''')
+    if flags != 'SQLITE_OPEN_READONLY':
+        cursor.execute('''PRAGMA journal_mode = WAL''')
 
     # Make case sensitive the LIKE operator.
     # For insensitive queries use 'UPPER(fieldname) LIKE value.upper()''
@@ -337,7 +339,7 @@ def connect_to_db(flags=None):
                 raise exceptions.DatabaseError('Integrity check failed.')
             integral = True
             break
-        except Exception:
+        except exceptions.DatabaseIntegrityError:
             time.sleep(1)
             continue
     if not integral:
@@ -370,10 +372,11 @@ def version_check (db):
                 passed = False
 
     if not passed:
-        explanation = 'Your version of counterpartyd is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: ‘{}’. Please upgrade to the latest version and restart the server.'.format(config.VERSION_STRING, versions['block_index'], versions['minimum_version_major'], versions['minimum_version_minor'], versions['minimum_version_revision'], versions['reason'])
-
+        explanation = 'Your version of counterpartyd is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: ‘{}’. Please upgrade to the latest version and restart the server.'.format(
+            config.VERSION_STRING, versions['block_index'], versions['minimum_version_major'], versions['minimum_version_minor'],
+            versions['minimum_version_revision'], versions['reason'])
         if last_block(db)['block_index'] >= versions['block_index']:
-            raise exceptions.VersionError(explanation)
+            raise exceptions.VersionUpdateRequiredError(explanation)
         else:
             warnings.warn(explanation)
 
@@ -386,9 +389,14 @@ def database_check (db, blockcount):
         raise exceptions.DatabaseError('{} database is behind Bitcoind. Is the {} server running?'.format(config.XCP_NAME, config.XCP_CLIENT))
     return
 
-
 def isodt (epoch_time):
     return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
+
+def curr_time():
+    return int(time.time())
+
+def date_passed(date):
+    return date <= time.time()
 
 def sortkeypicker(keynames):
     """http://stackoverflow.com/a/1143719"""
@@ -518,8 +526,9 @@ def debit (db, block_index, address, asset, quantity, action=None, event=None):
     }
     sql='insert into debits values(:block_index, :address, :asset, :quantity, :action, :event)'
     debit_cursor.execute(sql, bindings)
-
     debit_cursor.close()
+
+    BLOCK_LEDGER.append('{}{}{}{}'.format(block_index, address, asset, quantity))
 
 def credit (db, block_index, address, asset, quantity, action=None, event=None):
     credit_cursor = db.cursor()
@@ -542,7 +551,7 @@ def credit (db, block_index, address, asset, quantity, action=None, event=None):
         sql='insert into balances values(:address, :asset, :quantity)'
         credit_cursor.execute(sql, bindings)
     elif len(balances) > 1:
-        raise Exception
+        assert False
     else:
         old_balance = balances[0]['quantity']
         assert type(old_balance) == int
@@ -569,6 +578,8 @@ def credit (db, block_index, address, asset, quantity, action=None, event=None):
     sql='insert into credits values(:block_index, :address, :asset, :quantity, :action, :event)'
     credit_cursor.execute(sql, bindings)
     credit_cursor.close()
+
+    BLOCK_LEDGER.append('{}{}{}{}'.format(block_index, address, asset, quantity))
 
 def devise (db, quantity, asset, dest, divisible=None):
 
@@ -687,10 +698,15 @@ def xcp_supply (db):
     # Subtract issuance fees.
     cursor.execute('''SELECT * FROM issuances\
                       WHERE status = ?''', ('valid',))
-    fee_total = sum([issuance['fee_paid'] for issuance in cursor.fetchall()])
+    issuance_fee_total = sum([issuance['fee_paid'] for issuance in cursor.fetchall()])
+
+    # Subtract dividend fees.
+    cursor.execute('''SELECT * FROM dividends\
+                      WHERE status = ?''', ('valid',))
+    dividend_fee_total = sum([dividend['fee_paid'] for dividend in cursor.fetchall()])
 
     cursor.close()
-    return burn_total - fee_total
+    return burn_total - issuance_fee_total - dividend_fee_total
 
 def supplies (db):
     cursor = db.cursor()
@@ -712,11 +728,14 @@ def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
     try:
         r = requests.get(url, timeout=fetch_timeout)
     except Exception as e:
-        raise Exception("Got get_url request error: %s" % e)
+        raise GetURLError("Got get_url request error: %s" % e)
     else:
         if r.status_code != 200 and abort_on_error:
-            raise Exception("Bad status code returned: '%s'. result body: '%s'." % (r.status_code, r.text))
+            raise GetURLError("Bad status code returned: '%s'. result body: '%s'." % (r.status_code, r.text))
         result = json.loads(r.text) if is_json else r.text
     return result
+
+def dhash_string(text):
+    return binascii.hexlify(hashlib.sha256(hashlib.sha256(bytes(text, 'utf-8')).digest()).digest()).decode()
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

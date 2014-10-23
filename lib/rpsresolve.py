@@ -2,6 +2,7 @@
 
 import binascii
 import struct
+import string
 
 from . import (util, config, exceptions, bitcoin, util, rps)
 # move random rps_match_id
@@ -17,11 +18,12 @@ def validate (db, source, move, random, rps_match_id):
     if not isinstance(move, int):
         problems.append('move must be a integer')
         return None, None, problems
-    try:
-        random_bytes = binascii.unhexlify(random)
-    except:
+
+    if not all(c in string.hexdigits for c in random):
         problems.append('random must be an hexadecimal string')
         return None, None, problems
+
+    random_bytes = binascii.unhexlify(random)
     if len(random_bytes) != 16:
         problems.append('random must be 16 bytes in hexadecimal format')
         return None, None, problems
@@ -84,7 +86,7 @@ def compose (db, source, move, random, rps_match_id):
     tx0_hash_bytes = binascii.unhexlify(bytes(tx0_hash, 'utf-8'))
     tx1_hash_bytes = binascii.unhexlify(bytes(tx1_hash, 'utf-8'))
     random_bytes = binascii.unhexlify(bytes(random, 'utf-8'))
-    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
+    data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, move, random_bytes, tx0_hash_bytes, tx1_hash_bytes)
     return (source, [], data)
 
@@ -93,13 +95,14 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
-        assert len(message) == LENGTH
+        if len(message) != LENGTH:
+            raise exceptions.UnpackError
         move, random, tx0_hash_bytes, tx1_hash_bytes = struct.unpack(FORMAT, message)
         tx0_hash, tx1_hash = binascii.hexlify(tx0_hash_bytes).decode('utf-8'), binascii.hexlify(tx1_hash_bytes).decode('utf-8')
         rps_match_id = tx0_hash + tx1_hash
         random = binascii.hexlify(random).decode('utf-8')
         status = 'valid'
-    except (AssertionError, struct.error) as e:
+    except (exceptions.UnpackError, struct.error) as e:
         move, random, tx0_hash, tx1_hash, rps_match_id = None, None, None, None, None
         status = 'invalid: could not unpack'
 

@@ -11,7 +11,7 @@ ID = 100
 
 def compose (db, source, data_hex):
 
-    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
+    data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += binascii.unhexlify(data_hex)
 
     return (source, [], data)

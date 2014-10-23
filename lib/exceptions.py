@@ -7,12 +7,21 @@ class ConfigurationError (Exception):
     pass
 class DatabaseError (Exception):
     pass
+class DatabaseIntegrityError (DatabaseError):
+    pass
+
 class VersionError (Exception):
+    pass
+class VersionUpdateRequiredError (Exception):
     pass
 
 class TransactionError(Exception):
     pass
+class DecodeError(Exception):
+    pass
 class InputError(Exception):
+    pass
+class MempoolError (TransactionError):
     pass
 
 class RPCError (Exception):
@@ -55,6 +64,8 @@ class AssetIDError (AssetError):
 
 class MessageError (Exception):
     pass
+class UnpackError (MessageError):
+    pass
 class BurnError (MessageError):
     pass
 class SendError (MessageError):
@@ -76,6 +87,12 @@ class CancelError (MessageError):
 class CallbackError (MessageError):
     pass
 class RpsError (MessageError):
+    pass
+
+class ConsensusError (Exception):
+    pass
+
+class GetURLError (Exception):
     pass
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

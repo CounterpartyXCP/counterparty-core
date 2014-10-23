@@ -8,7 +8,7 @@ import decimal
 D = decimal.Decimal
 import logging
 
-from . import (util, config, exceptions, bitcoin, util)
+from . import (util, config, exceptions, bitcoin, util, blockchain)
 
 FORMAT = '>QQQQHQ'
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8
@@ -51,7 +51,7 @@ def cancel_order (db, order, status, block_index):
     util.message(db, block_index, 'update', 'orders', bindings)
 
     if order['give_asset'] != config.BTC:    # Can’t credit BTC.
-        util.credit(db, block_index, order['source'], order['give_asset'], order['give_remaining'], event=order['tx_hash'])
+        util.credit(db, block_index, order['source'], order['give_asset'], order['give_remaining'], action='cancel order', event=order['tx_hash'])
 
     if status == 'expired':
         # Record offer expiration.
@@ -103,7 +103,7 @@ def cancel_order_match (db, order_match, status, block_index):
         if order_match['forward_asset'] != config.BTC:
             util.credit(db, block_index, order_match['tx0_address'],
                         order_match['forward_asset'],
-                        order_match['forward_quantity'], event=order_match['id'])
+                        order_match['forward_quantity'], action='order {}'.format(tx0_order_status), event=order_match['id'])
     else:
         tx0_give_remaining = tx0_order['give_remaining'] + order_match['forward_quantity']
         tx0_get_remaining = tx0_order['get_remaining'] + order_match['backward_quantity']
@@ -134,7 +134,7 @@ def cancel_order_match (db, order_match, status, block_index):
         if order_match['backward_asset'] != config.BTC:
             util.credit(db, block_index, order_match['tx1_address'],
                         order_match['backward_asset'],
-                        order_match['backward_quantity'], event=order_match['id'])
+                        order_match['backward_quantity'], action='order {}'.format(tx1_order_status), event=order_match['id'])
     else:
         tx1_give_remaining = tx1_order['give_remaining'] + order_match['backward_quantity']
         tx1_get_remaining = tx1_order['get_remaining'] + order_match['forward_quantity']
@@ -238,16 +238,22 @@ def validate (db, source, give_asset, give_quantity, get_asset, get_quantity, ex
 
 def compose (db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required):
     cursor = db.cursor()
-    balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, give_asset)))
-    if give_asset != config.BTC and (not balances or balances[0]['quantity'] < give_quantity):
-        raise exceptions.OrderError('insufficient funds')
+
+    # Check balance.
+    if give_asset == config.BTC:
+        if sum(out['amount'] for out in bitcoin.get_unspent_txouts(source)) * config.UNIT < give_quantity:
+            print('WARNING: insufficient funds for {}pay.'.format(config.BTC))
+    else:
+        balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, give_asset)))
+        if (not balances or balances[0]['quantity'] < give_quantity):
+            raise exceptions.OrderError('insufficient funds')
 
     problems = validate(db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, util.last_block(db)['block_index'])
     if problems: raise exceptions.OrderError(problems)
 
     give_id = util.asset_id(give_asset)
     get_id = util.asset_id(get_asset)
-    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
+    data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, give_id, give_quantity, get_id, get_quantity,
                         expiration, fee_required)
     cursor.close()
@@ -258,19 +264,22 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
-        assert len(message) == LENGTH
+        if len(message) != LENGTH:
+            raise exceptions.UnpackError
         give_id, give_quantity, get_id, get_quantity, expiration, fee_required = struct.unpack(FORMAT, message)
         give_asset = util.asset_name(give_id)
         get_asset = util.asset_name(get_id)
         status = 'open'
-    except (AssertionError, struct.error) as e:
+    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
         give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required = 0, 0, 0, 0, 0, 0
         status = 'invalid: could not unpack'
 
     price = 0
     if status == 'open':
-        try: price = util.price(get_quantity, give_quantity, tx['block_index'])
-        except Exception as e: pass
+        try:
+            price = util.price(get_quantity, give_quantity, tx['block_index'])
+        except ZeroDivisionError:
+            price = 0
 
         # Overorder
         order_parse_cursor.execute('''SELECT * FROM balances \
@@ -291,7 +300,7 @@ def parse (db, tx, message):
     # Debit give quantity. (Escrow.)
     if status == 'open':
         if give_asset != config.BTC:  # No need (or way) to debit BTC.
-            util.debit(db, tx['block_index'], tx['source'], give_asset, give_quantity, event=tx['tx_hash'])
+            util.debit(db, tx['block_index'], tx['source'], give_asset, give_quantity, action='open order', event=tx['tx_hash'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {
@@ -485,9 +494,9 @@ def match (db, tx, block_index=None):
                 status = 'completed'
                 # Credit.
                 util.credit(db, tx['block_index'], tx1['source'], tx1['get_asset'],
-                                    forward_quantity, event=order_match_id)
+                                    forward_quantity, action='order match', event=order_match_id)
                 util.credit(db, tx['block_index'], tx0['source'], tx0['get_asset'],
-                                    backward_quantity, event=order_match_id)
+                                    backward_quantity, action='order match', event=order_match_id)
 
             # Debit the order, even if it involves giving bitcoins, and so one
             # can't debit the sending account.

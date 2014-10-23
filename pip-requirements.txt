@@ -16,7 +16,7 @@ pytest==2.5.1
 #############
 #counterpartyd specific deps
 
-pycoin==0.26
+pycoin==0.51
 
 requests==2.3.0
 
@@ -28,3 +28,7 @@ pycrypto>=2.6
 #^ on windows, this will skip as the windows pycrypto installer should have been run
 # One of available download locations is: 
 # http://www.voidspace.org.uk/python/modules.shtml#pycrypto
+
+lockfile==0.10.2
+
+python-bitcoinlib==0.2.1

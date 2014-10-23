@@ -24,6 +24,7 @@ import decimal
 D = decimal.Decimal
 import time
 import binascii
+import string
 
 from . import (util, config, bitcoin, exceptions, util)
 # possible_moves wager move_random_hash expiration
@@ -86,11 +87,11 @@ def validate (db, source, possible_moves, wager, move_random_hash, expiration, b
     if not isinstance(expiration, int):
         problems.append('expiration must be expressed as an integer block delta')
         return problems
-    try:
-        move_random_hash_bytes = binascii.unhexlify(move_random_hash)
-    except:
+
+    if not all(c in string.hexdigits for c in move_random_hash):
         problems.append('move_random_hash must be an hexadecimal string')
         return problems
+    move_random_hash_bytes = binascii.unhexlify(move_random_hash)
 
     if possible_moves < 3:
         problems.append('possible moves must be at least 3')
@@ -114,7 +115,7 @@ def compose(db, source, possible_moves, wager, move_random_hash, expiration):
 
     if problems: raise exceptions.RpsError(problems)
 
-    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
+    data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, possible_moves, wager, binascii.unhexlify(move_random_hash), expiration)
 
     return (source, [], data)
@@ -123,10 +124,11 @@ def parse(db, tx, message):
     rps_parse_cursor = db.cursor()
     # Unpack message.
     try:
-        assert len(message) == LENGTH
+        if len(message) != LENGTH:
+            raise exceptions.UnpackError
         (possible_moves, wager, move_random_hash, expiration) = struct.unpack(FORMAT, message)
         status = 'open'
-    except (AssertionError, struct.error) as e:
+    except (exceptions.UnpackError, struct.error):
         (possible_moves, wager, move_random_hash, expiration) = 0, 0, '', 0
         status = 'invalid: could not unpack'
 

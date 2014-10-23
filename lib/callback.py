@@ -103,7 +103,7 @@ def compose (db, source, fraction, asset):
     print('Total quantity to be called back:', util.devise(db, callback_total, asset, 'output'), asset)
 
     asset_id = util.asset_id(asset)
-    data = config.PREFIX + struct.pack(config.TXTYPE_FORMAT, ID)
+    data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, fraction, asset_id)
     return (source, [], data)
 
@@ -112,11 +112,12 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
-        assert len(message) == LENGTH
+        if len(message) != LENGTH:
+            raise exceptions.UnpackError
         fraction, asset_id = struct.unpack(FORMAT, message)
         asset = util.asset_name(asset_id)
         status = 'valid'
-    except (AssertionError, struct.error) as e:
+    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
         fraction, asset = None, None
         status = 'invalid: could not unpack'
 
@@ -127,14 +128,14 @@ def parse (db, tx, message):
     if status == 'valid':
         # Issuer.
         assert call_price * callback_total == int(call_price * callback_total)
-        util.debit(db, tx['block_index'], tx['source'], config.XCP, int(call_price * callback_total))
-        util.credit(db, tx['block_index'], tx['source'], asset, callback_total)
+        util.debit(db, tx['block_index'], tx['source'], config.XCP, int(call_price * callback_total), action='callback', event=tx['tx_hash'])
+        util.credit(db, tx['block_index'], tx['source'], asset, callback_total, action='callback', event=tx['tx_hash'])
 
         # Holders.
         for output in outputs:
             assert call_price * output['callback_quantity'] == int(call_price * output['callback_quantity'])
-            util.debit(db, tx['block_index'], output['address'], asset, output['callback_quantity'])
-            util.credit(db, tx['block_index'], output['address'], config.XCP, int(call_price * output['callback_quantity']))
+            util.debit(db, tx['block_index'], output['address'], asset, output['callback_quantity'], action='callback', event=tx['tx_hash'])
+            util.credit(db, tx['block_index'], output['address'], config.XCP, int(call_price * output['callback_quantity']), action='callback', event=tx['tx_hash'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

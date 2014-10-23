@@ -10,6 +10,8 @@ import time
 import dateutil.parser
 import calendar
 import configparser
+import traceback
+import threading
 from threading import Thread
 import binascii
 from fractions import Fraction
@@ -17,6 +19,7 @@ from fractions import Fraction
 import requests
 import appdirs
 from prettytable import PrettyTable
+from lockfile import LockFile
 
 from lib import config, api, util, exceptions, bitcoin, blocks, blockchain
 if os.name == 'nt':
@@ -51,7 +54,6 @@ def get_address (db, address):
     address_dict['order_match_expirations'] = util.api('get_order_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
     address_dict['rps_match_expirations'] = util.api('get_rps_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
     return address_dict
-
 
 def format_order (order):
     give_quantity = util.devise(db, D(order['give_quantity']), order['give_asset'], 'output')
@@ -157,8 +159,19 @@ def market (give_asset, get_asset):
 
 def cli(method, params, unsigned):
     # Get unsigned transaction serialisation.
-    if bitcoin.is_valid(params['source']):
-        if bitcoin.is_mine(params['source']):
+
+    array = params['source'].split('_')
+    if len(array) > 1:
+        signatures_required, signatures_possible = array[0], array[-1]
+        params['source'] = '_'.join([signatures_required] + sorted(array[1:-1]) + [signatures_possible]) # Sort source array.
+        pubkey = None
+    else:
+        # Get public key for source.
+        source = array[0]
+        pubkey = None
+        if not bitcoin.is_valid(source):
+            raise exceptions.AddressError('Invalid address.')
+        if bitcoin.is_mine(source):
             bitcoin.wallet_unlock()
         else:
             # TODO: Do this only if the encoding method needs it.
@@ -168,19 +181,34 @@ def cli(method, params, unsigned):
             # Public key or private key?
             try:
                 binascii.unhexlify(answer)  # Check if hex.
-                params['pubkey'] = answer   # If hex, assume public key.
+                pubkey = answer   # If hex, assume public key.
                 private_key_wif = None
             except binascii.Error:
                 private_key_wif = answer    # Else, assume private key.
-                params['pubkey'] = bitcoin.private_key_to_public_key(private_key_wif)
-    else:
-        raise exceptions.AddressError('Invalid address.')
+                pubkey = bitcoin.private_key_to_public_key(private_key_wif)
+        params['pubkey'] = pubkey
+
+    """  # NOTE: For debugging, e.g. with `Invalid Params` error.
+    tx_info = sys.modules['lib.send'].compose(db, params['source'], params['destination'], params['asset'], params['quantity'])
+    print(bitcoin.transaction(db, tx_info, encoding=params['encoding'],
+                                        fee_per_kb=params['fee_per_kb'],
+                                        regular_dust_size=params['regular_dust_size'],
+                                        multisig_dust_size=params['multisig_dust_size'],
+                                        op_return_value=params['op_return_value'],
+                                        self_public_key_hex=pubkey,
+                                        allow_unconfirmed_inputs=params['allow_unconfirmed_inputs']))
+    exit(0)
+    """
+
+    # Construct transaction.
     unsigned_tx_hex = util.api(method, params)
     print('Transaction (unsigned):', unsigned_tx_hex)
 
-    # Ask to sign and broadcast.
-    if not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
-        if bitcoin.is_mine(params['source']):
+    # Ask to sign and broadcast (if not multi‐sig).
+    if len(array) > 1:
+        print('Multi‐signature transactions are signed and broadcasted manually.')
+    elif not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
+        if bitcoin.is_mine(source):
             private_key_wif = None
         elif not private_key_wif:   # If private key was not given earlier.
             private_key_wif = input('Private key (Wallet Import Format): ')
@@ -190,20 +218,15 @@ def cli(method, params, unsigned):
         print('Transaction (signed):', signed_tx_hex)
         print('Hash of transaction (broadcasted):', bitcoin.broadcast_tx(signed_tx_hex))
 
-
 def set_options (data_dir=None, backend_rpc_connect=None,
                  backend_rpc_port=None, backend_rpc_user=None, backend_rpc_password=None,
                  backend_rpc_ssl=False, backend_rpc_ssl_verify=True,
                  blockchain_service_name=None, blockchain_service_connect=None,
                  rpc_host=None, rpc_port=None, rpc_user=None,
                  rpc_password=None, rpc_allow_cors=None, log_file=None,
-                 pid_file=None, config_file=None, database_file=None,
-                 testnet=False, testcoin=False, unittest=False, carefulness=0,
-                 force=False, broadcast_tx_mainnet=None):
-
-    # Unittests always run on testnet.
-    if unittest and not testnet:
-        raise Exception # TODO
+                 config_file=None, database_file=None, testnet=False,
+                 testcoin=False, carefulness=0, force=False,
+                 broadcast_tx_mainnet=None):
 
     if force:
         config.FORCE = force
@@ -243,14 +266,6 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     else:
         config.TESTCOIN = False
 
-    # unittest
-    if unittest:
-        config.UNITTEST = unittest
-    elif has_config and 'unittest' in configfile['Default']:
-        config.UNITTEST = configfile['Default'].getboolean('unittest')
-    else:
-        config.UNITTEST = False
-
     # carefulness (check conservation of assets)
     if carefulness:
         config.CAREFULNESS = carefulness
@@ -286,7 +301,8 @@ def set_options (data_dir=None, backend_rpc_connect=None,
             config.BACKEND_RPC_PORT = config.DEFAULT_BACKEND_RPC_PORT
     try:
         config.BACKEND_RPC_PORT = int(config.BACKEND_RPC_PORT)
-        assert int(config.BACKEND_RPC_PORT) > 1 and int(config.BACKEND_RPC_PORT) < 65535
+        if not (int(config.BACKEND_RPC_PORT) > 1 and int(config.BACKEND_RPC_PORT) < 65535):
+            raise exceptions.ConfigurationError('invalid backend API port number') 
     except:
         raise Exception("Please specific a valid port number backend-rpc-port configuration parameter")
 
@@ -380,7 +396,8 @@ def set_options (data_dir=None, backend_rpc_connect=None,
                 config.RPC_PORT = config.DEFAULT_RPC_PORT
     try:
         config.RPC_PORT = int(config.RPC_PORT)
-        assert int(config.RPC_PORT) > 1 and int(config.RPC_PORT) < 65535
+        if not (int(config.BACKEND_RPC_PORT) > 1 and int(config.BACKEND_RPC_PORT) < 65535):
+            raise exceptions.ConfigurationError('invalid counterpartyd API port number') 
     except:
         raise Exception("Please specific a valid port number rpc-port configuration parameter")
 
@@ -426,22 +443,11 @@ def set_options (data_dir=None, backend_rpc_connect=None,
             string += '.testcoin'
         config.LOG = os.path.join(config.DATA_DIR, string + '.log')
 
-    # PID file
-    if pid_file:
-        config.PID = pid_file
-    elif has_config and 'pid-file' in configfile['Default'] and configfile['Default']['pid-file']:
-        config.PID = configfile['Default']['pid-file']
+    # Encoding
+    if config.TESTCOIN:
+        config.PREFIX = b'XX'                   # 2 bytes (possibly accidentally created)
     else:
-        config.PID = os.path.join(config.DATA_DIR, '{}.pid'.format(config.XCP_CLIENT))
-
-    # Encoding prefix
-    if not unittest:
-        if config.TESTCOIN:
-            config.PREFIX = b'XX'                   # 2 bytes (possibly accidentally created)
-        else:
-            config.PREFIX = b'CNTRPRTY'             # 8 bytes
-    else:
-        config.PREFIX = b'TESTXXXX'                 # 8 bytes
+        config.PREFIX = b'CNTRPRTY'             # 8 bytes
 
     # Database
     if database_file:
@@ -495,9 +501,8 @@ def set_options (data_dir=None, backend_rpc_connect=None,
         config.BROADCAST_TX_MAINNET = '{}'.format(config.BTC_CLIENT)
 
 def balances (address):
-    if not bitcoin.base58_decode(address, config.ADDRESSVERSION):
-        raise exceptions.AddressError('Not a valid {} address:'.format(BTC_NAME),
-                                             address)
+    bitcoin.validate_address(address, util.last_block(db)['block_index'])
+
     address_data = get_address(db, address=address)
     balances = address_data['balances']
     table = PrettyTable(['Asset', 'Amount'])
@@ -526,7 +531,6 @@ if __name__ == '__main__':
     parser.add_argument('-V', '--version', action='version', version="{} v{}".format(config.XCP_CLIENT, config.VERSION_STRING))
 
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='sets log level to DEBUG instead of WARNING')
-    parser.add_argument('--force', action='store_true', help='don\'t check whether backend is caught up'.format(config.BTC_NAME))
     parser.add_argument('--testnet', action='store_true', help='use {} testnet addresses and block numbers'.format(config.BTC_NAME))
     parser.add_argument('--testcoin', action='store_true', help='use the test {} network on every blockchain'.format(config.XCP_NAME))
     parser.add_argument('--carefulness', type=int, default=0, help='check conservation of assets after every CAREFULNESS transactions (potentially slow)')
@@ -542,7 +546,6 @@ if __name__ == '__main__':
     parser.add_argument('--database-file', help='the location of the SQLite3 database')
     parser.add_argument('--config-file', help='the location of the configuration file')
     parser.add_argument('--log-file', help='the location of the log file')
-    parser.add_argument('--pid-file', help='the location of the pid file')
 
     parser.add_argument('--backend-rpc-connect', help='the hostname or IP of the backend bitcoind JSON-RPC server')
     parser.add_argument('--backend-rpc-port', type=int, help='the backend JSON-RPC port to connect to')
@@ -562,7 +565,8 @@ if __name__ == '__main__':
 
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
-    parser_server = subparsers.add_parser('server', help='run the server (WARNING: not thread‐safe)')
+    parser_server = subparsers.add_parser('server', help='run the server')
+    parser_server.add_argument('--force', action='store_true', help='skip backend check, version check, lockfile check')
 
     parser_send = subparsers.add_parser('send', help='create and broadcast a *send* message')
     parser_send.add_argument('--source', required=True, help='the source address')
@@ -626,7 +630,7 @@ if __name__ == '__main__':
     parser_dividend.add_argument('--dividend-asset', required=True, help='asset in which to pay the dividends')
     parser_dividend.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
-    parser_burn = subparsers.add_parser('burn', help='destroy {} tm earn XCP, during an initial period of time')
+    parser_burn = subparsers.add_parser('burn', help='destroy {} to earn XCP, during an initial period of time')
     parser_burn.add_argument('--source', required=True, help='the source address')
     parser_burn.add_argument('--quantity', required=True, help='quantity of {} to be destroyed'.format(config.BTC))
     parser_burn.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
@@ -672,10 +676,12 @@ if __name__ == '__main__':
 
     parser_pending= subparsers.add_parser('pending', help='list pending order matches awaiting {}payment from you'.format(config.BTC))
 
-    parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database (WARNING: not thread‐safe)')
+    parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database')
+    parser_reparse.add_argument('--force', action='store_true', help='skip backend check, version check, lockfile check')
 
-    parser_rollback = subparsers.add_parser('rollback', help='rollback database (WARNING: not thread‐safe)')
+    parser_rollback = subparsers.add_parser('rollback', help='rollback database')
     parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
+    parser_rollback.add_argument('--force', action='store_true', help='skip backend check, version check, lockfile check')
 
     parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the {} market'.format(config.XCP_NAME) )
     parser_market.add_argument('--give-asset', help='only show orders offering to sell GIVE_ASSET')
@@ -689,6 +695,10 @@ if __name__ == '__main__':
     args.multisig_dust_size = int(args.multisig_dust_size * config.UNIT)
     args.op_return_value= int(args.op_return_value * config.UNIT)
 
+    # Hack
+    try: args.force
+    except (NameError, AttributeError): args.force = None
+
     # Configuration
     set_options(data_dir=args.data_dir,
                 backend_rpc_connect=args.backend_rpc_connect,
@@ -701,16 +711,10 @@ if __name__ == '__main__':
                 blockchain_service_connect=args.blockchain_service_connect,
                 rpc_host=args.rpc_host, rpc_port=args.rpc_port, rpc_user=args.rpc_user,
                 rpc_password=args.rpc_password, rpc_allow_cors=args.rpc_allow_cors, 
-                log_file=args.log_file, pid_file=args.pid_file, 
-                config_file=args.config_file, database_file=args.database_file,
-                testnet=args.testnet, testcoin=args.testcoin, unittest=False,
-                carefulness=args.carefulness, force=args.force)
-
-    #Create/update pid file
-    pid = str(os.getpid())
-    pidf = open(config.PID, 'w')
-    pidf.write(pid)
-    pidf.close()
+                log_file=args.log_file, config_file=args.config_file,
+                database_file=args.database_file, testnet=args.testnet,
+                testcoin=args.testcoin, carefulness=args.carefulness,
+                force=args.force)
 
     # Logging (to file and console).
     logger = logging.getLogger() #get root logger
@@ -739,17 +743,26 @@ if __name__ == '__main__':
     urllib3_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
     urllib3_log.propagate = False
 
+
+    # Enforce locks?
+    if config.FORCE:
+        lock = threading.RLock()                                        # This won’t lock!
+    else:
+        lock = LockFile(config.DATABASE) # This will!
+
     # Database
-    logging.info('Status: Running v{} of counterpartyd.'.format(config.VERSION_STRING, config.XCP_CLIENT))
     logging.info('Status: Connecting to database.')
     db = util.connect_to_db()
 
-    if args.action == None: args.action = 'server'
-
-    # TODO: Keep around only as long as reparse and rollback don’t use API.
+    # Version
+    logging.info('Status: Running v{} of counterpartyd.'.format(config.VERSION_STRING, config.XCP_CLIENT))
     if not config.FORCE and args.action in ('server', 'reparse', 'rollback'):
         logging.info('Status: Checking version.')
-        util.version_check(db)
+        try:
+            util.version_check(db)
+        except exceptions.VersionUpdateRequiredError as e:
+            traceback.print_exc(file=sys.stdout)
+            sys.exit(config.EXITCODE_UPDATE_REQUIRED)
 
     # MESSAGE CREATION
     if args.action == 'send':
@@ -980,11 +993,6 @@ if __name__ == '__main__':
 
     # VIEWING (temporary)
     elif args.action == 'balances':
-        try:
-            bitcoin.base58_decode(args.address, config.ADDRESSVERSION)
-        except Exception:
-            raise exceptions.AddressError('Invalid {} address:'.format(config.BTC_NAME),
-                                                  args.address)
         balances(args.address)
 
     elif args.action == 'asset':
@@ -997,6 +1005,7 @@ if __name__ == '__main__':
 
         asset_id = util.asset_id(args.asset)
         divisible = results['divisible']
+        locked = results['locked']
         supply = util.devise(db, results['supply'], args.asset, dest='output')
         call_date = util.isodt(results['call_date']) if results['call_date'] else results['call_date']
         call_price = str(results['call_price']) + ' XCP' if results['call_price'] else results['call_price']
@@ -1004,6 +1013,7 @@ if __name__ == '__main__':
         print('Asset Name:', args.asset)
         print('Asset ID:', asset_id)
         print('Divisible:', divisible)
+        print('Locked:', locked)
         print('Supply:', supply)
         print('Issuer:', results['issuer'])
         print('Callable:', results['callable'])
@@ -1083,37 +1093,42 @@ if __name__ == '__main__':
 
     # PARSING
     elif args.action == 'reparse':
-        blocks.reparse(db)
+        with lock:
+            blocks.reparse(db)
 
     elif args.action == 'rollback':
-        blocks.reparse(db, block_index=args.block_index)
+        with lock:
+            blocks.reparse(db, block_index=args.block_index)
 
     elif args.action == 'server':
-        api_status_poller = api.APIStatusPoller()
-        api_status_poller.daemon = True
-        api_status_poller.start()
-        
-        api_server = api.APIServer()
-        api_server.daemon = True
-        api_server.start()
 
-        # Check blockchain explorer.
-        if not config.FORCE:
-            time_wait = 10
-            num_tries = 10
-            for i in range(1, num_tries + 1):
-                try:
-                    blockchain.check()
-                except:
-                    logging.warn("Blockchain backend (%s) not yet initialized. Waiting %i seconds and trying again (try %i of %i)..." % (
-                        config.BLOCKCHAIN_SERVICE_NAME, time_wait, i, num_tries))
-                    time.sleep(time_wait)
-                else: break
-            else:
-                raise Exception("Blockchain backend (%s) not initialized! Aborting startup after %i tries." % (
-                    config.BLOCKCHAIN_SERVICE_NAME, num_tries))
+        with lock:
+            api_status_poller = api.APIStatusPoller()
+            api_status_poller.daemon = True
+            api_status_poller.start()
 
-        blocks.follow(db)
+            api_server = api.APIServer()
+            api_server.daemon = True
+            api_server.start()
+
+            # Check blockchain explorer.
+            if not config.FORCE:
+                time_wait = 10
+                num_tries = 10
+                for i in range(1, num_tries + 1):
+                    try:
+                        blockchain.check()
+                    except: # TODO
+                        logging.warn("Blockchain backend (%s) not yet initialized. Waiting %i seconds and trying again (try %i of %i)..." % (
+                            config.BLOCKCHAIN_SERVICE_NAME, time_wait, i, num_tries))
+                        time.sleep(time_wait)
+                    else:
+                        break
+                else:
+                    raise Exception("Blockchain backend (%s) not initialized! Aborting startup after %i tries." % (
+                        config.BLOCKCHAIN_SERVICE_NAME, num_tries))
+
+            blocks.follow(db)
 
     else:
         parser.print_help()

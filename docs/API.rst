@@ -203,6 +203,7 @@ Here's an example using ``curl`` to make an API call to the ``get_running_info``
 
 For testnet, you could use the example above, but change the port to ``14000`` and change the username and password as necessary.
 
+**NOTE:** On Windows, the command may need to be formatted differently due to problems Windows has with escapes.
 
 Terms & Conventions
 ---------------------
@@ -584,7 +585,7 @@ Broadcast a signed transaction onto the Bitcoin network.
 
 create_bet
 ^^^^^^^^^^^^^^
-**create_bet(source, feed_address, bet_type, deadline, wager, counterwager, target_value=0.0, leverage=5040, encoding='auto', pubkey=null,
+**create_bet(source, feed_address, bet_type, deadline, wager, counterwager, expiration, target_value=0.0, leverage=5040, encoding='auto', pubkey=null,
 allow_unconfirmed_inputs=false, fee=null, fee_per_kb=10000)**
 
 Issue a bet against a feed.
@@ -597,6 +598,7 @@ Issue a bet against a feed.
   * **deadline (integer):** The time at which the bet should be decided/settled, in Unix time.
   * **wager (integer):** The :ref:`quantity <quantitys>` of XCP to wager.
   * **counterwager (integer):** The minimum :ref:`quantity <quantitys>` of XCP to be wagered against, for the bets to match.
+  * **expiration (integer):** The number of blocks after which the bet expires if it's still unmatched.
   * **target_value (float):** Target value for Equal/NotEqual bet
   * **leverage (integer):** Leverage, as a fraction of 5040
   * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
@@ -750,7 +752,7 @@ Issue a dividend on a specific user defined asset.
 
 create_issuance
 ^^^^^^^^^^^^^^^^^
-**create_issuance(source, asset, quantity, divisible, description, callable_=false, call_date=null, call_price=null,
+**create_issuance(source, asset, quantity, divisible, description, callable=false, call_date=null, call_price=null,
 transfer_destination=null, encoding='multisig', pubkey=null, allow_unconfirmed_inputs=false, fee=null, fee_per_kb=10000)**
 
 Issue a new asset, issue more of an existing asset, lock an asset, or transfer the ownership of an asset (note that you can only do one of these operations in a given create_issuance call).
@@ -761,7 +763,7 @@ Issue a new asset, issue more of an existing asset, lock an asset, or transfer t
   * **quantity (integer):** The :ref:`quantity <quantitys>` of the asset to issue (set to 0 if *transferring* an asset).
   * **asset (string):** The :ref:`asset <assets>` to issue or transfer.
   * **divisible (boolean):** Whether this asset is divisible or not (if a transfer, this value must match the value specified when the asset was originally issued).
-  * **callable_ (boolean):** Whether the asset is callable or not.
+  * **callable (boolean):** Whether the asset is callable or not.
   * **call_date (integer):** The timestamp at which the asset may be called back, in Unix time. Only valid for callable assets.
   * **call_price (float):** The :ref:`price <floats>` per unit XCP at which the asset may be called back, on or after the specified call_date. Only valid for callable assets.
   * **description (string):** A textual description for the asset. 52 bytes max.
@@ -1280,17 +1282,6 @@ API Changes
 
 This section documents any changes to the ``counterpartyd`` API, for version numbers where there were API-level modifications.
 
-.. _9_32_0:
-
-9.32.0
-^^^^^^^^^^^^^^^^^^^^^^^
-
-**Summary:** API framework overhaul for performance and simplicity 
-
-* "/api" with no trailing slash no longer supported as an API endpoint (use "/" or "/api/" instead)
-* We now consistently reject positional arguments with all API methods. Make sure your API calls do not use positional
-  arguments (e.g. use {"argument1": "value1", "argument2": "value2"} instead of ["value1", "value2"])
-
 
 .. _9_24_1:
 
@@ -1318,3 +1309,24 @@ This section documents any changes to the ``counterpartyd`` API, for version num
 * create_issuance: parameter ``lock`` (boolean) removed (use LOCK in description)
 * create_issuance: parameter ``transfer_destination`` replaced by ``destination``
 * DatabaseError: now a DatabaseError is returned immediately if the counterpartyd database is behind the backend, instead of after fourteen seconds
+
+
+.. _9_32_0:
+
+9.32.0
+^^^^^^^^^^^^^^^^^^^^^^^
+
+**Summary:** API framework overhaul for performance and simplicity 
+
+* "/api" with no trailing slash no longer supported as an API endpoint (use "/" or "/api/" instead)
+* We now consistently reject positional arguments with all API methods. Make sure your API calls do not use positional
+  arguments (e.g. use {"argument1": "value1", "argument2": "value2"} instead of ["value1", "value2"])
+
+
+.. _9_43_0:
+
+9.43.0
+^^^^^^^^^^^^^^^^^^^^^^^
+
+* create_issuance: ``callable`` is also accepted
+* create_*: None is used as default value for missing parameters 
