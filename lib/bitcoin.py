@@ -19,7 +19,7 @@ from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
 from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec, is_sec_compressed, EncodingError
 from Crypto.Cipher import ARC4
 
-from . import config, exceptions, util, blockchain
+from . import (config, exceptions, util, blockchain)
 
 # Constants
 OP_RETURN = b'\x6a'
@@ -65,6 +65,24 @@ def multisig_pubkeyhashes_to_pubkeys(address):
     pubkeys = [pubkeyhash_to_pubkey(pubkeyhash) for pubkeyhash in pubkeyhashes]
     address = '_'.join([str(signatures_required)] + sorted(pubkeys) + [str(len(pubkeys))])
     return address
+
+# TODO: really should be in util.py
+def validate_address(address, block_index):
+    addresses = address.split('_')
+    multisig = len(addresses) > 1
+    if multisig:
+        if not (config.TESTNET and block_index >= config.FIRST_MULTISIG_BLOCK_TESTNET):
+            raise exceptions.AddressError('Multi‐signature addresses currently disabled on mainnet.')
+        try:
+            assert int(addresses[0]) in (1,2,3)
+            assert int(addresses[-1]) in (1,2,3)
+        except (AssertionError):
+            raise exceptions.AddressError('Invalid multi‐signature address:', address)
+        addresses = addresses[1:-1]
+
+    # Check validity by attempting to decode.
+    for address in addresses:
+        base58_check_decode(address, config.ADDRESSVERSION)
 
 bitcoin_rpc_session = None
 
@@ -541,7 +559,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     for destination in destinations + [source]:
         if destination:
             try:
-                util.validate_address(destination, block_index)
+                validate_address(destination, block_index)
             except exceptions.AddressError as e:
                 raise exceptions.AddressError('Invalid destination address:', destination)
 

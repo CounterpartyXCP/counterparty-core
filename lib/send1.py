@@ -4,8 +4,8 @@
 
 import struct
 
-from . import (util, config)
-from exceptions import *
+from . import (util, config, bitcoin)
+from lib.exceptions import *
 
 FORMAT = '>QQ'
 LENGTH = 8 + 8
@@ -32,12 +32,12 @@ def validate (db, source, destination, asset, quantity, block_index):
         raise ValidateAssetError('asset invalid')
 
     try:
-        util.validate_address(source, block_index):
+        bitcoin.validate_address(source, block_index)
     except AddressError:
         raise ValidateError('source address invalid')
 
     try:
-        util.validate_address(destination, block_index):
+        bitcoin.validate_address(destination, block_index)
     except AddressError:
         raise ValidateError('destination address invalid')
 
@@ -94,6 +94,8 @@ def parse (db, tx, message):
                     'quantity': quantity,
                     'status': status,
                    }
-        util.insert(db, 'sends', bindings)
+        sql='insert into sends values(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :quantity, :status)'
+        cursor = db.cursor()
+        cursor.execute(sql, bindings)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

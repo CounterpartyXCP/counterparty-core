@@ -746,29 +746,16 @@ def dhash_string(text):
     return binascii.hexlify(hashlib.sha256(hashlib.sha256(bytes(text, 'utf-8')).digest()).digest()).decode()
 
 def transfer(db, block_index, source, destination, asset, quantity, action, event):
-    util.debit(db, block_index, source, asset, quantity, action=action, event=event)
-    util.credit(db, block_index, destination, asset, quantity, action=action, event=event)
+    debit(db, block_index, source, asset, quantity, action=action, event=event)
+    credit(db, block_index, destination, asset, quantity, action=action, event=event)
 
-def validate_address(address, block_index):
-    addresses = address.split('_')
-    multisig = len(addresses) > 1
-    if multisig:
-        if not (config.TESTNET and block_index >= config.FIRST_MULTISIG_BLOCK_TESTNET):
-            raise exceptions.AddressError('Multi‐signature addresses currently disabled on mainnet.')
-        try:
-            assert int(addresses[0]) in (1,2,3)
-            assert int(addresses[-1]) in (1,2,3)
-        except (AssertionError):
-            raise exceptions.AddressError('Invalid multi‐signature address:', address)
-        addresses = addresses[1:-1]
-
-    # Check validity by attempting to decode.
-    for address in addresses:
-        base58_check_decode(address, config.ADDRESSVERSION)
-
-def insert(db, table, bindings):
+def get_balance (db, address, asset):
+    # Get balance of contract or address.
     cursor = db.cursor()
-    cursor.execute('insert into {} values({})'.format(*MAGIC*), bindings)   # TODO
+    balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (address, asset)))
+    cursor.close()
+    if not balances: return 0
+    else: return balances[0]['quantity']
 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

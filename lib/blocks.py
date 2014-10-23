@@ -19,6 +19,7 @@ import bitcoin.rpc as bitcoinlib_rpc
 
 from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
+from . import (send1)
 
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['credits', 'debits', 'messages'] + \
@@ -69,7 +70,8 @@ def parse_tx (db, tx):
 
     message = tx['data'][4:]
     if message_type_id == send.ID:
-        send.parse(db, tx, message)
+        # send.parse(db, tx, message)
+        send1.parse(db, tx, message)    # TODO
     elif message_type_id == order.ID:
         order.parse(db, tx, message)
     elif message_type_id == btcpay.ID:

@@ -70,7 +70,7 @@ class MessageError (Exception):
     pass
 class UnpackError (MessageError):
     pass
-def ValidateError(MessageError):
+class ValidateError(MessageError):
     pass
 class BurnError (MessageError):
     pass
