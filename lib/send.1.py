@@ -26,9 +26,8 @@ def unpack(message):
 
 def validate (db, source, destination, asset, quantity, block_index):
 
-    # TODO: check asset name or asset id?
     try:
-        asset_id(asset)
+        util.asset_id(asset)
     except AssetError:
         raise ValidateAssetError('asset invalid')
 
