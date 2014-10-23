@@ -1259,20 +1259,6 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
 
 def initialise_transactions(db, bitcoind_dir, first_hash=None, last_hash=None):
 
-    def copy_leveldb(bitcoind_dir):
-        logging.info('copying leveldb indexes...')
-        start_copy = time.time()
-        dest = os.path.join(tempfile.gettempdir(), 'cp_bitcoind_data')
-        rmtree(dest, ignore_errors=True)
-        blocks_index_src = os.path.join(bitcoind_dir, 'blocks', 'index')
-        blocks_index_dest = os.path.join(tempfile.gettempdir(), 'cp_bitcoind_data', 'index')
-        copytree(blocks_index_src, blocks_index_dest)
-        chainstate_index_src = os.path.join(bitcoind_dir, 'chainstate')
-        chainstate_index_dest = os.path.join(tempfile.gettempdir(), 'cp_bitcoind_data', 'chainstate')
-        copytree(chainstate_index_src, chainstate_index_dest, ignore=ignore_patterns('LOCK'))
-        logging.info('leveldb indexes copied in {:.3f}'.format(time.time() - start_copy))
-        return blocks_index_dest, chainstate_index_dest
-
     def prepare_db(db, first_index):
         logging.info('preparing database...')
         start_prepare = time.time()
@@ -1353,17 +1339,14 @@ def initialise_transactions(db, bitcoind_dir, first_hash=None, last_hash=None):
 
     start = time.time()
 
-    # step 1: copy bitcoin leveldb database in tmp directory
-    blocks_index_path, chainstate_index_path = copy_leveldb(bitcoind_dir)
-
     if not first_hash:
         first_hash = config.BLOCK_FIRST_TESTNET_HASH if config.TESTNET else config.BLOCK_FIRST_MAINNET_HASH
     if not last_hash:
-        chain_parser = ChainstateParser(chainstate_index_path)
+        chain_parser = ChainstateParser(os.path.join(bitcoind_dir, 'chainstate'))
         last_hash = chain_parser.get_last_block_hash()
         chain_parser.close()
 
-    block_parser = BlockchainParser(os.path.join(bitcoind_dir, 'blocks'), blocks_index_path);
+    block_parser = BlockchainParser(os.path.join(bitcoind_dir, 'blocks'), os.path.join(bitcoind_dir, 'blocks/index'));
     first_block = block_parser.read_raw_block(first_hash)
     last_block = block_parser.read_raw_block(last_hash)
 
@@ -1378,13 +1361,12 @@ def initialise_transactions(db, bitcoind_dir, first_hash=None, last_hash=None):
             tx_index = insert_block(cursor, block, transactions, tx_index)
             current_hash = block['hash_prev'] if current_hash != first_hash else None
         block_parser.close()
+        
         # step 4: reorder transactions
         reorder_tx_index(db, tx_index)
+        
         # step 5: parse transactions
         reparse(db)
-
-    # step 6: delete bitcoind leveldb database from tmp directory
-    rmtree(os.path.join(tempfile.gettempdir(), 'cp_bitcoind_data'), ignore_errors=True)
 
     cursor.close()
     logging.info('duration total: {:.3f}s'.format(time.time() - start))
