@@ -21,6 +21,7 @@ from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
 
 from .blockchain.blocks_parser import BlockchainParser, ChainstateParser
+from .blockchain.utils import ib2h
 from shutil import copytree, rmtree, ignore_patterns
 import tempfile
 
@@ -899,14 +900,32 @@ def initialise(db):
 
     cursor.close()
 
-def get_tx_info (tx, block_index, block_parser = None):
+def get_asm(scriptpubkey):
+    try:
+        asm = []
+        for op in scriptpubkey:
+            if type(op) == bitcoinlib.core.script.CScriptOp:
+                asm.append(str(op))
+            else:
+                asm.append(op)
+    except bitcoinlib.core.script.CScriptTruncatedPushDataError:
+        raise exceptions.DecodeError('invalid pushdata due to truncation')
+    if not asm:
+        raise exceptions.DecodeError('empty output')
+    return asm
+
+def get_tx_info (tx_hex, block_index, block_parser = None):
     """
     The destination, if it exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
+    if config.TESTNET:
+        bitcoinlib.SelectParams('testnet')
+
+    ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
 
     def get_pubkeyhash (scriptpubkey):
-        asm = scriptpubkey['asm'].split(' ')
+        asm = get_asm(scriptpubkey)
         if len(asm) != 5 or asm[0] != 'OP_DUP' or asm[1] != 'OP_HASH160' or asm[3] != 'OP_EQUALVERIFY' or asm[4] != 'OP_CHECKSIG':
             return False
         return asm[2]
@@ -915,6 +934,7 @@ def get_tx_info (tx, block_index, block_parser = None):
         pubkeyhash = get_pubkeyhash(scriptpubkey)
         if not pubkeyhash: return False
 
+        pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
         address = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
 
         # Test decoding of address.
@@ -929,29 +949,24 @@ def get_tx_info (tx, block_index, block_parser = None):
     # Get destination output and data output.
     destination, btc_amount, data = None, None, b''
     pubkeyhash_encoding = False
-    for vout in tx['vout']:
-        fee -= vout['value'] * config.UNIT
+    for vout in ctx.vout:
+        fee -= vout.nValue
 
         # Sum data chunks to get data. (Can mix OP_RETURN and multi-sig.)
-        asm = vout['scriptPubKey']['asm'].split(' ')
+        asm = get_asm(vout.scriptPubKey)
         if len(asm) == 2 and asm[0] == 'OP_RETURN':                                                 # OP_RETURN
-            try: data_chunk = binascii.unhexlify(bytes(asm[1], 'utf-8'))
-            except binascii.Error: continue
+            data_chunk = asm[1]
             data += data_chunk
         elif len(asm) == 5 and asm[0] == '1' and asm[3] == '2' and asm[4] == 'OP_CHECKMULTISIG':    # Multi-sig
-            try: data_pubkey = binascii.unhexlify(bytes(asm[2], 'utf-8'))
-            except binascii.Error: continue
+            data_pubkey = asm[2]
             data_chunk_length = data_pubkey[0]  # No ord() necessary.
             data_chunk = data_pubkey[1:data_chunk_length + 1]
             data += data_chunk
         elif len(asm) == 5 and (block_index >= 293000 or config.TESTNET):    # Protocol change.
             # Be strict.
-            pubkeyhash_string = get_pubkeyhash(vout['scriptPubKey'])
-            try: pubkeyhash = binascii.unhexlify(bytes(pubkeyhash_string, 'utf-8'))
-            except binascii.Error: continue
-
-            if 'coinbase' in tx['vin'][0]: raise exceptions.DecodeError('coinbase transaction')
-            obj1 = ARC4.new(binascii.unhexlify(bytes(tx['vin'][0]['txid'], 'utf-8')))
+            pubkeyhash = get_pubkeyhash(vout.scriptPubKey)
+            if ctx.is_coinbase(): raise exceptions.DecodeError('coinbase transaction')
+            obj1 = ARC4.new(ctx.vin[0].prevout.hash[::-1])
             data_pubkey = obj1.decrypt(pubkeyhash)
             if data_pubkey[1:9] == config.PREFIX or pubkeyhash_encoding:
                 pubkeyhash_encoding = True
@@ -965,10 +980,10 @@ def get_tx_info (tx, block_index, block_parser = None):
 
         # Destination is the first output before the data.
         if not destination and not btc_amount and not data:
-            address = get_address(vout['scriptPubKey'])
+            address = get_address(vout.scriptPubKey)
             if address:
                 destination = address
-                btc_amount = round(vout['value'] * config.UNIT) # Floats are awful.
+                btc_amount = vout.nValue
 
     # Check for, and strip away, prefix (except for burns).
     if destination == config.UNSPENDABLE:
@@ -984,17 +999,20 @@ def get_tx_info (tx, block_index, block_parser = None):
 
     # Collect all possible source addresses; ignore coinbase transactions and anything but the simplest Pay‐to‐PubkeyHash inputs.
     source_list = []
-    for vin in tx['vin']:                                               # Loop through input transactions.
-        if 'coinbase' in vin: raise exceptions.DecodeError('coinbase transaction')
+    for vin in ctx.vin[:]:                                               # Loop through input transactions.
+        if vin.prevout.hash == b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00': 
+            raise exceptions.DecodeError('coinbase transaction')
          # Get the full transaction data for this input transaction.
         if block_parser:
-            vin_tx = block_parser.read_raw_transaction(vin['txid'])
+            vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
+            vin_ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(vin_tx['__data__']))
         else:
-            vin_tx = bitcoin.get_raw_transaction(vin['txid'])
-        vout = vin_tx['vout'][vin['vout']]
-        fee += vout['value'] * config.UNIT
+            rpc = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC)
+            vin_ctx = rpc.getrawtransaction(vin.prevout.hash)
+        vout = vin_ctx.vout[vin.prevout.n]
+        fee += vout.nValue
 
-        address = get_address(vout['scriptPubKey'])
+        address = get_address(vout.scriptPubKey)
         if not address: raise exceptions.DecodeError('invalid scriptpubkey')
         else: source_list.append(address)
 
@@ -1004,7 +1022,7 @@ def get_tx_info (tx, block_index, block_parser = None):
 
     return source, destination, btc_amount, round(fee), data
 
-def get_tx_info2 (tx, block_index):
+def get_tx_info2 (tx_hex, block_index):
     """
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
@@ -1014,26 +1032,12 @@ def get_tx_info2 (tx, block_index):
     if config.TESTNET:
         bitcoinlib.SelectParams('testnet')
     rpc = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC)
-    ctx = rpc.getrawtransaction(bitcoinlib.core.lx(tx['txid']))
+    ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
 
     def arc4_decrypt (cyphertext):
         '''Un‐obfuscate. Initialise key once per attempt.'''
         key = ARC4.new(ctx.vin[0].prevout.hash[::-1])
         return key.decrypt(cyphertext)
-
-    def get_asm(scriptpubkey):
-        try:
-            asm = []
-            for op in scriptpubkey:
-                if type(op) == bitcoinlib.core.script.CScriptOp:
-                    asm.append(str(op))
-                else:
-                    asm.append(op)
-        except bitcoinlib.core.script.CScriptTruncatedPushDataError:
-            raise exceptions.DecodeError('invalid pushdata due to truncation')
-        if not asm:
-            raise exceptions.DecodeError('empty output')
-        return asm
 
     def get_opreturn (asm):
         if len(asm) == 2 and asm[0] == 'OP_RETURN':
@@ -1212,14 +1216,14 @@ def reparse (db, block_index=None, quiet=False):
 
 def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     # Get the important details about each transaction.
-    tx = bitcoin.get_raw_transaction(tx_hash)
+    tx_hex = bitcoin.get_raw_transaction(tx_hash, verbose=0)
     logging.debug('Status: examining transaction {}.'.format(tx_hash))
 
     try:
         if (config.TESTNET and block_index >= config.FIRST_MULTISIG_BLOCK_TESTNET):  # Protocol change.
-            tx_info = get_tx_info2(tx, block_index)
+            tx_info = get_tx_info2(tx_hex, block_index)
         else:
-            tx_info = get_tx_info(tx, block_index)
+            tx_info = get_tx_info(tx_hex, block_index)
     except exceptions.DecodeError as e:
         logging.debug('Could not decode: ' + str(e))
         tx_info = b'', None, None, None, None
@@ -1298,9 +1302,9 @@ def initialise_transactions(db, bitcoind_dir, first_hash=None, last_hash=None):
                 tx_info = b'', None, None, None, None
                 try:
                     if (config.TESTNET and block['block_index'] >= config.FIRST_MULTISIG_BLOCK_TESTNET):  # Protocol change.
-                        tx_info = get_tx_info2(tx, block['block_index'])
+                        tx_info = get_tx_info2(tx['__data__'], block['block_index'])
                     else:
-                        tx_info = get_tx_info(tx, block['block_index'], block_parser)
+                        tx_info = get_tx_info(tx['__data__'], block['block_index'], block_parser)
                 except exceptions.DecodeError as e:
                     logging.debug('Could not decode: ' + str(e))
 
@@ -1313,7 +1317,7 @@ def initialise_transactions(db, bitcoind_dir, first_hash=None, last_hash=None):
                     ))
                     logging.info('Valid transaction: {}'.format(tx['tx_hash']))
 
-            # insert block and transaction in the database
+            # insert block and transactions in the database
             cursor.execute('''INSERT INTO blocks(
                                     block_index,
                                     block_hash,
