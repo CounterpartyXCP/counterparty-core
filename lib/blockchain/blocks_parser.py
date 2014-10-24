@@ -2,7 +2,6 @@ import os, json, time, logging, binascii
 
 from .bc_data_stream import BCDataStream
 from .utils import b2h, double_hash, ib2h, inverse_hash
-from .tx_script import TxScript
 
 import plyvel
 
@@ -36,8 +35,7 @@ class BlockchainParser():
         tx_out['value'] = vds.read_int64() / 100000000
         script = vds.read_bytes(vds.read_compact_size())
         tx_out['scriptPubKey'] = {
-            'hex': b2h(script),
-            'asm': TxScript(script).to_asm().replace("OP_1", "1").replace("OP_2", "2").replace("OP_3", "3")
+            'hex': b2h(script)
         }
         return tx_out
 
