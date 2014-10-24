@@ -74,8 +74,10 @@ def parse_tx (db, tx):
 
     message = tx['data'][4:]
     if message_type_id == send.ID:
-        # send.parse(db, tx, message)
-        send1.parse(db, tx, message)    # TODO
+        if config.TESTNET or True:  # Protocol change.
+            send.parse(db, tx, message)
+        else:
+            send1.parse(db, tx, message)
     elif message_type_id == order.ID:
         order.parse(db, tx, message)
     elif message_type_id == btcpay.ID:
