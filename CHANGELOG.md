@@ -1,6 +1,6 @@
 ## Client Versions ##
-* v9.45.0 (2014-10-12)
-	* add dividend fee of 0.0002 XCP per recipient (protocol change: 328000)
+* v9.45.0 (2014-10-23)
+	* add dividend fee of 0.0002 XCP per recipient (protocol change: 330000)
 * v9.44.0 (2014-09-22)
 	* server action requires `server` positional argument
 	* lockfile

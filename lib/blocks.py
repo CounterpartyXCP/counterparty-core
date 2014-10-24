@@ -118,10 +118,13 @@ def generate_consensus_hash(db, block_index, field, strings, check_hash_pos, pre
 
     # get previous hash
     if not previous_hash:
-      if block_index == config.BLOCK_FIRST:
-          previous_hash = util.dhash_string(config.CONSENSUS_HASH_SEED)
-      else: 
-          previous_hash = get_hash(block_index - 1)
+        if block_index == config.BLOCK_FIRST:
+            previous_hash = util.dhash_string(config.CONSENSUS_HASH_SEED)
+        else: 
+            previous_hash = get_hash(block_index - 1)
+
+    if not previous_hash:
+        raise exceptions.ConsensusError('Empty previous {} for block {}. Please launch a `reparse`.'.format(field, block_index))
 
     # concatenate strings
     block_string = ''.join(strings)
@@ -130,7 +133,7 @@ def generate_consensus_hash(db, block_index, field, strings, check_hash_pos, pre
     block_hash = util.dhash_string(previous_hash + block_string)
 
     if not current_hash:
-      current_hash = get_hash(block_index)
+        current_hash = get_hash(block_index)
 
     # check checkpoints and save block block_hash
     checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
