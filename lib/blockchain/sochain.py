@@ -73,7 +73,7 @@ def getaddressinfo(address):
     return None
 
 def gettransaction(tx_hash):
-    tx = util.get_url(get_host() + '/api/v2/get_tx/{}/{}'.format(sochain_network(), address), abort_on_error=True)
+    tx = util.get_url(get_host() + '/api/v2/get_tx/{}/{}'.format(sochain_network(), tx_hash), abort_on_error=True)
     if 'status' in tx and tx['status'] == 'success':
         valueOut = 0
         for vout in tx['data']['tx']['vout']:
