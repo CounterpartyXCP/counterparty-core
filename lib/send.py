@@ -66,7 +66,7 @@ def compose (db, source, destination, asset, quantity):
     if asset == config.BTC:
         return (source, [(destination, quantity)], None)
 
-    validate(db, source, destination, asset, quantity, util.last_block['block_index'])
+    validate(db, source, destination, asset, quantity, util.last_block(db)['block_index'])
     data = pack(asset, quantity)
 
     return (source, [(destination, None)], data)
