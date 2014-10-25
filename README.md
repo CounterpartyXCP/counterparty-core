@@ -1,41 +1,44 @@
 [![Build Status](https://travis-ci.org/CounterpartyXCP/counterpartyd.svg?branch=develop)](https://travis-ci.org/CounterpartyXCP/counterpartyd)
 
 # Description
-Counterparty is a protocol for the creation and use of decentralised financial
-instruments such as asset exchanges, contracts for difference and dividend
-payments. It uses Bitcoin as a transport layer. The contents of this
-repository, `counterpartyd`, constitute the reference implementation of the
-protocol.
-
-The Counterparty protocol specification may be found at
-<https://github.com/CounterpartyXCP/Counterparty>.
+`counterpartyd` is the reference implementation of the [Counterparty
+Protocol](https://github.com/CounterpartyXCP/Counterparty).
 
 # Dependencies
 * [Python 3](http://python.org)
-* Python 3 packages: apsw, requests, appdirs, prettytable, python-dateutil, json-rpc, tornado, flask, Flask-HTTPAuth, pycoin, pyzmq(v2.2+), pycrypto, lockfile, python-bitcoinlib (see [this link](https://github.com/CounterpartyXCP/counterpartyd/blob/master/pip-requirements.txt) for exact working versions)
-* Bitcoind
+* [Python 3 packages](https://github.com/CounterpartyXCP/counterpartyd/blob/master/pip-requirements.txt)
+* Bitcoin Core
+
+Sometimes the underlying package requirements may change for `counterpartyd`.
+If you build and installed it from scratch, you can manually update these
+requirements by executing something like:
+```
+    pip3 install --upgrade -r pip-requirements.txt 
+```
+
 
 # Installation
 
 **NOTE: This section covers manual installation of counterpartyd. If you want more of
-an automated approach to counterpartyd installation for Windows and Linux, see [this link](http://counterparty.io/docs/build-system/).**
+an automated approach to counterpartyd installation for Windows and Linux, use
+the [build system](http://counterparty.io/docs/build-system/).**
 
 In order for counterpartyd to function, it must be able to communicate with a
-running instance of Bitcoind or Bitcoin-Qt, which handles many Bitcoin‐specific
-matters on its behalf, including all wallet and private key management. For
-such interoperability, Bitcoind must be run with the following options:
-`-txindex=1` `-server=1`. This may require the setting of a JSON‐RPC password,
-which may be saved in Bitcoind’s configuration file.
+running instance of Bitcoin Core, which handles many Bitcoin‐specific matters
+on its behalf, including all wallet and private key management. For such
+interoperability, Bitcoin Core must be run with the following options: `-txindex=1`
+`-server=1`. This may require the setting of a JSON‐RPC password, which may be
+saved in Bitcoin Core’s configuration file.
 
-counterpartyd needs to know at least the JSON‐RPC password of the Bitcoind with
-which it is supposed to communicate. The simplest way to set this is to
+counterpartyd needs to know at least the JSON‐RPC password of the Bitcoin Core
+with which it is supposed to communicate. The simplest way to set this is to
 include it in all command‐line invocations of counterpartyd, such as
 `./counterpartyd.py --rpc-password=PASSWORD ACTION`. To make this and other
 options persistent across counterpartyd sessions, one may store the desired
 settings in a configuration file specific to counterpartyd.
 
-Note that the syntaxes for the countpartyd and the Bitcoind configuraion
-files are not the same. A Bitcoind configuration file looks like this:
+Note that the syntaxes for the countpartyd and the Bitcoin Core configuraion
+files are not the same. A Bitcoin Core configuration file looks like this:
 
 	rpcuser=bitcoinrpc
 	rpcpassword=PASSWORD
@@ -46,28 +49,15 @@ files are not the same. A Bitcoind configuration file looks like this:
 However, a counterpartyd configuration file looks like this:
 
 	[Default]
-	bitcoind-rpc-password=PASSWORD
+	backend-rpc-password=PASSWORD
 
 Note the change in hyphenation between `rpcpassword` and `rpc-password`.
 
 If and only if counterpartyd is to be run on the Bitcoin testnet, with the
-`--testnet` CLI option, Bitcoind must be set to do the same (`-testnet=1`).
+`--testnet` CLI option, Bitcoin Core must be set to do the same (`-testnet=1`).
 counterpartyd may run with the `--testcoin` option on any blockchain,
 however.
 
-# Updating your requirements
-
-Sometimes the underlying package requirements may change for `counterpartyd`. If you build and installed it from scratch,
-you can manually update these requirements by executing something like:
-```
-    pip install --upgrade -r pip-requirements.txt 
-```
-
-# Test suite
-
-The test suite is invoked with `py.test` in the root directory of the repository.
-Bitcoind testnet and mainnet must run on the default ports and use the same rpcuser and rpcpassword. 
-Do not include the following values ​​in counterpartyd.conf: bitcoind-rpc-connect, bitcoind-rpc-port, rpc-host, rpc-port and testnet.
 
 # Usage
 The command‐line syntax of counterpartyd is generally that of
@@ -81,28 +71,29 @@ balances or open orders.
 For a summary of the command‐line arguments and options, see
 `./counterpartyd.py --help`.
 
+The test suite is invoked with `py.test` in the root directory of the repository.
+
+
 # Versioning
-* Major version changes require a full rebuild of the database.
-* Minor version changes require a database reparse.
+* Major version changes require a full (automatic) rebuild of the database.
+* Minor version changes require a(n automatic) database reparse.
 * Most protocol changes are retroactive on testnet.
+
 
 ## Input and Output
 * Quantities of divisible assets are written to eight decimal places.
 * Quantities of indivisible assets are written as integers.
 * All other quantities, i.e. prices, odds, leverages, feed values and target
-values, fee multipliers, are specified to four decimal places.
-* counterpartyd identifies an Order, Bet, Order Match or Bet Match by an
-‘Order ID’, ‘Bet ID’, ‘Order Match ID’, or ‘Bet Match ID’, respectively. Match
-IDs are concatenations of the hashes of the two transactions which compose the
-corresponding Match, in the order of their appearances in the blockchain.
+values, fee multipliers, are represented internally as fractions, but printed
+to four decimal places.
 
 
-## Examples
+## Example Usage
 The following examples are abridged for parsimony.
 
 * Server
 
-	The `server` command should always be running in the background. All other commands will fail if the index of the last block in the database is less than that of the last block seen by Bitcoind.
+	The `server` command should always be running in the background. All other commands will fail if the index of the last block in the database is less than that of the last block seen by Bitcoin Core.
 
 * Burn
 
@@ -137,7 +128,7 @@ The following examples are abridged for parsimony.
 
 * BTCPay
 	```
-	btcpay --source=-source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --order-match-id=092f15d36786136c4d868c33356ec3c9b5a0c77de54ed0e96a8dbdd8af160c23
+	btcpay --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --order-match-id=092f15d36786136c4d868c33356ec3c9b5a0c77de54ed0e96a8dbdd8af160c23
 	```
 
 * Issue
@@ -176,7 +167,7 @@ The following examples are abridged for parsimony.
 	
 	Open a Rock-Paper-Scissors like game with arbitrary possible moves (Must be an odd number greater or equal than 3). Until you make an rpsresolve transaction, your move is stored as an hash and keep secret.
 	
-	Example: Play rock-paper-scissors-spock-lizard (http://en.wikipedia.org/wiki/Rock-paper-scissors-lizard-Spock):
+	Example: Play [rock-paper-scissors-spock-lizard](http://en.wikipedia.org/wiki/Rock-paper-scissors-lizard-Spock):
 
 	```
 	rps --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --possible-moves=5 --move=2 --wager=1 --expiration=100
