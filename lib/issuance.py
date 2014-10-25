@@ -163,7 +163,7 @@ def parse (db, tx, message):
             callable_, call_date, call_price, description = False, 0, 0.0, ''
         try:
             asset = util.asset_name(asset_id)
-        except exceptions.AssetNameError:
+        except util.AssetNameError:
             asset = None
             status = 'invalid: bad asset name'
         status = 'valid'

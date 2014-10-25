@@ -28,6 +28,9 @@ if os.name == 'nt':
 D = decimal.Decimal
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
+class ConfigurationError (Exception):
+    pass
+
 def get_address (db, address):
     address_dict = {}
     address_dict['balances'] = util.api('get_balances', {'filters': [('address', '==', address),]})

@@ -209,13 +209,13 @@ UNITTEST_VECTOR = {
         }],
         'compose': [{
             'in': (ADDR[0], None, 'ASSET', 1000, True, False, None, None, ''),
-            'error': ('AssetNameError', 'starts with ‘A’')
+            'error': ('AssetError', 'starts with ‘A’')
         }, {
             'in': (ADDR[0], None, 'BSSET1', 1000, True, False, None, None, ''),
-            'error': ('AssetNameError', "('invalid character:', '1')")
+            'error': ('AssetError', "('invalid character:', '1')")
         }, {
             'in': (ADDR[0], None, 'SET', 1000, True, False, None, None, ''),
-            'error': ('AssetNameError', 'too short')
+            'error': ('AssetError', 'too short')
         }, {
             'in': (ADDR[0], None, 'BSSET', 1000, True, False, None, None, ''),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x14\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')

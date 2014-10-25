@@ -27,6 +27,7 @@ BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
 BLOCK_LEDGER = []
 
 # TODO: This doesn’t timeout properly. (If server hangs, then unhangs, no result.)
+class RPCError (Exception): pass
 def api (method, params):
     headers = {'content-type': 'application/json'}
     payload = {
@@ -37,21 +38,21 @@ def api (method, params):
     }
     response = requests.post(config.RPC, data=json.dumps(payload), headers=headers)
     if response == None:
-        raise exceptions.RPCError('Cannot communicate with {} server.'.format(config.XCP_CLIENT))
+        raise RPCError('Cannot communicate with {} server.'.format(config.XCP_CLIENT))
     elif response.status_code != 200:
         if response.status_code == 500:
-            raise exceptions.RPCError('Malformed API call.')
+            raise RPCError('Malformed API call.')
         else:
-            raise exceptions.RPCError(str(response.status_code) + ' ' + response.reason)
+            raise RPCError(str(response.status_code) + ' ' + response.reason)
 
     response_json = response.json()
     if 'error' not in response_json.keys() or response_json['error'] == None:
         try:
             return response_json['result']
         except KeyError:
-            raise exceptions.RPCError(response_json)
+            raise RPCError(response_json)
     else:
-        raise exceptions.RPCError('{}'.format(response_json['error']))
+        raise RPCError('{}'.format(response_json['error']))
 
 def price (numerator, denominator, block_index):
     if block_index >= 294500 or config.TESTNET: # Protocol change.
@@ -297,6 +298,7 @@ def exectracer(cursor, sql, bindings):
 
     return True
 
+class DatabaseIntegrityError (exceptions.DatabaseError): pass
 def connect_to_db(flags=None):
     """Connects to the SQLite database, returning a db Connection object"""
     logging.debug('Status: Creating connection to `{}`.'.format(config.DATABASE.split('/').pop()))
@@ -339,7 +341,7 @@ def connect_to_db(flags=None):
                 raise exceptions.DatabaseError('Integrity check failed.')
             integral = True
             break
-        except exceptions.DatabaseIntegrityError:
+        except DatabaseIntegrityError:
             time.sleep(1)
             continue
     if not integral:
@@ -352,13 +354,15 @@ def connect_to_db(flags=None):
 
     return db
 
+class VersionError (Exception): pass
+class VersionUpdateRequiredError (VersionError): pass
 def version_check (db):
     try:
         host = 'https://raw2.github.com/CounterpartyXCP/counterpartyd/master/version.json'
         response = requests.get(host, headers={'cache-control': 'no-cache'})
         versions = json.loads(response.text)
     except Exception as e:
-        raise exceptions.VersionError('Unable to check version. How’s your Internet access?')
+        raise VersionError('Unable to check version. How’s your Internet access?')
 
     # Check client version.
     passed = True
@@ -376,7 +380,7 @@ def version_check (db):
             config.VERSION_STRING, versions['block_index'], versions['minimum_version_major'], versions['minimum_version_minor'],
             versions['minimum_version_revision'], versions['reason'])
         if last_block(db)['block_index'] >= versions['block_index']:
-            raise exceptions.VersionUpdateRequiredError(explanation)
+            raise VersionUpdateRequiredError(explanation)
         else:
             warnings.warn(explanation)
 
@@ -435,17 +439,18 @@ def last_message (db):
     cursor.close()
     return last_message
 
+class AssetNameError (exceptions.AssetError): pass
 def asset_id (asset):
     # Special cases.
     if asset == config.BTC: return 0
     elif asset == config.XCP: return 1
 
-    if asset[0] == 'A': raise exceptions.AssetNameError('starts with ‘A’')
+    if asset[0] == 'A': raise AssetNameError('starts with ‘A’')
 
     # Checksum
     """
     if not checksum.verify(asset):
-        raise exceptions.AssetNameError('invalid checksum')
+        raise util.AssetNameError('invalid checksum')
     else:
         asset = asset[:-1]  # Strip checksum character.
     """
@@ -455,21 +460,22 @@ def asset_id (asset):
     for c in asset:
         n *= 26
         if c not in b26_digits:
-            raise exceptions.AssetNameError('invalid character:', c)
+            raise AssetNameError('invalid character:', c)
         digit = b26_digits.index(c)
         n += digit
 
     if n < 26**3:
-        raise exceptions.AssetNameError('too short')
+        raise AssetNameError('too short')
 
     return n
 
+class AssetIDError (exceptions.AssetError): pass
 def asset_name (asset_id):
     if asset_id == 0: return config.BTC
     elif asset_id == 1: return config.XCP
 
     if asset_id < 26**3:
-        raise exceptions.AssetIDError('too low')
+        raise AssetIDError('too low')
 
     # Divide that integer into Base 26 string.
     res = []
@@ -484,16 +490,16 @@ def asset_name (asset_id):
     """
     return asset_name
 
-
+class DebitError (Exception): pass
 def debit (db, block_index, address, asset, quantity, action=None, event=None):
-    debit_cursor = db.cursor()
-    assert asset != config.BTC # Never BTC.
-    assert type(quantity) == int
-    assert quantity >= 0
-
+    if type(quantity) != int:
+        raise DebitError
+    if quantity < 0:
+        raise DebitError
     if asset == config.BTC:
-        raise exceptions.BalanceError('Cannot debit bitcoins from a {} address!'.format(config.XCP_NAME))
+        raise DebitError
 
+    debit_cursor = db.cursor()
     debit_cursor.execute('''SELECT * FROM balances \
                             WHERE (address = ? AND asset = ?)''', (address, asset))
     balances = debit_cursor.fetchall()
@@ -501,7 +507,7 @@ def debit (db, block_index, address, asset, quantity, action=None, event=None):
     else: old_balance = balances[0]['quantity']
 
     if old_balance < quantity:
-        raise exceptions.BalanceError('Insufficient funds.')
+        raise exceptions.DebitError('Insufficient funds.')
 
     balance = round(old_balance - quantity)
     balance = min(balance, config.MAX_INT)
@@ -530,12 +536,16 @@ def debit (db, block_index, address, asset, quantity, action=None, event=None):
 
     BLOCK_LEDGER.append('{}{}{}{}'.format(block_index, address, asset, quantity))
 
+class CreditError (Exception): pass
 def credit (db, block_index, address, asset, quantity, action=None, event=None):
-    credit_cursor = db.cursor()
-    assert asset != config.BTC # Never BTC.
-    assert type(quantity) == int
-    assert quantity >= 0
+    if type(quantity) != int:
+        raise CreditError
+    if quantity < 0:
+        raise CreditError
+    if asset == config.BTC:
+        raise CreditError
 
+    credit_cursor = db.cursor()
     credit_cursor.execute('''SELECT * FROM balances \
                              WHERE (address = ? AND asset = ?)''', (address, asset))
     balances = credit_cursor.fetchall()
@@ -581,6 +591,7 @@ def credit (db, block_index, address, asset, quantity, action=None, event=None):
 
     BLOCK_LEDGER.append('{}{}{}{}'.format(block_index, address, asset, quantity))
 
+class QuantityError(Exception): pass
 def devise (db, quantity, asset, dest, divisible=None):
 
     # For output only.
@@ -630,13 +641,13 @@ def devise (db, quantity, asset, dest, divisible=None):
             if quantity == quantity.to_integral():
                 return int(quantity)
             else:
-                raise exceptions.QuantityError('Divisible assets have only eight decimal places of precision.')
+                raise QuantityError('Divisible assets have only eight decimal places of precision.')
         else:
             return quantity
     else:
         quantity = D(quantity)
         if quantity != round(quantity):
-            raise exceptions.QuantityError('Fractional quantities of indivisible assets.')
+            raise QuantityError('Fractional quantities of indivisible assets.')
         return round(quantity)
 
 def holders(db, asset):
@@ -724,6 +735,7 @@ def supplies (db):
     cursor.close()
     return supplies
 
+class GetURLError (Exception): pass
 def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
     try:
         r = requests.get(url, timeout=fetch_timeout)
@@ -737,5 +749,18 @@ def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
 
 def dhash_string(text):
     return binascii.hexlify(hashlib.sha256(hashlib.sha256(bytes(text, 'utf-8')).digest()).digest()).decode()
+
+def transfer(db, block_index, source, destination, asset, quantity, action, event):
+    debit(db, block_index, source, asset, quantity, action=action, event=event)
+    credit(db, block_index, destination, asset, quantity, action=action, event=event)
+
+def get_balance (db, address, asset):
+    # Get balance of contract or address.
+    cursor = db.cursor()
+    balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (address, asset)))
+    cursor.close()
+    if not balances: return 0
+    else: return balances[0]['quantity']
+
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

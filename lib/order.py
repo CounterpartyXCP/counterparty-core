@@ -270,7 +270,7 @@ def parse (db, tx, message):
         give_asset = util.asset_name(give_id)
         get_asset = util.asset_name(get_id)
         status = 'open'
-    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
+    except (exceptions.UnpackError, util.AssetNameError, struct.error) as e:
         give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required = 0, 0, 0, 0, 0, 0
         status = 'invalid: could not unpack'
 
