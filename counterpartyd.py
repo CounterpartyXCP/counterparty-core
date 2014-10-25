@@ -1093,15 +1093,18 @@ if __name__ == '__main__':
 
     # PARSING
     elif args.action == 'reparse':
+        logging.info('Status: Acquiring process lock.')
         with lock:
             blocks.reparse(db)
 
     elif args.action == 'rollback':
+        logging.info('Status: Acquiring process lock.')
         with lock:
             blocks.reparse(db, block_index=args.block_index)
 
     elif args.action == 'server':
 
+        logging.info('Status: Acquiring process lock.')
         with lock:
             api_status_poller = api.APIStatusPoller()
             api_status_poller.daemon = True
