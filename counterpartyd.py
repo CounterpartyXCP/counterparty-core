@@ -15,7 +15,6 @@ import threading
 from threading import Thread
 import binascii
 from fractions import Fraction
-from tendo import singleton
 
 import requests
 import appdirs
@@ -1087,21 +1086,12 @@ if __name__ == '__main__':
 
     # PARSING
     elif args.action == 'reparse':
-        if not config.FORCE:
-            me = singleton.SingleInstance()
-
         blocks.reparse(db)
 
     elif args.action == 'rollback':
-        if not config.FORCE:
-            me = singleton.SingleInstance()
-
         blocks.reparse(db, block_index=args.block_index)
 
     elif args.action == 'server':
-        if not config.FORCE:
-            me = singleton.SingleInstance()
-
         api_status_poller = api.APIStatusPoller()
         api_status_poller.daemon = True
         api_status_poller.start()

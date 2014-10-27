@@ -16,6 +16,7 @@ from Crypto.Cipher import ARC4
 import apsw
 import bitcoin as bitcoinlib
 import bitcoin.rpc as bitcoinlib_rpc
+from tendo import singleton
 
 from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
@@ -1150,6 +1151,9 @@ def reparse (db, block_index=None, quiet=False):
     """Reparse all transactions (atomically). If block_index is set, rollback
     to the end of that block.
     """
+    if not config.FORCE:
+        me = singleton.SingleInstance()
+
     logging.warning('Status: Reparsing all transactions.')
     cursor = db.cursor()
 
@@ -1252,6 +1256,9 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     return
 
 def follow (db):
+    if not config.FORCE:
+        me = singleton.SingleInstance()
+
     cursor = db.cursor()
 
     # Initialise.
