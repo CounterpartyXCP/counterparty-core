@@ -1255,6 +1255,17 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
 
     return
 
+def get_next_tx_index(db):
+    cursor = db.cursor()
+    txes = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)'''))
+    if txes:
+        assert len(txes) == 1
+        tx_index = txes[0]['tx_index'] + 1
+    else:
+        tx_index = 0
+    cursor.close()
+    return tx_index
+
 def follow (db):
     if not config.FORCE:
         me = singleton.SingleInstance()
@@ -1282,12 +1293,7 @@ def follow (db):
         block_index = config.BLOCK_FIRST
 
     # Get index of last transaction.
-    txes = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)'''))
-    if txes:
-        assert len(txes) == 1
-        tx_index = txes[0]['tx_index'] + 1
-    else:
-        tx_index = 0
+    tx_index = get_next_tx_index(db)
 
     not_supported = {}   # No false positives. Use a dict to allow for O(1) lookups
     not_supported_sorted = collections.deque()
@@ -1335,6 +1341,7 @@ def follow (db):
                 # Rollback the DB.
                 reparse(db, block_index=c-1, quiet=True)
                 block_index = c
+                tx_index = get_next_tx_index(db)
                 continue
 
             # Get and parse transactions in this block (atomically).
