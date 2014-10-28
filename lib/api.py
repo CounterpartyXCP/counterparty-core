@@ -319,7 +319,10 @@ class APIServer(threading.Thread):
         # Generate dynamically get_{table} methods
         def generate_get_method(table):
             def get_method(**kwargs):
-                return get_rows(db, table=table, **kwargs)
+                try:
+                    return get_rows(db, table=table, **kwargs)
+                except TypeError as e:
+                    raise Exception(str(e))
             return get_method
 
         for table in API_TABLES:
@@ -352,12 +355,18 @@ class APIServer(threading.Thread):
                 return transaction_args, common_args, private_key_wif
 
             def create_method(**kwargs):
-                transaction_args, common_args, private_key_wif = split_params(**kwargs)
-                return compose_transaction(db, name=transaction, params=transaction_args, **common_args)
+                try:
+                    transaction_args, common_args, private_key_wif = split_params(**kwargs)
+                    return compose_transaction(db, name=transaction, params=transaction_args, **common_args)
+                except TypeError as e:
+                    raise Exception(str(e))
 
             def do_method(**kwargs):
-                transaction_args, common_args, private_key_wif = split_params(**kwargs)
-                return do_transaction(db, name=transaction, params=transaction_args, private_key_wif=private_key_wif, **common_args)
+                try:
+                    transaction_args, common_args, private_key_wif = split_params(**kwargs)
+                    return do_transaction(db, name=transaction, params=transaction_args, private_key_wif=private_key_wif, **common_args)
+                except TypeError as e:
+                    raise Exception(str(e))
 
             return create_method, do_method
 
@@ -442,7 +451,7 @@ class APIServer(threading.Thread):
                 cursor = db.cursor()
                 issuances = list(cursor.execute('''SELECT * FROM issuances WHERE (status = ? AND asset = ?) ORDER BY block_index ASC''', ('valid', asset)))
                 cursor.close()
-                if not issuances: break #asset not found, most likely
+                if not issuances: continue #asset not found, most likely
                 else: last_issuance = issuances[-1]
                 supply = 0
                 locked = False
