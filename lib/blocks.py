@@ -1030,22 +1030,28 @@ def get_tx_info2 (tx, block_index):
     def get_opreturn (asm):
         if len(asm) == 2 and asm[0] == 'OP_RETURN':
             pubkeyhash = asm[1]
-            return pubkeyhash
+            if type(pubkeyhash) == bytes:
+                return pubkeyhash
         raise exceptions.DecodeError('invalid OP_RETURN')
 
     def get_checksig (asm):
         if len(asm) == 5 and asm[0] == 'OP_DUP' and asm[1] == 'OP_HASH160' and asm[3] == 'OP_EQUALVERIFY' and asm[4] == 'OP_CHECKSIG':
             pubkeyhash = asm[2]
-            return pubkeyhash
+            if type(pubkeyhash) == bytes:
+                return pubkeyhash
         raise exceptions.DecodeError('invalid OP_CHECKSIG')
 
     def get_checkmultisig (asm):
         # N‐of‐2
         if len(asm) == 5 and asm[3] == 2 and asm[4] == 'OP_CHECKMULTISIG':
-            return asm[1:3], asm[0]
+            pubkeys, signatures_required = asm[1:3], asm[0]
+            if all([type(pubkey) == bytes for pubkey in pubkeys]):
+                return pubkeys, signatures_required
         # N‐of‐3
         if len(asm) == 6 and asm[4] == 3 and asm[5] == 'OP_CHECKMULTISIG':
-            return asm[1:4], asm[0]
+            pubkeys, signatures_required = asm[1:4], asm[0]
+            if all([type(pubkey) == bytes for pubkey in pubkeys]):
+                return pubkeys, signatures_required
         raise exceptions.DecodeError('invalid OP_CHECKMULTISIG')
 
     def decode_opreturn (asm):
