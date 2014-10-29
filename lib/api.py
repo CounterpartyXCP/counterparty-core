@@ -321,7 +321,7 @@ class APIServer(threading.Thread):
             def get_method(**kwargs):
                 try:
                     return get_rows(db, table=table, **kwargs)
-                except TypeError as e:
+                except TypeError as e:          #TODO: generalise for all API methods
                     raise Exception(str(e))
             return get_method
 
@@ -358,14 +358,14 @@ class APIServer(threading.Thread):
                 try:
                     transaction_args, common_args, private_key_wif = split_params(**kwargs)
                     return compose_transaction(db, name=transaction, params=transaction_args, **common_args)
-                except TypeError as e:
+                except TypeError as e:          #TODO: generalise for all API methods
                     raise Exception(str(e))
 
             def do_method(**kwargs):
                 try:
                     transaction_args, common_args, private_key_wif = split_params(**kwargs)
                     return do_transaction(db, name=transaction, params=transaction_args, private_key_wif=private_key_wif, **common_args)
-                except TypeError as e:
+                except TypeError as e:          #TODO: generalise for all API methods
                     raise Exception(str(e))
 
             return create_method, do_method
