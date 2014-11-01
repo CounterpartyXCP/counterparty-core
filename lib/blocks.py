@@ -146,7 +146,6 @@ def generate_consensus_hash(db, block_index, field, strings, check_hash_pos, pre
 
 def generate_ledger_hash(db, block_index, previous_hash=None, current_hash=None):
     ledger_hash = generate_consensus_hash(db, block_index, 'ledger_hash', util.BLOCK_LEDGER, 0, previous_hash, current_hash)
-    util.BLOCK_LEDGER = []
     return ledger_hash
 
 def generate_txlist_hash(db, block_index, txlist, previous_hash=None, current_hash=None):
@@ -156,6 +155,7 @@ def generate_txlist_hash(db, block_index, txlist, previous_hash=None, current_ha
 def parse_block (db, block_index, block_time, 
                  previous_ledger_hash=None, current_ledger_hash=None,
                  previous_txlist_hash=None, current_txlist_hash=None):
+    util.BLOCK_LEDGER = []
     cursor = db.cursor()
 
     # Expire orders, bets and rps.
