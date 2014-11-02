@@ -107,55 +107,46 @@ def parse_tx (db, tx):
     cursor.close()
     return True
 
-def generate_consensus_hash(db, block_index, field, strings, check_hash_pos, previous_hash=None, current_hash=None):
+
+def consensus_hash(db, block_index, field, previous_consensus_hash, content):
     cursor = db.cursor()
 
-    get_hash = lambda i: list(cursor.execute('''SELECT {} FROM blocks WHERE block_index = ?'''.format(field), (i,)))[0][field]
+    # Initialise previous hash on first block.
+    if block_index == config.BLOCK_FIRST:
+        assert not previous_consensus_hash
+        previous_consensus_hash = util.dhash_string(config.CONSENSUS_HASH_SEED)
 
-    # get previous hash
-    if not previous_hash:
-        if block_index == config.BLOCK_FIRST:
-            previous_hash = util.dhash_string(config.CONSENSUS_HASH_SEED)
-        else: 
-            previous_hash = get_hash(block_index - 1)
+    # Get previous hash.
+    if not previous_consensus_hash:
+        previous_consensus_hash = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index - 1,)))[0][field]
+        if not previous_consensus_hash:
+            raise exceptions.ConsensusError('Empty previous {} for block {}. Please launch a `reparse`.'.format(field, block_index))
 
-    if not previous_hash:
-        raise exceptions.ConsensusError('Empty previous {} for block {}. Please launch a `reparse`.'.format(field, block_index))
+    # Calculate current hash.
+    calculated_hash = util.dhash_string(previous_consensus_hash + '{}{}'.format(config.CONSENSUS_HASH_VERSION, ''.join(content)))
 
-    # concatenate strings
-    block_string = ''.join(strings)
+    # Verify hash (if already in database) or save hash (if not).
+    found_hash = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,)))[0][field]
+    if found_hash:
+        # Check against existing value.
+        if calculated_hash != found_hash:
+            raise exceptions.ConsensusError('Inconsistent {} for block {}.'.format(field, block_index))
 
-    # generate block hash
-    block_hash = util.dhash_string(previous_hash + block_string)
+        # Check against checkpoints.
+        checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
+        if block_index in checkpoints and checkpoints[block_index][field] != calculated_hash:
+            raise exceptions.ConsensusError('Incorrect {} for block {}.'.format(field, block_index))
+    else:
+        # Save new hash.
+        cursor.execute('''UPDATE blocks SET {} = ? WHERE block_index = ?'''.format(field), (calculated_hash, block_index))
 
-    if not current_hash:
-        current_hash = get_hash(block_index)
+    return calculated_hash
 
-    # check checkpoints and save block block_hash
-    checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
-    if (block_index in checkpoints and checkpoints[block_index][check_hash_pos] != block_hash) or (current_hash and current_hash != block_hash):
-        raise exceptions.ConsensusError('Incorrect {} for block {}.'.format(field, block_index))
-    elif not current_hash:
-        sql = '''UPDATE blocks SET {} = ? WHERE block_index = ?'''.format(field)
-        cursor.execute(sql, (block_hash, block_index))
 
-    cursor.close()
+def parse_block (db, block_index, block_time, previous_ledger_hash=None, ledger_hash=None, previous_txlist_hash=None, txlist_hash=None):
+    cursor = db.cursor()
 
-    return block_hash
-
-def generate_ledger_hash(db, block_index, previous_hash=None, current_hash=None):
-    ledger_hash = generate_consensus_hash(db, block_index, 'ledger_hash', util.BLOCK_LEDGER, 0, previous_hash, current_hash)
-    return ledger_hash
-
-def generate_txlist_hash(db, block_index, txlist, previous_hash=None, current_hash=None):
-    txlist_hash = generate_consensus_hash(db, block_index, 'txlist_hash', txlist, 1, previous_hash, current_hash)
-    return txlist_hash
-
-def parse_block (db, block_index, block_time, 
-                 previous_ledger_hash=None, current_ledger_hash=None,
-                 previous_txlist_hash=None, current_txlist_hash=None):
     util.BLOCK_LEDGER = []
-    cursor = db.cursor()
 
     # Expire orders, bets and rps.
     order.expire(db, block_index)
@@ -169,13 +160,18 @@ def parse_block (db, block_index, block_time,
     txlist = []
     for tx in list(cursor):
         parse_tx(db, tx)
-        txlist.append(tx['tx_hash'])
+        txlist.append('{}{}{}{}{}{}'.format(tx['tx_hash'], tx['source'], tx['destination'], 
+                                            tx['btc_amount'], tx['fee'], 
+                                            binascii.hexlify(tx['data']).decode('UTF-8')))
 
     cursor.close()
 
-    ledger_hash = generate_ledger_hash(db, block_index, previous_ledger_hash, current_ledger_hash)
-    txlist_hash = generate_txlist_hash(db, block_index, txlist, previous_txlist_hash, current_txlist_hash)
-    return ledger_hash, txlist_hash
+    # Consensus hashes.
+    new_ledger_hash = consensus_hash(db, block_index, 'ledger_hash', previous_ledger_hash, util.BLOCK_LEDGER)
+    new_txlist_hash = consensus_hash(db, block_index, 'txlist_hash', previous_txlist_hash, txlist)
+
+    return new_ledger_hash, new_txlist_hash
+
 
 def initialise(db):
     cursor = db.cursor()
@@ -1168,13 +1164,15 @@ def reparse (db, block_index=None, quiet=False):
         # clean consensus hashes if first block hash don't match with checkpoint.
         checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
         columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(blocks)''')]
-        for field, check_hash_pos in [('ledger_hash', 0), ('txlist_hash', 1)]:
+        for field in ['ledger_hash', 'txlist_hash']:
             if field in columns:
                 sql = '''SELECT {} FROM blocks  WHERE block_index = ?'''.format(field)
-                first_hash = list(cursor.execute(sql, (config.BLOCK_FIRST,)))[0][field]
-                if first_hash != checkpoints[config.BLOCK_FIRST][check_hash_pos]:
-                    logging.info('First hash changed. Cleaning {}.'.format(field))
-                    cursor.execute('''UPDATE blocks SET {} = NULL'''.format(field))
+                first_block = list(cursor.execute(sql, (config.BLOCK_FIRST,)))
+                if first_block:
+                    first_hash = first_block[0][field]
+                    if first_hash != checkpoints[config.BLOCK_FIRST][field]:
+                        logging.info('First hash changed. Cleaning {}.'.format(field))
+                        cursor.execute('''UPDATE blocks SET {} = NULL'''.format(field))
 
         # For rollbacks, just delete new blocks and then reparse what’s left.
         if block_index:
@@ -1186,14 +1184,14 @@ def reparse (db, block_index=None, quiet=False):
             log = logging.getLogger('')
             log.setLevel(logging.WARNING)
         initialise(db)
-        previous_ledger_hash = None
-        previous_txlist_hash = None
+        previous_ledger_hash, previous_txlist_hash = None, None
         cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
         for block in cursor.fetchall():
             logging.info('Block (re‐parse): {}'.format(str(block['block_index'])))
             previous_ledger_hash, previous_txlist_hash = parse_block(db, block['block_index'], block['block_time'], 
                                                                      previous_ledger_hash, block['ledger_hash'],
                                                                      previous_txlist_hash, block['txlist_hash'])
+
         if quiet:
             log.setLevel(logging.INFO)
 
@@ -1347,7 +1345,7 @@ def follow (db):
             block_hash = bitcoin.get_block_hash(block_index)
             block = bitcoin.get_block(block_hash)
             block_time = block['time']
-            tx_hash_list = block['tx']
+            txhash_list = block['tx']
             with db:
                 # List the block.
                 cursor.execute('''INSERT INTO blocks(
@@ -1360,7 +1358,7 @@ def follow (db):
                               )
 
                 # List the transactions in the block.
-                for tx_hash in tx_hash_list:
+                for tx_hash in txhash_list:
                     list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index)
                     tx_index += 1
 
