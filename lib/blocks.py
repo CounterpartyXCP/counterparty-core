@@ -17,7 +17,6 @@ import apsw
 import bitcoin as bitcoinlib
 import bitcoin.rpc as bitcoinlib_rpc
 from tendo import singleton
-import json
 
 from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
