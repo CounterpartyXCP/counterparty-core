@@ -29,7 +29,7 @@ pycrypto>=2.6.1
 # One of available download locations is: 
 # http://www.voidspace.org.uk/python/modules.shtml#pycrypto
 
-lockfile==0.10.2
+tendo==0.2.6
 
 python-bitcoinlib==0.2.1
 

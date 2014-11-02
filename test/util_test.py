@@ -170,6 +170,7 @@ def run_scenario(scenario, rawtransactions_db):
     counterpartyd.set_options(database_file=':memory:', testnet=True, **COUNTERPARTYD_OPTIONS)
     config.PREFIX = b'TESTXXXX'
     config.FIRST_MULTISIG_BLOCK_TESTNET = 1
+    checkpoints = dict(config.CHECKPOINTS_TESTNET)
     config.CHECKPOINTS_TESTNET = {}
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
@@ -202,6 +203,7 @@ def run_scenario(scenario, rawtransactions_db):
     log = logger_buff.getvalue()
 
     db.close()
+    config.CHECKPOINTS_TESTNET = checkpoints
     return dump, log, json.dumps(raw_transactions, indent=4)
 
 def save_scenario(scenario_name, rawtransactions_db):
@@ -355,6 +357,18 @@ def reparse(testnet=True):
     memory_cursor = memory_db.cursor()
     for table in blocks.TABLES + ['balances']:
         memory_cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
+
+    # clean consensus hashes if first block hash don't match with checkpoint.
+    checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
+    columns = [column['name'] for column in memory_cursor.execute('''PRAGMA table_info(blocks)''')]
+    for field in ['ledger_hash', 'txlist_hash']:
+        if field in columns:
+            sql = '''SELECT {} FROM blocks  WHERE block_index = ?'''.format(field)
+            first_hash = list(memory_cursor.execute(sql, (config.BLOCK_FIRST,)))[0][field]
+            if first_hash != checkpoints[config.BLOCK_FIRST][field]:
+                logging.info('First hash changed. Cleaning {}.'.format(field))
+                memory_cursor.execute('''UPDATE blocks SET {} = NULL'''.format(field))
+
     blocks.initialise(memory_db)
     previous_ledger_hash = None
     previous_txlist_hash = None
