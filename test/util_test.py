@@ -361,11 +361,11 @@ def reparse(testnet=True):
     # clean consensus hashes if first block hash don't match with checkpoint.
     checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
     columns = [column['name'] for column in memory_cursor.execute('''PRAGMA table_info(blocks)''')]
-    for field, check_hash_pos in [('ledger_hash', 0), ('txlist_hash', 1)]:
+    for field in ['ledger_hash', 'txlist_hash']:
         if field in columns:
             sql = '''SELECT {} FROM blocks  WHERE block_index = ?'''.format(field)
             first_hash = list(memory_cursor.execute(sql, (config.BLOCK_FIRST,)))[0][field]
-            if first_hash != checkpoints[config.BLOCK_FIRST][check_hash_pos]:
+            if first_hash != checkpoints[config.BLOCK_FIRST][field]:
                 logging.info('First hash changed. Cleaning {}.'.format(field))
                 memory_cursor.execute('''UPDATE blocks SET {} = NULL'''.format(field))
 
