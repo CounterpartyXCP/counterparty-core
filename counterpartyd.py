@@ -15,11 +15,11 @@ import threading
 from threading import Thread
 import binascii
 from fractions import Fraction
+from tendo import singleton
 
 import requests
 import appdirs
 from prettytable import PrettyTable
-from lockfile import LockFile
 
 from lib import config, api, util, exceptions, bitcoin, blocks, blockchain
 if os.name == 'nt':
@@ -569,7 +569,7 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
     parser_server = subparsers.add_parser('server', help='run the server')
-    parser_server.add_argument('--force', action='store_true', help='skip backend check, version check, lockfile check')
+    parser_server.add_argument('--force', action='store_true', help='skip backend check, version check, singleton check')
 
     parser_send = subparsers.add_parser('send', help='create and broadcast a *send* message')
     parser_send.add_argument('--source', required=True, help='the source address')
@@ -680,11 +680,11 @@ if __name__ == '__main__':
     parser_pending= subparsers.add_parser('pending', help='list pending order matches awaiting {}payment from you'.format(config.BTC))
 
     parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database')
-    parser_reparse.add_argument('--force', action='store_true', help='skip backend check, version check, lockfile check')
+    parser_reparse.add_argument('--force', action='store_true', help='skip backend check, version check, singleton check')
 
     parser_rollback = subparsers.add_parser('rollback', help='rollback database')
     parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
-    parser_rollback.add_argument('--force', action='store_true', help='skip backend check, version check, lockfile check')
+    parser_rollback.add_argument('--force', action='store_true', help='skip backend check, version check, singleton check')
 
     parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the {} market'.format(config.XCP_NAME) )
     parser_market.add_argument('--give-asset', help='only show orders offering to sell GIVE_ASSET')
@@ -746,12 +746,6 @@ if __name__ == '__main__':
     urllib3_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
     urllib3_log.propagate = False
 
-
-    # Enforce locks?
-    if config.FORCE:
-        lock = threading.RLock()                                        # This won’t lock!
-    else:
-        lock = LockFile(config.DATABASE) # This will!
 
     # Database
     logging.info('Status: Connecting to database.')
@@ -1096,42 +1090,47 @@ if __name__ == '__main__':
 
     # PARSING
     elif args.action == 'reparse':
-        with lock:
-            blocks.reparse(db)
+        if not config.FORCE:
+            me = singleton.SingleInstance()
+
+        blocks.reparse(db)
 
     elif args.action == 'rollback':
-        with lock:
-            blocks.reparse(db, block_index=args.block_index)
+        if not config.FORCE:
+            me = singleton.SingleInstance()
+
+        blocks.reparse(db, block_index=args.block_index)
 
     elif args.action == 'server':
+        if not config.FORCE:
+            me = singleton.SingleInstance()
 
-        with lock:
-            api_status_poller = api.APIStatusPoller()
-            api_status_poller.daemon = True
-            api_status_poller.start()
+        api_status_poller = api.APIStatusPoller()
+        api_status_poller.daemon = True
+        api_status_poller.start()
 
-            api_server = api.APIServer()
-            api_server.daemon = True
-            api_server.start()
+        api_server = api.APIServer()
+        api_server.daemon = True
+        api_server.start()
 
-            # Check blockchain explorer.
-            if not config.FORCE:
-                time_wait = 10
-                num_tries = 10
-                for i in range(1, num_tries + 1):
-                    try:
-                        blockchain.check()
-                    except: # TODO
-                        logging.warn("Blockchain backend (%s) not yet initialized. Waiting %i seconds and trying again (try %i of %i)..." % (
-                            config.BLOCKCHAIN_SERVICE_NAME, time_wait, i, num_tries))
-                        time.sleep(time_wait)
-                    else:
-                        break
+        # Check blockchain explorer.
+        if not config.FORCE:
+            time_wait = 10
+            num_tries = 10
+            for i in range(1, num_tries + 1):
+                try:
+                    blockchain.check()
+                except: # TODO
+                    logging.warn("Blockchain backend (%s) not yet initialized. Waiting %i seconds and trying again (try %i of %i)..." % (
+                        config.BLOCKCHAIN_SERVICE_NAME, time_wait, i, num_tries))
+                    time.sleep(time_wait)
                 else:
-                    raise Exception("Blockchain backend (%s) not initialized! Aborting startup after %i tries." % (
-                        config.BLOCKCHAIN_SERVICE_NAME, num_tries))
+                    break
+            else:
+                raise Exception("Blockchain backend (%s) not initialized! Aborting startup after %i tries." % (
+                    config.BLOCKCHAIN_SERVICE_NAME, num_tries))
 
-            blocks.follow(db)
+        blocks.follow(db)
 
     else:
         parser.print_help()

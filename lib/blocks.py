@@ -123,10 +123,13 @@ def generate_consensus_hash(db, block_index, field, strings, check_hash_pos, pre
 
     # get previous hash
     if not previous_hash:
-      if block_index == config.BLOCK_FIRST:
-          previous_hash = util.dhash_string(config.CONSENSUS_HASH_SEED)
-      else: 
-          previous_hash = get_hash(block_index - 1)
+        if block_index == config.BLOCK_FIRST:
+            previous_hash = util.dhash_string(config.CONSENSUS_HASH_SEED)
+        else: 
+            previous_hash = get_hash(block_index - 1)
+
+    if not previous_hash:
+        raise exceptions.ConsensusError('Empty previous {} for block {}. Please launch a `reparse`.'.format(field, block_index))
 
     # concatenate strings
     block_string = ''.join(strings)
@@ -135,7 +138,7 @@ def generate_consensus_hash(db, block_index, field, strings, check_hash_pos, pre
     block_hash = util.dhash_string(previous_hash + block_string)
 
     if not current_hash:
-      current_hash = get_hash(block_index)
+        current_hash = get_hash(block_index)
 
     # check checkpoints and save block block_hash
     checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
@@ -151,7 +154,6 @@ def generate_consensus_hash(db, block_index, field, strings, check_hash_pos, pre
 
 def generate_ledger_hash(db, block_index, previous_hash=None, current_hash=None):
     ledger_hash = generate_consensus_hash(db, block_index, 'ledger_hash', util.BLOCK_LEDGER, 0, previous_hash, current_hash)
-    util.BLOCK_LEDGER = []
     return ledger_hash
 
 def generate_txlist_hash(db, block_index, txlist, previous_hash=None, current_hash=None):
@@ -161,6 +163,7 @@ def generate_txlist_hash(db, block_index, txlist, previous_hash=None, current_ha
 def parse_block (db, block_index, block_time, 
                  previous_ledger_hash=None, current_ledger_hash=None,
                  previous_txlist_hash=None, current_txlist_hash=None):
+    util.BLOCK_LEDGER = []
     cursor = db.cursor()
 
     # Expire orders, bets and rps.
@@ -1035,22 +1038,28 @@ def get_tx_info2 (tx, block_index):
     def get_opreturn (asm):
         if len(asm) == 2 and asm[0] == 'OP_RETURN':
             pubkeyhash = asm[1]
-            return pubkeyhash
+            if type(pubkeyhash) == bytes:
+                return pubkeyhash
         raise DecodeError('invalid OP_RETURN')
 
     def get_checksig (asm):
         if len(asm) == 5 and asm[0] == 'OP_DUP' and asm[1] == 'OP_HASH160' and asm[3] == 'OP_EQUALVERIFY' and asm[4] == 'OP_CHECKSIG':
             pubkeyhash = asm[2]
-            return pubkeyhash
+            if type(pubkeyhash) == bytes:
+                return pubkeyhash
         raise DecodeError('invalid OP_CHECKSIG')
 
     def get_checkmultisig (asm):
         # N‐of‐2
         if len(asm) == 5 and asm[3] == 2 and asm[4] == 'OP_CHECKMULTISIG':
-            return asm[1:3], asm[0]
+            pubkeys, signatures_required = asm[1:3], asm[0]
+            if all([type(pubkey) == bytes for pubkey in pubkeys]):
+                return pubkeys, signatures_required
         # N‐of‐3
         if len(asm) == 6 and asm[4] == 3 and asm[5] == 'OP_CHECKMULTISIG':
-            return asm[1:4], asm[0]
+            pubkeys, signatures_required = asm[1:4], asm[0]
+            if all([type(pubkey) == bytes for pubkey in pubkeys]):
+                return pubkeys, signatures_required
         raise DecodeError('invalid OP_CHECKMULTISIG')
 
     def decode_opreturn (asm):
@@ -1257,6 +1266,17 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
 
     return
 
+def get_next_tx_index(db):
+    cursor = db.cursor()
+    txes = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)'''))
+    if txes:
+        assert len(txes) == 1
+        tx_index = txes[0]['tx_index'] + 1
+    else:
+        tx_index = 0
+    cursor.close()
+    return tx_index
+
 class MempoolError (exceptions.TransactionError): pass
 def follow (db):
     cursor = db.cursor()
@@ -1282,12 +1302,7 @@ def follow (db):
         block_index = config.BLOCK_FIRST
 
     # Get index of last transaction.
-    txes = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)'''))
-    if txes:
-        assert len(txes) == 1
-        tx_index = txes[0]['tx_index'] + 1
-    else:
-        tx_index = 0
+    tx_index = get_next_tx_index(db)
 
     not_supported = {}   # No false positives. Use a dict to allow for O(1) lookups
     not_supported_sorted = collections.deque()
@@ -1335,6 +1350,7 @@ def follow (db):
                 # Rollback the DB.
                 reparse(db, block_index=c-1, quiet=True)
                 block_index = c
+                tx_index = get_next_tx_index(db)
                 continue
 
             # Get and parse transactions in this block (atomically).
