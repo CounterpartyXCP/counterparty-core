@@ -107,7 +107,7 @@ def parse_tx (db, tx):
     cursor.close()
     return True
 
-def generate_consensus_hash(db, block_index, field, strings, check_hash_pos, previous_hash=None, current_hash=None):
+def generate_consensus_hash(db, block_index, field, strings, previous_hash=None, current_hash=None):
     cursor = db.cursor()
 
     get_hash = lambda i: list(cursor.execute('''SELECT {} FROM blocks WHERE block_index = ?'''.format(field), (i,)))[0][field]
@@ -133,7 +133,7 @@ def generate_consensus_hash(db, block_index, field, strings, check_hash_pos, pre
 
     # check checkpoints and save block block_hash
     checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
-    if (block_index in checkpoints and checkpoints[block_index][check_hash_pos] != block_hash) or (current_hash and current_hash != block_hash):
+    if (block_index in checkpoints and checkpoints[block_index][field] != block_hash) or (current_hash and current_hash != block_hash):
         raise exceptions.ConsensusError('Incorrect {} for block {}.'.format(field, block_index))
     elif not current_hash:
         sql = '''UPDATE blocks SET {} = ? WHERE block_index = ?'''.format(field)
@@ -142,14 +142,6 @@ def generate_consensus_hash(db, block_index, field, strings, check_hash_pos, pre
     cursor.close()
 
     return block_hash
-
-def generate_ledger_hash(db, block_index, previous_hash=None, current_hash=None):
-    ledger_hash = generate_consensus_hash(db, block_index, 'ledger_hash', util.BLOCK_LEDGER, 0, previous_hash, current_hash)
-    return ledger_hash
-
-def generate_txlist_hash(db, block_index, txlist, previous_hash=None, current_hash=None):
-    txlist_hash = generate_consensus_hash(db, block_index, 'txlist_hash', txlist, 1, previous_hash, current_hash)
-    return txlist_hash
 
 def parse_block (db, block_index, block_time, 
                  previous_ledger_hash=None, current_ledger_hash=None,
@@ -173,8 +165,8 @@ def parse_block (db, block_index, block_time,
 
     cursor.close()
 
-    ledger_hash = generate_ledger_hash(db, block_index, previous_ledger_hash, current_ledger_hash)
-    txlist_hash = generate_txlist_hash(db, block_index, txlist, previous_txlist_hash, current_txlist_hash)
+    ledger_hash = generate_consensus_hash(db, block_index, 'ledger_hash', util.BLOCK_LEDGER, previous_ledger_hash, current_ledger_hash)
+    txlist_hash = generate_consensus_hash(db, block_index, 'txlist_hash', txlist, previous_txlist_hash, current_txlist_hash)
     return ledger_hash, txlist_hash
 
 def initialise(db):
@@ -1168,11 +1160,11 @@ def reparse (db, block_index=None, quiet=False):
         # clean consensus hashes if first block hash don't match with checkpoint.
         checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
         columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(blocks)''')]
-        for field, check_hash_pos in [('ledger_hash', 0), ('txlist_hash', 1)]:
+        for field in ['ledger_hash', 'txlist_hash']:
             if field in columns:
                 sql = '''SELECT {} FROM blocks  WHERE block_index = ?'''.format(field)
                 first_hash = list(cursor.execute(sql, (config.BLOCK_FIRST,)))[0][field]
-                if first_hash != checkpoints[config.BLOCK_FIRST][check_hash_pos]:
+                if first_hash != checkpoints[config.BLOCK_FIRST][field]:
                     logging.info('First hash changed. Cleaning {}.'.format(field))
                     cursor.execute('''UPDATE blocks SET {} = NULL'''.format(field))
 
