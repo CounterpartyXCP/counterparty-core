@@ -120,7 +120,11 @@ def generate_consensus_hash(db, block_index, field, previous_consensus_hash, con
 
     # Generate current hash.
     consensus_hash = util.dhash_string(previous_consensus_hash + '{}{}'.format(config.CONSENSUS_HASH_VERSION, ''.join(content)))
-    cursor.execute('''UPDATE blocks SET {} = ? WHERE block_index = ?'''.format(field), (consensus_hash, block_index))
+
+    # Save in database if necessary
+    found_hash = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,)))[0][field]
+    if not found_hash:
+        cursor.execute('''UPDATE blocks SET {} = ? WHERE block_index = ?'''.format(field), (consensus_hash, block_index))
 
     return consensus_hash
 
@@ -130,15 +134,14 @@ def verify_consensus_hash(db, block_index, field, given_hash):
     if block_index == config.BLOCK_FIRST - 1:
         return
 
-    found_hash = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,)))[0][field]
-
     # Check against checkpoints.
     checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
-    if block_index in checkpoints and checkpoints[block_index][field] != found_hash:
+    if block_index in checkpoints and checkpoints[block_index][field] != given_hash:
         raise exceptions.ConsensusError('Incorrect {} for block {}.'.format(field, block_index))
 
     # Check against existing value.
-    if given_hash and given_hash != found_hash:
+    found_hash = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,)))[0][field]
+    if given_hash != found_hash:
         raise exceptions.ConsensusError('Inconsistent {} for block {}.'.format(field, block_index))
 
 
@@ -166,10 +169,10 @@ def parse_block (db, block_index, block_time, previous_ledger_hash=None, ledger_
     cursor.close()
 
     # Consensus hashes.
-    verify_consensus_hash(db, block_index - 1, 'ledger_hash', previous_ledger_hash)
-    verify_consensus_hash(db, block_index - 1, 'txlist_hash', previous_txlist_hash)
     ledger_hash = generate_consensus_hash(db, block_index, 'ledger_hash', previous_ledger_hash, util.BLOCK_LEDGER)
     txlist_hash = generate_consensus_hash(db, block_index, 'txlist_hash', previous_txlist_hash, txlist)
+    verify_consensus_hash(db, block_index, 'ledger_hash', ledger_hash)
+    verify_consensus_hash(db, block_index, 'txlist_hash', txlist_hash)
 
     return ledger_hash, txlist_hash
 
@@ -1168,10 +1171,12 @@ def reparse (db, block_index=None, quiet=False):
         for field in ['ledger_hash', 'txlist_hash']:
             if field in columns:
                 sql = '''SELECT {} FROM blocks  WHERE block_index = ?'''.format(field)
-                first_hash = list(cursor.execute(sql, (config.BLOCK_FIRST,)))[0][field]
-                if first_hash != checkpoints[config.BLOCK_FIRST][field]:
-                    logging.info('First hash changed. Cleaning {}.'.format(field))
-                    cursor.execute('''UPDATE blocks SET {} = NULL'''.format(field))
+                first_block = list(cursor.execute(sql, (config.BLOCK_FIRST,)))
+                if first_block:
+                    first_hash = first_block[0][field]
+                    if first_hash != checkpoints[config.BLOCK_FIRST][field]:
+                        logging.info('First hash changed. Cleaning {}.'.format(field))
+                        cursor.execute('''UPDATE blocks SET {} = NULL'''.format(field))
 
         # For rollbacks, just delete new blocks and then reparse what’s left.
         if block_index:
@@ -1187,9 +1192,9 @@ def reparse (db, block_index=None, quiet=False):
         cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
         for block in cursor.fetchall():
             logging.info('Block (re‐parse): {}'.format(str(block['block_index'])))
-            previous_ledger_hash, previous_txlist_hash = parse_block(db, block['block_index'], block['block_time'], (previous_ledger_hash, block['ledger_hash'],
-                                                                                                                     previous_txlist_hash, block['txlist_hash'])
-                                                                    )
+            previous_ledger_hash, previous_txlist_hash = parse_block(db, block['block_index'], block['block_time'], 
+                                                                     previous_ledger_hash, block['ledger_hash'],
+                                                                     previous_txlist_hash, block['txlist_hash'])
 
         if quiet:
             log.setLevel(logging.INFO)
