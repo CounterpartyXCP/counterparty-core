@@ -17,6 +17,7 @@ import apsw
 import bitcoin as bitcoinlib
 import bitcoin.rpc as bitcoinlib_rpc
 from tendo import singleton
+import json
 
 from . import (config, exceptions, util, bitcoin)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
@@ -124,7 +125,7 @@ def generate_consensus_hash(db, block_index, field, strings, check_hash_pos, pre
         raise exceptions.ConsensusError('Empty previous {} for block {}. Please launch a `reparse`.'.format(field, block_index))
 
     # concatenate strings
-    block_string = ''.join(strings)
+    block_string = '{}{}'.format(config.CONSENSUS_HASH_VERSION, ''.join(strings))
 
     # generate block hash
     block_hash = util.dhash_string(previous_hash + block_string)
@@ -170,7 +171,9 @@ def parse_block (db, block_index, block_time,
     txlist = []
     for tx in list(cursor):
         parse_tx(db, tx)
-        txlist.append(tx['tx_hash'])
+        txlist.append('{}{}{}{}{}{}'.format(tx['tx_hash'], tx['source'], tx['destination'], 
+                                            tx['btc_amount'], tx['fee'], 
+                                            binascii.hexlify(tx['data']).decode('UTF-8')))
 
     cursor.close()
 
