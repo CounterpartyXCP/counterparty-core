@@ -107,42 +107,40 @@ def parse_tx (db, tx):
     cursor.close()
     return True
 
-def generate_consensus_hash(db, block_index, field, previous_consensus_hash, content):
+
+def consensus_hash(db, block_index, field, previous_consensus_hash, content):
     cursor = db.cursor()
 
-    # Initialise previous hash.
+    # Initialise previous hash on first block.
     if block_index == config.BLOCK_FIRST:
+        assert not previous_consensus_hash
         previous_consensus_hash = util.dhash_string(config.CONSENSUS_HASH_SEED)
-    elif not previous_consensus_hash:
+
+    # Get previous hash.
+    if not previous_consensus_hash:
         previous_consensus_hash = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index - 1,)))[0][field]
         if not previous_consensus_hash:
             raise exceptions.ConsensusError('Empty previous {} for block {}. Please launch a `reparse`.'.format(field, block_index))
 
-    # Generate current hash.
-    consensus_hash = util.dhash_string(previous_consensus_hash + '{}{}'.format(config.CONSENSUS_HASH_VERSION, ''.join(content)))
+    # Calculate current hash.
+    calculated_hash = util.dhash_string(previous_consensus_hash + '{}{}'.format(config.CONSENSUS_HASH_VERSION, ''.join(content)))
 
-    # Save in database if necessary
+    # Verify hash (if already in database) or save hash (if not).
     found_hash = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,)))[0][field]
-    if not found_hash:
-        cursor.execute('''UPDATE blocks SET {} = ? WHERE block_index = ?'''.format(field), (consensus_hash, block_index))
+    if found_hash:
+        # Check against existing value.
+        if calculated_hash != found_hash:
+            raise exceptions.ConsensusError('Inconsistent {} for block {}.'.format(field, block_index))
 
-    return consensus_hash
+        # Check against checkpoints.
+        checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
+        if block_index in checkpoints and checkpoints[block_index][field] != calculated_hash:
+            raise exceptions.ConsensusError('Incorrect {} for block {}.'.format(field, block_index))
+    else:
+        # Save new hash.
+        cursor.execute('''UPDATE blocks SET {} = ? WHERE block_index = ?'''.format(field), (calculated_hash, block_index))
 
-def verify_consensus_hash(db, block_index, field, given_hash):
-    cursor = db.cursor()
-
-    if block_index == config.BLOCK_FIRST - 1:
-        return
-
-    # Check against checkpoints.
-    checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
-    if block_index in checkpoints and checkpoints[block_index][field] != given_hash:
-        raise exceptions.ConsensusError('Incorrect {} for block {}.'.format(field, block_index))
-
-    # Check against existing value.
-    found_hash = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,)))[0][field]
-    if given_hash != found_hash:
-        raise exceptions.ConsensusError('Inconsistent {} for block {}.'.format(field, block_index))
+    return calculated_hash
 
 
 def parse_block (db, block_index, block_time, previous_ledger_hash=None, ledger_hash=None, previous_txlist_hash=None, txlist_hash=None):
@@ -169,12 +167,10 @@ def parse_block (db, block_index, block_time, previous_ledger_hash=None, ledger_
     cursor.close()
 
     # Consensus hashes.
-    ledger_hash = generate_consensus_hash(db, block_index, 'ledger_hash', previous_ledger_hash, util.BLOCK_LEDGER)
-    txlist_hash = generate_consensus_hash(db, block_index, 'txlist_hash', previous_txlist_hash, txlist)
-    verify_consensus_hash(db, block_index, 'ledger_hash', ledger_hash)
-    verify_consensus_hash(db, block_index, 'txlist_hash', txlist_hash)
+    new_ledger_hash = consensus_hash(db, block_index, 'ledger_hash', previous_ledger_hash, util.BLOCK_LEDGER)
+    new_txlist_hash = consensus_hash(db, block_index, 'txlist_hash', previous_txlist_hash, txlist)
 
-    return ledger_hash, txlist_hash
+    return new_ledger_hash, new_txlist_hash
 
 
 def initialise(db):
