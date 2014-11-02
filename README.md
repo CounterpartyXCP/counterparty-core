@@ -93,7 +93,7 @@ The following examples are abridged for parsimony.
 
 * Server
 
-	The `server` command should always be running in the background. All other commands will fail if the index of the last block in the database is less than that of the last block seen by Bitcoin Core.
+	The `server` command should always be running in the background (or another console). All other commands will fail if the index of the last block in the database is less than that of the last block seen by Bitcoin Core.
 
 * Burn
 
@@ -121,16 +121,19 @@ The following examples are abridged for parsimony.
 	```
 
 * Buy XCP for BBBC
+ 
 	```
 	order --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=XCP
 	--give-quantity=20 --give-asset=BBBC --expiration=10
 	```
 
 * BTCPay
+
 	```
 	btcpay --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --order-match-id=092f15d36786136c4d868c33356ec3c9b5a0c77de54ed0e96a8dbdd8af160c23
 	```
-
+	Order Match ID can be obtained with the `pending` command.
+	
 * Issue
 
 	`issuance --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity=100 --asset='BBBC'`
@@ -138,6 +141,7 @@ The following examples are abridged for parsimony.
 	`issuance --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity=100 --asset='BBBQ' --divisible`
 
 * Broadcast
+
 	```
 	broadcast --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --text="Bitcoin price feed" --value=825.22
 	--fee-multiplier=0.001
@@ -181,7 +185,7 @@ The following examples are abridged for parsimony.
 
 * Cancel
 	```
-	cancel --source=-source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --offer-hash=092f15d36786136c4d868c33356ec3c9b5a0c77de54ed0e96a8dbdd8af160c23
+	cancel --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --offer-hash=092f15d36786136c4d868c33356ec3c9b5a0c77de54ed0e96a8dbdd8af160c23
 	```
 
 * Dividend
