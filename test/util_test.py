@@ -107,7 +107,7 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
     if pytest.config.option.saverawtransactions:
         save_rawtransaction(rawtransactions_db, tx_hash, raw_transaction, json.dumps(tx))
 
-    source, destination, btc_amount, fee, data = blocks.get_tx_info2(tx, block_index)
+    source, destination, btc_amount, fee, data = blocks.get_tx_info2(raw_transaction, block_index)
     transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
     cursor.execute('''INSERT INTO transactions VALUES (?,?,?,?,?,?,?,?,?,?,?)''', transaction)
     tx = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = ?''', (tx_index,)))[0]
