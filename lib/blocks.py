@@ -1311,7 +1311,7 @@ def initialise_transactions(db, bitcoind_dir):
                 tx_info = b'', None, None, None, None
                 try:
                     if (config.TESTNET and block['block_index'] >= config.FIRST_MULTISIG_BLOCK_TESTNET):  # Protocol change.
-                        tx_info = get_tx_info2(tx['__data__'], block['block_index'])
+                        tx_info = get_tx_info2(tx['__data__'], block['block_index'], block_parser)
                     else:
                         tx_info = get_tx_info(tx['__data__'], block['block_index'], block_parser)
                 except exceptions.DecodeError as e:
