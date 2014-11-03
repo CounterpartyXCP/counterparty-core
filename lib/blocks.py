@@ -1288,20 +1288,22 @@ def initialise_transactions(db, bitcoind_dir):
     block_parser = BlockchainParser(os.path.join(bitcoind_dir, 'blocks'), os.path.join(bitcoind_dir, 'blocks/index'));
     cursor = db.cursor()
 
-    # prepare sqlite database
-    logging.info('preparing database...')
-    start_time = time.time()
-    for table in TABLES + ['balances']:
-        cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
-    first_block = block_parser.read_raw_block(first_hash)
-    cursor.execute('''DELETE FROM transactions WHERE block_index >= ?''', (first_block['block_index'],))
-    cursor.execute('''DELETE FROM blocks WHERE block_index >= ?''', (first_block['block_index'],))
-    initialise(db)
-    logging.info('database prepared in {:.3f}'.format(time.time() - start_time))
-
     current_hash = last_hash
     tx_index = 0
+
     with db:
+
+        # prepare sqlite database
+        logging.info('preparing database...')
+        start_time = time.time()
+        for table in TABLES + ['balances']:
+            cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
+        first_block = block_parser.read_raw_block(first_hash)
+        cursor.execute('''DELETE FROM transactions WHERE block_index >= ?''', (first_block['block_index'],))
+        cursor.execute('''DELETE FROM blocks WHERE block_index >= ?''', (first_block['block_index'],))
+        initialise(db)
+        logging.info('database prepared in {:.3f}'.format(time.time() - start_time))
+
         # parse all blocks backward
         while current_hash != None:
             start_time = time.time()
