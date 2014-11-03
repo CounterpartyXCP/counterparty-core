@@ -43,7 +43,7 @@ def hash160(x):
     return m.digest()
 def pubkey_to_pubkeyhash(pubkey):
     pubkeyhash = hash160(pubkey)
-    pubkey = base58_check_encode(binascii.hexlify(pubkeyhash).decode('utf-8'), config.ADDRESSVERSION)
+    pubkey = util.base58_check_encode(binascii.hexlify(pubkeyhash).decode('utf-8'), config.ADDRESSVERSION)
     return pubkey
 def pubkeyhash_to_pubkey(pubkeyhash):
     # TODO: convert to python-bitcoinlib.
@@ -183,88 +183,6 @@ def rpc (method, params):
     else:
         raise exceptions.BitcoindError('{}'.format(response_json['error']))
 
-def validate_address(address, block_index):
-    addresses = address.split('_')
-    multisig = len(addresses) > 1
-    if multisig:
-        if not (config.TESTNET and block_index >= config.FIRST_MULTISIG_BLOCK_TESTNET):
-            raise exceptions.AddressError('Multi‐signature addresses currently disabled on mainnet.')
-        try:
-            assert int(addresses[0]) in (1,2,3)
-            assert int(addresses[-1]) in (1,2,3)
-        except (AssertionError):
-            raise exceptions.AddressError('Invalid multi‐signature address:', address)
-        addresses = addresses[1:-1]
-
-    # Check validity by attempting to decode.
-    for address in addresses:
-        base58_check_decode(address, config.ADDRESSVERSION)
-
-def base58_encode(binary):
-    # Convert big‐endian bytes to integer
-    n = int('0x0' + binascii.hexlify(binary).decode('utf8'), 16)
-
-    # Divide that integer into base58
-    res = []
-    while n > 0:
-        n, r = divmod (n, 58)
-        res.append(b58_digits[r])
-    res = ''.join(res[::-1])
-
-    return res
-
-def base58_check_encode(original, version):
-    b = binascii.unhexlify(bytes(original, 'utf-8'))
-    d = version + b
-
-    binary = d + dhash(d)[:4]
-    res = base58_encode(binary)
-
-    # Encode leading zeros as base58 zeros
-    czero = 0
-    pad = 0
-    for c in d:
-        if c == czero: pad += 1
-        else: break
-
-    address = b58_digits[0] * pad + res
-
-    if bytes(original, 'utf-8') != binascii.hexlify(base58_check_decode(address, version)):
-        raise exceptions.AddressError('encoded address does not decode properly')
-
-    return address
-
-def base58_check_decode (s, version):
-    # Convert the string to an integer
-    n = 0
-    for c in s:
-        n *= 58
-        if c not in b58_digits:
-            raise exceptions.InvalidBase58Error('Not a valid base58 character:', c)
-        digit = b58_digits.index(c)
-        n += digit
-
-    # Convert the integer to bytes
-    h = '%x' % n
-    if len(h) % 2:
-        h = '0' + h
-    res = binascii.unhexlify(h.encode('utf8'))
-
-    # Add padding back.
-    pad = 0
-    for c in s[:-1]:
-        if c == b58_digits[0]: pad += 1
-        else: break
-    k = version * pad + res
-
-    addrbyte, data, chk0 = k[0:1], k[1:-4], k[-4:]
-    if addrbyte != version:
-        raise exceptions.VersionByteError('incorrect version byte')
-    chk1 = dhash(addrbyte + data)[:4]
-    if chk0 != chk1:
-        raise exceptions.Base58ChecksumError('Checksum mismatch: %r ≠ %r' % (chk0, chk1))
-    return data
-
 def var_int (i):
     if i < 0xfd:
         return (i).to_bytes(1, byteorder='little')
@@ -352,7 +270,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
 
         else:
             # Construct script.
-            pubkeyhash = base58_check_decode(destination, config.ADDRESSVERSION)
+            pubkeyhash = util.base58_check_decode(destination, config.ADDRESSVERSION)
             script = OP_DUP                                     # OP_DUP
             script += OP_HASH160                                # OP_HASH160
             script += op_push(20)                               # Push 0x14 bytes
@@ -429,7 +347,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
     # Change output.
     if change_output:
         address, value = change_output
-        pubkeyhash = base58_check_decode(address, config.ADDRESSVERSION)
+        pubkeyhash = util.base58_check_decode(address, config.ADDRESSVERSION)
         s += value.to_bytes(8, byteorder='little')          # Value
         script = OP_DUP                                     # OP_DUP
         script += OP_HASH160                                # OP_HASH160
@@ -499,7 +417,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     block_index = util.last_block(db)['block_index']
 
     (source, destination_outputs, data) = tx_info
-    multisig_source = len(source.split('_')) > 1
+    multisig_source = util.is_multisig(source)
 
     # Data encoding methods.
     if data:
@@ -543,14 +461,11 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     if encoding == 'pubkeyhash' and get_block_count() < 293000 and not config.TESTNET:
         raise exceptions.TransactionError('pubkeyhash encoding unsupported before block 293000')
 
-    # Validate source and all destination addresses.
+    # Validate source and destination addresses.
     destinations = [address for address, value in destination_outputs]
-    for destination in destinations + [source]:
-        if destination:
-            try:
-                validate_address(destination, block_index)
-            except exceptions.AddressError as e:
-                raise exceptions.AddressError('Invalid destination address:', destination)
+    for address in destinations + [source]:
+        if address:
+            util.validate_address(address, block_index)
 
     # Check that the source is in wallet.
     if encoding in ('multisig') and not self_public_key and not multisig_source:
@@ -643,23 +558,27 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
         total_btc_out = btc_out + max(change_quantity, 0) + final_fee
         raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need approximately {} {}.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)'.format(source, total_btc_out / config.UNIT, config.BTC))
 
-    # Construct outputs.
+    # Get change address.
+    if multisig_source:
+        change_address = source.split('_')[1] # TODO
+    else:
+        change_address = source
+
+    # Data outputs.
     if data: data_output = (data_array, data_value)
     else: data_output = None
-    if change_quantity:
-        if multisig_source:
-            change_output = (source.split('_')[1], change_quantity)
-        else:
-            change_output = (source, change_quantity)
+
+    # Change output.
+    if change_quantity: change_output = (change_address, change_quantity)
     else: change_output = None
 
     # Replace multi‐sig addresses with multi‐sig pubkeys.
     if multisig_source:
         source = multisig_pubkeyhashes_to_pubkeys(source)
-        self_public_key = binascii.unhexlify(source.split('_')[1])
+        self_public_key = binascii.unhexlify(change_address)  # TODO
     destination_outputs_new = []
     for (destination, value) in destination_outputs:
-        if len(destination.split('_')) > 1:
+        if util.is_multisig(destination):
             destination_outputs_new.append((multisig_pubkeyhashes_to_pubkeys(destination), value))
         else:
             destination_outputs_new.append((destination, value))
@@ -729,18 +648,18 @@ def get_unspent_txouts(source):
     @return: A list of dicts, with each entry in the dict having the following keys:
     """
 
-    addresses = source.split('_')
-    if len(addresses) > 1:
+    if util.is_multisig(source):
+        pubkeyhashes = util.pubkeyhash_array(source)
         outputs = []
-        raw_transactions = search_raw_transactions(addresses[1])
+        raw_transactions = search_raw_transactions(pubkeyhashes[1])
         # Get all coins.
         for tx in raw_transactions:
             for vout in tx['vout']:
                 scriptpubkey = vout['scriptPubKey']
                 if scriptpubkey['type'] == 'multisig' and 'addresses' in scriptpubkey.keys():
                     found = True
-                    for address in addresses[1:-1]:
-                        if not address in scriptpubkey['addresses']:
+                    for pubkeyhash in pubkeyhashes:
+                        if not pubkeyhash in scriptpubkey['addresses']:
                             found = False
                     if found:
                         coin = {'amount': vout['value'],

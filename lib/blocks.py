@@ -906,10 +906,10 @@ def get_tx_info (tx, block_index):
         pubkeyhash = get_pubkeyhash(scriptpubkey)
         if not pubkeyhash: return False
 
-        address = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
+        address = util.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
 
         # Test decoding of address.
-        if address != config.UNSPENDABLE and binascii.unhexlify(bytes(pubkeyhash, 'utf-8')) != bitcoin.base58_check_decode(address, config.ADDRESSVERSION):
+        if address != config.UNSPENDABLE and binascii.unhexlify(bytes(pubkeyhash, 'utf-8')) != util.base58_check_decode(address, config.ADDRESSVERSION):
             return False
 
         return address
@@ -1069,7 +1069,7 @@ def get_tx_info2 (tx, block_index):
             destination, data = None, chunk[len(config.PREFIX):]
         else:                                                       # Destination
             pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
-            destination, data = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION), None
+            destination, data = util.base58_check_encode(pubkeyhash, config.ADDRESSVERSION), None
 
         return destination, data
 

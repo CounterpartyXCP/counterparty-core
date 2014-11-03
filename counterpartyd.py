@@ -499,8 +499,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
         config.BROADCAST_TX_MAINNET = '{}'.format(config.BTC_CLIENT)
 
 def balances (address):
-    bitcoin.validate_address(address, util.last_block(db)['block_index'])
-
+    address = util.canonical_address(address)
     address_data = get_address(db, address=address)
     balances = address_data['balances']
     table = PrettyTable(['Asset', 'Amount'])
