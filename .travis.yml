@@ -1,6 +1,6 @@
 language: python
 python:
-  - "3.4.0"
+- 3.4.0
 before_install:
 - sudo apt-get update -qq
 - sudo apt-get install -y unzip wget
@@ -9,4 +9,7 @@ install:
 - unzip apsw-3.8.5-r1.zip
 - cd apsw-3.8.5-r1 && python setup.py fetch --version=3.8.5 --all build --enable-all-extensions install
 - cd .. && pip install -r pip-requirements.txt --use-mirrors
-script:  py.test --skiptestbook=all
+script: py.test --skiptestbook=all
+notifications:
+  slack:
+    secure: cl0G5fWZNnIK5VQ6BPZ4RtwVO2/nfvX/zjhljfF6cQ20OKyvyiJHq+e67fl2pkCKDlqlEqSWaQJ6G52YzUpDQmf+o7qpH6YnkFxSqYp5h4YF1hJw4sCHJ7bVSLrjogWxU8QaNvH7YpL4YkGe+WOau2FgoIZOcMt6hhKrvWclfuc=

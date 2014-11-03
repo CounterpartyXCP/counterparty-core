@@ -55,7 +55,7 @@ def validate (db, source, move, random, rps_match_id):
         txn = 1
         rps_match_status = ['pending', 'resolved and pending']
 
-    move_random_hash = bitcoin.dhash(random_bytes + int(move).to_bytes(2, byteorder='big'))
+    move_random_hash = util.dhash(random_bytes + int(move).to_bytes(2, byteorder='big'))
     move_random_hash = binascii.hexlify(move_random_hash).decode('utf-8')
     if rps_match['tx{}_move_random_hash'.format(txn)] != move_random_hash:
         problems.append('invalid move or random value')
