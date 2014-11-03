@@ -1277,6 +1277,13 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     return
 
 def initialise_transactions(db, bitcoind_dir):
+    print("Warnings:")
+    print("- Ensure that bitcoind is stopped")
+    print("- You should reindex bitcoind after the initialisation (restart with -reindex=1)")
+    print("- This operation takes a long time")
+    if input('Continue the initialisation ? (y/N) : ') != 'y':
+        return
+
     start_time_total = time.time()
 
     first_hash = config.BLOCK_FIRST_TESTNET_HASH if config.TESTNET else config.BLOCK_FIRST_MAINNET_HASH
