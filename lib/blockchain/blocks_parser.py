@@ -5,6 +5,14 @@ from .utils import b2h, double_hash, ib2h, inverse_hash
 
 import plyvel
 
+def open_leveldb(db_dir):
+    try:
+        return plyvel.DB(db_dir, create_if_missing=False)
+    except plyvel._plyvel.IOError as e:
+        print(e)
+        print("Ensure that bitcoind is stopped.")
+        exit()
+
 class BlockchainParser():
 
     def __init__(self, blocks_dir, leveldb_dir):
@@ -14,7 +22,7 @@ class BlockchainParser():
         self.current_file_size = 0
         self.current_block_file = None
         self.data_stream = None
-        self.ldb = plyvel.DB(self.leveldb_dir)
+        self.ldb = open_leveldb(self.leveldb_dir)
 
     def read_tx_in(self, vds):
         tx_in = {}
@@ -145,7 +153,7 @@ class BlockchainParser():
 class ChainstateParser():
 
     def __init__(self, leveldb_dir):
-        self.ldb = plyvel.DB(leveldb_dir, create_if_missing=False)
+        self.ldb = open_leveldb(leveldb_dir)
 
     def get_last_block_hash(self):
         block_hash = self.ldb.get(bytes('B', 'utf-8'))
