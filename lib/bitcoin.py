@@ -57,14 +57,9 @@ def pubkeyhash_to_pubkey(pubkeyhash):
                 return pubkey
     raise exceptions.AddressError('Public key for address ‘{}’ not published in blockchain.'.format(pubkeyhash))
 def multisig_pubkeyhashes_to_pubkeys(address):
-    array = address.split('_')
-    signatures_required = int(array[0])
-    signatures_possible = int(array[-1])
-    pubkeyhashes = array[1:-1]
-
+    signatures_required, pubkeyhashes, signatures_possible = util.extract_array(address)
     pubkeys = [pubkeyhash_to_pubkey(pubkeyhash) for pubkeyhash in pubkeyhashes]
-    address = '_'.join([str(signatures_required)] + sorted(pubkeys) + [str(len(pubkeys))])
-    return address
+    return util.construct_array(signatures_required, pubkeys, signatures_possible)
 
 bitcoin_rpc_session = None
 
@@ -320,16 +315,11 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
 
     # Destination output.
     for destination, value in destination_outputs:
-        addresses = destination.split('_')
         s += value.to_bytes(8, byteorder='little')          # Value
 
-        if len(addresses) > 1:
+        if util.is_multisig(destination):
             # Unpack multi‐sig address.
-            signatures_required = int(addresses[0])
-            signatures_possible = int(addresses[-1])
-            addresses = sorted(addresses[1:-1])
-            if signatures_possible != len(addresses):
-                raise exceptions.InputError('Incorrect number of public keys in multi‐signature destination.')
+            signatures_required, pubkeys, signatures_possible = util.extract_array(destination)
 
             # Required signatures.
             if signatures_required == 1:
@@ -342,19 +332,19 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
                 raise exceptions.InputError('Required signatures must be 1, 2 or 3.')
 
             # Required signatures.
-            if len(addresses) == 1:
+            if len(pubkeys) == 1:
                 op_total = OP_1
-            elif len(addresses) == 2:
+            elif len(pubkeys) == 2:
                 op_total = OP_2
-            elif len(addresses) == 3:
+            elif len(pubkeys) == 3:
                 op_total = OP_3
             else:
                 raise exceptions.InputError('Total possible signatures must be 1, 2 or 3.')
 
             # Construct script.
             script = op_required                                # Required signatures
-            for address in addresses:
-                destination_public_key = binascii.unhexlify(address)
+            for pubkey in pubkeys:
+                destination_public_key = binascii.unhexlify(pubkey)
                 script += op_push(len(destination_public_key))  # Push bytes of public key
                 script += destination_public_key                # Data chunk (fake) public key
             script += op_total                                  # Total signatures
@@ -362,7 +352,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
 
         else:
             # Construct script.
-            pubkeyhash = base58_check_decode(addresses[0], config.ADDRESSVERSION)
+            pubkeyhash = base58_check_decode(destination, config.ADDRESSVERSION)
             script = OP_DUP                                     # OP_DUP
             script += OP_HASH160                                # OP_HASH160
             script += op_push(20)                               # Push 0x14 bytes

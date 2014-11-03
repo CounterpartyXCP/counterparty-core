@@ -738,4 +738,54 @@ def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
 def dhash_string(text):
     return binascii.hexlify(hashlib.sha256(hashlib.sha256(bytes(text, 'utf-8')).digest()).digest()).decode()
 
+
+## MULTI‐SIG ##
+# NOTE: a `pub` is either a pubkey or a pubkeyhash
+
+class MultiSigAddressError (exceptions.AddressError):
+    pass
+
+def is_multisig(address):
+    array = address.split('_')
+    return (len(array) > 1)
+
+def canonical_address(address):
+    if is_multisig(address):
+        array = address.split('_')
+        pubs = array[1:-1]
+
+        # TODO: Convert pubkeys to pubkeyhashes?!
+        # TODO: Just check that they are pubkeyhashes?!
+
+        return construct_array(signatures_required, pubs, signatures_possible)
+    else:
+        return address
+
+def construct_array(signatures_required, pubs, signatures_possible):
+    try:
+        signatures_required, signatures_possible = int(array[0]), int(array[-1])
+    except ValueError:
+        raise MultiSigAddressError('Signature values not integers.')
+    if signatures_required < 1 or signatures_required > 3:
+        raise MultiSigAddressError('Invalid signatures_required.')
+    if signatures_possible < 2 or signatures_possible > 3:
+        raise MultiSigAddressError('Invalid signatures_possible.')
+    if signatures_possible != len(pubs):
+        raise exceptions.InputError('Incorrect number of pubkeys/pubkeyhashes in multi‐signature address.')
+
+    address = '_'.join([str(signatures_required)] + sorted(pubs) + [str(signatures_possible)])
+    return address
+
+def extract_array(address):
+    assert is_multisig(address)
+    array = address.split('_')
+    signatures_required, pubs, sigatures_possible = int(array[0]), sorted(array[1:-1]), int(array[-1])
+    return signatures_required, pubs, sigatures_possible
+
+def pubkeyhash_array(address):
+    # TODO: Check that they are pubkeyhashes.
+    return extract_array[1:-1]
+
+## MULTI‐SIG ##
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

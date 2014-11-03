@@ -160,15 +160,13 @@ def market (give_asset, get_asset):
 def cli(method, params, unsigned):
     # Get unsigned transaction serialisation.
 
-    array = params['source'].split('_')
-    if len(array) > 1:
-        signatures_required, signatures_possible = array[0], array[-1]
-        params['source'] = '_'.join([signatures_required] + sorted(array[1:-1]) + [signatures_possible]) # Sort source array.
-        pubkey = None
-    else:
+    is_multisig = util.is_multisig(params['source'])
+    params['source'] = util.canonical_address(params['source'])
+    pubkey = None
+
+    if not is_multisig:
         # Get public key for source.
-        source = array[0]
-        pubkey = None
+        source = params['source']
         if not bitcoin.is_valid(source):
             raise exceptions.AddressError('Invalid address.')
         if bitcoin.is_mine(source):
@@ -205,7 +203,7 @@ def cli(method, params, unsigned):
     print('Transaction (unsigned):', unsigned_tx_hex)
 
     # Ask to sign and broadcast (if not multi‐sig).
-    if len(array) > 1:
+    if is_multisig:
         print('Multi‐signature transactions are signed and broadcasted manually.')
     elif not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
         if bitcoin.is_mine(source):
