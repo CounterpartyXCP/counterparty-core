@@ -953,7 +953,7 @@ def get_tx_info (tx_hex, block_index, block_parser = None):
         if len(asm) == 2 and asm[0] == 'OP_RETURN':                                                 # OP_RETURN
             data_chunk = asm[1]
             data += data_chunk
-        elif len(asm) == 5 and asm[0] == '1' and asm[3] == '2' and asm[4] == 'OP_CHECKMULTISIG':    # Multi-sig
+        elif len(asm) == 5 and asm[0] == 1 and asm[3] == 2 and asm[4] == 'OP_CHECKMULTISIG':    # Multi-sig
             data_pubkey = asm[2]
             data_chunk_length = data_pubkey[0]  # No ord() necessary.
             data_chunk = data_pubkey[1:data_chunk_length + 1]
