@@ -960,8 +960,9 @@ def get_tx_info (tx_hex, block_index, block_parser = None):
             data += data_chunk
         elif len(asm) == 5 and (block_index >= 293000 or config.TESTNET):    # Protocol change.
             # Be strict.
-            pubkeyhash = get_pubkeyhash(vout.scriptPubKey)
             if ctx.is_coinbase(): raise exceptions.DecodeError('coinbase transaction')
+            pubkeyhash = get_pubkeyhash(vout.scriptPubKey)
+            if not pubkeyhash: continue
             obj1 = ARC4.new(ctx.vin[0].prevout.hash[::-1])
             data_pubkey = obj1.decrypt(pubkeyhash)
             if data_pubkey[1:9] == config.PREFIX or pubkeyhash_encoding:
@@ -1016,7 +1017,7 @@ def get_tx_info (tx_hex, block_index, block_parser = None):
     if all(x == source_list[0] for x in source_list): source = source_list[0]
     else: source = None
 
-    return source, destination, btc_amount, round(fee), data
+    return source, destination, btc_amount, fee, data
 
 def get_tx_info2 (tx_hex, block_index, block_parser = None):
     """
