@@ -22,8 +22,6 @@ from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, ca
 
 from .blockchain.blocks_parser import BlockchainParser, ChainstateParser
 from .blockchain.utils import ib2h
-from shutil import copytree, rmtree, ignore_patterns
-import tempfile
 
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['credits', 'debits', 'messages'] + \
