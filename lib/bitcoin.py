@@ -32,10 +32,8 @@ OP_1 = b'\x51'
 OP_2 = b'\x52'
 OP_3 = b'\x53'
 OP_CHECKMULTISIG = b'\xae'
-b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
 D = decimal.Decimal
-dhash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
 def hash160(x):
     x = hashlib.sha256(x).digest()
     m = hashlib.new('ripemd160')
@@ -203,7 +201,7 @@ def op_push (i):
     else:
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
-def serialise (block_index, encoding, inputs, destination_outputs, data_output=None, change_output=None, source=None, self_public_key=None):
+def serialise (block_index, encoding, inputs, destination_outputs, data_output=None, change_output=None, self_public_key=None):
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
     # Number of inputs.
@@ -250,11 +248,11 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
                 raise exceptions.InputError('Required signatures must be 1, 2 or 3.')
 
             # Required signatures.
-            if len(pubkeys) == 1:
+            if signatures_possible == 1:
                 op_total = OP_1
-            elif len(pubkeys) == 2:
+            elif signatures_possible == 2:
                 op_total = OP_2
-            elif len(pubkeys) == 3:
+            elif signatures_possible == 3:
                 op_total = OP_3
             else:
                 raise exceptions.InputError('Total possible signatures must be 1, 2 or 3.')
@@ -572,10 +570,12 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     if change_quantity: change_output = (change_address, change_quantity)
     else: change_output = None
 
-    # Replace multi‐sig addresses with multi‐sig pubkeys.
+    # Get `self_public_key`.
     if multisig_source:
-        source = multisig_pubkeyhashes_to_pubkeys(source)
-        self_public_key = binascii.unhexlify(change_address)  # TODO
+        a, self_pubkeys, b = util.extract_array(multisig_pubkeyhashes_to_pubkeys(source))
+        self_public_key = binascii.unhexlify(self_pubkeys[0])  # TODO
+
+    # Replace multi‐sig addresses with multi‐sig pubkeys.
     destination_outputs_new = []
     for (destination, value) in destination_outputs:
         if util.is_multisig(destination):
@@ -587,7 +587,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     destination_outputs = destination_outputs_new
 
     # Serialise inputs and outputs.
-    unsigned_tx = serialise(block_index, encoding, inputs, destination_outputs, data_output, change_output, source=source, self_public_key=self_public_key)
+    unsigned_tx = serialise(block_index, encoding, inputs, destination_outputs, data_output, change_output, self_public_key=self_public_key)
     unsigned_tx_hex = binascii.hexlify(unsigned_tx).decode('utf-8')
     return unsigned_tx_hex
 

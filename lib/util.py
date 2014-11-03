@@ -19,6 +19,9 @@ from . import (config, exceptions)
 
 D = decimal.Decimal
 b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+
+dhash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
 
 # Obsolete in Python 3.4, with enum module.
 BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
@@ -823,7 +826,7 @@ def base58_check_decode (s, version):
 ### Bitcoin Addresses ###
 
 
-### MULTI‐SIG ###
+### Multi‐signature Addresses ###
 # NOTE: a `pub` is either a pubkey or a pubkeyhash
 
 class MultiSigAddressError (exceptions.AddressError):
@@ -835,8 +838,7 @@ def is_multisig(address):
 
 def canonical_address(address):
     if is_multisig(address):
-        array = address.split('_')
-        pubkeyhashes = array[1:-1]
+        signatures_required, pubkeyhashes, signatures_possible = extract_array(address)
         if not all([base58_check_decode(pubkeyhash, config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes]):
             raise MultiSigAddressError('Multi‐signature address must use PubKeyHashes, not public keys.')
         return construct_array(signatures_required, pubkeyhashes, signatures_possible)
@@ -844,7 +846,7 @@ def canonical_address(address):
         return address
 def test_array(signatures_required, pubs, signatures_possible):
     try:
-        signatures_required, signatures_possible = int(array[0]), int(array[-1])
+        signatures_required, signatures_possible = int(signatures_required), int(signatures_possible)
     except ValueError:
         raise MultiSigAddressError('Signature values not integers.')
     if signatures_required < 1 or signatures_required > 3:
@@ -862,16 +864,16 @@ def construct_array(signatures_required, pubs, signatures_possible):
 def extract_array(address):
     assert is_multisig(address)
     array = address.split('_')
-    signatures_required, pubs, sigatures_possible = int(array[0]), sorted(array[1:-1]), int(array[-1])
+    signatures_required, pubs, signatures_possible = array[0], sorted(array[1:-1]), array[-1]
     test_array(signatures_required, pubs, signatures_possible)
-    return signatures_required, pubs, sigatures_possible
+    return int(signatures_required), pubs, int(signatures_possible)
 
 def pubkeyhash_array(address):
-    pubkeyhashes = extract_array[1:-1]
+    signatures_required, pubkeyhashes, signatures_possible = extract_array(address)
     if not all([base58_check_decode(pubkeyhash, config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes]):
         raise MultiSigAddressError('Multi‐signature address must use PubKeyHashes, not public keys.')
     return pubkeyhashes
 
-### MULTI‐SIG ###
+### Multi‐signature Addresses ###
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

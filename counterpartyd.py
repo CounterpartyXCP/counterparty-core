@@ -514,7 +514,7 @@ def balances (address):
 def generate_move_random_hash(move):
     move = int(move).to_bytes(2, byteorder='big')
     random = os.urandom(16)
-    move_random_hash = bitcoin.dhash(random+move)
+    move_random_hash = util.dhash(random+move)
     return binascii.hexlify(random).decode('utf8'), binascii.hexlify(move_random_hash).decode('utf8')
 
 
