@@ -4,7 +4,7 @@
 
 import struct
 
-from . import (util, config, bitcoin)
+from . import (util, config)
 from lib.exceptions import *
 
 FORMAT = '>QQ'
@@ -37,12 +37,12 @@ def validate (db, source, destination, asset, quantity, block_index):
         raise ValidateAssetError('asset invalid')
 
     try:
-        bitcoin.validate_address(source, block_index)
+        util.validate_address(source, block_index)
     except AddressError:
         raise ValidateError('source address invalid')
 
     try:
-        bitcoin.validate_address(destination, block_index)
+        util.validate_address(destination, block_index)
     except AddressError:
         raise ValidateError('destination address invalid')
 

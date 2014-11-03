@@ -269,7 +269,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db)
         return tested_method(counterpartyd_db, inputs[0], **inputs[1])
     elif tx_name == 'util' and method == 'api':
         return tested_method(*inputs)
-    elif tx_name == 'bitcoin' and method == 'base58_check_decode':
+    elif tx_name == 'util' and method == 'base58_check_decode':
         return binascii.hexlify(tested_method(*inputs)).decode('utf-8')
     else:
         return tested_method(counterpartyd_db, *inputs)

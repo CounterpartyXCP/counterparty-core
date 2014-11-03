@@ -116,18 +116,6 @@ def parse_tx (db, tx):
     return True
 
 class ConsensusError (Exception): pass
-def generate_consensus_hash(db, block_index, field, strings, check_hash_pos, previous_hash=None, current_hash=None):
-    cursor = db.cursor()
-
-    get_hash = lambda i: list(cursor.execute('''SELECT {} FROM blocks WHERE block_index = ?'''.format(field), (i,)))[0][field]
-
-    # get previous hash
-    if not previous_hash:
-        if block_index == config.BLOCK_FIRST:
-            previous_hash = util.dhash_string(config.CONSENSUS_HASH_SEED)
-        else: 
-            previous_hash = get_hash(block_index - 1)
-
 def consensus_hash(db, block_index, field, previous_consensus_hash, content):
     cursor = db.cursor()
 
@@ -140,7 +128,7 @@ def consensus_hash(db, block_index, field, previous_consensus_hash, content):
     if not previous_consensus_hash:
         previous_consensus_hash = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index - 1,)))[0][field]
         if not previous_consensus_hash:
-            raise exceptions.ConsensusError('Empty previous {} for block {}. Please launch a `reparse`.'.format(field, block_index))
+            raise ConsensusError('Empty previous {} for block {}. Please launch a `reparse`.'.format(field, block_index))
 
     # Calculate current hash.
     calculated_hash = util.dhash_string(previous_consensus_hash + '{}{}'.format(config.CONSENSUS_HASH_VERSION, ''.join(content)))
@@ -150,12 +138,12 @@ def consensus_hash(db, block_index, field, previous_consensus_hash, content):
     if found_hash:
         # Check against existing value.
         if calculated_hash != found_hash:
-            raise exceptions.ConsensusError('Inconsistent {} for block {}.'.format(field, block_index))
+            raise ConsensusError('Inconsistent {} for block {}.'.format(field, block_index))
 
         # Check against checkpoints.
         checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
         if block_index in checkpoints and checkpoints[block_index][field] != calculated_hash:
-            raise exceptions.ConsensusError('Incorrect {} for block {}.'.format(field, block_index))
+            raise ConsensusError('Incorrect {} for block {}.'.format(field, block_index))
     else:
         # Save new hash.
         cursor.execute('''UPDATE blocks SET {} = ? WHERE block_index = ?'''.format(field), (calculated_hash, block_index))
@@ -926,10 +914,10 @@ def get_tx_info (tx, block_index):
         pubkeyhash = get_pubkeyhash(scriptpubkey)
         if not pubkeyhash: return False
 
-        address = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
+        address = util.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
 
         # Test decoding of address.
-        if address != config.UNSPENDABLE and binascii.unhexlify(bytes(pubkeyhash, 'utf-8')) != bitcoin.base58_check_decode(address, config.ADDRESSVERSION):
+        if address != config.UNSPENDABLE and binascii.unhexlify(bytes(pubkeyhash, 'utf-8')) != util.base58_check_decode(address, config.ADDRESSVERSION):
             return False
 
         return address
@@ -1089,7 +1077,7 @@ def get_tx_info2 (tx, block_index):
             destination, data = None, chunk[len(config.PREFIX):]
         else:                                                       # Destination
             pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
-            destination, data = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION), None
+            destination, data = util.base58_check_encode(pubkeyhash, config.ADDRESSVERSION), None
 
         return destination, data
 
@@ -1106,7 +1094,7 @@ def get_tx_info2 (tx, block_index):
             destination, data = None, chunk[len(config.PREFIX):]
         else:                                                       # Destination
             pubkeyhashes = [bitcoin.pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
-            destination, data = '_'.join([str(signatures_required)] + sorted(pubkeyhashes) + [str(len(pubkeyhashes))]), None
+            destination, data = util.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes)), None
 
         return destination, data
 
