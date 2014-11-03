@@ -948,10 +948,14 @@ def get_tx_info (tx_hex, block_index, block_parser = None):
 
         # Sum data chunks to get data. (Can mix OP_RETURN and multi-sig.)
         asm = get_asm(vout.scriptPubKey)
-        if len(asm) == 2 and asm[0] == 'OP_RETURN':                                                 # OP_RETURN
+        if len(asm) == 2 and asm[0] == 'OP_RETURN':                                             # OP_RETURN
+            if type(asm[1]) != bytes:
+                raise exceptions.DecodeError('invalid OP_RETURN')
             data_chunk = asm[1]
             data += data_chunk
         elif len(asm) == 5 and asm[0] == 1 and asm[3] == 2 and asm[4] == 'OP_CHECKMULTISIG':    # Multi-sig
+            if not all([type(pubkey) == bytes for pubkey in asm[1:3]]):
+                raise exceptions.DecodeError('invalid OP_CHECKMULTISIG')
             data_pubkey = asm[2]
             data_chunk_length = data_pubkey[0]  # No ord() necessary.
             data_chunk = data_pubkey[1:data_chunk_length + 1]
