@@ -1274,15 +1274,14 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
 
     return
 
-def initialise_transactions(db, bitcoind_dir, first_hash=None, last_hash=None):
+def initialise_transactions(db, bitcoind_dir):
     start_time_total = time.time()
 
-    if not first_hash:
-        first_hash = config.BLOCK_FIRST_TESTNET_HASH if config.TESTNET else config.BLOCK_FIRST_MAINNET_HASH
-    if not last_hash:
-        chain_parser = ChainstateParser(os.path.join(bitcoind_dir, 'chainstate'))
-        last_hash = chain_parser.get_last_block_hash()
-        chain_parser.close()
+    first_hash = config.BLOCK_FIRST_TESTNET_HASH if config.TESTNET else config.BLOCK_FIRST_MAINNET_HASH
+
+    chain_parser = ChainstateParser(os.path.join(bitcoind_dir, 'chainstate'))
+    last_hash = chain_parser.get_last_block_hash()
+    chain_parser.close()
 
     block_parser = BlockchainParser(os.path.join(bitcoind_dir, 'blocks'), os.path.join(bitcoind_dir, 'blocks/index'));
     cursor = db.cursor()

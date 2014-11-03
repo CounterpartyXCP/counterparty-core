@@ -685,8 +685,6 @@ if __name__ == '__main__':
 
     parser_initialise = subparsers.add_parser('initialise', help='initialise database')
     parser_initialise.add_argument('--bitcoind-dir', required=True, help='Bitcoind data directory')
-    parser_initialise.add_argument('--first-block-hash', help='first block hash to initialise')
-    parser_initialise.add_argument('--last-block-hash', help='last block hash to initialise')
 
     parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the {} market'.format(config.XCP_NAME) )
     parser_market.add_argument('--give-asset', help='only show orders offering to sell GIVE_ASSET')
@@ -1102,9 +1100,7 @@ if __name__ == '__main__':
             me = singleton.SingleInstance()
 
     elif args.action == 'initialise':
-        blocks.initialise_transactions(db, bitcoind_dir=args.bitcoind_dir, 
-                                           first_hash=args.first_block_hash, 
-                                           last_hash=args.last_block_hash)
+        blocks.initialise_transactions(db, bitcoind_dir=args.bitcoind_dir)
 
     elif args.action == 'server':
         if not config.FORCE:
