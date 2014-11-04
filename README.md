@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/CounterpartyXCP/counterpartyd.svg?branch=develop)](https://travis-ci.org/CounterpartyXCP/counterpartyd)
+[![Coverage Status](https://img.shields.io/coveralls/CounterpartyXCP/counterpartyd.svg)](https://coveralls.io/r/CounterpartyXCP/counterpartyd?branch=develop)
 
 # Description
 `counterpartyd` is the reference implementation of the [Counterparty
