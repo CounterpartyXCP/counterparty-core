@@ -928,11 +928,15 @@ def get_tx_info (tx_hex, block_index, block_parser = None):
         pubkeyhash = get_pubkeyhash(scriptpubkey)
         if not pubkeyhash: return False
 
+<<<<<<< HEAD
         pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
         address = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
+=======
+        address = util.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
+>>>>>>> current
 
         # Test decoding of address.
-        if address != config.UNSPENDABLE and binascii.unhexlify(bytes(pubkeyhash, 'utf-8')) != bitcoin.base58_check_decode(address, config.ADDRESSVERSION):
+        if address != config.UNSPENDABLE and binascii.unhexlify(bytes(pubkeyhash, 'utf-8')) != util.base58_check_decode(address, config.ADDRESSVERSION):
             return False
 
         return address
@@ -1084,7 +1088,7 @@ def get_tx_info2 (tx_hex, block_index, block_parser = None):
             destination, data = None, chunk[len(config.PREFIX):]
         else:                                                       # Destination
             pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
-            destination, data = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION), None
+            destination, data = util.base58_check_encode(pubkeyhash, config.ADDRESSVERSION), None
 
         return destination, data
 
@@ -1101,7 +1105,7 @@ def get_tx_info2 (tx_hex, block_index, block_parser = None):
             destination, data = None, chunk[len(config.PREFIX):]
         else:                                                       # Destination
             pubkeyhashes = [bitcoin.pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
-            destination, data = '_'.join([str(signatures_required)] + sorted(pubkeyhashes) + [str(len(pubkeyhashes))]), None
+            destination, data = util.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes)), None
 
         return destination, data
 

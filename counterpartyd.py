@@ -160,15 +160,13 @@ def market (give_asset, get_asset):
 def cli(method, params, unsigned):
     # Get unsigned transaction serialisation.
 
-    array = params['source'].split('_')
-    if len(array) > 1:
-        signatures_required, signatures_possible = array[0], array[-1]
-        params['source'] = '_'.join([signatures_required] + sorted(array[1:-1]) + [signatures_possible]) # Sort source array.
-        pubkey = None
-    else:
+    is_multisig = util.is_multisig(params['source'])
+    params['source'] = util.canonical_address(params['source'])
+    pubkey = None
+
+    if not is_multisig:
         # Get public key for source.
-        source = array[0]
-        pubkey = None
+        source = params['source']
         if not bitcoin.is_valid(source):
             raise exceptions.AddressError('Invalid address.')
         if bitcoin.is_mine(source):
@@ -205,7 +203,7 @@ def cli(method, params, unsigned):
     print('Transaction (unsigned):', unsigned_tx_hex)
 
     # Ask to sign and broadcast (if not multi‐sig).
-    if len(array) > 1:
+    if is_multisig:
         print('Multi‐signature transactions are signed and broadcasted manually.')
     elif not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
         if bitcoin.is_mine(source):
@@ -501,12 +499,16 @@ def set_options (data_dir=None, backend_rpc_connect=None,
         config.BROADCAST_TX_MAINNET = '{}'.format(config.BTC_CLIENT)
 
 def balances (address):
-    bitcoin.validate_address(address, util.last_block(db)['block_index'])
-
+    address = util.canonical_address(address)
+    util.validate_address(address, util.last_block(db)['block_index'])
     address_data = get_address(db, address=address)
     balances = address_data['balances']
     table = PrettyTable(['Asset', 'Amount'])
-    table.add_row([config.BTC, blockchain.getaddressinfo(address)['balance']])  # BTC
+    if util.is_multisig(address):
+        btc_balance = '???'
+    else:
+        btc_balance = blockchain.getaddressinfo(address)['balance']
+    table.add_row([config.BTC, btc_balance])  # BTC
     for balance in balances:
         asset = balance['asset']
         quantity = util.devise(db, balance['quantity'], balance['asset'], 'output')
@@ -517,7 +519,7 @@ def balances (address):
 def generate_move_random_hash(move):
     move = int(move).to_bytes(2, byteorder='big')
     random = os.urandom(16)
-    move_random_hash = bitcoin.dhash(random+move)
+    move_random_hash = util.dhash(random+move)
     return binascii.hexlify(random).decode('utf8'), binascii.hexlify(move_random_hash).decode('utf8')
 
 
