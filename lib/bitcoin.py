@@ -201,6 +201,57 @@ def op_push (i):
     else:
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
+
+def get_multisig_script(address):
+
+    # Unpack multi‐sig address.
+    signatures_required, pubkeys, signatures_possible = util.extract_array(address)
+
+    # Required signatures.
+    if signatures_required == 1:
+        op_required = OP_1
+    elif signatures_required == 2:
+        op_required = OP_2
+    elif signatures_required == 3:
+        op_required = OP_3
+    else:
+        raise exceptions.InputError('Required signatures must be 1, 2 or 3.')
+
+    # Required signatures.
+    if signatures_possible == 1:
+        op_total = OP_1
+    elif signatures_possible == 2:
+        op_total = OP_2
+    elif signatures_possible == 3:
+        op_total = OP_3
+    else:
+        raise exceptions.InputError('Total possible signatures must be 1, 2 or 3.')
+
+    # Construct script.
+    script = op_required                                # Required signatures
+    for public_key in pubkeys:
+        public_key = binascii.unhexlify(public_key)
+        script += op_push(len(public_key))              # Push bytes of public key
+        script += public_key                            # Data chunk (fake) public key
+    script += op_total                                  # Total signatures
+    script += OP_CHECKMULTISIG                          # OP_CHECKMULTISIG
+
+    return script
+
+def get_monosig_script(address):
+
+    # Construct script.
+    pubkeyhash = util.base58_check_decode(address, config.ADDRESSVERSION)
+    script = OP_DUP                                     # OP_DUP
+    script += OP_HASH160                                # OP_HASH160
+    script += op_push(20)                               # Push 0x14 bytes
+    script += pubkeyhash                                # pubKeyHash
+    script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
+    script += OP_CHECKSIG                               # OP_CHECKSIG
+
+    return script
+
+
 def serialise (block_index, encoding, inputs, destination_outputs, data_output=None, change_output=None, self_public_key=None):
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
@@ -234,54 +285,16 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
         s += value.to_bytes(8, byteorder='little')          # Value
 
         if util.is_multisig(destination):
-            # Unpack multi‐sig address.
-            signatures_required, pubkeys, signatures_possible = util.extract_array(destination)
-
-            # Required signatures.
-            if signatures_required == 1:
-                op_required = OP_1
-            elif signatures_required == 2:
-                op_required = OP_2
-            elif signatures_required == 3:
-                op_required = OP_3
-            else:
-                raise exceptions.InputError('Required signatures must be 1, 2 or 3.')
-
-            # Required signatures.
-            if signatures_possible == 1:
-                op_total = OP_1
-            elif signatures_possible == 2:
-                op_total = OP_2
-            elif signatures_possible == 3:
-                op_total = OP_3
-            else:
-                raise exceptions.InputError('Total possible signatures must be 1, 2 or 3.')
-
-            # Construct script.
-            script = op_required                                # Required signatures
-            for pubkey in pubkeys:
-                destination_public_key = binascii.unhexlify(pubkey)
-                script += op_push(len(destination_public_key))  # Push bytes of public key
-                script += destination_public_key                # Data chunk (fake) public key
-            script += op_total                                  # Total signatures
-            script += OP_CHECKMULTISIG                          # OP_CHECKMULTISIG
-
+            script = get_multisig_script(destination)
         else:
-            # Construct script.
-            pubkeyhash = util.base58_check_decode(destination, config.ADDRESSVERSION)
-            script = OP_DUP                                     # OP_DUP
-            script += OP_HASH160                                # OP_HASH160
-            script += op_push(20)                               # Push 0x14 bytes
-            script += pubkeyhash                                # pubKeyHash
-            script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
-            script += OP_CHECKSIG                               # OP_CHECKSIG
+            script = get_monosig_script(destination)
 
         s += var_int(int(len(script)))                      # Script length
         s += script
 
     # Data output.
     for data_chunk in data_array:
-        data_array, value = data_output # DUPE
+        data_array, value = data_output
         s += value.to_bytes(8, byteorder='little')        # Value
 
         if config.TESTNET and block_index >= config.FIRST_MULTISIG_BLOCK_TESTNET:   # Protocol change.
@@ -344,15 +357,14 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
 
     # Change output.
     if change_output:
-        address, value = change_output
-        pubkeyhash = util.base58_check_decode(address, config.ADDRESSVERSION)
-        s += value.to_bytes(8, byteorder='little')          # Value
-        script = OP_DUP                                     # OP_DUP
-        script += OP_HASH160                                # OP_HASH160
-        script += op_push(20)                               # Push 0x14 bytes
-        script += pubkeyhash                                # pubKeyHash
-        script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
-        script += OP_CHECKSIG                               # OP_CHECKSIG
+        change_address, change_value = change_output
+        s += change_value.to_bytes(8, byteorder='little')   # Value
+
+        if util.is_multisig(change_address):
+            script = get_multisig_script(change_address)
+        else:
+            script = get_monosig_script(change_address)
+
         s += var_int(int(len(script)))                      # Script length
         s += script
 
@@ -556,35 +568,31 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
         total_btc_out = btc_out + max(change_quantity, 0) + final_fee
         raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need approximately {} {}.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)'.format(source, total_btc_out / config.UNIT, config.BTC))
 
-    # Get change address.
-    if multisig_source:
-        change_address = source.split('_')[1] # TODO
-    else:
-        change_address = source
-
-    # Data outputs.
-    if data: data_output = (data_array, data_value)
-    else: data_output = None
-
-    # Change output.
-    if change_quantity: change_output = (change_address, change_quantity)
-    else: change_output = None
-
-    # Get `self_public_key`.
-    if multisig_source:
-        a, self_pubkeys, b = util.extract_array(multisig_pubkeyhashes_to_pubkeys(source))
-        self_public_key = binascii.unhexlify(self_pubkeys[0])  # TODO
-
-    # Replace multi‐sig addresses with multi‐sig pubkeys.
+    # Destination outputs. (Replace multi‐sig addresses with multi‐sig pubkeys.)
     destination_outputs_new = []
     for (destination, value) in destination_outputs:
         if util.is_multisig(destination):
             destination_outputs_new.append((multisig_pubkeyhashes_to_pubkeys(destination), value))
         else:
             destination_outputs_new.append((destination, value))
-    if len(destination_outputs) != len(destination_outputs_new):
-        raise exceptions.AddressError('Could not convert destination pubkeyhashes to pubkeys.')
     destination_outputs = destination_outputs_new
+
+    # Data outputs.
+    if data: data_output = (data_array, data_value)
+    else: data_output = None
+
+    # Change output. (Change address is source address.)
+    if util.is_multisig(source):
+        change_address = source.split('_')[1]
+    else:
+        change_address = source
+    if change_quantity: change_output = (change_address, change_quantity)
+    else: change_output = None
+
+    # Get `self_public_key`, if multi‐sig (for then it’s not passed as an argument).
+    if multisig_source:
+        a, self_pubkeys, b = util.extract_array(multisig_pubkeyhashes_to_pubkeys(source))
+        self_public_key = binascii.unhexlify(self_pubkeys[0])
 
     # Serialise inputs and outputs.
     unsigned_tx = serialise(block_index, encoding, inputs, destination_outputs, data_output, change_output, self_public_key=self_public_key)
