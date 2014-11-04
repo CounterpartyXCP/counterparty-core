@@ -583,7 +583,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
 
     # Change output. (Change address is source address.)
     if util.is_multisig(source):
-        change_address = source.split('_')[1]
+        change_address = multisig_pubkeyhashes_to_pubkeys(source)
     else:
         change_address = source
     if change_quantity: change_output = (change_address, change_quantity)
