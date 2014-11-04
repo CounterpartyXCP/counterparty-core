@@ -749,7 +749,7 @@ def validate_address(address, block_index):
     # Get array of pubkeyhashes to check.
     if is_multisig(address):
         if not (config.TESTNET and block_index >= config.FIRST_MULTISIG_BLOCK_TESTNET):
-            raise MultiSigAddressError('Multi‐signature addresses are currently disabled on mainnet.')
+            raise MultiSigAddressError('Multi‐signature addresses are currently disabled.')
         pubkeyhashes = pubkeyhash_array(address)
     else:
         pubkeyhashes = [address]

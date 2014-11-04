@@ -500,10 +500,15 @@ def set_options (data_dir=None, backend_rpc_connect=None,
 
 def balances (address):
     address = util.canonical_address(address)
+    util.validate_address(address, util.last_block(db)['block_index'])
     address_data = get_address(db, address=address)
     balances = address_data['balances']
     table = PrettyTable(['Asset', 'Amount'])
-    table.add_row([config.BTC, blockchain.getaddressinfo(address)['balance']])  # BTC
+    if util.is_multisig(address):
+        btc_balance = '???'
+    else:
+        btc_balance = blockchain.getaddressinfo(address)['balance']
+    table.add_row([config.BTC, btc_balance])  # BTC
     for balance in balances:
         asset = balance['asset']
         quantity = util.devise(db, balance['quantity'], balance['asset'], 'output')
