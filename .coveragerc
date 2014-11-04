@@ -1,0 +1,5 @@
+[run]
+omit = test/*
+[report]
+show_missing = True
+precision = 2
