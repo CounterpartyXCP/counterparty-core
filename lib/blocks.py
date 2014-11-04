@@ -928,12 +928,7 @@ def get_tx_info (tx_hex, block_index, block_parser = None):
         pubkeyhash = get_pubkeyhash(scriptpubkey)
         if not pubkeyhash: return False
 
-<<<<<<< HEAD
-        pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
-        address = bitcoin.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
-=======
         address = util.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
->>>>>>> current
 
         # Test decoding of address.
         if address != config.UNSPENDABLE and binascii.unhexlify(bytes(pubkeyhash, 'utf-8')) != util.base58_check_decode(address, config.ADDRESSVERSION):
