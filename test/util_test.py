@@ -24,6 +24,7 @@ os.environ['TZ'] = 'EST'
 time.tzset()
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
+# TODO: This should grab the correct backend port and password, when used for, e.g., saverawtransactions.
 COUNTERPARTYD_OPTIONS = {
     'testcoin': False, 
     'backend_rpc_ssl_verify': False, 
@@ -145,7 +146,7 @@ def save_rawtransaction(db, tx_hash, tx_hex, tx_json):
     try:
         txid = binascii.hexlify(bitcoinlib.core.lx(tx_hash)).decode()
         cursor.execute('''INSERT INTO raw_transactions VALUES (?, ?, ?)''', (txid, tx_hex, tx_json))
-    except Exception as e:
+    except Exception as e: # TODO
         pass
     cursor.close()
 
@@ -158,7 +159,10 @@ def getrawtransaction(db, txid):
 
 def decoderawtransaction(db, tx_hex):
     cursor = db.cursor()
-    tx_json = list(cursor.execute('''SELECT tx_json FROM raw_transactions WHERE tx_hex = ?''', (tx_hex,)))[0][0]
+    try:
+        tx_json = list(cursor.execute('''SELECT tx_json FROM raw_transactions WHERE tx_hex = ?''', (tx_hex,)))[0][0]
+    except IndexError:
+        raise Exception('raw transaction changed')
     cursor.close()
     return json.loads(tx_json)
 
