@@ -909,6 +909,18 @@ def get_asm(scriptpubkey):
     return asm
 
 def get_tx_info (tx_hex, block_index, block_parser = None):
+    try:
+        if (config.TESTNET and block_index >= config.FIRST_MULTISIG_BLOCK_TESTNET):  # Protocol change.
+            tx_info = get_tx_info2(tx_hex, block_index, block_parser)
+        else:
+            tx_info = get_tx_info1(tx_hex, block_index, block_parser)
+    except exceptions.DecodeError as e:
+        logging.debug('Could not decode: ' + str(e))
+        tx_info = b'', None, None, None, None
+
+    return tx_info
+
+def get_tx_info1 (tx_hex, block_index, block_parser = None):
     """
     The destination, if it exists, always comes before the data output; the
     change, if it exists, always comes after.
@@ -1165,6 +1177,35 @@ def get_tx_info2 (tx_hex, block_index, block_parser = None):
     destinations = '-'.join(destinations)
     return sources, destinations, btc_amount, round(fee), data
 
+def reinitialise(db, block_index=None):
+    cursor = db.cursor()
+
+    # Delete all of the results of parsing.
+    for table in TABLES + ['balances']:
+        cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
+
+    # Create missing tables
+    initialise(db)
+
+    # clean consensus hashes if first block hash don't match with checkpoint.
+    checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
+    columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(blocks)''')]
+    for field in ['ledger_hash', 'txlist_hash']:
+        if field in columns:
+            sql = '''SELECT {} FROM blocks  WHERE block_index = ?'''.format(field)
+            first_block = list(cursor.execute(sql, (config.BLOCK_FIRST,)))
+            if first_block:
+                first_hash = first_block[0][field]
+                if first_hash != checkpoints[config.BLOCK_FIRST][field]:
+                    logging.info('First hash changed. Cleaning {}.'.format(field))
+                    cursor.execute('''UPDATE blocks SET {} = NULL'''.format(field))
+
+    # For rollbacks, just delete new blocks and then reparse what’s left.
+    if block_index:
+        cursor.execute('''DELETE FROM transactions WHERE block_index > ?''', (block_index,))
+        cursor.execute('''DELETE FROM blocks WHERE block_index > ?''', (block_index,))
+
+    cursor.close()
 
 def reparse (db, block_index=None, quiet=False):
     """Reparse all transactions (atomically). If block_index is set, rollback
@@ -1174,34 +1215,13 @@ def reparse (db, block_index=None, quiet=False):
     cursor = db.cursor()
 
     with db:
-
-        # Delete all of the results of parsing.
-        for table in TABLES + ['balances']:
-            cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
-
-        # clean consensus hashes if first block hash don't match with checkpoint.
-        checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
-        columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(blocks)''')]
-        for field in ['ledger_hash', 'txlist_hash']:
-            if field in columns:
-                sql = '''SELECT {} FROM blocks  WHERE block_index = ?'''.format(field)
-                first_block = list(cursor.execute(sql, (config.BLOCK_FIRST,)))
-                if first_block:
-                    first_hash = first_block[0][field]
-                    if first_hash != checkpoints[config.BLOCK_FIRST][field]:
-                        logging.info('First hash changed. Cleaning {}.'.format(field))
-                        cursor.execute('''UPDATE blocks SET {} = NULL'''.format(field))
-
-        # For rollbacks, just delete new blocks and then reparse what’s left.
-        if block_index:
-            cursor.execute('''DELETE FROM transactions WHERE block_index > ?''', (block_index,))
-            cursor.execute('''DELETE FROM blocks WHERE block_index > ?''', (block_index,))
+        reinitialise(db)
 
         # Reparse all blocks, transactions.
         if quiet:
             log = logging.getLogger('')
             log.setLevel(logging.WARNING)
-        initialise(db)
+        
         previous_ledger_hash, previous_txlist_hash = None, None
         cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
         for block in cursor.fetchall():
@@ -1227,16 +1247,7 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     # Get the important details about each transaction.
     tx_hex = bitcoin.get_raw_transaction(tx_hash, verbose=0)
     logging.debug('Status: examining transaction {}.'.format(tx_hash))
-
-    try:
-        if (config.TESTNET and block_index >= config.FIRST_MULTISIG_BLOCK_TESTNET):  # Protocol change.
-            tx_info = get_tx_info2(tx_hex, block_index)
-        else:
-            tx_info = get_tx_info(tx_hex, block_index)
-    except exceptions.DecodeError as e:
-        logging.debug('Could not decode: ' + str(e))
-        tx_info = b'', None, None, None, None
-    source, destination, btc_amount, fee, data = tx_info
+    source, destination, btc_amount, fee, data = get_tx_info(tx_hex, block_index)
 
     # For mempool
     if block_hash == None:
@@ -1301,12 +1312,8 @@ def kickstart(db, bitcoind_dir):
         # Prepare SQLite database. # TODO: Be more specific!
         logging.info('Preparing database…')
         start_time = time.time()
-        for table in TABLES + ['balances']:
-            cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
         first_block = block_parser.read_raw_block(first_hash)
-        initialise(db)
-        cursor.execute('''DELETE FROM transactions WHERE block_index >= ?''', (first_block['block_index'],))
-        cursor.execute('''DELETE FROM blocks WHERE block_index >= ?''', (first_block['block_index'],))
+        reinitialise(db, block_index=config.BLOCK_FIRST - 1)
         logging.info('Prepared database in {:.3f}s'.format(time.time() - start_time))
 
         # Get blocks and transactions, moving backwards in time.
@@ -1317,18 +1324,7 @@ def kickstart(db, bitcoind_dir):
             # Get `tx_info`s for transactions in this block.
             block = block_parser.read_raw_block(current_hash)
             for tx in block['transactions']:
-                # TODO: partial DUPE with `list_tx()`
-                tx_info = b'', None, None, None, None
-                try:
-                    if (config.TESTNET and block['block_index'] >= config.FIRST_MULTISIG_BLOCK_TESTNET):  # Protocol change.
-                        tx_info = get_tx_info2(tx['__data__'], block['block_index'], block_parser)
-                    else:
-                        tx_info = get_tx_info(tx['__data__'], block['block_index'], block_parser)
-                except exceptions.DecodeError as e:
-                    logging.debug('Could not decode: ' + str(e))
-
-                source, destination, btc_amount, fee, data  = tx_info
-
+                source, destination, btc_amount, fee, data  = get_tx_info(tx['__data__'], block['block_index'], block_parser)
                 if source and (data or destination == config.UNSPENDABLE):
                     transactions.append((
                         tx['tx_hash'], block['block_index'], block['block_hash'], block['block_time'],
