@@ -947,22 +947,21 @@ def get_tx_info (tx_hex, block_index, block_parser = None):
         # Sum data chunks to get data. (Can mix OP_RETURN and multi-sig.)
         asm = get_asm(vout.scriptPubKey)
         if len(asm) == 2 and asm[0] == 'OP_RETURN':                                             # OP_RETURN
-            if type(asm[1]) != bytes:
-                raise exceptions.DecodeError('invalid OP_RETURN')
+            if type(asm[1]) != bytes: continue
             data_chunk = asm[1]
             data += data_chunk
         elif len(asm) == 5 and asm[0] == 1 and asm[3] == 2 and asm[4] == 'OP_CHECKMULTISIG':    # Multi-sig
-            if not all([type(pubkey) == bytes for pubkey in asm[1:3]]):
-                raise exceptions.DecodeError('invalid OP_CHECKMULTISIG')
+            if type(asm[2]) != bytes: continue
             data_pubkey = asm[2]
             data_chunk_length = data_pubkey[0]  # No ord() necessary.
             data_chunk = data_pubkey[1:data_chunk_length + 1]
             data += data_chunk
         elif len(asm) == 5 and (block_index >= 293000 or config.TESTNET):    # Protocol change.
             # Be strict.
-            if ctx.is_coinbase(): raise exceptions.DecodeError('coinbase transaction')
             pubkeyhash = get_pubkeyhash(vout.scriptPubKey)
             if not pubkeyhash: continue
+
+            if ctx.is_coinbase(): raise exceptions.DecodeError('coinbase transaction')
             obj1 = ARC4.new(ctx.vin[0].prevout.hash[::-1])
             data_pubkey = obj1.decrypt(pubkeyhash)
             if data_pubkey[1:9] == config.PREFIX or pubkeyhash_encoding:
