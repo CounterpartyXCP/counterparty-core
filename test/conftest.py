@@ -38,8 +38,6 @@ def pytest_addoption(parser):
     parser.addoption("--function", action="append", default=[], help="list of functions to test")
     parser.addoption("--scenario", action="append", default=[], help="list of scenarios to test")
     parser.addoption("--gentxhex", action='store_true', default=False, help="generate and print unsigned hex for *.compose() tests")
-    parser.addoption("--saverawtransactions", action='store_true', default=False, help="populate raw transactions db")
-    parser.addoption("--initrawtransactions", action='store_true', default=False, help="initialize raw transactions db")
     parser.addoption("--savescenarios", action='store_true', default=False, help="generate sql dump and log in .new files")
     parser.addoption("--skiptestbook", default='no', help="skip test book(s) (use with one of the following values: `all`, `testnet` or `mainnet`)")
 
@@ -86,7 +84,7 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
         return address
 
     def decode_raw_transaction(raw_transaction):
-        if pytest.config.option.initrawtransactions or pytest.config.option.saverawtransactions:
+        if pytest.config.option.savescenarios:
             return bitcoin.rpc('decoderawtransaction', [raw_transaction])
         else:
             return util_test.decoderawtransaction(rawtransactions_db, raw_transaction)

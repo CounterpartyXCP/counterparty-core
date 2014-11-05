@@ -105,7 +105,7 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
     tx_hash = hashlib.sha256('{}{}'.format(tx_index,raw_transaction).encode('utf-8')).hexdigest()
     #print(tx_hash)
     tx['txid'] = tx_hash
-    if pytest.config.option.saverawtransactions:
+    if pytest.config.option.savescenarios:
         save_rawtransaction(rawtransactions_db, tx_hash, raw_transaction, json.dumps(tx))
 
     source, destination, btc_amount, fee, data = blocks.get_tx_info2(tx, block_index)
@@ -128,7 +128,7 @@ def insert_transaction(transaction, db):
 # table uses for getrawtransaction mock.
 # we use the same database (in memory) for speed
 def initialise_rawtransactions_db(db):
-    if pytest.config.option.initrawtransactions:
+    if pytest.config.option.savescenarios:
         counterpartyd.set_options(testnet=True, **COUNTERPARTYD_OPTIONS)
         cursor = db.cursor()
         cursor.execute('DROP TABLE  IF EXISTS raw_transactions')
