@@ -687,6 +687,7 @@ if __name__ == '__main__':
 
     parser_kickstart = subparsers.add_parser('kickstart', help='rapidly bring database up to the present')
     parser_kickstart.add_argument('--bitcoind-dir', required=True, help='Bitcoin Core data directory')
+    parser_kickstart.add_argument('--force', action='store_true', help='skip backend check, version check, singleton check')
 
     parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the {} market'.format(config.XCP_NAME) )
     parser_market.add_argument('--give-asset', help='only show orders offering to sell GIVE_ASSET')
@@ -755,7 +756,7 @@ if __name__ == '__main__':
 
     # Version
     logging.info('Status: Running v{} of counterpartyd.'.format(config.VERSION_STRING, config.XCP_CLIENT))
-    if not config.FORCE and args.action in ('server', 'reparse', 'rollback'):
+    if not config.FORCE and args.action in ('server', 'reparse', 'rollback', 'kickstart'):
         logging.info('Status: Checking version.')
         try:
             util.version_check(db)
@@ -1101,7 +1102,12 @@ if __name__ == '__main__':
         if not config.FORCE:
             me = singleton.SingleInstance()
 
+        blocks.reparse(db, block_index=args.block_index)
+
     elif args.action == 'kickstart':
+        if not config.FORCE:
+            me = singleton.SingleInstance()
+
         blocks.kickstart(db, bitcoind_dir=args.bitcoind_dir)
 
     elif args.action == 'server':
