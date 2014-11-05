@@ -927,9 +927,8 @@ def get_tx_info (tx_hex, block_index, block_parser = None):
     def get_address (scriptpubkey):
         pubkeyhash = get_pubkeyhash(scriptpubkey)
         if not pubkeyhash: return False
-
+        pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
         address = util.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
-
         # Test decoding of address.
         if address != config.UNSPENDABLE and binascii.unhexlify(bytes(pubkeyhash, 'utf-8')) != util.base58_check_decode(address, config.ADDRESSVERSION):
             return False
