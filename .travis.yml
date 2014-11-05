@@ -13,5 +13,8 @@ script: py.test --cov-config .coveragerc --cov-report term-missing --cov ./ --sk
 notifications:
   slack:
     secure: cl0G5fWZNnIK5VQ6BPZ4RtwVO2/nfvX/zjhljfF6cQ20OKyvyiJHq+e67fl2pkCKDlqlEqSWaQJ6G52YzUpDQmf+o7qpH6YnkFxSqYp5h4YF1hJw4sCHJ7bVSLrjogWxU8QaNvH7YpL4YkGe+WOau2FgoIZOcMt6hhKrvWclfuc=
+-branches:
+-  except:
+-    - clean
 after_success:
 - coveralls
