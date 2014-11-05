@@ -361,7 +361,7 @@ class VersionError (Exception): pass
 class VersionUpdateRequiredError (VersionError): pass
 def version_check (db):
     try:
-        host = 'https://raw2.github.com/CounterpartyXCP/counterpartyd/master/version.json'
+        host = 'https://raw.githubusercontent.com/CounterpartyXCP/counterpartyd/master/version.json'
         response = requests.get(host, headers={'cache-control': 'no-cache'})
         versions = json.loads(response.text)
     except Exception as e:
@@ -761,7 +761,7 @@ def validate_address(address, block_index):
     # Get array of pubkeyhashes to check.
     if is_multisig(address):
         if not (config.TESTNET and block_index >= config.FIRST_MULTISIG_BLOCK_TESTNET):
-            raise MultiSigAddressError('Multi‐signature addresses are currently disabled on mainnet.')
+            raise MultiSigAddressError('Multi‐signature addresses are currently disabled.')
         pubkeyhashes = pubkeyhash_array(address)
     else:
         pubkeyhashes = [address]

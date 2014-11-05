@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.46.0 (2014-11-03)
+	* new consensus hashes (include `tx_info` and version)
 * v9.45.0 (2014-10-23)
 	* add dividend fee of 0.0002 XCP per recipient (protocol change: 330000)
 * v9.44.0 (2014-09-22)
