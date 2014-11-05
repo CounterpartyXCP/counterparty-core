@@ -1274,32 +1274,33 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
 
     return
 
-def initialise_transactions(db, bitcoind_dir):
-    print("Warnings:")
-    print("- Ensure that bitcoind is stopped")
-    print("- You should reindex bitcoind after the initialisation (restart with -reindex=1)")
-    print("- This operation takes a long time")
-    if input('Continue the initialisation ? (y/N) : ') != 'y':
+def kickstart(db, bitcoind_dir):
+    cursor = db.cursor()
+
+    logging.warning('''Warning:
+- Ensure that bitcoind is stopped.
+- You must reindex bitcoind after the initialisation is complete (restart with `-reindex=1`
+- The initialisation may take a while.''')
+    if input('Procede with the initialisation? (y/N) : ') != 'y':
         return
 
+    first_hash = config.BLOCK_FIRST_TESTNET_HASH if config.TESTNET else config.BLOCK_FIRST_MAINNET_HASH
     start_time_total = time.time()
 
-    first_hash = config.BLOCK_FIRST_TESTNET_HASH if config.TESTNET else config.BLOCK_FIRST_MAINNET_HASH
-
+    # Get hash of last known block.
     chain_parser = ChainstateParser(os.path.join(bitcoind_dir, 'chainstate'))
     last_hash = chain_parser.get_last_block_hash()
     chain_parser.close()
 
+    # Start block parser.
     block_parser = BlockchainParser(os.path.join(bitcoind_dir, 'blocks'), os.path.join(bitcoind_dir, 'blocks/index'));
-    cursor = db.cursor()
 
     current_hash = last_hash
     tx_index = 0
-
     with db:
 
-        # prepare sqlite database
-        logging.info('preparing database...')
+        # Prepare SQLite database. # TODO: Be more specific!
+        logging.info('Preparing database…')
         start_time = time.time()
         for table in TABLES + ['balances']:
             cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
@@ -1307,16 +1308,17 @@ def initialise_transactions(db, bitcoind_dir):
         initialise(db)
         cursor.execute('''DELETE FROM transactions WHERE block_index >= ?''', (first_block['block_index'],))
         cursor.execute('''DELETE FROM blocks WHERE block_index >= ?''', (first_block['block_index'],))
-        logging.info('database prepared in {:.3f}'.format(time.time() - start_time))
+        logging.info('Prepared database in {:.3f}s'.format(time.time() - start_time))
 
-        # parse all blocks backward
+        # Get blocks and transactions, moving backwards in time.
         while current_hash != None:
             start_time = time.time()
-            block = block_parser.read_raw_block(current_hash)
             transactions = []
 
-            # get tx infos for all transactions of the block
+            # Get `tx_info`s for transactions in this block.
+            block = block_parser.read_raw_block(current_hash)
             for tx in block['transactions']:
+                # TODO: partial DUPE with `list_tx()`
                 tx_info = b'', None, None, None, None
                 try:
                     if (config.TESTNET and block['block_index'] >= config.FIRST_MULTISIG_BLOCK_TESTNET):  # Protocol change.
@@ -1335,7 +1337,7 @@ def initialise_transactions(db, bitcoind_dir):
                     ))
                     logging.info('Valid transaction: {}'.format(tx['tx_hash']))
 
-            # insert block and transactions in the database
+            # Insert block and transactions into database.
             cursor.execute('''INSERT INTO blocks(
                                     block_index,
                                     block_hash,
@@ -1343,19 +1345,17 @@ def initialise_transactions(db, bitcoind_dir):
                                     (block['block_index'],
                                     block['block_hash'],
                                     block['block_time']))
-
             if len(transactions):
                 sql = '''INSERT INTO transactions
                             (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data) 
                          VALUES '''
                 bindings = ()
                 bindings_place = []
-                # negative tx_index from -1 and inverse order for fast reordering
+                # negative tx_index from -1 and inverse order for fast reordering   # TODO: Can this be clearer?
                 for tx in reversed(transactions):
                     bindings += (-(tx_index + 1),) + tx
                     bindings_place.append('''(?,?,?,?,?,?,?,?,?,?)''')
                     tx_index += 1
-
                 sql += ', '.join(bindings_place)
                 cursor.execute(sql, bindings)
 
@@ -1364,22 +1364,22 @@ def initialise_transactions(db, bitcoind_dir):
                           len(transactions), len(block['transactions']),
                           time.time() - start_time))
 
-            # next block to parse
+            # Get hash of next block.
             current_hash = block['hash_prev'] if current_hash != first_hash else None
 
         block_parser.close()
         
-        # reorder transactions
-        logging.info('reordering tx_index...')
+        # Reorder all transactions in database.
+        logging.info('Reordering transactions…')
         start_time = time.time()
         cursor.execute('''UPDATE transactions SET tx_index = tx_index + ?''', (tx_index,))
-        logging.info('tx_index reordered in {:.3f}'.format(time.time() - start_time))
+        logging.info('Reordered transactions in {:.3f}s.'.format(time.time() - start_time))
         
-        # parse transactions
+        # Parse all transactions in database.
         reparse(db)
 
     cursor.close()
-    logging.info('duration total: {:.3f}s'.format(time.time() - start_time_total))
+    logging.info('Total duration: {:.3f}s'.format(time.time() - start_time_total))
 
 def get_next_tx_index(db):
     cursor = db.cursor()
