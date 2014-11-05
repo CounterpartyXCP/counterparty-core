@@ -996,7 +996,7 @@ def get_tx_info (tx_hex, block_index, block_parser = None):
     # Collect all possible source addresses; ignore coinbase transactions and anything but the simplest Pay‐to‐PubkeyHash inputs.
     source_list = []
     for vin in ctx.vin[:]:                                               # Loop through input transactions.
-        if vin.prevout.hash == b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00': 
+        if vin.prevout.is_null():
             raise exceptions.DecodeError('coinbase transaction')
          # Get the full transaction data for this input transaction.
         if block_parser:
