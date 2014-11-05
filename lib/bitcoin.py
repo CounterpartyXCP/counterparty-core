@@ -70,8 +70,8 @@ def get_block_count():
     return int(rpc('getblockcount', []))
 def get_block_hash(block_index):
     return rpc('getblockhash', [block_index])
-def get_raw_transaction (tx_hash):
-    return rpc('getrawtransaction', [tx_hash, 1])
+def get_raw_transaction (tx_hash, verbose=1):
+    return rpc('getrawtransaction', [tx_hash, verbose])
 def get_block (block_hash):
     return rpc('getblock', [block_hash])
 def get_block_hash (block_index):

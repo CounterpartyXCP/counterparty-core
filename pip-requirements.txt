@@ -33,6 +33,8 @@ tendo==0.2.6
 
 python-bitcoinlib==0.2.1
 
+plyvel==0.9
+
 pytest-cov==1.8.0
 
 python-coveralls==2.4.3
