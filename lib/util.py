@@ -357,7 +357,7 @@ def connect_to_db(flags=None):
 
 def version_check (db):
     try:
-        host = 'http://counterpartyxcp.github.io/counterpartyd/version.json'
+        host = 'https://counterpartyxcp.github.io/counterpartyd/version.json'
         response = requests.get(host, headers={'cache-control': 'no-cache'})
         versions = json.loads(response.text)
     except Exception as e:
