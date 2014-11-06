@@ -469,6 +469,7 @@ def apply_op(db, block, tx, msg, processed_code, compustate):
     elif op == 'SEND':
         addr, quantity, asset_id = stk.pop(), stk.pop(), stk.pop()
         asset_name = util.asset_name(asset_id)
+        # TODO: Check balance first.
         block.transfer_value(tx, msg.to, addr, quantity, asset=asset_name)
     elif op == 'ORIGIN':
         stk.append(utils.coerce_to_int(tx.sender))
