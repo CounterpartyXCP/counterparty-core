@@ -466,6 +466,10 @@ def apply_op(db, block, tx, msg, processed_code, compustate):
         addr = utils.coerce_to_hex(addr)
         asset_name = util.asset_name(asset_id)
         stk.append(block.get_balance(addr, asset=asset_name))
+    elif op == 'SEND':
+        addr, quantity, asset_id = stk.pop(), stk.pop(), stk.pop()
+        asset_name = util.asset_name(asset_id)
+        block.transfer_value(tx, msg.to, addr, quantity, asset=asset_name)
     elif op == 'ORIGIN':
         stk.append(utils.coerce_to_int(tx.sender))
     elif op == 'CALLER':
@@ -613,6 +617,7 @@ def apply_op(db, block, tx, msg, processed_code, compustate):
             stk.append(0)
             compustate.gas = 0
     elif op == 'CALL':
+        # TODO: Check that this allows for the sending of XCP to Counterparty addresses, as well as contract addresses.
         gas, to, value, meminstart, meminsz, memoutstart, memoutsz = \
             stk.pop(), stk.pop(), stk.pop(), stk.pop(), stk.pop(), stk.pop(), stk.pop()
         new_memsize = max(meminstart + meminsz, memoutstart + memoutsz)

@@ -63,7 +63,8 @@ opcodes = {
     0xf2: ['RETURN', 2, 1, [[-1, -2]], 1],
     0xf3: ['POST', 5, 1, [[-4, -5]], 20],
     0xf4: ['CALL_STATELESS', 7, 1, [[-4, -5], [-6, -7]], 20],
-    0xfe: ['ASSET_BALANCE', 2, 1, [], 20],
+    0xfd: ['ASSET_BALANCE', 2, 1, [], 20],
+    0xfe: ['SEND', 3, 0, [], 20],
     0xff: ['SUICIDE', 1, 1, [], 0],
 }
 

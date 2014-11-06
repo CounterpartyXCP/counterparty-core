@@ -159,11 +159,11 @@ class Block(object):
     def get_balance(self, address, asset=config.XCP):
         return util.get_balance(self.db, address, asset)
 
-    def transfer_value(self, tx, source, destination, quantity):
+    def transfer_value(self, tx, source, destination, quantity, asset=config.XCP):
         if source:
-            util.debit(self.db, tx.block_index, source, config.XCP, quantity, action='transfer value', event=tx.tx_hash)
+            util.debit(self.db, tx.block_index, source, asset, quantity, action='transfer value', event=tx.tx_hash)
         if destination:
-            util.credit(self.db, tx.block_index, destination, config.XCP, quantity, action='transfer value', event=tx.tx_hash)
+            util.credit(self.db, tx.block_index, destination, asset, quantity, action='transfer value', event=tx.tx_hash)
         return True
 
     def del_account(self, suicide):
