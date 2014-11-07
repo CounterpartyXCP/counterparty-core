@@ -266,11 +266,11 @@ class APIStatusPoller(threading.Thread):
         self.last_version_check = 0
         self.last_database_check = 0
         threading.Thread.__init__(self)
-        
+
     def run(self):
         global current_api_status_code, current_api_status_response_json
         db = util.connect_to_db(flags='SQLITE_OPEN_READONLY')
-        
+
         while True:
             try:
                 # Check version.
@@ -279,7 +279,7 @@ class APIStatusPoller(threading.Thread):
                     util.version_check(db)
                     self.last_version_check = time.time()
                 # Check that bitcoind is running, communicable, and caught up with the blockchain.
-                # Check that the database has caught up with bitcoind.                    
+                # Check that the database has caught up with bitcoind.
                 if time.time() - self.last_database_check > 10 * 60: # Ten minutes since last check.
                     code = 11
                     bitcoin.backend_check(db)
@@ -311,7 +311,7 @@ class APIServer(threading.Thread):
         def get_pw(username):
             if username == config.RPC_USER:
                 return config.RPC_PASSWORD
-            return None        
+            return None
 
         ######################
         #READ API
@@ -485,7 +485,7 @@ class APIServer(threading.Thread):
                 assert False
             cursor.close()
             return block
-        
+
         @dispatcher.add_method
         def get_blocks(block_indexes):
             """fetches block info and messages for the specified block indexes"""
@@ -496,22 +496,22 @@ class APIServer(threading.Thread):
 
             block_indexes_str = ','.join([str(x) for x in block_indexes])
             cursor = db.cursor()
-            
+
             cursor.execute('SELECT * FROM blocks WHERE block_index IN (%s) ORDER BY block_index ASC'
                 % (block_indexes_str,))
             blocks = cursor.fetchall()
-                
+
             cursor.execute('SELECT * FROM messages WHERE block_index IN (%s) ORDER BY block_index ASC, message_index ASC'
                 % (block_indexes_str,))
             messages = collections.deque(cursor.fetchall())
-            
+
             for block in blocks:
                 messages_in_block = []
                 block['_messages'] = []
                 while len(messages) and messages[0]['block_index'] == block['block_index']:
                     block['_messages'].append(messages.popleft())
             assert not len(messages) #should have been cleared out
-            
+
             cursor.close()
             return blocks
 
@@ -583,7 +583,7 @@ class APIServer(threading.Thread):
                 response.headers['Access-Control-Allow-Origin'] = '*'
                 response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
                 response.headers['Access-Control-Allow-Headers'] = 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type';
-    
+
         @app.route('/', methods=["OPTIONS",])
         @app.route('/api/', methods=["OPTIONS",])
         def handle_options():
@@ -599,17 +599,17 @@ class APIServer(threading.Thread):
                 request_json = flask.request.get_data().decode('utf-8')
                 request_data = json.loads(request_json)
                 assert 'id' in request_data and request_data['jsonrpc'] == "2.0" and request_data['method']
-                # params may be omitted 
+                # params may be omitted
             except:
                 obj_error = jsonrpc.exceptions.JSONRPCInvalidRequest(data="Invalid JSON-RPC 2.0 request format")
                 return flask.Response(obj_error.json.encode(), 200, mimetype='application/json')
-            
+
             #only arguments passed as a dict are supported
             if request_data.get('params', None) and not isinstance(request_data['params'], dict):
                 obj_error = jsonrpc.exceptions.JSONRPCInvalidRequest(
                     data='Arguments must be passed as a JSON object (list of unnamed arguments not supported)')
                 return flask.Response(obj_error.json.encode(), 200, mimetype='application/json')
-            
+
             #return an error if API fails checks
             if not config.FORCE and current_api_status_code:
                 return flask.Response(current_api_status_response_json, 200, mimetype='application/json')
@@ -625,7 +625,7 @@ class APIServer(threading.Thread):
         try:
             http_server.listen(config.RPC_PORT, address=config.RPC_HOST)
             self.is_ready = True
-            IOLoop.instance().start()        
+            IOLoop.instance().start()
         except OSError:
             raise Exception("Cannot start the API subsystem. Is {} already running, or is something else listening on port {}?".format(config.XCP_CLIENT, config.RPC_PORT))
 

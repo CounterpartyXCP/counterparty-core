@@ -300,7 +300,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     try:
         config.BACKEND_RPC_PORT = int(config.BACKEND_RPC_PORT)
         if not (int(config.BACKEND_RPC_PORT) > 1 and int(config.BACKEND_RPC_PORT) < 65535):
-            raise exceptions.ConfigurationError('invalid backend API port number') 
+            raise exceptions.ConfigurationError('invalid backend API port number')
     except:
         raise Exception("Please specific a valid port number backend-rpc-port configuration parameter")
 
@@ -395,7 +395,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     try:
         config.RPC_PORT = int(config.RPC_PORT)
         if not (int(config.BACKEND_RPC_PORT) > 1 and int(config.BACKEND_RPC_PORT) < 65535):
-            raise exceptions.ConfigurationError('invalid counterpartyd API port number') 
+            raise exceptions.ConfigurationError('invalid counterpartyd API port number')
     except:
         raise Exception("Please specific a valid port number rpc-port configuration parameter")
 
@@ -712,7 +712,7 @@ if __name__ == '__main__':
                 blockchain_service_name=args.blockchain_service_name,
                 blockchain_service_connect=args.blockchain_service_connect,
                 rpc_host=args.rpc_host, rpc_port=args.rpc_port, rpc_user=args.rpc_user,
-                rpc_password=args.rpc_password, rpc_allow_cors=args.rpc_allow_cors, 
+                rpc_password=args.rpc_password, rpc_allow_cors=args.rpc_allow_cors,
                 log_file=args.log_file, config_file=args.config_file,
                 database_file=args.database_file, testnet=args.testnet,
                 testcoin=args.testcoin, carefulness=args.carefulness,

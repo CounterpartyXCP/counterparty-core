@@ -190,7 +190,7 @@ def log (db, command, category, bindings):
             logging.info(log_message)
 
         elif category == 'rpsresolves':
-            
+
             if bindings['status'] == 'valid':
                 rps_matches = list(cursor.execute('''SELECT * FROM rps_matches WHERE id = ?''', (bindings['rps_match_id'],)))
                 assert len(rps_matches) == 1

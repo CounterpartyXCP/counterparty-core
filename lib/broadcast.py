@@ -274,7 +274,7 @@ def parse (db, tx, message):
             else:
                 winner = 'NotEqual'
                 bet_match_status = 'settled: for notequal'
-                util.credit(db, tx['block_index'], notequal_address, config.XCP, escrow_less_fee, action='bet {}'.format(bet_match_status), event=tx['tx_hash'])   
+                util.credit(db, tx['block_index'], notequal_address, config.XCP, escrow_less_fee, action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
 
             # Pay fee to feed.
             util.credit(db, tx['block_index'], bet_match['feed_address'], config.XCP, fee, action='feed fee', event=tx['tx_hash'])

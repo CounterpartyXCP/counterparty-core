@@ -69,7 +69,7 @@ def getaddressinfo(address):
             'txApperances': infos['data']['total_txs'],
             'transactions': transactions
         }
-    
+
     return None
 
 def gettransaction(tx_hash):
