@@ -1,12 +1,13 @@
 ## Client Versions ##
 * v9.46.0 (2014-11-03)
-	* new consensus hashes (include `tx_info` and version)
+	* new consensus hashes, with `tx_info` and consensus version
 	* Coveralls support
 	* rewrite of README
-	* more elegant multi‐sig address handling
+	* better multi‐sig address handling
+	* multi‐sig change
 	* use new process‐locking mechanism
-	* use GitHub pages for hosting minimum version information
-	* bump dependencies versions
+	* use GitHub Pages for hosting minimum version information
+	* bump versions of dependencies
 	* miscellaneous clean up
 * v9.45.0 (2014-10-23)
 	* add dividend fee of 0.0002 XCP per recipient (protocol change: 330000)
