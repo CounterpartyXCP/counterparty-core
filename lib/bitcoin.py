@@ -664,7 +664,7 @@ def get_unspent_txouts(source):
         for tx in raw_transactions:
             for vout in tx['vout']:
                 scriptpubkey = vout['scriptPubKey']
-                if scriptpubkey['type'] == 'multisig' and 'addresses' in scriptpubkey.keys():
+                if scriptpubkey['type'] == 'multisig' and 'addresses' in scriptpubkey.keys() and len(scriptpubkey['addresses']) == len(pubkeyhashes):
                     found = True
                     for pubkeyhash in pubkeyhashes:
                         if not pubkeyhash in scriptpubkey['addresses']:
