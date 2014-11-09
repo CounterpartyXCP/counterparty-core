@@ -438,7 +438,7 @@ def last_message (db):
     cursor.close()
     return last_message
 
-def asset_id (asset_name):
+def asset_id (asset_name, block_index):
     # Special cases.
     if asset_name == config.BTC: return 0
     elif asset_name == config.XCP: return 1
