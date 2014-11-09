@@ -9,7 +9,7 @@ from fixtures.vectors import UNITTEST_VECTOR
 from fixtures.params import DEFAULT_PARAMS
 from fixtures.scenarios import INTEGRATION_SCENARIOS
 
-from lib import config, bitcoin
+from lib import config, bitcoin, util
 
 import bitcoin as bitcoinlib
 
@@ -87,7 +87,7 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
 
     def decode_raw_transaction(raw_transaction):
         if pytest.config.option.initrawtransactions or pytest.config.option.saverawtransactions:
-            return bitcoin.rpc('decoderawtransaction', [raw_transaction])
+            return util.rpc('decoderawtransaction', [raw_transaction])
         else:
             return util_test.decoderawtransaction(rawtransactions_db, raw_transaction)
 
