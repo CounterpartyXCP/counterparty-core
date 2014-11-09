@@ -15,7 +15,7 @@ import threading
 from threading import Thread
 import binascii
 from fractions import Fraction
-from tendo import singleton
+import socket
 
 import requests
 import appdirs
@@ -27,6 +27,18 @@ if os.name == 'nt':
 
 D = decimal.Decimal
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
+
+# Lock database access by opening a socket.
+class LockingError(Exception): pass
+def get_lock():
+    database_path = config.DATABASE
+    global lock_socket
+    lock_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+    try:
+        logging.info('Status: Checking process lock')
+        lock_socket.bind('\0' + database_path)
+    except socket.error:
+        raise LockingError('Database {} is currently being written to by another copy of {}'.format(database_path, config.XCP_CLIENT))
 
 def get_address (db, address):
     address_dict = {}
@@ -568,7 +580,7 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
     parser_server = subparsers.add_parser('server', help='run the server')
-    parser_server.add_argument('--force', action='store_true', help='skip backend check, version check, singleton check')
+    parser_server.add_argument('--force', action='store_true', help='skip backend check, version check, process lock check')
 
     parser_send = subparsers.add_parser('send', help='create and broadcast a *send* message')
     parser_send.add_argument('--source', required=True, help='the source address')
@@ -679,11 +691,11 @@ if __name__ == '__main__':
     parser_pending= subparsers.add_parser('pending', help='list pending order matches awaiting {}payment from you'.format(config.BTC))
 
     parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database')
-    parser_reparse.add_argument('--force', action='store_true', help='skip backend check, version check, singleton check')
+    parser_reparse.add_argument('--force', action='store_true', help='skip backend check, version check, process lock check')
 
     parser_rollback = subparsers.add_parser('rollback', help='rollback database')
     parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
-    parser_rollback.add_argument('--force', action='store_true', help='skip backend check, version check, singleton check')
+    parser_rollback.add_argument('--force', action='store_true', help='skip backend check, version check, process lock check')
 
     parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the {} market'.format(config.XCP_NAME) )
     parser_market.add_argument('--give-asset', help='only show orders offering to sell GIVE_ASSET')
@@ -1090,19 +1102,19 @@ if __name__ == '__main__':
     # PARSING
     elif args.action == 'reparse':
         if not config.FORCE:
-            me = singleton.SingleInstance()
+            get_lock()
 
         blocks.reparse(db)
 
     elif args.action == 'rollback':
         if not config.FORCE:
-            me = singleton.SingleInstance()
+            get_lock()
 
         blocks.reparse(db, block_index=args.block_index)
 
     elif args.action == 'server':
         if not config.FORCE:
-            me = singleton.SingleInstance()
+            get_lock()
 
         api_status_poller = api.APIStatusPoller()
         api_status_poller.daemon = True
