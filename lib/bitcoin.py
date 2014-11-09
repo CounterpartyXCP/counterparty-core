@@ -45,7 +45,7 @@ def pubkey_to_pubkeyhash(pubkey):
     return pubkey
 def pubkeyhash_to_pubkey(pubkeyhash):
     # TODO: convert to python-bitcoinlib.
-    raw_transactions = search_raw_transactions(pubkeyhash)
+    raw_transactions = blockchain.searchrawtransactions(pubkeyhash)
     for tx in raw_transactions:
         for vin in tx['vin']:
             scriptsig = vin['scriptSig']
@@ -92,8 +92,6 @@ def send_raw_transaction (tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
 def get_private_key (address):
     return rpc('dumpprivkey', [address])
-def search_raw_transactions (address):
-    return rpc('searchrawtransactions', [address, 1, 0, 9999999])
 
 def get_wallet ():
     for group in rpc('listaddressgroupings', []):
@@ -659,10 +657,10 @@ def get_unspent_txouts(source):
     outputs = {}
     if util.is_multisig(source):
         pubkeyhashes = util.pubkeyhash_array(source)
-        raw_transactions = search_raw_transactions(pubkeyhashes[1])
+        raw_transactions = blockchain.searchrawtransactions(pubkeyhashes[1])
     else:
         pubkeyhashes = [source]
-        raw_transactions = search_raw_transactions(source)
+        raw_transactions = blockchain.searchrawtransactions(source)
 
     for tx in raw_transactions:
         for vout in tx['vout']:
