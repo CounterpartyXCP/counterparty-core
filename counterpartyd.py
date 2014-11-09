@@ -507,7 +507,7 @@ def balances (address):
     if util.is_multisig(address):
         btc_balance = '???'
     else:
-        btc_balance = blockchain.getaddressinfo(address)['balance']
+        btc_balance = sum(out['amount'] for out in bitcoin.get_unspent_txouts(address))
     table.add_row([config.BTC, btc_balance])  # BTC
     for balance in balances:
         asset = balance['asset']

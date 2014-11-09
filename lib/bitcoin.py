@@ -655,51 +655,42 @@ def get_unspent_txouts(source):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
     """
-
+    # Get all coins.
+    outputs = {}
     if util.is_multisig(source):
         pubkeyhashes = util.pubkeyhash_array(source)
-        outputs = []
         raw_transactions = search_raw_transactions(pubkeyhashes[1])
-        # Get all coins.
-        for tx in raw_transactions:
-            for vout in tx['vout']:
-                scriptpubkey = vout['scriptPubKey']
-                if scriptpubkey['type'] == 'multisig' and 'addresses' in scriptpubkey.keys() and len(scriptpubkey['addresses']) == len(pubkeyhashes):
-                    found = True
-                    for pubkeyhash in pubkeyhashes:
-                        if not pubkeyhash in scriptpubkey['addresses']:
-                            found = False
-                    if found:
-                        coin = {'amount': vout['value'],
-                                'confirmations': tx['confirmations'],
-                                'scriptPubKey': scriptpubkey['hex'],
-                                'txid': tx['txid'],
-                                'vout': vout['n']
-                               }
-                        outputs.append(coin)
-        # Prune away spent coins.
-        unspent = []
-        for output in outputs:
-            spent = False
-            for tx in raw_transactions:
-                for vin in tx['vin']:
-                    if (vin['txid'], vin['vout']) == (output['txid'], output['vout']):
-                        spent = True
-            if not spent:
-                unspent.append(output)
     else:
-        # TODO: remove account (and address?) fields
-        if is_mine(source):
-            wallet_unspent = list_unspent()
-            unspent = []
-            for output in wallet_unspent:
-                try:
-                    if output['address'] == source:
-                        unspent.append(output)
-                except KeyError:
-                    pass
-        else:
-            unspent = blockchain.listunspent(source)
+        pubkeyhashes = [source]
+        raw_transactions = search_raw_transactions(source)
+
+    for tx in raw_transactions:
+        for vout in tx['vout']:
+            scriptpubkey = vout['scriptPubKey']
+            if util.is_multisig(source) and scriptpubkey['type'] != 'multisig':
+                continue
+            elif 'addresses' in scriptpubkey.keys() and "".join(sorted(scriptpubkey['addresses'])) == "".join(sorted(pubkeyhashes)):
+                txid = tx['txid']
+                if txid not in outputs or outputs[txid]['confirmations'] < tx['confirmations']:
+                    coin = {'amount': vout['value'],
+                            'confirmations': tx['confirmations'],
+                            'scriptPubKey': scriptpubkey['hex'],
+                            'txid': txid,
+                            'vout': vout['n']
+                           }
+                    outputs[txid] = coin
+    outputs = outputs.values()
+
+    # Prune away spent coins.
+    unspent = []
+    for output in outputs:
+        spent = False
+        for tx in raw_transactions:
+            for vin in tx['vin']:
+                if (vin['txid'], vin['vout']) == (output['txid'], output['vout']):
+                    spent = True
+        if not spent:
+            unspent.append(output)
 
     return unspent
 
