@@ -31,14 +31,24 @@ json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 # Lock database access by opening a socket.
 class LockingError(Exception): pass
 def get_lock():
-    database_path = config.DATABASE
+
+    # Cross‐platform.
+    if os.name == 'nt' or True: # Not database‐specific.
+        socket_family = socket.AF_INET
+        socket_address = ('localhost', 8999)
+        error = 'Another copy of {} is currently running.'.format(config.XCP_CLIENT)
+    else:
+        socket_family = socket.AF_UNIX
+        socket_address = '\0' + config.DATABASE
+        error = 'Another copy of {} is currently writing to database {}'.format(config.XCP_CLIENT, config.DATABASE)
+
     global lock_socket
-    lock_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+    lock_socket = socket.socket(socket_family, socket.SOCK_DGRAM)
     try:
-        logging.info('Status: Checking process lock')
-        lock_socket.bind('\0' + database_path)
+        logging.info('Status: Getting process lock.')
+        lock_socket.bind(socket_address)
     except socket.error:
-        raise LockingError('Database {} is currently being written to by another copy of {}'.format(database_path, config.XCP_CLIENT))
+        raise LockingError(error)
 
 def get_address (db, address):
     address_dict = {}
