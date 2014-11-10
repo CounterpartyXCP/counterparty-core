@@ -31,3 +31,10 @@ def getaddressinfo(address):
 
 def gettransaction(tx_hash):
     return util.get_url(get_host() + '/api/tx/' + tx_hash + '/', abort_on_error=False)
+
+def searchrawtransactions(address):
+    result = util.get_url(get_host() + '/api/txs/?address=' + address, abort_on_error=False)
+    if 'txs' in result:
+        return result['txs']
+    else:
+        return []

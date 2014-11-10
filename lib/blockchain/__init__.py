@@ -28,5 +28,5 @@ def getaddressinfo(address):
 def gettransaction(tx_hash):
     return sys.modules['lib.blockchain.{}'.format(config.BLOCKCHAIN_SERVICE_NAME)].gettransaction(tx_hash)
 
-def searchtransactions(address):
-    return sys.modules['lib.blockchain.{}'.format(config.BLOCKCHAIN_SERVICE_NAME)].searchtransactions(address)
+def searchrawtransactions(address):
+    return sys.modules['lib.blockchain.{}'.format(config.BLOCKCHAIN_SERVICE_NAME)].searchrawtransactions(address)

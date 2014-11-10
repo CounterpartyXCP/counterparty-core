@@ -928,6 +928,7 @@ def rpc (method, params):
 
     # Return result, with error handling.
     response_json = response.json()
+    logging.error(response_json)
     if 'error' not in response_json.keys() or response_json['error'] == None:
         return response_json['result']
     elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
@@ -942,7 +943,7 @@ def rpc (method, params):
                 raise exceptions.BitcoindError('Source address not in wallet.')
         else:
             raise exceptions.AddressError('Invalid address. (Multi‐signature?)')
-    elif response_json['error']['code'] == -1 and response_json['message'] == 'Block number out of range.':
+    elif response_json['error']['code'] == -1 and response_json['error']['message'] == 'Block number out of range.':
         time.sleep(10)
         return get_block_hash(block_index)
     else:
