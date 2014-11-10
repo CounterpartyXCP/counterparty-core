@@ -96,7 +96,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
                               WHERE (address = ? AND asset = ?)''', (source, config.XCP))
             balances = cursor.fetchall()
             cursor.close()
-            if config.TESTNET or block_index >= 340000:  # Protocol change.
+            if config.asset_names_v2(block_index):  # Protocol change.
                 if len(asset) >= 13:
                     fee = 0
                 else:

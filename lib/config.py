@@ -114,3 +114,12 @@ CHECKPOINTS_TESTNET = {
 }
 
 FIRST_MULTISIG_BLOCK_TESTNET = 303000
+
+def asset_names_v2(block_index):
+    if config.TESTNET:
+        if block_index >= 307600:
+            return True
+        else:
+            return False
+    elif block_index >= 340000 and False:
+        return True

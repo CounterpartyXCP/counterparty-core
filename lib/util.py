@@ -455,16 +455,16 @@ def get_asset_id (asset_name, block_index):
         raise exceptions.AssetNameError('too short')
 
     # Numeric asset names.
-    if config.TESTNET or block_index >= 340000:  # Protocol change.
+    if config.asset_names_v2(block_index):  # Protocol change.
         if asset_name[0] == 'A':
             # Must be numeric.
             try:
                 asset_id = int(asset_name[1:])
             except ValueError:
-                raise exceptions.AssetNameError('non‐numeric asset name with ‘A’ prefix')
+                raise exceptions.AssetNameError('non‐numeric asset name starts with ‘A’')
 
             # Number must be in range.
-            if not (26^12 + 1 <= asset_id <= 256**8):
+            if not (26**12 + 1 <= asset_id <= 256**8):
                 raise exceptions.AssetNameError('numeric asset name not in range')
 
             return asset_id
@@ -495,10 +495,11 @@ def get_asset_name (asset_id, block_index):
     if asset_id < 26**3:
         raise exceptions.AssetIDError('too low')
 
-    if config.TESTNET or block_index >= 340000:  # Protocol change.
+    if config.asset_names_v2(block_index):  # Protocol change.
         if asset_id <= 256**8:
-            if 26^12 + 1 <= asset_id:
-                return 'A' + str(asset_id)
+            if 26**12 + 1 <= asset_id:
+                asset_name = 'A' + str(asset_id)
+                return asset_name
         else:
             raise exceptions.AssetIDError('too high')
 

@@ -209,7 +209,7 @@ UNITTEST_VECTOR = {
         }],
         'compose': [{
             'in': (ADDR[0], None, 'ASSET', 1000, True, False, None, None, ''),
-            'error': ('AssetNameError', 'starts with ‘A’')
+            'error': ('AssetNameError', 'non‐numeric asset name starts with ‘A’')
         }, {
             'in': (ADDR[0], None, 'BSSET1', 1000, True, False, None, None, ''),
             'error': ('AssetNameError', "('invalid character:', '1')")
