@@ -45,7 +45,7 @@ def get_lock():
     global lock_socket
     lock_socket = socket.socket(socket_family, socket.SOCK_DGRAM)
     try:
-        logging.info('Status: Getting process lock.')
+        logging.info('Status: Acquiring lock.')
         lock_socket.bind(socket_address)
     except socket.error:
         raise LockingError(error)
@@ -590,7 +590,7 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
     parser_server = subparsers.add_parser('server', help='run the server')
-    parser_server.add_argument('--force', action='store_true', help='skip backend check, version check, process lock check')
+    parser_server.add_argument('--force', action='store_true', help='skip backend check, version check, process lock')
 
     parser_send = subparsers.add_parser('send', help='create and broadcast a *send* message')
     parser_send.add_argument('--source', required=True, help='the source address')
@@ -701,11 +701,11 @@ if __name__ == '__main__':
     parser_pending= subparsers.add_parser('pending', help='list pending order matches awaiting {}payment from you'.format(config.BTC))
 
     parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database')
-    parser_reparse.add_argument('--force', action='store_true', help='skip backend check, version check, process lock check')
+    parser_reparse.add_argument('--force', action='store_true', help='skip backend check, version check, process lock')
 
     parser_rollback = subparsers.add_parser('rollback', help='rollback database')
     parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
-    parser_rollback.add_argument('--force', action='store_true', help='skip backend check, version check, process lock check')
+    parser_rollback.add_argument('--force', action='store_true', help='skip backend check, version check, process lock')
 
     parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the {} market'.format(config.XCP_NAME) )
     parser_market.add_argument('--give-asset', help='only show orders offering to sell GIVE_ASSET')
