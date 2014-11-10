@@ -171,7 +171,7 @@ UNITTEST_VECTOR = {
             'in': (ADDR[0], None, 'INVALIDCALLPRICE', 1000, True, True, 1409401723, 'price', '', 1),
             'out': (1409401723, 'price', ['call_price must be a float'], 0)
         }, {
-            'in': (ADDR[0], None, 'NEGATIVEVALUES', -1000, True, True, -1409401723, -DP['quantity'], '', 1),
+            'in': (ADDR[0], None, 'NEGVALUES', -1000, True, True, -1409401723, -DP['quantity'], '', 1),
             'out': (-1409401723, -100000000.0, ['negative quantity', 'negative call price', 'negative call date'], 50000000)
         }, {
             'in': (ADDR[2], None, 'DIVISIBLE', 1000, True, False, None, None, 'Divisible asset', 1),

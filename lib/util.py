@@ -355,7 +355,7 @@ def connect_to_db(flags=None):
 
     return db
 
-def version_check (db):
+def version_check (block_index):
     try:
         host = 'https://counterpartyxcp.github.io/counterpartyd/version.json'
         response = requests.get(host, headers={'cache-control': 'no-cache'})
@@ -378,7 +378,7 @@ def version_check (db):
         explanation = 'Your version of counterpartyd is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: ‘{}’. Please upgrade to the latest version and restart the server.'.format(
             config.VERSION_STRING, versions['block_index'], versions['minimum_version_major'], versions['minimum_version_minor'],
             versions['minimum_version_revision'], versions['reason'])
-        if last_block(db)['block_index'] >= versions['block_index']:
+        if block_index >= versions['block_index']:
             raise exceptions.VersionUpdateRequiredError(explanation)
         else:
             warnings.warn(explanation)
@@ -438,24 +438,22 @@ def last_message (db):
     cursor.close()
     return last_message
 
-def asset_id (asset):
+def asset_id (asset_name, block_index):
     # Special cases.
-    if asset == config.BTC: return 0
-    elif asset == config.XCP: return 1
-
-    if asset[0] == 'A': raise exceptions.AssetNameError('starts with ‘A’')
+    if asset_name == config.BTC: return 0
+    elif asset_name == config.XCP: return 1
 
     # Checksum
     """
-    if not checksum.verify(asset):
+    if not checksum.verify(asset_name):
         raise exceptions.AssetNameError('invalid checksum')
     else:
-        asset = asset[:-1]  # Strip checksum character.
+        asset_name = asset_name[:-1]  # Strip checksum character.
     """
 
     # Convert the Base 26 string to an integer.
     n = 0
-    for c in asset:
+    for c in asset_name:
         n *= 26
         if c not in b26_digits:
             raise exceptions.AssetNameError('invalid character:', c)
@@ -465,9 +463,17 @@ def asset_id (asset):
     if n < 26**3:
         raise exceptions.AssetNameError('too short')
 
-    return n
+    asset_id = n
 
-def asset_name (asset_id):
+    if len(asset_name) >= 13 and (config.TESTNET or block_index >= 340000):  # Protocol change.
+        if asset_id != asset_name:  # Initial ‘A’ is ignored.
+            raise exceptions.AssetNameError('long asset names are now numerical')
+    elif asset_name[0] == 'A':
+        raise exceptions.AssetNameError('starts with ‘A’')
+
+    return asset_id
+
+def asset_name (asset_id, block_index):
     if asset_id == 0: return config.BTC
     elif asset_id == 1: return config.XCP
 
@@ -482,10 +488,13 @@ def asset_name (asset_id):
         res.append(b26_digits[r])
     asset_name = ''.join(res[::-1])
 
-    """
-    return asset_name + checksum.compute(asset_name)
-    """
-    return asset_name
+    if len(asset_name) >= 13 and (config.TESTNET or block_index >= 340000):  # Protocol change.
+        return 'A' + str(asset_id)
+    else:
+        """
+        return asset_name + checksum.compute(asset_name)
+        """
+        return asset_name
 
 
 def debit (db, block_index, address, asset, quantity, action=None, event=None):

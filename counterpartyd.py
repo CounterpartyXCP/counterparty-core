@@ -15,7 +15,7 @@ import threading
 from threading import Thread
 import binascii
 from fractions import Fraction
-from tendo import singleton
+import socket
 
 import requests
 import appdirs
@@ -27,6 +27,27 @@ if os.name == 'nt':
 
 D = decimal.Decimal
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
+
+# Lock database access by opening a socket.
+class LockingError(Exception): pass
+def get_lock():
+
+    # Cross‐platform.
+    if os.name == 'nt': # Not database‐specific.
+        socket_family = socket.AF_INET
+        socket_address = ('localhost', 8999)
+        error = 'Another copy of {} is currently running.'.format(config.XCP_CLIENT)
+    else:
+        socket_family = socket.AF_UNIX
+        socket_address = '\0' + config.DATABASE
+        error = 'Another copy of {} is currently writing to database {}'.format(config.XCP_CLIENT, config.DATABASE)
+
+    global lock_socket
+    lock_socket = socket.socket(socket_family, socket.SOCK_DGRAM)
+    try:
+        lock_socket.bind(socket_address)
+    except socket.error:
+        raise LockingError(error)
 
 def get_address (db, address):
     address_dict = {}
@@ -568,7 +589,7 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
     parser_server = subparsers.add_parser('server', help='run the server')
-    parser_server.add_argument('--force', action='store_true', help='skip backend check, version check, singleton check')
+    parser_server.add_argument('--force', action='store_true', help='skip backend check, version check, process lock')
 
     parser_send = subparsers.add_parser('send', help='create and broadcast a *send* message')
     parser_send.add_argument('--source', required=True, help='the source address')
@@ -679,11 +700,11 @@ if __name__ == '__main__':
     parser_pending= subparsers.add_parser('pending', help='list pending order matches awaiting {}payment from you'.format(config.BTC))
 
     parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database')
-    parser_reparse.add_argument('--force', action='store_true', help='skip backend check, version check, singleton check')
+    parser_reparse.add_argument('--force', action='store_true', help='skip backend check, version check, process lock')
 
     parser_rollback = subparsers.add_parser('rollback', help='rollback database')
     parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
-    parser_rollback.add_argument('--force', action='store_true', help='skip backend check, version check, singleton check')
+    parser_rollback.add_argument('--force', action='store_true', help='skip backend check, version check, process lock')
 
     parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the {} market'.format(config.XCP_NAME) )
     parser_market.add_argument('--give-asset', help='only show orders offering to sell GIVE_ASSET')
@@ -746,19 +767,24 @@ if __name__ == '__main__':
     urllib3_log.propagate = False
 
 
-    # Database
-    logging.info('Status: Connecting to database.')
-    db = util.connect_to_db()
-
     # Version
     logging.info('Status: Running v{} of counterpartyd.'.format(config.VERSION_STRING, config.XCP_CLIENT))
     if not config.FORCE and args.action in ('server', 'reparse', 'rollback'):
         logging.info('Status: Checking version.')
         try:
-            util.version_check(db)
+            util.version_check(bitcoin.get_block_count())
         except exceptions.VersionUpdateRequiredError as e:
             traceback.print_exc(file=sys.stdout)
             sys.exit(config.EXITCODE_UPDATE_REQUIRED)
+
+    # Lock
+    if args.action in ('rollback', 'reparse', 'server') and not config.FORCE:
+        logging.info('Status: Acquiring lock.')
+        get_lock()
+
+    # Database
+    logging.info('Status: Connecting to database.')
+    db = util.connect_to_db()
 
     # MESSAGE CREATION
     if args.action == 'send':
@@ -1089,21 +1115,12 @@ if __name__ == '__main__':
 
     # PARSING
     elif args.action == 'reparse':
-        if not config.FORCE:
-            me = singleton.SingleInstance()
-
         blocks.reparse(db)
 
     elif args.action == 'rollback':
-        if not config.FORCE:
-            me = singleton.SingleInstance()
-
         blocks.reparse(db, block_index=args.block_index)
 
     elif args.action == 'server':
-        if not config.FORCE:
-            me = singleton.SingleInstance()
-
         api_status_poller = api.APIStatusPoller()
         api_status_poller.daemon = True
         api_status_poller.start()
