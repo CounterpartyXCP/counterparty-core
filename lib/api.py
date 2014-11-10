@@ -276,7 +276,7 @@ class APIStatusPoller(threading.Thread):
                 # Check version.
                 if time.time() - self.last_version_check >= 10: # Four hours since last check.
                     code = 10
-                    util.version_check(db)
+                    util.version_check(util.last_block(db)['block_index'])
                     self.last_version_check = time.time()
                 # Check that bitcoind is running, communicable, and caught up with the blockchain.
                 # Check that the database has caught up with bitcoind.

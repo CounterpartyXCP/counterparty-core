@@ -355,7 +355,7 @@ def connect_to_db(flags=None):
 
     return db
 
-def version_check (db):
+def version_check (block_index):
     try:
         host = 'https://counterpartyxcp.github.io/counterpartyd/version.json'
         response = requests.get(host, headers={'cache-control': 'no-cache'})
@@ -378,7 +378,7 @@ def version_check (db):
         explanation = 'Your version of counterpartyd is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: ‘{}’. Please upgrade to the latest version and restart the server.'.format(
             config.VERSION_STRING, versions['block_index'], versions['minimum_version_major'], versions['minimum_version_minor'],
             versions['minimum_version_revision'], versions['reason'])
-        if last_block(db)['block_index'] >= versions['block_index']:
+        if block_index >= versions['block_index']:
             raise exceptions.VersionUpdateRequiredError(explanation)
         else:
             warnings.warn(explanation)

@@ -45,7 +45,6 @@ def get_lock():
     global lock_socket
     lock_socket = socket.socket(socket_family, socket.SOCK_DGRAM)
     try:
-        logging.info('Status: Acquiring lock.')
         lock_socket.bind(socket_address)
     except socket.error:
         raise LockingError(error)
@@ -768,19 +767,24 @@ if __name__ == '__main__':
     urllib3_log.propagate = False
 
 
-    # Database
-    logging.info('Status: Connecting to database.')
-    db = util.connect_to_db()
-
     # Version
     logging.info('Status: Running v{} of counterpartyd.'.format(config.VERSION_STRING, config.XCP_CLIENT))
     if not config.FORCE and args.action in ('server', 'reparse', 'rollback'):
         logging.info('Status: Checking version.')
         try:
-            util.version_check(db)
+            util.version_check(bitcoin.get_block_count())
         except exceptions.VersionUpdateRequiredError as e:
             traceback.print_exc(file=sys.stdout)
             sys.exit(config.EXITCODE_UPDATE_REQUIRED)
+
+    # Lock
+    if args.action in ('rollback', 'reparse', 'server') and not config.FORCE:
+        logging.info('Status: Acquiring lock.')
+        get_lock()
+
+    # Database
+    logging.info('Status: Connecting to database.')
+    db = util.connect_to_db()
 
     # MESSAGE CREATION
     if args.action == 'send':
@@ -1111,21 +1115,12 @@ if __name__ == '__main__':
 
     # PARSING
     elif args.action == 'reparse':
-        if not config.FORCE:
-            get_lock()
-
         blocks.reparse(db)
 
     elif args.action == 'rollback':
-        if not config.FORCE:
-            get_lock()
-
         blocks.reparse(db, block_index=args.block_index)
 
     elif args.action == 'server':
-        if not config.FORCE:
-            get_lock()
-
         api_status_poller = api.APIStatusPoller()
         api_status_poller.daemon = True
         api_status_poller.start()
