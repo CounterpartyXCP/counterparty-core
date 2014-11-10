@@ -33,7 +33,7 @@ class LockingError(Exception): pass
 def get_lock():
 
     # Cross‐platform.
-    if os.name == 'nt' or True: # Not database‐specific.
+    if os.name == 'nt': # Not database‐specific.
         socket_family = socket.AF_INET
         socket_address = ('localhost', 8999)
         error = 'Another copy of {} is currently running.'.format(config.XCP_CLIENT)
