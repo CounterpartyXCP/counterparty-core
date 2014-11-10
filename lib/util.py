@@ -471,7 +471,7 @@ def get_asset_id (asset_name, block_index):
         elif len(asset_name) >= 13:
             raise exceptions.AssetNameError('long asset names must be numeric')
 
-    if asset_name[0] == 'A': raise exceptions.AssetNameError('starts with ‘A’')
+    if asset_name[0] == 'A': raise exceptions.AssetNameError('non‐numeric asset name starts with ‘A’')
 
     # Convert the Base 26 string to an integer.
     n = 0
@@ -912,7 +912,8 @@ def asset_names_v2(block_index):
             return True
         else:
             return False
-    elif block_index >= 340000 and False:
+    elif False:
         return True
+    return False
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
