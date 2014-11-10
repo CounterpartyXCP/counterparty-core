@@ -455,7 +455,7 @@ def get_asset_id (asset_name, block_index):
         raise exceptions.AssetNameError('too short')
 
     # Numeric asset names.
-    if config.asset_names_v2(block_index):  # Protocol change.
+    if asset_names_v2(block_index):  # Protocol change.
         if asset_name[0] == 'A':
             # Must be numeric.
             try:
@@ -495,7 +495,7 @@ def get_asset_name (asset_id, block_index):
     if asset_id < 26**3:
         raise exceptions.AssetIDError('too low')
 
-    if config.asset_names_v2(block_index):  # Protocol change.
+    if asset_names_v2(block_index):  # Protocol change.
         if asset_id <= 256**8:
             if 26**12 + 1 <= asset_id:
                 asset_name = 'A' + str(asset_id)
@@ -904,5 +904,15 @@ def pubkeyhash_array(address):
     return pubkeyhashes
 
 ### Multi‐signature Addresses ###
+
+### Protocol Changes ###
+def asset_names_v2(block_index):
+    if config.TESTNET:
+        if block_index >= 307400:
+            return True
+        else:
+            return False
+    elif block_index >= 340000 and False:
+        return True
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
