@@ -16,6 +16,7 @@ from threading import Thread
 import binascii
 from fractions import Fraction
 import socket
+import signal
 
 import requests
 import appdirs
@@ -27,6 +28,21 @@ if os.name == 'nt':
 
 D = decimal.Decimal
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
+
+def sigterm_handler(_signo, _stack_frame):
+    if 'api_server' in globals():
+        logging.info('Status: Stopping API server.')
+        api_server.stop()
+        api_status_poller.stop()
+
+    # logging.info('Status: Closing database connection.')
+    # db.close()
+
+    logging.info('Status: Shutting down.')
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, sigterm_handler)
+signal.signal(signal.SIGINT, sigterm_handler)
 
 # Lock database access by opening a socket.
 class LockingError(Exception): pass
@@ -1125,9 +1141,11 @@ if __name__ == '__main__':
         api_status_poller.daemon = True
         api_status_poller.start()
 
+        """
         api_server = api.APIServer()
         api_server.daemon = True
         api_server.start()
+        """
 
         # Check blockchain explorer.
         if not config.FORCE:

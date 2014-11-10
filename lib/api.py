@@ -266,12 +266,16 @@ class APIStatusPoller(threading.Thread):
         self.last_version_check = 0
         self.last_database_check = 0
         threading.Thread.__init__(self)
+        self.stop_event = threading.Event()
+
+    def stop(self):
+        self.stop_event.set()
 
     def run(self):
         global current_api_status_code, current_api_status_response_json
         db = util.connect_to_db(flags='SQLITE_OPEN_READONLY')
 
-        while True:
+        while self.stop_event == False:
             try:
                 # Check version.
                 if time.time() - self.last_version_check >= 10: # Four hours since last check.
@@ -301,6 +305,12 @@ class APIServer(threading.Thread):
     def __init__(self):
         self.is_ready = False
         threading.Thread.__init__(self)
+        self.stop_event = threading.Event()
+
+    def stop(self):
+        self.ioloop.stop()
+        self.join()
+        self.stop_event.set()
 
     def run(self):
         db = util.connect_to_db(flags='SQLITE_OPEN_READONLY')
@@ -625,8 +635,13 @@ class APIServer(threading.Thread):
         try:
             http_server.listen(config.RPC_PORT, address=config.RPC_HOST)
             self.is_ready = True
-            IOLoop.instance().start()
+            self.ioloop = IOLoop.instance()
+            self.ioloop.start()
         except OSError:
             raise Exception("Cannot start the API subsystem. Is {} already running, or is something else listening on port {}?".format(config.XCP_CLIENT, config.RPC_PORT))
+
+        http_server.stop()
+        self.ioloop.close()
+        return
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
