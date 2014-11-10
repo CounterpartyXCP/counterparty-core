@@ -191,7 +191,7 @@ def cli(method, params, unsigned):
         if not bitcoin.is_valid(source):
             raise exceptions.AddressError('Invalid address.')
         if bitcoin.is_mine(source):
-            bitcoin.wallet_unlock()
+            util.wallet_unlock()
         else:
             # TODO: Do this only if the encoding method needs it.
             print('Source not in backend wallet.')

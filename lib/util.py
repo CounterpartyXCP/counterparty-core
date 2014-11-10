@@ -740,10 +740,10 @@ def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
     try:
         r = requests.get(url, timeout=fetch_timeout)
     except Exception as e:
-        raise GetURLError("Got get_url request error: %s" % e)
+        raise exceptions.GetURLError("Got get_url request error: %s" % e)
     else:
         if r.status_code != 200 and abort_on_error:
-            raise GetURLError("Bad status code returned: '%s'. result body: '%s'." % (r.status_code, r.text))
+            raise exceptions.GetURLError("Bad status code returned: '%s'. result body: '%s'." % (r.status_code, r.text))
         result = json.loads(r.text) if is_json else r.text
     return result
 
@@ -906,7 +906,7 @@ def connect (url, payload, headers):
     return None
 
 def wallet_unlock ():
-    getinfo = get_info()
+    getinfo = rpc('getinfo', [])
     if 'unlocked_until' in getinfo:
         if getinfo['unlocked_until'] >= 60:
             return True # Wallet is unlocked for at least the next 60 seconds.
@@ -937,7 +937,6 @@ def rpc (method, params):
 
     # Return result, with error handling.
     response_json = response.json()
-    logging.error(response_json)
     if 'error' not in response_json.keys() or response_json['error'] == None:
         return response_json['result']
     elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
