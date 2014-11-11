@@ -616,6 +616,7 @@ def get_unspent_txouts(source):
         spent = False
         for tx in raw_transactions:
             for vin in tx['vin']:
+                if 'coinbase' in vin: continue
                 if (vin['txid'], vin['vout']) == (output['txid'], output['vout']):
                     spent = True
         if not spent:
