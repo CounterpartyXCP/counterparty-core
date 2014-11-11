@@ -14,6 +14,9 @@ LENGTH = 44
 ID = 101
 
 def compose (db, source, contract_id, gasprice, startgas, value, payload_hex):
+    if not config.TESTNET:  # TODO
+        return
+
     block = blocks.Block(db, util.last_block(db)['block_hash'])
     code = block.get_code(contract_id)
     payload = binascii.unhexlify(payload_hex)
@@ -56,10 +59,14 @@ class Transaction(object):
         return dict_
 
 def parse (db, tx, message):
+    if not config.TESTNET:  # TODO
+        return
+
     output = None
     status = 'valid'
 
     try:
+        # TODO: Use unpack function.
         # Unpack message.
         curr_format = FORMAT + '{}s'.format(len(message) - LENGTH)
         try:
