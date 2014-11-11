@@ -43,7 +43,7 @@ def compose (db, source, destination, asset, quantity):
     problems = validate(db, source, destination, asset, quantity)
     if problems: raise exceptions.SendError(problems)
 
-    asset_id = util.asset_id(asset, util.last_block(db)['block_index'])
+    asset_id = util.get_asset_id(asset, util.last_block(db)['block_index'])
     data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, quantity)
 
@@ -58,7 +58,7 @@ def parse (db, tx, message):
         if len(message) != LENGTH:
             raise exceptions.UnpackError
         asset_id, quantity = struct.unpack(FORMAT, message)
-        asset = util.asset_name(asset_id, tx['block_index'])
+        asset = util.get_asset_name(asset_id, tx['block_index'])
         status = 'valid'
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
         asset, quantity = None, None

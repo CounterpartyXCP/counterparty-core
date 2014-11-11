@@ -438,18 +438,40 @@ def last_message (db):
     cursor.close()
     return last_message
 
-def asset_id (asset_name, block_index):
+def get_asset_id (asset_name, block_index):
     # Special cases.
     if asset_name == config.BTC: return 0
     elif asset_name == config.XCP: return 1
 
-    # Checksum
     """
+    # Checksum
     if not checksum.verify(asset_name):
         raise exceptions.AssetNameError('invalid checksum')
     else:
         asset_name = asset_name[:-1]  # Strip checksum character.
     """
+
+    if len(asset_name) < 4:
+        raise exceptions.AssetNameError('too short')
+
+    # Numeric asset names.
+    if asset_names_v2(block_index):  # Protocol change.
+        if asset_name[0] == 'A':
+            # Must be numeric.
+            try:
+                asset_id = int(asset_name[1:])
+            except ValueError:
+                raise exceptions.AssetNameError('non‐numeric asset name starts with ‘A’')
+
+            # Number must be in range.
+            if not (26**12 + 1 <= asset_id <= 256**8):
+                raise exceptions.AssetNameError('numeric asset name not in range')
+
+            return asset_id
+        elif len(asset_name) >= 13:
+            raise exceptions.AssetNameError('long asset names must be numeric')
+
+    if asset_name[0] == 'A': raise exceptions.AssetNameError('non‐numeric asset name starts with ‘A’')
 
     # Convert the Base 26 string to an integer.
     n = 0
@@ -459,26 +481,27 @@ def asset_id (asset_name, block_index):
             raise exceptions.AssetNameError('invalid character:', c)
         digit = b26_digits.index(c)
         n += digit
-
-    if n < 26**3:
-        raise exceptions.AssetNameError('too short')
-
     asset_id = n
 
-    if len(asset_name) >= 13 and (config.TESTNET or block_index >= 340000):  # Protocol change.
-        if asset_id != asset_name:  # Initial ‘A’ is ignored.
-            raise exceptions.AssetNameError('long asset names are now numerical')
-    elif asset_name[0] == 'A':
-        raise exceptions.AssetNameError('starts with ‘A’')
+    if asset_id < 26**3:
+        raise exceptions.AssetNameError('too short')
 
     return asset_id
 
-def asset_name (asset_id, block_index):
+def get_asset_name (asset_id, block_index):
     if asset_id == 0: return config.BTC
     elif asset_id == 1: return config.XCP
 
     if asset_id < 26**3:
         raise exceptions.AssetIDError('too low')
+
+    if asset_names_v2(block_index):  # Protocol change.
+        if asset_id <= 256**8:
+            if 26**12 + 1 <= asset_id:
+                asset_name = 'A' + str(asset_id)
+                return asset_name
+        else:
+            raise exceptions.AssetIDError('too high')
 
     # Divide that integer into Base 26 string.
     res = []
@@ -488,13 +511,10 @@ def asset_name (asset_id, block_index):
         res.append(b26_digits[r])
     asset_name = ''.join(res[::-1])
 
-    if len(asset_name) >= 13 and (config.TESTNET or block_index >= 340000):  # Protocol change.
-        return 'A' + str(asset_id)
-    else:
-        """
-        return asset_name + checksum.compute(asset_name)
-        """
-        return asset_name
+    """
+    return asset_name + checksum.compute(asset_name)
+    """
+    return asset_name
 
 
 def debit (db, block_index, address, asset, quantity, action=None, event=None):
@@ -958,5 +978,16 @@ def rpc (method, params):
         raise exceptions.BitcoindError('{}'.format(response_json['error']))
 
 ### Backend RPC ###
+
+### Protocol Changes ###
+def asset_names_v2(block_index):
+    if config.TESTNET:
+        if block_index >= 307400:
+            return True
+        else:
+            return False
+    elif False:
+        return True
+    return False
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

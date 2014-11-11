@@ -103,8 +103,8 @@ def compose (db, source, quantity_per_unit, asset, dividend_asset):
     if dividend_asset == config.BTC:
         return (source, [(output['address'], output['dividend_quantity']) for output in outputs], None)
 
-    asset_id = util.asset_id(asset, util.last_block(db)['block_index'])
-    dividend_asset_id = util.asset_id(dividend_asset, util.last_block(db)['block_index'])
+    asset_id = util.get_asset_id(asset, util.last_block(db)['block_index'])
+    dividend_asset_id = util.get_asset_id(dividend_asset, util.last_block(db)['block_index'])
     data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT_2, quantity_per_unit, asset_id, dividend_asset_id)
     return (source, [], data)
@@ -116,12 +116,12 @@ def parse (db, tx, message):
     try:
         if (tx['block_index'] > 288150 or config.TESTNET) and len(message) == LENGTH_2:
             quantity_per_unit, asset_id, dividend_asset_id = struct.unpack(FORMAT_2, message)
-            asset = util.asset_name(asset_id, tx['block_index'])
-            dividend_asset = util.asset_name(dividend_asset_id, tx['block_index'])
+            asset = util.get_asset_name(asset_id, tx['block_index'])
+            dividend_asset = util.get_asset_name(dividend_asset_id, tx['block_index'])
             status = 'valid'
         elif len(message) == LENGTH_1:
             quantity_per_unit, asset_id = struct.unpack(FORMAT_1, message)
-            asset = util.asset_name(asset_id, tx['block_index'])
+            asset = util.get_asset_name(asset_id, tx['block_index'])
             dividend_asset = config.XCP
             status = 'valid'
         else:

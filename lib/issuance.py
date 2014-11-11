@@ -96,10 +96,8 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
                               WHERE (address = ? AND asset = ?)''', (source, config.XCP))
             balances = cursor.fetchall()
             cursor.close()
-            if config.TESTNET or block_index >= 340000:  # Protocol change.
+            if util.asset_names_v2(block_index):  # Protocol change.
                 if len(asset) >= 13:
-                    assert asset[0] == 'A'
-                    assert 26^12 + 1 <= int(asset[1:]) <= 256**8
                     fee = 0
                 else:
                     fee = int(0.5 * config.UNIT)
@@ -132,7 +130,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, calla
     call_date, call_price, problems, fee = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.last_block(db)['block_index'])
     if problems: raise exceptions.IssuanceError(problems)
 
-    asset_id = util.asset_id(asset, util.last_block(db)['block_index'])
+    asset_id = util.get_asset_id(asset, util.last_block(db)['block_index'])
     data = struct.pack(config.TXTYPE_FORMAT, ID)
     if len(description) <= 42:
         curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
@@ -169,7 +167,7 @@ def parse (db, tx, message):
             asset_id, quantity, divisible = struct.unpack(FORMAT_1, message)
             callable_, call_date, call_price, description = False, 0, 0.0, ''
         try:
-            asset = util.asset_name(asset_id, tx['block_index'])
+            asset = util.get_asset_name(asset_id, tx['block_index'])
         except exceptions.AssetNameError:
             asset = None
             status = 'invalid: bad asset name'

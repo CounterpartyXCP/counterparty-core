@@ -1470,6 +1470,7 @@ def follow (db):
 
             # Wait
             mempool_initialised = True
+            db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
             time.sleep(2)
 
     cursor.close()
