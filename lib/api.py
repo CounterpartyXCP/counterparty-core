@@ -23,7 +23,7 @@ import jsonrpc
 from jsonrpc import dispatcher
 import inspect
 
-from . import (config, bitcoin, exceptions, util)
+from . import (config, bitcoin, exceptions, util, blockchain)
 from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish)
 
 API_TABLES = ['balances', 'credits', 'debits', 'bets', 'bet_matches',
@@ -587,6 +587,14 @@ class APIServer(threading.Thread):
             for holder in holders:
                 addresses.append(holder['address'])
             return { asset: len(set(addresses)) }
+
+        @dispatcher.add_method
+        def search_raw_transactions(address):
+            return blockchain.searchrawtransactions(address)
+
+        @dispatcher.add_method
+        def get_unspent_txouts(address):
+            return bitcoin.get_unspent_txouts(address)
 
         def _set_cors_headers(response):
             if config.RPC_ALLOW_CORS:
