@@ -990,4 +990,31 @@ def asset_names_v2(block_index):
         return True
     return False
 
+### Unconfirmed Transactions ###
+
+def extract_addresses(tx):
+    addresses = []
+
+    for vout in tx['vout']:
+        if 'addresses' in vout['scriptPubKey']:
+            addresses += vout['scriptPubKey']['addresses']
+
+    for vin in tx['vin']:
+        vin_tx = rpc('getrawtransaction', [vin['txid'], 1])
+        vout = vin_tx['vout'][vin['vout']]
+        if 'addresses' in vout['scriptPubKey']:
+            addresses += vout['scriptPubKey']['addresses']
+
+    return addresses
+
+def unconfirmed_transactions(address):
+    transactions = []
+
+    for tx_hash in rpc('getrawmempool', []):
+        tx = rpc('getrawtransaction', [tx_hash, 1])
+        if address in extract_addresses(tx):
+            transactions.append(tx)
+
+    return transactions
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
