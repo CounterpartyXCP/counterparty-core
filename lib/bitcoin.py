@@ -599,9 +599,10 @@ def get_unspent_txouts(source):
                 continue
             elif 'addresses' in scriptpubkey.keys() and "".join(sorted(scriptpubkey['addresses'])) == "".join(sorted(pubkeyhashes)):
                 txid = tx['txid']
-                if txid not in outputs or outputs[txid]['confirmations'] < tx['confirmations']:
-                    coin = {'amount': vout['value'],
-                            'confirmations': tx['confirmations'],
+                confirmations = tx['confirmations'] if 'confirmations' in tx else 0 
+                if txid not in outputs or outputs[txid]['confirmations'] < confirmations:
+                    coin = {'amount': float(vout['value']),
+                            'confirmations': confirmations,
                             'scriptPubKey': scriptpubkey['hex'],
                             'txid': txid,
                             'vout': vout['n']
