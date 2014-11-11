@@ -24,13 +24,14 @@ os.environ['TZ'] = 'EST'
 time.tzset()
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
+# TODO: This should grab the correct backend port and password, when used for, e.g., saverawtransactions.
 COUNTERPARTYD_OPTIONS = {
-    'testcoin': False, 
-    'backend_rpc_ssl_verify': False, 
-    'data_dir': tempfile.gettempdir(), 
-    'rpc_port': 9999, 
-    'rpc_password': 'pass', 
-    'backend_rpc_port': 8888, 
+    'testcoin': False,
+    'backend_rpc_ssl_verify': False,
+    'data_dir': tempfile.gettempdir(),
+    'rpc_port': 9999,
+    'rpc_password': 'pass',
+    'backend_rpc_port': 8888,
     'backend_rpc_password': 'pass'
 }
 
@@ -84,7 +85,7 @@ def insert_block(db, block_index, parse_block=False):
     return block_index, block_hash, block_time
 
 def create_next_block(db, block_index=None, parse_block=False):
-    cursor = db.cursor()  
+    cursor = db.cursor()
     last_block_index = list(cursor.execute("SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1"))[0]['block_index']
     if not block_index:
         block_index = last_block_index + 1
@@ -100,7 +101,7 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
     cursor = db.cursor()
     tx_index = block_index - config.BURN_START + 1
     tx = bitcoin.decode_raw_transaction(raw_transaction)
-    
+
     tx_hash = hashlib.sha256('{}{}'.format(tx_index,raw_transaction).encode('utf-8')).hexdigest()
     #print(tx_hash)
     tx['txid'] = tx_hash
@@ -145,7 +146,7 @@ def save_rawtransaction(db, tx_hash, tx_hex, tx_json):
     try:
         txid = binascii.hexlify(bitcoinlib.core.lx(tx_hash)).decode()
         cursor.execute('''INSERT INTO raw_transactions VALUES (?, ?, ?)''', (txid, tx_hex, tx_json))
-    except Exception as e:
+    except Exception as e: # TODO
         pass
     cursor.close()
 
@@ -158,7 +159,10 @@ def getrawtransaction(db, txid):
 
 def decoderawtransaction(db, tx_hex):
     cursor = db.cursor()
-    tx_json = list(cursor.execute('''SELECT tx_json FROM raw_transactions WHERE tx_hex = ?''', (tx_hex,)))[0][0]
+    try:
+        tx_json = list(cursor.execute('''SELECT tx_json FROM raw_transactions WHERE tx_hex = ?''', (tx_hex,)))[0][0]
+    except IndexError:
+        raise Exception('raw transaction changed')
     cursor.close()
     return json.loads(tx_json)
 
@@ -243,7 +247,7 @@ def check_record(record, counterpartyd_db):
             conditions.append('''{} = ?'''.format(field))
             bindings.append(record['values'][field])
     sql += " AND ".join(conditions)
-    
+
     count = list(cursor.execute(sql, tuple(bindings)))[0]['c']
     if count != 1:
         print(list(cursor.execute('''SELECT * FROM {} WHERE block_index = ?'''.format(record['table']), (record['values']['block_index'],))))
@@ -278,7 +282,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db)
 def check_ouputs(tx_name, method, inputs, outputs, error, records, counterpartyd_db):
     tested_module = sys.modules['lib.{}'.format(tx_name)]
     tested_method = getattr(tested_module, method)
-    
+
     test_outputs = None
     if error is not None:
         with pytest.raises(getattr(exceptions, error[0])) as exception:
@@ -332,7 +336,7 @@ def reparse(testnet=True):
     options = dict(COUNTERPARTYD_OPTIONS)
     options.pop('data_dir')
     counterpartyd.set_options(database_file=':memory:', testnet=testnet, **options)
-    
+
     if testnet:
         config.PREFIX = b'TESTXXXX'
 
@@ -345,7 +349,7 @@ def reparse(testnet=True):
 
     memory_db = util.connect_to_db()
     initialise_db(memory_db)
-    
+
     prod_db_path = os.path.join(config.DATA_DIR, '{}.{}{}.db'.format(config.XCP_CLIENT, str(config.VERSION_MAJOR), '.testnet' if testnet else ''))
     prod_db = apsw.Connection(prod_db_path)
     prod_db.setrowtrace(util.rowtracer)
@@ -376,7 +380,7 @@ def reparse(testnet=True):
     for block in memory_cursor.fetchall():
         try:
             logger.info('Block (re‐parse): {}'.format(str(block['block_index'])))
-            previous_ledger_hash, previous_txlist_hash = blocks.parse_block(memory_db, block['block_index'], block['block_time'], 
+            previous_ledger_hash, previous_txlist_hash = blocks.parse_block(memory_db, block['block_index'], block['block_time'],
                                                                                     previous_ledger_hash, block['ledger_hash'],
                                                                                     previous_txlist_hash, block['txlist_hash'])
         except ConsensusError as e:

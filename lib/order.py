@@ -251,8 +251,8 @@ def compose (db, source, give_asset, give_quantity, get_asset, get_quantity, exp
     problems = validate(db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, util.last_block(db)['block_index'])
     if problems: raise exceptions.OrderError(problems)
 
-    give_id = util.asset_id(give_asset)
-    get_id = util.asset_id(get_asset)
+    give_id = util.get_asset_id(give_asset, util.last_block(db)['block_index'])
+    get_id = util.get_asset_id(get_asset, util.last_block(db)['block_index'])
     data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, give_id, give_quantity, get_id, get_quantity,
                         expiration, fee_required)
@@ -267,8 +267,8 @@ def parse (db, tx, message):
         if len(message) != LENGTH:
             raise exceptions.UnpackError
         give_id, give_quantity, get_id, get_quantity, expiration, fee_required = struct.unpack(FORMAT, message)
-        give_asset = util.asset_name(give_id)
-        get_asset = util.asset_name(get_id)
+        give_asset = util.get_asset_name(give_id, tx['block_index'])
+        get_asset = util.get_asset_name(get_id, tx['block_index'])
         status = 'open'
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
         give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required = 0, 0, 0, 0, 0, 0
@@ -364,7 +364,7 @@ def match (db, tx, block_index=None):
     tx1_status = tx1['status']
     for tx0 in order_matches:
         order_match_id = tx0['tx_hash'] + tx1['tx_hash']
-        if not block_index: 
+        if not block_index:
             block_index = max(tx0['block_index'], tx1['block_index'])
         if tx1_status != 'open': break
 
@@ -451,12 +451,12 @@ def match (db, tx, block_index=None):
             fee = 0
             if block_index >= 286500 or config.TESTNET: # Protocol change. Deduct fee_required from fee_provided_remaining, etc., if possible (else don’t match).
                 if tx1['get_asset'] == config.BTC:
-                    
+
                     if block_index >= 310500 or config.TESTNET:     # Protocol change.
                         fee = int(tx1['fee_required'] * util.price(backward_quantity, tx1['give_quantity'], block_index))
                     else:
                         fee = int(tx1['fee_required_remaining'] * util.price(forward_quantity, tx1_get_remaining, block_index))
-                    
+
                     logging.debug('Tx0 fee provided remaining: {}; required fee: {}'.format(tx0_fee_provided_remaining / config.UNIT, fee / config.UNIT))
                     if tx0_fee_provided_remaining < fee:
                         logging.debug('Skipping: tx0 fee provided remaining is too low.')
@@ -470,7 +470,7 @@ def match (db, tx, block_index=None):
 
                     if block_index >= 310500 or config.TESTNET:      # Protocol change.
                         fee = int(tx0['fee_required'] * util.price(backward_quantity, tx0['give_quantity'], block_index))
-                    else:   
+                    else:
                         fee = int(tx0['fee_required_remaining'] * util.price(backward_quantity, tx0_get_remaining, block_index))
 
                     logging.debug('Tx1 fee provided remaining: {}; required fee: {}'.format(tx1_fee_provided_remaining / config.UNIT, fee / config.UNIT))
@@ -481,7 +481,7 @@ def match (db, tx, block_index=None):
                         tx1_fee_provided_remaining -= fee
                         if block_index >= 287800 or config.TESTNET:  # Protocol change.
                             tx0_fee_required_remaining -= fee
-                            
+
             else:   # Don’t deduct.
                 if tx1['get_asset'] == config.BTC:
                     if tx0_fee_provided_remaining < tx1['fee_required']: continue

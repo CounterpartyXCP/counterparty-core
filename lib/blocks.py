@@ -163,8 +163,8 @@ def parse_block (db, block_index, block_time, previous_ledger_hash=None, ledger_
     txlist = []
     for tx in list(cursor):
         parse_tx(db, tx)
-        txlist.append('{}{}{}{}{}{}'.format(tx['tx_hash'], tx['source'], tx['destination'], 
-                                            tx['btc_amount'], tx['fee'], 
+        txlist.append('{}{}{}{}{}{}'.format(tx['tx_hash'], tx['source'], tx['destination'],
+                                            tx['btc_amount'], tx['fee'],
                                             binascii.hexlify(tx['data']).decode('UTF-8')))
 
     cursor.close()
@@ -1263,7 +1263,7 @@ def reparse (db, block_index=None, quiet=False):
         cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
         for block in cursor.fetchall():
             logging.info('Block (re‐parse): {}'.format(str(block['block_index'])))
-            previous_ledger_hash, previous_txlist_hash = parse_block(db, block['block_index'], block['block_time'], 
+            previous_ledger_hash, previous_txlist_hash = parse_block(db, block['block_index'], block['block_time'],
                                                                      previous_ledger_hash, block['ledger_hash'],
                                                                      previous_txlist_hash, block['txlist_hash'])
 
@@ -1369,7 +1369,7 @@ def follow (db):
 
     not_supported = {}   # No false positives. Use a dict to allow for O(1) lookups
     not_supported_sorted = collections.deque()
-    # ^ Entries in form of (block_index, tx_hash), oldest first. Allows for easy removal of past, unncessary entries 
+    # ^ Entries in form of (block_index, tx_hash), oldest first. Allows for easy removal of past, unncessary entries
     mempool_initialised = False
     # a reorg can happen without the block count increasing, or even for that
         # matter, with the block count decreasing. This should only delay
@@ -1452,7 +1452,7 @@ def follow (db):
             while len(not_supported_sorted) and not_supported_sorted[0][0] <= block_index - 10:
                 (i, tx_h) = not_supported_sorted.popleft()
                 del not_supported[tx_h]
-            
+
             logging.info('Block: %s (%ss)'%(str(block_index), "{:.2f}".format(time.time() - starttime, 3)))
             # Increment block index.
             block_count = bitcoin.get_block_count()
@@ -1549,6 +1549,7 @@ def follow (db):
 
             # Wait
             mempool_initialised = True
+            db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
             time.sleep(2)
 
     cursor.close()

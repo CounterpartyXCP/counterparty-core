@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/CounterpartyXCP/counterpartyd.svg?branch=develop)](https://travis-ci.org/CounterpartyXCP/counterpartyd)
+[![Coverage Status](https://coveralls.io/repos/CounterpartyXCP/counterpartyd/badge.png?branch=develop)](https://coveralls.io/r/CounterpartyXCP/counterpartyd?branch=develop)
 
 # Description
 `counterpartyd` is the reference implementation of the [Counterparty
@@ -107,7 +108,7 @@ The following examples are abridged for parsimony.
 	```
 
 * Buy BTC for XCP
-	
+
 	```
 	order --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --get-quantity=10 --get-asset=BTC
 	--give-quantity=20 --give-asset=XCP --expiration=10 --fee_required=.001
@@ -133,7 +134,7 @@ The following examples are abridged for parsimony.
 	btcpay --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --order-match-id=092f15d36786136c4d868c33356ec3c9b5a0c77de54ed0e96a8dbdd8af160c23
 	```
 	Order Match ID can be obtained with the `pending` command.
-	
+
 * Issue
 
 	`issuance --source=mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns --quantity=100 --asset='BBBC'`
