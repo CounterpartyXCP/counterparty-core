@@ -640,6 +640,7 @@ class APIServer(threading.Thread):
         except OSError:
             raise Exception("Cannot start the API subsystem. Is {} already running, or is something else listening on port {}?".format(config.XCP_CLIENT, config.RPC_PORT))
 
+        db.close()
         http_server.stop()
         self.ioloop.close()
         return

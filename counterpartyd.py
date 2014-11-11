@@ -1141,11 +1141,9 @@ if __name__ == '__main__':
         api_status_poller.daemon = True
         api_status_poller.start()
 
-        """
         api_server = api.APIServer()
         api_server.daemon = True
         api_server.start()
-        """
 
         # Check blockchain explorer.
         if not config.FORCE:
