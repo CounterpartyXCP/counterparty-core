@@ -541,10 +541,7 @@ def balances (address):
     address_data = get_address(db, address=address)
     balances = address_data['balances']
     table = PrettyTable(['Asset', 'Amount'])
-    if util.is_multisig(address):
-        btc_balance = '???'
-    else:
-        btc_balance = sum(out['amount'] for out in bitcoin.get_unspent_txouts(address))
+    btc_balance = bitcoin.get_btc_balance(address)
     table.add_row([config.BTC, btc_balance])  # BTC
     for balance in balances:
         asset = balance['asset']
