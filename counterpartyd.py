@@ -479,8 +479,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
 
     # Encoding
     if config.TESTCOIN:
-        # config.PREFIX = b'XX'                   # 2 bytes (possibly accidentally created)
-        config.PREFIX = b'OwKWTVmzg'    # TODO
+        config.PREFIX = b'XX'                   # 2 bytes (possibly accidentally created)
     else:
         config.PREFIX = b'CNTRPRTY'             # 8 bytes
 

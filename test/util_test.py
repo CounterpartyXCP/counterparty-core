@@ -77,8 +77,8 @@ def insert_block(db, block_index, parse_block=False):
     cursor = db.cursor()
     block_hash = hashlib.sha512(chr(block_index).encode('utf-8')).hexdigest()
     block_time = block_index * 10000000
-    block = (block_index, block_hash, block_time, None, None)
-    cursor.execute('''INSERT INTO blocks VALUES (?,?,?,?,?)''', block)
+    block = (block_index, block_hash, block_time, None, None, None, None)
+    cursor.execute('''INSERT INTO blocks VALUES (?,?,?,?,?,?,?)''', block)
     cursor.close()
     if parse_block:
         blocks.parse_block(db, block_index, block_time)

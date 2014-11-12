@@ -195,12 +195,17 @@ def initialise(db):
                       index_hash_idx ON blocks (block_index, block_hash)
                    ''')
 
-    # sqlite don't manage ALTER TABLE IF COLUMN NOT EXISTS
+    # SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS`.
     columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(blocks)''')]
     if 'ledger_hash' not in columns:
         cursor.execute('''ALTER TABLE blocks ADD COLUMN ledger_hash TEXT''')
     if 'txlist_hash' not in columns:
         cursor.execute('''ALTER TABLE blocks ADD COLUMN txlist_hash TEXT''')
+    if 'previous_block_hash' not in columns:
+        cursor.execute('''ALTER TABLE blocks ADD COLUMN previous_block_hash TEXT''')
+    if 'difficulty' not in columns:
+        cursor.execute('''ALTER TABLE blocks ADD COLUMN difficulty TEXT''')
+
 
     # Check that first block in DB is BLOCK_FIRST.
     cursor.execute('''SELECT * from blocks ORDER BY block_index''')
