@@ -593,8 +593,12 @@ class APIServer(threading.Thread):
             return blockchain.searchrawtransactions(address)
 
         @dispatcher.add_method
-        def get_unspent_txouts(address):
-            return bitcoin.get_unspent_txouts(address)
+        def get_unspent_txouts(address, return_confirmed=False):
+            result = bitcoin.get_unspent_txouts(address, return_confirmed=return_confirmed)
+            if return_confirmed:
+                return {'all': result[0], 'confirmed': result[1]}
+            else:
+                return result
 
         def _set_cors_headers(response):
             if config.RPC_ALLOW_CORS:

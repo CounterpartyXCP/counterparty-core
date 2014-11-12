@@ -579,7 +579,7 @@ def get_btc_supply(normalize=False):
             blocks_remaining = 0
     return total_supply if normalize else int(total_supply * config.UNIT)
 
-def get_unspent_txouts(source):
+def get_unspent_txouts(source, return_confirmed=False):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
     """
@@ -599,7 +599,7 @@ def get_unspent_txouts(source):
                 continue
             elif 'addresses' in scriptpubkey.keys() and "".join(sorted(scriptpubkey['addresses'])) == "".join(sorted(pubkeyhashes)):
                 txid = tx['txid']
-                confirmations = tx['confirmations'] if 'confirmations' in tx else 0 
+                confirmations = tx['confirmations'] if 'confirmations' in tx else 0
                 if txid not in outputs or outputs[txid]['confirmations'] < confirmations:
                     coin = {'amount': float(vout['value']),
                             'confirmations': confirmations,
@@ -612,16 +612,25 @@ def get_unspent_txouts(source):
 
     # Prune away spent coins.
     unspent = []
+    confirmed_unspent = []
     for output in outputs:
         spent = False
+        confirmed_spent = False
         for tx in raw_transactions:
             for vin in tx['vin']:
                 if 'coinbase' in vin: continue
                 if (vin['txid'], vin['vout']) == (output['txid'], output['vout']):
                     spent = True
+                    if 'confirmations' in tx and tx['confirmations'] > 0:
+                        confirmed_spent = True
         if not spent:
             unspent.append(output)
+        if not confirmed_spent and output['confirmations'] > 0:
+            confirmed_unspent.append(output)
 
-    return unspent
+    if return_confirmed:
+        return unspent, confirmed_unspent
+    else:
+        return unspent
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
