@@ -33,6 +33,6 @@ tendo==0.2.6
 
 python-bitcoinlib==0.2.1
 
-pysha3=0.3
+pysha3==0.3
 
 pytest-cov==1.8.0
