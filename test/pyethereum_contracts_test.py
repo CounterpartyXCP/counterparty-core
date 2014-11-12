@@ -38,7 +38,7 @@ import logging
 
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
-counterpartyd.set_options(rpc_port=9999, database_file=CURR_DIR+'/counterpartyd.unittest.db', testnet=True, testcoin=False, backend_rpc_ssl_verify=False)
+counterpartyd.set_options(rpc_port=9999, database_file=tempfile.gettempdir()+'/counterpartyd.unittest.db', testnet=True, testcoin=False, backend_rpc_ssl_verify=False)
 
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 
