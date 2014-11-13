@@ -997,6 +997,7 @@ def asset_names_v2(block_index):
 
 ### Unconfirmed Transactions ###
 
+@lru_cache(maxsize=4096)
 def extract_addresses(tx):
     addresses = []
 
