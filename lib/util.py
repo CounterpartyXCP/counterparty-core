@@ -14,6 +14,7 @@ import fractions
 import warnings
 import binascii
 import hashlib
+from functools import lru_cache
 
 from . import (config, exceptions)
 
@@ -977,6 +978,10 @@ def rpc (method, params):
     else:
         raise exceptions.BitcoindError('{}'.format(response_json['error']))
 
+@lru_cache(maxsize=4096)
+def get_cached_raw_transaction(tx_hash):
+    return rpc('getrawtransaction', [tx_hash, 1])
+
 ### Backend RPC ###
 
 ### Protocol Changes ###
@@ -1000,7 +1005,7 @@ def extract_addresses(tx):
             addresses += vout['scriptPubKey']['addresses']
 
     for vin in tx['vin']:
-        vin_tx = rpc('getrawtransaction', [vin['txid'], 1])
+        vin_tx = get_cached_raw_transaction(vin['txid'])
         vout = vin_tx['vout'][vin['vout']]
         if 'addresses' in vout['scriptPubKey']:
             addresses += vout['scriptPubKey']['addresses']
@@ -1011,7 +1016,7 @@ def unconfirmed_transactions(address):
     transactions = []
 
     for tx_hash in rpc('getrawmempool', []):
-        tx = rpc('getrawtransaction', [tx_hash, 1])
+        tx = get_cached_raw_transaction(tx_hash)
         if address in extract_addresses(tx):
             transactions.append(tx)
 
