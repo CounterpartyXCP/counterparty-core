@@ -29,6 +29,8 @@ BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
 BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
 
 BLOCK_LEDGER = []
+# inelegant but easy and fast cache
+MEMPOOL = []
 
 # TODO: This doesn’t timeout properly. (If server hangs, then unhangs, no result.)
 def api (method, params):
@@ -999,6 +1001,7 @@ def asset_names_v2(block_index):
 
 @lru_cache(maxsize=4096)
 def extract_addresses(tx):
+    tx = json.loads(tx) # for lru_cache
     addresses = []
 
     for vout in tx['vout']:
@@ -1016,9 +1019,9 @@ def extract_addresses(tx):
 def unconfirmed_transactions(address):
     transactions = []
 
-    for tx_hash in rpc('getrawmempool', []):
+    for tx_hash in MEMPOOL:
         tx = get_cached_raw_transaction(tx_hash)
-        if address in extract_addresses(tx):
+        if address in extract_addresses(json.dumps(tx)):
             transactions.append(tx)
 
     return transactions
