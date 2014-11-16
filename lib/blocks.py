@@ -1399,7 +1399,8 @@ def follow (db):
             # and then save those messages.
             # Every transaction in mempool is parsed independently. (DB is rolled back after each one.)
             mempool = []
-            for tx_hash in bitcoin.get_mempool():
+            util.MEMPOOL = bitcoin.get_mempool()
+            for tx_hash in util.MEMPOOL:
 
                 # If already in counterpartyd mempool, copy to new one.
                 if tx_hash in old_mempool_hashes:

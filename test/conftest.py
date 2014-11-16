@@ -9,7 +9,7 @@ from fixtures.vectors import UNITTEST_VECTOR
 from fixtures.params import DEFAULT_PARAMS
 from fixtures.scenarios import INTEGRATION_SCENARIOS
 
-from lib import config, bitcoin
+from lib import config, bitcoin, util
 
 import bitcoin as bitcoinlib
 
@@ -51,11 +51,14 @@ def rawtransactions_db(request):
 @pytest.fixture(autouse=True)
 def init_mock_functions(monkeypatch, rawtransactions_db):
 
-    def get_unspent_txouts(address):
+    def get_unspent_txouts(address, return_confirmed=False):
         with open(util_test.CURR_DIR + '/fixtures/unspent_outputs.json', 'r') as listunspent_test_file:
             wallet_unspent = json.load(listunspent_test_file)
             unspent_txouts = [output for output in wallet_unspent if output['address'] == address]
-            return unspent_txouts
+            if return_confirmed:
+                return unspent_txouts, unspent_txouts
+            else:
+                return unspent_txouts
 
     def get_private_key(source):
         return DEFAULT_PARAMS['privkey'][source]
@@ -85,7 +88,7 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
 
     def decode_raw_transaction(raw_transaction):
         if pytest.config.option.savescenarios:
-            return bitcoin.rpc('decoderawtransaction', [raw_transaction])
+            return util.rpc('decoderawtransaction', [raw_transaction])
         else:
             return util_test.decoderawtransaction(rawtransactions_db, raw_transaction)
 

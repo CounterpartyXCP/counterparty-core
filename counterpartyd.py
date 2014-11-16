@@ -207,7 +207,7 @@ def cli(method, params, unsigned):
         if not bitcoin.is_valid(source):
             raise exceptions.AddressError('Invalid address.')
         if bitcoin.is_mine(source):
-            bitcoin.wallet_unlock()
+            util.wallet_unlock()
         else:
             # TODO: Do this only if the encoding method needs it.
             print('Source not in backend wallet.')
@@ -390,7 +390,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     elif has_config and 'blockchain-service-name' in configfile['Default'] and configfile['Default']['blockchain-service-name']:
         config.BLOCKCHAIN_SERVICE_NAME = configfile['Default']['blockchain-service-name']
     else:
-        config.BLOCKCHAIN_SERVICE_NAME = 'blockr'
+        config.BLOCKCHAIN_SERVICE_NAME = 'jmcorgan'
 
     # custom blockchain service API endpoint
     # leave blank to use the default. if specified, include the scheme prefix and port, without a trailing slash (e.g. http://localhost:3001)
@@ -541,10 +541,7 @@ def balances (address):
     address_data = get_address(db, address=address)
     balances = address_data['balances']
     table = PrettyTable(['Asset', 'Amount'])
-    if util.is_multisig(address):
-        btc_balance = '???'
-    else:
-        btc_balance = blockchain.getaddressinfo(address)['balance']
+    btc_balance = bitcoin.get_btc_balance(address)
     table.add_row([config.BTC, btc_balance])  # BTC
     for balance in balances:
         asset = balance['asset']
@@ -1152,7 +1149,8 @@ if __name__ == '__main__':
             for i in range(1, num_tries + 1):
                 try:
                     blockchain.check()
-                except: # TODO
+                except Exception as e: # TODO
+                    logging.exception(e)
                     logging.warn("Blockchain backend (%s) not yet initialized. Waiting %i seconds and trying again (try %i of %i)..." % (
                         config.BLOCKCHAIN_SERVICE_NAME, time_wait, i, num_tries))
                     time.sleep(time_wait)
