@@ -1,7 +1,7 @@
 {
 	"minimum_version_major": 9,
-	"minimum_version_minor": 46,
+	"minimum_version_minor": 45,
 	"minimum_version_revision": 0,
-	"reason": "new consensus hashes",
+	"reason": "dividend fees",
 	"block_index": 330000
 }

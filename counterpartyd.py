@@ -15,7 +15,8 @@ import threading
 from threading import Thread
 import binascii
 from fractions import Fraction
-from tendo import singleton
+import socket
+import signal
 
 import requests
 import appdirs
@@ -27,6 +28,42 @@ if os.name == 'nt':
 
 D = decimal.Decimal
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
+
+def sigterm_handler(_signo, _stack_frame):
+    if 'api_server' in globals():
+        logging.info('Status: Stopping API server.')
+        api_server.stop()
+        api_status_poller.stop()
+
+    # logging.info('Status: Closing database connection.')
+    # db.close()
+
+    logging.info('Status: Shutting down.')
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, sigterm_handler)
+signal.signal(signal.SIGINT, sigterm_handler)
+
+# Lock database access by opening a socket.
+class LockingError(Exception): pass
+def get_lock():
+
+    # Cross‐platform.
+    if os.name == 'nt': # Not database‐specific.
+        socket_family = socket.AF_INET
+        socket_address = ('localhost', 8999)
+        error = 'Another copy of {} is currently running.'.format(config.XCP_CLIENT)
+    else:
+        socket_family = socket.AF_UNIX
+        socket_address = '\0' + config.DATABASE
+        error = 'Another copy of {} is currently writing to database {}'.format(config.XCP_CLIENT, config.DATABASE)
+
+    global lock_socket
+    lock_socket = socket.socket(socket_family, socket.SOCK_DGRAM)
+    try:
+        lock_socket.bind(socket_address)
+    except socket.error:
+        raise LockingError(error)
 
 def get_address (db, address):
     address_dict = {}
@@ -170,7 +207,7 @@ def cli(method, params, unsigned):
         if not bitcoin.is_valid(source):
             raise exceptions.AddressError('Invalid address.')
         if bitcoin.is_mine(source):
-            bitcoin.wallet_unlock()
+            util.wallet_unlock()
         else:
             # TODO: Do this only if the encoding method needs it.
             print('Source not in backend wallet.')
@@ -300,7 +337,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     try:
         config.BACKEND_RPC_PORT = int(config.BACKEND_RPC_PORT)
         if not (int(config.BACKEND_RPC_PORT) > 1 and int(config.BACKEND_RPC_PORT) < 65535):
-            raise exceptions.ConfigurationError('invalid backend API port number') 
+            raise exceptions.ConfigurationError('invalid backend API port number')
     except:
         raise Exception("Please specific a valid port number backend-rpc-port configuration parameter")
 
@@ -353,7 +390,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     elif has_config and 'blockchain-service-name' in configfile['Default'] and configfile['Default']['blockchain-service-name']:
         config.BLOCKCHAIN_SERVICE_NAME = configfile['Default']['blockchain-service-name']
     else:
-        config.BLOCKCHAIN_SERVICE_NAME = 'blockr'
+        config.BLOCKCHAIN_SERVICE_NAME = 'jmcorgan'
 
     # custom blockchain service API endpoint
     # leave blank to use the default. if specified, include the scheme prefix and port, without a trailing slash (e.g. http://localhost:3001)
@@ -395,7 +432,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     try:
         config.RPC_PORT = int(config.RPC_PORT)
         if not (int(config.BACKEND_RPC_PORT) > 1 and int(config.BACKEND_RPC_PORT) < 65535):
-            raise exceptions.ConfigurationError('invalid counterpartyd API port number') 
+            raise exceptions.ConfigurationError('invalid counterpartyd API port number')
     except:
         raise Exception("Please specific a valid port number rpc-port configuration parameter")
 
@@ -504,10 +541,7 @@ def balances (address):
     address_data = get_address(db, address=address)
     balances = address_data['balances']
     table = PrettyTable(['Asset', 'Amount'])
-    if util.is_multisig(address):
-        btc_balance = '???'
-    else:
-        btc_balance = blockchain.getaddressinfo(address)['balance']
+    btc_balance = bitcoin.get_btc_balance(address)
     table.add_row([config.BTC, btc_balance])  # BTC
     for balance in balances:
         asset = balance['asset']
@@ -568,7 +602,7 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
     parser_server = subparsers.add_parser('server', help='run the server')
-    parser_server.add_argument('--force', action='store_true', help='skip backend check, version check, singleton check')
+    parser_server.add_argument('--force', action='store_true', help='skip backend check, version check, process lock')
 
     parser_send = subparsers.add_parser('send', help='create and broadcast a *send* message')
     parser_send.add_argument('--source', required=True, help='the source address')
@@ -679,11 +713,11 @@ if __name__ == '__main__':
     parser_pending= subparsers.add_parser('pending', help='list pending order matches awaiting {}payment from you'.format(config.BTC))
 
     parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database')
-    parser_reparse.add_argument('--force', action='store_true', help='skip backend check, version check, singleton check')
+    parser_reparse.add_argument('--force', action='store_true', help='skip backend check, version check, process lock')
 
     parser_rollback = subparsers.add_parser('rollback', help='rollback database')
     parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
-    parser_rollback.add_argument('--force', action='store_true', help='skip backend check, version check, singleton check')
+    parser_rollback.add_argument('--force', action='store_true', help='skip backend check, version check, process lock')
 
     parser_kickstart = subparsers.add_parser('kickstart', help='rapidly bring database up to the present')
     parser_kickstart.add_argument('--bitcoind-dir', required=True, help='Bitcoin Core data directory')
@@ -716,7 +750,7 @@ if __name__ == '__main__':
                 blockchain_service_name=args.blockchain_service_name,
                 blockchain_service_connect=args.blockchain_service_connect,
                 rpc_host=args.rpc_host, rpc_port=args.rpc_port, rpc_user=args.rpc_user,
-                rpc_password=args.rpc_password, rpc_allow_cors=args.rpc_allow_cors, 
+                rpc_password=args.rpc_password, rpc_allow_cors=args.rpc_allow_cors,
                 log_file=args.log_file, config_file=args.config_file,
                 database_file=args.database_file, testnet=args.testnet,
                 testcoin=args.testcoin, carefulness=args.carefulness,
@@ -750,19 +784,24 @@ if __name__ == '__main__':
     urllib3_log.propagate = False
 
 
-    # Database
-    logging.info('Status: Connecting to database.')
-    db = util.connect_to_db()
-
     # Version
     logging.info('Status: Running v{} of counterpartyd.'.format(config.VERSION_STRING, config.XCP_CLIENT))
     if not config.FORCE and args.action in ('server', 'reparse', 'rollback', 'kickstart'):
         logging.info('Status: Checking version.')
         try:
-            util.version_check(db)
+            util.version_check(bitcoin.get_block_count())
         except exceptions.VersionUpdateRequiredError as e:
             traceback.print_exc(file=sys.stdout)
             sys.exit(config.EXITCODE_UPDATE_REQUIRED)
+
+    # Lock
+    if args.action in ('rollback', 'reparse', 'server') and not config.FORCE:
+        logging.info('Status: Acquiring lock.')
+        get_lock()
+
+    # Database
+    logging.info('Status: Connecting to database.')
+    db = util.connect_to_db()
 
     # MESSAGE CREATION
     if args.action == 'send':
@@ -1003,7 +1042,7 @@ if __name__ == '__main__':
             print('Asset ‘{}’ not found.'.format(args.asset))
             exit(0)
 
-        asset_id = util.asset_id(args.asset)
+        asset_id = util.get_asset_id(args.asset)
         divisible = results['divisible']
         locked = results['locked']
         supply = util.devise(db, results['supply'], args.asset, dest='output')
@@ -1093,15 +1132,9 @@ if __name__ == '__main__':
 
     # PARSING
     elif args.action == 'reparse':
-        if not config.FORCE:
-            me = singleton.SingleInstance()
-
         blocks.reparse(db)
 
     elif args.action == 'rollback':
-        if not config.FORCE:
-            me = singleton.SingleInstance()
-
         blocks.reparse(db, block_index=args.block_index)
 
     elif args.action == 'kickstart':
@@ -1111,9 +1144,6 @@ if __name__ == '__main__':
         blocks.kickstart(db, bitcoind_dir=args.bitcoind_dir)
 
     elif args.action == 'server':
-        if not config.FORCE:
-            me = singleton.SingleInstance()
-
         api_status_poller = api.APIStatusPoller()
         api_status_poller.daemon = True
         api_status_poller.start()
@@ -1129,7 +1159,8 @@ if __name__ == '__main__':
             for i in range(1, num_tries + 1):
                 try:
                     blockchain.check()
-                except: # TODO
+                except Exception as e: # TODO
+                    logging.exception(e)
                     logging.warn("Blockchain backend (%s) not yet initialized. Waiting %i seconds and trying again (try %i of %i)..." % (
                         config.BLOCKCHAIN_SERVICE_NAME, time_wait, i, num_tries))
                     time.sleep(time_wait)
