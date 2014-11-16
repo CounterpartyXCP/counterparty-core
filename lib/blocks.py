@@ -12,6 +12,7 @@ import decimal
 D = decimal.Decimal
 import logging
 import collections
+import platform
 from Crypto.Cipher import ARC4
 import apsw
 import bitcoin as bitcoinlib
@@ -1285,11 +1286,21 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     return
 
 def kickstart(db, bitcoind_dir):
+    if bitcoind_dir is None:
+        if platform.system() == 'Darwin':
+            bitcoind_dir = os.path.expanduser('~/Library/Application Support/Bitcoin/')
+        elif platform.system() == 'Windows':
+            bitcoind_dir = os.path.join(os.environ['APPDATA'], 'Bitcoin')
+        else:
+            bitcoind_dir = os.path.expanduser('~/.bitcoin')
+    if not os.path.isdir(bitcoind_dir):
+        raise Exception('Bitcoin Core data directory not found at {}. Use --bitcoind-dir parameter.'.format(bitcoind_dir))
+
     cursor = db.cursor()
 
     logging.warning('''Warning:
 - Ensure that bitcoind is stopped.
-- You must reindex bitcoind after the initialisation is complete (restart with `-reindex=1`
+- You must reindex bitcoind after the initialisation is complete (restart with `-reindex=1`)
 - The initialisation may take a while.''')
     if input('Procede with the initialisation? (y/N) : ') != 'y':
         return

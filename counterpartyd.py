@@ -720,7 +720,7 @@ if __name__ == '__main__':
     parser_rollback.add_argument('--force', action='store_true', help='skip backend check, version check, process lock')
 
     parser_kickstart = subparsers.add_parser('kickstart', help='rapidly bring database up to the present')
-    parser_kickstart.add_argument('--bitcoind-dir', required=True, help='Bitcoin Core data directory')
+    parser_kickstart.add_argument('--bitcoind-dir', help='Bitcoin Core data directory')
     parser_kickstart.add_argument('--force', action='store_true', help='skip backend check, version check, singleton check')
 
     parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the {} market'.format(config.XCP_NAME) )
