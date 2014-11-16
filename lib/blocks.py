@@ -1341,18 +1341,21 @@ def kickstart(db, bitcoind_dir):
                                     block['block_hash'],
                                     block['block_time']))
             if len(transactions):
-                sql = '''INSERT INTO transactions
-                            (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data) 
-                         VALUES '''
-                bindings = ()
-                bindings_place = []
-                # negative tx_index from -1 and inverse order for fast reordering   # TODO: Can this be clearer?
-                for tx in reversed(transactions):
-                    bindings += (-(tx_index + 1),) + tx
-                    bindings_place.append('''(?,?,?,?,?,?,?,?,?,?)''')
-                    tx_index += 1
-                sql += ', '.join(bindings_place)
-                cursor.execute(sql, bindings)
+                transactions = list(reversed(transactions))
+                tx_chunks = [transactions[i:i+90] for i in range(0,len(transactions),90)]
+                for tx_chunk in tx_chunks:
+                    sql = '''INSERT INTO transactions
+                                (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data) 
+                             VALUES '''
+                    bindings = ()
+                    bindings_place = []
+                    # negative tx_index from -1 and inverse order for fast reordering   # TODO: Can this be clearer?
+                    for tx in tx_chunk:
+                        bindings += (-(tx_index + 1),) + tx
+                        bindings_place.append('''(?,?,?,?,?,?,?,?,?,?)''')
+                        tx_index += 1
+                    sql += ', '.join(bindings_place)
+                    cursor.execute(sql, bindings)
 
             logging.info('Block {} ({}): {}/{} saved in {:.3f}s'.format(
                           block['block_index'], block['block_hash'],
