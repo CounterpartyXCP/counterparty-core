@@ -786,7 +786,7 @@ if __name__ == '__main__':
 
     # Version
     logging.info('Status: Running v{} of counterpartyd.'.format(config.VERSION_STRING, config.XCP_CLIENT))
-    if not config.FORCE and args.action in ('server', 'reparse', 'rollback', 'kickstart'):
+    if args.action in ('server', 'reparse', 'rollback') and not config.FORCE:
         logging.info('Status: Checking version.')
         try:
             util.version_check(bitcoin.get_block_count())
@@ -795,7 +795,7 @@ if __name__ == '__main__':
             sys.exit(config.EXITCODE_UPDATE_REQUIRED)
 
     # Lock
-    if args.action in ('rollback', 'reparse', 'server') and not config.FORCE:
+    if args.action in ('rollback', 'reparse', 'server', 'kickstart') and not config.FORCE:
         logging.info('Status: Acquiring lock.')
         get_lock()
 
@@ -1138,8 +1138,6 @@ if __name__ == '__main__':
         blocks.reparse(db, block_index=args.block_index)
 
     elif args.action == 'kickstart':
-        if not config.FORCE:
-            me = singleton.SingleInstance()
 
         blocks.kickstart(db, bitcoind_dir=args.bitcoind_dir)
 
