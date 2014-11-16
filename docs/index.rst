@@ -10,7 +10,7 @@ The Counterparty protocol specification may be found `here <https://github.com/C
 To get ``counterpartyd`` installed and set up on your computer, you have two options:
 
 - Set it up manually, using the instructions `here <https://github.com/CounterpartyXCP/counterpartyd/blob/master/README.md>`__
-- For Windows and Ubuntu Linux users, you can use the `automated build system <http://counterparty.io/docs/build-system/>`__
+- For Windows and Ubuntu Linux users, you can use the `automated build system <http://counterpartyd-build.rtfd.org>`__
 
 
 Table of Contents

@@ -69,68 +69,68 @@ def generate_standard_scenario(address1, address2, order_matches, rps_matches):
 standard_scenarios_params = {
     'simplesig' : {
         'address1': ADDR[0],
-        'address2': ADDR[1], 
+        'address2': ADDR[1],
         'order_matches': [
             'b7a20fda89961cb1f3632fae11960769eb215b67092ab93911de977459c5b04cd646f64fb17ee3dc83700fae7d1155d2e2a7de1f634dd7dbd57fe7246f13f140'
-        ], 
+        ],
         'rps_matches': [
             'a54b7aea0e6875394b5ab938ab15a3b81f01303eedc7b726602357480e90cc90af5c2e5c41e84fbf96a7d03a5ae740552c4611786dc112826c75f147f1cd13eb',
             '2501cd2ee7e1c5f407e970b75a05ccbee4be74e605781de5dd3a6838a165f7bf72fe4a5e983752587b92edbb5da26c67c7f2968d2dde2e0f930acfce1ab9b669'
         ]
-    }, 
+    },
     'multisig_1_of_2': {
         'address1': MULTISIGADDR[0],
         'address2': MULTISIGADDR[1],
         'order_matches': [
-            '3f995494228c67860250b3ab0decf77e9467fed9dc15dbd278ddf3f9aef0acd2a667e44ce48fcd05a74130bd8cf564486a3017b8afb24fa369249d77f21bd253'
-        ], 
+            '49419de600dbee1e2d5e379eb4a37739ee3360d506522bbf728a632d06ece726c740728c908e01df094c434fb58b6426d8359220e404edf24c6f6fd41971f6b6'
+        ],
         'rps_matches': [
-            '08dd31a576fc835a651c7ce8818bf80a3c16b973ec5055ae5f6b1c75567c9e33dcc4b9ea7e9b98d2c9376c7a3240b7019de79bd0074039d652d27781b6a13011',
-            '640f166066e9396abc163df5826a5184631fbccb470ce0724ef3349ed452fb62ce4d806a2f6266051585fc979e3a89f4c7b6a18ea0b41f51bfb26336137c4f26'
+            'b08a7a28d03a62821b5510e6cedf936ab09216a45ba0ef51f234c5a4ee2aaa9aca94f4122a83adf4d27ee4836542e07e1b236d1ef33493e44d79a3edef0c3362',
+            '2389f5719e05dedd11d0c0988cc74ac40caa3b19f2392987575d0ad6cbd037f4b18c2963e52589f5b9ff1731542d27a502436f37b578d1f610dcbccc705ba6ae'
         ]
-    }, 
+    },
     'multisig_2_of_2': {
         'address1': MULTISIGADDR[3],
         'address2': MULTISIGADDR[4],
         'order_matches': [
-            '75799f04ade223ea1cc29121fa1cb7ca550da1cee549a87439994202d0d2585aa59a47b4b1cc072b8dfbcca228a00d700ccf0a66171aa50553e1ac32bbdd231d'
-        ], 
+            '878c11df1a0dc35b8cb39e2c35bdc3c7e1102e40ec03b704938cfa0d6a06ab0625b19174b9ed4bc5d692125e0bc572b5a7c935938155be20d04e650f09feffb0'
+        ],
         'rps_matches': [
-            '3b5d38ad9a5470b642b4281483180a2368f2bc32f82e842fcec508d5f9341afe2b9193f719d4aaa4234a04a7a8e52a7584bd9e69dac2ea0dbd32b5eac8801aad',
-            '31c71e187fc92b453d3d7cf6bbb4dde8755c40ef0cc08b2781b41b26f4e67d4f7a96ab193c6236d79834e90625cefc3cabcebb9d889663e3e137d6e546055ec5'
+            '06577f103706ef5b6b4afaf2918a63b86034f3082f53b3baab38c1d9e5e3501c490c5880ea56313edb2a7e5f8b313a2bffb4852918e8c737d93ca512fc4be417',
+            'cb91b1e26844266bd3dfbd8952f160d05a57a79ee2a7577f093c643ce6353e38771874b62b13a8efcdfc502b68cced7b1466838558bcc644bbc74cf7c18561a9'
         ]
-    }, 
+    },
     'multisig_1_of_3': {
         'address1': MULTISIGADDR[5],
         'address2': MULTISIGADDR[6],
         'order_matches': [
-            'f744c1d46e9da6abb4768c8b44ee63a44b5513f86eabbbd4784bc6c961d566e508fe83094e172ee642271aac7b75980974d6b9f7ec614dbb380323892a4f1a46'
-        ], 
+            '73656ed61e13f5862872d2391beb8489e5d47d4fbe2e70ac44dc804794d12eb56cfa7e71bab6adf4cb495097c32645d57d0a2976c950151d50a0444c1a853a4d'
+        ],
         'rps_matches': [
-            '35947f8727ab7834eab73084906d49dbd1ca50464efd17f602b3b942d6bbb34c7c9c7932b4c7410f0a7d4a5e8906ead88628b6ef25adc7a8f0e944764fb2bb3e',
-            '1514d02df03b5126de43e78d7cc2f879d0688fbfea67eb64cfbda0add0aa412e539801eca19ca1c68f479b6ec9db353445481f921ec8cde51f4c042c3f41923a'
+            '0aeeb0b82a9f62fd7fb00780ee626f5b11f697cba60a8e38456ac52f3c5103dcd5bbe3d346fd180e78ce6ddecad87a4feb3ee0e0b7c7f30944a01156f36a0c12',
+            '93a6926b8b6ee2d4c8bf277c0ee2c51aaaf3dcb358be87993d328b852def2dcef2d714440922691756a8354ef8e77ba22f2c0cc91234c2610af394cf336df857'
         ]
-    }, 
+    },
     'multisig_2_of_3': {
         'address1': MULTISIGADDR[7],
         'address2': MULTISIGADDR[8],
         'order_matches': [
-            'c27012f72d283a3e8dbfe1f4a65c2b0cc52f8387544f1a7b15b82eacb374b40e02197e98a43ac5d531f16fd72c7e9e7a3f448fc4bc0a4de4bf210b5124da8dd5'
-        ], 
+            'e9f8fbc1ee2d161867e77aec88ec2cb7b69f41513e51d6189c5aad5a0dd6245b50155ea68921273f308d37e1e7c0b57672cb6d9146ced587ce18098f639153cf'
+        ],
         'rps_matches': [
-            '6220983855032fbd448a9cc20cddee130917f5f6ff5da67c6072a23635ce6dbe5a2766d9238954d214b185b75afb248f568f85bfa4df6a9409dc683f99e57370',
-            '9feb47e813a167025c4d4ac9527a0a1067dd1774db20b16ae4732a39525b72ddb473bef4fad6f9fce39ed5be529539fbed0c41c3f6451018e70455875b6fa93b'
+            'cf8c7134a6010e812d6f1df93517f8c2ea065cdd88a6ee51f69c85d6f686d614199064bea45ef1113fe46acd8c5992c45659f38d89d17e7ad3e5d0c768eb7b29',
+            'ff755f79e47e0417b67e53c8d80f2eba9ef63f18e7825d2eb1b82bae882917d8b22358c5f5be7211ac3aed63e2594c00571b5307c83b088fd76c365e2d3725a4'
         ]
-    }, 
+    },
     'multisig_3_of_3': {
         'address1': MULTISIGADDR[9],
         'address2': MULTISIGADDR[10],
         'order_matches': [
-            '791e7db77ec2e974dc7912af2f09bb5b00bdebee1fc0905ce5ce953128d13f638250f7b366140c67814c2063661c86267d7e9c744f5b87f2d73990e033e7c7f6'
-        ], 
+            '7efc440fe53509475e7c526af5dafe8752ef2a792df9ce552b9eba33373051c77582fcb849797577c29cbe6b2afa5c62b01c62f131d40de93ae9f0181f51fdf8'
+        ],
         'rps_matches': [
-            'ab5efc8615faa7f9a4af81b4418fbd6dbd6a395804b2cd3b83eb49968b35480b2b35d8308052dbf05b804bc5ec0eec0e8c1e4fe4d75efde745a7733493e295b9',
-            '68d8328f0d3fbdc45ac14d7982622964e9d6b99ad0be065ff6d8ed3fbeaa9a567edcdabe2c175888d827a2a9c514b5e62589255d5fbc171aa6092a954fa2c95a'
+            'cd05950b910c40fe30676bc669977fe9948faaaed9228bb385dbdac35b994cb76c35187c7c49b178fe7279abd490530fcef7f018f96c1406fe9c56112f4e43a4',
+            'c489007df2a197940874a3992a00a7bd1a6770059bc7697b38d7c1b8100c0091dade89f45a70fd82cb410d6dca48ca2affcb85eb83701b6be3f1939dd0eb5bdc'
         ]
     }
 }

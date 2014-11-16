@@ -22,7 +22,7 @@ def getinfo():
                 "blocks": result['data']['last_block']['nb']
             }
         }
-    
+
     return None
 
 def listunspent(address):
@@ -42,7 +42,7 @@ def listunspent(address):
             }
             utxo.append(newtxo)
         return utxo
-    
+
     return None
 
 def getaddressinfo(address):
@@ -65,7 +65,7 @@ def getaddressinfo(address):
                 'txApperances': txs['data']['nb_txs'],
                 'transactions': transactions
             }
-    
+
     return None
 
 def gettransaction(tx_hash):
@@ -76,7 +76,7 @@ def gettransaction(tx_hash):
         return None
     elif tx['code'] != 200:
         raise Exception("Invalid result (code %s), body: %s" % (tx['code'], tx))
-    
+
     if 'status' in tx and tx['status'] == 'success':
         valueOut = 0
         for vout in tx['data']['tx']['vout']:

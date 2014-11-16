@@ -285,7 +285,7 @@ def expire (db, block_index):
         }
         sql = '''INSERT INTO rps_match_expirations VALUES (:rps_match_id, :tx0_address, :tx1_address, :block_index)'''
         cursor.execute(sql, bindings)
-        
+
         # Rematch not expired and not resolved RPS
         if new_rps_match_status == 'expired':
             sql = '''SELECT * FROM rps WHERE tx_hash IN (?, ?) AND status = ? AND expire_index >= ?'''
