@@ -579,6 +579,18 @@ def get_btc_supply(normalize=False):
             blocks_remaining = 0
     return total_supply if normalize else int(total_supply * config.UNIT)
 
+def scriptpubkey_to_address(scriptpubkey):
+    if 'addresses' not in scriptpubkey.keys():
+        return None
+    if scriptpubkey['type'] == 'multisig':
+        asm = scriptpubkey['asm'].split(' ')
+        logging.error(asm)
+        signatures_required, signatures_possible = int(asm[0]), int(asm[-2])
+        return '{}_{}_{}'.format(signatures_required, "_".join(sorted(scriptpubkey['addresses'])), signatures_possible)
+    elif len(scriptpubkey['addresses']) == 1:
+        return scriptpubkey['addresses'][0]
+    return None
+
 def get_unspent_txouts(source, return_confirmed=False):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
@@ -592,12 +604,14 @@ def get_unspent_txouts(source, return_confirmed=False):
         pubkeyhashes = [source]
         raw_transactions = blockchain.searchrawtransactions(source)
 
+    canonical_address = util.canonical_address(source)
+
     for tx in raw_transactions:
         for vout in tx['vout']:
             scriptpubkey = vout['scriptPubKey']
             if util.is_multisig(source) and scriptpubkey['type'] != 'multisig':
                 continue
-            elif 'addresses' in scriptpubkey.keys() and "".join(sorted(scriptpubkey['addresses'])) == "".join(sorted(pubkeyhashes)):
+            elif scriptpubkey_to_address(scriptpubkey) == canonical_address:
                 txid = tx['txid']
                 confirmations = tx['confirmations'] if 'confirmations' in tx else 0
                 if txid not in outputs or outputs[txid]['confirmations'] < confirmations:
