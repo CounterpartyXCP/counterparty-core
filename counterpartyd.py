@@ -719,6 +719,10 @@ if __name__ == '__main__':
     parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
     parser_rollback.add_argument('--force', action='store_true', help='skip backend check, version check, process lock')
 
+    parser_kickstart = subparsers.add_parser('kickstart', help='rapidly bring database up to the present')
+    parser_kickstart.add_argument('--bitcoind-dir', help='Bitcoin Core data directory')
+    parser_kickstart.add_argument('--force', action='store_true', help='skip backend check, version check, singleton check')
+
     parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the {} market'.format(config.XCP_NAME) )
     parser_market.add_argument('--give-asset', help='only show orders offering to sell GIVE_ASSET')
     parser_market.add_argument('--get-asset', help='only show orders offering to buy GET_ASSET')
@@ -782,7 +786,7 @@ if __name__ == '__main__':
 
     # Version
     logging.info('Status: Running v{} of counterpartyd.'.format(config.VERSION_STRING, config.XCP_CLIENT))
-    if not config.FORCE and args.action in ('server', 'reparse', 'rollback'):
+    if args.action in ('server', 'reparse', 'rollback') and not config.FORCE:
         logging.info('Status: Checking version.')
         try:
             util.version_check(bitcoin.get_block_count())
@@ -791,7 +795,7 @@ if __name__ == '__main__':
             sys.exit(config.EXITCODE_UPDATE_REQUIRED)
 
     # Lock
-    if args.action in ('rollback', 'reparse', 'server') and not config.FORCE:
+    if args.action in ('rollback', 'reparse', 'server', 'kickstart') and not config.FORCE:
         logging.info('Status: Acquiring lock.')
         get_lock()
 
@@ -1132,6 +1136,10 @@ if __name__ == '__main__':
 
     elif args.action == 'rollback':
         blocks.reparse(db, block_index=args.block_index)
+
+    elif args.action == 'kickstart':
+
+        blocks.kickstart(db, bitcoind_dir=args.bitcoind_dir)
 
     elif args.action == 'server':
         api_status_poller = api.APIStatusPoller()
