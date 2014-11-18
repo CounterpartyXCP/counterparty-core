@@ -601,8 +601,8 @@ Issue a bet against a feed.
   * **wager (integer, required):** The :ref:`quantity <quantitys>` of XCP to wager.
   * **counterwager (integer, required):** The minimum :ref:`quantity <quantitys>` of XCP to be wagered against, for the bets to match.
   * **expiration (integer, required):** The number of blocks after which the bet expires if it's still unmatched.
-  * **target_value (float):** Target value for Equal/NotEqual bet
-  * **leverage (integer):** Leverage, as a fraction of 5040
+  * **target_value (float, default=None):** Target value for Equal/NotEqual bet
+  * **leverage (integer, default=5040):** Leverage, as a fraction of 5040
   * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
   * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
   * **allow_unconfirmed_inputs (boolean):** Set to ``true`` to allow this transaction to utilize unconfirmed UTXOs as inputs.
@@ -764,12 +764,12 @@ Issue a new asset, issue more of an existing asset, lock an asset, or transfer t
   * **source (string, required):** The address that will be issuing or transfering the asset.
   * **quantity (integer, required):** The :ref:`quantity <quantitys>` of the asset to issue (set to 0 if *transferring* an asset).
   * **asset (string, required):** The :ref:`asset <assets>` to issue or transfer.
-  * **divisible (boolean):** Whether this asset is divisible or not (if a transfer, this value must match the value specified when the asset was originally issued).
-  * **callable (boolean):** Whether the asset is callable or not.
-  * **call_date (integer):** The timestamp at which the asset may be called back, in Unix time. Only valid for callable assets.
-  * **call_price (float):** The :ref:`price <floats>` per unit XCP at which the asset may be called back, on or after the specified call_date. Only valid for callable assets.
-  * **description (string):** A textual description for the asset. 52 bytes max.
-  * **transfer_destination (string):** The address to receive the asset (only used when *transferring* assets -- leave set to ``null`` if issuing an asset).
+  * **divisible (boolean, default=True):** Whether this asset is divisible or not (if a transfer, this value must match the value specified when the asset was originally issued).
+  * **callable (boolean, default=False):** Whether the asset is callable or not.
+  * **call_date (integer, default=0):** The timestamp at which the asset may be called back, in Unix time. Only valid for callable assets.
+  * **call_price (float, default=0.0):** The :ref:`price <floats>` per unit XCP at which the asset may be called back, on or after the specified call_date. Only valid for callable assets.
+  * **description (string, default=''):** A textual description for the asset. 52 bytes max.
+  * **transfer_destination (string, default=None):** The address to receive the asset (only used when *transferring* assets -- leave set to ``null`` if issuing an asset).
   * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
   * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
   * **allow_unconfirmed_inputs (boolean):** Set to ``true`` to allow this transaction to utilize unconfirmed UTXOs as inputs.
