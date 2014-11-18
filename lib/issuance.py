@@ -67,8 +67,6 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     if issuances:
         reissuance = True
         last_issuance = issuances[-1]
-        if call_date is None: call_date = 0
-        if call_price is None: call_price = 0.0
 
         if last_issuance['issuer'] != source:
             problems.append('issued by another address')
