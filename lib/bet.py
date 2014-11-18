@@ -121,14 +121,16 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
 
     if wager_quantity <= 0: problems.append('non‐positive wager')
     if counterwager_quantity <= 0: problems.append('non‐positive counterwager')
-    if target_value < 0: problems.append('negative target value')
     if deadline < 0: problems.append('negative deadline')
     if expiration < 0: problems.append('negative expiration')
     if expiration == 0 and not (block_index >= 317500 or config.TESTNET):   # Protocol change.
         problems.append('zero expiration')
 
-    if target_value and bet_type in (0,1):   # BullCFD, BearCFD
-        problems.append('CFDs have no target value')
+    if target_value:
+        if bet_type in (0,1):   # BullCFD, BearCFD
+            problems.append('CFDs have no target value')
+        if target_value < 0:
+            problems.append('negative target value')
 
     if expiration > config.MAX_EXPIRATION:
         problems.append('expiration overflow')
