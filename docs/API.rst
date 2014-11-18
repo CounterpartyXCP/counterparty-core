@@ -189,7 +189,7 @@ Python Example
     payload = {
       "method": "create_issuance",
       "params": {
-        'source': "1CUdFmgK9trTNZHALfqGvd8d6nUZqH2AAf"
+        'source': "1CUdFmgK9trTNZHALfqGvd8d6nUZqH2AAf",
         'asset': "MYASSET",
         'quantity': 1000,
         'description': "my asset is cool",
