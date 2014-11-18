@@ -28,19 +28,20 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     if call_date is None: call_date = 0
     if call_price is None: call_price = 0.0
     if description is None: description = ""
+    if divisible is None: divisible = True
 
     if isinstance(call_price, int): call_price = float(call_price)
     #^ helps especially with calls from JS-based clients, where parseFloat(15) returns 15 (not 15.0), which json takes as an int
 
     if not isinstance(quantity, int):
         problems.append('quantity must be in satoshis')
-        return call_date, call_price, problems, fee, description
+        return call_date, call_price, problems, fee, description, divisible
     if call_date and not isinstance(call_date, int):
         problems.append('call_date must be epoch integer')
-        return call_date, call_price, problems, fee, description
+        return call_date, call_price, problems, fee, description, divisible
     if call_price and not isinstance(call_price, float):
         problems.append('call_price must be a float')
-        return call_date, call_price, problems, fee, description
+        return call_date, call_price, problems, fee, description, divisible
 
     if quantity < 0: problems.append('negative quantity')
     if call_price < 0: problems.append('negative call price')
@@ -123,10 +124,10 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     if destination and quantity:
         problems.append('cannot issue and transfer simultaneously')
 
-    return call_date, call_price, problems, fee, description
+    return call_date, call_price, problems, fee, description, divisible
 
 def compose (db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description):
-    call_date, call_price, problems, fee, description = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.last_block(db)['block_index'])
+    call_date, call_price, problems, fee, description, divisible = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.last_block(db)['block_index'])
     if problems: raise exceptions.IssuanceError(problems)
 
     asset_id = util.get_asset_id(asset, util.last_block(db)['block_index'])
@@ -177,7 +178,7 @@ def parse (db, tx, message):
 
     fee = 0
     if status == 'valid':
-        call_date, call_price, problems, fee, description = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, callable_, call_date, call_price, description, block_index=tx['block_index'])
+        call_date, call_price, problems, fee, description, divisible = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, callable_, call_date, call_price, description, block_index=tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
         if 'total quantity overflow' in problems:
             quantity = 0
