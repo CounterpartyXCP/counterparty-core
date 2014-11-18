@@ -15,6 +15,7 @@ import warnings
 import binascii
 import hashlib
 from functools import lru_cache
+import getpass
 
 from . import (config, exceptions)
 
