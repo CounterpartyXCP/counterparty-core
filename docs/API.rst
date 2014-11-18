@@ -557,7 +557,7 @@ Sign a transaction created with the Action/Write API.
 
 **Parameters:**
 
-  * **tx_hex (string):** A hex-encoded raw transaction (which was created via one of the ``create_`` calls).
+  * **tx_hex (string, required):** A hex-encoded raw transaction (which was created via one of the ``create_`` calls).
   * **privkey (string):** The private key in WIF format to use for signing the transaction. If not provided,
     the private key must to be known by the ``bitcoind`` wallet.
   
@@ -576,7 +576,7 @@ Broadcast a signed transaction onto the Bitcoin network.
 
 **Parameters:**
 
-  * **signed_tx_hex (string):** A hex-encoded signed raw transaction (which was created via one of the ``create_`` calls
+  * **signed_tx_hex (string, required):** A hex-encoded signed raw transaction (which was created via one of the ``create_`` calls
     and signed with ``sign_tx`` method).
   
 **Return:** 
@@ -594,13 +594,13 @@ Issue a bet against a feed.
 
 **Parameters:**
 
-  * **source (string):** The address that will make the bet.
-  * **feed_address (string):** The address that host the feed to be bet on.
-  * **bet_type (integer):** 0 for Bullish CFD, 1 for Bearish CFD, 2 for Equal, 3 for NotEqual.
-  * **deadline (integer):** The time at which the bet should be decided/settled, in Unix time.
-  * **wager (integer):** The :ref:`quantity <quantitys>` of XCP to wager.
-  * **counterwager (integer):** The minimum :ref:`quantity <quantitys>` of XCP to be wagered against, for the bets to match.
-  * **expiration (integer):** The number of blocks after which the bet expires if it's still unmatched.
+  * **source (string, required):** The address that will make the bet.
+  * **feed_address (string, required):** The address that host the feed to be bet on.
+  * **bet_type (integer, required):** 0 for Bullish CFD, 1 for Bearish CFD, 2 for Equal, 3 for NotEqual.
+  * **deadline (integer, required):** The time at which the bet should be decided/settled, in Unix time.
+  * **wager (integer, required):** The :ref:`quantity <quantitys>` of XCP to wager.
+  * **counterwager (integer, required):** The minimum :ref:`quantity <quantitys>` of XCP to be wagered against, for the bets to match.
+  * **expiration (integer, required):** The number of blocks after which the bet expires if it's still unmatched.
   * **target_value (float):** Target value for Equal/NotEqual bet
   * **leverage (integer):** Leverage, as a fraction of 5040
   * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
@@ -624,11 +624,11 @@ Broadcast textual and numerical information to the network.
 
 **Parameters:**
 
-  * **source (string):** The address that will be sending (must have the necessary quantity of the specified asset).
-  * **fee_fraction (float):** How much of every bet on this feed should go to its operator; a fraction of 1, (i.e. .05 is five percent).
-  * **text (string):** The textual part of the broadcast.
-  * **timestamp (integer):** The timestamp of the broadcast, in Unix time.
-  * **value (float):** Numerical value of the broadcast.
+  * **source (string, required):** The address that will be sending (must have the necessary quantity of the specified asset).
+  * **fee_fraction (float, required):** How much of every bet on this feed should go to its operator; a fraction of 1, (i.e. .05 is five percent).
+  * **text (string, required):** The textual part of the broadcast.
+  * **timestamp (integer, required):** The timestamp of the broadcast, in Unix time.
+  * **value (float, required):** Numerical value of the broadcast.
   * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
   * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
   * **allow_unconfirmed_inputs (boolean):** Set to ``true`` to allow this transaction to utilize unconfirmed UTXOs as inputs.
@@ -650,7 +650,7 @@ Create and (optionally) broadcast a BTCpay message, to settle an Order Match for
 
 **Parameters:**
 
-  * **order_match_id (string):** The concatenation of the hashes of the two transactions which compose the order match.
+  * **order_match_id (string, required):** The concatenation of the hashes of the two transactions which compose the order match.
   * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
   * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
   * **allow_unconfirmed_inputs (boolean):** Set to ``true`` to allow this transaction to utilize unconfirmed UTXOs as inputs.
@@ -671,8 +671,8 @@ Burn a given quantity of BTC for XCP (**only possible between blocks 278310 and 
 
 **Parameters:**
 
-  * **source (string):** The address with the BTC to burn.
-  * **quantity (integer):** The :ref:`quantity <quantitys>` of BTC to burn (1 BTC maximum burn per address).
+  * **source (string, required):** The address with the BTC to burn.
+  * **quantity (integer, required):** The :ref:`quantity <quantitys>` of BTC to burn (1 BTC maximum burn per address).
   * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
   * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
   * **allow_unconfirmed_inputs (boolean):** Set to ``true`` to allow this transaction to utilize unconfirmed UTXOs as inputs.
@@ -693,8 +693,8 @@ Make a call on a callable asset (where some whole or part of the asset is return
 
 **Parameters:**
 
-  * **source (string):** The callback source address. Must be the same address as the specified asset's owner.
-  * **fraction (float):** A floating point number greater than zero but less than or equal to 1, where 0% is for a callback of 0% of the balance of each of the asset's holders, and 1 would be for a callback of 100%). For example, ``0.56`` would be 56%. Each holder of the called asset will be paid the call price for the asset, times the number of units of that asset that were called back from them.
+  * **source (string, required):** The callback source address. Must be the same address as the specified asset's owner.
+  * **fraction (float, required):** A floating point number greater than zero but less than or equal to 1, where 0% is for a callback of 0% of the balance of each of the asset's holders, and 1 would be for a callback of 100%). For example, ``0.56`` would be 56%. Each holder of the called asset will be paid the call price for the asset, times the number of units of that asset that were called back from them.
   * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
   * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
   * **allow_unconfirmed_inputs (boolean):** Set to ``true`` to allow this transaction to utilize unconfirmed UTXOs as inputs.
@@ -715,7 +715,7 @@ Cancel an open order or bet you created.
 
 **Parameters:**
 
-  * **offer_hash (string):** The transaction hash of the order or bet.
+  * **offer_hash (string, required):** The transaction hash of the order or bet.
   * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
   * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
   * **allow_unconfirmed_inputs (boolean):** Set to ``true`` to allow this transaction to utilize unconfirmed UTXOs as inputs.
@@ -736,10 +736,10 @@ Issue a dividend on a specific user defined asset.
 
 **Parameters:**
 
-  * **source (string):** The address that will be issuing the dividend (must have the ownership of the asset which the dividend is being issued on).
-  * **asset (string):** The :ref:`asset <assets>` that the dividends are being rewarded on.
-  * **dividend_asset (string):** The :ref:`asset <assets>` that the dividends are paid in.
-  * **quantity_per_unit (integer):** The :ref:`quantity <quantitys>` of XCP rewarded per whole unit of the asset.
+  * **source (string, required):** The address that will be issuing the dividend (must have the ownership of the asset which the dividend is being issued on).
+  * **asset (string, required):** The :ref:`asset <assets>` that the dividends are being rewarded on.
+  * **dividend_asset (string, required):** The :ref:`asset <assets>` that the dividends are paid in.
+  * **quantity_per_unit (integer, required):** The :ref:`quantity <quantitys>` of XCP rewarded per whole unit of the asset.
   * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
   * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
   * **allow_unconfirmed_inputs (boolean):** Set to ``true`` to allow this transaction to utilize unconfirmed UTXOs as inputs.
@@ -761,9 +761,9 @@ Issue a new asset, issue more of an existing asset, lock an asset, or transfer t
 
 **Parameters:**
 
-  * **source (string):** The address that will be issuing or transfering the asset.
-  * **quantity (integer):** The :ref:`quantity <quantitys>` of the asset to issue (set to 0 if *transferring* an asset).
-  * **asset (string):** The :ref:`asset <assets>` to issue or transfer.
+  * **source (string, required):** The address that will be issuing or transfering the asset.
+  * **quantity (integer, required):** The :ref:`quantity <quantitys>` of the asset to issue (set to 0 if *transferring* an asset).
+  * **asset (string, required):** The :ref:`asset <assets>` to issue or transfer.
   * **divisible (boolean):** Whether this asset is divisible or not (if a transfer, this value must match the value specified when the asset was originally issued).
   * **callable (boolean):** Whether the asset is callable or not.
   * **call_date (integer):** The timestamp at which the asset may be called back, in Unix time. Only valid for callable assets.
@@ -798,12 +798,12 @@ Issue an order request.
 
 **Parameters:**
 
-  * **source (string):** The address that will be issuing the order request (must have the necessary quantity of the specified asset to give).
-  * **give_quantity (integer):** The :ref:`quantity <quantitys>` of the asset to give.
-  * **give_asset (string):** The :ref:`asset <assets>` to give.
-  * **get_quantity (integer):** The :ref:`quantity <quantitys>` of the asset requested in return.
-  * **get_asset (string):** The :ref:`asset <assets>` requested in return.
-  * **expiration (integer):** The number of blocks for which the order should be valid.
+  * **source (string, required):** The address that will be issuing the order request (must have the necessary quantity of the specified asset to give).
+  * **give_quantity (integer, required):** The :ref:`quantity <quantitys>` of the asset to give.
+  * **give_asset (string, required):** The :ref:`asset <assets>` to give.
+  * **get_quantity (integer, required):** The :ref:`quantity <quantitys>` of the asset requested in return.
+  * **get_asset (string, required):** The :ref:`asset <assets>` requested in return.
+  * **expiration (integer, required):** The number of blocks for which the order should be valid.
   * **fee_required (integer):** The miners' fee required to be paid by orders for them to match this one; in BTC; required only if buying BTC (may be zero, though). If not specified or set to ``null``, this defaults to 1% of the BTC desired for purchase.
   * **fee_provided (integer):** The miners' fee provided; in BTC; required only if selling BTC (should not be lower than is required for acceptance in a block).  If not specified or set to ``null``, this defaults to 1% of the BTC for sale. 
   * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
@@ -826,10 +826,10 @@ Send XCP or a user defined asset.
 
 **Parameters:**
 
-  * **source (string):** The address that will be sending (must have the necessary quantity of the specified asset).
-  * **destination (string):** The address to receive the asset.
-  * **quantity (integer):** The :ref:`quantity <quantitys>` of the asset to send.
-  * **asset (string):** The :ref:`asset <assets>` to send.
+  * **source (string, required):** The address that will be sending (must have the necessary quantity of the specified asset).
+  * **destination (string, required):** The address to receive the asset.
+  * **quantity (integer, required):** The :ref:`quantity <quantitys>` of the asset to send.
+  * **asset (string, required):** The :ref:`asset <assets>` to send.
   * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
   * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
   * **allow_unconfirmed_inputs (boolean):** Set to ``true`` to allow this transaction to utilize unconfirmed UTXOs as inputs.
@@ -851,11 +851,11 @@ Open a Rock-Paper-Scissors (RPS) like game.
 
 **Parameters:**
 
-  * **source (string):** The address that will be sending (must have the necessary quantity of the specified asset).
-  * **possible_moves (integer):** The number of possible moves. Must be an odd number greater or equal than 3.
-  * **wager (integer):** The :ref:`quantity <quantitys>` of XCP to wager.
-  * **move_random_hash (string):** A 32 bytes hex string (64 chars): sha256(sha256(random+move)). Where random is 16 bytes random number.
-  * **expiration (integer):** The number of blocks for which the game should be valid.
+  * **source (string, required):** The address that will be sending (must have the necessary quantity of the specified asset).
+  * **possible_moves (integer, required):** The number of possible moves. Must be an odd number greater or equal than 3.
+  * **wager (integer, required):** The :ref:`quantity <quantitys>` of XCP to wager.
+  * **move_random_hash (string, required):** A 32 bytes hex string (64 chars): sha256(sha256(random+move)). Where random is 16 bytes random number.
+  * **expiration (integer, required):** The number of blocks for which the game should be valid.
   * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
   * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
   * **allow_unconfirmed_inputs (boolean):** Set to ``true`` to allow this transaction to utilize unconfirmed UTXOs as inputs.
@@ -874,10 +874,10 @@ allow_unconfirmed_inputs=false, fee=null, fee_per_kb=10000)**
 Resolve a Rock-Paper-Scissors game.
 
 **Parameters:**
-  * **source (string):** The address that will be sending (must have the necessary quantity of the specified asset).
-  * **move (integer):** The selected move.
-  * **random (string):** A 16 bytes hex string (32 chars) used to generate the move_random_hash value.
-  * **rps_match_id (string):** The concatenation of the hashes of the two transactions which compose the rps match.
+  * **source (string, required):** The address that will be sending (must have the necessary quantity of the specified asset).
+  * **move (integer, required):** The selected move.
+  * **random (string, required):** A 16 bytes hex string (32 chars) used to generate the move_random_hash value.
+  * **rps_match_id (string, required):** The concatenation of the hashes of the two transactions which compose the rps match.
   * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
   * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
   * **allow_unconfirmed_inputs (boolean):** Set to ``true`` to allow this transaction to utilize unconfirmed UTXOs as inputs.
