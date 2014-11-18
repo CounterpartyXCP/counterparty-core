@@ -171,6 +171,69 @@ Python Example
     print("\BROADCAST_TX RESULT: ", tx_hash)
     
 
+    # Basic parameters for issuance (divisible, no callable)
+    payload = {
+      "method": "create_issuance",
+      "params": {
+        'source': "1CUdFmgK9trTNZHALfqGvd8d6nUZqH2AAf",
+        'asset': "MYASSET",
+        'quantity': 1000
+      },
+      "jsonrpc": "2.0",
+      "id": 0,
+    }
+    tx_hash = requests.post(url, data=json.dumps(payload), headers=headers, auth=auth)
+    print("\CREATE ISSUANCE RESULT: ", tx_hash)
+
+    # Advanced parameters for issuance (no divisible, callable)
+    payload = {
+      "method": "create_issuance",
+      "params": {
+        'source': "1CUdFmgK9trTNZHALfqGvd8d6nUZqH2AAf"
+        'asset': "MYASSET",
+        'quantity': 1000,
+        'description': "my asset is cool",
+        'callable': True,
+        'call_date': 1418926641,
+        'call_price', 100000000,
+        'divisible': False
+      },
+      "jsonrpc": "2.0",
+      "id": 0,
+    }
+    tx_hash = requests.post(url, data=json.dumps(payload), headers=headers, auth=auth)
+    print("\CREATE ISSUANCE RESULT: ", tx_hash)
+
+    # Transfer asset ownership
+    payload = {
+      "method": "create_issuance",
+      "params": {
+        'source': "1CUdFmgK9trTNZHALfqGvd8d6nUZqH2AAf",
+        'transfer_destination': "17rRm52PYGkntcJxD2yQF9jQqRS4S2nZ7E",
+        'asset': "MYASSET",
+        'quantity': 0
+      },
+      "jsonrpc": "2.0",
+      "id": 0,
+    }
+    tx_hash = requests.post(url, data=json.dumps(payload), headers=headers, auth=auth)
+    print("\TRANSFER ASSET RESULT: ", tx_hash)
+
+    # Lock asset
+    payload = {
+      "method": "create_issuance",
+      "params": {
+        'source': "1CUdFmgK9trTNZHALfqGvd8d6nUZqH2AAf",
+        'asset': "MYASSET",
+        'quantity': 0,
+        'description': 'LOCK'
+      },
+      "jsonrpc": "2.0",
+      "id": 0,
+    }
+    tx_hash = requests.post(url, data=json.dumps(payload), headers=headers, auth=auth)
+    print("\LOCK ASSET RESULT: ", tx_hash)
+
 PHP Example
 ^^^^^^^^^^^^
 
