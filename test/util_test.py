@@ -78,7 +78,8 @@ def insert_block(db, block_index, parse_block=False):
     block_hash = hashlib.sha512(chr(block_index).encode('utf-8')).hexdigest()
     block_time = block_index * 10000000
     block = (block_index, block_hash, block_time, None, None, None, None)
-    cursor.execute('''INSERT INTO blocks VALUES (?,?,?,?,?,?,?)''', block)
+    cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty) 
+                      VALUES (?,?,?,?,?,?,?)''', block)
     cursor.close()
     if parse_block:
         blocks.parse_block(db, block_index, block_time)
@@ -119,8 +120,9 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
 
 def insert_transaction(transaction, db):
     cursor = db.cursor()
-    block = (transaction['block_index'], transaction['block_hash'], transaction['block_time'], None, None)
-    cursor.execute('''INSERT INTO blocks VALUES (?,?,?,?,?)''', block)
+    block = (transaction['block_index'], transaction['block_hash'], transaction['block_time'], None, None, None, None)
+    cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty) 
+                      VALUES (?,?,?,?,?,?,?)''', block)
     keys = ",".join(transaction.keys())
     cursor.execute('''INSERT INTO transactions ({}) VALUES (?,?,?,?,?,?,?,?,?,?,?)'''.format(keys), tuple(transaction.values()))
     cursor.close()
