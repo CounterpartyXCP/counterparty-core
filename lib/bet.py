@@ -83,6 +83,8 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
               counterwager_quantity, target_value, leverage, expiration, block_index):
     problems = []
 
+    if leverage is None: leverage = 5040
+
     # Look at feed to be bet on.
     cursor = db.cursor()
     broadcasts = list(cursor.execute('''SELECT * FROM broadcasts WHERE (status = ? AND source = ?) ORDER BY tx_index ASC''', ('valid', feed_address)))
@@ -109,24 +111,26 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
 
     if not isinstance(wager_quantity, int):
         problems.append('wager_quantity must be in satoshis')
-        return problems
+        return problems, leverage
     if not isinstance(counterwager_quantity, int):
         problems.append('counterwager_quantity must be in satoshis')
-        return problems
+        return problems, leverage
     if not isinstance(expiration, int):
         problems.append('expiration must be expressed as an integer block delta')
-        return problems
+        return problems, leverage
 
     if wager_quantity <= 0: problems.append('non‐positive wager')
     if counterwager_quantity <= 0: problems.append('non‐positive counterwager')
-    if target_value < 0: problems.append('negative target value')
     if deadline < 0: problems.append('negative deadline')
     if expiration < 0: problems.append('negative expiration')
     if expiration == 0 and not (block_index >= 317500 or config.TESTNET):   # Protocol change.
         problems.append('zero expiration')
 
-    if target_value and bet_type in (0,1):   # BullCFD, BearCFD
-        problems.append('CFDs have no target value')
+    if target_value:
+        if bet_type in (0,1):   # BullCFD, BearCFD
+            problems.append('CFDs have no target value')
+        if target_value < 0:
+            problems.append('negative target value')
 
     if expiration > config.MAX_EXPIRATION:
         problems.append('expiration overflow')
@@ -135,12 +139,12 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
     if wager_quantity > config.MAX_INT or counterwager_quantity > config.MAX_INT or bet_type > config.MAX_INT or deadline > config.MAX_INT or leverage > config.MAX_INT:
         problems.append('integer overflow')
 
-    return problems
+    return problems, leverage
 
 def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
             counterwager_quantity, target_value, leverage, expiration):
 
-    problems = validate(db, source, feed_address, bet_type, deadline, wager_quantity,
+    problems, leverage = validate(db, source, feed_address, bet_type, deadline, wager_quantity,
                         counterwager_quantity, target_value, leverage, expiration, util.last_block(db)['block_index'])
     if util.date_passed(deadline):
         problems.append('deadline passed')
@@ -191,7 +195,7 @@ def parse (db, tx, message):
                 wager_quantity = balance
                 counterwager_quantity = int(util.price(wager_quantity, odds, tx['block_index']))
 
-        problems = validate(db, tx['source'], feed_address, bet_type, deadline, wager_quantity,
+        problems, leverage = validate(db, tx['source'], feed_address, bet_type, deadline, wager_quantity,
                             counterwager_quantity, target_value, leverage, expiration, tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
 

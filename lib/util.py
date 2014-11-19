@@ -15,6 +15,8 @@ import warnings
 import binascii
 import hashlib
 import sha3
+from functools import lru_cache
+import getpass
 
 from . import (config, exceptions)
 
@@ -31,6 +33,8 @@ BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
 BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
 
 BLOCK_LEDGER = []
+# inelegant but easy and fast cache
+MEMPOOL = []
 
 # TODO: This doesn’t timeout properly. (If server hangs, then unhangs, no result.)
 def api (method, params):
@@ -819,10 +823,10 @@ def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
     try:
         r = requests.get(url, timeout=fetch_timeout)
     except Exception as e:
-        raise GetURLError("Got get_url request error: %s" % e)
+        raise exceptions.GetURLError("Got get_url request error: %s" % e)
     else:
         if r.status_code != 200 and abort_on_error:
-            raise GetURLError("Bad status code returned: '%s'. result body: '%s'." % (r.status_code, r.text))
+            raise exceptions.GetURLError("Bad status code returned: '%s'. result body: '%s'." % (r.status_code, r.text))
         result = json.loads(r.text) if is_json else r.text
     return result
 
@@ -976,6 +980,84 @@ def get_balance (db, address, asset):
 def hexlify(x):
     return binascii.hexlify(x).decode('ascii')
 
+### Backend RPC ###
+
+bitcoin_rpc_session = None
+
+def connect (url, payload, headers):
+    global bitcoin_rpc_session
+    if not bitcoin_rpc_session: bitcoin_rpc_session = requests.Session()
+    TRIES = 12
+    for i in range(TRIES):
+        try:
+            response = bitcoin_rpc_session.post(url, data=json.dumps(payload), headers=headers, verify=config.BACKEND_RPC_SSL_VERIFY)
+            if i > 0: print('Successfully connected.', file=sys.stderr)
+            return response
+        except requests.exceptions.SSLError as e:
+            raise e
+        except requests.exceptions.ConnectionError:
+            logging.debug('Could not connect to Bitcoind. (Try {}/{})'.format(i+1, TRIES))
+            time.sleep(5)
+    return None
+
+def wallet_unlock ():
+    getinfo = rpc('getinfo', [])
+    if 'unlocked_until' in getinfo:
+        if getinfo['unlocked_until'] >= 60:
+            return True # Wallet is unlocked for at least the next 60 seconds.
+        else:
+            passphrase = getpass.getpass('Enter your Bitcoind[‐Qt] wallet passhrase: ')
+            print('Unlocking wallet for 60 (more) seconds.')
+            rpc('walletpassphrase', [passphrase, 60])
+    else:
+        return True    # Wallet is unencrypted.
+
+def rpc (method, params):
+    starttime = time.time()
+    headers = {'content-type': 'application/json'}
+    payload = {
+        "method": method,
+        "params": params,
+        "jsonrpc": "2.0",
+        "id": 0,
+    }
+
+    response = connect(config.BACKEND_RPC, payload, headers)
+    if response == None:
+        if config.TESTNET: network = 'testnet'
+        else: network = 'mainnet'
+        raise exceptions.BitcoindRPCError('Cannot communicate with {} Core. ({} is set to run on {}, is {} Core?)'.format(config.BTC_NAME, config.XCP_CLIENT, network, config.BTC_NAME))
+    elif response.status_code not in (200, 500):
+        raise exceptions.BitcoindRPCError(str(response.status_code) + ' ' + response.reason)
+
+    # Return result, with error handling.
+    response_json = response.json()
+    if 'error' not in response_json.keys() or response_json['error'] == None:
+        return response_json['result']
+    elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
+        raise exceptions.BitcoindError('{} Is txindex enabled in {} Core?'.format(response_json['error'], config.BTC_NAME))
+    elif response_json['error']['code'] == -4:   # Unknown private key (locked wallet?)
+        # If address in wallet, attempt to unlock.
+        address = params[0]
+        if is_valid(address):
+            if is_mine(address):
+                raise exceptions.BitcoindError('Wallet is locked.')
+            else:   # When will this happen?
+                raise exceptions.BitcoindError('Source address not in wallet.')
+        else:
+            raise exceptions.AddressError('Invalid address. (Multi‐signature?)')
+    elif response_json['error']['code'] == -1 and response_json['error']['message'] == 'Block number out of range.':
+        time.sleep(10)
+        return get_block_hash(block_index)
+    else:
+        raise exceptions.BitcoindError('{}'.format(response_json['error']))
+
+@lru_cache(maxsize=4096)
+def get_cached_raw_transaction(tx_hash):
+    return rpc('getrawtransaction', [tx_hash, 1])
+
+### Backend RPC ###
+
 ### Protocol Changes ###
 def asset_names_v2(block_index):
     if config.TESTNET:
@@ -986,5 +1068,34 @@ def asset_names_v2(block_index):
     elif False:
         return True
     return False
+
+### Unconfirmed Transactions ###
+
+@lru_cache(maxsize=4096)
+def extract_addresses(tx):
+    tx = json.loads(tx) # for lru_cache
+    addresses = []
+
+    for vout in tx['vout']:
+        if 'addresses' in vout['scriptPubKey']:
+            addresses += vout['scriptPubKey']['addresses']
+
+    for vin in tx['vin']:
+        vin_tx = get_cached_raw_transaction(vin['txid'])
+        vout = vin_tx['vout'][vin['vout']]
+        if 'addresses' in vout['scriptPubKey']:
+            addresses += vout['scriptPubKey']['addresses']
+
+    return addresses
+
+def unconfirmed_transactions(address):
+    transactions = []
+
+    for tx_hash in MEMPOOL:
+        tx = get_cached_raw_transaction(tx_hash)
+        if address in extract_addresses(json.dumps(tx)):
+            transactions.append(tx)
+
+    return transactions
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
