@@ -305,7 +305,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     if carefulness:
         config.CAREFULNESS = carefulness
     elif has_config and 'carefulness' in configfile['Default']:
-        config.CAREFULNESS = configfile['Default'].getboolean('carefulness')
+        config.CAREFULNESS = configfile['Default']['carefulness']
     else:
         config.CAREFULNESS = 0
 
