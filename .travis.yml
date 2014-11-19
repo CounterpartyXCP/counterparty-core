@@ -11,6 +11,7 @@ before_install:
 - sudo cp libleveldb.a libleveldb.so libleveldb.so.1 libleveldb.so.1.15 /usr/lib
 - cd ..
 install:
+- git clone https://github.com/ethereum/serpent.git && cd serpent && make && sudo make install && cd ..
 - wget https://github.com/rogerbinns/apsw/releases/download/3.8.5-r1/apsw-3.8.5-r1.zip
 - unzip apsw-3.8.5-r1.zip
 - cd apsw-3.8.5-r1 && python setup.py fetch --version=3.8.5 --all build --enable-all-extensions install

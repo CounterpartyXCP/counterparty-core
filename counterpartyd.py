@@ -27,7 +27,6 @@ if os.name == 'nt':
     from lib import util_windows
 
 D = decimal.Decimal
-json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
 def sigterm_handler(_signo, _stack_frame):
     if 'api_server' in globals():
@@ -697,10 +696,22 @@ if __name__ == '__main__':
     parser_rpsresolve.add_argument('--rps-match-id', required=True, help='the concatenation of the hashes of the two transactions which compose the rps match')
     parser_rpsresolve.add_argument('--fee', help='the exact BTC fee to be paid to miners')
 
-    parser_publish = subparsers.add_parser('publish', help='publish arbitrary data in the blockchain')
+    parser_publish = subparsers.add_parser('publish', help='publish contract code in the blockchain')
     parser_publish.add_argument('--source', required=True, help='the source address')
-    parser_publish.add_argument('--data-hex', required=True, help='the hex‐encoded data')
+    parser_publish.add_argument('--gasprice', required=True, type=int, help='the price of gas')
+    parser_publish.add_argument('--startgas', required=True, type=int, help='the maximum quantity of {} to be used to pay for the execution (satoshis)'.format(config.XCP))
+    parser_publish.add_argument('--endowment', required=True, type=int, help='quantity of {} to be transfered to the contract (satoshis)'.format(config.XCP))
+    parser_publish.add_argument('--code-hex', required=True, type=str, help='the hex‐encoded contract (returned by `serpent compile`)')
     parser_publish.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
+
+    parser_execute = subparsers.add_parser('execute', help='execute contract code in the blockchain')
+    parser_execute.add_argument('--source', required=True, help='the source address')
+    parser_execute.add_argument('--contract-id', required=True, help='the contract ID of the contract to be executed')
+    parser_execute.add_argument('--gasprice', required=True, type=int, help='the price of gas')
+    parser_execute.add_argument('--startgas', required=True, type=int, help='the maximum quantity of {} to be used to pay for the execution (satoshis)'.format(config.XCP))
+    parser_execute.add_argument('--value', required=True, type=int, help='quantity of {} to be transfered to the contract (satoshis)'.format(config.XCP))
+    parser_execute.add_argument('--payload-hex', required=True, type=str, help='data to be provided to the contract (returned by `serpent encode_datalist`)')
+    parser_execute.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
     parser_address = subparsers.add_parser('balances', help='display the balances of a {} address'.format(config.XCP_NAME))
     parser_address.add_argument('address', help='the address you are interested in')
@@ -1020,15 +1031,31 @@ if __name__ == '__main__':
     elif args.action == 'publish':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
         cli('create_publish', {'source': args.source,
-                               'data_hex': args.data_hex, 'fee': args.fee,
+                               'gasprice': args.gasprice, 'startgas':
+                               args.startgas, 'endowment': args.endowment,
+                               'code_hex': args.code_hex, 'fee': args.fee,
                                'allow_unconfirmed_inputs': args.unconfirmed,
                                'encoding': args.encoding, 'fee_per_kb':
                                args.fee_per_kb, 'regular_dust_size':
                                args.regular_dust_size, 'multisig_dust_size':
                                args.multisig_dust_size, 'op_return_value':
-                               args.op_return_value},
-            args.unsigned)
+                               args.op_return_value}, args.unsigned)
 
+    elif args.action == 'execute':
+        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
+        value = util.devise(db, args.value, 'XCP', 'input')
+        startgas = util.devise(db, args.startgas, 'XCP', 'input')
+        cli('create_execute', {'source': args.source,
+                               'contract_id': args.contract_id, 'gasprice':
+                               args.gasprice, 'startgas': args.startgas,
+                               'value': value, 'payload_hex': args.payload_hex, 'fee':
+                               args.fee, 'allow_unconfirmed_inputs':
+                               args.unconfirmed, 'encoding': args.encoding,
+                               'fee_per_kb': args.fee_per_kb,
+                               'regular_dust_size': args.regular_dust_size,
+                               'multisig_dust_size': args.multisig_dust_size,
+                               'op_return_value': args.op_return_value},
+            args.unsigned)
 
     # VIEWING (temporary)
     elif args.action == 'balances':

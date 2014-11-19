@@ -19,18 +19,19 @@ import bitcoin as bitcoinlib
 import bitcoin.rpc as bitcoinlib_rpc
 
 from . import (config, exceptions, util, bitcoin)
-from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
+from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute)
 
 from .blockchain.blocks_parser import BlockchainParser, ChainstateParser
 from .blockchain.utils import ib2h
 
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['credits', 'debits', 'messages'] + \
-         ['bet_match_resolutions', 'order_match_expirations',
-          'order_matches', 'order_expirations', 'orders', 'bet_match_expirations',
-          'bet_matches', 'bet_expirations', 'bets', 'broadcasts', 'btcpays',
-          'burns', 'callbacks', 'cancels', 'dividends', 'issuances', 'sends',
-          'rps_match_expirations', 'rps_expirations', 'rpsresolves', 'rps_matches', 'rps']
+         ['bet_match_resolutions', 'order_match_expirations', 'order_matches',
+         'order_expirations', 'orders', 'bet_match_expirations', 'bet_matches',
+         'bet_expirations', 'bets', 'broadcasts', 'btcpays', 'burns',
+         'callbacks', 'cancels', 'dividends', 'issuances', 'sends',
+         'rps_match_expirations', 'rps_expirations', 'rpsresolves',
+         'rps_matches', 'rps', 'executions', 'contracts', 'storage', 'suicides', 'nonces', 'postqueue']
 
 def check_conservation (db):
     logging.debug('Status: Checking for conservation of assets.')
@@ -40,9 +41,7 @@ def check_conservation (db):
 
         issued = supplies[asset]
         held = sum([holder['address_quantity'] for holder in util.holders(db, asset)])
-        # import json
-        # json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
-        # json_print(util.holders(db, asset))
+        # util.json_print(util.holders(db, asset))
         if held != issued:
             raise exceptions.SanityError('{} {} issued ≠ {} {} held'.format(util.devise(db, issued, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
         logging.debug('Status: {} has been conserved ({} {} both issued and held)'.format(asset, util.devise(db, issued, asset, 'output'), asset))
@@ -94,6 +93,10 @@ def parse_tx (db, tx):
         rps.parse(db, tx, message)
     elif message_type_id == rpsresolve.ID and rps_enabled:
         rpsresolve.parse(db, tx, message)
+    elif message_type_id == publish.ID and tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
+        publish.parse(db, tx, message)
+    elif message_type_id == execute.ID and tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
+        execute.parse(db, tx, message)
     else:
         cursor.execute('''UPDATE transactions \
                                    SET supported=? \
@@ -185,6 +188,8 @@ def initialise(db):
                       block_index INTEGER UNIQUE,
                       block_hash TEXT UNIQUE,
                       block_time INTEGER,
+                      previous_block_hash TEXT UNIQUE,
+                      difficulty INTEGER,
                       PRIMARY KEY (block_index, block_hash))
                    ''')
     cursor.execute('''CREATE INDEX IF NOT EXISTS
@@ -194,12 +199,17 @@ def initialise(db):
                       index_hash_idx ON blocks (block_index, block_hash)
                    ''')
 
-    # sqlite don't manage ALTER TABLE IF COLUMN NOT EXISTS
+    # SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS`.
     columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(blocks)''')]
     if 'ledger_hash' not in columns:
         cursor.execute('''ALTER TABLE blocks ADD COLUMN ledger_hash TEXT''')
     if 'txlist_hash' not in columns:
         cursor.execute('''ALTER TABLE blocks ADD COLUMN txlist_hash TEXT''')
+    if 'previous_block_hash' not in columns:
+        cursor.execute('''ALTER TABLE blocks ADD COLUMN previous_block_hash TEXT''')
+    if 'difficulty' not in columns:
+        cursor.execute('''ALTER TABLE blocks ADD COLUMN difficulty TEXT''')
+
 
     # Check that first block in DB is BLOCK_FIRST.
     cursor.execute('''SELECT * from blocks ORDER BY block_index''')
@@ -865,6 +875,76 @@ def initialise(db):
                       tx1_address_idx ON rps_match_expirations (tx1_address)
                    ''')
 
+    # Contracts
+    cursor.execute('''CREATE TABLE IF NOT EXISTS contracts(
+                      contract_id TEXT PRIMARY KEY,
+                      tx_index INTEGER UNIQUE,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      source TEXT,
+                      code BLOB,
+                      nonce INTEGER,
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
+                  ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      source_idx ON contracts (source)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      tx_hash_idx ON contracts (tx_hash)
+                   ''')
+
+    # Executions
+    cursor.execute('''CREATE TABLE IF NOT EXISTS executions(
+                      tx_index INTEGER UNIQUE,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      source TEXT,
+                      contract_id TEXT,
+                      gas_price INTEGER,
+                      gas_start INTEGER,
+                      gas_cost INTEGER,
+                      gas_remained INTEGER,
+                      value INTEGER,
+                      data BLOB,
+                      output BLOB,
+                      status TEXT,
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
+                  ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      source_idx ON executions(source)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      tx_hash_idx ON executions(tx_hash)
+                   ''')
+
+    # Contract Storage
+    cursor.execute('''CREATE TABLE IF NOT EXISTS storage(
+                      contract_id TEXT,
+                      key BLOB,
+                      value BLOB,
+                      FOREIGN KEY (contract_id) REFERENCES contracts(contract_id))
+                  ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      contract_id_idx ON contracts(contract_id)
+                   ''')
+
+    # Suicides
+    cursor.execute('''CREATE TABLE IF NOT EXISTS suicides(
+                      contract_id TEXT PRIMARY KEY,
+                      FOREIGN KEY (contract_id) REFERENCES contracts(contract_id))
+                  ''')
+
+    # Nonces
+    cursor.execute('''CREATE TABLE IF NOT EXISTS nonces(
+                      address TEXT PRIMARY KEY,
+                      nonce INTEGER)
+                  ''')
+
+    # Postqueue
+    cursor.execute('''CREATE TABLE IF NOT EXISTS postqueue(
+                      message BLOB)
+                  ''')
+
     # Messages
     cursor.execute('''CREATE TABLE IF NOT EXISTS messages(
                       message_index INTEGER PRIMARY KEY,
@@ -1486,10 +1566,14 @@ def follow (db):
                 cursor.execute('''INSERT INTO blocks(
                                     block_index,
                                     block_hash,
-                                    block_time) VALUES(?,?,?)''',
+                                    block_time,
+                                    previous_block_hash,
+                                    difficulty) VALUES(?,?,?,?,?)''',
                                     (block_index,
                                     block_hash,
-                                    block_time)
+                                    block_time,
+                                    block['previousblockhash'],
+                                    block['difficulty'])
                               )
 
                 # List the transactions in the block.

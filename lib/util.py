@@ -14,6 +14,7 @@ import fractions
 import warnings
 import binascii
 import hashlib
+import sha3
 from functools import lru_cache
 import getpass
 
@@ -24,6 +25,8 @@ b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
 dhash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
+
+json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
 # Obsolete in Python 3.4, with enum module.
 BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
@@ -71,6 +74,12 @@ def price (numerator, denominator, block_index):
 def log (db, command, category, bindings):
     cursor = db.cursor()
 
+    for element in bindings.keys():
+        try:
+            str(bindings[element])
+        except Exception:
+            bindings[element] = '<Error>'
+
     # Slow?!
     def output (quantity, asset):
         try:
@@ -82,6 +91,8 @@ def log (db, command, category, bindings):
             return '<AssetError>'
         except decimal.DivisionByZero:
             return '<DivisionByZero>'
+        except TypeError:
+            return '<None>'
 
     if command == 'update':
         if category == 'order':
@@ -236,7 +247,28 @@ def log (db, command, category, bindings):
         elif category == 'rps_match_expirations':
             logging.info('Expired RPS Match: {}'.format(bindings['rps_match_id']))
 
+        elif category == 'contracts':
+            logging.info('New Contract: {}'.format(bindings['contract_id']))
+
+        elif category == 'executions':
+            """
+            try:
+                payload_hex = binascii.hexlify(bindings['payload']).decode('ascii')
+            except TypeError:
+                payload_hex = '<None>'
+            try:
+                output_hex = binascii.hexlify(bindings['output']).decode('ascii')
+            except TypeError:
+                output_hex = '<None>'
+            logging.info('Execution: {} executed contract {}, funded with {}, at a price of {} (?), at a final cost of {}, reclaiming {}, and also sending {}, with a data payload of {}, yielding {} ({}) [{}]'.format(bindings['source'], bindings['contract_id'], output(bindings['gas_start'], config.XCP), bindings['gas_price'], output(bindings['gas_cost'], config.XCP), output(bindings['gas_remaining'], config.XCP), output(bindings['value'], config.XCP), payload_hex, output_hex, bindings['tx_hash'], bindings['status']))
+            """
+            if bindings['contract_id']:
+                logging.info('Execution: {} executed contract {} ({}) [{}]'.format(bindings['source'], bindings['contract_id'], bindings['tx_hash'], bindings['status']))
+            else:
+                logging.info('Execution: {} created contract {} ({}) [{}]'.format(bindings['source'], bindings['output'], bindings['tx_hash'], bindings['status']))
+
     cursor.close()
+
 
 def message (db, block_index, command, category, bindings, tx_hash=None):
     cursor = db.cursor()
@@ -259,7 +291,15 @@ def message (db, block_index, command, category, bindings, tx_hash=None):
         except KeyError:
             pass
 
-    bindings_string = json.dumps(collections.OrderedDict(sorted(bindings.items())))
+    # Handle binary data.
+    items = []
+    for item in sorted(bindings.items()):
+        if type(item[1]) == bytes:
+            items.append((item[0], binascii.hexlify(item[1]).decode('ascii')))
+        else:
+            items.append(item)
+
+    bindings_string = json.dumps(collections.OrderedDict(items))
     cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings, :timestamp)',
                    (message_index, block_index, command, category, bindings_string, curr_time()))
 
@@ -284,10 +324,11 @@ def exectracer(cursor, sql, bindings):
 
     # Parse SQL.
     array = sql.split('(')[0].split(' ')
+    command = array[0]
     if 'insert' in sql:
-        command, category = array[0], array[2]
+        category = array[2]
     elif 'update' in sql:
-        command, category = array[0], array[1]
+        category = array[1]
     else:
         return True
 
@@ -298,13 +339,18 @@ def exectracer(cursor, sql, bindings):
     if 'blocks' in sql or 'transactions' in sql: return True
 
     # Record alteration in database.
-    if category not in ('balances', 'messages', 'mempool'):
-        if not (command in ('update') and category in ('orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches')):    # List message manually.
-            message(db, bindings['block_index'], command, category, bindings)
+    if category not in ('balances', 'messages', 'mempool', ):
+        if category not in ('suicides', 'postqueue'):  # These tables are ephemeral.
+            if category not in ('nonces', 'storage'):  # List message manually.
+                if not (command in ('update') and category in ('orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches', 'contracts')):    # List message manually.
+                    try:
+                        message(db, bindings['block_index'], command, category, bindings)
+                    except TypeError:
+                        raise TypeError('SQLite3 statements must used named arguments.')
 
     return True
 
-def connect_to_db(flags=None):
+def connect_to_db(flags=None, foreign_keys=True):
     """Connects to the SQLite database, returning a db Connection object"""
     logging.debug('Status: Creating connection to `{}`.'.format(config.DATABASE.split('/').pop()))
 
@@ -321,8 +367,9 @@ def connect_to_db(flags=None):
     cursor.execute('''PRAGMA count_changes = OFF''')
 
     # For integrity, security.
-    cursor.execute('''PRAGMA foreign_keys = ON''')
-    cursor.execute('''PRAGMA defer_foreign_keys = ON''')
+    if foreign_keys:
+        cursor.execute('''PRAGMA foreign_keys = ON''')
+        cursor.execute('''PRAGMA defer_foreign_keys = ON''')
 
     # So that writers don’t block readers.
     if flags != 'SQLITE_OPEN_READONLY':
@@ -530,6 +577,10 @@ def debit (db, block_index, address, asset, quantity, action=None, event=None):
     assert type(quantity) == int
     assert quantity >= 0
 
+    # Contracts can only hold XCP balances.
+    if len(address) == 40:
+        assert asset == config.XCP
+
     if asset == config.BTC:
         raise exceptions.BalanceError('Cannot debit bitcoins from a {} address!'.format(config.XCP_NAME))
 
@@ -574,6 +625,10 @@ def credit (db, block_index, address, asset, quantity, action=None, event=None):
     assert asset != config.BTC # Never BTC.
     assert type(quantity) == int
     assert quantity >= 0
+
+    # Contracts can only hold XCP balances.
+    if len(address) == 40:
+        assert asset == config.XCP
 
     credit_cursor.execute('''SELECT * FROM balances \
                              WHERE (address = ? AND asset = ?)''', (address, asset))
@@ -722,6 +777,10 @@ def holders(db, asset):
         for rps_match in list(cursor):
             holders.append({'address': rps_match['tx0_address'], 'address_quantity': rps_match['wager'], 'escrow': rps_match['id']})
             holders.append({'address': rps_match['tx1_address'], 'address_quantity': rps_match['wager'], 'escrow': rps_match['id']})
+
+        cursor.execute('''SELECT * FROM executions''')
+        for execution in list(cursor):
+            holders.append({'address': execution['source'], 'address_quantity': execution['gas_cost'], 'escrow': None})
 
     cursor.close()
     return holders
@@ -911,6 +970,18 @@ def pubkeyhash_array(address):
     return pubkeyhashes
 
 ### Multi‐signature Addresses ###
+
+def get_balance (db, address, asset):
+    # Get balance of contract or address.
+    cursor = db.cursor()
+    balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (address, asset)))
+    cursor.close()
+    if not balances: return 0
+    else: return balances[0]['quantity']
+
+# Why on Earth does `binascii.hexlify()` return bytes?!
+def hexlify(x):
+    return binascii.hexlify(x).decode('ascii')
 
 ### Backend RPC ###
 
