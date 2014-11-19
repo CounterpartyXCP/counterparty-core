@@ -206,7 +206,7 @@ def cli(method, params, unsigned):
         if not bitcoin.is_valid(source):
             raise exceptions.AddressError('Invalid address.')
         if bitcoin.is_mine(source):
-            bitcoin.wallet_unlock()
+            util.wallet_unlock()
         else:
             # TODO: Do this only if the encoding method needs it.
             print('Source not in backend wallet.')
@@ -389,7 +389,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     elif has_config and 'blockchain-service-name' in configfile['Default'] and configfile['Default']['blockchain-service-name']:
         config.BLOCKCHAIN_SERVICE_NAME = configfile['Default']['blockchain-service-name']
     else:
-        config.BLOCKCHAIN_SERVICE_NAME = 'blockr'
+        config.BLOCKCHAIN_SERVICE_NAME = 'jmcorgan'
 
     # custom blockchain service API endpoint
     # leave blank to use the default. if specified, include the scheme prefix and port, without a trailing slash (e.g. http://localhost:3001)
@@ -540,10 +540,7 @@ def balances (address):
     address_data = get_address(db, address=address)
     balances = address_data['balances']
     table = PrettyTable(['Asset', 'Amount'])
-    if util.is_multisig(address):
-        btc_balance = '???'
-    else:
-        btc_balance = blockchain.getaddressinfo(address)['balance']
+    btc_balance = bitcoin.get_btc_balance(address)
     table.add_row([config.BTC, btc_balance])  # BTC
     for balance in balances:
         asset = balance['asset']
@@ -733,6 +730,10 @@ if __name__ == '__main__':
     parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
     parser_rollback.add_argument('--force', action='store_true', help='skip backend check, version check, process lock')
 
+    parser_kickstart = subparsers.add_parser('kickstart', help='rapidly bring database up to the present')
+    parser_kickstart.add_argument('--bitcoind-dir', help='Bitcoin Core data directory')
+    parser_kickstart.add_argument('--force', action='store_true', help='skip backend check, version check, singleton check')
+
     parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the {} market'.format(config.XCP_NAME) )
     parser_market.add_argument('--give-asset', help='only show orders offering to sell GIVE_ASSET')
     parser_market.add_argument('--get-asset', help='only show orders offering to buy GET_ASSET')
@@ -796,7 +797,7 @@ if __name__ == '__main__':
 
     # Version
     logging.info('Status: Running v{} of counterpartyd.'.format(config.VERSION_STRING, config.XCP_CLIENT))
-    if not config.FORCE and args.action in ('server', 'reparse', 'rollback'):
+    if args.action in ('server', 'reparse', 'rollback') and not config.FORCE:
         logging.info('Status: Checking version.')
         try:
             util.version_check(bitcoin.get_block_count())
@@ -805,7 +806,7 @@ if __name__ == '__main__':
             sys.exit(config.EXITCODE_UPDATE_REQUIRED)
 
     # Lock
-    if args.action in ('rollback', 'reparse', 'server') and not config.FORCE:
+    if args.action in ('rollback', 'reparse', 'server', 'kickstart') and not config.FORCE:
         logging.info('Status: Acquiring lock.')
         get_lock()
 
@@ -1163,6 +1164,10 @@ if __name__ == '__main__':
     elif args.action == 'rollback':
         blocks.reparse(db, block_index=args.block_index)
 
+    elif args.action == 'kickstart':
+
+        blocks.kickstart(db, bitcoind_dir=args.bitcoind_dir)
+
     elif args.action == 'server':
         api_status_poller = api.APIStatusPoller()
         api_status_poller.daemon = True
@@ -1179,7 +1184,8 @@ if __name__ == '__main__':
             for i in range(1, num_tries + 1):
                 try:
                     blockchain.check()
-                except: # TODO
+                except Exception as e: # TODO
+                    logging.exception(e)
                     logging.warn("Blockchain backend (%s) not yet initialized. Waiting %i seconds and trying again (try %i of %i)..." % (
                         config.BLOCKCHAIN_SERVICE_NAME, time_wait, i, num_tries))
                     time.sleep(time_wait)

@@ -8,7 +8,7 @@ import decimal
 D = decimal.Decimal
 import logging
 
-from . import (util, config, exceptions, bitcoin, util, blockchain)
+from . import (util, config, exceptions, bitcoin, util)
 
 FORMAT = '>QQQQHQ'
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8
@@ -241,7 +241,7 @@ def compose (db, source, give_asset, give_quantity, get_asset, get_quantity, exp
 
     # Check balance.
     if give_asset == config.BTC:
-        if sum(out['amount'] for out in bitcoin.get_unspent_txouts(source)) * config.UNIT < give_quantity:
+        if bitcoin.get_btc_balance(source) * config.UNIT < give_quantity:
             print('WARNING: insufficient funds for {}pay.'.format(config.BTC))
     else:
         balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, give_asset)))
