@@ -397,7 +397,10 @@ def database_check (db, blockcount):
     return
 
 def isodt (epoch_time):
-    return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
+    try:
+        return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
+    except OSError:
+        return '<datetime>'
 
 def curr_time():
     return int(time.time())
