@@ -360,7 +360,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     # Data encoding methods.
     if data:
         if encoding == 'auto':
-            if len(data) <= 40:
+            if len(data) <= config.OP_RETURN_MAX_SIZE:
                 # encoding = 'opreturn'
                 encoding = 'multisig'   # BTCGuild isn’t mining OP_RETURN?!
             else:
