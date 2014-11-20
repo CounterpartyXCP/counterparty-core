@@ -1072,7 +1072,7 @@ def protocol_change(block_index, mainnet, testnet):
         if mainnet and block_index >= mainnet:
             return True
         else:
-            return True
+            return False
     return False
 
 def asset_names_v2_enabled(block_index):
