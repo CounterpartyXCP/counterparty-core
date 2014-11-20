@@ -1297,7 +1297,7 @@ def reparse (db, block_index=None, quiet=False):
     cursor = db.cursor()
 
     with db:
-        reinitialise(db)
+        reinitialise(db, block_index)
 
         # Reparse all blocks, transactions.
         if quiet:
