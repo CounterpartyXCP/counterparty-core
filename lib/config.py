@@ -95,8 +95,8 @@ DEFAULT_FEE_FRACTION_PROVIDED = .01    # 1.00%
 EXITCODE_UPDATE_REQUIRED = 5
 
 CONSENSUS_HASH_SEED = 'We can only see a short distance ahead, but we can see plenty there that needs to be done.'
-CONSENSUS_HASH_VERSION = 2
 
+CONSENSUS_HASH_VERSION_MAINNET = 2
 CHECKPOINTS_MAINNET = {
     BLOCK_FIRST_MAINNET: {'ledger_hash': '766ff0a9039521e3628a79fa669477ade241fc4c0ae541c3eae97f34b547b0b7', 'txlist_hash': '766ff0a9039521e3628a79fa669477ade241fc4c0ae541c3eae97f34b547b0b7'},
     280000: {'ledger_hash': '265719e2770d5a6994f6fe49839069183cd842ee14f56c2b870e56641e8a8725', 'txlist_hash': 'a59b33b4633649db4f14586af47e258ed9b8884dbb7aa308fb1f49a653ee60f4'},
@@ -107,11 +107,12 @@ CHECKPOINTS_MAINNET = {
     330000: {'ledger_hash': 'dd56aa97e5ca15841407f383ce1d7814536a594d7cfffcb4cf60bee8b362065a', 'txlist_hash': '3c45b4377a99e020550a198daa45c378c488a72ba199b53deb90b320d55a897b'}
 }
 
+CONSENSUS_HASH_VERSION_TESTNET = 3
 CHECKPOINTS_TESTNET = {
-    BLOCK_FIRST_TESTNET: {'ledger_hash': '766ff0a9039521e3628a79fa669477ade241fc4c0ae541c3eae97f34b547b0b7', 'txlist_hash': '766ff0a9039521e3628a79fa669477ade241fc4c0ae541c3eae97f34b547b0b7'},
-    160000: {'ledger_hash': '3011bf438695867599a69d5abc8194e3c72cbe338cfb5ad76c31213b511e3569', 'txlist_hash': '9194e3faa4539577f43628744c3c60a5b3047d93b6e577d3a4bec86953eb1600'},
-    180000: {'ledger_hash': 'bb2e422604ee07cca333e21b7a26b5a44962bde0617d19e4a2a363a6c6767b18', 'txlist_hash': '6586b880681a94209daf5ca8d9d8e650e733343424bd158547b596beecfc9e34'},
-    200000: {'ledger_hash': '9eda3189c86e592f68f44b3bfdb7ee48c163318178b50794cfa1b01907f92aa9', 'txlist_hash': 'd17d8af90b8c260a755d485eebc12ce073b6da55a6c5517c87c43c588899e283'},
-    250000: {'ledger_hash': '41f54d6681ddb132c98911539ebac708443fd9d5183b56cb879ca577f4f4fc3d', 'txlist_hash': '8c0abec60490ddb955f2b788457af94337e579662d83913f8daf87d6d127e16a'},
-    300000: {'ledger_hash': '0d060be6ecbd59ea9ba5c5619a82359e3d5fac0ccf4194611cbceedbd24b0aa4', 'txlist_hash': 'a2c04b4ab74c2e1944418d18716d2fde61223e29eb2f08e4d12a3ce21586322c'}
+    BLOCK_FIRST_TESTNET: {'ledger_hash': 'df480d3a2c138df0cd631670ed9b7c874079b2c0cb077645871769ad6718ad19', 'txlist_hash': 'df480d3a2c138df0cd631670ed9b7c874079b2c0cb077645871769ad6718ad19'},
+    160000: {'ledger_hash': '08a11ed6d211992f6e8788e1ce4a1c8bdf3691ca72c77c3fde8c4362b7b650ea', 'txlist_hash': 'f631650deecda6e38582b70f0f326f1bb80e48a7b191c7fa580a0bc01640fa44'},
+    180000: {'ledger_hash': '25b067067ee4730556bd3014144a15a52957ab3a03e781c2dee1d26d04f0813d', 'txlist_hash': '3842631281d672efa3ea06baab186f7a89aa5f88f89280f8d03bab2ac8bb82e4'},
+    200000: {'ledger_hash': '192b46977a96150145421635e2d325a51f43f095ce4c5f7b5a91ff910f57094c', 'txlist_hash': '453c54a6d9643eced4611814cf8a8bdd97c7b8ef2f830752f47b3bddbd1e0651'},
+    250000: {'ledger_hash': 'a2a3d1c118cc253f5986be076215fb0fc76277a1b8369c64db1466651d800db3', 'txlist_hash': '4e32e227d6abc46948e4d2d1bb9c9e1a6b7c7a700041c44e289072ff744f9429'},
+    300000: {'ledger_hash': 'd530cbf2251016b211a36d09da8a1f68a23736d435a56add3e208d848cbb61ba', 'txlist_hash': '0dad3d3d7672af7b91390e0aa8cd169b7d63906e4b4740df40c05a52dfd079d5'}
 }
