@@ -13,6 +13,8 @@ ID = 100
 
 
 def compose (db, source, gasprice, startgas, endowment, code_hex):
+    if not config.TESTNET:  # TODO
+        return
 
     data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, gasprice, startgas, endowment)
@@ -22,6 +24,8 @@ def compose (db, source, gasprice, startgas, endowment, code_hex):
 
 
 def parse (db, tx, message):
+    if not config.TESTNET:  # TODO
+        return
 
     try:
         gasprice, startgas, endowment = struct.unpack(FORMAT, message[:LENGTH])
