@@ -27,19 +27,21 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
 
     if call_date is None: call_date = 0
     if call_price is None: call_price = 0.0
+    if description is None: description = ""
+    if divisible is None: divisible = True
 
     if isinstance(call_price, int): call_price = float(call_price)
     #^ helps especially with calls from JS-based clients, where parseFloat(15) returns 15 (not 15.0), which json takes as an int
 
     if not isinstance(quantity, int):
         problems.append('quantity must be in satoshis')
-        return call_date, call_price, problems, fee
+        return call_date, call_price, problems, fee, description, divisible
     if call_date and not isinstance(call_date, int):
         problems.append('call_date must be epoch integer')
-        return call_date, call_price, problems, fee
+        return call_date, call_price, problems, fee, description, divisible
     if call_price and not isinstance(call_price, float):
         problems.append('call_price must be a float')
-        return call_date, call_price, problems, fee
+        return call_date, call_price, problems, fee, description, divisible
 
     if quantity < 0: problems.append('negative quantity')
     if call_price < 0: problems.append('negative call price')
@@ -66,8 +68,6 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     if issuances:
         reissuance = True
         last_issuance = issuances[-1]
-        if call_date is None: call_date = 0
-        if call_price is None: call_price = 0.0
 
         if last_issuance['issuer'] != source:
             problems.append('issued by another address')
@@ -96,7 +96,12 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
                               WHERE (address = ? AND asset = ?)''', (source, config.XCP))
             balances = cursor.fetchall()
             cursor.close()
-            if block_index >= 291700 or config.TESTNET:     # Protocol change.
+            if util.asset_names_v2(block_index):  # Protocol change.
+                if len(asset) >= 13:
+                    fee = 0
+                else:
+                    fee = int(0.5 * config.UNIT)
+            elif block_index >= 291700 or config.TESTNET:     # Protocol change.
                 fee = int(0.5 * config.UNIT)
             elif block_index >= 286000 or config.TESTNET:   # Protocol change.
                 fee = 5 * config.UNIT
@@ -119,13 +124,13 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     if destination and quantity:
         problems.append('cannot issue and transfer simultaneously')
 
-    return call_date, call_price, problems, fee
+    return call_date, call_price, problems, fee, description, divisible
 
 def compose (db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description):
-    call_date, call_price, problems, fee = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.last_block(db)['block_index'])
+    call_date, call_price, problems, fee, description, divisible = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.last_block(db)['block_index'])
     if problems: raise exceptions.IssuanceError(problems)
 
-    asset_id = util.asset_id(asset)
+    asset_id = util.get_asset_id(asset, util.last_block(db)['block_index'])
     data = struct.pack(config.TXTYPE_FORMAT, ID)
     if len(description) <= 42:
         curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
@@ -162,7 +167,7 @@ def parse (db, tx, message):
             asset_id, quantity, divisible = struct.unpack(FORMAT_1, message)
             callable_, call_date, call_price, description = False, 0, 0.0, ''
         try:
-            asset = util.asset_name(asset_id)
+            asset = util.get_asset_name(asset_id, tx['block_index'])
         except exceptions.AssetNameError:
             asset = None
             status = 'invalid: bad asset name'
@@ -173,7 +178,7 @@ def parse (db, tx, message):
 
     fee = 0
     if status == 'valid':
-        call_date, call_price, problems, fee = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, callable_, call_date, call_price, description, block_index=tx['block_index'])
+        call_date, call_price, problems, fee, description, divisible = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, callable_, call_date, call_price, description, block_index=tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
         if 'total quantity overflow' in problems:
             quantity = 0

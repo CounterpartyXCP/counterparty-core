@@ -14,6 +14,9 @@ import fractions
 import warnings
 import binascii
 import hashlib
+import sha3
+from functools import lru_cache
+import getpass
 
 from . import (config, exceptions)
 
@@ -23,11 +26,15 @@ b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
 dhash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
 
+json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
+
 # Obsolete in Python 3.4, with enum module.
 BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
 BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
 
 BLOCK_LEDGER = []
+# inelegant but easy and fast cache
+MEMPOOL = []
 
 # TODO: This doesn’t timeout properly. (If server hangs, then unhangs, no result.)
 def api (method, params):
@@ -67,6 +74,12 @@ def price (numerator, denominator, block_index):
 def log (db, command, category, bindings):
     cursor = db.cursor()
 
+    for element in bindings.keys():
+        try:
+            str(bindings[element])
+        except Exception:
+            bindings[element] = '<Error>'
+
     # Slow?!
     def output (quantity, asset):
         try:
@@ -78,6 +91,8 @@ def log (db, command, category, bindings):
             return '<AssetError>'
         except decimal.DivisionByZero:
             return '<DivisionByZero>'
+        except TypeError:
+            return '<None>'
 
     if command == 'update':
         if category == 'order':
@@ -232,7 +247,28 @@ def log (db, command, category, bindings):
         elif category == 'rps_match_expirations':
             logging.info('Expired RPS Match: {}'.format(bindings['rps_match_id']))
 
+        elif category == 'contracts':
+            logging.info('New Contract: {}'.format(bindings['contract_id']))
+
+        elif category == 'executions':
+            """
+            try:
+                payload_hex = binascii.hexlify(bindings['payload']).decode('ascii')
+            except TypeError:
+                payload_hex = '<None>'
+            try:
+                output_hex = binascii.hexlify(bindings['output']).decode('ascii')
+            except TypeError:
+                output_hex = '<None>'
+            logging.info('Execution: {} executed contract {}, funded with {}, at a price of {} (?), at a final cost of {}, reclaiming {}, and also sending {}, with a data payload of {}, yielding {} ({}) [{}]'.format(bindings['source'], bindings['contract_id'], output(bindings['gas_start'], config.XCP), bindings['gas_price'], output(bindings['gas_cost'], config.XCP), output(bindings['gas_remaining'], config.XCP), output(bindings['value'], config.XCP), payload_hex, output_hex, bindings['tx_hash'], bindings['status']))
+            """
+            if bindings['contract_id']:
+                logging.info('Execution: {} executed contract {} ({}) [{}]'.format(bindings['source'], bindings['contract_id'], bindings['tx_hash'], bindings['status']))
+            else:
+                logging.info('Execution: {} created contract {} ({}) [{}]'.format(bindings['source'], bindings['output'], bindings['tx_hash'], bindings['status']))
+
     cursor.close()
+
 
 def message (db, block_index, command, category, bindings, tx_hash=None):
     cursor = db.cursor()
@@ -255,7 +291,15 @@ def message (db, block_index, command, category, bindings, tx_hash=None):
         except KeyError:
             pass
 
-    bindings_string = json.dumps(collections.OrderedDict(sorted(bindings.items())))
+    # Handle binary data.
+    items = []
+    for item in sorted(bindings.items()):
+        if type(item[1]) == bytes:
+            items.append((item[0], binascii.hexlify(item[1]).decode('ascii')))
+        else:
+            items.append(item)
+
+    bindings_string = json.dumps(collections.OrderedDict(items))
     cursor.execute('insert into messages values(:message_index, :block_index, :command, :category, :bindings, :timestamp)',
                    (message_index, block_index, command, category, bindings_string, curr_time()))
 
@@ -280,10 +324,11 @@ def exectracer(cursor, sql, bindings):
 
     # Parse SQL.
     array = sql.split('(')[0].split(' ')
+    command = array[0]
     if 'insert' in sql:
-        command, category = array[0], array[2]
+        category = array[2]
     elif 'update' in sql:
-        command, category = array[0], array[1]
+        category = array[1]
     else:
         return True
 
@@ -294,13 +339,18 @@ def exectracer(cursor, sql, bindings):
     if 'blocks' in sql or 'transactions' in sql: return True
 
     # Record alteration in database.
-    if category not in ('balances', 'messages', 'mempool'):
-        if not (command in ('update') and category in ('orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches')):    # List message manually.
-            message(db, bindings['block_index'], command, category, bindings)
+    if category not in ('balances', 'messages', 'mempool', ):
+        if category not in ('suicides', 'postqueue'):  # These tables are ephemeral.
+            if category not in ('nonces', 'storage'):  # List message manually.
+                if not (command in ('update') and category in ('orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches', 'contracts')):    # List message manually.
+                    try:
+                        message(db, bindings['block_index'], command, category, bindings)
+                    except TypeError:
+                        raise TypeError('SQLite3 statements must used named arguments.')
 
     return True
 
-def connect_to_db(flags=None):
+def connect_to_db(flags=None, foreign_keys=True):
     """Connects to the SQLite database, returning a db Connection object"""
     logging.debug('Status: Creating connection to `{}`.'.format(config.DATABASE.split('/').pop()))
 
@@ -317,8 +367,9 @@ def connect_to_db(flags=None):
     cursor.execute('''PRAGMA count_changes = OFF''')
 
     # For integrity, security.
-    cursor.execute('''PRAGMA foreign_keys = ON''')
-    cursor.execute('''PRAGMA defer_foreign_keys = ON''')
+    if foreign_keys:
+        cursor.execute('''PRAGMA foreign_keys = ON''')
+        cursor.execute('''PRAGMA defer_foreign_keys = ON''')
 
     # So that writers don’t block readers.
     if flags != 'SQLITE_OPEN_READONLY':
@@ -355,7 +406,7 @@ def connect_to_db(flags=None):
 
     return db
 
-def version_check (db):
+def version_check (block_index):
     try:
         host = 'https://counterpartyxcp.github.io/counterpartyd/version.json'
         response = requests.get(host, headers={'cache-control': 'no-cache'})
@@ -378,7 +429,7 @@ def version_check (db):
         explanation = 'Your version of counterpartyd is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: ‘{}’. Please upgrade to the latest version and restart the server.'.format(
             config.VERSION_STRING, versions['block_index'], versions['minimum_version_major'], versions['minimum_version_minor'],
             versions['minimum_version_revision'], versions['reason'])
-        if last_block(db)['block_index'] >= versions['block_index']:
+        if block_index >= versions['block_index']:
             raise exceptions.VersionUpdateRequiredError(explanation)
         else:
             warnings.warn(explanation)
@@ -393,7 +444,10 @@ def database_check (db, blockcount):
     return
 
 def isodt (epoch_time):
-    return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
+    try:
+        return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
+    except OSError:
+        return '<datetime>'
 
 def curr_time():
     return int(time.time())
@@ -438,41 +492,70 @@ def last_message (db):
     cursor.close()
     return last_message
 
-def asset_id (asset):
+def get_asset_id (asset_name, block_index):
     # Special cases.
-    if asset == config.BTC: return 0
-    elif asset == config.XCP: return 1
+    if asset_name == config.BTC: return 0
+    elif asset_name == config.XCP: return 1
 
-    if asset[0] == 'A': raise exceptions.AssetNameError('starts with ‘A’')
-
-    # Checksum
     """
-    if not checksum.verify(asset):
+    # Checksum
+    if not checksum.verify(asset_name):
         raise exceptions.AssetNameError('invalid checksum')
     else:
-        asset = asset[:-1]  # Strip checksum character.
+        asset_name = asset_name[:-1]  # Strip checksum character.
     """
+
+    if len(asset_name) < 4:
+        raise exceptions.AssetNameError('too short')
+
+    # Numeric asset names.
+    if asset_names_v2(block_index):  # Protocol change.
+        if asset_name[0] == 'A':
+            # Must be numeric.
+            try:
+                asset_id = int(asset_name[1:])
+            except ValueError:
+                raise exceptions.AssetNameError('non‐numeric asset name starts with ‘A’')
+
+            # Number must be in range.
+            if not (26**12 + 1 <= asset_id <= 256**8):
+                raise exceptions.AssetNameError('numeric asset name not in range')
+
+            return asset_id
+        elif len(asset_name) >= 13:
+            raise exceptions.AssetNameError('long asset names must be numeric')
+
+    if asset_name[0] == 'A': raise exceptions.AssetNameError('non‐numeric asset name starts with ‘A’')
 
     # Convert the Base 26 string to an integer.
     n = 0
-    for c in asset:
+    for c in asset_name:
         n *= 26
         if c not in b26_digits:
             raise exceptions.AssetNameError('invalid character:', c)
         digit = b26_digits.index(c)
         n += digit
+    asset_id = n
 
-    if n < 26**3:
+    if asset_id < 26**3:
         raise exceptions.AssetNameError('too short')
 
-    return n
+    return asset_id
 
-def asset_name (asset_id):
+def get_asset_name (asset_id, block_index):
     if asset_id == 0: return config.BTC
     elif asset_id == 1: return config.XCP
 
     if asset_id < 26**3:
         raise exceptions.AssetIDError('too low')
+
+    if asset_names_v2(block_index):  # Protocol change.
+        if asset_id <= 256**8:
+            if 26**12 + 1 <= asset_id:
+                asset_name = 'A' + str(asset_id)
+                return asset_name
+        else:
+            raise exceptions.AssetIDError('too high')
 
     # Divide that integer into Base 26 string.
     res = []
@@ -493,6 +576,10 @@ def debit (db, block_index, address, asset, quantity, action=None, event=None):
     assert asset != config.BTC # Never BTC.
     assert type(quantity) == int
     assert quantity >= 0
+
+    # Contracts can only hold XCP balances.
+    if len(address) == 40:
+        assert asset == config.XCP
 
     if asset == config.BTC:
         raise exceptions.BalanceError('Cannot debit bitcoins from a {} address!'.format(config.XCP_NAME))
@@ -538,6 +625,10 @@ def credit (db, block_index, address, asset, quantity, action=None, event=None):
     assert asset != config.BTC # Never BTC.
     assert type(quantity) == int
     assert quantity >= 0
+
+    # Contracts can only hold XCP balances.
+    if len(address) == 40:
+        assert asset == config.XCP
 
     credit_cursor.execute('''SELECT * FROM balances \
                              WHERE (address = ? AND asset = ?)''', (address, asset))
@@ -687,6 +778,10 @@ def holders(db, asset):
             holders.append({'address': rps_match['tx0_address'], 'address_quantity': rps_match['wager'], 'escrow': rps_match['id']})
             holders.append({'address': rps_match['tx1_address'], 'address_quantity': rps_match['wager'], 'escrow': rps_match['id']})
 
+        cursor.execute('''SELECT * FROM executions''')
+        for execution in list(cursor):
+            holders.append({'address': execution['source'], 'address_quantity': execution['gas_cost'], 'escrow': None})
+
     cursor.close()
     return holders
 
@@ -731,10 +826,10 @@ def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
     try:
         r = requests.get(url, timeout=fetch_timeout)
     except Exception as e:
-        raise GetURLError("Got get_url request error: %s" % e)
+        raise exceptions.GetURLError("Got get_url request error: %s" % e)
     else:
         if r.status_code != 200 and abort_on_error:
-            raise GetURLError("Bad status code returned: '%s'. result body: '%s'." % (r.status_code, r.text))
+            raise exceptions.GetURLError("Bad status code returned: '%s'. result body: '%s'." % (r.status_code, r.text))
         result = json.loads(r.text) if is_json else r.text
     return result
 
@@ -875,5 +970,138 @@ def pubkeyhash_array(address):
     return pubkeyhashes
 
 ### Multi‐signature Addresses ###
+
+def get_balance (db, address, asset):
+    # Get balance of contract or address.
+    cursor = db.cursor()
+    balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (address, asset)))
+    cursor.close()
+    if not balances: return 0
+    else: return balances[0]['quantity']
+
+# Why on Earth does `binascii.hexlify()` return bytes?!
+def hexlify(x):
+    return binascii.hexlify(x).decode('ascii')
+
+### Backend RPC ###
+
+bitcoin_rpc_session = None
+
+def connect (url, payload, headers):
+    global bitcoin_rpc_session
+    if not bitcoin_rpc_session: bitcoin_rpc_session = requests.Session()
+    TRIES = 12
+    for i in range(TRIES):
+        try:
+            response = bitcoin_rpc_session.post(url, data=json.dumps(payload), headers=headers, verify=config.BACKEND_RPC_SSL_VERIFY)
+            if i > 0: print('Successfully connected.', file=sys.stderr)
+            return response
+        except requests.exceptions.SSLError as e:
+            raise e
+        except requests.exceptions.ConnectionError:
+            logging.debug('Could not connect to Bitcoind. (Try {}/{})'.format(i+1, TRIES))
+            time.sleep(5)
+    return None
+
+def wallet_unlock ():
+    getinfo = rpc('getinfo', [])
+    if 'unlocked_until' in getinfo:
+        if getinfo['unlocked_until'] >= 60:
+            return True # Wallet is unlocked for at least the next 60 seconds.
+        else:
+            passphrase = getpass.getpass('Enter your Bitcoind[‐Qt] wallet passhrase: ')
+            print('Unlocking wallet for 60 (more) seconds.')
+            rpc('walletpassphrase', [passphrase, 60])
+    else:
+        return True    # Wallet is unencrypted.
+
+def rpc (method, params):
+    starttime = time.time()
+    headers = {'content-type': 'application/json'}
+    payload = {
+        "method": method,
+        "params": params,
+        "jsonrpc": "2.0",
+        "id": 0,
+    }
+
+    response = connect(config.BACKEND_RPC, payload, headers)
+    if response == None:
+        if config.TESTNET: network = 'testnet'
+        else: network = 'mainnet'
+        raise exceptions.BitcoindRPCError('Cannot communicate with {} Core. ({} is set to run on {}, is {} Core?)'.format(config.BTC_NAME, config.XCP_CLIENT, network, config.BTC_NAME))
+    elif response.status_code not in (200, 500):
+        raise exceptions.BitcoindRPCError(str(response.status_code) + ' ' + response.reason)
+
+    # Return result, with error handling.
+    response_json = response.json()
+    if 'error' not in response_json.keys() or response_json['error'] == None:
+        return response_json['result']
+    elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
+        raise exceptions.BitcoindError('{} Is txindex enabled in {} Core?'.format(response_json['error'], config.BTC_NAME))
+    elif response_json['error']['code'] == -4:   # Unknown private key (locked wallet?)
+        # If address in wallet, attempt to unlock.
+        address = params[0]
+        if is_valid(address):
+            if is_mine(address):
+                raise exceptions.BitcoindError('Wallet is locked.')
+            else:   # When will this happen?
+                raise exceptions.BitcoindError('Source address not in wallet.')
+        else:
+            raise exceptions.AddressError('Invalid address. (Multi‐signature?)')
+    elif response_json['error']['code'] == -1 and response_json['error']['message'] == 'Block number out of range.':
+        time.sleep(10)
+        return get_block_hash(block_index)
+    else:
+        raise exceptions.BitcoindError('{}'.format(response_json['error']))
+
+@lru_cache(maxsize=4096)
+def get_cached_raw_transaction(tx_hash):
+    return rpc('getrawtransaction', [tx_hash, 1])
+
+### Backend RPC ###
+
+### Protocol Changes ###
+def asset_names_v2(block_index):
+    if config.TESTNET:
+        if block_index >= 307400:
+            return True
+        else:
+            return False
+    else:   # mainnet
+        if block_index >= 332000:
+            return True
+        else:
+            return True
+    return False
+
+### Unconfirmed Transactions ###
+
+@lru_cache(maxsize=4096)
+def extract_addresses(tx):
+    tx = json.loads(tx) # for lru_cache
+    addresses = []
+
+    for vout in tx['vout']:
+        if 'addresses' in vout['scriptPubKey']:
+            addresses += vout['scriptPubKey']['addresses']
+
+    for vin in tx['vin']:
+        vin_tx = get_cached_raw_transaction(vin['txid'])
+        vout = vin_tx['vout'][vin['vout']]
+        if 'addresses' in vout['scriptPubKey']:
+            addresses += vout['scriptPubKey']['addresses']
+
+    return addresses
+
+def unconfirmed_transactions(address):
+    transactions = []
+
+    for tx_hash in MEMPOOL:
+        tx = get_cached_raw_transaction(tx_hash)
+        if address in extract_addresses(json.dumps(tx)):
+            transactions.append(tx)
+
+    return transactions
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.47.0 (2014-11-19)
+	* free numeric asset names (protocol change: 332000)
 * v9.46.0 (2014-11-03)
 	* new consensus hashes, with `tx_info` and consensus version
 	* Coveralls support

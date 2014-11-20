@@ -77,8 +77,9 @@ def insert_block(db, block_index, parse_block=False):
     cursor = db.cursor()
     block_hash = hashlib.sha512(chr(block_index).encode('utf-8')).hexdigest()
     block_time = block_index * 10000000
-    block = (block_index, block_hash, block_time, None, None)
-    cursor.execute('''INSERT INTO blocks VALUES (?,?,?,?,?)''', block)
+    block = (block_index, block_hash, block_time, None, None, None, None)
+    cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty) 
+                      VALUES (?,?,?,?,?,?,?)''', block)
     cursor.close()
     if parse_block:
         blocks.parse_block(db, block_index, block_time)
@@ -105,10 +106,10 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
     tx_hash = hashlib.sha256('{}{}'.format(tx_index,raw_transaction).encode('utf-8')).hexdigest()
     #print(tx_hash)
     tx['txid'] = tx_hash
-    if pytest.config.option.saverawtransactions:
+    if pytest.config.option.savescenarios:
         save_rawtransaction(rawtransactions_db, tx_hash, raw_transaction, json.dumps(tx))
 
-    source, destination, btc_amount, fee, data = blocks.get_tx_info2(tx, block_index)
+    source, destination, btc_amount, fee, data = blocks.get_tx_info2(raw_transaction, block_index)
     transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
     cursor.execute('''INSERT INTO transactions VALUES (?,?,?,?,?,?,?,?,?,?,?)''', transaction)
     tx = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = ?''', (tx_index,)))[0]
@@ -119,8 +120,9 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
 
 def insert_transaction(transaction, db):
     cursor = db.cursor()
-    block = (transaction['block_index'], transaction['block_hash'], transaction['block_time'], None, None)
-    cursor.execute('''INSERT INTO blocks VALUES (?,?,?,?,?)''', block)
+    block = (transaction['block_index'], transaction['block_hash'], transaction['block_time'], None, None, None, None)
+    cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty) 
+                      VALUES (?,?,?,?,?,?,?)''', block)
     keys = ",".join(transaction.keys())
     cursor.execute('''INSERT INTO transactions ({}) VALUES (?,?,?,?,?,?,?,?,?,?,?)'''.format(keys), tuple(transaction.values()))
     cursor.close()
@@ -128,7 +130,7 @@ def insert_transaction(transaction, db):
 # table uses for getrawtransaction mock.
 # we use the same database (in memory) for speed
 def initialise_rawtransactions_db(db):
-    if pytest.config.option.initrawtransactions:
+    if pytest.config.option.savescenarios:
         counterpartyd.set_options(testnet=True, **COUNTERPARTYD_OPTIONS)
         cursor = db.cursor()
         cursor.execute('DROP TABLE  IF EXISTS raw_transactions')

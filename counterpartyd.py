@@ -16,6 +16,7 @@ from threading import Thread
 import binascii
 from fractions import Fraction
 import socket
+import signal
 
 import requests
 import appdirs
@@ -26,7 +27,21 @@ if os.name == 'nt':
     from lib import util_windows
 
 D = decimal.Decimal
-json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
+
+def sigterm_handler(_signo, _stack_frame):
+    if 'api_server' in globals():
+        logging.info('Status: Stopping API server.')
+        api_server.stop()
+        api_status_poller.stop()
+
+    # logging.info('Status: Closing database connection.')
+    # db.close()
+
+    logging.info('Status: Shutting down.')
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, sigterm_handler)
+signal.signal(signal.SIGINT, sigterm_handler)
 
 # Lock database access by opening a socket.
 class LockingError(Exception): pass
@@ -45,7 +60,6 @@ def get_lock():
     global lock_socket
     lock_socket = socket.socket(socket_family, socket.SOCK_DGRAM)
     try:
-        logging.info('Status: Getting process lock.')
         lock_socket.bind(socket_address)
     except socket.error:
         raise LockingError(error)
@@ -192,7 +206,7 @@ def cli(method, params, unsigned):
         if not bitcoin.is_valid(source):
             raise exceptions.AddressError('Invalid address.')
         if bitcoin.is_mine(source):
-            bitcoin.wallet_unlock()
+            util.wallet_unlock()
         else:
             # TODO: Do this only if the encoding method needs it.
             print('Source not in backend wallet.')
@@ -290,7 +304,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     if carefulness:
         config.CAREFULNESS = carefulness
     elif has_config and 'carefulness' in configfile['Default']:
-        config.CAREFULNESS = configfile['Default'].getboolean('carefulness')
+        config.CAREFULNESS = configfile['Default']['carefulness']
     else:
         config.CAREFULNESS = 0
 
@@ -375,7 +389,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     elif has_config and 'blockchain-service-name' in configfile['Default'] and configfile['Default']['blockchain-service-name']:
         config.BLOCKCHAIN_SERVICE_NAME = configfile['Default']['blockchain-service-name']
     else:
-        config.BLOCKCHAIN_SERVICE_NAME = 'blockr'
+        config.BLOCKCHAIN_SERVICE_NAME = 'jmcorgan'
 
     # custom blockchain service API endpoint
     # leave blank to use the default. if specified, include the scheme prefix and port, without a trailing slash (e.g. http://localhost:3001)
@@ -526,10 +540,7 @@ def balances (address):
     address_data = get_address(db, address=address)
     balances = address_data['balances']
     table = PrettyTable(['Asset', 'Amount'])
-    if util.is_multisig(address):
-        btc_balance = '???'
-    else:
-        btc_balance = blockchain.getaddressinfo(address)['balance']
+    btc_balance = bitcoin.get_btc_balance(address)
     table.add_row([config.BTC, btc_balance])  # BTC
     for balance in balances:
         asset = balance['asset']
@@ -590,7 +601,7 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
     parser_server = subparsers.add_parser('server', help='run the server')
-    parser_server.add_argument('--force', action='store_true', help='skip backend check, version check, process lock check')
+    parser_server.add_argument('--force', action='store_true', help='skip backend check, version check, process lock')
 
     parser_send = subparsers.add_parser('send', help='create and broadcast a *send* message')
     parser_send.add_argument('--source', required=True, help='the source address')
@@ -685,10 +696,22 @@ if __name__ == '__main__':
     parser_rpsresolve.add_argument('--rps-match-id', required=True, help='the concatenation of the hashes of the two transactions which compose the rps match')
     parser_rpsresolve.add_argument('--fee', help='the exact BTC fee to be paid to miners')
 
-    parser_publish = subparsers.add_parser('publish', help='publish arbitrary data in the blockchain')
+    parser_publish = subparsers.add_parser('publish', help='publish contract code in the blockchain')
     parser_publish.add_argument('--source', required=True, help='the source address')
-    parser_publish.add_argument('--data-hex', required=True, help='the hex‐encoded data')
+    parser_publish.add_argument('--gasprice', required=True, type=int, help='the price of gas')
+    parser_publish.add_argument('--startgas', required=True, type=int, help='the maximum quantity of {} to be used to pay for the execution (satoshis)'.format(config.XCP))
+    parser_publish.add_argument('--endowment', required=True, type=int, help='quantity of {} to be transfered to the contract (satoshis)'.format(config.XCP))
+    parser_publish.add_argument('--code-hex', required=True, type=str, help='the hex‐encoded contract (returned by `serpent compile`)')
     parser_publish.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
+
+    parser_execute = subparsers.add_parser('execute', help='execute contract code in the blockchain')
+    parser_execute.add_argument('--source', required=True, help='the source address')
+    parser_execute.add_argument('--contract-id', required=True, help='the contract ID of the contract to be executed')
+    parser_execute.add_argument('--gasprice', required=True, type=int, help='the price of gas')
+    parser_execute.add_argument('--startgas', required=True, type=int, help='the maximum quantity of {} to be used to pay for the execution (satoshis)'.format(config.XCP))
+    parser_execute.add_argument('--value', required=True, type=int, help='quantity of {} to be transfered to the contract (satoshis)'.format(config.XCP))
+    parser_execute.add_argument('--payload-hex', required=True, type=str, help='data to be provided to the contract (returned by `serpent encode_datalist`)')
+    parser_execute.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
     parser_address = subparsers.add_parser('balances', help='display the balances of a {} address'.format(config.XCP_NAME))
     parser_address.add_argument('address', help='the address you are interested in')
@@ -701,11 +724,15 @@ if __name__ == '__main__':
     parser_pending= subparsers.add_parser('pending', help='list pending order matches awaiting {}payment from you'.format(config.BTC))
 
     parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database')
-    parser_reparse.add_argument('--force', action='store_true', help='skip backend check, version check, process lock check')
+    parser_reparse.add_argument('--force', action='store_true', help='skip backend check, version check, process lock')
 
     parser_rollback = subparsers.add_parser('rollback', help='rollback database')
     parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
-    parser_rollback.add_argument('--force', action='store_true', help='skip backend check, version check, process lock check')
+    parser_rollback.add_argument('--force', action='store_true', help='skip backend check, version check, process lock')
+
+    parser_kickstart = subparsers.add_parser('kickstart', help='rapidly bring database up to the present')
+    parser_kickstart.add_argument('--bitcoind-dir', help='Bitcoin Core data directory')
+    parser_kickstart.add_argument('--force', action='store_true', help='skip backend check, version check, singleton check')
 
     parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the {} market'.format(config.XCP_NAME) )
     parser_market.add_argument('--give-asset', help='only show orders offering to sell GIVE_ASSET')
@@ -768,19 +795,24 @@ if __name__ == '__main__':
     urllib3_log.propagate = False
 
 
-    # Database
-    logging.info('Status: Connecting to database.')
-    db = util.connect_to_db()
-
     # Version
     logging.info('Status: Running v{} of counterpartyd.'.format(config.VERSION_STRING, config.XCP_CLIENT))
-    if not config.FORCE and args.action in ('server', 'reparse', 'rollback'):
+    if args.action in ('server', 'reparse', 'rollback') and not config.FORCE:
         logging.info('Status: Checking version.')
         try:
-            util.version_check(db)
+            util.version_check(bitcoin.get_block_count())
         except exceptions.VersionUpdateRequiredError as e:
             traceback.print_exc(file=sys.stdout)
             sys.exit(config.EXITCODE_UPDATE_REQUIRED)
+
+    # Lock
+    if args.action in ('rollback', 'reparse', 'server', 'kickstart') and not config.FORCE:
+        logging.info('Status: Acquiring lock.')
+        get_lock()
+
+    # Database
+    logging.info('Status: Connecting to database.')
+    db = util.connect_to_db()
 
     # MESSAGE CREATION
     if args.action == 'send':
@@ -999,15 +1031,31 @@ if __name__ == '__main__':
     elif args.action == 'publish':
         if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
         cli('create_publish', {'source': args.source,
-                               'data_hex': args.data_hex, 'fee': args.fee,
+                               'gasprice': args.gasprice, 'startgas':
+                               args.startgas, 'endowment': args.endowment,
+                               'code_hex': args.code_hex, 'fee': args.fee,
                                'allow_unconfirmed_inputs': args.unconfirmed,
                                'encoding': args.encoding, 'fee_per_kb':
                                args.fee_per_kb, 'regular_dust_size':
                                args.regular_dust_size, 'multisig_dust_size':
                                args.multisig_dust_size, 'op_return_value':
-                               args.op_return_value},
-            args.unsigned)
+                               args.op_return_value}, args.unsigned)
 
+    elif args.action == 'execute':
+        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
+        value = util.devise(db, args.value, 'XCP', 'input')
+        startgas = util.devise(db, args.startgas, 'XCP', 'input')
+        cli('create_execute', {'source': args.source,
+                               'contract_id': args.contract_id, 'gasprice':
+                               args.gasprice, 'startgas': args.startgas,
+                               'value': value, 'payload_hex': args.payload_hex, 'fee':
+                               args.fee, 'allow_unconfirmed_inputs':
+                               args.unconfirmed, 'encoding': args.encoding,
+                               'fee_per_kb': args.fee_per_kb,
+                               'regular_dust_size': args.regular_dust_size,
+                               'multisig_dust_size': args.multisig_dust_size,
+                               'op_return_value': args.op_return_value},
+            args.unsigned)
 
     # VIEWING (temporary)
     elif args.action == 'balances':
@@ -1021,7 +1069,7 @@ if __name__ == '__main__':
             print('Asset ‘{}’ not found.'.format(args.asset))
             exit(0)
 
-        asset_id = util.asset_id(args.asset)
+        asset_id = util.get_asset_id(args.asset)
         divisible = results['divisible']
         locked = results['locked']
         supply = util.devise(db, results['supply'], args.asset, dest='output')
@@ -1111,21 +1159,16 @@ if __name__ == '__main__':
 
     # PARSING
     elif args.action == 'reparse':
-        if not config.FORCE:
-            get_lock()
-
         blocks.reparse(db)
 
     elif args.action == 'rollback':
-        if not config.FORCE:
-            get_lock()
-
         blocks.reparse(db, block_index=args.block_index)
 
-    elif args.action == 'server':
-        if not config.FORCE:
-            get_lock()
+    elif args.action == 'kickstart':
 
+        blocks.kickstart(db, bitcoind_dir=args.bitcoind_dir)
+
+    elif args.action == 'server':
         api_status_poller = api.APIStatusPoller()
         api_status_poller.daemon = True
         api_status_poller.start()
@@ -1141,7 +1184,8 @@ if __name__ == '__main__':
             for i in range(1, num_tries + 1):
                 try:
                     blockchain.check()
-                except: # TODO
+                except Exception as e: # TODO
+                    logging.exception(e)
                     logging.warn("Blockchain backend (%s) not yet initialized. Waiting %i seconds and trying again (try %i of %i)..." % (
                         config.BLOCKCHAIN_SERVICE_NAME, time_wait, i, num_tries))
                     time.sleep(time_wait)
