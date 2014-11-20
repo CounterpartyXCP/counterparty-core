@@ -173,7 +173,7 @@ def initialise_db(db):
 def run_scenario(scenario, rawtransactions_db):
     counterpartyd.set_options(database_file=':memory:', testnet=True, **COUNTERPARTYD_OPTIONS)
     config.PREFIX = b'TESTXXXX'
-    config.FIRST_MULTISIG_BLOCK_TESTNET = 1
+    util.multisig_enabled = lambda x: return True
     checkpoints = dict(config.CHECKPOINTS_TESTNET)
     config.CHECKPOINTS_TESTNET = {}
     logger = logging.getLogger()

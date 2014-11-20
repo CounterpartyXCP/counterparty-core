@@ -1,6 +1,7 @@
 ## Client Versions ##
 * v9.47.0 (2014-11-19)
-	* free numeric asset names (protocol change: 332000)
+	* multi‐signature address support (protocol change: 333000)
+	* free numeric asset names (protocol change: 333000)
 	* kickstart functionality
 	* better process‐locking
 	* improvements to documentation
