@@ -578,8 +578,9 @@ def debit (db, block_index, address, asset, quantity, action=None, event=None):
     assert quantity >= 0
 
     # Contracts can only hold XCP balances.
-    if len(address) == 40:
-        assert asset == config.XCP
+    if protocol_change(block_index, 333000, config.BLOCK_FIRST_TESTNET): # Protocol change.
+        if len(address) == 40:
+            assert asset == config.XCP
 
     if asset == config.BTC:
         raise exceptions.BalanceError('Cannot debit bitcoins from a {} address!'.format(config.XCP_NAME))
@@ -627,8 +628,9 @@ def credit (db, block_index, address, asset, quantity, action=None, event=None):
     assert quantity >= 0
 
     # Contracts can only hold XCP balances.
-    if len(address) == 40:
-        assert asset == config.XCP
+    if protocol_change(block_index, 333000, config.BLOCK_FIRST_TESTNET): # Protocol change.
+        if len(address) == 40:
+            assert asset == config.XCP
 
     credit_cursor.execute('''SELECT * FROM balances \
                              WHERE (address = ? AND asset = ?)''', (address, asset))
