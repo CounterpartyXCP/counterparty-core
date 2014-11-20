@@ -997,8 +997,11 @@ def asset_names_v2(block_index):
             return True
         else:
             return False
-    elif False:
-        return True
+    else:   # mainnet
+        if block_index >= 332000:
+            return True
+        else:
+            return True
     return False
 
 ### Unconfirmed Transactions ###
