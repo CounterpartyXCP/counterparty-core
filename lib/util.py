@@ -1076,7 +1076,7 @@ def protocol_change(block_index, mainnet, testnet):
     return False
 
 def asset_names_v2_enabled(block_index):
-    return protocol_change(block_index, 333000, 310000)
+    return protocol_change(block_index, 333000, 307400)
 FIRST_MULTISIG_BLOCK_TESTNET = 303000
 def multisig_enabled(block_index):
     return protocol_change(block_index, 333000, FIRST_MULTISIG_BLOCK_TESTNET)
