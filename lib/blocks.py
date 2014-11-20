@@ -130,7 +130,8 @@ def consensus_hash(db, block_index, field, previous_consensus_hash, content):
             raise exceptions.ConsensusError('Empty previous {} for block {}. Please launch a `reparse`.'.format(field, block_index))
 
     # Calculate current hash.
-    calculated_hash = util.dhash_string(previous_consensus_hash + '{}{}'.format(config.CONSENSUS_HASH_VERSION, ''.join(content)))
+    version = config.CONSENSUS_HASH_VERSION_TESTNET if config.TESTNET else config.CONSENSUS_HASH_VERSION_MAINNET
+    calculated_hash = util.dhash_string(previous_consensus_hash + '{}{}'.format(version, ''.join(content)))
 
     # Verify hash (if already in database) or save hash (if not).
     found_hash = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,)))[0][field]
