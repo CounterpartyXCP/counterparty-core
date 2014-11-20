@@ -509,7 +509,7 @@ def get_asset_id (asset_name, block_index):
         raise exceptions.AssetNameError('too short')
 
     # Numeric asset names.
-    if asset_names_v2(block_index):  # Protocol change.
+    if asset_names_v2_enabled(block_index):  # Protocol change.
         if asset_name[0] == 'A':
             # Must be numeric.
             try:
@@ -549,7 +549,7 @@ def get_asset_name (asset_id, block_index):
     if asset_id < 26**3:
         raise exceptions.AssetIDError('too low')
 
-    if asset_names_v2(block_index):  # Protocol change.
+    if asset_names_v2_enabled(block_index):  # Protocol change.
         if asset_id <= 256**8:
             if 26**12 + 1 <= asset_id:
                 asset_name = 'A' + str(asset_id)
@@ -843,7 +843,7 @@ def validate_address(address, block_index):
 
     # Get array of pubkeyhashes to check.
     if is_multisig(address):
-        if not util.multisig_enabled(block_index):
+        if not multisig_enabled(block_index):
             raise MultiSigAddressError('Multi‐signature addresses are currently disabled.')
         pubkeyhashes = pubkeyhash_array(address)
     else:
@@ -1077,8 +1077,9 @@ def protocol_change(block_index, mainnet, testnet):
 
 def asset_names_v2_enabled(block_index):
     return protocol_change(block_index, 333000, 307400)
+FIRST_MULTISIG_BLOCK_TESTNET = 303000
 def multisig_enabled(block_index):
-    return protocol_change(block_index, 333000, 303000)
+    return protocol_change(block_index, 333000, FIRST_MULTISIG_BLOCK_TESTNET)
 ### Unconfirmed Transactions ###
 
 @lru_cache(maxsize=4096)
