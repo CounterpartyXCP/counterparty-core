@@ -1,6 +1,12 @@
 ## Client Versions ##
 * v9.47.0 (2014-11-19)
 	* free numeric asset names (protocol change: 332000)
+	* kickstart functionality
+	* better process‐locking
+	* improvements to documentation
+	* graceful shutdown of processes
+	* faster server startup
+	* support for jmcorgan Bitcoin Core fork for block explorer
 * v9.46.0 (2014-11-03)
 	* new consensus hashes, with `tx_info` and consensus version
 	* Coveralls support
