@@ -22,7 +22,7 @@ def validate (db, source, destination, asset, quantity, block_index):
 
     if quantity < 0: problems.append('negative quantity')
 
-    if util.protocol_change(block_index, 333000, config.BLOCK_FIRST_TESTNET):
+    if util.protocol_change(block_index, 333000, config.BLOCK_FIRST_TESTNET):  # Protocol change.
         if not destination:
             status = problems.append('destination is required')
 
