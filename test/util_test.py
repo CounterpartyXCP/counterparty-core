@@ -274,10 +274,11 @@ def vector_to_args(vector, functions=[]):
 def exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db):
     if tx_name == 'bitcoin' and method == 'transaction':
         return tested_method(counterpartyd_db, inputs[0], **inputs[1])
-    elif tx_name == 'util' and method == 'api':
-        return tested_method(*inputs)
-    elif tx_name == 'util' and method == 'base58_check_decode':
-        return binascii.hexlify(tested_method(*inputs)).decode('utf-8')
+    elif tx_name == 'util':
+        if method == 'base58_check_decode':
+            return binascii.hexlify(tested_method(*inputs)).decode('utf-8')
+        else:
+            return tested_method(*inputs)
     else:
         return tested_method(counterpartyd_db, *inputs)
 
