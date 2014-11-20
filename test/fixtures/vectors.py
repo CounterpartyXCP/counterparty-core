@@ -558,6 +558,56 @@ UNITTEST_VECTOR = {
         }, {
             'in': ('create_dividend', {'source': ADDR[0], 'quantity_per_unit': 1, 'asset': 'NODIVISIBLE', 'dividend_asset': 'XCP'}),
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e0000000000006951210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0215a415bf04af834423d3dd7ad96dc727a030865759f9fbc9036a64c1197e58754da21540fb2673b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe724e88ec81d53ae8c19ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+        }],
+        'get_asset_id': [{
+            'in': ('BCD', 308000),
+            'error': ('AssetNameError', 'too short')
+        }, {
+            'in': ('ABCD', 308000),
+            'error': ('AssetNameError', 'non‐numeric asset name starts with ‘A’')
+        }, {
+            'in': ('A{}'.format(26**12), 308000),
+            'error': ('AssetNameError', 'numeric asset name not in range')
+        }, {
+            'in': ('A{}'.format(256**8 + 1), 308000),
+            'error': ('AssetNameError', 'numeric asset name not in range')
+        }, {
+            'in': ('A{}'.format(26**12 + 1), 308000),
+            'out': 26**12 + 1
+        }, {
+            'in': ('A{}'.format(256**8), 308000),
+            'out': 256**8
+        }, {
+            'in': ('LONGASSETNAMES', 308000),
+            'error': ('AssetNameError', 'long asset names must be numeric')
+        }, {
+            'in': ('BCDE_F', 308000),
+            'error': ('AssetNameError', "('invalid character:', '_')")
+        }, {
+            'in': ('BAAA', 308000),
+            'out': 26**3
+        }, {
+            'in': ('ZZZZZZZZZZZZ', 308000),
+            'out': 26**12 - 1
+        }],
+        'get_asset_name': [{
+            'in': (26**12 - 1, 308000),
+            'out': 'ZZZZZZZZZZZZ'
+        }, {
+            'in': (26**3, 308000),
+            'out': 'BAAA'
+        }, {
+            'in': (256**8, 308000),
+            'out': 'A{}'.format(256**8)
+        }, {
+            'in': (26**12 + 1, 308000),
+            'out': 'A{}'.format(26**12 + 1)
+        }, {
+            'in': (26**3 - 1, 308000),
+            'error': ('AssetIDError', 'too low')
+        }, {
+            'in': (256**8 + 1, 308000),
+            'error': ('AssetIDError', 'too high')
         }]
     }
 }
