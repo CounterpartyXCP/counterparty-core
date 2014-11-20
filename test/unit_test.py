@@ -12,7 +12,7 @@ import counterpartyd
 def setup_module():
     counterpartyd.set_options(database_file=tempfile.gettempdir() + '/fixtures.unittest.db', testnet=True, **util_test.COUNTERPARTYD_OPTIONS)
     util_test.restore_database(config.DATABASE, CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql')
-    config.FIRST_MULTISIG_BLOCK_TESTNET = 1
+    util.multisig_enabled = lambda x: return True
     # start RPC server
     api_server = api.APIServer()
     api_server.daemon = True

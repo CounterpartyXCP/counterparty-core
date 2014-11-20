@@ -843,7 +843,7 @@ def validate_address(address, block_index):
 
     # Get array of pubkeyhashes to check.
     if is_multisig(address):
-        if not (config.TESTNET and block_index >= config.FIRST_MULTISIG_BLOCK_TESTNET):
+        if not util.multisig_enabled(block_index):
             raise MultiSigAddressError('Multi‐signature addresses are currently disabled.')
         pubkeyhashes = pubkeyhash_array(address)
     else:
@@ -1062,19 +1062,23 @@ def get_cached_raw_transaction(tx_hash):
 ### Backend RPC ###
 
 ### Protocol Changes ###
-def asset_names_v2(block_index):
+def protocol_change(block_index, mainnet, testnet):
     if config.TESTNET:
-        if block_index >= 307400:
+        if testnet and block_index >= testnet:
             return True
         else:
             return False
     else:   # mainnet
-        if block_index >= 332000:
+        if mainnet and block_index >= mainnet:
             return True
         else:
             return True
     return False
 
+def asset_names_v2_enabled(block_index):
+    return protocol_change(block_index, 333000, 307400)
+def multisig_enabled(block_index):
+    return protocol_change(block_index, 333000, 303000)
 ### Unconfirmed Transactions ###
 
 @lru_cache(maxsize=4096)
