@@ -579,21 +579,22 @@ def get_btc_supply(normalize=False):
             blocks_remaining = 0
     return total_supply if normalize else int(total_supply * config.UNIT)
 
-def scriptpubkey_to_address(scriptpubkey):
-    if 'addresses' not in scriptpubkey.keys():
-        return None
-    if scriptpubkey['type'] == 'multisig':
-        asm = scriptpubkey['asm'].split(' ')
-        signatures_required, signatures_possible = int(asm[0]), int(asm[-2])
-        return util.construct_array(signatures_required, scriptpubkey['addresses'], signatures_possible)
-    elif len(scriptpubkey['addresses']) == 1:
-        return scriptpubkey['addresses'][0]
-    return None
-
 def get_unspent_txouts(source, return_confirmed=False):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
     """
+
+    def scriptpubkey_to_address(scriptpubkey):
+        if 'addresses' not in scriptpubkey.keys():
+            return None
+        if scriptpubkey['type'] == 'multisig':
+            asm = scriptpubkey['asm'].split(' ')
+            signatures_required, signatures_possible = int(asm[0]), int(asm[-2])
+            return util.construct_array(signatures_required, scriptpubkey['addresses'], signatures_possible)
+        elif len(scriptpubkey['addresses']) == 1:
+            return scriptpubkey['addresses'][0]
+        return None
+
     # Get all coins.
     outputs = {}
     if util.is_multisig(source):
