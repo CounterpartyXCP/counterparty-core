@@ -29,7 +29,7 @@ def parse (db, tx, message):
 
     try:
         gasprice, startgas, endowment = struct.unpack(FORMAT, message[:LENGTH])
-    except struct.UnpackError:
+    except struct.error:
         gasprice, startgas, endowment = 0, 0, 0 # TODO: Is this ideal 
 
     code = util.hexlify(message[LENGTH:])
