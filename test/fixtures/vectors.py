@@ -56,25 +56,25 @@ UNITTEST_VECTOR = {
     },
     'send': {
         'validate': [{
-            'in': (ADDR[0], ADDR[1], 'XCP', DP['quantity']),
+            'in': (ADDR[0], ADDR[1], 'XCP', DP['quantity'], 1),
             'out': ([])
         }, {
-            'in': (ADDR[0], ADDR[1], 'BTC', DP['quantity']),
+            'in': (ADDR[0], ADDR[1], 'BTC', DP['quantity'], 1),
             'out': (['cannot send bitcoins'])
         }, {
-            'in': (ADDR[0], ADDR[1], 'XCP', DP['quantity'] / 3),
+            'in': (ADDR[0], ADDR[1], 'XCP', DP['quantity'] / 3, 1),
             'out': (['quantity must be in satoshis'])
         }, {
-            'in': (ADDR[0], ADDR[1], 'XCP', -1 * DP['quantity']),
+            'in': (ADDR[0], ADDR[1], 'XCP', -1 * DP['quantity'], 1),
             'out': (['negative quantity'])
         }, {
-            'in': (ADDR[0], MULTISIGADDR[0], 'XCP', DP['quantity']),
+            'in': (ADDR[0], MULTISIGADDR[0], 'XCP', DP['quantity'], 1),
             'out': ([])
         }, {
-            'in': (ADDR[0], ADDR[1], 'MAXI', 2**63 - 1),
+            'in': (ADDR[0], ADDR[1], 'MAXI', 2**63 - 1, 1),
             'out': ([])
         }, {
-            'in': (ADDR[0], ADDR[1], 'MAXI', 2**63 + 1),
+            'in': (ADDR[0], ADDR[1], 'MAXI', 2**63 + 1, 1),
             'out': ([])
         }],
         'compose': [{
