@@ -584,9 +584,8 @@ def scriptpubkey_to_address(scriptpubkey):
         return None
     if scriptpubkey['type'] == 'multisig':
         asm = scriptpubkey['asm'].split(' ')
-        logging.error(asm)
         signatures_required, signatures_possible = int(asm[0]), int(asm[-2])
-        return '{}_{}_{}'.format(signatures_required, "_".join(sorted(scriptpubkey['addresses'])), signatures_possible)
+        return util.construct_array(signatures_required, scriptpubkey['addresses'], signatures_possible)
     elif len(scriptpubkey['addresses']) == 1:
         return scriptpubkey['addresses'][0]
     return None
