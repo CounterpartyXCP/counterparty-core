@@ -11,7 +11,7 @@ LENGTH = 8 + 8
 ID = 0
 
 
-def validate (db, source, destination, asset, quantity):
+def validate (db, source, destination, asset, quantity, block_index):
     problems = []
 
     if asset == config.BTC: problems.append('cannot send bitcoins')  # Only for parsing.
@@ -21,6 +21,10 @@ def validate (db, source, destination, asset, quantity):
         return problems
 
     if quantity < 0: problems.append('negative quantity')
+
+    if util.protocol_change(block_index, 333000, config.BLOCK_FIRST_TESTNET):  # Protocol change.
+        if not destination:
+            status = problems.append('destination is required')
 
     return problems
 
@@ -40,10 +44,12 @@ def compose (db, source, destination, asset, quantity):
     if not balances or balances[0]['quantity'] < quantity:
         raise exceptions.SendError('insufficient funds')
 
-    problems = validate(db, source, destination, asset, quantity)
+    block_index = util.last_block(db)['block_index']
+
+    problems = validate(db, source, destination, asset, quantity, block_index)
     if problems: raise exceptions.SendError(problems)
 
-    asset_id = util.get_asset_id(asset, util.last_block(db)['block_index'])
+    asset_id = util.get_asset_id(asset, block_index)
     data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, quantity)
 
@@ -77,7 +83,7 @@ def parse (db, tx, message):
     if status == 'valid':
         # For SQLite3
         quantity = min(quantity, config.MAX_INT)
-        problems = validate(db, tx['source'], tx['destination'], asset, quantity)
+        problems = validate(db, tx['source'], tx['destination'], asset, quantity, tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
 
     if status == 'valid':
