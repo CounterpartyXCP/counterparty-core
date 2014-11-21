@@ -17,6 +17,8 @@ import requests
 from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
 from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec, is_sec_compressed, EncodingError
 from Crypto.Cipher import ARC4
+from bitcoin.core.script import CScript
+from bitcoin.core import x
 
 from . import config, exceptions, util, blockchain
 
@@ -33,15 +35,7 @@ OP_3 = b'\x53'
 OP_CHECKMULTISIG = b'\xae'
 
 D = decimal.Decimal
-def hash160(x):
-    x = hashlib.sha256(x).digest()
-    m = hashlib.new('ripemd160')
-    m.update(x)
-    return m.digest()
-def pubkey_to_pubkeyhash(pubkey):
-    pubkeyhash = hash160(pubkey)
-    pubkey = util.base58_check_encode(binascii.hexlify(pubkeyhash).decode('utf-8'), config.ADDRESSVERSION)
-    return pubkey
+
 def pubkeyhash_to_pubkey(pubkeyhash):
     # TODO: convert to python-bitcoinlib.
     raw_transactions = blockchain.searchrawtransactions(pubkeyhash)
@@ -50,7 +44,7 @@ def pubkeyhash_to_pubkey(pubkeyhash):
             scriptsig = vin['scriptSig']
             asm = scriptsig['asm'].split(' ')
             pubkey = asm[1]
-            if pubkeyhash == pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
+            if pubkeyhash == util.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
                 return pubkey
     raise exceptions.AddressError('Public key for address ‘{}’ not published in blockchain.'.format(pubkeyhash))
 def multisig_pubkeyhashes_to_pubkeys(address):
@@ -592,12 +586,12 @@ def get_unspent_txouts(source, return_confirmed=False):
         pubkeyhashes = [source]
         raw_transactions = blockchain.searchrawtransactions(source)
 
+    canonical_address = util.canonical_address(source)
+
     for tx in raw_transactions:
         for vout in tx['vout']:
             scriptpubkey = vout['scriptPubKey']
-            if util.is_multisig(source) and scriptpubkey['type'] != 'multisig':
-                continue
-            elif 'addresses' in scriptpubkey.keys() and "".join(sorted(scriptpubkey['addresses'])) == "".join(sorted(pubkeyhashes)):
+            if util.scriptpubkey_to_address(CScript(x(scriptpubkey['hex']))) == canonical_address:
                 txid = tx['txid']
                 confirmations = tx['confirmations'] if 'confirmations' in tx else 0
                 if txid not in outputs or outputs[txid]['confirmations'] < confirmations:
