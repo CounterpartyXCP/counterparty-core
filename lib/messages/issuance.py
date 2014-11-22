@@ -8,7 +8,7 @@ import struct
 import decimal
 D = decimal.Decimal
 
-from . import (config, util, exceptions, bitcoin, util)
+from lib import (config, util, exceptions, bitcoin, util)
 
 FORMAT_1 = '>QQ?'
 LENGTH_1 = 8 + 8 + 1
@@ -31,7 +31,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     if divisible is None: divisible = True
 
     if isinstance(call_price, int): call_price = float(call_price)
-    #^ helps especially with calls from JS-based clients, where parseFloat(15) returns 15 (not 15.0), which json takes as an int
+    #^ helps especially with calls from JS‐based clients, where parseFloat(15) returns 15 (not 15.0), which json takes as an int
 
     if not isinstance(quantity, int):
         problems.append('quantity must be in satoshis')

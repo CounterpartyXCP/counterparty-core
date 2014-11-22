@@ -3,7 +3,7 @@
 """Based on pyethereum <https://github.com/ethereum/pyethereum>."""
 
 from lib import (util, config)
-from lib.scriptlib import (rlp, utils)
+from lib.messages.scriptlib import (rlp, utils)
 
 import logging
 import pickle

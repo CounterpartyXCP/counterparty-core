@@ -4,7 +4,9 @@ import binascii
 import struct
 import string
 
-from . import (util, config, exceptions, bitcoin, util, rps)
+from lib import (config, exceptions, bitcoin, util)
+from . import rps
+
 # move random rps_match_id
 FORMAT = '>H16s32s32s'
 LENGTH = 2 + 16 + 32 + 32

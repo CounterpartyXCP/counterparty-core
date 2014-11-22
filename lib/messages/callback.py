@@ -6,7 +6,7 @@ import struct
 import decimal
 D = decimal.Decimal
 
-from . import (util, config, exceptions, bitcoin, util)
+from lib import (config, exceptions, bitcoin, util)
 from . import order
 
 FORMAT = '>dQ'

@@ -19,7 +19,7 @@ import bitcoin as bitcoinlib
 import bitcoin.rpc as bitcoinlib_rpc
 
 from . import (config, exceptions, util, bitcoin)
-from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute)
+from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute)
 
 from .blockchain.blocks_parser import BlockchainParser, ChainstateParser
 from .blockchain.utils import ib2h

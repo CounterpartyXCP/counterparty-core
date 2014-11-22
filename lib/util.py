@@ -37,6 +37,8 @@ BLOCK_LEDGER = []
 # inelegant but easy and fast cache
 MEMPOOL = []
 
+class RPCError (Exception): pass
+
 # TODO: This doesn’t timeout properly. (If server hangs, then unhangs, no result.)
 def api (method, params):
     headers = {'content-type': 'application/json'}
@@ -48,21 +50,21 @@ def api (method, params):
     }
     response = requests.post(config.RPC, data=json.dumps(payload), headers=headers)
     if response == None:
-        raise exceptions.RPCError('Cannot communicate with {} server.'.format(config.XCP_CLIENT))
+        raise RPCError('Cannot communicate with {} server.'.format(config.XCP_CLIENT))
     elif response.status_code != 200:
         if response.status_code == 500:
-            raise exceptions.RPCError('Malformed API call.')
+            raise RPCError('Malformed API call.')
         else:
-            raise exceptions.RPCError(str(response.status_code) + ' ' + response.reason)
+            raise RPCError(str(response.status_code) + ' ' + response.reason)
 
     response_json = response.json()
     if 'error' not in response_json.keys() or response_json['error'] == None:
         try:
             return response_json['result']
         except KeyError:
-            raise exceptions.RPCError(response_json)
+            raise RPCError(response_json)
     else:
-        raise exceptions.RPCError('{}'.format(response_json['error']))
+        raise RPCError('{}'.format(response_json['error']))
 
 def price (numerator, denominator, block_index):
     if block_index >= 294500 or config.TESTNET: # Protocol change.

@@ -8,7 +8,7 @@ import decimal
 D = decimal.Decimal
 import logging
 
-from . import (util, config, exceptions, bitcoin, util)
+from lib import (config, exceptions, bitcoin, util)
 
 FORMAT = '>QQQQHQ'
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8
@@ -449,7 +449,7 @@ def match (db, tx, block_index=None):
 
             # Check and update fee remainings.
             fee = 0
-            if block_index >= 286500 or config.TESTNET: # Protocol change. Deduct fee_required from fee_provided_remaining, etc., if possible (else don’t match).
+            if block_index >= 286500 or config.TESTNET: # Protocol change. Deduct fee_required from provided_remaining, etc., if possible (else don’t match).
                 if tx1['get_asset'] == config.BTC:
 
                     if block_index >= 310500 or config.TESTNET:     # Protocol change.

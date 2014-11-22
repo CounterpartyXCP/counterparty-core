@@ -7,7 +7,7 @@ import binascii
 import logging
 
 from lib import (util, config, exceptions)
-from lib.scriptlib import (utils, blocks, processblock)
+from .scriptlib import (utils, blocks, processblock)
 
 FORMAT = '>20sQQQ'
 LENGTH = 44

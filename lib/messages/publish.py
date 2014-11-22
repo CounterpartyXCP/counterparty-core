@@ -5,7 +5,8 @@
 import struct
 import binascii
 
-from . import (util, config, exceptions, bitcoin, util, execute)
+from lib import (config, exceptions, bitcoin, util)
+from . import execute
 
 FORMAT = '>QQQ'
 LENGTH = 8 + 8 + 8

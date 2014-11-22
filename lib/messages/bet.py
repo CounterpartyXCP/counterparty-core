@@ -18,7 +18,7 @@ D = decimal.Decimal
 import time
 import logging
 
-from . import (util, config, bitcoin, exceptions, util)
+from lib import (config, bitcoin, exceptions, util)
 
 FORMAT = '>HIQQdII'
 LENGTH = 2 + 4 + 8 + 8 + 8 + 4 + 4
@@ -66,7 +66,7 @@ def cancel_bet_match (db, bet_match, status, block_index):
 
 
 def get_fee_fraction (db, feed_address):
-    '''Get fee fraction from the last broadcast from the feed_address address.
+    '''Get fee fraction from last broadcast from the feed_address address.
     '''
     cursor = db.cursor()
     broadcasts = list(cursor.execute('''SELECT * FROM broadcasts WHERE (status = ? AND source = ?) ORDER BY tx_index ASC''', ('valid', feed_address)))

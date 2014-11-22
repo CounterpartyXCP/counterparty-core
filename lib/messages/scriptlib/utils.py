@@ -3,7 +3,7 @@
 """Based on pyethereum <https://github.com/ethereum/pyethereum>."""
 
 from lib import util
-from lib.scriptlib import rlp
+from lib.messages.scriptlib import rlp
 
 import hashlib, binascii
 

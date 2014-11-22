@@ -26,7 +26,7 @@ import time
 import binascii
 import string
 
-from . import (util, config, bitcoin, exceptions, util)
+from lib import (config, bitcoin, exceptions, util)
 # possible_moves wager move_random_hash expiration
 FORMAT = '>HQ32sI'
 LENGTH = 2 + 8 + 32 + 4

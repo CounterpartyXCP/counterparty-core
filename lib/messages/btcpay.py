@@ -3,7 +3,7 @@
 import binascii
 import struct
 
-from . import (util, config, exceptions, bitcoin, util)
+from lib import (config, exceptions, bitcoin, util)
 
 FORMAT = '>32s32s'
 LENGTH = 32 + 32

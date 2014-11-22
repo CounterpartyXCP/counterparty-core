@@ -12,7 +12,7 @@ import math
 import fractions
 
 from lib import (util, config)
-from lib.scriptlib import (rlp, utils, opcodes, blocks)
+from lib.messages.scriptlib import (rlp, utils, opcodes, blocks)
 
 class PBLogger(object):
     def log(self, name, **kargs):
