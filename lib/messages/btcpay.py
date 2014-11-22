@@ -9,7 +9,6 @@ FORMAT = '>32s32s'
 LENGTH = 32 + 32
 ID = 11
 
-
 def validate (db, source, order_match_id, block_index):
     problems = []
     order_match = None
@@ -61,7 +60,7 @@ def compose (db, source, order_match_id):
     tx0_hash, tx1_hash = order_match_id[:64], order_match_id[64:] # UTF-8 encoding means that the indices are doubled.
 
     destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(db, source, order_match_id, util.last_block(db)['block_index'])
-    if problems: raise exceptions.BTCPayError(problems)
+    if problems: raise exceptions.ComposeError(problems)
 
     # Warn if down to the wire.
     time_left = order_match['match_expire_index'] - util.last_block(db)['block_index']

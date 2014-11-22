@@ -37,17 +37,17 @@ def compose (db, source, destination, asset, quantity):
 
     #quantity must be in int satoshi (not float, string, etc)
     if not isinstance(quantity, int):
-        raise exceptions.SendError('quantity must be an int (in satoshi)')
+        raise exceptions.ComposeError('quantity must be an int (in satoshi)')
 
     # Only for outgoing (incoming will overburn).
     balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, asset)))
     if not balances or balances[0]['quantity'] < quantity:
-        raise exceptions.SendError('insufficient funds')
+        raise exceptions.ComposeError('insufficient funds')
 
     block_index = util.last_block(db)['block_index']
 
     problems = validate(db, source, destination, asset, quantity, block_index)
-    if problems: raise exceptions.SendError(problems)
+    if problems: raise exceptions.ComposeError(problems)
 
     asset_id = util.get_asset_id(asset, block_index)
     data = struct.pack(config.TXTYPE_FORMAT, ID)

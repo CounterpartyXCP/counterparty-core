@@ -78,7 +78,7 @@ def compose (db, source, move, random, rps_match_id):
     tx0_hash, tx1_hash = rps_match_id[:64], rps_match_id[64:] # UTF-8 encoding means that the indices are doubled.
 
     txn, rps_match, problems = validate(db, source, move, random, rps_match_id)
-    if problems: raise exceptions.RpsError(problems)
+    if problems: raise exceptions.ComposeError(problems)
 
     # Warn if down to the wire.
     time_left = rps_match['match_expire_index'] - util.last_block(db)['block_index']

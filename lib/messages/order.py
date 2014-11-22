@@ -246,10 +246,10 @@ def compose (db, source, give_asset, give_quantity, get_asset, get_quantity, exp
     else:
         balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, give_asset)))
         if (not balances or balances[0]['quantity'] < give_quantity):
-            raise exceptions.OrderError('insufficient funds')
+            raise exceptions.ComposeError('insufficient funds')
 
     problems = validate(db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, util.last_block(db)['block_index'])
-    if problems: raise exceptions.OrderError(problems)
+    if problems: raise exceptions.ComposeError(problems)
 
     give_id = util.get_asset_id(give_asset, util.last_block(db)['block_index'])
     get_id = util.get_asset_id(get_asset, util.last_block(db)['block_index'])

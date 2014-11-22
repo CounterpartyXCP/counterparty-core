@@ -128,7 +128,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
 
 def compose (db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description):
     call_date, call_price, problems, fee, description, divisible = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.last_block(db)['block_index'])
-    if problems: raise exceptions.IssuanceError(problems)
+    if problems: raise exceptions.ComposeError(problems)
 
     asset_id = util.get_asset_id(asset, util.last_block(db)['block_index'])
     data = struct.pack(config.TXTYPE_FORMAT, ID)

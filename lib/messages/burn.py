@@ -11,7 +11,6 @@ from lib import (config, exceptions, bitcoin, util)
 
 ID = 60
 
-
 def validate (db, source, destination, quantity, block_index, overburn=False):
     problems = []
 
@@ -37,13 +36,13 @@ def compose (db, source, quantity, overburn=False):
     cursor = db.cursor()
     destination = config.UNSPENDABLE
     problems = validate(db, source, destination, quantity, util.last_block(db)['block_index'], overburn=overburn)
-    if problems: raise exceptions.BurnError(problems)
+    if problems: raise exceptions.ComposeError(problems)
 
     # Check that a maximum of 1 BTC total is burned per address.
     burns = list(cursor.execute('''SELECT * FROM burns WHERE (status = ? AND source = ?)''', ('valid', source)))
     already_burned = sum([burn['burned'] for burn in burns])
     if quantity > (1 * config.UNIT - already_burned) and not overburn:
-        raise exceptions.BurnError('1 {} may be burned per address'.format(config.BTC))
+        raise exceptions.ComposeError('1 {} may be burned per address'.format(config.BTC))
 
     cursor.close()
     return (source, [(destination, quantity)], None)

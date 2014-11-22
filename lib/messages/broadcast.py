@@ -35,7 +35,6 @@ LENGTH = 4 + 8 + 4
 ID = 30
 # NOTE: Pascal strings are used for storing texts for backwards‐compatibility.
 
-
 def validate (db, source, timestamp, value, fee_fraction_int, text, block_index):
     problems = []
 
@@ -69,7 +68,7 @@ def compose (db, source, timestamp, value, fee_fraction, text):
     fee_fraction_int = int(fee_fraction * 1e8)
 
     problems = validate(db, source, timestamp, value, fee_fraction_int, text, util.last_block(db)['block_index'])
-    if problems: raise exceptions.BroadcastError(problems)
+    if problems: raise exceptions.ComposeError(problems)
 
     data = struct.pack(config.TXTYPE_FORMAT, ID)
     if len(text) <= 52:

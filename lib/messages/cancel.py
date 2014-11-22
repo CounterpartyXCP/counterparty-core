@@ -48,7 +48,7 @@ def compose (db, source, offer_hash):
 
     # Check that offer exists.
     offer, offer_type, problems = validate(db, source, offer_hash)
-    if problems: raise exceptions.CancelError(problems)
+    if problems: raise exceptions.ComposeError(problems)
 
     offer_hash_bytes = binascii.unhexlify(bytes(offer_hash, 'utf-8'))
     data = struct.pack(config.TXTYPE_FORMAT, ID)

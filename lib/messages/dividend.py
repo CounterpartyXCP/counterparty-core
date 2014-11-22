@@ -14,7 +14,6 @@ FORMAT_2 = '>QQQ'
 LENGTH_2 = 8 + 8 + 8
 ID = 50
 
-
 def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index):
     cursor = db.cursor()
     problems = []
@@ -97,7 +96,7 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
 def compose (db, source, quantity_per_unit, asset, dividend_asset):
 
     dividend_total, outputs, problems, fee = validate(db, source, quantity_per_unit, asset, dividend_asset, util.last_block(db)['block_index'])
-    if problems: raise exceptions.DividendError(problems)
+    if problems: raise exceptions.ComposeError(problems)
     print('Total quantity to be distributed in dividends:', util.devise(db, dividend_total, dividend_asset, 'output'), dividend_asset)
 
     if dividend_asset == config.BTC:

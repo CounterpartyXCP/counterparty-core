@@ -13,7 +13,6 @@ FORMAT = '>dQ'
 LENGTH = 8 + 8
 ID = 21
 
-
 def validate (db, source, fraction, asset, block_time, block_index, parse):
     cursor = db.cursor()
     problems = []
@@ -99,7 +98,7 @@ def validate (db, source, fraction, asset, block_time, block_index, parse):
 
 def compose (db, source, fraction, asset):
     call_price, callback_total, outputs, problems = validate(db, source, fraction, asset, util.last_block(db)['block_time'], util.last_block(db)['block_index'], parse=False)
-    if problems: raise exceptions.CallbackError(problems)
+    if problems: raise exceptions.ComposeError(problems)
     print('Total quantity to be called back:', util.devise(db, callback_total, asset, 'output'), asset)
 
     asset_id = util.get_asset_id(asset, util.last_block(db)['block_index'])
