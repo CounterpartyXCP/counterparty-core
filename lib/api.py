@@ -286,7 +286,7 @@ class APIStatusPoller(threading.Thread):
                 # Check that the database has caught up with bitcoind.
                 if time.time() - self.last_database_check > 10 * 60: # Ten minutes since last check.
                     code = 11
-                    bitcoin.backend_check(db)
+                    util.backend_check(db)
                     code = 12
                     util.database_check(db, bitcoin.get_block_count())  # TODO: If not reparse or rollback, once those use API.
                     self.last_database_check = time.time()

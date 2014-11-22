@@ -8,7 +8,6 @@ sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
 from lib import (config, api, util, exceptions, bitcoin, blocks)
 from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
-from lib.exceptions import ConsensusError
 import counterpartyd
 
 from fixtures.params import DEFAULT_PARAMS as DP
@@ -386,7 +385,7 @@ def reparse(testnet=True):
             previous_ledger_hash, previous_txlist_hash = blocks.parse_block(memory_db, block['block_index'], block['block_time'],
                                                                                     previous_ledger_hash, block['ledger_hash'],
                                                                                     previous_txlist_hash, block['txlist_hash'])
-        except ConsensusError as e:
+        except blocks.ConsensusError as e:
             message = str(e)
             if message.find('ledger_hash') != -1:
                 new_ledger = get_block_ledger(memory_db, block['block_index'])

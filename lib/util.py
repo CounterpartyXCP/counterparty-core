@@ -407,13 +407,16 @@ def connect_to_db(flags=None, foreign_keys=True):
 
     return db
 
+
+class VersionError (Exception): pass
+class VersionUpdateRequiredError (VersionError): pass
 def version_check (block_index):
     try:
         host = 'https://counterpartyxcp.github.io/counterpartyd/version.json'
         response = requests.get(host, headers={'cache-control': 'no-cache'})
         versions = json.loads(response.text)
     except Exception as e:
-        raise exceptions.VersionError('Unable to check version. How’s your Internet access?')
+        raise VersionError('Unable to check version. How’s your Internet access?')
 
     # Check client version.
     passed = True
@@ -431,12 +434,21 @@ def version_check (block_index):
             config.VERSION_STRING, versions['block_index'], versions['minimum_version_major'], versions['minimum_version_minor'],
             versions['minimum_version_revision'], versions['reason'])
         if block_index >= versions['block_index']:
-            raise exceptions.VersionUpdateRequiredError(explanation)
+            raise VersionUpdateRequiredError(explanation)
         else:
             warnings.warn(explanation)
 
     logging.debug('Status: Version check passed.')
     return
+
+def backend_check (db):
+    """Checks blocktime of last block to see if {} Core is running behind.""".format(config.BTC_NAME)
+    block_count = get_block_count()
+    block_hash = get_block_hash(block_count)
+    block = get_block(block_hash)
+    time_behind = time.time() - block['time']   # TODO: Block times are not very reliable.
+    if time_behind > 60 * 60 * 2:   # Two hours.
+        raise BitcoindError('Bitcoind is running about {} seconds behind.'.format(round(time_behind)))
 
 def database_check (db, blockcount):
     """Checks {} database to see if the {} server has caught up with Bitcoind.""".format(config.XCP_NAME, config.XCP_CLIENT)
@@ -572,11 +584,16 @@ def get_asset_name (asset_id, block_index):
     return asset_name
 
 
+class DebitError (Exception): pass
 def debit (db, block_index, address, asset, quantity, action=None, event=None):
+    if type(quantity) != int:
+        raise DebitError
+    if quantity < 0:
+        raise DebitError
+    if asset == config.BTC:
+        raise DebitError
+
     debit_cursor = db.cursor()
-    assert asset != config.BTC # Never BTC.
-    assert type(quantity) == int
-    assert quantity >= 0
 
     # Contracts can only hold XCP balances.
     if protocol_change(block_index, 333000, config.BLOCK_FIRST_TESTNET): # Protocol change.
@@ -593,7 +610,7 @@ def debit (db, block_index, address, asset, quantity, action=None, event=None):
     else: old_balance = balances[0]['quantity']
 
     if old_balance < quantity:
-        raise exceptions.BalanceError('Insufficient funds.')
+        raise DebitError('Insufficient funds.')
 
     balance = round(old_balance - quantity)
     balance = min(balance, config.MAX_INT)
@@ -622,11 +639,16 @@ def debit (db, block_index, address, asset, quantity, action=None, event=None):
 
     BLOCK_LEDGER.append('{}{}{}{}'.format(block_index, address, asset, quantity))
 
+class CreditError (Exception): pass
 def credit (db, block_index, address, asset, quantity, action=None, event=None):
+    if type(quantity) != int:
+        raise CreditError
+    if quantity < 0:
+        raise CreditError
+    if asset == config.BTC:
+        raise CreditError
+
     credit_cursor = db.cursor()
-    assert asset != config.BTC # Never BTC.
-    assert type(quantity) == int
-    assert quantity >= 0
 
     # Contracts can only hold XCP balances.
     if protocol_change(block_index, 333000, config.BLOCK_FIRST_TESTNET): # Protocol change.
@@ -678,6 +700,7 @@ def credit (db, block_index, address, asset, quantity, action=None, event=None):
 
     BLOCK_LEDGER.append('{}{}{}{}'.format(block_index, address, asset, quantity))
 
+class QuantityError(Exception): pass
 def devise (db, quantity, asset, dest, divisible=None):
 
     # For output only.
@@ -727,13 +750,13 @@ def devise (db, quantity, asset, dest, divisible=None):
             if quantity == quantity.to_integral():
                 return int(quantity)
             else:
-                raise exceptions.QuantityError('Divisible assets have only eight decimal places of precision.')
+                raise QuantityError('Divisible assets have only eight decimal places of precision.')
         else:
             return quantity
     else:
         quantity = D(quantity)
         if quantity != round(quantity):
-            raise exceptions.QuantityError('Fractional quantities of indivisible assets.')
+            raise QuantityError('Fractional quantities of indivisible assets.')
         return round(quantity)
 
 def holders(db, asset):
@@ -825,14 +848,15 @@ def supplies (db):
     cursor.close()
     return supplies
 
+class GetURLError (Exception): pass
 def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
     try:
         r = requests.get(url, timeout=fetch_timeout)
     except Exception as e:
-        raise exceptions.GetURLError("Got get_url request error: %s" % e)
+        raise GetURLError("Got get_url request error: %s" % e)
     else:
         if r.status_code != 200 and abort_on_error:
-            raise exceptions.GetURLError("Bad status code returned: '%s'. result body: '%s'." % (r.status_code, r.text))
+            raise GetURLError("Bad status code returned: '%s'. result body: '%s'." % (r.status_code, r.text))
         result = json.loads(r.text) if is_json else r.text
     return result
 
@@ -1018,6 +1042,8 @@ def wallet_unlock ():
     else:
         return True    # Wallet is unencrypted.
 
+class BitcoindError (Exception): pass
+class BitcoindRPCError (BitcoindError): pass
 def rpc (method, params):
     starttime = time.time()
     headers = {'content-type': 'application/json'}
@@ -1032,31 +1058,31 @@ def rpc (method, params):
     if response == None:
         if config.TESTNET: network = 'testnet'
         else: network = 'mainnet'
-        raise exceptions.BitcoindRPCError('Cannot communicate with {} Core. ({} is set to run on {}, is {} Core?)'.format(config.BTC_NAME, config.XCP_CLIENT, network, config.BTC_NAME))
+        raise BitcoindRPCError('Cannot communicate with {} Core. ({} is set to run on {}, is {} Core?)'.format(config.BTC_NAME, config.XCP_CLIENT, network, config.BTC_NAME))
     elif response.status_code not in (200, 500):
-        raise exceptions.BitcoindRPCError(str(response.status_code) + ' ' + response.reason)
+        raise BitcoindRPCError(str(response.status_code) + ' ' + response.reason)
 
     # Return result, with error handling.
     response_json = response.json()
     if 'error' not in response_json.keys() or response_json['error'] == None:
         return response_json['result']
     elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
-        raise exceptions.BitcoindError('{} Is txindex enabled in {} Core?'.format(response_json['error'], config.BTC_NAME))
+        raise BitcoindError('{} Is txindex enabled in {} Core?'.format(response_json['error'], config.BTC_NAME))
     elif response_json['error']['code'] == -4:   # Unknown private key (locked wallet?)
         # If address in wallet, attempt to unlock.
         address = params[0]
         if is_valid(address):
             if is_mine(address):
-                raise exceptions.BitcoindError('Wallet is locked.')
+                raise BitcoindError('Wallet is locked.')
             else:   # When will this happen?
-                raise exceptions.BitcoindError('Source address not in wallet.')
+                raise BitcoindError('Source address not in wallet.')
         else:
             raise exceptions.AddressError('Invalid address. (Multi‐signature?)')
     elif response_json['error']['code'] == -1 and response_json['error']['message'] == 'Block number out of range.':
         time.sleep(10)
         return get_block_hash(block_index)
     else:
-        raise exceptions.BitcoindError('{}'.format(response_json['error']))
+        raise BitcoindError('{}'.format(response_json['error']))
 
 @lru_cache(maxsize=4096)
 def get_cached_raw_transaction(tx_hash):
@@ -1169,5 +1195,18 @@ def scriptpubkey_to_address(scriptpubkey):
         pubkeyhashes = [pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
         return construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes))
     return None
+
+
+def transfer(db, block_index, source, destination, asset, quantity, action, event):
+    debit(db, block_index, source, asset, quantity, action=action, event=event)
+    credit(db, block_index, destination, asset, quantity, action=action, event=event)
+
+def get_balance (db, address, asset):
+    # Get balance of contract or address.
+    cursor = db.cursor()
+    balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (address, asset)))
+    cursor.close()
+    if not balances: return 0
+    else: return balances[0]['quantity']
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

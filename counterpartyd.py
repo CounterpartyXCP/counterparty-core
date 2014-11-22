@@ -28,6 +28,9 @@ if os.name == 'nt':
 
 D = decimal.Decimal
 
+class ConfigurationError (Exception):
+    pass
+
 def sigterm_handler(_signo, _stack_frame):
     if 'api_server' in globals():
         logging.info('Status: Stopping API server.')
