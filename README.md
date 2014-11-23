@@ -5,7 +5,6 @@
 `counterpartyd` is the reference implementation of the [Counterparty
 Protocol](https://github.com/CounterpartyXCP/Counterparty).
 
-
 # Dependencies
 * [Python 3](http://python.org)
 * [Python 3 packages](https://github.com/CounterpartyXCP/counterpartyd/blob/master/pip-requirements.txt)
@@ -20,22 +19,22 @@ requirements by executing something like:
 
 # Versioning
 * Major version changes require a full (automatic) rebuild of the database.
-* Minor version changes require a(n automatic) database reparse.
+* Minor version changes require an (automatic) database reparse.
 * Most protocol changes are retroactive on testnet.
-
 
 # Installation
 
 **NOTE: This section covers manual installation of counterpartyd. If you want more of
-an automated approach to counterpartyd installation for Windows and Linux, use
-the [build system](http://counterparty.io/docs/build-system/).**
+an automated approach to counterpartyd installation for Windows and Linux that is less
+error-prone, make use of the [build system](http://counterparty.io/docs/build-system/).**
 
 In order for counterpartyd to function, it must be able to communicate with a
-running instance of Bitcoin Core, which handles many Bitcoin‐specific matters
-on its behalf, including all wallet and private key management. For such
-interoperability, Bitcoin Core must be run with the following options: `-txindex=1`
-`-server=1`. This may require the setting of a JSON‐RPC password, which may be
-saved in Bitcoin Core’s configuration file.
+running instance of Bitcoin Core with jmcorgan addrindex patch, which handles many 
+Bitcoin‐specific matters on its behalf, including all wallet and private key management. 
+
+For such interoperability, Bitcoin Core must be run with the following options:
+`-txindex=1` `-server=1` `-addrindex=1`. This may require the setting of a 
+JSON‐RPC password, which may be saved in Bitcoin Core’s configuration file.
 
 counterpartyd needs to know at least the JSON‐RPC password of the Bitcoin Core
 with which it is supposed to communicate. The simplest way to set this is to
@@ -52,19 +51,20 @@ files are not the same. A Bitcoin Core configuration file looks like this:
 	testnet=1
 	txindex=1
 	server=1
+	addrindex=1
 
 However, a counterpartyd configuration file looks like this:
 
 	[Default]
 	backend-rpc-password=PASSWORD
 
-Note the change in hyphenation between `rpcpassword` and `rpc-password`.
+Note the change in hyphenation between `rpcpassword` (biticoind) and
+`rpc-password` (counterpartyd).
 
 If and only if counterpartyd is to be run on the Bitcoin testnet, with the
 `--testnet` CLI option, Bitcoin Core must be set to do the same (`-testnet=1`).
 counterpartyd may run with the `--testcoin` option on any blockchain,
 however.
-
 
 # Usage
 The command‐line syntax of counterpartyd is generally that of
@@ -79,7 +79,7 @@ For a summary of the command‐line arguments and options, see
 `./counterpartyd.py --help`.
 
 The test suite is invoked with `py.test` in the root directory of the repository.
-
+Currently it is not functional on Windows.
 
 ### Input and Output
 * Quantities of divisible assets are written to eight decimal places.
@@ -88,7 +88,6 @@ The test suite is invoked with `py.test` in the root directory of the repository
 values, fee multipliers, are represented internally as fractions, but printed
 to four decimal places. Call prices are stored as integers with six decimal
 places of precision.
-
 
 ### Example Usage
 The following examples are abridged for parsimony.
