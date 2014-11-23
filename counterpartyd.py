@@ -646,7 +646,7 @@ if __name__ == '__main__':
         logging.info('Status: Checking version.')
         try:
             util.version_check(bitcoin.get_block_count())
-        except exceptions.VersionUpdateRequiredError as e:
+        except util.VersionUpdateRequiredError as e:
             traceback.print_exc(file=sys.stdout)
             sys.exit(config.EXITCODE_UPDATE_REQUIRED)
 
