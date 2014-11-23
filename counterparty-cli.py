@@ -67,6 +67,135 @@ def get_lock():
     except socket.error:
         raise LockingError(error)
 
+def get_address (db, address):
+    address_dict = {}
+    address_dict['balances'] = util.api('get_balances', {'filters': [('address', '==', address),]})
+    address_dict['debits'] = util.api('get_debits', {'filters': [('address', '==', address),]})
+    address_dict['credits'] = util.api('get_credits', {'filters': [('address', '==', address),]})
+    address_dict['burns'] = util.api('get_burns', {'filters': [('source', '==', address),]})
+    address_dict['sends'] = util.api('get_sends', {'filters': [('source', '==', address), ('destination', '==', address)], 'filterop': 'or'})
+    address_dict['orders'] = util.api('get_orders', {'filters': [('source', '==', address),]})
+    address_dict['order_matches'] = util.api('get_order_matches', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
+    address_dict['btcpays'] = util.api('get_btcpays', {'filters': [('source', '==', address), ('destination', '==', address)], 'filterop': 'or'})
+    address_dict['issuances'] = util.api('get_issuances', {'filters': [('source', '==', address),]})
+    address_dict['broadcasts'] = util.api('get_broadcasts', {'filters': [('source', '==', address),]})
+    address_dict['bets'] = util.api('get_bets', {'filters': [('source', '==', address),]})
+    address_dict['bet_matches'] = util.api('get_bet_matches', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
+    address_dict['dividends'] = util.api('get_dividends', {'filters': [('source', '==', address),]})
+    address_dict['cancels'] = util.api('get_cancels', {'filters': [('source', '==', address),]})
+    address_dict['rps'] = util.api('get_rps', {'filters': [('source', '==', address),]})
+    address_dict['rps_matches'] = util.api('get_rps_matches', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
+    address_dict['callbacks'] = util.api('get_callbacks', {'filters': [('source', '==', address),]})
+    address_dict['bet_expirations'] = util.api('get_bet_expirations', {'filters': [('source', '==', address),]})
+    address_dict['order_expirations'] = util.api('get_order_expirations', {'filters': [('source', '==', address),]})
+    address_dict['rps_expirations'] = util.api('get_rps_expirations', {'filters': [('source', '==', address),]})
+    address_dict['bet_match_expirations'] = util.api('get_bet_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
+    address_dict['order_match_expirations'] = util.api('get_order_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
+    address_dict['rps_match_expirations'] = util.api('get_rps_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
+    return address_dict
+
+def format_order (order):
+    give_quantity = util.devise(db, D(order['give_quantity']), order['give_asset'], 'output')
+    get_quantity = util.devise(db, D(order['get_quantity']), order['get_asset'], 'output')
+    give_remaining = util.devise(db, D(order['give_remaining']), order['give_asset'], 'output')
+    get_remaining = util.devise(db, D(order['get_remaining']), order['get_asset'], 'output')
+    give_asset = order['give_asset']
+    get_asset = order['get_asset']
+
+    if get_asset < give_asset:
+        price = util.devise(db, D(order['get_quantity']) / D(order['give_quantity']), 'price', 'output')
+        price_assets = get_asset + '/' + give_asset + ' ask'
+    else:
+        price = util.devise(db, D(order['give_quantity']) / D(order['get_quantity']), 'price', 'output')
+        price_assets = give_asset + '/' + get_asset + ' bid'
+
+    return [D(give_remaining), give_asset, price, price_assets, str(order['fee_required'] / config.UNIT), str(order['fee_provided'] / config.UNIT), order['expire_index'] - util.last_block(db)['block_index'], order['tx_hash']]
+
+def format_bet (bet):
+    odds = D(bet['counterwager_quantity']) / D(bet['wager_quantity'])
+
+    if not bet['target_value']: target_value = None
+    else: target_value = bet['target_value']
+    if not bet['leverage']: leverage = None
+    else: leverage = util.devise(db, D(bet['leverage']) / 5040, 'leverage', 'output')
+
+    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], util.isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.devise(db, odds, 'odds', 'output'), bet['expire_index'] - util.last_block(db)['block_index'], bet['tx_hash']]
+
+def format_order_match (db, order_match):
+    order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']
+    order_match_time_left = order_match['match_expire_index'] - util.last_block(db)['block_index']
+    return [order_match_id, order_match_time_left]
+
+def format_feed (feed):
+    timestamp = util.isodt(feed['timestamp'])
+    if not feed['text']:
+        text = '<Locked>'
+    else:
+        text = feed['text']
+    return [feed['source'], timestamp, text, feed['value'], D(feed['fee_fraction_int']) / D(1e8)]
+
+def market (give_asset, get_asset):
+
+    # Your Pending Orders Matches.
+    addresses = []
+    for bunch in bitcoin.get_wallet():
+        addresses.append(bunch[:2][0])
+    filters = [
+        ('tx0_address', 'IN', addresses),
+        ('tx1_address', 'IN', addresses)
+    ]
+    awaiting_btcs = util.api('get_order_matches', {'filters': filters, 'filterop': 'OR', 'status': 'pending'})
+    table = PrettyTable(['Matched Order ID', 'Time Left'])
+    for order_match in awaiting_btcs:
+        order_match = format_order_match(db, order_match)
+        table.add_row(order_match)
+    print('Your Pending Order Matches')
+    print(table)
+    print('\n')
+
+    # Open orders.
+    orders = util.api('get_orders', {'status': 'open'})
+    table = PrettyTable(['Give Quantity', 'Give Asset', 'Price', 'Price Assets', 'Required {} Fee'.format(config.BTC), 'Provided {} Fee'.format(config.BTC), 'Time Left', 'Tx Hash'])
+    for order in orders:
+        if give_asset and order['give_asset'] != give_asset: continue
+        if get_asset and order['get_asset'] != get_asset: continue
+        order = format_order(order)
+        table.add_row(order)
+    print('Open Orders')
+    table = table.get_string(sortby='Price')
+    print(table)
+    print('\n')
+
+    # Open bets.
+    bets = util.api('get_bets', {'status': 'open'})
+    table = PrettyTable(['Bet Type', 'Feed Address', 'Deadline', 'Target Value', 'Leverage', 'Wager', 'Odds', 'Time Left', 'Tx Hash'])
+    for bet in bets:
+        bet = format_bet(bet)
+        table.add_row(bet)
+    print('Open Bets')
+    print(table)
+    print('\n')
+
+    # Feeds
+    broadcasts = util.api('get_broadcasts', {'status': 'valid', 'order_by': 'timestamp', 'order_dir': 'desc'})
+    table = PrettyTable(['Feed Address', 'Timestamp', 'Text', 'Value', 'Fee Fraction'])
+    seen_addresses = []
+    for broadcast in broadcasts:
+        # Only show feeds with broadcasts in the last two weeks.
+        last_block_time = util.last_block(db)['block_time']
+        if broadcast['timestamp'] + config.TWO_WEEKS < last_block_time:
+            continue
+        # Always show only the latest broadcast from a feed address.
+        if broadcast['source'] not in seen_addresses:
+            feed = format_feed(broadcast)
+            table.add_row(feed)
+            seen_addresses.append(broadcast['source'])
+        else:
+            continue
+    print('Feeds')
+    print(table)
+
+
 def cli(method, params, unsigned):
     # Get unsigned transaction serialisation.
 
@@ -408,6 +537,21 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     else:
         config.BROADCAST_TX_MAINNET = '{}'.format(config.BTC_CLIENT)
 
+def balances (address):
+    address = util.canonical_address(address)
+    util.validate_address(address, util.last_block(db)['block_index'])
+    address_data = get_address(db, address=address)
+    balances = address_data['balances']
+    table = PrettyTable(['Asset', 'Amount'])
+    btc_balance = bitcoin.get_btc_balance(address)
+    table.add_row([config.BTC, btc_balance])  # BTC
+    for balance in balances:
+        asset = balance['asset']
+        quantity = util.devise(db, balance['quantity'], balance['asset'], 'output')
+        table.add_row([asset, quantity])
+    print('Balances')
+    print(table.get_string())
+
 def generate_move_random_hash(move):
     move = int(move).to_bytes(2, byteorder='big')
     random = os.urandom(16)
@@ -458,9 +602,6 @@ if __name__ == '__main__':
     parser.add_argument('--rpc-allow-cors', action='store_true', default=True, help='Allow ajax cross domain request')
 
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
-
-    parser_server = subparsers.add_parser('server', help='run the server')
-    parser_server.add_argument('--force', action='store_true', help='skip backend check, version check, process lock')
 
     parser_send = subparsers.add_parser('send', help='create and broadcast a *send* message')
     parser_send.add_argument('--source', required=True, help='the source address')
@@ -572,16 +713,19 @@ if __name__ == '__main__':
     parser_execute.add_argument('--payload-hex', required=True, type=str, help='data to be provided to the contract (returned by `serpent encode_datalist`)')
     parser_execute.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
-    parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database')
-    parser_reparse.add_argument('--force', action='store_true', help='skip backend check, version check, process lock')
+    parser_address = subparsers.add_parser('balances', help='display the balances of a {} address'.format(config.XCP_NAME))
+    parser_address.add_argument('address', help='the address you are interested in')
 
-    parser_rollback = subparsers.add_parser('rollback', help='rollback database')
-    parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
-    parser_rollback.add_argument('--force', action='store_true', help='skip backend check, version check, process lock')
+    parser_asset = subparsers.add_parser('asset', help='display the basic properties of a {} asset'.format(config.XCP_NAME))
+    parser_asset.add_argument('asset', help='the asset you are interested in')
 
-    parser_kickstart = subparsers.add_parser('kickstart', help='rapidly bring database up to the present')
-    parser_kickstart.add_argument('--bitcoind-dir', help='Bitcoin Core data directory')
-    parser_kickstart.add_argument('--force', action='store_true', help='skip backend check, version check, singleton check')
+    parser_wallet = subparsers.add_parser('wallet', help='list the addresses in your backend wallet along with their balances in all {} assets'.format(config.XCP_NAME))
+
+    parser_pending= subparsers.add_parser('pending', help='list pending order matches awaiting {}payment from you'.format(config.BTC))
+
+    parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the {} market'.format(config.XCP_NAME) )
+    parser_market.add_argument('--give-asset', help='only show orders offering to sell GIVE_ASSET')
+    parser_market.add_argument('--get-asset', help='only show orders offering to buy GET_ASSET')
 
     args = parser.parse_args()
 
@@ -639,21 +783,6 @@ if __name__ == '__main__':
     urllib3_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
     urllib3_log.propagate = False
 
-
-    # Version
-    logging.info('Status: Running v{} of counterpartyd.'.format(config.VERSION_STRING, config.XCP_CLIENT))
-    if args.action in ('server', 'reparse', 'rollback') and not config.FORCE:
-        logging.info('Status: Checking version.')
-        try:
-            util.version_check(bitcoin.get_block_count())
-        except exceptions.VersionUpdateRequiredError as e:
-            traceback.print_exc(file=sys.stdout)
-            sys.exit(config.EXITCODE_UPDATE_REQUIRED)
-
-    # Lock
-    if args.action in ('rollback', 'reparse', 'server', 'kickstart') and not config.FORCE:
-        logging.info('Status: Acquiring lock.')
-        get_lock()
 
     # Database
     logging.info('Status: Connecting to database.')
@@ -902,6 +1031,87 @@ if __name__ == '__main__':
                                'op_return_value': args.op_return_value},
             args.unsigned)
 
+    # VIEWING (temporary)
+    elif args.action == 'balances':
+        balances(args.address)
+
+    elif args.action == 'asset':
+        results = util.api('get_asset_info', {'assets': [args.asset]})
+        if results:
+            results = results[0]    # HACK
+        else:
+            print('Asset ‘{}’ not found.'.format(args.asset))
+            exit(0)
+
+        asset_id = util.get_asset_id(args.asset)
+        divisible = results['divisible']
+        locked = results['locked']
+        supply = util.devise(db, results['supply'], args.asset, dest='output')
+        call_date = util.isodt(results['call_date']) if results['call_date'] else results['call_date']
+        call_price = str(results['call_price']) + ' XCP' if results['call_price'] else results['call_price']
+
+        print('Asset Name:', args.asset)
+        print('Asset ID:', asset_id)
+        print('Divisible:', divisible)
+        print('Locked:', locked)
+        print('Supply:', supply)
+        print('Issuer:', results['issuer'])
+        print('Callable:', results['callable'])
+        print('Call Date:', call_date)
+        print('Call Price:', call_price)
+        print('Description:', '‘' + results['description'] + '’')
+
+        if args.asset != config.BTC:
+            print('Shareholders:')
+            balances = util.api('get_balances', {'filters': [('asset', '==', args.asset)]})
+            print('\taddress, quantity, escrow')
+            for holder in util.holders(db, args.asset):
+                quantity = holder['address_quantity']
+                if not quantity: continue
+                quantity = util.devise(db, quantity, args.asset, 'output')
+                if holder['escrow']: escrow = holder['escrow']
+                else: escrow = 'None'
+                print('\t' + str(holder['address']) + ',' + str(quantity) + ',' + escrow)
+
+
+    elif args.action == 'wallet':
+        total_table = PrettyTable(['Asset', 'Balance'])
+        totals = {}
+
+        print()
+        for bunch in bitcoin.get_wallet():
+            address, btc_balance = bunch[:2]
+            address_data = get_address(db, address=address)
+            balances = address_data['balances']
+            table = PrettyTable(['Asset', 'Balance'])
+            empty = True
+            if btc_balance:
+                table.add_row([config.BTC, btc_balance])  # BTC
+                if config.BTC in totals.keys(): totals[config.BTC] += btc_balance
+                else: totals[config.BTC] = btc_balance
+                empty = False
+            for balance in balances:
+                asset = balance['asset']
+                try:
+                    balance = D(util.devise(db, balance['quantity'], balance['asset'], 'output'))
+                except:
+                    balance = None
+                if balance:
+                    if asset in totals.keys(): totals[asset] += balance
+                    else: totals[asset] = balance
+                    table.add_row([asset, balance])
+                    empty = False
+            if not empty:
+                print(address)
+                print(table.get_string())
+                print()
+        for asset in totals.keys():
+            balance = totals[asset]
+            total_table.add_row([asset, round(balance, 8)])
+        print('TOTAL')
+        print(total_table.get_string())
+        print()
+
     elif args.action == 'pending':
         addresses = []
         for bunch in bitcoin.get_wallet():
@@ -919,47 +1129,6 @@ if __name__ == '__main__':
 
     elif args.action == 'market':
         market(args.give_asset, args.get_asset)
-
-
-    # PARSING
-    elif args.action == 'reparse':
-        blocks.reparse(db)
-
-    elif args.action == 'rollback':
-        blocks.reparse(db, block_index=args.block_index)
-
-    elif args.action == 'kickstart':
-
-        blocks.kickstart(db, bitcoind_dir=args.bitcoind_dir)
-
-    elif args.action == 'server':
-        api_status_poller = api.APIStatusPoller()
-        api_status_poller.daemon = True
-        api_status_poller.start()
-
-        api_server = api.APIServer()
-        api_server.daemon = True
-        api_server.start()
-
-        # Check blockchain explorer.
-        if not config.FORCE:
-            time_wait = 10
-            num_tries = 10
-            for i in range(1, num_tries + 1):
-                try:
-                    blockchain.check()
-                except Exception as e: # TODO
-                    logging.exception(e)
-                    logging.warn("Blockchain backend (%s) not yet initialized. Waiting %i seconds and trying again (try %i of %i)..." % (
-                        config.BLOCKCHAIN_SERVICE_NAME, time_wait, i, num_tries))
-                    time.sleep(time_wait)
-                else:
-                    break
-            else:
-                raise Exception("Blockchain backend (%s) not initialized! Aborting startup after %i tries." % (
-                    config.BLOCKCHAIN_SERVICE_NAME, num_tries))
-
-        blocks.follow(db)
 
     else:
         parser.print_help()
