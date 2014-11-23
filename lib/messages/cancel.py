@@ -21,9 +21,9 @@ def validate (db, source, offer_hash):
     cursor = db.cursor()
     cursor.execute('''SELECT * from orders WHERE tx_hash = ?''', (offer_hash,))
     orders = list(cursor)
-    cursor.execute('''SELECT * from orders WHERE tx_hash = ?''', (offer_hash,))
+    cursor.execute('''SELECT * from bets WHERE tx_hash = ?''', (offer_hash,))
     bets = list(cursor)
-    cursor.execute('''SELECT * from orders WHERE tx_hash = ?''', (offer_hash,))
+    cursor.execute('''SELECT * from rps WHERE tx_hash = ?''', (offer_hash,))
     rps = list(cursor)
     cursor.close()
 
