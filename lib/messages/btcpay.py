@@ -2,6 +2,7 @@
 
 import binascii
 import struct
+import logging
 
 from lib import (config, exceptions, bitcoin, util)
 
@@ -65,9 +66,9 @@ def compose (db, source, order_match_id):
     # Warn if down to the wire.
     time_left = order_match['match_expire_index'] - util.last_block(db)['block_index']
     if time_left < 4:
-        print('WARNING: Only {} blocks until that order match expires. The payment might not make into the blockchain in time.'.format(time_left))
+        logging.warning('WARNING: Only {} blocks until that order match expires. The payment might not make into the blockchain in time.'.format(time_left))
     if 10 - time_left < 4:
-        print('WARNING: Order match has only {} confirmation(s).'.format(10 - time_left))
+        logging.warning('WARNING: Order match has only {} confirmation(s).'.format(10 - time_left))
 
     tx0_hash_bytes, tx1_hash_bytes = binascii.unhexlify(bytes(tx0_hash, 'utf-8')), binascii.unhexlify(bytes(tx1_hash, 'utf-8'))
     data = struct.pack(config.TXTYPE_FORMAT, ID)
