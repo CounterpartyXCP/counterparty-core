@@ -27,6 +27,7 @@ Forward Quantity: 50000000
 Backward Quantity: 100000000
 Tx0 fee provided remaining: 0.01; required fee: 0.00857142
 Order Match: 0.5 BTC for 1.0 XCP (49419de600dbee1e2d5e379eb4a37739ee3360d506522bbf728a632d06ece726c740728c908e01df094c434fb58b6426d8359220e404edf24c6f6fd41971f6b6) [pending]
+WARNING: Order match has only -10 confirmation(s).
 Sorted UTXOs: ['amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6', 'amount: 1.0; txid: 9d34af75fca5282eb97f1aba6cf0f23e78556e6fc04a16e013351d841093d539; vout: 0; confirmations: 6']
 New input: amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6
 Change quantity: 0.499744 BTC
@@ -57,6 +58,7 @@ Change quantity: 0.999744 BTC
 Debit: 526 BBBC from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #send# <b795e3ab2bd81721dfbbe7a9f447c0a5e53c3c7be71dc70af81d9e7275e7981c>
 Credit: 526 BBBC to 1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #send# <b795e3ab2bd81721dfbbe7a9f447c0a5e53c3c7be71dc70af81d9e7275e7981c>
 Send: 526 BBBC from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 to 1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (b795e3ab2bd81721dfbbe7a9f447c0a5e53c3c7be71dc70af81d9e7275e7981c) [valid]
+Total quantity to be distributed in dividends: 0.00000024 XCP
 Sorted UTXOs: ['amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6', 'amount: 1.0; txid: 9d34af75fca5282eb97f1aba6cf0f23e78556e6fc04a16e013351d841093d539; vout: 0; confirmations: 6']
 New input: amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6
 Change quantity: 0.999822 BTC
@@ -64,6 +66,7 @@ Debit: 0.00000024 XCP from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2M
 Debit: 0.0002 XCP from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #dividend fee# <5e765a39789ee88094f2b3095ec82071573d8adbe30dee17eb203fe8a457c2bb>
 Credit: 0.00000024 XCP to 1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #dividend# <5e765a39789ee88094f2b3095ec82071573d8adbe30dee17eb203fe8a457c2bb>
 Dividend: 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 paid 0.000006 XCP per unit of BBBB (5e765a39789ee88094f2b3095ec82071573d8adbe30dee17eb203fe8a457c2bb) [valid]
+Total quantity to be distributed in dividends: 0.004208 XCP
 Sorted UTXOs: ['amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6', 'amount: 1.0; txid: 9d34af75fca5282eb97f1aba6cf0f23e78556e6fc04a16e013351d841093d539; vout: 0; confirmations: 6']
 New input: amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6
 Change quantity: 0.999822 BTC
@@ -177,6 +180,7 @@ Expired bet: 371fb5a75bceada50b4ca39fc2dbdf118627bf3a7f4b40202bc451779d29b49d
 Debit: 10000 BBBC from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #send# <4a0a3e55fb4e960b5f3e110953e18b1de14585621b38e609ee7814efb4cf70f6>
 Credit: 10000 BBBC to 1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #send# <4a0a3e55fb4e960b5f3e110953e18b1de14585621b38e609ee7814efb4cf70f6>
 Send: 10000 BBBC from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 to 1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (4a0a3e55fb4e960b5f3e110953e18b1de14585621b38e609ee7814efb4cf70f6) [valid]
+Total quantity to be called back: 3157 BBBC
 Sorted UTXOs: ['amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6', 'amount: 1.0; txid: 9d34af75fca5282eb97f1aba6cf0f23e78556e6fc04a16e013351d841093d539; vout: 0; confirmations: 6']
 New input: amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6
 Change quantity: 0.999822 BTC
