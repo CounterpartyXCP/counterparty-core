@@ -24,8 +24,7 @@ from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, 
 from .blockchain.blocks_parser import BlockchainParser, ChainstateParser
 from .blockchain.utils import ib2h
 
-class DecodeError(Exception):
-    pass
+from .exceptions import DecodeError
 
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['credits', 'debits', 'messages'] + \
