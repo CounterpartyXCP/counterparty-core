@@ -569,14 +569,14 @@ UNITTEST_VECTOR = {
             'in': ('A{}'.format(26**12), 308000),
             'error': ('AssetNameError', 'numeric asset name not in range')
         }, {
-            'in': ('A{}'.format(256**8 + 1), 308000),
+            'in': ('A{}'.format(2**64), 308000),
             'error': ('AssetNameError', 'numeric asset name not in range')
         }, {
             'in': ('A{}'.format(26**12 + 1), 308000),
             'out': 26**12 + 1
         }, {
-            'in': ('A{}'.format(256**8), 308000),
-            'out': 256**8
+            'in': ('A{}'.format(2**64 - 1), 308000),
+            'out': 2**64 - 1
         }, {
             'in': ('LONGASSETNAMES', 308000),
             'error': ('AssetNameError', 'long asset names must be numeric')
@@ -597,8 +597,8 @@ UNITTEST_VECTOR = {
             'in': (26**3, 308000),
             'out': 'BAAA'
         }, {
-            'in': (256**8, 308000),
-            'out': 'A{}'.format(256**8)
+            'in': (2**64 - 1, 308000),
+            'out': 'A{}'.format(2**64 - 1)
         }, {
             'in': (26**12 + 1, 308000),
             'out': 'A{}'.format(26**12 + 1)
@@ -606,7 +606,7 @@ UNITTEST_VECTOR = {
             'in': (26**3 - 1, 308000),
             'error': ('AssetIDError', 'too low')
         }, {
-            'in': (256**8 + 1, 308000),
+            'in': (2**64, 308000),
             'error': ('AssetIDError', 'too high')
         }]
     }
