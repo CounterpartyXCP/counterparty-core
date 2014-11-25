@@ -20,6 +20,7 @@ import getpass
 import bitcoin as bitcoinlib
 
 from . import (config, exceptions)
+from .exceptions import DecodeError
 
 D = decimal.Decimal
 b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
