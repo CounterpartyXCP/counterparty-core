@@ -598,7 +598,7 @@ def debit (db, block_index, address, asset, quantity, action=None, event=None):
     debit_cursor = db.cursor()
 
     # Contracts can only hold XCP balances.
-    if protocol_change(block_index, 333000, config.BLOCK_FIRST_TESTNET): # Protocol change.
+    if protocol_change(block_index, 333000): # Protocol change.
         if len(address) == 40:
             assert asset == config.XCP
 
@@ -653,7 +653,7 @@ def credit (db, block_index, address, asset, quantity, action=None, event=None):
     credit_cursor = db.cursor()
 
     # Contracts can only hold XCP balances.
-    if protocol_change(block_index, 333000, config.BLOCK_FIRST_TESTNET): # Protocol change.
+    if protocol_change(block_index, 333000): # Protocol change.
         if len(address) == 40:
             assert asset == config.XCP
 
@@ -806,7 +806,7 @@ def holders(db, asset):
             holders.append({'address': rps_match['tx0_address'], 'address_quantity': rps_match['wager'], 'escrow': rps_match['id']})
             holders.append({'address': rps_match['tx1_address'], 'address_quantity': rps_match['wager'], 'escrow': rps_match['id']})
 
-        cursor.execute('''SELECT * FROM executions''')
+        cursor.execute('''SELECT * FROM executions WHERE status = ?''', ('valid',))
         for execution in list(cursor):
             holders.append({'address': execution['source'], 'address_quantity': execution['gas_cost'], 'escrow': None})
 
@@ -1093,24 +1093,21 @@ def get_cached_raw_transaction(tx_hash):
 ### Backend RPC ###
 
 ### Protocol Changes ###
-def protocol_change(block_index, mainnet, testnet):
-    if config.TESTNET:
-        if testnet and block_index >= testnet:
-            return True
-        else:
-            return False
+def protocol_change(block_index, block_first):
+    if config.TESTNET: 
+        return True # always retroactive on testnet
     else:   # mainnet
-        if mainnet and block_index >= mainnet:
+        if block_index >= block_first:
             return True
         else:
             return False
     return False
 
 def asset_names_v2_enabled(block_index):
-    return protocol_change(block_index, 333000, 307400)
-FIRST_MULTISIG_BLOCK_TESTNET = 303000
+    return protocol_change(block_index, 333000)
+
 def multisig_enabled(block_index):
-    return protocol_change(block_index, 333000, FIRST_MULTISIG_BLOCK_TESTNET)
+    return protocol_change(block_index, 333000)
 
 ### Unconfirmed Transactions ###
 

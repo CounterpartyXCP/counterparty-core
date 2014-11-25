@@ -32,5 +32,7 @@ class UnpackError (MessageError):
     pass
 class ValidateError(MessageError):
     pass
+class DecodeError(MessageError):
+    pass
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

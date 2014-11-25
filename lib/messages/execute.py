@@ -62,8 +62,8 @@ def parse (db, tx, message):
     if not config.TESTNET:  # TODO
         return
 
-    output = None
     status = 'valid'
+    output, gas_cost, gas_remained = None, None, None
 
     try:
         # TODO: Use unpack function.
@@ -71,6 +71,8 @@ def parse (db, tx, message):
         curr_format = FORMAT + '{}s'.format(len(message) - LENGTH)
         try:
             contract_id, gasprice, startgas, value, payload = struct.unpack(curr_format, message)
+            if gasprice > config.MAX_INT or startgas > config.MAX_INT: # TODO: define max for gasprice and startgas
+                raise exceptions.UnpackError()
         except (struct.error) as e:
             raise exceptions.UnpackError()
 
@@ -84,6 +86,7 @@ def parse (db, tx, message):
         tx_obj = Transaction(tx, contract_id, gasprice, startgas, value, payload)
         block_obj = blocks.Block(db, tx['block_hash'])
         success, output, gas_remained = processblock.apply_transaction(db, tx_obj, block_obj)
+        gas_cost = gasprice * (startgas - gas_remained) # different definition from pyethereum’s
 
     except exceptions.UnpackError as e:
         contract_id, gasprice, startgas, value, payload = None, None, None, None, None
@@ -121,7 +124,7 @@ def parse (db, tx, message):
             'contract_id': contract_id,
             'gasprice': gasprice,
             'startgas': startgas,
-            'gas_cost': gasprice * (startgas - gas_remained),
+            'gas_cost': gas_cost,
             'gas_remained': gas_remained,
             'value': value,
             'payload': payload,
