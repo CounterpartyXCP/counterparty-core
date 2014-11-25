@@ -231,6 +231,15 @@ UNITTEST_VECTOR = {
         }, {
             'in': (ADDR[0], None, 'MAXIMUM', 2**63-1, True, False, None, None, 'Maximum quantity'),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x14\x00\x00\x00\x00\xdd\x96\xd2t\x7f\xff\xff\xff\xff\xff\xff\xff\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x10Maximum quantity')
+        }, {
+            'in': (ADDR[0], None, 'A{}'.format(2**64 - 1), 1000, None, None, None, None, None),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x14\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+        }, {
+            'in': (ADDR[0], None, 'A{}'.format(2**64), 1000, True, False, None, None, ''),
+            'error': ('AssetNameError', 'numeric asset name not in range')
+        }, {
+            'in': (ADDR[0], None, 'A{}'.format(26**12), 1000, True, False, None, None, ''),
+            'error': ('AssetNameError', 'numeric asset name not in range')
         }],
         'parse': [{
             'in': ({'supported': 1, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'data': b'\x00\x00\x00\x14\x00\x00\x00\x00\x00\xbaOs\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 'btc_amount': None, 'destination': None, 'block_time': 1554090000000, 'block_index': DP['default_block'], 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'fee': 10000, 'tx_index': 502, 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8'},),
@@ -268,6 +277,13 @@ UNITTEST_VECTOR = {
                 {'table': 'issuances', 'values': {'issuer': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'call_price': 0.0, 'transfer': 0, 'call_date': 0, 'divisible': 1, 'description': 'Maximum quantity', 'asset': 'MAXIMUM', 'tx_index': 502, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_index': DP['default_block'], 'quantity': 9223372036854775807, 'status': 'valid', 'callable': 0, 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace', 'fee_paid': 50000000, 'locked': 0}},
                 {'table': 'credits', 'values': {'asset': 'MAXIMUM', 'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_index': DP['default_block'], 'quantity': 9223372036854775807, 'event': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace', 'calling_function': 'issuance'}},
                 {'table': 'debits', 'values': {'asset': 'XCP', 'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_index': DP['default_block'], 'action': 'issuance fee', 'quantity': 50000000, 'event': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}}
+            ]
+        }, {
+            'in': ({'data': b'\x00\x00\x00\x14\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 'tx_index': 502, 'tx_hash': '4188c1f7aaae56ce3097ef256cdbcb644dd43c84e237b4add4f24fd4848cb2c7', 'destination': '', 'fee': 10000, 'btc_amount': 0, 'block_time': 2815010000000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': 281501, 'block_hash': '8e80b430efbe3e1b7cc13d7ec51c1e47a16b0fa23d6dd3c939fb6c4d4cfa311e1f25072500f5f9872373b54c72424b3557fccd68915d00c0afb6523702e11b6a'},),
+            'records': [
+                {'table': 'issuances', 'values': {'transfer': 0, 'tx_hash': '4188c1f7aaae56ce3097ef256cdbcb644dd43c84e237b4add4f24fd4848cb2c7', 'divisible': 1, 'status': 'valid', 'asset': 'A18446744073709551615', 'description': '', 'call_date': 0, 'tx_index': 502, 'call_price': 0.0, 'callable': 0, 'issuer': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'fee_paid': 0, 'locked': 0, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_index': 281501, 'quantity': 1000}},
+                {'table': 'credits', 'values': {'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'asset': 'A18446744073709551615', 'event': '4188c1f7aaae56ce3097ef256cdbcb644dd43c84e237b4add4f24fd4848cb2c7', 'block_index': 281501, 'quantity': 1000, 'calling_function': 'issuance'}},
+                {'table': 'debits', 'values': {'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'action': 'issuance fee', 'asset': 'XCP', 'event': '4188c1f7aaae56ce3097ef256cdbcb644dd43c84e237b4add4f24fd4848cb2c7', 'block_index': 281501, 'quantity': 0}}
             ]
         }]
     },
@@ -500,6 +516,10 @@ UNITTEST_VECTOR = {
             'comment': 'dividend',
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x002\x00\x00\x00\x00\x00\x00\x00\x01\x00\x06\xca\xd8\xdc\x7f\x0bf\x00\x00\x00\x00\x00\x00\x00\x01'), {'encoding': 'multisig'}),
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e0000000000006951210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0215a415bf04af834423d3dd7ad96dc727a030865759f9fbc9036a64c1197e58754da21540fb2673b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe724e88ec81d53ae8c19ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+        }, {
+            'comment': 'free issuance',
+            'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x14\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'), {'encoding': 'multisig'}),
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e0000000000006951210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b02159415bf04af834423d3dd7adb0238d85fcf79a8a619fba5aee7a331919e48754da21540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe724e88ec81d53ae8c19ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }],
     },
     'util': {
@@ -546,6 +566,9 @@ UNITTEST_VECTOR = {
         }, {
             'in': ('create_issuance', {'source': ADDR[0], 'transfer_destination': MULTISIGADDR[0], 'asset': 'DIVISIBLE', 'quantity': 0, 'divisible': True, 'callable': False, 'call_date': None, 'call_price': None, 'description': ''}),
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03781e0000000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae781e0000000000006951210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b02159415bf04af834423d3dd7adb0dc727aa153863ef89fba5aee7a331af1e48754da21540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe724e88ec81d53ae14fbe90b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+        }, {
+            'in': ('create_issuance', {'source': ADDR[0], 'asset': 'A{}'.format(2**64 - 1), 'quantity': 1000}),
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e0000000000006951210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b02159415bf04af834423d3dd7adb0238d85fcf79a8a619fba5aee7a331919e48754da21540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe724e88ec81d53ae8c19ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }, {
             'in': ('create_order', {'source': MULTISIGADDR[0], 'give_asset': 'BTC', 'give_quantity': DP['small'], 'get_asset': 'XCP', 'get_quantity': DP['small'] * 2, 'expiration': DP['expiration'], 'fee_required': 0, 'fee_provided': DP['fee_provided']}),
             'out': '0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff02781e0000000000006951210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0211ecaf7ca87f0fd78a01d9a0d62221e55beef3722db8be72d254adc40426108bc1421528340c37d005aa9e764ded8c038ffa94625307a450077125d580099b5c8255d0e53ae4880e605000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000'
