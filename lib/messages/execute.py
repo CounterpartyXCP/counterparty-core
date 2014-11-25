@@ -17,8 +17,6 @@ def compose (db, source, contract_id, gasprice, startgas, value, payload_hex):
     if not config.TESTNET:  # TODO
         return
 
-    block = blocks.Block(db, util.last_block(db)['block_hash'])
-    code = block.get_code(contract_id)
     payload = binascii.unhexlify(payload_hex)
 
     if startgas < 0:
@@ -38,6 +36,7 @@ class Transaction(object):
         assert type(data) == bytes
         self.block_index = tx['block_index']
         self.tx_hash = tx['tx_hash']
+        self.tx_index = tx['tx_index']
         self.sender = tx['source']
         self.data = data 
         self.to = to

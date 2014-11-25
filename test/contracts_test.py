@@ -47,6 +47,7 @@ counterpartyd.set_options(rpc_port=9999, data_dir=tempfile.gettempdir(), databas
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 
 TIMESTAMP = 1410973349
+tx_index = 1
 
 class serpent(object):
     def compile(code):
@@ -131,16 +132,20 @@ class tester(object):
             return tester.state.evm(self, evmcode, endowment=endowment, sender=sender)
 
         def do_send (self, sender, to, value, data=[]):
+            global tx_index
 
             if not sender:
                 sender = util.contract_sha3('foo'.encode('utf-8'))
 
+            print("TO: {}".format(to))
             # Construct `tx`.
             tx = { 'source': sender,
                    'block_index': 0,
-                   'tx_hash': to, 
-                   'block_time': TIMESTAMP
+                   'tx_hash': '{}{}'.format(to, tx_index),
+                   'block_time': TIMESTAMP,
+                   'tx_index': tx_index
                  }
+            tx_index += 1
             tx_obj = execute.Transaction(tx, to, 1, tester.gas_limit, value, data)
 
             # Force block init.
