@@ -137,7 +137,6 @@ class tester(object):
             if not sender:
                 sender = util.contract_sha3('foo'.encode('utf-8'))
 
-            print("TO: {}".format(to))
             # Construct `tx`.
             tx = { 'source': sender,
                    'block_index': 0,
