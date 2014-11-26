@@ -467,6 +467,7 @@ def apply_op(db, block, tx, msg, processed_code, compustate):
         asset_name = util.asset_name(asset_id)
         stk.append(block.get_balance(addr, asset=asset_name))
     elif op == 'SEND':
+        # TODO: You can’t send BTC to a contract address.
         addr, quantity, asset_id = stk.pop(), stk.pop(), stk.pop()
         asset_name = util.asset_name(asset_id)
         # TODO: Check balance first.
