@@ -1297,14 +1297,17 @@ def reparse (db, block_index=None, quiet=False):
 
 def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     # Get the important details about each transaction.
-    tx_hex = bitcoin.get_raw_transaction(tx_hash, verbose=0)
+    tx = util.get_cached_raw_transaction(tx_hash)
     logging.debug('Status: examining transaction {}.'.format(tx_hash))
-    source, destination, btc_amount, fee, data = get_tx_info(tx_hex, block_index)
+    source, destination, btc_amount, fee, data = get_tx_info(tx['hex'], block_index)
 
     # For mempool
     if block_hash == None:
         block_hash = config.MEMPOOL_BLOCK_HASH
         block_index = config.MEMPOOL_BLOCK_INDEX
+        util.update_unconfirmed_addrindex(tx)
+    else:
+        util.clean_unconfirmed_addrindex(tx)
 
     if source and (data or destination == config.UNSPENDABLE):
         cursor = db.cursor()
@@ -1331,10 +1334,11 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
                              data)
                       )
         cursor.close()
+        return tx_index + 1
     else:
         logging.debug('Skipping: ' + tx_hash)
 
-    return
+    return tx_index
 
 def kickstart(db, bitcoind_dir):
     if bitcoind_dir is None:
@@ -1550,8 +1554,7 @@ def follow (db):
 
                 # List the transactions in the block.
                 for tx_hash in txhash_list:
-                    list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index)
-                    tx_index += 1
+                    tx_index = list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index)
 
                 # Parse the transactions in the block.
                 parse_block(db, block_index, block_time)
@@ -1617,8 +1620,7 @@ def follow (db):
 
                             # List transaction.
                             try:    # Sometimes the transactions can’t be found: `{'code': -5, 'message': 'No information available about transaction'} Is txindex enabled in Bitcoind?`
-                                list_tx(db, None, block_index, curr_time, tx_hash, mempool_tx_index)
-                                mempool_tx_index += 1
+                                mempool_tx_index = list_tx(db, None, block_index, curr_time, tx_hash, mempool_tx_index)
                             except exceptions.BitcoindError:
                                 raise MempoolError
 
