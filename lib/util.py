@@ -1112,6 +1112,9 @@ def multisig_enabled(block_index):
 
 ### Unconfirmed Transactions ###
 
+# cache
+UNCONFIRMED_ADDRINDEX = {}
+
 # TODO: use scriptpubkey_to_address()
 @lru_cache(maxsize=4096)
 def extract_addresses(tx):
@@ -1130,14 +1133,31 @@ def extract_addresses(tx):
 
     return addresses
 
-def unconfirmed_transactions(address):
-    transactions = []
-    for tx_hash in MEMPOOL:
-        tx = get_cached_raw_transaction(tx_hash)
-        if address in extract_addresses(json.dumps(tx)):
-            transactions.append(tx)
-    return transactions
+def update_unconfirmed_addrindex(tx):
+    addresses = extract_addresses(json.dumps(tx))
+    for address in addresses:
+        if address not in UNCONFIRMED_ADDRINDEX:
+            UNCONFIRMED_ADDRINDEX[address] = {}
+        UNCONFIRMED_ADDRINDEX[address][tx['txid']] = tx
 
+def clean_unconfirmed_addrindex(tx):
+    empties = []
+    for address in UNCONFIRMED_ADDRINDEX:
+        if tx['txid'] in UNCONFIRMED_ADDRINDEX[address]:
+            UNCONFIRMED_ADDRINDEX[address].pop(tx['txid'])
+            if len(UNCONFIRMED_ADDRINDEX[address]) == 0:
+                empties.append(address)
+    for address in empties:
+        UNCONFIRMED_ADDRINDEX.pop(address)
+
+def unconfirmed_transactions(address):
+    if address in UNCONFIRMED_ADDRINDEX:
+        txlist = []
+        for txid in UNCONFIRMED_ADDRINDEX[address]:
+            txlist.append(UNCONFIRMED_ADDRINDEX[address][txid])
+        return txlist
+    else:
+        return []
 
 ### Script ####
 
