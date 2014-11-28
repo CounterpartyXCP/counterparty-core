@@ -1141,21 +1141,15 @@ def update_unconfirmed_addrindex(tx):
         UNCONFIRMED_ADDRINDEX[address][tx['txid']] = tx
 
 def clean_unconfirmed_addrindex(tx):
-    empties = []
-    for address in UNCONFIRMED_ADDRINDEX:
+    for address in list(UNCONFIRMED_ADDRINDEX.keys()):
         if tx['txid'] in UNCONFIRMED_ADDRINDEX[address]:
             UNCONFIRMED_ADDRINDEX[address].pop(tx['txid'])
             if len(UNCONFIRMED_ADDRINDEX[address]) == 0:
-                empties.append(address)
-    for address in empties:
-        UNCONFIRMED_ADDRINDEX.pop(address)
+                UNCONFIRMED_ADDRINDEX.pop(address)
 
 def unconfirmed_transactions(address):
     if address in UNCONFIRMED_ADDRINDEX:
-        txlist = []
-        for txid in UNCONFIRMED_ADDRINDEX[address]:
-            txlist.append(UNCONFIRMED_ADDRINDEX[address][txid])
-        return txlist
+        return list(UNCONFIRMED_ADDRINDEX[address].values())
     else:
         return []
 
