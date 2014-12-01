@@ -1,6 +1,4 @@
 ## Client Versions ##
-* v9.48.0 (???)
-	* multi‐signature address support (protocol change: ???)
 * v9.47.0 (2014-12-01)
 	* numeric asset names (protocol change: 333500)
 	* kickstart functionality
