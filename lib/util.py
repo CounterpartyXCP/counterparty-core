@@ -599,7 +599,7 @@ def debit (db, block_index, address, asset, quantity, action=None, event=None):
     debit_cursor = db.cursor()
 
     # Contracts can only hold XCP balances.
-    if protocol_change(block_index, 333000): # Protocol change.
+    if protocol_change(block_index, 333500): # Protocol change.
         if len(address) == 40:
             assert asset == config.XCP
 
@@ -654,7 +654,7 @@ def credit (db, block_index, address, asset, quantity, action=None, event=None):
     credit_cursor = db.cursor()
 
     # Contracts can only hold XCP balances.
-    if protocol_change(block_index, 333000): # Protocol change.
+    if protocol_change(block_index, 333500): # Protocol change.
         if len(address) == 40:
             assert asset == config.XCP
 
@@ -1105,10 +1105,11 @@ def protocol_change(block_index, block_first):
     return False
 
 def asset_names_v2_enabled(block_index):
-    return protocol_change(block_index, 333000)
+    return protocol_change(block_index, 333500)
 
 def multisig_enabled(block_index):
-    return protocol_change(block_index, 333000)
+    return False
+    # TODO: return protocol_change(block_index, )
 
 ### Unconfirmed Transactions ###
 
