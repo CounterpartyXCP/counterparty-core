@@ -12,7 +12,7 @@ import math
 import fractions
 
 from lib import (util, config)
-from lib.scriptlib import (rlp, utils, opcodes, blocks)
+from lib.messages.scriptlib import (rlp, utils, opcodes, blocks)
 
 class PBLogger(object):
     def log(self, name, **kargs):
@@ -279,8 +279,8 @@ def apply_msg(db, block, tx, msg, code):
                                 state=block.account_to_dict(msg.to))
 
                     if o == OUT_OF_GAS:
+                        block.revert()
                         raise OutOfGas
-                        block.revert(snapshot)
                     else:
                         return 1, compustate.gas, o
 
@@ -310,8 +310,8 @@ def create_contract(db, block, tx, msg):
     res, gas, dat = apply_msg(db, block, tx, msg, msg.data)
     if res:
         cursor = db.cursor()
-        bindings = {'contract_id': msg.to, 'tx_index': None, 'tx_hash': None, 'block_index': 0, 'source': None, 'code': bytes(dat), 'nonce': 0}
-        sql='insert into contracts values(:contract_id, :tx_index, :tx_hash, :block_index, :source, :code, :nonce)'
+        bindings = {'contract_id': msg.to, 'tx_index': tx.tx_index, 'tx_hash': tx.tx_hash, 'block_index': block.number, 'source': tx.sender, 'code': bytes(dat), 'nonce': nonce}
+        sql = '''INSERT INTO contracts VALUES (:contract_id, :tx_index, :tx_hash, :block_index, :source, :code, :nonce)'''
         cursor.execute(sql, bindings)
         return msg.to, gas, dat
     else:
@@ -467,6 +467,7 @@ def apply_op(db, block, tx, msg, processed_code, compustate):
         asset_name = util.asset_name(asset_id)
         stk.append(block.get_balance(addr, asset=asset_name))
     elif op == 'SEND':
+        # TODO: You can’t send BTC to a contract address.
         addr, quantity, asset_id = stk.pop(), stk.pop(), stk.pop()
         asset_name = util.asset_name(asset_id)
         # TODO: Check balance first.

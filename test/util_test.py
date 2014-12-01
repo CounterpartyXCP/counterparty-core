@@ -7,8 +7,7 @@ CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.ex
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
 from lib import (config, api, util, exceptions, bitcoin, blocks)
-from lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
-from lib.exceptions import ConsensusError
+from lib.messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
 import counterpartyd
 
 from fixtures.params import DEFAULT_PARAMS as DP
@@ -197,7 +196,7 @@ def run_scenario(scenario, rawtransactions_db):
     raw_transactions = []
     for transaction in scenario:
         if transaction[0] != 'create_next_block':
-            module = sys.modules['lib.{}'.format(transaction[0])]
+            module = sys.modules['lib.messages.{}'.format(transaction[0])]
             compose = getattr(module, 'compose')
             unsigned_tx_hex = bitcoin.transaction(db, compose(db, *transaction[1]), **transaction[2])
             raw_transactions.append({transaction[0]: unsigned_tx_hex})
@@ -283,7 +282,10 @@ def exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db)
         return tested_method(counterpartyd_db, *inputs)
 
 def check_ouputs(tx_name, method, inputs, outputs, error, records, counterpartyd_db):
-    tested_module = sys.modules['lib.{}'.format(tx_name)]
+    try:
+        tested_module = sys.modules['lib.{}'.format(tx_name)]
+    except KeyError:    # TODO: hack
+        tested_module = sys.modules['lib.messages.{}'.format(tx_name)]
     tested_method = getattr(tested_module, method)
 
     test_outputs = None
@@ -386,7 +388,7 @@ def reparse(testnet=True):
             previous_ledger_hash, previous_txlist_hash = blocks.parse_block(memory_db, block['block_index'], block['block_time'],
                                                                                     previous_ledger_hash, block['ledger_hash'],
                                                                                     previous_txlist_hash, block['txlist_hash'])
-        except ConsensusError as e:
+        except blocks.ConsensusError as e:
             message = str(e)
             if message.find('ledger_hash') != -1:
                 new_ledger = get_block_ledger(memory_db, block['block_index'])

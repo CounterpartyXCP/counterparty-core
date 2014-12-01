@@ -21,7 +21,7 @@ requirements by executing something like:
 # Versioning
 * Major version changes require a full (automatic) rebuild of the database.
 * Minor version changes require a(n automatic) database reparse.
-* Most protocol changes are retroactive on testnet.
+* All protocol changes are retroactive on testnet.
 
 
 # Installation

@@ -27,6 +27,7 @@ Forward Quantity: 50000000
 Backward Quantity: 100000000
 Tx0 fee provided remaining: 0.01; required fee: 0.00857142
 Order Match: 0.5 BTC for 1.0 XCP (7efc440fe53509475e7c526af5dafe8752ef2a792df9ce552b9eba33373051c77582fcb849797577c29cbe6b2afa5c62b01c62f131d40de93ae9f0181f51fdf8) [pending]
+WARNING: Order match has only -10 confirmation(s).
 Sorted UTXOs: ['amount: 3.0; txid: 39091e24e0d0e3aae34250d89d4b7ec8c46778c457c4b2f401ed8b35945a8440; vout: 0; confirmations: 6']
 New input: amount: 3.0; txid: 39091e24e0d0e3aae34250d89d4b7ec8c46778c457c4b2f401ed8b35945a8440; vout: 0; confirmations: 6
 Change quantity: 2.499744 BTC
@@ -57,6 +58,7 @@ Change quantity: 2.999744 BTC
 Debit: 526 BBBC from 3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #send# <5e86f200404fa207128ea7d19b93c3c49846c82640e9fd0fd354c024f4ddac67>
 Credit: 526 BBBC to 3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj_3 #send# <5e86f200404fa207128ea7d19b93c3c49846c82640e9fd0fd354c024f4ddac67>
 Send: 526 BBBC from 3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 to 3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj_3 (5e86f200404fa207128ea7d19b93c3c49846c82640e9fd0fd354c024f4ddac67) [valid]
+Total quantity to be distributed in dividends: 0.00000024 XCP
 Sorted UTXOs: ['amount: 3.0; txid: 39091e24e0d0e3aae34250d89d4b7ec8c46778c457c4b2f401ed8b35945a8440; vout: 0; confirmations: 6']
 New input: amount: 3.0; txid: 39091e24e0d0e3aae34250d89d4b7ec8c46778c457c4b2f401ed8b35945a8440; vout: 0; confirmations: 6
 Change quantity: 2.999822 BTC
@@ -64,6 +66,7 @@ Debit: 0.00000024 XCP from 3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSk
 Debit: 0.0002 XCP from 3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #dividend fee# <46c71ce3cbba57e7b613d0d5506479a59c7a618955aed1fafb7bbcda3a0e00c7>
 Credit: 0.00000024 XCP to 3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj_3 #dividend# <46c71ce3cbba57e7b613d0d5506479a59c7a618955aed1fafb7bbcda3a0e00c7>
 Dividend: 3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 paid 0.000006 XCP per unit of BBBB (46c71ce3cbba57e7b613d0d5506479a59c7a618955aed1fafb7bbcda3a0e00c7) [valid]
+Total quantity to be distributed in dividends: 0.004208 XCP
 Sorted UTXOs: ['amount: 3.0; txid: 39091e24e0d0e3aae34250d89d4b7ec8c46778c457c4b2f401ed8b35945a8440; vout: 0; confirmations: 6']
 New input: amount: 3.0; txid: 39091e24e0d0e3aae34250d89d4b7ec8c46778c457c4b2f401ed8b35945a8440; vout: 0; confirmations: 6
 Change quantity: 2.999822 BTC
@@ -165,8 +168,8 @@ Order: 3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_m
 Sorted UTXOs: ['amount: 3.0; txid: 39091e24e0d0e3aae34250d89d4b7ec8c46778c457c4b2f401ed8b35945a8440; vout: 0; confirmations: 6']
 New input: amount: 3.0; txid: 39091e24e0d0e3aae34250d89d4b7ec8c46778c457c4b2f401ed8b35945a8440; vout: 0; confirmations: 6
 Change quantity: 1.9999 BTC
-Credit: 569.99891788 XCP to 3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #burn# <c56318d85bacc3e96b131ebc4a914d12fa09f2a516b090f04b2f7a1085c1d53f>
-Burn: 3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 burned 0.38 BTC for 569.99891788 XCP (c56318d85bacc3e96b131ebc4a914d12fa09f2a516b090f04b2f7a1085c1d53f) [valid]
+Credit: 569.99888137 XCP to 3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #burn# <c56318d85bacc3e96b131ebc4a914d12fa09f2a516b090f04b2f7a1085c1d53f>
+Burn: 3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 burned 0.38 BTC for 569.99888137 XCP (c56318d85bacc3e96b131ebc4a914d12fa09f2a516b090f04b2f7a1085c1d53f) [valid]
 Sorted UTXOs: ['amount: 3.0; txid: 39091e24e0d0e3aae34250d89d4b7ec8c46778c457c4b2f401ed8b35945a8440; vout: 0; confirmations: 6']
 New input: amount: 3.0; txid: 39091e24e0d0e3aae34250d89d4b7ec8c46778c457c4b2f401ed8b35945a8440; vout: 0; confirmations: 6
 Change quantity: 2.999744 BTC
@@ -175,6 +178,7 @@ Expired bet: 463975d2674516ac57af5edcdfb531ba7e4a32cf87ba9bc95d9923c877c1a411
 Debit: 10000 BBBC from 3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #send# <e62ba26b630643c04d55b7359d13b3dfa0f0230085910c4605da95801725db43>
 Credit: 10000 BBBC to 3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj_3 #send# <e62ba26b630643c04d55b7359d13b3dfa0f0230085910c4605da95801725db43>
 Send: 10000 BBBC from 3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 to 3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj_3 (e62ba26b630643c04d55b7359d13b3dfa0f0230085910c4605da95801725db43) [valid]
+Total quantity to be called back: 3157 BBBC
 Sorted UTXOs: ['amount: 3.0; txid: 39091e24e0d0e3aae34250d89d4b7ec8c46778c457c4b2f401ed8b35945a8440; vout: 0; confirmations: 6']
 New input: amount: 3.0; txid: 39091e24e0d0e3aae34250d89d4b7ec8c46778c457c4b2f401ed8b35945a8440; vout: 0; confirmations: 6
 Change quantity: 2.999822 BTC
