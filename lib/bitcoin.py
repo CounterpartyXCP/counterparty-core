@@ -19,6 +19,7 @@ from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_p
 from Crypto.Cipher import ARC4
 from bitcoin.core.script import CScript
 from bitcoin.core import x
+from bitcoin.core.key import CPubKey
 
 from . import config, exceptions, util, blockchain
 
@@ -167,6 +168,27 @@ def get_monosig_script(address):
 
     return script
 
+def make_fully_valid(pubkey):
+    assert len(pubkey) == 31    # One sign byte and one nonce byte required (for 33 bytes).
+
+    cpubkey = CPubKey(b'')
+    random_bytes = hashlib.sha256(pubkey).digest()      # Deterministically generated, for unit tests.
+    sign = (random_bytes[0] & 0b1) + 2                  # 0x02 or 0x03
+    nonce = initial_nonce = random_bytes[1]
+
+    while not cpubkey.is_fullyvalid:
+        # Increment nonce.
+        nonce += 1
+        assert nonce != initial_nonce
+
+        # Construct a possibly fully valid public key.
+        possibly_fully_valid_pubkey = bytes([sign]) + pubkey + bytes([nonce % 256])
+        cpubkey = CPubKey(possibly_fully_valid_pubkey)
+
+    fully_valid_pubkey = possibly_fully_valid_pubkey
+    assert len(fully_valid_pubkey) == 33
+    return fully_valid_pubkey
+
 
 def serialise (block_index, encoding, inputs, destination_outputs, data_output=None, change_output=None, self_public_key=None):
     s  = (1).to_bytes(4, byteorder='little')                # Version
@@ -222,18 +244,21 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
         if encoding == 'multisig':
             # Get data (fake) public key.
             if util.multisig_enabled(block_index):   # Protocol change.
-                pad_length = (33 * 2) - 1 - len(data_chunk)
+                pad_length = (33 * 2) - 1 - 2 - 2 - len(data_chunk)
                 assert pad_length >= 0
                 data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
                 data_chunk = key.encrypt(data_chunk)
+                data_pubkey_1 = make_fully_valid(data_chunk[:31])
+                data_pubkey_2 = make_fully_valid(data_chunk[31:])
+
                 # Construct script.
                 script = OP_1                                   # OP_1
+                script += op_push(33)                           # Push bytes of data chunk (fake) public key    (1/2)
+                script += data_pubkey_1                         # (Fake) public key                  (1/2)
+                script += op_push(33)                           # Push bytes of data chunk (fake) public key    (2/2)
+                script += data_pubkey_2                         # (Fake) public key                  (2/2)
                 script += op_push(len(self_public_key))         # Push bytes of source public key
                 script += self_public_key                       # Source public key
-                script += op_push(33)                           # Push bytes of data chunk (fake) public key    (1/2)
-                script += data_chunk[:33]                       # (Fake) public key                  (1/2)
-                script += op_push(33)                           # Push bytes of data chunk (fake) public key    (2/2)
-                script += data_chunk[33:]                       # (Fake) public key                  (2/2)
                 script += OP_3                                  # OP_3
                 script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
             else:
@@ -425,7 +450,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
             if encoding == 'pubkeyhash':
                 data_array = list(chunks(data, 20 - 1 - 8)) # Prefix is also a suffix here.
             elif encoding == 'multisig':
-                data_array = list(chunks(data, (33 * 2) - 1 - 8))
+                data_array = list(chunks(data, (33 * 2) - 1 - 8 - 2 - 2)) # Two pubkeys, minus length byte, minus prefix, minus two nonces, minus two sign bytes
         else:
             data = config.PREFIX + data
             if encoding == 'pubkeyhash':

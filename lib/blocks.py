@@ -1152,8 +1152,8 @@ def get_tx_info2 (tx_hex, block_index, block_parser = None):
     def decode_checkmultisig (asm):
         pubkeys, signatures_required = util.get_checkmultisig(asm)
         chunk = b''
-        for pubkey in pubkeys[1:]:      # (No data in first pubkey.)
-            chunk += pubkey
+        for pubkey in pubkeys[:-1]:     # (No data in last pubkey.)
+            chunk += pubkey[1:-1]       # Skip sign byte and nonce byte.
         chunk = arc4_decrypt(chunk)
         if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
             # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
