@@ -4,14 +4,14 @@
 
 import struct
 
-from . import (util, config, exceptions, bitcoin, util)
+from ... import (config, exceptions, bitcoin, util)
 
 FORMAT = '>QQ'
 LENGTH = 8 + 8
 ID = 0
 
 
-def validate (db, source, destination, asset, quantity):
+def validate (db, source, destination, asset, quantity, block_index):
     problems = []
 
     if asset == config.BTC: problems.append('cannot send bitcoins')  # Only for parsing.
@@ -21,6 +21,10 @@ def validate (db, source, destination, asset, quantity):
         return problems
 
     if quantity < 0: problems.append('negative quantity')
+
+    if util.protocol_change(block_index, 333500):  # Protocol change.
+        if not destination:
+            status = problems.append('destination is required')
 
     return problems
 
@@ -33,17 +37,19 @@ def compose (db, source, destination, asset, quantity):
 
     #quantity must be in int satoshi (not float, string, etc)
     if not isinstance(quantity, int):
-        raise exceptions.SendError('quantity must be an int (in satoshi)')
+        raise exceptions.ComposeError('quantity must be an int (in satoshi)')
 
     # Only for outgoing (incoming will overburn).
     balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, asset)))
     if not balances or balances[0]['quantity'] < quantity:
-        raise exceptions.SendError('insufficient funds')
+        raise exceptions.ComposeError('insufficient funds')
 
-    problems = validate(db, source, destination, asset, quantity)
-    if problems: raise exceptions.SendError(problems)
+    block_index = util.last_block(db)['block_index']
 
-    asset_id = util.asset_id(asset)
+    problems = validate(db, source, destination, asset, quantity, block_index)
+    if problems: raise exceptions.ComposeError(problems)
+
+    asset_id = util.get_asset_id(asset, block_index)
     data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, asset_id, quantity)
 
@@ -58,7 +64,7 @@ def parse (db, tx, message):
         if len(message) != LENGTH:
             raise exceptions.UnpackError
         asset_id, quantity = struct.unpack(FORMAT, message)
-        asset = util.asset_name(asset_id)
+        asset = util.get_asset_name(asset_id, tx['block_index'])
         status = 'valid'
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
         asset, quantity = None, None
@@ -77,7 +83,7 @@ def parse (db, tx, message):
     if status == 'valid':
         # For SQLite3
         quantity = min(quantity, config.MAX_INT)
-        problems = validate(db, tx['source'], tx['destination'], asset, quantity)
+        problems = validate(db, tx['source'], tx['destination'], asset, quantity, tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
 
     if status == 'valid':

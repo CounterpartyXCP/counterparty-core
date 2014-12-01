@@ -20,14 +20,9 @@ def check():
     if result['status'] == 'syncing':
         logging.warning("WARNING: Insight is not fully synced to the blockchain: %s%% complete" % result['syncPercentage'])
 
-def getinfo():
-    return util.get_url(get_host() + '/api/status?q=getInfo', abort_on_error=True)
-
-def listunspent(address):
-    return util.get_url(get_host() + '/api/addr/' + address + '/utxo/', abort_on_error=True)
-
-def getaddressinfo(address):
-    return util.get_url(get_host() + '/api/addr/' + address + '/', abort_on_error=True)
-
-def gettransaction(tx_hash):
-    return util.get_url(get_host() + '/api/tx/' + tx_hash + '/', abort_on_error=False)
+def searchrawtransactions(address):
+    result = util.get_url(get_host() + '/api/txs/?address=' + address, abort_on_error=False)
+    if 'txs' in result:
+        return result['txs']
+    else:
+        return []

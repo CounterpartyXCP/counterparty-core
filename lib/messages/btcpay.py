@@ -2,13 +2,13 @@
 
 import binascii
 import struct
+import logging
 
-from . import (util, config, exceptions, bitcoin, util)
+from lib import (config, exceptions, bitcoin, util)
 
 FORMAT = '>32s32s'
 LENGTH = 32 + 32
 ID = 11
-
 
 def validate (db, source, order_match_id, block_index):
     problems = []
@@ -61,14 +61,14 @@ def compose (db, source, order_match_id):
     tx0_hash, tx1_hash = order_match_id[:64], order_match_id[64:] # UTF-8 encoding means that the indices are doubled.
 
     destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(db, source, order_match_id, util.last_block(db)['block_index'])
-    if problems: raise exceptions.BTCPayError(problems)
+    if problems: raise exceptions.ComposeError(problems)
 
     # Warn if down to the wire.
     time_left = order_match['match_expire_index'] - util.last_block(db)['block_index']
     if time_left < 4:
-        print('WARNING: Only {} blocks until that order match expires. The payment might not make into the blockchain in time.'.format(time_left))
+        logging.warning('WARNING: Only {} blocks until that order match expires. The payment might not make into the blockchain in time.'.format(time_left))
     if 10 - time_left < 4:
-        print('WARNING: Order match has only {} confirmation(s).'.format(10 - time_left))
+        logging.warning('WARNING: Order match has only {} confirmation(s).'.format(10 - time_left))
 
     tx0_hash_bytes, tx1_hash_bytes = binascii.unhexlify(bytes(tx0_hash, 'utf-8')), binascii.unhexlify(bytes(tx1_hash, 'utf-8'))
     data = struct.pack(config.TXTYPE_FORMAT, ID)

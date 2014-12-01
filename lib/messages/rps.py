@@ -26,7 +26,7 @@ import time
 import binascii
 import string
 
-from . import (util, config, bitcoin, exceptions, util)
+from lib import (config, bitcoin, exceptions, util)
 # possible_moves wager move_random_hash expiration
 FORMAT = '>HQ32sI'
 LENGTH = 2 + 8 + 32 + 4
@@ -113,7 +113,7 @@ def compose(db, source, possible_moves, wager, move_random_hash, expiration):
 
     problems = validate(db, source, possible_moves, wager, move_random_hash, expiration, util.last_block(db)['block_index'])
 
-    if problems: raise exceptions.RpsError(problems)
+    if problems: raise exceptions.ComposeError(problems)
 
     data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, possible_moves, wager, binascii.unhexlify(move_random_hash), expiration)

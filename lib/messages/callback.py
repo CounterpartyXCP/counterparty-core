@@ -5,14 +5,14 @@
 import struct
 import decimal
 D = decimal.Decimal
+import logging
 
-from . import (util, config, exceptions, bitcoin, util)
+from lib import (config, exceptions, bitcoin, util)
 from . import order
 
 FORMAT = '>dQ'
 LENGTH = 8 + 8
 ID = 21
-
 
 def validate (db, source, fraction, asset, block_time, block_index, parse):
     cursor = db.cursor()
@@ -99,10 +99,10 @@ def validate (db, source, fraction, asset, block_time, block_index, parse):
 
 def compose (db, source, fraction, asset):
     call_price, callback_total, outputs, problems = validate(db, source, fraction, asset, util.last_block(db)['block_time'], util.last_block(db)['block_index'], parse=False)
-    if problems: raise exceptions.CallbackError(problems)
-    print('Total quantity to be called back:', util.devise(db, callback_total, asset, 'output'), asset)
+    if problems: raise exceptions.ComposeError(problems)
+    logging.info('Total quantity to be called back: {} {}'.format(util.devise(db, callback_total, asset, 'output'), asset))
 
-    asset_id = util.asset_id(asset)
+    asset_id = util.get_asset_id(asset, util.last_block(db)['block_index'])
     data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, fraction, asset_id)
     return (source, [], data)
@@ -115,7 +115,7 @@ def parse (db, tx, message):
         if len(message) != LENGTH:
             raise exceptions.UnpackError
         fraction, asset_id = struct.unpack(FORMAT, message)
-        asset = util.asset_name(asset_id)
+        asset = util.get_asset_name(asset_id, tx['block_index'])
         status = 'valid'
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
         fraction, asset = None, None

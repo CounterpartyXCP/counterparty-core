@@ -21,7 +21,7 @@ requirements by executing something like:
 # Versioning
 * Major version changes require a full (automatic) rebuild of the database.
 * Minor version changes require a(n automatic) database reparse.
-* Most protocol changes are retroactive on testnet.
+* All protocol changes are retroactive on testnet.
 
 
 # Installation
@@ -86,7 +86,8 @@ The test suite is invoked with `py.test` in the root directory of the repository
 * Quantities of indivisible assets are written as integers.
 * All other quantities, i.e. prices, odds, leverages, feed values and target
 values, fee multipliers, are represented internally as fractions, but printed
-to four decimal places.
+to four decimal places. Call prices are stored as integers with six decimal
+places of precision.
 
 
 ### Example Usage

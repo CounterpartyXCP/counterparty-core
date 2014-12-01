@@ -2,9 +2,12 @@
 
 import binascii
 import struct
+import logging
 import string
 
-from . import (util, config, exceptions, bitcoin, util, rps)
+from lib import (config, exceptions, bitcoin, util)
+from . import rps
+
 # move random rps_match_id
 FORMAT = '>H16s32s32s'
 LENGTH = 2 + 16 + 32 + 32
@@ -76,12 +79,12 @@ def compose (db, source, move, random, rps_match_id):
     tx0_hash, tx1_hash = rps_match_id[:64], rps_match_id[64:] # UTF-8 encoding means that the indices are doubled.
 
     txn, rps_match, problems = validate(db, source, move, random, rps_match_id)
-    if problems: raise exceptions.RpsError(problems)
+    if problems: raise exceptions.ComposeError(problems)
 
     # Warn if down to the wire.
     time_left = rps_match['match_expire_index'] - util.last_block(db)['block_index']
     if time_left < 4:
-        print('WARNING: Only {} blocks until that rps match expires. The conclusion might not make into the blockchain in time.'.format(time_left))
+        logging.warning('WARNING: Only {} blocks until that rps match expires. The conclusion might not make into the blockchain in time.'.format(time_left))
 
     tx0_hash_bytes = binascii.unhexlify(bytes(tx0_hash, 'utf-8'))
     tx1_hash_bytes = binascii.unhexlify(bytes(tx1_hash, 'utf-8'))
