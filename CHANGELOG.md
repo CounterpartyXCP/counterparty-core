@@ -8,6 +8,8 @@
 	* graceful shutdown of processes
 	* faster server startup
 	* support for jmcorgan Bitcoin Core fork for block explorer
+	* change testnet first block (now 281000)
+	* make protocol changes always retroactive on testnet
 * v9.46.0 (2014-11-03)
 	* new consensus hashes, with `tx_info` and consensus version
 	* Coveralls support

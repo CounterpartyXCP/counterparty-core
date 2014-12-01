@@ -7,7 +7,7 @@ import binascii
 import logging
 
 from lib import (util, config, exceptions)
-from lib.scriptlib import (utils, blocks, processblock)
+from .scriptlib import (utils, blocks, processblock)
 
 FORMAT = '>20sQQQ'
 LENGTH = 44
@@ -17,8 +17,6 @@ def compose (db, source, contract_id, gasprice, startgas, value, payload_hex):
     if not config.TESTNET:  # TODO
         return
 
-    block = blocks.Block(db, util.last_block(db)['block_hash'])
-    code = block.get_code(contract_id)
     payload = binascii.unhexlify(payload_hex)
 
     if startgas < 0:
@@ -38,6 +36,7 @@ class Transaction(object):
         assert type(data) == bytes
         self.block_index = tx['block_index']
         self.tx_hash = tx['tx_hash']
+        self.tx_index = tx['tx_index']
         self.sender = tx['source']
         self.data = data 
         self.to = to
@@ -62,8 +61,8 @@ def parse (db, tx, message):
     if not config.TESTNET:  # TODO
         return
 
-    output = None
     status = 'valid'
+    output, gas_cost, gas_remained = None, None, None
 
     try:
         # TODO: Use unpack function.
@@ -71,6 +70,8 @@ def parse (db, tx, message):
         curr_format = FORMAT + '{}s'.format(len(message) - LENGTH)
         try:
             contract_id, gasprice, startgas, value, payload = struct.unpack(curr_format, message)
+            if gasprice > config.MAX_INT or startgas > config.MAX_INT: # TODO: define max for gasprice and startgas
+                raise exceptions.UnpackError()
         except (struct.error) as e:
             raise exceptions.UnpackError()
 
@@ -84,6 +85,7 @@ def parse (db, tx, message):
         tx_obj = Transaction(tx, contract_id, gasprice, startgas, value, payload)
         block_obj = blocks.Block(db, tx['block_hash'])
         success, output, gas_remained = processblock.apply_transaction(db, tx_obj, block_obj)
+        gas_cost = gasprice * (startgas - gas_remained) # different definition from pyethereum’s
 
     except exceptions.UnpackError as e:
         contract_id, gasprice, startgas, value, payload = None, None, None, None, None
@@ -121,7 +123,7 @@ def parse (db, tx, message):
             'contract_id': contract_id,
             'gasprice': gasprice,
             'startgas': startgas,
-            'gas_cost': gasprice * (startgas - gas_remained),
+            'gas_cost': gas_cost,
             'gas_remained': gas_remained,
             'value': value,
             'payload': payload,

@@ -14,5 +14,6 @@ def check():
 
 def searchrawtransactions(address):
     unconfirmed = util.unconfirmed_transactions(address)
-    confirmed = util.rpc('searchrawtransactions', [address, 1, 0, 9999999])
+    rawtransactions = util.rpc('searchrawtransactions', [address, 1, 0, 9999999])
+    confirmed = [tx for tx in rawtransactions if tx['confirmations'] > 0]
     return unconfirmed + confirmed

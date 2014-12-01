@@ -5,15 +5,15 @@
 import struct
 import decimal
 D = decimal.Decimal
+import logging
 
-from . import (util, config, exceptions, bitcoin, util)
+from lib import (config, exceptions, bitcoin, util)
 
 FORMAT_1 = '>QQ'
 LENGTH_1 = 8 + 8
 FORMAT_2 = '>QQQ'
 LENGTH_2 = 8 + 8 + 8
 ID = 50
-
 
 def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index):
     cursor = db.cursor()
@@ -97,8 +97,8 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
 def compose (db, source, quantity_per_unit, asset, dividend_asset):
 
     dividend_total, outputs, problems, fee = validate(db, source, quantity_per_unit, asset, dividend_asset, util.last_block(db)['block_index'])
-    if problems: raise exceptions.DividendError(problems)
-    print('Total quantity to be distributed in dividends:', util.devise(db, dividend_total, dividend_asset, 'output'), dividend_asset)
+    if problems: raise exceptions.ComposeError(problems)
+    logging.info('Total quantity to be distributed in dividends: {} {}'.format(util.devise(db, dividend_total, dividend_asset, 'output'), dividend_asset))
 
     if dividend_asset == config.BTC:
         return (source, [(output['address'], output['dividend_quantity']) for output in outputs], None)

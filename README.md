@@ -21,7 +21,7 @@ requirements by executing something like:
 # Versioning
 * Major version changes require a full (automatic) rebuild of the database.
 * Minor version changes require a(n automatic) database reparse.
-* Most protocol changes are retroactive on testnet.
+* All protocol changes are retroactive on testnet.
 
 
 # Installation
@@ -44,7 +44,7 @@ include it in all command‐line invocations of counterpartyd, such as
 options persistent across counterpartyd sessions, one may store the desired
 settings in a configuration file specific to counterpartyd.
 
-Note that the syntaxes for the countpartyd and the Bitcoin Core configuraion
+Note that the syntaxes for the countpartyd and the Bitcoin Core configuration
 files are not the same. A Bitcoin Core configuration file looks like this:
 
 	rpcuser=bitcoinrpc

@@ -8,7 +8,7 @@ import decimal
 D = decimal.Decimal
 import logging
 
-from . import (util, config, exceptions, bitcoin, util)
+from lib import (config, exceptions, bitcoin, util)
 
 FORMAT = '>QQQQHQ'
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8
@@ -242,14 +242,14 @@ def compose (db, source, give_asset, give_quantity, get_asset, get_quantity, exp
     # Check balance.
     if give_asset == config.BTC:
         if bitcoin.get_btc_balance(source) * config.UNIT < give_quantity:
-            print('WARNING: insufficient funds for {}pay.'.format(config.BTC))
+            logging.warning('WARNING: insufficient funds for {}pay.'.format(config.BTC))
     else:
         balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, give_asset)))
         if (not balances or balances[0]['quantity'] < give_quantity):
-            raise exceptions.OrderError('insufficient funds')
+            raise exceptions.ComposeError('insufficient funds')
 
     problems = validate(db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, util.last_block(db)['block_index'])
-    if problems: raise exceptions.OrderError(problems)
+    if problems: raise exceptions.ComposeError(problems)
 
     give_id = util.get_asset_id(give_asset, util.last_block(db)['block_index'])
     get_id = util.get_asset_id(get_asset, util.last_block(db)['block_index'])
@@ -449,7 +449,7 @@ def match (db, tx, block_index=None):
 
             # Check and update fee remainings.
             fee = 0
-            if block_index >= 286500 or config.TESTNET: # Protocol change. Deduct fee_required from fee_provided_remaining, etc., if possible (else don’t match).
+            if block_index >= 286500 or config.TESTNET: # Protocol change. Deduct fee_required from provided_remaining, etc., if possible (else don’t match).
                 if tx1['get_asset'] == config.BTC:
 
                     if block_index >= 310500 or config.TESTNET:     # Protocol change.

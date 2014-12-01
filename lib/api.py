@@ -24,7 +24,7 @@ from jsonrpc import dispatcher
 import inspect
 
 from . import (config, bitcoin, exceptions, util, blockchain)
-from . import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute)
+from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute)
 
 API_TABLES = ['balances', 'credits', 'debits', 'bets', 'bet_matches',
               'broadcasts', 'btcpays', 'burns', 'callbacks', 'cancels',
@@ -209,7 +209,7 @@ def compose_transaction(db, name, params,
         if param in params:
             params[ARGS_ALIAS[param]] = params.pop(param)
 
-    compose_method = sys.modules['lib.{}'.format(name)].compose
+    compose_method = sys.modules['lib.messages.{}'.format(name)].compose
     compose_params = inspect.getargspec(compose_method)[0]
     missing_params = [p for p in compose_params if p not in params and p != 'db']
     for param in missing_params:
@@ -286,7 +286,7 @@ class APIStatusPoller(threading.Thread):
                 # Check that the database has caught up with bitcoind.
                 if time.time() - self.last_database_check > 10 * 60: # Ten minutes since last check.
                     code = 11
-                    bitcoin.backend_check(db)
+                    util.backend_check(db)
                     code = 12
                     util.database_check(db, bitcoin.get_block_count())  # TODO: If not reparse or rollback, once those use API.
                     self.last_database_check = time.time()

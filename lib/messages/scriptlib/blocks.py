@@ -3,7 +3,7 @@
 """Based on pyethereum <https://github.com/ethereum/pyethereum>."""
 
 from lib import (util, config)
-from lib.scriptlib import (rlp, utils)
+from lib.messages.scriptlib import (rlp, utils)
 
 import logging
 import pickle
@@ -60,7 +60,7 @@ class Block(object):
         cursor = self.db.cursor()
         cursor.execute('''DELETE FROM suicides''')
 
-    def revert(snapshot):
+    def revert(self):
         logging.debug('### REVERTING ###')
 
     def get_storage_data(self, contract_id, key=None):
@@ -99,7 +99,7 @@ class Block(object):
                 'value': value
                 }
             util.message(self.db, self.number, 'update', 'storage', bindings)
-            sql='update storage set value = :value where contract_id = :contract_id and key = :key'
+            sql='''UPDATE storage SET value = :value WHERE contract_id = :contract_id AND key = :key'''
             cursor.execute(sql, bindings)
         else:           # Insert value.
             bindings = {
@@ -108,7 +108,7 @@ class Block(object):
                 'value': value
                 }
             util.message(self.db, self.number, 'insert', 'storage', bindings)
-            sql='insert into storage values(:contract_id, :key, :value)'
+            sql='''INSERT INTO storage VALUES (:contract_id, :key, :value)'''
             cursor.execute(sql, bindings)
 
         storages = cursor.execute('''SELECT * FROM storage WHERE contract_id = ? AND key = ?''', (contract_id, key))

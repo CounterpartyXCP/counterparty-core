@@ -7,7 +7,7 @@ offer_hash is the hash of either a bet or an order.
 import binascii
 import struct
 
-from . import (util, config, exceptions, bitcoin, util)
+from lib import (config, exceptions, bitcoin, util)
 from . import (order, bet, rps)
 
 FORMAT = '>32s'
@@ -48,7 +48,7 @@ def compose (db, source, offer_hash):
 
     # Check that offer exists.
     offer, offer_type, problems = validate(db, source, offer_hash)
-    if problems: raise exceptions.CancelError(problems)
+    if problems: raise exceptions.ComposeError(problems)
 
     offer_hash_bytes = binascii.unhexlify(bytes(offer_hash, 'utf-8'))
     data = struct.pack(config.TXTYPE_FORMAT, ID)
