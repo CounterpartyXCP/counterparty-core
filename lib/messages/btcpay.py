@@ -10,6 +10,29 @@ FORMAT = '>32s32s'
 LENGTH = 32 + 32
 ID = 11
 
+def initialise(db):
+    cursor = db.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS btcpays(
+                      tx_index INTEGER PRIMARY KEY,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      source TEXT,
+                      destination TEXT,
+                      btc_amount INTEGER,
+                      order_match_id TEXT,
+                      status TEXT,
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
+                   ''')
+                      # Disallows invalids: FOREIGN KEY (order_match_id) REFERENCES order_matches(id))
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      block_index_idx ON btcpays (block_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      source_idx ON btcpays (source)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      destination_idx ON btcpays (destination)
+                   ''')
 def validate (db, source, order_match_id, block_index):
     problems = []
     order_match = None

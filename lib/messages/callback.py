@@ -14,6 +14,28 @@ FORMAT = '>dQ'
 LENGTH = 8 + 8
 ID = 21
 
+def initialise (db):
+    cursor = db.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS callbacks(
+                      tx_index INTEGER PRIMARY KEY,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      source TEXT,
+                      fraction TEXT,
+                      asset TEXT,
+                      status TEXT,
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      block_index_idx ON callbacks (block_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      source_idx ON callbacks (source)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      asset_idx ON callbacks (asset)
+                   ''')
+
 def validate (db, source, fraction, asset, block_time, block_index, parse):
     cursor = db.cursor()
     problems = []
