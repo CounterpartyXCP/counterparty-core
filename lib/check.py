@@ -67,7 +67,6 @@ def asset_conservation (db):
 
     supplies = util.supplies(db)
     for asset in supplies.keys():
-
         issued = supplies[asset]
         held = sum([holder['address_quantity'] for holder in util.holders(db, asset)])
         # util.json_print(util.holders(db, asset))
