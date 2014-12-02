@@ -270,6 +270,7 @@ def initialise(db):
 
     # Consolidated
     send.initialise(db)
+    destroy.initialise(db)
     order.initialise(db)
     btcpay.initialise(db)
     issuance.initialise(db)
@@ -470,7 +471,7 @@ def get_tx_info2 (tx_hex, block_index, block_parser = None):
         return destination, data
 
     def decode_checksig (asm):
-        pubkeyhash = script.get_checksig(asm)
+        pubkeyhash = util.get_checksig(asm)
         chunk = arc4_decrypt(pubkeyhash)
         if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
             # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
