@@ -143,14 +143,14 @@ def consensus_hash(db, block_index, field, previous_consensus_hash, content):
         # Check against existing value.
         if calculated_hash != found_hash:
             raise ConsensusError('Inconsistent {} for block {}.'.format(field, block_index))
-
-        # Check against checkpoints.
-        checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
-        if block_index in checkpoints and checkpoints[block_index][field] != calculated_hash:
-            raise ConsensusError('Incorrect {} for block {}.'.format(field, block_index))
     else:
         # Save new hash.
         cursor.execute('''UPDATE blocks SET {} = ? WHERE block_index = ?'''.format(field), (calculated_hash, block_index))
+
+    # Check against checkpoints.
+    checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
+    if block_index in checkpoints and checkpoints[block_index][field] != calculated_hash:
+        raise ConsensusError('Incorrect {} for block {}.'.format(field, block_index))
 
     return calculated_hash
 
