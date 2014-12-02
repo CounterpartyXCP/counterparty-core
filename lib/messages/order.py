@@ -8,7 +8,7 @@ import decimal
 D = decimal.Decimal
 import logging
 
-from . import (util, config, exceptions, bitcoin, util, blockchain)
+from lib import (config, exceptions, bitcoin, util)
 
 FORMAT = '>QQQQHQ'
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8
@@ -241,18 +241,18 @@ def compose (db, source, give_asset, give_quantity, get_asset, get_quantity, exp
 
     # Check balance.
     if give_asset == config.BTC:
-        if sum(out['amount'] for out in bitcoin.get_unspent_txouts(source)) * config.UNIT < give_quantity:
-            print('WARNING: insufficient funds for {}pay.'.format(config.BTC))
+        if bitcoin.get_btc_balance(source) * config.UNIT < give_quantity:
+            logging.warning('WARNING: insufficient funds for {}pay.'.format(config.BTC))
     else:
         balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, give_asset)))
         if (not balances or balances[0]['quantity'] < give_quantity):
-            raise exceptions.OrderError('insufficient funds')
+            raise exceptions.ComposeError('insufficient funds')
 
     problems = validate(db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, util.last_block(db)['block_index'])
-    if problems: raise exceptions.OrderError(problems)
+    if problems: raise exceptions.ComposeError(problems)
 
-    give_id = util.asset_id(give_asset)
-    get_id = util.asset_id(get_asset)
+    give_id = util.get_asset_id(give_asset, util.last_block(db)['block_index'])
+    get_id = util.get_asset_id(get_asset, util.last_block(db)['block_index'])
     data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, give_id, give_quantity, get_id, get_quantity,
                         expiration, fee_required)
@@ -267,8 +267,8 @@ def parse (db, tx, message):
         if len(message) != LENGTH:
             raise exceptions.UnpackError
         give_id, give_quantity, get_id, get_quantity, expiration, fee_required = struct.unpack(FORMAT, message)
-        give_asset = util.asset_name(give_id)
-        get_asset = util.asset_name(get_id)
+        give_asset = util.get_asset_name(give_id, tx['block_index'])
+        get_asset = util.get_asset_name(get_id, tx['block_index'])
         status = 'open'
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
         give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required = 0, 0, 0, 0, 0, 0
@@ -449,7 +449,7 @@ def match (db, tx, block_index=None):
 
             # Check and update fee remainings.
             fee = 0
-            if block_index >= 286500 or config.TESTNET: # Protocol change. Deduct fee_required from fee_provided_remaining, etc., if possible (else don’t match).
+            if block_index >= 286500 or config.TESTNET: # Protocol change. Deduct fee_required from provided_remaining, etc., if possible (else don’t match).
                 if tx1['get_asset'] == config.BTC:
 
                     if block_index >= 310500 or config.TESTNET:     # Protocol change.

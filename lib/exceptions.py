@@ -1,47 +1,9 @@
 #! /usr/bin/python3
 
-class SanityError (Exception):
-    pass
-
-class ConfigurationError (Exception):
-    pass
 class DatabaseError (Exception):
-    pass
-class DatabaseIntegrityError (DatabaseError):
-    pass
-
-class VersionError (Exception):
-    pass
-class VersionUpdateRequiredError (Exception):
     pass
 
 class TransactionError(Exception):
-    pass
-class DecodeError(Exception):
-    pass
-class InputError(Exception):
-    pass
-class MempoolError (TransactionError):
-    pass
-
-class RPCError (Exception):
-    pass
-
-class BitcoindError (Exception):
-    pass
-class BitcoindRPCError (BitcoindError):
-    pass
-class InsightError (Exception):
-    pass
-
-class AltcoinSupportError (Exception):
-    pass
-
-class FeeError (Exception):
-    pass
-class BalanceError (Exception):
-    pass
-class QuantityError(Exception):
     pass
 
 class AddressError (Exception):
@@ -64,35 +26,13 @@ class AssetIDError (AssetError):
 
 class MessageError (Exception):
     pass
+class ComposeError (MessageError):
+    pass
 class UnpackError (MessageError):
     pass
-class BurnError (MessageError):
+class ValidateError(MessageError):
     pass
-class SendError (MessageError):
-    pass
-class OrderError (MessageError):
-    pass
-class BroadcastError (MessageError):
-    pass
-class BetError (MessageError):
-    pass
-class IssuanceError (MessageError):
-    pass
-class DividendError (MessageError):
-    pass
-class BTCPayError (MessageError):
-    pass
-class CancelError (MessageError):
-    pass
-class CallbackError (MessageError):
-    pass
-class RpsError (MessageError):
-    pass
-
-class ConsensusError (Exception):
-    pass
-
-class GetURLError (Exception):
+class DecodeError(MessageError):
     pass
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
