@@ -168,8 +168,8 @@ Order: 3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_m
 Sorted UTXOs: ['amount: 3.0; txid: 39091e24e0d0e3aae34250d89d4b7ec8c46778c457c4b2f401ed8b35945a8440; vout: 0; confirmations: 6']
 New input: amount: 3.0; txid: 39091e24e0d0e3aae34250d89d4b7ec8c46778c457c4b2f401ed8b35945a8440; vout: 0; confirmations: 6
 Change quantity: 1.9999 BTC
-Credit: 569.99888137 XCP to 3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #burn# <c56318d85bacc3e96b131ebc4a914d12fa09f2a516b090f04b2f7a1085c1d53f>
-Burn: 3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 burned 0.38 BTC for 569.99888137 XCP (c56318d85bacc3e96b131ebc4a914d12fa09f2a516b090f04b2f7a1085c1d53f) [valid]
+Credit: 569.99887262 XCP to 3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 #burn# <c56318d85bacc3e96b131ebc4a914d12fa09f2a516b090f04b2f7a1085c1d53f>
+Burn: 3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 burned 0.38 BTC for 569.99887262 XCP (c56318d85bacc3e96b131ebc4a914d12fa09f2a516b090f04b2f7a1085c1d53f) [valid]
 Sorted UTXOs: ['amount: 3.0; txid: 39091e24e0d0e3aae34250d89d4b7ec8c46778c457c4b2f401ed8b35945a8440; vout: 0; confirmations: 6']
 New input: amount: 3.0; txid: 39091e24e0d0e3aae34250d89d4b7ec8c46778c457c4b2f401ed8b35945a8440; vout: 0; confirmations: 6
 Change quantity: 2.999744 BTC
