@@ -1108,11 +1108,7 @@ def asset_names_v2_enabled(block_index):
     return protocol_change(block_index, 333500)
 
 def multisig_enabled(block_index):
-    if config.TESTNET:
-        return True
-    else:
-        return False
-    # TODO: return protocol_change(block_index, )
+    return protocol_change(block_index, 333500)
 
 ### Unconfirmed Transactions ###
 
