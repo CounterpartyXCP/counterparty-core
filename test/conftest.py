@@ -13,6 +13,8 @@ from lib import config, bitcoin, util
 
 import bitcoin as bitcoinlib
 
+collect_ignore = ["contracts_test.py"]
+
 def pytest_generate_tests(metafunc):
     if metafunc.function.__name__ == 'test_vector':
         args = util_test.vector_to_args(UNITTEST_VECTOR, pytest.config.option.function)
