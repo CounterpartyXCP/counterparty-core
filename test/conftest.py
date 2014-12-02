@@ -13,7 +13,9 @@ from lib import config, bitcoin, util
 
 import bitcoin as bitcoinlib
 
-collect_ignore = ["contracts_test.py"]
+def pytest_collection_modifyitems(session, config, items):
+    # run contracts_test.py last
+    items[:] = list(reversed(items))
 
 def pytest_generate_tests(metafunc):
     if metafunc.function.__name__ == 'test_vector':
