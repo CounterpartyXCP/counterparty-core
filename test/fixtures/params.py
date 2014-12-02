@@ -16,10 +16,10 @@ DEFAULT_PARAMS = {
     'move_random_hash': '6a886d74c2d4b1d7a35fd9159333ef64ba45a04d7aeeeb4538f958603c16fc5d',
     'rps_random': '7a4488d61ed8f2e9fa2874113fccb8b1',
     'unspendable': 'mvCounterpartyXXXXXXXXXXXXXXW24Hef',
-    'burn_start': 281000,
+    'burn_start': 310000,
     'burn_end': 4017708,
     'burn_quantity': int(.62 * UNIT),
-    'default_block': 281000 + 501
+    'default_block': 310000 + 501
 }
 DEFAULT_PARAMS['privkey'] = {addr: priv for (addr, priv, pub) in DEFAULT_PARAMS['addresses']}
 DEFAULT_PARAMS['pubkey'] = {addr: pub for (addr, priv, pub) in DEFAULT_PARAMS['addresses']}
