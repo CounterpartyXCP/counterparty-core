@@ -463,17 +463,15 @@ class APIServer(threading.Thread):
                 cursor.close()
                 if not issuances: continue #asset not found, most likely
                 else: last_issuance = issuances[-1]
-                supply = 0
                 locked = False
                 for e in issuances:
                     if e['locked']: locked = True
-                    supply += e['quantity']
                 assetsInfo.append({
                     'asset': asset,
                     'owner': last_issuance['issuer'],
                     'divisible': bool(last_issuance['divisible']),
                     'locked': locked,
-                    'supply': supply,
+                    'supply': util.asset_supply(db, asset),
                     'callable': bool(last_issuance['callable']),
                     'call_date': last_issuance['call_date'],
                     'call_price': last_issuance['call_price'],

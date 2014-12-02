@@ -20,7 +20,7 @@ import bitcoin.rpc as bitcoinlib_rpc
 import csv
 
 from lib import (config, exceptions, util, bitcoin, check, script)
-from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute)
+from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute, destroy)
 
 from .blockchain.blocks_parser import BlockchainParser, ChainstateParser
 from .blockchain.utils import ib2h
@@ -95,6 +95,8 @@ def parse_tx (db, tx):
         publish.parse(db, tx, message)
     elif message_type_id == execute.ID and tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
         execute.parse(db, tx, message)
+    elif message_type_id == destroy.ID:
+        destroy.parse(db, tx, message)
     else:
         cursor.execute('''UPDATE transactions \
                                    SET supported=? \
@@ -471,7 +473,7 @@ def get_tx_info2 (tx_hex, block_index, block_parser = None):
         return destination, data
 
     def decode_checksig (asm):
-        pubkeyhash = util.get_checksig(asm)
+        pubkeyhash = script.get_checksig(asm)
         chunk = arc4_decrypt(pubkeyhash)
         if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
             # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.

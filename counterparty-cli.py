@@ -669,7 +669,7 @@ if __name__ == '__main__':
 
     parser_burn = subparsers.add_parser('burn', help='destroy {} to earn XCP, during an initial period of time')
     parser_burn.add_argument('--source', required=True, help='the source address')
-    parser_burn.add_argument('--quantity', required=True, help='quantity of {} to be destroyed'.format(config.BTC))
+    parser_burn.add_argument('--quantity', required=True, help='quantity of {} to be burned'.format(config.BTC))
     parser_burn.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
     parser_cancel= subparsers.add_parser('cancel', help='cancel an open order or bet you created')
@@ -714,6 +714,13 @@ if __name__ == '__main__':
     parser_execute.add_argument('--value', required=True, type=int, help='quantity of {} to be transfered to the contract (satoshis)'.format(config.XCP))
     parser_execute.add_argument('--payload-hex', required=True, type=str, help='data to be provided to the contract (returned by `serpent encode_datalist`)')
     parser_execute.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
+
+    parser_destroy = subparsers.add_parser('destroy', help='destroy a quantity of a Counterparty asset')
+    parser_destroy.add_argument('--source', required=True, help='the source address')
+    parser_destroy.add_argument('--asset', required=True, help='the ASSET of which you would like to destroy QUANTITY')
+    parser_destroy.add_argument('--quantity', required=True, help='the quantity of ASSET to destroy')
+    parser_destroy.add_argument('--tag', default='', help='tag')
+    parser_destroy.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
     parser_address = subparsers.add_parser('balances', help='display the balances of a {} address'.format(config.XCP_NAME))
     parser_address.add_argument('address', help='the address you are interested in')
@@ -1031,6 +1038,20 @@ if __name__ == '__main__':
                                'multisig_dust_size': args.multisig_dust_size,
                                'op_return_value': args.op_return_value},
             args.unsigned)
+
+    elif args.action == 'destroy':
+        if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
+        quantity = util.devise(db, args.quantity, args.asset, 'input')
+        cli('create_destroy', {'source': args.source,
+                            'asset': args.asset, 'quantity': quantity, 'tag':
+                            args.tag, 'fee': args.fee,
+                            'allow_unconfirmed_inputs': args.unconfirmed,
+                            'encoding': args.encoding, 'fee_per_kb':
+                            args.fee_per_kb, 'regular_dust_size':
+                            args.regular_dust_size, 'multisig_dust_size':
+                            args.multisig_dust_size, 'op_return_value':
+                            args.op_return_value}, args.unsigned)
+
 
     # VIEWING (temporary)
     elif args.action == 'balances':

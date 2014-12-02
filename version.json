@@ -23,10 +23,10 @@
 			"minimum_version_revision": 1,
 			"block_index": 333500
 		},
-	"destroy_message":	{
+	"destroy_message":      {
 			"minimum_version_major": 9,
-			"minimum_version_minor": 47,
-			"minimum_version_revision": 1,
-			"block_index": 334500
+			"minimum_version_minor": 48,
+			"minimum_version_revision": 0,
+			"block_index": 335000
 		}
 }
