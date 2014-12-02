@@ -1102,7 +1102,7 @@ def protocol_change(block_index, block_first):
             return True
         else:
             return False
-    return False
+    assert False
 
 def asset_names_v2_enabled(block_index):
     return protocol_change(block_index, 333500)
