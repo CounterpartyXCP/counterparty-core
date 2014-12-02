@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.47.1 (2014-12-02)
+	* change first testnet block to 310000
 * v9.47.0 (2014-12-01)
 	* multi‐signature address support (protocol change: 333500)
 	* numeric asset names (protocol change: 333500)
