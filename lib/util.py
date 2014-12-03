@@ -478,7 +478,7 @@ def get_asset_id (asset_name, block_index):
         raise exceptions.AssetNameError('too short')
 
     # Numeric asset names.
-    if asset_names_v2_enabled(block_index):  # Protocol change.
+    if enabled('numeric_asset_names', block_index):  # Protocol change.
         if asset_name[0] == 'A':
             # Must be numeric.
             try:
@@ -518,7 +518,7 @@ def get_asset_name (asset_id, block_index):
     if asset_id < 26**3:
         raise exceptions.AssetIDError('too low')
 
-    if asset_names_v2_enabled(block_index):  # Protocol change.
+    if enabled('numeric_asset_names', block_index):  # Protocol change.
         if asset_id <= 2**64 - 1:
             if 26**12 + 1 <= asset_id:
                 asset_name = 'A' + str(asset_id)
@@ -552,7 +552,7 @@ def debit (db, block_index, address, asset, quantity, action=None, event=None):
     debit_cursor = db.cursor()
 
     # Contracts can only hold XCP balances.
-    if protocol_change(block_index, 333500): # Protocol change.
+    if enabled('contracts_only_xcp_balances', block_index): # Protocol change.
         if len(address) == 40:
             assert asset == config.XCP
 
@@ -607,7 +607,7 @@ def credit (db, block_index, address, asset, quantity, action=None, event=None):
     credit_cursor = db.cursor()
 
     # Contracts can only hold XCP balances.
-    if protocol_change(block_index, 333500): # Protocol change.
+    if enabled('contracts_only_xcp_balances', block_index): # Protocol change.
         if len(address) == 40:
             assert asset == config.XCP
 
@@ -826,7 +826,7 @@ def validate_address(address, block_index):
 
     # Get array of pubkeyhashes to check.
     if is_multisig(address):
-        if not multisig_enabled(block_index):
+        if not enabled('multisig_addresses', block_index):
             raise MultiSigAddressError('Multi‐signature addresses are currently disabled.')
         pubkeyhashes = pubkeyhash_array(address)
     else:
@@ -1047,21 +1047,19 @@ def get_cached_raw_transaction(tx_hash):
 ### Backend RPC ###
 
 ### Protocol Changes ###
-def protocol_change(block_index, block_first):
+def enabled (change_name, block_index):
+    with open('version.json') as f:
+        versions = json.load(f)
+    enable_block_index = versions[change_name]['block_index']
+
     if config.TESTNET: 
-        return True # always retroactive on testnet
-    else:   # mainnet
-        if block_index >= block_first:
+        return True     # Protocol changes are always retroactive on testnet.
+    else:
+        if block_index >= enable_block_index:
             return True
         else:
             return False
     assert False
-
-def asset_names_v2_enabled(block_index):
-    return protocol_change(block_index, 333500)
-
-def multisig_enabled(block_index):
-    return protocol_change(block_index, 333500)
 
 ### Unconfirmed Transactions ###
 

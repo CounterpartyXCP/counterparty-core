@@ -931,7 +931,7 @@ def initialise(db):
 
 def get_tx_info (tx_hex, block_index, block_parser = None):
     try:
-        if util.multisig_enabled(block_index):  # Protocol change.
+        if util.enabled('multisig_addresses', block_index):   # Protocol change.
             tx_info = get_tx_info2(tx_hex, block_index, block_parser)
         else:
             tx_info = get_tx_info1(tx_hex, block_index, block_parser)
