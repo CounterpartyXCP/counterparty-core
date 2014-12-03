@@ -17,6 +17,8 @@ from Crypto.Cipher import ARC4
 import apsw
 import bitcoin as bitcoinlib
 import bitcoin.rpc as bitcoinlib_rpc
+import sys
+import csv
 
 from lib import (config, exceptions, util, bitcoin, check, script)
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute)
@@ -36,6 +38,11 @@ TABLES = ['credits', 'debits', 'messages'] + \
          'rps_matches', 'rps', 'executions', 'contracts', 'storage',
          'suicides', 'nonces', 'postqueue']
 
+CURR_DIR = os.path.dirname(os.path.realpath(sys.argv[0]))
+with open(CURR_DIR + '/mainnet_burns.csv', 'r') as f:
+    mainnet_burns_reader = csv.DictReader(f)
+    MAINNET_BURNS = [line for line in mainnet_burns_reader]
+
 def parse_tx (db, tx):
     cursor = db.cursor()
 
@@ -46,7 +53,7 @@ def parse_tx (db, tx):
 
     # Burns.
     if tx['destination'] == config.UNSPENDABLE:
-        burn.parse(db, tx)
+        burn.parse(db, tx, MAINNET_BURNS)
         return
 
     if len(tx['data']) > 4:
