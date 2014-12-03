@@ -4,15 +4,17 @@ import logging
 from .bc_data_stream import BCDataStream
 from .utils import b2h, double_hash, ib2h, inverse_hash
 
-import plyvel
-
 def open_leveldb(db_dir):
+    try:
+        import plyvel
+    except:
+        raise Exception("Please install the plyvel package via pip3.")
+
     try:
         return plyvel.DB(db_dir, create_if_missing=False)
     except plyvel._plyvel.IOError as e:
         logging.info(str(e))
-        logging.info("Ensure that bitcoind is stopped.")
-        exit()
+        raise Exception("Ensure that bitcoind is stopped.")
 
 class BlockchainParser():
 
