@@ -388,7 +388,7 @@ def reparse(testnet=True):
             previous_ledger_hash, previous_txlist_hash = blocks.parse_block(memory_db, block['block_index'], block['block_time'],
                                                                                     previous_ledger_hash, block['ledger_hash'],
                                                                                     previous_txlist_hash, block['txlist_hash'])
-        except blocks.ConsensusError as e:
+        except check.ConsensusError as e:
             message = str(e)
             if message.find('ledger_hash') != -1:
                 new_ledger = get_block_ledger(memory_db, block['block_index'])
