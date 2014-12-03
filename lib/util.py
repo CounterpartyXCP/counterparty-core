@@ -88,9 +88,9 @@ def log (db, command, category, bindings):
     def output (quantity, asset):
         try:
             if asset not in ('fraction', 'leverage'):
-                return str(devise(db, quantity, asset, 'output')) + ' ' + asset
+                return str(value_out(db, quantity, asset)) + ' ' + asset
             else:
-                return str(devise(db, quantity, asset, 'output'))
+                return str(value_out(db, quantity, asset))
         except exceptions.AssetError:
             return '<AssetError>'
         except decimal.DivisionByZero:
@@ -147,7 +147,7 @@ def log (db, command, category, bindings):
                 else:
                     callability = 'uncallable'
                 try:
-                    quantity = devise(db, bindings['quantity'], None, dest='output', divisible=bindings['divisible'])
+                    quantity = value_out(db, bindings['quantity'], None, divisible=bindings['divisible'])
                 except Exception as e:
                     quantity = '?'
                 logging.info('Issuance: {} created {} of asset {}, which is {} and {}, with description ‘{}’ ({}) [{}]'.format(bindings['issuer'], quantity, bindings['asset'], divisibility, callability, bindings['description'], bindings['tx_hash'], bindings['status']))
@@ -158,7 +158,7 @@ def log (db, command, category, bindings):
             else:
                 if not bindings['value']: infix = '‘{}’'.format(bindings['text'])
                 else: infix = '‘{}’ = {}'.format(bindings['text'], bindings['value'])
-                suffix = ' from ' + bindings['source'] + ' at ' + isodt(bindings['timestamp']) + ' with a fee of {}%'.format(output(D(bindings['fee_fraction_int'] / 1e8) * D(100), 'fraction')) + ' (' + bindings['tx_hash'] + ')' + ' [{}]'.format(bindings['status'])
+                suffix = ' from ' + bindings['source'] + ' at ' + isodt(bindings['timestamp']) + ' with a fee of {}'.format(output(D(bindings['fee_fraction_int'] / 1e8), 'fraction')) + ' (' + bindings['tx_hash'] + ')' + ' [{}]'.format(bindings['status'])
                 logging.info('Broadcast: {}'.format(infix + suffix))
 
         elif category == 'bets':
@@ -198,7 +198,7 @@ def log (db, command, category, bindings):
             logging.info('Cancel: {} ({}) [{}]'.format(bindings['offer_hash'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'callbacks':
-            logging.info('Callback: {} called back {}% of {} ({}) [{}]'.format(bindings['source'], float(D(bindings['fraction']) * D(100)), bindings['asset'], bindings['tx_hash'], bindings['status']))
+            logging.info('Callback: {} called back {} of {} ({}) [{}]'.format(bindings['source'], float(D(bindings['fraction'])), bindings['asset'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'rps':
             log_message = 'RPS: {} opens game with {} possible moves and a wager of {}'.format(bindings['source'], bindings['possible_moves'], output(bindings['wager'], 'XCP'))
@@ -657,63 +657,71 @@ def credit (db, block_index, address, asset, quantity, action=None, event=None):
     BLOCK_LEDGER.append('{}{}{}{}'.format(block_index, address, asset, quantity))
 
 class QuantityError(Exception): pass
-def devise (db, quantity, asset, dest, divisible=None):
 
-    # For output only.
-    def norm(num, places):
-        # Round only if necessary.
-        num = round(num, places)
+def is_divisible(db, asset):
+    if asset in (config.BTC, config.XCP):
+        return True
+    else:
+        cursor = db.cursor()
+        cursor.execute('''SELECT * FROM issuances \
+                          WHERE (status = ? AND asset = ?)''', ('valid', asset))
+        issuances = cursor.fetchall()
+        if not issuances: raise exceptions.AssetError('No such asset: {}'.format(asset))
+        return issuances[0]['divisible']
 
-        fmt = '{:.' + str(places) + 'f}'
-        num = fmt.format(num)
-        return num.rstrip('0')+'0' if num.rstrip('0')[-1] == '.' else num.rstrip('0')
+def value_in (db, quantity, asset, divisible=None):
 
-    # TODO: remove price, odds
-    if asset in ('leverage', 'value', 'fraction', 'price', 'odds'):
-        if dest == 'output':
-            return norm(quantity, 6)
-        elif dest == 'input':
-            # Hackish
-            if asset == 'leverage':
-                return round(quantity)
-            else:
-                return float(quantity)  # TODO: Float?!
+    if asset == 'leverage':
+        return round(quantity)
 
-    if asset in ('fraction',):
-        return norm(fraction(quantity, 1e8), 6)
+    if asset in ('value', 'fraction', 'price', 'odds'):
+        return float(quantity)  # TODO: Float?!
 
     if divisible == None:
-        if asset in (config.BTC, config.XCP):
-            divisible = True
-        else:
-            cursor = db.cursor()
-            cursor.execute('''SELECT * FROM issuances \
-                              WHERE (status = ? AND asset = ?)''', ('valid', asset))
-            issuances = cursor.fetchall()
-            cursor.close()
-            if not issuances: raise exceptions.AssetError('No such asset: {}'.format(asset))
-            divisible = issuances[0]['divisible']
+        divisible = is_divisible(db, asset)
 
     if divisible:
-        if dest == 'output':
-            quantity = D(quantity) / D(config.UNIT)
-            if quantity == quantity.to_integral():
-                return str(quantity) + '.0'  # For divisible assets, display the decimal point.
-            else:
-                return norm(quantity, 8)
-        elif dest == 'input':
-            quantity = D(quantity) * config.UNIT
-            if quantity == quantity.to_integral():
-                return int(quantity)
-            else:
-                raise QuantityError('Divisible assets have only eight decimal places of precision.')
+        quantity = d(quantity) * config.unit
+        if quantity == quantity.to_integral():
+            return int(quantity)
         else:
-            return quantity
+            raise quantityerror('divisible assets have only eight decimal places of precision.')
     else:
         quantity = D(quantity)
         if quantity != round(quantity):
             raise QuantityError('Fractional quantities of indivisible assets.')
         return round(quantity)
+
+def value_out (db, quantity, asset, divisible=None):
+
+    def norm(num, places):
+        # Round only if necessary.
+        num = round(num, places)
+        fmt = '{:.' + str(places) + 'f}'
+        num = fmt.format(num)
+        return num.rstrip('0')+'0' if num.rstrip('0')[-1] == '.' else num.rstrip('0')
+
+    if asset in ('leverage', 'value', 'price', 'odds'):
+        return norm(quantity, 6)
+
+    if asset in 'fraction':
+        return str(norm(quantity * D(100), 6)) + '%'
+
+    if divisible == None:
+        divisible = is_divisible(db, asset)
+
+    if divisible:
+        quantity = D(quantity) / D(config.UNIT)
+        if quantity == quantity.to_integral():
+            return str(quantity) + '.0'  # For divisible assets, display the decimal point.
+        else:
+            return norm(quantity, 8)
+    else:
+        quantity = D(quantity)
+        if quantity != round(quantity):
+            raise QuantityError('Fractional quantities of indivisible assets.')
+        return round(quantity)
+
 
 def holders(db, asset):
     holders = []

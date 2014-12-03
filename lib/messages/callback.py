@@ -100,7 +100,7 @@ def validate (db, source, fraction, asset, block_time, block_index, parse):
 def compose (db, source, fraction, asset):
     call_price, callback_total, outputs, problems = validate(db, source, fraction, asset, util.last_block(db)['block_time'], util.last_block(db)['block_index'], parse=False)
     if problems: raise exceptions.ComposeError(problems)
-    logging.info('Total quantity to be called back: {} {}'.format(util.devise(db, callback_total, asset, 'output'), asset))
+    logging.info('Total quantity to be called back: {} {}'.format(util.value_out(db, callback_total, asset), asset))
 
     asset_id = util.get_asset_id(asset, util.last_block(db)['block_index'])
     data = struct.pack(config.TXTYPE_FORMAT, ID)

@@ -72,8 +72,8 @@ def asset_conservation (db):
         held = sum([holder['address_quantity'] for holder in util.holders(db, asset)])
         # util.json_print(util.holders(db, asset))
         if held != issued:
-            raise SanityError('{} {} issued ≠ {} {} held'.format(util.devise(db, issued, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
-        logging.debug('Status: {} has been conserved ({} {} both issued and held)'.format(asset, util.devise(db, issued, asset, 'output'), asset))
+            raise SanityError('{} {} issued ≠ {} {} held'.format(util.value_out(db, issued, asset), asset, util.value_out(db, held, asset), asset))
+        logging.debug('Status: {} has been conserved ({} {} both issued and held)'.format(asset, util.value_out(db, issued, asset), asset))
 
 class VersionError (Exception): pass
 class VersionUpdateRequiredError (VersionError): pass

@@ -98,7 +98,7 @@ def compose (db, source, quantity_per_unit, asset, dividend_asset):
 
     dividend_total, outputs, problems, fee = validate(db, source, quantity_per_unit, asset, dividend_asset, util.last_block(db)['block_index'])
     if problems: raise exceptions.ComposeError(problems)
-    logging.info('Total quantity to be distributed in dividends: {} {}'.format(util.devise(db, dividend_total, dividend_asset, 'output'), dividend_asset))
+    logging.info('Total quantity to be distributed in dividends: {} {}'.format(util.value_out(db, dividend_total, dividend_asset), dividend_asset))
 
     if dividend_asset == config.BTC:
         return (source, [(output['address'], output['dividend_quantity']) for output in outputs], None)
