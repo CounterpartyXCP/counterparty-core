@@ -8,7 +8,7 @@ def open_leveldb(db_dir):
     try:
         import plyvel
     except:
-        logging.info("Please install plyvel (pip install plyvel==0.9.")
+        logging.info("Please install plyvel (pip install plyvel==0.9).")
         exit()
 
     try:
