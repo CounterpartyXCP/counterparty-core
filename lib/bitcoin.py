@@ -394,19 +394,19 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     # retrieved from wallet.
     self_public_key = None
     if encoding in ('multisig', 'pubkeyhash') and not multisig_source:
-        # If no public key was provided, derive from private key.
         if not self_public_key_hex:
-            # Get private key.
+            # If public key was not provided, derive it from the private key.
             private_key_wif = get_private_key(source)
-
-            # Derive public key.
             self_public_key_hex = private_key_to_public_key(private_key_wif)
+        else:
+            # If public key was provided, check that it matches the source address.
+            if source != pubkey_to_pubkeyhash(pubkey):
+                raise InputError('provided public key does not match the source address')
 
-        #convert public key hex into public key pair (sec)
+        # Convert hex public key into binary public key.
         try:
-            sec = binascii.unhexlify(self_public_key_hex)
-            is_compressed = is_sec_compressed(sec)
-            self_public_key = sec
+            self_public_key = binascii.unhexlify(self_public_key_hex)
+            is_compressed = is_sec_compressed(self_public_key)
         except (EncodingError, binascii.Error):
             raise InputError('Invalid private key.')
 

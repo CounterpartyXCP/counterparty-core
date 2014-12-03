@@ -223,6 +223,8 @@ def cli(method, params, unsigned):
             except binascii.Error:
                 private_key_wif = answer    # Else, assume private key.
                 pubkey = bitcoin.private_key_to_public_key(private_key_wif)
+                if params['source'] != pubkey_to_pubkeyhash(pubkey):
+                    raise InputError('provided private key does not match the source address')
         params['pubkey'] = pubkey
 
     """  # NOTE: For debugging, e.g. with `Invalid Params` error.
