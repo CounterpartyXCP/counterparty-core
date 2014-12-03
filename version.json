@@ -1,7 +1,14 @@
 {
-	"minimum_version_major": 9,
-	"minimum_version_minor": 47,
-	"minimum_version_revision": 1,
-	"reason": "numeric asset names; multi‐sig addresses",
-	"block_index": 333500
+	"numeric_asset_names":	{
+			"minimum_version_major": 9,
+			"minimum_version_minor": 47,
+			"minimum_version_revision": 1,
+			"block_index": 333500
+		},
+	"multisig_addresses":	{
+			"minimum_version_major": 9,
+			"minimum_version_minor": 47,
+			"minimum_version_revision": 1,
+			"block_index": 333500
+		}
 }

@@ -18,7 +18,7 @@ import apsw
 import bitcoin as bitcoinlib
 import bitcoin.rpc as bitcoinlib_rpc
 
-from . import (config, exceptions, util, bitcoin)
+from . import (config, exceptions, util, bitcoin, check)
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute)
 
 from .blockchain.blocks_parser import BlockchainParser, ChainstateParser
@@ -34,20 +34,6 @@ TABLES = ['credits', 'debits', 'messages'] + \
          'callbacks', 'cancels', 'dividends', 'issuances', 'sends',
          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
          'rps_matches', 'rps', 'executions', 'contracts', 'storage', 'suicides', 'nonces', 'postqueue']
-
-class SanityError (Exception): pass
-def check_conservation (db):
-    logging.debug('Status: Checking for conservation of assets.')
-
-    supplies = util.supplies(db)
-    for asset in supplies.keys():
-
-        issued = supplies[asset]
-        held = sum([holder['address_quantity'] for holder in util.holders(db, asset)])
-        # util.json_print(util.holders(db, asset))
-        if held != issued:
-            raise SanityError('{} {} issued ≠ {} {} held'.format(util.devise(db, issued, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
-        logging.debug('Status: {} has been conserved ({} {} both issued and held)'.format(asset, util.devise(db, issued, asset, 'output'), asset))
 
 def parse_tx (db, tx):
     cursor = db.cursor()
@@ -112,47 +98,10 @@ def parse_tx (db, tx):
 
     # Check for conservation of assets every CAREFULNESS transactions.
     if config.CAREFULNESS and not tx['tx_index'] % config.CAREFULNESS:
-        check_conservation(db)
+        check.asset_conservation(db)
 
     cursor.close()
     return True
-
-
-class ConsensusError (Exception): pass
-def consensus_hash(db, block_index, field, previous_consensus_hash, content):
-    cursor = db.cursor()
-
-    # Initialise previous hash on first block.
-    if block_index == config.BLOCK_FIRST:
-        assert not previous_consensus_hash
-        previous_consensus_hash = util.dhash_string(config.CONSENSUS_HASH_SEED)
-
-    # Get previous hash.
-    if not previous_consensus_hash:
-        previous_consensus_hash = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index - 1,)))[0][field]
-        if not previous_consensus_hash:
-            raise ConsensusError('Empty previous {} for block {}. Please launch a `reparse`.'.format(field, block_index))
-
-    # Calculate current hash.
-    version = config.CONSENSUS_HASH_VERSION_TESTNET if config.TESTNET else config.CONSENSUS_HASH_VERSION_MAINNET
-    calculated_hash = util.dhash_string(previous_consensus_hash + '{}{}'.format(version, ''.join(content)))
-
-    # Verify hash (if already in database) or save hash (if not).
-    found_hash = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,)))[0][field]
-    if found_hash:
-        # Check against existing value.
-        if calculated_hash != found_hash:
-            raise ConsensusError('Inconsistent {} for block {}.'.format(field, block_index))
-    else:
-        # Save new hash.
-        cursor.execute('''UPDATE blocks SET {} = ? WHERE block_index = ?'''.format(field), (calculated_hash, block_index))
-
-    # Check against checkpoints.
-    checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
-    if block_index in checkpoints and checkpoints[block_index][field] != calculated_hash:
-        raise ConsensusError('Incorrect {} for block {}.'.format(field, block_index))
-
-    return calculated_hash
 
 
 def parse_block (db, block_index, block_time, previous_ledger_hash=None, ledger_hash=None, previous_txlist_hash=None, txlist_hash=None):
@@ -179,8 +128,8 @@ def parse_block (db, block_index, block_time, previous_ledger_hash=None, ledger_
     cursor.close()
 
     # Consensus hashes.
-    new_ledger_hash = consensus_hash(db, block_index, 'ledger_hash', previous_ledger_hash, util.BLOCK_LEDGER)
-    new_txlist_hash = consensus_hash(db, block_index, 'txlist_hash', previous_txlist_hash, txlist)
+    new_ledger_hash = check.consensus_hash(db, block_index, 'ledger_hash', previous_ledger_hash, util.BLOCK_LEDGER)
+    new_txlist_hash = check.consensus_hash(db, block_index, 'txlist_hash', previous_txlist_hash, txlist)
 
     return new_ledger_hash, new_txlist_hash
 
@@ -1240,7 +1189,7 @@ def reinitialise(db, block_index=None):
     initialise(db)
 
     # clean consensus hashes if first block hash don't match with checkpoint.
-    checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
+    checkpoints = check.CHECKPOINTS_TESTNET if config.TESTNET else check.CHECKPOINTS_MAINNET
     columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(blocks)''')]
     for field in ['ledger_hash', 'txlist_hash']:
         if field in columns:
@@ -1561,7 +1510,7 @@ def follow (db):
 
             # When newly caught up, check for conservation of assets.
             if block_index == block_count:
-                check_conservation(db)
+                check.asset_conservation(db)
 
             # Remove any non‐supported transactions older than ten blocks.
             while len(not_supported_sorted) and not_supported_sorted[0][0] <= block_index - 10:

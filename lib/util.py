@@ -354,6 +354,8 @@ def exectracer(cursor, sql, bindings):
 
     return True
 
+class DatabaseIntegrityError(exceptions.DatabaseError):
+    pass
 def connect_to_db(flags=None, foreign_keys=True):
     """Connects to the SQLite database, returning a db Connection object"""
     logging.debug('Status: Creating connection to `{}`.'.format(config.DATABASE.split('/').pop()))
@@ -397,7 +399,7 @@ def connect_to_db(flags=None, foreign_keys=True):
                 raise exceptions.DatabaseError('Integrity check failed.')
             integral = True
             break
-        except exceptions.DatabaseIntegrityError:
+        except DatabaseIntegrityError:
             time.sleep(1)
             continue
     if not integral:
@@ -409,55 +411,6 @@ def connect_to_db(flags=None, foreign_keys=True):
     db.setexectrace(exectracer)
 
     return db
-
-
-class VersionError (Exception): pass
-class VersionUpdateRequiredError (VersionError): pass
-def version_check (block_index):
-    try:
-        host = 'https://counterpartyxcp.github.io/counterpartyd/version.json'
-        response = requests.get(host, headers={'cache-control': 'no-cache'})
-        versions = json.loads(response.text)
-    except Exception as e:
-        raise VersionError('Unable to check version. How’s your Internet access?')
-
-    # Check client version.
-    passed = True
-    if config.VERSION_MAJOR < versions['minimum_version_major']:
-        passed = False
-    elif config.VERSION_MAJOR == versions['minimum_version_major']:
-        if config.VERSION_MINOR < versions['minimum_version_minor']:
-            passed = False
-        elif config.VERSION_MINOR == versions['minimum_version_minor']:
-            if config.VERSION_REVISION < versions['minimum_version_revision']:
-                passed = False
-
-    if not passed:
-        explanation = 'Your version of counterpartyd is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: ‘{}’. Please upgrade to the latest version and restart the server.'.format(
-            config.VERSION_STRING, versions['block_index'], versions['minimum_version_major'], versions['minimum_version_minor'],
-            versions['minimum_version_revision'], versions['reason'])
-        if block_index >= versions['block_index']:
-            raise VersionUpdateRequiredError(explanation)
-        else:
-            warnings.warn(explanation)
-
-    logging.debug('Status: Version check passed.')
-    return
-
-def backend_check (db):
-    """Checks blocktime of last block to see if {} Core is running behind.""".format(config.BTC_NAME)
-    block_count = get_block_count()
-    block_hash = get_block_hash(block_count)
-    block = get_block(block_hash)
-    time_behind = time.time() - block['time']   # TODO: Block times are not very reliable.
-    if time_behind > 60 * 60 * 2:   # Two hours.
-        raise BitcoindError('Bitcoind is running about {} seconds behind.'.format(round(time_behind)))
-
-def database_check (db, blockcount):
-    """Checks {} database to see if the {} server has caught up with Bitcoind.""".format(config.XCP_NAME, config.XCP_CLIENT)
-    if last_block(db)['block_index'] + 1 < blockcount:
-        raise exceptions.DatabaseError('{} database is behind Bitcoind. Is the {} server running?'.format(config.XCP_NAME, config.XCP_CLIENT))
-    return
 
 def isodt (epoch_time):
     try:

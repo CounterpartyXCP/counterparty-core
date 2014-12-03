@@ -22,7 +22,7 @@ import requests
 import appdirs
 from prettytable import PrettyTable
 
-from lib import config, api, util, exceptions, bitcoin, blocks, blockchain
+from lib import config, api, util, exceptions, bitcoin, blocks, blockchain, check
 if os.name == 'nt':
     from lib import util_windows
 
@@ -645,8 +645,8 @@ if __name__ == '__main__':
     if args.action in ('server', 'reparse', 'rollback') and not config.FORCE:
         logging.info('Status: Checking version.')
         try:
-            util.version_check(bitcoin.get_block_count())
-        except util.VersionUpdateRequiredError as e:
+            check.version(bitcoin.get_block_count())
+        except check.VersionUpdateRequiredError as e:
             traceback.print_exc(file=sys.stdout)
             sys.exit(config.EXITCODE_UPDATE_REQUIRED)
 

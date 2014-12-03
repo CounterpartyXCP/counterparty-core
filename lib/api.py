@@ -23,7 +23,7 @@ import jsonrpc
 from jsonrpc import dispatcher
 import inspect
 
-from . import (config, bitcoin, exceptions, util, blockchain)
+from . import (config, bitcoin, exceptions, util, blockchain, check)
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute)
 
 API_TABLES = ['balances', 'credits', 'debits', 'bets', 'bet_matches',
@@ -280,15 +280,15 @@ class APIStatusPoller(threading.Thread):
                 # Check version.
                 if time.time() - self.last_version_check >= 10: # Four hours since last check.
                     code = 10
-                    util.version_check(util.last_block(db)['block_index'])
+                    check.version(util.last_block(db)['block_index'])
                     self.last_version_check = time.time()
                 # Check that bitcoind is running, communicable, and caught up with the blockchain.
                 # Check that the database has caught up with bitcoind.
                 if time.time() - self.last_database_check > 10 * 60: # Ten minutes since last check.
                     code = 11
-                    util.backend_check(db)
+                    check.backend(db)
                     code = 12
-                    util.database_check(db, bitcoin.get_block_count())  # TODO: If not reparse or rollback, once those use API.
+                    check.database(db, bitcoin.get_block_count())  # TODO: If not reparse or rollback, once those use API.
                     self.last_database_check = time.time()
             except Exception as e:
                 exception_name = e.__class__.__name__
