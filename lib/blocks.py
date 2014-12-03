@@ -35,7 +35,7 @@ TABLES = ['credits', 'debits', 'messages'] + \
          'callbacks', 'cancels', 'dividends', 'issuances', 'sends',
          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
          'rps_matches', 'rps', 'executions', 'contracts', 'storage',
-         'suicides', 'nonces', 'postqueue']
+         'suicides', 'nonces', 'postqueue', 'destructions']
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(CURR_DIR + '/../mainnet_burns.csv', 'r') as f:
