@@ -8,7 +8,7 @@ def open_leveldb(db_dir):
     try:
         import plyvel
     except:
-        raise Exception("Please install plyvel with `pip3 install plyvel==0.9`.")
+        raise Exception("Please install the plyvel package via pip3.")
 
     try:
         return plyvel.DB(db_dir, create_if_missing=False)
