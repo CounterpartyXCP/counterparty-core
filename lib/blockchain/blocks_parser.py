@@ -4,9 +4,13 @@ import logging
 from .bc_data_stream import BCDataStream
 from .utils import b2h, double_hash, ib2h, inverse_hash
 
-import plyvel
-
 def open_leveldb(db_dir):
+    try:
+        import plyvel
+    except:
+        logging.info("Please install plyvel (pip install plyvel==0.9).")
+        exit()
+
     try:
         return plyvel.DB(db_dir, create_if_missing=False)
     except plyvel._plyvel.IOError as e:

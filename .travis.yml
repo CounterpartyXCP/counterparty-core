@@ -3,13 +3,7 @@ python:
 - 3.4.0
 before_install:
 - sudo apt-get update -qq
-- sudo apt-get install -y unzip wget libleveldb-dev libsnappy1
-- wget https://leveldb.googlecode.com/files/leveldb-1.15.0.tar.gz
-- tar zxvf leveldb-1.15.0.tar.gz
-- cd leveldb-1.15.0; make
-- sudo cp -r include/leveldb /usr/include
-- sudo cp libleveldb.a libleveldb.so libleveldb.so.1 libleveldb.so.1.15 /usr/lib
-- cd ..
+- sudo apt-get install -y unzip wget
 install:
 - git clone https://github.com/ethereum/serpent.git && cd serpent && make && sudo make install && cd ..
 - wget https://github.com/rogerbinns/apsw/releases/download/3.8.5-r1/apsw-3.8.5-r1.zip
