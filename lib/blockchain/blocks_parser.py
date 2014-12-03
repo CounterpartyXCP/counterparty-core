@@ -8,15 +8,13 @@ def open_leveldb(db_dir):
     try:
         import plyvel
     except:
-        logging.info("Please install plyvel (pip install plyvel==0.9).")
-        exit()
+        raise Exception("Please install plyvel with `pip3 install plyvel==0.9`.")
 
     try:
         return plyvel.DB(db_dir, create_if_missing=False)
     except plyvel._plyvel.IOError as e:
         logging.info(str(e))
-        logging.info("Ensure that bitcoind is stopped.")
-        exit()
+        raise Exception("Ensure that bitcoind is stopped.")
 
 class BlockchainParser():
 
