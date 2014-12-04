@@ -17,6 +17,39 @@ LENGTH_2 = 8 + 8 + 1 + 1 + 4 + 4
 ID = 20
 # NOTE: Pascal strings are used for storing descriptions for backwards‐compatibility.
 
+def initialise(db):
+    cursor = db.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS issuances(
+                      tx_index INTEGER PRIMARY KEY,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      asset TEXT,
+                      quantity INTEGER,
+                      divisible BOOL,
+                      source TEXT,
+                      issuer TEXT,
+                      transfer BOOL,
+                      callable BOOL,
+                      call_date INTEGER,
+                      call_price REAL,
+                      description TEXT,
+                      fee_paid INTEGER,
+                      locked BOOL,
+                      status TEXT,
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      block_index_idx ON issuances (block_index)
+                    ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      valid_asset_idx ON issuances (asset, status)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      status_idx ON issuances (status)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      source_idx ON issuances (source)
+                   ''')
 
 def validate (db, source, destination, asset, quantity, divisible, callable_, call_date, call_price, description, block_index):
     problems = []
@@ -96,7 +129,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
                               WHERE (address = ? AND asset = ?)''', (source, config.XCP))
             balances = cursor.fetchall()
             cursor.close()
-            if util.asset_names_v2_enabled(block_index):  # Protocol change.
+            if util.enabled('numeric_asset_names', block_index):  # Protocol change.
                 if len(asset) >= 13:
                     fee = 0
                 else:

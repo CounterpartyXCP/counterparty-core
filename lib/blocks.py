@@ -18,7 +18,7 @@ import apsw
 import bitcoin as bitcoinlib
 import bitcoin.rpc as bitcoinlib_rpc
 
-from . import (config, exceptions, util, bitcoin)
+from lib import (config, exceptions, util, bitcoin, check, script)
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute)
 
 from .blockchain.blocks_parser import BlockchainParser, ChainstateParser
@@ -33,21 +33,8 @@ TABLES = ['credits', 'debits', 'messages'] + \
          'bet_expirations', 'bets', 'broadcasts', 'btcpays', 'burns',
          'callbacks', 'cancels', 'dividends', 'issuances', 'sends',
          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
-         'rps_matches', 'rps', 'executions', 'contracts', 'storage', 'suicides', 'nonces', 'postqueue']
-
-class SanityError (Exception): pass
-def check_conservation (db):
-    logging.debug('Status: Checking for conservation of assets.')
-
-    supplies = util.supplies(db)
-    for asset in supplies.keys():
-
-        issued = supplies[asset]
-        held = sum([holder['address_quantity'] for holder in util.holders(db, asset)])
-        # util.json_print(util.holders(db, asset))
-        if held != issued:
-            raise SanityError('{} {} issued ≠ {} {} held'.format(util.devise(db, issued, asset, 'output'), asset, util.devise(db, held, asset, 'output'), asset))
-        logging.debug('Status: {} has been conserved ({} {} both issued and held)'.format(asset, util.devise(db, issued, asset, 'output'), asset))
+         'rps_matches', 'rps', 'executions', 'contracts', 'storage',
+         'suicides', 'nonces', 'postqueue']
 
 def parse_tx (db, tx):
     cursor = db.cursor()
@@ -112,47 +99,10 @@ def parse_tx (db, tx):
 
     # Check for conservation of assets every CAREFULNESS transactions.
     if config.CAREFULNESS and not tx['tx_index'] % config.CAREFULNESS:
-        check_conservation(db)
+        check.asset_conservation(db)
 
     cursor.close()
     return True
-
-
-class ConsensusError (Exception): pass
-def consensus_hash(db, block_index, field, previous_consensus_hash, content):
-    cursor = db.cursor()
-
-    # Initialise previous hash on first block.
-    if block_index == config.BLOCK_FIRST:
-        assert not previous_consensus_hash
-        previous_consensus_hash = util.dhash_string(config.CONSENSUS_HASH_SEED)
-
-    # Get previous hash.
-    if not previous_consensus_hash:
-        previous_consensus_hash = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index - 1,)))[0][field]
-        if not previous_consensus_hash:
-            raise ConsensusError('Empty previous {} for block {}. Please launch a `reparse`.'.format(field, block_index))
-
-    # Calculate current hash.
-    version = config.CONSENSUS_HASH_VERSION_TESTNET if config.TESTNET else config.CONSENSUS_HASH_VERSION_MAINNET
-    calculated_hash = util.dhash_string(previous_consensus_hash + '{}{}'.format(version, ''.join(content)))
-
-    # Verify hash (if already in database) or save hash (if not).
-    found_hash = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,)))[0][field]
-    if found_hash:
-        # Check against existing value.
-        if calculated_hash != found_hash:
-            raise ConsensusError('Inconsistent {} for block {}.'.format(field, block_index))
-    else:
-        # Save new hash.
-        cursor.execute('''UPDATE blocks SET {} = ? WHERE block_index = ?'''.format(field), (calculated_hash, block_index))
-
-    # Check against checkpoints.
-    checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
-    if block_index in checkpoints and checkpoints[block_index][field] != calculated_hash:
-        raise ConsensusError('Incorrect {} for block {}.'.format(field, block_index))
-
-    return calculated_hash
 
 
 def parse_block (db, block_index, block_time, previous_ledger_hash=None, ledger_hash=None, previous_txlist_hash=None, txlist_hash=None):
@@ -179,8 +129,8 @@ def parse_block (db, block_index, block_time, previous_ledger_hash=None, ledger_
     cursor.close()
 
     # Consensus hashes.
-    new_ledger_hash = consensus_hash(db, block_index, 'ledger_hash', previous_ledger_hash, util.BLOCK_LEDGER)
-    new_txlist_hash = consensus_hash(db, block_index, 'txlist_hash', previous_txlist_hash, txlist)
+    new_ledger_hash = check.consensus_hash(db, block_index, 'ledger_hash', previous_ledger_hash, util.BLOCK_LEDGER)
+    new_txlist_hash = check.consensus_hash(db, block_index, 'txlist_hash', previous_txlist_hash, txlist)
 
     return new_ledger_hash, new_txlist_hash
 
@@ -310,645 +260,21 @@ def initialise(db):
                       asset_idx ON balances (asset)
                    ''')
 
-    # Sends
-    cursor.execute('''CREATE TABLE IF NOT EXISTS sends(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      destination TEXT,
-                      asset TEXT,
-                      quantity INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON sends (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON sends (source)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      destination_idx ON sends (destination)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      asset_idx ON sends (asset)
-                   ''')
-
-    # Orders
-    cursor.execute('''CREATE TABLE IF NOT EXISTS orders(
-                      tx_index INTEGER UNIQUE,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      give_asset TEXT,
-                      give_quantity INTEGER,
-                      give_remaining INTEGER,
-                      get_asset TEXT,
-                      get_quantity INTEGER,
-                      get_remaining INTEGER,
-                      expiration INTEGER,
-                      expire_index INTEGER,
-                      fee_required INTEGER,
-                      fee_required_remaining INTEGER,
-                      fee_provided INTEGER,
-                      fee_provided_remaining INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      PRIMARY KEY (tx_index, tx_hash))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON orders (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      index_hash_idx ON orders (tx_index, tx_hash)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      expire_idx ON orders (expire_index, status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      give_status_idx ON orders (give_asset, status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_give_status_idx ON orders (source, give_asset, status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      give_get_status_idx ON orders (get_asset, give_asset, status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON orders (source)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      give_asset_idx ON orders (give_asset)
-                   ''')
-
-    # Order Matches
-    cursor.execute('''CREATE TABLE IF NOT EXISTS order_matches(
-                      id TEXT PRIMARY KEY,
-                      tx0_index INTEGER,
-                      tx0_hash TEXT,
-                      tx0_address TEXT,
-                      tx1_index INTEGER,
-                      tx1_hash TEXT,
-                      tx1_address TEXT,
-                      forward_asset TEXT,
-                      forward_quantity INTEGER,
-                      backward_asset TEXT,
-                      backward_quantity INTEGER,
-                      tx0_block_index INTEGER,
-                      tx1_block_index INTEGER,
-                      block_index INTEGER,
-                      tx0_expiration INTEGER,
-                      tx1_expiration INTEGER,
-                      match_expire_index INTEGER,
-                      fee_paid INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx0_index, tx0_hash, tx0_block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      FOREIGN KEY (tx1_index, tx1_hash, tx1_block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      match_expire_idx ON order_matches (status, match_expire_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      forward_status_idx ON order_matches (forward_asset, status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      backward_status_idx ON order_matches (backward_asset, status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      id_idx ON order_matches (id)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx0_address_idx ON order_matches (tx0_address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx1_address_idx ON order_matches (tx1_address)
-                   ''')
-
-    # BTCpays
-    cursor.execute('''CREATE TABLE IF NOT EXISTS btcpays(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      destination TEXT,
-                      btc_amount INTEGER,
-                      order_match_id TEXT,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   ''')
-                      # Disallows invalids: FOREIGN KEY (order_match_id) REFERENCES order_matches(id))
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON btcpays (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON btcpays (source)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      destination_idx ON btcpays (destination)
-                   ''')
-
-    # Issuances
-    cursor.execute('''CREATE TABLE IF NOT EXISTS issuances(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      asset TEXT,
-                      quantity INTEGER,
-                      divisible BOOL,
-                      source TEXT,
-                      issuer TEXT,
-                      transfer BOOL,
-                      callable BOOL,
-                      call_date INTEGER,
-                      call_price REAL,
-                      description TEXT,
-                      fee_paid INTEGER,
-                      locked BOOL,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON issuances (block_index)
-                    ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      valid_asset_idx ON issuances (asset, status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      status_idx ON issuances (status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON issuances (source)
-                   ''')
-
-    # Broadcasts
-    cursor.execute('''CREATE TABLE IF NOT EXISTS broadcasts(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      timestamp INTEGER,
-                      value REAL,
-                      fee_fraction_int INTEGER,
-                      text TEXT,
-                      locked BOOL,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON broadcasts (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      status_source_idx ON broadcasts (status, source)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      status_source_index_idx ON broadcasts (status, source, tx_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      timestamp_idx ON broadcasts (timestamp)
-                   ''')
-
-    # Bets.
-    cursor.execute('''CREATE TABLE IF NOT EXISTS bets(
-                      tx_index INTEGER UNIQUE,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      feed_address TEXT,
-                      bet_type INTEGER,
-                      deadline INTEGER,
-                      wager_quantity INTEGER,
-                      wager_remaining INTEGER,
-                      counterwager_quantity INTEGER,
-                      counterwager_remaining INTEGER,
-                      target_value REAL,
-                      leverage INTEGER,
-                      expiration INTEGER,
-                      expire_index INTEGER,
-                      fee_fraction_int INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      PRIMARY KEY (tx_index, tx_hash))
-                  ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON bets (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      index_hash_idx ON bets (tx_index, tx_hash)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      expire_idx ON bets (status, expire_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      feed_valid_bettype_idx ON bets (feed_address, status, bet_type)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON bets (source)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      status_idx ON bets (status)
-                   ''')
-
-    # Bet Matches
-    cursor.execute('''CREATE TABLE IF NOT EXISTS bet_matches(
-                      id TEXT PRIMARY KEY,
-                      tx0_index INTEGER,
-                      tx0_hash TEXT,
-                      tx0_address TEXT,
-                      tx1_index INTEGER,
-                      tx1_hash TEXT,
-                      tx1_address TEXT,
-                      tx0_bet_type INTEGER,
-                      tx1_bet_type INTEGER,
-                      feed_address TEXT,
-                      initial_value INTEGER,
-                      deadline INTEGER,
-                      target_value REAL,
-                      leverage INTEGER,
-                      forward_quantity INTEGER,
-                      backward_quantity INTEGER,
-                      tx0_block_index INTEGER,
-                      tx1_block_index INTEGER,
-                      block_index INTEGER,
-                      tx0_expiration INTEGER,
-                      tx1_expiration INTEGER,
-                      match_expire_index INTEGER,
-                      fee_fraction_int INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx0_index, tx0_hash, tx0_block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      FOREIGN KEY (tx1_index, tx1_hash, tx1_block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      match_expire_idx ON bet_matches (status, match_expire_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      valid_feed_idx ON bet_matches (feed_address, status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      id_idx ON bet_matches (id)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx0_address_idx ON bet_matches (tx0_address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx1_address_idx ON bet_matches (tx1_address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      status_idx ON bet_matches (status)
-                   ''')
-
-    # Dividends
-    cursor.execute('''CREATE TABLE IF NOT EXISTS dividends(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      asset TEXT,
-                      dividend_asset TEXT,
-                      quantity_per_unit INTEGER,
-                      fee_paid INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON dividends (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON dividends (source)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      asset_idx ON dividends (asset)
-                   ''')
-
-    # Burns
-    cursor.execute('''CREATE TABLE IF NOT EXISTS burns(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      burned INTEGER,
-                      earned INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      status_idx ON burns (status)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      address_idx ON burns (source)
-                   ''')
-
-    # Cancels
-    cursor.execute('''CREATE TABLE IF NOT EXISTS cancels(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      offer_hash TEXT,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   ''')
-                      # Offer hash is not a foreign key. (And it cannot be, because of some invalid cancels.)
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      cancels_block_index_idx ON cancels (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON cancels (source)
-                   ''')
-
-    # Callbacks
-    cursor.execute('''CREATE TABLE IF NOT EXISTS callbacks(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      fraction TEXT,
-                      asset TEXT,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON callbacks (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON callbacks (source)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      asset_idx ON callbacks (asset)
-                   ''')
-
-    # RPS (Rock-Paper-Scissors)
-    cursor.execute('''CREATE TABLE IF NOT EXISTS rps(
-                      tx_index INTEGER UNIQUE,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      possible_moves INTEGER,
-                      wager INTEGER,
-                      move_random_hash TEXT,
-                      expiration INTEGER,
-                      expire_index INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      PRIMARY KEY (tx_index, tx_hash))
-                  ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON rps (source)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      matching_idx ON rps (wager, possible_moves)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      status_idx ON rps (status)
-                   ''')
-
-    # RPS Matches
-    cursor.execute('''CREATE TABLE IF NOT EXISTS rps_matches(
-                      id TEXT PRIMARY KEY,
-                      tx0_index INTEGER,
-                      tx0_hash TEXT,
-                      tx0_address TEXT,
-                      tx1_index INTEGER,
-                      tx1_hash TEXT,
-                      tx1_address TEXT,
-                      tx0_move_random_hash TEXT,
-                      tx1_move_random_hash TEXT,
-                      wager INTEGER,
-                      possible_moves INTEGER,
-                      tx0_block_index INTEGER,
-                      tx1_block_index INTEGER,
-                      block_index INTEGER,
-                      tx0_expiration INTEGER,
-                      tx1_expiration INTEGER,
-                      match_expire_index INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx0_index, tx0_hash, tx0_block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                      FOREIGN KEY (tx1_index, tx1_hash, tx1_block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      rps_match_expire_idx ON rps_matches (status, match_expire_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      rps_tx0_address_idx ON rps_matches (tx0_address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      rps_tx1_address_idx ON rps_matches (tx1_address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      status_idx ON rps_matches (status)
-                   ''')
-
-    # RPS Resolves
-    cursor.execute('''CREATE TABLE IF NOT EXISTS rpsresolves(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      move INTEGER,
-                      random TEXT,
-                      rps_match_id TEXT,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON rpsresolves (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON rpsresolves (source)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      rps_match_id_idx ON rpsresolves (rps_match_id)
-                   ''')
-
-    # Order Expirations
-    cursor.execute('''CREATE TABLE IF NOT EXISTS order_expirations(
-                      order_index INTEGER PRIMARY KEY,
-                      order_hash TEXT UNIQUE,
-                      source TEXT,
-                      block_index INTEGER,
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index),
-                      FOREIGN KEY (order_index, order_hash) REFERENCES orders(tx_index, tx_hash))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON order_expirations (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON order_expirations (source)
-                   ''')
-
-    # Bet Expirations
-    cursor.execute('''CREATE TABLE IF NOT EXISTS bet_expirations(
-                      bet_index INTEGER PRIMARY KEY,
-                      bet_hash TEXT UNIQUE,
-                      source TEXT,
-                      block_index INTEGER,
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index),
-                      FOREIGN KEY (bet_index, bet_hash) REFERENCES bets(tx_index, tx_hash))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON bet_expirations (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON bet_expirations (source)
-                   ''')
-
-    # RPS Expirations
-    cursor.execute('''CREATE TABLE IF NOT EXISTS rps_expirations(
-                      rps_index INTEGER PRIMARY KEY,
-                      rps_hash TEXT UNIQUE,
-                      source TEXT,
-                      block_index INTEGER,
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index),
-                      FOREIGN KEY (rps_index, rps_hash) REFERENCES rps(tx_index, tx_hash))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON rps_expirations (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON rps_expirations (source)
-                   ''')
-
-    # Order Match Expirations
-    cursor.execute('''CREATE TABLE IF NOT EXISTS order_match_expirations(
-                      order_match_id TEXT PRIMARY KEY,
-                      tx0_address TEXT,
-                      tx1_address TEXT,
-                      block_index INTEGER,
-                      FOREIGN KEY (order_match_id) REFERENCES order_matches(id),
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON order_match_expirations (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx0_address_idx ON order_match_expirations (tx0_address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx1_address_idx ON order_match_expirations (tx1_address)
-                   ''')
-
-    # Bet Match Expirations
-    cursor.execute('''CREATE TABLE IF NOT EXISTS bet_match_expirations(
-                      bet_match_id TEXT PRIMARY KEY,
-                      tx0_address TEXT,
-                      tx1_address TEXT,
-                      block_index INTEGER,
-                      FOREIGN KEY (bet_match_id) REFERENCES bet_matches(id),
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON bet_match_expirations (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx0_address_idx ON bet_match_expirations (tx0_address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx1_address_idx ON bet_match_expirations (tx1_address)
-                   ''')
-
-    # Bet Match Resolutions
-    cursor.execute('''CREATE TABLE IF NOT EXISTS bet_match_resolutions(
-                      bet_match_id TEXT PRIMARY KEY,
-                      bet_match_type_id INTEGER,
-                      block_index INTEGER,
-                      winner TEXT,
-                      settled BOOL,
-                      bull_credit INTEGER,
-                      bear_credit INTEGER,
-                      escrow_less_fee INTEGER,
-                      fee INTEGER,
-                      FOREIGN KEY (bet_match_id) REFERENCES bet_matches(id),
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index))
-                   ''')
-
-    # RPS Match Expirations
-    cursor.execute('''CREATE TABLE IF NOT EXISTS rps_match_expirations(
-                      rps_match_id TEXT PRIMARY KEY,
-                      tx0_address TEXT,
-                      tx1_address TEXT,
-                      block_index INTEGER,
-                      FOREIGN KEY (rps_match_id) REFERENCES rps_matches(id),
-                      FOREIGN KEY (block_index) REFERENCES blocks(block_index))
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      block_index_idx ON rps_match_expirations (block_index)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx0_address_idx ON rps_match_expirations (tx0_address)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx1_address_idx ON rps_match_expirations (tx1_address)
-                   ''')
-
-    # Contracts
-    cursor.execute('''CREATE TABLE IF NOT EXISTS contracts(
-                      contract_id TEXT PRIMARY KEY,
-                      tx_index INTEGER UNIQUE,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      code BLOB,
-                      nonce INTEGER,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                  ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON contracts (source)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx_hash_idx ON contracts (tx_hash)
-                   ''')
-
-    # Executions
-    cursor.execute('''CREATE TABLE IF NOT EXISTS executions(
-                      tx_index INTEGER UNIQUE,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      contract_id TEXT,
-                      gas_price INTEGER,
-                      gas_start INTEGER,
-                      gas_cost INTEGER,
-                      gas_remained INTEGER,
-                      value INTEGER,
-                      data BLOB,
-                      output BLOB,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                  ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON executions(source)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx_hash_idx ON executions(tx_hash)
-                   ''')
-
-    # Contract Storage
-    cursor.execute('''CREATE TABLE IF NOT EXISTS storage(
-                      contract_id TEXT,
-                      key BLOB,
-                      value BLOB,
-                      FOREIGN KEY (contract_id) REFERENCES contracts(contract_id))
-                  ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      contract_id_idx ON contracts(contract_id)
-                   ''')
-
-    # Suicides
-    cursor.execute('''CREATE TABLE IF NOT EXISTS suicides(
-                      contract_id TEXT PRIMARY KEY,
-                      FOREIGN KEY (contract_id) REFERENCES contracts(contract_id))
-                  ''')
-
-    # Nonces
-    cursor.execute('''CREATE TABLE IF NOT EXISTS nonces(
-                      address TEXT PRIMARY KEY,
-                      nonce INTEGER)
-                  ''')
-
-    # Postqueue
-    cursor.execute('''CREATE TABLE IF NOT EXISTS postqueue(
-                      message BLOB)
-                  ''')
+    # Consolidated
+    send.initialise(db)
+    order.initialise(db)
+    btcpay.initialise(db)
+    issuance.initialise(db)
+    broadcast.initialise(db)
+    bet.initialise(db)
+    publish.initialise(db)
+    execute.initialise(db)
+    dividend.initialise(db)
+    burn.initialise(db)
+    cancel.initialise(db)
+    rps.initialise(db)
+    rpsresolve.initialise(db)
+    callback.initialise(db)
 
     # Messages
     cursor.execute('''CREATE TABLE IF NOT EXISTS messages(
@@ -982,7 +308,7 @@ def initialise(db):
 
 def get_tx_info (tx_hex, block_index, block_parser = None):
     try:
-        if util.multisig_enabled(block_index):  # Protocol change.
+        if util.enabled('multisig_addresses', block_index):   # Protocol change.
             tx_info = get_tx_info2(tx_hex, block_index, block_parser)
         else:
             tx_info = get_tx_info1(tx_hex, block_index, block_parser)
@@ -1003,7 +329,7 @@ def get_tx_info1 (tx_hex, block_index, block_parser = None):
     ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
 
     def get_pubkeyhash (scriptpubkey):
-        asm = util.get_asm(scriptpubkey)
+        asm = script.get_asm(scriptpubkey)
         if len(asm) != 5 or asm[0] != 'OP_DUP' or asm[1] != 'OP_HASH160' or asm[3] != 'OP_EQUALVERIFY' or asm[4] != 'OP_CHECKSIG':
             return False
         return asm[2]
@@ -1029,7 +355,7 @@ def get_tx_info1 (tx_hex, block_index, block_parser = None):
         fee -= vout.nValue
 
         # Sum data chunks to get data. (Can mix OP_RETURN and multi-sig.)
-        asm = util.get_asm(vout.scriptPubKey)
+        asm = script.get_asm(vout.scriptPubKey)
         if len(asm) == 2 and asm[0] == 'OP_RETURN':                                             # OP_RETURN
             if type(asm[1]) != bytes: continue
             data_chunk = asm[1]
@@ -1136,7 +462,7 @@ def get_tx_info2 (tx_hex, block_index, block_parser = None):
         return destination, data
 
     def decode_checksig (asm):
-        pubkeyhash = util.get_checksig(asm)
+        pubkeyhash = script.get_checksig(asm)
         chunk = arc4_decrypt(pubkeyhash)
         if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
             # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
@@ -1150,7 +476,7 @@ def get_tx_info2 (tx_hex, block_index, block_parser = None):
         return destination, data
 
     def decode_checkmultisig (asm):
-        pubkeys, signatures_required = util.get_checkmultisig(asm)
+        pubkeys, signatures_required = script.get_checkmultisig(asm)
         chunk = b''
         for pubkey in pubkeys[:-1]:     # (No data in last pubkey.)
             chunk += pubkey[1:-1]       # Skip sign byte and nonce byte.
@@ -1161,7 +487,7 @@ def get_tx_info2 (tx_hex, block_index, block_parser = None):
             chunk = chunk[1:chunk_length + 1]
             destination, data = None, chunk[len(config.PREFIX):]
         else:                                                       # Destination
-            pubkeyhashes = [util.pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
+            pubkeyhashes = [script.pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
             destination, data = util.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes)), None
 
         return destination, data
@@ -1176,7 +502,7 @@ def get_tx_info2 (tx_hex, block_index, block_parser = None):
         output_value = vout.nValue
         fee -= output_value
 
-        asm = util.get_asm(vout.scriptPubKey)
+        asm = script.get_asm(vout.scriptPubKey)
         if asm[0] == 'OP_RETURN':
             new_destination, new_data = decode_opreturn(asm)
         elif asm[-1] == 'OP_CHECKSIG':
@@ -1211,7 +537,7 @@ def get_tx_info2 (tx_hex, block_index, block_parser = None):
         vout = vin_ctx.vout[vin.prevout.n]
         fee += vout.nValue
 
-        asm = util.get_asm(vout.scriptPubKey)
+        asm = script.get_asm(vout.scriptPubKey)
         if asm[-1] == 'OP_CHECKSIG':
             new_source, new_data = decode_checksig(asm)
             if new_data or not new_source: raise DecodeError('data in source')
@@ -1240,7 +566,7 @@ def reinitialise(db, block_index=None):
     initialise(db)
 
     # clean consensus hashes if first block hash don't match with checkpoint.
-    checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
+    checkpoints = check.CHECKPOINTS_TESTNET if config.TESTNET else check.CHECKPOINTS_MAINNET
     columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(blocks)''')]
     for field in ['ledger_hash', 'txlist_hash']:
         if field in columns:
@@ -1561,7 +887,7 @@ def follow (db):
 
             # When newly caught up, check for conservation of assets.
             if block_index == block_count:
-                check_conservation(db)
+                check.asset_conservation(db)
 
             # Remove any non‐supported transactions older than ten blocks.
             while len(not_supported_sorted) and not_supported_sorted[0][0] <= block_index - 10:

@@ -21,7 +21,7 @@ from bitcoin.core.script import CScript
 from bitcoin.core import x
 from bitcoin.core.key import CPubKey
 
-from . import config, exceptions, util, blockchain
+from . import (config, exceptions, util, blockchain, script)
 
 class InputError (Exception):
     pass
@@ -48,7 +48,7 @@ def pubkeyhash_to_pubkey(pubkeyhash):
             scriptsig = vin['scriptSig']
             asm = scriptsig['asm'].split(' ')
             pubkey = asm[1]
-            if pubkeyhash == util.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
+            if pubkeyhash == script.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
                 return pubkey
     raise exceptions.AddressError('Public key for address ‘{}’ not published in blockchain.'.format(pubkeyhash))
 def multisig_pubkeyhashes_to_pubkeys(address):
@@ -235,7 +235,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
         data_array, value = data_output
         s += value.to_bytes(8, byteorder='little')        # Value
 
-        if util.multisig_enabled(block_index):   # Protocol change.
+        if util.enabled('multisig_addresses', block_index):   # Protocol change.
             data_chunk = config.PREFIX + data_chunk
 
         # Initialise encryption key (once per output).
@@ -243,7 +243,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
 
         if encoding == 'multisig':
             # Get data (fake) public key.
-            if util.multisig_enabled(block_index):   # Protocol change.
+            if util.enabled('multisig_addresses', block_index):   # Protocol change.
                 pad_length = (33 * 2) - 1 - 2 - 2 - len(data_chunk)
                 assert pad_length >= 0
                 data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
@@ -274,7 +274,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
                 script += OP_2                                  # OP_2
                 script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
         elif encoding == 'opreturn':
-            if util.multisig_enabled(block_index):   # Protocol change.
+            if util.enabled('multisig_addresses', block_index):   # Protocol change.
                 data_chunk = key.encrypt(data_chunk)
             script = OP_RETURN                                  # OP_RETURN
             script += op_push(len(data_chunk))                  # Push bytes of data chunk (NOTE: OP_SMALLDATA?)
@@ -394,19 +394,19 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     # retrieved from wallet.
     self_public_key = None
     if encoding in ('multisig', 'pubkeyhash') and not multisig_source:
-        # If no public key was provided, derive from private key.
         if not self_public_key_hex:
-            # Get private key.
+            # If public key was not provided, derive it from the private key.
             private_key_wif = get_private_key(source)
-
-            # Derive public key.
             self_public_key_hex = private_key_to_public_key(private_key_wif)
+        else:
+            # If public key was provided, check that it matches the source address.
+            if source != script.pubkey_to_pubkeyhash(pubkey):
+                raise InputError('provided public key does not match the source address')
 
-        #convert public key hex into public key pair (sec)
+        # Convert hex public key into binary public key.
         try:
-            sec = binascii.unhexlify(self_public_key_hex)
-            is_compressed = is_sec_compressed(sec)
-            self_public_key = sec
+            self_public_key = binascii.unhexlify(self_public_key_hex)
+            is_compressed = is_sec_compressed(self_public_key)
         except (EncodingError, binascii.Error):
             raise InputError('Invalid private key.')
 
@@ -446,7 +446,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
             """ Yield successive n‐sized chunks from l.
             """
             for i in range(0, len(l), n): yield l[i:i+n]
-        if util.multisig_enabled(block_index):   # Protocol change.
+        if util.enabled('multisig_addresses', block_index):   # Protocol change.
             if encoding == 'pubkeyhash':
                 data_array = list(chunks(data, 20 - 1 - 8)) # Prefix is also a suffix here.
             elif encoding == 'multisig':
@@ -612,7 +612,7 @@ def get_unspent_txouts(source, return_confirmed=False):
     for tx in raw_transactions:
         for vout in tx['vout']:
             scriptpubkey = vout['scriptPubKey']
-            if util.scriptpubkey_to_address(CScript(x(scriptpubkey['hex']))) == canonical_address:
+            if script.scriptpubkey_to_address(CScript(x(scriptpubkey['hex']))) == canonical_address:
                 txid = tx['txid']
                 confirmations = tx['confirmations'] if 'confirmations' in tx else 0
                 if txid not in outputs or outputs[txid]['confirmations'] < confirmations:

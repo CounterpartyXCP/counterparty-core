@@ -88,9 +88,9 @@ def log (db, command, category, bindings):
     def output (quantity, asset):
         try:
             if asset not in ('fraction', 'leverage'):
-                return str(devise(db, quantity, asset, 'output')) + ' ' + asset
+                return str(value_out(db, quantity, asset)) + ' ' + asset
             else:
-                return str(devise(db, quantity, asset, 'output'))
+                return str(value_out(db, quantity, asset))
         except exceptions.AssetError:
             return '<AssetError>'
         except decimal.DivisionByZero:
@@ -147,7 +147,7 @@ def log (db, command, category, bindings):
                 else:
                     callability = 'uncallable'
                 try:
-                    quantity = devise(db, bindings['quantity'], None, dest='output', divisible=bindings['divisible'])
+                    quantity = value_out(db, bindings['quantity'], None, divisible=bindings['divisible'])
                 except Exception as e:
                     quantity = '?'
                 logging.info('Issuance: {} created {} of asset {}, which is {} and {}, with description ‘{}’ ({}) [{}]'.format(bindings['issuer'], quantity, bindings['asset'], divisibility, callability, bindings['description'], bindings['tx_hash'], bindings['status']))
@@ -158,7 +158,7 @@ def log (db, command, category, bindings):
             else:
                 if not bindings['value']: infix = '‘{}’'.format(bindings['text'])
                 else: infix = '‘{}’ = {}'.format(bindings['text'], bindings['value'])
-                suffix = ' from ' + bindings['source'] + ' at ' + isodt(bindings['timestamp']) + ' with a fee of {}%'.format(output(D(bindings['fee_fraction_int'] / 1e8) * D(100), 'fraction')) + ' (' + bindings['tx_hash'] + ')' + ' [{}]'.format(bindings['status'])
+                suffix = ' from ' + bindings['source'] + ' at ' + isodt(bindings['timestamp']) + ' with a fee of {}'.format(output(D(bindings['fee_fraction_int'] / 1e8), 'fraction')) + ' (' + bindings['tx_hash'] + ')' + ' [{}]'.format(bindings['status'])
                 logging.info('Broadcast: {}'.format(infix + suffix))
 
         elif category == 'bets':
@@ -198,7 +198,7 @@ def log (db, command, category, bindings):
             logging.info('Cancel: {} ({}) [{}]'.format(bindings['offer_hash'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'callbacks':
-            logging.info('Callback: {} called back {}% of {} ({}) [{}]'.format(bindings['source'], float(D(bindings['fraction']) * D(100)), bindings['asset'], bindings['tx_hash'], bindings['status']))
+            logging.info('Callback: {} called back {} of {} ({}) [{}]'.format(bindings['source'], float(D(bindings['fraction'])), bindings['asset'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'rps':
             log_message = 'RPS: {} opens game with {} possible moves and a wager of {}'.format(bindings['source'], bindings['possible_moves'], output(bindings['wager'], 'XCP'))
@@ -354,6 +354,8 @@ def exectracer(cursor, sql, bindings):
 
     return True
 
+class DatabaseIntegrityError(exceptions.DatabaseError):
+    pass
 def connect_to_db(flags=None, foreign_keys=True):
     """Connects to the SQLite database, returning a db Connection object"""
     logging.debug('Status: Creating connection to `{}`.'.format(config.DATABASE.split('/').pop()))
@@ -397,7 +399,7 @@ def connect_to_db(flags=None, foreign_keys=True):
                 raise exceptions.DatabaseError('Integrity check failed.')
             integral = True
             break
-        except exceptions.DatabaseIntegrityError:
+        except DatabaseIntegrityError:
             time.sleep(1)
             continue
     if not integral:
@@ -409,55 +411,6 @@ def connect_to_db(flags=None, foreign_keys=True):
     db.setexectrace(exectracer)
 
     return db
-
-
-class VersionError (Exception): pass
-class VersionUpdateRequiredError (VersionError): pass
-def version_check (block_index):
-    try:
-        host = 'https://counterpartyxcp.github.io/counterpartyd/version.json'
-        response = requests.get(host, headers={'cache-control': 'no-cache'})
-        versions = json.loads(response.text)
-    except Exception as e:
-        raise VersionError('Unable to check version. How’s your Internet access?')
-
-    # Check client version.
-    passed = True
-    if config.VERSION_MAJOR < versions['minimum_version_major']:
-        passed = False
-    elif config.VERSION_MAJOR == versions['minimum_version_major']:
-        if config.VERSION_MINOR < versions['minimum_version_minor']:
-            passed = False
-        elif config.VERSION_MINOR == versions['minimum_version_minor']:
-            if config.VERSION_REVISION < versions['minimum_version_revision']:
-                passed = False
-
-    if not passed:
-        explanation = 'Your version of counterpartyd is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: ‘{}’. Please upgrade to the latest version and restart the server.'.format(
-            config.VERSION_STRING, versions['block_index'], versions['minimum_version_major'], versions['minimum_version_minor'],
-            versions['minimum_version_revision'], versions['reason'])
-        if block_index >= versions['block_index']:
-            raise VersionUpdateRequiredError(explanation)
-        else:
-            warnings.warn(explanation)
-
-    logging.debug('Status: Version check passed.')
-    return
-
-def backend_check (db):
-    """Checks blocktime of last block to see if {} Core is running behind.""".format(config.BTC_NAME)
-    block_count = get_block_count()
-    block_hash = get_block_hash(block_count)
-    block = get_block(block_hash)
-    time_behind = time.time() - block['time']   # TODO: Block times are not very reliable.
-    if time_behind > 60 * 60 * 2:   # Two hours.
-        raise BitcoindError('Bitcoind is running about {} seconds behind.'.format(round(time_behind)))
-
-def database_check (db, blockcount):
-    """Checks {} database to see if the {} server has caught up with Bitcoind.""".format(config.XCP_NAME, config.XCP_CLIENT)
-    if last_block(db)['block_index'] + 1 < blockcount:
-        raise exceptions.DatabaseError('{} database is behind Bitcoind. Is the {} server running?'.format(config.XCP_NAME, config.XCP_CLIENT))
-    return
 
 def isodt (epoch_time):
     try:
@@ -525,7 +478,7 @@ def get_asset_id (asset_name, block_index):
         raise exceptions.AssetNameError('too short')
 
     # Numeric asset names.
-    if asset_names_v2_enabled(block_index):  # Protocol change.
+    if enabled('numeric_asset_names', block_index):  # Protocol change.
         if asset_name[0] == 'A':
             # Must be numeric.
             try:
@@ -565,7 +518,7 @@ def get_asset_name (asset_id, block_index):
     if asset_id < 26**3:
         raise exceptions.AssetIDError('too low')
 
-    if asset_names_v2_enabled(block_index):  # Protocol change.
+    if enabled('numeric_asset_names', block_index):  # Protocol change.
         if asset_id <= 2**64 - 1:
             if 26**12 + 1 <= asset_id:
                 asset_name = 'A' + str(asset_id)
@@ -599,7 +552,7 @@ def debit (db, block_index, address, asset, quantity, action=None, event=None):
     debit_cursor = db.cursor()
 
     # Contracts can only hold XCP balances.
-    if protocol_change(block_index, 333500): # Protocol change.
+    if enabled('contracts_only_xcp_balances', block_index): # Protocol change.
         if len(address) == 40:
             assert asset == config.XCP
 
@@ -654,7 +607,7 @@ def credit (db, block_index, address, asset, quantity, action=None, event=None):
     credit_cursor = db.cursor()
 
     # Contracts can only hold XCP balances.
-    if protocol_change(block_index, 333500): # Protocol change.
+    if enabled('contracts_only_xcp_balances', block_index): # Protocol change.
         if len(address) == 40:
             assert asset == config.XCP
 
@@ -704,63 +657,71 @@ def credit (db, block_index, address, asset, quantity, action=None, event=None):
     BLOCK_LEDGER.append('{}{}{}{}'.format(block_index, address, asset, quantity))
 
 class QuantityError(Exception): pass
-def devise (db, quantity, asset, dest, divisible=None):
 
-    # For output only.
-    def norm(num, places):
-        # Round only if necessary.
-        num = round(num, places)
+def is_divisible(db, asset):
+    if asset in (config.BTC, config.XCP):
+        return True
+    else:
+        cursor = db.cursor()
+        cursor.execute('''SELECT * FROM issuances \
+                          WHERE (status = ? AND asset = ?)''', ('valid', asset))
+        issuances = cursor.fetchall()
+        if not issuances: raise exceptions.AssetError('No such asset: {}'.format(asset))
+        return issuances[0]['divisible']
 
-        fmt = '{:.' + str(places) + 'f}'
-        num = fmt.format(num)
-        return num.rstrip('0')+'0' if num.rstrip('0')[-1] == '.' else num.rstrip('0')
+def value_in (db, quantity, asset, divisible=None):
 
-    # TODO: remove price, odds
-    if asset in ('leverage', 'value', 'fraction', 'price', 'odds'):
-        if dest == 'output':
-            return norm(quantity, 6)
-        elif dest == 'input':
-            # Hackish
-            if asset == 'leverage':
-                return round(quantity)
-            else:
-                return float(quantity)  # TODO: Float?!
+    if asset == 'leverage':
+        return round(quantity)
 
-    if asset in ('fraction',):
-        return norm(fraction(quantity, 1e8), 6)
+    if asset in ('value', 'fraction', 'price', 'odds'):
+        return float(quantity)  # TODO: Float?!
 
     if divisible == None:
-        if asset in (config.BTC, config.XCP):
-            divisible = True
-        else:
-            cursor = db.cursor()
-            cursor.execute('''SELECT * FROM issuances \
-                              WHERE (status = ? AND asset = ?)''', ('valid', asset))
-            issuances = cursor.fetchall()
-            cursor.close()
-            if not issuances: raise exceptions.AssetError('No such asset: {}'.format(asset))
-            divisible = issuances[0]['divisible']
+        divisible = is_divisible(db, asset)
 
     if divisible:
-        if dest == 'output':
-            quantity = D(quantity) / D(config.UNIT)
-            if quantity == quantity.to_integral():
-                return str(quantity) + '.0'  # For divisible assets, display the decimal point.
-            else:
-                return norm(quantity, 8)
-        elif dest == 'input':
-            quantity = D(quantity) * config.UNIT
-            if quantity == quantity.to_integral():
-                return int(quantity)
-            else:
-                raise QuantityError('Divisible assets have only eight decimal places of precision.')
+        quantity = d(quantity) * config.unit
+        if quantity == quantity.to_integral():
+            return int(quantity)
         else:
-            return quantity
+            raise quantityerror('divisible assets have only eight decimal places of precision.')
     else:
         quantity = D(quantity)
         if quantity != round(quantity):
             raise QuantityError('Fractional quantities of indivisible assets.')
         return round(quantity)
+
+def value_out (db, quantity, asset, divisible=None):
+
+    def norm(num, places):
+        # Round only if necessary.
+        num = round(num, places)
+        fmt = '{:.' + str(places) + 'f}'
+        num = fmt.format(num)
+        return num.rstrip('0')+'0' if num.rstrip('0')[-1] == '.' else num.rstrip('0')
+
+    if asset in ('leverage', 'value', 'price', 'odds'):
+        return norm(quantity, 6)
+
+    if asset in 'fraction':
+        return str(norm(quantity * D(100), 6)) + '%'
+
+    if divisible == None:
+        divisible = is_divisible(db, asset)
+
+    if divisible:
+        quantity = D(quantity) / D(config.UNIT)
+        if quantity == quantity.to_integral():
+            return str(quantity) + '.0'  # For divisible assets, display the decimal point.
+        else:
+            return norm(quantity, 8)
+    else:
+        quantity = D(quantity)
+        if quantity != round(quantity):
+            raise QuantityError('Fractional quantities of indivisible assets.')
+        return round(quantity)
+
 
 def holders(db, asset):
     holders = []
@@ -873,7 +834,7 @@ def validate_address(address, block_index):
 
     # Get array of pubkeyhashes to check.
     if is_multisig(address):
-        if not multisig_enabled(block_index):
+        if not enabled('multisig_addresses', block_index):
             raise MultiSigAddressError('Multi‐signature addresses are currently disabled.')
         pubkeyhashes = pubkeyhash_array(address)
     else:
@@ -1094,21 +1055,19 @@ def get_cached_raw_transaction(tx_hash):
 ### Backend RPC ###
 
 ### Protocol Changes ###
-def protocol_change(block_index, block_first):
+def enabled (change_name, block_index):
+    with open('version.json') as f:
+        versions = json.load(f)
+    enable_block_index = versions[change_name]['block_index']
+
     if config.TESTNET: 
-        return True # always retroactive on testnet
-    else:   # mainnet
-        if block_index >= block_first:
+        return True     # Protocol changes are always retroactive on testnet.
+    else:
+        if block_index >= enable_block_index:
             return True
         else:
             return False
     assert False
-
-def asset_names_v2_enabled(block_index):
-    return protocol_change(block_index, 333500)
-
-def multisig_enabled(block_index):
-    return protocol_change(block_index, 333500)
 
 ### Unconfirmed Transactions ###
 
@@ -1152,63 +1111,6 @@ def unconfirmed_transactions(address):
         return list(UNCONFIRMED_ADDRINDEX[address].values())
     else:
         return []
-
-### Script ####
-
-def hash160(x):
-    x = hashlib.sha256(x).digest()
-    m = hashlib.new('ripemd160')
-    m.update(x)
-    return m.digest()
-
-def pubkey_to_pubkeyhash(pubkey):
-    pubkeyhash = hash160(pubkey)
-    pubkey = base58_check_encode(binascii.hexlify(pubkeyhash).decode('utf-8'), config.ADDRESSVERSION)
-    return pubkey
-
-def get_asm(scriptpubkey):
-    try:
-        asm = []
-        for op in scriptpubkey:
-            if type(op) == bitcoinlib.core.script.CScriptOp:
-                asm.append(str(op))
-            else:
-                asm.append(op)
-    except bitcoinlib.core.script.CScriptTruncatedPushDataError:
-        raise DecodeError('invalid pushdata due to truncation')
-    if not asm:
-        raise DecodeError('empty output')
-    return asm
-
-def get_checksig(asm):
-    if len(asm) == 5 and asm[0] == 'OP_DUP' and asm[1] == 'OP_HASH160' and asm[3] == 'OP_EQUALVERIFY' and asm[4] == 'OP_CHECKSIG':
-        pubkeyhash = asm[2]
-        if type(pubkeyhash) == bytes:
-            return pubkeyhash
-    raise DecodeError('invalid OP_CHECKSIG')
-
-def get_checkmultisig(asm):
-    # N‐of‐2
-    if len(asm) == 5 and asm[3] == 2 and asm[4] == 'OP_CHECKMULTISIG':
-        pubkeys, signatures_required = asm[1:3], asm[0]
-        if all([type(pubkey) == bytes for pubkey in pubkeys]):
-            return pubkeys, signatures_required
-    # N‐of‐3
-    if len(asm) == 6 and asm[4] == 3 and asm[5] == 'OP_CHECKMULTISIG':
-        pubkeys, signatures_required = asm[1:4], asm[0]
-        if all([type(pubkey) == bytes for pubkey in pubkeys]):
-            return pubkeys, signatures_required
-    raise DecodeError('invalid OP_CHECKMULTISIG')
-
-def scriptpubkey_to_address(scriptpubkey):
-    asm = get_asm(scriptpubkey)
-    if asm[-1] == 'OP_CHECKSIG':
-        return base58_check_encode(binascii.hexlify(get_checksig(asm)).decode('utf-8'), config.ADDRESSVERSION)
-    elif asm[-1] == 'OP_CHECKMULTISIG':
-        pubkeys, signatures_required = get_checkmultisig(asm)
-        pubkeyhashes = [pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
-        return construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes))
-    return None
 
 
 def transfer(db, block_index, source, destination, asset, quantity, action, event):

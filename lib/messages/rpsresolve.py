@@ -13,6 +13,28 @@ FORMAT = '>H16s32s32s'
 LENGTH = 2 + 16 + 32 + 32
 ID = 81
 
+def initialise (db):
+    cursor = db.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS rpsresolves(
+                      tx_index INTEGER PRIMARY KEY,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      source TEXT,
+                      move INTEGER,
+                      random TEXT,
+                      rps_match_id TEXT,
+                      status TEXT,
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      block_index_idx ON rpsresolves (block_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      source_idx ON rpsresolves (source)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      rps_match_id_idx ON rpsresolves (rps_match_id)
+                   ''')
 
 def validate (db, source, move, random, rps_match_id):
     problems = []

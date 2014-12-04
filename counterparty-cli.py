@@ -95,18 +95,18 @@ def get_address (db, address):
     return address_dict
 
 def format_order (order):
-    give_quantity = util.devise(db, D(order['give_quantity']), order['give_asset'], 'output')
-    get_quantity = util.devise(db, D(order['get_quantity']), order['get_asset'], 'output')
-    give_remaining = util.devise(db, D(order['give_remaining']), order['give_asset'], 'output')
-    get_remaining = util.devise(db, D(order['get_remaining']), order['get_asset'], 'output')
+    give_quantity = util.value_out(db, D(order['give_quantity']), order['give_asset'])
+    get_quantity = util.value_out(db, D(order['get_quantity']), order['get_asset'])
+    give_remaining = util.value_out(db, D(order['give_remaining']), order['give_asset'])
+    get_remaining = util.value_out(db, D(order['get_remaining']), order['get_asset'])
     give_asset = order['give_asset']
     get_asset = order['get_asset']
 
     if get_asset < give_asset:
-        price = util.devise(db, D(order['get_quantity']) / D(order['give_quantity']), 'price', 'output')
+        price = util.value_out(db, D(order['get_quantity']) / D(order['give_quantity']), 'price')
         price_assets = get_asset + '/' + give_asset + ' ask'
     else:
-        price = util.devise(db, D(order['give_quantity']) / D(order['get_quantity']), 'price', 'output')
+        price = util.value_out(db, D(order['give_quantity']) / D(order['get_quantity']), 'price')
         price_assets = give_asset + '/' + get_asset + ' bid'
 
     return [D(give_remaining), give_asset, price, price_assets, str(order['fee_required'] / config.UNIT), str(order['fee_provided'] / config.UNIT), order['expire_index'] - util.last_block(db)['block_index'], order['tx_hash']]
@@ -117,9 +117,9 @@ def format_bet (bet):
     if not bet['target_value']: target_value = None
     else: target_value = bet['target_value']
     if not bet['leverage']: leverage = None
-    else: leverage = util.devise(db, D(bet['leverage']) / 5040, 'leverage', 'output')
+    else: leverage = util.value_out(db, D(bet['leverage']) / 5040, 'leverage')
 
-    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], util.isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.devise(db, odds, 'odds', 'output'), bet['expire_index'] - util.last_block(db)['block_index'], bet['tx_hash']]
+    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], util.isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.value_out(db, odds, 'odds'), bet['expire_index'] - util.last_block(db)['block_index'], bet['tx_hash']]
 
 def format_order_match (db, order_match):
     order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']
@@ -223,6 +223,8 @@ def cli(method, params, unsigned):
             except binascii.Error:
                 private_key_wif = answer    # Else, assume private key.
                 pubkey = bitcoin.private_key_to_public_key(private_key_wif)
+                if params['source'] != pubkey_to_pubkeyhash(pubkey):
+                    raise InputError('provided private key does not match the source address')
         params['pubkey'] = pubkey
 
     """  # NOTE: For debugging, e.g. with `Invalid Params` error.
@@ -547,7 +549,7 @@ def balances (address):
     table.add_row([config.BTC, btc_balance])  # BTC
     for balance in balances:
         asset = balance['asset']
-        quantity = util.devise(db, balance['quantity'], balance['asset'], 'output')
+        quantity = util.value_out(db, balance['quantity'], balance['asset'])
         table.add_row([asset, quantity])
     print('Balances')
     print(table.get_string())
@@ -790,8 +792,8 @@ if __name__ == '__main__':
 
     # MESSAGE CREATION
     if args.action == 'send':
-        if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
-        quantity = util.devise(db, args.quantity, args.asset, 'input')
+        if args.fee: args.fee = util.value_in(db, args.fee, config.BTC)
+        quantity = util.value_in(db, args.quantity, args.asset)
         cli('create_send', {'source': args.source,
                             'destination': args.destination, 'asset':
                             args.asset, 'quantity': quantity, 'fee': args.fee,
@@ -804,27 +806,27 @@ if __name__ == '__main__':
             args.unsigned)
 
     elif args.action == 'order':
-        if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
+        if args.fee: args.fee = util.value_in(db, args.fee, config.BTC)
         fee_required, fee_fraction_provided = D(args.fee_fraction_required), D(args.fee_fraction_provided)
         give_quantity, get_quantity = D(args.give_quantity), D(args.get_quantity)
 
         # Fee argument is either fee_required or fee_provided, as necessary.
         if args.give_asset == config.BTC:
             fee_required = 0
-            fee_fraction_provided = util.devise(db, fee_fraction_provided, 'fraction', 'input')
+            fee_fraction_provided = util.value_in(db, fee_fraction_provided, 'fraction')
             fee_provided = round(D(fee_fraction_provided) * D(give_quantity) * D(config.UNIT))
-            print('Fee provided: {} {}'.format(util.devise(db, fee_provided, config.BTC, 'output'), config.BTC))
+            print('Fee provided: {} {}'.format(util.value_out(db, fee_provided, config.BTC), config.BTC))
         elif args.get_asset == config.BTC:
             fee_provided = 0
-            fee_fraction_required = util.devise(db, args.fee_fraction_required, 'fraction', 'input')
+            fee_fraction_required = util.value_in(db, args.fee_fraction_required, 'fraction')
             fee_required = round(D(fee_fraction_required) * D(get_quantity) * D(config.UNIT))
-            print('Fee required: {} {}'.format(util.devise(db, fee_required, config.BTC, 'output'), config.BTC))
+            print('Fee required: {} {}'.format(util.value_out(db, fee_required, config.BTC), config.BTC))
         else:
             fee_required = 0
             fee_provided = 0
 
-        give_quantity = util.devise(db, give_quantity, args.give_asset, 'input')
-        get_quantity = util.devise(db, get_quantity, args.get_asset, 'input')
+        give_quantity = util.value_in(db, give_quantity, args.give_asset)
+        get_quantity = util.value_in(db, get_quantity, args.get_asset)
 
         cli('create_order', {'source': args.source,
                              'give_asset': args.give_asset, 'give_quantity':
@@ -841,7 +843,7 @@ if __name__ == '__main__':
            args.unsigned)
 
     elif args.action == '{}pay'.format(config.BTC).lower():
-        if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
+        if args.fee: args.fee = util.value_in(db, args.fee, config.BTC)
         cli('create_btcpay', {'source': args.source,
                               'order_match_id': args.order_match_id, 'fee':
                               args.fee, 'allow_unconfirmed_inputs':
@@ -853,9 +855,8 @@ if __name__ == '__main__':
             args.unsigned)
 
     elif args.action == 'issuance':
-        if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
-        quantity = util.devise(db, args.quantity, None, 'input',
-                               divisible=args.divisible)
+        if args.fee: args.fee = util.value_in(db, args.fee, config.BTC)
+        quantity = util.value_in(db, args.quantity, None, divisible=args.divisible)
         if args.callable_:
             if not args.call_date:
                 parser.error('must specify call date of callable asset', )
@@ -882,9 +883,9 @@ if __name__ == '__main__':
            args.unsigned)
 
     elif args.action == 'broadcast':
-        if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
-        value = util.devise(db, args.value, 'value', 'input')
-        fee_fraction = util.devise(db, args.fee_fraction, 'fraction', 'input')
+        if args.fee: args.fee = util.value_in(db, args.fee, config.BTC)
+        value = util.value_in(db, args.value, 'value')
+        fee_fraction = util.value_in(db, args.fee_fraction, 'fraction')
 
         cli('create_broadcast', {'source': args.source,
                                  'fee_fraction': fee_fraction, 'text':
@@ -899,12 +900,12 @@ if __name__ == '__main__':
            args.unsigned)
 
     elif args.action == 'bet':
-        if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
+        if args.fee: args.fee = util.value_in(db, args.fee, config.BTC)
         deadline = calendar.timegm(dateutil.parser.parse(args.deadline).utctimetuple())
-        wager = util.devise(db, args.wager, config.XCP, 'input')
-        counterwager = util.devise(db, args.counterwager, config.XCP, 'input')
-        target_value = util.devise(db, args.target_value, 'value', 'input')
-        leverage = util.devise(db, args.leverage, 'leverage', 'input')
+        wager = util.value_in(db, args.wager, config.XCP)
+        counterwager = util.value_in(db, args.counterwager, config.XCP)
+        target_value = util.value_in(db, args.target_value, 'value')
+        leverage = util.value_in(db, args.leverage, 'leverage')
 
         cli('create_bet', {'source': args.source,
                            'feed_address': args.feed_address, 'bet_type':
@@ -921,8 +922,8 @@ if __name__ == '__main__':
             args.unsigned)
 
     elif args.action == 'dividend':
-        if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
-        quantity_per_unit = util.devise(db, args.quantity_per_unit, config.XCP, 'input')
+        if args.fee: args.fee = util.value_in(db, args.fee, config.BTC)
+        quantity_per_unit = util.value_in(db, args.quantity_per_unit, config.XCP)
         cli('create_dividend', {'source': args.source,
                                 'quantity_per_unit': quantity_per_unit,
                                 'asset': args.asset, 'dividend_asset':
@@ -936,8 +937,8 @@ if __name__ == '__main__':
            args.unsigned)
 
     elif args.action == 'burn':
-        if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
-        quantity = util.devise(db, args.quantity, config.BTC, 'input')
+        if args.fee: args.fee = util.value_in(db, args.fee, config.BTC)
+        quantity = util.value_in(db, args.quantity, config.BTC)
         cli('create_burn', {'source': args.source, 'quantity': quantity,
                             'fee': args.fee, 'allow_unconfirmed_inputs':
                             args.unconfirmed, 'encoding': args.encoding,
@@ -948,7 +949,7 @@ if __name__ == '__main__':
         args.unsigned)
 
     elif args.action == 'cancel':
-        if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
+        if args.fee: args.fee = util.value_in(db, args.fee, config.BTC)
         cli('create_cancel', {'source': args.source,
                               'offer_hash': args.offer_hash, 'fee': args.fee,
                               'allow_unconfirmed_inputs': args.unconfirmed,
@@ -960,9 +961,9 @@ if __name__ == '__main__':
         args.unsigned)
 
     elif args.action == 'callback':
-        if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
+        if args.fee: args.fee = util.value_in(db, args.fee, config.BTC)
         cli('create_callback', {'source': args.source,
-                                'fraction': util.devise(db, args.fraction, 'fraction', 'input'),
+                                'fraction': util.value_in(db, args.fraction, 'fraction'),
                                 'asset': args.asset, 'fee': args.fee,
                                 'allow_unconfirmed_inputs': args.unconfirmed,
                                 'encoding': args.encoding, 'fee_per_kb':
@@ -973,8 +974,8 @@ if __name__ == '__main__':
            args.unsigned)
 
     elif args.action == 'rps':
-        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
-        wager = util.devise(db, args.wager, 'XCP', 'input')
+        if args.fee: args.fee = util.value_in(db, args.fee, 'BTC')
+        wager = util.value_in(db, args.wager, 'XCP')
         random, move_random_hash = generate_move_random_hash(args.move)
         print('random: {}'.format(random))
         print('move_random_hash: {}'.format(move_random_hash))
@@ -990,7 +991,7 @@ if __name__ == '__main__':
            args.unsigned)
 
     elif args.action == 'rpsresolve':
-        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
+        if args.fee: args.fee = util.value_in(db, args.fee, 'BTC')
         cli('create_rpsresolve', {'source': args.source,
                                 'random': args.random, 'move': args.move,
                                 'rps_match_id': args.rps_match_id, 'fee': args.fee,
@@ -1003,7 +1004,7 @@ if __name__ == '__main__':
            args.unsigned)
 
     elif args.action == 'publish':
-        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
+        if args.fee: args.fee = util.value_in(db, args.fee, 'BTC')
         cli('create_publish', {'source': args.source,
                                'gasprice': args.gasprice, 'startgas':
                                args.startgas, 'endowment': args.endowment,
@@ -1016,9 +1017,9 @@ if __name__ == '__main__':
                                args.op_return_value}, args.unsigned)
 
     elif args.action == 'execute':
-        if args.fee: args.fee = util.devise(db, args.fee, 'BTC', 'input')
-        value = util.devise(db, args.value, 'XCP', 'input')
-        startgas = util.devise(db, args.startgas, 'XCP', 'input')
+        if args.fee: args.fee = util.value_in(db, args.fee, 'BTC')
+        value = util.value_in(db, args.value, 'XCP')
+        startgas = util.value_in(db, args.startgas, 'XCP')
         cli('create_execute', {'source': args.source,
                                'contract_id': args.contract_id, 'gasprice':
                                args.gasprice, 'startgas': args.startgas,
@@ -1046,7 +1047,7 @@ if __name__ == '__main__':
         asset_id = util.get_asset_id(args.asset)
         divisible = results['divisible']
         locked = results['locked']
-        supply = util.devise(db, results['supply'], args.asset, dest='output')
+        supply = util.value_out(db, results['supply'], args.asset)
         call_date = util.isodt(results['call_date']) if results['call_date'] else results['call_date']
         call_price = str(results['call_price']) + ' XCP' if results['call_price'] else results['call_price']
 
@@ -1068,7 +1069,7 @@ if __name__ == '__main__':
             for holder in util.holders(db, args.asset):
                 quantity = holder['address_quantity']
                 if not quantity: continue
-                quantity = util.devise(db, quantity, args.asset, 'output')
+                quantity = util.value_out(db, quantity, args.asset)
                 if holder['escrow']: escrow = holder['escrow']
                 else: escrow = 'None'
                 print('\t' + str(holder['address']) + ',' + str(quantity) + ',' + escrow)
@@ -1093,7 +1094,7 @@ if __name__ == '__main__':
             for balance in balances:
                 asset = balance['asset']
                 try:
-                    balance = D(util.devise(db, balance['quantity'], balance['asset'], 'output'))
+                    balance = D(util.value_out(db, balance['quantity'], balance['asset']))
                 except:
                     balance = None
                 if balance:
