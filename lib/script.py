@@ -1,3 +1,9 @@
+import hashlib
+import bitcoin as bitcoinlib
+import binascii
+
+from lib import (util, config)
+
 def hash160(x):
     x = hashlib.sha256(x).digest()
     m = hashlib.new('ripemd160')
@@ -6,7 +12,7 @@ def hash160(x):
 
 def pubkey_to_pubkeyhash(pubkey):
     pubkeyhash = hash160(pubkey)
-    pubkey = base58_check_encode(binascii.hexlify(pubkeyhash).decode('utf-8'), config.ADDRESSVERSION)
+    pubkey = util.base58_check_encode(binascii.hexlify(pubkeyhash).decode('utf-8'), config.ADDRESSVERSION)
     return pubkey
 
 def get_asm(scriptpubkey):
@@ -46,7 +52,7 @@ def get_checkmultisig(asm):
 def scriptpubkey_to_address(scriptpubkey):
     asm = get_asm(scriptpubkey)
     if asm[-1] == 'OP_CHECKSIG':
-        return base58_check_encode(binascii.hexlify(get_checksig(asm)).decode('utf-8'), config.ADDRESSVERSION)
+        return util.base58_check_encode(binascii.hexlify(get_checksig(asm)).decode('utf-8'), config.ADDRESSVERSION)
     elif asm[-1] == 'OP_CHECKMULTISIG':
         pubkeys, signatures_required = get_checkmultisig(asm)
         pubkeyhashes = [pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
