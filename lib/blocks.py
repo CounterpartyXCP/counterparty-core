@@ -18,7 +18,7 @@ import apsw
 import bitcoin as bitcoinlib
 import bitcoin.rpc as bitcoinlib_rpc
 
-from . import (config, exceptions, util, bitcoin, check)
+from lib import (config, exceptions, util, bitcoin, check, script)
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute)
 
 from .blockchain.blocks_parser import BlockchainParser, ChainstateParser
@@ -262,7 +262,6 @@ def initialise(db):
 
     # Consolidated
     send.initialise(db)
-    destroy.initialise(db)
     order.initialise(db)
     btcpay.initialise(db)
     issuance.initialise(db)
@@ -330,7 +329,7 @@ def get_tx_info1 (tx_hex, block_index, block_parser = None):
     ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
 
     def get_pubkeyhash (scriptpubkey):
-        asm = util.get_asm(scriptpubkey)
+        asm = script.get_asm(scriptpubkey)
         if len(asm) != 5 or asm[0] != 'OP_DUP' or asm[1] != 'OP_HASH160' or asm[3] != 'OP_EQUALVERIFY' or asm[4] != 'OP_CHECKSIG':
             return False
         return asm[2]
@@ -356,7 +355,7 @@ def get_tx_info1 (tx_hex, block_index, block_parser = None):
         fee -= vout.nValue
 
         # Sum data chunks to get data. (Can mix OP_RETURN and multi-sig.)
-        asm = util.get_asm(vout.scriptPubKey)
+        asm = script.get_asm(vout.scriptPubKey)
         if len(asm) == 2 and asm[0] == 'OP_RETURN':                                             # OP_RETURN
             if type(asm[1]) != bytes: continue
             data_chunk = asm[1]
@@ -463,7 +462,7 @@ def get_tx_info2 (tx_hex, block_index, block_parser = None):
         return destination, data
 
     def decode_checksig (asm):
-        pubkeyhash = util.get_checksig(asm)
+        pubkeyhash = script.get_checksig(asm)
         chunk = arc4_decrypt(pubkeyhash)
         if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
             # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
@@ -477,7 +476,7 @@ def get_tx_info2 (tx_hex, block_index, block_parser = None):
         return destination, data
 
     def decode_checkmultisig (asm):
-        pubkeys, signatures_required = util.get_checkmultisig(asm)
+        pubkeys, signatures_required = script.get_checkmultisig(asm)
         chunk = b''
         for pubkey in pubkeys[:-1]:     # (No data in last pubkey.)
             chunk += pubkey[1:-1]       # Skip sign byte and nonce byte.
@@ -488,7 +487,7 @@ def get_tx_info2 (tx_hex, block_index, block_parser = None):
             chunk = chunk[1:chunk_length + 1]
             destination, data = None, chunk[len(config.PREFIX):]
         else:                                                       # Destination
-            pubkeyhashes = [util.pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
+            pubkeyhashes = [script.pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
             destination, data = util.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes)), None
 
         return destination, data
@@ -503,7 +502,7 @@ def get_tx_info2 (tx_hex, block_index, block_parser = None):
         output_value = vout.nValue
         fee -= output_value
 
-        asm = util.get_asm(vout.scriptPubKey)
+        asm = script.get_asm(vout.scriptPubKey)
         if asm[0] == 'OP_RETURN':
             new_destination, new_data = decode_opreturn(asm)
         elif asm[-1] == 'OP_CHECKSIG':
@@ -538,7 +537,7 @@ def get_tx_info2 (tx_hex, block_index, block_parser = None):
         vout = vin_ctx.vout[vin.prevout.n]
         fee += vout.nValue
 
-        asm = util.get_asm(vout.scriptPubKey)
+        asm = script.get_asm(vout.scriptPubKey)
         if asm[-1] == 'OP_CHECKSIG':
             new_source, new_data = decode_checksig(asm)
             if new_data or not new_source: raise DecodeError('data in source')

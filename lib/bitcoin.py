@@ -21,7 +21,7 @@ from bitcoin.core.script import CScript
 from bitcoin.core import x
 from bitcoin.core.key import CPubKey
 
-from . import config, exceptions, util, blockchain
+from . import (config, exceptions, util, blockchain, script)
 
 class InputError (Exception):
     pass
@@ -48,7 +48,7 @@ def pubkeyhash_to_pubkey(pubkeyhash):
             scriptsig = vin['scriptSig']
             asm = scriptsig['asm'].split(' ')
             pubkey = asm[1]
-            if pubkeyhash == util.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
+            if pubkeyhash == script.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
                 return pubkey
     raise exceptions.AddressError('Public key for address ‘{}’ not published in blockchain.'.format(pubkeyhash))
 def multisig_pubkeyhashes_to_pubkeys(address):
@@ -400,7 +400,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
             self_public_key_hex = private_key_to_public_key(private_key_wif)
         else:
             # If public key was provided, check that it matches the source address.
-            if source != pubkey_to_pubkeyhash(pubkey):
+            if source != script.pubkey_to_pubkeyhash(pubkey):
                 raise InputError('provided public key does not match the source address')
 
         # Convert hex public key into binary public key.
@@ -612,7 +612,7 @@ def get_unspent_txouts(source, return_confirmed=False):
     for tx in raw_transactions:
         for vout in tx['vout']:
             scriptpubkey = vout['scriptPubKey']
-            if util.scriptpubkey_to_address(CScript(x(scriptpubkey['hex']))) == canonical_address:
+            if script.scriptpubkey_to_address(CScript(x(scriptpubkey['hex']))) == canonical_address:
                 txid = tx['txid']
                 confirmations = tx['confirmations'] if 'confirmations' in tx else 0
                 if txid not in outputs or outputs[txid]['confirmations'] < confirmations:
