@@ -198,7 +198,7 @@ def log (db, command, category, bindings):
             logging.info('Cancel: {} ({}) [{}]'.format(bindings['offer_hash'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'callbacks':
-            logging.info('Callback: {} called back {} of {} ({}) [{}]'.format(bindings['source'], float(D(bindings['fraction'])), bindings['asset'], bindings['tx_hash'], bindings['status']))
+            logging.info('Callback: {} called back {} of {} ({}) [{}]'.format(bindings['source'], value_out(db, bindings['fraction'], 'fraction'), bindings['asset'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'rps':
             log_message = 'RPS: {} opens game with {} possible moves and a wager of {}'.format(bindings['source'], bindings['possible_moves'], output(bindings['wager'], 'XCP'))
@@ -347,10 +347,10 @@ def exectracer(cursor, sql, bindings):
         if category not in ('suicides', 'postqueue'):  # These tables are ephemeral.
             if category not in ('nonces', 'storage'):  # List message manually.
                 if not (command in ('update') and category in ('orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches', 'contracts')):    # List message manually.
-                    try:
+                    # try:
                         message(db, bindings['block_index'], command, category, bindings)
-                    except TypeError:
-                        raise TypeError('SQLite3 statements must used named arguments.')
+                    # except:
+                        # raise TypeError('SQLite3 statements must used named arguments.')
 
     return True
 
@@ -701,11 +701,11 @@ def value_out (db, quantity, asset, divisible=None):
         num = fmt.format(num)
         return num.rstrip('0')+'0' if num.rstrip('0')[-1] == '.' else num.rstrip('0')
 
+    if asset == 'fraction':
+        return str(norm(D(quantity) * D(100), 6)) + '%'
+
     if asset in ('leverage', 'value', 'price', 'odds'):
         return norm(quantity, 6)
-
-    if asset in 'fraction':
-        return str(norm(quantity * D(100), 6)) + '%'
 
     if divisible == None:
         divisible = is_divisible(db, asset)
