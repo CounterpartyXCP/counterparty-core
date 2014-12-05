@@ -77,36 +77,45 @@ def asset_conservation (db):
 
 class VersionError (Exception): pass
 class VersionUpdateRequiredError (VersionError): pass
+def check_change(protocol_change):
+
+    # Check client version.
+    passed = True
+    if config.VERSION_MAJOR < protocol_change['minimum_version_major']:
+        passed = False
+    elif config.VERSION_MAJOR == protocol_change['minimum_version_major']:
+        if config.VERSION_MINOR < protocol_change['minimum_version_minor']:
+            passed = False
+        elif config.VERSION_MINOR == protocol_change['minimum_version_minor']:
+            if config.VERSION_REVISION < protocol_change['minimum_version_revision']:
+                passed = False
+
+    if not passed:
+        explanation = 'Your version of counterpartyd is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: ‘{}’. Please upgrade to the latest version and restart the server.'.format(
+            config.VERSION_STRING, protocol_change['block_index'], protocol_change['minimum_version_major'], protocol_change['minimum_version_minor'],
+            protocol_change['minimum_version_revision'], change_name)
+        if block_index >= protocol_change['block_index']:
+            raise VersionUpdateRequiredError(explanation)
+        else:
+            warnings.warn(explanation)
+
 def version (block_index):
     try:
-        host = 'https://counterpartyxcp.github.io/counterpartyd/protocolchanges.json'
+        host = 'https://counterpartyxcp.github.io/counterpartyd/version.json'
         response = requests.get(host, headers={'cache-control': 'no-cache'})
         versions = json.loads(response.text)
     except Exception as e:
         raise VersionError('Unable to check version. How’s your Internet access?')
 
-    for change_name in versions:
-        protocol_change = versions[change_name]
-
-        # Check client version.
-        passed = True
-        if config.VERSION_MAJOR < protocol_change['minimum_version_major']:
-            passed = False
-        elif config.VERSION_MAJOR == protocol_change['minimum_version_major']:
-            if config.VERSION_MINOR < protocol_change['minimum_version_minor']:
-                passed = False
-            elif config.VERSION_MINOR == protocol_change['minimum_version_minor']:
-                if config.VERSION_REVISION < protocol_change['minimum_version_revision']:
-                    passed = False
-
-        if not passed:
-            explanation = 'Your version of counterpartyd is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: ‘{}’. Please upgrade to the latest version and restart the server.'.format(
-                config.VERSION_STRING, protocol_change['block_index'], protocol_change['minimum_version_major'], protocol_change['minimum_version_minor'],
-                protocol_change['minimum_version_revision'], change_name)
-            if block_index >= protocol_change['block_index']:
-                raise VersionUpdateRequiredError(explanation)
-            else:
-                warnings.warn(explanation)
+    # TODO: The first branch is for backwards‐compatibility and can be removed
+    # once these changes are pushed to `master`.
+    if 'minimum_version_major' in versions.keys():
+        protocol_change = versions
+        check_change(protocol_change)
+    else:
+        for change_name in versions:
+            protocol_change = versions[change_name]
+            check_change(protocol_change)
 
     logging.debug('Status: Version check passed.')
     return
