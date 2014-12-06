@@ -17,7 +17,6 @@ from Crypto.Cipher import ARC4
 import apsw
 import bitcoin as bitcoinlib
 import bitcoin.rpc as bitcoinlib_rpc
-import sys
 import csv
 
 from lib import (config, exceptions, util, bitcoin, check, script)
@@ -38,10 +37,12 @@ TABLES = ['credits', 'debits', 'messages'] + \
          'rps_matches', 'rps', 'executions', 'contracts', 'storage',
          'suicides', 'nonces', 'postqueue']
 
-CURR_DIR = os.path.dirname(os.path.realpath(sys.argv[0]))
-with open(CURR_DIR + '/mainnet_burns.csv', 'r') as f:
+CURR_DIR = os.path.dirname(os.path.realpath(__file__))
+with open(CURR_DIR + '/../mainnet_burns.csv', 'r') as f:
     mainnet_burns_reader = csv.DictReader(f)
-    MAINNET_BURNS = [line for line in mainnet_burns_reader]
+    MAINNET_BURNS = {}
+    for line in mainnet_burns_reader:
+        MAINNET_BURNS[line['tx_hash']] = line
 
 def parse_tx (db, tx):
     cursor = db.cursor()

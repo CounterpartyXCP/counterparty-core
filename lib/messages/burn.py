@@ -111,26 +111,20 @@ def parse (db, tx, MAINNET_BURNS, message=None):
     else:
         # Mainnet burns are hard‐coded.
 
-        found = False
-        for line in MAINNET_BURNS:
-            if line['tx_hash'] == tx['tx_hash']:
-                found = True
-                break
-            else:
-                continue
-
-        if found:
-            util.credit(db, int(line['block_index']), line['source'], config.XCP, int(line['earned']), action='burn', event=line['tx_hash'])
-
-            tx_index = line['tx_index']
-            tx_hash = line['tx_hash']
-            block_index = line['block_index']
-            source = line['source']
-            burned = line['burned']
-            earned = line['earned']
-            status = 'valid'
-        else:
+        try:
+            line = MAINNET_BURNS[tx['tx_hash']]
+        except KeyError:
             return
+
+        util.credit(db, int(line['block_index']), line['source'], config.XCP, int(line['earned']), action='burn', event=line['tx_hash'])
+
+        tx_index = line['tx_index']
+        tx_hash = line['tx_hash']
+        block_index = line['block_index']
+        source = line['source']
+        burned = line['burned']
+        earned = line['earned']
+        status = 'valid'
 
     # Add parsed transaction to message-type–specific table.
     # TODO: store sent in table
