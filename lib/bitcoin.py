@@ -370,23 +370,6 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     block_index = util.last_block(db)['block_index']
     (source, destination_outputs, data) = tx_info
 
-    # Data encoding methods (choose and validate).
-    if data:
-        if encoding == 'auto':
-            if len(data) <= config.OP_RETURN_MAX_SIZE:
-                # encoding = 'opreturn'
-                encoding = 'multisig'   # BTCGuild isn’t mining OP_RETURN?!
-            else:
-                encoding = 'multisig'
-
-        if encoding not in ('pubkeyhash', 'multisig', 'opreturn'):
-            raise exceptions.TransactionError('Unknown encoding‐scheme.')
-
-    if exact_fee and not isinstance(exact_fee, int):
-        raise exceptions.TransactionError('Exact fees must be in satoshis.')
-    if not isinstance(fee_provided, int):
-        raise exceptions.TransactionError('Fee provided must be in satoshis.')
-
 
     '''Destinations'''
 
@@ -397,7 +380,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     for (address, value) in destination_outputs:
 
         # Value.
-        if encoding == 'multisig':  # TODO: shoud be `util.is_multisig(address)`
+        if util.is_multisig(address):
             dust_size = multisig_dust_size
         else:
             dust_size = regular_dust_size
@@ -419,6 +402,23 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
 
 
     '''Data'''
+
+    # Data encoding methods (choose and validate).
+    if data:
+        if encoding == 'auto':
+            if len(data) <= config.OP_RETURN_MAX_SIZE:
+                # encoding = 'opreturn'
+                encoding = 'multisig'   # BTCGuild isn’t mining OP_RETURN?!
+            else:
+                encoding = 'multisig'
+
+        if encoding not in ('pubkeyhash', 'multisig', 'opreturn'):
+            raise exceptions.TransactionError('Unknown encoding‐scheme.')
+
+    if exact_fee and not isinstance(exact_fee, int):
+        raise exceptions.TransactionError('Exact fees must be in satoshis.')
+    if not isinstance(fee_provided, int):
+        raise exceptions.TransactionError('Fee provided must be in satoshis.')
 
     # Divide data into chunks.
     if data:
