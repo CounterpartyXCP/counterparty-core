@@ -218,7 +218,7 @@ def cancel_order_match (db, order_match, status, block_index):
     cursor.execute(sql, bindings)
     util.message(db, block_index, 'update', 'order_matches', bindings)
 
-    order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']
+    order_match_id = util.make_id(order_match['tx0_hash'], order_match['tx1_hash'])
 
     # If tx0 is dead, credit address directly; if not, replenish give remaining, get remaining, and fee required remaining.
     orders = list(cursor.execute('''SELECT * FROM orders \
@@ -491,7 +491,7 @@ def match (db, tx, block_index=None):
 
     tx1_status = tx1['status']
     for tx0 in order_matches:
-        order_match_id = tx0['tx_hash'] + tx1['tx_hash']
+        order_match_id = util.make_id(tx0['tx_hash'], tx1['tx_hash'])
         if not block_index:
             block_index = max(tx0['block_index'], tx1['block_index'])
         if tx1_status != 'open': break
@@ -502,12 +502,12 @@ def match (db, tx, block_index=None):
 
         # Ignore previous matches. (Both directions, just to be sure.)
         cursor.execute('''SELECT * FROM order_matches
-                          WHERE id = ? ''', (tx0['tx_hash'] + tx1['tx_hash'], ))
+                          WHERE id = ? ''', (util.make_id(tx0['tx_hash'], tx1['tx_hash']), ))
         if list(cursor):
             logging.debug('Skipping: previous match')
             continue
         cursor.execute('''SELECT * FROM order_matches
-                          WHERE id = ? ''', (tx1['tx_hash'] + tx0['tx_hash'], ))
+                          WHERE id = ? ''', (util.make_id(tx1['tx_hash'], tx0['tx_hash']), ))
         if list(cursor):
             logging.debug('Skipping: previous match')
             continue
@@ -681,7 +681,7 @@ def match (db, tx, block_index=None):
 
             # Record order match.
             bindings = {
-                'id': tx0['tx_hash'] + tx['tx_hash'],
+                'id': util.make_id(tx0['tx_hash'], tx['tx_hash']),
                 'tx0_index': tx0['tx_index'],
                 'tx0_hash': tx0['tx_hash'],
                 'tx0_address': tx0['source'],

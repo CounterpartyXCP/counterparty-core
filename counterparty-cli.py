@@ -122,7 +122,7 @@ def format_bet (bet):
     return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], util.isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.value_out(db, odds, 'odds'), bet['expire_index'] - util.last_block(db)['block_index'], bet['tx_hash']]
 
 def format_order_match (db, order_match):
-    order_match_id = order_match['tx0_hash'] + order_match['tx1_hash']
+    order_match_id = util.make_id(order_match['tx0_hash'], order_match['tx1_hash'])
     order_match_time_left = order_match['match_expire_index'] - util.last_block(db)['block_index']
     return [order_match_id, order_match_time_left]
 

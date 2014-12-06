@@ -318,7 +318,7 @@ def match (db, tx, block_index):
             util.message(db, block_index, 'update', 'rps', bindings)
 
         bindings = {
-            'id': tx0['tx_hash'] + tx1['tx_hash'],
+            'id': util.make_id(tx0['tx_hash'], tx1['tx_hash']),
             'tx0_index': tx0['tx_index'],
             'tx0_hash': tx0['tx_hash'],
             'tx0_address': tx0['source'],

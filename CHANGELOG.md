@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.48.0 (2014-12-06)
+	* match IDs now include underscore
 * v9.47.1 (2014-12-02)
 	* handle protocol changes more elegantly
 	* more sophisticated version checking

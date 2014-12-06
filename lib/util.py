@@ -1125,4 +1125,11 @@ def get_balance (db, address, asset):
     if not balances: return 0
     else: return balances[0]['quantity']
 
+ID_SEPARATOR = '_'
+def make_id(hash_1, hash_2):
+    return hash_1 + hash_2
+def parse_id(match_id):
+    # assert match_id[64] == ID_SEPARATOR
+    return match_id[:64], match_id[64:] # UTF-8 encoding means that the indices are doubled.
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

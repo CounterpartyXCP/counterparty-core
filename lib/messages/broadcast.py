@@ -185,7 +185,7 @@ def parse (db, tx, message):
                    ('pending', tx['source']))
     for bet_match in cursor.fetchall():
         broadcast_bet_match_cursor = db.cursor()
-        bet_match_id = bet_match['tx0_hash'] + bet_match['tx1_hash']
+        bet_match_id = util.make_id(bet_match['tx0_hash'], bet_match['tx1_hash'])
         bet_match_status = None
 
         # Calculate total funds held in escrow and total fee to be paid if

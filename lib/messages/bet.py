@@ -463,7 +463,7 @@ def match (db, tx):
                     logging.debug('Skipping: zero backward quantity.')
                     continue
 
-            bet_match_id = tx0['tx_hash'] + tx1['tx_hash']
+            bet_match_id = util.make_id(tx0['tx_hash'], tx1['tx_hash'])
 
             # Debit the order.
             # Counterwager remainings may be negative.
@@ -510,7 +510,7 @@ def match (db, tx):
 
             # Record bet fulfillment.
             bindings = {
-                'id': tx0['tx_hash'] + tx['tx_hash'],
+                'id': util.make_id(tx0['tx_hash'], tx['tx_hash']),
                 'tx0_index': tx0['tx_index'],
                 'tx0_hash': tx0['tx_hash'],
                 'tx0_address': tx0['source'],
