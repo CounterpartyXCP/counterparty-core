@@ -831,12 +831,10 @@ def dhash_string(text):
 
 ### Bitcoin Addresses ###
 
-def validate_address(address, block_index):
+def validate_address(address):
 
     # Get array of pubkeyhashes to check.
     if is_multisig(address):
-        if not enabled('multisig_addresses', block_index):
-            raise MultiSigAddressError('Multi‐signature addresses are currently disabled.')
         pubkeyhashes = pubkeyhash_array(address)
     else:
         pubkeyhashes = [address]

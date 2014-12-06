@@ -37,12 +37,12 @@ def validate (db, source, destination, asset, quantity, block_index):
         raise ValidateAssetError('asset invalid')
 
     try:
-        util.validate_address(source, block_index)
+        util.validate_address(source)
     except AddressError:
         raise ValidateError('source address invalid')
 
     try:
-        util.validate_address(destination, block_index)
+        util.validate_address(destination)
     except AddressError:
         raise ValidateError('destination address invalid')
 

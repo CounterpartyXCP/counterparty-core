@@ -541,7 +541,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
 
 def balances (address):
     address = util.canonical_address(address)
-    util.validate_address(address, util.last_block(db)['block_index'])
+    util.validate_address(address)
     address_data = get_address(db, address=address)
     balances = address_data['balances']
     table = PrettyTable(['Asset', 'Amount'])
