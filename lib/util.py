@@ -18,6 +18,7 @@ import sha3
 from functools import lru_cache
 import getpass
 import bitcoin as bitcoinlib
+import os
 
 from . import (config, exceptions)
 from .exceptions import DecodeError
@@ -1056,7 +1057,8 @@ def get_cached_raw_transaction(tx_hash):
 
 ### Protocol Changes ###
 def enabled (change_name, block_index):
-    with open('version.json') as f:
+    CURR_DIR = os.path.dirname(os.path.realpath(__file__))
+    with open(CURR_DIR + '/../version.json') as f:
         versions = json.load(f)
     enable_block_index = versions[change_name]['block_index']
 
