@@ -620,7 +620,7 @@ def reparse (db, block_index=None, quiet=False):
             log.setLevel(logging.INFO)
 
         # Check for conservation of assets.
-        check_conservation(db)
+        check.asset_conservation(db)
 
         # Update minor version number.
         minor_version = cursor.execute('PRAGMA user_version = {}'.format(int(config.VERSION_MINOR))) # Syntax?!
