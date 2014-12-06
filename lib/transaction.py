@@ -138,7 +138,7 @@ def make_fully_valid(pubkey):
     return fully_valid_pubkey
 
 
-def serialise (block_index, encoding, inputs, destination_outputs, data_output=None, change_output=None, dust_return_public_key=None):
+def serialise (block_index, encoding, inputs, destination_outputs, data_output=None, change_output=None, dust_return_pubkey=None):
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
     # Number of inputs.
@@ -205,8 +205,8 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
                 tx_script += data_pubkey_1                         # (Fake) public key                  (1/2)
                 tx_script += op_push(33)                           # Push bytes of data chunk (fake) public key    (2/2)
                 tx_script += data_pubkey_2                         # (Fake) public key                  (2/2)
-                tx_script += op_push(len(dust_return_public_key))  # Push bytes of source public key
-                tx_script += dust_return_public_key                       # Source public key
+                tx_script += op_push(len(dust_return_pubkey))  # Push bytes of source public key
+                tx_script += dust_return_pubkey                       # Source public key
                 tx_script += OP_3                                  # OP_3
                 tx_script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
             else:
@@ -215,8 +215,8 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
                 data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
                 # Construct script.
                 tx_script = OP_1                                   # OP_1
-                tx_script += op_push(len(dust_return_public_key))  # Push bytes of source public key
-                tx_script += dust_return_public_key                       # Source public key
+                tx_script += op_push(len(dust_return_pubkey))  # Push bytes of source public key
+                tx_script += dust_return_pubkey                       # Source public key
                 tx_script += op_push(len(data_chunk))              # Push bytes of data chunk (fake) public key
                 tx_script += data_chunk                            # (Fake) public key
                 tx_script += OP_2                                  # OP_2
@@ -266,7 +266,7 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
                  regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
                  multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
                  op_return_value=config.DEFAULT_OP_RETURN_VALUE,
-                 exact_fee=None, fee_provided=0, self_public_key_hex=None,
+                 exact_fee=None, fee_provided=0, provided_pubkeys=None,
                  allow_unconfirmed_inputs=False):
 
     block_index = util.last_block(db)['block_index']
@@ -295,7 +295,7 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
         # Address.
         script.validate(address)
         if script.is_multisig(address):
-            destination_outputs_new.append((script.multisig_pubkeyhashes_to_pubkeys(address), value))
+            destination_outputs_new.append((script.multisig_pubkeyhashes_to_pubkeys(address, provided_pubkeys), value))
         else:
             destination_outputs_new.append((address, value))
 
@@ -363,27 +363,27 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
     if source:
         script.validate(source)
 
-    self_public_key = None
+    # Get `dust_return_pubkey`, if necessary.
     if encoding in ('multisig', 'pubkeyhash'):
         if script.is_multisig(source):
-            a, self_pubkeys, b = script.extract_array(script.multisig_pubkeyhashes_to_pubkeys(source))
-            self_public_key = binascii.unhexlify(self_pubkeys[0])
+            a, self_pubkeys, b = script.extract_array(script.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys))
+            self_public_key_hex = self_pubkeys[0]
         else:
-            if not self_public_key_hex:
+            if not provided_pubkeys:
                 # If public key was not provided, derive it from the private key.
                 private_key_wif = backend.dumpprivkey(source)
                 self_public_key_hex = script.private_key_to_public_key(private_key_wif)
             else:
-                # If public key was provided, check that it matches the source address.
-                if source != script.pubkey_to_pubkeyhash(binascii.unhexlify(self_public_key_hex)):
-                    raise InputError('provided public key does not match the source address')
+                self_public_key_hex = script.pubkeyhash_to_pubkey(source)
 
-            # Convert hex public key into binary public key.
-            try:
-                self_public_key = binascii.unhexlify(self_public_key_hex)
-                is_compressed = is_sec_compressed(self_public_key)
-            except (EncodingError, binascii.Error):
-                raise InputError('Invalid private key.')
+        # Convert hex public key into binary public key.
+        try:
+            dust_return_pubkey = binascii.unhexlify(self_public_key_hex)
+            is_compressed = is_sec_compressed(dust_return_pubkey)
+        except (EncodingError, binascii.Error):
+            raise InputError('Invalid private key.')
+    else:
+        dust_return_pubkey = None
 
     # Calculate collective size of outputs.
     if encoding == 'multisig': data_output_size = 81        # 71 for the data
@@ -431,7 +431,7 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
 
     # Change output.
     if script.is_multisig(source):
-        change_address = script.multisig_pubkeyhashes_to_pubkeys(source)
+        change_address = script.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
     else:
         change_address = source
     if change_quantity: change_output = (change_address, change_quantity)
@@ -439,7 +439,7 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
 
 
     # Serialise inputs and outputs.
-    unsigned_tx = serialise(block_index, encoding, inputs, destination_outputs, data_output, change_output, dust_return_public_key=self_public_key)
+    unsigned_tx = serialise(block_index, encoding, inputs, destination_outputs, data_output, change_output, dust_return_pubkey=dust_return_pubkey)
     unsigned_tx_hex = binascii.hexlify(unsigned_tx).decode('utf-8')
 
     # Check that the constructed transaction isn’t doing anything funny.

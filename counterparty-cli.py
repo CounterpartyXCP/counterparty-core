@@ -160,11 +160,14 @@ def market(give_asset, get_asset):
 def cli(method, params, unsigned):
     # Get unsigned transaction serialisation.
 
-    is_multisig = script.is_multisig(params['source'])
     params['source'] = script.make_canonical(params['source'])
     pubkey = None
 
-    if not is_multisig:
+    if script.is_multisig(params['source']):
+        answer = input('Public keys (hexadecimal, comma‐separated): ')
+        answer = anwser.replace(' ', '')
+        params['pubkey'] = answer.split(',')
+    else:
         # Get public key for source.
         source = params['source']
         if not backend.is_valid(source):
@@ -195,7 +198,7 @@ def cli(method, params, unsigned):
                                         regular_dust_size=params['regular_dust_size'],
                                         multisig_dust_size=params['multisig_dust_size'],
                                         op_return_value=params['op_return_value'],
-                                        self_public_key_hex=pubkey,
+                                        provided_pubkeys=pubkey,
                                         allow_unconfirmed_inputs=params['allow_unconfirmed_inputs']))
     exit(0)
     """
@@ -205,7 +208,7 @@ def cli(method, params, unsigned):
     print('Transaction (unsigned):', unsigned_tx_hex)
 
     # Ask to sign and broadcast (if not multi‐sig).
-    if is_multisig:
+    if script.is_multisig(params['source']):
         print('Multi‐signature transactions are signed and broadcasted manually.')
     elif not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
         if backend.is_mine(source):
@@ -496,7 +499,7 @@ def set_options(data_dir=None, backend_rpc_connect=None,
 def balances(address):
     address = script.canonical(address)
     script.validate(address)
-    balances = get_address(db, address=address)['balances']
+    balances = get_address(db, address=addr)['balances']
     table = PrettyTable(['Asset', 'Amount'])
     btc_balance = backend.get_btc_balance(address)
     table.add_row([config.BTC, btc_balance])  # BTC
