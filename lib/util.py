@@ -271,6 +271,9 @@ def log (db, command, category, bindings):
             else:
                 logging.info('Execution: {} created contract {} ({}) [{}]'.format(bindings['source'], bindings['output'], bindings['tx_hash'], bindings['status']))
 
+        elif category == 'destructions':
+            logging.info('Destruction: {} destroyed {} {} with tag ‘{}’({}) [{}]'.format(bindings['source'], bindings['quantity'], bindings['asset'], bindings['tag'], bindings['tx_hash'], bindings['status']))
+
     cursor.close()
 
 
@@ -775,13 +778,21 @@ def holders(db, asset):
     cursor.close()
     return holders
 
-def xcp_supply (db):
+def xcp_created (db):
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM burns \
+                      WHERE (status = ?)''', ('valid',))
+    total = sum([burn['earned'] for burn in list(cursor)])
+    cursor.close()
+    return total
+
+def xcp_destroyed (db):
     cursor = db.cursor()
 
-    # Add burns.
-    cursor.execute('''SELECT * FROM burns \
-                      WHERE status = ?''', ('valid',))
-    burn_total = sum([burn['earned'] for burn in cursor.fetchall()])
+    # Destructions
+    cursor.execute('''SELECT * FROM destructions \
+                      WHERE (status = ? AND asset = ?)''', ('valid', config.XCP))
+    destroyed_total = sum([destruction['quantity'] for destruction in list(cursor)])
 
     # Subtract issuance fees.
     cursor.execute('''SELECT * FROM issuances\
@@ -794,23 +805,50 @@ def xcp_supply (db):
     dividend_fee_total = sum([dividend['fee_paid'] for dividend in cursor.fetchall()])
 
     cursor.close()
-    return burn_total - issuance_fee_total - dividend_fee_total
+    return destroyed_total - issuance_fee_total - dividend_fee_total
 
-def supplies (db):
+def xcp_supply (db):
+    return xcp_created(db) - xcp_destroyed(db)
+
+def creations (db):
     cursor = db.cursor()
-    supplies = {config.XCP: xcp_supply(db)}
+    creations = {config.XCP: xcp_created(db)}
     cursor.execute('''SELECT * from issuances \
                       WHERE status = ?''', ('valid',))
     for issuance in list(cursor):
         asset = issuance['asset']
         quantity = issuance['quantity']
-        if asset in supplies.keys():
-            supplies[asset] += quantity
+        if asset in creations.keys():
+            creations[asset] += quantity
         else:
-            supplies[asset] = quantity
+            creations[asset] = quantity
 
     cursor.close()
-    return supplies
+    return creations
+
+def destructions (db):
+    cursor = db.cursor()
+    destructions = {config.XCP: xcp_destroyed(db)}
+    cursor.execute('''SELECT * from destructions \
+                      WHERE (status = ? AND asset != ?)''', ('valid', config.XCP))
+    for destruction in list(cursor):
+        asset = destruction['asset']
+        quantity = destruction['burned']
+        if asset in destructions.keys():
+            destructions[asset] += quantity
+        else:
+            destructions[asset] = quantity
+
+    cursor.close()
+    return destructions
+
+def asset_supply (db, asset):
+    return creations(db)[asset] - destructions(db)[asset]
+
+def supplies (db):
+    d1 = creations(db)
+    d2 = destructions(db)
+    return {key: d1[key] - d2.get(key, 0) for key in d1.keys()}
 
 class GetURLError (Exception): pass
 def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):

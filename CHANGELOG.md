@@ -1,5 +1,6 @@
 ## Client Versions ##
 * v9.48.0 (2014-12-06)
+	* ‘destroy’ functionality (protocol change: 335000)
 	* match IDs now include underscore
 	* code clean‐up
 	* mainnet burns are hard‐coded

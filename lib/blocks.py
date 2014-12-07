@@ -20,7 +20,7 @@ import bitcoin.rpc as bitcoinlib_rpc
 import csv
 
 from lib import (config, exceptions, util, bitcoin, check, script)
-from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute)
+from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute, destroy)
 
 from .blockchain.blocks_parser import BlockchainParser, ChainstateParser
 from .blockchain.utils import ib2h
@@ -35,7 +35,7 @@ TABLES = ['credits', 'debits', 'messages'] + \
          'callbacks', 'cancels', 'dividends', 'issuances', 'sends',
          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
          'rps_matches', 'rps', 'executions', 'contracts', 'storage',
-         'suicides', 'nonces', 'postqueue']
+         'suicides', 'nonces', 'postqueue', 'destructions']
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(CURR_DIR + '/../mainnet_burns.csv', 'r') as f:
@@ -95,6 +95,8 @@ def parse_tx (db, tx):
         publish.parse(db, tx, message)
     elif message_type_id == execute.ID and tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
         execute.parse(db, tx, message)
+    elif message_type_id == destroy.ID:
+        destroy.parse(db, tx, message)
     else:
         cursor.execute('''UPDATE transactions \
                                    SET supported=? \
@@ -270,6 +272,7 @@ def initialise(db):
 
     # Consolidated
     send.initialise(db)
+    destroy.initialise(db)
     order.initialise(db)
     btcpay.initialise(db)
     issuance.initialise(db)
