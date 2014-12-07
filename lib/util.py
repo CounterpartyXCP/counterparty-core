@@ -21,7 +21,6 @@ import bitcoin as bitcoinlib
 import os
 
 from . import (config, exceptions)
-from .exceptions import DecodeError
 
 D = decimal.Decimal
 b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'

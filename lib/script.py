@@ -3,6 +3,7 @@ import bitcoin as bitcoinlib
 import binascii
 
 from lib import (util, config)
+from .exceptions import DecodeError
 
 def hash160(x):
     x = hashlib.sha256(x).digest()
