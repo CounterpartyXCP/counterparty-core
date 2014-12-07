@@ -325,7 +325,7 @@ def parse (db, tx, message):
         if bet_match_status:
             bindings = {
                 'status': bet_match_status,
-                'bet_match_id': bet_match['tx0_hash'] + bet_match['tx1_hash']
+                'bet_match_id': util.make_id(bet_match['tx0_hash'], bet_match['tx1_hash'])
             }
             sql='update bet_matches set status = :status where id = :bet_match_id'
             cursor.execute(sql, bindings)
