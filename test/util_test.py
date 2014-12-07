@@ -30,7 +30,8 @@ COUNTERPARTYD_OPTIONS = {
     'data_dir': tempfile.gettempdir(),
     'rpc_port': 9999,
     'rpc_password': 'pass',
-    'backend_rpc_port': 8888,
+    'backend_rpc_port': 18332,
+    'backend_rpc_user': 'rpc',
     'backend_rpc_password': 'pass'
 }
 
@@ -234,6 +235,9 @@ def clean_scenario_dump(scenario_name, dump):
     dump = dump.replace(standard_scenarios_params[scenario_name]['address2'], 'address2')
     dump = re.sub('[a-f0-9]{64}', 'hash', dump)
     dump = re.sub('X\'[A-F0-9]+\',1\);', '\'data\',1)', dump)
+    # ignore dust value
+    dump = re.sub(',7800,10000,\'data\',1\)', ',0,10000,\'data\',1\)', dump)
+    dump = re.sub(',5430,10000,\'data\',1\)', ',0,10000,\'data\',1\)', dump)
     return dump
 
 def check_record(record, counterpartyd_db):
