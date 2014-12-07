@@ -1,6 +1,9 @@
 ## Client Versions ##
 * v9.48.0 (2014-12-06)
 	* match IDs now include underscore
+	* code clean‐up
+	* mainnet burns are hard‐coded
+	* sanity checks for manually provided public and private keys
 * v9.47.1 (2014-12-02)
 	* handle protocol changes more elegantly
 	* more sophisticated version checking
