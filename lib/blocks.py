@@ -806,8 +806,6 @@ def follow (db):
         if minor_version != config.VERSION_MINOR:
             logging.info('Status: client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.VERSION_MINOR))
             reparse(db, quiet=False)
-        logging.info('Status: Connecting to backend.')
-        bitcoin.get_info()
         logging.info('Status: Resuming parsing.')
 
     except exceptions.DatabaseError:

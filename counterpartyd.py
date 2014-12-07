@@ -639,9 +639,14 @@ if __name__ == '__main__':
     urllib3_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
     urllib3_log.propagate = False
 
+    logging.info('Status: Running v{} of counterpartyd.'.format(config.VERSION_STRING, config.XCP_CLIENT))
+
+    # Backend
+    if args.action == 'server' or (args.action in ('reparse', 'rollback') and not config.FORCE):
+        logging.info('Status: Connecting to backend.')
+        bitcoin.get_info()
 
     # Version
-    logging.info('Status: Running v{} of counterpartyd.'.format(config.VERSION_STRING, config.XCP_CLIENT))
     if args.action in ('server', 'reparse', 'rollback') and not config.FORCE:
         logging.info('Status: Checking version.')
         try:
