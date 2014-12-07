@@ -416,6 +416,21 @@ INSERT INTO debits VALUES(310075,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','XCP',1102
 CREATE INDEX address_idx ON debits (address);
 CREATE INDEX asset_idx ON debits (asset);
 
+-- Table  destructions
+DROP TABLE IF EXISTS destructions;
+CREATE TABLE destructions(
+                      tx_index INTEGER PRIMARY KEY,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      source TEXT,
+                      asset INTEGER,
+                      quantity INTEGER,
+                      tag TEXT,
+                      status TEXT,
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
+-- Triggers and indices on  destructions
+CREATE INDEX status_idx ON destructions (status);
+
 -- Table  dividends
 DROP TABLE IF EXISTS dividends;
 CREATE TABLE dividends(
@@ -473,7 +488,6 @@ CREATE TABLE issuances(
 INSERT INTO issuances VALUES(6,'81972e1b6d68a5b857edf2a874805ca26013c7d5cf6d186a4bbd35699545b52a',310005,'BBBB',1000000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'',50000000,0,'valid');
 INSERT INTO issuances VALUES(7,'69151fb8e4a848b1f75aa63c947ac3f166fc6d44ee51083e8e057710ed78abec',310006,'BBBC',100000,0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1,17,0.015,'foobar',50000000,0,'valid');
 -- Triggers and indices on  issuances
-CREATE INDEX status_idx ON issuances (status);
 CREATE INDEX valid_asset_idx ON issuances (asset, status);
 
 -- Table  mempool
