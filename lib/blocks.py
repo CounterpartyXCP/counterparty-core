@@ -53,9 +53,9 @@ def parse_tx (db, tx):
     cursor = db.cursor()
 
     # Only one source and one destination allowed for now.
-    tx['source'] = tx['source'].split('-')[0]
+    if len(tx['source'].split('-')) > 1: return
     if tx['destination']:
-        tx['destination'] = tx['destination'].split('-')[0]
+        if len(tx['destination'].split('-')) > 1: return
 
     # Burns.
     if tx['destination'] == config.UNSPENDABLE:

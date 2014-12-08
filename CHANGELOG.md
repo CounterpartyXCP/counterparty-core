@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.48.0 (2014-12-08)
+	* better enforcement of single source, destination
 * v9.47.1 (2014-12-02)
 	* change first testnet block to 310000
 * v9.47.0 (2014-12-01)
