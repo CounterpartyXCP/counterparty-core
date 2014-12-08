@@ -107,9 +107,9 @@ def parse_tx (db, tx):
         cursor.close()
         return False
 
-    # Check for conservation of assets every CAREFULNESS transactions.
-    if config.CAREFULNESS and not tx['tx_index'] % config.CAREFULNESS:
-        check.asset_conservation(db)
+    # NOTE: for debugging (check asset conservation after every `N` transactions).
+    # if not tx['tx_index'] % N:
+    #     check.asset_conservation(db)
 
     cursor.close()
     return True

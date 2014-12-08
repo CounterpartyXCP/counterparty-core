@@ -133,8 +133,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
                  rpc_host=None, rpc_port=None, rpc_user=None,
                  rpc_password=None, rpc_allow_cors=None, log_file=None,
                  config_file=None, database_file=None, testnet=False,
-                 testcoin=False, carefulness=0, force=False,
-                 broadcast_tx_mainnet=None):
+                 testcoin=False, force=False, broadcast_tx_mainnet=None):
 
     if force:
         config.FORCE = force
@@ -173,14 +172,6 @@ def set_options (data_dir=None, backend_rpc_connect=None,
         config.TESTCOIN = configfile['Default'].getboolean('testcoin')
     else:
         config.TESTCOIN = False
-
-    # carefulness (check conservation of assets)
-    if carefulness:
-        config.CAREFULNESS = carefulness
-    elif has_config and 'carefulness' in configfile['Default']:
-        config.CAREFULNESS = configfile['Default']['carefulness']
-    else:
-        config.CAREFULNESS = 0
 
     ##############
     # THINGS WE CONNECT TO
@@ -427,7 +418,6 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='sets log level to DEBUG instead of WARNING')
     parser.add_argument('--testnet', action='store_true', help='use {} testnet addresses and block numbers'.format(config.BTC_NAME))
     parser.add_argument('--testcoin', action='store_true', help='use the test {} network on every blockchain'.format(config.XCP_NAME))
-    parser.add_argument('--carefulness', type=int, default=0, help='check conservation of assets after every CAREFULNESS transactions (potentially slow)')
     parser.add_argument('--unconfirmed', action='store_true', help='allow the spending of unconfirmed transaction outputs')
     parser.add_argument('--encoding', default='auto', type=str, help='data encoding method')
     parser.add_argument('--fee-per-kb', type=D, default=D(config.DEFAULT_FEE_PER_KB / config.UNIT), help='fee per kilobyte, in {}'.format(config.BTC))
@@ -609,8 +599,7 @@ if __name__ == '__main__':
                 rpc_password=args.rpc_password, rpc_allow_cors=args.rpc_allow_cors,
                 log_file=args.log_file, config_file=args.config_file,
                 database_file=args.database_file, testnet=args.testnet,
-                testcoin=args.testcoin, carefulness=args.carefulness,
-                force=args.force)
+                testcoin=args.testcoin, force=args.force)
 
     # Logging (to file and console).
     logger = logging.getLogger() #get root logger
