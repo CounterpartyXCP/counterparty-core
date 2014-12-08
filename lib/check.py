@@ -64,12 +64,10 @@ def consensus_hash (db, block_index, field, previous_consensus_hash, content):
 class SanityError (Exception): pass
 def asset_conservation (db):
     logging.debug('Status: Checking for conservation of assets.')
-
     supplies = util.supplies(db)
     for asset in supplies.keys():
         issued = supplies[asset]
         held = sum([holder['address_quantity'] for holder in util.holders(db, asset)])
-        # util.json_print(util.holders(db, asset))
         if held != issued:
             raise SanityError('{} {} issued ≠ {} {} held'.format(util.value_out(db, issued, asset), asset, util.value_out(db, held, asset), asset))
         logging.debug('Status: {} has been conserved ({} {} both issued and held)'.format(asset, util.value_out(db, issued, asset), asset))

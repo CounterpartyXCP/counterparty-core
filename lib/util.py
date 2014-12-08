@@ -726,6 +726,9 @@ def value_out (db, quantity, asset, divisible=None):
         return round(quantity)
 
 
+
+### SUPPLIES ###
+
 def holders(db, asset):
     holders = []
     cursor = db.cursor()
@@ -785,31 +788,24 @@ def xcp_created (db):
     total = sum([burn['earned'] for burn in list(cursor)])
     cursor.close()
     return total
-
 def xcp_destroyed (db):
     cursor = db.cursor()
-
     # Destructions
     cursor.execute('''SELECT * FROM destructions \
                       WHERE (status = ? AND asset = ?)''', ('valid', config.XCP))
     destroyed_total = sum([destruction['quantity'] for destruction in list(cursor)])
-
     # Subtract issuance fees.
     cursor.execute('''SELECT * FROM issuances\
                       WHERE status = ?''', ('valid',))
     issuance_fee_total = sum([issuance['fee_paid'] for issuance in cursor.fetchall()])
-
     # Subtract dividend fees.
     cursor.execute('''SELECT * FROM dividends\
                       WHERE status = ?''', ('valid',))
     dividend_fee_total = sum([dividend['fee_paid'] for dividend in cursor.fetchall()])
-
     cursor.close()
-    return destroyed_total - issuance_fee_total - dividend_fee_total
-
+    return destroyed_total + issuance_fee_total + dividend_fee_total
 def xcp_supply (db):
     return xcp_created(db) - xcp_destroyed(db)
-
 def creations (db):
     cursor = db.cursor()
     creations = {config.XCP: xcp_created(db)}
@@ -825,7 +821,6 @@ def creations (db):
 
     cursor.close()
     return creations
-
 def destructions (db):
     cursor = db.cursor()
     destructions = {config.XCP: xcp_destroyed(db)}
@@ -838,17 +833,17 @@ def destructions (db):
             destructions[asset] += quantity
         else:
             destructions[asset] = quantity
-
     cursor.close()
     return destructions
-
 def asset_supply (db, asset):
     return creations(db)[asset] - destructions(db)[asset]
-
 def supplies (db):
     d1 = creations(db)
     d2 = destructions(db)
     return {key: d1[key] - d2.get(key, 0) for key in d1.keys()}
+
+### SUPPLIES ###
+
 
 class GetURLError (Exception): pass
 def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
