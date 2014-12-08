@@ -124,7 +124,7 @@ def backend (db):
     block = get_block(block_hash)
     time_behind = time.time() - block['time']   # TODO: Block times are not very reliable.
     if time_behind > 60 * 60 * 2:   # Two hours.
-        raise BitcoindError('Bitcoind is running about {} seconds behind.'.format(round(time_behind)))
+        raise util.BitcoindError('Bitcoind is running about {} seconds behind.'.format(round(time_behind)))
 
 def database (db, blockcount):
     """Checks {} database to see if the {} server has caught up with Bitcoind.""".format(config.XCP_NAME, config.XCP_CLIENT)
