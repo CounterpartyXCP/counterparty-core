@@ -57,7 +57,7 @@ def scriptpubkey_to_address(scriptpubkey):
     elif asm[-1] == 'OP_CHECKMULTISIG':
         pubkeys, signatures_required = get_checkmultisig(asm)
         pubkeyhashes = [pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
-        return construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes))
+        return util.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes))
     return None
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

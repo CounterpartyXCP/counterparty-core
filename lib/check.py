@@ -3,7 +3,7 @@ import requests
 import logging
 import warnings
 
-from lib import (config, util)
+from lib import (config, util, exceptions)
 
 CONSENSUS_HASH_SEED = 'We can only see a short distance ahead, but we can see plenty there that needs to be done.'
 
@@ -128,7 +128,7 @@ def backend (db):
 
 def database (db, blockcount):
     """Checks {} database to see if the {} server has caught up with Bitcoind.""".format(config.XCP_NAME, config.XCP_CLIENT)
-    if last_block(db)['block_index'] + 1 < blockcount:
+    if util.last_block(db)['block_index'] + 1 < blockcount:
         raise exceptions.DatabaseError('{} database is behind Bitcoind. Is the {} server running?'.format(config.XCP_NAME, config.XCP_CLIENT))
     return
 

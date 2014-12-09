@@ -528,7 +528,7 @@ class APIServer(threading.Thread):
             latestBlockIndex = bitcoin.get_block_count()
 
             try:
-                util.database_check(db, latestBlockIndex)
+                check.database(db, latestBlockIndex)
             except exceptions.DatabaseError as e:
                 caught_up = False
             else:

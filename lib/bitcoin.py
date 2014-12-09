@@ -473,7 +473,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
                 self_public_key_hex = private_key_to_public_key(private_key_wif)
             else:
                 # If public key was provided, check that it matches the source address.
-                if source != script.pubkey_to_pubkeyhash(pubkey):
+                if source != script.pubkey_to_pubkeyhash(binascii.unhexlify(self_public_key_hex)):
                     raise InputError('provided public key does not match the source address')
 
             # Convert hex public key into binary public key.

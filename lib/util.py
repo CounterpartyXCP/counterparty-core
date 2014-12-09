@@ -836,7 +836,11 @@ def destructions (db):
     cursor.close()
     return destructions
 def asset_supply (db, asset):
-    return creations(db)[asset] - destructions(db)[asset]
+    supply = creations(db)[asset]
+    destroyed = destructions(db)
+    if asset in destroyed:
+        supply -= destroyed[asset]
+    return supply
 def supplies (db):
     d1 = creations(db)
     d2 = destructions(db)
