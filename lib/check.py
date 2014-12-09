@@ -128,7 +128,7 @@ def backend (db):
 
 def database (db, blockcount):
     """Checks {} database to see if the {} server has caught up with Bitcoind.""".format(config.XCP_NAME, config.XCP_CLIENT)
-    if last_block(db)['block_index'] + 1 < blockcount:
+    if util.last_block(db)['block_index'] + 1 < blockcount:
         raise exceptions.DatabaseError('{} database is behind Bitcoind. Is the {} server running?'.format(config.XCP_NAME, config.XCP_CLIENT))
     return
 
