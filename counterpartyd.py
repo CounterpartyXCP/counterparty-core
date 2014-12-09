@@ -450,7 +450,7 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
     parser_server = subparsers.add_parser('server', help='run the server')
-    parser_server.add_argument('--force', action='store_true', help='skip backend check, version check, process lock')
+    parser_server.add_argument('--force', action='store_true', help='skip backend check, version check, process lock (DO NOT USE ON PRODUCTION SYSTEMS)')
 
     parser_send = subparsers.add_parser('send', help='create and broadcast a *send* message')
     parser_send.add_argument('--source', required=True, help='the source address')
