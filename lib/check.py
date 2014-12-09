@@ -3,7 +3,7 @@ import requests
 import logging
 import warnings
 
-from lib import (config, util)
+from lib import (config, util, exceptions)
 
 CONSENSUS_HASH_SEED = 'We can only see a short distance ahead, but we can see plenty there that needs to be done.'
 
