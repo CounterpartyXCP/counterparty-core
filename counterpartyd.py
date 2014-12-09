@@ -450,7 +450,7 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
     parser_server = subparsers.add_parser('server', help='run the server')
-    parser_server.add_argument('--force', action='store_true', help='skip backend check, version check, process lock (DO NOT USE ON PRODUCTION SYSTEMS)')
+    parser_server.add_argument('--force', action='store_true', help='skip backend check, version check, process lock (NOT FOR USE ON PRODUCTION SYSTEMS)')
 
     parser_send = subparsers.add_parser('send', help='create and broadcast a *send* message')
     parser_send.add_argument('--source', required=True, help='the source address')
@@ -563,15 +563,15 @@ if __name__ == '__main__':
     parser_execute.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
     parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database')
-    parser_reparse.add_argument('--force', action='store_true', help='skip backend check, version check, process lock')
+    parser_reparse.add_argument('--force', action='store_true', help='skip backend check, version check, process lock (NOT FOR USE ON PRODUCTION SYSTEMS)')
 
     parser_rollback = subparsers.add_parser('rollback', help='rollback database')
     parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
-    parser_rollback.add_argument('--force', action='store_true', help='skip backend check, version check, process lock')
+    parser_rollback.add_argument('--force', action='store_true', help='skip backend check, version check, process lock (NOT FOR USE ON PRODUCTION SYSTEMS)')
 
     parser_kickstart = subparsers.add_parser('kickstart', help='rapidly bring database up to the present')
     parser_kickstart.add_argument('--bitcoind-dir', help='Bitcoin Core data directory')
-    parser_kickstart.add_argument('--force', action='store_true', help='skip backend check, version check, singleton check')
+    parser_kickstart.add_argument('--force', action='store_true', help='skip backend check, version check, singleton check (NOT FOR USE ON PRODUCTION SYSTEMS)')
 
     args = parser.parse_args()
 
@@ -629,6 +629,9 @@ if __name__ == '__main__':
     urllib3_log.propagate = False
 
     logging.info('Status: Running v{} of counterpartyd.'.format(config.VERSION_STRING, config.XCP_CLIENT))
+
+    if config.FORCE:
+        logging.warning('WARNING: THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.')
 
     # Backend
     if args.action == 'server' or (args.action in ('reparse', 'rollback') and not config.FORCE):
