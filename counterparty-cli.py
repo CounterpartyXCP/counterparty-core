@@ -99,29 +99,29 @@ def get_lock():
 
 def get_address (db, address):
     address_dict = {}
-    address_dict['balances'] = util.api('get_balances', {'filters': [('address', '==', address),]})
-    address_dict['debits'] = util.api('get_debits', {'filters': [('address', '==', address),]})
-    address_dict['credits'] = util.api('get_credits', {'filters': [('address', '==', address),]})
-    address_dict['burns'] = util.api('get_burns', {'filters': [('source', '==', address),]})
-    address_dict['sends'] = util.api('get_sends', {'filters': [('source', '==', address), ('destination', '==', address)], 'filterop': 'or'})
-    address_dict['orders'] = util.api('get_orders', {'filters': [('source', '==', address),]})
-    address_dict['order_matches'] = util.api('get_order_matches', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
-    address_dict['btcpays'] = util.api('get_btcpays', {'filters': [('source', '==', address), ('destination', '==', address)], 'filterop': 'or'})
-    address_dict['issuances'] = util.api('get_issuances', {'filters': [('source', '==', address),]})
-    address_dict['broadcasts'] = util.api('get_broadcasts', {'filters': [('source', '==', address),]})
-    address_dict['bets'] = util.api('get_bets', {'filters': [('source', '==', address),]})
-    address_dict['bet_matches'] = util.api('get_bet_matches', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
-    address_dict['dividends'] = util.api('get_dividends', {'filters': [('source', '==', address),]})
-    address_dict['cancels'] = util.api('get_cancels', {'filters': [('source', '==', address),]})
-    address_dict['rps'] = util.api('get_rps', {'filters': [('source', '==', address),]})
-    address_dict['rps_matches'] = util.api('get_rps_matches', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
-    address_dict['callbacks'] = util.api('get_callbacks', {'filters': [('source', '==', address),]})
-    address_dict['bet_expirations'] = util.api('get_bet_expirations', {'filters': [('source', '==', address),]})
-    address_dict['order_expirations'] = util.api('get_order_expirations', {'filters': [('source', '==', address),]})
-    address_dict['rps_expirations'] = util.api('get_rps_expirations', {'filters': [('source', '==', address),]})
-    address_dict['bet_match_expirations'] = util.api('get_bet_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
-    address_dict['order_match_expirations'] = util.api('get_order_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
-    address_dict['rps_match_expirations'] = util.api('get_rps_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
+    address_dict['balances'] = api('get_balances', {'filters': [('address', '==', address),]})
+    address_dict['debits'] = api('get_debits', {'filters': [('address', '==', address),]})
+    address_dict['credits'] = api('get_credits', {'filters': [('address', '==', address),]})
+    address_dict['burns'] = api('get_burns', {'filters': [('source', '==', address),]})
+    address_dict['sends'] = api('get_sends', {'filters': [('source', '==', address), ('destination', '==', address)], 'filterop': 'or'})
+    address_dict['orders'] = api('get_orders', {'filters': [('source', '==', address),]})
+    address_dict['order_matches'] = api('get_order_matches', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
+    address_dict['btcpays'] = api('get_btcpays', {'filters': [('source', '==', address), ('destination', '==', address)], 'filterop': 'or'})
+    address_dict['issuances'] = api('get_issuances', {'filters': [('source', '==', address),]})
+    address_dict['broadcasts'] = api('get_broadcasts', {'filters': [('source', '==', address),]})
+    address_dict['bets'] = api('get_bets', {'filters': [('source', '==', address),]})
+    address_dict['bet_matches'] = api('get_bet_matches', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
+    address_dict['dividends'] = api('get_dividends', {'filters': [('source', '==', address),]})
+    address_dict['cancels'] = api('get_cancels', {'filters': [('source', '==', address),]})
+    address_dict['rps'] = api('get_rps', {'filters': [('source', '==', address),]})
+    address_dict['rps_matches'] = api('get_rps_matches', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
+    address_dict['callbacks'] = api('get_callbacks', {'filters': [('source', '==', address),]})
+    address_dict['bet_expirations'] = api('get_bet_expirations', {'filters': [('source', '==', address),]})
+    address_dict['order_expirations'] = api('get_order_expirations', {'filters': [('source', '==', address),]})
+    address_dict['rps_expirations'] = api('get_rps_expirations', {'filters': [('source', '==', address),]})
+    address_dict['bet_match_expirations'] = api('get_bet_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
+    address_dict['order_match_expirations'] = api('get_order_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
+    address_dict['rps_match_expirations'] = api('get_rps_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
     return address_dict
 
 def format_order (order):
@@ -174,7 +174,7 @@ def market (give_asset, get_asset):
         ('tx0_address', 'IN', addresses),
         ('tx1_address', 'IN', addresses)
     ]
-    awaiting_btcs = util.api('get_order_matches', {'filters': filters, 'filterop': 'OR', 'status': 'pending'})
+    awaiting_btcs = api('get_order_matches', {'filters': filters, 'filterop': 'OR', 'status': 'pending'})
     table = PrettyTable(['Matched Order ID', 'Time Left'])
     for order_match in awaiting_btcs:
         order_match = format_order_match(db, order_match)
@@ -184,7 +184,7 @@ def market (give_asset, get_asset):
     print('\n')
 
     # Open orders.
-    orders = util.api('get_orders', {'status': 'open'})
+    orders = api('get_orders', {'status': 'open'})
     table = PrettyTable(['Give Quantity', 'Give Asset', 'Price', 'Price Assets', 'Required {} Fee'.format(config.BTC), 'Provided {} Fee'.format(config.BTC), 'Time Left', 'Tx Hash'])
     for order in orders:
         if give_asset and order['give_asset'] != give_asset: continue
@@ -197,7 +197,7 @@ def market (give_asset, get_asset):
     print('\n')
 
     # Open bets.
-    bets = util.api('get_bets', {'status': 'open'})
+    bets = api('get_bets', {'status': 'open'})
     table = PrettyTable(['Bet Type', 'Feed Address', 'Deadline', 'Target Value', 'Leverage', 'Wager', 'Odds', 'Time Left', 'Tx Hash'])
     for bet in bets:
         bet = format_bet(bet)
@@ -207,7 +207,7 @@ def market (give_asset, get_asset):
     print('\n')
 
     # Feeds
-    broadcasts = util.api('get_broadcasts', {'status': 'valid', 'order_by': 'timestamp', 'order_dir': 'desc'})
+    broadcasts = api('get_broadcasts', {'status': 'valid', 'order_by': 'timestamp', 'order_dir': 'desc'})
     table = PrettyTable(['Feed Address', 'Timestamp', 'Text', 'Value', 'Fee Fraction'])
     seen_addresses = []
     for broadcast in broadcasts:
@@ -270,7 +270,7 @@ def cli(method, params, unsigned):
     """
 
     # Construct transaction.
-    unsigned_tx_hex = util.api(method, params)
+    unsigned_tx_hex = api(method, params)
     print('Transaction (unsigned):', unsigned_tx_hex)
 
     # Ask to sign and broadcast (if not multi‐sig).
@@ -1078,7 +1078,7 @@ if __name__ == '__main__':
         balances(args.address)
 
     elif args.action == 'asset':
-        results = util.api('get_asset_info', {'assets': [args.asset]})
+        results = api('get_asset_info', {'assets': [args.asset]})
         if results:
             results = results[0]    # HACK
         else:
@@ -1105,7 +1105,7 @@ if __name__ == '__main__':
 
         if args.asset != config.BTC:
             print('Shareholders:')
-            balances = util.api('get_balances', {'filters': [('asset', '==', args.asset)]})
+            balances = api('get_balances', {'filters': [('asset', '==', args.asset)]})
             print('\taddress, quantity, escrow')
             for holder in util.holders(db, args.asset):
                 quantity = holder['address_quantity']
@@ -1162,7 +1162,7 @@ if __name__ == '__main__':
             ('tx0_address', 'IN', addresses),
             ('tx1_address', 'IN', addresses)
         ]
-        awaiting_btcs = util.api('get_order_matches', {'filters': filters, 'filterop': 'OR', 'status': 'pending'})
+        awaiting_btcs = api('get_order_matches', {'filters': filters, 'filterop': 'OR', 'status': 'pending'})
         table = PrettyTable(['Matched Order ID', 'Time Left'])
         for order_match in awaiting_btcs:
             order_match = format_order_match(db, order_match)
