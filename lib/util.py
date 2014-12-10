@@ -584,7 +584,10 @@ def get_asset_id (db, asset_name, block_index):
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM assets WHERE asset_name = ?''', (asset_name,))
     assets = list(cursor)
-    return int(assets[0]['asset_id'])
+    if len(assets) == 1:
+        return int(assets[0]['asset_id'])
+    else:
+        raise exceptions.AssetError('No such asset: {}'.format(asset_name))
 
 def get_asset_name (db, asset_id, block_index):
     if protocol_change(block_index, 3339000):
@@ -592,7 +595,10 @@ def get_asset_name (db, asset_id, block_index):
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM assets WHERE asset_id = ?''', (str(asset_id),))
     assets = list(cursor)
-    return assets[0]['asset_name']
+    if len(assets) == 1:
+        return assets[0]['asset_name']
+    elif not assets:
+        return 0    # Strange, I know…
 
 
 class DebitError (Exception): pass

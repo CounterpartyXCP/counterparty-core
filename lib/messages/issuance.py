@@ -208,6 +208,16 @@ def parse (db, tx, message):
             description = issuances[-1]['description']  # Use last description. (Assume previous issuance exists because tx is valid.)
             timestamp, value_int, fee_fraction_int = None, None, None
 
+        if not reissuance:
+            # Add to table of assets.
+            bindings= {
+                'asset_id': str(asset_id),
+                'asset_name': str(asset),
+                'block_index': tx['block_index'],
+            }
+            sql='insert into assets values(:asset_id, :asset_name, :block_index)'
+            issuance_parse_cursor.execute(sql, bindings)
+
     # Add parsed transaction to message-type–specific table.
     bindings= {
         'tx_index': tx['tx_index'],
@@ -229,16 +239,6 @@ def parse (db, tx, message):
     }
     sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status)'
     issuance_parse_cursor.execute(sql, bindings)
-
-    if not reissuance:
-        # Add to table of assets.
-        bindings= {
-            'asset_id': str(asset_id),
-            'asset_name': str(asset),
-            'block_index': tx['block_index'],
-        }
-        sql='insert into assets values(:asset_id, :asset_name, :block_index)'
-        issuance_parse_cursor.execute(sql, bindings)
 
     # Credit.
     if status == 'valid' and quantity:
