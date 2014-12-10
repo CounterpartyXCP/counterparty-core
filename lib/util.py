@@ -38,6 +38,10 @@ BLOCK_LEDGER = []
 # inelegant but easy and fast cache
 MEMPOOL = []
 
+CURR_DIR = os.path.dirname(os.path.realpath(__file__))
+with open(CURR_DIR + '/../version.json') as f:
+    VERSIONS = json.load(f)
+
 class RPCError (Exception): pass
 
 # TODO: This doesn’t timeout properly. (If server hangs, then unhangs, no result.)
@@ -1091,10 +1095,7 @@ def get_cached_raw_transaction(tx_hash):
 
 ### Protocol Changes ###
 def enabled (change_name, block_index):
-    CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-    with open(CURR_DIR + '/../version.json') as f:
-        versions = json.load(f)
-    enable_block_index = versions[change_name]['block_index']
+    enable_block_index = VERSIONS[change_name]['block_index']
 
     if config.TESTNET: 
         return True     # Protocol changes are always retroactive on testnet.
