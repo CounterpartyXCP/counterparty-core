@@ -119,9 +119,9 @@ def version (block_index):
 
 def backend (db):
     """Checks blocktime of last block to see if {} Core is running behind.""".format(config.BTC_NAME)
-    block_count = get_block_count()
-    block_hash = get_block_hash(block_count)
-    block = get_block(block_hash)
+    block_count = backend.rpc.getinfo()['blocks']
+    block_hash = backend.rpc.getblockhash(block_count)
+    block = backend.rpc.getblock(block_hash)
     time_behind = time.time() - block['time']   # TODO: Block times are not very reliable.
     if time_behind > 60 * 60 * 2:   # Two hours.
         raise util.BitcoindError('Bitcoind is running about {} seconds behind.'.format(round(time_behind)))

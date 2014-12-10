@@ -23,7 +23,7 @@ import jsonrpc
 from jsonrpc import dispatcher
 import inspect
 
-from . import (config, bitcoin, exceptions, util, blockchain, check, database)
+from . import (config, bitcoin, exceptions, util, blockchain, check, backend, database)
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute)
 
 API_TABLES = ['balances', 'credits', 'debits', 'bets', 'bet_matches',
@@ -288,7 +288,7 @@ class APIStatusPoller(threading.Thread):
                     code = 11
                     check.backend(db)
                     code = 12
-                    check.database(db, bitcoin.get_block_count())  # TODO: If not reparse or rollback, once those use API.
+                    check.database(db, backend.rpc.getinfo()['blocks'])
                     self.last_database_check = time.time()
             except Exception as e:
                 exception_name = e.__class__.__name__
@@ -525,7 +525,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_running_info():
-            latestBlockIndex = bitcoin.get_block_count()
+            latestBlockIndex = backend.rpc.getinfo()['blocks']
 
             try:
                 check.database(db, latestBlockIndex)
