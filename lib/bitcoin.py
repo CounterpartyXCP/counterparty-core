@@ -643,6 +643,9 @@ def get_unspent_txouts(source, return_confirmed=False):
         if not confirmed_spent and output['confirmations'] > 0:
             confirmed_unspent.append(output)
 
+    unspent = sorted(unspent, key=lambda x: x['txid'])
+    confirmed_unspent = sorted(confirmed_unspent, key=lambda x: x['txid'])
+
     if return_confirmed:
         return unspent, confirmed_unspent
     else:
