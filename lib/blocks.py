@@ -806,7 +806,7 @@ def follow (db):
         # Reparse all transactions if minor version has changed.
         minor_version = cursor.execute('PRAGMA user_version').fetchall()[0]['user_version']
         if minor_version != config.VERSION_MINOR:
-            logging.info('Status: client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.VERSION_MINOR))
+            logging.info('Status: Client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.VERSION_MINOR))
             reparse(db, quiet=False)
         logging.info('Status: Resuming parsing.')
 
