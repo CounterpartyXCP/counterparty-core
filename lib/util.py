@@ -343,7 +343,7 @@ def exectracer(cursor, sql, bindings):
     if 'blocks' in sql or 'transactions' in sql: return True
 
     # Record alteration in database.
-    if category not in ('balances', 'messages', 'mempool', ):
+    if category not in ('balances', 'messages', 'mempool', 'assets'):
         if category not in ('suicides', 'postqueue'):  # These tables are ephemeral.
             if category not in ('nonces', 'storage'):  # List message manually.
                 if not (command in ('update') and category in ('orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches', 'contracts')):    # List message manually.
@@ -508,18 +508,9 @@ def last_message (db):
     cursor.close()
     return last_message
 
-def get_asset_id (asset_name, block_index):
-    # Special cases.
+def generate_asset_id (asset_name, block_index):
     if asset_name == config.BTC: return 0
     elif asset_name == config.XCP: return 1
-
-    """
-    # Checksum
-    if not checksum.verify(asset_name):
-        raise exceptions.AssetNameError('invalid checksum')
-    else:
-        asset_name = asset_name[:-1]  # Strip checksum character.
-    """
 
     if len(asset_name) < 4:
         raise exceptions.AssetNameError('too short')
@@ -558,7 +549,7 @@ def get_asset_id (asset_name, block_index):
 
     return asset_id
 
-def get_asset_name (asset_id, block_index):
+def generate_asset_name (asset_id, block_index):
     if asset_id == 0: return config.BTC
     elif asset_id == 1: return config.XCP
 
@@ -585,6 +576,23 @@ def get_asset_name (asset_id, block_index):
     return asset_name + checksum.compute(asset_name)
     """
     return asset_name
+
+
+def get_asset_id (db, asset_name, block_index):
+    if protocol_change(block_index, 333900):
+        return generate_asset_id(asset_name, block_index)
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM assets WHERE asset_name = ?''', (asset_name,))
+    assets = list(cursor)
+    return assets[0]['asset_id']
+
+def get_asset_name (db, asset_id, block_index):
+    if protocol_change(block_index, 3339000):
+        return generate_asset_name(asset_id, block_index)
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM assets WHERE asset_id = ?''', (asset_id,))
+    assets = list(cursor)
+    return assets[0]['asset_name']
 
 
 class DebitError (Exception): pass

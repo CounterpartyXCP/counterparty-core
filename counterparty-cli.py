@@ -1043,7 +1043,7 @@ if __name__ == '__main__':
             print('Asset ‘{}’ not found.'.format(args.asset))
             exit(0)
 
-        asset_id = util.get_asset_id(args.asset)
+        asset_id = util.get_asset_id(db, args.asset, util.last_block(db)['block_index'])
         divisible = results['divisible']
         locked = results['locked']
         supply = util.devise(db, results['supply'], args.asset, dest='output')
