@@ -31,6 +31,11 @@ D = decimal.Decimal
 class ConfigurationError (Exception):
     pass
 
+def get_wallet ():
+    for group in backend.rpc.listaddressgroupings()
+        for bunch in group:
+            yield bunch
+
 def sigterm_handler(_signo, _stack_frame):
     if 'api_server' in globals():
         logging.info('Status: Stopping API server.')
@@ -138,7 +143,7 @@ def market (give_asset, get_asset):
 
     # Your Pending Orders Matches.
     addresses = []
-    for bunch in bitcoin.get_wallet():
+    for bunch in get_wallet():
         addresses.append(bunch[:2][0])
     filters = [
         ('tx0_address', 'IN', addresses),
@@ -1091,7 +1096,7 @@ if __name__ == '__main__':
         totals = {}
 
         print()
-        for bunch in bitcoin.get_wallet():
+        for bunch in get_wallet():
             address, btc_balance = bunch[:2]
             address_data = get_address(db, address=address)
             balances = address_data['balances']
@@ -1126,7 +1131,7 @@ if __name__ == '__main__':
 
     elif args.action == 'pending':
         addresses = []
-        for bunch in bitcoin.get_wallet():
+        for bunch in get_wallet():
             addresses.append(bunch[:2][0])
         filters = [
             ('tx0_address', 'IN', addresses),

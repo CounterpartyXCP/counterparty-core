@@ -16,11 +16,16 @@ def wallet_unlock ():
     else:
         return True    # Wallet is unencrypted.
 
-def deserialize(data):
-    return bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(data))
+def deserialize(tx_hex):
+    return bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
+def serialize(ctx):
+    return bitcoinlib.core.CTransaction.serialize(ctx)
+
+def get_txhash_list(block):
+    return [bitcoinlib.core.b2lx(ctx.GetHash()) for ctx in block.vtx]
 
 @lru_cache(maxsize=4096)
 def get_cached_raw_transaction(tx_hash):
-    return rpc.getrawtransaction(tx_hash, verbose=True)
+    return rpc.getrawtransaction(bitcoinlib.core.lx(tx_hash))
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

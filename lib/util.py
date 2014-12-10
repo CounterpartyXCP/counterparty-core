@@ -1110,10 +1110,10 @@ def update_unconfirmed_addrindex(tx):
             UNCONFIRMED_ADDRINDEX[address] = {}
         UNCONFIRMED_ADDRINDEX[address][tx['txid']] = tx
 
-def clean_unconfirmed_addrindex(tx):
+def clean_unconfirmed_addrindex(tx_hash):
     for address in list(UNCONFIRMED_ADDRINDEX.keys()):
-        if tx['txid'] in UNCONFIRMED_ADDRINDEX[address]:
-            UNCONFIRMED_ADDRINDEX[address].pop(tx['txid'])
+        if tx_hash in UNCONFIRMED_ADDRINDEX[address]:
+            UNCONFIRMED_ADDRINDEX[address].pop(tx_hash)
             if len(UNCONFIRMED_ADDRINDEX[address]) == 0:
                 UNCONFIRMED_ADDRINDEX.pop(address)
 

@@ -76,13 +76,6 @@ def send_raw_transaction (tx_hex):
     return util.rpc('sendrawtransaction', [tx_hex])
 def get_private_key (address):
     return util.rpc('dumpprivkey', [address])
-
-def get_wallet ():
-    for group in util.rpc('listaddressgroupings', []):
-        for bunch in group:
-            yield bunch
-def get_mempool ():
-    return util.rpc('getrawmempool', [])
 def list_unspent ():
     return util.rpc('listunspent', [0, 999999])
 """

@@ -624,10 +624,11 @@ def reparse (db, block_index=None, quiet=False):
     return
 
 def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
-    # Get the important details about each transaction.
-    tx = backend.get_cached_raw_transaction(tx_hash)
     logging.debug('Status: examining transaction {}.'.format(tx_hash))
-    source, destination, btc_amount, fee, data = get_tx_info(tx['hex'], block_index)
+
+    # Get the important details about each transaction.
+    tx_hex = util.hexlify(backend.get_cached_raw_transaction(tx_hash).serialize())
+    source, destination, btc_amount, fee, data = get_tx_info(tx_hex, block_index)
 
     # For mempool
     if block_hash == None:
@@ -635,7 +636,7 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
         block_index = config.MEMPOOL_BLOCK_INDEX
         util.update_unconfirmed_addrindex(tx)
     else:
-        util.clean_unconfirmed_addrindex(tx)
+        util.clean_unconfirmed_addrindex(tx_hash)
 
     if source and (data or destination == config.UNSPENDABLE):
         cursor = db.cursor()
@@ -862,7 +863,7 @@ def follow (db):
             block_hash = backend.rpc.getblockhash(c)
             block = backend.rpc.getblock(block_hash)
             block_time = block.nTime
-            txhash_list = [ctx.GetHash for ctx in block.vtx]
+            txhash_list = backend.get_txhash_list(block)
             with db:
                 # List the block.
                 cursor.execute('''INSERT INTO blocks(
@@ -919,7 +920,7 @@ def follow (db):
             # and then save those messages.
             # Every transaction in mempool is parsed independently. (DB is rolled back after each one.)
             mempool = []
-            util.MEMPOOL = bitcoin.get_mempool()
+            util.MEMPOOL = bitcoin.rpc.getrawmempool()
             for tx_hash in util.MEMPOOL:
 
                 # If already in counterpartyd mempool, copy to new one.
