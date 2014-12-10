@@ -6,7 +6,7 @@ from requests.auth import HTTPBasicAuth
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
-from lib import (config, api, util, exceptions, bitcoin, blocks, check)
+from lib import (config, api, util, exceptions, bitcoin, blocks, check, backend)
 from lib.messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
 import counterpartyd
 
@@ -101,7 +101,7 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
 
     cursor = db.cursor()
     tx_index = block_index - config.BURN_START + 1
-    tx = bitcoin.decode_raw_transaction(raw_transaction)
+    tx = backend.rpc.decode_raw_transaction(raw_transaction)
 
     tx_hash = hashlib.sha256('{}{}'.format(tx_index,raw_transaction).encode('utf-8')).hexdigest()
     #print(tx_hash)

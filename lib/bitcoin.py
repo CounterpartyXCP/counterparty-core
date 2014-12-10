@@ -59,24 +59,6 @@ def multisig_pubkeyhashes_to_pubkeys(address):
 def print_coin(coin):
     return 'amount: {}; txid: {}; vout: {}; confirmations: {}'.format(coin['amount'], coin['txid'], coin['vout'], coin.get('confirmations', '?')) # simplify and make deterministic
 
-
-"""
-# COMMON
-def decode_raw_transaction (unsigned_tx_hex):
-    return util.rpc('decoderawtransaction', [unsigned_tx_hex])
-
-# UNCOMMON
-def sign_raw_transaction (unsigned_tx_hex):
-    return util.rpc('signrawtransaction', [unsigned_tx_hex])
-def send_raw_transaction (tx_hex):
-    return util.rpc('sendrawtransaction', [tx_hex])
-def get_private_key (address):
-    return util.rpc('dumpprivkey', [address])
-def list_unspent ():
-    return util.rpc('listunspent', [0, 999999])
-"""
-
-
 def var_int (i):
     if i < 0xfd:
         return (i).to_bytes(1, byteorder='little')
@@ -448,7 +430,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
         else:
             if not self_public_key_hex:
                 # If public key was not provided, derive it from the private key.
-                private_key_wif = get_private_key(source)
+                private_key_wif = backend.rpc.dumpprivkey(source)
                 self_public_key_hex = private_key_to_public_key(private_key_wif)
             else:
                 # If public key was provided, check that it matches the source address.
