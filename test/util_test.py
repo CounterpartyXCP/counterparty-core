@@ -105,7 +105,7 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
     tx_hash = hashlib.sha256('{}{}'.format(tx_index,raw_transaction).encode('utf-8')).hexdigest()
     tx_hash = backend.deserialize(raw_transaction).GetHash()
     tx_hash = bitcoinlib.core.b2lx(tx_hash)
-    print(tx_hash)
+    # print(tx_hash)
     if pytest.config.option.savescenarios:
         save_rawtransaction(rawtransactions_db, tx_hash, raw_transaction, json.dumps(tx))
 
@@ -134,13 +134,13 @@ def initialise_rawtransactions_db(db):
         counterpartyd.set_options(testnet=True, **COUNTERPARTYD_OPTIONS)
         cursor = db.cursor()
         cursor.execute('DROP TABLE  IF EXISTS raw_transactions')
-        cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT, tx_json TEXT)')
+        cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT)')
         with open(CURR_DIR + '/fixtures/unspent_outputs.json', 'r') as listunspent_test_file:
                 wallet_unspent = json.load(listunspent_test_file)
                 for output in wallet_unspent:
                     txid = binascii.hexlify(bitcoinlib.core.lx(output['txid'])).decode()
-                    tx = backend.rpc.decoderawtransaction(output['txhex'])
-                    cursor.execute('INSERT INTO raw_transactions VALUES (?, ?, ?)', (txid, output['txhex'], json.dumps(tx)))
+                    tx = backend.deserialise(output['txhex'])
+                    cursor.execute('INSERT INTO raw_transactions VALUES (?, ?)', (txid, output['txhex']))
         cursor.close()
 
 def save_rawtransaction(db, tx_hash, tx_hex, tx_json):
@@ -158,15 +158,6 @@ def getrawtransaction(db, txid):
     tx_hex = list(cursor.execute('''SELECT tx_hex FROM raw_transactions WHERE tx_hash = ?''', (txid,)))[0][0]
     cursor.close()
     return tx_hex
-
-def decoderawtransaction(db, tx_hex):
-    cursor = db.cursor()
-    try:
-        tx_json = list(cursor.execute('''SELECT tx_json FROM raw_transactions WHERE tx_hex = ?''', (tx_hex,)))[0][0]
-    except IndexError:
-        raise Exception('raw transaction changed')
-    cursor.close()
-    return json.loads(tx_json)
 
 def initialise_db(db):
     blocks.initialise(db)
