@@ -8,13 +8,13 @@ BEGIN TRANSACTION;
 -- Table  assets
 DROP TABLE IF EXISTS assets;
 CREATE TABLE assets(
-                      asset_id INTEGER PRIMARY KEY,
+                      asset_id TEXT UNIQUE,
                       asset_name TEXT UNIQUE,
                       block_index INTEGER);
-INSERT INTO assets VALUES(0,'BTC',NULL);
-INSERT INTO assets VALUES(1,'XCP',NULL);
-INSERT INTO assets VALUES(18279,'BBBB',310005);
-INSERT INTO assets VALUES(18280,'BBBC',310006);
+INSERT INTO assets VALUES('0','BTC',NULL);
+INSERT INTO assets VALUES('1','XCP',NULL);
+INSERT INTO assets VALUES('18279','BBBB',310005);
+INSERT INTO assets VALUES('18280','BBBC',310006);
 -- Triggers and indices on  assets
 CREATE INDEX id_idx ON assets (asset_id);
 CREATE INDEX name_idx ON assets (asset_name);
