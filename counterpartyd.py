@@ -20,10 +20,10 @@ import signal
 import requests
 import appdirs
 from prettytable import PrettyTable
+import bitcoin as bitcoinlib
 import bitcoin.rpc as bitcoinlib_rpc
 
-from lib import config, api, util, exceptions, bitcoin, blocks, blockchain, check
-import counterparty-cli as cli
+from lib import (config, api, util, exceptions, bitcoin, blocks, blockchain, check, backend)
 if os.name == 'nt':
     from lib import util_windows
 
@@ -81,7 +81,7 @@ def cli(method, params, unsigned):
         if not bitcoin.is_valid(source):
             raise exceptions.AddressError('Invalid address.')
         if bitcoin.is_mine(source):
-            util.wallet_unlock()
+            backend.wallet_unlock()
         else:
             # TODO: Do this only if the encoding method needs it.
             print('Source not in backend wallet.')
@@ -110,7 +110,7 @@ def cli(method, params, unsigned):
     """
 
     # Construct transaction.
-    unsigned_tx_hex = cli.api(method, params)
+    unsigned_tx_hex = util.api(method, params)
     print('Transaction (unsigned):', unsigned_tx_hex)
 
     # Ask to sign and broadcast (if not multi‐sig).
@@ -252,8 +252,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     # Connection to backend.
     if config.TESTNET:
         bitcoinlib.SelectParams('testnet')
-    global RPC
-    RPC = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC)
+    backend.rpc = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC)
 
     # blockchain service name
     if blockchain_service_name:
@@ -905,25 +904,6 @@ if __name__ == '__main__':
                                'multisig_dust_size': args.multisig_dust_size,
                                'op_return_value': args.op_return_value},
             args.unsigned)
-
-    elif args.action == 'pending':
-        addresses = []
-        for bunch in bitcoin.get_wallet():
-            addresses.append(bunch[:2][0])
-        filters = [
-            ('tx0_address', 'IN', addresses),
-            ('tx1_address', 'IN', addresses)
-        ]
-        awaiting_btcs = cli.api('get_order_matches', {'filters': filters, 'filterop': 'OR', 'status': 'pending'})
-        table = PrettyTable(['Matched Order ID', 'Time Left'])
-        for order_match in awaiting_btcs:
-            order_match = format_order_match(db, order_match)
-            table.add_row(order_match)
-        print(table)
-
-    elif args.action == 'market':
-        market(args.give_asset, args.get_asset)
-
 
     # PARSING
     elif args.action == 'reparse':

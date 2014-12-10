@@ -15,10 +15,9 @@ import collections
 import platform
 from Crypto.Cipher import ARC4
 import apsw
-import bitcoin as bitcoinlib
 import csv
 
-from lib import (config, exceptions, util, bitcoin, check, script)
+from lib import (config, exceptions, util, bitcoin, check, script, backend)
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute, destroy)
 
 from .blockchain.blocks_parser import BlockchainParser, ChainstateParser
@@ -333,7 +332,7 @@ def get_tx_info1 (tx_hex, block_index, block_parser = None):
     The destination, if it exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
-    ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
+    ctx = backend.deserialize(tx_hex)
 
     def get_pubkeyhash (scriptpubkey):
         asm = script.get_asm(scriptpubkey)
@@ -418,9 +417,9 @@ def get_tx_info1 (tx_hex, block_index, block_parser = None):
          # Get the full transaction data for this input transaction.
         if block_parser:
             vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
-            vin_ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(vin_tx['__data__']))
+            vin_ctx = backend.deserialize(vin_tx['__data__'])
         else:
-            vin_ctx = RPC.getrawtransaction(vin.prevout.hash)
+            vin_ctx = backend.rpc.getrawtransaction(vin.prevout.hash)
         vout = vin_ctx.vout[vin.prevout.n]
         fee += vout.nValue
 
@@ -441,7 +440,7 @@ def get_tx_info2 (tx_hex, block_index, block_parser = None):
     """
 
     # Decode transaction binary.
-    ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
+    ctx = backend.deserialize(tx_hex)
 
     def arc4_decrypt (cyphertext):
         '''Un‐obfuscate. Initialise key once per attempt.'''
@@ -534,9 +533,9 @@ def get_tx_info2 (tx_hex, block_index, block_parser = None):
         # Get the full transaction data for this input transaction.  
         if block_parser:
             vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
-            vin_ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(vin_tx['__data__']))
+            vin_ctx = backend.deserialize(vin_tx['__data__'])
         else:
-            vin_ctx = RPC.getrawtransaction(vin.prevout.hash)
+            vin_ctx = backend.rpc.getrawtransaction(vin.prevout.hash)
         vout = vin_ctx.vout[vin.prevout.n]
         fee += vout.nValue
 
@@ -626,7 +625,7 @@ def reparse (db, block_index=None, quiet=False):
 
 def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     # Get the important details about each transaction.
-    tx = util.get_cached_raw_transaction(tx_hash)
+    tx = backend.get_cached_raw_transaction(tx_hash)
     logging.debug('Status: examining transaction {}.'.format(tx_hash))
     source, destination, btc_amount, fee, data = get_tx_info(tx['hex'], block_index)
 
