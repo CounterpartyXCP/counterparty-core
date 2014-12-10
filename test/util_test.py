@@ -101,11 +101,11 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
 
     cursor = db.cursor()
     tx_index = block_index - config.BURN_START + 1
-    tx = backend.rpc.decode_raw_transaction(raw_transaction)
 
     tx_hash = hashlib.sha256('{}{}'.format(tx_index,raw_transaction).encode('utf-8')).hexdigest()
-    #print(tx_hash)
-    tx['txid'] = tx_hash
+    tx_hash = backend.deserialize(raw_transaction).GetHash()
+    tx_hash = bitcoinlib.core.b2lx(tx_hash)
+    print(tx_hash)
     if pytest.config.option.savescenarios:
         save_rawtransaction(rawtransactions_db, tx_hash, raw_transaction, json.dumps(tx))
 
@@ -139,7 +139,7 @@ def initialise_rawtransactions_db(db):
                 wallet_unspent = json.load(listunspent_test_file)
                 for output in wallet_unspent:
                     txid = binascii.hexlify(bitcoinlib.core.lx(output['txid'])).decode()
-                    tx = bitcoin.decode_raw_transaction(output['txhex'])
+                    tx = backend.rpc.decoderawtransaction(output['txhex'])
                     cursor.execute('INSERT INTO raw_transactions VALUES (?, ?, ?)', (txid, output['txhex'], json.dumps(tx)))
         cursor.close()
 

@@ -4,6 +4,9 @@ from functools import lru_cache
 
 import bitcoin as bitcoinlib
 
+def dumpprivkey():
+   return util.rpc('dumpprivkey', [address])
+
 def wallet_unlock ():
     getinfo = rpc.getinfo()
     if 'unlocked_until' in getinfo:
@@ -12,7 +15,7 @@ def wallet_unlock ():
         else:
             passphrase = getpass.getpass('Enter your Bitcoind[‐Qt] wallet passhrase: ')
             print('Unlocking wallet for 60 (more) seconds.')
-            rpc('walletpassphrase', [passphrase, 60])
+            util.rpc('walletpassphrase', [passphrase, 60])
     else:
         return True    # Wallet is unencrypted.
 

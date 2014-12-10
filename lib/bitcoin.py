@@ -430,7 +430,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
         else:
             if not self_public_key_hex:
                 # If public key was not provided, derive it from the private key.
-                private_key_wif = backend.rpc.dumpprivkey(source)
+                private_key_wif = backend.dumpprivkey(source)
                 self_public_key_hex = private_key_to_public_key(private_key_wif)
             else:
                 # If public key was provided, check that it matches the source address.
