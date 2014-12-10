@@ -310,6 +310,22 @@ def initialise(db):
                       asset_idx ON balances (asset)
                    ''')
 
+    # Assets
+    # TODO: Store more asset info here?!
+    cursor.execute('''CREATE TABLE IF NOT EXISTS assets(
+                      asset_id INTEGER PRIMARY KEY,
+                      asset_name TEXT UNIQUE,
+                      block_index INTEGER)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      name_idx ON assets (asset_name)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      id_idx ON assets (asset_id)
+                   ''')
+    cursor.execute('''INSERT INTO assets VALUES (?,?,?)''', (0, 'BTC', None))
+    cursor.execute('''INSERT INTO assets VALUES (?,?,?)''', (1, 'XCP', None))
+
     # Sends
     cursor.execute('''CREATE TABLE IF NOT EXISTS sends(
                       tx_index INTEGER PRIMARY KEY,

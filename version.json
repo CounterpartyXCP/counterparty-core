@@ -1,7 +1,7 @@
 {
 	"minimum_version_major": 9,
-	"minimum_version_minor": 48,
+	"minimum_version_minor": 49,
 	"minimum_version_revision": 0,
-	"reason": "better enforcement of single source, destination",
-	"block_index": 333500
+	"reason": "hotfix: numeric asset names",
+	"block_index": 333900
 }

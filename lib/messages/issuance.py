@@ -130,7 +130,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, calla
     call_date, call_price, problems, fee, description, divisible = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.last_block(db)['block_index'])
     if problems: raise exceptions.ComposeError(problems)
 
-    asset_id = util.get_asset_id(asset, util.last_block(db)['block_index'])
+    asset_id = util.generate_asset_id(asset, util.last_block(db)['block_index'])
     data = struct.pack(config.TXTYPE_FORMAT, ID)
     if len(description) <= 42:
         curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
@@ -167,7 +167,7 @@ def parse (db, tx, message):
             asset_id, quantity, divisible = struct.unpack(FORMAT_1, message)
             callable_, call_date, call_price, description = False, 0, 0.0, ''
         try:
-            asset = util.get_asset_name(asset_id, tx['block_index'])
+            asset = util.generate_asset_name(asset_id, tx['block_index'])
         except exceptions.AssetNameError:
             asset = None
             status = 'invalid: bad asset name'
@@ -228,6 +228,15 @@ def parse (db, tx, message):
         'status': status,
     }
     sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status)'
+    issuance_parse_cursor.execute(sql, bindings)
+
+    # Add to table of assets.
+    bindings= {
+        'asset_id': asset_id,
+        'asset_name': asset,
+        'block_index': tx['block_index'],
+    }
+    sql='insert into assets values(:asset_id, :asset_name, :block_index)'
     issuance_parse_cursor.execute(sql, bindings)
 
     # Credit.

@@ -582,7 +582,7 @@ UNITTEST_VECTOR = {
             'in': ('create_dividend', {'source': ADDR[0], 'quantity_per_unit': 1, 'asset': 'NODIVISIBLE', 'dividend_asset': 'XCP'}),
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e000000000000695121025a415bf04af834423d3dd7ad96dc727a030865759f9fbc9036a64c1197e587c8210254da540fb2673b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe7246f210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae8c19ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }],
-        'get_asset_id': [{
+        'generate_asset_id': [{
             'in': ('BCD', 308000),
             'error': ('AssetNameError', 'too short')
         }, {
@@ -613,7 +613,7 @@ UNITTEST_VECTOR = {
             'in': ('ZZZZZZZZZZZZ', 308000),
             'out': 26**12 - 1
         }],
-        'get_asset_name': [{
+        'generate_asset_name': [{
             'in': (26**12 - 1, 308000),
             'out': 'ZZZZZZZZZZZZ'
         }, {
