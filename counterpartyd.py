@@ -17,12 +17,13 @@ import binascii
 from fractions import Fraction
 import socket
 import signal
-
 import requests
 import appdirs
 from prettytable import PrettyTable
+import bitcoin.rpc as bitcoinlib_rpc
 
 from lib import config, api, util, exceptions, bitcoin, blocks, blockchain, check
+import counterparty-cli as cli
 if os.name == 'nt':
     from lib import util_windows
 
@@ -109,7 +110,7 @@ def cli(method, params, unsigned):
     """
 
     # Construct transaction.
-    unsigned_tx_hex = util.api(method, params)
+    unsigned_tx_hex = cli.api(method, params)
     print('Transaction (unsigned):', unsigned_tx_hex)
 
     # Ask to sign and broadcast (if not multi‐sig).
@@ -247,6 +248,12 @@ def set_options (data_dir=None, backend_rpc_connect=None,
         config.BACKEND_RPC = 'https://' + config.BACKEND_RPC
     else:
         config.BACKEND_RPC = 'http://' + config.BACKEND_RPC
+
+    # Connection to backend.
+    if config.TESTNET:
+        bitcoinlib.SelectParams('testnet')
+    global RPC
+    RPC = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC)
 
     # blockchain service name
     if blockchain_service_name:
@@ -907,7 +914,7 @@ if __name__ == '__main__':
             ('tx0_address', 'IN', addresses),
             ('tx1_address', 'IN', addresses)
         ]
-        awaiting_btcs = util.api('get_order_matches', {'filters': filters, 'filterop': 'OR', 'status': 'pending'})
+        awaiting_btcs = cli.api('get_order_matches', {'filters': filters, 'filterop': 'OR', 'status': 'pending'})
         table = PrettyTable(['Matched Order ID', 'Time Left'])
         for order_match in awaiting_btcs:
             order_match = format_order_match(db, order_match)

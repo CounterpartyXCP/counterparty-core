@@ -42,35 +42,6 @@ CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(CURR_DIR + '/../version.json') as f:
     VERSIONS = json.load(f)
 
-class RPCError (Exception): pass
-
-# TODO: This doesn’t timeout properly. (If server hangs, then unhangs, no result.)
-def api (method, params):
-    headers = {'content-type': 'application/json'}
-    payload = {
-        "method": method,
-        "params": params,
-        "jsonrpc": "2.0",
-        "id": 0,
-    }
-    response = requests.post(config.RPC, data=json.dumps(payload), headers=headers)
-    if response == None:
-        raise RPCError('Cannot communicate with {} server.'.format(config.XCP_CLIENT))
-    elif response.status_code != 200:
-        if response.status_code == 500:
-            raise RPCError('Malformed API call.')
-        else:
-            raise RPCError(str(response.status_code) + ' ' + response.reason)
-
-    response_json = response.json()
-    if 'error' not in response_json.keys() or response_json['error'] == None:
-        try:
-            return response_json['result']
-        except KeyError:
-            raise RPCError(response_json)
-    else:
-        raise RPCError('{}'.format(response_json['error']))
-
 def price (numerator, denominator, block_index):
     if block_index >= 294500 or config.TESTNET: # Protocol change.
         return fractions.Fraction(numerator, denominator)
@@ -1095,7 +1066,10 @@ def get_cached_raw_transaction(tx_hash):
 
 ### Protocol Changes ###
 def enabled (change_name, block_index):
-    enable_block_index = VERSIONS[change_name]['block_index']
+    CURR_DIR = os.path.dirname(os.path.realpath(__file__))
+    with open(CURR_DIR + '/../version.json') as f:
+        versions = json.load(f)
+    enable_block_index = versions[change_name]['block_index']
 
     if config.TESTNET: 
         return True     # Protocol changes are always retroactive on testnet.

@@ -16,7 +16,6 @@ import platform
 from Crypto.Cipher import ARC4
 import apsw
 import bitcoin as bitcoinlib
-import bitcoin.rpc as bitcoinlib_rpc
 import csv
 
 from lib import (config, exceptions, util, bitcoin, check, script)
@@ -334,9 +333,6 @@ def get_tx_info1 (tx_hex, block_index, block_parser = None):
     The destination, if it exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
-    if config.TESTNET:
-        bitcoinlib.SelectParams('testnet')
-    rpc = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC)
     ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
 
     def get_pubkeyhash (scriptpubkey):
@@ -424,7 +420,7 @@ def get_tx_info1 (tx_hex, block_index, block_parser = None):
             vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
             vin_ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(vin_tx['__data__']))
         else:
-            vin_ctx = rpc.getrawtransaction(vin.prevout.hash)
+            vin_ctx = RPC.getrawtransaction(vin.prevout.hash)
         vout = vin_ctx.vout[vin.prevout.n]
         fee += vout.nValue
 
@@ -445,9 +441,6 @@ def get_tx_info2 (tx_hex, block_index, block_parser = None):
     """
 
     # Decode transaction binary.
-    if config.TESTNET:
-        bitcoinlib.SelectParams('testnet')
-    rpc = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC)
     ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
 
     def arc4_decrypt (cyphertext):
@@ -543,7 +536,7 @@ def get_tx_info2 (tx_hex, block_index, block_parser = None):
             vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
             vin_ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(vin_tx['__data__']))
         else:
-            vin_ctx = rpc.getrawtransaction(vin.prevout.hash)
+            vin_ctx = RPC.getrawtransaction(vin.prevout.hash)
         vout = vin_ctx.vout[vin.prevout.n]
         fee += vout.nValue
 

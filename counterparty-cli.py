@@ -31,6 +31,36 @@ D = decimal.Decimal
 class ConfigurationError (Exception):
     pass
 
+
+class RPCError (Exception): pass
+# TODO: This doesn’t timeout properly. (If server hangs, then unhangs, no result.)
+def api (method, params):
+    headers = {'content-type': 'application/json'}
+    payload = {
+        "method": method,
+        "params": params,
+        "jsonrpc": "2.0",
+        "id": 0,
+    }
+    response = requests.post(config.RPC, data=json.dumps(payload), headers=headers)
+    if response == None:
+        raise RPCError('Cannot communicate with {} server.'.format(config.XCP_CLIENT))
+    elif response.status_code != 200:
+        if response.status_code == 500:
+            raise RPCError('Malformed API call.')
+        else:
+            raise RPCError(str(response.status_code) + ' ' + response.reason)
+
+    response_json = response.json()
+    if 'error' not in response_json.keys() or response_json['error'] == None:
+        try:
+            return response_json['result']
+        except KeyError:
+            raise RPCError(response_json)
+    else:
+        raise RPCError('{}'.format(response_json['error']))
+
+
 def sigterm_handler(_signo, _stack_frame):
     if 'api_server' in globals():
         logging.info('Status: Stopping API server.')
