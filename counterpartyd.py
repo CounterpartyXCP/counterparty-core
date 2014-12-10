@@ -78,9 +78,9 @@ def cli(method, params, unsigned):
     if not is_multisig:
         # Get public key for source.
         source = params['source']
-        if not bitcoin.is_valid(source):
+        if not backend.is_valid(source):
             raise exceptions.AddressError('Invalid address.')
-        if bitcoin.is_mine(source):
+        if backend.is_mine(source):
             backend.wallet_unlock()
         else:
             # TODO: Do this only if the encoding method needs it.
@@ -117,7 +117,7 @@ def cli(method, params, unsigned):
     if is_multisig:
         print('Multi‐signature transactions are signed and broadcasted manually.')
     elif not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
-        if bitcoin.is_mine(source):
+        if backend.is_mine(source):
             private_key_wif = None
         elif not private_key_wif:   # If private key was not given earlier.
             private_key_wif = input('Private key (Wallet Import Format): ')

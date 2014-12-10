@@ -66,10 +66,6 @@ def decode_raw_transaction (unsigned_tx_hex):
     return util.rpc('decoderawtransaction', [unsigned_tx_hex])
 
 # UNCOMMON
-def is_valid (address):
-    return util.rpc('validateaddress', [address])['isvalid']
-def is_mine (address):
-    return util.rpc('validateaddress', [address])['ismine']
 def sign_raw_transaction (unsigned_tx_hex):
     return util.rpc('signrawtransaction', [unsigned_tx_hex])
 def send_raw_transaction (tx_hex):

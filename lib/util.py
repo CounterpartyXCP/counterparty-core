@@ -1045,8 +1045,8 @@ def rpc (method, params):
     elif response_json['error']['code'] == -4:   # Unknown private key (locked wallet?)
         # If address in wallet, attempt to unlock.
         address = params[0]
-        if is_valid(address):
-            if is_mine(address):
+        if backend.is_valid(address):
+            if backend.is_mine(address):
                 raise BitcoindError('Wallet is locked.')
             else:   # When will this happen?
                 raise BitcoindError('Source address not in wallet.')
@@ -1054,7 +1054,7 @@ def rpc (method, params):
             raise exceptions.AddressError('Invalid address. (Multi‐signature?)')
     elif response_json['error']['code'] == -1 and response_json['error']['message'] == 'Block number out of range.':
         time.sleep(10)
-        return get_block_hash(block_index)
+        return backend.rpc.getblockhash(block_index)
     else:
         raise BitcoindError('{}'.format(response_json['error']))
 

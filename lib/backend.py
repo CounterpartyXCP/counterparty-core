@@ -21,6 +21,11 @@ def deserialize(tx_hex):
 def serialize(ctx):
     return bitcoinlib.core.CTransaction.serialize(ctx)
 
+def is_valid (address):
+    return rpc.validateAddress(address)['isvalid']
+def is_mine (address):
+    return rpc.validateAddress(address)['ismine']
+
 def get_txhash_list(block):
     return [bitcoinlib.core.b2lx(ctx.GetHash()) for ctx in block.vtx]
 

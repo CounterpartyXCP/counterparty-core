@@ -107,7 +107,7 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
 
     monkeypatch.setattr('lib.bitcoin.get_unspent_txouts', get_unspent_txouts)
     monkeypatch.setattr('lib.bitcoin.get_private_key', get_private_key)
-    monkeypatch.setattr('lib.bitcoin.is_mine', is_mine)
+    monkeypatch.setattr('lib.backend.is_mine', is_mine)
     monkeypatch.setattr('lib.util.isodt', isodt)
     monkeypatch.setattr('lib.util.curr_time', curr_time)
     monkeypatch.setattr('lib.util.date_passed', date_passed)
