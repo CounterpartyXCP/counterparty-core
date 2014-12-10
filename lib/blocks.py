@@ -819,7 +819,7 @@ def follow (db):
     while True:
         starttime = time.time()
         # Get new blocks.
-        block_count = bitcoin.get_block_count()
+        block_count = backend.rpc.getinfo()['blocks']
         if block_index <= block_count:
 
             # Backwards check for incorrect blocks due to chain reorganisation, and stop when a common parent is found.
@@ -829,9 +829,9 @@ def follow (db):
                 if c == config.BLOCK_FIRST: break
 
                 # Bitcoind parent hash.
-                c_hash = bitcoin.get_block_hash(c)
-                c_block = bitcoin.get_block(c_hash)
-                bitcoind_parent = c_block['previousblockhash']
+                c_hash = backend.rpc.getblockhash(c)
+                c_block = backend.rpc.getblock(c_hash)
+                bitcoind_parent = c_block.hashPrevBlock
 
                 # DB parent hash.
                 blocks = list(cursor.execute('''SELECT * FROM blocks
@@ -859,10 +859,10 @@ def follow (db):
                 continue
 
             # Get and parse transactions in this block (atomically).
-            block_hash = bitcoin.get_block_hash(block_index)
-            block = bitcoin.get_block(block_hash)
-            block_time = block['time']
-            txhash_list = block['tx']
+            block_hash = backend.rpc.getblockhash(c)
+            block = backend.rpc.getblock(block_hash)
+            block_time = block.nTime
+            txhash_list = [ctx.GetHash for ctx in block.vtx]
             with db:
                 # List the block.
                 cursor.execute('''INSERT INTO blocks(
@@ -874,8 +874,8 @@ def follow (db):
                                     (block_index,
                                     block_hash,
                                     block_time,
-                                    block['previousblockhash'],
-                                    block['difficulty'])
+                                    block.hashPrevBlock,
+                                    block.difficulty)
                               )
 
                 # List the transactions in the block.
@@ -896,7 +896,7 @@ def follow (db):
 
             logging.info('Block: %s (%ss)'%(str(block_index), "{:.2f}".format(time.time() - starttime, 3)))
             # Increment block index.
-            block_count = bitcoin.get_block_count()
+            block_count = backend.rpc.getinfo()['blocks']
             block_index +=1
 
         else:

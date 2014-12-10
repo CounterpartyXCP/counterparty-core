@@ -21,7 +21,7 @@ from bitcoin.core.script import CScript
 from bitcoin.core import x
 from bitcoin.core.key import CPubKey
 
-from . import (config, exceptions, util, blockchain, script)
+from . import (config, exceptions, util, blockchain, script, backend)
 
 class InputError (Exception):
     pass
@@ -60,19 +60,10 @@ def print_coin(coin):
     return 'amount: {}; txid: {}; vout: {}; confirmations: {}'.format(coin['amount'], coin['txid'], coin['vout'], coin.get('confirmations', '?')) # simplify and make deterministic
 
 
+"""
 # COMMON
-def get_block_count():
-    return int(util.rpc('getblockcount', []))
-def get_block_hash(block_index):
-    return util.rpc('getblockhash', [block_index])
-def get_block (block_hash):
-    return util.rpc('getblock', [block_hash])
-def get_block_hash (block_index):
-    return util.rpc('getblockhash', [block_index])
 def decode_raw_transaction (unsigned_tx_hex):
     return util.rpc('decoderawtransaction', [unsigned_tx_hex])
-def get_info():
-    return util.rpc('getinfo', [])
 
 # UNCOMMON
 def is_valid (address):
@@ -94,6 +85,7 @@ def get_mempool ():
     return util.rpc('getrawmempool', [])
 def list_unspent ():
     return util.rpc('listunspent', [0, 999999])
+"""
 
 
 def var_int (i):
@@ -577,7 +569,7 @@ def normalize_quantity(quantity, divisible=True):
 
 def get_btc_supply(normalize=False):
     """returns the total supply of {} (based on what Bitcoin Core says the current block height is)""".format(config.BTC)
-    block_count = get_block_count()
+    block_count = backend.rpc.getinfo()['blocks']
     blocks_remaining = block_count
     total_supply = 0
     reward = 50.0

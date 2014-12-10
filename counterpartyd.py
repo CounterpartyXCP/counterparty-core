@@ -642,13 +642,13 @@ if __name__ == '__main__':
     # Backend
     if args.action == 'server' or (args.action in ('reparse', 'rollback') and not config.FORCE):
         logging.info('Status: Connecting to backend.')
-        bitcoin.get_info()
+        backend.rpc.getinfo()
 
     # Version
     if args.action in ('server', 'reparse', 'rollback') and not config.FORCE:
         logging.info('Status: Checking version.')
         try:
-            check.version(bitcoin.get_block_count())
+            check.version(backend.rpc.getinfo()['blocks'])
         except check.VersionUpdateRequiredError as e:
             traceback.print_exc(file=sys.stdout)
             sys.exit(config.EXITCODE_UPDATE_REQUIRED)
