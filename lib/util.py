@@ -45,6 +45,7 @@ with open(CURR_DIR + '/../version.json') as f:
 
 class RPCError (Exception): pass
 
+# TODO: Move to `counterparty-cli.py`.
 # TODO: This doesn’t timeout properly. (If server hangs, then unhangs, no result.)
 def api (method, params):
     headers = {'content-type': 'application/json'}
@@ -71,6 +72,7 @@ def api (method, params):
             raise RPCError(response_json)
     else:
         raise RPCError('{}'.format(response_json['error']))
+
 
 def price (numerator, denominator, block_index):
     if block_index >= 294500 or config.TESTNET: # Protocol change.
@@ -972,8 +974,8 @@ def rpc (method, params):
     elif response_json['error']['code'] == -4:   # Unknown private key (locked wallet?)
         # If address in wallet, attempt to unlock.
         address = params[0]
-        if is_valid(address):
-            if is_mine(address):
+        if backend.is_valid(address):
+            if backend.is_mine(address):
                 raise BitcoindError('Wallet is locked.')
             else:   # When will this happen?
                 raise BitcoindError('Source address not in wallet.')
@@ -981,7 +983,7 @@ def rpc (method, params):
             raise exceptions.AddressError('Invalid address. (Multi‐signature?)')
     elif response_json['error']['code'] == -1 and response_json['error']['message'] == 'Block number out of range.':
         time.sleep(10)
-        return get_block_hash(block_index)
+        return backend.rpc.getblockhash(block_index)
     else:
         raise BitcoindError('{}'.format(response_json['error']))
 
@@ -993,7 +995,10 @@ def get_cached_raw_transaction(tx_hash):
 
 ### Protocol Changes ###
 def enabled (change_name, block_index):
-    enable_block_index = VERSIONS[change_name]['block_index']
+    CURR_DIR = os.path.dirname(os.path.realpath(__file__))
+    with open(CURR_DIR + '/../version.json') as f:
+        versions = json.load(f)
+    enable_block_index = versions[change_name]['block_index']
 
     if config.TESTNET: 
         return True     # Protocol changes are always retroactive on testnet.
@@ -1034,10 +1039,10 @@ def update_unconfirmed_addrindex(tx):
             UNCONFIRMED_ADDRINDEX[address] = {}
         UNCONFIRMED_ADDRINDEX[address][tx['txid']] = tx
 
-def clean_unconfirmed_addrindex(tx):
+def clean_unconfirmed_addrindex(tx_hash):
     for address in list(UNCONFIRMED_ADDRINDEX.keys()):
-        if tx['txid'] in UNCONFIRMED_ADDRINDEX[address]:
-            UNCONFIRMED_ADDRINDEX[address].pop(tx['txid'])
+        if tx_hash in UNCONFIRMED_ADDRINDEX[address]:
+            UNCONFIRMED_ADDRINDEX[address].pop(tx_hash)
             if len(UNCONFIRMED_ADDRINDEX[address]) == 0:
                 UNCONFIRMED_ADDRINDEX.pop(address)
 

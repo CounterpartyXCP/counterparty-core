@@ -15,11 +15,9 @@ import collections
 import platform
 from Crypto.Cipher import ARC4
 import apsw
-import bitcoin as bitcoinlib
-import bitcoin.rpc as bitcoinlib_rpc
 import csv
 
-from lib import (config, exceptions, util, bitcoin, check, script)
+from lib import (config, exceptions, util, bitcoin, check, script, backend)
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute, destroy)
 
 from .blockchain.blocks_parser import BlockchainParser, ChainstateParser
@@ -352,10 +350,7 @@ def get_tx_info1 (tx_hex, block_index, block_parser = None):
     The destination, if it exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
-    if config.TESTNET:
-        bitcoinlib.SelectParams('testnet')
-    rpc = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC)
-    ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
+    ctx = backend.deserialize(tx_hex)
 
     def get_pubkeyhash (scriptpubkey):
         asm = script.get_asm(scriptpubkey)
@@ -440,9 +435,9 @@ def get_tx_info1 (tx_hex, block_index, block_parser = None):
          # Get the full transaction data for this input transaction.
         if block_parser:
             vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
-            vin_ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(vin_tx['__data__']))
+            vin_ctx = backend.deserialize(vin_tx['__data__'])
         else:
-            vin_ctx = rpc.getrawtransaction(vin.prevout.hash)
+            vin_ctx = backend.rpc.getrawtransaction(vin.prevout.hash)
         vout = vin_ctx.vout[vin.prevout.n]
         fee += vout.nValue
 
@@ -463,10 +458,7 @@ def get_tx_info2 (tx_hex, block_parser = None):
     """
 
     # Decode transaction binary.
-    if config.TESTNET:
-        bitcoinlib.SelectParams('testnet')
-    rpc = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC)
-    ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
+    ctx = backend.deserialize(tx_hex)
 
     def arc4_decrypt (cyphertext):
         '''Un‐obfuscate. Initialise key once per attempt.'''
@@ -559,10 +551,9 @@ def get_tx_info2 (tx_hex, block_parser = None):
         # Get the full transaction data for this input transaction.  
         if block_parser:
             vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
-            vin_ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(vin_tx['__data__']))
+            vin_ctx = backend.deserialize(vin_tx['__data__'])
         else:
-            rpc = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC)
-            vin_ctx = rpc.getrawtransaction(vin.prevout.hash)
+            vin_ctx = backend.rpc.getrawtransaction(vin.prevout.hash)
         vout = vin_ctx.vout[vin.prevout.n]
         fee += vout.nValue
 
@@ -651,10 +642,11 @@ def reparse (db, block_index=None, quiet=False):
     return
 
 def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
-    # Get the important details about each transaction.
-    tx = util.get_cached_raw_transaction(tx_hash)
     logging.debug('Status: examining transaction {}.'.format(tx_hash))
-    source, destination, btc_amount, fee, data = get_tx_info(tx['hex'], block_index)
+
+    # Get the important details about each transaction.
+    tx_hex = util.hexlify(backend.get_cached_raw_transaction(tx_hash).serialize())
+    source, destination, btc_amount, fee, data = get_tx_info(tx_hex, block_index)
 
     # For mempool
     if block_hash == None:
@@ -662,7 +654,7 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
         block_index = config.MEMPOOL_BLOCK_INDEX
         util.update_unconfirmed_addrindex(tx)
     else:
-        util.clean_unconfirmed_addrindex(tx)
+        util.clean_unconfirmed_addrindex(tx_hash)
 
     if source and (data or destination == config.UNSPENDABLE):
         cursor = db.cursor()
@@ -846,7 +838,7 @@ def follow (db):
     while True:
         starttime = time.time()
         # Get new blocks.
-        block_count = bitcoin.get_block_count()
+        block_count = backend.rpc.getinfo()['blocks']
         if block_index <= block_count:
 
             # Backwards check for incorrect blocks due to chain reorganisation, and stop when a common parent is found.
@@ -856,9 +848,9 @@ def follow (db):
                 if c == config.BLOCK_FIRST: break
 
                 # Bitcoind parent hash.
-                c_hash = bitcoin.get_block_hash(c)
-                c_block = bitcoin.get_block(c_hash)
-                bitcoind_parent = c_block['previousblockhash']
+                c_hash = backend.rpc.getblockhash(c)
+                c_block = backend.rpc.getblock(c_hash)
+                bitcoind_parent = c_block.hashPrevBlock
 
                 # DB parent hash.
                 blocks = list(cursor.execute('''SELECT * FROM blocks
@@ -886,10 +878,10 @@ def follow (db):
                 continue
 
             # Get and parse transactions in this block (atomically).
-            block_hash = bitcoin.get_block_hash(block_index)
-            block = bitcoin.get_block(block_hash)
-            block_time = block['time']
-            txhash_list = block['tx']
+            block_hash = backend.rpc.getblockhash(c)
+            block = backend.rpc.getblock(block_hash)
+            block_time = block.nTime
+            txhash_list = backend.get_txhash_list(block)
             with db:
                 # List the block.
                 cursor.execute('''INSERT INTO blocks(
@@ -901,8 +893,8 @@ def follow (db):
                                     (block_index,
                                     block_hash,
                                     block_time,
-                                    block['previousblockhash'],
-                                    block['difficulty'])
+                                    block.hashPrevBlock,
+                                    block.difficulty)
                               )
 
                 # List the transactions in the block.
@@ -923,7 +915,7 @@ def follow (db):
 
             logging.info('Block: %s (%ss)'%(str(block_index), "{:.2f}".format(time.time() - starttime, 3)))
             # Increment block index.
-            block_count = bitcoin.get_block_count()
+            block_count = backend.rpc.getinfo()['blocks']
             block_index +=1
 
         else:
@@ -946,7 +938,7 @@ def follow (db):
             # and then save those messages.
             # Every transaction in mempool is parsed independently. (DB is rolled back after each one.)
             mempool = []
-            util.MEMPOOL = bitcoin.get_mempool()
+            util.MEMPOOL = bitcoin.rpc.getrawmempool()
             for tx_hash in util.MEMPOOL:
 
                 # If already in counterpartyd mempool, copy to new one.

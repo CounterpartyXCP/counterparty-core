@@ -17,12 +17,14 @@ import binascii
 from fractions import Fraction
 import socket
 import signal
-
 import requests
 import appdirs
 from prettytable import PrettyTable
 
-from lib import config, api, util, exceptions, bitcoin, blocks, blockchain, check, database
+import bitcoin as bitcoinlib
+import bitcoin.rpc as bitcoinlib_rpc
+
+from lib import config, api, util, exceptions, bitcoin, blocks, blockchain, check, backend, database
 if os.name == 'nt':
     from lib import util_windows
 
@@ -79,10 +81,10 @@ def cli(method, params, unsigned):
     if not is_multisig:
         # Get public key for source.
         source = params['source']
-        if not bitcoin.is_valid(source):
+        if not backend.is_valid(source):
             raise exceptions.AddressError('Invalid address.')
-        if bitcoin.is_mine(source):
-            util.wallet_unlock()
+        if backend.is_mine(source):
+            backend.wallet_unlock()
         else:
             # TODO: Do this only if the encoding method needs it.
             print('Source not in backend wallet.')
@@ -118,7 +120,7 @@ def cli(method, params, unsigned):
     if is_multisig:
         print('Multi‐signature transactions are signed and broadcasted manually.')
     elif not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
-        if bitcoin.is_mine(source):
+        if backend.is_mine(source):
             private_key_wif = None
         elif not private_key_wif:   # If private key was not given earlier.
             private_key_wif = input('Private key (Wallet Import Format): ')
@@ -249,6 +251,11 @@ def set_options (data_dir=None, backend_rpc_connect=None,
         config.BACKEND_RPC = 'https://' + config.BACKEND_RPC
     else:
         config.BACKEND_RPC = 'http://' + config.BACKEND_RPC
+
+    # Connection to backend.
+    if config.TESTNET:
+        bitcoinlib.SelectParams('testnet')
+    backend.rpc = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC)
 
     # blockchain service name
     if blockchain_service_name:
@@ -638,13 +645,13 @@ if __name__ == '__main__':
     # Backend
     if args.action == 'server' or (args.action in ('reparse', 'rollback') and not config.FORCE):
         logging.info('Status: Connecting to backend.')
-        bitcoin.get_info()
+        backend.rpc.getinfo()
 
     # Version
     if args.action in ('server', 'reparse', 'rollback') and not config.FORCE:
         logging.info('Status: Checking version.')
         try:
-            check.version(bitcoin.get_block_count())
+            check.version(backend.rpc.getinfo()['blocks'])
         except check.VersionUpdateRequiredError as e:
             traceback.print_exc(file=sys.stdout)
             sys.exit(config.EXITCODE_UPDATE_REQUIRED)
@@ -899,25 +906,6 @@ if __name__ == '__main__':
                                'multisig_dust_size': args.multisig_dust_size,
                                'op_return_value': args.op_return_value},
             args.unsigned)
-
-    elif args.action == 'pending':
-        addresses = []
-        for bunch in bitcoin.get_wallet():
-            addresses.append(bunch[:2][0])
-        filters = [
-            ('tx0_address', 'IN', addresses),
-            ('tx1_address', 'IN', addresses)
-        ]
-        awaiting_btcs = util.api('get_order_matches', {'filters': filters, 'filterop': 'OR', 'status': 'pending'})
-        table = PrettyTable(['Matched Order ID', 'Time Left'])
-        for order_match in awaiting_btcs:
-            order_match = format_order_match(db, order_match)
-            table.add_row(order_match)
-        print(table)
-
-    elif args.action == 'market':
-        market(args.give_asset, args.get_asset)
-
 
     # PARSING
     elif args.action == 'reparse':

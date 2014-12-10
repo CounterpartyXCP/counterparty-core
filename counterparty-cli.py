@@ -22,7 +22,7 @@ import requests
 import appdirs
 from prettytable import PrettyTable
 
-from lib import config, api, util, exceptions, bitcoin, blocks, blockchain, database
+from lib import config, api, util, exceptions, bitcoin, blocks, blockchain, backend, database
 if os.name == 'nt':
     from lib import util_windows
 
@@ -30,6 +30,11 @@ D = decimal.Decimal
 
 class ConfigurationError (Exception):
     pass
+
+def get_wallet ():
+    for group in backend.rpc.listaddressgroupings()
+        for bunch in group:
+            yield bunch
 
 def sigterm_handler(_signo, _stack_frame):
     if 'api_server' in globals():
@@ -138,7 +143,7 @@ def market (give_asset, get_asset):
 
     # Your Pending Orders Matches.
     addresses = []
-    for bunch in bitcoin.get_wallet():
+    for bunch in get_wallet():
         addresses.append(bunch[:2][0])
     filters = [
         ('tx0_address', 'IN', addresses),
@@ -206,10 +211,10 @@ def cli(method, params, unsigned):
     if not is_multisig:
         # Get public key for source.
         source = params['source']
-        if not bitcoin.is_valid(source):
+        if not backend.is_valid(source):
             raise exceptions.AddressError('Invalid address.')
-        if bitcoin.is_mine(source):
-            util.wallet_unlock()
+        if backend.is_mine(source):
+            backend.wallet_unlock()
         else:
             # TODO: Do this only if the encoding method needs it.
             print('Source not in backend wallet.')
@@ -247,7 +252,7 @@ def cli(method, params, unsigned):
     if is_multisig:
         print('Multi‐signature transactions are signed and broadcasted manually.')
     elif not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
-        if bitcoin.is_mine(source):
+        if backend.is_mine(source):
             private_key_wif = None
         elif not private_key_wif:   # If private key was not given earlier.
             private_key_wif = input('Private key (Wallet Import Format): ')
@@ -1091,7 +1096,7 @@ if __name__ == '__main__':
         totals = {}
 
         print()
-        for bunch in bitcoin.get_wallet():
+        for bunch in get_wallet():
             address, btc_balance = bunch[:2]
             address_data = get_address(db, address=address)
             balances = address_data['balances']
@@ -1126,7 +1131,7 @@ if __name__ == '__main__':
 
     elif args.action == 'pending':
         addresses = []
-        for bunch in bitcoin.get_wallet():
+        for bunch in get_wallet():
             addresses.append(bunch[:2][0])
         filters = [
             ('tx0_address', 'IN', addresses),
