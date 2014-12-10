@@ -33,7 +33,7 @@ TABLES = ['credits', 'debits', 'messages'] + \
          'bet_expirations', 'bets', 'broadcasts', 'btcpays', 'burns',
          'callbacks', 'cancels', 'dividends', 'issuances', 'sends',
          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
-         'rps_matches', 'rps', 'executions', 'contracts', 'storage', 'suicides', 'nonces', 'postqueue']
+         'rps_matches', 'rps', 'executions', 'contracts', 'storage', 'suicides', 'nonces', 'postqueue', 'assets']
 
 class SanityError (Exception): pass
 def check_conservation (db):
@@ -313,7 +313,7 @@ def initialise(db):
     # Assets
     # TODO: Store more asset info here?!
     cursor.execute('''CREATE TABLE IF NOT EXISTS assets(
-                      asset_id INTEGER PRIMARY KEY,
+                      asset_id TEXT UNIQUE,
                       asset_name TEXT UNIQUE,
                       block_index INTEGER)
                    ''')
@@ -323,8 +323,10 @@ def initialise(db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       id_idx ON assets (asset_id)
                    ''')
-    cursor.execute('''INSERT INTO assets VALUES (?,?,?)''', (0, 'BTC', None))
-    cursor.execute('''INSERT INTO assets VALUES (?,?,?)''', (1, 'XCP', None))
+    cursor.execute('''SELECT * FROM assets WHERE asset_name = ?''', ('BTC',))
+    if not list(cursor):
+        cursor.execute('''INSERT INTO assets VALUES (?,?,?)''', ('0', 'BTC', None))
+        cursor.execute('''INSERT INTO assets VALUES (?,?,?)''', ('1', 'XCP', None))
 
     # Sends
     cursor.execute('''CREATE TABLE IF NOT EXISTS sends(

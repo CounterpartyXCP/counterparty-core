@@ -584,13 +584,13 @@ def get_asset_id (db, asset_name, block_index):
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM assets WHERE asset_name = ?''', (asset_name,))
     assets = list(cursor)
-    return assets[0]['asset_id']
+    return int(assets[0]['asset_id'])
 
 def get_asset_name (db, asset_id, block_index):
     if protocol_change(block_index, 3339000):
         return generate_asset_name(asset_id, block_index)
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM assets WHERE asset_id = ?''', (asset_id,))
+    cursor.execute('''SELECT * FROM assets WHERE asset_id = ?''', (str(asset_id),))
     assets = list(cursor)
     return assets[0]['asset_name']
 
