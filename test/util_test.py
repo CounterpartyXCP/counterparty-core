@@ -107,7 +107,7 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
     tx_hash = bitcoinlib.core.b2lx(tx_hash)
     # print(tx_hash)
     if pytest.config.option.savescenarios:
-        save_rawtransaction(rawtransactions_db, tx_hash, raw_transaction, json.dumps(tx))
+        save_rawtransaction(rawtransactions_db, tx_hash, raw_transaction)
 
     source, destination, btc_amount, fee, data = blocks.get_tx_info2(raw_transaction, block_index)
     transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
@@ -143,11 +143,11 @@ def initialise_rawtransactions_db(db):
                     cursor.execute('INSERT INTO raw_transactions VALUES (?, ?)', (txid, output['txhex']))
         cursor.close()
 
-def save_rawtransaction(db, tx_hash, tx_hex, tx_json):
+def save_rawtransaction(db, tx_hash, tx_hex):
     cursor = db.cursor()
     try:
         txid = binascii.hexlify(bitcoinlib.core.lx(tx_hash)).decode()
-        cursor.execute('''INSERT INTO raw_transactions VALUES (?, ?, ?)''', (txid, tx_hex, tx_json))
+        cursor.execute('''INSERT INTO raw_transactions VALUES (?, ?)''', (txid, tx_hex))
     except Exception as e: # TODO
         pass
     cursor.close()
