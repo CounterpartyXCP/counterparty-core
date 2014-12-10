@@ -124,10 +124,10 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     if destination and quantity:
         problems.append('cannot issue and transfer simultaneously')
 
-    return call_date, call_price, problems, fee, description, divisible
+    return call_date, call_price, problems, fee, description, divisible, reissuance
 
 def compose (db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description):
-    call_date, call_price, problems, fee, description, divisible = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.last_block(db)['block_index'])
+    call_date, call_price, problems, fee, description, divisible, reissuance = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.last_block(db)['block_index'])
     if problems: raise exceptions.ComposeError(problems)
 
     asset_id = util.generate_asset_id(asset, util.last_block(db)['block_index'])
@@ -178,7 +178,7 @@ def parse (db, tx, message):
 
     fee = 0
     if status == 'valid':
-        call_date, call_price, problems, fee, description, divisible = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, callable_, call_date, call_price, description, block_index=tx['block_index'])
+        call_date, call_price, problems, fee, description, divisible, reissuance = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, callable_, call_date, call_price, description, block_index=tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
         if 'total quantity overflow' in problems:
             quantity = 0
@@ -230,14 +230,15 @@ def parse (db, tx, message):
     sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status)'
     issuance_parse_cursor.execute(sql, bindings)
 
-    # Add to table of assets.
-    bindings= {
-        'asset_id': asset_id,
-        'asset_name': asset,
-        'block_index': tx['block_index'],
-    }
-    sql='insert into assets values(:asset_id, :asset_name, :block_index)'
-    issuance_parse_cursor.execute(sql, bindings)
+    if not reissuance:
+        # Add to table of assets.
+        bindings= {
+            'asset_id': str(asset_id),
+            'asset_name': str(asset),
+            'block_index': tx['block_index'],
+        }
+        sql='insert into assets values(:asset_id, :asset_name, :block_index)'
+        issuance_parse_cursor.execute(sql, bindings)
 
     # Credit.
     if status == 'valid' and quantity:
