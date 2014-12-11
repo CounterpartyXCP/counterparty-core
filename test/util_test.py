@@ -109,7 +109,7 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
     if pytest.config.option.savescenarios:
         save_rawtransaction(rawtransactions_db, tx_hash, raw_transaction, json.dumps(tx))
 
-    source, destination, btc_amount, fee, data = blocks.get_tx_info2(raw_transaction, block_index)
+    source, destination, btc_amount, fee, data = blocks.get_tx_info2(raw_transaction)
     transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
     cursor.execute('''INSERT INTO transactions VALUES (?,?,?,?,?,?,?,?,?,?,?)''', transaction)
     tx = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = ?''', (tx_index,)))[0]
@@ -361,7 +361,7 @@ def reparse(testnet=True):
 
     prod_db_path = os.path.join(config.DATA_DIR, '{}.{}{}.db'.format(config.XCP_CLIENT, str(config.VERSION_MAJOR), '.testnet' if testnet else ''))
     prod_db = apsw.Connection(prod_db_path)
-    prod_db.setrowtrace(util.rowtracer)
+    prod_db.setrowtrace(database.rowtracer)
 
     with memory_db.backup("main", prod_db, "main") as backup:
         backup.step()

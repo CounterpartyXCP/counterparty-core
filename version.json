@@ -29,9 +29,16 @@
 			"minimum_version_revision": 0,
 			"block_index": 335000
 		},
-	"destroy_message":      {
+
+	"hotfix_numeric_assets":      {
 			"minimum_version_major": 9,
 			"minimum_version_minor": 49,
+			"minimum_version_revision": 0,
+			"block_index": 334000
+		},
+	"destroy_message":      {
+			"minimum_version_major": 9,
+			"minimum_version_minor": 50,
 			"minimum_version_revision": 0,
 			"block_index": 335000
 		}

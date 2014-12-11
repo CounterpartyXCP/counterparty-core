@@ -34,7 +34,7 @@ def exectracer(cursor, sql, bindings):
     if 'blocks' in sql or 'transactions' in sql: return True
 
     # Record alteration in database.
-    if category not in ('balances', 'messages', 'mempool', ):
+    if category not in ('balances', 'messages', 'mempool', 'assets'):
         if category not in ('suicides', 'postqueue'):  # These tables are ephemeral.
             if category not in ('nonces', 'storage'):  # List message manually.
                 if not (command in ('update') and category in ('orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches', 'contracts')):    # List message manually.

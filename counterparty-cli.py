@@ -274,7 +274,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
 
     # Data directory
     if not data_dir:
-        config.DATA_DIR = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.XCP_CLIENT, roaming=True)
+        config.DATA_DIR = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.XCP_CLIENT, roaming=True)
     else:
         config.DATA_DIR = os.path.expanduser(data_dir)
     if not os.path.isdir(config.DATA_DIR): os.mkdir(config.DATA_DIR)
@@ -333,7 +333,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     try:
         config.BACKEND_RPC_PORT = int(config.BACKEND_RPC_PORT)
         if not (int(config.BACKEND_RPC_PORT) > 1 and int(config.BACKEND_RPC_PORT) < 65535):
-            raise exceptions.ConfigurationError('invalid backend API port number')
+            raise ConfigurationError('invalid backend API port number')
     except:
         raise Exception("Please specific a valid port number backend-rpc-port configuration parameter")
 
@@ -355,7 +355,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     elif has_config and 'bitcoind-rpc-password' in configfile['Default'] and configfile['Default']['bitcoind-rpc-password']:
         config.BACKEND_RPC_PASSWORD = configfile['Default']['bitcoind-rpc-password']
     else:
-        raise exceptions.ConfigurationError('backend RPC password not set. (Use configuration file or --backend-rpc-password=PASSWORD)')
+        raise ConfigurationError('backend RPC password not set. (Use configuration file or --backend-rpc-password=PASSWORD)')
 
     # Backend Core RPC SSL
     if backend_rpc_ssl:
@@ -428,7 +428,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     try:
         config.RPC_PORT = int(config.RPC_PORT)
         if not (int(config.BACKEND_RPC_PORT) > 1 and int(config.BACKEND_RPC_PORT) < 65535):
-            raise exceptions.ConfigurationError('invalid counterpartyd API port number')
+            raise ConfigurationError('invalid counterpartyd API port number')
     except:
         raise Exception("Please specific a valid port number rpc-port configuration parameter")
 
@@ -446,7 +446,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     elif has_config and 'rpc-password' in configfile['Default'] and configfile['Default']['rpc-password']:
         config.RPC_PASSWORD = configfile['Default']['rpc-password']
     else:
-        raise exceptions.ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
+        raise ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
 
     config.RPC = 'http://' + config.RPC_USER + ':' + config.RPC_PASSWORD + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT)
 
@@ -1055,7 +1055,7 @@ if __name__ == '__main__':
             print('Asset ‘{}’ not found.'.format(args.asset))
             exit(0)
 
-        asset_id = util.get_asset_id(args.asset)
+        asset_id = util.get_asset_id(db, args.asset, util.last_block(db)['block_index'])
         divisible = results['divisible']
         locked = results['locked']
         supply = util.value_out(db, results['supply'], args.asset)

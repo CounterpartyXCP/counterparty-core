@@ -154,58 +154,58 @@ UNITTEST_VECTOR = {
     'issuance': {
         'validate': [{
             'in': (ADDR[0], None, 'ASSET', 1000, True, False, None, None, '', DP['default_block']),
-            'out': (0, 0.0, [], 50000000, '', True)
+            'out': (0, 0.0, [], 50000000, '', True, False)
         }, {
             'in': (ADDR[0], None, 'BTC', 1000, True, False, None, None, '', DP['default_block']),
-            'out': (0, 0.0, ['cannot issue BTC or XCP'], 50000000, '', True)
+            'out': (0, 0.0, ['cannot issue BTC or XCP'], 50000000, '', True, False)
         }, {
             'in': (ADDR[0], None, 'XCP', 1000, True, False, None, None, '', DP['default_block']),
-            'out': (0, 0.0, ['cannot issue BTC or XCP'], 50000000, '', True)
+            'out': (0, 0.0, ['cannot issue BTC or XCP'], 50000000, '', True, False)
         }, {
             'in': (ADDR[0], None, 'NOSATOSHI', 1000.5, True, False, None, None, '', DP['default_block']),
-            'out': (0, 0.0, ['quantity must be in satoshis'], 0, '', True)
+            'out': (0, 0.0, ['quantity must be in satoshis'], 0, '', True, None)
         }, {
             'in': (ADDR[0], None, 'INVALIDCALLDATE', 1000, True, True, 10000.5, DP['quantity'], '', DP['default_block']),
-            'out': (10000.5, 100000000.0, ['call_date must be epoch integer'], 0, '', True)
+            'out': (10000.5, 100000000.0, ['call_date must be epoch integer'], 0, '', True, None)
         }, {
             'in': (ADDR[0], None, 'INVALIDCALLPRICE', 1000, True, True, 1409401723, 'price', '', DP['default_block']),
-            'out': (1409401723, 'price', ['call_price must be a float'], 0, '', True)
+            'out': (1409401723, 'price', ['call_price must be a float'], 0, '', True, None)
         }, {
             'in': (ADDR[0], None, 'NEGVALUES', -1000, True, True, -1409401723, -DP['quantity'], '', DP['default_block']),
-            'out': (-1409401723, -100000000.0, ['negative quantity', 'negative call price', 'negative call date'], 50000000, '', True)
+            'out': (-1409401723, -100000000.0, ['negative quantity', 'negative call price', 'negative call date'], 50000000, '', True, False)
         }, {
             'in': (ADDR[2], None, 'DIVISIBLE', 1000, True, False, None, None, 'Divisible asset', DP['default_block']),
-            'out': (0, 0.0, ['issued by another address'], 0, 'Divisible asset', True)
+            'out': (0, 0.0, ['issued by another address'], 0, 'Divisible asset', True, True)
         }, {
             'in': (ADDR[0], None, 'DIVISIBLE', 1000, False, True, 1409401723, DP['quantity'], 'Divisible asset', DP['default_block']),
-            'out': (1409401723, 100000000.0, ['cannot change divisibility', 'cannot change callability'], 0, 'Divisible asset', False)
+            'out': (1409401723, 100000000.0, ['cannot change divisibility', 'cannot change callability'], 0, 'Divisible asset', False, True)
         }, {
             'in': (ADDR[0], None, 'CALLABLE', 1000, True, True, 1409400251, DP['quantity'] / 2, 'Callable asset', DP['default_block']),
-            'out': (1409400251, 50000000.0, ['cannot reduce call price'], 0, 'Callable asset', True)
+            'out': (1409400251, 50000000.0, ['cannot reduce call price'], 0, 'Callable asset', True, True)
         }, {
             'in': (ADDR[0], None, 'LOCKED', 1000, True, False, None, None, 'Locked asset', DP['default_block']),
-            'out': (0, 0.0, ['locked asset and non‐zero quantity'], 0, 'Locked asset', True)
+            'out': (0, 0.0, ['locked asset and non‐zero quantity'], 0, 'Locked asset', True, True)
         }, {
             'in': (ADDR[0], None, 'BSSET', 1000, True, False, None, None, 'LOCK', DP['default_block']),
-            'out': (0, 0.0, ['cannot lock a non‐existent asset'], 50000000, 'LOCK', True)
+            'out': (0, 0.0, ['cannot lock a non‐existent asset'], 50000000, 'LOCK', True, False)
         }, {
             'in': (ADDR[0], ADDR[1], 'BSSET', 1000, True, False, None, None, '', DP['default_block']),
-            'out': (0, 0.0, ['cannot transfer a non‐existent asset', 'cannot issue and transfer simultaneously'], 50000000, '', True)
+            'out': (0, 0.0, ['cannot transfer a non‐existent asset', 'cannot issue and transfer simultaneously'], 50000000, '', True, False)
         }, {
             'in': (ADDR[2], None, 'BSSET', 1000, True, False, None, None, '', DP['default_block']),
-            'out': (0, 0.0, ['insufficient funds'], 50000000, '', True)
+            'out': (0, 0.0, ['insufficient funds'], 50000000, '', True, False)
         }, {
             'in': (ADDR[0], None, 'BSSET', 2**63, True, False, None, None, '', DP['default_block']),
-            'out': (0, 0.0, ['total quantity overflow'], 50000000, '', True)
+            'out': (0, 0.0, ['total quantity overflow'], 50000000, '', True, False)
         }, {
             'in': (ADDR[0], ADDR[1], 'DIVISIBLE', 1000, True, False, None, None, 'Divisible asset', DP['default_block']),
-            'out': (0, 0.0, ['cannot issue and transfer simultaneously'], 0, 'Divisible asset', True)
+            'out': (0, 0.0, ['cannot issue and transfer simultaneously'], 0, 'Divisible asset', True, True)
         }, {
             'in': (ADDR[0], None, 'MAXIMUM', 2**63-1, True, False, None, None, 'Maximum quantity', DP['default_block']),
-            'out': (0, 0.0, [], 50000000, 'Maximum quantity', True)
+            'out': (0, 0.0, [], 50000000, 'Maximum quantity', True, False)
         }, {
             'in': (ADDR[0], None, 'DIVISIBLE', 2**63-1, True, False, None, None, 'Maximum quantity', DP['default_block']),
-            'out': (0, 0.0, ['total quantity overflow'], 0, 'Maximum quantity', True)
+            'out': (0, 0.0, ['total quantity overflow'], 0, 'Maximum quantity', True, True)
         }],
         'compose': [{
             'in': (ADDR[0], None, 'ASSET', 1000, True, False, None, None, ''),
@@ -582,7 +582,7 @@ UNITTEST_VECTOR = {
             'in': ('create_dividend', {'source': ADDR[0], 'quantity_per_unit': 1, 'asset': 'NODIVISIBLE', 'dividend_asset': 'XCP'}),
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e000000000000695121025a415bf04af834423d3dd7ad96dc727a030865759f9fbc9036a64c1197e587c8210254da540fb2673b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe7246f210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae8c19ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }],
-        'get_asset_id': [{
+        'generate_asset_id': [{
             'in': ('BCD', 308000),
             'error': ('AssetNameError', 'too short')
         }, {
@@ -613,7 +613,7 @@ UNITTEST_VECTOR = {
             'in': ('ZZZZZZZZZZZZ', 308000),
             'out': 26**12 - 1
         }],
-        'get_asset_name': [{
+        'generate_asset_name': [{
             'in': (26**12 - 1, 308000),
             'out': 'ZZZZZZZZZZZZ'
         }, {

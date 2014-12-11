@@ -379,8 +379,8 @@ def compose (db, source, give_asset, give_quantity, get_asset, get_quantity, exp
     problems = validate(db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, util.last_block(db)['block_index'])
     if problems: raise exceptions.ComposeError(problems)
 
-    give_id = util.get_asset_id(give_asset, util.last_block(db)['block_index'])
-    get_id = util.get_asset_id(get_asset, util.last_block(db)['block_index'])
+    give_id = util.get_asset_id(db, give_asset, util.last_block(db)['block_index'])
+    get_id = util.get_asset_id(db, get_asset, util.last_block(db)['block_index'])
     data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, give_id, give_quantity, get_id, get_quantity,
                         expiration, fee_required)
@@ -395,8 +395,8 @@ def parse (db, tx, message):
         if len(message) != LENGTH:
             raise exceptions.UnpackError
         give_id, give_quantity, get_id, get_quantity, expiration, fee_required = struct.unpack(FORMAT, message)
-        give_asset = util.get_asset_name(give_id, tx['block_index'])
-        get_asset = util.get_asset_name(get_id, tx['block_index'])
+        give_asset = util.get_asset_name(db, give_id, tx['block_index'])
+        get_asset = util.get_asset_name(db, get_id, tx['block_index'])
         status = 'open'
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
         give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required = 0, 0, 0, 0, 0, 0

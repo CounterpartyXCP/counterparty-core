@@ -68,13 +68,13 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
 
     if not isinstance(quantity, int):
         problems.append('quantity must be in satoshis')
-        return call_date, call_price, problems, fee, description, divisible
+        return call_date, call_price, problems, fee, description, divisible, None
     if call_date and not isinstance(call_date, int):
         problems.append('call_date must be epoch integer')
-        return call_date, call_price, problems, fee, description, divisible
+        return call_date, call_price, problems, fee, description, divisible, None
     if call_price and not isinstance(call_price, float):
         problems.append('call_price must be a float')
-        return call_date, call_price, problems, fee, description, divisible
+        return call_date, call_price, problems, fee, description, divisible, None
 
     if quantity < 0: problems.append('negative quantity')
     if call_price < 0: problems.append('negative call price')
@@ -157,13 +157,13 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     if destination and quantity:
         problems.append('cannot issue and transfer simultaneously')
 
-    return call_date, call_price, problems, fee, description, divisible
+    return call_date, call_price, problems, fee, description, divisible, reissuance
 
 def compose (db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description):
-    call_date, call_price, problems, fee, description, divisible = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.last_block(db)['block_index'])
+    call_date, call_price, problems, fee, description, divisible, reissuance = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.last_block(db)['block_index'])
     if problems: raise exceptions.ComposeError(problems)
 
-    asset_id = util.get_asset_id(asset, util.last_block(db)['block_index'])
+    asset_id = util.generate_asset_id(asset, util.last_block(db)['block_index'])
     data = struct.pack(config.TXTYPE_FORMAT, ID)
     if len(description) <= 42:
         curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
@@ -200,7 +200,7 @@ def parse (db, tx, message):
             asset_id, quantity, divisible = struct.unpack(FORMAT_1, message)
             callable_, call_date, call_price, description = False, 0, 0.0, ''
         try:
-            asset = util.get_asset_name(asset_id, tx['block_index'])
+            asset = util.generate_asset_name(asset_id, tx['block_index'])
         except exceptions.AssetNameError:
             asset = None
             status = 'invalid: bad asset name'
@@ -211,7 +211,7 @@ def parse (db, tx, message):
 
     fee = 0
     if status == 'valid':
-        call_date, call_price, problems, fee, description, divisible = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, callable_, call_date, call_price, description, block_index=tx['block_index'])
+        call_date, call_price, problems, fee, description, divisible, reissuance = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, callable_, call_date, call_price, description, block_index=tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
         if 'total quantity overflow' in problems:
             quantity = 0
@@ -240,6 +240,16 @@ def parse (db, tx, message):
             cursor.close()
             description = issuances[-1]['description']  # Use last description. (Assume previous issuance exists because tx is valid.)
             timestamp, value_int, fee_fraction_int = None, None, None
+
+        if not reissuance:
+            # Add to table of assets.
+            bindings= {
+                'asset_id': str(asset_id),
+                'asset_name': str(asset),
+                'block_index': tx['block_index'],
+            }
+            sql='insert into assets values(:asset_id, :asset_name, :block_index)'
+            issuance_parse_cursor.execute(sql, bindings)
 
     # Add parsed transaction to message-type–specific table.
     bindings= {

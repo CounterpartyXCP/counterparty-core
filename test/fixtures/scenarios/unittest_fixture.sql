@@ -5,6 +5,23 @@
 
 BEGIN TRANSACTION;
 
+-- Table  assets
+DROP TABLE IF EXISTS assets;
+CREATE TABLE assets(
+                      asset_id TEXT UNIQUE,
+                      asset_name TEXT UNIQUE,
+                      block_index INTEGER);
+INSERT INTO assets VALUES('0','BTC',NULL);
+INSERT INTO assets VALUES('1','XCP',NULL);
+INSERT INTO assets VALUES('697326324582','DIVISIBLE',310001);
+INSERT INTO assets VALUES('1911882621324134','NODIVISIBLE',310002);
+INSERT INTO assets VALUES('16199343190','CALLABLE',310003);
+INSERT INTO assets VALUES('137134819','LOCKED',310004);
+INSERT INTO assets VALUES('211518','MAXI',310016);
+-- Triggers and indices on  assets
+CREATE INDEX id_idx ON assets (asset_id);
+CREATE INDEX name_idx ON assets (asset_name);
+
 -- Table  balances
 DROP TABLE IF EXISTS balances;
 CREATE TABLE balances(
@@ -971,7 +988,6 @@ INSERT INTO order_matches VALUES('9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e
 -- Triggers and indices on  order_matches
 CREATE INDEX backward_status_idx ON order_matches (backward_asset, status);
 CREATE INDEX forward_status_idx ON order_matches (forward_asset, status);
-CREATE INDEX id_idx ON order_matches (id);
 CREATE INDEX match_expire_idx ON order_matches (status, match_expire_index);
 CREATE INDEX tx0_address_idx ON order_matches (tx0_address);
 CREATE INDEX tx1_address_idx ON order_matches (tx1_address);

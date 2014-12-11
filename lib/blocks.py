@@ -35,7 +35,7 @@ TABLES = ['credits', 'debits', 'messages'] + \
          'callbacks', 'cancels', 'dividends', 'issuances', 'sends',
          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
          'rps_matches', 'rps', 'executions', 'contracts', 'storage',
-         'suicides', 'nonces', 'postqueue', 'destructions']
+         'suicides', 'nonces', 'postqueue', 'destructions', 'assets']
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(CURR_DIR + '/../mainnet_burns.csv', 'r') as f:
@@ -270,6 +270,24 @@ def initialise(db):
                       asset_idx ON balances (asset)
                    ''')
 
+    # Assets
+    # TODO: Store more asset info here?!
+    cursor.execute('''CREATE TABLE IF NOT EXISTS assets(
+                      asset_id TEXT UNIQUE,
+                      asset_name TEXT UNIQUE,
+                      block_index INTEGER)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      name_idx ON assets (asset_name)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      id_idx ON assets (asset_id)
+                   ''')
+    cursor.execute('''SELECT * FROM assets WHERE asset_name = ?''', ('BTC',))
+    if not list(cursor):
+        cursor.execute('''INSERT INTO assets VALUES (?,?,?)''', ('0', 'BTC', None))
+        cursor.execute('''INSERT INTO assets VALUES (?,?,?)''', ('1', 'XCP', None))
+
     # Consolidated
     send.initialise(db)
     destroy.initialise(db)
@@ -320,9 +338,9 @@ def initialise(db):
 def get_tx_info (tx_hex, block_index, block_parser = None):
     try:
         if util.enabled('multisig_addresses', block_index):   # Protocol change.
-            tx_info = get_tx_info2(tx_hex, block_index, block_parser)
+            tx_info = get_tx_info2(tx_hex, block_parser=block_parser)
         else:
-            tx_info = get_tx_info1(tx_hex, block_index, block_parser)
+            tx_info = get_tx_info1(tx_hex, block_index, block_parser=block_parser)
     except DecodeError as e:
         logging.debug('Could not decode: ' + str(e))
         tx_info = b'', None, None, None, None
@@ -438,7 +456,7 @@ def get_tx_info1 (tx_hex, block_index, block_parser = None):
 
     return source, destination, btc_amount, fee, data
 
-def get_tx_info2 (tx_hex, block_index, block_parser = None):
+def get_tx_info2 (tx_hex, block_parser = None):
     """
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
@@ -543,6 +561,7 @@ def get_tx_info2 (tx_hex, block_index, block_parser = None):
             vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
             vin_ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(vin_tx['__data__']))
         else:
+            rpc = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC)
             vin_ctx = rpc.getrawtransaction(vin.prevout.hash)
         vout = vin_ctx.vout[vin.prevout.n]
         fee += vout.nValue

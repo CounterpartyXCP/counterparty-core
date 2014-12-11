@@ -21,6 +21,7 @@ import bitcoin as bitcoinlib
 import os
 
 from . import (config, exceptions)
+from .exceptions import DecodeError
 
 D = decimal.Decimal
 b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -370,18 +371,9 @@ def last_message (db):
     cursor.close()
     return last_message
 
-def get_asset_id (asset_name, block_index):
-    # Special cases.
+def generate_asset_id (asset_name, block_index):
     if asset_name == config.BTC: return 0
     elif asset_name == config.XCP: return 1
-
-    """
-    # Checksum
-    if not checksum.verify(asset_name):
-        raise exceptions.AssetNameError('invalid checksum')
-    else:
-        asset_name = asset_name[:-1]  # Strip checksum character.
-    """
 
     if len(asset_name) < 4:
         raise exceptions.AssetNameError('too short')
@@ -420,7 +412,7 @@ def get_asset_id (asset_name, block_index):
 
     return asset_id
 
-def get_asset_name (asset_id, block_index):
+def generate_asset_name (asset_id, block_index):
     if asset_id == 0: return config.BTC
     elif asset_id == 1: return config.XCP
 
@@ -447,6 +439,29 @@ def get_asset_name (asset_id, block_index):
     return asset_name + checksum.compute(asset_name)
     """
     return asset_name
+
+
+def get_asset_id (db, asset_name, block_index):
+    if not enabled('hotfix_numeric_assets', block_index):
+        return generate_asset_id(asset_name, block_index)
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM assets WHERE asset_name = ?''', (asset_name,))
+    assets = list(cursor)
+    if len(assets) == 1:
+        return int(assets[0]['asset_id'])
+    else:
+        raise exceptions.AssetError('No such asset: {}'.format(asset_name))
+
+def get_asset_name (db, asset_id, block_index):
+    if not enabled('hotfix_numeric_assets', block_index):
+        return generate_asset_name(asset_id, block_index)
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM assets WHERE asset_id = ?''', (str(asset_id),))
+    assets = list(cursor)
+    if len(assets) == 1:
+        return assets[0]['asset_name']
+    elif not assets:
+        return 0    # Strange, I know…
 
 
 class DebitError (Exception): pass
