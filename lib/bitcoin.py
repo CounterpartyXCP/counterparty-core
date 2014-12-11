@@ -540,6 +540,16 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     # Serialise inputs and outputs.
     unsigned_tx = serialise(block_index, encoding, inputs, destination_outputs, data_output, change_output, self_public_key=self_public_key)
     unsigned_tx_hex = binascii.hexlify(unsigned_tx).decode('utf-8')
+
+    # Check that the constructed transaction isn’t doing anything funny.
+    from lib import blocks
+    (desired_source, desired_destination_outputs, desired_data) = tx_info
+    desired_destination = desired_destination_outputs[0][0] if desired_destination_outputs else ''
+    if desired_data == None: desired_data = b''
+    parsed_source, parsed_destination, x, y, parsed_data = blocks.get_tx_info2(unsigned_tx_hex)
+    if (desired_source, desired_destination, desired_data) != (parsed_source, parsed_destination, parsed_data):
+        raise TransactionError('constructed transaction does not parse correctly')
+
     return unsigned_tx_hex
 
 def sign_tx (unsigned_tx_hex, private_key_wif=None):

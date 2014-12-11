@@ -1001,9 +1001,9 @@ def initialise(db):
 def get_tx_info (tx_hex, block_index, block_parser = None):
     try:
         if util.multisig_enabled(block_index):  # Protocol change.
-            tx_info = get_tx_info2(tx_hex, block_index, block_parser)
+            tx_info = get_tx_info2(tx_hex, block_parser=block_parser)
         else:
-            tx_info = get_tx_info1(tx_hex, block_index, block_parser)
+            tx_info = get_tx_info1(tx_hex, block_index, block_parser=block_parser)
     except DecodeError as e:
         logging.debug('Could not decode: ' + str(e))
         tx_info = b'', None, None, None, None
@@ -1120,7 +1120,7 @@ def get_tx_info1 (tx_hex, block_index, block_parser = None):
 
     return source, destination, btc_amount, fee, data
 
-def get_tx_info2 (tx_hex, block_index, block_parser = None):
+def get_tx_info2 (tx_hex, block_parser = None):
     """
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
