@@ -1,4 +1,8 @@
 ## Client Versions ##
+* v9.49.0 (2014-12-11)
+	* hotfix: numeric asset names (protocol change: 334000)
+	* sanity check on transaction construction
+	* minor bug fixes
 * v9.48.0 (2014-12-08)
 	* better enforcement of single source, destination
 * v9.47.1 (2014-12-02)
