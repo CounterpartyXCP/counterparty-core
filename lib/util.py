@@ -321,104 +321,6 @@ def message (db, block_index, command, category, bindings, tx_hash=None):
     cursor.close()
 
 
-def rowtracer(cursor, sql):
-    """Converts fetched SQL data into dict-style"""
-    dictionary = {}
-    for index, (name, type_) in enumerate(cursor.getdescription()):
-        dictionary[name] = sql[index]
-    return dictionary
-
-def exectracer(cursor, sql, bindings):
-    # This means that all changes to database must use a very simple syntax.
-        # TODO: Need sanity checks here.
-    sql = sql.lower()
-
-    # Parse SQL.
-    array = sql.split('(')[0].split(' ')
-    command = array[0]
-    if 'insert' in sql:
-        category = array[2]
-    elif 'update' in sql:
-        category = array[1]
-    else:
-        return True
-
-    db = cursor.getconnection()
-    dictionary = {'command': command, 'category': category, 'bindings': bindings}
-
-    # Skip blocks, transactions.
-    if 'blocks' in sql or 'transactions' in sql: return True
-
-    # Record alteration in database.
-    if category not in ('balances', 'messages', 'mempool', ):
-        if category not in ('suicides', 'postqueue'):  # These tables are ephemeral.
-            if category not in ('nonces', 'storage'):  # List message manually.
-                if not (command in ('update') and category in ('orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches', 'contracts')):    # List message manually.
-                    # try:
-                        message(db, bindings['block_index'], command, category, bindings)
-                    # except:
-                        # raise TypeError('SQLite3 statements must used named arguments.')
-
-    return True
-
-class DatabaseIntegrityError(exceptions.DatabaseError):
-    pass
-def connect_to_db(flags=None, foreign_keys=True):
-    """Connects to the SQLite database, returning a db Connection object"""
-    logging.debug('Status: Creating connection to `{}`.'.format(config.DATABASE.split('/').pop()))
-
-    if flags == None:
-        db = apsw.Connection(config.DATABASE)
-    elif flags == 'SQLITE_OPEN_READONLY':
-        db = apsw.Connection(config.DATABASE, flags=0x00000001)
-    else:
-        raise exceptions.DatabaseError
-
-    cursor = db.cursor()
-
-    # For speed.
-    cursor.execute('''PRAGMA count_changes = OFF''')
-
-    # For integrity, security.
-    if foreign_keys:
-        cursor.execute('''PRAGMA foreign_keys = ON''')
-        cursor.execute('''PRAGMA defer_foreign_keys = ON''')
-
-    # So that writers don’t block readers.
-    if flags != 'SQLITE_OPEN_READONLY':
-        cursor.execute('''PRAGMA journal_mode = WAL''')
-
-    # Make case sensitive the LIKE operator.
-    # For insensitive queries use 'UPPER(fieldname) LIKE value.upper()''
-    cursor.execute('''PRAGMA case_sensitive_like = ON''')
-
-    rows = list(cursor.execute('''PRAGMA foreign_key_check'''))
-    if rows: raise exceptions.DatabaseError('Foreign key check failed.')
-
-    # Integrity check
-    integral = False
-    for i in range(10): # DUPE
-        try:
-            logging.debug('Status: Checking database integrity.')
-            cursor.execute('''PRAGMA integrity_check''')
-            rows = cursor.fetchall()
-            if not (len(rows) == 1 and rows[0][0] == 'ok'):
-                raise exceptions.DatabaseError('Integrity check failed.')
-            integral = True
-            break
-        except DatabaseIntegrityError:
-            time.sleep(1)
-            continue
-    if not integral:
-        raise exceptions.DatabaseError('Could not perform integrity check.')
-
-    cursor.close()
-
-    db.setrowtrace(rowtracer)
-    db.setexectrace(exectracer)
-
-    return db
-
 def isodt (epoch_time):
     try:
         return datetime.fromtimestamp(epoch_time, tzlocal()).isoformat()
@@ -1024,7 +926,7 @@ def connect (url, payload, headers):
     for i in range(TRIES):
         try:
             response = bitcoin_rpc_session.post(url, data=json.dumps(payload), headers=headers, verify=config.BACKEND_RPC_SSL_VERIFY)
-            if i > 0: print('Successfully connected.', file=sys.stderr)
+            if i > 0: logging.debug('Status: Successfully connected.', file=sys.stderr)
             return response
         except requests.exceptions.SSLError as e:
             raise e

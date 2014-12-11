@@ -22,7 +22,7 @@ import requests
 import appdirs
 from prettytable import PrettyTable
 
-from lib import config, api, util, exceptions, bitcoin, blocks, blockchain
+from lib import config, api, util, exceptions, bitcoin, blocks, blockchain, database
 if os.name == 'nt':
     from lib import util_windows
 
@@ -785,7 +785,7 @@ if __name__ == '__main__':
 
     # Database
     logging.info('Status: Connecting to database.')
-    db = util.connect_to_db()
+    db = database.get_connection()
 
     # MESSAGE CREATION
     if args.action == 'send':

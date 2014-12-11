@@ -6,7 +6,7 @@ from requests.auth import HTTPBasicAuth
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
-from lib import (config, api, util, exceptions, bitcoin, blocks, check)
+from lib import (config, api, util, exceptions, bitcoin, blocks, check, database)
 from lib.messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
 import counterpartyd
 
@@ -191,7 +191,7 @@ def run_scenario(scenario, rawtransactions_db):
     asyncio_log = logging.getLogger('asyncio')
     asyncio_log.setLevel(logging.ERROR)
 
-    db = util.connect_to_db()
+    db = database.get_connection(read_only=False)
     initialise_db(db)
 
     raw_transactions = []
@@ -356,7 +356,7 @@ def reparse(testnet=True):
     console.setFormatter(formatter)
     logger.addHandler(console)
 
-    memory_db = util.connect_to_db()
+    memory_db = database.get_connection(read_only=False)
     initialise_db(memory_db)
 
     prod_db_path = os.path.join(config.DATA_DIR, '{}.{}{}.db'.format(config.XCP_CLIENT, str(config.VERSION_MAJOR), '.testnet' if testnet else ''))

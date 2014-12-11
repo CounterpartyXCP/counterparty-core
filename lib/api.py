@@ -23,7 +23,7 @@ import jsonrpc
 from jsonrpc import dispatcher
 import inspect
 
-from . import (config, bitcoin, exceptions, util, blockchain, check)
+from . import (config, bitcoin, exceptions, util, blockchain, check, database)
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute)
 
 API_TABLES = ['balances', 'credits', 'debits', 'bets', 'bet_matches',
@@ -273,7 +273,7 @@ class APIStatusPoller(threading.Thread):
 
     def run(self):
         global current_api_status_code, current_api_status_response_json
-        db = util.connect_to_db(flags='SQLITE_OPEN_READONLY')
+        db = database.get_connection(integrity_check=False)
 
         while self.stop_event == False:
             try:
@@ -313,7 +313,7 @@ class APIServer(threading.Thread):
         self.stop_event.set()
 
     def run(self):
-        db = util.connect_to_db(flags='SQLITE_OPEN_READONLY')
+        db = database.get_connection(integrity_check=False)
         app = flask.Flask(__name__)
         auth = HTTPBasicAuth()
 

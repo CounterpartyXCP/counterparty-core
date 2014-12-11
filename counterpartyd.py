@@ -22,7 +22,7 @@ import requests
 import appdirs
 from prettytable import PrettyTable
 
-from lib import config, api, util, exceptions, bitcoin, blocks, blockchain, check
+from lib import config, api, util, exceptions, bitcoin, blocks, blockchain, check, database
 if os.name == 'nt':
     from lib import util_windows
 
@@ -49,6 +49,7 @@ signal.signal(signal.SIGINT, sigterm_handler)
 # Lock database access by opening a socket.
 class LockingError(Exception): pass
 def get_lock():
+    logging.info('Status: Acquiring lock.')
 
     # Cross‐platform.
     if os.name == 'nt': # Not database‐specific.
@@ -66,6 +67,7 @@ def get_lock():
         lock_socket.bind(socket_address)
     except socket.error:
         raise LockingError(error)
+    logging.debug('Status: Lock acquired.')
 
 def cli(method, params, unsigned):
     # Get unsigned transaction serialisation.
@@ -649,12 +651,11 @@ if __name__ == '__main__':
 
     # Lock
     if args.action in ('rollback', 'reparse', 'server', 'kickstart') and not config.FORCE:
-        logging.info('Status: Acquiring lock.')
         get_lock()
 
     # Database
     logging.info('Status: Connecting to database.')
-    db = util.connect_to_db()
+    db = database.get_connection(read_only=False)
 
     # MESSAGE CREATION
     if args.action == 'send':
