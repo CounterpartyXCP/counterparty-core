@@ -9,25 +9,25 @@ Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Change quantity: 1.9989134 BTC
 Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance fee# <82e357fac0f41bc8c0c01e781ce96f0871bd3d6aaf57a8e99255d5e9d9fba554>
-Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 1000.0 of asset DIVISIBLE, which is divisible and uncallable, with description ‘Divisible asset’ (82e357fac0f41bc8c0c01e781ce96f0871bd3d6aaf57a8e99255d5e9d9fba554) [valid]
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 1000.0 of asset DIVISIBLE, which is divisible and uncallable (82e357fac0f41bc8c0c01e781ce96f0871bd3d6aaf57a8e99255d5e9d9fba554) [valid]
 Credit: 1000.0 DIVISIBLE to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance# <82e357fac0f41bc8c0c01e781ce96f0871bd3d6aaf57a8e99255d5e9d9fba554>
 Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Change quantity: 1.9989134 BTC
 Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance fee# <6ecaeb544ce2f8a4a24d8d497ecba6ef7b71082a3f1cfdabc48726d5bc90fdca>
-Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 1000 of asset NODIVISIBLE, which is indivisible and uncallable, with description ‘No divisible asset’ (6ecaeb544ce2f8a4a24d8d497ecba6ef7b71082a3f1cfdabc48726d5bc90fdca) [valid]
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 1000 of asset NODIVISIBLE, which is indivisible and uncallable (6ecaeb544ce2f8a4a24d8d497ecba6ef7b71082a3f1cfdabc48726d5bc90fdca) [valid]
 Credit: 1000 NODIVISIBLE to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance# <6ecaeb544ce2f8a4a24d8d497ecba6ef7b71082a3f1cfdabc48726d5bc90fdca>
 Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Change quantity: 1.9989134 BTC
 Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance fee# <390f3f38b46499ad8a6552e7453dd1ecb5fab8244743a5cc393a9aef7d16de85>
-Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 0.00001 of asset CALLABLE, which is divisible and callable from 2014-08-30T12:04:11 for 100000000.0 XCP/CALLABLE, with description ‘Callable asset’ (390f3f38b46499ad8a6552e7453dd1ecb5fab8244743a5cc393a9aef7d16de85) [valid]
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 0.00001 of asset CALLABLE, which is divisible and callable from 2014-08-30T12:04:11 for 100000000.0 XCP/CALLABLE (390f3f38b46499ad8a6552e7453dd1ecb5fab8244743a5cc393a9aef7d16de85) [valid]
 Credit: 0.00001 CALLABLE to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance# <390f3f38b46499ad8a6552e7453dd1ecb5fab8244743a5cc393a9aef7d16de85>
 Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Change quantity: 1.9989134 BTC
 Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance fee# <044c9ac702136ee7839dc776cb7b43bbb9d5328415925a958679d801ac6c6b63>
-Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 0.00001 of asset LOCKED, which is divisible and uncallable, with description ‘Locked asset’ (044c9ac702136ee7839dc776cb7b43bbb9d5328415925a958679d801ac6c6b63) [valid]
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 0.00001 of asset LOCKED, which is divisible and uncallable (044c9ac702136ee7839dc776cb7b43bbb9d5328415925a958679d801ac6c6b63) [valid]
 Credit: 0.00001 LOCKED to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance# <044c9ac702136ee7839dc776cb7b43bbb9d5328415925a958679d801ac6c6b63>
 Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
@@ -96,7 +96,7 @@ Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Change quantity: 1.9989134 BTC
 Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance fee# <cd929bf57f5f26550a56ba40eecd258b684842777dfc434a46b65a86e924bf52>
-Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 92233720368.54775807 of asset MAXI, which is divisible and uncallable, with description ‘Maximum quantity’ (cd929bf57f5f26550a56ba40eecd258b684842777dfc434a46b65a86e924bf52) [valid]
+Issuance: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc created 92233720368.54775807 of asset MAXI, which is divisible and uncallable (cd929bf57f5f26550a56ba40eecd258b684842777dfc434a46b65a86e924bf52) [valid]
 Credit: 92233720368.54775807 MAXI to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuance# <cd929bf57f5f26550a56ba40eecd258b684842777dfc434a46b65a86e924bf52>
 Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
