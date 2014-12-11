@@ -272,7 +272,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
 
     # Data directory
     if not data_dir:
-        config.DATA_DIR = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.XCP_CLIENT, roaming=True)
+        config.DATA_DIR = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.XCP_CLIENT, roaming=True)
     else:
         config.DATA_DIR = os.path.expanduser(data_dir)
     if not os.path.isdir(config.DATA_DIR): os.mkdir(config.DATA_DIR)
