@@ -1,6 +1,6 @@
 ## Client Versions ##
-* v9.50.0 (???)
-	* ‘destroy’ functionality (protocol change: 335000)
+* v9.49.2 (???)
+	* prepare for ‘destroy’ functionality
 	* match IDs now include underscore
 	* code clean‐up
 	* mainnet burns are hard‐coded
