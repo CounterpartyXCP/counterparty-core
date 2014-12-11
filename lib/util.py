@@ -579,7 +579,7 @@ def generate_asset_name (asset_id, block_index):
 
 
 def get_asset_id (db, asset_name, block_index):
-    if protocol_change(block_index, 333900):
+    if not protocol_change(block_index, 333900):
         return generate_asset_id(asset_name, block_index)
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM assets WHERE asset_name = ?''', (asset_name,))
@@ -590,7 +590,7 @@ def get_asset_id (db, asset_name, block_index):
         raise exceptions.AssetError('No such asset: {}'.format(asset_name))
 
 def get_asset_name (db, asset_id, block_index):
-    if protocol_change(block_index, 3339000):
+    if not protocol_change(block_index, 333900):
         return generate_asset_name(asset_id, block_index)
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM assets WHERE asset_id = ?''', (str(asset_id),))
