@@ -30,8 +30,7 @@ COUNTERPARTYD_OPTIONS = {
     'data_dir': tempfile.gettempdir(),
     'rpc_port': 9999,
     'rpc_password': 'pass',
-    'backend_rpc_port': 18332,
-    'backend_rpc_user': 'rpc',
+    'backend_rpc_port': 8888,
     'backend_rpc_password': 'pass'
 }
 
@@ -103,8 +102,6 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
     tx_index = block_index - config.BURN_START + 1
 
     tx_hash = hashlib.sha256('{}{}'.format(tx_index,raw_transaction).encode('utf-8')).hexdigest()
-    tx_hash = backend.deserialize(raw_transaction).GetHash()
-    tx_hash = bitcoinlib.core.b2lx(tx_hash)
     # print(tx_hash)
     if pytest.config.option.savescenarios:
         save_rawtransaction(rawtransactions_db, tx_hash, raw_transaction)
@@ -139,7 +136,7 @@ def initialise_rawtransactions_db(db):
                 wallet_unspent = json.load(listunspent_test_file)
                 for output in wallet_unspent:
                     txid = binascii.hexlify(bitcoinlib.core.lx(output['txid'])).decode()
-                    tx = backend.deserialise(output['txhex'])
+                    tx = backend.deserialize(output['txhex'])
                     cursor.execute('INSERT INTO raw_transactions VALUES (?, ?)', (txid, output['txhex']))
         cursor.close()
 
