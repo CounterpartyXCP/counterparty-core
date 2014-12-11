@@ -155,16 +155,13 @@ def log (db, command, category, bindings):
                     quantity = value_out(db, bindings['quantity'], None, divisible=bindings['divisible'])
                 except Exception as e:
                     quantity = '?'
-                logging.info('Issuance: {} created {} of asset {}, which is {} and {}, with description ‘{}’ ({}) [{}]'.format(bindings['issuer'], quantity, bindings['asset'], divisibility, callability, bindings['description'], bindings['tx_hash'], bindings['status']))
+                logging.info('Issuance: {} created {} of asset {}, which is {} and {} ({}) [{}]'.format(bindings['issuer'], quantity, bindings['asset'], divisibility, callability, bindings['tx_hash'], bindings['status']))
 
         elif category == 'broadcasts':
             if bindings['locked']:
                 logging.info('Broadcast: {} locked his feed ({}) [{}]'.format(bindings['source'], bindings['tx_hash'], bindings['status']))
             else:
-                if not bindings['value']: infix = '‘{}’'.format(bindings['text'])
-                else: infix = '‘{}’ = {}'.format(bindings['text'], bindings['value'])
-                suffix = ' from ' + bindings['source'] + ' at ' + isodt(bindings['timestamp']) + ' with a fee of {}'.format(output(D(bindings['fee_fraction_int'] / 1e8), 'fraction')) + ' (' + bindings['tx_hash'] + ')' + ' [{}]'.format(bindings['status'])
-                logging.info('Broadcast: {}'.format(infix + suffix))
+                logging.info('Broadcast: ' + bindings['source'] + ' at ' + isodt(bindings['timestamp']) + ' with a fee of {}'.format(output(D(bindings['fee_fraction_int'] / 1e8), 'fraction')) + ' (' + bindings['tx_hash'] + ')' + ' [{}]'.format(bindings['status']))
 
         elif category == 'bets':
             # Last text
