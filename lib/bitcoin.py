@@ -556,6 +556,10 @@ def sign_tx (unsigned_tx_hex, private_key_wif=None):
     """Sign unsigned transaction serialisation."""
 
     if private_key_wif:
+        for char in private_key_wif:
+            if char not in util.b58_digits:
+                raise exceptions.TransactionError('invalid private key')
+
         # TODO: Hack! (pybitcointools is Python 2 only)
         import subprocess
         i = 0
