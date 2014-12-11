@@ -8,6 +8,8 @@
 	* handle protocol changes more elegantly
 	* more sophisticated version checking
 	* removed obsolete `carefulness` CLI option
+* v9.49.1 (2014-12-11)
+	* don’t print user‐submitted text
 * v9.49.0 (2014-12-11)
 	* hotfix: numeric asset names (protocol change: 334000)
 	* sanity check on transaction construction
