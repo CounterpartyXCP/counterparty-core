@@ -6,7 +6,7 @@ from util_test import CURR_DIR
 from fixtures.vectors import UNITTEST_VECTOR
 from fixtures.params import DEFAULT_PARAMS as DP
 
-from lib import (config, util, api)
+from lib import (config, util, api, database)
 import counterpartyd
 
 def setup_module():
@@ -30,7 +30,7 @@ def teardown_module(function):
 
 @pytest.fixture
 def counterpartyd_db(request):
-    db = util.connect_to_db()
+    db = database.get_connection(read_only=False)
     cursor = db.cursor()
     cursor.execute('''BEGIN''')
     request.addfinalizer(lambda: cursor.execute('''ROLLBACK'''))

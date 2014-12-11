@@ -10,6 +10,29 @@ FORMAT = '>32s32s'
 LENGTH = 32 + 32
 ID = 11
 
+def initialise(db):
+    cursor = db.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS btcpays(
+                      tx_index INTEGER PRIMARY KEY,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      source TEXT,
+                      destination TEXT,
+                      btc_amount INTEGER,
+                      order_match_id TEXT,
+                      status TEXT,
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
+                   ''')
+                      # Disallows invalids: FOREIGN KEY (order_match_id) REFERENCES order_matches(id))
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      block_index_idx ON btcpays (block_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      source_idx ON btcpays (source)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      destination_idx ON btcpays (destination)
+                   ''')
 def validate (db, source, order_match_id, block_index):
     problems = []
     order_match = None
@@ -58,7 +81,7 @@ def validate (db, source, order_match_id, block_index):
     return destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems
 
 def compose (db, source, order_match_id):
-    tx0_hash, tx1_hash = order_match_id[:64], order_match_id[64:] # UTF-8 encoding means that the indices are doubled.
+    tx0_hash, tx1_hash = util.parse_id(order_match_id)
 
     destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(db, source, order_match_id, util.last_block(db)['block_index'])
     if problems: raise exceptions.ComposeError(problems)
@@ -84,7 +107,7 @@ def parse (db, tx, message):
             raise exceptions.UnpackError
         tx0_hash_bytes, tx1_hash_bytes = struct.unpack(FORMAT, message)
         tx0_hash, tx1_hash = binascii.hexlify(tx0_hash_bytes).decode('utf-8'), binascii.hexlify(tx1_hash_bytes).decode('utf-8')
-        order_match_id = tx0_hash + tx1_hash
+        order_match_id = util.make_id(tx0_hash, tx1_hash)
         status = 'valid'
     except (exceptions.UnpackError, struct.error) as e:
         tx0_hash, tx1_hash, order_match_id = None, None, None
