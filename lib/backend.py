@@ -32,8 +32,4 @@ def is_mine (address):
 def get_txhash_list(block):
     return [bitcoinlib.core.b2lx(ctx.GetHash()) for ctx in block.vtx]
 
-@lru_cache(maxsize=4096)
-def get_cached_raw_transaction(tx_hash):
-    return rpc.getrawtransaction(bitcoinlib.core.lx(tx_hash))
-
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

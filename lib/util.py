@@ -988,8 +988,12 @@ def rpc (method, params):
         raise BitcoindError('{}'.format(response_json['error']))
 
 @lru_cache(maxsize=4096)
-def get_cached_raw_transaction(tx_hash):
-    return rpc('getrawtransaction', [tx_hash, 1])
+def get_cached_raw_transaction (tx_hash, json=False):
+    if json:
+        return rpc('getrawtransaction', [tx_hash, 1])
+    else:
+        return rpc('getrawtransaction', [tx_hash])
+        
 
 ### Backend RPC ###
 
@@ -1025,24 +1029,24 @@ def extract_addresses(tx):
             addresses += vout['scriptPubKey']['addresses']
 
     for vin in tx['vin']:
-        vin_tx = get_cached_raw_transaction(vin['txid'])
+        vin_tx = get_cached_raw_transaction(vin['txid'], json=True)
         vout = vin_tx['vout'][vin['vout']]
         if 'addresses' in vout['scriptPubKey']:
             addresses += vout['scriptPubKey']['addresses']
 
     return addresses
 
-def update_unconfirmed_addrindex(tx):
-    addresses = extract_addresses(json.dumps(tx))
+def update_unconfirmed_addrindex(tx_json):
+    addresses = extract_addresses(tx_json)
     for address in addresses:
         if address not in UNCONFIRMED_ADDRINDEX:
             UNCONFIRMED_ADDRINDEX[address] = {}
-        UNCONFIRMED_ADDRINDEX[address][tx['txid']] = tx
+        UNCONFIRMED_ADDRINDEX[address][tx_json['txid']] = tx_json
 
-def clean_unconfirmed_addrindex(tx_hash):
+def clean_unconfirmed_addrindex(tx_json):
     for address in list(UNCONFIRMED_ADDRINDEX.keys()):
-        if tx_hash in UNCONFIRMED_ADDRINDEX[address]:
-            UNCONFIRMED_ADDRINDEX[address].pop(tx_hash)
+        if tx_json in UNCONFIRMED_ADDRINDEX[address]:   # TODO: Will this work?!
+            UNCONFIRMED_ADDRINDEX[address].pop(tx_json)
             if len(UNCONFIRMED_ADDRINDEX[address]) == 0:
                 UNCONFIRMED_ADDRINDEX.pop(address)
 

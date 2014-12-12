@@ -645,16 +645,17 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     logging.debug('Status: examining transaction {}.'.format(tx_hash))
 
     # Get the important details about each transaction.
-    tx_hex = util.hexlify(backend.get_cached_raw_transaction(tx_hash).serialize())
+    tx_json = util.get_cached_raw_transaction(tx_hash, json=True)
+    tx_hex = util.get_cached_raw_transaction(tx_hash, json=False)
     source, destination, btc_amount, fee, data = get_tx_info(tx_hex, block_index)
 
     # For mempool
     if block_hash == None:
         block_hash = config.MEMPOOL_BLOCK_HASH
         block_index = config.MEMPOOL_BLOCK_INDEX
-        util.update_unconfirmed_addrindex(tx)
+        util.update_unconfirmed_addrindex(tx_json)
     else:
-        util.clean_unconfirmed_addrindex(tx_hash)
+        util.clean_unconfirmed_addrindex(tx_json)
 
     if source and (data or destination == config.UNSPENDABLE):
         cursor = db.cursor()
