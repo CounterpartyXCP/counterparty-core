@@ -34,6 +34,15 @@ COUNTERPARTYD_OPTIONS = {
     'backend_rpc_password': 'pass'
 }
 
+class RpcProxy():
+    def __init__(self, service_url=None):
+        pass
+    @staticmethod
+    def getrawtransaction(txid):
+        tx_hex = getrawtransaction(rawtransactions_db, txid)
+        ctx = backend.deserialize(tx_hex)
+        return ctx
+
 def dump_database(db):
     # TEMPORARY
     # .dump command bugs when aspw.Shell is used with 'db' args instead 'args'
@@ -166,6 +175,8 @@ def run_scenario(scenario, rawtransactions_db):
     util.FIRST_MULTISIG_BLOCK_TESTNET = 1
     checkpoints = dict(check.CHECKPOINTS_TESTNET)
     check.CHECKPOINTS_TESTNET = {}
+    backend.rpc = RpcProxy()
+
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     logger_buff = io.StringIO()

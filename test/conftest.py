@@ -12,6 +12,7 @@ from fixtures.scenarios import INTEGRATION_SCENARIOS
 from lib import config, bitcoin, util, backend
 
 import bitcoin as bitcoinlib
+import bitcoin.rpc as bitcoinlib_rpc
 
 def pytest_collection_modifyitems(session, config, items):
     # run contracts_test.py last
@@ -55,6 +56,9 @@ def rawtransactions_db(request):
 @pytest.fixture(autouse=True)
 def init_mock_functions(monkeypatch, rawtransactions_db):
 
+    util_test.rawtransactions_db = rawtransactions_db
+    backend.rpc = None
+
     def get_unspent_txouts(address, return_confirmed=False):
         with open(util_test.CURR_DIR + '/fixtures/unspent_outputs.json', 'r') as listunspent_test_file:
             wallet_unspent = json.load(listunspent_test_file)
@@ -90,15 +94,6 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
         address = '_'.join([str(signatures_required)] + sorted(pubkeys) + [str(len(pubkeys))])
         return address
 
-    class RpcProxy():
-        def __init__(self, service_url=None):
-            pass
-
-        def getrawtransaction(self, txid):
-            tx_hex = util_test.getrawtransaction(rawtransactions_db, txid)
-            ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
-            return ctx
-
     monkeypatch.setattr('lib.bitcoin.get_unspent_txouts', get_unspent_txouts)
     monkeypatch.setattr('lib.backend.dumpprivkey', dumpprivkey)
     monkeypatch.setattr('lib.backend.is_mine', is_mine)
@@ -109,4 +104,4 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
     if hasattr(config, 'PREFIX'):
         monkeypatch.setattr('lib.config.PREFIX', b'TESTXXXX')
     monkeypatch.setattr('lib.bitcoin.multisig_pubkeyhashes_to_pubkeys', multisig_pubkeyhashes_to_pubkeys)
-    monkeypatch.setattr('bitcoin.rpc.Proxy', RpcProxy)
+    monkeypatch.setattr('lib.backend.rpc', util_test.RpcProxy)
