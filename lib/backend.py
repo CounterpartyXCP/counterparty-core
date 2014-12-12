@@ -10,7 +10,7 @@ def dumpprivkey(address):
    return util.rpc('dumpprivkey', [address])
 
 def wallet_unlock ():
-    getinfo = rpc.getinfo()
+    getinfo = rpc.getinfo() # TODO: broken with btcd
     if 'unlocked_until' in getinfo:
         if getinfo['unlocked_until'] >= 60:
             return True # Wallet is unlocked for at least the next 60 seconds.

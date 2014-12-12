@@ -288,7 +288,7 @@ class APIStatusPoller(threading.Thread):
                     code = 11
                     check.backend(db)
                     code = 12
-                    check.database(db, backend.rpc.getinfo()['blocks'])
+                    check.database(db, backend.rpc.getblockcount())
                     self.last_database_check = time.time()
             except Exception as e:
                 exception_name = e.__class__.__name__
@@ -525,7 +525,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_running_info():
-            latestBlockIndex = backend.rpc.getinfo()['blocks']
+            latestBlockIndex = backend.rpc.getblockcount()
 
             try:
                 check.database(db, latestBlockIndex)

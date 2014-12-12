@@ -558,7 +558,7 @@ def normalize_quantity(quantity, divisible=True):
 
 def get_btc_supply(normalize=False):
     """returns the total supply of {} (based on what Bitcoin Core says the current block height is)""".format(config.BTC)
-    block_count = backend.rpc.getinfo()['blocks']
+    block_count = backend.rpc.getblockcount()
     blocks_remaining = block_count
     total_supply = 0
     reward = 50.0

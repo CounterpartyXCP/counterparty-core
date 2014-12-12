@@ -838,7 +838,7 @@ def follow (db):
     while True:
         starttime = time.time()
         # Get new blocks.
-        block_count = backend.rpc.getinfo()['blocks']
+        block_count = backend.rpc.getblockcount()
         if block_index <= block_count:
 
             # Backwards check for incorrect blocks due to chain reorganisation, and stop when a common parent is found.
@@ -915,7 +915,7 @@ def follow (db):
 
             logging.info('Block: %s (%ss)'%(str(block_index), "{:.2f}".format(time.time() - starttime, 3)))
             # Increment block index.
-            block_count = backend.rpc.getinfo()['blocks']
+            block_count = backend.rpc.getblockcount()
             block_index +=1
 
         else:

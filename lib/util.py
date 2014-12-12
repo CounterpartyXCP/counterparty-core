@@ -933,18 +933,6 @@ def connect (url, payload, headers):
             time.sleep(5)
     return None
 
-def wallet_unlock ():
-    getinfo = rpc('getinfo', [])
-    if 'unlocked_until' in getinfo:
-        if getinfo['unlocked_until'] >= 60:
-            return True # Wallet is unlocked for at least the next 60 seconds.
-        else:
-            passphrase = getpass.getpass('Enter your Bitcoind[‐Qt] wallet passhrase: ')
-            print('Unlocking wallet for 60 (more) seconds.')
-            rpc('walletpassphrase', [passphrase, 60])
-    else:
-        return True    # Wallet is unencrypted.
-
 class BitcoindError (Exception): pass
 class BitcoindRPCError (BitcoindError): pass
 def rpc (method, params):

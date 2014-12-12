@@ -645,13 +645,13 @@ if __name__ == '__main__':
     # Backend
     if args.action == 'server' or (args.action in ('reparse', 'rollback') and not config.FORCE):
         logging.info('Status: Connecting to backend.')
-        backend.rpc.getinfo()
+        backend.rpc.getblockcount()
 
     # Version
     if args.action in ('server', 'reparse', 'rollback') and not config.FORCE:
         logging.info('Status: Checking version.')
         try:
-            check.version(backend.rpc.getinfo()['blocks'])
+            check.version(backend.rpc.getblockcount())
         except check.VersionUpdateRequiredError as e:
             traceback.print_exc(file=sys.stdout)
             sys.exit(config.EXITCODE_UPDATE_REQUIRED)
