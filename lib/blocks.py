@@ -847,10 +847,11 @@ def follow (db):
             while True:
                 if c == config.BLOCK_FIRST: break
 
-                # Bitcoind parent hash.
+                logging.debug('Status: Checking that block {} is not an orphan.'.format(c))
+
+                # Backend parent hash.
                 c_hash = backend.rpc.getblockhash(c)
-                c_block = backend.rpc.getblock(c_hash)
-                bitcoind_parent = c_block.hashPrevBlock
+                backend_parent = backend.get_prevhash(c_hash)
 
                 # DB parent hash.
                 blocks = list(cursor.execute('''SELECT * FROM blocks
@@ -859,7 +860,7 @@ def follow (db):
                 db_parent = blocks[0]['block_hash']
 
                 # Compare.
-                if db_parent == bitcoind_parent:
+                if db_parent == backend_parent:
                     break
                 else:
                     c -= 1
