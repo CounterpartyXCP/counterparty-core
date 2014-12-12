@@ -38,13 +38,8 @@ def sigterm_handler(_signo, _stack_frame):
         logging.info('Status: Stopping API server.')
         api_server.stop()
         api_status_poller.stop()
-
-    # logging.info('Status: Closing database connection.')
-    # db.close()
-
     logging.info('Status: Shutting down.')
     sys.exit(0)
-
 signal.signal(signal.SIGTERM, sigterm_handler)
 signal.signal(signal.SIGINT, sigterm_handler)
 
@@ -636,6 +631,11 @@ if __name__ == '__main__':
     urllib3_log = logging.getLogger('urllib3')
     urllib3_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
     urllib3_log.propagate = False
+    #log unhandled errors (especially to the log files)
+
+    def handle_exception(exc_type, exc_value, exc_traceback):
+        logger.error("ERROR: ", exc_info=(exc_type, exc_value, exc_traceback))
+    sys.excepthook = handle_exception
 
     logging.info('Status: Running v{} of counterpartyd.'.format(config.VERSION_STRING, config.XCP_CLIENT))
 

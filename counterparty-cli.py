@@ -41,13 +41,8 @@ def sigterm_handler(_signo, _stack_frame):
         logging.info('Status: Stopping API server.')
         api_server.stop()
         api_status_poller.stop()
-
-    # logging.info('Status: Closing database connection.')
-    # db.close()
-
     logging.info('Status: Shutting down.')
     sys.exit(0)
-
 signal.signal(signal.SIGTERM, sigterm_handler)
 signal.signal(signal.SIGINT, sigterm_handler)
 
@@ -767,34 +762,6 @@ if __name__ == '__main__':
                 log_file=args.log_file, config_file=args.config_file,
                 database_file=args.database_file, testnet=args.testnet,
                 testcoin=args.testcoin, force=args.force)
-
-    # Logging (to file and console).
-    logger = logging.getLogger() #get root logger
-    logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
-    #Console logging
-    console = logging.StreamHandler()
-    console.setLevel(logging.DEBUG if args.verbose else logging.INFO)
-    formatter = logging.Formatter('%(message)s')
-    console.setFormatter(formatter)
-    logger.addHandler(console)
-    #File logging (rotated)
-    max_log_size = 20 * 1024 * 1024 #max log size of 20 MB before rotation (make configurable later)
-    if os.name == 'nt':
-        fileh = util_windows.SanitizedRotatingFileHandler(config.LOG, maxBytes=max_log_size, backupCount=5)
-    else:
-        fileh = logging.handlers.RotatingFileHandler(config.LOG, maxBytes=max_log_size, backupCount=5)
-    fileh.setLevel(logging.DEBUG if args.verbose else logging.INFO)
-    formatter = logging.Formatter('%(asctime)s %(message)s', '%Y-%m-%d-T%H:%M:%S%z')
-    fileh.setFormatter(formatter)
-    logger.addHandler(fileh)
-    #API requests logging (don't show on console in normal operation)
-    requests_log = logging.getLogger("requests")
-    requests_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
-    requests_log.propagate = False
-    urllib3_log = logging.getLogger('urllib3')
-    urllib3_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
-    urllib3_log.propagate = False
-
 
     # Database
     logging.info('Status: Connecting to database.')
