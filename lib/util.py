@@ -588,7 +588,7 @@ def value_in (db, quantity, asset, divisible=None):
         divisible = is_divisible(db, asset)
 
     if divisible:
-        quantity = d(quantity) * config.unit
+        quantity = D(quantity) * config.UNIT
         if quantity == quantity.to_integral():
             return int(quantity)
         else:
@@ -988,11 +988,8 @@ def rpc (method, params):
         raise BitcoindError('{}'.format(response_json['error']))
 
 @lru_cache(maxsize=4096)
-def get_cached_raw_transaction (tx_hash, json=False):
-    if json:
-        return rpc('getrawtransaction', [tx_hash, 1])
-    else:
-        return rpc('getrawtransaction', [tx_hash])
+def get_cached_raw_transaction_json (tx_hash):
+    return rpc('getrawtransaction', [tx_hash, 1])
         
 
 ### Backend RPC ###
@@ -1029,7 +1026,7 @@ def extract_addresses(tx):
             addresses += vout['scriptPubKey']['addresses']
 
     for vin in tx['vin']:
-        vin_tx = get_cached_raw_transaction(vin['txid'], json=True)
+        vin_tx = get_cached_raw_transaction_json(vin['txid'])
         vout = vin_tx['vout'][vin['vout']]
         if 'addresses' in vout['scriptPubKey']:
             addresses += vout['scriptPubKey']['addresses']

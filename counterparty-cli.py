@@ -32,7 +32,7 @@ class ConfigurationError (Exception):
     pass
 
 def get_wallet ():
-    for group in backend.rpc.listaddressgroupings()
+    for group in backend.rpc.listaddressgroupings():
         for bunch in group:
             yield bunch
 
@@ -384,6 +384,14 @@ def set_options (data_dir=None, backend_rpc_connect=None,
         config.BACKEND_RPC = 'https://' + config.BACKEND_RPC
     else:
         config.BACKEND_RPC = 'http://' + config.BACKEND_RPC
+
+    # Connection to backend.
+    # TODO: temp
+    import bitcoin as bitcoinlib
+    import bitcoin.rpc as bitcoinlib_rpc
+    if config.TESTNET:
+        bitcoinlib.SelectParams('testnet')
+    backend.rpc = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC)
 
     # blockchain service name
     if blockchain_service_name:

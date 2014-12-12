@@ -645,9 +645,8 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     logging.debug('Status: examining transaction {}.'.format(tx_hash))
 
     # Get the important details about each transaction.
-    tx_json = util.get_cached_raw_transaction(tx_hash, json=True)
-    tx_hex = util.get_cached_raw_transaction(tx_hash, json=False)
-    source, destination, btc_amount, fee, data = get_tx_info(tx_hex, block_index)
+    tx_json = util.get_cached_raw_transaction_json(tx_hash)
+    source, destination, btc_amount, fee, data = get_tx_info(tx_json['hex'], block_index)
 
     # For mempool
     if block_hash == None:
@@ -939,7 +938,7 @@ def follow (db):
             # and then save those messages.
             # Every transaction in mempool is parsed independently. (DB is rolled back after each one.)
             mempool = []
-            util.MEMPOOL = bitcoin.rpc.getrawmempool()
+            util.MEMPOOL = backend.rpc.getrawmempool()
             for tx_hash in util.MEMPOOL:
 
                 # If already in counterpartyd mempool, copy to new one.

@@ -4,7 +4,9 @@ from functools import lru_cache
 
 import bitcoin as bitcoinlib
 
-def dumpprivkey():
+from lib import util
+
+def dumpprivkey(address):
    return util.rpc('dumpprivkey', [address])
 
 def wallet_unlock ():
@@ -25,9 +27,9 @@ def serialize(ctx):
     return bitcoinlib.core.CTransaction.serialize(ctx)
 
 def is_valid (address):
-    return rpc.validateAddress(address)['isvalid']
+    return rpc.validateaddress(address)['isvalid']
 def is_mine (address):
-    return rpc.validateAddress(address)['ismine']
+    return rpc.validateaddress(address)['ismine']
 
 def get_txhash_list(block):
     return [bitcoinlib.core.b2lx(ctx.GetHash()) for ctx in block.vtx]
