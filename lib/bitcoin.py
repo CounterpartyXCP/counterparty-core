@@ -546,12 +546,14 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     (desired_source, desired_destination_outputs, desired_data) = tx_info
     desired_destination = desired_destination_outputs[0][0] if desired_destination_outputs else ''
     # Include change in destinations for BTC transactions.
-    if change_output and not desired_data:
+    if change_output and not desired_data and desired_destination != config.UNSPENDABLE:
         if desired_destination == '': desired_destination = change_address
         else: desired_destination += '-{}'.format(change_address)
     if desired_data == None: desired_data = b''
     parsed_source, parsed_destination, x, y, parsed_data = blocks.get_tx_info2(unsigned_tx_hex)
     if (desired_source, desired_destination, desired_data) != (parsed_source, parsed_destination, parsed_data):
+        logging.error('{}, {}, {}'.format(desired_source, desired_destination, desired_data))
+        logging.error('{}, {}, {}'.format(parsed_source, parsed_destination, parsed_data))
         raise exceptions.TransactionError('constructed transaction does not parse correctly')
 
     return unsigned_tx_hex
