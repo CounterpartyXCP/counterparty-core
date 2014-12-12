@@ -990,7 +990,7 @@ def rpc (method, params):
 @lru_cache(maxsize=4096)
 def get_cached_raw_transaction_json (tx_hash):
     return rpc('getrawtransaction', [tx_hash, 1])
-        
+
 
 ### Backend RPC ###
 
