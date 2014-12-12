@@ -552,8 +552,6 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
     if desired_data == None: desired_data = b''
     parsed_source, parsed_destination, x, y, parsed_data = blocks.get_tx_info2(unsigned_tx_hex)
     if (desired_source, desired_destination, desired_data) != (parsed_source, parsed_destination, parsed_data):
-        logging.error('{}, {}, {}'.format(desired_source, desired_destination, desired_data))
-        logging.error('{}, {}, {}'.format(parsed_source, parsed_destination, parsed_data))
         raise exceptions.TransactionError('constructed transaction does not parse correctly')
 
     return unsigned_tx_hex
