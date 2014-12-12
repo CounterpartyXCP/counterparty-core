@@ -593,14 +593,15 @@ def get_unspent_txouts(source, return_confirmed=False):
             if script.scriptpubkey_to_address(CScript(x(scriptpubkey['hex']))) == canonical_address:
                 txid = tx['txid']
                 confirmations = tx['confirmations'] if 'confirmations' in tx else 0
-                if txid not in outputs or outputs[txid]['confirmations'] < confirmations:
+                outkey = '{}{}'.format(txid, vout['n'])
+                if outkey not in outputs or outputs[outkey]['confirmations'] < confirmations:
                     coin = {'amount': float(vout['value']),
                             'confirmations': confirmations,
                             'scriptPubKey': scriptpubkey['hex'],
                             'txid': txid,
                             'vout': vout['n']
                            }
-                    outputs[txid] = coin
+                    outputs[outkey] = coin
     outputs = outputs.values()
 
     # Prune away spent coins.
