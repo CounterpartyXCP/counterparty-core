@@ -21,7 +21,7 @@ from bitcoin.core.script import CScript
 from bitcoin.core import x
 from bitcoin.core.key import CPubKey
 
-from . import (config, exceptions, util, blockchain, script)
+from . import (config, exceptions, util, blockchain, script, backend)
 
 class InputError (Exception):
     pass
@@ -58,45 +58,6 @@ def multisig_pubkeyhashes_to_pubkeys(address):
 
 def print_coin(coin):
     return 'amount: {}; txid: {}; vout: {}; confirmations: {}'.format(coin['amount'], coin['txid'], coin['vout'], coin.get('confirmations', '?')) # simplify and make deterministic
-
-
-# COMMON
-def get_block_count():
-    return int(util.rpc('getblockcount', []))
-def get_block_hash(block_index):
-    return util.rpc('getblockhash', [block_index])
-def get_raw_transaction (tx_hash, verbose=1):
-    return util.rpc('getrawtransaction', [tx_hash, verbose])
-def get_block (block_hash):
-    return util.rpc('getblock', [block_hash])
-def get_block_hash (block_index):
-    return util.rpc('getblockhash', [block_index])
-def decode_raw_transaction (unsigned_tx_hex):
-    return util.rpc('decoderawtransaction', [unsigned_tx_hex])
-def get_info():
-    return util.rpc('getinfo', [])
-
-# UNCOMMON
-def is_valid (address):
-    return util.rpc('validateaddress', [address])['isvalid']
-def is_mine (address):
-    return util.rpc('validateaddress', [address])['ismine']
-def sign_raw_transaction (unsigned_tx_hex):
-    return util.rpc('signrawtransaction', [unsigned_tx_hex])
-def send_raw_transaction (tx_hex):
-    return util.rpc('sendrawtransaction', [tx_hex])
-def get_private_key (address):
-    return util.rpc('dumpprivkey', [address])
-
-def get_wallet ():
-    for group in util.rpc('listaddressgroupings', []):
-        for bunch in group:
-            yield bunch
-def get_mempool ():
-    return util.rpc('getrawmempool', [])
-def list_unspent ():
-    return util.rpc('listunspent', [0, 999999])
-
 
 def var_int (i):
     if i < 0xfd:
@@ -469,7 +430,7 @@ def transaction (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER
         else:
             if not self_public_key_hex:
                 # If public key was not provided, derive it from the private key.
-                private_key_wif = get_private_key(source)
+                private_key_wif = backend.dumpprivkey(source)
                 self_public_key_hex = private_key_to_public_key(private_key_wif)
             else:
                 # If public key was provided, check that it matches the source address.
@@ -597,7 +558,7 @@ def normalize_quantity(quantity, divisible=True):
 
 def get_btc_supply(normalize=False):
     """returns the total supply of {} (based on what Bitcoin Core says the current block height is)""".format(config.BTC)
-    block_count = get_block_count()
+    block_count = backend.rpc.getinfo()['blocks']
     blocks_remaining = block_count
     total_supply = 0
     reward = 50.0
