@@ -278,12 +278,14 @@ Terms & Conventions
 assets
 ^^^^^^^^^
 
-Everywhere in the API an asset is referenced as an uppercase alphabetic (base
-26) string name of the asset, of at least 4 characters in length and not starting with 'A', or as 'BTC' or 'XCP' as appropriate. Examples are:
+Everywhere in the API an asset is referenced by its name, not its ID. See the
+Counterparty protocol specification for what constitutes a valid asset name.
+Examples:
 
 - "BTC"
 - "XCP"
 - "FOOBAR"
+- "A7736697071037023001"
 
 .. _quantitys:
 
