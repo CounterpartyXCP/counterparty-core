@@ -647,8 +647,8 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     assert type(tx_hash) == str
 
     # Get the important details about each transaction.
-    tx_json = backend.get_cached_raw_transaction(tx_hash, verbose=True)
-    source, destination, btc_amount, fee, data = get_tx_info(tx_json['hex'], block_index)
+    tx_dict = backend.get_cached_raw_transaction(tx_hash, verbose=True)
+    source, destination, btc_amount, fee, data = get_tx_info(tx_dict['hex'], block_index)
 
     # For mempool
     if block_hash == None:
