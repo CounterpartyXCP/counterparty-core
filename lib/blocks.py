@@ -654,9 +654,6 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     if block_hash == None:
         block_hash = config.MEMPOOL_BLOCK_HASH
         block_index = config.MEMPOOL_BLOCK_INDEX
-        util.update_unconfirmed_addrindex(tx_json)
-    else:
-        util.clean_unconfirmed_addrindex(tx_json)
 
     if source and (data or destination == config.UNSPENDABLE):
         logging.debug('Status: saving transaction {}.'.format(tx_hash))

@@ -36,8 +36,6 @@ BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
 BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
 
 BLOCK_LEDGER = []
-# inelegant but easy and fast cache
-MEMPOOL = []
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(CURR_DIR + '/../version.json') as f:
@@ -995,9 +993,6 @@ def enabled (change_name, block_index):
 
 ### Unconfirmed Transactions ###
 
-# cache
-UNCONFIRMED_ADDRINDEX = {}
-
 # TODO: use scriptpubkey_to_address()
 @lru_cache(maxsize=4096)
 def extract_addresses(tx):
@@ -1016,25 +1011,14 @@ def extract_addresses(tx):
 
     return addresses
 
-def update_unconfirmed_addrindex(tx_json):
-    addresses = extract_addresses(tx_json)
-    for address in addresses:
-        if address not in UNCONFIRMED_ADDRINDEX:
-            UNCONFIRMED_ADDRINDEX[address] = {}
-        UNCONFIRMED_ADDRINDEX[address][tx_json['txid']] = tx_json
-
-def clean_unconfirmed_addrindex(tx_json):
-    for address in list(UNCONFIRMED_ADDRINDEX.keys()):
-        if tx_json in UNCONFIRMED_ADDRINDEX[address]:   # TODO: Will this work?!
-            UNCONFIRMED_ADDRINDEX[address].pop(tx_json)
-            if len(UNCONFIRMED_ADDRINDEX[address]) == 0:
-                UNCONFIRMED_ADDRINDEX.pop(address)
-
 def unconfirmed_transactions(address):
-    if address in UNCONFIRMED_ADDRINDEX:
-        return list(UNCONFIRMED_ADDRINDEX[address].values())
-    else:
-        return []
+    unconfirmed_tx = []
+    for tx_hash in bitcoin.get_mempool():
+        tx = get_cached_raw_transaction(tx_hash)
+        addresses = extract_addresses(json.dumps(tx))
+        if address in addresses:
+             unconfirmed_tx.append(tx)
+    return unconfirmed_tx
 
 
 def transfer(db, block_index, source, destination, asset, quantity, action, event):
