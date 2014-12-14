@@ -8,6 +8,8 @@
 	* handle protocol changes more elegantly
 	* more sophisticated version checking
 	* removed obsolete `carefulness` CLI option
+	* removed addrindex for unconfirmed transactions
+	* misc. bug fixes
 * v9.49.1 (2014-12-11)
 	* don’t print user‐submitted text
 * v9.49.0 (2014-12-11)

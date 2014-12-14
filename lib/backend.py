@@ -30,6 +30,14 @@ def get_prevhash(c_hash):
     c_block = rpc.getblock(c_hash)
     return bitcoinlib.core.b2lx(c_block.hashPrevBlock)
 
+@lru_cache(maxsize=4096)
+def get_cached_raw_transaction (tx_hash, verbose=False):
+    # NOTE: python-bitcoinlib won’t return JSON.
+    if verbose:
+        return util.rpc('getrawtransaction', [tx_hash, 1])
+    else:
+        return util.rpc('getrawtransaction', [tx_hash])
+
 def is_valid (address):
     return rpc.validateaddress(address)['isvalid']
 def is_mine (address):

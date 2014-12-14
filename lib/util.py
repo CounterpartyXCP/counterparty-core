@@ -975,11 +975,6 @@ def rpc (method, params):
     else:
         raise BitcoindError('{}'.format(response_json['error']))
 
-@lru_cache(maxsize=4096)
-def get_cached_raw_transaction_json (tx_hash):
-    return rpc('getrawtransaction', [tx_hash, 1])
-
-
 ### Backend RPC ###
 
 ### Protocol Changes ###
@@ -1014,7 +1009,7 @@ def extract_addresses(tx):
             addresses += vout['scriptPubKey']['addresses']
 
     for vin in tx['vin']:
-        vin_tx = get_cached_raw_transaction_json(vin['txid'])
+        vin_tx = backend.get_cached_raw_transaction(vin['txid'], verbose=True)
         vout = vin_tx['vout'][vin['vout']]
         if 'addresses' in vout['scriptPubKey']:
             addresses += vout['scriptPubKey']['addresses']
