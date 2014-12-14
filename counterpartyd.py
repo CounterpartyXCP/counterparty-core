@@ -132,7 +132,8 @@ def set_options (data_dir=None, backend_rpc_connect=None,
                  rpc_host=None, rpc_port=None, rpc_user=None,
                  rpc_password=None, rpc_allow_cors=None, log_file=None,
                  config_file=None, database_file=None, testnet=False,
-                 testcoin=False, force=False, broadcast_tx_mainnet=None):
+                 testcoin=False, force=False, broadcast_tx_mainnet=None,
+                 backend_poll_interval=None):
 
     if force:
         config.FORCE = force
@@ -239,6 +240,14 @@ def set_options (data_dir=None, backend_rpc_connect=None,
         config.BACKEND_RPC_SSL_VERIFY = configfile['Default']['backend-rpc-ssl-verify']
     else:
         config.BACKEND_RPC_SSL_VERIFY = False # Default to off (support self‐signed certificates)
+
+    # Backend Poll Interval
+    if backend_poll_interval:
+        config.BACKEND_POLL_INTERVAL= backend_poll_interval
+    elif has_config and 'backend-poll-interval' in configfile['Default'] and configfile['Default']['backend-poll-interval']:
+        config.BACKEND_POLL_INTERVAL = configfile['Default']['backend-poll-interval']
+    else:
+        config.BACKEND_POLL_INTERVAL = 2.0
 
     # Construct backend URL.
     config.BACKEND_RPC = config.BACKEND_RPC_USER + ':' + config.BACKEND_RPC_PASSWORD + '@' + config.BACKEND_RPC_CONNECT + ':' + str(config.BACKEND_RPC_PORT)
@@ -441,6 +450,7 @@ if __name__ == '__main__':
     parser.add_argument('--backend-rpc-password', help='the password used to communicate with backend over JSON-RPC')
     parser.add_argument('--backend-rpc-ssl', action='store_true', help='use SSL to connect to backend (default: false)')
     parser.add_argument('--backend-rpc-ssl-verify', action='store_true', help='verify SSL certificate of backend; disallow use of self‐signed certificates (default: false)')
+    parser.add_argument('--backend-poll-interval', type=float, help='poll interval, in seconds (default: 2.0)')
 
     parser.add_argument('--blockchain-service-name', help='the blockchain service name to connect to')
     parser.add_argument('--blockchain-service-connect', help='the blockchain service server URL base to connect to, if not default')
@@ -603,7 +613,7 @@ if __name__ == '__main__':
                 rpc_password=args.rpc_password, rpc_allow_cors=args.rpc_allow_cors,
                 log_file=args.log_file, config_file=args.config_file,
                 database_file=args.database_file, testnet=args.testnet,
-                testcoin=args.testcoin, force=args.force)
+                testcoin=args.testcoin, force=args.force, backend_poll_interval=args.backend_poll_interval)
 
     # Logging (to file and console).
     logger = logging.getLogger() #get root logger
