@@ -971,7 +971,7 @@ def rpc (method, params):
             raise exceptions.AddressError('Invalid address. (Multi‐signature?)')
     elif response_json['error']['code'] == -1 and response_json['error']['message'] == 'Block number out of range.':
         time.sleep(10)
-        return backend.rpc.getblockhash(block_index)
+        return bitcoinlib.core.b2lx(backend.rpc.getblockhash(block_index))
     else:
         raise BitcoindError('{}'.format(response_json['error']))
 

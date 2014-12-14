@@ -3,6 +3,8 @@ import requests
 import logging
 import warnings
 
+import bitcoin as bitcoinlib
+
 from lib import (config, util, exceptions)
 
 CONSENSUS_HASH_SEED = 'We can only see a short distance ahead, but we can see plenty there that needs to be done.'
@@ -120,8 +122,9 @@ def version (block_index):
 def backend (db):
     """Checks blocktime of last block to see if {} Core is running behind.""".format(config.BTC_NAME)
     block_count = backend.rpc.getblockcount()
-    block_hash = backend.rpc.getblockhash(block_count)
-    block = backend.rpc.getblock(block_hash)
+    block_hash_bin = backend.rpc.getblockhash(block_count)
+    block = backend.rpc.getblock(block_hash_bin)
+    block_hash = bitcoinlib.core.b2lx(block_hash_bin)
     time_behind = time.time() - block['time']   # TODO: Block times are not very reliable.
     if time_behind > 60 * 60 * 2:   # Two hours.
         raise util.BitcoindError('Bitcoind is running about {} seconds behind.'.format(round(time_behind)))

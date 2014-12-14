@@ -17,6 +17,8 @@ from Crypto.Cipher import ARC4
 import apsw
 import csv
 
+import bitcoin as bitcoinlib
+
 from lib import (config, exceptions, util, bitcoin, check, script, backend)
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute, destroy)
 
@@ -642,7 +644,6 @@ def reparse (db, block_index=None, quiet=False):
     return
 
 def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
-    logging.debug('Status: examining transaction {}.'.format(tx_hash))
 
     # Get the important details about each transaction.
     tx_json = util.get_cached_raw_transaction_json(tx_hash)
@@ -657,6 +658,7 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
         util.clean_unconfirmed_addrindex(tx_json)
 
     if source and (data or destination == config.UNSPENDABLE):
+        logging.debug('Status: saving transaction {}.'.format(tx_hash))
         cursor = db.cursor()
         cursor.execute('''INSERT INTO transactions(
                             tx_index,
@@ -683,7 +685,7 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
         cursor.close()
         return tx_index + 1
     else:
-        logging.debug('Skipping: ' + tx_hash)
+        logging.debug('Status: skipping transaction {}.'.format(tx_hash))
 
     return tx_index
 
@@ -850,8 +852,8 @@ def follow (db):
                 logging.debug('Status: Checking that block {} is not an orphan.'.format(c))
 
                 # Backend parent hash.
-                c_hash = backend.rpc.getblockhash(c)
-                backend_parent = backend.get_prevhash(c_hash)
+                c_hash_bin = backend.rpc.getblockhash(c)
+                backend_parent = backend.get_prevhash(c_hash_bin)
 
                 # DB parent hash.
                 blocks = list(cursor.execute('''SELECT * FROM blocks
@@ -860,6 +862,8 @@ def follow (db):
                 db_parent = blocks[0]['block_hash']
 
                 # Compare.
+                assert type(db_parent) == str
+                assert type(backend_parent) == str
                 if db_parent == backend_parent:
                     break
                 else:
@@ -879,8 +883,9 @@ def follow (db):
                 continue
 
             # Get and parse transactions in this block (atomically).
-            block_hash = backend.rpc.getblockhash(c)
-            block = backend.rpc.getblock(block_hash)
+            block_hash_bin = backend.rpc.getblockhash(c)
+            block = backend.rpc.getblock(block_hash_bin)
+            block_hash = bitcoinlib.core.b2lx(block_hash_bin)
             block_time = block.nTime
             txhash_list = backend.get_txhash_list(block)
             with db:
