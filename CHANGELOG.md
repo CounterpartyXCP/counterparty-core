@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.49.3 (???)
+	* if no RPC password is specified, generate automatically
 * v9.49.2 (???)
 	* prepare for ‘destroy’ functionality
 	* match IDs now include underscore

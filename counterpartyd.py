@@ -154,13 +154,12 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     else:
         config_path = os.path.join(config.DATA_DIR, '{}.conf'.format(config.XCP_CLIENT))
     configfile.read(config_path)
-    has_config = 'Default' in configfile
-    #logging.debug("Config file: %s; Exists: %s" % (config_path, "Yes" if has_config else "No"))
+    if not 'Default' in configfile: configfile['Default'] = {}
 
     # testnet
     if testnet:
         config.TESTNET = testnet
-    elif has_config and 'testnet' in configfile['Default']:
+    elif 'testnet' in configfile['Default']:
         config.TESTNET = configfile['Default'].getboolean('testnet')
     else:
         config.TESTNET = False
@@ -168,7 +167,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     # testcoin
     if testcoin:
         config.TESTCOIN = testcoin
-    elif has_config and 'testcoin' in configfile['Default']:
+    elif 'testcoin' in configfile['Default']:
         config.TESTCOIN = configfile['Default'].getboolean('testcoin')
     else:
         config.TESTCOIN = False
@@ -179,9 +178,9 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     # Backend RPC host (Bitcoin Core)
     if backend_rpc_connect:
         config.BACKEND_RPC_CONNECT = backend_rpc_connect
-    elif has_config and 'backend-rpc-connect' in configfile['Default'] and configfile['Default']['backend-rpc-connect']:
+    elif 'backend-rpc-connect' in configfile['Default'] and configfile['Default']['backend-rpc-connect']:
         config.BACKEND_RPC_CONNECT = configfile['Default']['backend-rpc-connect']
-    elif has_config and 'bitcoind-rpc-connect' in configfile['Default'] and configfile['Default']['bitcoind-rpc-connect']:
+    elif 'bitcoind-rpc-connect' in configfile['Default'] and configfile['Default']['bitcoind-rpc-connect']:
         config.BACKEND_RPC_CONNECT = configfile['Default']['bitcoind-rpc-connect']
     else:
         config.BACKEND_RPC_CONNECT = 'localhost'
@@ -189,9 +188,9 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     # Backend Core RPC port (Bitcoin Core)
     if backend_rpc_port:
         config.BACKEND_RPC_PORT = backend_rpc_port
-    elif has_config and 'backend-rpc-port' in configfile['Default'] and configfile['Default']['backend-rpc-port']:
+    elif 'backend-rpc-port' in configfile['Default'] and configfile['Default']['backend-rpc-port']:
         config.BACKEND_RPC_PORT = configfile['Default']['backend-rpc-port']
-    elif has_config and 'bitcoind-rpc-port' in configfile['Default'] and configfile['Default']['bitcoind-rpc-port']:
+    elif 'bitcoind-rpc-port' in configfile['Default'] and configfile['Default']['bitcoind-rpc-port']:
         config.BACKEND_RPC_PORT = configfile['Default']['bitcoind-rpc-port']
     else:
         if config.TESTNET:
@@ -201,16 +200,16 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     try:
         config.BACKEND_RPC_PORT = int(config.BACKEND_RPC_PORT)
         if not (int(config.BACKEND_RPC_PORT) > 1 and int(config.BACKEND_RPC_PORT) < 65535):
-            raise exceptions.ConfigurationError('invalid backend API port number')
+            raise ConfigurationError('invalid backend API port number')
     except:
         raise Exception("Please specific a valid port number backend-rpc-port configuration parameter")
 
     # Backend Core RPC user (Bitcoin Core)
     if backend_rpc_user:
         config.BACKEND_RPC_USER = backend_rpc_user
-    elif has_config and 'backend-rpc-user' in configfile['Default'] and configfile['Default']['backend-rpc-user']:
+    elif 'backend-rpc-user' in configfile['Default'] and configfile['Default']['backend-rpc-user']:
         config.BACKEND_RPC_USER = configfile['Default']['backend-rpc-user']
-    elif has_config and 'bitcoind-rpc-user' in configfile['Default'] and configfile['Default']['bitcoind-rpc-user']:
+    elif 'bitcoind-rpc-user' in configfile['Default'] and configfile['Default']['bitcoind-rpc-user']:
         config.BACKEND_RPC_USER = configfile['Default']['bitcoind-rpc-user']
     else:
         config.BACKEND_RPC_USER = 'bitcoinrpc'
@@ -218,17 +217,17 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     # Backend Core RPC password (Bitcoin Core)
     if backend_rpc_password:
         config.BACKEND_RPC_PASSWORD = backend_rpc_password
-    elif has_config and 'backend-rpc-password' in configfile['Default'] and configfile['Default']['backend-rpc-password']:
+    elif 'backend-rpc-password' in configfile['Default'] and configfile['Default']['backend-rpc-password']:
         config.BACKEND_RPC_PASSWORD = configfile['Default']['backend-rpc-password']
-    elif has_config and 'bitcoind-rpc-password' in configfile['Default'] and configfile['Default']['bitcoind-rpc-password']:
+    elif 'bitcoind-rpc-password' in configfile['Default'] and configfile['Default']['bitcoind-rpc-password']:
         config.BACKEND_RPC_PASSWORD = configfile['Default']['bitcoind-rpc-password']
     else:
-        raise exceptions.ConfigurationError('backend RPC password not set. (Use configuration file or --backend-rpc-password=PASSWORD)')
+        raise ConfigurationError('backend RPC password not set. (Use configuration file or --backend-rpc-password=PASSWORD)')
 
     # Backend Core RPC SSL
     if backend_rpc_ssl:
         config.BACKEND_RPC_SSL= backend_rpc_ssl
-    elif has_config and 'backend-rpc-ssl' in configfile['Default'] and configfile['Default']['backend-rpc-ssl']:
+    elif 'backend-rpc-ssl' in configfile['Default'] and configfile['Default']['backend-rpc-ssl']:
         config.BACKEND_RPC_SSL = configfile['Default']['backend-rpc-ssl']
     else:
         config.BACKEND_RPC_SSL = False  # Default to off.
@@ -236,7 +235,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     # Backend Core RPC SSL Verify
     if backend_rpc_ssl_verify:
         config.BACKEND_RPC_SSL_VERIFY = backend_rpc_ssl_verify
-    elif has_config and 'backend-rpc-ssl-verify' in configfile['Default'] and configfile['Default']['backend-rpc-ssl-verify']:
+    elif 'backend-rpc-ssl-verify' in configfile['Default'] and configfile['Default']['backend-rpc-ssl-verify']:
         config.BACKEND_RPC_SSL_VERIFY = configfile['Default']['backend-rpc-ssl-verify']
     else:
         config.BACKEND_RPC_SSL_VERIFY = False # Default to off (support self‐signed certificates)
@@ -244,7 +243,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     # Backend Poll Interval
     if backend_poll_interval:
         config.BACKEND_POLL_INTERVAL= backend_poll_interval
-    elif has_config and 'backend-poll-interval' in configfile['Default'] and configfile['Default']['backend-poll-interval']:
+    elif 'backend-poll-interval' in configfile['Default'] and configfile['Default']['backend-poll-interval']:
         config.BACKEND_POLL_INTERVAL = configfile['Default']['backend-poll-interval']
     else:
         config.BACKEND_POLL_INTERVAL = 2.0
@@ -264,7 +263,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     # blockchain service name
     if blockchain_service_name:
         config.BLOCKCHAIN_SERVICE_NAME = blockchain_service_name
-    elif has_config and 'blockchain-service-name' in configfile['Default'] and configfile['Default']['blockchain-service-name']:
+    elif 'blockchain-service-name' in configfile['Default'] and configfile['Default']['blockchain-service-name']:
         config.BLOCKCHAIN_SERVICE_NAME = configfile['Default']['blockchain-service-name']
     else:
         config.BLOCKCHAIN_SERVICE_NAME = 'jmcorgan'
@@ -273,7 +272,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     # leave blank to use the default. if specified, include the scheme prefix and port, without a trailing slash (e.g. http://localhost:3001)
     if blockchain_service_connect:
         config.BLOCKCHAIN_SERVICE_CONNECT = blockchain_service_connect
-    elif has_config and 'blockchain-service-connect' in configfile['Default'] and configfile['Default']['blockchain-service-connect']:
+    elif 'blockchain-service-connect' in configfile['Default'] and configfile['Default']['blockchain-service-connect']:
         config.BLOCKCHAIN_SERVICE_CONNECT = configfile['Default']['blockchain-service-connect']
     else:
         config.BLOCKCHAIN_SERVICE_CONNECT = None #use default specified by the library
@@ -285,7 +284,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     # counterpartyd API RPC host
     if rpc_host:
         config.RPC_HOST = rpc_host
-    elif has_config and 'rpc-host' in configfile['Default'] and configfile['Default']['rpc-host']:
+    elif 'rpc-host' in configfile['Default'] and configfile['Default']['rpc-host']:
         config.RPC_HOST = configfile['Default']['rpc-host']
     else:
         config.RPC_HOST = 'localhost'
@@ -293,7 +292,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     # counterpartyd API RPC port
     if rpc_port:
         config.RPC_PORT = rpc_port
-    elif has_config and 'rpc-port' in configfile['Default'] and configfile['Default']['rpc-port']:
+    elif 'rpc-port' in configfile['Default'] and configfile['Default']['rpc-port']:
         config.RPC_PORT = configfile['Default']['rpc-port']
     else:
         if config.TESTNET:
@@ -309,14 +308,14 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     try:
         config.RPC_PORT = int(config.RPC_PORT)
         if not (int(config.BACKEND_RPC_PORT) > 1 and int(config.BACKEND_RPC_PORT) < 65535):
-            raise exceptions.ConfigurationError('invalid counterpartyd API port number')
+            raise ConfigurationError('invalid counterpartyd API port number')
     except:
         raise Exception("Please specific a valid port number rpc-port configuration parameter")
 
     #  counterpartyd API RPC user
     if rpc_user:
         config.RPC_USER = rpc_user
-    elif has_config and 'rpc-user' in configfile['Default'] and configfile['Default']['rpc-user']:
+    elif 'rpc-user' in configfile['Default'] and configfile['Default']['rpc-user']:
         config.RPC_USER = configfile['Default']['rpc-user']
     else:
         config.RPC_USER = 'rpc'
@@ -324,17 +323,21 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     #  counterpartyd API RPC password
     if rpc_password:
         config.RPC_PASSWORD = rpc_password
-    elif has_config and 'rpc-password' in configfile['Default'] and configfile['Default']['rpc-password']:
+    elif 'rpc-password' in configfile['Default'] and configfile['Default']['rpc-password']:
         config.RPC_PASSWORD = configfile['Default']['rpc-password']
     else:
-        raise exceptions.ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
+        config.RPC_PASSWORD = util.hexlify(util.dhash(os.urandom(16)))
+        configfile['Default']['rpc-password'] = config.RPC_PASSWORD
+        logging.info('Generated password for counterpartyd RPC API: {}'.format(config.RPC_PASSWORD))
+        logging.info('Saved in configuration file: {}'.format(config_file))
+        # raise ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
 
     config.RPC = 'http://' + config.RPC_USER + ':' + config.RPC_PASSWORD + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT)
 
      # RPC CORS
     if rpc_allow_cors:
         config.RPC_ALLOW_CORS = rpc_allow_cors
-    elif has_config and 'rpc-allow-cors' in configfile['Default'] and configfile['Default']['rpc-allow-cors']:
+    elif 'rpc-allow-cors' in configfile['Default'] and configfile['Default']['rpc-allow-cors']:
         config.RPC_ALLOW_CORS = configfile['Default'].getboolean('rpc-allow-cors')
     else:
         config.RPC_ALLOW_CORS = True
@@ -345,7 +348,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     # Log
     if log_file:
         config.LOG = log_file
-    elif has_config and 'log-file' in configfile['Default'] and configfile['Default']['log-file']:
+    elif 'log-file' in configfile['Default'] and configfile['Default']['log-file']:
         config.LOG = configfile['Default']['log-file']
     else:
         string = config.XCP_CLIENT
@@ -364,7 +367,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     # Database
     if database_file:
         config.DATABASE = database_file
-    elif has_config and 'database-file' in configfile['Default'] and configfile['Default']['database-file']:
+    elif 'database-file' in configfile['Default'] and configfile['Default']['database-file']:
         config.DATABASE = configfile['Default']['database-file']
     else:
         string = '{}.'.format(config.XCP_CLIENT) + str(config.VERSION_MAJOR)
@@ -407,10 +410,14 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     # method used to broadcast signed transactions. bitcoind or bci (default: bitcoind)
     if broadcast_tx_mainnet:
         config.BROADCAST_TX_MAINNET = broadcast_tx_mainnet
-    elif has_config and 'broadcast-tx-mainnet' in configfile['Default']:
+    elif 'broadcast-tx-mainnet' in configfile['Default']:
         config.BROADCAST_TX_MAINNET = configfile['Default']['broadcast-tx-mainnet']
     else:
         config.BROADCAST_TX_MAINNET = '{}'.format(config.BTC_CLIENT)
+
+    # Save generated settings.
+    with open(config_path, 'w') as f:
+        configfile.write(f)
 
 def generate_move_random_hash(move):
     move = int(move).to_bytes(2, byteorder='big')
