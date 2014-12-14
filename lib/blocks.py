@@ -1323,9 +1323,6 @@ def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
     if block_hash == None:
         block_hash = config.MEMPOOL_BLOCK_HASH
         block_index = config.MEMPOOL_BLOCK_INDEX
-        util.update_unconfirmed_addrindex(tx)
-    else:
-        util.clean_unconfirmed_addrindex(tx)
 
     if source and (data or destination == config.UNSPENDABLE):
         cursor = db.cursor()
@@ -1611,8 +1608,7 @@ def follow (db):
             # and then save those messages.
             # Every transaction in mempool is parsed independently. (DB is rolled back after each one.)
             mempool = []
-            util.MEMPOOL = bitcoin.get_mempool()
-            for tx_hash in util.MEMPOOL:
+            for tx_hash in bitcoin.get_mempool():
 
                 # If already in counterpartyd mempool, copy to new one.
                 if tx_hash in old_mempool_hashes:
