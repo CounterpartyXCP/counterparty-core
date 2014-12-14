@@ -977,10 +977,7 @@ def rpc (method, params):
 
 ### Protocol Changes ###
 def enabled (change_name, block_index):
-    CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-    with open(CURR_DIR + '/../version.json') as f:
-        versions = json.load(f)
-    enable_block_index = versions[change_name]['block_index']
+    enable_block_index = VERSIONS[change_name]['block_index']
 
     if config.TESTNET: 
         return True     # Protocol changes are always retroactive on testnet.
