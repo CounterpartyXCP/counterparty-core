@@ -64,7 +64,7 @@ def extract_addresses(tx):
 
 def unconfirmed_transactions(address):
     unconfirmed_tx = []
-    for tx_hash in bitcoin.get_mempool():
+    for tx_hash in old_rpc('getrawmempool', []):
         tx = get_cached_raw_transaction(tx_hash)
         addresses = extract_addresses(json.dumps(tx))
         if address in addresses:
