@@ -1,5 +1,7 @@
 ## Client Versions ##
 * v9.49.3 (???)
+	* update README
+	* code reorganisation
 	* if no RPC password is specified, generate automatically
 * v9.49.2 (???)
 	* prepare for ‘destroy’ functionality
