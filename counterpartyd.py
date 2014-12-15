@@ -34,6 +34,14 @@ class ConfigurationError (Exception):
     pass
 
 def sigterm_handler(_signo, _stack_frame):
+    if _signo == 15:
+        signal_name = 'SIGTERM'
+    elif _signo == 2:
+        signal_name = 'SIGINT'
+    else:
+        assert False
+    logging.info('Status: Received {}.'.format(signal_name))
+
     if 'api_server' in globals():
         logging.info('Status: Stopping API server.')
         api_server.stop()

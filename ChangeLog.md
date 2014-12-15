@@ -1,5 +1,6 @@
 ## Client Versions ##
 * v9.49.3 (???)
+	* better logging when handling `SIGTERM`, `SIGKILL`
 	* update README
 	* code reorganisation
 	* if no RPC password is specified, generate automatically
