@@ -308,7 +308,7 @@ class APIServer(threading.Thread):
         self.stop_event = threading.Event()
 
     def stop(self):
-        self.ioloop.stop()
+        self.ioloop.stop()  # TODO: This fails if it is called before the API server has started up.
         self.join()
         self.stop_event.set()
 

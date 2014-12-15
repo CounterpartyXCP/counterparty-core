@@ -41,7 +41,6 @@ OP_CHECKMULTISIG = b'\xae'
 D = decimal.Decimal
 
 def pubkeyhash_to_pubkey(pubkeyhash):
-    # TODO: convert to python-bitcoinlib.
     raw_transactions = blockchain.searchrawtransactions(pubkeyhash)
     for tx in raw_transactions:
         for vin in tx['vin']:
