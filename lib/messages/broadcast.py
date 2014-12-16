@@ -27,7 +27,7 @@ D = decimal.Decimal
 from fractions import Fraction
 import logging
 
-from lib import (exceptions, config, bitcoin, util)
+from lib import (exceptions, config, util)
 from . import (bet)
 
 FORMAT = '>IdI'

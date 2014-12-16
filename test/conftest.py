@@ -9,7 +9,7 @@ from fixtures.vectors import UNITTEST_VECTOR
 from fixtures.params import DEFAULT_PARAMS
 from fixtures.scenarios import INTEGRATION_SCENARIOS
 
-from lib import config, bitcoin, util, backend
+from lib import config, util, backend, transaction
 
 import bitcoin as bitcoinlib
 import bitcoin.rpc as bitcoinlib_rpc
@@ -94,7 +94,7 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
         address = '_'.join([str(signatures_required)] + sorted(pubkeys) + [str(len(pubkeys))])
         return address
 
-    monkeypatch.setattr('lib.bitcoin.get_unspent_txouts', get_unspent_txouts)
+    monkeypatch.setattr('lib.util.get_unspent_txouts', get_unspent_txouts)
     monkeypatch.setattr('lib.backend.dumpprivkey', dumpprivkey)
     monkeypatch.setattr('lib.backend.is_mine', is_mine)
     monkeypatch.setattr('lib.util.isodt', isodt)
@@ -103,5 +103,5 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
     monkeypatch.setattr('lib.api.init_api_access_log', init_api_access_log)
     if hasattr(config, 'PREFIX'):
         monkeypatch.setattr('lib.config.PREFIX', b'TESTXXXX')
-    monkeypatch.setattr('lib.bitcoin.multisig_pubkeyhashes_to_pubkeys', multisig_pubkeyhashes_to_pubkeys)
+    monkeypatch.setattr('lib.transaction.multisig_pubkeyhashes_to_pubkeys', multisig_pubkeyhashes_to_pubkeys)
     monkeypatch.setattr('lib.backend.rpc', util_test.RpcProxy)

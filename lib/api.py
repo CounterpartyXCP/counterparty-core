@@ -23,7 +23,7 @@ import jsonrpc
 from jsonrpc import dispatcher
 import inspect
 
-from . import (config, bitcoin, exceptions, util, blockchain, check, backend, database)
+from . import (config, exceptions, util, blockchain, check, backend, database, transaction)
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute)
 
 API_TABLES = ['balances', 'credits', 'debits', 'bets', 'bet_matches',
@@ -217,7 +217,7 @@ def compose_transaction(db, name, params,
 
     # try:  # NOTE: For debugging, e.g. with `Invalid Params` error.
     tx_info = compose_method(db, **params)
-    return bitcoin.transaction(db, tx_info, encoding=encoding,
+    return transaction.construct(db, tx_info, encoding=encoding,
                                         fee_per_kb=fee_per_kb,
                                         regular_dust_size=regular_dust_size,
                                         multisig_dust_size=multisig_dust_size,
@@ -231,7 +231,7 @@ def compose_transaction(db, name, params,
         # traceback.print_exc()
 
 def sign_transaction(unsigned_tx_hex, private_key_wif=None):
-    return bitcoin.sign_tx(unsigned_tx_hex,
+    return transaction.sign_tx(unsigned_tx_hex,
         private_key_wif=private_key_wif)
 
 def broadcast_transaction(signed_tx_hex):
@@ -241,12 +241,12 @@ def broadcast_transaction(signed_tx_hex):
         response = requests.post(url, data=params)
         if response.text.lower() != 'transaction submitted' or response.status_code != 200:
             if config.BROADCAST_TX_MAINNET == 'bci-failover':
-                return bitcoin.broadcast_tx(signed_tx_hex)
+                return transaction.broadcast_tx(signed_tx_hex)
             else:
                 raise Exception(response.text)
         return response.text
     else:
-        return bitcoin.broadcast_tx(signed_tx_hex)
+        return transaction.broadcast_tx(signed_tx_hex)
 
 def do_transaction(db, name, params, private_key_wif=None, **kwargs):
     unsigned_tx = compose_transaction(db, name, params, **kwargs)
@@ -439,7 +439,7 @@ class APIServer(threading.Thread):
                 # BTC and XCP.
                 if asset in [config.BTC, config.XCP]:
                     if asset == config.BTC:
-                        supply = bitcoin.get_btc_supply(normalize=False)
+                        supply = util.get_btc_supply(normalize=False)
                     else:
                         supply = util.xcp_supply(db)
 
@@ -592,7 +592,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_unspent_txouts(address, return_confirmed=False):
-            result = bitcoin.get_unspent_txouts(address, return_confirmed=return_confirmed)
+            result = util.get_unspent_txouts(address, return_confirmed=return_confirmed)
             if return_confirmed:
                 return {'all': result[0], 'confirmed': result[1]}
             else:

@@ -5,7 +5,7 @@
 import struct
 import binascii
 
-from lib import (config, exceptions, bitcoin, util)
+from lib import (config, exceptions, util)
 from . import execute
 
 FORMAT = '>QQQ'

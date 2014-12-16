@@ -8,7 +8,7 @@ import struct
 import decimal
 D = decimal.Decimal
 
-from lib import (config, util, exceptions, bitcoin, util)
+from lib import (config, util, exceptions, util)
 
 FORMAT_1 = '>QQ?'
 LENGTH_1 = 8 + 8 + 1

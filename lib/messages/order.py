@@ -8,7 +8,7 @@ import decimal
 D = decimal.Decimal
 import logging
 
-from lib import (config, exceptions, bitcoin, util)
+from lib import (config, exceptions, util)
 
 FORMAT = '>QQQQHQ'
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8
@@ -369,7 +369,7 @@ def compose (db, source, give_asset, give_quantity, get_asset, get_quantity, exp
 
     # Check balance.
     if give_asset == config.BTC:
-        if bitcoin.get_btc_balance(source) * config.UNIT < give_quantity:
+        if util.get_btc_balance(source) * config.UNIT < give_quantity:
             logging.warning('WARNING: insufficient funds for {}pay.'.format(config.BTC))
     else:
         balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, give_asset)))

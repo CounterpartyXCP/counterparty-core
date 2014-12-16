@@ -6,7 +6,7 @@ from requests.auth import HTTPBasicAuth
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
-from lib import (config, api, util, exceptions, bitcoin, blocks, check, backend, database)
+from lib import (config, api, util, exceptions, blocks, check, backend, database, transaction)
 from lib.messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
 import counterpartyd
 
@@ -194,15 +194,15 @@ def run_scenario(scenario, rawtransactions_db):
     initialise_db(db)
 
     raw_transactions = []
-    for transaction in scenario:
-        if transaction[0] != 'create_next_block':
-            module = sys.modules['lib.messages.{}'.format(transaction[0])]
+    for tx in scenario:
+        if tx[0] != 'create_next_block':
+            module = sys.modules['lib.messages.{}'.format(tx[0])]
             compose = getattr(module, 'compose')
-            unsigned_tx_hex = bitcoin.transaction(db, compose(db, *transaction[1]), **transaction[2])
-            raw_transactions.append({transaction[0]: unsigned_tx_hex})
+            unsigned_tx_hex = transaction.construct(db, compose(db, *tx[1]), **tx[2])
+            raw_transactions.append({tx[0]: unsigned_tx_hex})
             insert_raw_transaction(unsigned_tx_hex, db, rawtransactions_db)
         else:
-            create_next_block(db, block_index=config.BURN_START + transaction[1], parse_block=True)
+            create_next_block(db, block_index=config.BURN_START + tx[1], parse_block=True)
 
     dump = dump_database(db)
     log = logger_buff.getvalue()
@@ -274,7 +274,7 @@ def vector_to_args(vector, functions=[]):
     return args
 
 def exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db):
-    if tx_name == 'bitcoin' and method == 'transaction':
+    if tx_name == 'transaction' and method == 'construct':
         return tested_method(counterpartyd_db, inputs[0], **inputs[1])
     elif tx_name == 'util':
         if method == 'base58_check_decode':
@@ -305,7 +305,7 @@ def check_ouputs(tx_name, method, inputs, outputs, error, records, counterpartyd
             if tx_name == 'order' and inputs[1]=='BTC':
                 print('give btc')
                 tx_params['fee_provided'] = DP['fee_provided']
-            unsigned_tx_hex = bitcoin.transaction(counterpartyd_db, test_outputs, **tx_params)
+            unsigned_tx_hex = transaction.construct(counterpartyd_db, test_outputs, **tx_params)
             print(tx_name)
             print(unsigned_tx_hex)
 

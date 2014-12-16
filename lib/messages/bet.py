@@ -18,7 +18,7 @@ D = decimal.Decimal
 import time
 import logging
 
-from lib import (config, bitcoin, exceptions, util)
+from lib import (config, exceptions, util)
 
 FORMAT = '>HIQQdII'
 LENGTH = 2 + 4 + 8 + 8 + 8 + 4 + 4

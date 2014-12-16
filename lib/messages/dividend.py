@@ -7,7 +7,7 @@ import decimal
 D = decimal.Decimal
 import logging
 
-from lib import (config, exceptions, bitcoin, util)
+from lib import (config, exceptions, util)
 
 FORMAT_1 = '>QQ'
 LENGTH_1 = 8 + 8

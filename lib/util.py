@@ -943,4 +943,90 @@ def parse_id(match_id):
     assert match_id[64] == ID_SEPARATOR
     return match_id[:64], match_id[65:] # UTF-8 encoding means that the indices are doubled.
 
+
+
+
+
+def get_btc_supply(normalize=False):
+    """returns the total supply of {} (based on what Bitcoin Core says the current block height is)""".format(config.BTC)
+    block_count = backend.rpc.getblockcount()
+    blocks_remaining = block_count
+    total_supply = 0
+    reward = 50.0
+    while blocks_remaining > 0:
+        if blocks_remaining >= 210000:
+            blocks_remaining -= 210000
+            total_supply += 210000 * reward
+            reward /= 2
+        else:
+            total_supply += (blocks_remaining * reward)
+            blocks_remaining = 0
+    return total_supply if normalize else int(total_supply * config.UNIT)
+
+def get_unspent_txouts(source, return_confirmed=False):
+    """returns a list of unspent outputs for a specific address
+    @return: A list of dicts, with each entry in the dict having the following keys:
+    """
+    # Get all coins.
+    outputs = {}
+    if is_multisig(source):
+        pubkeyhashes = pubkeyhash_array(source)
+        raw_transactions = blockchain.searchrawtransactions(pubkeyhashes[1])
+    else:
+        pubkeyhashes = [source]
+        raw_transactions = blockchain.searchrawtransactions(source)
+
+    canonical_address = canonical_address(source)
+
+    for tx in raw_transactions:
+        for vout in tx['vout']:
+            scriptpubkey = vout['scriptPubKey']
+            if script.scriptpubkey_to_address(CScript(x(scriptpubkey['hex']))) == canonical_address:
+                txid = tx['txid']
+                confirmations = tx['confirmations'] if 'confirmations' in tx else 0
+                outkey = '{}{}'.format(txid, vout['n'])
+                if outkey not in outputs or outputs[outkey]['confirmations'] < confirmations:
+                    coin = {'amount': float(vout['value']),
+                            'confirmations': confirmations,
+                            'scriptPubKey': scriptpubkey['hex'],
+                            'txid': txid,
+                            'vout': vout['n']
+                           }
+                    outputs[outkey] = coin
+    outputs = outputs.values()
+
+    # Prune away spent coins.
+    unspent = []
+    confirmed_unspent = []
+    for output in outputs:
+        spent = False
+        confirmed_spent = False
+        for tx in raw_transactions:
+            for vin in tx['vin']:
+                if 'coinbase' in vin: continue
+                if (vin['txid'], vin['vout']) == (output['txid'], output['vout']):
+                    spent = True
+                    if 'confirmations' in tx and tx['confirmations'] > 0:
+                        confirmed_spent = True
+        if not spent:
+            unspent.append(output)
+        if not confirmed_spent and output['confirmations'] > 0:
+            confirmed_unspent.append(output)
+
+    unspent = sorted(unspent, key=lambda x: x['txid'])
+    confirmed_unspent = sorted(confirmed_unspent, key=lambda x: x['txid'])
+
+    if return_confirmed:
+        return unspent, confirmed_unspent
+    else:
+        return unspent
+
+def get_btc_balance(address, confirmed=True):
+    all_unspent, confirmed_unspent = get_unspent_txouts(address, return_confirmed=True)
+    unspent = confirmed_unspent if confirmed else all_unspent
+    return sum(out['amount'] for out in unspent)
+
+
+
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

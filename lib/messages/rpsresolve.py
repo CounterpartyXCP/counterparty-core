@@ -5,7 +5,7 @@ import struct
 import logging
 import string
 
-from lib import (config, exceptions, bitcoin, util)
+from lib import (config, exceptions, util)
 from . import rps
 
 # move random rps_match_id

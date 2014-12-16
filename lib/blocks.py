@@ -19,7 +19,7 @@ import csv
 
 import bitcoin as bitcoinlib
 
-from lib import (config, exceptions, util, bitcoin, check, script, backend)
+from lib import (config, exceptions, util, check, script, backend)
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute, destroy)
 
 from .blockchain.blocks_parser import BlockchainParser, ChainstateParser

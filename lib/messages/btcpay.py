@@ -4,7 +4,7 @@ import binascii
 import struct
 import logging
 
-from lib import (config, exceptions, bitcoin, util)
+from lib import (config, exceptions, util)
 
 FORMAT = '>32s32s'
 LENGTH = 32 + 32

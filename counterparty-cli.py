@@ -22,7 +22,7 @@ import requests
 import appdirs
 from prettytable import PrettyTable
 
-from lib import config, api, util, exceptions, bitcoin, blocks, blockchain, backend, database
+from lib import config, api, util, exceptions, blocks, blockchain, backend, database, transaction
 if os.name == 'nt':
     from lib import util_windows
 
@@ -222,14 +222,14 @@ def cli(method, params, unsigned):
                 private_key_wif = None
             except binascii.Error:
                 private_key_wif = answer    # Else, assume private key.
-                pubkey = bitcoin.private_key_to_public_key(private_key_wif)
+                pubkey = transaction.private_key_to_public_key(private_key_wif)
                 if params['source'] != pubkey_to_pubkeyhash(pubkey):
                     raise InputError('provided private key does not match the source address')
         params['pubkey'] = pubkey
 
     """  # NOTE: For debugging, e.g. with `Invalid Params` error.
     tx_info = sys.modules['lib.send'].compose(db, params['source'], params['destination'], params['asset'], params['quantity'])
-    print(bitcoin.transaction(db, tx_info, encoding=params['encoding'],
+    print(transaction.construct(db, tx_info, encoding=params['encoding'],
                                         fee_per_kb=params['fee_per_kb'],
                                         regular_dust_size=params['regular_dust_size'],
                                         multisig_dust_size=params['multisig_dust_size'],
@@ -253,9 +253,9 @@ def cli(method, params, unsigned):
             private_key_wif = input('Private key (Wallet Import Format): ')
 
         # Sign and broadcast.
-        signed_tx_hex = bitcoin.sign_tx(unsigned_tx_hex, private_key_wif=private_key_wif)
+        signed_tx_hex = transaction.sign_tx(unsigned_tx_hex, private_key_wif=private_key_wif)
         print('Transaction (signed):', signed_tx_hex)
-        print('Hash of transaction (broadcasted):', bitcoin.broadcast_tx(signed_tx_hex))
+        print('Hash of transaction (broadcasted):', transaction.broadcast_tx(signed_tx_hex))
 
 def set_options (data_dir=None, backend_rpc_connect=None,
                  backend_rpc_port=None, backend_rpc_user=None, backend_rpc_password=None,
@@ -545,7 +545,7 @@ def balances (address):
     address_data = get_address(db, address=address)
     balances = address_data['balances']
     table = PrettyTable(['Asset', 'Amount'])
-    btc_balance = bitcoin.get_btc_balance(address)
+    btc_balance = util.get_btc_balance(address)
     table.add_row([config.BTC, btc_balance])  # BTC
     for balance in balances:
         asset = balance['asset']
