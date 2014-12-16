@@ -23,8 +23,8 @@ import jsonrpc
 from jsonrpc import dispatcher
 import inspect
 
-from . import (config, exceptions, util, blockchain, check, backend, database, transaction)
-from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute)
+from lib import (config, exceptions, util, blockchain, check, backend, database, transaction)
+from lib.messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute)
 
 API_TABLES = ['balances', 'credits', 'debits', 'bets', 'bet_matches',
               'broadcasts', 'btcpays', 'burns', 'callbacks', 'cancels',
@@ -65,14 +65,17 @@ def db_query(db, statement, bindings=(), callback=None, **callback_args):
     cursor.close()
     return results
 
-def get_rows(db, table, filters=[], filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None,
+def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None,
               status=None, limit=1000, offset=0, show_expired=True):
     """Filters results based on a filter data structure (as used by the API)"""
+
+    if filters == None:
+        filters = []
 
     def value_to_marker(value):
         # if value is an array place holder is (?,?,?,..)
         if isinstance(value, list):
-            return '''({})'''.format(','.join(['?' for e in range(0,len(value))]))
+            return '''({})'''.format(','.join(['?' for e in range(0, len(value))]))
         else:
             return '''?'''
 
@@ -103,7 +106,8 @@ def get_rows(db, table, filters=[], filterop='AND', order_by=None, order_dir=Non
     for filter_ in filters:
         if type(filter_) in (list, tuple) and len(filter_) in [3, 4]:
             new_filter = {'field': filter_[0], 'op': filter_[1], 'value':  filter_[2]}
-            if len(filter_) == 4: new_filter['case_sensitive'] = filter_[3]
+            if len(filter_) == 4:
+                new_filter['case_sensitive'] = filter_[3]
             new_filters.append(new_filter)
         elif type(filter_) == dict:
             new_filters.append(filter_)
@@ -306,9 +310,10 @@ class APIServer(threading.Thread):
         self.is_ready = False
         threading.Thread.__init__(self)
         self.stop_event = threading.Event()
+        self.ioloop = IOLoop.instance()
 
     def stop(self):
-        self.ioloop.stop()  # TODO: This fails if it is called before the API server has started up.
+        self.ioloop.stop()
         self.join()
         self.stop_event.set()
 
@@ -341,7 +346,9 @@ class APIServer(threading.Thread):
             dispatcher.add_method(new_method)
 
         @dispatcher.add_method
-        def sql(query, bindings=[]):
+        def sql(query, bindings=None):
+            if bindings == None:
+                bindings = []
             return db_query(db, query, tuple(bindings))
 
 
@@ -349,7 +356,7 @@ class APIServer(threading.Thread):
         #WRITE/ACTION API
 
         # Generate dynamically create_{transaction} and do_{transaction} methods
-        def generate_create_method(transaction):
+        def generate_create_method(tx):
 
             def split_params(**kwargs):
                 transaction_args = {}
@@ -367,23 +374,23 @@ class APIServer(threading.Thread):
             def create_method(**kwargs):
                 try:
                     transaction_args, common_args, private_key_wif = split_params(**kwargs)
-                    return compose_transaction(db, name=transaction, params=transaction_args, **common_args)
+                    return compose_transaction(db, name=tx, params=transaction_args, **common_args)
                 except TypeError as e:          #TODO: generalise for all API methods
                     raise Exception(str(e))
 
             def do_method(**kwargs):
                 try:
                     transaction_args, common_args, private_key_wif = split_params(**kwargs)
-                    return do_transaction(db, name=transaction, params=transaction_args, private_key_wif=private_key_wif, **common_args)
+                    return do_transaction(db, name=tx, params=transaction_args, private_key_wif=private_key_wif, **common_args)
                 except TypeError as e:          #TODO: generalise for all API methods
                     raise Exception(str(e))
 
             return create_method, do_method
 
-        for transaction in API_TRANSACTIONS:
-            create_method, do_method = generate_create_method(transaction)
-            create_method.__name__ = 'create_{}'.format(transaction)
-            do_method.__name__ = 'do_{}'.format(transaction)
+        for tx in API_TRANSACTIONS:
+            create_method, do_method = generate_create_method(tx)
+            create_method.__name__ = 'create_{}'.format(tx)
+            do_method.__name__ = 'do_{}'.format(tx)
             dispatcher.add_method(create_method)
             dispatcher.add_method(do_method)
 
@@ -461,8 +468,10 @@ class APIServer(threading.Thread):
                 cursor = db.cursor()
                 issuances = list(cursor.execute('''SELECT * FROM issuances WHERE (status = ? AND asset = ?) ORDER BY block_index ASC''', ('valid', asset)))
                 cursor.close()
-                if not issuances: continue #asset not found, most likely
-                else: last_issuance = issuances[-1]
+                if not issuances:
+                    continue #asset not found, most likely
+                else:
+                    last_issuance = issuances[-1]
                 locked = False
                 for e in issuances:
                     if e['locked']: locked = True
@@ -514,7 +523,7 @@ class APIServer(threading.Thread):
             messages = collections.deque(cursor.fetchall())
 
             for block in blocks:
-                messages_in_block = []
+                # messages_in_block = []
                 block['_messages'] = []
                 while len(messages) and messages[0]['block_index'] == block['block_index']:
                     block['_messages'].append(messages.popleft())
@@ -529,7 +538,7 @@ class APIServer(threading.Thread):
 
             try:
                 check.database(db, latestBlockIndex)
-            except exceptions.DatabaseError as e:
+            except exceptions.DatabaseError:
                 caught_up = False
             else:
                 caught_up = True
@@ -584,7 +593,7 @@ class APIServer(threading.Thread):
             addresses = []
             for holder in holders:
                 addresses.append(holder['address'])
-            return { asset: len(set(addresses)) }
+            return {asset: len(set(addresses))}
 
         @dispatcher.add_method
         def search_raw_transactions(address):
@@ -611,7 +620,7 @@ class APIServer(threading.Thread):
             if config.RPC_ALLOW_CORS:
                 response.headers['Access-Control-Allow-Origin'] = '*'
                 response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-                response.headers['Access-Control-Allow-Headers'] = 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type';
+                response.headers['Access-Control-Allow-Headers'] = 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type'
 
         @app.route('/', methods=["OPTIONS",])
         @app.route('/api/', methods=["OPTIONS",])
@@ -654,7 +663,6 @@ class APIServer(threading.Thread):
         try:
             http_server.listen(config.RPC_PORT, address=config.RPC_HOST)
             self.is_ready = True
-            self.ioloop = IOLoop.instance()
             self.ioloop.start()
         except OSError:
             raise Exception("Cannot start the API subsystem. Is {} already running, or is something else listening on port {}?".format(config.XCP_CLIENT, config.RPC_PORT))

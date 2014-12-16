@@ -5,6 +5,7 @@
 import struct
 
 from lib import (util, config, address)
+from lib.address import AddressError
 from lib.exceptions import *
 
 FORMAT = '>QQ8s'

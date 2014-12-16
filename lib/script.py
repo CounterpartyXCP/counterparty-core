@@ -91,7 +91,7 @@ def pubkeyhash_to_pubkey(pubkeyhash):
             pubkey = asm[1]
             if pubkeyhash == script.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
                 return pubkey
-    raise exceptions.AddressError('Public key for address ‘{}’ not published in blockchain.'.format(pubkeyhash))
+    raise address.AddressError('Public key for address ‘{}’ not published in blockchain.'.format(pubkeyhash))
 def multisig_pubkeyhashes_to_pubkeys(address):
     signatures_required, pubkeyhashes, signatures_possible = address.extract_array(address)
     pubkeys = [pubkeyhash_to_pubkey(pubkeyhash) for pubkeyhash in pubkeyhashes]

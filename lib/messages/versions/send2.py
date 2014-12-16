@@ -5,9 +5,9 @@
 import struct
 
 from lib import (util, config, address)
+from lib.address import AddressError
 from lib.exceptions import ValidateError, ValidateAssetError
 from lib.exceptions import UnpackError, AssetError
-from lib.exceptions import AddressError
 
 FORMAT = '>QQ'
 LENGTH = 8 + 8

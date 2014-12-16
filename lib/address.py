@@ -8,7 +8,9 @@ from lib import config, exceptions, util
 
 b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
-class MultiSigAddressError (exceptions.AddressError):
+class AddressError(Exception):
+    pass
+class MultiSigAddressError(AddressError):
     pass
 
 def validate(address):
@@ -30,7 +32,7 @@ def base58_encode(binary):
     # Divide that integer into base58
     res = []
     while n > 0:
-        n, r = divmod (n, 58)
+        n, r = divmod(n, 58)
         res.append(b58_digits[r])
     res = ''.join(res[::-1])
 
@@ -47,8 +49,10 @@ def base58_check_encode(original, version):
     czero = 0
     pad = 0
     for c in d:
-        if c == czero: pad += 1
-        else: break
+        if c == czero:
+            pad += 1
+        else:
+            break
 
     address = b58_digits[0] * pad + res
 
@@ -57,7 +61,7 @@ def base58_check_encode(original, version):
 
     return address
 
-def base58_check_decode (s, version):
+def base58_check_decode(s, version):
     # Convert the string to an integer
     n = 0
     for c in s:
@@ -76,8 +80,10 @@ def base58_check_decode (s, version):
     # Add padding back.
     pad = 0
     for c in s[:-1]:
-        if c == b58_digits[0]: pad += 1
-        else: break
+        if c == b58_digits[0]:
+            pad += 1
+        else:
+            break
     k = version * pad + res
 
     addrbyte, data, chk0 = k[0:1], k[1:-4], k[-4:]
@@ -91,7 +97,7 @@ def base58_check_decode (s, version):
 
 def is_multisig(address):
     array = address.split('_')
-    return (len(array) > 1)
+    return len(array) > 1
 
 def make_canonical(address):
     if is_multisig(address):

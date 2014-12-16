@@ -6,11 +6,10 @@ class DatabaseError (Exception):
 class TransactionError(Exception):
     pass
 
-class AddressError (Exception):
+class VersionByteError (Exception):
     pass
-class VersionByteError (AddressError):
-    pass
-class Base58Error (AddressError):
+
+class Base58Error (Exception):
     pass
 class InvalidBase58Error (Base58Error):
     pass
