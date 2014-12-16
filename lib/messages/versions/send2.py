@@ -5,7 +5,9 @@
 import struct
 
 from lib import (util, config)
-from lib.exceptions import *
+from lib.exceptions import ValidateError, ValidateAssetError
+from lib.exceptions import UnpackError, AssetError
+from lib.exceptions import AddressError
 
 FORMAT = '>QQ'
 LENGTH = 8 + 8
@@ -29,7 +31,7 @@ def unpack(message):
 
     return asset, quantity
 
-def validate (db, source, destination, asset, quantity, block_index):
+def validate(db, source, destination, asset, quantity, block_index):
 
     try:
         util.asset_id(asset)
@@ -61,7 +63,7 @@ def validate (db, source, destination, asset, quantity, block_index):
     if util.get_balance(db, source, asset) < quantity:
         raise ValidateError('balance insufficient')
 
-def compose (db, source, destination, asset, quantity):
+def compose(db, source, destination, asset, quantity):
 
     if asset == config.BTC:
         return (source, [(destination, quantity)], None)
@@ -71,7 +73,7 @@ def compose (db, source, destination, asset, quantity):
 
     return (source, [(destination, None)], data)
 
-def parse (db, tx, message):
+def parse(db, tx, message):
     status = 'valid'
 
     try:
@@ -97,7 +99,7 @@ def parse (db, tx, message):
                     'quantity': quantity,
                     'status': status,
                    }
-        sql='insert into sends values(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :quantity, :status)'
+        sql = 'insert into sends values(:tx_index, :tx_hash, :block_index, :source, :destination, :asset, :quantity, :status)'
         cursor = db.cursor()
         cursor.execute(sql, bindings)
 

@@ -23,6 +23,8 @@ class AssetNameError (AssetError):
     pass
 class AssetIDError (AssetError):
     pass
+class ValidateAssetError(AssetError):
+    pass
 
 class MessageError (Exception):
     pass
