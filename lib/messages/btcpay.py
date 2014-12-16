@@ -4,7 +4,7 @@ import binascii
 import struct
 import logging
 
-from lib import (config, exceptions, util)
+from lib import config, exceptions, util, logger
 
 FORMAT = '>32s32s'
 LENGTH = 32 + 32
@@ -134,7 +134,7 @@ def parse (db, tx, message):
             }
             sql='update order_matches set status = :status where id = :order_match_id'
             cursor.execute(sql, bindings)
-            util.message(db, tx['block_index'], 'update', 'order_matches', bindings)
+            logger.message(db, tx['block_index'], 'update', 'order_matches', bindings)
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

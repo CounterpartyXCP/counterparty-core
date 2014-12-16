@@ -3,7 +3,7 @@ import logging
 import time
 
 
-from lib import config, util, exceptions
+from lib import config, util, exceptions, logger
 
 def rowtracer(cursor, sql):
     """Converts fetched SQL data into dict-style"""
@@ -39,7 +39,7 @@ def exectracer(cursor, sql, bindings):
             if category not in ('nonces', 'storage'):  # List message manually.
                 if not (command in ('update') and category in ('orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches', 'contracts')):    # List message manually.
                     # try:
-                        util.message(db, bindings['block_index'], command, category, bindings)
+                        logger.message(db, bindings['block_index'], command, category, bindings)
                     # except:
                         # raise TypeError('SQLite3 statements must used named arguments.')
 

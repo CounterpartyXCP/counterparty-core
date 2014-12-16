@@ -19,7 +19,7 @@ import platform
 import bitcoin as bitcoinlib
 import bitcoin.rpc as bitcoinlib_rpc
 
-from lib import config, api, util, exceptions, blocks, blockchain, check, backend, database, transaction, script, address
+from lib import config, api, util, exceptions, blocks, blockchain, check, backend, database, transaction, script, address, logger
 if os.name == 'nt':
     from lib import util_windows
 
@@ -525,7 +525,7 @@ if __name__ == '__main__':
     parser_bet = subparsers.add_parser('bet', help='offer to make a bet on the value of a feed')
     parser_bet.add_argument('--source', required=True, help='the source address')
     parser_bet.add_argument('--feed-address', required=True, help='the address which publishes the feed to bet on')
-    parser_bet.add_argument('--bet-type', choices=list(util.BET_TYPE_NAME.values()), required=True, help='choices: {}'.format(list(util.BET_TYPE_NAME.values())))
+    parser_bet.add_argument('--bet-type', choices=list(logger.BET_TYPE_NAME.values()), required=True, help='choices: {}'.format(list(logger.BET_TYPE_NAME.values())))
     parser_bet.add_argument('--deadline', required=True, help='the date and time at which the bet should be decided/settled')
     parser_bet.add_argument('--wager', required=True, help='the quantity of XCP to wager')
     parser_bet.add_argument('--counterwager', required=True, help='the minimum quantity of XCP to be wagered by the user to bet against you, if he were to accept the whole thing')
@@ -815,7 +815,7 @@ if __name__ == '__main__':
 
         cli('create_bet', {'source': args.source,
                            'feed_address': args.feed_address, 'bet_type':
-                           util.BET_TYPE_ID[args.bet_type], 'deadline':
+                           logger.BET_TYPE_ID[args.bet_type], 'deadline':
                            deadline, 'wager_quantity': wager,
                            'counterwager_quantity': counterwager, 'expiration':
                            args.expiration, 'target_value': target_value,

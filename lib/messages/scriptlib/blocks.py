@@ -2,7 +2,7 @@
 
 """Based on pyethereum <https://github.com/ethereum/pyethereum>."""
 
-from lib import (util, config)
+from lib import (util, config, logger)
 from lib.messages.scriptlib import (rlp, utils)
 
 import logging
@@ -98,7 +98,7 @@ class Block(object):
                 'key': key,
                 'value': value
                 }
-            util.message(self.db, self.number, 'update', 'storage', bindings)
+            logger.message(self.db, self.number, 'update', 'storage', bindings)
             sql='''UPDATE storage SET value = :value WHERE contract_id = :contract_id AND key = :key'''
             cursor.execute(sql, bindings)
         else:           # Insert value.
@@ -107,7 +107,7 @@ class Block(object):
                 'key': key,
                 'value': value
                 }
-            util.message(self.db, self.number, 'insert', 'storage', bindings)
+            logger.message(self.db, self.number, 'insert', 'storage', bindings)
             sql='''INSERT INTO storage VALUES (:contract_id, :key, :value)'''
             cursor.execute(sql, bindings)
 
@@ -142,10 +142,10 @@ class Block(object):
         nonces = list(cursor)
         bindings = {'address': address, 'nonce': nonce}
         if not nonces:
-            util.message(self.db, self.number, 'insert', 'nonces', bindings)
+            logger.message(self.db, self.number, 'insert', 'nonces', bindings)
             cursor.execute('''INSERT INTO nonces VALUES(:address, :nonce)''', bindings)
         else:
-            util.message(self.db, self.number, 'update', 'nonces', bindings)
+            logger.message(self.db, self.number, 'update', 'nonces', bindings)
             cursor.execute('''UPDATE nonces SET nonce = :nonce WHERE (address = :address)''', bindings)
 
     def increment_nonce(self, address):
@@ -171,9 +171,9 @@ class Block(object):
         contract_id = suicide['contract_id']
         logging.debug('SUICIDING {}'.format(contract_id))
         bindings = {'contract_id': contract_id}
-        util.message(self.db, self.number, 'delete', 'contracts', bindings)
+        logger.message(self.db, self.number, 'delete', 'contracts', bindings)
         cursor.execute('''DELETE FROM contracts WHERE contract_id = :contract_id''', bindings)
-        util.message(self.db, self.number, 'delete', 'storage', bindings)
+        logger.message(self.db, self.number, 'delete', 'storage', bindings)
         cursor.execute('''DELETE FROM storage WHERE contract_id = :contract_id''', bindings)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

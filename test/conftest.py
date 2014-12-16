@@ -97,8 +97,8 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
     monkeypatch.setattr('lib.backend.get_unspent_txouts', get_unspent_txouts)
     monkeypatch.setattr('lib.backend.dumpprivkey', dumpprivkey)
     monkeypatch.setattr('lib.backend.is_mine', is_mine)
-    monkeypatch.setattr('lib.util.isodt', isodt)
-    monkeypatch.setattr('lib.util.curr_time', curr_time)
+    monkeypatch.setattr('lib.logger.isodt', isodt)
+    monkeypatch.setattr('lib.logger.curr_time', curr_time)
     monkeypatch.setattr('lib.util.date_passed', date_passed)
     monkeypatch.setattr('lib.api.init_api_access_log', init_api_access_log)
     if hasattr(config, 'PREFIX'):
