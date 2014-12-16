@@ -478,15 +478,15 @@ def sign_tx (unsigned_tx_hex, private_key_wif=None):
             raise exceptions.TransactionError('Could not sign transaction with pybtctool.')
 
     else:   # Assume source is in wallet and wallet is unlocked.
-        result = sign_raw_transaction(unsigned_tx_hex)
+        result = backend.rpc.signrawtransaction(backend.deserialize(unsigned_tx_hex))
         if result['complete']:
-            signed_tx_hex = result['hex']
+            signed_tx_hex = util.hexlify(backend.serialize(result['tx']))
         else:
             raise exceptions.TransactionError('Could not sign transaction with Bitcoin Core.')
 
     return signed_tx_hex
 
 def broadcast_tx (signed_tx_hex):
-    return send_raw_transaction(signed_tx_hex)
+    return util.hexlify(backend.rpc.sendrawtransaction(backend.deserialize(signed_tx_hex)))
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
