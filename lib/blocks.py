@@ -44,13 +44,15 @@ with open(CURR_DIR + '/../mainnet_burns.csv', 'r') as f:
     for line in mainnet_burns_reader:
         MAINNET_BURNS[line['tx_hash']] = line
 
-def parse_tx (db, tx):
+def parse_tx(db, tx):
     cursor = db.cursor()
 
     # Only one source and one destination allowed for now.
-    if len(tx['source'].split('-')) > 1: return
+    if len(tx['source'].split('-')) > 1:
+        return
     if tx['destination']:
-        if len(tx['destination'].split('-')) > 1: return
+        if len(tx['destination'].split('-')) > 1:
+            return
 
     # Burns.
     if tx['destination'] == config.UNSPENDABLE:
@@ -115,7 +117,7 @@ def parse_tx (db, tx):
     return True
 
 
-def parse_block (db, block_index, block_time, previous_ledger_hash=None, ledger_hash=None, previous_txlist_hash=None, txlist_hash=None):
+def parse_block(db, block_index, block_time, previous_ledger_hash=None, previous_txlist_hash=None):
     cursor = db.cursor()
 
     util.BLOCK_LEDGER = []
@@ -335,7 +337,7 @@ def initialise(db):
 
     cursor.close()
 
-def get_tx_info (tx_hex, block_index, block_parser = None):
+def get_tx_info(tx_hex, block_index, block_parser=None):
     try:
         if util.enabled('multisig_addresses', block_index):   # Protocol change.
             tx_info = get_tx_info2(tx_hex, block_parser=block_parser)
@@ -347,22 +349,23 @@ def get_tx_info (tx_hex, block_index, block_parser = None):
 
     return tx_info
 
-def get_tx_info1 (tx_hex, block_index, block_parser = None):
+def get_tx_info1(tx_hex, block_index, block_parser=None):
     """
     The destination, if it exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
     ctx = backend.deserialize(tx_hex)
 
-    def get_pubkeyhash (scriptpubkey):
+    def get_pubkeyhash(scriptpubkey):
         asm = script.get_asm(scriptpubkey)
         if len(asm) != 5 or asm[0] != 'OP_DUP' or asm[1] != 'OP_HASH160' or asm[3] != 'OP_EQUALVERIFY' or asm[4] != 'OP_CHECKSIG':
             return False
         return asm[2]
 
-    def get_address (scriptpubkey):
+    def get_address(scriptpubkey):
         pubkeyhash = get_pubkeyhash(scriptpubkey)
-        if not pubkeyhash: return False
+        if not pubkeyhash:
+            return False
         pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
         address = util.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
         # Test decoding of address.
@@ -383,11 +386,13 @@ def get_tx_info1 (tx_hex, block_index, block_parser = None):
         # Sum data chunks to get data. (Can mix OP_RETURN and multi-sig.)
         asm = script.get_asm(vout.scriptPubKey)
         if len(asm) == 2 and asm[0] == 'OP_RETURN':                                             # OP_RETURN
-            if type(asm[1]) != bytes: continue
+            if type(asm[1]) != bytes:
+                continue
             data_chunk = asm[1]
             data += data_chunk
         elif len(asm) == 5 and asm[0] == 1 and asm[3] == 2 and asm[4] == 'OP_CHECKMULTISIG':    # Multi-sig
-            if type(asm[2]) != bytes: continue
+            if type(asm[2]) != bytes:
+                continue
             data_pubkey = asm[2]
             data_chunk_length = data_pubkey[0]  # No ord() necessary.
             data_chunk = data_pubkey[1:data_chunk_length + 1]
@@ -395,9 +400,11 @@ def get_tx_info1 (tx_hex, block_index, block_parser = None):
         elif len(asm) == 5 and (block_index >= 293000 or config.TESTNET):    # Protocol change.
             # Be strict.
             pubkeyhash = get_pubkeyhash(vout.scriptPubKey)
-            if not pubkeyhash: continue
+            if not pubkeyhash:
+                continue
 
-            if ctx.is_coinbase(): raise DecodeError('coinbase transaction')
+            if ctx.is_coinbase():
+                raise DecodeError('coinbase transaction')
             obj1 = ARC4.new(ctx.vin[0].prevout.hash[::-1])
             data_pubkey = obj1.decrypt(pubkeyhash)
             if data_pubkey[1:9] == config.PREFIX or pubkeyhash_encoding:
@@ -444,16 +451,20 @@ def get_tx_info1 (tx_hex, block_index, block_parser = None):
         fee += vout.nValue
 
         address = get_address(vout.scriptPubKey)
-        if not address: raise DecodeError('invalid scriptpubkey')
-        else: source_list.append(address)
+        if not address:
+            raise DecodeError('invalid scriptpubkey')
+        else:
+            source_list.append(address)
 
     # Require that all possible source addresses be the same.
-    if all(x == source_list[0] for x in source_list): source = source_list[0]
-    else: source = None
+    if all(x == source_list[0] for x in source_list):
+        source = source_list[0]
+    else:
+        source = None
 
     return source, destination, btc_amount, fee, data
 
-def get_tx_info2 (tx_hex, block_parser = None):
+def get_tx_info2(tx_hex, block_parser=None):
     """
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
@@ -462,19 +473,19 @@ def get_tx_info2 (tx_hex, block_parser = None):
     # Decode transaction binary.
     ctx = backend.deserialize(tx_hex)
 
-    def arc4_decrypt (cyphertext):
+    def arc4_decrypt(cyphertext):
         '''Un‐obfuscate. Initialise key once per attempt.'''
         key = ARC4.new(ctx.vin[0].prevout.hash[::-1])
         return key.decrypt(cyphertext)
 
-    def get_opreturn (asm):
+    def get_opreturn(asm):
         if len(asm) == 2 and asm[0] == 'OP_RETURN':
             pubkeyhash = asm[1]
             if type(pubkeyhash) == bytes:
                 return pubkeyhash
         raise DecodeError('invalid OP_RETURN')
 
-    def decode_opreturn (asm):
+    def decode_opreturn(asm):
         chunk = get_opreturn(asm)
         chunk = arc4_decrypt(chunk)
         if chunk[:len(config.PREFIX)] == config.PREFIX:             # Data
@@ -484,7 +495,7 @@ def get_tx_info2 (tx_hex, block_parser = None):
 
         return destination, data
 
-    def decode_checksig (asm):
+    def decode_checksig(asm):
         pubkeyhash = script.get_checksig(asm)
         chunk = arc4_decrypt(pubkeyhash)
         if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
@@ -498,7 +509,7 @@ def get_tx_info2 (tx_hex, block_parser = None):
 
         return destination, data
 
-    def decode_checkmultisig (asm):
+    def decode_checkmultisig(asm):
         pubkeys, signatures_required = script.get_checkmultisig(asm)
         chunk = b''
         for pubkey in pubkeys[:-1]:     # (No data in last pubkey.)
@@ -516,7 +527,8 @@ def get_tx_info2 (tx_hex, block_parser = None):
         return destination, data
 
     # Ignore coinbase transactions.
-    if ctx.is_coinbase(): raise DecodeError('coinbase transaction')
+    if ctx.is_coinbase():
+        raise DecodeError('coinbase transaction')
 
     # Get destinations and data outputs.
     destinations, btc_amount, fee, data = [], 0, 0, b''
@@ -550,7 +562,7 @@ def get_tx_info2 (tx_hex, block_parser = None):
     # Collect all (unique) source addresses.
     sources = []
     for vin in ctx.vin[:]:                   # Loop through inputs.
-        # Get the full transaction data for this input transaction.  
+        # Get the full transaction data for this input transaction.
         if block_parser:
             vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
             vin_ctx = backend.deserialize(vin_tx['__data__'])
@@ -562,10 +574,12 @@ def get_tx_info2 (tx_hex, block_parser = None):
         asm = script.get_asm(vout.scriptPubKey)
         if asm[-1] == 'OP_CHECKSIG':
             new_source, new_data = decode_checksig(asm)
-            if new_data or not new_source: raise DecodeError('data in source')
+            if new_data or not new_source:
+                raise DecodeError('data in source')
         elif asm[-1] == 'OP_CHECKMULTISIG':
             new_source, new_data = decode_checkmultisig(asm)
-            if new_data or not new_source: raise DecodeError('data in source')
+            if new_data or not new_source:
+                raise DecodeError('data in source')
         else:
             raise DecodeError('unrecognised source type')
 
@@ -607,7 +621,7 @@ def reinitialise(db, block_index=None):
 
     cursor.close()
 
-def reparse (db, block_index=None, quiet=False):
+def reparse(db, block_index=None, quiet=False):
     """Reparse all transactions (atomically). If block_index is set, rollback
     to the end of that block.
     """
@@ -621,14 +635,13 @@ def reparse (db, block_index=None, quiet=False):
         if quiet:
             log = logging.getLogger('')
             log.setLevel(logging.WARNING)
-        
+
         previous_ledger_hash, previous_txlist_hash = None, None
         cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
         for block in cursor.fetchall():
             logging.info('Block (re‐parse): {}'.format(str(block['block_index'])))
             previous_ledger_hash, previous_txlist_hash = parse_block(db, block['block_index'], block['block_time'],
-                                                                     previous_ledger_hash, block['ledger_hash'],
-                                                                     previous_txlist_hash, block['txlist_hash'])
+                                                                     previous_ledger_hash, previous_txlist_hash)
 
         if quiet:
             log.setLevel(logging.INFO)
@@ -637,13 +650,13 @@ def reparse (db, block_index=None, quiet=False):
         check.asset_conservation(db)
 
         # Update minor version number.
-        minor_version = cursor.execute('PRAGMA user_version = {}'.format(int(config.VERSION_MINOR))) # Syntax?!
+        cursor.execute('PRAGMA user_version = {}'.format(int(config.VERSION_MINOR))) # Syntax?!
         logging.info('Status: Database minor version number updated.')
 
     cursor.close()
     return
 
-def list_tx (db, block_hash, block_index, block_time, tx_hash, tx_index):
+def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index):
     assert type(tx_hash) == str
 
     # Get the important details about each transaction.
@@ -716,7 +729,7 @@ def kickstart(db, bitcoind_dir):
     chain_parser.close()
 
     # Start block parser.
-    block_parser = BlockchainParser(os.path.join(bitcoind_dir, 'blocks'), os.path.join(bitcoind_dir, 'blocks/index'));
+    block_parser = BlockchainParser(os.path.join(bitcoind_dir, 'blocks'), os.path.join(bitcoind_dir, 'blocks/index'))
 
     current_hash = last_hash
     tx_index = 0
@@ -725,7 +738,6 @@ def kickstart(db, bitcoind_dir):
         # Prepare SQLite database. # TODO: Be more specific!
         logging.info('Preparing database…')
         start_time = time.time()
-        first_block = block_parser.read_raw_block(first_hash)
         reinitialise(db, block_index=config.BLOCK_FIRST - 1)
         logging.info('Prepared database in {:.3f}s'.format(time.time() - start_time))
 
@@ -737,7 +749,7 @@ def kickstart(db, bitcoind_dir):
             # Get `tx_info`s for transactions in this block.
             block = block_parser.read_raw_block(current_hash)
             for tx in block['transactions']:
-                source, destination, btc_amount, fee, data  = get_tx_info(tx['__data__'], block['block_index'], block_parser)
+                source, destination, btc_amount, fee, data = get_tx_info(tx['__data__'], block['block_index'], block_parser)
                 if source and (data or destination == config.UNSPENDABLE):
                     transactions.append((
                         tx['tx_hash'], block['block_index'], block['block_hash'], block['block_time'],
@@ -755,7 +767,7 @@ def kickstart(db, bitcoind_dir):
                                     block['block_time']))
             if len(transactions):
                 transactions = list(reversed(transactions))
-                tx_chunks = [transactions[i:i+90] for i in range(0,len(transactions),90)]
+                tx_chunks = [transactions[i:i+90] for i in range(0, len(transactions), 90)]
                 for tx_chunk in tx_chunks:
                     sql = '''INSERT INTO transactions
                                 (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data) 
@@ -779,13 +791,13 @@ def kickstart(db, bitcoind_dir):
             current_hash = block['hash_prev'] if current_hash != first_hash else None
 
         block_parser.close()
-        
+
         # Reorder all transactions in database.
         logging.info('Reordering transactions…')
         start_time = time.time()
         cursor.execute('''UPDATE transactions SET tx_index = tx_index + ?''', (tx_index,))
         logging.info('Reordered transactions in {:.3f}s.'.format(time.time() - start_time))
-        
+
         # Parse all transactions in database.
         reparse(db)
 
@@ -803,8 +815,9 @@ def get_next_tx_index(db):
     cursor.close()
     return tx_index
 
-class MempoolError (exceptions.TransactionError): pass
-def follow (db):
+class MempoolError(Exception):
+    pass
+def follow(db):
     cursor = db.cursor()
 
     # Initialise.
@@ -845,7 +858,8 @@ def follow (db):
             c = block_index
             requires_rollback = False
             while True:
-                if c == config.BLOCK_FIRST: break
+                if c == config.BLOCK_FIRST:
+                    break
 
                 logging.debug('Status: Checking that block {} is not an orphan.'.format(c))
 
@@ -856,7 +870,8 @@ def follow (db):
                 # DB parent hash.
                 blocks = list(cursor.execute('''SELECT * FROM blocks
                                                 WHERE block_index = ?''', (c - 1,)))
-                if len(blocks) != 1: break  # For empty DB.
+                if len(blocks) != 1:  # For empty DB.
+                    break
                 db_parent = blocks[0]['block_hash']
 
                 # Compare.
@@ -915,13 +930,13 @@ def follow (db):
 
             # Remove any non‐supported transactions older than ten blocks.
             while len(not_supported_sorted) and not_supported_sorted[0][0] <= block_index - 10:
-                (i, tx_h) = not_supported_sorted.popleft()
+                tx_h = not_supported_sorted.popleft()[1]
                 del not_supported[tx_h]
 
             logging.info('Block: %s (%ss)'%(str(block_index), "{:.2f}".format(time.time() - starttime, 3)))
             # Increment block index.
             block_count = backend.rpc.getblockcount()
-            block_index +=1
+            block_index += 1
 
         else:
             # First mempool fill for session?
