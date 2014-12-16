@@ -19,7 +19,7 @@ import platform
 import bitcoin as bitcoinlib
 import bitcoin.rpc as bitcoinlib_rpc
 
-from lib import config, api, util, exceptions, blocks, blockchain, check, backend, database, transaction, script
+from lib import config, api, util, exceptions, blocks, blockchain, check, backend, database, transaction, script, address
 if os.name == 'nt':
     from lib import util_windows
 
@@ -73,8 +73,8 @@ def get_lock():
 def cli(method, params, unsigned):
     # Get unsigned transaction serialisation.
 
-    is_multisig = util.is_multisig(params['source'])
-    params['source'] = util.canonical_address(params['source'])
+    is_multisig = address.is_multisig(params['source'])
+    params['source'] = address.make_canonical(params['source'])
     pubkey = None
 
     if not is_multisig:

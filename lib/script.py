@@ -2,7 +2,7 @@ import hashlib
 import bitcoin as bitcoinlib
 import binascii
 
-from lib import (util, config)
+from lib import (util, config, address)
 from .exceptions import DecodeError
 
 def hash160(x):
@@ -13,7 +13,7 @@ def hash160(x):
 
 def pubkey_to_pubkeyhash(pubkey):
     pubkeyhash = hash160(pubkey)
-    pubkey = util.base58_check_encode(binascii.hexlify(pubkeyhash).decode('utf-8'), config.ADDRESSVERSION)
+    pubkey = address.base58_check_encode(binascii.hexlify(pubkeyhash).decode('utf-8'), config.ADDRESSVERSION)
     return pubkey
 
 def get_asm(scriptpubkey):
@@ -53,11 +53,11 @@ def get_checkmultisig(asm):
 def scriptpubkey_to_address(scriptpubkey):
     asm = get_asm(scriptpubkey)
     if asm[-1] == 'OP_CHECKSIG':
-        return util.base58_check_encode(binascii.hexlify(get_checksig(asm)).decode('utf-8'), config.ADDRESSVERSION)
+        return address.base58_check_encode(binascii.hexlify(get_checksig(asm)).decode('utf-8'), config.ADDRESSVERSION)
     elif asm[-1] == 'OP_CHECKMULTISIG':
         pubkeys, signatures_required = get_checkmultisig(asm)
         pubkeyhashes = [pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
-        return util.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes))
+        return address.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes))
     return None
 
 
@@ -93,8 +93,8 @@ def pubkeyhash_to_pubkey(pubkeyhash):
                 return pubkey
     raise exceptions.AddressError('Public key for address ‘{}’ not published in blockchain.'.format(pubkeyhash))
 def multisig_pubkeyhashes_to_pubkeys(address):
-    signatures_required, pubkeyhashes, signatures_possible = util.extract_array(address)
+    signatures_required, pubkeyhashes, signatures_possible = address.extract_array(address)
     pubkeys = [pubkeyhash_to_pubkey(pubkeyhash) for pubkeyhash in pubkeyhashes]
-    return util.construct_array(signatures_required, pubkeys, signatures_possible)
+    return address.construct_array(signatures_required, pubkeys, signatures_possible)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

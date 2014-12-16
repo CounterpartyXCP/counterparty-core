@@ -4,7 +4,7 @@ from functools import lru_cache
 
 import bitcoin as bitcoinlib
 
-from lib import util, script
+from lib import util, script, address
 
 def dumpprivkey(address):
    return old_rpc('dumpprivkey', [address])
@@ -131,19 +131,19 @@ def get_unspent_txouts(source, return_confirmed=False):
     from lib import blockchain  # TODO
     # Get all coins.
     outputs = {}
-    if util.is_multisig(source):
-        pubkeyhashes = util.pubkeyhash_array(source)
+    if address.is_multisig(source):
+        pubkeyhashes = address.pubkeyhash_array(source)
         raw_transactions = blockchain.searchrawtransactions(pubkeyhashes[1])
     else:
         pubkeyhashes = [source]
         raw_transactions = blockchain.searchrawtransactions(source)
 
-    canonical_address = util.canonical_address(source)
+    canonical_source = address.make_canonical(source)
 
     for tx in raw_transactions:
         for vout in tx['vout']:
             scriptpubkey = vout['scriptPubKey']
-            if script.scriptpubkey_to_address(bitcoinlib.core.CScript(bitcoinlib.core.x(scriptpubkey['hex']))) == canonical_address:
+            if script.scriptpubkey_to_address(bitcoinlib.core.CScript(bitcoinlib.core.x(scriptpubkey['hex']))) == canonical_source:
                 txid = tx['txid']
                 confirmations = tx['confirmations'] if 'confirmations' in tx else 0
                 outkey = '{}{}'.format(txid, vout['n'])

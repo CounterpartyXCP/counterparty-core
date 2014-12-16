@@ -4,7 +4,7 @@
 
 import struct
 
-from lib import (util, config)
+from lib import (util, config, address)
 from lib.exceptions import *
 
 FORMAT = '>QQ8s'
@@ -60,7 +60,7 @@ def validate (db, source, destination, asset, quantity, block_index):
         raise ValidateAssetError('asset invalid')
 
     try:
-        util.validate_address(source, block_index)
+        address.validate(source)
     except AddressError:
         raise ValidateError('source address invalid')
 

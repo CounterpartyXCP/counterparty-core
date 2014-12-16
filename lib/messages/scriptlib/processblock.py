@@ -11,7 +11,7 @@ import pickle
 import math
 import fractions
 
-from lib import (util, config)
+from lib import (util, config, address)
 from lib.messages.scriptlib import (rlp, utils, opcodes, blocks)
 
 class PBLogger(object):
@@ -298,7 +298,7 @@ def create_contract(db, block, tx, msg):
     if len(msg.sender) == 40:   # Sender is contract.
         sender = binascii.unhexlify(msg.sender)
     else:                       # Sender is regular address.
-        sender = util.base58_check_decode(msg.sender, config.ADDRESSVERSION)
+        sender = address.base58_check_decode(msg.sender, config.ADDRESSVERSION)
 
     if tx.sender != msg.sender:
         block.increment_nonce(msg.sender)

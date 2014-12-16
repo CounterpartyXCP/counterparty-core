@@ -19,7 +19,7 @@ from bitcoin.core.script import CScript
 from bitcoin.core import x
 from bitcoin.core.key import CPubKey
 
-from . import (config, exceptions, util, blockchain, script, backend)
+from . import (config, exceptions, util, blockchain, script, backend, address)
 
 class InputError (Exception):
     pass
@@ -62,10 +62,10 @@ def op_push (i):
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
 
-def get_multisig_script(address):
+def get_multisig_script(addr):
 
     # Unpack multi‐sig address.
-    signatures_required, pubkeys, signatures_possible = util.extract_array(address)
+    signatures_required, pubkeys, signatures_possible = address.extract_array(addr)
 
     # Required signatures.
     if signatures_required == 1:
@@ -98,10 +98,10 @@ def get_multisig_script(address):
 
     return script
 
-def get_monosig_script(address):
+def get_monosig_script(addr):
 
     # Construct script.
-    pubkeyhash = util.base58_check_decode(address, config.ADDRESSVERSION)
+    pubkeyhash = address.base58_check_decode(addr, config.ADDRESSVERSION)
     script = OP_DUP                                     # OP_DUP
     script += OP_HASH160                                # OP_HASH160
     script += op_push(20)                               # Push 0x14 bytes
@@ -165,7 +165,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
     for destination, value in destination_outputs:
         s += value.to_bytes(8, byteorder='little')          # Value
 
-        if util.is_multisig(destination):
+        if address.is_multisig(destination):
             script = get_multisig_script(destination)
         else:
             script = get_monosig_script(destination)
@@ -245,7 +245,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
         change_address, change_value = change_output
         s += change_value.to_bytes(8, byteorder='little')   # Value
 
-        if util.is_multisig(change_address):
+        if address.is_multisig(change_address):
             script = get_multisig_script(change_address)
         else:
             script = get_monosig_script(change_address)
@@ -275,10 +275,10 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
         # Replace multi‐sig addresses with multi‐sig pubkeys. Check that the
         # destination output isn’t a dust output. Set null values to dust size.
     destination_outputs_new = []
-    for (address, value) in destination_outputs:
+    for (addr, value) in destination_outputs:
 
         # Value.
-        if util.is_multisig(address):
+        if address.is_multisig(addr):
             dust_size = multisig_dust_size
         else:
             dust_size = regular_dust_size
@@ -289,14 +289,14 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
             raise exceptions.TransactionError('Destination output is dust.')
 
         # Address.
-        util.validate_address(address)
-        if util.is_multisig(address):
-            destination_outputs_new.append((script.multisig_pubkeyhashes_to_pubkeys(address), value))
+        address.validate(addr)
+        if address.is_multisig(addr):
+            destination_outputs_new.append((script.multisig_pubkeyhashes_to_pubkeys(addr), value))
         else:
-            destination_outputs_new.append((address, value))
+            destination_outputs_new.append((addr, value))
 
     destination_outputs = destination_outputs_new
-    destination_btc_out = sum([value for address, value in destination_outputs])
+    destination_btc_out = sum([value for addr, value in destination_outputs])
 
 
     '''Data'''
@@ -357,12 +357,12 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
         # transaction, either use the public key provided, or derive it from a
         # private key retrieved from wallet.
     if source:
-        util.validate_address(source)
+        address.validate(source)
 
     self_public_key = None
     if encoding in ('multisig', 'pubkeyhash'):
-        if util.is_multisig(source):
-            a, self_pubkeys, b = util.extract_array(script.multisig_pubkeyhashes_to_pubkeys(source))
+        if address.is_multisig(source):
+            a, self_pubkeys, b = address.extract_array(script.multisig_pubkeyhashes_to_pubkeys(source))
             self_public_key = binascii.unhexlify(self_pubkeys[0])
         else:
             if not self_public_key_hex:
@@ -426,7 +426,7 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
     '''Finish'''
 
     # Change output.
-    if util.is_multisig(source):
+    if address.is_multisig(source):
         change_address = script.multisig_pubkeyhashes_to_pubkeys(source)
     else:
         change_address = source
@@ -441,8 +441,8 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
     # Check that the constructed transaction isn’t doing anything funny.
     from lib import blocks
     (desired_source, desired_destination_outputs, desired_data) = tx_info
-    desired_source = util.canonical_address(desired_source)
-    desired_destination = util.canonical_address(desired_destination_outputs[0][0]) if desired_destination_outputs else ''
+    desired_source = address.make_canonical(desired_source)
+    desired_destination = address.make_canonical(desired_destination_outputs[0][0]) if desired_destination_outputs else ''
     # Include change in destinations for BTC transactions.
     if change_output and not desired_data and desired_destination != config.UNSPENDABLE:
         if desired_destination == '': desired_destination = desired_source
