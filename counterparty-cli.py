@@ -222,7 +222,7 @@ def cli(method, params, unsigned):
                 private_key_wif = None
             except binascii.Error:
                 private_key_wif = answer    # Else, assume private key.
-                pubkey = transaction.private_key_to_public_key(private_key_wif)
+                pubkey = script.private_key_to_public_key(private_key_wif)
                 if params['source'] != pubkey_to_pubkeyhash(pubkey):
                     raise InputError('provided private key does not match the source address')
         params['pubkey'] = pubkey
@@ -545,7 +545,7 @@ def balances (address):
     address_data = get_address(db, address=address)
     balances = address_data['balances']
     table = PrettyTable(['Asset', 'Amount'])
-    btc_balance = util.get_btc_balance(address)
+    btc_balance = backend.get_btc_balance(address)
     table.add_row([config.BTC, btc_balance])  # BTC
     for balance in balances:
         asset = balance['asset']

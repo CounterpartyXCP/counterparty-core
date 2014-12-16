@@ -60,4 +60,41 @@ def scriptpubkey_to_address(scriptpubkey):
         return util.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes))
     return None
 
+
+
+
+from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec, EncodingError
+from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
+
+class AltcoinSupportError (Exception): pass
+def private_key_to_public_key (private_key_wif):
+    if config.TESTNET:
+        allowable_wif_prefixes = [config.PRIVATEKEY_VERSION_TESTNET]
+    else:
+        allowable_wif_prefixes = [config.PRIVATEKEY_VERSION_MAINNET]
+    try:
+        secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(
+                private_key_wif, allowable_wif_prefixes=allowable_wif_prefixes)
+    except EncodingError:
+        raise AltcoinSupportError('pycoin: unsupported WIF prefix')
+    public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
+    public_key = public_pair_to_sec(public_pair, compressed=compressed)
+    public_key_hex = binascii.hexlify(public_key).decode('utf-8')
+    return public_key_hex
+
+def pubkeyhash_to_pubkey(pubkeyhash):
+    raw_transactions = blockchain.searchrawtransactions(pubkeyhash)
+    for tx in raw_transactions:
+        for vin in tx['vin']:
+            scriptsig = vin['scriptSig']
+            asm = scriptsig['asm'].split(' ')
+            pubkey = asm[1]
+            if pubkeyhash == script.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
+                return pubkey
+    raise exceptions.AddressError('Public key for address ‘{}’ not published in blockchain.'.format(pubkeyhash))
+def multisig_pubkeyhashes_to_pubkeys(address):
+    signatures_required, pubkeyhashes, signatures_possible = util.extract_array(address)
+    pubkeys = [pubkeyhash_to_pubkey(pubkeyhash) for pubkeyhash in pubkeyhashes]
+    return util.construct_array(signatures_required, pubkeys, signatures_possible)
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

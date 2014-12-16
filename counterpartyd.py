@@ -100,7 +100,7 @@ def cli(method, params, unsigned):
                 private_key_wif = None
             except binascii.Error:
                 private_key_wif = answer    # Else, assume private key.
-                pubkey = transaction.private_key_to_public_key(private_key_wif)
+                pubkey = script.private_key_to_public_key(private_key_wif)
         params['pubkey'] = pubkey
 
     """  # NOTE: For debugging, e.g. with `Invalid Params` error.

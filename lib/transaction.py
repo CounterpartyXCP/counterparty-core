@@ -1,6 +1,5 @@
 """
-Craft, sign and broadcast Bitcoin transactions.
-Interface with Bitcoind.
+Construct, sign and broadcast Bitcoin transactions.
 """
 
 import os
@@ -14,8 +13,7 @@ import decimal
 import logging
 
 import requests
-from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
-from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec, is_sec_compressed, EncodingError
+from pycoin.encoding import is_sec_compressed, EncodingError
 from Crypto.Cipher import ARC4
 from bitcoin.core.script import CScript
 from bitcoin.core import x
@@ -39,21 +37,6 @@ OP_3 = b'\x53'
 OP_CHECKMULTISIG = b'\xae'
 
 D = decimal.Decimal
-
-def pubkeyhash_to_pubkey(pubkeyhash):
-    raw_transactions = blockchain.searchrawtransactions(pubkeyhash)
-    for tx in raw_transactions:
-        for vin in tx['vin']:
-            scriptsig = vin['scriptSig']
-            asm = scriptsig['asm'].split(' ')
-            pubkey = asm[1]
-            if pubkeyhash == script.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
-                return pubkey
-    raise exceptions.AddressError('Public key for address ‘{}’ not published in blockchain.'.format(pubkeyhash))
-def multisig_pubkeyhashes_to_pubkeys(address):
-    signatures_required, pubkeyhashes, signatures_possible = util.extract_array(address)
-    pubkeys = [pubkeyhash_to_pubkey(pubkeyhash) for pubkeyhash in pubkeyhashes]
-    return util.construct_array(signatures_required, pubkeys, signatures_possible)
 
 def print_coin(coin):
     return 'amount: {}; txid: {}; vout: {}; confirmations: {}'.format(coin['amount'], coin['txid'], coin['vout'], coin.get('confirmations', '?')) # simplify and make deterministic
@@ -273,53 +256,8 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
     s += (0).to_bytes(4, byteorder='little')                # LockTime
     return s
 
-def input_value_weight(amount):
-    # Prefer outputs less than dust size, then bigger is better.
-    if amount * config.UNIT <= config.DEFAULT_REGULAR_DUST_SIZE:
-        return 0
-    else:
-        return 1 / amount
 
-def sort_unspent_txouts(unspent, allow_unconfirmed_inputs):
-    # Get deterministic results (for multiAPIConsensus type requirements), sort by timestamp and vout index.
-    # (Oldest to newest so the nodes don’t have to be exactly caught up to each other for consensus to be achieved.)
-    # searchrawtransactions doesn’t support unconfirmed transactions
-    try:
-        unspent = sorted(unspent, key=util.sortkeypicker(['ts', 'vout']))
-    except KeyError: # If timestamp isn’t given.
-        pass
-
-    # Sort by amount.
-    unspent = sorted(unspent,key=lambda x:input_value_weight(x['amount']))
-
-    # Remove unconfirmed txouts, if desired.
-    if allow_unconfirmed_inputs:
-        # Hackish: Allow only inputs which are either already confirmed or were seen only recently. (Skip outputs from slow‐to‐confirm transanctions.)
-        try:
-            unspent = [coin for coin in unspent if (coin['confirmations'] > 0 or (time.time() - coin['ts']) < 6 * 3600)] # Cutoff: six hours
-        except (KeyError, TypeError):
-            pass
-    else:
-        unspent = [coin for coin in unspent if coin['confirmations'] > 0]
-
-    return unspent
-class AltcoinSupportError (Exception): pass
-def private_key_to_public_key (private_key_wif):
-    if config.TESTNET:
-        allowable_wif_prefixes = [config.PRIVATEKEY_VERSION_TESTNET]
-    else:
-        allowable_wif_prefixes = [config.PRIVATEKEY_VERSION_MAINNET]
-    try:
-        secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(
-                private_key_wif, allowable_wif_prefixes=allowable_wif_prefixes)
-    except EncodingError:
-        raise AltcoinSupportError('pycoin: unsupported WIF prefix')
-    public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
-    public_key = public_pair_to_sec(public_pair, compressed=compressed)
-    public_key_hex = binascii.hexlify(public_key).decode('utf-8')
-    return public_key_hex
-
-class BalanceError (Exception): pass
+class BalanceError (exceptions.TransactionError): pass
 def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
                  regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
                  multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
@@ -353,7 +291,7 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
         # Address.
         util.validate_address(address)
         if util.is_multisig(address):
-            destination_outputs_new.append((multisig_pubkeyhashes_to_pubkeys(address), value))
+            destination_outputs_new.append((script.multisig_pubkeyhashes_to_pubkeys(address), value))
         else:
             destination_outputs_new.append((address, value))
 
@@ -424,13 +362,13 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
     self_public_key = None
     if encoding in ('multisig', 'pubkeyhash'):
         if util.is_multisig(source):
-            a, self_pubkeys, b = util.extract_array(multisig_pubkeyhashes_to_pubkeys(source))
+            a, self_pubkeys, b = util.extract_array(script.multisig_pubkeyhashes_to_pubkeys(source))
             self_public_key = binascii.unhexlify(self_pubkeys[0])
         else:
             if not self_public_key_hex:
                 # If public key was not provided, derive it from the private key.
                 private_key_wif = backend.dumpprivkey(source)
-                self_public_key_hex = private_key_to_public_key(private_key_wif)
+                self_public_key_hex = script.private_key_to_public_key(private_key_wif)
             else:
                 # If public key was provided, check that it matches the source address.
                 if source != script.pubkey_to_pubkeyhash(binascii.unhexlify(self_public_key_hex)):
@@ -450,8 +388,8 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
     outputs_size = ((25 + 9) * len(destination_outputs)) + (len(data_array) * data_output_size)
 
     # Get inputs.
-    unspent = util.get_unspent_txouts(source)
-    unspent = sort_unspent_txouts(unspent, allow_unconfirmed_inputs)
+    unspent = backend.get_unspent_txouts(source)
+    unspent = backend.sort_unspent_txouts(unspent, allow_unconfirmed_inputs)
     logging.debug('Sorted UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
 
     inputs, btc_in = [], 0
@@ -489,7 +427,7 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
 
     # Change output.
     if util.is_multisig(source):
-        change_address = multisig_pubkeyhashes_to_pubkeys(source)
+        change_address = script.multisig_pubkeyhashes_to_pubkeys(source)
     else:
         change_address = source
     if change_quantity: change_output = (change_address, change_quantity)
