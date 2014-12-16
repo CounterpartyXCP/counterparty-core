@@ -19,6 +19,7 @@ import socket
 import signal
 import requests
 import appdirs
+import platform
 from prettytable import PrettyTable
 
 import bitcoin as bitcoinlib
@@ -57,7 +58,8 @@ def get_lock():
     logging.info('Status: Acquiring lock.')
 
     # Cross‐platform.
-    if os.name == 'nt': # Not database‐specific.
+    if os.name == 'nt' or platform.system() == 'Darwin':    # Windows or OS X
+        # Not database‐specific.
         socket_family = socket.AF_INET
         socket_address = ('localhost', 8999)
         error = 'Another copy of {} is currently running.'.format(config.XCP_CLIENT)
