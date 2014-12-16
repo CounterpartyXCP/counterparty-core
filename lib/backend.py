@@ -131,7 +131,7 @@ def get_unspent_txouts(source, return_confirmed=False):
     from lib import blockchain  # TODO
     # Get all coins.
     outputs = {}
-    if is_multisig(source):
+    if util.is_multisig(source):
         pubkeyhashes = pubkeyhash_array(source)
         raw_transactions = blockchain.searchrawtransactions(pubkeyhashes[1])
     else:
