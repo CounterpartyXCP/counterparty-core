@@ -884,6 +884,7 @@ def follow (db):
             block_hash_bin = backend.rpc.getblockhash(c)
             block = backend.rpc.getblock(block_hash_bin)
             block_hash = bitcoinlib.core.b2lx(block_hash_bin)
+            previous_block_hash = bitcoinlib.core.b2lx(block.hashPrevBlock)
             block_time = block.nTime
             txhash_list = backend.get_txhash_list(block)
             with db:
@@ -897,7 +898,7 @@ def follow (db):
                                     (block_index,
                                     block_hash,
                                     block_time,
-                                    block.hashPrevBlock,
+                                    previous_block_hash,
                                     block.difficulty)
                               )
 
