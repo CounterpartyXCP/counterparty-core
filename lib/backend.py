@@ -4,7 +4,7 @@ from functools import lru_cache
 
 import bitcoin as bitcoinlib
 
-from lib import util
+from lib import util, script
 
 def dumpprivkey(address):
    return old_rpc('dumpprivkey', [address])
@@ -67,7 +67,7 @@ def extract_addresses(tx):
 def unconfirmed_transactions(address):
     unconfirmed_tx = []
     for tx_hash in old_rpc('getrawmempool', []):
-        tx = get_cached_raw_transaction(tx_hash)
+        tx = get_cached_raw_transaction(tx_hash, verbose=True)
         addresses = extract_addresses(json.dumps(tx))
         if address in addresses:
              unconfirmed_tx.append(tx)
@@ -131,19 +131,19 @@ def get_unspent_txouts(source, return_confirmed=False):
     from lib import blockchain  # TODO
     # Get all coins.
     outputs = {}
-    if is_multisig(source):
-        pubkeyhashes = pubkeyhash_array(source)
+    if util.is_multisig(source):
+        pubkeyhashes = util.pubkeyhash_array(source)
         raw_transactions = blockchain.searchrawtransactions(pubkeyhashes[1])
     else:
         pubkeyhashes = [source]
         raw_transactions = blockchain.searchrawtransactions(source)
 
-    canonical_address = canonical_address(source)
+    canonical_address = util.canonical_address(source)
 
     for tx in raw_transactions:
         for vout in tx['vout']:
             scriptpubkey = vout['scriptPubKey']
-            if script.scriptpubkey_to_address(CScript(x(scriptpubkey['hex']))) == canonical_address:
+            if script.scriptpubkey_to_address(bitcoinlib.core.CScript(bitcoinlib.core.x(scriptpubkey['hex']))) == canonical_address:
                 txid = tx['txid']
                 confirmations = tx['confirmations'] if 'confirmations' in tx else 0
                 outkey = '{}{}'.format(txid, vout['n'])
