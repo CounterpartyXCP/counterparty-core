@@ -598,6 +598,15 @@ class APIServer(threading.Thread):
             else:
                 return result
 
+        @dispatcher.add_method
+        def get_wallet():
+            wallet = {}
+            for group in backend.rpc.listaddressgroupings():
+                for bunch in group:
+                    address, btc_balance = bunch[:2]
+                    wallet[address] = str(btc_balance)
+            return wallet
+
         def _set_cors_headers(response):
             if config.RPC_ALLOW_CORS:
                 response.headers['Access-Control-Allow-Origin'] = '*'
