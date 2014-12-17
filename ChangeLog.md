@@ -2,8 +2,9 @@
 * v9.49.3 (???)
 	* better logging when handling `SIGTERM`, `SIGKILL`
 	* update README
-	* code reorganisation
 	* if no RPC password is specified, generate automatically
+	* code reorganisation
+	* code cleanup
 * v9.49.2 (???)
 	* prepare for ‘destroy’ functionality
 	* match IDs now include underscore
