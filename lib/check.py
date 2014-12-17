@@ -2,10 +2,9 @@ import json
 import requests
 import logging
 import warnings
+import time
 
-import bitcoin as bitcoinlib
-
-from lib import (config, util, exceptions)
+from lib import config, util, exceptions
 
 CONSENSUS_HASH_SEED = 'We can only see a short distance ahead, but we can see plenty there that needs to be done.'
 
@@ -27,9 +26,13 @@ CHECKPOINTS_TESTNET = {
     312000: {'ledger_hash': '3698b6a7abec4088822a4871d695cccacb0b8d82650157f2714e4be120289d4a', 'txlist_hash': '4160ed1fef8492221e1c4daddd6a6720211f786d67869f40017234ccada652e4'}
 }
 
+class BackendError(Exception):  # TODO: Redundant with `BitcoindError`
+    pass
 
-class ConsensusError (Exception): pass
-def consensus_hash (db, block_index, field, previous_consensus_hash, content):
+class ConsensusError(Exception):
+    pass
+
+def consensus_hash(db, block_index, field, previous_consensus_hash, content):
     cursor = db.cursor()
 
     # Initialise previous hash on first block.
@@ -44,8 +47,8 @@ def consensus_hash (db, block_index, field, previous_consensus_hash, content):
             raise ConsensusError('Empty previous {} for block {}. Please launch a `reparse`.'.format(field, block_index))
 
     # Calculate current hash.
-    version = CONSENSUS_HASH_VERSION_TESTNET if config.TESTNET else CONSENSUS_HASH_VERSION_MAINNET
-    calculated_hash = util.dhash_string(previous_consensus_hash + '{}{}'.format(version, ''.join(content)))
+    consensus_hash_version = CONSENSUS_HASH_VERSION_TESTNET if config.TESTNET else CONSENSUS_HASH_VERSION_MAINNET
+    calculated_hash = util.dhash_string(previous_consensus_hash + '{}{}'.format(consensus_hash_version, ''.join(content)))
 
     # Verify hash (if already in database) or save hash (if not).
     found_hash = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,)))[0][field]
@@ -64,8 +67,10 @@ def consensus_hash (db, block_index, field, previous_consensus_hash, content):
 
     return calculated_hash
 
-class SanityError (Exception): pass
-def asset_conservation (db):
+class SanityError(Exception):
+    pass
+
+def asset_conservation(db):
     logging.debug('Status: Checking for conservation of assets.')
     supplies = util.supplies(db)
     for asset in supplies.keys():
@@ -75,9 +80,12 @@ def asset_conservation (db):
             raise SanityError('{} {} issued ≠ {} {} held'.format(util.value_out(db, issued, asset), asset, util.value_out(db, held, asset), asset))
         logging.debug('Status: {} has been conserved ({} {} both issued and held)'.format(asset, util.value_out(db, issued, asset), asset))
 
-class VersionError (Exception): pass
-class VersionUpdateRequiredError (VersionError): pass
-def check_change(protocol_change):
+class VersionError(Exception):
+    pass
+class VersionUpdateRequiredError(VersionError):
+    pass
+
+def check_change(protocol_change, block_index):
 
     # Check client version.
     passed = True
@@ -93,44 +101,43 @@ def check_change(protocol_change):
     if not passed:
         explanation = 'Your version of counterpartyd is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: ‘{}’. Please upgrade to the latest version and restart the server.'.format(
             config.VERSION_STRING, protocol_change['block_index'], protocol_change['minimum_version_major'], protocol_change['minimum_version_minor'],
-            protocol_change['minimum_version_revision'], change_name)
+            protocol_change['minimum_version_revision'], protocol_change)
         if block_index >= protocol_change['block_index']:
             raise VersionUpdateRequiredError(explanation)
         else:
             warnings.warn(explanation)
 
-def version (block_index):
+def version(block_index):
     try:
         host = 'https://counterpartyxcp.github.io/counterpartyd/version.json'
         response = requests.get(host, headers={'cache-control': 'no-cache'})
         versions = json.loads(response.text)
-    except Exception as e:
+    except Exception:
         raise VersionError('Unable to check version. How’s your Internet access?')
 
     # TODO: The first branch is for backwards‐compatibility and can be removed
     # once these changes are pushed to `master`.
     if 'minimum_version_major' in versions.keys():
         protocol_change = versions
-        check_change(protocol_change)
+        check_change(protocol_change, block_index)
     else:
         for change_name in versions:
             protocol_change = versions[change_name]
-            check_change(protocol_change)
+            check_change(protocol_change, block_index)
 
     logging.debug('Status: Version check passed.')
     return
 
-def backend (db):
+def backend():
     """Checks blocktime of last block to see if {} Core is running behind.""".format(config.BTC_NAME)
     block_count = backend.rpc.getblockcount()
     block_hash_bin = backend.rpc.getblockhash(block_count)
     block = backend.rpc.getblock(block_hash_bin)
-    block_hash = bitcoinlib.core.b2lx(block_hash_bin)
     time_behind = time.time() - block['time']   # TODO: Block times are not very reliable.
     if time_behind > 60 * 60 * 2:   # Two hours.
-        raise backend.BitcoindError('Bitcoind is running about {} seconds behind.'.format(round(time_behind)))
+        raise BackendError('Bitcoind is running about {} seconds behind.'.format(round(time_behind)))
 
-def database (db, blockcount):
+def database(db, blockcount):
     """Checks {} database to see if the {} server has caught up with Bitcoind.""".format(config.XCP_NAME, config.XCP_CLIENT)
     if util.last_block(db)['block_index'] + 1 < blockcount:
         raise exceptions.DatabaseError('{} database is behind Bitcoind. Is the {} server running?'.format(config.XCP_NAME, config.XCP_CLIENT))

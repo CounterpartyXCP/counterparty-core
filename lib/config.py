@@ -1,6 +1,3 @@
-import sys
-import os
-
 """Variables prefixed with `DEFAULT` should be able to be overridden by
 configuration file and command‐line arguments."""
 
