@@ -16,6 +16,7 @@ import platform
 from Crypto.Cipher import ARC4
 import apsw
 import csv
+import http
 
 import bitcoin as bitcoinlib
 
@@ -850,8 +851,20 @@ def follow(db):
         # processing of the new blocks a bit.
     while True:
         starttime = time.time()
+
+        # Get block count.
+        # If the backend is unreachable and `config.FORCE` is set, just sleep
+        # and try again repeatedly.
+        try:
+            block_count = backend.rpc.getblockcount()
+        except (ConnectionRefusedError, http.client.CannotSendRequest) as e:
+            if config.FORCE:
+                time.sleep(config.BACKEND_POLL_INTERVAL)
+                continue
+            else:
+                raise e
+
         # Get new blocks.
-        block_count = backend.rpc.getblockcount()
         if block_index <= block_count:
 
             # Backwards check for incorrect blocks due to chain reorganisation, and stop when a common parent is found.

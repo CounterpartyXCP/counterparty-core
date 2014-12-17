@@ -668,7 +668,7 @@ if __name__ == '__main__':
         logging.warning('WARNING: THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.')
 
     # Backend
-    if args.action == 'server' or (args.action in ('reparse', 'rollback') and not config.FORCE):
+    if args.action in ('server', 'reparse', 'rollback') and not config.FORCE:
         logging.info('Status: Connecting to backend.')
         backend.rpc.getblockcount()
 
