@@ -950,6 +950,7 @@ def follow(db):
 
                 # List the transactions in the block.
                 for tx_hash in txhash_list:
+                    # TODO: use rpc._batch to get all transactions with one RPC call
                     tx_index = list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index)
 
                 # Parse the transactions in the block.
