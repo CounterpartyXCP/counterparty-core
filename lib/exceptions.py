@@ -22,8 +22,6 @@ class AssetNameError (AssetError):
     pass
 class AssetIDError (AssetError):
     pass
-class ValidateAssetError(AssetError):
-    pass
 
 class MessageError (Exception):
     pass
@@ -34,6 +32,9 @@ class UnpackError (MessageError):
 class ValidateError(MessageError):
     pass
 class DecodeError(MessageError):
+    pass
+
+class BalanceError (Exception):
     pass
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

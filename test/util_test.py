@@ -43,6 +43,9 @@ class RpcProxy():
         ctx = backend.deserialize(tx_hex)
         return ctx
 
+def get_proxy():
+    return RpcProxy()
+
 def dump_database(db):
     # TEMPORARY
     # .dump command bugs when aspw.Shell is used with 'db' args instead 'args'
@@ -175,7 +178,6 @@ def run_scenario(scenario, rawtransactions_db):
     util.FIRST_MULTISIG_BLOCK_TESTNET = 1
     checkpoints = dict(check.CHECKPOINTS_TESTNET)
     check.CHECKPOINTS_TESTNET = {}
-    backend.rpc = RpcProxy()
 
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
@@ -278,7 +280,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db)
         return tested_method(counterpartyd_db, inputs[0], **inputs[1])
     elif tx_name == 'util':
         return tested_method(*inputs)
-    elif tx_name == 'address' and method == 'base58_check_decode':
+    elif tx_name == 'script' and method == 'base58_check_decode':
         return binascii.hexlify(tested_method(*inputs)).decode('utf-8')
     else:
         return tested_method(counterpartyd_db, *inputs)

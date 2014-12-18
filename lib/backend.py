@@ -6,14 +6,30 @@ import json
 from functools import lru_cache
 
 import bitcoin as bitcoinlib
+import bitcoin.rpc as bitcoinlib_rpc
 
-from lib import util, script, address
+from lib import util
+from lib import script
+from lib import config
 
-def dumpprivkey(addr):
-    return old_rpc('dumpprivkey', [addr])
+def get_proxy():
+    if config.TESTNET:
+        bitcoinlib.SelectParams('testnet')
+    proxy = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC)
+    return proxy
+
+def get_wallet():
+    proxy = get_proxy()
+    for group in proxy.listaddressgroupings():
+        for bunch in group:
+            yield bunch
+
+def dumpprivkey(address):
+    return old_rpc('dumpprivkey', [address])
 
 def wallet_unlock():
-    getinfo = rpc.getinfo() # TODO: broken with btcd
+    proxy = get_proxy()
+    getinfo = proxy.getinfo() # TODO: broken with btcd
     if 'unlocked_until' in getinfo:
         if getinfo['unlocked_until'] >= 60:
             return True # Wallet is unlocked for at least the next 60 seconds.
@@ -29,10 +45,6 @@ def deserialize(tx_hex):
 def serialize(ctx):
     return bitcoinlib.core.CTransaction.serialize(ctx)
 
-def get_prevhash(c_hash):
-    c_block = rpc.getblock(c_hash)
-    return bitcoinlib.core.b2lx(c_block.hashPrevBlock)
-
 @lru_cache(maxsize=4096)
 def get_cached_raw_transaction(tx_hash, verbose=False):
     # NOTE: python-bitcoinlib won’t return JSON.
@@ -41,10 +53,12 @@ def get_cached_raw_transaction(tx_hash, verbose=False):
     else:
         return old_rpc('getrawtransaction', [tx_hash])
 
-def is_valid(addr):
-    return rpc.validateaddress(addr)['isvalid']
-def is_mine(addr):
-    return rpc.validateaddress(addr)['ismine']
+def is_valid(address):
+    proxy = get_proxy()
+    return proxy.validateaddress(address)['isvalid']
+def is_mine(address):
+    proxy = get_proxy()
+    return proxy.validateaddress(address)['ismine']
 
 def get_txhash_list(block):
     return [bitcoinlib.core.b2lx(ctx.GetHash()) for ctx in block.vtx]
@@ -67,7 +81,7 @@ def extract_addresses(tx):
 
     return addresses
 
-def unconfirmed_transactions(addr):
+def unconfirmed_transactions(address):
     unconfirmed_tx = []
 
     call_id = 0
@@ -89,6 +103,7 @@ def unconfirmed_transactions(addr):
                 addresses = extract_addresses(json.dumps(tx, cls=util.DecimalEncoder))
                 if addr in addresses:
                     unconfirmed_tx.append(tx)
+
     return unconfirmed_tx
 
 
@@ -127,7 +142,8 @@ def sort_unspent_txouts(unspent, allow_unconfirmed_inputs):
 
 def get_btc_supply(normalize=False):
     """returns the total supply of {} (based on what Bitcoin Core says the current block height is)""".format(config.BTC)
-    block_count = rpc.getblockcount()
+    proxy = get_proxy()
+    block_count = proxy.getblockcount()
     blocks_remaining = block_count
     total_supply = 0
     reward = 50.0
@@ -148,14 +164,14 @@ def get_unspent_txouts(source, return_confirmed=False):
     from lib import blockchain  # TODO
     # Get all coins.
     outputs = {}
-    if address.is_multisig(source):
-        pubkeyhashes = address.pubkeyhash_array(source)
+    if script.is_multisig(source):
+        pubkeyhashes = script.pubkeyhash_array(source)
         raw_transactions = blockchain.searchrawtransactions(pubkeyhashes[1])
     else:
         pubkeyhashes = [source]
         raw_transactions = blockchain.searchrawtransactions(source)
 
-    canonical_source = address.make_canonical(source)
+    canonical_source = script.make_canonical(source)
 
     for tx in raw_transactions:
         for vout in tx['vout']:
@@ -201,8 +217,8 @@ def get_unspent_txouts(source, return_confirmed=False):
     else:
         return unspent
 
-def get_btc_balance(addr, confirmed=True):
-    all_unspent, confirmed_unspent = get_unspent_txouts(addr, return_confirmed=True)
+def get_btc_balance(address, confirmed=True):
+    all_unspent, confirmed_unspent = get_unspent_txouts(address, return_confirmed=True)
     unspent = confirmed_unspent if confirmed else all_unspent
     return sum(out['amount'] for out in unspent)
 
@@ -272,17 +288,17 @@ def old_rpc(method, params):
         raise BitcoindError('{} Is txindex enabled in {} Core?'.format(response_json['error'], config.BTC_NAME))
     elif response_json['error']['code'] == -4:   # Unknown private key (locked wallet?)
         # If address in wallet, attempt to unlock.
-        addr = params[0]
-        if is_valid(addr):
-            if is_mine(addr):
+        address = params[0]
+        if is_valid(address):
+            if is_mine(address):
                 raise BitcoindError('Wallet is locked.')
             else:   # When will this happen?
                 raise BitcoindError('Source address not in wallet.')
         else:
-            raise address.AddressError('Invalid address. (Multi‐signature?)')
+            raise script.AddressError('Invalid address. (Multi‐signature?)')
     # elif response_json['error']['code'] == -1 and response_json['error']['message'] == 'Block number out of range.':
     #     time.sleep(10)
-    #     return bitcoinlib.core.b2lx(rpc.getblockhash(block_index))
+    #     return bitcoinlib.core.b2lx(proxy.getblockhash(block_index))
     else:
         raise BitcoindError('{}'.format(response_json['error']))
 

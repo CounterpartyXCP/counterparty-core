@@ -16,10 +16,16 @@ import platform
 from Crypto.Cipher import ARC4
 import apsw
 import csv
+import http
 
 import bitcoin as bitcoinlib
 
-from lib import (config, exceptions, util, check, script, backend, address)
+from lib import config
+from lib import exceptions
+from lib import util
+from lib import check
+from lib import script
+from lib import backend
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute, destroy)
 
 from .blockchain.blocks_parser import BlockchainParser, ChainstateParser
@@ -349,11 +355,14 @@ def get_tx_info(tx_hex, block_index, block_parser=None):
 
     return tx_info
 
-def get_tx_info1(tx_hex, block_index, block_parser=None):
+def get_tx_info1(tx_hex, block_index, proxy=None, block_parser=None):
     """
     The destination, if it exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
+    if proxy == None:
+        proxy = backend.get_proxy()
+
     ctx = backend.deserialize(tx_hex)
 
     def get_pubkeyhash(scriptpubkey):
@@ -367,9 +376,9 @@ def get_tx_info1(tx_hex, block_index, block_parser=None):
         if not pubkeyhash:
             return False
         pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
-        address = address.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
+        address = script.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
         # Test decoding of address.
-        if address != config.UNSPENDABLE and binascii.unhexlify(bytes(pubkeyhash, 'utf-8')) != address.base58_check_decode(address, config.ADDRESSVERSION):
+        if address != config.UNSPENDABLE and binascii.unhexlify(bytes(pubkeyhash, 'utf-8')) != script.base58_check_decode(address, config.ADDRESSVERSION):
             return False
 
         return address
@@ -446,7 +455,7 @@ def get_tx_info1(tx_hex, block_index, block_parser=None):
             vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
             vin_ctx = backend.deserialize(vin_tx['__data__'])
         else:
-            vin_ctx = backend.rpc.getrawtransaction(vin.prevout.hash)
+            vin_ctx = proxy.getrawtransaction(vin.prevout.hash)
         vout = vin_ctx.vout[vin.prevout.n]
         fee += vout.nValue
 
@@ -464,11 +473,13 @@ def get_tx_info1(tx_hex, block_index, block_parser=None):
 
     return source, destination, btc_amount, fee, data
 
-def get_tx_info2(tx_hex, block_parser=None):
+def get_tx_info2(tx_hex, proxy=None, block_parser=None):
     """
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
+    if proxy == None:
+        proxy = backend.get_proxy()
 
     # Decode transaction binary.
     ctx = backend.deserialize(tx_hex)
@@ -505,7 +516,7 @@ def get_tx_info2(tx_hex, block_parser=None):
             destination, data = None, chunk[len(config.PREFIX):]
         else:                                                       # Destination
             pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
-            destination, data = address.base58_check_encode(pubkeyhash, config.ADDRESSVERSION), None
+            destination, data = script.base58_check_encode(pubkeyhash, config.ADDRESSVERSION), None
 
         return destination, data
 
@@ -522,7 +533,7 @@ def get_tx_info2(tx_hex, block_parser=None):
             destination, data = None, chunk[len(config.PREFIX):]
         else:                                                       # Destination
             pubkeyhashes = [script.pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
-            destination, data = address.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes)), None
+            destination, data = script.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes)), None
 
         return destination, data
 
@@ -559,6 +570,11 @@ def get_tx_info2(tx_hex, block_parser=None):
             else:                   # Data.
                 data += new_data
 
+    # Only look for source if data were found or destination is `UNSPENDABLE`,
+    # for speed.
+    if not data and destinations != [config.UNSPENDABLE,]:
+        raise DecodeError('no data and not unspendable')
+
     # Collect all (unique) source addresses.
     sources = []
     for vin in ctx.vin[:]:                   # Loop through inputs.
@@ -567,7 +583,7 @@ def get_tx_info2(tx_hex, block_parser=None):
             vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
             vin_ctx = backend.deserialize(vin_tx['__data__'])
         else:
-            vin_ctx = backend.rpc.getrawtransaction(vin.prevout.hash)
+            vin_ctx = proxy.getrawtransaction(vin.prevout.hash)
         vout = vin_ctx.vout[vin.prevout.n]
         fee += vout.nValue
 
@@ -820,6 +836,8 @@ class MempoolError(Exception):
 def follow(db):
     cursor = db.cursor()
 
+    proxy = backend.get_proxy()
+
     # Initialise.
     initialise(db)
 
@@ -850,8 +868,20 @@ def follow(db):
         # processing of the new blocks a bit.
     while True:
         starttime = time.time()
+
+        # Get block count.
+        # If the backend is unreachable and `config.FORCE` is set, just sleep
+        # and try again repeatedly.
+        try:
+            block_count = proxy.getblockcount()
+        except (ConnectionRefusedError, http.client.CannotSendRequest) as e:
+            if config.FORCE:
+                time.sleep(config.BACKEND_POLL_INTERVAL)
+                continue
+            else:
+                raise e
+
         # Get new blocks.
-        block_count = backend.rpc.getblockcount()
         if block_index <= block_count:
 
             # Backwards check for incorrect blocks due to chain reorganisation, and stop when a common parent is found.
@@ -864,8 +894,9 @@ def follow(db):
                 logging.debug('Status: Checking that block {} is not an orphan.'.format(c))
 
                 # Backend parent hash.
-                c_hash_bin = backend.rpc.getblockhash(c)
-                backend_parent = backend.get_prevhash(c_hash_bin)
+                c_hash_bin = proxy.getblockhash(c)
+                c_block = proxy.getblock(c_hash_bin)
+                backend_parent = bitcoinlib.core.b2lx(c_block.hashPrevBlock)
 
                 # DB parent hash.
                 blocks = list(cursor.execute('''SELECT * FROM blocks
@@ -896,8 +927,8 @@ def follow(db):
                 continue
 
             # Get and parse transactions in this block (atomically).
-            block_hash_bin = backend.rpc.getblockhash(c)
-            block = backend.rpc.getblock(block_hash_bin)
+            block_hash_bin = proxy.getblockhash(c)
+            block = proxy.getblock(block_hash_bin)
             block_hash = bitcoinlib.core.b2lx(block_hash_bin)
             previous_block_hash = bitcoinlib.core.b2lx(block.hashPrevBlock)
             block_time = block.nTime
@@ -935,7 +966,7 @@ def follow(db):
 
             logging.info('Block: %s (%ss)'%(str(block_index), "{:.2f}".format(time.time() - starttime, 3)))
             # Increment block index.
-            block_count = backend.rpc.getblockcount()
+            block_count = proxy.getblockcount()
             block_index += 1
 
         else:
@@ -958,7 +989,7 @@ def follow(db):
             # and then save those messages.
             # Every transaction in mempool is parsed independently. (DB is rolled back after each one.)
             mempool = []
-            util.MEMPOOL = backend.rpc.getrawmempool()
+            util.MEMPOOL = proxy.getrawmempool()
             for tx_hash in util.MEMPOOL:
                 tx_hash = bitcoinlib.core.b2lx(tx_hash)
 

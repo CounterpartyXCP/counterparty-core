@@ -13,7 +13,7 @@ import binascii
 import appdirs
 from prettytable import PrettyTable
 
-from lib import config, util, exceptions, backend, database, transaction, script, address
+from lib import config, util, exceptions, backend, database, transaction, script
 if os.name == 'nt':
     from lib import util_windows
 
@@ -21,11 +21,6 @@ D = decimal.Decimal
 
 class ConfigurationError(Exception):
     pass
-
-def get_wallet():
-    for group in backend.rpc.listaddressgroupings():
-        for bunch in group:
-            yield bunch
 
 def get_address(address):
     address_dict = {}
@@ -102,7 +97,7 @@ def market(give_asset, get_asset):
 
     # Your Pending Orders Matches.
     addresses = []
-    for bunch in get_wallet():
+    for bunch in backend.get_wallet():
         addresses.append(bunch[:2][0])
     filters = [
         ('tx0_address', 'IN', addresses),
@@ -165,8 +160,8 @@ def market(give_asset, get_asset):
 def cli(method, params, unsigned):
     # Get unsigned transaction serialisation.
 
-    is_multisig = address.is_multisig(params['source'])
-    params['source'] = address.make_canonical(params['source'])
+    is_multisig = script.is_multisig(params['source'])
+    params['source'] = script.make_canonical(params['source'])
     pubkey = None
 
     if not is_multisig:
@@ -347,14 +342,6 @@ def set_options(data_dir=None, backend_rpc_connect=None,
     else:
         config.BACKEND_RPC = 'http://' + config.BACKEND_RPC
 
-    # Connection to backend.
-    # TODO: temp
-    import bitcoin as bitcoinlib
-    import bitcoin.rpc as bitcoinlib_rpc
-    if config.TESTNET:
-        bitcoinlib.SelectParams('testnet')
-    backend.rpc = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC)
-
     # blockchain service name
     if blockchain_service_name:
         config.BLOCKCHAIN_SERVICE_NAME = blockchain_service_name
@@ -506,12 +493,12 @@ def set_options(data_dir=None, backend_rpc_connect=None,
     else:
         config.BROADCAST_TX_MAINNET = '{}'.format(config.BTC_CLIENT)
 
-def balances(addr):
-    addr = address.canonical(addr)
-    address.validate(addr)
-    balances = get_address(db, address=addr)['balances']
+def balances(address):
+    address = script.canonical(address)
+    script.validate(address)
+    balances = get_address(db, address=address)['balances']
     table = PrettyTable(['Asset', 'Amount'])
-    btc_balance = backend.get_btc_balance(addr)
+    btc_balance = backend.get_btc_balance(address)
     table.add_row([config.BTC, btc_balance])  # BTC
     for balance in balances:
         asset = balance['asset']
@@ -1057,7 +1044,7 @@ if __name__ == '__main__':
         totals = {}
 
         print()
-        for bunch in get_wallet():
+        for bunch in backend.get_wallet():
             address, btc_balance = bunch[:2]
             address_data = get_address(db, address=address)
             balances = address_data['balances']
@@ -1096,7 +1083,7 @@ if __name__ == '__main__':
 
     elif args.action == 'pending':
         addresses = []
-        for bunch in get_wallet():
+        for bunch in backend.get_wallet():
             addresses.append(bunch[:2][0])
         filters = [
             ('tx0_address', 'IN', addresses),

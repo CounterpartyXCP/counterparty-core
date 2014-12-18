@@ -19,7 +19,12 @@ from bitcoin.core.script import CScript
 from bitcoin.core import x
 from bitcoin.core.key import CPubKey
 
-from . import (config, exceptions, util, blockchain, script, backend, address)
+from lib import config
+from lib import exceptions
+from lib import util
+from lib import blockchain
+from lib import script
+from lib import backend
 
 class InputError (Exception):
     pass
@@ -62,10 +67,10 @@ def op_push (i):
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
 
-def get_multisig_script(addr):
+def get_multisig_script(address):
 
     # Unpack multi‐sig address.
-    signatures_required, pubkeys, signatures_possible = address.extract_array(addr)
+    signatures_required, pubkeys, signatures_possible = script.extract_array(address)
 
     # Required signatures.
     if signatures_required == 1:
@@ -88,28 +93,28 @@ def get_multisig_script(addr):
         raise InputError('Total possible signatures must be 1, 2 or 3.')
 
     # Construct script.
-    script = op_required                                # Required signatures
+    tx_script = op_required                                # Required signatures
     for public_key in pubkeys:
         public_key = binascii.unhexlify(public_key)
-        script += op_push(len(public_key))              # Push bytes of public key
-        script += public_key                            # Data chunk (fake) public key
-    script += op_total                                  # Total signatures
-    script += OP_CHECKMULTISIG                          # OP_CHECKMULTISIG
+        tx_script += op_push(len(public_key))              # Push bytes of public key
+        tx_script += public_key                            # Data chunk (fake) public key
+    tx_script += op_total                                  # Total signatures
+    tx_script += OP_CHECKMULTISIG                          # OP_CHECKMULTISIG
 
-    return script
+    return tx_script
 
-def get_monosig_script(addr):
+def get_monosig_script(address):
 
     # Construct script.
-    pubkeyhash = address.base58_check_decode(addr, config.ADDRESSVERSION)
-    script = OP_DUP                                     # OP_DUP
-    script += OP_HASH160                                # OP_HASH160
-    script += op_push(20)                               # Push 0x14 bytes
-    script += pubkeyhash                                # pubKeyHash
-    script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
-    script += OP_CHECKSIG                               # OP_CHECKSIG
+    pubkeyhash = script.base58_check_decode(address, config.ADDRESSVERSION)
+    tx_script = OP_DUP                                     # OP_DUP
+    tx_script += OP_HASH160                                # OP_HASH160
+    tx_script += op_push(20)                               # Push 0x14 bytes
+    tx_script += pubkeyhash                                # pubKeyHash
+    tx_script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
+    tx_script += OP_CHECKSIG                               # OP_CHECKSIG
 
-    return script
+    return tx_script
 
 def make_fully_valid(pubkey):
     assert len(pubkey) == 31    # One sign byte and one nonce byte required (for 33 bytes).
@@ -145,9 +150,9 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
         s += binascii.unhexlify(bytes(txin['txid'], 'utf-8'))[::-1]         # TxOutHash
         s += txin['vout'].to_bytes(4, byteorder='little')   # TxOutIndex
 
-        script = binascii.unhexlify(bytes(txin['scriptPubKey'], 'utf-8'))
-        s += var_int(int(len(script)))                      # Script length
-        s += script                                         # Script
+        tx_script = binascii.unhexlify(bytes(txin['scriptPubKey'], 'utf-8'))
+        s += var_int(int(len(tx_script)))                      # Script length
+        s += tx_script                                         # Script
         s += b'\xff' * 4                                    # Sequence
 
     # Number of outputs.
@@ -165,13 +170,13 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
     for destination, value in destination_outputs:
         s += value.to_bytes(8, byteorder='little')          # Value
 
-        if address.is_multisig(destination):
-            script = get_multisig_script(destination)
+        if script.is_multisig(destination):
+            tx_script = get_multisig_script(destination)
         else:
-            script = get_monosig_script(destination)
+            tx_script = get_monosig_script(destination)
 
-        s += var_int(int(len(script)))                      # Script length
-        s += script
+        s += var_int(int(len(tx_script)))                      # Script length
+        s += tx_script
 
     # Data output.
     for data_chunk in data_array:
@@ -195,69 +200,68 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
                 data_pubkey_2 = make_fully_valid(data_chunk[31:])
 
                 # Construct script.
-                script = OP_1                                   # OP_1
-                script += op_push(33)                           # Push bytes of data chunk (fake) public key    (1/2)
-                script += data_pubkey_1                         # (Fake) public key                  (1/2)
-                script += op_push(33)                           # Push bytes of data chunk (fake) public key    (2/2)
-                script += data_pubkey_2                         # (Fake) public key                  (2/2)
-                script += op_push(len(dust_return_public_key))  # Push bytes of source public key
-                script += dust_return_public_key                       # Source public key
-                script += OP_3                                  # OP_3
-                script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
+                tx_script = OP_1                                   # OP_1
+                tx_script += op_push(33)                           # Push bytes of data chunk (fake) public key    (1/2)
+                tx_script += data_pubkey_1                         # (Fake) public key                  (1/2)
+                tx_script += op_push(33)                           # Push bytes of data chunk (fake) public key    (2/2)
+                tx_script += data_pubkey_2                         # (Fake) public key                  (2/2)
+                tx_script += op_push(len(dust_return_public_key))  # Push bytes of source public key
+                tx_script += dust_return_public_key                       # Source public key
+                tx_script += OP_3                                  # OP_3
+                tx_script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
             else:
                 pad_length = 33 - 1 - len(data_chunk)
                 assert pad_length >= 0
                 data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
                 # Construct script.
-                script = OP_1                                   # OP_1
-                script += op_push(len(dust_return_public_key))  # Push bytes of source public key
-                script += dust_return_public_key                       # Source public key
-                script += op_push(len(data_chunk))              # Push bytes of data chunk (fake) public key
-                script += data_chunk                            # (Fake) public key
-                script += OP_2                                  # OP_2
-                script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
+                tx_script = OP_1                                   # OP_1
+                tx_script += op_push(len(dust_return_public_key))  # Push bytes of source public key
+                tx_script += dust_return_public_key                       # Source public key
+                tx_script += op_push(len(data_chunk))              # Push bytes of data chunk (fake) public key
+                tx_script += data_chunk                            # (Fake) public key
+                tx_script += OP_2                                  # OP_2
+                tx_script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
         elif encoding == 'opreturn':
             if util.enabled('multisig_addresses', block_index):   # Protocol change.
                 data_chunk = key.encrypt(data_chunk)
-            script = OP_RETURN                                  # OP_RETURN
-            script += op_push(len(data_chunk))                  # Push bytes of data chunk (NOTE: OP_SMALLDATA?)
-            script += data_chunk                                # Data
+            tx_script = OP_RETURN                                  # OP_RETURN
+            tx_script += op_push(len(data_chunk))                  # Push bytes of data chunk (NOTE: OP_SMALLDATA?)
+            tx_script += data_chunk                                # Data
         elif encoding == 'pubkeyhash':
             pad_length = 20 - 1 - len(data_chunk)
             assert pad_length >= 0
             data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
             data_chunk = key.encrypt(data_chunk)
             # Construct script.
-            script = OP_DUP                                     # OP_DUP
-            script += OP_HASH160                                # OP_HASH160
-            script += op_push(20)                               # Push 0x14 bytes
-            script += data_chunk                                # (Fake) pubKeyHash
-            script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
-            script += OP_CHECKSIG                               # OP_CHECKSIG
+            tx_script = OP_DUP                                     # OP_DUP
+            tx_script += OP_HASH160                                # OP_HASH160
+            tx_script += op_push(20)                               # Push 0x14 bytes
+            tx_script += data_chunk                                # (Fake) pubKeyHash
+            tx_script += OP_EQUALVERIFY                            # OP_EQUALVERIFY
+            tx_script += OP_CHECKSIG                               # OP_CHECKSIG
         else:
             raise exceptions.TransactionError('Unknown encoding‐scheme.')
 
-        s += var_int(int(len(script)))                      # Script length
-        s += script
+        s += var_int(int(len(tx_script)))                      # Script length
+        s += tx_script
 
     # Change output.
     if change_output:
         change_address, change_value = change_output
         s += change_value.to_bytes(8, byteorder='little')   # Value
 
-        if address.is_multisig(change_address):
-            script = get_multisig_script(change_address)
+        if script.is_multisig(change_address):
+            tx_script = get_multisig_script(change_address)
         else:
-            script = get_monosig_script(change_address)
+            tx_script = get_monosig_script(change_address)
 
-        s += var_int(int(len(script)))                      # Script length
-        s += script
+        s += var_int(int(len(tx_script)))                      # Script length
+        s += tx_script
 
     s += (0).to_bytes(4, byteorder='little')                # LockTime
     return s
 
 
-class BalanceError (exceptions.TransactionError): pass
 def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
                  regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
                  multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
@@ -275,10 +279,10 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
         # Replace multi‐sig addresses with multi‐sig pubkeys. Check that the
         # destination output isn’t a dust output. Set null values to dust size.
     destination_outputs_new = []
-    for (addr, value) in destination_outputs:
+    for (address, value) in destination_outputs:
 
         # Value.
-        if address.is_multisig(addr):
+        if script.is_multisig(address):
             dust_size = multisig_dust_size
         else:
             dust_size = regular_dust_size
@@ -289,14 +293,14 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
             raise exceptions.TransactionError('Destination output is dust.')
 
         # Address.
-        address.validate(addr)
-        if address.is_multisig(addr):
-            destination_outputs_new.append((script.multisig_pubkeyhashes_to_pubkeys(addr), value))
+        script.validate(address)
+        if script.is_multisig(address):
+            destination_outputs_new.append((script.multisig_pubkeyhashes_to_pubkeys(address), value))
         else:
-            destination_outputs_new.append((addr, value))
+            destination_outputs_new.append((address, value))
 
     destination_outputs = destination_outputs_new
-    destination_btc_out = sum([value for addr, value in destination_outputs])
+    destination_btc_out = sum([value for address, value in destination_outputs])
 
 
     '''Data'''
@@ -357,12 +361,12 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
         # transaction, either use the public key provided, or derive it from a
         # private key retrieved from wallet.
     if source:
-        address.validate(source)
+        script.validate(source)
 
     self_public_key = None
     if encoding in ('multisig', 'pubkeyhash'):
-        if address.is_multisig(source):
-            a, self_pubkeys, b = address.extract_array(script.multisig_pubkeyhashes_to_pubkeys(source))
+        if script.is_multisig(source):
+            a, self_pubkeys, b = script.extract_array(script.multisig_pubkeyhashes_to_pubkeys(source))
             self_public_key = binascii.unhexlify(self_pubkeys[0])
         else:
             if not self_public_key_hex:
@@ -420,13 +424,13 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
     if not sufficient_funds:
         # Approximate needed change, fee by with most recently calculated quantities.
         total_btc_out = btc_out + max(change_quantity, 0) + final_fee
-        raise BalanceError('Insufficient bitcoins at address {}. (Need approximately {} {}.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)'.format(source, total_btc_out / config.UNIT, config.BTC))
+        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need approximately {} {}.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)'.format(source, total_btc_out / config.UNIT, config.BTC))
 
 
     '''Finish'''
 
     # Change output.
-    if address.is_multisig(source):
+    if script.is_multisig(source):
         change_address = script.multisig_pubkeyhashes_to_pubkeys(source)
     else:
         change_address = source
@@ -441,8 +445,8 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
     # Check that the constructed transaction isn’t doing anything funny.
     from lib import blocks
     (desired_source, desired_destination_outputs, desired_data) = tx_info
-    desired_source = address.make_canonical(desired_source)
-    desired_destination = address.make_canonical(desired_destination_outputs[0][0]) if desired_destination_outputs else ''
+    desired_source = script.make_canonical(desired_source)
+    desired_destination = script.make_canonical(desired_destination_outputs[0][0]) if desired_destination_outputs else ''
     # Include change in destinations for BTC transactions.
     if change_output and not desired_data and desired_destination != config.UNSPENDABLE:
         if desired_destination == '': desired_destination = desired_source
@@ -478,7 +482,8 @@ def sign_tx (unsigned_tx_hex, private_key_wif=None):
             raise exceptions.TransactionError('Could not sign transaction with pybtctool.')
 
     else:   # Assume source is in wallet and wallet is unlocked.
-        result = backend.rpc.signrawtransaction(backend.deserialize(unsigned_tx_hex))
+        proxy = backend.get_proxy()
+        result = proxy.signrawtransaction(backend.deserialize(unsigned_tx_hex))
         if result['complete']:
             signed_tx_hex = util.hexlify(backend.serialize(result['tx']))
         else:
@@ -487,6 +492,7 @@ def sign_tx (unsigned_tx_hex, private_key_wif=None):
     return signed_tx_hex
 
 def broadcast_tx (signed_tx_hex):
-    return util.hexlify(backend.rpc.sendrawtransaction(backend.deserialize(signed_tx_hex)))
+    proxy = backend.get_proxy()
+    return util.hexlify(proxy.sendrawtransaction(backend.deserialize(signed_tx_hex)))
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

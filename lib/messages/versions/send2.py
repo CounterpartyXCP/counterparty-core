@@ -4,10 +4,14 @@
 
 import struct
 
-from lib import (util, config, address)
-from lib.address import AddressError
-from lib.exceptions import ValidateError, ValidateAssetError
-from lib.exceptions import UnpackError, AssetError
+from lib import util
+from lib import config
+from lib.script import AddressError
+from lib.exceptions import ValidateError
+from lib.exceptions import UnpackError
+from lib.exceptions import AssetError
+from lib.exceptions import AssetNameError
+from lib.exceptions import BalanceError
 
 FORMAT = '>QQ'
 LENGTH = 8 + 8
@@ -18,33 +22,37 @@ def pack(asset, quantity):
     data += struct.pack(FORMAT, util.asset_id(asset), quantity)
     return data
 
-def unpack(message):
+def unpack(db, message, block_index):
     try:
         asset_id, quantity = struct.unpack(FORMAT, message)
-        asset = util.asset_name(asset_id)
+        asset = util.get_asset_name(db, asset_id, block_index)
 
     except struct.error:
         raise UnpackError('could not unpack')
 
-    except util.AssetNameError:
+    except AssetNameError:
         raise UnpackError('asset id invalid')
 
-    return asset, quantity
+    unpacked = {
+                'asset': asset,
+                'quantity': quantity
+               }
+    return unpacked
 
 def validate(db, source, destination, asset, quantity, block_index):
 
     try:
         util.asset_id(asset)
     except AssetError:
-        raise ValidateAssetError('asset invalid')
+        raise ValidateError('asset invalid')
 
     try:
-        address.validate(source)
+        script.validate(source)
     except AddressError:
         raise ValidateError('source address invalid')
 
     try:
-        address.validate(destination)
+        script.validate(destination)
     except AddressError:
         raise ValidateError('destination address invalid')
 
@@ -61,7 +69,7 @@ def validate(db, source, destination, asset, quantity, block_index):
         raise ValidateError('quantity negative')
 
     if util.get_balance(db, source, asset) < quantity:
-        raise ValidateError('balance insufficient')
+        raise BalanceError('balance insufficient')
 
 def compose(db, source, destination, asset, quantity):
 
@@ -77,7 +85,8 @@ def parse(db, tx, message):
     status = 'valid'
 
     try:
-        asset, quantity = unpack(message)
+        unpacked = unpack(message)
+        asset, quantity = unpacked['asset'], unpacked['quantity']
         validate(db, tx['source'], tx['destination'], asset, quantity, tx['block_index'])
         util.transfer(db, tx['block_index'], tx['source'], tx['destination'], asset, quantity, 'send', tx['tx_hash'])
 
@@ -85,7 +94,7 @@ def parse(db, tx, message):
         asset, quantity = None, None
         status = 'invalid: ' + ''.join(e.args)
 
-    except ValidateError as e:
+    except (ValidateError, BalanceError) as e:
         status = 'invalid: ' + ''.join(e.args)
 
     finally:
