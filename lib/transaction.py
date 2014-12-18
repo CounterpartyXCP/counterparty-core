@@ -17,6 +17,7 @@ from pycoin.encoding import EncodingError
 from Crypto.Cipher import ARC4
 from bitcoin.core.script import CScript
 from bitcoin.core import x
+from bitcoin.core import b2lx
 from bitcoin.core.key import CPubKey
 
 from lib import config
@@ -520,6 +521,6 @@ def sign_tx (unsigned_tx_hex, private_key_wif=None):
 
 def broadcast_tx (signed_tx_hex):
     proxy = backend.get_proxy()
-    return util.hexlify(proxy.sendrawtransaction(backend.deserialize(signed_tx_hex)))
+    return b2lx(proxy.sendrawtransaction(backend.deserialize(signed_tx_hex)))
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
