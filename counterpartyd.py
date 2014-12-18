@@ -256,11 +256,6 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     else:
         config.BACKEND_RPC = 'http://' + config.BACKEND_RPC
 
-    # Connection to backend.
-    if config.TESTNET:
-        bitcoinlib.SelectParams('testnet')
-    backend.rpc = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC)
-
     # blockchain service name
     if blockchain_service_name:
         config.BLOCKCHAIN_SERVICE_NAME = blockchain_service_name
@@ -652,16 +647,19 @@ if __name__ == '__main__':
     if config.FORCE:
         logging.warning('WARNING: THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.')
 
+    # Connection to backend.
+    proxy = backend.get_proxy()
+
     # Backend
     if args.action == 'server' or (args.action in ('reparse', 'rollback') and not config.FORCE):
         logging.info('Status: Connecting to backend.')
-        backend.rpc.getblockcount()
+        proxy.getblockcount()
 
     # Version
     if args.action in ('server', 'reparse', 'rollback') and not config.FORCE:
         logging.info('Status: Checking version.')
         try:
-            check.version(backend.rpc.getblockcount())
+            check.version(proxy.getblockcount())
         except check.VersionUpdateRequiredError as e:
             traceback.print_exc(file=sys.stdout)
             sys.exit(config.EXITCODE_UPDATE_REQUIRED)

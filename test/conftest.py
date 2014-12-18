@@ -57,7 +57,6 @@ def rawtransactions_db(request):
 def init_mock_functions(monkeypatch, rawtransactions_db):
 
     util_test.rawtransactions_db = rawtransactions_db
-    backend.rpc = None
 
     def get_unspent_txouts(address, return_confirmed=False):
         with open(util_test.CURR_DIR + '/fixtures/unspent_outputs.json', 'r') as listunspent_test_file:
@@ -104,4 +103,4 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
     if hasattr(config, 'PREFIX'):
         monkeypatch.setattr('lib.config.PREFIX', b'TESTXXXX')
     monkeypatch.setattr('lib.bitcoin.multisig_pubkeyhashes_to_pubkeys', multisig_pubkeyhashes_to_pubkeys)
-    monkeypatch.setattr('lib.backend.rpc', util_test.RpcProxy)
+    monkeypatch.setattr('lib.backend.get_proxy', util_test.get_proxy)

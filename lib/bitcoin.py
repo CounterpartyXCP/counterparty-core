@@ -541,7 +541,8 @@ def sign_tx (unsigned_tx_hex, private_key_wif=None):
             raise exceptions.TransactionError('Could not sign transaction with pybtctool.')
 
     else:   # Assume source is in wallet and wallet is unlocked.
-        result = backend.rpc.signrawtransaction(backend.deserialize(unsigned_tx_hex))
+        proxy = backend.get_proxy()
+        result = proxy.signrawtransaction(backend.deserialize(unsigned_tx_hex))
         if result['complete']:
             signed_tx_hex = util.hexlify(backend.serialize(result['tx']))
         else:
@@ -550,7 +551,8 @@ def sign_tx (unsigned_tx_hex, private_key_wif=None):
     return signed_tx_hex
 
 def broadcast_tx (signed_tx_hex):
-    return util.hexlify(backend.rpc.sendrawtransaction(backend.deserialize(signed_tx_hex)))
+    proxy = backend.get_proxy()
+    return util.hexlify(proxy.sendrawtransaction(backend.deserialize(signed_tx_hex)))
 
 def normalize_quantity(quantity, divisible=True):
     if divisible:
@@ -559,7 +561,8 @@ def normalize_quantity(quantity, divisible=True):
 
 def get_btc_supply(normalize=False):
     """returns the total supply of {} (based on what Bitcoin Core says the current block height is)""".format(config.BTC)
-    block_count = backend.rpc.getblockcount()
+    proxy = backend.get_proxy()
+    block_count = proxy.getblockcount()
     blocks_remaining = block_count
     total_supply = 0
     reward = 50.0

@@ -439,7 +439,8 @@ def get_tx_info1 (tx_hex, block_index, block_parser = None):
             vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
             vin_ctx = backend.deserialize(vin_tx['__data__'])
         else:
-            vin_ctx = backend.rpc.getrawtransaction(vin.prevout.hash)
+            proxy = backend.get_proxy()
+            vin_ctx = proxy.getrawtransaction(vin.prevout.hash)
         vout = vin_ctx.vout[vin.prevout.n]
         fee += vout.nValue
 
@@ -555,7 +556,8 @@ def get_tx_info2 (tx_hex, block_parser = None):
             vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
             vin_ctx = backend.deserialize(vin_tx['__data__'])
         else:
-            vin_ctx = backend.rpc.getrawtransaction(vin.prevout.hash)
+            proxy = backend.get_proxy()
+            vin_ctx = proxy.getrawtransaction(vin.prevout.hash)
         vout = vin_ctx.vout[vin.prevout.n]
         fee += vout.nValue
 
@@ -809,6 +811,7 @@ def follow (db):
 
     # Initialise.
     initialise(db)
+    proxy = backend.get_proxy()
 
     # Get index of last block.
     try:
@@ -838,7 +841,7 @@ def follow (db):
     while True:
         starttime = time.time()
         # Get new blocks.
-        block_count = backend.rpc.getblockcount()
+        block_count = proxy.getblockcount()
         if block_index <= block_count:
 
             # Backwards check for incorrect blocks due to chain reorganisation, and stop when a common parent is found.
@@ -850,7 +853,7 @@ def follow (db):
                 logging.debug('Status: Checking that block {} is not an orphan.'.format(c))
 
                 # Backend parent hash.
-                c_hash_bin = backend.rpc.getblockhash(c)
+                c_hash_bin = proxy.getblockhash(c)
                 backend_parent = backend.get_prevhash(c_hash_bin)
 
                 # DB parent hash.
@@ -881,8 +884,8 @@ def follow (db):
                 continue
 
             # Get and parse transactions in this block (atomically).
-            block_hash_bin = backend.rpc.getblockhash(c)
-            block = backend.rpc.getblock(block_hash_bin)
+            block_hash_bin = proxy.getblockhash(c)
+            block = proxy.getblock(block_hash_bin)
             block_hash = bitcoinlib.core.b2lx(block_hash_bin)
             previous_block_hash = bitcoinlib.core.b2lx(block.hashPrevBlock)
             block_time = block.nTime
@@ -920,7 +923,7 @@ def follow (db):
 
             logging.info('Block: %s (%ss)'%(str(block_index), "{:.2f}".format(time.time() - starttime, 3)))
             # Increment block index.
-            block_count = backend.rpc.getblockcount()
+            block_count = proxy.getblockcount()
             block_index +=1
 
         else:
@@ -943,7 +946,7 @@ def follow (db):
             # and then save those messages.
             # Every transaction in mempool is parsed independently. (DB is rolled back after each one.)
             mempool = []
-            util.MEMPOOL = backend.rpc.getrawmempool()
+            util.MEMPOOL = proxy.getrawmempool()
             for tx_hash in util.MEMPOOL:
                 tx_hash = bitcoinlib.core.b2lx(tx_hash)
 
