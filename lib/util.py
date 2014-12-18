@@ -571,4 +571,12 @@ def parse_id(match_id):
     assert match_id[64] == ID_SEPARATOR
     return match_id[:64], match_id[65:] # UTF-8 encoding means that the indices are doubled.
 
+
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, D):
+            return format(obj, '.8f')
+        # Let the base class default method raise the TypeError
+        return json.JSONEncoder.default(self, obj)
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

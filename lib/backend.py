@@ -2,6 +2,7 @@ import getpass
 import binascii
 import logging
 import sys
+import json
 from functools import lru_cache
 
 import bitcoin as bitcoinlib
@@ -68,13 +69,27 @@ def extract_addresses(tx):
 
 def unconfirmed_transactions(addr):
     unconfirmed_tx = []
-    for tx_hash in old_rpc('getrawmempool', []):
-        tx = get_cached_raw_transaction(tx_hash, verbose=True)
-        addresses = extract_addresses(json.dumps(tx))
-        if addr in addresses:
-            unconfirmed_tx.append(tx)
-    return unconfirmed_tx
 
+    call_id = 0
+    call_list = []
+    for tx_hash in old_rpc('getrawmempool', []):
+        call_list.append({
+            "method": 'getrawtransaction',
+            "params": [tx_hash, 1],
+            "jsonrpc": "2.0",
+            "id": call_id
+        })
+        call_id += 1
+
+    batch_responses = rpc._batch(call_list)
+    for response in batch_responses:
+        if 'error' not in response or response['error'] is None:
+            if 'result' in response and response['result'] is not None:
+                tx = response['result']
+                addresses = extract_addresses(json.dumps(tx, cls=util.DecimalEncoder))
+                if addr in addresses:
+                    unconfirmed_tx.append(tx)
+    return unconfirmed_tx
 
 
 def input_value_weight(amount):
