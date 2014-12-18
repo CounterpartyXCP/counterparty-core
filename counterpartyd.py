@@ -16,9 +16,6 @@ import signal
 import appdirs
 import platform
 
-import bitcoin as bitcoinlib
-import bitcoin.rpc as bitcoinlib_rpc
-
 from lib import config, api, util, exceptions, blocks, blockchain, check, backend, database, transaction, script, address, logger
 if os.name == 'nt':
     from lib import util_windows
@@ -260,11 +257,6 @@ def set_options(
         config.BACKEND_RPC = 'https://' + config.BACKEND_RPC
     else:
         config.BACKEND_RPC = 'http://' + config.BACKEND_RPC
-
-    # Connection to backend.
-    if config.TESTNET:
-        bitcoinlib.SelectParams('testnet')
-    backend.rpc = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC)
 
     # blockchain service name
     if blockchain_service_name:
@@ -667,16 +659,19 @@ if __name__ == '__main__':
     if config.FORCE:
         logging.warning('WARNING: THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.')
 
+    # Get proxy.
+    proxy = backend.get_proxy()
+
     # Backend
     if args.action in ('server', 'reparse', 'rollback') and not config.FORCE:
         logging.info('Status: Connecting to backend.')
-        backend.rpc.getblockcount()
+        proxy.getblockcount()
 
     # Version
     if args.action in ('server', 'reparse', 'rollback') and not config.FORCE:
         logging.info('Status: Checking version.')
         try:
-            check.version(backend.rpc.getblockcount())
+            check.version(proxy.getblockcount())
         except check.VersionUpdateRequiredError as e:
             traceback.print_exc(file=sys.stdout)
             sys.exit(config.EXITCODE_UPDATE_REQUIRED)

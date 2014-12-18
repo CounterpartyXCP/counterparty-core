@@ -5,14 +5,31 @@ import sys
 from functools import lru_cache
 
 import bitcoin as bitcoinlib
+import bitcoin.rpc as bitcoinlib_rpc
 
-from lib import util, script, address
+from lib import util
+from lib import script
+from lib import address
+from lib import config
+
+def get_proxy():
+    if config.TESTNET:
+        bitcoinlib.SelectParams('testnet')
+    proxy = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC)
+    return proxy
+
+def get_wallet():
+    proxy = get_proxy()
+    for group in proxy.listaddressgroupings():
+        for bunch in group:
+            yield bunch
 
 def dumpprivkey(addr):
     return old_rpc('dumpprivkey', [addr])
 
 def wallet_unlock():
-    getinfo = rpc.getinfo() # TODO: broken with btcd
+    proxy = get_proxy()
+    getinfo = proxy.getinfo() # TODO: broken with btcd
     if 'unlocked_until' in getinfo:
         if getinfo['unlocked_until'] >= 60:
             return True # Wallet is unlocked for at least the next 60 seconds.
@@ -28,10 +45,6 @@ def deserialize(tx_hex):
 def serialize(ctx):
     return bitcoinlib.core.CTransaction.serialize(ctx)
 
-def get_prevhash(c_hash):
-    c_block = rpc.getblock(c_hash)
-    return bitcoinlib.core.b2lx(c_block.hashPrevBlock)
-
 @lru_cache(maxsize=4096)
 def get_cached_raw_transaction(tx_hash, verbose=False):
     # NOTE: python-bitcoinlib won’t return JSON.
@@ -41,9 +54,11 @@ def get_cached_raw_transaction(tx_hash, verbose=False):
         return old_rpc('getrawtransaction', [tx_hash])
 
 def is_valid(addr):
-    return rpc.validateaddress(addr)['isvalid']
+    proxy = get_proxy()
+    return proxy.validateaddress(addr)['isvalid']
 def is_mine(addr):
-    return rpc.validateaddress(addr)['ismine']
+    proxy = get_proxy()
+    return proxy.validateaddress(addr)['ismine']
 
 def get_txhash_list(block):
     return [bitcoinlib.core.b2lx(ctx.GetHash()) for ctx in block.vtx]
@@ -112,7 +127,8 @@ def sort_unspent_txouts(unspent, allow_unconfirmed_inputs):
 
 def get_btc_supply(normalize=False):
     """returns the total supply of {} (based on what Bitcoin Core says the current block height is)""".format(config.BTC)
-    block_count = rpc.getblockcount()
+    proxy = get_proxy()
+    block_count = proxy.getblockcount()
     blocks_remaining = block_count
     total_supply = 0
     reward = 50.0
@@ -267,7 +283,7 @@ def old_rpc(method, params):
             raise address.AddressError('Invalid address. (Multi‐signature?)')
     # elif response_json['error']['code'] == -1 and response_json['error']['message'] == 'Block number out of range.':
     #     time.sleep(10)
-    #     return bitcoinlib.core.b2lx(rpc.getblockhash(block_index))
+    #     return bitcoinlib.core.b2lx(proxy.getblockhash(block_index))
     else:
         raise BitcoindError('{}'.format(response_json['error']))
 

@@ -350,11 +350,14 @@ def get_tx_info(tx_hex, block_index, block_parser=None):
 
     return tx_info
 
-def get_tx_info1(tx_hex, block_index, block_parser=None):
+def get_tx_info1(tx_hex, block_index, proxy=None, block_parser=None):
     """
     The destination, if it exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
+    if proxy == None:
+        proxy = backend.get_proxy()
+
     ctx = backend.deserialize(tx_hex)
 
     def get_pubkeyhash(scriptpubkey):
@@ -447,7 +450,7 @@ def get_tx_info1(tx_hex, block_index, block_parser=None):
             vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
             vin_ctx = backend.deserialize(vin_tx['__data__'])
         else:
-            vin_ctx = backend.rpc.getrawtransaction(vin.prevout.hash)
+            vin_ctx = proxy.getrawtransaction(vin.prevout.hash)
         vout = vin_ctx.vout[vin.prevout.n]
         fee += vout.nValue
 
@@ -465,11 +468,13 @@ def get_tx_info1(tx_hex, block_index, block_parser=None):
 
     return source, destination, btc_amount, fee, data
 
-def get_tx_info2(tx_hex, block_parser=None):
+def get_tx_info2(tx_hex, proxy=None, block_parser=None):
     """
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
+    if proxy == None:
+        proxy = backend.get_proxy()
 
     # Decode transaction binary.
     ctx = backend.deserialize(tx_hex)
@@ -568,7 +573,7 @@ def get_tx_info2(tx_hex, block_parser=None):
             vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
             vin_ctx = backend.deserialize(vin_tx['__data__'])
         else:
-            vin_ctx = backend.rpc.getrawtransaction(vin.prevout.hash)
+            vin_ctx = proxy.getrawtransaction(vin.prevout.hash)
         vout = vin_ctx.vout[vin.prevout.n]
         fee += vout.nValue
 
@@ -821,6 +826,8 @@ class MempoolError(Exception):
 def follow(db):
     cursor = db.cursor()
 
+    proxy = backend.get_proxy()
+
     # Initialise.
     initialise(db)
 
@@ -856,7 +863,7 @@ def follow(db):
         # If the backend is unreachable and `config.FORCE` is set, just sleep
         # and try again repeatedly.
         try:
-            block_count = backend.rpc.getblockcount()
+            block_count = proxy.getblockcount()
         except (ConnectionRefusedError, http.client.CannotSendRequest) as e:
             if config.FORCE:
                 time.sleep(config.BACKEND_POLL_INTERVAL)
@@ -877,8 +884,9 @@ def follow(db):
                 logging.debug('Status: Checking that block {} is not an orphan.'.format(c))
 
                 # Backend parent hash.
-                c_hash_bin = backend.rpc.getblockhash(c)
-                backend_parent = backend.get_prevhash(c_hash_bin)
+                c_hash_bin = proxy.getblockhash(c)
+                c_block = proxy.getblock(c_hash_bin)
+                backend_parent = bitcoinlib.core.b2lx(c_block.hashPrevBlock)
 
                 # DB parent hash.
                 blocks = list(cursor.execute('''SELECT * FROM blocks
@@ -909,8 +917,8 @@ def follow(db):
                 continue
 
             # Get and parse transactions in this block (atomically).
-            block_hash_bin = backend.rpc.getblockhash(c)
-            block = backend.rpc.getblock(block_hash_bin)
+            block_hash_bin = proxy.getblockhash(c)
+            block = proxy.getblock(block_hash_bin)
             block_hash = bitcoinlib.core.b2lx(block_hash_bin)
             previous_block_hash = bitcoinlib.core.b2lx(block.hashPrevBlock)
             block_time = block.nTime
@@ -948,7 +956,7 @@ def follow(db):
 
             logging.info('Block: %s (%ss)'%(str(block_index), "{:.2f}".format(time.time() - starttime, 3)))
             # Increment block index.
-            block_count = backend.rpc.getblockcount()
+            block_count = proxy.getblockcount()
             block_index += 1
 
         else:
@@ -971,7 +979,7 @@ def follow(db):
             # and then save those messages.
             # Every transaction in mempool is parsed independently. (DB is rolled back after each one.)
             mempool = []
-            util.MEMPOOL = backend.rpc.getrawmempool()
+            util.MEMPOOL = proxy.getrawmempool()
             for tx_hash in util.MEMPOOL:
                 tx_hash = bitcoinlib.core.b2lx(tx_hash)
 

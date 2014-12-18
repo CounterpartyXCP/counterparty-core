@@ -22,11 +22,6 @@ D = decimal.Decimal
 class ConfigurationError(Exception):
     pass
 
-def get_wallet():
-    for group in backend.rpc.listaddressgroupings():
-        for bunch in group:
-            yield bunch
-
 def get_address(address):
     address_dict = {}
     address_dict['balances'] = util.api('get_balances', {'filters': [('address', '==', address),]})
@@ -102,7 +97,7 @@ def market(give_asset, get_asset):
 
     # Your Pending Orders Matches.
     addresses = []
-    for bunch in get_wallet():
+    for bunch in backend.get_wallet():
         addresses.append(bunch[:2][0])
     filters = [
         ('tx0_address', 'IN', addresses),
@@ -346,14 +341,6 @@ def set_options(data_dir=None, backend_rpc_connect=None,
         config.BACKEND_RPC = 'https://' + config.BACKEND_RPC
     else:
         config.BACKEND_RPC = 'http://' + config.BACKEND_RPC
-
-    # Connection to backend.
-    # TODO: temp
-    import bitcoin as bitcoinlib
-    import bitcoin.rpc as bitcoinlib_rpc
-    if config.TESTNET:
-        bitcoinlib.SelectParams('testnet')
-    backend.rpc = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC)
 
     # blockchain service name
     if blockchain_service_name:
@@ -1057,7 +1044,7 @@ if __name__ == '__main__':
         totals = {}
 
         print()
-        for bunch in get_wallet():
+        for bunch in backend.get_wallet():
             address, btc_balance = bunch[:2]
             address_data = get_address(db, address=address)
             balances = address_data['balances']
@@ -1096,7 +1083,7 @@ if __name__ == '__main__':
 
     elif args.action == 'pending':
         addresses = []
-        for bunch in get_wallet():
+        for bunch in backend.get_wallet():
             addresses.append(bunch[:2][0])
         filters = [
             ('tx0_address', 'IN', addresses),
