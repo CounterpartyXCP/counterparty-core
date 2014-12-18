@@ -52,13 +52,10 @@ def unpack(message):
 
 def validate (db, source, destination, asset, quantity, block_index):
 
-    if util.protocol_change(block_index, 335000):
-        raise ValidateAssetError('destroy disabled')
-
     try:
         util.asset_id(asset)
     except AssetError:
-        raise ValidateAssetError('asset invalid')
+        raise ValidateError('asset invalid')
 
     try:
         address.validate(source)
@@ -81,7 +78,7 @@ def validate (db, source, destination, asset, quantity, block_index):
         raise ValidateError('quantity negative')
 
     if util.get_balance(db, source, asset) < quantity:
-        raise ValidateError('balance insufficient')
+        raise BalanceError('balance insufficient')
 
     if not config.TESTNET:
         raise ValidateError('disabled on mainnet')
@@ -105,7 +102,7 @@ def parse (db, tx, message):
         asset, quantity = None, None
         status = 'invalid: ' + ''.join(e.args)
 
-    except ValidateError as e:
+    except (ValidateError, BalanceError) as e:
         status = 'invalid: ' + ''.join(e.args)
 
     finally:

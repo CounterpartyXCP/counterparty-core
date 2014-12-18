@@ -655,11 +655,11 @@ class APIServer(threading.Thread):
             data = binascii.unhexlify(data_hex)
             message_type_id = struct.unpack(config.TXTYPE_FORMAT, data[:4])[0]
             message = data[4:]
-            if message_type_id == send.ID:
-                unpacked = send.unpack(db, message, util.last_block(db)['block_index'])
-            else:
-                raise APIError('unsupported message type')
-                # TODO: Support the rest of the message types.
+
+            for message_type in API_TRANSACTIONS:
+                if message_type_id == sys.modules['lib.messages.{}'.format(message_type)].ID:
+                    unpack_method = sys.modules['lib.messages.{}'.format(message_type)].unpack
+                    unpacked = unpack_method(db, message, util.last_block(db)['block_index'])
             return message_type_id, unpacked
 
         def _set_cors_headers(response):

@@ -257,7 +257,6 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
     return s
 
 
-class BalanceError (exceptions.TransactionError): pass
 def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
                  regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
                  multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
@@ -420,7 +419,7 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
     if not sufficient_funds:
         # Approximate needed change, fee by with most recently calculated quantities.
         total_btc_out = btc_out + max(change_quantity, 0) + final_fee
-        raise BalanceError('Insufficient bitcoins at address {}. (Need approximately {} {}.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)'.format(source, total_btc_out / config.UNIT, config.BTC))
+        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need approximately {} {}.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)'.format(source, total_btc_out / config.UNIT, config.BTC))
 
 
     '''Finish'''

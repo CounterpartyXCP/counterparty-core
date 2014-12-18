@@ -9,10 +9,10 @@ from lib import config
 from lib import address
 from lib.address import AddressError
 from lib.exceptions import ValidateError
-from lib.exceptions import ValidateAssetError
 from lib.exceptions import UnpackError
 from lib.exceptions import AssetError
 from lib.exceptions import AssetNameError
+from lib.exceptions import BalanceError
 
 FORMAT = '>QQ'
 LENGTH = 8 + 8
@@ -45,7 +45,7 @@ def validate(db, source, destination, asset, quantity, block_index):
     try:
         util.asset_id(asset)
     except AssetError:
-        raise ValidateAssetError('asset invalid')
+        raise ValidateError('asset invalid')
 
     try:
         address.validate(source)
@@ -70,7 +70,7 @@ def validate(db, source, destination, asset, quantity, block_index):
         raise ValidateError('quantity negative')
 
     if util.get_balance(db, source, asset) < quantity:
-        raise ValidateError('balance insufficient')
+        raise BalanceError('balance insufficient')
 
 def compose(db, source, destination, asset, quantity):
 
@@ -95,7 +95,7 @@ def parse(db, tx, message):
         asset, quantity = None, None
         status = 'invalid: ' + ''.join(e.args)
 
-    except ValidateError as e:
+    except (ValidateError, BalanceError) as e:
         status = 'invalid: ' + ''.join(e.args)
 
     finally:
