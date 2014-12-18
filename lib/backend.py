@@ -3,6 +3,7 @@ import binascii
 import logging
 import sys
 import json
+from decimal import Decimal as D
 from functools import lru_cache
 
 import bitcoin as bitcoinlib
@@ -81,6 +82,13 @@ def extract_addresses(tx):
 
     return addresses
 
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, D):
+            return format(obj, '.8f')
+        # Let the base class default method raise the TypeError
+        return json.JSONEncoder.default(self, obj)
+
 def unconfirmed_transactions(address):
     unconfirmed_tx = []
 
@@ -95,13 +103,13 @@ def unconfirmed_transactions(address):
         })
         call_id += 1
 
-    batch_responses = rpc._batch(call_list)
+    batch_responses = get_proxy()._batch(call_list)
     for response in batch_responses:
         if 'error' not in response or response['error'] is None:
             if 'result' in response and response['result'] is not None:
                 tx = response['result']
-                addresses = extract_addresses(json.dumps(tx, cls=util.DecimalEncoder))
-                if addr in addresses:
+                addresses = extract_addresses(json.dumps(tx, cls=DecimalEncoder))
+                if address in addresses:
                     unconfirmed_tx.append(tx)
 
     return unconfirmed_tx
