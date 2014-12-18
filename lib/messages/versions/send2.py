@@ -6,8 +6,7 @@ import struct
 
 from lib import util
 from lib import config
-from lib import address
-from lib.address import AddressError
+from lib.script import AddressError
 from lib.exceptions import ValidateError
 from lib.exceptions import UnpackError
 from lib.exceptions import AssetError
@@ -48,12 +47,12 @@ def validate(db, source, destination, asset, quantity, block_index):
         raise ValidateError('asset invalid')
 
     try:
-        address.validate(source)
+        script.validate(source)
     except AddressError:
         raise ValidateError('source address invalid')
 
     try:
-        address.validate(destination)
+        script.validate(destination)
     except AddressError:
         raise ValidateError('destination address invalid')
 

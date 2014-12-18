@@ -4,8 +4,10 @@
 
 import struct
 
-from lib import (util, config, address)
-from lib.address import AddressError
+from lib import util
+from lib import config
+from lib import script
+from lib.script import AddressError
 from lib.exceptions import *
 
 FORMAT = '>QQ8s'
@@ -58,7 +60,7 @@ def validate (db, source, destination, asset, quantity, block_index):
         raise ValidateError('asset invalid')
 
     try:
-        address.validate(source)
+        script.validate(source)
     except AddressError:
         raise ValidateError('source address invalid')
 

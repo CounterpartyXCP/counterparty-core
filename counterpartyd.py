@@ -16,7 +16,7 @@ import signal
 import appdirs
 import platform
 
-from lib import config, api, util, exceptions, blocks, blockchain, check, backend, database, transaction, script, address, logger
+from lib import config, api, util, exceptions, blocks, blockchain, check, backend, database, transaction, script, logger
 if os.name == 'nt':
     from lib import util_windows
 
@@ -70,8 +70,8 @@ def get_lock():
 def cli(method, params, unsigned):
     # Get unsigned transaction serialisation.
 
-    is_multisig = address.is_multisig(params['source'])
-    params['source'] = address.make_canonical(params['source'])
+    is_multisig = script.is_multisig(params['source'])
+    params['source'] = script.make_canonical(params['source'])
     pubkey = None
 
     if not is_multisig:

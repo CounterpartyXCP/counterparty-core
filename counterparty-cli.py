@@ -13,7 +13,7 @@ import binascii
 import appdirs
 from prettytable import PrettyTable
 
-from lib import config, util, exceptions, backend, database, transaction, script, address
+from lib import config, util, exceptions, backend, database, transaction, script
 if os.name == 'nt':
     from lib import util_windows
 
@@ -160,8 +160,8 @@ def market(give_asset, get_asset):
 def cli(method, params, unsigned):
     # Get unsigned transaction serialisation.
 
-    is_multisig = address.is_multisig(params['source'])
-    params['source'] = address.make_canonical(params['source'])
+    is_multisig = script.is_multisig(params['source'])
+    params['source'] = script.make_canonical(params['source'])
     pubkey = None
 
     if not is_multisig:
@@ -493,12 +493,12 @@ def set_options(data_dir=None, backend_rpc_connect=None,
     else:
         config.BROADCAST_TX_MAINNET = '{}'.format(config.BTC_CLIENT)
 
-def balances(addr):
-    addr = address.canonical(addr)
-    address.validate(addr)
-    balances = get_address(db, address=addr)['balances']
+def balances(address):
+    address = script.canonical(address)
+    script.validate(address)
+    balances = get_address(db, address=address)['balances']
     table = PrettyTable(['Asset', 'Amount'])
-    btc_balance = backend.get_btc_balance(addr)
+    btc_balance = backend.get_btc_balance(address)
     table.add_row([config.BTC, btc_balance])  # BTC
     for balance in balances:
         asset = balance['asset']

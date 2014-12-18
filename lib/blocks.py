@@ -20,7 +20,12 @@ import http
 
 import bitcoin as bitcoinlib
 
-from lib import (config, exceptions, util, check, script, backend, address)
+from lib import config
+from lib import exceptions
+from lib import util
+from lib import check
+from lib import script
+from lib import backend
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute, destroy)
 
 from .blockchain.blocks_parser import BlockchainParser, ChainstateParser
@@ -371,9 +376,9 @@ def get_tx_info1(tx_hex, block_index, proxy=None, block_parser=None):
         if not pubkeyhash:
             return False
         pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
-        address = address.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
+        address = script.base58_check_encode(pubkeyhash, config.ADDRESSVERSION)
         # Test decoding of address.
-        if address != config.UNSPENDABLE and binascii.unhexlify(bytes(pubkeyhash, 'utf-8')) != address.base58_check_decode(address, config.ADDRESSVERSION):
+        if address != config.UNSPENDABLE and binascii.unhexlify(bytes(pubkeyhash, 'utf-8')) != script.base58_check_decode(address, config.ADDRESSVERSION):
             return False
 
         return address
@@ -511,7 +516,7 @@ def get_tx_info2(tx_hex, proxy=None, block_parser=None):
             destination, data = None, chunk[len(config.PREFIX):]
         else:                                                       # Destination
             pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
-            destination, data = address.base58_check_encode(pubkeyhash, config.ADDRESSVERSION), None
+            destination, data = script.base58_check_encode(pubkeyhash, config.ADDRESSVERSION), None
 
         return destination, data
 
@@ -528,7 +533,7 @@ def get_tx_info2(tx_hex, proxy=None, block_parser=None):
             destination, data = None, chunk[len(config.PREFIX):]
         else:                                                       # Destination
             pubkeyhashes = [script.pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
-            destination, data = address.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes)), None
+            destination, data = script.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes)), None
 
         return destination, data
 
