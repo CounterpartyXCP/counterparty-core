@@ -13,7 +13,7 @@ import decimal
 import logging
 
 import requests
-from pycoin.encoding import is_sec_compressed, EncodingError
+from pycoin.encoding import EncodingError
 from Crypto.Cipher import ARC4
 from bitcoin.core.script import CScript
 from bitcoin.core import x
@@ -66,6 +66,31 @@ def op_push (i):
     else:
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
+def get_dust_return_pubkey(source, provided_pubkeys, private_key_wif):
+    # Get `dust_return_pubkey`, if necessary.
+    if encoding in ('multisig', 'pubkeyhash'):
+
+        # Get hex dust return pubkey.
+        if script.is_multisig(source):
+            a, self_pubkeys, b = script.extract_array(script.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys))
+            dust_return_pubkey_hex = self_pubkeys[0]
+        else:
+            if not provided_pubkeys:
+                # If public key was not provided, derive it from the private key.
+                private_key_wif = backend.dumpprivkey(source)
+                dust_return_pubkey_hex = script.private_key_to_public_key(private_key_wif)
+            else:
+                dust_return_pubkey_hex = script.pubkeyhash_to_pubkey(source)
+
+        # Convert hex public key into the (binary) dust return pubkey.
+        try:
+            dust_return_pubkey = binascii.unhexlify(dust_return_pubkey_hex)
+        except binascii.Error:
+            raise InputError('Invalid private key.')
+
+    else:
+        dust_return_pubkey = None
+    return dust_return_pubkey
 
 def get_multisig_script(address):
 
@@ -138,7 +163,7 @@ def make_fully_valid(pubkey):
     return fully_valid_pubkey
 
 
-def serialise (block_index, encoding, inputs, destination_outputs, data_output=None, change_output=None, dust_return_public_key=None):
+def serialise (block_index, encoding, inputs, destination_outputs, data_output=None, change_output=None, dust_return_pubkey=None):
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
     # Number of inputs.
@@ -205,8 +230,8 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
                 tx_script += data_pubkey_1                         # (Fake) public key                  (1/2)
                 tx_script += op_push(33)                           # Push bytes of data chunk (fake) public key    (2/2)
                 tx_script += data_pubkey_2                         # (Fake) public key                  (2/2)
-                tx_script += op_push(len(dust_return_public_key))  # Push bytes of source public key
-                tx_script += dust_return_public_key                       # Source public key
+                tx_script += op_push(len(dust_return_pubkey))  # Push bytes of source public key
+                tx_script += dust_return_pubkey                       # Source public key
                 tx_script += OP_3                                  # OP_3
                 tx_script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
             else:
@@ -215,8 +240,8 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
                 data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
                 # Construct script.
                 tx_script = OP_1                                   # OP_1
-                tx_script += op_push(len(dust_return_public_key))  # Push bytes of source public key
-                tx_script += dust_return_public_key                       # Source public key
+                tx_script += op_push(len(dust_return_pubkey))  # Push bytes of source public key
+                tx_script += dust_return_pubkey                       # Source public key
                 tx_script += op_push(len(data_chunk))              # Push bytes of data chunk (fake) public key
                 tx_script += data_chunk                            # (Fake) public key
                 tx_script += OP_2                                  # OP_2
@@ -261,16 +286,28 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
     s += (0).to_bytes(4, byteorder='little')                # LockTime
     return s
 
+def chunks(l, n):
+    """ Yield successive n‐sized chunks from l.
+    """
+    for i in range(0, len(l), n):
+        yield l[i:i+n]
 
-def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_KB,
-                 regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
-                 multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
-                 op_return_value=config.DEFAULT_OP_RETURN_VALUE,
-                 exact_fee=None, fee_provided=0, self_public_key_hex=None,
-                 allow_unconfirmed_inputs=False):
+def construct (db, tx_info, encoding='auto',
+               fee_per_kb=config.DEFAULT_FEE_PER_KB,
+               regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
+               multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
+               op_return_value=config.DEFAULT_OP_RETURN_VALUE,
+               exact_fee=None, fee_provided=0, provided_pubkeys=None,
+               allow_unconfirmed_inputs=False):
 
     block_index = util.last_block(db)['block_index']
     (source, destination_outputs, data) = tx_info
+
+    # Sanity checks.
+    if exact_fee and not isinstance(exact_fee, int):
+        raise exceptions.TransactionError('Exact fees must be in satoshis.')
+    if not isinstance(fee_provided, int):
+        raise exceptions.TransactionError('Fee provided must be in satoshis.')
 
 
     '''Destinations'''
@@ -286,7 +323,6 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
             dust_size = multisig_dust_size
         else:
             dust_size = regular_dust_size
-
         if value == None:
             value = dust_size
         elif value < dust_size:
@@ -295,7 +331,7 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
         # Address.
         script.validate(address)
         if script.is_multisig(address):
-            destination_outputs_new.append((script.multisig_pubkeyhashes_to_pubkeys(address), value))
+            destination_outputs_new.append((script.multisig_pubkeyhashes_to_pubkeys(address, provided_pubkeys), value))
         else:
             destination_outputs_new.append((address, value))
 
@@ -309,48 +345,42 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
     if data:
         if encoding == 'auto':
             if len(data) <= config.OP_RETURN_MAX_SIZE:
-                # encoding = 'opreturn'
-                encoding = 'multisig'   # BTCGuild isn’t mining OP_RETURN?!
+                encoding = 'multisig'   # BTCGuild isn’t mining `OP_RETURN`?!
             else:
                 encoding = 'multisig'
-
-        if encoding not in ('pubkeyhash', 'multisig', 'opreturn'):
+        elif encoding not in ('pubkeyhash', 'multisig', 'opreturn'):
             raise exceptions.TransactionError('Unknown encoding‐scheme.')
-
-    if exact_fee and not isinstance(exact_fee, int):
-        raise exceptions.TransactionError('Exact fees must be in satoshis.')
-    if not isinstance(fee_provided, int):
-        raise exceptions.TransactionError('Fee provided must be in satoshis.')
 
     # Divide data into chunks.
     if data:
-        def chunks(l, n):
-            """ Yield successive n‐sized chunks from l.
-            """
-            for i in range(0, len(l), n): yield l[i:i+n]
-        if util.enabled('multisig_addresses', block_index):   # Protocol change.
-            if encoding == 'pubkeyhash':
-                data_array = list(chunks(data, 20 - 1 - 8)) # Prefix is also a suffix here.
-            elif encoding == 'multisig':
-                data_array = list(chunks(data, (33 * 2) - 1 - 8 - 2 - 2)) # Two pubkeys, minus length byte, minus prefix, minus two nonces, minus two sign bytes
-        else:
-            data = config.PREFIX + data
-            if encoding == 'pubkeyhash':
-                data_array = list(chunks(data + config.PREFIX, 20 - 1)) # Prefix is also a suffix here.
-            elif encoding == 'multisig':
-                data_array = list(chunks(data, 33 - 1))
-        if encoding == 'opreturn':
-            data_array = list(chunks(data, config.OP_RETURN_MAX_SIZE))
-            assert len(data_array) == 1 # Only one OP_RETURN output currently supported (OP_RETURN messages should all be shorter than 40 bytes, at the moment).
+        if encoding == 'pubkeyhash':
+            # Prefix is also a suffix here.
+            chunk_size = 20 - 1 - 8
+        elif encoding == 'multisig':
+            # Two pubkeys, minus length byte, minus prefix, minus two nonces,
+            # minus two sign bytes.
+            chunk_size = (33 * 2) - 1 - 8 - 2 - 2)
+        elif encoding == 'opreturn':
+            chunk_size = config.OP_RETURN_MAX_SIZE
+            if len(data) > chunk_size:
+                raise exceptions.TransactionError('One `OP_RETURN` output per\ 
+                                                  transaction.')
+        data_array = list(chunks(data, chunk_size))
     else:
         data_array = []
 
     # Data outputs.
-    if encoding == 'multisig': data_value = multisig_dust_size
-    elif encoding == 'opreturn': data_value = op_return_value
-    else: data_value = regular_dust_size # Pay‐to‐PubKeyHash
-    if data: data_output = (data_array, data_value)
-    else: data_output = None
+    if data:
+        if encoding == 'multisig':
+            data_value = multisig_dust_size
+        elif encoding == 'opreturn':
+            data_value = op_return_value
+        else:
+            # Pay‐to‐PubKeyHash, e.g.
+            data_value = regular_dust_size
+        data_output = (data_array, data_value)
+    else:
+        data_output = None
     data_btc_out = sum([data_value for data_chunk in data_array])
 
 
@@ -362,33 +392,16 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
         # private key retrieved from wallet.
     if source:
         script.validate(source)
+    dust_return_pubkey = get_dust_return_pubkey(source, provided_pubkeys,
+                                                private_key_wif)
 
-    self_public_key = None
-    if encoding in ('multisig', 'pubkeyhash'):
-        if script.is_multisig(source):
-            a, self_pubkeys, b = script.extract_array(script.multisig_pubkeyhashes_to_pubkeys(source))
-            self_public_key = binascii.unhexlify(self_pubkeys[0])
-        else:
-            if not self_public_key_hex:
-                # If public key was not provided, derive it from the private key.
-                private_key_wif = backend.dumpprivkey(source)
-                self_public_key_hex = script.private_key_to_public_key(private_key_wif)
-            else:
-                # If public key was provided, check that it matches the source address.
-                if source != script.pubkey_to_pubkeyhash(binascii.unhexlify(self_public_key_hex)):
-                    raise InputError('provided public key does not match the source address')
-
-            # Convert hex public key into binary public key.
-            try:
-                self_public_key = binascii.unhexlify(self_public_key_hex)
-                is_compressed = is_sec_compressed(self_public_key)
-            except (EncodingError, binascii.Error):
-                raise InputError('Invalid private key.')
-
-    # Calculate collective size of outputs.
-    if encoding == 'multisig': data_output_size = 81        # 71 for the data
-    elif encoding == 'opreturn': data_output_size = 90      # 80 for the data
-    else: data_output_size = 25 + 9                         # Pay‐to‐PubKeyHash (25 for the data?)
+    # Calculate collective size of outputs, for fee calculation.
+    if encoding == 'multisig':
+        data_output_size = 81       # 71 for the data
+    elif encoding == 'opreturn':
+        data_output_size = 90       # 80 for the data
+    else:
+        data_output_size = 25 + 9   # Pay‐to‐PubKeyHash (25 for the data?)
     outputs_size = ((25 + 9) * len(destination_outputs)) + (len(data_array) * data_output_size)
 
     # Get inputs.
@@ -396,7 +409,8 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
     unspent = backend.sort_unspent_txouts(unspent, allow_unconfirmed_inputs)
     logging.debug('Sorted UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
 
-    inputs, btc_in = [], 0
+    inputs = []
+    btc_in = 0
     change_quantity = 0
     sufficient_funds = False
     final_fee = fee_per_kb
@@ -405,7 +419,8 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
         inputs.append(coin)
         btc_in += round(coin['amount'] * config.UNIT)
 
-        # If exact fee is specified, use that. Otherwise, calculate size of tx and base fee on that (plus provide a minimum fee for selling BTC).
+        # If exact fee is specified, use that. Otherwise, calculate size of tx
+        # and base fee on that (plus provide a minimum fee for selling BTC).
         if exact_fee:
             final_fee = exact_fee
         else:
@@ -418,40 +433,52 @@ def construct (db, tx_info, encoding='auto', fee_per_kb=config.DEFAULT_FEE_PER_K
         btc_out = destination_btc_out + data_btc_out
         change_quantity = btc_in - (btc_out + final_fee)
         logging.debug('Change quantity: {} BTC'.format(change_quantity / config.UNIT))
-        if change_quantity == 0 or change_quantity >= regular_dust_size: # If change is necessary, must not be a dust output.
+        # If change is necessary, must not be a dust output.
+        if change_quantity == 0 or change_quantity >= regular_dust_size:
             sufficient_funds = True
             break
+
     if not sufficient_funds:
-        # Approximate needed change, fee by with most recently calculated quantities.
+        # Approximate needed change, fee by with most recently calculated
+        # quantities.
         total_btc_out = btc_out + max(change_quantity, 0) + final_fee
-        raise exceptions.BalanceError('Insufficient bitcoins at address {}. (Need approximately {} {}.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)'.format(source, total_btc_out / config.UNIT, config.BTC))
+        raise exceptions.BalanceError('Insufficient {} at address {}. (Need approximately {} {}.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)'.format(config.BTC, source, total_btc_out / config.UNIT, config.BTC))
 
 
     '''Finish'''
 
     # Change output.
-    if script.is_multisig(source):
-        change_address = script.multisig_pubkeyhashes_to_pubkeys(source)
+    if change_quantity:
+        if script.is_multisig(source):
+            change_address = script.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
+        else:
+            change_address = source
+        change_output = (change_address, change_quantity)
     else:
-        change_address = source
-    if change_quantity: change_output = (change_address, change_quantity)
-    else: change_output = None
+        change_output = None
 
 
     # Serialise inputs and outputs.
-    unsigned_tx = serialise(block_index, encoding, inputs, destination_outputs, data_output, change_output, dust_return_public_key=self_public_key)
+    unsigned_tx = serialise(block_index, encoding, inputs, destination_outputs,
+                            data_output, change_output,
+                            dust_return_pubkey=dust_return_pubkey)
     unsigned_tx_hex = binascii.hexlify(unsigned_tx).decode('utf-8')
 
-    # Check that the constructed transaction isn’t doing anything funny.
+
+    '''Sanity Check'''
+
     from lib import blocks
     (desired_source, desired_destination_outputs, desired_data) = tx_info
     desired_source = script.make_canonical(desired_source)
     desired_destination = script.make_canonical(desired_destination_outputs[0][0]) if desired_destination_outputs else ''
     # Include change in destinations for BTC transactions.
     if change_output and not desired_data and desired_destination != config.UNSPENDABLE:
-        if desired_destination == '': desired_destination = desired_source
-        else: desired_destination += '-{}'.format(desired_source)
-    if desired_data == None: desired_data = b''
+        if desired_destination == '':
+            desired_destination = desired_source
+        else:
+            desired_destination += '-{}'.format(desired_source)
+    if desired_data == None:
+        desired_data = b''
     parsed_source, parsed_destination, x, y, parsed_data = blocks.get_tx_info2(unsigned_tx_hex)
     if (desired_source, desired_destination, desired_data) != (parsed_source, parsed_destination, parsed_data):
         raise exceptions.TransactionError('constructed transaction does not parse correctly')

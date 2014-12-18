@@ -11,6 +11,7 @@
 	* code clean‐up
 	* mainnet burns are hard‐coded
 	* sanity checks for manually provided public and private keys
+	* allow manually providing pubkeys for multi‐sig addresses
 	* handle protocol changes more elegantly
 	* more sophisticated version checking
 	* removed obsolete `carefulness` CLI option

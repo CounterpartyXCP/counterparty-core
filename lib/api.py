@@ -252,7 +252,7 @@ def compose_transaction(db, name, params,
                                         regular_dust_size=regular_dust_size,
                                         multisig_dust_size=multisig_dust_size,
                                         op_return_value=op_return_value,
-                                        self_public_key_hex=pubkey,
+                                        provided_pubkeys=pubkey,
                                         allow_unconfirmed_inputs=allow_unconfirmed_inputs,
                                         exact_fee=fee,
                                         fee_provided=fee_provided)
