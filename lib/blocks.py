@@ -565,6 +565,11 @@ def get_tx_info2(tx_hex, proxy=None, block_parser=None):
             else:                   # Data.
                 data += new_data
 
+    # Only look for source if data were found or destination is `UNSPENDABLE`,
+    # for speed.
+    if not data and destinations != [config.UNSPENDABLE,]:
+        raise DecodeError('no data and not unspendable')
+
     # Collect all (unique) source addresses.
     sources = []
     for vin in ctx.vin[:]:                   # Loop through inputs.
