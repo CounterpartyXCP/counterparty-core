@@ -956,7 +956,7 @@ def unconfirmed_transactions(address):
 
     call_id = 0
     call_list = []
-    for tx_hash in rpc('getrawmempool', []):
+    for tx_hash in backend.old_rpc('getrawmempool', []):
         call_list.append({
             "method": 'getrawtransaction',
             "params": [tx_hash, 1],
@@ -965,11 +965,7 @@ def unconfirmed_transactions(address):
         })
         call_id += 1
 
-    if config.TESTNET:
-        bitcoinlib.SelectParams('testnet')
-    proxy = bitcoinlib.rpc.Proxy(service_url=config.BACKEND_RPC)
-    batch_responses = proxy._batch(call_list)
-
+    batch_responses = backend.get_proxy()._batch(call_list)
     for response in batch_responses:
         if 'error' not in response or response['error'] is None:
             if 'result' in response and response['result'] is not None:
