@@ -360,12 +360,11 @@ def construct (db, tx_info, encoding='auto',
         elif encoding == 'multisig':
             # Two pubkeys, minus length byte, minus prefix, minus two nonces,
             # minus two sign bytes.
-            chunk_size = (33 * 2) - 1 - 8 - 2 - 2)
+            chunk_size = (33 * 2) - 1 - 8 - 2 - 2
         elif encoding == 'opreturn':
             chunk_size = config.OP_RETURN_MAX_SIZE
             if len(data) > chunk_size:
-                raise exceptions.TransactionError('One `OP_RETURN` output per\ 
-                                                  transaction.')
+                raise exceptions.TransactionError('One `OP_RETURN` output per transaction.')
         data_array = list(chunks(data, chunk_size))
     else:
         data_array = []
