@@ -2,6 +2,8 @@ import getpass
 import binascii
 import logging
 import sys
+import json
+from decimal import Decimal as D
 from functools import lru_cache
 
 import bitcoin as bitcoinlib
@@ -80,15 +82,37 @@ def extract_addresses(tx):
 
     return addresses
 
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, D):
+            return format(obj, '.8f')
+        # Let the base class default method raise the TypeError
+        return json.JSONEncoder.default(self, obj)
+
 def unconfirmed_transactions(address):
     unconfirmed_tx = []
-    for tx_hash in old_rpc('getrawmempool', []):
-        tx = get_cached_raw_transaction(tx_hash, verbose=True)
-        addresses = extract_addresses(json.dumps(tx))
-        if address in addresses:
-            unconfirmed_tx.append(tx)
-    return unconfirmed_tx
 
+    call_id = 0
+    call_list = []
+    for tx_hash in old_rpc('getrawmempool', []):
+        call_list.append({
+            "method": 'getrawtransaction',
+            "params": [tx_hash, 1],
+            "jsonrpc": "2.0",
+            "id": call_id
+        })
+        call_id += 1
+
+    batch_responses = get_proxy()._batch(call_list)
+    for response in batch_responses:
+        if 'error' not in response or response['error'] is None:
+            if 'result' in response and response['result'] is not None:
+                tx = response['result']
+                addresses = extract_addresses(json.dumps(tx, cls=DecimalEncoder))
+                if address in addresses:
+                    unconfirmed_tx.append(tx)
+
+    return unconfirmed_tx
 
 
 def input_value_weight(amount):
