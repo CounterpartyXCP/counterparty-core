@@ -67,7 +67,7 @@ def op_push (i):
     else:
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
-def get_dust_return_pubkey(source, provided_pubkeys, private_key_wif):
+def get_dust_return_pubkey(source, provided_pubkeys, encoding):
     # Get `dust_return_pubkey`, if necessary.
     if encoding in ('multisig', 'pubkeyhash'):
 
@@ -360,12 +360,11 @@ def construct (db, tx_info, encoding='auto',
         elif encoding == 'multisig':
             # Two pubkeys, minus length byte, minus prefix, minus two nonces,
             # minus two sign bytes.
-            chunk_size = (33 * 2) - 1 - 8 - 2 - 2)
+            chunk_size = (33 * 2) - 1 - 8 - 2 - 2
         elif encoding == 'opreturn':
             chunk_size = config.OP_RETURN_MAX_SIZE
             if len(data) > chunk_size:
-                raise exceptions.TransactionError('One `OP_RETURN` output per\ 
-                                                  transaction.')
+                raise exceptions.TransactionError('One `OP_RETURN` output per transaction.')
         data_array = list(chunks(data, chunk_size))
     else:
         data_array = []
@@ -394,7 +393,7 @@ def construct (db, tx_info, encoding='auto',
     if source:
         script.validate(source)
     dust_return_pubkey = get_dust_return_pubkey(source, provided_pubkeys,
-                                                private_key_wif)
+                                                encoding)
 
     # Calculate collective size of outputs, for fee calculation.
     if encoding == 'multisig':
