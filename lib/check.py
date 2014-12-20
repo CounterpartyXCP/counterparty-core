@@ -101,7 +101,7 @@ def check_change(protocol_change):
 
 def version (block_index):
     try:
-        host = 'https://counterpartyxcp.github.io/counterpartyd/version.json'
+        host = 'https://counterpartyxcp.github.io/counterpartyd/protocol_changes.json'
         response = requests.get(host, headers={'cache-control': 'no-cache'})
         versions = json.loads(response.text)
     except Exception as e:
