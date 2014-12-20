@@ -1,5 +1,5 @@
 ## Client Versions ##
-* v9.49.2 (???)
+* v9.49.2 (2014-12-19)
 	* prepare for ‘destroy’ functionality
 	* match IDs now include underscore
 	* code clean‐up
