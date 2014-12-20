@@ -43,9 +43,9 @@ Credit: 10.0 BBBB to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiW
 Sorted UTXOs: ['amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6', 'amount: 1.0; txid: 9d34af75fca5282eb97f1aba6cf0f23e78556e6fc04a16e013351d841093d539; vout: 0; confirmations: 6']
 New input: amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6
 Change quantity: 0.999822 BTC
-Debit: 0.5 XCP from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #issuance fee# <a2b4ba345a6906fbdb7d9d24bb17e3fac8dc283354127ac3c1d5b38cb602d1a6>
-Issuance: 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 created 100000 of indivisible asset BBBC (a2b4ba345a6906fbdb7d9d24bb17e3fac8dc283354127ac3c1d5b38cb602d1a6) [valid]
-Credit: 100000 BBBC to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #issuance# <a2b4ba345a6906fbdb7d9d24bb17e3fac8dc283354127ac3c1d5b38cb602d1a6>
+Debit: 0.5 XCP from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #issuance fee# <776fb4dc98d29b37b676ebf6b19dde4794a048af0e2830ff514920d6e57c10bb>
+Issuance: 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 created 100000 of indivisible asset BBBC (776fb4dc98d29b37b676ebf6b19dde4794a048af0e2830ff514920d6e57c10bb) [valid]
+Credit: 100000 BBBC to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #issuance# <776fb4dc98d29b37b676ebf6b19dde4794a048af0e2830ff514920d6e57c10bb>
 Sorted UTXOs: ['amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6', 'amount: 1.0; txid: 9d34af75fca5282eb97f1aba6cf0f23e78556e6fc04a16e013351d841093d539; vout: 0; confirmations: 6']
 New input: amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6
 Change quantity: 0.999744 BTC
@@ -180,44 +180,35 @@ Expired bet: 4c601826f72f2613c1b2c90e8e649981c005d4d895ae3bb5852ef3489ba6c2ea
 Debit: 10000 BBBC from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #send# <2cfbac01ae9a33a41fc062446bf8b08d85c6ca5082fb3ce9042f3e323999b88d>
 Credit: 10000 BBBC to 1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #send# <2cfbac01ae9a33a41fc062446bf8b08d85c6ca5082fb3ce9042f3e323999b88d>
 Send: 10000 BBBC from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 to 1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (2cfbac01ae9a33a41fc062446bf8b08d85c6ca5082fb3ce9042f3e323999b88d) [valid]
-Total quantity to be called back: 3157 BBBC
 Sorted UTXOs: ['amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6', 'amount: 1.0; txid: 9d34af75fca5282eb97f1aba6cf0f23e78556e6fc04a16e013351d841093d539; vout: 0; confirmations: 6']
 New input: amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6
 Change quantity: 0.999822 BTC
-Debit: 47.355 XCP from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #callback# <5ba45d0164b830fa68c8d89c2d46e6d0342d78c2385d30b47f85536e8a9c3561>
-Credit: 3157 BBBC to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #callback# <5ba45d0164b830fa68c8d89c2d46e6d0342d78c2385d30b47f85536e8a9c3561>
-Debit: 3157 BBBC from 1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #callback# <5ba45d0164b830fa68c8d89c2d46e6d0342d78c2385d30b47f85536e8a9c3561>
-Credit: 47.355 XCP to 1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #callback# <5ba45d0164b830fa68c8d89c2d46e6d0342d78c2385d30b47f85536e8a9c3561>
-Callback: 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 called back 30.0% of BBBC (5ba45d0164b830fa68c8d89c2d46e6d0342d78c2385d30b47f85536e8a9c3561) [valid]
-Sorted UTXOs: ['amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6', 'amount: 1.0; txid: 9d34af75fca5282eb97f1aba6cf0f23e78556e6fc04a16e013351d841093d539; vout: 0; confirmations: 6']
-New input: amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6
-Change quantity: 0.999822 BTC
-Debit: 0.11021663 XCP from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #open RPS# <7a08c17d9dd9e4796662f541701efe691b48684cb0f0c384a7f5bb542dea2665>
+Debit: 0.11021663 XCP from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #open RPS# <fa7429664990690ac78274dca111dcb53ed3bd8ee0f3f728305a34db0b89d483>
 RPS: 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 opens game with 5 possible moves and a wager of 0.11021663 XCP
 Sorted UTXOs: ['amount: 1.5; txid: 5f4aa5addf4d37d63ad251bd8ce46e425a9f0ab34ffe67926e6d56a8bf75aa72; vout: 0; confirmations: 6']
 New input: amount: 1.5; txid: 5f4aa5addf4d37d63ad251bd8ce46e425a9f0ab34ffe67926e6d56a8bf75aa72; vout: 0; confirmations: 6
 Change quantity: 1.499822 BTC
-Debit: 0.11021663 XCP from 1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #open RPS# <6f01d2eb3703f4542954feb08433efa4e91a9ae55d95302eb262772d24739364>
+Debit: 0.11021663 XCP from 1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #open RPS# <e744b41a49191f82166ec2e6f32c56a16b9c9c6ed91b9e7d5da97caf95d26df9>
 RPS: 1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 opens game with 5 possible moves and a wager of 0.11021663 XCP
-RPS Match: 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 is playing a 5-moves game with 1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 with a wager of 0.11021663 XCP (7a08c17d9dd9e4796662f541701efe691b48684cb0f0c384a7f5bb542dea2665_6f01d2eb3703f4542954feb08433efa4e91a9ae55d95302eb262772d24739364) [pending]
+RPS Match: 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 is playing a 5-moves game with 1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 with a wager of 0.11021663 XCP (fa7429664990690ac78274dca111dcb53ed3bd8ee0f3f728305a34db0b89d483_e744b41a49191f82166ec2e6f32c56a16b9c9c6ed91b9e7d5da97caf95d26df9) [pending]
 Sorted UTXOs: ['amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6', 'amount: 1.0; txid: 9d34af75fca5282eb97f1aba6cf0f23e78556e6fc04a16e013351d841093d539; vout: 0; confirmations: 6']
 New input: amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6
 Change quantity: 0.999744 BTC
-RPS Resolved: 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 is playing 3 on a 5-moves game with 1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 with a wager of 0.11021663 XCP (7a08c17d9dd9e4796662f541701efe691b48684cb0f0c384a7f5bb542dea2665_6f01d2eb3703f4542954feb08433efa4e91a9ae55d95302eb262772d24739364) [resolved and pending]
+RPS Resolved: 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 is playing 3 on a 5-moves game with 1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 with a wager of 0.11021663 XCP (fa7429664990690ac78274dca111dcb53ed3bd8ee0f3f728305a34db0b89d483_e744b41a49191f82166ec2e6f32c56a16b9c9c6ed91b9e7d5da97caf95d26df9) [resolved and pending]
 Sorted UTXOs: ['amount: 1.5; txid: 5f4aa5addf4d37d63ad251bd8ce46e425a9f0ab34ffe67926e6d56a8bf75aa72; vout: 0; confirmations: 6']
 New input: amount: 1.5; txid: 5f4aa5addf4d37d63ad251bd8ce46e425a9f0ab34ffe67926e6d56a8bf75aa72; vout: 0; confirmations: 6
 Change quantity: 1.499744 BTC
-Credit: 0.22043326 XCP to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #wins# <7a08c17d9dd9e4796662f541701efe691b48684cb0f0c384a7f5bb542dea2665_6f01d2eb3703f4542954feb08433efa4e91a9ae55d95302eb262772d24739364>
-RPS Resolved: 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 is playing 5 on a 5-moves game with 1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 with a wager of 0.11021663 XCP (7a08c17d9dd9e4796662f541701efe691b48684cb0f0c384a7f5bb542dea2665_6f01d2eb3703f4542954feb08433efa4e91a9ae55d95302eb262772d24739364) [concluded: first player wins]
+Credit: 0.22043326 XCP to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #wins# <fa7429664990690ac78274dca111dcb53ed3bd8ee0f3f728305a34db0b89d483_e744b41a49191f82166ec2e6f32c56a16b9c9c6ed91b9e7d5da97caf95d26df9>
+RPS Resolved: 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 is playing 5 on a 5-moves game with 1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 with a wager of 0.11021663 XCP (fa7429664990690ac78274dca111dcb53ed3bd8ee0f3f728305a34db0b89d483_e744b41a49191f82166ec2e6f32c56a16b9c9c6ed91b9e7d5da97caf95d26df9) [concluded: first player wins]
 Sorted UTXOs: ['amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6', 'amount: 1.0; txid: 9d34af75fca5282eb97f1aba6cf0f23e78556e6fc04a16e013351d841093d539; vout: 0; confirmations: 6']
 New input: amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6
 Change quantity: 0.999822 BTC
-Debit: 0.11021663 XCP from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #open RPS# <d7d9df6987ce94dccd8ac7c056b520054d9756c6149f92a2c6721218eb8187d0>
+Debit: 0.11021663 XCP from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #open RPS# <5632386837d8078c935c5f89b0a04418915450f051c342246180e2773190e3a0>
 RPS: 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 opens game with 5 possible moves and a wager of 0.11021663 XCP
 Credit: 0.5 BBBB to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #cancel order# <e48c933f928db9b300c045ba33197bfb55cc12ebb6f00dfa9903039aa30bd7c0>
 Expired order: e48c933f928db9b300c045ba33197bfb55cc12ebb6f00dfa9903039aa30bd7c0
-Credit: 0.11021663 XCP to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #recredit wager# <d7d9df6987ce94dccd8ac7c056b520054d9756c6149f92a2c6721218eb8187d0>
-Expired RPS: d7d9df6987ce94dccd8ac7c056b520054d9756c6149f92a2c6721218eb8187d0
+Credit: 0.11021663 XCP to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #recredit wager# <5632386837d8078c935c5f89b0a04418915450f051c342246180e2773190e3a0>
+Expired RPS: 5632386837d8078c935c5f89b0a04418915450f051c342246180e2773190e3a0
 Sorted UTXOs: ['amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6', 'amount: 1.0; txid: 9d34af75fca5282eb97f1aba6cf0f23e78556e6fc04a16e013351d841093d539; vout: 0; confirmations: 6']
 New input: amount: 1.0; txid: 5f00a83de4b1acc6a510a03552679041fffaae22de1fffdbe309a36bb6111505; vout: 0; confirmations: 6
 Change quantity: 0.999822 BTC
