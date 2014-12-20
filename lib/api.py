@@ -23,7 +23,7 @@ import jsonrpc
 from jsonrpc import dispatcher
 import inspect
 
-from . import (config, bitcoin, exceptions, util, blockchain)
+from . import (config, bitcoin, exceptions, util, blockchain, check, backend, database)
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute)
 
 API_TABLES = ['balances', 'credits', 'debits', 'bets', 'bet_matches',
@@ -273,22 +273,22 @@ class APIStatusPoller(threading.Thread):
 
     def run(self):
         global current_api_status_code, current_api_status_response_json
-        db = util.connect_to_db(flags='SQLITE_OPEN_READONLY')
+        db = database.get_connection(integrity_check=False)
 
         while self.stop_event == False:
             try:
                 # Check version.
                 if time.time() - self.last_version_check >= 10: # Four hours since last check.
                     code = 10
-                    util.version_check(util.last_block(db)['block_index'])
+                    check.version(util.last_block(db)['block_index'])
                     self.last_version_check = time.time()
                 # Check that bitcoind is running, communicable, and caught up with the blockchain.
                 # Check that the database has caught up with bitcoind.
                 if time.time() - self.last_database_check > 10 * 60: # Ten minutes since last check.
                     code = 11
-                    util.backend_check(db)
+                    check.backend(db)
                     code = 12
-                    util.database_check(db, bitcoin.get_block_count())  # TODO: If not reparse or rollback, once those use API.
+                    check.database(db, self.proxy.getblockcount())
                     self.last_database_check = time.time()
             except Exception as e:
                 exception_name = e.__class__.__name__
@@ -306,6 +306,7 @@ class APIServer(threading.Thread):
         self.is_ready = False
         threading.Thread.__init__(self)
         self.stop_event = threading.Event()
+        self.proxy = backend.get_proxy()
 
     def stop(self):
         self.ioloop.stop()
@@ -313,7 +314,7 @@ class APIServer(threading.Thread):
         self.stop_event.set()
 
     def run(self):
-        db = util.connect_to_db(flags='SQLITE_OPEN_READONLY')
+        db = database.get_connection(integrity_check=False)
         app = flask.Flask(__name__)
         auth = HTTPBasicAuth()
 
@@ -463,17 +464,15 @@ class APIServer(threading.Thread):
                 cursor.close()
                 if not issuances: continue #asset not found, most likely
                 else: last_issuance = issuances[-1]
-                supply = 0
                 locked = False
                 for e in issuances:
                     if e['locked']: locked = True
-                    supply += e['quantity']
                 assetsInfo.append({
                     'asset': asset,
                     'owner': last_issuance['issuer'],
                     'divisible': bool(last_issuance['divisible']),
                     'locked': locked,
-                    'supply': supply,
+                    'supply': util.asset_supply(db, asset),
                     'callable': bool(last_issuance['callable']),
                     'call_date': last_issuance['call_date'],
                     'call_price': last_issuance['call_price'],
@@ -527,10 +526,10 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_running_info():
-            latestBlockIndex = bitcoin.get_block_count()
+            latestBlockIndex = self.proxy.getblockcount()
 
             try:
-                util.database_check(db, latestBlockIndex)
+                check.database(db, latestBlockIndex)
             except exceptions.DatabaseError as e:
                 caught_up = False
             else:

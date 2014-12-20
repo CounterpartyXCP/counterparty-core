@@ -24,6 +24,148 @@ FORMAT = '>HIQQdII'
 LENGTH = 2 + 4 + 8 + 8 + 8 + 4 + 4
 ID = 40
 
+def initialise (db):
+    cursor = db.cursor()
+
+    # Bets.
+    cursor.execute('''CREATE TABLE IF NOT EXISTS bets(
+                      tx_index INTEGER UNIQUE,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      source TEXT,
+                      feed_address TEXT,
+                      bet_type INTEGER,
+                      deadline INTEGER,
+                      wager_quantity INTEGER,
+                      wager_remaining INTEGER,
+                      counterwager_quantity INTEGER,
+                      counterwager_remaining INTEGER,
+                      target_value REAL,
+                      leverage INTEGER,
+                      expiration INTEGER,
+                      expire_index INTEGER,
+                      fee_fraction_int INTEGER,
+                      status TEXT,
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
+                      PRIMARY KEY (tx_index, tx_hash))
+                  ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      block_index_idx ON bets (block_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      index_hash_idx ON bets (tx_index, tx_hash)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      expire_idx ON bets (status, expire_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      feed_valid_bettype_idx ON bets (feed_address, status, bet_type)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      source_idx ON bets (source)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      status_idx ON bets (status)
+                   ''')
+
+    # Bet Matches
+    cursor.execute('''CREATE TABLE IF NOT EXISTS bet_matches(
+                      id TEXT PRIMARY KEY,
+                      tx0_index INTEGER,
+                      tx0_hash TEXT,
+                      tx0_address TEXT,
+                      tx1_index INTEGER,
+                      tx1_hash TEXT,
+                      tx1_address TEXT,
+                      tx0_bet_type INTEGER,
+                      tx1_bet_type INTEGER,
+                      feed_address TEXT,
+                      initial_value INTEGER,
+                      deadline INTEGER,
+                      target_value REAL,
+                      leverage INTEGER,
+                      forward_quantity INTEGER,
+                      backward_quantity INTEGER,
+                      tx0_block_index INTEGER,
+                      tx1_block_index INTEGER,
+                      block_index INTEGER,
+                      tx0_expiration INTEGER,
+                      tx1_expiration INTEGER,
+                      match_expire_index INTEGER,
+                      fee_fraction_int INTEGER,
+                      status TEXT,
+                      FOREIGN KEY (tx0_index, tx0_hash, tx0_block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
+                      FOREIGN KEY (tx1_index, tx1_hash, tx1_block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      match_expire_idx ON bet_matches (status, match_expire_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      valid_feed_idx ON bet_matches (feed_address, status)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      id_idx ON bet_matches (id)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      tx0_address_idx ON bet_matches (tx0_address)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      tx1_address_idx ON bet_matches (tx1_address)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      status_idx ON bet_matches (status)
+                   ''')
+
+    # Bet Expirations
+    cursor.execute('''CREATE TABLE IF NOT EXISTS bet_expirations(
+                      bet_index INTEGER PRIMARY KEY,
+                      bet_hash TEXT UNIQUE,
+                      source TEXT,
+                      block_index INTEGER,
+                      FOREIGN KEY (block_index) REFERENCES blocks(block_index),
+                      FOREIGN KEY (bet_index, bet_hash) REFERENCES bets(tx_index, tx_hash))
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      block_index_idx ON bet_expirations (block_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      source_idx ON bet_expirations (source)
+                   ''')
+
+    # Bet Match Expirations
+    cursor.execute('''CREATE TABLE IF NOT EXISTS bet_match_expirations(
+                      bet_match_id TEXT PRIMARY KEY,
+                      tx0_address TEXT,
+                      tx1_address TEXT,
+                      block_index INTEGER,
+                      FOREIGN KEY (bet_match_id) REFERENCES bet_matches(id),
+                      FOREIGN KEY (block_index) REFERENCES blocks(block_index))
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      block_index_idx ON bet_match_expirations (block_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      tx0_address_idx ON bet_match_expirations (tx0_address)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      tx1_address_idx ON bet_match_expirations (tx1_address)
+                   ''')
+
+    # Bet Match Resolutions
+    cursor.execute('''CREATE TABLE IF NOT EXISTS bet_match_resolutions(
+                      bet_match_id TEXT PRIMARY KEY,
+                      bet_match_type_id INTEGER,
+                      block_index INTEGER,
+                      winner TEXT,
+                      settled BOOL,
+                      bull_credit INTEGER,
+                      bear_credit INTEGER,
+                      escrow_less_fee INTEGER,
+                      fee INTEGER,
+                      FOREIGN KEY (bet_match_id) REFERENCES bet_matches(id),
+                      FOREIGN KEY (block_index) REFERENCES blocks(block_index))
+                   ''')
+
 def cancel_bet (db, bet, status, block_index):
     cursor = db.cursor()
 
@@ -321,7 +463,7 @@ def match (db, tx):
                     logging.debug('Skipping: zero backward quantity.')
                     continue
 
-            bet_match_id = tx0['tx_hash'] + tx1['tx_hash']
+            bet_match_id = util.make_id(tx0['tx_hash'], tx1['tx_hash'])
 
             # Debit the order.
             # Counterwager remainings may be negative.
@@ -368,7 +510,7 @@ def match (db, tx):
 
             # Record bet fulfillment.
             bindings = {
-                'id': tx0['tx_hash'] + tx['tx_hash'],
+                'id': util.make_id(tx0['tx_hash'], tx['tx_hash']),
                 'tx0_index': tx0['tx_index'],
                 'tx0_hash': tx0['tx_hash'],
                 'tx0_address': tx0['source'],

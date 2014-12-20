@@ -13,6 +13,28 @@ FORMAT = '>H16s32s32s'
 LENGTH = 2 + 16 + 32 + 32
 ID = 81
 
+def initialise (db):
+    cursor = db.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS rpsresolves(
+                      tx_index INTEGER PRIMARY KEY,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      source TEXT,
+                      move INTEGER,
+                      random TEXT,
+                      rps_match_id TEXT,
+                      status TEXT,
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      block_index_idx ON rpsresolves (block_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      source_idx ON rpsresolves (source)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      rps_match_id_idx ON rpsresolves (rps_match_id)
+                   ''')
 
 def validate (db, source, move, random, rps_match_id):
     problems = []
@@ -76,7 +98,7 @@ def validate (db, source, move, random, rps_match_id):
     return txn, rps_match, problems
 
 def compose (db, source, move, random, rps_match_id):
-    tx0_hash, tx1_hash = rps_match_id[:64], rps_match_id[64:] # UTF-8 encoding means that the indices are doubled.
+    tx0_hash, tx1_hash = util.parse_id(rps_match_id)
 
     txn, rps_match, problems = validate(db, source, move, random, rps_match_id)
     if problems: raise exceptions.ComposeError(problems)
@@ -102,7 +124,7 @@ def parse (db, tx, message):
             raise exceptions.UnpackError
         move, random, tx0_hash_bytes, tx1_hash_bytes = struct.unpack(FORMAT, message)
         tx0_hash, tx1_hash = binascii.hexlify(tx0_hash_bytes).decode('utf-8'), binascii.hexlify(tx1_hash_bytes).decode('utf-8')
-        rps_match_id = tx0_hash + tx1_hash
+        rps_match_id = util.make_id(tx0_hash, tx1_hash)
         random = binascii.hexlify(random).decode('utf-8')
         status = 'valid'
     except (exceptions.UnpackError, struct.error) as e:

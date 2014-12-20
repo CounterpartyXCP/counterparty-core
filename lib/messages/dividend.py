@@ -15,6 +15,30 @@ FORMAT_2 = '>QQQ'
 LENGTH_2 = 8 + 8 + 8
 ID = 50
 
+def initialise (db):
+    cursor = db.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS dividends(
+                      tx_index INTEGER PRIMARY KEY,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      source TEXT,
+                      asset TEXT,
+                      dividend_asset TEXT,
+                      quantity_per_unit INTEGER,
+                      fee_paid INTEGER,
+                      status TEXT,
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      block_index_idx ON dividends (block_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      source_idx ON dividends (source)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      asset_idx ON dividends (asset)
+                   ''')
+
 def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index):
     cursor = db.cursor()
     problems = []
@@ -98,7 +122,7 @@ def compose (db, source, quantity_per_unit, asset, dividend_asset):
 
     dividend_total, outputs, problems, fee = validate(db, source, quantity_per_unit, asset, dividend_asset, util.last_block(db)['block_index'])
     if problems: raise exceptions.ComposeError(problems)
-    logging.info('Total quantity to be distributed in dividends: {} {}'.format(util.devise(db, dividend_total, dividend_asset, 'output'), dividend_asset))
+    logging.info('Total quantity to be distributed in dividends: {} {}'.format(util.value_out(db, dividend_total, dividend_asset), dividend_asset))
 
     if dividend_asset == config.BTC:
         return (source, [(output['address'], output['dividend_quantity']) for output in outputs], None)

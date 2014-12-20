@@ -35,6 +35,34 @@ LENGTH = 4 + 8 + 4
 ID = 30
 # NOTE: Pascal strings are used for storing texts for backwards‐compatibility.
 
+def initialise(db):
+    cursor = db.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS broadcasts(
+                      tx_index INTEGER PRIMARY KEY,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      source TEXT,
+                      timestamp INTEGER,
+                      value REAL,
+                      fee_fraction_int INTEGER,
+                      text TEXT,
+                      locked BOOL,
+                      status TEXT,
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      block_index_idx ON broadcasts (block_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      status_source_idx ON broadcasts (status, source)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      status_source_index_idx ON broadcasts (status, source, tx_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      timestamp_idx ON broadcasts (timestamp)
+                   ''')
+
 def validate (db, source, timestamp, value, fee_fraction_int, text, block_index):
     problems = []
 
@@ -157,7 +185,7 @@ def parse (db, tx, message):
                    ('pending', tx['source']))
     for bet_match in cursor.fetchall():
         broadcast_bet_match_cursor = db.cursor()
-        bet_match_id = bet_match['tx0_hash'] + bet_match['tx1_hash']
+        bet_match_id = util.make_id(bet_match['tx0_hash'], bet_match['tx1_hash'])
         bet_match_status = None
 
         # Calculate total funds held in escrow and total fee to be paid if
@@ -297,7 +325,7 @@ def parse (db, tx, message):
         if bet_match_status:
             bindings = {
                 'status': bet_match_status,
-                'bet_match_id': bet_match['tx0_hash'] + bet_match['tx1_hash']
+                'bet_match_id': util.make_id(bet_match['tx0_hash'], bet_match['tx1_hash'])
             }
             sql='update bet_matches set status = :status where id = :bet_match_id'
             cursor.execute(sql, bindings)

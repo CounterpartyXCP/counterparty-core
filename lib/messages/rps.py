@@ -32,6 +32,106 @@ FORMAT = '>HQ32sI'
 LENGTH = 2 + 8 + 32 + 4
 ID = 80
 
+def initialise (db):
+    cursor = db.cursor()
+
+    # RPS (Rock-Paper-Scissors)
+    cursor.execute('''CREATE TABLE IF NOT EXISTS rps(
+                      tx_index INTEGER UNIQUE,
+                      tx_hash TEXT UNIQUE,
+                      block_index INTEGER,
+                      source TEXT,
+                      possible_moves INTEGER,
+                      wager INTEGER,
+                      move_random_hash TEXT,
+                      expiration INTEGER,
+                      expire_index INTEGER,
+                      status TEXT,
+                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
+                      PRIMARY KEY (tx_index, tx_hash))
+                  ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      source_idx ON rps (source)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      matching_idx ON rps (wager, possible_moves)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      status_idx ON rps (status)
+                   ''')
+
+    # RPS Matches
+    cursor.execute('''CREATE TABLE IF NOT EXISTS rps_matches(
+                      id TEXT PRIMARY KEY,
+                      tx0_index INTEGER,
+                      tx0_hash TEXT,
+                      tx0_address TEXT,
+                      tx1_index INTEGER,
+                      tx1_hash TEXT,
+                      tx1_address TEXT,
+                      tx0_move_random_hash TEXT,
+                      tx1_move_random_hash TEXT,
+                      wager INTEGER,
+                      possible_moves INTEGER,
+                      tx0_block_index INTEGER,
+                      tx1_block_index INTEGER,
+                      block_index INTEGER,
+                      tx0_expiration INTEGER,
+                      tx1_expiration INTEGER,
+                      match_expire_index INTEGER,
+                      status TEXT,
+                      FOREIGN KEY (tx0_index, tx0_hash, tx0_block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
+                      FOREIGN KEY (tx1_index, tx1_hash, tx1_block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      rps_match_expire_idx ON rps_matches (status, match_expire_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      rps_tx0_address_idx ON rps_matches (tx0_address)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      rps_tx1_address_idx ON rps_matches (tx1_address)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      status_idx ON rps_matches (status)
+                   ''')
+
+    # RPS Expirations
+    cursor.execute('''CREATE TABLE IF NOT EXISTS rps_expirations(
+                      rps_index INTEGER PRIMARY KEY,
+                      rps_hash TEXT UNIQUE,
+                      source TEXT,
+                      block_index INTEGER,
+                      FOREIGN KEY (block_index) REFERENCES blocks(block_index),
+                      FOREIGN KEY (rps_index, rps_hash) REFERENCES rps(tx_index, tx_hash))
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      block_index_idx ON rps_expirations (block_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      source_idx ON rps_expirations (source)
+                   ''')
+
+    # RPS Match Expirations
+    cursor.execute('''CREATE TABLE IF NOT EXISTS rps_match_expirations(
+                      rps_match_id TEXT PRIMARY KEY,
+                      tx0_address TEXT,
+                      tx1_address TEXT,
+                      block_index INTEGER,
+                      FOREIGN KEY (rps_match_id) REFERENCES rps_matches(id),
+                      FOREIGN KEY (block_index) REFERENCES blocks(block_index))
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      block_index_idx ON rps_match_expirations (block_index)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      tx0_address_idx ON rps_match_expirations (tx0_address)
+                   ''')
+    cursor.execute('''CREATE INDEX IF NOT EXISTS
+                      tx1_address_idx ON rps_match_expirations (tx1_address)
+                   ''')
+
+
 def cancel_rps (db, rps, status, block_index):
     cursor = db.cursor()
 
@@ -218,7 +318,7 @@ def match (db, tx, block_index):
             util.message(db, block_index, 'update', 'rps', bindings)
 
         bindings = {
-            'id': tx0['tx_hash'] + tx1['tx_hash'],
+            'id': util.make_id(tx0['tx_hash'], tx1['tx_hash']),
             'tx0_index': tx0['tx_index'],
             'tx0_hash': tx0['tx_hash'],
             'tx0_address': tx0['source'],

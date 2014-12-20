@@ -6,7 +6,7 @@ from requests.auth import HTTPBasicAuth
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
-from lib import (config, api, util, exceptions, bitcoin, blocks)
+from lib import (config, api, util, exceptions, bitcoin, blocks, check, backend, database)
 from lib.messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
 import counterpartyd
 
@@ -33,6 +33,18 @@ COUNTERPARTYD_OPTIONS = {
     'backend_rpc_port': 8888,
     'backend_rpc_password': 'pass'
 }
+
+class RpcProxy():
+    def __init__(self, service_url=None):
+        pass
+    @staticmethod
+    def getrawtransaction(txid):
+        tx_hex = getrawtransaction(rawtransactions_db, txid)
+        ctx = backend.deserialize(tx_hex)
+        return ctx
+
+def get_proxy():
+    return RpcProxy()
 
 def dump_database(db):
     # TEMPORARY
@@ -100,13 +112,11 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
 
     cursor = db.cursor()
     tx_index = block_index - config.BURN_START + 1
-    tx = bitcoin.decode_raw_transaction(raw_transaction)
 
     tx_hash = hashlib.sha256('{}{}'.format(tx_index,raw_transaction).encode('utf-8')).hexdigest()
-    #print(tx_hash)
-    tx['txid'] = tx_hash
+    # print(tx_hash)
     if pytest.config.option.savescenarios:
-        save_rawtransaction(rawtransactions_db, tx_hash, raw_transaction, json.dumps(tx))
+        save_rawtransaction(rawtransactions_db, tx_hash, raw_transaction)
 
     source, destination, btc_amount, fee, data = blocks.get_tx_info2(raw_transaction)
     transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
@@ -133,20 +143,20 @@ def initialise_rawtransactions_db(db):
         counterpartyd.set_options(testnet=True, **COUNTERPARTYD_OPTIONS)
         cursor = db.cursor()
         cursor.execute('DROP TABLE  IF EXISTS raw_transactions')
-        cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT, tx_json TEXT)')
+        cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT)')
         with open(CURR_DIR + '/fixtures/unspent_outputs.json', 'r') as listunspent_test_file:
                 wallet_unspent = json.load(listunspent_test_file)
                 for output in wallet_unspent:
                     txid = binascii.hexlify(bitcoinlib.core.lx(output['txid'])).decode()
-                    tx = bitcoin.decode_raw_transaction(output['txhex'])
-                    cursor.execute('INSERT INTO raw_transactions VALUES (?, ?, ?)', (txid, output['txhex'], json.dumps(tx)))
+                    tx = backend.deserialize(output['txhex'])
+                    cursor.execute('INSERT INTO raw_transactions VALUES (?, ?)', (txid, output['txhex']))
         cursor.close()
 
-def save_rawtransaction(db, tx_hash, tx_hex, tx_json):
+def save_rawtransaction(db, tx_hash, tx_hex):
     cursor = db.cursor()
     try:
         txid = binascii.hexlify(bitcoinlib.core.lx(tx_hash)).decode()
-        cursor.execute('''INSERT INTO raw_transactions VALUES (?, ?, ?)''', (txid, tx_hex, tx_json))
+        cursor.execute('''INSERT INTO raw_transactions VALUES (?, ?)''', (txid, tx_hex))
     except Exception as e: # TODO
         pass
     cursor.close()
@@ -158,15 +168,6 @@ def getrawtransaction(db, txid):
     cursor.close()
     return tx_hex
 
-def decoderawtransaction(db, tx_hex):
-    cursor = db.cursor()
-    try:
-        tx_json = list(cursor.execute('''SELECT tx_json FROM raw_transactions WHERE tx_hex = ?''', (tx_hex,)))[0][0]
-    except IndexError:
-        raise Exception('raw transaction changed')
-    cursor.close()
-    return json.loads(tx_json)
-
 def initialise_db(db):
     blocks.initialise(db)
     insert_block(db, config.BURN_START - 1)
@@ -175,8 +176,10 @@ def run_scenario(scenario, rawtransactions_db):
     counterpartyd.set_options(database_file=':memory:', testnet=True, **COUNTERPARTYD_OPTIONS)
     config.PREFIX = b'TESTXXXX'
     util.FIRST_MULTISIG_BLOCK_TESTNET = 1
-    checkpoints = dict(config.CHECKPOINTS_TESTNET)
-    config.CHECKPOINTS_TESTNET = {}
+    checkpoints = dict(check.CHECKPOINTS_TESTNET)
+    check.CHECKPOINTS_TESTNET = {}
+    proxy = RpcProxy()
+
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     logger_buff = io.StringIO()
@@ -190,7 +193,7 @@ def run_scenario(scenario, rawtransactions_db):
     asyncio_log = logging.getLogger('asyncio')
     asyncio_log.setLevel(logging.ERROR)
 
-    db = util.connect_to_db()
+    db = database.get_connection(read_only=False)
     initialise_db(db)
 
     raw_transactions = []
@@ -208,7 +211,7 @@ def run_scenario(scenario, rawtransactions_db):
     log = logger_buff.getvalue()
 
     db.close()
-    config.CHECKPOINTS_TESTNET = checkpoints
+    check.CHECKPOINTS_TESTNET = checkpoints
     return dump, log, json.dumps(raw_transactions, indent=4)
 
 def save_scenario(scenario_name, rawtransactions_db):
@@ -234,6 +237,9 @@ def clean_scenario_dump(scenario_name, dump):
     dump = dump.replace(standard_scenarios_params[scenario_name]['address2'], 'address2')
     dump = re.sub('[a-f0-9]{64}', 'hash', dump)
     dump = re.sub('X\'[A-F0-9]+\',1\);', '\'data\',1)', dump)
+    # ignore dust value
+    dump = re.sub(',7800,10000,\'data\',1\)', ',0,10000,\'data\',1\)', dump)
+    dump = re.sub(',5430,10000,\'data\',1\)', ',0,10000,\'data\',1\)', dump)
     return dump
 
 def check_record(record, counterpartyd_db):
@@ -352,12 +358,12 @@ def reparse(testnet=True):
     console.setFormatter(formatter)
     logger.addHandler(console)
 
-    memory_db = util.connect_to_db()
+    memory_db = database.get_connection(read_only=False)
     initialise_db(memory_db)
 
     prod_db_path = os.path.join(config.DATA_DIR, '{}.{}{}.db'.format(config.XCP_CLIENT, str(config.VERSION_MAJOR), '.testnet' if testnet else ''))
     prod_db = apsw.Connection(prod_db_path)
-    prod_db.setrowtrace(util.rowtracer)
+    prod_db.setrowtrace(database.rowtracer)
 
     with memory_db.backup("main", prod_db, "main") as backup:
         backup.step()
@@ -368,7 +374,7 @@ def reparse(testnet=True):
         memory_cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
 
     # clean consensus hashes if first block hash don't match with checkpoint.
-    checkpoints = config.CHECKPOINTS_TESTNET if config.TESTNET else config.CHECKPOINTS_MAINNET
+    checkpoints = check.CHECKPOINTS_TESTNET if config.TESTNET else check.CHECKPOINTS_MAINNET
     columns = [column['name'] for column in memory_cursor.execute('''PRAGMA table_info(blocks)''')]
     for field in ['ledger_hash', 'txlist_hash']:
         if field in columns:
@@ -388,7 +394,7 @@ def reparse(testnet=True):
             previous_ledger_hash, previous_txlist_hash = blocks.parse_block(memory_db, block['block_index'], block['block_time'],
                                                                                     previous_ledger_hash, block['ledger_hash'],
                                                                                     previous_txlist_hash, block['txlist_hash'])
-        except blocks.ConsensusError as e:
+        except check.ConsensusError as e:
             message = str(e)
             if message.find('ledger_hash') != -1:
                 new_ledger = get_block_ledger(memory_db, block['block_index'])

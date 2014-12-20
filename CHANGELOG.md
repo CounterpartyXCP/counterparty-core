@@ -1,4 +1,18 @@
 ## Client Versions ##
+* v9.49.2 (2014-12-19)
+	* prepare for ‘destroy’ functionality
+	* match IDs now include underscore
+	* code clean‐up
+	* mainnet burns are hard‐coded
+	* sanity checks for manually provided public and private keys
+	* handle protocol changes more elegantly
+	* more sophisticated version checking
+	* removed obsolete `carefulness` CLI option
+	* removed addrindex for unconfirmed transactions
+	* use python-bitcoinlib for RPC communication with backend
+	* log unhandled exceptions
+	* updated API docs
+	* misc. bug fixes
 * v9.49.1 (2014-12-11)
 	* don’t print user‐submitted text
 * v9.49.0 (2014-12-11)

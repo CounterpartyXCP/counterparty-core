@@ -9,9 +9,10 @@ from fixtures.vectors import UNITTEST_VECTOR
 from fixtures.params import DEFAULT_PARAMS
 from fixtures.scenarios import INTEGRATION_SCENARIOS
 
-from lib import config, bitcoin, util
+from lib import config, bitcoin, util, backend
 
 import bitcoin as bitcoinlib
+import bitcoin.rpc as bitcoinlib_rpc
 
 def pytest_collection_modifyitems(session, config, items):
     # run contracts_test.py last
@@ -55,6 +56,8 @@ def rawtransactions_db(request):
 @pytest.fixture(autouse=True)
 def init_mock_functions(monkeypatch, rawtransactions_db):
 
+    util_test.rawtransactions_db = rawtransactions_db
+
     def get_unspent_txouts(address, return_confirmed=False):
         with open(util_test.CURR_DIR + '/fixtures/unspent_outputs.json', 'r') as listunspent_test_file:
             wallet_unspent = json.load(listunspent_test_file)
@@ -64,7 +67,7 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
             else:
                 return unspent_txouts
 
-    def get_private_key(source):
+    def dumpprivkey(source):
         return DEFAULT_PARAMS['privkey'][source]
 
     def is_mine(address):
@@ -90,24 +93,9 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
         address = '_'.join([str(signatures_required)] + sorted(pubkeys) + [str(len(pubkeys))])
         return address
 
-    def decode_raw_transaction(raw_transaction):
-        if pytest.config.option.savescenarios:
-            return util.rpc('decoderawtransaction', [raw_transaction])
-        else:
-            return util_test.decoderawtransaction(rawtransactions_db, raw_transaction)
-
-    class RpcProxy():
-        def __init__(self, service_url=None):
-            pass
-
-        def getrawtransaction(self, txid):
-            tx_hex = util_test.getrawtransaction(rawtransactions_db, txid)
-            ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
-            return ctx
-
     monkeypatch.setattr('lib.bitcoin.get_unspent_txouts', get_unspent_txouts)
-    monkeypatch.setattr('lib.bitcoin.get_private_key', get_private_key)
-    monkeypatch.setattr('lib.bitcoin.is_mine', is_mine)
+    monkeypatch.setattr('lib.backend.dumpprivkey', dumpprivkey)
+    monkeypatch.setattr('lib.backend.is_mine', is_mine)
     monkeypatch.setattr('lib.util.isodt', isodt)
     monkeypatch.setattr('lib.util.curr_time', curr_time)
     monkeypatch.setattr('lib.util.date_passed', date_passed)
@@ -115,5 +103,4 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
     if hasattr(config, 'PREFIX'):
         monkeypatch.setattr('lib.config.PREFIX', b'TESTXXXX')
     monkeypatch.setattr('lib.bitcoin.multisig_pubkeyhashes_to_pubkeys', multisig_pubkeyhashes_to_pubkeys)
-    monkeypatch.setattr('lib.bitcoin.decode_raw_transaction', decode_raw_transaction)
-    monkeypatch.setattr('bitcoin.rpc.Proxy', RpcProxy)
+    monkeypatch.setattr('lib.backend.get_proxy', util_test.get_proxy)

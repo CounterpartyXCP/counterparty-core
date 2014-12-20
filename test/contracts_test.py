@@ -27,7 +27,7 @@ startgas = 10000
 ### Counterparty compatibility ###
 
 import counterpartyd
-from lib import (util, config)
+from lib import (util, config, database)
 from lib.messages import execute
 from lib.messages.scriptlib import (blocks, rlp, processblock)
 
@@ -216,7 +216,7 @@ def setup_function(function):
 
     # Connect to database.
     global db
-    db = util.connect_to_db(foreign_keys=False)
+    db = database.get_connection(read_only=False, foreign_keys=False)
     from lib import blocks
     blocks.initialise(db)
 
