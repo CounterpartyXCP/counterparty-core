@@ -150,6 +150,7 @@ def set_options(
         os.mkdir(config.DATA_DIR)
 
     # Configuration file
+    config_file_changed = False
     configfile = configparser.ConfigParser()
     if config_file:
         config_path = config_file
@@ -324,6 +325,7 @@ def set_options(
     elif 'rpc-password' in configfile['Default'] and configfile['Default']['rpc-password']:
         config.RPC_PASSWORD = configfile['Default']['rpc-password']
     else:
+        config_file_changed = True
         config.RPC_PASSWORD = util.hexlify(util.dhash(os.urandom(16)))
         configfile['Default']['rpc-password'] = config.RPC_PASSWORD
         logging.info('Generated password for counterpartyd RPC API: {}'.format(config.RPC_PASSWORD))
@@ -414,8 +416,9 @@ def set_options(
         config.BROADCAST_TX_MAINNET = '{}'.format(config.BTC_CLIENT)
 
     # Save generated settings.
-    with open(config_path, 'w') as f:
-        configfile.write(f)
+    if config_file_changed:
+        with open(config_path, 'w') as f:
+            configfile.write(f)
 
 def generate_move_random_hash(move):
     move = int(move).to_bytes(2, byteorder='big')
