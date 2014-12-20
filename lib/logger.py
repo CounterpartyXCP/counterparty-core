@@ -130,15 +130,11 @@ def log (db, command, category, bindings):
                 else:
                     divisibility = 'indivisible'
                     unit = 1
-                if bindings['callable'] and (bindings['block_index'] > 283271 or config.TESTNET):   # Protocol change.
-                    callability = 'callable from {} for {} XCP/{}'.format(isodt(bindings['call_date']), bindings['call_price'], bindings['asset'])
-                else:
-                    callability = 'uncallable'
                 try:
                     quantity = util.value_out(db, bindings['quantity'], None, divisible=bindings['divisible'])
                 except Exception as e:
                     quantity = '?'
-                logging.info('Issuance: {} created {} of asset {}, which is {} and {} ({}) [{}]'.format(bindings['issuer'], quantity, bindings['asset'], divisibility, callability, bindings['tx_hash'], bindings['status']))
+                logging.info('Issuance: {} created {} of {} asset {} ({}) [{}]'.format(bindings['issuer'], quantity, divisibility, bindings['asset'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'broadcasts':
             if bindings['locked']:
@@ -165,9 +161,6 @@ def log (db, command, category, bindings):
 
         elif category == 'cancels':
             logging.info('Cancel: {} ({}) [{}]'.format(bindings['offer_hash'], bindings['tx_hash'], bindings['status']))
-
-        elif category == 'callbacks':
-            logging.info('Callback: {} called back {} of {} ({}) [{}]'.format(bindings['source'], util.value_out(db, bindings['fraction'], 'fraction'), bindings['asset'], bindings['tx_hash'], bindings['status']))
 
         elif category == 'rps':
             log_message = 'RPS: {} opens game with {} possible moves and a wager of {}'.format(bindings['source'], bindings['possible_moves'], output(bindings['wager'], 'XCP'))

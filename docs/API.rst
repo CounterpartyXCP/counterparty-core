@@ -185,7 +185,7 @@ Python Example
     tx_hash = requests.post(url, data=json.dumps(payload), headers=headers, auth=auth)
     print("\CREATE ISSUANCE RESULT: ", tx_hash)
 
-    # Advanced parameters for issuance (no divisible, callable)
+    # Advanced parameters for issuance (indivisible)
     payload = {
       "method": "create_issuance",
       "params": {
@@ -193,9 +193,6 @@ Python Example
         'asset': "MYASSET",
         'quantity': 1000,
         'description': "my asset is cool",
-        'callable': True,
-        'call_date': 1418926641,
-        'call_price', 100000000,
         'divisible': False
       },
       "jsonrpc": "2.0",
@@ -307,7 +304,7 @@ Examples:
 floats
 ^^^^^^^^^^^^^^^^^^^^
 
-Floats are are ratios or floating point values with six decimal places of precision, used in bets, dividends and callbacks.
+Floats are are ratios or floating point values with six decimal places of precision, used in bets and dividends.
 
 .. _filtering:
 
@@ -399,7 +396,7 @@ limit=1000, offset=0, show_expired=True)**
 
 **{table}** must be one of the following values:
 ``balances``, ``credits``, ``debits``, ``bets``, ``bet_matches``, ``broadcasts``, ``btcpays``, ``burns``, 
-``callbacks``, ``cancels``, ``dividends``, ``issuances``, ``orders``, ``order_matches``, ``sends``, 
+``cancels``, ``dividends``, ``issuances``, ``orders``, ``order_matches``, ``sends``,
 ``bet_expirations``, ``order_expirations``, ``bet_match_expirations``, ``order_match_expirations``,
 ``rps``, ``rps_expirations``, ``rps_matches``, ``rps_match_expirations``, or ``rpsresolves``.
 
@@ -468,9 +465,6 @@ Gets information on an issued asset.
   - **divisible** (*boolean*): Whether the asset is divisible or not
   - **locked** (*boolean*): Whether the asset is locked (future issuances prohibited)
   - **total_issued** (*integer*): The :ref:`quantity <quantitys>` of the asset issued, in total
-  - **callable** (*boolean*): If the asset is callable or not
-  - **call_date** (*integer*): The call date, as an epoch timestamp
-  - **call_price** (*float*): The call price
   - **description** (*string*): The asset's current description
   - **issuer** (*string*): The asset's original owner (i.e. issuer)
 
@@ -748,28 +742,6 @@ Burn a given quantity of BTC for XCP (**only possible between blocks 278310 and 
 
   The unsigned transaction, as an hex-encoded string. See :ref:`this section <encoding_param>` for more information.
 
-.. _create_callback:
-
-create_callback
-^^^^^^^^^^^^^^^^^
-**create_callback(offer_hash, encoding='multisig', pubkey=null, allow_unconfirmed_inputs=false, fee=null, fee_per_kb=10000)**
-
-Make a call on a callable asset (where some whole or part of the asset is returned to the issuer, on or after the asset's call date).
-
-**Parameters:**
-
-  * **source (string, required):** The callback source address. Must be the same address as the specified asset's owner.
-  * **fraction (float, required):** A floating point number greater than zero but less than or equal to 1, where 0% is for a callback of 0% of the balance of each of the asset's holders, and 1 would be for a callback of 100%). For example, ``0.56`` would be 56%. Each holder of the called asset will be paid the call price for the asset, times the number of units of that asset that were called back from them.
-  * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
-  * **pubkey (string):** The pubkey hex string. Required if multisig transaction encoding is specified for a key external to ``counterpartyd``'s local wallet. See :ref:`this section <encoding_param>` for more info.
-  * **allow_unconfirmed_inputs (boolean):** Set to ``true`` to allow this transaction to utilize unconfirmed UTXOs as inputs.
-  * **fee (integer):** If you'd like to specify a custom miners' fee, specify it here (in satoshi). Leave as default for ``counterpartyd`` to automatically choose. 
-  * **fee_per_kb (integer):** The fee per kilobyte of transaction data constant that ``counterpartyd`` uses when deciding on the dynamic fee to use (in satoshi). Leave as default unless you know what you're doing.
-
-**Return:** 
-
-  The unsigned transaction, as an hex-encoded string. See :ref:`this section <encoding_param>` for more information.
-
 .. _create_cancel:
 
 create_cancel
@@ -819,7 +791,7 @@ Issue a dividend on a specific user defined asset.
 
 create_issuance
 ^^^^^^^^^^^^^^^^^
-**create_issuance(source, asset, quantity, divisible, description, callable=false, call_date=null, call_price=null,
+**create_issuance(source, asset, quantity, divisible, description,
 transfer_destination=null, encoding='multisig', pubkey=null, allow_unconfirmed_inputs=false, fee=null, fee_per_kb=10000)**
 
 Issue a new asset, issue more of an existing asset, lock an asset, or transfer the ownership of an asset (note that you can only do one of these operations in a given create_issuance call).
@@ -830,9 +802,6 @@ Issue a new asset, issue more of an existing asset, lock an asset, or transfer t
   * **quantity (integer, required):** The :ref:`quantity <quantitys>` of the asset to issue (set to 0 if *transferring* an asset).
   * **asset (string, required):** The :ref:`asset <assets>` to issue or transfer.
   * **divisible (boolean, default=True):** Whether this asset is divisible or not (if a transfer, this value must match the value specified when the asset was originally issued).
-  * **callable (boolean, default=False):** Whether the asset is callable or not.
-  * **call_date (integer, default=0):** The timestamp at which the asset may be called back, in Unix time. Only valid for callable assets.
-  * **call_price (float, default=0.0):** The :ref:`price <floats>` per unit XCP at which the asset may be called back, on or after the specified call_date. Only valid for callable assets.
   * **description (string, default=''):** A textual description for the asset. 52 bytes max.
   * **transfer_destination (string, default=None):** The address to receive the asset (only used when *transferring* assets -- leave set to ``null`` if issuing an asset).
   * **encoding (string):** The encoding method to use, see :ref:`this section <encoding_param>` for more info.  
@@ -964,7 +933,7 @@ raw transaction, which you must then sign and broadcast, this call will create t
 it automatically.
 
 **{entity}** must be one of the following values:
-``bet``, ``broadcast``, ``btcpay``, ``burn``,  ``callback``, ``cancel``, ``dividend``, ``issuance``,
+``bet``, ``broadcast``, ``btcpay``, ``burn``,  ``cancel``, ``dividend``, ``issuance``,
 ``order``, ``send``,  ``rps``, ``rpsresolve``.
 
 For example: ``do_bet``, ``do_burn``, ``do_dividend``, etc are all valid API methods.
@@ -1247,24 +1216,6 @@ to track state changes to the counterpartyd database on a block-by-block basis).
   columns in the table referred to by **category**.
 
   
-.. _callback-object:
-
-Callback Object
-^^^^^^^^^^^^^^^^^^^^^^^
-
-An object that describes a specific asset callback (i.e. the exercising of a call option on an asset owned by the source address).
-
-* **tx_index** (*integer*): The transaction index
-* **tx_hash** (*string*): The transaction hash
-* **block_index** (*integer*): The block index (block number in the block chain)
-* **source** (*string*): The source address of the call back (should be the current owner of the asset)
-* **fraction** (*integer*): A floating point number greater than zero but less than or equal to 1, where 0% is for a callback of 0%
-    of the balance of each of the asset's holders, and 1 would be for a callback of 100%). For example, ``0.56`` would be 56%.
-    Each holder of the called asset will be paid the call price for the asset, times the number of units of that asset that were called back from them.
-* **asset** (*string*): The :ref:`asset <assets>` being called back
-* **validity** (*string*): Set to "valid" if a valid send. Any other setting signifies an invalid/improper send
-
-
 .. _bet-expiration-object:
 
 Bet Expiration Object
@@ -1331,7 +1282,6 @@ Here the list of all possible status for each table:
 * **broadcasts**: valid, invalid: {problem(s)}
 * **btcpays**: valid, invalid: {problem(s)}
 * **burns**: valid, invalid: {problem(s)}
-* **callbacks**: valid, invalid: {problem(s)}
 * **cancels**: valid, invalid: {problem(s)}
 * **credits**: No status field
 * **debits**: No status field
@@ -1397,3 +1347,8 @@ This section documents any changes to the ``counterpartyd`` API, for version num
 
 * create_issuance: ``callable`` is also accepted
 * create_*: None is used as default value for missing parameters 
+
+9.49.3
+^^^^^^^^^^^^^^^^^^^^^^^
+* \*_issuance: ``callable``, ``call_date`` and ``call_price`` are no longer valid parameters
+* \*_callback: removed

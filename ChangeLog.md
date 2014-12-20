@@ -4,6 +4,7 @@
 	* update README
 	* if no RPC password is specified, generate automatically
 	* allow manually providing pubkeys for multi‐sig addresses
+	* removed archaic callback functionality
 	* code reorganisation
 	* code cleanup
 * v9.49.2 (2014-12-19)

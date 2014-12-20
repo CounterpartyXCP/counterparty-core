@@ -26,7 +26,7 @@ from lib import util
 from lib import check
 from lib import script
 from lib import backend
-from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute, destroy)
+from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve, publish, execute, destroy)
 
 from .blockchain.blocks_parser import BlockchainParser, ChainstateParser
 from .blockchain.utils import ib2h
@@ -38,7 +38,7 @@ TABLES = ['credits', 'debits', 'messages'] + \
          ['bet_match_resolutions', 'order_match_expirations', 'order_matches',
          'order_expirations', 'orders', 'bet_match_expirations', 'bet_matches',
          'bet_expirations', 'bets', 'broadcasts', 'btcpays', 'burns',
-         'callbacks', 'cancels', 'dividends', 'issuances', 'sends',
+         'cancels', 'dividends', 'issuances', 'sends',
          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
          'rps_matches', 'rps', 'executions', 'contracts', 'storage',
          'suicides', 'nonces', 'postqueue', 'destructions', 'assets']
@@ -93,8 +93,6 @@ def parse_tx(db, tx):
         dividend.parse(db, tx, message)
     elif message_type_id == cancel.ID:
         cancel.parse(db, tx, message)
-    elif message_type_id == callback.ID:
-        callback.parse(db, tx, message)
     elif message_type_id == rps.ID and rps_enabled:
         rps.parse(db, tx, message)
     elif message_type_id == rpsresolve.ID and rps_enabled:
@@ -311,7 +309,6 @@ def initialise(db):
     cancel.initialise(db)
     rps.initialise(db)
     rpsresolve.initialise(db)
-    callback.initialise(db)
 
     # Messages
     cursor.execute('''CREATE TABLE IF NOT EXISTS messages(

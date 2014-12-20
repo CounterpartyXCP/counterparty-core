@@ -195,8 +195,8 @@ def cancel_order (db, order, status, block_index):
     cursor.close()
 
 def cancel_order_match (db, order_match, status, block_index):
+    '''The only cancelling is an expiration.
     '''
-    May only be cancelled by callbacks.'''
 
     cursor = db.cursor()
 
