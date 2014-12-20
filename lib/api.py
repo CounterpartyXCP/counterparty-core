@@ -338,6 +338,7 @@ class APIServer(threading.Thread):
         threading.Thread.__init__(self)
         self.stop_event = threading.Event()
         self.ioloop = IOLoop.instance()
+        self.proxy = backend.get_proxy()
 
     def stop(self):
         self.ioloop.stop()
