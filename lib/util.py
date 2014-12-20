@@ -30,8 +30,8 @@ json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 BLOCK_LEDGER = []
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-with open(CURR_DIR + '/../version.json') as f:
-    VERSIONS = json.load(f)
+with open(CURR_DIR + '/../protocol_changes.json') as f:
+    PROTOCOL_CHANGES = json.load(f)
 
 class RPCError (Exception): pass
 
@@ -539,7 +539,7 @@ def hexlify(x):
 
 ### Protocol Changes ###
 def enabled (change_name, block_index):
-    enable_block_index = VERSIONS[change_name]['block_index']
+    enable_block_index = PROTOCOL_CHANGES[change_name]['block_index']
 
     if config.TESTNET: 
         return True     # Protocol changes are always retroactive on testnet.
