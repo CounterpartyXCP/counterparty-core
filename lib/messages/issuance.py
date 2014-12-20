@@ -29,9 +29,6 @@ def initialise(db):
                       source TEXT,
                       issuer TEXT,
                       transfer BOOL,
-                      callable BOOL,
-                      call_date INTEGER,
-                      call_price REAL,
                       description TEXT,
                       fee_paid INTEGER,
                       locked BOOL,
@@ -55,41 +52,20 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     problems = []
     fee = 0
 
+    if callable_ or call_date or call_price:
+        problems.append('callability depreciated')
+
     if asset in (config.BTC, config.XCP):
         problems.append('cannot issue {} or {}'.format(config.BTC, config.XCP))
 
-    if call_date is None: call_date = 0
-    if call_price is None: call_price = 0.0
     if description is None: description = ""
     if divisible is None: divisible = True
 
-    if isinstance(call_price, int): call_price = float(call_price)
-    #^ helps especially with calls from JS‐based clients, where parseFloat(15) returns 15 (not 15.0), which json takes as an int
-
     if not isinstance(quantity, int):
         problems.append('quantity must be in satoshis')
-        return call_date, call_price, problems, fee, description, divisible, None
-    if call_date and not isinstance(call_date, int):
-        problems.append('call_date must be epoch integer')
-        return call_date, call_price, problems, fee, description, divisible, None
-    if call_price and not isinstance(call_price, float):
-        problems.append('call_price must be a float')
-        return call_date, call_price, problems, fee, description, divisible, None
+        return problems, fee, description, divisible, None
 
     if quantity < 0: problems.append('negative quantity')
-    if call_price < 0: problems.append('negative call price')
-    if call_date < 0: problems.append('negative call date')
-
-    # Callable, or not.
-    if not callable_:
-        if block_index >= 312500 or config.TESTNET: # Protocol change.
-            call_date = 0
-            call_price = 0.0
-        elif block_index >= 310000:                 # Protocol change.
-            if call_date:
-                problems.append('call date for non‐callable asset')
-            if call_price:
-                problems.append('call price for non‐callable asset')
 
     # Valid re-issuance?
     cursor = db.cursor()
@@ -106,12 +82,6 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
             problems.append('issued by another address')
         if bool(last_issuance['divisible']) != bool(divisible):
             problems.append('cannot change divisibility')
-        if bool(last_issuance['callable']) != bool(callable_):
-            problems.append('cannot change callability')
-        if last_issuance['call_date'] > call_date and (call_date != 0 or (block_index < 312500 and not config.TESTNET)):
-            problems.append('cannot advance call date')
-        if last_issuance['call_price'] > call_price:
-            problems.append('cannot reduce call price')
         if last_issuance['locked'] and quantity:
             problems.append('locked asset and non‐zero quantity')
     else:
@@ -148,7 +118,6 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
             problems.append('description too long')
 
     # For SQLite3
-    call_date = min(call_date, config.MAX_INT)
     total = sum([issuance['quantity'] for issuance in issuances])
     assert isinstance(quantity, int)
     if total + quantity > config.MAX_INT:
@@ -157,10 +126,11 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     if destination and quantity:
         problems.append('cannot issue and transfer simultaneously')
 
-    return call_date, call_price, problems, fee, description, divisible, reissuance
+    return problems, fee, description, divisible, reissuance
 
-def compose (db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description):
-    call_date, call_price, problems, fee, description, divisible, reissuance = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.last_block(db)['block_index'])
+def compose (db, source, transfer_destination, asset, quantity, divisible, description):
+    callable_, call_date, call_price, = False, 0, 0.0
+    problems, fee, description, divisible, reissuance = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.last_block(db)['block_index'])
     if problems: raise exceptions.ComposeError(problems)
 
     asset_id = util.generate_asset_id(asset, util.last_block(db)['block_index'])
@@ -169,8 +139,7 @@ def compose (db, source, transfer_destination, asset, quantity, divisible, calla
         curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
     else:
         curr_format = FORMAT_2 + '{}s'.format(len(description))
-    data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, 1 if callable_ else 0,
-        call_date or 0, call_price or 0.0, description.encode('utf-8'))
+    data += struct.pack(curr_format, asset_id, quantity, 1 if divisible else 0, callable_, call_date, call_price, description.encode('utf-8'))
     if transfer_destination:
         destination_outputs = [(transfer_destination, None)]
     else:
@@ -189,7 +158,6 @@ def parse (db, tx, message):
                 curr_format = FORMAT_2 + '{}s'.format(len(message) - LENGTH_2)
             asset_id, quantity, divisible, callable_, call_date, call_price, description = struct.unpack(curr_format, message)
 
-            call_price = round(call_price, 6) # TODO: arbitrary
             try:
                 description = description.decode('utf-8')
             except UnicodeDecodeError:
@@ -211,7 +179,7 @@ def parse (db, tx, message):
 
     fee = 0
     if status == 'valid':
-        call_date, call_price, problems, fee, description, divisible, reissuance = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, callable_, call_date, call_price, description, block_index=tx['block_index'])
+        problems, fee, description, divisible, reissuance = validate(db, tx['source'], tx['destination'], asset, quantity, divisible, callable_, call_date, call_price, description, block_index=tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
         if 'total quantity overflow' in problems:
             quantity = 0
@@ -262,15 +230,12 @@ def parse (db, tx, message):
         'source': tx['source'],
         'issuer': issuer,
         'transfer': transfer,
-        'callable': callable_,
-        'call_date': call_date,
-        'call_price': call_price,
         'description': description,
         'fee_paid': fee,
         'locked': lock,
         'status': status,
     }
-    sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :callable, :call_date, :call_price, :description, :fee_paid, :locked, :status)'
+    sql='insert into issuances values(:tx_index, :tx_hash, :block_index, :asset, :quantity, :divisible, :source, :issuer, :transfer, :description, :fee_paid, :locked, :status)'
     issuance_parse_cursor.execute(sql, bindings)
 
     # Credit.

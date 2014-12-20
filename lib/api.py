@@ -43,14 +43,13 @@ from lib.messages import bet
 from lib.messages import dividend
 from lib.messages import burn
 from lib.messages import cancel
-from lib.messages import callback
 from lib.messages import rps
 from lib.messages import rpsresolve
 from lib.messages import publish
 from lib.messages import execute
 
 API_TABLES = ['balances', 'credits', 'debits', 'bets', 'bet_matches',
-              'broadcasts', 'btcpays', 'burns', 'callbacks', 'cancels',
+              'broadcasts', 'btcpays', 'burns', 'cancels',
               'dividends', 'issuances', 'orders', 'order_matches', 'sends',
               'bet_expirations', 'order_expirations', 'bet_match_expirations',
               'order_match_expirations', 'bet_match_resolutions', 'rps',
@@ -58,16 +57,12 @@ API_TABLES = ['balances', 'credits', 'debits', 'bets', 'bet_matches',
               'mempool']
 
 API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel',
-                    'callback', 'dividend', 'issuance', 'order', 'send',
+                    'dividend', 'issuance', 'order', 'send',
                     'rps', 'rpsresolve', 'publish', 'execute']
 
 COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
                 'multisig_dust_size', 'op_return_value', 'pubkey',
                 'allow_unconfirmed_inputs', 'fee', 'fee_provided']
-
-ARGS_ALIAS = {
-    'callable': 'callable_'
-}
 
 API_MAX_LOG_SIZE = 10 * 1024 * 1024 #max log size of 20 MB before rotation (make configurable later)
 API_MAX_LOG_COUNT = 10
@@ -235,9 +230,6 @@ def compose_transaction(db, name, params,
                         allow_unconfirmed_inputs=False,
                         fee=None,
                         fee_provided=0):
-    for param in ARGS_ALIAS:
-        if param in params:
-            params[ARGS_ALIAS[param]] = params.pop(param)
 
     compose_method = sys.modules['lib.messages.{}'.format(name)].compose
     compose_params = inspect.getargspec(compose_method)[0]
@@ -484,9 +476,6 @@ class APIServer(threading.Thread):
                         'divisible': True,
                         'locked': False,
                         'supply': supply,
-                        'callable': False,
-                        'call_date': None,
-                        'call_price': None,
                         'description': '',
                         'issuer': None
                     })
@@ -509,9 +498,6 @@ class APIServer(threading.Thread):
                     'divisible': bool(last_issuance['divisible']),
                     'locked': locked,
                     'supply': util.asset_supply(db, asset),
-                    'callable': bool(last_issuance['callable']),
-                    'call_date': last_issuance['call_date'],
-                    'call_price': last_issuance['call_price'],
                     'description': last_issuance['description'],
                     'issuer': last_issuance['issuer']})
             return assetsInfo
@@ -599,7 +585,7 @@ class APIServer(threading.Thread):
             cursor = db.cursor()
             for element in ['transactions', 'blocks', 'debits', 'credits', 'balances', 'sends', 'orders',
                 'order_matches', 'btcpays', 'issuances', 'broadcasts', 'bets', 'bet_matches', 'dividends',
-                'burns', 'cancels', 'callbacks', 'order_expirations', 'bet_expirations', 'order_match_expirations',
+                'burns', 'cancels', 'order_expirations', 'bet_expirations', 'order_match_expirations',
                 'bet_match_expirations', 'messages']:
                 cursor.execute("SELECT COUNT(*) AS count FROM %s" % element)
                 count_list = cursor.fetchall()

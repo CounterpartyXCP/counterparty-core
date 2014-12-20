@@ -501,9 +501,6 @@ if __name__ == '__main__':
     parser_issuance.add_argument('--quantity', default=0, help='the quantity of ASSET to be issued')
     parser_issuance.add_argument('--asset', required=True, help='the name of the asset to be issued (if it’s available)')
     parser_issuance.add_argument('--divisible', action='store_true', help='whether or not the asset is divisible (must agree with previous issuances)')
-    parser_issuance.add_argument('--callable', dest='callable_', action='store_true', help='whether or not the asset is callable (must agree with previous issuances)')
-    parser_issuance.add_argument('--call-date', help='the date from which a callable asset may be called back (must agree with previous issuances)')
-    parser_issuance.add_argument('--call-price', help='the price, in XCP per whole unit, at which a callable asset may be called back (must agree with previous issuances)')
     parser_issuance.add_argument('--description', type=str, required=True, help='a description of the asset (set to ‘LOCK’ to lock against further issuances with non‐zero quantitys)')
     parser_issuance.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
@@ -542,12 +539,6 @@ if __name__ == '__main__':
     parser_cancel.add_argument('--source', required=True, help='the source address')
     parser_cancel.add_argument('--offer-hash', required=True, help='the transaction hash of the order or bet')
     parser_cancel.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
-
-    parser_callback = subparsers.add_parser('callback', help='callback a fraction of an asset')
-    parser_callback.add_argument('--source', required=True, help='the source address')
-    parser_callback.add_argument('--fraction', required=True, help='the fraction of ASSET to call back')
-    parser_callback.add_argument('--asset', required=True, help='the asset to callback')
-    parser_callback.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
     parser_rps = subparsers.add_parser('rps', help='open a rock-paper-scissors like game')
     parser_rps.add_argument('--source', required=True, help='the source address')
@@ -756,22 +747,13 @@ if __name__ == '__main__':
             args.fee = util.value_in(db, args.fee, config.BTC)
         quantity = util.value_in(db, args.quantity, None,
                                divisible=args.divisible)
-        if args.callable_:
-            if not args.call_date:
-                parser.error('must specify call date of callable asset', )
-            if not args.call_price:
-                parser.error('must specify call price of callable asset')
-            call_date = calendar.timegm(dateutil.parser.parse(args.call_date).utctimetuple())
-            call_price = float(args.call_price)
-        else:
-            call_date, call_price = 0, 0
 
         cli('create_issuance', {'source': args.source, 'asset': args.asset,
                                 'quantity': quantity, 'divisible':
                                 args.divisible, 'description':
-                                args.description, 'callable_': args.callable_,
-                                'call_date': call_date, 'call_price':
-                                call_price, 'transfer_destination':
+                                args.description, 'callable_': False,
+                                'call_date': 0, 'call_price':
+                                0, 'transfer_destination':
                                 args.transfer_destination, 'fee': args.fee,
                                 'allow_unconfirmed_inputs': args.unconfirmed,
                                 'encoding': args.encoding, 'fee_per_kb':
@@ -863,20 +845,6 @@ if __name__ == '__main__':
                               args.regular_dust_size, 'multisig_dust_size':
                               args.multisig_dust_size, 'op_return_value':
                               args.op_return_value},
-            args.unsigned)
-
-    elif args.action == 'callback':
-        if args.fee:
-            args.fee = util.value_in(db, args.fee, config.BTC)
-        cli('create_callback', {'source': args.source,
-                                'fraction': util.value_in(db, args.fraction,
-                                'fraction'), 'asset': args.asset, 'fee':
-                                args.fee, 'allow_unconfirmed_inputs':
-                                args.unconfirmed, 'encoding': args.encoding,
-                                'fee_per_kb': args.fee_per_kb,
-                                'regular_dust_size': args.regular_dust_size,
-                                'multisig_dust_size': args.multisig_dust_size,
-                                'op_return_value': args.op_return_value},
             args.unsigned)
 
     elif args.action == 'rps':
