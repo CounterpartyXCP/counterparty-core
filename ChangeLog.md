@@ -3,15 +3,15 @@
 	* better logging when handling `SIGTERM`, `SIGKILL`
 	* update README
 	* if no RPC password is specified, generate automatically
+	* allow manually providing pubkeys for multi‐sig addresses
 	* code reorganisation
 	* code cleanup
-* v9.49.2 (???)
+* v9.49.2 (2014-12-19)
 	* prepare for ‘destroy’ functionality
 	* match IDs now include underscore
 	* code clean‐up
 	* mainnet burns are hard‐coded
 	* sanity checks for manually provided public and private keys
-	* allow manually providing pubkeys for multi‐sig addresses
 	* handle protocol changes more elegantly
 	* more sophisticated version checking
 	* removed obsolete `carefulness` CLI option
