@@ -10,10 +10,6 @@ from dateutil.tz import tzlocal
 
 from lib import config, exceptions, util
 
-# Obsolete in Python 3.4, with enum module.
-BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
-BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
-
 def curr_time():
     return int(time.time())
 
@@ -151,7 +147,7 @@ def log (db, command, category, bindings):
                 placeholder = ' that ' + str(output(bindings['target_value'], 'value'))
             if bindings['leverage']:
                 placeholder += ', leveraged {}x'.format(output(bindings['leverage'] / 5040, 'leverage'))
-            logging.info('Bet Match: {} for {} against {} for {} on {} at {}{} ({}) [{}]'.format(BET_TYPE_NAME[bindings['tx0_bet_type']], output(bindings['forward_quantity'], config.XCP), BET_TYPE_NAME[bindings['tx1_bet_type']], output(bindings['backward_quantity'], config.XCP), bindings['feed_address'], isodt(bindings['deadline']), placeholder, bindings['id'], bindings['status']))
+            logging.info('Bet Match: {} for {} against {} for {} on {} at {}{} ({}) [{}]'.format(util.BET_TYPE_NAME[bindings['tx0_bet_type']], output(bindings['forward_quantity'], config.XCP), util.BET_TYPE_NAME[bindings['tx1_bet_type']], output(bindings['backward_quantity'], config.XCP), bindings['feed_address'], isodt(bindings['deadline']), placeholder, bindings['id'], bindings['status']))
 
         elif category == 'dividends':
             logging.info('Dividend: {} paid {} per unit of {} ({}) [{}]'.format(bindings['source'], output(bindings['quantity_per_unit'], bindings['dividend_asset']), bindings['asset'], bindings['tx_hash'], bindings['status']))
@@ -195,8 +191,8 @@ def log (db, command, category, bindings):
 
         elif category == 'bet_match_resolutions':
             # DUPE
-            cfd_type_id = BET_TYPE_ID['BullCFD'] + BET_TYPE_ID['BearCFD']
-            equal_type_id = BET_TYPE_ID['Equal'] + BET_TYPE_ID['NotEqual']
+            cfd_type_id = util.BET_TYPE_ID['BullCFD'] + util.BET_TYPE_ID['BearCFD']
+            equal_type_id = util.BET_TYPE_ID['Equal'] + util.BET_TYPE_ID['NotEqual']
 
             if bindings['bet_match_type_id'] == cfd_type_id:
                 if bindings['settled']:

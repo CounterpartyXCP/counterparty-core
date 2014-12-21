@@ -23,6 +23,10 @@ from .exceptions import DecodeError
 D = decimal.Decimal
 b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
+# Obsolete in Python 3.4, with enum module.
+BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
+BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
+
 dhash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
 
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
