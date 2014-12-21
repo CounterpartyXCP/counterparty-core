@@ -154,46 +154,46 @@ UNITTEST_VECTOR = {
     'issuance': {
         'validate': [{
             'in': (ADDR[0], None, 'ASSET', 1000, True, False, None, None, '', DP['default_block']),
-            'out': ([], 50000000, '', True, False)
+            'out': (0, 0.0, [], 50000000, '', True, False)
         }, {
             'in': (ADDR[0], None, 'BTC', 1000, True, False, None, None, '', DP['default_block']),
-            'out': (['cannot issue BTC or XCP'], 50000000, '', True, False)
+            'out': (0, 0.0, ['cannot issue BTC or XCP'], 50000000, '', True, False)
         }, {
             'in': (ADDR[0], None, 'XCP', 1000, True, False, None, None, '', DP['default_block']),
-            'out': (['cannot issue BTC or XCP'], 50000000, '', True, False)
+            'out': (0, 0.0, ['cannot issue BTC or XCP'], 50000000, '', True, False)
         }, {
             'in': (ADDR[0], None, 'NOSATOSHI', 1000.5, True, False, None, None, '', DP['default_block']),
-            'out': (['quantity must be in satoshis'], 0, '', True, None)
+            'out': (0, 0.0, ['quantity must be in satoshis'], 0, '', True, None)
         }, {
             'in': (ADDR[0], None, 'NEGVALUES', -1000, True, True, -1409401723, -DP['quantity'], '', DP['default_block']),
-            'out': (['callability depreciated', 'negative quantity'], 50000000, '', True, False)
+            'out': (-1409401723, -100000000.0, ['negative quantity', 'negative call price', 'negative call date'], 50000000, '', True, False)
         }, {
             'in': (ADDR[2], None, 'DIVISIBLE', 1000, True, False, None, None, 'Divisible asset', DP['default_block']),
-            'out': (['issued by another address'], 0, 'Divisible asset', True, True)
+            'out': (0, 0.0, ['issued by another address'], 0, 'Divisible asset', True, True)
         }, {
             'in': (ADDR[0], None, 'LOCKED', 1000, True, False, None, None, 'Locked asset', DP['default_block']),
-            'out': (['locked asset and non‐zero quantity'], 0, 'Locked asset', True, True)
+            'out': (0, 0.0, ['locked asset and non‐zero quantity'], 0, 'Locked asset', True, True)
         }, {
             'in': (ADDR[0], None, 'BSSET', 1000, True, False, None, None, 'LOCK', DP['default_block']),
-            'out': (['cannot lock a non‐existent asset'], 50000000, 'LOCK', True, False)
+            'out': (0, 0.0, ['cannot lock a non‐existent asset'], 50000000, 'LOCK', True, False)
         }, {
             'in': (ADDR[0], ADDR[1], 'BSSET', 1000, True, False, None, None, '', DP['default_block']),
-            'out': (['cannot transfer a non‐existent asset', 'cannot issue and transfer simultaneously'], 50000000, '', True, False)
+            'out': (0, 0.0, ['cannot transfer a non‐existent asset', 'cannot issue and transfer simultaneously'], 50000000, '', True, False)
         }, {
             'in': (ADDR[2], None, 'BSSET', 1000, True, False, None, None, '', DP['default_block']),
-            'out': (['insufficient funds'], 50000000, '', True, False)
+            'out': (0, 0.0, ['insufficient funds'], 50000000, '', True, False)
         }, {
             'in': (ADDR[0], None, 'BSSET', 2**63, True, False, None, None, '', DP['default_block']),
-            'out': (['total quantity overflow'], 50000000, '', True, False)
+            'out': (0, 0.0, ['total quantity overflow'], 50000000, '', True, False)
         }, {
             'in': (ADDR[0], ADDR[1], 'DIVISIBLE', 1000, True, False, None, None, 'Divisible asset', DP['default_block']),
-            'out': (['cannot issue and transfer simultaneously'], 0, 'Divisible asset', True, True)
+            'out': (0, 0.0, ['cannot issue and transfer simultaneously'], 0, 'Divisible asset', True, True)
         }, {
             'in': (ADDR[0], None, 'MAXIMUM', 2**63-1, True, False, None, None, 'Maximum quantity', DP['default_block']),
-            'out': ([], 50000000, 'Maximum quantity', True, False)
+            'out': (0, 0.0, [], 50000000, 'Maximum quantity', True, False)
         }, {
             'in': (ADDR[0], None, 'DIVISIBLE', 2**63-1, True, False, None, None, 'Maximum quantity', DP['default_block']),
-            'out': (['total quantity overflow'], 0, 'Maximum quantity', True, True)
+            'out': (0, 0.0, ['total quantity overflow'], 0, 'Maximum quantity', True, True)
         }],
         'compose': [{
             'in': (ADDR[0], None, 'ASSET', 1000, True, ''),
