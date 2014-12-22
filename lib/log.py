@@ -31,6 +31,7 @@ def set_up(args):
     # File Logging
     max_log_size = 20 * 1024 * 1024 # 20 MB
     if os.name == 'nt':
+        from lib import util_windows
         fileh = util_windows.SanitizedRotatingFileHandler(config.LOG, maxBytes=max_log_size, backupCount=5)
     else:
         fileh = logging.handlers.RotatingFileHandler(config.LOG, maxBytes=max_log_size, backupCount=5)
