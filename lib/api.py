@@ -296,13 +296,15 @@ class APIStatusPoller(threading.Thread):
         self.stop_event.set()
 
     def run(self):
+        logger.debug('Starting API Status Poller.')
         global current_api_status_code, current_api_status_response_json
         db = database.get_connection(integrity_check=False)
 
-        while self.stop_event == False:
+        while self.stop_event.is_set() != True:
             try:
                 # Check version.
-                if time.time() - self.last_version_check >= 10: # Four hours since last check.
+                if time.time() - self.last_version_check >= 60 * 60: # One hour since last check.
+                    logger.debug('Checking version.')
                     code = 10
                     check.version(util.last_block(db)['block_index'])
                     self.last_version_check = time.time()
@@ -310,20 +312,23 @@ class APIStatusPoller(threading.Thread):
                 # Check that the database has caught up with bitcoind.
                 if time.time() - self.last_database_check > 10 * 60: # Ten minutes since last check.
                     code = 11
-                    check.backend()
+                    logger.debug('Checking backend state.')
+                    check.backend_state()
                     code = 12
-                    check.database(db, self.proxy.getblockcount())
+                    logger.debug('Checking database state.')
+                    check.database_state(db, self.proxy.getblockcount())
                     self.last_database_check = time.time()
-            except Exception as e:
+            except (check.VersionError, check.BackendError, exceptions.DatabaseError) as e:
                 exception_name = e.__class__.__name__
                 exception_text = str(e)
+                logger.debug("API Status Poller: %s", exception_text)
                 jsonrpc_response = jsonrpc.exceptions.JSONRPCServerError(message=exception_name, data=exception_text)
                 current_api_status_code = code
                 current_api_status_response_json = jsonrpc_response.json.encode()
             else:
                 current_api_status_code = None
                 current_api_status_response_json = None
-            time.sleep(2)
+            time.sleep(config.BACKEND_POLL_INTERVAL)
 
 class APIServer(threading.Thread):
     def __init__(self):
@@ -339,6 +344,7 @@ class APIServer(threading.Thread):
         self.stop_event.set()
 
     def run(self):
+        logger.debug('Starting API Server.')
         db = database.get_connection(integrity_check=False)
         app = flask.Flask(__name__)
         auth = HTTPBasicAuth()
@@ -552,7 +558,7 @@ class APIServer(threading.Thread):
             latestBlockIndex = self.proxy.getblockcount()
 
             try:
-                check.database(db, latestBlockIndex)
+                check.database_state(db, latestBlockIndex)
             except exceptions.DatabaseError:
                 caught_up = False
             else:

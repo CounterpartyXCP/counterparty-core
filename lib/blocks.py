@@ -683,7 +683,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index):
         block_index = config.MEMPOOL_BLOCK_INDEX
 
     if source and (data or destination == config.UNSPENDABLE):
-        logger.debug('Saving transaction: {}.'.format(tx_hash))
+        logger.debug('Saving transaction: {}'.format(tx_hash))
         cursor = db.cursor()
         cursor.execute('''INSERT INTO transactions(
                             tx_index,
@@ -710,7 +710,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index):
         cursor.close()
         return tx_index + 1
     else:
-        logger.debug('Skipping transaction: {}.'.format(tx_hash))
+        logger.debug('Skipping transaction: {}'.format(tx_hash))
 
     return tx_index
 
@@ -883,22 +883,22 @@ def follow(db):
         if block_index <= block_count:
 
             # Backwards check for incorrect blocks due to chain reorganisation, and stop when a common parent is found.
-            c = block_index
+            current_index = block_index
             requires_rollback = False
             while True:
-                if c == config.BLOCK_FIRST:
+                if current_index == config.BLOCK_FIRST:
                     break
 
-                logger.debug('Checking that block {} is not an orphan.'.format(c))
+                logger.debug('Checking that block {} is not an orphan.'.format(current_index))
 
                 # Backend parent hash.
-                c_hash_bin = proxy.getblockhash(c)
-                c_block = proxy.getblock(c_hash_bin)
-                backend_parent = bitcoinlib.core.b2lx(c_block.hashPrevBlock)
+                current_hash_bin = proxy.getblockhash(current_index)
+                current_cblock = proxy.getblock(current_hash_bin)
+                backend_parent = bitcoinlib.core.b2lx(current_cblock.hashPrevBlock)
 
                 # DB parent hash.
                 blocks = list(cursor.execute('''SELECT * FROM blocks
-                                                WHERE block_index = ?''', (c - 1,)))
+                                                WHERE block_index = ?''', (current_index - 1,)))
                 if len(blocks) != 1:  # For empty DB.
                     break
                 db_parent = blocks[0]['block_hash']
@@ -909,23 +909,23 @@ def follow(db):
                 if db_parent == backend_parent:
                     break
                 else:
-                    c -= 1
+                    current_index -= 1
                     requires_rollback = True
 
             # Rollback for reorganisation.
             if requires_rollback:
                 # Record reorganisation.
-                logger.warning('Blockchain reorganisation at block {}.'.format(c))
-                log.message(db, block_index, 'reorg', None, {'block_index': c})
+                logger.warning('Blockchain reorganisation at block {}.'.format(current_index))
+                log.message(db, block_index, 'reorg', None, {'block_index': current_index})
 
                 # Rollback the DB.
-                reparse(db, block_index=c-1, quiet=True)
-                block_index = c
+                reparse(db, block_index=current_index-1, quiet=True)
+                block_index = current_index
                 tx_index = get_next_tx_index(db)
                 continue
 
             # Get and parse transactions in this block (atomically).
-            block_hash_bin = proxy.getblockhash(c)
+            block_hash_bin = proxy.getblockhash(current_index)
             block = proxy.getblock(block_hash_bin)
             block_hash = bitcoinlib.core.b2lx(block_hash_bin)
             previous_block_hash = bitcoinlib.core.b2lx(block.hashPrevBlock)

@@ -5,7 +5,7 @@ logger = logging.getLogger(__name__)
 import warnings
 import time
 
-from lib import config, util, exceptions
+from lib import config, util, exceptions, backend
 
 CONSENSUS_HASH_SEED = 'We can only see a short distance ahead, but we can see plenty there that needs to be done.'
 
@@ -129,20 +129,22 @@ def version(block_index):
     logger.debug('Version check passed.')
     return
 
-def backend():
+def backend_state():
     """Checks blocktime of last block to see if {} Core is running behind.""".format(config.BTC_NAME)
     proxy = backend.get_proxy()
     block_count = proxy.getblockcount()
     block_hash_bin = proxy.getblockhash(block_count)
-    block = proxy.getblock(block_hash_bin)
-    time_behind = time.time() - block['time']   # TODO: Block times are not very reliable.
+    cblock = proxy.getblock(block_hash_bin)
+    time_behind = time.time() - cblock.nTime   # TODO: Block times are not very reliable.
     if time_behind > 60 * 60 * 2:   # Two hours.
         raise BackendError('Bitcoind is running about {} seconds behind.'.format(round(time_behind)))
+    logger.debug('Backend state check passed.')
 
-def database(db, blockcount):
-    """Checks {} database to see if the {} server has caught up with Bitcoind.""".format(config.XCP_NAME, config.XCP_CLIENT)
+def database_state(db, blockcount):
+    """Checks {} database to see if is caught up with backend.""".format(config.XCP_NAME)
     if util.last_block(db)['block_index'] + 1 < blockcount:
-        raise exceptions.DatabaseError('{} database is behind Bitcoind. Is the {} server running?'.format(config.XCP_NAME, config.XCP_CLIENT))
+        raise exceptions.DatabaseError('{} database is behind backend.'.format(config.XCP_NAME))
+    logger.debug('Database state check passed.')
     return
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
