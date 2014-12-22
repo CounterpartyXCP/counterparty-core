@@ -17,8 +17,7 @@ from lib import config
 def get_proxy():
     if config.TESTNET:
         bitcoinlib.SelectParams('testnet')
-    proxy = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC,
-                                 timeout=config.BACKEND_HTTP_TIMEOUT)
+    proxy = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC)
     return proxy
 
 def get_wallet():
