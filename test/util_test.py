@@ -379,7 +379,7 @@ def reparse(testnet=True):
             sql = '''SELECT {} FROM blocks  WHERE block_index = ?'''.format(field)
             first_hash = list(memory_cursor.execute(sql, (config.BLOCK_FIRST,)))[0][field]
             if first_hash != checkpoints[config.BLOCK_FIRST][field]:
-                logging.info('First hash changed. Cleaning {}.'.format(field))
+                logger.info('First hash changed. Cleaning {}.'.format(field))
                 memory_cursor.execute('''UPDATE blocks SET {} = NULL'''.format(field))
 
     blocks.initialise(memory_db)

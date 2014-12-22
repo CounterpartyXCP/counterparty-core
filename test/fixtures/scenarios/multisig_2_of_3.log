@@ -1,5 +1,5 @@
-Status: Creating connection to `:memory:`.
-Status: Checking database integrity.
+Creating connection to `:memory:`.
+Checking database integrity.
 Sorted UTXOs: ['amount: 3.0; txid: d331d71f0f5d5f62261d6f18019459f9a0711c1fa0a0e38004386319cefbccfc; vout: 0; confirmations: 6']
 New input: amount: 3.0; txid: d331d71f0f5d5f62261d6f18019459f9a0711c1fa0a0e38004386319cefbccfc; vout: 0; confirmations: 6
 Change quantity: 2.3799 BTC
@@ -27,7 +27,7 @@ Forward Quantity: 50000000
 Backward Quantity: 100000000
 Tx0 fee provided remaining: 0.01; required fee: 0.00857142
 Order Match: 0.5 BTC for 1.0 XCP (b898ed7f73ba34981adde222bf27498f66f352254817b0f4d07156a62b387e86_bc36229a30165dd3d5f927646292fa4b1b024c50ed3490ce578946020f4f29ed) [pending]
-WARNING: Order match has only -10 confirmation(s).
+Order match has only -10 confirmation(s).
 Sorted UTXOs: ['amount: 3.0; txid: d331d71f0f5d5f62261d6f18019459f9a0711c1fa0a0e38004386319cefbccfc; vout: 0; confirmations: 6']
 New input: amount: 3.0; txid: d331d71f0f5d5f62261d6f18019459f9a0711c1fa0a0e38004386319cefbccfc; vout: 0; confirmations: 6
 Change quantity: 2.499744 BTC

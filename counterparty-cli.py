@@ -4,6 +4,7 @@ import os
 import argparse
 import decimal
 import logging
+logger = logging.getLogger(__name__)
 import time
 import dateutil.parser
 import calendar
@@ -251,7 +252,7 @@ def set_options(data_dir=None, backend_rpc_connect=None,
         config_path = os.path.join(config.DATA_DIR, '{}.conf'.format(config.XCP_CLIENT))
     configfile.read(config_path)
     has_config = 'Default' in configfile
-    #logging.debug("Config file: %s; Exists: %s" % (config_path, "Yes" if has_config else "No"))
+    #logger.debug("Config file: %s; Exists: %s" % (config_path, "Yes" if has_config else "No"))
 
     # testnet
     if testnet:
@@ -712,7 +713,7 @@ if __name__ == '__main__':
                 testcoin=args.testcoin, force=args.force)
 
     # Database
-    logging.info('Status: Connecting to database.')
+    logger.info('Connecting to database.')
     db = database.get_connection()
 
     # MESSAGE CREATION

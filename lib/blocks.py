@@ -11,6 +11,7 @@ import struct
 import decimal
 D = decimal.Decimal
 import logging
+logger = logging.getLogger(__name__)
 import collections
 import platform
 from Crypto.Cipher import ARC4
@@ -26,6 +27,7 @@ from lib import util
 from lib import check
 from lib import script
 from lib import backend
+from lib import log
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve, publish, execute, destroy)
 
 from .blockchain.blocks_parser import BlockchainParser, ChainstateParser
@@ -109,7 +111,7 @@ def parse_tx(db, tx):
                                    WHERE tx_hash=?''',
                                 (False, tx['tx_hash']))
         if tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
-            logging.info('Unsupported transaction: hash {}; data {}'.format(tx['tx_hash'], tx['data']))
+            logger.info('Unsupported transaction: hash {}; data {}'.format(tx['tx_hash'], tx['data']))
         cursor.close()
         return False
 
@@ -347,7 +349,7 @@ def get_tx_info(tx_hex, block_index, block_parser=None):
         else:
             tx_info = get_tx_info1(tx_hex, block_index, block_parser=block_parser)
     except DecodeError as e:
-        logging.debug('Could not decode: ' + str(e))
+        # NOTE: For debugging, logger.debug('Could not decode: ' + str(e))
         tx_info = b'', None, None, None, None
 
     return tx_info
@@ -624,7 +626,7 @@ def reinitialise(db, block_index=None):
             if first_block:
                 first_hash = first_block[0][field]
                 if first_hash != checkpoints[config.BLOCK_FIRST][field]:
-                    logging.info('First hash changed. Cleaning {}.'.format(field))
+                    logger.info('First hash changed. Cleaning {}.'.format(field))
                     cursor.execute('''UPDATE blocks SET {} = NULL'''.format(field))
 
     # For rollbacks, just delete new blocks and then reparse what’s left.
@@ -638,7 +640,7 @@ def reparse(db, block_index=None, quiet=False):
     """Reparse all transactions (atomically). If block_index is set, rollback
     to the end of that block.
     """
-    logging.warning('Status: Reparsing all transactions.')
+    logger.warning('Reparsing all transactions.')
     cursor = db.cursor()
 
     with db:
@@ -646,13 +648,12 @@ def reparse(db, block_index=None, quiet=False):
 
         # Reparse all blocks, transactions.
         if quiet:
-            log = logging.getLogger('')
             log.setLevel(logging.WARNING)
 
         previous_ledger_hash, previous_txlist_hash = None, None
         cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
         for block in cursor.fetchall():
-            logging.info('Block (re‐parse): {}'.format(str(block['block_index'])))
+            logger.info('Block (re‐parse): {}'.format(str(block['block_index'])))
             previous_ledger_hash, previous_txlist_hash = parse_block(db, block['block_index'], block['block_time'],
                                                                      previous_ledger_hash, previous_txlist_hash)
 
@@ -664,7 +665,7 @@ def reparse(db, block_index=None, quiet=False):
 
         # Update minor version number.
         cursor.execute('PRAGMA user_version = {}'.format(int(config.VERSION_MINOR))) # Syntax?!
-        logging.info('Status: Database minor version number updated.')
+        logger.info('Database minor version number updated.')
 
     cursor.close()
     return
@@ -682,7 +683,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index):
         block_index = config.MEMPOOL_BLOCK_INDEX
 
     if source and (data or destination == config.UNSPENDABLE):
-        logging.debug('Status: saving transaction {}.'.format(tx_hash))
+        logger.debug('Saving transaction: {}.'.format(tx_hash))
         cursor = db.cursor()
         cursor.execute('''INSERT INTO transactions(
                             tx_index,
@@ -709,7 +710,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index):
         cursor.close()
         return tx_index + 1
     else:
-        logging.debug('Status: skipping transaction {}.'.format(tx_hash))
+        logger.debug('Skipping transaction: {}.'.format(tx_hash))
 
     return tx_index
 
@@ -726,7 +727,7 @@ def kickstart(db, bitcoind_dir):
 
     cursor = db.cursor()
 
-    logging.warning('''Warning:
+    logger.warning('''Warning:
 - Ensure that bitcoind is stopped.
 - You must reindex bitcoind after the initialisation is complete (restart with `-reindex=1`)
 - The initialisation may take a while.''')
@@ -749,10 +750,10 @@ def kickstart(db, bitcoind_dir):
     with db:
 
         # Prepare SQLite database. # TODO: Be more specific!
-        logging.info('Preparing database…')
+        logger.info('Preparing database…')
         start_time = time.time()
         reinitialise(db, block_index=config.BLOCK_FIRST - 1)
-        logging.info('Prepared database in {:.3f}s'.format(time.time() - start_time))
+        logger.info('Prepared database in {:.3f}s'.format(time.time() - start_time))
 
         # Get blocks and transactions, moving backwards in time.
         while current_hash != None:
@@ -768,7 +769,7 @@ def kickstart(db, bitcoind_dir):
                         tx['tx_hash'], block['block_index'], block['block_hash'], block['block_time'],
                         source, destination, btc_amount, fee, data
                     ))
-                    logging.info('Valid transaction: {}'.format(tx['tx_hash']))
+                    logger.info('Valid transaction: {}'.format(tx['tx_hash']))
 
             # Insert block and transactions into database.
             cursor.execute('''INSERT INTO blocks(
@@ -795,7 +796,7 @@ def kickstart(db, bitcoind_dir):
                     sql += ', '.join(bindings_place)
                     cursor.execute(sql, bindings)
 
-            logging.info('Block {} ({}): {}/{} saved in {:.3f}s'.format(
+            logger.info('Block {} ({}): {}/{} saved in {:.3f}s'.format(
                           block['block_index'], block['block_hash'],
                           len(transactions), len(block['transactions']),
                           time.time() - start_time))
@@ -806,16 +807,16 @@ def kickstart(db, bitcoind_dir):
         block_parser.close()
 
         # Reorder all transactions in database.
-        logging.info('Reordering transactions…')
+        logger.info('Reordering transactions…')
         start_time = time.time()
         cursor.execute('''UPDATE transactions SET tx_index = tx_index + ?''', (tx_index,))
-        logging.info('Reordered transactions in {:.3f}s.'.format(time.time() - start_time))
+        logger.info('Reordered transactions in {:.3f}s.'.format(time.time() - start_time))
 
         # Parse all transactions in database.
         reparse(db)
 
     cursor.close()
-    logging.info('Total duration: {:.3f}s'.format(time.time() - start_time_total))
+    logger.info('Total duration: {:.3f}s'.format(time.time() - start_time_total))
 
 def get_next_tx_index(db):
     cursor = db.cursor()
@@ -845,12 +846,12 @@ def follow(db):
         # Reparse all transactions if minor version has changed.
         minor_version = cursor.execute('PRAGMA user_version').fetchall()[0]['user_version']
         if minor_version != config.VERSION_MINOR:
-            logging.info('Status: Client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.VERSION_MINOR))
+            logger.info('Client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.VERSION_MINOR))
             reparse(db, quiet=False)
-        logging.info('Status: Resuming parsing.')
+        logger.info('Resuming parsing.')
 
     except exceptions.DatabaseError:
-        logging.warning('Status: New database.')
+        logger.warning('New database.')
         block_index = config.BLOCK_FIRST
 
     # Get index of last transaction.
@@ -888,7 +889,7 @@ def follow(db):
                 if c == config.BLOCK_FIRST:
                     break
 
-                logging.debug('Status: Checking that block {} is not an orphan.'.format(c))
+                logger.debug('Checking that block {} is not an orphan.'.format(c))
 
                 # Backend parent hash.
                 c_hash_bin = proxy.getblockhash(c)
@@ -914,8 +915,8 @@ def follow(db):
             # Rollback for reorganisation.
             if requires_rollback:
                 # Record reorganisation.
-                logging.warning('Status: Blockchain reorganisation at block {}.'.format(c))
-                logger.message(db, block_index, 'reorg', None, {'block_index': c})
+                logger.warning('Blockchain reorganisation at block {}.'.format(c))
+                log.message(db, block_index, 'reorg', None, {'block_index': c})
 
                 # Rollback the DB.
                 reparse(db, block_index=c-1, quiet=True)
@@ -962,7 +963,7 @@ def follow(db):
                 tx_h = not_supported_sorted.popleft()[1]
                 del not_supported[tx_h]
 
-            logging.info('Block: %s (%ss)'%(str(block_index), "{:.2f}".format(time.time() - starttime, 3)))
+            logger.info('Block: %s (%ss)'%(str(block_index), "{:.2f}".format(time.time() - starttime, 3)))
             # Increment block index.
             block_count = proxy.getblockcount()
             block_index += 1
@@ -970,9 +971,9 @@ def follow(db):
         else:
             # First mempool fill for session?
             if mempool_initialised:
-                logging.debug('Status: Updating mempool.')
+                logger.debug('Updating mempool.')
             else:
-                logging.debug('Status: Initialising mempool.')
+                logger.debug('Initialising mempool.')
 
             # Get old counterpartyd mempool.
             old_mempool = list(cursor.execute('''SELECT * FROM mempool'''))

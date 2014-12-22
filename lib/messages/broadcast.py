@@ -26,8 +26,12 @@ import decimal
 D = decimal.Decimal
 from fractions import Fraction
 import logging
+logger = logging.getLogger(__name__)
 
-from lib import (exceptions, config, util, logger)
+from lib import exceptions
+from lib import config
+from lib import util
+from lib import log
 from . import (bet)
 
 FORMAT = '>IdI'
@@ -329,7 +333,7 @@ def parse (db, tx, message):
             }
             sql='update bet_matches set status = :status where id = :bet_match_id'
             cursor.execute(sql, bindings)
-            logger.message(db, tx['block_index'], 'update', 'bet_matches', bindings)
+            log.message(db, tx['block_index'], 'update', 'bet_matches', bindings)
 
         broadcast_bet_match_cursor.close()
 

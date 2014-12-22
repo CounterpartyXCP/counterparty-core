@@ -1,6 +1,7 @@
 import getpass
 import binascii
 import logging
+logger = logging.getLogger(__name__)
 import sys
 import json
 from decimal import Decimal as D
@@ -271,12 +272,12 @@ def old_rpc(method, params):
         try:
             response = bitcoin_rpc_session.post(url, data=json.dumps(payload), headers=headers, verify=config.BACKEND_RPC_SSL_VERIFY)
             if i > 0:
-                logging.debug('Status: Successfully connected.', file=sys.stderr)
+                logger.debug('Successfully connected.', file=sys.stderr)
             break
         except requests.exceptions.SSLError as e:
             raise e
         except requests.exceptions.ConnectionError:
-            logging.debug('Could not connect to Bitcoind. (Try {}/{})'.format(i+1, TRIES))
+            logger.debug('Could not connect to Bitcoind. (Try {}/{})'.format(i+1, TRIES))
             time.sleep(5)
 
     if response == None:

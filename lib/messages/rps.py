@@ -26,7 +26,10 @@ import time
 import binascii
 import string
 
-from lib import config, exceptions, util, logger
+from lib import config
+from lib import exceptions
+from lib import util
+from lib import log
 
 # possible_moves wager move_random_hash expiration
 FORMAT = '>HQ32sI'
@@ -143,7 +146,7 @@ def cancel_rps (db, rps, status, block_index):
     }
     sql='''UPDATE rps SET status = :status WHERE tx_hash = :tx_hash'''
     cursor.execute(sql, bindings)
-    logger.message(db, block_index, 'update', 'rps', bindings)
+    log.message(db, block_index, 'update', 'rps', bindings)
 
     util.credit(db, block_index, rps['source'], 'XCP', rps['wager'], action='recredit wager', event=rps['tx_hash'])
 
@@ -172,7 +175,7 @@ def update_rps_match_status (db, rps_match, status, block_index):
     }
     sql='UPDATE rps_matches SET status = :status WHERE id = :rps_match_id'
     cursor.execute(sql, bindings)
-    logger.message(db, block_index, 'update', 'rps_matches', bindings)
+    log.message(db, block_index, 'update', 'rps_matches', bindings)
 
     cursor.close()
 
@@ -316,7 +319,7 @@ def match (db, tx, block_index):
                 'tx_index': txn['tx_index']
             }
             cursor.execute('''UPDATE rps SET status = :status WHERE tx_index = :tx_index''', bindings)
-            logger.message(db, block_index, 'update', 'rps', bindings)
+            log.message(db, block_index, 'update', 'rps', bindings)
 
         bindings = {
             'id': util.make_id(tx0['tx_hash'], tx1['tx_hash']),

@@ -5,6 +5,7 @@ import argparse
 import decimal
 import sys
 import logging
+logger = logging.getLogger(__name__)
 import time
 import dateutil.parser
 import calendar
@@ -16,7 +17,7 @@ import signal
 import appdirs
 import platform
 
-from lib import config, api, util, exceptions, blocks, blockchain, check, backend, database, transaction, script, logger
+from lib import config, api, util, exceptions, blocks, blockchain, check, backend, database, transaction, script, log
 if os.name == 'nt':
     from lib import util_windows
 
@@ -32,13 +33,14 @@ def sigterm_handler(_signo, _stack_frame):
         signal_name = 'SIGINT'
     else:
         assert False
-    logging.info('Status: Received {}.'.format(signal_name))
+    logger.info('Received {}.'.format(signal_name))
 
     if 'api_server' in globals():
-        logging.info('Status: Stopping API server.')
+        logger.info('Stopping API server.')
         api_server.stop()
         api_status_poller.stop()
-    logging.info('Status: Shutting down.')
+    logger.info('Shutting down.')
+    logging.shutdown()
     sys.exit(0)
 signal.signal(signal.SIGTERM, sigterm_handler)
 signal.signal(signal.SIGINT, sigterm_handler)
@@ -47,7 +49,7 @@ signal.signal(signal.SIGINT, sigterm_handler)
 class LockingError(Exception):
     pass
 def get_lock():
-    logging.info('Status: Acquiring lock.')
+    logger.info('Acquiring lock.')
 
     # Cross‐platform.
     if os.name == 'nt' or platform.system() == 'Darwin':    # Windows or OS X
@@ -65,7 +67,7 @@ def get_lock():
         lock_socket.bind(socket_address)
     except socket.error:
         raise LockingError(error)
-    logging.debug('Status: Lock acquired.')
+    logger.debug('Lock acquired.')
 
 def cli(method, params, unsigned):
     # Get unsigned transaction serialisation.
@@ -328,8 +330,8 @@ def set_options(
         config_file_changed = True
         config.RPC_PASSWORD = util.hexlify(util.dhash(os.urandom(16)))
         configfile['Default']['rpc-password'] = config.RPC_PASSWORD
-        logging.info('Generated password for counterpartyd RPC API: {}'.format(config.RPC_PASSWORD))
-        logging.info('Saved in configuration file: {}'.format(config_file))
+        logger.info('Generated password for counterpartyd RPC API: {}'.format(config.RPC_PASSWORD))
+        logger.info('Saved in configuration file: {}'.format(config_file))
         # raise ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
 
     config.RPC = 'http://' + config.RPC_USER + ':' + config.RPC_PASSWORD + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT)
@@ -616,54 +618,29 @@ if __name__ == '__main__':
                 database_file=args.database_file, testnet=args.testnet,
                 testcoin=args.testcoin, force=args.force, backend_poll_interval=args.backend_poll_interval)
 
-    # Logging (to file and console).
-    logger = logging.getLogger() #get root logger
-    logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
-    #Console logging
-    console = logging.StreamHandler()
-    console.setLevel(logging.DEBUG if args.verbose else logging.INFO)
-    formatter = logging.Formatter('%(message)s')
-    console.setFormatter(formatter)
-    logger.addHandler(console)
-    #File logging (rotated)
-    max_log_size = 20 * 1024 * 1024 #max log size of 20 MB before rotation (make configurable later)
-    if os.name == 'nt':
-        fileh = util_windows.SanitizedRotatingFileHandler(config.LOG, maxBytes=max_log_size, backupCount=5)
-    else:
-        fileh = logging.handlers.RotatingFileHandler(config.LOG, maxBytes=max_log_size, backupCount=5)
-    fileh.setLevel(logging.DEBUG if args.verbose else logging.INFO)
-    formatter = logging.Formatter('%(asctime)s %(message)s', '%Y-%m-%d-T%H:%M:%S%z')
-    fileh.setFormatter(formatter)
-    logger.addHandler(fileh)
-    #API requests logging (don't show on console in normal operation)
-    requests_log = logging.getLogger("requests")
-    requests_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
-    requests_log.propagate = False
-    urllib3_log = logging.getLogger('urllib3')
-    urllib3_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
-    urllib3_log.propagate = False
-    #log unhandled errors (especially to the log files)
-
+    # Set up logging.
+    # Log unhandled errors.
+    log.set_up(args)
     def handle_exception(exc_type, exc_value, exc_traceback):
-        logger.error("ERROR: ", exc_info=(exc_type, exc_value, exc_traceback))
+        logger.error("Unhandled Exception", exc_info=(exc_type, exc_value, exc_traceback))
     sys.excepthook = handle_exception
 
-    logging.info('Status: Running v{} of counterpartyd.'.format(config.VERSION_STRING, config.XCP_CLIENT))
+    logger.info('Running v{} of counterpartyd.'.format(config.VERSION_STRING, config.XCP_CLIENT))
 
     if config.FORCE:
-        logging.warning('WARNING: THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.')
+        logger.warning('THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.')
 
     # Get proxy.
     proxy = backend.get_proxy()
 
     # Backend
     if args.action in ('server', 'reparse', 'rollback') and not config.FORCE:
-        logging.info('Status: Connecting to backend.')
+        logger.info('Connecting to backend.')
         proxy.getblockcount()
 
     # Version
     if args.action in ('server', 'reparse', 'rollback') and not config.FORCE:
-        logging.info('Status: Checking version.')
+        logger.info('Checking version.')
         try:
             check.version(proxy.getblockcount())
         except check.VersionUpdateRequiredError as e:
@@ -675,7 +652,7 @@ if __name__ == '__main__':
         get_lock()
 
     # Database
-    logging.info('Status: Connecting to database.')
+    logger.info('Connecting to database.')
     db = database.get_connection(read_only=False)
 
     # MESSAGE CREATION

@@ -17,8 +17,12 @@ import decimal
 D = decimal.Decimal
 import time
 import logging
+logger = logging.getLogger(__name__)
 
-from lib import config, exceptions, util, logger
+from lib import config
+from lib import exceptions
+from lib import util
+from lib import log
 
 FORMAT = '>HIQQdII'
 LENGTH = 2 + 4 + 8 + 8 + 8 + 4 + 4
@@ -176,7 +180,7 @@ def cancel_bet (db, bet, status, block_index):
     }
     sql='update bets set status = :status where tx_hash = :tx_hash'
     cursor.execute(sql, bindings)
-    logger.message(db, block_index, 'update', 'bets', bindings)
+    log.message(db, block_index, 'update', 'bets', bindings)
 
     util.credit(db, block_index, bet['source'], config.XCP, bet['wager_remaining'], action='recredit wager remaining', event=bet['tx_hash'])
 
@@ -202,7 +206,7 @@ def cancel_bet_match (db, bet_match, status, block_index):
     }
     sql='update bet_matches set status = :status where id = :bet_match_id'
     cursor.execute(sql, bindings)
-    logger.message(db, block_index, 'update', 'bet_matches', bindings)
+    log.message(db, block_index, 'update', 'bet_matches', bindings)
 
     cursor.close()
 
@@ -408,33 +412,33 @@ def match (db, tx):
     for tx0 in bet_matches:
         if tx1_status != 'open': break
 
-        logging.debug('Considering: ' + tx0['tx_hash'])
+        logger.debug('Considering: ' + tx0['tx_hash'])
         tx0_wager_remaining = tx0['wager_remaining']
         tx0_counterwager_remaining = tx0['counterwager_remaining']
 
         # Bet types must be opposite.
         if counterbet_type != tx0['bet_type']:
-            logging.debug('Skipping: bet types disagree.')
+            logger.debug('Skipping: bet types disagree.')
             continue
 
         # Leverages must agree exactly
         if tx0['leverage'] != tx1['leverage']:
-            logging.debug('Skipping: leverages disagree.')
+            logger.debug('Skipping: leverages disagree.')
             continue
 
         # Target values must agree exactly.
         if tx0['target_value'] != tx1['target_value']:
-            logging.debug('Skipping: target values disagree.')
+            logger.debug('Skipping: target values disagree.')
             continue
 
         # Fee fractions must agree exactly.
         if tx0['fee_fraction_int'] != tx1['fee_fraction_int']:
-            logging.debug('Skipping: fee fractions disagree.')
+            logger.debug('Skipping: fee fractions disagree.')
             continue
 
         # Deadlines must agree exactly.
         if tx0['deadline'] != tx1['deadline']:
-            logging.debug('Skipping: deadlines disagree.')
+            logger.debug('Skipping: deadlines disagree.')
             continue
 
         # If the odds agree, make the trade. The found order sets the odds,
@@ -445,22 +449,22 @@ def match (db, tx):
 
         if tx['block_index'] < 286000: tx0_inverse_odds = util.price(1, tx0_odds, tx1['block_index']) # Protocol change.
 
-        logging.debug('Tx0 Inverse Odds: {}; Tx1 Odds: {}'.format(float(tx0_inverse_odds), float(tx1_odds)))
+        logger.debug('Tx0 Inverse Odds: {}; Tx1 Odds: {}'.format(float(tx0_inverse_odds), float(tx1_odds)))
         if tx0_inverse_odds > tx1_odds:
-            logging.debug('Skipping: price mismatch.')
+            logger.debug('Skipping: price mismatch.')
         else:
-            logging.debug('Potential forward quantities: {}, {}'.format(tx0_wager_remaining, int(util.price(tx1_wager_remaining, tx1_odds, tx1['block_index']))))
+            logger.debug('Potential forward quantities: {}, {}'.format(tx0_wager_remaining, int(util.price(tx1_wager_remaining, tx1_odds, tx1['block_index']))))
             forward_quantity = int(min(tx0_wager_remaining, int(util.price(tx1_wager_remaining, tx1_odds, tx1['block_index']))))
-            logging.debug('Forward Quantity: {}'.format(forward_quantity))
+            logger.debug('Forward Quantity: {}'.format(forward_quantity))
             backward_quantity = round(forward_quantity / tx0_odds)
-            logging.debug('Backward Quantity: {}'.format(backward_quantity))
+            logger.debug('Backward Quantity: {}'.format(backward_quantity))
 
             if not forward_quantity:
-                logging.debug('Skipping: zero forward quantity.')
+                logger.debug('Skipping: zero forward quantity.')
                 continue
             if tx1['block_index'] >= 286500 or config.TESTNET:    # Protocol change.
                 if not backward_quantity:
-                    logging.debug('Skipping: zero backward quantity.')
+                    logger.debug('Skipping: zero backward quantity.')
                     continue
 
             bet_match_id = util.make_id(tx0['tx_hash'], tx1['tx_hash'])
@@ -486,7 +490,7 @@ def match (db, tx):
             }
             sql='update bets set wager_remaining = :wager_remaining, counterwager_remaining = :counterwager_remaining, status = :status where tx_hash = :tx_hash'
             cursor.execute(sql, bindings)
-            logger.message(db, tx1['block_index'], 'update', 'bets', bindings)
+            log.message(db, tx1['block_index'], 'update', 'bets', bindings)
 
             if tx1['block_index'] >= 292000 or config.TESTNET:  # Protocol change
                 if tx1_wager_remaining <= 0 or tx1_counterwager_remaining <= 0:
@@ -502,7 +506,7 @@ def match (db, tx):
             }
             sql='update bets set wager_remaining = :wager_remaining, counterwager_remaining = :counterwager_remaining, status = :status where tx_hash = :tx_hash'
             cursor.execute(sql, bindings)
-            logger.message(db, tx1['block_index'], 'update', 'bets', bindings)
+            log.message(db, tx1['block_index'], 'update', 'bets', bindings)
 
             # Get last value of feed.
             broadcasts = list(cursor.execute('''SELECT * FROM broadcasts WHERE (status = ? AND source = ?) ORDER BY tx_index ASC''', ('valid', feed_address)))

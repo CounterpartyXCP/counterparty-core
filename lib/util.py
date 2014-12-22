@@ -3,6 +3,7 @@ import decimal
 import sys
 import json
 import logging
+logger = logging.getLogger(__name__)
 import apsw
 import inspect
 import requests

@@ -1,9 +1,13 @@
 import apsw
 import logging
+logger = logging.getLogger(__name__)
 import time
 
 
-from lib import config, util, exceptions, logger
+from lib import config
+from lib import util
+from lib import exceptions
+from lib import log
 
 def rowtracer(cursor, sql):
     """Converts fetched SQL data into dict-style"""
@@ -39,7 +43,7 @@ def exectracer(cursor, sql, bindings):
             if category not in ('nonces', 'storage'):  # List message manually.
                 if not (command in ('update') and category in ('orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches', 'contracts')):    # List message manually.
                     # try:
-                        logger.message(db, bindings['block_index'], command, category, bindings)
+                        log.message(db, bindings['block_index'], command, category, bindings)
                     # except:
                         # raise TypeError('SQLite3 statements must used named arguments.')
 
@@ -49,7 +53,7 @@ class DatabaseIntegrityError(exceptions.DatabaseError):
     pass
 def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
     """Connects to the SQLite database, returning a db `Connection` object"""
-    logging.debug('Status: Creating connection to `{}`.'.format(config.DATABASE.split('/').pop()))
+    logger.debug('Creating connection to `{}`.'.format(config.DATABASE.split('/').pop()))
 
     if read_only:
         db = apsw.Connection(config.DATABASE, flags=0x00000001)
@@ -76,7 +80,7 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
         integral = False
         for i in range(10): # DUPE
             try:
-                logging.debug('Status: Checking database integrity.')
+                logger.debug('Checking database integrity.')
                 cursor.execute('''PRAGMA integrity_check''')
                 rows = cursor.fetchall()
                 if not (len(rows) == 1 and rows[0][0] == 'ok'):

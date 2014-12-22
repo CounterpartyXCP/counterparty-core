@@ -1,5 +1,5 @@
-Status: Creating connection to `:memory:`.
-Status: Checking database integrity.
+Creating connection to `:memory:`.
+Checking database integrity.
 Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Change quantity: 1.3789914 BTC

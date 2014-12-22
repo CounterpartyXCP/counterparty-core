@@ -5,6 +5,7 @@
 import struct
 import binascii
 import logging
+logger = logging.getLogger(__name__)
 
 from lib import (util, config, exceptions)
 from .scriptlib import (utils, blocks, processblock)
@@ -153,22 +154,22 @@ def parse (db, tx, message):
         output = None
     except processblock.InsufficientStartGas as e:
         have, need = e.args
-        logging.debug('Insufficient start gas: have {} and need {}'.format(have, need))
+        logger.debug('Insufficient start gas: have {} and need {}'.format(have, need))
         status = 'invalid: insufficient start gas'
         output = None
     except processblock.InsufficientBalance as e:
         have, need = e.args
-        logging.debug('Insufficient balance: have {} and need {}'.format(have, need))
+        logger.debug('Insufficient balance: have {} and need {}'.format(have, need))
         status = 'invalid: insufficient balance'
         output = None
     except processblock.OutOfGas as e:
-        logging.debug('TX OUT_OF_GAS (startgas: {}, gas_remained: {})'.format(startgas, gas_remained))
+        logger.debug('TX OUT_OF_GAS (startgas: {}, gas_remained: {})'.format(startgas, gas_remained))
         status = 'out of gas'
         output = None
     finally:
 
         if status == 'valid':
-            logging.debug('TX FINISHED (gas_remained: {})'.format(gas_remained))
+            logger.debug('TX FINISHED (gas_remained: {})'.format(gas_remained))
 
         # Add parsed transaction to message-type–specific table.
         bindings = {

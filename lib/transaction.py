@@ -11,6 +11,7 @@ import re
 import time
 import decimal
 import logging
+logger = logging.getLogger(__name__)
 
 import requests
 from pycoin.encoding import EncodingError
@@ -407,7 +408,7 @@ def construct (db, tx_info, encoding='auto',
     # Get inputs.
     unspent = backend.get_unspent_txouts(source)
     unspent = backend.sort_unspent_txouts(unspent, allow_unconfirmed_inputs)
-    logging.debug('Sorted UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
+    logger.debug('Sorted UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
 
     inputs = []
     btc_in = 0
@@ -415,7 +416,7 @@ def construct (db, tx_info, encoding='auto',
     sufficient_funds = False
     final_fee = fee_per_kb
     for coin in unspent:
-        logging.debug('New input: {}'.format(print_coin(coin)))
+        logger.debug('New input: {}'.format(print_coin(coin)))
         inputs.append(coin)
         btc_in += round(coin['amount'] * config.UNIT)
 
@@ -432,7 +433,7 @@ def construct (db, tx_info, encoding='auto',
         # Check if good.
         btc_out = destination_btc_out + data_btc_out
         change_quantity = btc_in - (btc_out + final_fee)
-        logging.debug('Change quantity: {} BTC'.format(change_quantity / config.UNIT))
+        logger.debug('Change quantity: {} BTC'.format(change_quantity / config.UNIT))
         # If change is necessary, must not be a dust output.
         if change_quantity == 0 or change_quantity >= regular_dust_size:
             sufficient_funds = True

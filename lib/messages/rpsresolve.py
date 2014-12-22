@@ -3,6 +3,7 @@
 import binascii
 import struct
 import logging
+logger = logging.getLogger(__name__)
 import string
 
 from lib import (config, exceptions, util)
@@ -106,7 +107,7 @@ def compose (db, source, move, random, rps_match_id):
     # Warn if down to the wire.
     time_left = rps_match['match_expire_index'] - util.last_block(db)['block_index']
     if time_left < 4:
-        logging.warning('WARNING: Only {} blocks until that rps match expires. The conclusion might not make into the blockchain in time.'.format(time_left))
+        logger.warning('Only {} blocks until that rps match expires. The conclusion might not make into the blockchain in time.'.format(time_left))
 
     tx0_hash_bytes = binascii.unhexlify(bytes(tx0_hash, 'utf-8'))
     tx1_hash_bytes = binascii.unhexlify(bytes(tx1_hash, 'utf-8'))

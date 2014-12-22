@@ -1,6 +1,7 @@
 import json
 import requests
 import logging
+logger = logging.getLogger(__name__)
 import warnings
 import time
 
@@ -71,14 +72,14 @@ class SanityError(Exception):
     pass
 
 def asset_conservation(db):
-    logging.debug('Status: Checking for conservation of assets.')
+    logger.debug('Checking for conservation of assets.')
     supplies = util.supplies(db)
     for asset in supplies.keys():
         issued = supplies[asset]
         held = sum([holder['address_quantity'] for holder in util.holders(db, asset)])
         if held != issued:
             raise SanityError('{} {} issued ≠ {} {} held'.format(util.value_out(db, issued, asset), asset, util.value_out(db, held, asset), asset))
-        logging.debug('Status: {} has been conserved ({} {} both issued and held)'.format(asset, util.value_out(db, issued, asset), asset))
+        logger.debug('{} has been conserved ({} {} both issued and held)'.format(asset, util.value_out(db, issued, asset), asset))
 
 class VersionError(Exception):
     pass
@@ -125,7 +126,7 @@ def version(block_index):
             protocol_change = versions[change_name]
             check_change(protocol_change, block_index)
 
-    logging.debug('Status: Version check passed.')
+    logger.debug('Version check passed.')
     return
 
 def backend():

@@ -2,6 +2,7 @@
 http://insight.bitpay.com/
 '''
 import logging
+logger = logging.getLogger(__name__)
 import requests
 import time
 

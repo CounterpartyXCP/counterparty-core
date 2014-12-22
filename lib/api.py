@@ -10,6 +10,7 @@ import re
 import requests
 import collections
 import logging
+logger = logging.getLogger(__name__)
 from logging import handlers as logging_handlers
 D = decimal.Decimal
 import binascii

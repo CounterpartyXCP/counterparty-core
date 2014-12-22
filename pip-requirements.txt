@@ -36,3 +36,5 @@ python-bitcoinlib==0.2.1
 pysha3==0.3
 
 pytest-cov==1.8.0
+
+colorlog==2.4.0

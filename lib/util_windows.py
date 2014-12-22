@@ -1,6 +1,7 @@
 import sys
 import copy
 import logging
+logger = logging.getLogger(__name__)
 import unicodedata
 import codecs
 from ctypes import WINFUNCTYPE, windll, POINTER, byref, c_int

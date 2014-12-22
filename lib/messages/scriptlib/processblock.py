@@ -5,6 +5,7 @@
 import binascii
 import time
 import logging
+logger = logging.getLogger(__name__)
 import string
 import json
 import pickle
@@ -32,7 +33,7 @@ class PBLogger(object):
             order = dict()
         items = sorted(kargs.items(), key=lambda x: order.get(x[0], 0))
         msg = ", ".join("%s=%s" % (k,v) for k,v in items)
-        logging.info("%s: %s", name.ljust(15), msg)
+        logger.info("%s: %s", name.ljust(15), msg)
 
 pblogger = PBLogger()
 
@@ -59,12 +60,12 @@ def log (name, obj):
 
     if 'op' == name.lower():
         string = str(lines).replace("'", "")[1:-1]
-        logging.debug('\tOP ' + string)
+        logger.debug('\tOP ' + string)
     else:
         if name:
-            logging.debug(name)
+            logger.debug(name)
         for line in lines:
-            logging.debug('\t' + str(line))
+            logger.debug('\t' + str(line))
 
 code_cache = {}
 
@@ -216,10 +217,10 @@ class Compustate():
 
 def apply_msg(db, block, tx, msg, code):
     """
-    logging.debug('\n')
+    logger.debug('\n')
     new_dict = vars(msg).copy()
     new_dict.update(get_msg_state(block, msg, code))
-    logging.debug('\nBEGIN MESSAGE')
+    logger.debug('\nBEGIN MESSAGE')
     log('', new_dict)
     """
 
@@ -231,14 +232,14 @@ def apply_msg(db, block, tx, msg, code):
     if not o:
         return 1, msg.gas, []
 
-    # logging.info('CODE {}'.format(util.hexlify(code)))
+    # logger.info('CODE {}'.format(util.hexlify(code)))
     if code in code_cache:
         processed_code = code_cache[code]
     else:
         processed_code = [opcodes.opcodes.get(c, ['INVALID', 0, 0, [], 0]) +
                           [c] for c in code]
         code_cache[code] = processed_code
-    # logging.info('PROCESSED_CODE {}'.format(processed_code))
+    # logger.info('PROCESSED_CODE {}'.format(processed_code))
 
     try:
         # Snapshot.
@@ -251,7 +252,7 @@ def apply_msg(db, block, tx, msg, code):
             t, ops = time.time(), 0
 
             # Main loop
-            # logging.debug('')
+            # logger.debug('')
             while True:
                 o = apply_op(db, block, tx, msg, processed_code, compustate)
                 ops += 1
@@ -269,9 +270,9 @@ def apply_msg(db, block, tx, msg, code):
                                    'gas': gas_remaining}
                     new_dict = msg_applied.copy()
                     new_dict.update(get_msg_state(msg, code))
-                    logging.debug('')
+                    logger.debug('')
                     log('', new_dict)
-                    logging.debug('END MESSAGE\n')
+                    logger.debug('END MESSAGE\n')
                     """
 
                     pblogger.log('MSG APPLIED', result=o, gas_remained=compustate.gas,
@@ -331,7 +332,7 @@ def get_op_data(code, index):
 def ceil32(x):
     return x if x % 32 == 0 else x + 32 - (x % 32)
 def out_of_gas_exception(expense, fee, compustate, op):
-    logging.debug('OUT OF GAS (expense: {}, needed: {}, available: {}, op: {}, stack: {})'.format(expense, fee, compustate.gas, op, list(reversed(compustate.stack))))
+    logger.debug('OUT OF GAS (expense: {}, needed: {}, available: {}, op: {}, stack: {})'.format(expense, fee, compustate.gas, op, list(reversed(compustate.stack))))
     return OUT_OF_GAS
 def mem_extend(mem, compustate, op, newsize):
     if len(mem) < ceil32(newsize):
@@ -359,7 +360,7 @@ def apply_op(db, block, tx, msg, processed_code, compustate):
 
     # empty stack error
     if in_args > len(compustate.stack):
-        logging.debug('INSUFFICIENT STACK ERROR (op: {}, needed: {}, available: {})'.format(op, in_args,
+        logger.debug('INSUFFICIENT STACK ERROR (op: {}, needed: {}, available: {})'.format(op, in_args,
                      len(compustate.stack)))
         return []
 
@@ -371,9 +372,9 @@ def apply_op(db, block, tx, msg, processed_code, compustate):
 
     for i in range(0, len(compustate.memory), 16):
         memblk = compustate.memory[i:i+16]
-        # logging.debug('MEM {}'.format(memprint(memblk)))
+        # logger.debug('MEM {}'.format(memprint(memblk)))
 
-    # logging.debug('\tSTORAGE\n\t\t' + '\n\t\t'.join(['{}: {}'.format(utils.hexprint(storage['key']), utils.hexprint(storage['value'])) for storage in block.get_storage_data(msg.to)]))
+    # logger.debug('\tSTORAGE\n\t\t' + '\n\t\t'.join(['{}: {}'.format(utils.hexprint(storage['key']), utils.hexprint(storage['value'])) for storage in block.get_storage_data(msg.to)]))
 
     # Log operation
     log_args = dict(pc=str(compustate.pc),
@@ -678,11 +679,11 @@ def apply_op(db, block, tx, msg, processed_code, compustate):
         to = utils.encode_int(to)
         to = util.hexlify(((b'\x00' * (32 - len(to))) + to)[12:])
         data = bytes(mem[meminstart: meminstart + meminsz])
-        # logging.debug('SUB CALL NEW (sender: {}, to: {}, value: {}, gas: {}, data: {})'.format(msg.to, to, value, gas, util.hexlify(data)))
+        # logger.debug('SUB CALL NEW (sender: {}, to: {}, value: {}, gas: {}, data: {})'.format(msg.to, to, value, gas, util.hexlify(data)))
         pblogger.log('SUB CALL NEW', sender=msg.to, to=msg.to, value=value, gas=gas, data=util.hexlify(data))
         call_msg = Message(msg.to, msg.to, value, gas, data)
         result, gas, data = apply_msg(db, block, tx, call_msg, block.get_code(to))
-        # logging.debug('SUB CALL OUT (result: {}, data: {}, length: {}, expected: {}'.format(result, data, len(data), memoutsz))
+        # logger.debug('SUB CALL OUT (result: {}, data: {}, length: {}, expected: {}'.format(result, data, len(data), memoutsz))
         pblogger.log('SUB CALL OUT', result=result, data=data, length=len(data), expected=memoutsz)
         if result == 0:
             stk.append(0)
