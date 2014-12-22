@@ -201,7 +201,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     try:
         config.BACKEND_RPC_PORT = int(config.BACKEND_RPC_PORT)
         if not (int(config.BACKEND_RPC_PORT) > 1 and int(config.BACKEND_RPC_PORT) < 65535):
-            raise exceptions.ConfigurationError('invalid backend API port number')
+            raise ConfigurationError('invalid backend API port number')
     except:
         raise Exception("Please specific a valid port number backend-rpc-port configuration parameter")
 
@@ -223,7 +223,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     elif has_config and 'bitcoind-rpc-password' in configfile['Default'] and configfile['Default']['bitcoind-rpc-password']:
         config.BACKEND_RPC_PASSWORD = configfile['Default']['bitcoind-rpc-password']
     else:
-        raise exceptions.ConfigurationError('backend RPC password not set. (Use configuration file or --backend-rpc-password=PASSWORD)')
+        raise ConfigurationError('backend RPC password not set. (Use configuration file or --backend-rpc-password=PASSWORD)')
 
     # Backend Core RPC SSL
     if backend_rpc_ssl:
@@ -304,7 +304,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     try:
         config.RPC_PORT = int(config.RPC_PORT)
         if not (int(config.BACKEND_RPC_PORT) > 1 and int(config.BACKEND_RPC_PORT) < 65535):
-            raise exceptions.ConfigurationError('invalid counterpartyd API port number')
+            raise ConfigurationError('invalid counterpartyd API port number')
     except:
         raise Exception("Please specific a valid port number rpc-port configuration parameter")
 
@@ -322,7 +322,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     elif has_config and 'rpc-password' in configfile['Default'] and configfile['Default']['rpc-password']:
         config.RPC_PASSWORD = configfile['Default']['rpc-password']
     else:
-        raise exceptions.ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
+        raise ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
 
     config.RPC = 'http://' + config.RPC_USER + ':' + config.RPC_PASSWORD + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT)
 
