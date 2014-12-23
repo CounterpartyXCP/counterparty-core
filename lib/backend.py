@@ -9,9 +9,10 @@ from lib import config
 
 
 def get_proxy():
-    if config.TESTNET: 
-        bitcoinlib.SelectParams('testnet') 
-    proxy = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC) 
+    if config.TESTNET:
+        bitcoinlib.SelectParams('testnet')
+    proxy = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC,
+                                 timeout=config.HTTP_TIMEOUT)
     return proxy
 
 def dumpprivkey(address):
