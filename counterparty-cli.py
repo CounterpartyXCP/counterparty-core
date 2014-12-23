@@ -497,9 +497,9 @@ def set_options(data_dir=None, backend_rpc_connect=None,
         config.BROADCAST_TX_MAINNET = '{}'.format(config.BTC_CLIENT)
 
 def balances(address):
-    address = script.canonical(address)
+    address = script.make_canonical(address)
     script.validate(address)
-    balances = get_address(db, address=address)['balances']
+    balances = get_address(address=address)['balances']
     table = PrettyTable(['Asset', 'Amount'])
     btc_balance = backend.get_btc_balance(address)
     table.add_row([config.BTC, btc_balance])  # BTC
