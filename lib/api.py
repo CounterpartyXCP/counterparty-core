@@ -290,7 +290,6 @@ class APIStatusPoller(threading.Thread):
         self.last_database_check = 0
         threading.Thread.__init__(self)
         self.stop_event = threading.Event()
-        self.proxy = backend.get_proxy()
 
     def stop(self):
         self.stop_event.set()
@@ -316,7 +315,8 @@ class APIStatusPoller(threading.Thread):
                     check.backend_state()
                     code = 12
                     logger.debug('Checking database state.')
-                    check.database_state(db, self.proxy.getblockcount())
+                    proxy = backend.get_proxy()
+                    check.database_state(db, proxy.getblockcount())
                     self.last_database_check = time.time()
             except (check.VersionError, check.BackendError, exceptions.DatabaseError) as e:
                 exception_name = e.__class__.__name__
@@ -336,7 +336,6 @@ class APIServer(threading.Thread):
         threading.Thread.__init__(self)
         self.stop_event = threading.Event()
         self.ioloop = IOLoop.instance()
-        self.proxy = backend.get_proxy()
 
     def stop(self):
         self.ioloop.stop()
@@ -555,7 +554,8 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_running_info():
-            latestBlockIndex = self.proxy.getblockcount()
+            proxy = backend.get_proxy()
+            latestBlockIndex = proxy.getblockcount()
 
             try:
                 check.database_state(db, latestBlockIndex)
@@ -631,8 +631,9 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_wallet():
             # TODO: Dupe with `backend.get_wallet()`
+            proxy = backend.get_proxy()
             wallet = {}
-            for group in self.proxy.listaddressgroupings():
+            for group in proxy.listaddressgroupings():
                 for bunch in group:
                     address, btc_balance = bunch[:2]
                     wallet[address] = str(btc_balance)
