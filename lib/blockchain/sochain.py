@@ -3,7 +3,7 @@ chain.sp
 '''
 import logging
 
-from lib import config, util
+from lib import config, util, backend
 
 def get_host():
     if config.BLOCKCHAIN_SERVICE_CONNECT:
@@ -27,8 +27,7 @@ def searchrawtransactions(address):
     txs = util.get_url(get_host() + '/api/v2/get_tx/{}/{}'.format(sochain_network(), address), abort_on_error=True)
     if 'status' in txs and txs['status'] == 'success':
         for tx in txs['data']['txs']:
-            tx = util.rpc('getrawtransaction', [tx['txid'], 1])
+            tx = backend.old_rpc('getrawtransaction', [tx['txid'], 1])
             confirmed.append(tx)
 
     return unconfirmed + confirmed
-    

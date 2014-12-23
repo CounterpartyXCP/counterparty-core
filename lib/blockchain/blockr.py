@@ -3,7 +3,7 @@ blockr.io
 '''
 import logging
 
-from lib import config, util
+from lib import config, util, backend
 
 def get_host():
     if config.BLOCKCHAIN_SERVICE_CONNECT:
@@ -21,7 +21,7 @@ def searchrawtransactions(address):
     txs = util.get_url(get_host() + '/api/v1/address/txs/{}'.format(address), abort_on_error=True)
     if 'status' in txs and txs['status'] == 'success':
         for tx in txs['data']['txs']:
-            tx = util.rpc('getrawtransaction', [tx['tx'], 1])
+            tx = backend.old_rpc('getrawtransaction', [tx['tx'], 1])
             confirmed.append(tx)
 
     return unconfirmed + confirmed
