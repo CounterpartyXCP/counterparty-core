@@ -469,26 +469,33 @@ def construct (db, tx_info, encoding='auto',
     '''Sanity Check'''
 
     from lib import blocks
+
+    # Desired transaction info.
     (desired_source, desired_destination_outputs, desired_data) = tx_info
-    # Completely skip BTC‐only transactions.
-    if desired_data:
-        desired_source = script.make_canonical(desired_source)
-        desired_destination = script.make_canonical(desired_destination_outputs[0][0]) if desired_destination_outputs else ''
-        # NOTE: Include change in destinations for BTC transactions.
-        # if change_output and not desired_data and desired_destination != config.UNSPENDABLE:
-        #    if desired_destination == '':
-        #        desired_destination = desired_source
-        #    else:
-        #        desired_destination += '-{}'.format(desired_source)
-        # NOTE
-        if desired_data == None:
-            desired_data = b''
+    desired_source = script.make_canonical(desired_source)
+    desired_destination = script.make_canonical(desired_destination_outputs[0][0]) if desired_destination_outputs else ''
+    # NOTE: Include change in destinations for BTC transactions.
+    # if change_output and not desired_data and desired_destination != config.UNSPENDABLE:
+    #    if desired_destination == '':
+    #        desired_destination = desired_source
+    #    else:
+    #        desired_destination += '-{}'.format(desired_source)
+    # NOTE
+    if desired_data == None:
+        desired_data = b''
+
+    # Parsed transaction info.
+    try:
         parsed_source, parsed_destination, x, y, parsed_data = blocks.get_tx_info2(None, unsigned_tx_hex)
-        logger.critical((desired_source, desired_destination, desired_data))    # TODO
-        logger.critical((parsed_source, parsed_destination, parsed_data))       # TODO
-        desired_source = script.make_canonical(desired_source)
-        if (desired_source, desired_destination, desired_data) != (parsed_source, parsed_destination, parsed_data):
-            raise exceptions.TransactionError('constructed transaction does not parse correctly')
+    except exceptions.BTCOnlyError:
+        # Skip BTC‐only transactions.
+        return unsigned_tx_hex
+    desired_source = script.make_canonical(desired_source)
+
+    # Check desired info against parsed info.
+    if (desired_source, desired_destination, desired_data) != (parsed_source, parsed_destination, parsed_data):
+        raise exceptions.TransactionError('constructed transaction does not parse correctly')
+
 
     return unsigned_tx_hex
 

@@ -33,7 +33,7 @@ from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, 
 from .blockchain.blocks_parser import BlockchainParser, ChainstateParser
 from .blockchain.utils import ib2h
 
-from .exceptions import DecodeError
+from .exceptions import DecodeError, BTCOnlyError
 
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['credits', 'debits', 'messages'] + \
@@ -348,7 +348,7 @@ def get_tx_info(proxy, tx_hex, block_index, block_parser=None):
             tx_info = get_tx_info2(proxy, tx_hex, block_parser=block_parser)
         else:
             tx_info = get_tx_info1(proxy, tx_hex, block_index, block_parser=block_parser)
-    except DecodeError as e:
+    except (DecodeError, BTCOnlyError) as e:
         # NOTE: For debugging, logger.debug('Could not decode: ' + str(e))
         tx_info = b'', None, None, None, None
 
@@ -442,7 +442,7 @@ def get_tx_info1(proxy, tx_hex, block_index, block_parser=None):
 
     # Only look for source if data were found or destination is UNSPENDABLE, for speed.
     if not data and destination != config.UNSPENDABLE:
-        raise DecodeError('no data and not unspendable')
+        raise BTCOnlyError('no data and not unspendable')
 
     # Collect all possible source addresses; ignore coinbase transactions and anything but the simplest Pay‐to‐PubkeyHash inputs.
     source_list = []
@@ -572,7 +572,7 @@ def get_tx_info2(proxy, tx_hex, block_parser=None):
     # Only look for source if data were found or destination is `UNSPENDABLE`,
     # for speed.
     if not data and destinations != [config.UNSPENDABLE,]:
-        raise DecodeError('no data and not unspendable')
+        raise BTCOnlyError('no data and not unspendable')
 
     # Collect all (unique) source addresses.
     sources = []

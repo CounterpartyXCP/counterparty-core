@@ -33,6 +33,8 @@ class ValidateError(MessageError):
     pass
 class DecodeError(MessageError):
     pass
+class BTCOnlyError(MessageError):
+    pass
 
 class BalanceError (Exception):
     pass
