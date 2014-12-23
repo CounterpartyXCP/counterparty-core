@@ -731,9 +731,7 @@ if __name__ == '__main__':
         cli('create_issuance', {'source': args.source, 'asset': args.asset,
                                 'quantity': quantity, 'divisible':
                                 args.divisible, 'description':
-                                args.description, 'callable_': False,
-                                'call_date': 0, 'call_price':
-                                0, 'transfer_destination':
+                                args.description, 'transfer_destination':
                                 args.transfer_destination, 'fee': args.fee,
                                 'allow_unconfirmed_inputs': args.unconfirmed,
                                 'encoding': args.encoding, 'fee_per_kb':

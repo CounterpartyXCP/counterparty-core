@@ -7,6 +7,7 @@
 	* removed depreciated callback functionality
 	* new log format, architecture
 	* fixed API Status Poller
+	* fixed troublesome `socket.timeout` error
 	* code reorganisation
 	* code cleanup
 * v9.49.2 (2014-12-19)
