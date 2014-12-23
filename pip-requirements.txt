@@ -31,7 +31,7 @@ pycrypto>=2.6.1
 
 tendo==0.2.6
 
-python-bitcoinlib==0.2.1
+python-bitcoinlib==0.3.0
 
 pysha3==0.3
 
