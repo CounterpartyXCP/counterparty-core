@@ -480,7 +480,7 @@ def construct (db, tx_info, encoding='auto',
             desired_destination += '-{}'.format(desired_source)
     if desired_data == None:
         desired_data = b''
-    parsed_source, parsed_destination, x, y, parsed_data = blocks.get_tx_info2(unsigned_tx_hex)
+    parsed_source, parsed_destination, x, y, parsed_data = blocks.get_tx_info2(None, unsigned_tx_hex)
     if (desired_source, desired_destination, desired_data) != (parsed_source, parsed_destination, parsed_data):
         raise exceptions.TransactionError('constructed transaction does not parse correctly')
 
