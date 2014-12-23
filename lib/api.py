@@ -631,9 +631,8 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_wallet():
             # TODO: Dupe with `backend.get_wallet()`
-            proxy = backend.get_proxy()
             wallet = {}
-            for group in proxy.listaddressgroupings():
+            for group in self.proxy.listaddressgroupings():
                 for bunch in group:
                     address, btc_balance = bunch[:2]
                     wallet[address] = str(btc_balance)
