@@ -6,7 +6,6 @@ import sys
 import json
 from decimal import Decimal as D
 from functools import lru_cache
-import socket
 
 import bitcoin as bitcoinlib
 import bitcoin.rpc as bitcoinlib_rpc
@@ -16,7 +15,6 @@ from lib import script
 from lib import config
 
 def get_proxy():
-    socket.setdefaulttimeout(10)
     if config.TESTNET:
         bitcoinlib.SelectParams('testnet')
     proxy = bitcoinlib_rpc.Proxy(service_url=config.BACKEND_RPC)
