@@ -618,7 +618,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def search_raw_transactions(address):
-            return blockchain.searchrawtransactions(address)
+            return blockchain.searchrawtransactions(self.proxy, address)
 
         @dispatcher.add_method
         def get_unspent_txouts(address, return_confirmed=False):

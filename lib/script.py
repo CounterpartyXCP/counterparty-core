@@ -223,7 +223,7 @@ def private_key_to_public_key (private_key_wif):
 def pubkeyhash_to_pubkey(pubkeyhash):
     # TODO
     from lib import blockchain
-    
+
     # Search blockchain.
     raw_transactions = blockchain.searchrawtransactions(pubkeyhash)
     for tx in raw_transactions:

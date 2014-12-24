@@ -171,10 +171,10 @@ def get_unspent_txouts(source, return_confirmed=False):
     outputs = {}
     if script.is_multisig(source):
         pubkeyhashes = script.pubkeyhash_array(source)
-        raw_transactions = blockchain.searchrawtransactions(pubkeyhashes[1])
+        raw_transactions = blockchain.searchrawtransactions(proxy, pubkeyhashes[1])
     else:
         pubkeyhashes = [source]
-        raw_transactions = blockchain.searchrawtransactions(source)
+        raw_transactions = blockchain.searchrawtransactions(proxy, source)
 
     canonical_source = script.make_canonical(source)
 

@@ -68,7 +68,7 @@ def op_push (i):
     else:
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
-def get_dust_return_pubkey(source, provided_pubkeys, encoding):
+def get_dust_return_pubkey(proxy, source, provided_pubkeys, encoding):
     # Get `dust_return_pubkey`, if necessary.
     if encoding in ('multisig', 'pubkeyhash'):
 
@@ -82,7 +82,7 @@ def get_dust_return_pubkey(source, provided_pubkeys, encoding):
                 private_key_wif = backend.dumpprivkey(source)
                 dust_return_pubkey_hex = script.private_key_to_public_key(private_key_wif)
             else:
-                dust_return_pubkey_hex = script.pubkeyhash_to_pubkey(source)
+                dust_return_pubkey_hex = script.pubkeyhash_to_pubkey(proxy, source)
 
         # Convert hex public key into the (binary) dust return pubkey.
         try:
@@ -393,8 +393,8 @@ def construct (db, proxy, tx_info, encoding='auto',
         # private key retrieved from wallet.
     if source:
         script.validate(source)
-    dust_return_pubkey = get_dust_return_pubkey(source, provided_pubkeys,
-                                                encoding)
+    dust_return_pubkey = get_dust_return_pubkey(proxy, source,
+                                                provided_pubkeys, encoding)
 
     # Calculate collective size of outputs, for fee calculation.
     if encoding == 'multisig':
