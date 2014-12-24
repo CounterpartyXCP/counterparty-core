@@ -622,7 +622,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_unspent_txouts(address, return_confirmed=False):
-            result = backend.get_unspent_txouts(address, return_confirmed=return_confirmed)
+            result = backend.get_unspent_txouts(self.proxy, address, return_confirmed=return_confirmed)
             if return_confirmed:
                 return {'all': result[0], 'confirmed': result[1]}
             else:
