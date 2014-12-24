@@ -22,7 +22,7 @@ def check():
     pass
 
 def searchrawtransactions(address):
-    unconfirmed = backend.unconfirmed_transactions(address)
+    unconfirmed = backend.unconfirmed_transactions(proxy, address)
 
     confirmed = []
     txs = util.get_url(get_host() + '/api/v2/get_tx/{}/{}'.format(sochain_network(), address), abort_on_error=True)

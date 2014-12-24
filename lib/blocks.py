@@ -359,9 +359,6 @@ def get_tx_info1(proxy, tx_hex, block_index, block_parser=None):
     The destination, if it exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
-    if proxy == None:
-        proxy = backend.get_proxy()
-
     ctx = backend.deserialize(tx_hex)
 
     def get_pubkeyhash(scriptpubkey):
@@ -477,9 +474,6 @@ def get_tx_info2(proxy, tx_hex, block_parser=None):
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
-    if proxy == None:
-        proxy = backend.get_proxy()
-
     # Decode transaction binary.
     ctx = backend.deserialize(tx_hex)
 
@@ -831,9 +825,8 @@ def get_next_tx_index(db):
 
 class MempoolError(Exception):
     pass
-def follow(db):
+def follow(db, proxy):
     cursor = db.cursor()
-    proxy = backend.get_proxy()
 
     # Initialise.
     initialise(db)

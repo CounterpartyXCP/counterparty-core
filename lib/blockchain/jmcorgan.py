@@ -14,7 +14,7 @@ def check():
     return True
 
 def searchrawtransactions(address):
-    unconfirmed = backend.unconfirmed_transactions(address)
+    unconfirmed = backend.unconfirmed_transactions(proxy, address)
     try:
         rawtransactions = backend.old_rpc('searchrawtransactions', [address, 1, 0, 9999999])
     except backend.BitcoindRPCError as e:

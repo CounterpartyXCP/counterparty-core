@@ -21,8 +21,7 @@ def get_proxy():
                                  timeout=config.HTTP_TIMEOUT)
     return proxy
 
-def get_wallet():
-    proxy = get_proxy()
+def get_wallet(proxy):
     for group in proxy.listaddressgroupings():
         for bunch in group:
             yield bunch
@@ -30,8 +29,7 @@ def get_wallet():
 def dumpprivkey(address):
     return old_rpc('dumpprivkey', [address])
 
-def wallet_unlock():
-    proxy = get_proxy()
+def wallet_unlock(proxy):
     getinfo = proxy.getinfo() # TODO: broken with btcd
     if 'unlocked_until' in getinfo:
         if getinfo['unlocked_until'] >= 60:
@@ -56,11 +54,9 @@ def get_cached_raw_transaction(tx_hash, verbose=False):
     else:
         return old_rpc('getrawtransaction', [tx_hash])
 
-def is_valid(address):
-    proxy = get_proxy()
+def is_valid(proxy, address):
     return proxy.validateaddress(address)['isvalid']
-def is_mine(address):
-    proxy = get_proxy()
+def is_mine(proxy, address):
     return proxy.validateaddress(address)['ismine']
 
 def get_txhash_list(block):
@@ -91,7 +87,7 @@ class DecimalEncoder(json.JSONEncoder):
         # Let the base class default method raise the TypeError
         return json.JSONEncoder.default(self, obj)
 
-def unconfirmed_transactions(address):
+def unconfirmed_transactions(proxy, address):
     unconfirmed_tx = []
 
     call_id = 0
@@ -105,7 +101,7 @@ def unconfirmed_transactions(address):
         })
         call_id += 1
 
-    batch_responses = get_proxy()._batch(call_list)
+    batch_responses = proxy._batch(call_list)
     for response in batch_responses:
         if 'error' not in response or response['error'] is None:
             if 'result' in response and response['result'] is not None:
@@ -150,9 +146,8 @@ def sort_unspent_txouts(unspent, allow_unconfirmed_inputs):
 
 
 
-def get_btc_supply(normalize=False):
+def get_btc_supply(proxy, normalize=False):
     """returns the total supply of {} (based on what Bitcoin Core says the current block height is)""".format(config.BTC)
-    proxy = get_proxy()
     block_count = proxy.getblockcount()
     blocks_remaining = block_count
     total_supply = 0
@@ -299,7 +294,7 @@ def old_rpc(method, params):
     elif response_json['error']['code'] == -4:   # Unknown private key (locked wallet?)
         # If address in wallet, attempt to unlock.
         address = params[0]
-        if is_valid(address):
+        if is_valid(proxy, address):
             if is_mine(address):
                 raise BitcoindError('Wallet is locked.')
             else:   # When will this happen?

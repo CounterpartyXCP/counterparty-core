@@ -97,7 +97,7 @@ def market(give_asset, get_asset):
 
     # Your Pending Orders Matches.
     addresses = []
-    for bunch in backend.get_wallet():
+    for bunch in backend.get_wallet(proxy):
         addresses.append(bunch[:2][0])
     filters = [
         ('tx0_address', 'IN', addresses),
@@ -170,10 +170,10 @@ def cli(method, params, unsigned):
     else:
         # Get public key for source.
         source = params['source']
-        if not backend.is_valid(source):
+        if not backend.is_valid(proxy, source):
             raise exceptions.AddressError('Invalid address.')
-        if backend.is_mine(source):
-            backend.wallet_unlock()
+        if backend.is_mine(proxy, source):
+            backend.wallet_unlock(proxy)
         else:
             # TODO: Do this only if the encoding method needs it.
             print('Source not in backend wallet.')
@@ -193,7 +193,7 @@ def cli(method, params, unsigned):
 
     """  # NOTE: For debugging, e.g. with `Invalid Params` error.
     tx_info = sys.modules['lib.send'].compose(db, params['source'], params['destination'], params['asset'], params['quantity'])
-    print(transaction.construct(db, tx_info, encoding=params['encoding'],
+    print(transaction.construct(db, proxy, tx_info, encoding=params['encoding'],
                                         fee_per_kb=params['fee_per_kb'],
                                         regular_dust_size=params['regular_dust_size'],
                                         multisig_dust_size=params['multisig_dust_size'],
@@ -211,15 +211,15 @@ def cli(method, params, unsigned):
     if script.is_multisig(params['source']):
         print('Multi‐signature transactions are signed and broadcasted manually.')
     elif not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
-        if backend.is_mine(source):
+        if backend.is_mine(proxy, source):
             private_key_wif = None
         elif not private_key_wif:   # If private key was not given earlier.
             private_key_wif = input('Private key (Wallet Import Format): ')
 
         # Sign and broadcast.
-        signed_tx_hex = transaction.sign_tx(unsigned_tx_hex, private_key_wif=private_key_wif)
+        signed_tx_hex = transaction.sign_tx(proxy, unsigned_tx_hex, private_key_wif=private_key_wif)
         print('Transaction (signed):', signed_tx_hex)
-        print('Hash of transaction (broadcasted):', transaction.broadcast_tx(signed_tx_hex))
+        print('Hash of transaction (broadcasted):', transaction.broadcast_tx(proxy, signed_tx_hex))
 
 def set_options(data_dir=None, backend_rpc_connect=None,
                  backend_rpc_port=None, backend_rpc_user=None, backend_rpc_password=None,
@@ -716,6 +716,9 @@ if __name__ == '__main__':
     logger.info('Connecting to database.')
     db = database.get_connection()
 
+    # Proxy
+    proxy = backend.get_proxy()
+
     # MESSAGE CREATION
     if args.action == 'send':
         if args.fee:
@@ -1010,7 +1013,7 @@ if __name__ == '__main__':
         totals = {}
 
         print()
-        for bunch in backend.get_wallet():
+        for bunch in backend.get_wallet(proxy):
             address, btc_balance = bunch[:2]
             address_data = get_address(address=address)
             balances = address_data['balances']
@@ -1049,7 +1052,7 @@ if __name__ == '__main__':
 
     elif args.action == 'pending':
         addresses = []
-        for bunch in backend.get_wallet():
+        for bunch in backend.get_wallet(proxy):
             addresses.append(bunch[:2][0])
         filters = [
             ('tx0_address', 'IN', addresses),

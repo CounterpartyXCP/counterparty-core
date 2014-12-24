@@ -118,7 +118,7 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
     if pytest.config.option.savescenarios:
         save_rawtransaction(rawtransactions_db, tx_hash, raw_transaction)
 
-    source, destination, btc_amount, fee, data = blocks.get_tx_info2(None, raw_transaction)
+    source, destination, btc_amount, fee, data = blocks.get_tx_info2(get_proxy(), raw_transaction)
     transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
     cursor.execute('''INSERT INTO transactions VALUES (?,?,?,?,?,?,?,?,?,?,?)''', transaction)
     tx = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = ?''', (tx_index,)))[0]
@@ -200,7 +200,7 @@ def run_scenario(scenario, rawtransactions_db):
         if tx[0] != 'create_next_block':
             module = sys.modules['lib.messages.{}'.format(tx[0])]
             compose = getattr(module, 'compose')
-            unsigned_tx_hex = transaction.construct(db, compose(db, *tx[1]), **tx[2])
+            unsigned_tx_hex = transaction.construct(db, get_proxy(), compose(db, *tx[1]), **tx[2])
             raw_transactions.append({tx[0]: unsigned_tx_hex})
             insert_raw_transaction(unsigned_tx_hex, db, rawtransactions_db)
         else:
@@ -277,7 +277,7 @@ def vector_to_args(vector, functions=[]):
 
 def exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db):
     if tx_name == 'transaction' and method == 'construct':
-        return tested_method(counterpartyd_db, inputs[0], **inputs[1])
+        return tested_method(counterpartyd_db, get_proxy(), inputs[0], **inputs[1])
     elif tx_name == 'util':
         return tested_method(*inputs)
     elif tx_name == 'script' and method == 'base58_check_decode':
@@ -306,7 +306,7 @@ def check_ouputs(tx_name, method, inputs, outputs, error, records, counterpartyd
             if tx_name == 'order' and inputs[1]=='BTC':
                 print('give btc')
                 tx_params['fee_provided'] = DP['fee_provided']
-            unsigned_tx_hex = transaction.construct(counterpartyd_db, test_outputs, **tx_params)
+            unsigned_tx_hex = transaction.construct(counterpartyd_db, get_proxy(), test_outputs, **tx_params)
             print(tx_name)
             print(unsigned_tx_hex)
 

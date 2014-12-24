@@ -129,9 +129,8 @@ def version(block_index):
     logger.debug('Version check passed.')
     return
 
-def backend_state():
+def backend_state(proxy):
     """Checks blocktime of last block to see if {} Core is running behind.""".format(config.BTC_NAME)
-    proxy = backend.get_proxy()
     block_count = proxy.getblockcount()
     block_hash_bin = proxy.getblockhash(block_count)
     cblock = proxy.getblock(block_hash_bin)

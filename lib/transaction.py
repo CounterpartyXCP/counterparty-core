@@ -294,7 +294,7 @@ def chunks(l, n):
     for i in range(0, len(l), n):
         yield l[i:i+n]
 
-def construct (db, tx_info, encoding='auto',
+def construct (db, proxy, tx_info, encoding='auto',
                fee_per_kb=config.DEFAULT_FEE_PER_KB,
                regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
                multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
@@ -486,7 +486,7 @@ def construct (db, tx_info, encoding='auto',
 
     # Parsed transaction info.
     try:
-        parsed_source, parsed_destination, x, y, parsed_data = blocks.get_tx_info2(None, unsigned_tx_hex)
+        parsed_source, parsed_destination, x, y, parsed_data = blocks.get_tx_info2(proxy, unsigned_tx_hex)
     except exceptions.BTCOnlyError:
         # Skip BTC‐only transactions.
         return unsigned_tx_hex
@@ -499,7 +499,7 @@ def construct (db, tx_info, encoding='auto',
 
     return unsigned_tx_hex
 
-def sign_tx (unsigned_tx_hex, private_key_wif=None):
+def sign_tx (proxy, unsigned_tx_hex, private_key_wif=None):
     """Sign unsigned transaction serialisation."""
 
     if private_key_wif:
@@ -523,7 +523,6 @@ def sign_tx (unsigned_tx_hex, private_key_wif=None):
             raise exceptions.TransactionError('Could not sign transaction with pybtctool.')
 
     else:   # Assume source is in wallet and wallet is unlocked.
-        proxy = backend.get_proxy()
         result = proxy.signrawtransaction(backend.deserialize(unsigned_tx_hex))
         if result['complete']:
             signed_tx_hex = util.hexlify(backend.serialize(result['tx']))
@@ -532,8 +531,7 @@ def sign_tx (unsigned_tx_hex, private_key_wif=None):
 
     return signed_tx_hex
 
-def broadcast_tx (signed_tx_hex):
-    proxy = backend.get_proxy()
+def broadcast_tx (proxy, signed_tx_hex):
     return b2lx(proxy.sendrawtransaction(backend.deserialize(signed_tx_hex)))
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
