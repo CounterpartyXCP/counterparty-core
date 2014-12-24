@@ -6,8 +6,8 @@ from requests.auth import HTTPBasicAuth
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
-from lib import (config, api, util, exceptions, bitcoin, blocks, check, backend, database)
-from lib.messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve)
+from lib import (config, api, util, exceptions, blocks, check, backend, database, transaction)
+from lib.messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve)
 import counterpartyd
 
 from fixtures.params import DEFAULT_PARAMS as DP
@@ -118,7 +118,7 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
     if pytest.config.option.savescenarios:
         save_rawtransaction(rawtransactions_db, tx_hash, raw_transaction)
 
-    source, destination, btc_amount, fee, data = blocks.get_tx_info2(raw_transaction)
+    source, destination, btc_amount, fee, data = blocks.get_tx_info2(get_proxy(), raw_transaction)
     transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
     cursor.execute('''INSERT INTO transactions VALUES (?,?,?,?,?,?,?,?,?,?,?)''', transaction)
     tx = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = ?''', (tx_index,)))[0]
@@ -178,7 +178,6 @@ def run_scenario(scenario, rawtransactions_db):
     util.FIRST_MULTISIG_BLOCK_TESTNET = 1
     checkpoints = dict(check.CHECKPOINTS_TESTNET)
     check.CHECKPOINTS_TESTNET = {}
-    proxy = RpcProxy()
 
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
@@ -197,15 +196,15 @@ def run_scenario(scenario, rawtransactions_db):
     initialise_db(db)
 
     raw_transactions = []
-    for transaction in scenario:
-        if transaction[0] != 'create_next_block':
-            module = sys.modules['lib.messages.{}'.format(transaction[0])]
+    for tx in scenario:
+        if tx[0] != 'create_next_block':
+            module = sys.modules['lib.messages.{}'.format(tx[0])]
             compose = getattr(module, 'compose')
-            unsigned_tx_hex = bitcoin.transaction(db, compose(db, *transaction[1]), **transaction[2])
-            raw_transactions.append({transaction[0]: unsigned_tx_hex})
+            unsigned_tx_hex = transaction.construct(db, get_proxy(), compose(db, *tx[1]), **tx[2])
+            raw_transactions.append({tx[0]: unsigned_tx_hex})
             insert_raw_transaction(unsigned_tx_hex, db, rawtransactions_db)
         else:
-            create_next_block(db, block_index=config.BURN_START + transaction[1], parse_block=True)
+            create_next_block(db, block_index=config.BURN_START + tx[1], parse_block=True)
 
     dump = dump_database(db)
     log = logger_buff.getvalue()
@@ -277,13 +276,12 @@ def vector_to_args(vector, functions=[]):
     return args
 
 def exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db):
-    if tx_name == 'bitcoin' and method == 'transaction':
-        return tested_method(counterpartyd_db, inputs[0], **inputs[1])
+    if tx_name == 'transaction' and method == 'construct':
+        return tested_method(counterpartyd_db, get_proxy(), inputs[0], **inputs[1])
     elif tx_name == 'util':
-        if method == 'base58_check_decode':
-            return binascii.hexlify(tested_method(*inputs)).decode('utf-8')
-        else:
-            return tested_method(*inputs)
+        return tested_method(*inputs)
+    elif tx_name == 'script' and method == 'base58_check_decode':
+        return binascii.hexlify(tested_method(*inputs)).decode('utf-8')
     else:
         return tested_method(counterpartyd_db, *inputs)
 
@@ -308,7 +306,7 @@ def check_ouputs(tx_name, method, inputs, outputs, error, records, counterpartyd
             if tx_name == 'order' and inputs[1]=='BTC':
                 print('give btc')
                 tx_params['fee_provided'] = DP['fee_provided']
-            unsigned_tx_hex = bitcoin.transaction(counterpartyd_db, test_outputs, **tx_params)
+            unsigned_tx_hex = transaction.construct(counterpartyd_db, get_proxy(), test_outputs, **tx_params)
             print(tx_name)
             print(unsigned_tx_hex)
 
@@ -381,7 +379,7 @@ def reparse(testnet=True):
             sql = '''SELECT {} FROM blocks  WHERE block_index = ?'''.format(field)
             first_hash = list(memory_cursor.execute(sql, (config.BLOCK_FIRST,)))[0][field]
             if first_hash != checkpoints[config.BLOCK_FIRST][field]:
-                logging.info('First hash changed. Cleaning {}.'.format(field))
+                logger.info('First hash changed. Cleaning {}.'.format(field))
                 memory_cursor.execute('''UPDATE blocks SET {} = NULL'''.format(field))
 
     blocks.initialise(memory_db)

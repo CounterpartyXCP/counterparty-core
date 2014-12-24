@@ -9,7 +9,7 @@ from fixtures.vectors import UNITTEST_VECTOR
 from fixtures.params import DEFAULT_PARAMS
 from fixtures.scenarios import INTEGRATION_SCENARIOS
 
-from lib import config, bitcoin, util, backend
+from lib import config, util, backend, transaction
 
 import bitcoin as bitcoinlib
 import bitcoin.rpc as bitcoinlib_rpc
@@ -85,7 +85,8 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
     def init_api_access_log():
         pass
 
-    def multisig_pubkeyhashes_to_pubkeys(address):
+    def multisig_pubkeyhashes_to_pubkeys(address, provided_pubkeys):
+        # TODO: Should be updated?!
         array = address.split('_')
         signatures_required = int(array[0])
         pubkeyhashes = array[1:-1]
@@ -93,14 +94,18 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
         address = '_'.join([str(signatures_required)] + sorted(pubkeys) + [str(len(pubkeys))])
         return address
 
-    monkeypatch.setattr('lib.bitcoin.get_unspent_txouts', get_unspent_txouts)
+    def get_cached_raw_transaction(tx_hash, verbose=False):
+        return util_test.getrawtransaction(rawtransactions_db, bitcoinlib.core.lx(tx_hash))
+
+    monkeypatch.setattr('lib.backend.get_unspent_txouts', get_unspent_txouts)
     monkeypatch.setattr('lib.backend.dumpprivkey', dumpprivkey)
     monkeypatch.setattr('lib.backend.is_mine', is_mine)
-    monkeypatch.setattr('lib.util.isodt', isodt)
-    monkeypatch.setattr('lib.util.curr_time', curr_time)
+    monkeypatch.setattr('lib.log.isodt', isodt)
+    monkeypatch.setattr('lib.log.curr_time', curr_time)
     monkeypatch.setattr('lib.util.date_passed', date_passed)
     monkeypatch.setattr('lib.api.init_api_access_log', init_api_access_log)
     if hasattr(config, 'PREFIX'):
         monkeypatch.setattr('lib.config.PREFIX', b'TESTXXXX')
-    monkeypatch.setattr('lib.bitcoin.multisig_pubkeyhashes_to_pubkeys', multisig_pubkeyhashes_to_pubkeys)
+    monkeypatch.setattr('lib.script.multisig_pubkeyhashes_to_pubkeys', multisig_pubkeyhashes_to_pubkeys)
     monkeypatch.setattr('lib.backend.get_proxy', util_test.get_proxy)
+    monkeypatch.setattr('lib.backend.get_cached_raw_transaction', get_cached_raw_transaction)

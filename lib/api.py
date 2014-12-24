@@ -10,9 +10,12 @@ import re
 import requests
 import collections
 import logging
+logger = logging.getLogger(__name__)
 from logging import handlers as logging_handlers
 D = decimal.Decimal
+import binascii
 
+import struct
 import apsw
 import flask
 from flask.ext.httpauth import HTTPBasicAuth
@@ -23,11 +26,31 @@ import jsonrpc
 from jsonrpc import dispatcher
 import inspect
 
-from . import (config, bitcoin, exceptions, util, blockchain, check, backend, database)
-from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback, rps, rpsresolve, publish, execute)
+from lib import config
+from lib import exceptions
+from lib import util
+from lib import blockchain
+from lib import check
+from lib import backend
+from lib import database
+from lib import transaction
+from lib import blocks
+from lib.messages import send
+from lib.messages import order
+from lib.messages import btcpay
+from lib.messages import issuance
+from lib.messages import broadcast
+from lib.messages import bet
+from lib.messages import dividend
+from lib.messages import burn
+from lib.messages import cancel
+from lib.messages import rps
+from lib.messages import rpsresolve
+from lib.messages import publish
+from lib.messages import execute
 
 API_TABLES = ['balances', 'credits', 'debits', 'bets', 'bet_matches',
-              'broadcasts', 'btcpays', 'burns', 'callbacks', 'cancels',
+              'broadcasts', 'btcpays', 'burns', 'cancels',
               'dividends', 'issuances', 'orders', 'order_matches', 'sends',
               'bet_expirations', 'order_expirations', 'bet_match_expirations',
               'order_match_expirations', 'bet_match_resolutions', 'rps',
@@ -35,22 +58,21 @@ API_TABLES = ['balances', 'credits', 'debits', 'bets', 'bet_matches',
               'mempool']
 
 API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel',
-                    'callback', 'dividend', 'issuance', 'order', 'send',
+                    'dividend', 'issuance', 'order', 'send',
                     'rps', 'rpsresolve', 'publish', 'execute']
 
 COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
                 'multisig_dust_size', 'op_return_value', 'pubkey',
                 'allow_unconfirmed_inputs', 'fee', 'fee_provided']
 
-ARGS_ALIAS = {
-    'callable': 'callable_'
-}
-
 API_MAX_LOG_SIZE = 10 * 1024 * 1024 #max log size of 20 MB before rotation (make configurable later)
 API_MAX_LOG_COUNT = 10
 
 current_api_status_code = None #is updated by the APIStatusPoller
 current_api_status_response_json = None #is updated by the APIStatusPoller
+
+class APIError(Exception):
+    pass
 
 # TODO: ALL queries EVERYWHERE should be done with these methods
 def db_query(db, statement, bindings=(), callback=None, **callback_args):
@@ -65,33 +87,36 @@ def db_query(db, statement, bindings=(), callback=None, **callback_args):
     cursor.close()
     return results
 
-def get_rows(db, table, filters=[], filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None,
+def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None,
               status=None, limit=1000, offset=0, show_expired=True):
     """Filters results based on a filter data structure (as used by the API)"""
+
+    if filters == None:
+        filters = []
 
     def value_to_marker(value):
         # if value is an array place holder is (?,?,?,..)
         if isinstance(value, list):
-            return '''({})'''.format(','.join(['?' for e in range(0,len(value))]))
+            return '''({})'''.format(','.join(['?' for e in range(0, len(value))]))
         else:
             return '''?'''
 
     # TODO: Document that op can be anything that SQLite3 accepts.
     if not table or table.lower() not in API_TABLES:
-        raise Exception('Unknown table')
+        raise APIError('Unknown table')
     if filterop and filterop.upper() not in ['OR', 'AND']:
-        raise Exception('Invalid filter operator (OR, AND)')
+        raise APIError('Invalid filter operator (OR, AND)')
     if order_dir and order_dir.upper() not in ['ASC', 'DESC']:
-        raise Exception('Invalid order direction (ASC, DESC)')
+        raise APIError('Invalid order direction (ASC, DESC)')
     if not isinstance(limit, int):
-        raise Exception('Invalid limit')
+        raise APIError('Invalid limit')
     elif limit > 1000:
-        raise Exception('Limit should be lower or equal to 1000')
+        raise APIError('Limit should be lower or equal to 1000')
     if not isinstance(offset, int):
-        raise Exception('Invalid offset')
+        raise APIError('Invalid offset')
     # TODO: accept an object:  {'field1':'ASC', 'field2': 'DESC'}
     if order_by and not re.compile('^[a-z0-9_]+$').match(order_by):
-        raise Exception('Invalid order_by, must be a field name')
+        raise APIError('Invalid order_by, must be a field name')
 
     if isinstance(filters, dict): #single filter entry, convert to a one entry list
         filters = [filters,]
@@ -103,27 +128,28 @@ def get_rows(db, table, filters=[], filterop='AND', order_by=None, order_dir=Non
     for filter_ in filters:
         if type(filter_) in (list, tuple) and len(filter_) in [3, 4]:
             new_filter = {'field': filter_[0], 'op': filter_[1], 'value':  filter_[2]}
-            if len(filter_) == 4: new_filter['case_sensitive'] = filter_[3]
+            if len(filter_) == 4:
+                new_filter['case_sensitive'] = filter_[3]
             new_filters.append(new_filter)
         elif type(filter_) == dict:
             new_filters.append(filter_)
         else:
-            raise Exception('Unknown filter type')
+            raise APIError('Unknown filter type')
     filters = new_filters
 
     # validate filter(s)
     for filter_ in filters:
         for field in ['field', 'op', 'value']: #should have all fields
             if field not in filter_:
-                raise Exception("A specified filter is missing the '%s' field" % field)
+                raise APIError("A specified filter is missing the '%s' field" % field)
         if not isinstance(filter_['value'], (str, int, float, list)):
-            raise Exception("Invalid value for the field '%s'" % filter_['field'])
+            raise APIError("Invalid value for the field '%s'" % filter_['field'])
         if isinstance(filter_['value'], list) and filter_['op'].upper() not in ['IN', 'NOT IN']:
-            raise Exception("Invalid value for the field '%s'" % filter_['field'])
+            raise APIError("Invalid value for the field '%s'" % filter_['field'])
         if filter_['op'].upper() not in ['=', '==', '!=', '>', '<', '>=', '<=', 'IN', 'LIKE', 'NOT IN', 'NOT LIKE']:
-            raise Exception("Invalid operator for the field '%s'" % filter_['field'])
+            raise APIError("Invalid operator for the field '%s'" % filter_['field'])
         if 'case_sensitive' in filter_ and not isinstance(filter_['case_sensitive'], bool):
-            raise Exception("case_sensitive must be a boolean")
+            raise APIError("case_sensitive must be a boolean")
 
     # SELECT
     statement = '''SELECT * FROM {}'''.format(table)
@@ -195,7 +221,7 @@ def get_rows(db, table, filters=[], filterop='AND', order_by=None, order_dir=Non
 
     return db_query(db, statement, tuple(bindings))
 
-def compose_transaction(db, name, params,
+def compose_transaction(db, proxy, name, params,
                         encoding='auto',
                         fee_per_kb=config.DEFAULT_FEE_PER_KB,
                         regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
@@ -205,9 +231,6 @@ def compose_transaction(db, name, params,
                         allow_unconfirmed_inputs=False,
                         fee=None,
                         fee_provided=0):
-    for param in ARGS_ALIAS:
-        if param in params:
-            params[ARGS_ALIAS[param]] = params.pop(param)
 
     compose_method = sys.modules['lib.messages.{}'.format(name)].compose
     compose_params = inspect.getargspec(compose_method)[0]
@@ -217,12 +240,12 @@ def compose_transaction(db, name, params,
 
     # try:  # NOTE: For debugging, e.g. with `Invalid Params` error.
     tx_info = compose_method(db, **params)
-    return bitcoin.transaction(db, tx_info, encoding=encoding,
+    return transaction.construct(db, proxy, tx_info, encoding=encoding,
                                         fee_per_kb=fee_per_kb,
                                         regular_dust_size=regular_dust_size,
                                         multisig_dust_size=multisig_dust_size,
                                         op_return_value=op_return_value,
-                                        self_public_key_hex=pubkey,
+                                        provided_pubkeys=pubkey,
                                         allow_unconfirmed_inputs=allow_unconfirmed_inputs,
                                         exact_fee=fee,
                                         fee_provided=fee_provided)
@@ -230,28 +253,28 @@ def compose_transaction(db, name, params,
         # import traceback
         # traceback.print_exc()
 
-def sign_transaction(unsigned_tx_hex, private_key_wif=None):
-    return bitcoin.sign_tx(unsigned_tx_hex,
+def sign_transaction(proxy, unsigned_tx_hex, private_key_wif=None):
+    return transaction.sign_tx(proxy, unsigned_tx_hex,
         private_key_wif=private_key_wif)
 
-def broadcast_transaction(signed_tx_hex):
+def broadcast_transaction(proxy, signed_tx_hex):
     if not config.TESTNET and config.BROADCAST_TX_MAINNET in ['bci', 'bci-failover']:
         url = "https://blockchain.info/pushtx"
         params = {'tx': signed_tx_hex}
         response = requests.post(url, data=params)
         if response.text.lower() != 'transaction submitted' or response.status_code != 200:
             if config.BROADCAST_TX_MAINNET == 'bci-failover':
-                return bitcoin.broadcast_tx(signed_tx_hex)
+                return transaction.broadcast_tx(proxy, signed_tx_hex)
             else:
-                raise Exception(response.text)
+                raise APIError(response.text)
         return response.text
     else:
-        return bitcoin.broadcast_tx(signed_tx_hex)
+        return transaction.broadcast_tx(proxy, signed_tx_hex)
 
-def do_transaction(db, name, params, private_key_wif=None, **kwargs):
-    unsigned_tx = compose_transaction(db, name, params, **kwargs)
+def do_transaction(db, proxy, name, params, private_key_wif=None, **kwargs):
+    unsigned_tx = compose_transaction(db, proxy, name, params, **kwargs)
     signed_tx = sign_transaction(unsigned_tx, private_key_wif=private_key_wif)
-    return broadcast_transaction(signed_tx)
+    return broadcast_transaction(proxy, signed_tx)
 
 def init_api_access_log():
     api_logger = logging.getLogger("tornado")
@@ -267,18 +290,21 @@ class APIStatusPoller(threading.Thread):
         self.last_database_check = 0
         threading.Thread.__init__(self)
         self.stop_event = threading.Event()
+        self.proxy = backend.get_proxy()
 
     def stop(self):
         self.stop_event.set()
 
     def run(self):
+        logger.debug('Starting API Status Poller.')
         global current_api_status_code, current_api_status_response_json
         db = database.get_connection(integrity_check=False)
 
-        while self.stop_event == False:
+        while self.stop_event.is_set() != True:
             try:
                 # Check version.
-                if time.time() - self.last_version_check >= 10: # Four hours since last check.
+                if time.time() - self.last_version_check >= 60 * 60: # One hour since last check.
+                    logger.debug('Checking version.')
                     code = 10
                     check.version(util.last_block(db)['block_index'])
                     self.last_version_check = time.time()
@@ -286,27 +312,31 @@ class APIStatusPoller(threading.Thread):
                 # Check that the database has caught up with bitcoind.
                 if time.time() - self.last_database_check > 10 * 60: # Ten minutes since last check.
                     code = 11
-                    check.backend(db)
+                    logger.debug('Checking backend state.')
+                    check.backend_state(self.proxy)
                     code = 12
-                    proxy = backend.get_proxy()
-                    check.database(db, proxy.getblockcount())
+                    logger.debug('Checking database state.')
+                    check.database_state(db, self.proxy.getblockcount())
                     self.last_database_check = time.time()
-            except Exception as e:
+            except (check.VersionError, check.BackendError, exceptions.DatabaseError) as e:
                 exception_name = e.__class__.__name__
                 exception_text = str(e)
+                logger.debug("API Status Poller: %s", exception_text)
                 jsonrpc_response = jsonrpc.exceptions.JSONRPCServerError(message=exception_name, data=exception_text)
                 current_api_status_code = code
                 current_api_status_response_json = jsonrpc_response.json.encode()
             else:
                 current_api_status_code = None
                 current_api_status_response_json = None
-            time.sleep(2)
+            time.sleep(config.BACKEND_POLL_INTERVAL)
 
 class APIServer(threading.Thread):
     def __init__(self):
         self.is_ready = False
         threading.Thread.__init__(self)
         self.stop_event = threading.Event()
+        self.ioloop = IOLoop.instance()
+        self.proxy = backend.get_proxy()
 
     def stop(self):
         self.ioloop.stop()
@@ -314,6 +344,7 @@ class APIServer(threading.Thread):
         self.stop_event.set()
 
     def run(self):
+        logger.debug('Starting API Server.')
         db = database.get_connection(integrity_check=False)
         app = flask.Flask(__name__)
         auth = HTTPBasicAuth()
@@ -333,7 +364,7 @@ class APIServer(threading.Thread):
                 try:
                     return get_rows(db, table=table, **kwargs)
                 except TypeError as e:          #TODO: generalise for all API methods
-                    raise Exception(str(e))
+                    raise APIError(str(e))
             return get_method
 
         for table in API_TABLES:
@@ -342,7 +373,9 @@ class APIServer(threading.Thread):
             dispatcher.add_method(new_method)
 
         @dispatcher.add_method
-        def sql(query, bindings=[]):
+        def sql(query, bindings=None):
+            if bindings == None:
+                bindings = []
             return db_query(db, query, tuple(bindings))
 
 
@@ -350,7 +383,7 @@ class APIServer(threading.Thread):
         #WRITE/ACTION API
 
         # Generate dynamically create_{transaction} and do_{transaction} methods
-        def generate_create_method(transaction):
+        def generate_create_method(tx):
 
             def split_params(**kwargs):
                 transaction_args = {}
@@ -368,38 +401,38 @@ class APIServer(threading.Thread):
             def create_method(**kwargs):
                 try:
                     transaction_args, common_args, private_key_wif = split_params(**kwargs)
-                    return compose_transaction(db, name=transaction, params=transaction_args, **common_args)
+                    return compose_transaction(db, self.proxy, name=tx, params=transaction_args, **common_args)
                 except TypeError as e:          #TODO: generalise for all API methods
-                    raise Exception(str(e))
+                    raise APIError(str(e))
 
             def do_method(**kwargs):
                 try:
                     transaction_args, common_args, private_key_wif = split_params(**kwargs)
-                    return do_transaction(db, name=transaction, params=transaction_args, private_key_wif=private_key_wif, **common_args)
+                    return do_transaction(db, self.proxy, name=tx, params=transaction_args, private_key_wif=private_key_wif, **common_args)
                 except TypeError as e:          #TODO: generalise for all API methods
-                    raise Exception(str(e))
+                    raise APIError(str(e))
 
             return create_method, do_method
 
-        for transaction in API_TRANSACTIONS:
-            create_method, do_method = generate_create_method(transaction)
-            create_method.__name__ = 'create_{}'.format(transaction)
-            do_method.__name__ = 'do_{}'.format(transaction)
+        for tx in API_TRANSACTIONS:
+            create_method, do_method = generate_create_method(tx)
+            create_method.__name__ = 'create_{}'.format(tx)
+            do_method.__name__ = 'do_{}'.format(tx)
             dispatcher.add_method(create_method)
             dispatcher.add_method(do_method)
 
         @dispatcher.add_method
         def sign_tx(unsigned_tx_hex, privkey=None):
-            return sign_transaction(unsigned_tx_hex, private_key_wif=privkey)
+            return sign_transaction(self.proxy, unsigned_tx_hex, private_key_wif=privkey)
 
         @dispatcher.add_method
         def broadcast_tx(signed_tx_hex):
-            return broadcast_transaction(signed_tx_hex)
+            return broadcast_transaction(self.proxy, signed_tx_hex)
 
         @dispatcher.add_method
         def get_messages(block_index):
             if not isinstance(block_index, int):
-                raise Exception("block_index must be an integer.")
+                raise APIError("block_index must be an integer.")
 
             cursor = db.cursor()
             cursor.execute('select * from messages where block_index = ? order by message_index asc', (block_index,))
@@ -417,7 +450,7 @@ class APIServer(threading.Thread):
                 message_indexes = [message_indexes,]
             for idx in message_indexes:  #make sure the data is clean
                 if not isinstance(idx, int):
-                    raise Exception("All items in message_indexes are not integers")
+                    raise APIError("All items in message_indexes are not integers")
 
             cursor = db.cursor()
             cursor.execute('SELECT * FROM messages WHERE message_index IN (%s) ORDER BY message_index ASC'
@@ -433,14 +466,14 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_asset_info(assets):
             if not isinstance(assets, list):
-                raise Exception("assets must be a list of asset names, even if it just contains one entry")
+                raise APIError("assets must be a list of asset names, even if it just contains one entry")
             assetsInfo = []
             for asset in assets:
 
                 # BTC and XCP.
                 if asset in [config.BTC, config.XCP]:
                     if asset == config.BTC:
-                        supply = bitcoin.get_btc_supply(normalize=False)
+                        supply = backend.get_btc_supply(self.proxy, normalize=False)
                     else:
                         supply = util.xcp_supply(db)
 
@@ -450,9 +483,6 @@ class APIServer(threading.Thread):
                         'divisible': True,
                         'locked': False,
                         'supply': supply,
-                        'callable': False,
-                        'call_date': None,
-                        'call_price': None,
                         'description': '',
                         'issuer': None
                     })
@@ -462,8 +492,10 @@ class APIServer(threading.Thread):
                 cursor = db.cursor()
                 issuances = list(cursor.execute('''SELECT * FROM issuances WHERE (status = ? AND asset = ?) ORDER BY block_index ASC''', ('valid', asset)))
                 cursor.close()
-                if not issuances: continue #asset not found, most likely
-                else: last_issuance = issuances[-1]
+                if not issuances:
+                    continue #asset not found, most likely
+                else:
+                    last_issuance = issuances[-1]
                 locked = False
                 for e in issuances:
                     if e['locked']: locked = True
@@ -473,9 +505,6 @@ class APIServer(threading.Thread):
                     'divisible': bool(last_issuance['divisible']),
                     'locked': locked,
                     'supply': util.asset_supply(db, asset),
-                    'callable': bool(last_issuance['callable']),
-                    'call_date': last_issuance['call_date'],
-                    'call_price': last_issuance['call_price'],
                     'description': last_issuance['description'],
                     'issuer': last_issuance['issuer']})
             return assetsInfo
@@ -499,9 +528,9 @@ class APIServer(threading.Thread):
         def get_blocks(block_indexes):
             """fetches block info and messages for the specified block indexes"""
             if not isinstance(block_indexes, (list, tuple)):
-                raise Exception("block_indexes must be a list of integers.")
+                raise APIError("block_indexes must be a list of integers.")
             if len(block_indexes) >= 250:
-                raise Exception("can only specify up to 250 indexes at a time.")
+                raise APIError("can only specify up to 250 indexes at a time.")
 
             block_indexes_str = ','.join([str(x) for x in block_indexes])
             cursor = db.cursor()
@@ -515,7 +544,7 @@ class APIServer(threading.Thread):
             messages = collections.deque(cursor.fetchall())
 
             for block in blocks:
-                messages_in_block = []
+                # messages_in_block = []
                 block['_messages'] = []
                 while len(messages) and messages[0]['block_index'] == block['block_index']:
                     block['_messages'].append(messages.popleft())
@@ -526,12 +555,11 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_running_info():
-            proxy = backend.get_proxy()
-            latestBlockIndex = proxy.getblockcount()
+            latestBlockIndex = self.proxy.getblockcount()
 
             try:
-                check.database(db, latestBlockIndex)
-            except exceptions.DatabaseError as e:
+                check.database_state(db, latestBlockIndex)
+            except exceptions.DatabaseError:
                 caught_up = False
             else:
                 caught_up = True
@@ -564,7 +592,7 @@ class APIServer(threading.Thread):
             cursor = db.cursor()
             for element in ['transactions', 'blocks', 'debits', 'credits', 'balances', 'sends', 'orders',
                 'order_matches', 'btcpays', 'issuances', 'broadcasts', 'bets', 'bet_matches', 'dividends',
-                'burns', 'cancels', 'callbacks', 'order_expirations', 'bet_expirations', 'order_match_expirations',
+                'burns', 'cancels', 'order_expirations', 'bet_expirations', 'order_match_expirations',
                 'bet_match_expirations', 'messages']:
                 cursor.execute("SELECT COUNT(*) AS count FROM %s" % element)
                 count_list = cursor.fetchall()
@@ -586,7 +614,7 @@ class APIServer(threading.Thread):
             addresses = []
             for holder in holders:
                 addresses.append(holder['address'])
-            return { asset: len(set(addresses)) }
+            return {asset: len(set(addresses))}
 
         @dispatcher.add_method
         def search_raw_transactions(address):
@@ -594,17 +622,44 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_unspent_txouts(address, return_confirmed=False):
-            result = bitcoin.get_unspent_txouts(address, return_confirmed=return_confirmed)
+            result = backend.get_unspent_txouts(address, return_confirmed=return_confirmed)
             if return_confirmed:
                 return {'all': result[0], 'confirmed': result[1]}
             else:
                 return result
 
+        @dispatcher.add_method
+        def get_wallet():
+            # TODO: Dupe with `backend.get_wallet()`
+            wallet = {}
+            for group in self.proxy.listaddressgroupings():
+                for bunch in group:
+                    address, btc_balance = bunch[:2]
+                    wallet[address] = str(btc_balance)
+            return wallet
+
+        @dispatcher.add_method
+        def get_tx_info(tx_hex):
+            source, destination, btc_amount, fee, data = blocks.get_tx_info(tx_hex, util.last_block(db)['block_index'])
+            return source, destination, btc_amount, fee, util.hexlify(data)
+
+        @dispatcher.add_method
+        def unpack(data_hex):
+            data = binascii.unhexlify(data_hex)
+            message_type_id = struct.unpack(config.TXTYPE_FORMAT, data[:4])[0]
+            message = data[4:]
+
+            for message_type in API_TRANSACTIONS:
+                if message_type_id == sys.modules['lib.messages.{}'.format(message_type)].ID:
+                    unpack_method = sys.modules['lib.messages.{}'.format(message_type)].unpack
+                    unpacked = unpack_method(db, message, util.last_block(db)['block_index'])
+            return message_type_id, unpacked
+
         def _set_cors_headers(response):
             if config.RPC_ALLOW_CORS:
                 response.headers['Access-Control-Allow-Origin'] = '*'
                 response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-                response.headers['Access-Control-Allow-Headers'] = 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type';
+                response.headers['Access-Control-Allow-Headers'] = 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type'
 
         @app.route('/', methods=["OPTIONS",])
         @app.route('/api/', methods=["OPTIONS",])
@@ -647,10 +702,9 @@ class APIServer(threading.Thread):
         try:
             http_server.listen(config.RPC_PORT, address=config.RPC_HOST)
             self.is_ready = True
-            self.ioloop = IOLoop.instance()
             self.ioloop.start()
         except OSError:
-            raise Exception("Cannot start the API subsystem. Is {} already running, or is something else listening on port {}?".format(config.XCP_CLIENT, config.RPC_PORT))
+            raise APIError("Cannot start the API subsystem. Is {} already running, or is something else listening on port {}?".format(config.XCP_CLIENT, config.RPC_PORT))
 
         db.close()
         http_server.stop()

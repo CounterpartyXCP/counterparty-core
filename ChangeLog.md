@@ -1,4 +1,15 @@
 ## Client Versions ##
+* v9.49.3 (???)
+	* better logging when handling `SIGTERM`, `SIGKILL`
+	* update README
+	* if no RPC password is specified, generate automatically
+	* allow manually providing pubkeys for multi‐sig addresses
+	* removed depreciated callback functionality
+	* new log format, architecture
+	* fixed API Status Poller
+	* fixed troublesome `socket.timeout` error
+	* code reorganisation
+	* code cleanup
 * v9.49.2 (2014-12-19)
 	* prepare for ‘destroy’ functionality
 	* match IDs now include underscore
