@@ -123,7 +123,11 @@ def parse_tx(db, tx):
     return True
 
 
-def parse_block(db, block_index, block_time, previous_ledger_hash=None, previous_txlist_hash=None):
+def parse_block(db, block_index, block_time, previous_ledger_hash=None,
+                ledger_hash=None, previous_txlist_hash=None, txlist_hash=None):
+    """The unused arguments `ledger_hash` and `txlist_hash` are for the test
+    suite.
+    """
     cursor = db.cursor()
 
     util.BLOCK_LEDGER = []
