@@ -373,10 +373,7 @@ def compose (db, source, give_asset, give_quantity, get_asset, get_quantity, exp
     cursor = db.cursor()
 
     # Check balance.
-    if give_asset == config.BTC:
-        if backend.get_btc_balance(source) * config.UNIT < give_quantity:
-            logger.warning('insufficient funds for {}pay.'.format(config.BTC))
-    else:
+    if give_asset != config.BTC:
         balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, give_asset)))
         if (not balances or balances[0]['quantity'] < give_quantity):
             raise exceptions.ComposeError('insufficient funds')
