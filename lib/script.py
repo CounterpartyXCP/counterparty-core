@@ -220,12 +220,12 @@ def private_key_to_public_key (private_key_wif):
     public_key_hex = binascii.hexlify(public_key).decode('utf-8')
     return public_key_hex
 
-def pubkeyhash_to_pubkey(pubkeyhash):
+def pubkeyhash_to_pubkey(proxy, pubkeyhash):
     # TODO
     from lib import blockchain
 
     # Search blockchain.
-    raw_transactions = blockchain.searchrawtransactions(pubkeyhash)
+    raw_transactions = blockchain.searchrawtransactions(proxy, pubkeyhash)
     for tx in raw_transactions:
         for vin in tx['vin']:
             scriptsig = vin['scriptSig']

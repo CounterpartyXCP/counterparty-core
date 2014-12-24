@@ -180,7 +180,7 @@ def get_btc_supply(proxy, normalize=False):
             blocks_remaining = 0
     return total_supply if normalize else int(total_supply * config.UNIT)
 
-def get_unspent_txouts(source, return_confirmed=False):
+def get_unspent_txouts(proxy, source, return_confirmed=False):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
     """
@@ -240,8 +240,8 @@ def get_unspent_txouts(source, return_confirmed=False):
     else:
         return unspent
 
-def get_btc_balance(address, confirmed=True):
-    all_unspent, confirmed_unspent = get_unspent_txouts(address, return_confirmed=True)
+def get_btc_balance(proxy, address, confirmed=True):
+    all_unspent, confirmed_unspent = get_unspent_txouts(proxy, address, return_confirmed=True)
     unspent = confirmed_unspent if confirmed else all_unspent
     return sum(out['amount'] for out in unspent)
 

@@ -406,7 +406,7 @@ def construct (db, proxy, tx_info, encoding='auto',
     outputs_size = ((25 + 9) * len(destination_outputs)) + (len(data_array) * data_output_size)
 
     # Get inputs.
-    unspent = backend.get_unspent_txouts(source)
+    unspent = backend.get_unspent_txouts(proxy, source)
     unspent = backend.sort_unspent_txouts(unspent, allow_unconfirmed_inputs)
     logger.debug('Sorted UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
 
