@@ -220,27 +220,24 @@ def private_key_to_public_key (private_key_wif):
     public_key_hex = binascii.hexlify(public_key).decode('utf-8')
     return public_key_hex
 
-def pubkeyhash_to_pubkey(proxy, pubkeyhash):
-    if backend.is_mine(pubkeyhash):
-        # Derive from private key.
-        private_key_wif = backend.dumpprivkey(pubkeyhash)
-        pubkey = private_key_to_public_key(private_key_wif)
-        return pubkey
-    else:
-        # Search blockchain.
-        raw_transactions = blockchain.searchrawtransactions(proxy, pubkeyhash)
-        for tx in raw_transactions:
-            for vin in tx['vin']:
-                scriptsig = vin['scriptSig']
-                asm = scriptsig['asm'].split(' ')
-                pubkey = asm[1]
-                if pubkeyhash == pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
-                    return pubkey
-        raise AddressError('Public key for address ‘{}’ not published in blockchain.'.format(pubkeyhash))
+def pubkeyhash_to_pubkey(pubkeyhash):
+    # TODO
+    from lib import blockchain
 
-def multisig_pubkeyhashes_to_pubkeys (address, provided_pubkeys):
+    # Search blockchain.
+    raw_transactions = blockchain.searchrawtransactions(pubkeyhash)
+    for tx in raw_transactions:
+        for vin in tx['vin']:
+            scriptsig = vin['scriptSig']
+            asm = scriptsig['asm'].split(' ')
+            pubkey = asm[1]
+            if pubkeyhash == pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
+                return pubkey
+    raise AddressError('Public key for address ‘{}’ not published in blockchain.'.format(pubkeyhash))
+
+def multisig_pubkeyhashes_to_pubkeys (address, provided_pubkeys=None):
     signatures_required, pubkeyhashes, signatures_possible = extract_array(address)
-    pubkeys = [pubkeyhash_to_pubkey(pubkeyhash) for pubkeyhash in pubkeyhashes]
+    pubkeys = provided_pubkeys or [pubkeyhash_to_pubkey(pubkeyhash) for pubkeyhash in pubkeyhashes]
     return construct_array(signatures_required, pubkeys, signatures_possible)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
