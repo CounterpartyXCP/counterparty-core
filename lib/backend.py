@@ -29,6 +29,24 @@ def get_wallet(proxy):
 def dumpprivkey(address):
     return old_rpc('dumpprivkey', [address])
 
+# TODO: Generate this block of code dynamically?
+def getblockcount(proxy):
+    return proxy.getblockcount()
+def getblockhash(proxy, blockcount):
+    return proxy.getblockhash(blockcount)
+def getblock(proxy, block_hash_bin):
+    return proxy.getblock(block_hash_bin)
+def getrawtransaction(proxy, tx_hash_bin):
+    return proxy.getrawtransaction(tx_hash_bin)
+def getrawmempool(proxy):
+    return proxy.getrawmempool()
+def listaddressgroupings(proxy):
+    return proxy.listaddressgroupings()
+def signrawtransaction(proxy, ctx):
+    return proxy.signrawtransaction(ctx)
+def sendrawtransaction(proxy, ctx):
+    return proxy.sendrawtransaction(ctx)
+
 def wallet_unlock(proxy):
     getinfo = proxy.getinfo() # TODO: broken with btcd
     if 'unlocked_until' in getinfo:

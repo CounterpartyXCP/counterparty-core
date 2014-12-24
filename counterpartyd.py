@@ -636,13 +636,13 @@ if __name__ == '__main__':
     # Backend
     if args.action in ('server', 'reparse', 'rollback') and not config.FORCE:
         logger.info('Connecting to backend.')
-        proxy.getblockcount()
+        backend.getblockcount(proxy)
 
     # Version
     if args.action in ('server', 'reparse', 'rollback') and not config.FORCE:
         logger.info('Checking version.')
         try:
-            check.version(proxy.getblockcount())
+            check.version(backend.getblockcount(proxy))
         except check.VersionUpdateRequiredError as e:
             traceback.print_exc(file=sys.stdout)
             sys.exit(config.EXITCODE_UPDATE_REQUIRED)

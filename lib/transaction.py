@@ -523,7 +523,7 @@ def sign_tx (proxy, unsigned_tx_hex, private_key_wif=None):
             raise exceptions.TransactionError('Could not sign transaction with pybtctool.')
 
     else:   # Assume source is in wallet and wallet is unlocked.
-        result = proxy.signrawtransaction(backend.deserialize(unsigned_tx_hex))
+        result = backend.signrawtransaction(proxy, backend.deserialize(unsigned_tx_hex))
         if result['complete']:
             signed_tx_hex = util.hexlify(backend.serialize(result['tx']))
         else:
@@ -532,6 +532,6 @@ def sign_tx (proxy, unsigned_tx_hex, private_key_wif=None):
     return signed_tx_hex
 
 def broadcast_tx (proxy, signed_tx_hex):
-    return b2lx(proxy.sendrawtransaction(backend.deserialize(signed_tx_hex)))
+    return b2lx(backend.sendrawtransaction(proxy, backend.deserialize(signed_tx_hex)))
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

@@ -455,7 +455,7 @@ def get_tx_info1(proxy, tx_hex, block_index, block_parser=None):
             vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
             vin_ctx = backend.deserialize(vin_tx['__data__'])
         else:
-            vin_ctx = proxy.getrawtransaction(vin.prevout.hash)
+            vin_ctx = backend.getrawtransaction(proxy, vin.prevout.hash)
         vout = vin_ctx.vout[vin.prevout.n]
         fee += vout.nValue
 
@@ -872,7 +872,7 @@ def follow(db, proxy):
         # If the backend is unreachable and `config.FORCE` is set, just sleep
         # and try again repeatedly.
         try:
-            block_count = proxy.getblockcount()
+            block_count = backend.getblockcount(proxy)
         except (ConnectionRefusedError, http.client.CannotSendRequest) as e:
             if config.FORCE:
                 time.sleep(config.BACKEND_POLL_INTERVAL)
@@ -893,8 +893,8 @@ def follow(db, proxy):
                 logger.debug('Checking that block {} is not an orphan.'.format(current_index))
 
                 # Backend parent hash.
-                current_hash_bin = proxy.getblockhash(current_index)
-                current_cblock = proxy.getblock(current_hash_bin)
+                current_hash_bin = backend.getblockhash(proxy, current_index)
+                current_cblock = backend.getblock(proxy, current_hash_bin)
                 backend_parent = bitcoinlib.core.b2lx(current_cblock.hashPrevBlock)
 
                 # DB parent hash.
@@ -926,8 +926,8 @@ def follow(db, proxy):
                 continue
 
             # Get and parse transactions in this block (atomically).
-            block_hash_bin = proxy.getblockhash(current_index)
-            block = proxy.getblock(block_hash_bin)
+            block_hash_bin = backend.getblockhash(proxy, current_index)
+            block = backend.getblock(proxy, block_hash_bin)
             block_hash = bitcoinlib.core.b2lx(block_hash_bin)
             previous_block_hash = bitcoinlib.core.b2lx(block.hashPrevBlock)
             block_time = block.nTime
@@ -966,7 +966,7 @@ def follow(db, proxy):
 
             logger.info('Block: %s (%ss)'%(str(block_index), "{:.2f}".format(time.time() - starttime, 3)))
             # Increment block index.
-            block_count = proxy.getblockcount()
+            block_count = backend.getblockcount(proxy)
             block_index += 1
 
         else:
@@ -989,7 +989,7 @@ def follow(db, proxy):
             # and then save those messages.
             # Every transaction in mempool is parsed independently. (DB is rolled back after each one.)
             mempool = []
-            util.MEMPOOL = proxy.getrawmempool()
+            util.MEMPOOL = backend.getrawmempool(proxy)
             for tx_hash in util.MEMPOOL:
                 tx_hash = bitcoinlib.core.b2lx(tx_hash)
 

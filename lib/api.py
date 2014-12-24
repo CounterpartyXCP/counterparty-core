@@ -316,7 +316,7 @@ class APIStatusPoller(threading.Thread):
                     check.backend_state(self.proxy)
                     code = 12
                     logger.debug('Checking database state.')
-                    check.database_state(db, self.proxy.getblockcount())
+                    check.database_state(db, backend.getblockcount(self.proxy))
                     self.last_database_check = time.time()
             except (check.VersionError, check.BackendError, exceptions.DatabaseError) as e:
                 exception_name = e.__class__.__name__
@@ -555,7 +555,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_running_info():
-            latestBlockIndex = self.proxy.getblockcount()
+            latestBlockIndex = backend.getblockcount(self.proxy)
 
             try:
                 check.database_state(db, latestBlockIndex)
@@ -632,7 +632,7 @@ class APIServer(threading.Thread):
         def get_wallet():
             # TODO: Dupe with `backend.get_wallet()`
             wallet = {}
-            for group in self.proxy.listaddressgroupings():
+            for group in backend.listaddressgroupings(self.proxy):
                 for bunch in group:
                     address, btc_balance = bunch[:2]
                     wallet[address] = str(btc_balance)
