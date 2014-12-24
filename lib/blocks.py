@@ -576,7 +576,8 @@ def get_tx_info2(proxy, tx_hex, block_parser=None):
             vin_tx = block_parser.read_raw_transaction(ib2h(vin.prevout.hash))
             vin_ctx = backend.deserialize(vin_tx['__data__'])
         else:
-            vin_ctx = proxy.getrawtransaction(vin.prevout.hash)
+            vin_tx = backend.get_cached_raw_transaction(ib2h(vin.prevout.hash))
+            vin_ctx = backend.deserialize(vin_tx)
         vout = vin_ctx.vout[vin.prevout.n]
         fee += vout.nValue
 

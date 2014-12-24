@@ -94,6 +94,9 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
         address = '_'.join([str(signatures_required)] + sorted(pubkeys) + [str(len(pubkeys))])
         return address
 
+    def get_cached_raw_transaction(tx_hash, verbose=False):
+        return util_test.getrawtransaction(rawtransactions_db, bitcoinlib.core.lx(tx_hash))
+
     monkeypatch.setattr('lib.backend.get_unspent_txouts', get_unspent_txouts)
     monkeypatch.setattr('lib.backend.dumpprivkey', dumpprivkey)
     monkeypatch.setattr('lib.backend.is_mine', is_mine)
@@ -105,3 +108,4 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
         monkeypatch.setattr('lib.config.PREFIX', b'TESTXXXX')
     monkeypatch.setattr('lib.script.multisig_pubkeyhashes_to_pubkeys', multisig_pubkeyhashes_to_pubkeys)
     monkeypatch.setattr('lib.backend.get_proxy', util_test.get_proxy)
+    monkeypatch.setattr('lib.backend.get_cached_raw_transaction', get_cached_raw_transaction)
