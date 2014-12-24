@@ -21,7 +21,7 @@ def sochain_network():
 def check():
     pass
 
-def searchrawtransactions(address):
+def searchrawtransactions(proxy, address):
     unconfirmed = backend.unconfirmed_transactions(proxy, address)
 
     confirmed = []

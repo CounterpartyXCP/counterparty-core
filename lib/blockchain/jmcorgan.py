@@ -13,7 +13,7 @@ bitcoin_rpc_session = None
 def check():
     return True
 
-def searchrawtransactions(address):
+def searchrawtransactions(proxy, address):
     unconfirmed = backend.unconfirmed_transactions(proxy, address)
     try:
         rawtransactions = backend.old_rpc('searchrawtransactions', [address, 1, 0, 9999999])

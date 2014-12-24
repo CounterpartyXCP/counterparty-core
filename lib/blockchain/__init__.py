@@ -13,5 +13,5 @@ def check():
     logger.info('Connecting to block explorer.')
     return sys.modules['lib.blockchain.{}'.format(config.BLOCKCHAIN_SERVICE_NAME)].check()
 
-def searchrawtransactions(address):
-    return sys.modules['lib.blockchain.{}'.format(config.BLOCKCHAIN_SERVICE_NAME)].searchrawtransactions(address)
+def searchrawtransactions(proxy, address):
+    return sys.modules['lib.blockchain.{}'.format(config.BLOCKCHAIN_SERVICE_NAME)].searchrawtransactions(proxy, address)

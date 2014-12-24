@@ -21,7 +21,7 @@ def check():
     if result['status'] == 'syncing':
         logger.warning("Insight is not fully synced to the blockchain: %s%% complete" % result['syncPercentage'])
 
-def searchrawtransactions(address):
+def searchrawtransactions(proxy, address):
     result = util.get_url(get_host() + '/api/txs/?address=' + address, abort_on_error=False)
     if 'txs' in result:
         return result['txs']
