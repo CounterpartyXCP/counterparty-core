@@ -8,7 +8,7 @@ import binascii
 
 from lib import util
 from lib import config
-from .exceptions import DecodeError
+from lib import exceptions
 
 b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
@@ -61,7 +61,7 @@ def base58_check_encode(original, version):
     address = b58_digits[0] * pad + res
 
     if bytes(original, 'utf-8') != binascii.hexlify(base58_check_decode(address, version)):
-        raise exceptions.AddressError('encoded address does not decode properly')
+        raise AddressError('encoded address does not decode properly')
 
     return address
 
@@ -163,9 +163,9 @@ def get_asm(scriptpubkey):
             else:
                 asm.append(op)
     except bitcoinlib.core.script.CScriptTruncatedPushDataError:
-        raise DecodeError('invalid pushdata due to truncation')
+        raise exceptions.DecodeError('invalid pushdata due to truncation')
     if not asm:
-        raise DecodeError('empty output')
+        raise exceptions.DecodeError('empty output')
     return asm
 
 def get_checksig(asm):
@@ -173,7 +173,7 @@ def get_checksig(asm):
         pubkeyhash = asm[2]
         if type(pubkeyhash) == bytes:
             return pubkeyhash
-    raise DecodeError('invalid OP_CHECKSIG')
+    raise exceptions.DecodeError('invalid OP_CHECKSIG')
 
 def get_checkmultisig(asm):
     # N‐of‐2
@@ -186,7 +186,7 @@ def get_checkmultisig(asm):
         pubkeys, signatures_required = asm[1:4], asm[0]
         if all([type(pubkey) == bytes for pubkey in pubkeys]):
             return pubkeys, signatures_required
-    raise DecodeError('invalid OP_CHECKMULTISIG')
+    raise exceptions.DecodeError('invalid OP_CHECKMULTISIG')
 
 def scriptpubkey_to_address(scriptpubkey):
     asm = get_asm(scriptpubkey)
