@@ -28,9 +28,6 @@ from lib import blockchain
 from lib import script
 from lib import backend
 
-class InputError (Exception):
-    pass
-
 # Constants
 OP_RETURN = b'\x6a'
 OP_PUSHDATA1 = b'\x4c'
@@ -88,7 +85,7 @@ def get_dust_return_pubkey(proxy, source, provided_pubkeys, encoding):
         try:
             dust_return_pubkey = binascii.unhexlify(dust_return_pubkey_hex)
         except binascii.Error:
-            raise InputError('Invalid private key.')
+            raise script.InputError('Invalid private key.')
 
     else:
         dust_return_pubkey = None
@@ -107,7 +104,7 @@ def get_multisig_script(address):
     elif signatures_required == 3:
         op_required = OP_3
     else:
-        raise InputError('Required signatures must be 1, 2 or 3.')
+        raise script.InputError('Required signatures must be 1, 2 or 3.')
 
     # Required signatures.
     if signatures_possible == 1:
@@ -117,7 +114,7 @@ def get_multisig_script(address):
     elif signatures_possible == 3:
         op_total = OP_3
     else:
-        raise InputError('Total possible signatures must be 1, 2 or 3.')
+        raise script.InputError('Total possible signatures must be 1, 2 or 3.')
 
     # Construct script.
     tx_script = op_required                                # Required signatures

@@ -12,6 +12,8 @@ from lib import exceptions
 
 b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
+class InputError (Exception):
+    pass
 class AddressError(Exception):
     pass
 class MultiSigAddressError(AddressError):
@@ -122,7 +124,7 @@ def test_array(signatures_required, pubs, signatures_possible):
     if signatures_possible < 2 or signatures_possible > 3:
         raise MultiSigAddressError('Invalid signatures_possible.')
     if signatures_possible != len(pubs):
-        raise exceptions.InputError('Incorrect number of pubkeys/pubkeyhashes in multi‐signature address.')
+        raise InputError('Incorrect number of pubkeys/pubkeyhashes in multi‐signature address.')
 
 def construct_array(signatures_required, pubs, signatures_possible):
     test_array(signatures_required, pubs, signatures_possible)
