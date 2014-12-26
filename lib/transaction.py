@@ -71,7 +71,7 @@ def get_dust_return_pubkey(proxy, source, provided_pubkeys, encoding):
 
         # Get hex dust return pubkey.
         if script.is_multisig(source):
-            a, self_pubkeys, b = script.extract_array(script.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys))
+            a, self_pubkeys, b = script.extract_array(script.multisig_pubkeyhashes_to_pubkeys(proxy, source, provided_pubkeys))
             dust_return_pubkey_hex = self_pubkeys[0]
         else:
             if not provided_pubkeys:
@@ -330,7 +330,7 @@ def construct (db, proxy, tx_info, encoding='auto',
         # Address.
         script.validate(address)
         if script.is_multisig(address):
-            destination_outputs_new.append((script.multisig_pubkeyhashes_to_pubkeys(address, provided_pubkeys), value))
+            destination_outputs_new.append((script.multisig_pubkeyhashes_to_pubkeys(proxy, address, provided_pubkeys), value))
         else:
             destination_outputs_new.append((address, value))
 
@@ -448,7 +448,7 @@ def construct (db, proxy, tx_info, encoding='auto',
     # Change output.
     if change_quantity:
         if script.is_multisig(source):
-            change_address = script.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
+            change_address = script.multisig_pubkeyhashes_to_pubkeys(proxy, source, provided_pubkeys)
         else:
             change_address = source
         change_output = (change_address, change_quantity)

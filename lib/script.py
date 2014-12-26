@@ -207,7 +207,7 @@ from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_p
 from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
 
 class AltcoinSupportError (Exception): pass
-def private_key_to_public_key (private_key_wif):
+def private_key_to_public_key(private_key_wif):
     if config.TESTNET:
         allowable_wif_prefixes = [config.PRIVATEKEY_VERSION_TESTNET]
     else:
@@ -237,9 +237,9 @@ def pubkeyhash_to_pubkey(proxy, pubkeyhash):
                 return pubkey
     raise AddressError('Public key for address ‘{}’ not published in blockchain.'.format(pubkeyhash))
 
-def multisig_pubkeyhashes_to_pubkeys (address, provided_pubkeys=None):
+def multisig_pubkeyhashes_to_pubkeys(proxy, address, provided_pubkeys=None):
     signatures_required, pubkeyhashes, signatures_possible = extract_array(address)
-    pubkeys = provided_pubkeys or [pubkeyhash_to_pubkey(pubkeyhash) for pubkeyhash in pubkeyhashes]
+    pubkeys = provided_pubkeys or [pubkeyhash_to_pubkey(proxy, pubkeyhash) for pubkeyhash in pubkeyhashes]
     return construct_array(signatures_required, pubkeys, signatures_possible)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
