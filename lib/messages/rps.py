@@ -182,6 +182,9 @@ def update_rps_match_status (db, rps_match, status, block_index):
 def validate (db, source, possible_moves, wager, move_random_hash, expiration, block_index):
     problems = []
 
+    if util.enabled('disable_rps', block_index):
+        problems.append('rps disabled')
+
     if not isinstance(possible_moves, int):
         problems.append('possible_moves must be a integer')
         return problems

@@ -629,21 +629,6 @@ if __name__ == '__main__':
     parser_cancel.add_argument('--offer-hash', required=True, help='the transaction hash of the order or bet')
     parser_cancel.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
-    parser_rps = subparsers.add_parser('rps', help='open a rock-paper-scissors like game')
-    parser_rps.add_argument('--source', required=True, help='the source address')
-    parser_rps.add_argument('--wager', required=True, help='the quantity of XCP to wager')
-    parser_rps.add_argument('--move', type=int, required=True, help='the selected move')
-    parser_rps.add_argument('--possible-moves', type=int, required=True, help='the number of possible moves (odd number greater or equal than 3)')
-    parser_rps.add_argument('--expiration', type=int, required=True, help='the number of blocks for which the bet should be valid')
-    parser_rps.add_argument('--fee', help='the exact BTC fee to be paid to miners')
-
-    parser_rpsresolve = subparsers.add_parser('rpsresolve', help='resolve a rock-paper-scissors like game')
-    parser_rpsresolve.add_argument('--source', required=True, help='the source address')
-    parser_rpsresolve.add_argument('--random', type=str, required=True, help='the random number used in the corresponding rps transaction')
-    parser_rpsresolve.add_argument('--move', type=int, required=True, help='the selected move in the corresponding rps transaction')
-    parser_rpsresolve.add_argument('--rps-match-id', required=True, help='the concatenation of the hashes of the two transactions which compose the rps match')
-    parser_rpsresolve.add_argument('--fee', help='the exact BTC fee to be paid to miners')
-
     parser_publish = subparsers.add_parser('publish', help='publish contract code in the blockchain')
     parser_publish.add_argument('--source', required=True, help='the source address')
     parser_publish.add_argument('--gasprice', required=True, type=int, help='the price of gas')
@@ -886,38 +871,6 @@ if __name__ == '__main__':
                               args.multisig_dust_size, 'op_return_value':
                               args.op_return_value},
         args.unsigned)
-
-    elif args.action == 'rps':
-        if args.fee:
-            args.fee = util.value_in(db, args.fee, 'BTC')
-        wager = util.value_in(db, args.wager, 'XCP')
-        random, move_random_hash = generate_move_random_hash(args.move)
-        print('random: {}'.format(random))
-        print('move_random_hash: {}'.format(move_random_hash))
-        cli('create_rps', {'source': args.source,
-                           'possible_moves': args.possible_moves, 'wager': wager,
-                           'move_random_hash': move_random_hash, 'expiration': args.expiration,
-                           'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed,
-                           'encoding': args.encoding, 'fee_per_kb':
-                           args.fee_per_kb, 'regular_dust_size':
-                           args.regular_dust_size, 'multisig_dust_size':
-                           args.multisig_dust_size, 'op_return_value':
-                           args.op_return_value},
-           args.unsigned)
-
-    elif args.action == 'rpsresolve':
-        if args.fee:
-            args.fee = util.value_in(db, args.fee, 'BTC')
-        cli('create_rpsresolve', {'source': args.source,
-                                'random': args.random, 'move': args.move,
-                                'rps_match_id': args.rps_match_id, 'fee': args.fee,
-                                'allow_unconfirmed_inputs': args.unconfirmed,
-                                'encoding': args.encoding, 'fee_per_kb':
-                                args.fee_per_kb, 'regular_dust_size':
-                                args.regular_dust_size, 'multisig_dust_size':
-                                args.multisig_dust_size, 'op_return_value':
-                                args.op_return_value},
-           args.unsigned)
 
     elif args.action == 'publish':
         if args.fee:

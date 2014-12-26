@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.50.0 (???)
+	* disable rock‐paper‐scissors (protocol change: ???)
 * v9.49.3 (???)
 	* better logging when handling `SIGTERM`, `SIGKILL`
 	* update README

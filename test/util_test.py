@@ -7,7 +7,7 @@ CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.ex
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
 from lib import (config, api, util, exceptions, blocks, check, backend, database, transaction)
-from lib.messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve)
+from lib.messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel)
 import counterpartyd
 
 from fixtures.params import DEFAULT_PARAMS as DP
