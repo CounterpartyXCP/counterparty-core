@@ -37,9 +37,12 @@ def initialise (db):
                       rps_match_id_idx ON rpsresolves (rps_match_id)
                    ''')
 
-def validate (db, source, move, random, rps_match_id):
+def validate (db, source, move, random, rps_match_id, block_index):
     problems = []
     rps_match = None
+
+    if util.enabled('disable_rps', block_index):
+        problems.append('rps disabled')
 
     if not isinstance(move, int):
         problems.append('move must be a integer')
@@ -101,7 +104,7 @@ def validate (db, source, move, random, rps_match_id):
 def compose (db, source, move, random, rps_match_id):
     tx0_hash, tx1_hash = util.parse_id(rps_match_id)
 
-    txn, rps_match, problems = validate(db, source, move, random, rps_match_id)
+    txn, rps_match, problems = validate(db, source, move, random, rps_match_id, util.last_block(db)['block_index'])
     if problems: raise exceptions.ComposeError(problems)
 
     # Warn if down to the wire.
@@ -133,7 +136,7 @@ def parse (db, tx, message):
         status = 'invalid: could not unpack'
 
     if status == 'valid':
-        txn, rps_match, problems = validate(db, tx['source'], move, random, rps_match_id)
+        txn, rps_match, problems = validate(db, tx['source'], move, random, rps_match_id, tx['block_index'])
         if problems:
             rps_match = None
             status = 'invalid: ' + '; '.join(problems)

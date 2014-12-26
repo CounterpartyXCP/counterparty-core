@@ -14,7 +14,6 @@ DEFAULT_PARAMS = {
     'fee_provided': 1000000,
     'fee_multiplier': .05,
     'move_random_hash': '6a886d74c2d4b1d7a35fd9159333ef64ba45a04d7aeeeb4538f958603c16fc5d',
-    'rps_random': '7a4488d61ed8f2e9fa2874113fccb8b1',
     'unspendable': 'mvCounterpartyXXXXXXXXXXXXXXW24Hef',
     'burn_start': 310000,
     'burn_end': 4017708,
