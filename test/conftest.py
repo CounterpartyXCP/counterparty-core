@@ -85,7 +85,7 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
     def init_api_access_log():
         pass
 
-    def multisig_pubkeyhashes_to_pubkeys(proxy, address, provided_pubkeys):
+    def multisig_pubkeyhashes_to_pubkeys(proxy, address, provided_pubkeys=None):
         # TODO: Should be updated?!
         array = address.split('_')
         signatures_required = int(array[0])

@@ -330,7 +330,7 @@ def construct (db, proxy, tx_info, encoding='auto',
         # Address.
         script.validate(address)
         if script.is_multisig(address):
-            destination_outputs_new.append((script.multisig_pubkeyhashes_to_pubkeys(proxy, address, provided_pubkeys), value))
+            destination_outputs_new.append((script.multisig_pubkeyhashes_to_pubkeys(proxy, address), value))
         else:
             destination_outputs_new.append((address, value))
 
