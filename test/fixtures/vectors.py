@@ -517,6 +517,43 @@ UNITTEST_VECTOR = {
         }, {
             'in': (ADDR[0], b'\x6f'),
             'out': '4838d8b3588c4c7ba7c1d06f866e9b3739c63037'
+        }],
+        'is_fully_valid': [{
+            'in': (b'\x03T\xdaT\x0f\xb2g;u\xe6\xc3\xc9\x94\xf8\n\xd0\xc8C\x16C\xba\xb2\x8c\xedx<\xd9@y\xbb\xe7$E',), # Fully valid compressed public key
+            'out': True
+        }, {
+            'in': (b'\x03T\xdaT\x0f\xb2g;u\xe6\xc3\xc9\x94\xf8\n\xd0\xc8C\x16C\xba\xb2\x8c\xedx<\xd9@y\xbb\xe7$D',), # Not fully valid compressed public key: last byte decremented; not on curve
+            'out': False
+        }, {
+            'in': (b'\x01T\xdaT\x0f\xb2g;u\xe6\xc3\xc9\x94\xf8\n\xd0\xc8C\x16C\xba\xb2\x8c\xedx<\xd9@y\xbb\xe7$E',), # Invalid compressed public key: first byte not `\x02` or `\x03`
+            'out': False
+        }],
+        'is_pubkeyhash': [{
+            'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6',),  # Valid Bitcoin Address
+            'out': True
+        }, {
+            'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP7',),  # Invalid Checksum
+            'out': False
+        }, {
+            'in': ('LnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6',),  # Invalid Version Byte
+            'out': False
+        }],
+        'make_pubkeyhash': [{
+            'in': ('02513522cbf07b0bd553b0d8f8414c476c9275334fd3edfa368386412e3a193558',),                                          # Mono‐sig
+            'out': 'mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6'
+        }, {
+            'in': ('1_02513522cbf07b0bd553b0d8f8414c476c9275334fd3edfa368386412e3a193558_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_2',),   # Multi‐sig, with pubkey in first position and pubkeyhash in second
+            'out': '1_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_2'
+        }],
+        'extract_pubkeys': [{
+            'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6',),                                                                          # PubkeyHash
+            'out': []
+        }, {
+            'in': ('02513522cbf07b0bd553b0d8f8414c476c9275334fd3edfa368386412e3a193558',),                                          # Mono‐sig
+            'out': ['02513522cbf07b0bd553b0d8f8414c476c9275334fd3edfa368386412e3a193558']
+        }, {
+            'in': ('1_02513522cbf07b0bd553b0d8f8414c476c9275334fd3edfa368386412e3a193558_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_2',),   # Multi‐sig, with pubkey in first position and pubkeyhash in second
+            'out': ['02513522cbf07b0bd553b0d8f8414c476c9275334fd3edfa368386412e3a193558']
         }]
     },
     'util': {

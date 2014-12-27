@@ -256,14 +256,14 @@ def multisig_pubkeyhashes_to_pubkeys(proxy, address, provided_pubkeys=None):
 
 
 def is_pubkeyhash(monosig_address):
-    """Check if pubkeyhash.
+    """Check if pubkeyhash (and that’s really all).
     """
 
     assert not is_multisig(monosig_address)
     try:
         base58_check_decode(monosig_address, config.ADDRESSVERSION)
         return True
-    except (exceptions.VersionByteError, exceptions.Base58ChecksumError):
+    except (exceptions.Base58Error, exceptions.VersionByteError):
         return False
 
 def make_pubkeyhash(address):
@@ -274,7 +274,7 @@ def make_pubkeyhash(address):
             if is_pubkeyhash(pub):
                 pubkeyhash = pub
             else:
-                pubkeyhash = pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8')))
+                pubkeyhash = pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pub, 'utf-8')))
             pubkeyhashes.append(pubkeyhash)
         pubkeyhash_address = construct_array(signatures_required, pubkeyhashes, signatures_possible)
     else:
@@ -292,10 +292,10 @@ def extract_pubkeys(pub):
         _, pubs, _ = extract_array(pub)
         for pub in pubs:
             if not is_pubkeyhash(pub):
-                pubkeys.append(pubkey)
+                pubkeys.append(pub)
     else:
         if not is_pubkeyhash(pub):
-            pubkeys.append(pubkey)
+            pubkeys.append(pub)
     return pubkeys
 
 

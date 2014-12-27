@@ -1,5 +1,8 @@
 """
-Construct, sign and broadcast Bitcoin transactions.
+Construct, serialize, sign and broadcast the Bitcoin transactions that are
+Counterparty transactions.
+
+This module contains no consensus‐critical code.
 """
 
 import os
