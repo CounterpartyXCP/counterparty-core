@@ -19,7 +19,6 @@ from Crypto.Cipher import ARC4
 from bitcoin.core.script import CScript
 from bitcoin.core import x
 from bitcoin.core import b2lx
-from bitcoin.core.key import CPubKey
 
 from lib import config
 from lib import exceptions
@@ -135,26 +134,25 @@ def get_monosig_script(address):
 
     return tx_script
 
-def make_fully_valid(pubkey):
-    assert len(pubkey) == 31    # One sign byte and one nonce byte required (for 33 bytes).
+def make_fully_valid(pubkey_start):
+    assert type(pubkey_start) == bytes
+    assert len(pubkey_start) == 31    # One sign byte and one nonce byte required (for 33 bytes).
 
-    cpubkey = CPubKey(b'')
-    random_bytes = hashlib.sha256(pubkey).digest()      # Deterministically generated, for unit tests.
+    random_bytes = hashlib.sha256(pubkey_start).digest()      # Deterministically generated, for unit tests.
     sign = (random_bytes[0] & 0b1) + 2                  # 0x02 or 0x03
     nonce = initial_nonce = random_bytes[1]
 
-    while not cpubkey.is_fullyvalid:
+    pubkey = b''
+    while not script.is_fully_valid(pubkey):
         # Increment nonce.
         nonce += 1
         assert nonce != initial_nonce
 
         # Construct a possibly fully valid public key.
-        possibly_fully_valid_pubkey = bytes([sign]) + pubkey + bytes([nonce % 256])
-        cpubkey = CPubKey(possibly_fully_valid_pubkey)
+        pubkey = bytes([sign]) + pubkey_start + bytes([nonce % 256])
 
-    fully_valid_pubkey = possibly_fully_valid_pubkey
-    assert len(fully_valid_pubkey) == 33
-    return fully_valid_pubkey
+    assert len(pubkey) == 33
+    return pubkey
 
 
 def serialise (block_index, encoding, inputs, destination_outputs, data_output=None, change_output=None, dust_return_pubkey=None):

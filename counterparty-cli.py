@@ -171,13 +171,11 @@ def get_pubkey(pubkeyhash):
 
         # If not in wallet and not in blockchain, get from user.
         answer = input('Public keys (hexadecimal) or Private key (Wallet Import Format) for `{}`: '.format(pub))
-        # If hex, assume user presented public key; otherwise, assume private key.
-        try:
-            binascii.unhexlify(answer)
+        if script.is_fully_valid(binascii.unhexlify(answer)):
             pubkey = answer
-        except binascii.Error:
-            pubkey = script.private_key_to_public_key(answer)
-        # Check that manually provided public key is correct.
+        else:
+            private_key = answer
+            pubkey = script.private_key_to_public_key(private_key)
         if pubkeyhash != script.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
             raise transaction.InputError('provided public or private key does not match the source address')
 

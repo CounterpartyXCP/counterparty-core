@@ -225,20 +225,20 @@ def extract_pubkeyhash_and_pubkeys_from_monosig(address):
     try:
         script.base58_check_decode(address)
         pubkeyhash = address
-        pubkeys = None
+        pubkey = None
     except (exceptions.InvalidBase58Error, exceptions.VersionByteError, exceptions.Base58ChecksumError):
         pubkeyhash = script.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(address, 'utf-8')))
-        pubkeys = address
-    return pubkeyhash, pubkeys
+        pubkey = address
+    return pubkeyhash, [pubkey]
 
 def extract_pubkeyhash_and_pubkeys_from_multisig(address):
     signatures_required, pubs, signatures_possible = script.extract_array(address)
     pubkeyhashes, pubkeys = [], []
     for pub in pubs:
-        pubkeyhash, pubkey = monosig_address_input(pub)
+        pubkeyhash, pubkeys = extract_pubkeyhash_and_pubkeys_from_monosig(pub)
         pubkeyhashes.append(pubkeyhash)
-        if pubkey:
-            pubkeys.append(pubkey)
+        if pubkeys:
+            pubkeys.append(pubkeys[0])
     pubkeyhash = construct_array(signatures_required, pubkeyhashes, signatures_possible)
     return pubkeyhash, pubkeys
 
@@ -268,6 +268,9 @@ def compose_transaction(db, proxy, name, params,
                 pubkeyhash, pubkeys = extract_pubkeyhash_and_pubkeys_from_monosig(address)
             params[address_name] = pubkeyhash
             provided_pubkeys += pubkeys
+    for pubkey in provided_pubkeys:
+        if not script.is_fully_valid(binascii.unhexlify(pubkey)):
+            raise APIError('invalid public key: {}'.format(pubkey))
 
     compose_method = sys.modules['lib.messages.{}'.format(name)].compose
     compose_params = inspect.getargspec(compose_method)[0]

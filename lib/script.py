@@ -6,6 +6,8 @@ import hashlib
 import bitcoin as bitcoinlib
 import binascii
 
+from bitcoin.core.key import CPubKey
+
 from lib import util
 from lib import config
 from lib import exceptions
@@ -104,6 +106,10 @@ def base58_check_decode(s, version):
 def is_multisig(address):
     array = address.split('_')
     return len(array) > 1
+
+def is_fully_valid(pubkey_bin):
+    cpubkey = CPubKey(pubkey_bin)
+    return cpubkey.is_fullyvalid
 
 def make_canonical(address):
     if is_multisig(address):
