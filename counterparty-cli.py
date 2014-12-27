@@ -189,14 +189,15 @@ def cli(method, params, unsigned):
     pubkeys = []
     for address_name in ['source', 'destination']:
         if address_name in params:
-            if script.is_multisig(params[address_name]):
-                _, pubs, _ = script.extract_array(address_name)
+            address = params[address_name]
+            if script.is_multisig(address):
+                _, pubs, _ = script.extract_array(address)
                 for pub in pubs:
                     pubkey = get_pubkey(pub)
                     if pubkey:
                         pubkeys.append(pubkey)
             elif address_name != 'destination': # We don’t need the pubkey for a monosig destination.
-                pubkey = get_pubkey(params[address_name])
+                pubkey = get_pubkey(address)
                 if pubkey:
                     pubkeys.append(pubkey)
     params['pubkey'] = pubkeys

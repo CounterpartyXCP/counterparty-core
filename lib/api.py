@@ -222,27 +222,6 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
 
     return db_query(db, statement, tuple(bindings))
 
-def extract_pubkeyhash_and_pubkeys_from_monosig(address):
-    try:
-        script.base58_check_decode(address, config.ADDRESSVERSION)
-        pubkeyhash = address
-        pubkey = []
-    except (exceptions.InvalidBase58Error, exceptions.VersionByteError, exceptions.Base58ChecksumError):
-        pubkeyhash = script.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(address, 'utf-8')))
-        pubkey = [address]
-    return pubkeyhash, pubkey
-
-def extract_pubkeyhash_and_pubkeys_from_multisig(address):
-    signatures_required, pubs, signatures_possible = script.extract_array(address)
-    pubkeyhashes, pubkeys = [], []
-    for pub in pubs:
-        pubkeyhash, pubkeys = extract_pubkeyhash_and_pubkeys_from_monosig(pub)
-        pubkeyhashes.append(pubkeyhash)
-        if pubkeys:
-            pubkeys.append(pubkeys[0])
-    pubkeyhash = script.construct_array(signatures_required, pubkeyhashes, signatures_possible)
-    return pubkeyhash, pubkeys
-
 def compose_transaction(db, proxy, name, params,
                         encoding='auto',
                         fee_per_kb=config.DEFAULT_FEE_PER_KB,
@@ -254,25 +233,28 @@ def compose_transaction(db, proxy, name, params,
                         fee=None,
                         fee_provided=0):
 
-    # Get provided pubkeys from source and destination params.
-    provided_pubkeys = []
+    # Get provided pubkeys.
     if type(pubkey) == str:
-        provided_pubkeys.append(pubkey)
+        provided_pubkeys = [pubkey]
     elif type(pubkey) == list:
-        provided_pubkeys += pubkey
+        provided_pubkeys = pubkey
+    elif pubkey == None:
+        provided_pubkeys = []
+    else:
+        assert False
+
+    # Get additional pubkeys from `source` and `destination` params.
+    # Convert `source` and `destination` to pubkeyhash form.
     for address_name in ['source', 'destination']:
         if address_name in params:
             address = params[address_name]
-            if script.is_multisig(address):
-                pubkeyhash, pubkeys = extract_pubkeyhash_and_pubkeys_from_multisig(address)
-            else:
-                pubkeyhash, pubkeys = extract_pubkeyhash_and_pubkeys_from_monosig(address)
-            params[address_name] = pubkeyhash
-            provided_pubkeys += pubkeys
+            provided_pubkeys += script.extract_pubkeys(address)
+            params[address_name] = script.make_pubkeyhash(address)
 
+    # Check validity of collected pubkeys.
     for pubkey in provided_pubkeys:
         if not script.is_fully_valid(binascii.unhexlify(pubkey)):
-            raise APIError('invalid public key: {}'.format(pubkey))
+            raise script.AddressError('invalid public key: {}'.format(pubkey))
 
     compose_method = sys.modules['lib.messages.{}'.format(name)].compose
     compose_params = inspect.getargspec(compose_method)[0]

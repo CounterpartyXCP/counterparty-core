@@ -254,4 +254,49 @@ def multisig_pubkeyhashes_to_pubkeys(proxy, address, provided_pubkeys=None):
     pubkeys = [pubkeyhash_to_pubkey(proxy, pubkeyhash, provided_pubkeys) for pubkeyhash in pubkeyhashes]
     return construct_array(signatures_required, pubkeys, signatures_possible)
 
+
+def is_pubkeyhash(monosig_address):
+    """Check if pubkeyhash.
+    """
+
+    assert not is_multisig(monosig_address)
+    try:
+        base58_check_decode(monosig_address, config.ADDRESSVERSION)
+        return True
+    except (exceptions.VersionByteError, exceptions.Base58ChecksumError):
+        return False
+
+def make_pubkeyhash(address):
+    if is_multisig(address):
+        signatures_required, pubs, signatures_possible = extract_array(address)
+        pubkeyhashes = []
+        for pub in pubs:
+            if is_pubkeyhash(pub):
+                pubkeyhash = pub
+            else:
+                pubkeyhash = pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8')))
+            pubkeyhashes.append(pubkeyhash)
+        pubkeyhash_address = construct_array(signatures_required, pubkeyhashes, signatures_possible)
+    else:
+        if is_pubkeyhash(address):
+            pubkeyhash_address = address
+        else:
+            pubkeyhash_address = pubkey_to_pubkeyhash(binascii.unhexlify(bytes(address, 'utf-8')))
+    return pubkeyhash_address
+
+def extract_pubkeys(pub):
+    """Assume pubkey if not pubkeyhash. (Check validity later.)
+    """
+    pubkeys = []
+    if is_multisig(pub):
+        _, pubs, _ = extract_array(pub)
+        for pub in pubs:
+            if not is_pubkeyhash(pub):
+                pubkeys.append(pubkey)
+    else:
+        if not is_pubkeyhash(pub):
+            pubkeys.append(pubkey)
+    return pubkeys
+
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
