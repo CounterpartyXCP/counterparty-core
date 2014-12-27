@@ -513,10 +513,10 @@ UNITTEST_VECTOR = {
     'script': {
         'base58_check_decode': [{
             'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM', b'\x00'),
-            'out': '010966776006953d5567439e5e39f86a0d273bee'
+            'out': b"\x01\tfw`\x06\x95=UgC\x9e^9\xf8j\r';\xee"
         }, {
             'in': (ADDR[0], b'\x6f'),
-            'out': '4838d8b3588c4c7ba7c1d06f866e9b3739c63037'
+            'out': b'H8\xd8\xb3X\x8cL{\xa7\xc1\xd0o\x86n\x9b79\xc607'
         }],
         'is_fully_valid': [{
             'in': (b'\x03T\xdaT\x0f\xb2g;u\xe6\xc3\xc9\x94\xf8\n\xd0\xc8C\x16C\xba\xb2\x8c\xedx<\xd9@y\xbb\xe7$E',), # Fully valid compressed public key

@@ -1,4 +1,6 @@
 """
+None of the functions/objects in this module need be passed `db` or `proxy`.
+
 Naming convention: a `pub` is either a pubkey or a pubkeyhash
 """
 
@@ -226,34 +228,6 @@ def private_key_to_public_key(private_key_wif):
     public_key = public_pair_to_sec(public_pair, compressed=compressed)
     public_key_hex = binascii.hexlify(public_key).decode('utf-8')
     return public_key_hex
-
-def pubkeyhash_to_pubkey(proxy, pubkeyhash, provided_pubkeys=None):
-    # Search provided pubkeys.
-    if provided_pubkeys:
-        if type(provided_pubkeys) != list:
-            provided_pubkeys = [provided_pubkeys]
-        for pubkey in provided_pubkeys:
-            if pubkeyhash == pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
-                return pubkey
-
-    # Search blockchain.
-    from lib import blockchain  # TODO
-    raw_transactions = blockchain.searchrawtransactions(proxy, pubkeyhash)
-    for tx in raw_transactions:
-        for vin in tx['vin']:
-            scriptsig = vin['scriptSig']
-            asm = scriptsig['asm'].split(' ')
-            pubkey = asm[1]
-            if pubkeyhash == pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
-                return pubkey
-
-    raise AddressError('Public key for address ‘{}’ not published in blockchain.'.format(pubkeyhash))
-
-def multisig_pubkeyhashes_to_pubkeys(proxy, address, provided_pubkeys=None):
-    signatures_required, pubkeyhashes, signatures_possible = extract_array(address)
-    pubkeys = [pubkeyhash_to_pubkey(proxy, pubkeyhash, provided_pubkeys) for pubkeyhash in pubkeyhashes]
-    return construct_array(signatures_required, pubkeys, signatures_possible)
-
 
 def is_pubkeyhash(monosig_address):
     """Check if pubkeyhash (and that’s really all).

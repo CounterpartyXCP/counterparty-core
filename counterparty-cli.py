@@ -161,11 +161,11 @@ def get_pubkey(pubkeyhash):
 
         # If in wallet, get from wallet.
         if backend.is_mine(proxy, pubkeyhash):
-            return backend.pubkeyhash_to_pubkey(proxy, pubkeyhash)
+            return backend.wallet_pubkeyhash_to_pubkey(proxy, pubkeyhash)
 
         # If in blockchain (and not in wallet), get from blockchain.
         try:
-            return script.pubkeyhash_to_pubkey(proxy, pubkeyhash, provided_pubkeys=None)
+            return backend.pubkeyhash_to_pubkey(proxy, pubkeyhash, provided_pubkeys=None)
         except script.AddressError:
             pass
 
@@ -176,7 +176,7 @@ def get_pubkey(pubkeyhash):
         else:
             private_key = answer
             pubkey = script.private_key_to_public_key(private_key)
-        if pubkeyhash != script.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
+        if pubkeyhash != backend.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
             raise transaction.InputError('provided public or private key does not match the source address')
 
         return pubkey

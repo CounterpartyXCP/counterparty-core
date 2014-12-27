@@ -76,7 +76,7 @@ def is_valid(proxy, address):
     return proxy.validateaddress(address)['isvalid']
 def is_mine(proxy, address):
     return proxy.validateaddress(address)['ismine']
-def pubkeyhash_to_pubkey(proxy, pubkeyhash):
+def wallet_pubkeyhash_to_pubkey(proxy, pubkeyhash):
     info = proxy.validateaddress(pubkeyhash)
     if info['isvalid'] and info['ismine']:
         return info['pubkey']
@@ -250,6 +250,33 @@ def get_btc_balance(proxy, address, confirmed=True):
     unspent = confirmed_unspent if confirmed else all_unspent
     return sum(out['amount'] for out in unspent)
 
+
+def pubkeyhash_to_pubkey(proxy, pubkeyhash, provided_pubkeys=None):
+    # Search provided pubkeys.
+    if provided_pubkeys:
+        if type(provided_pubkeys) != list:
+            provided_pubkeys = [provided_pubkeys]
+        for pubkey in provided_pubkeys:
+            if pubkeyhash == script.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
+                return pubkey
+
+    # Search blockchain.
+    from lib import blockchain  # TODO
+    raw_transactions = blockchain.searchrawtransactions(proxy, pubkeyhash)
+    for tx in raw_transactions:
+        for vin in tx['vin']:
+            scriptsig = vin['scriptSig']
+            asm = scriptsig['asm'].split(' ')
+            pubkey = asm[1]
+            if pubkeyhash == script.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
+                return pubkey
+
+    raise script.AddressError('Public key for address ‘{}’ not published in blockchain.'.format(pubkeyhash))
+
+def multisig_pubkeyhashes_to_pubkeys(proxy, address, provided_pubkeys=None):
+    signatures_required, pubkeyhashes, signatures_possible = script.extract_array(address)
+    pubkeys = [pubkeyhash_to_pubkey(proxy, pubkeyhash, provided_pubkeys) for pubkeyhash in pubkeyhashes]
+    return script.construct_array(signatures_required, pubkeys, signatures_possible)
 
 
 
