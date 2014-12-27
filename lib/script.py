@@ -224,16 +224,14 @@ def private_key_to_public_key(private_key_wif):
 def pubkeyhash_to_pubkey(proxy, pubkeyhash, provided_pubkeys=None):
     # Search provided pubkeys.
     if provided_pubkeys:
-        if not isinstance(provided_pubkeys, list):
+        if type(provided_pubkeys) != list:
             provided_pubkeys = [provided_pubkeys]
         for pubkey in provided_pubkeys:
             if pubkeyhash == pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
                 return pubkey
-    
-    # TODO
-    from lib import blockchain
 
     # Search blockchain.
+    from lib import blockchain  # TODO
     raw_transactions = blockchain.searchrawtransactions(proxy, pubkeyhash)
     for tx in raw_transactions:
         for vin in tx['vin']:

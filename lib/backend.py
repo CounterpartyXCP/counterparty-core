@@ -76,9 +76,9 @@ def is_valid(proxy, address):
     return proxy.validateaddress(address)['isvalid']
 def is_mine(proxy, address):
     return proxy.validateaddress(address)['ismine']
-def get_pubkey(proxy, address):
-    info = proxy.validateaddress(address)
-    if info['isvalid'] && info['ismine']:
+def pubkeyhash_to_pubkey(proxy, pubkeyhash):
+    info = proxy.validateaddress(pubkeyhash)
+    if info['isvalid'] and info['ismine']:
         return info['pubkey']
     return None
 

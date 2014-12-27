@@ -156,46 +156,54 @@ def market(give_asset, get_asset):
     print('Feeds')
     print(table)
 
-def ask_pubkey(pubkeyhash):
+def get_pubkey(pubkeyhash):
     if backend.is_valid(proxy, pubkeyhash):
-        wallet_pubkey = backend.get_pubkey(proxy, pub)
-        if wallet_pubkey:
-            return wallet_pubkey
-        else:
-            answer = input('Public keys (hexadecimal) or Private key (Wallet Import Format) for {} (leave blank if at least one transaction has been done by this address): '.format(pub))
-            # Public key or private key?
-            try:
-                binascii.unhexlify(answer)  # Check if hex.
-                pubkey = answer   # If hex, assume public key.
-            except binascii.Error:
-                pubkey = script.private_key_to_public_key(answer) # Else, assume private key.
 
-            if pubkeyhash != script.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
-                raise transaction.InputError('provided public or private key does not match the source address')
+        # If in wallet, get from wallet.
+        if backend.is_mine(proxy, pubkeyhash):
+            return backend.pubkeyhash_to_pubkey(proxy, pubkeyhash)
 
-            return pubkey
+        # If in blockchain (and not in wallet), get from blockchain.
+        try:
+            return blockchain.pubkeyhash_to_pubkey(proxy, pubkeyhash, provided_pubkeys=None)
+        except script.AddressError:
+            pass
+
+        # If not in wallet and not in blockchain, get from user.
+        answer = input('Public keys (hexadecimal) or Private key (Wallet Import Format) for `{}`: '.format(pub))
+        # If hex, assume user presented public key; otherwise, assume private key.
+        try:
+            binascii.unhexlify(answer)
+            pubkey = answer
+        except binascii.Error:
+            pubkey = script.private_key_to_public_key(answer)
+        # Check that manually provided public key is correct.
+        if pubkeyhash != script.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
+            raise transaction.InputError('provided public or private key does not match the source address')
+
+        return pubkey
+
     return None
 
-def provided_pubkeys(params):
+def cli(method, params, unsigned):
+
+    # Get provided pubkeys from params.
     pubkeys = []
-    for key in ['source', 'destination']:
-        if key in params:
-            if script.is_multisig(params[key]):
-                _, pubs, _ = script.extract_array(address)
+    for address_name in ['source', 'destination']:
+        if address_name in params:
+            if script.is_multisig(params[address_name]):
+                _, pubs, _ = script.extract_array(address_name)
                 for pub in pubs:
-                    pubkey = ask_pubkey(pub)
+                    pubkey = get_pubkey(pub)
                     if pubkey:
                         pubkeys.append(pubkey)
-            elif key == 'source': # no need pubkey for monosig destination
-                pubkey = ask_pubkey(params[key])
+            elif address_name != 'destination': # We don’t need the pubkey for a monosig destination.
+                pubkey = get_pubkey(params[address_name])
                 if pubkey:
                     pubkeys.append(pubkey)
-    return pubkeys
+    params['pubkey'] = pubkeys
 
-def cli(method, params, unsigned):
     # Get unsigned transaction serialisation.
-    params['pubkey'] = provided_pubkeys(params)
-
     """  # NOTE: For debugging, e.g. with `Invalid Params` error.
     tx_info = sys.modules['lib.send'].compose(db, params['source'], params['destination'], params['asset'], params['quantity'])
     print(transaction.construct(db, proxy, tx_info, encoding=params['encoding'],
@@ -205,10 +213,7 @@ def cli(method, params, unsigned):
                                         op_return_value=params['op_return_value'],
                                         provided_pubkeys=params['pubkey'],
                                         allow_unconfirmed_inputs=params['allow_unconfirmed_inputs']))
-    exit(0)
-    """
-
-    # Construct transaction.
+    exit(0)"""
     unsigned_tx_hex = util.api(method, params)
     print('Transaction (unsigned):', unsigned_tx_hex)
 
