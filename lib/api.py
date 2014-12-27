@@ -35,6 +35,7 @@ from lib import backend
 from lib import database
 from lib import transaction
 from lib import blocks
+from lib import script
 from lib.messages import send
 from lib.messages import order
 from lib.messages import btcpay
@@ -223,13 +224,13 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
 
 def extract_pubkeyhash_and_pubkeys_from_monosig(address):
     try:
-        script.base58_check_decode(address)
+        script.base58_check_decode(address, config.ADDRESSVERSION)
         pubkeyhash = address
-        pubkey = None
+        pubkey = []
     except (exceptions.InvalidBase58Error, exceptions.VersionByteError, exceptions.Base58ChecksumError):
         pubkeyhash = script.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(address, 'utf-8')))
-        pubkey = address
-    return pubkeyhash, [pubkey]
+        pubkey = [address]
+    return pubkeyhash, pubkey
 
 def extract_pubkeyhash_and_pubkeys_from_multisig(address):
     signatures_required, pubs, signatures_possible = script.extract_array(address)
@@ -239,7 +240,7 @@ def extract_pubkeyhash_and_pubkeys_from_multisig(address):
         pubkeyhashes.append(pubkeyhash)
         if pubkeys:
             pubkeys.append(pubkeys[0])
-    pubkeyhash = construct_array(signatures_required, pubkeyhashes, signatures_possible)
+    pubkeyhash = script.construct_array(signatures_required, pubkeyhashes, signatures_possible)
     return pubkeyhash, pubkeys
 
 def compose_transaction(db, proxy, name, params,
@@ -268,6 +269,7 @@ def compose_transaction(db, proxy, name, params,
                 pubkeyhash, pubkeys = extract_pubkeyhash_and_pubkeys_from_monosig(address)
             params[address_name] = pubkeyhash
             provided_pubkeys += pubkeys
+
     for pubkey in provided_pubkeys:
         if not script.is_fully_valid(binascii.unhexlify(pubkey)):
             raise APIError('invalid public key: {}'.format(pubkey))

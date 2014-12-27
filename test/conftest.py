@@ -85,6 +85,9 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
     def init_api_access_log():
         pass
 
+    def pubkeyhash_to_pubkey(proxy, address, provided_pubkeys=None):
+        return DEFAULT_PARAMS['pubkey'][address]
+
     def multisig_pubkeyhashes_to_pubkeys(proxy, address, provided_pubkeys=None):
         # TODO: Should be updated?!
         array = address.split('_')
@@ -106,6 +109,7 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
     monkeypatch.setattr('lib.api.init_api_access_log', init_api_access_log)
     if hasattr(config, 'PREFIX'):
         monkeypatch.setattr('lib.config.PREFIX', b'TESTXXXX')
+    monkeypatch.setattr('lib.script.pubkeyhash_to_pubkey', pubkeyhash_to_pubkey)
     monkeypatch.setattr('lib.script.multisig_pubkeyhashes_to_pubkeys', multisig_pubkeyhashes_to_pubkeys)
     monkeypatch.setattr('lib.backend.get_proxy', util_test.get_proxy)
     monkeypatch.setattr('lib.backend.get_cached_raw_transaction', get_cached_raw_transaction)

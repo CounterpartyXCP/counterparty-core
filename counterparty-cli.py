@@ -165,7 +165,7 @@ def get_pubkey(pubkeyhash):
 
         # If in blockchain (and not in wallet), get from blockchain.
         try:
-            return blockchain.pubkeyhash_to_pubkey(proxy, pubkeyhash, provided_pubkeys=None)
+            return script.pubkeyhash_to_pubkey(proxy, pubkeyhash, provided_pubkeys=None)
         except script.AddressError:
             pass
 
