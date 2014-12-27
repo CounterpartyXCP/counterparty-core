@@ -76,6 +76,11 @@ def is_valid(proxy, address):
     return proxy.validateaddress(address)['isvalid']
 def is_mine(proxy, address):
     return proxy.validateaddress(address)['ismine']
+def get_pubkey(proxy, address):
+    info = proxy.validateaddress(address)
+    if info['isvalid'] && info['ismine']:
+        return info['pubkey']
+    return None
 
 def get_txhash_list(block):
     return [bitcoinlib.core.b2lx(ctx.GetHash()) for ctx in block.vtx]

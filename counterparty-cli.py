@@ -14,7 +14,7 @@ import binascii
 import appdirs
 from prettytable import PrettyTable
 
-from lib import config, util, exceptions, backend, database, transaction, script
+from lib import config, util, exceptions, backend, database, transaction, script, api
 if os.name == 'nt':
     from lib import util_windows
 
@@ -156,40 +156,45 @@ def market(give_asset, get_asset):
     print('Feeds')
     print(table)
 
-
-def cli(method, params, unsigned):
-    # Get unsigned transaction serialisation.
-
-    params['source'] = script.make_canonical(params['source'])
-    pubkey = None
-
-    if script.is_multisig(params['source']):
-        answer = input('Public keys (hexadecimal, comma‐separated): ')
-        answer = anwser.replace(' ', '')
-        params['pubkey'] = answer.split(',')
-    else:
-        # Get public key for source.
-        source = params['source']
-        if not backend.is_valid(proxy, source):
-            raise exceptions.AddressError('Invalid address.')
-        if backend.is_mine(proxy, source):
-            backend.wallet_unlock(proxy)
+def ask_pubkey(pubkeyhash):
+    if backend.is_valid(proxy, pubkeyhash):
+        wallet_pubkey = backend.get_pubkey(proxy, pub)
+        if wallet_pubkey:
+            return wallet_pubkey
         else:
-            # TODO: Do this only if the encoding method needs it.
-            print('Source not in backend wallet.')
-            answer = input('Public key (hexadecimal) or Private key (Wallet Import Format): ')
-
+            answer = input('Public keys (hexadecimal) or Private key (Wallet Import Format) for {} (leave blank if at least one transaction has been done by this address): '.format(pub))
             # Public key or private key?
             try:
                 binascii.unhexlify(answer)  # Check if hex.
                 pubkey = answer   # If hex, assume public key.
-                private_key_wif = None
             except binascii.Error:
-                private_key_wif = answer    # Else, assume private key.
-                pubkey = script.private_key_to_public_key(private_key_wif)
-                if params['source'] != script.pubkey_to_pubkeyhash(pubkey):
-                    raise transaction.InputError('provided private key does not match the source address')
-        params['pubkey'] = pubkey
+                pubkey = script.private_key_to_public_key(answer) # Else, assume private key.
+
+            if pubkeyhash != script.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
+                raise transaction.InputError('provided public or private key does not match the source address')
+
+            return pubkey
+    return None
+
+def provided_pubkeys(params):
+    pubkeys = []
+    for key in ['source', 'destination']:
+        if key in params:
+            if script.is_multisig(params[key]):
+                _, pubs, _ = script.extract_array(address)
+                for pub in pubs:
+                    pubkey = ask_pubkey(pub)
+                    if pubkey:
+                        pubkeys.append(pubkey)
+            elif key == 'source': # no need pubkey for monosig destination
+                pubkey = ask_pubkey(params[key])
+                if pubkey:
+                    pubkeys.append(pubkey)
+    return pubkeys
+
+def cli(method, params, unsigned):
+    # Get unsigned transaction serialisation.
+    params['pubkey'] = provided_pubkeys(params)
 
     """  # NOTE: For debugging, e.g. with `Invalid Params` error.
     tx_info = sys.modules['lib.send'].compose(db, params['source'], params['destination'], params['asset'], params['quantity'])
@@ -198,7 +203,7 @@ def cli(method, params, unsigned):
                                         regular_dust_size=params['regular_dust_size'],
                                         multisig_dust_size=params['multisig_dust_size'],
                                         op_return_value=params['op_return_value'],
-                                        provided_pubkeys=pubkey,
+                                        provided_pubkeys=params['pubkey'],
                                         allow_unconfirmed_inputs=params['allow_unconfirmed_inputs']))
     exit(0)
     """

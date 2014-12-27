@@ -144,7 +144,6 @@ def pubkeyhash_array(address):
         raise MultiSigAddressError('Multi‐signature address must use PubKeyHashes, not public keys.')
     return pubkeyhashes
 
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
 def hash160(x):
     x = hashlib.sha256(x).digest()
     m = hashlib.new('ripemd160')
@@ -222,7 +221,15 @@ def private_key_to_public_key(private_key_wif):
     public_key_hex = binascii.hexlify(public_key).decode('utf-8')
     return public_key_hex
 
-def pubkeyhash_to_pubkey(proxy, pubkeyhash):
+def pubkeyhash_to_pubkey(proxy, pubkeyhash, provided_pubkeys=None):
+    # Search provided pubkeys.
+    if provided_pubkeys:
+        if not isinstance(provided_pubkeys, list):
+            provided_pubkeys = [provided_pubkeys]
+        for pubkey in provided_pubkeys:
+            if pubkeyhash == pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
+                return pubkey
+    
     # TODO
     from lib import blockchain
 
@@ -235,11 +242,12 @@ def pubkeyhash_to_pubkey(proxy, pubkeyhash):
             pubkey = asm[1]
             if pubkeyhash == pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
                 return pubkey
+
     raise AddressError('Public key for address ‘{}’ not published in blockchain.'.format(pubkeyhash))
 
 def multisig_pubkeyhashes_to_pubkeys(proxy, address, provided_pubkeys=None):
     signatures_required, pubkeyhashes, signatures_possible = extract_array(address)
-    pubkeys = provided_pubkeys or [pubkeyhash_to_pubkey(proxy, pubkeyhash) for pubkeyhash in pubkeyhashes]
+    pubkeys = [pubkeyhash_to_pubkey(proxy, pubkeyhash, provided_pubkeys) for pubkeyhash in pubkeyhashes]
     return construct_array(signatures_required, pubkeys, signatures_possible)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

@@ -221,6 +221,31 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
 
     return db_query(db, statement, tuple(bindings))
 
+def monosig_address_input(address):
+    try:
+        script.base58_check_decode(address)
+        return address, None
+    except (exceptions.InvalidBase58Error, exceptions.VersionByteError, exceptions.Base58ChecksumError):
+        pubkeyhash = script.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(address, 'utf-8')))
+        return pubkeyhash, address
+
+def multisig_address_input(address):
+    signatures_required, pubs, signatures_possible = script.extract_array(address)
+    pubkeys = []
+    pubkeyhashes = []
+    for pub in pubs:
+        pubkeyhash, pubkey = monosig_address_input(pub)
+        pubkeyhashes.append(pubkeyhash)
+        if pubkey:
+            pubkeys.append(pubkey)
+    return construct_array(signatures_required, pubkeyhashes, signatures_possible), pubkeys
+
+def address_input(address):
+    if script.is_multisig(address):
+        return multisig_address_input(address)
+    else:
+        return monosig_address_input(address)
+
 def compose_transaction(db, proxy, name, params,
                         encoding='auto',
                         fee_per_kb=config.DEFAULT_FEE_PER_KB,
@@ -231,6 +256,17 @@ def compose_transaction(db, proxy, name, params,
                         allow_unconfirmed_inputs=False,
                         fee=None,
                         fee_provided=0):
+
+    provided_pubkeys = []
+    if isinstance(pubkey, str):
+        provided_pubkeys.append(pubkey)
+    elif isinstance(pubkey, list):
+        provided_pubkeys += pubkey
+    for key in ['source', 'destination']:
+        if key in params:
+            pubkeyhash, pubkeys = address_input(params[key])
+            params[key] = pubkeyhash
+            provided_pubkeys += pubkeys
 
     compose_method = sys.modules['lib.messages.{}'.format(name)].compose
     compose_params = inspect.getargspec(compose_method)[0]
@@ -245,7 +281,7 @@ def compose_transaction(db, proxy, name, params,
                                         regular_dust_size=regular_dust_size,
                                         multisig_dust_size=multisig_dust_size,
                                         op_return_value=op_return_value,
-                                        provided_pubkeys=pubkey,
+                                        provided_pubkeys=provided_pubkeys,
                                         allow_unconfirmed_inputs=allow_unconfirmed_inputs,
                                         exact_fee=fee,
                                         fee_provided=fee_provided)

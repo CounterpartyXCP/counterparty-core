@@ -74,12 +74,7 @@ def get_dust_return_pubkey(proxy, source, provided_pubkeys, encoding):
             a, self_pubkeys, b = script.extract_array(script.multisig_pubkeyhashes_to_pubkeys(proxy, source, provided_pubkeys))
             dust_return_pubkey_hex = self_pubkeys[0]
         else:
-            if not provided_pubkeys:
-                # If public key was not provided, derive it from the private key.
-                private_key_wif = backend.dumpprivkey(source)
-                dust_return_pubkey_hex = script.private_key_to_public_key(private_key_wif)
-            else:
-                dust_return_pubkey_hex = script.pubkeyhash_to_pubkey(proxy, source)
+            dust_return_pubkey_hex = script.pubkeyhash_to_pubkey(proxy, source, provided_pubkeys)
 
         # Convert hex public key into the (binary) dust return pubkey.
         try:
@@ -330,7 +325,7 @@ def construct (db, proxy, tx_info, encoding='auto',
         # Address.
         script.validate(address)
         if script.is_multisig(address):
-            destination_outputs_new.append((script.multisig_pubkeyhashes_to_pubkeys(proxy, address), value))
+            destination_outputs_new.append((script.multisig_pubkeyhashes_to_pubkeys(proxy, address, provided_pubkeys), value))
         else:
             destination_outputs_new.append((address, value))
 
