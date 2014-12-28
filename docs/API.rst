@@ -962,7 +962,7 @@ Balance Object
 
 An object that describes a balance that is associated to a specific address:
 
-* **address** (*string*): The address that has the balance
+* **address** (*string*): A PubkeyHash Bitcoin address, or the pubkey associated with it (in case the address hasn’t sent anything before).
 * **asset** (*string*): The ID of the :ref:`asset <assets>` in which the balance is specified
 * **quantity** (*integer*): The :ref:`balance <quantitys>` of the specified asset at this address
 
@@ -1352,3 +1352,4 @@ This section documents any changes to the ``counterpartyd`` API, for version num
 ^^^^^^^^^^^^^^^^^^^^^^^
 * \*_issuance: ``callable``, ``call_date`` and ``call_price`` are no longer valid parameters
 * \*_callback: removed
+* Bitcoin addresses may everywhere be replaced by pubkeys.
