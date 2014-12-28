@@ -80,7 +80,7 @@ def cli(method, params, unsigned):
         # Get public key for source.
         source = params['source']
         if not backend.is_valid(proxy, source):
-            raise exceptions.AddressError('Invalid address.')
+            raise script.AddressError('Invalid address.')
         if backend.is_mine(proxy, source):
             backend.wallet_unlock(proxy)
         else:

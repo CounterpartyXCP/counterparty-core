@@ -37,7 +37,7 @@ def validate(address):
 
 def base58_encode(binary):
     # Convert big‐endian bytes to integer
-    n = int('0x0' + binascii.hexlify(binary).decode('utf8'), 16)
+    n = int('0x0' + util.hexlify(binary), 16)
 
     # Divide that integer into base58
     res = []
@@ -66,7 +66,7 @@ def base58_check_encode(original, version):
 
     address = b58_digits[0] * pad + res
 
-    if bytes(original, 'utf-8') != binascii.hexlify(base58_check_decode(address, version)):
+    if original != util.hexlify(base58_check_decode(address, version)):
         raise AddressError('encoded address does not decode properly')
 
     return address
@@ -77,7 +77,7 @@ def base58_check_decode(s, version):
     for c in s:
         n *= 58
         if c not in b58_digits:
-            raise exceptions.InvalidBase58Error('Not a valid base58 character:', c)
+            raise exceptions.InvalidBase58Error('Not a valid Base58 character: ‘{}’'.format(c))
         digit = b58_digits.index(c)
         n += digit
 
@@ -101,7 +101,7 @@ def base58_check_decode(s, version):
         raise exceptions.VersionByteError('incorrect version byte')
     chk1 = util.dhash(addrbyte + data)[:4]
     if chk0 != chk1:
-        raise exceptions.Base58ChecksumError('Checksum mismatch: %r ≠ %r' % (chk0, chk1))
+        raise exceptions.Base58ChecksumError('Checksum mismatch: 0x{} ≠ 0x{}'.format(util.hexlify(chk0), util.hexlify(chk1)))
     return data
 
 

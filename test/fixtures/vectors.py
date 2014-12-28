@@ -511,12 +511,53 @@ UNITTEST_VECTOR = {
         }],
     },
     'script': {
+        'validate': [{
+            'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6',),                                          # Valid Bitcoin address
+            'out': None                                                                             # No Error
+        }, {
+            'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP7',),                                          # Invalid Bitcoin address: bad checksum
+            'error': ('Base58ChecksumError', 'Checksum mismatch: 0x00285aa2 ≠ 0x00285aa1')
+        }, {
+            'in': ('1_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_2',),   # Valid multi‐sig
+            'out': None                                                                             # No Error
+        }],
+        'base58_encode': [{
+            'in': (b'\x82\xe3\x069\x16\x17I\x12S\x81\xeaQC\xa6J\xac',),                             # Random bytes
+            'out': 'HARXEpbq7gJQGcSVUtubYo'
+        }, {
+            'in': (b"\x01\tfw`\x06\x95=UgC\x9e^9\xf8j\r';\xee",),
+            'out': 'qb3y62fmEEVTPySXPQ77WXok6H'
+        }],
+        'base58_check_encode': [{
+            'in': ('010966776006953d5567439e5e39f86a0d273bee', b'\x00'),                            # Valid mainnet Bitcoin address
+            'out': '16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM'
+        # TODO: Can’t get this one to work.
+        # }, {
+        #    'in': ('010966776006953d5567439e5e39f86a0d273bee', b'\x00'),                            # Invalid mainnet Bitcoin address: leading zero byte
+        #    'error': ('AddressError', 'encoded address does not decode properly')
+        }],
         'base58_check_decode': [{
-            'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM', b'\x00'),
+            'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM', b'\x00'),                                   # Valid mainnet Bitcoin address
             'out': b"\x01\tfw`\x06\x95=UgC\x9e^9\xf8j\r';\xee"
         }, {
-            'in': (ADDR[0], b'\x6f'),
+            'in': ('26UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM', b'\x00'),                                   # Wrong version byte
+            'error': ('VersionByteError', 'incorrect version byte')
+        }, {
+            'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvN', b'\x00'),                                   # Invalid mainnet Bitcoin address: bad checksum
+            'error': ('Base58ChecksumError', 'Checksum mismatch: 0xd61967f7 ≠ 0xd61967f6')
+        }, {
+            'in': (ADDR[0], b'\x6f'),                                                               # TODO: What is this?
             'out': b'H8\xd8\xb3X\x8cL{\xa7\xc1\xd0o\x86n\x9b79\xc607'
+        }, {
+            'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjv0', b'\x00'),                                   # Invalid mainnet Bitcoin address: invalid character
+            'error': ('InvalidBase58Error', "Not a valid Base58 character: ‘0’")
+        }],
+        'is_multisig': [{
+            'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM',),                                           # Mono‐sig
+            'out': False
+        }, {
+            'in': ('1_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_2',),   # Multi‐sig
+            'out': True
         }],
         'is_fully_valid': [{
             'in': (b'\x03T\xdaT\x0f\xb2g;u\xe6\xc3\xc9\x94\xf8\n\xd0\xc8C\x16C\xba\xb2\x8c\xedx<\xd9@y\xbb\xe7$E',), # Fully valid compressed public key
