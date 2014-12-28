@@ -161,7 +161,7 @@ def get_pubkey(pubkeyhash):
 
         # If in wallet, get from wallet.
         if backend.is_mine(proxy, pubkeyhash):
-            return backend.wallet_pubkeyhash_to_pubkey(proxy, pubkeyhash)
+            return util.hexlify(backend.wallet_pubkeyhash_to_pubkey(proxy, pubkeyhash))
 
         # If in blockchain (and not in wallet), get from blockchain.
         try:
