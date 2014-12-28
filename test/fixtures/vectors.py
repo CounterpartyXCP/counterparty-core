@@ -1,5 +1,8 @@
 from .params import ADDR, MULTISIGADDR, DEFAULT_PARAMS as DP
 
+from lib import exceptions
+from lib import script
+
 UNITTEST_VECTOR = {
     'burn': {
         'validate': [{
@@ -35,7 +38,7 @@ UNITTEST_VECTOR = {
             'out': ('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', [('mvCounterpartyXXXXXXXXXXXXXXW24Hef', 62000000)], None)
         }, {
             'in': (ADDR[0], DP['burn_quantity']),
-            'error': ('ComposeError', '1 BTC may be burned per address')
+            'error': (exceptions.ComposeError, '1 BTC may be burned per address')
         }, {
             'in': (MULTISIGADDR[0], int(DP['quantity'] / 2)),
             'out': ('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', [('mvCounterpartyXXXXXXXXXXXXXXW24Hef', 50000000)], None)
@@ -82,10 +85,10 @@ UNITTEST_VECTOR = {
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80')
         }, {
             'in': (ADDR[0], ADDR[1], 'XCP', DP['quantity'] * 10000000),
-            'error': ('ComposeError', 'insufficient funds')
+            'error': (exceptions.ComposeError, 'insufficient funds')
         }, {
             'in': (ADDR[0], ADDR[1], 'XCP', DP['quantity'] / 3),
-            'error': ('ComposeError', 'quantity must be an int (in satoshi)')
+            'error': (exceptions.ComposeError, 'quantity must be an int (in satoshi)')
         }, {
             'in': (ADDR[0], MULTISIGADDR[0], 'XCP', DP['quantity']),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00')
@@ -100,7 +103,7 @@ UNITTEST_VECTOR = {
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', None)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03:>\x7f\xff\xff\xff\xff\xff\xff\xff')
         }, {
             'in': (ADDR[0], ADDR[1], 'MAXI', 2**63 + 1),
-            'error': ('ComposeError', 'insufficient funds')
+            'error': (exceptions.ComposeError, 'insufficient funds')
         }],
         'parse': [{
             'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block'], 'fee': 10000, 'block_time': 1554090000000, 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
@@ -197,13 +200,13 @@ UNITTEST_VECTOR = {
         }],
         'compose': [{
             'in': (ADDR[0], None, 'ASSET', 1000, True, ''),
-            'error': ('AssetNameError', 'non‐numeric asset name starts with ‘A’')
+            'error': (exceptions.AssetNameError, 'non‐numeric asset name starts with ‘A’')
         }, {
             'in': (ADDR[0], None, 'BSSET1', 1000, True, ''),
-            'error': ('AssetNameError', "('invalid character:', '1')")
+            'error': (exceptions.AssetNameError, "('invalid character:', '1')")
         }, {
             'in': (ADDR[0], None, 'SET', 1000, True, ''),
-            'error': ('AssetNameError', 'too short')
+            'error': (exceptions.AssetNameError, 'too short')
         }, {
             'in': (ADDR[0], None, 'BSSET', 1000, True, ''),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x14\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
@@ -224,10 +227,10 @@ UNITTEST_VECTOR = {
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x14\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
         }, {
             'in': (ADDR[0], None, 'A{}'.format(2**64), 1000, True, ''),
-            'error': ('AssetNameError', 'numeric asset name not in range')
+            'error': (exceptions.AssetNameError, 'numeric asset name not in range')
         }, {
             'in': (ADDR[0], None, 'A{}'.format(26**12), 1000, True, ''),
-            'error': ('AssetNameError', 'numeric asset name not in range')
+            'error': (exceptions.AssetNameError, 'numeric asset name not in range')
         }],
         'parse': [{
             'in': ({'supported': 1, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'data': b'\x00\x00\x00\x14\x00\x00\x00\x00\x00\xbaOs\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 'btc_amount': None, 'destination': None, 'block_time': 1554090000000, 'block_index': DP['default_block'], 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'fee': 10000, 'tx_index': 502, 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8'},),
@@ -368,7 +371,7 @@ UNITTEST_VECTOR = {
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x03:>\x7f\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\n\x00\x00\x00\x00\x00\r\xbb\xa0')
         }, {
             'in': (ADDR[0], 'MAXI', 2**63 + 1, 'XCP', DP['quantity'], DP['expiration'], DP['fee_required']),
-            'error': ('ComposeError', 'insufficient funds')
+            'error': (exceptions.ComposeError, 'insufficient funds')
         }],
         'parse': [{
             'in': ({'destination': None, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'block_time': 1554090000000, 'block_index': DP['default_block'], 'tx_index': 502, 'data': b'\x00\x00\x00\n\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x07\xd0\x00\x00\x00\x00\x00\x00\x00\x00', 'fee': 10000, 'btc_amount': None, 'supported': 1, 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8'},),
@@ -516,7 +519,7 @@ UNITTEST_VECTOR = {
             'out': None                                                                             # No Error
         }, {
             'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP7',),                                          # Invalid Bitcoin address: bad checksum
-            'error': ('Base58ChecksumError', 'Checksum mismatch: 0x00285aa2 ≠ 0x00285aa1')
+            'error': (exceptions.Base58ChecksumError, 'Checksum mismatch: 0x00285aa2 ≠ 0x00285aa1')
         }, {
             'in': ('1_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_2',),   # Valid multi‐sig
             'out': None                                                                             # No Error
@@ -531,26 +534,25 @@ UNITTEST_VECTOR = {
         'base58_check_encode': [{
             'in': ('010966776006953d5567439e5e39f86a0d273bee', b'\x00'),                            # Valid mainnet Bitcoin address
             'out': '16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM'
-        # TODO: Can’t get this one to work.
-        # }, {
-        #    'in': ('010966776006953d5567439e5e39f86a0d273bee', b'\x00'),                            # Invalid mainnet Bitcoin address: leading zero byte
-        #    'error': ('AddressError', 'encoded address does not decode properly')
+        # TODO }, {
+        #    'in': ('SOMETHING', b'\x00'),                            # Invalid mainnet Bitcoin address: leading zero byte
+        #    'error': (script.AddressError, 'encoded address does not decode properly')
         }],
         'base58_check_decode': [{
             'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM', b'\x00'),                                   # Valid mainnet Bitcoin address
             'out': b"\x01\tfw`\x06\x95=UgC\x9e^9\xf8j\r';\xee"
         }, {
             'in': ('26UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM', b'\x00'),                                   # Wrong version byte
-            'error': ('VersionByteError', 'incorrect version byte')
+            'error': (exceptions.VersionByteError, 'incorrect version byte')
         }, {
             'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvN', b'\x00'),                                   # Invalid mainnet Bitcoin address: bad checksum
-            'error': ('Base58ChecksumError', 'Checksum mismatch: 0xd61967f7 ≠ 0xd61967f6')
+            'error': (exceptions.Base58ChecksumError, 'Checksum mismatch: 0xd61967f7 ≠ 0xd61967f6')
         }, {
             'in': (ADDR[0], b'\x6f'),                                                               # TODO: What is this?
             'out': b'H8\xd8\xb3X\x8cL{\xa7\xc1\xd0o\x86n\x9b79\xc607'
         }, {
             'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjv0', b'\x00'),                                   # Invalid mainnet Bitcoin address: invalid character
-            'error': ('InvalidBase58Error', "Not a valid Base58 character: ‘0’")
+            'error': (exceptions.InvalidBase58Error, "Not a valid Base58 character: ‘0’")
         }],
         'is_multisig': [{
             'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM',),                                           # Mono‐sig
@@ -569,6 +571,48 @@ UNITTEST_VECTOR = {
             'in': (b'\x01T\xdaT\x0f\xb2g;u\xe6\xc3\xc9\x94\xf8\n\xd0\xc8C\x16C\xba\xb2\x8c\xedx<\xd9@y\xbb\xe7$E',), # Invalid compressed public key: first byte not `\x02` or `\x03`
             'out': False
         }],
+        'make_canonical': [{
+            'in': ('1_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2',),                   # TODO: Pubkeys out of order
+            'out': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2'
+        }, {
+            'in': ('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',),                   # TODO: Pubkeys out of order
+            'out': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2'
+        }, {
+            'in': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',),                                                          # Mono‐sig
+            'out': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'
+        }, {
+            'in': ('1_02513522cbf07b0bd553b0d8f8414c476c9275334fd3edfa368386412e3a193558_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_2',),
+            'error': (script.MultiSigAddressError, 'Multi‐signature address must use PubKeyHashes, not public keys.')
+        }],
+
+        'test_array': [{
+            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 2),         # Valid array
+            'out': None                                                                                             # No error
+        }, {
+            'in': ('Q', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 2),         # Bad first element
+            'error': (script.MultiSigAddressError, 'Signature values not integers.')
+        }, {
+            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], None),      # Bad last element
+            'error': (script.MultiSigAddressError, 'Signature values not integers.')
+        }, {
+            'in': ('0', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 2),         # First element too low
+            'error': (script.MultiSigAddressError, 'Invalid signatures_required.')
+        }, {
+            'in': ('4', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 2),         # First element too high
+            'error': (script.MultiSigAddressError, 'Invalid signatures_required.')
+        }, {
+            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 1),         # Last element too low
+            'error': (script.MultiSigAddressError, 'Invalid signatures_possible.')
+        }, {
+            'in': ('2', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 4),         # Last element too high
+            'error': (script.MultiSigAddressError, 'Invalid signatures_possible.')
+        }, {
+            'in': ('3', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 3),         # Wrong number of pubkeys
+            'error': (script.InputError, 'Incorrect number of pubkeys/pubkeyhashes in multi‐signature address.')
+        }],
+
+
+
         'is_pubkeyhash': [{
             'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6',),  # Valid Bitcoin Address
             'out': True
@@ -652,16 +696,16 @@ UNITTEST_VECTOR = {
         }],
         'generate_asset_id': [{
             'in': ('BCD', 308000),
-            'error': ('AssetNameError', 'too short')
+            'error': (exceptions.AssetNameError, 'too short')
         }, {
             'in': ('ABCD', 308000),
-            'error': ('AssetNameError', 'non‐numeric asset name starts with ‘A’')
+            'error': (exceptions.AssetNameError, 'non‐numeric asset name starts with ‘A’')
         }, {
             'in': ('A{}'.format(26**12), 308000),
-            'error': ('AssetNameError', 'numeric asset name not in range')
+            'error': (exceptions.AssetNameError, 'numeric asset name not in range')
         }, {
             'in': ('A{}'.format(2**64), 308000),
-            'error': ('AssetNameError', 'numeric asset name not in range')
+            'error': (exceptions.AssetNameError, 'numeric asset name not in range')
         }, {
             'in': ('A{}'.format(26**12 + 1), 308000),
             'out': 26**12 + 1
@@ -670,10 +714,10 @@ UNITTEST_VECTOR = {
             'out': 2**64 - 1
         }, {
             'in': ('LONGASSETNAMES', 308000),
-            'error': ('AssetNameError', 'long asset names must be numeric')
+            'error': (exceptions.AssetNameError, 'long asset names must be numeric')
         }, {
             'in': ('BCDE_F', 308000),
-            'error': ('AssetNameError', "('invalid character:', '_')")
+            'error': (exceptions.AssetNameError, "('invalid character:', '_')")
         }, {
             'in': ('BAAA', 308000),
             'out': 26**3
@@ -695,10 +739,10 @@ UNITTEST_VECTOR = {
             'out': 'A{}'.format(26**12 + 1)
         }, {
             'in': (26**3 - 1, 308000),
-            'error': ('AssetIDError', 'too low')
+            'error': (exceptions.AssetIDError, 'too low')
         }, {
             'in': (2**64, 308000),
-            'error': ('AssetIDError', 'too high')
+            'error': (exceptions.AssetIDError, 'too high')
         }]
     }
 }

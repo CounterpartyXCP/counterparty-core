@@ -116,7 +116,9 @@ def is_fully_valid(pubkey_bin):
 def make_canonical(address):
     if is_multisig(address):
         signatures_required, pubkeyhashes, signatures_possible = extract_array(address)
-        if not all([base58_check_decode(pubkeyhash, config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes]):
+        try:
+            [base58_check_decode(pubkeyhash, config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes]
+        except exceptions.InvalidBase58Error:
             raise MultiSigAddressError('Multi‐signature address must use PubKeyHashes, not public keys.')
         return construct_array(signatures_required, pubkeyhashes, signatures_possible)
     else:
@@ -125,7 +127,7 @@ def make_canonical(address):
 def test_array(signatures_required, pubs, signatures_possible):
     try:
         signatures_required, signatures_possible = int(signatures_required), int(signatures_possible)
-    except ValueError:
+    except (ValueError, TypeError):
         raise MultiSigAddressError('Signature values not integers.')
     if signatures_required < 1 or signatures_required > 3:
         raise MultiSigAddressError('Invalid signatures_required.')

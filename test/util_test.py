@@ -6,7 +6,7 @@ from requests.auth import HTTPBasicAuth
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
-from lib import (config, api, util, exceptions, blocks, check, backend, database, transaction)
+from lib import (config, api, util, exceptions, blocks, check, backend, database, transaction, script)
 from lib.messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve)
 import counterpartyd
 
@@ -292,7 +292,7 @@ def check_ouputs(tx_name, method, inputs, outputs, error, records, counterpartyd
 
     test_outputs = None
     if error is not None:
-        with pytest.raises(getattr(exceptions, error[0])) as exception:
+        with pytest.raises(error[0]) as exception:
             test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db)
     else:
         test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db)
