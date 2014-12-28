@@ -4,6 +4,7 @@ import pytest
 from pyethereum import tester
 import serpent
 import logging
+logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 logger = logging.getLogger()
 
@@ -36,6 +37,7 @@ import binascii
 import os
 import sys
 import logging
+logger = logging.getLogger(__name__)
 import tempfile
 
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))

@@ -1,6 +1,7 @@
 #! /usr/bin/python3
 
-from .versions import send1
+from lib.messages.versions import send1
+from lib.messages.versions import send2
 
 ID = send1.ID
 
@@ -30,6 +31,9 @@ def initialise (db):
                       asset_idx ON sends (asset)
                    ''')
 
+def unpack(db, message, block_index):
+    return send2.unpack(db, message, block_index)
+
 def validate (db, source, destination, asset, quantity, block_index):
     return send1.validate(db, source, destination, asset, quantity, block_index)
 
@@ -38,6 +42,7 @@ def compose (db, source, destination, asset, quantity):
 
 def parse (db, tx, message):    # TODO: *args
     return send1.parse(db, tx, message)
+
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
 

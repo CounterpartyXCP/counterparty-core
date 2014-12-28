@@ -5,7 +5,7 @@ import decimal
 D = decimal.Decimal
 from fractions import Fraction
 
-from lib import (config, exceptions, bitcoin, util)
+from lib import (config, exceptions, util)
 
 """Burn {} to earn {} during a special period of time.""".format(config.BTC, config.XCP)
 

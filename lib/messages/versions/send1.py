@@ -4,7 +4,7 @@
 
 import struct
 
-from ... import (config, exceptions, bitcoin, util)
+from ... import (config, exceptions, util)
 
 FORMAT = '>QQ'
 LENGTH = 8 + 8

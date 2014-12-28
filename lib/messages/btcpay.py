@@ -3,8 +3,12 @@
 import binascii
 import struct
 import logging
+logger = logging.getLogger(__name__)
 
-from lib import (config, exceptions, bitcoin, util)
+from lib import config
+from lib import exceptions
+from lib import util
+from lib import log
 
 FORMAT = '>32s32s'
 LENGTH = 32 + 32
@@ -89,9 +93,9 @@ def compose (db, source, order_match_id):
     # Warn if down to the wire.
     time_left = order_match['match_expire_index'] - util.last_block(db)['block_index']
     if time_left < 4:
-        logging.warning('WARNING: Only {} blocks until that order match expires. The payment might not make into the blockchain in time.'.format(time_left))
+        logger.warning('Only {} blocks until that order match expires. The payment might not make into the blockchain in time.'.format(time_left))
     if 10 - time_left < 4:
-        logging.warning('WARNING: Order match has only {} confirmation(s).'.format(10 - time_left))
+        logger.warning('Order match has only {} confirmation(s).'.format(10 - time_left))
 
     tx0_hash_bytes, tx1_hash_bytes = binascii.unhexlify(bytes(tx0_hash, 'utf-8')), binascii.unhexlify(bytes(tx1_hash, 'utf-8'))
     data = struct.pack(config.TXTYPE_FORMAT, ID)
@@ -134,7 +138,7 @@ def parse (db, tx, message):
             }
             sql='update order_matches set status = :status where id = :order_match_id'
             cursor.execute(sql, bindings)
-            util.message(db, tx['block_index'], 'update', 'order_matches', bindings)
+            log.message(db, tx['block_index'], 'update', 'order_matches', bindings)
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

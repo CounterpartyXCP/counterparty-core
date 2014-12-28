@@ -2,6 +2,7 @@
 http://insight.bitpay.com/
 '''
 import logging
+logger = logging.getLogger(__name__)
 
 from lib import config, util
 
@@ -18,9 +19,9 @@ def check():
     if result['status'] == 'error':
         raise Exception('Insight reports error: %s' % result['error'])
     if result['status'] == 'syncing':
-        logging.warning("WARNING: Insight is not fully synced to the blockchain: %s%% complete" % result['syncPercentage'])
+        logger.warning("Insight is not fully synced to the blockchain: %s%% complete" % result['syncPercentage'])
 
-def searchrawtransactions(address):
+def searchrawtransactions(proxy, address):
     result = util.get_url(get_host() + '/api/txs/?address=' + address, abort_on_error=False)
     if 'txs' in result:
         return result['txs']

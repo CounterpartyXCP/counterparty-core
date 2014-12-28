@@ -1,6 +1,3 @@
-import sys
-import os
-
 """Variables prefixed with `DEFAULT` should be able to be overridden by
 configuration file and command‐line arguments."""
 
@@ -10,7 +7,7 @@ UNIT = 100000000        # The same across assets.
 # Versions
 VERSION_MAJOR = 9
 VERSION_MINOR = 49
-VERSION_REVISION = 2
+VERSION_REVISION = 3
 VERSION_STRING = str(VERSION_MAJOR) + '.' + str(VERSION_MINOR) + '.' + str(VERSION_REVISION)
 
 

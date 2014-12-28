@@ -2,10 +2,14 @@
 
 """Based on pyethereum <https://github.com/ethereum/pyethereum>."""
 
-from lib import (util, config)
-from lib.messages.scriptlib import (rlp, utils)
+from lib import util
+from lib import config
+from lib import log
+from lib.messages.scriptlib import rlp
+from lib.messages.scriptlib import utils
 
 import logging
+logger = logging.getLogger(__name__)
 import pickle
 
 # NOTE: Not logging most of the specifics here.
@@ -61,7 +65,7 @@ class Block(object):
         cursor.execute('''DELETE FROM suicides''')
 
     def revert(self):
-        logging.debug('### REVERTING ###')
+        logger.debug('### REVERTING ###')
 
     def get_storage_data(self, contract_id, key=None):
         cursor = self.db.cursor()
@@ -98,7 +102,7 @@ class Block(object):
                 'key': key,
                 'value': value
                 }
-            util.message(self.db, self.number, 'update', 'storage', bindings)
+            log.message(self.db, self.number, 'update', 'storage', bindings)
             sql='''UPDATE storage SET value = :value WHERE contract_id = :contract_id AND key = :key'''
             cursor.execute(sql, bindings)
         else:           # Insert value.
@@ -107,7 +111,7 @@ class Block(object):
                 'key': key,
                 'value': value
                 }
-            util.message(self.db, self.number, 'insert', 'storage', bindings)
+            log.message(self.db, self.number, 'insert', 'storage', bindings)
             sql='''INSERT INTO storage VALUES (:contract_id, :key, :value)'''
             cursor.execute(sql, bindings)
 
@@ -142,10 +146,10 @@ class Block(object):
         nonces = list(cursor)
         bindings = {'address': address, 'nonce': nonce}
         if not nonces:
-            util.message(self.db, self.number, 'insert', 'nonces', bindings)
+            log.message(self.db, self.number, 'insert', 'nonces', bindings)
             cursor.execute('''INSERT INTO nonces VALUES(:address, :nonce)''', bindings)
         else:
-            util.message(self.db, self.number, 'update', 'nonces', bindings)
+            log.message(self.db, self.number, 'update', 'nonces', bindings)
             cursor.execute('''UPDATE nonces SET nonce = :nonce WHERE (address = :address)''', bindings)
 
     def increment_nonce(self, address):
@@ -169,11 +173,11 @@ class Block(object):
     def del_account(self, suicide):
         cursor = self.db.cursor()
         contract_id = suicide['contract_id']
-        logging.debug('SUICIDING {}'.format(contract_id))
+        logger.debug('SUICIDING {}'.format(contract_id))
         bindings = {'contract_id': contract_id}
-        util.message(self.db, self.number, 'delete', 'contracts', bindings)
+        log.message(self.db, self.number, 'delete', 'contracts', bindings)
         cursor.execute('''DELETE FROM contracts WHERE contract_id = :contract_id''', bindings)
-        util.message(self.db, self.number, 'delete', 'storage', bindings)
+        log.message(self.db, self.number, 'delete', 'storage', bindings)
         cursor.execute('''DELETE FROM storage WHERE contract_id = :contract_id''', bindings)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

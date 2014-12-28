@@ -8,7 +8,7 @@ import struct
 import decimal
 D = decimal.Decimal
 
-from lib import (config, util, exceptions, bitcoin, util)
+from lib import (config, util, exceptions, util)
 
 FORMAT_1 = '>QQ?'
 LENGTH_1 = 8 + 8 + 1
@@ -159,7 +159,8 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
 
     return call_date, call_price, problems, fee, description, divisible, reissuance
 
-def compose (db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description):
+def compose (db, source, transfer_destination, asset, quantity, divisible, description):
+    callable_, call_date, call_price = False, 0, 0.0
     call_date, call_price, problems, fee, description, divisible, reissuance = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.last_block(db)['block_index'])
     if problems: raise exceptions.ComposeError(problems)
 

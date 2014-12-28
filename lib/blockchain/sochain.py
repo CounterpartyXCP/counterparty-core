@@ -2,6 +2,7 @@
 chain.sp
 '''
 import logging
+logger = logging.getLogger(__name__)
 
 from lib import config, util, backend
 
@@ -20,8 +21,8 @@ def sochain_network():
 def check():
     pass
 
-def searchrawtransactions(address):
-    unconfirmed = util.unconfirmed_transactions(address)
+def searchrawtransactions(proxy, address):
+    unconfirmed = backend.unconfirmed_transactions(proxy, address)
 
     confirmed = []
     txs = util.get_url(get_host() + '/api/v2/get_tx/{}/{}'.format(sochain_network(), address), abort_on_error=True)
@@ -31,3 +32,4 @@ def searchrawtransactions(address):
             confirmed.append(tx)
 
     return unconfirmed + confirmed
+

@@ -1,74 +1,29 @@
 #! /usr/bin/env python3
+
 import os
 import argparse
-import json
 import decimal
-import sys
 import logging
-import unicodedata
+logger = logging.getLogger(__name__)
 import time
 import dateutil.parser
 import calendar
 import configparser
-import traceback
-import threading
-from threading import Thread
 import binascii
-from fractions import Fraction
-import socket
-import signal
 
-import requests
 import appdirs
 from prettytable import PrettyTable
 
-from lib import config, api, util, exceptions, bitcoin, blocks, blockchain, backend, database
+from lib import config, util, exceptions, backend, database, transaction, script, api
 if os.name == 'nt':
     from lib import util_windows
 
 D = decimal.Decimal
 
-class ConfigurationError (Exception):
+class ConfigurationError(Exception):
     pass
 
-def get_wallet ():
-    proxy = backend.get_proxy()
-    for group in proxy.listaddressgroupings():
-        for bunch in group:
-            yield bunch
-
-def sigterm_handler(_signo, _stack_frame):
-    if 'api_server' in globals():
-        logging.info('Status: Stopping API server.')
-        api_server.stop()
-        api_status_poller.stop()
-    logging.info('Status: Shutting down.')
-    sys.exit(0)
-signal.signal(signal.SIGTERM, sigterm_handler)
-signal.signal(signal.SIGINT, sigterm_handler)
-
-# Lock database access by opening a socket.
-class LockingError(Exception): pass
-def get_lock():
-
-    # Cross‐platform.
-    if os.name == 'nt': # Not database‐specific.
-        socket_family = socket.AF_INET
-        socket_address = ('localhost', 8999)
-        error = 'Another copy of {} is currently running.'.format(config.XCP_CLIENT)
-    else:
-        socket_family = socket.AF_UNIX
-        socket_address = '\0' + config.DATABASE
-        error = 'Another copy of {} is currently writing to database {}'.format(config.XCP_CLIENT, config.DATABASE)
-
-    global lock_socket
-    lock_socket = socket.socket(socket_family, socket.SOCK_DGRAM)
-    try:
-        lock_socket.bind(socket_address)
-    except socket.error:
-        raise LockingError(error)
-
-def get_address (db, address):
+def get_address(address):
     address_dict = {}
     address_dict['balances'] = util.api('get_balances', {'filters': [('address', '==', address),]})
     address_dict['debits'] = util.api('get_debits', {'filters': [('address', '==', address),]})
@@ -86,7 +41,6 @@ def get_address (db, address):
     address_dict['cancels'] = util.api('get_cancels', {'filters': [('source', '==', address),]})
     address_dict['rps'] = util.api('get_rps', {'filters': [('source', '==', address),]})
     address_dict['rps_matches'] = util.api('get_rps_matches', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
-    address_dict['callbacks'] = util.api('get_callbacks', {'filters': [('source', '==', address),]})
     address_dict['bet_expirations'] = util.api('get_bet_expirations', {'filters': [('source', '==', address),]})
     address_dict['order_expirations'] = util.api('get_order_expirations', {'filters': [('source', '==', address),]})
     address_dict['rps_expirations'] = util.api('get_rps_expirations', {'filters': [('source', '==', address),]})
@@ -95,7 +49,7 @@ def get_address (db, address):
     address_dict['rps_match_expirations'] = util.api('get_rps_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
     return address_dict
 
-def format_order (order):
+def format_order(order):
     give_quantity = util.value_out(db, D(order['give_quantity']), order['give_asset'])
     get_quantity = util.value_out(db, D(order['get_quantity']), order['get_asset'])
     give_remaining = util.value_out(db, D(order['give_remaining']), order['give_asset'])
@@ -112,22 +66,26 @@ def format_order (order):
 
     return [D(give_remaining), give_asset, price, price_assets, str(order['fee_required'] / config.UNIT), str(order['fee_provided'] / config.UNIT), order['expire_index'] - util.last_block(db)['block_index'], order['tx_hash']]
 
-def format_bet (bet):
+def format_bet(bet):
     odds = D(bet['counterwager_quantity']) / D(bet['wager_quantity'])
 
-    if not bet['target_value']: target_value = None
-    else: target_value = bet['target_value']
-    if not bet['leverage']: leverage = None
-    else: leverage = util.value_out(db, D(bet['leverage']) / 5040, 'leverage')
+    if not bet['target_value']:
+        target_value = None
+    else:
+        target_value = bet['target_value']
+    if not bet['leverage']:
+        leverage = None
+    else:
+        leverage = util.value_out(db, D(bet['leverage']) / 5040, 'leverage')
 
     return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], util.isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.value_out(db, odds, 'odds'), bet['expire_index'] - util.last_block(db)['block_index'], bet['tx_hash']]
 
-def format_order_match (db, order_match):
+def format_order_match(db, order_match):
     order_match_id = util.make_id(order_match['tx0_hash'], order_match['tx1_hash'])
     order_match_time_left = order_match['match_expire_index'] - util.last_block(db)['block_index']
     return [order_match_id, order_match_time_left]
 
-def format_feed (feed):
+def format_feed(feed):
     timestamp = util.isodt(feed['timestamp'])
     if not feed['text']:
         text = '<Locked>'
@@ -135,11 +93,11 @@ def format_feed (feed):
         text = feed['text']
     return [feed['source'], timestamp, text, feed['value'], D(feed['fee_fraction_int']) / D(1e8)]
 
-def market (give_asset, get_asset):
+def market(give_asset, get_asset):
 
     # Your Pending Orders Matches.
     addresses = []
-    for bunch in get_wallet():
+    for bunch in backend.get_wallet(proxy):
         addresses.append(bunch[:2][0])
     filters = [
         ('tx0_address', 'IN', addresses),
@@ -158,8 +116,10 @@ def market (give_asset, get_asset):
     orders = util.api('get_orders', {'status': 'open'})
     table = PrettyTable(['Give Quantity', 'Give Asset', 'Price', 'Price Assets', 'Required {} Fee'.format(config.BTC), 'Provided {} Fee'.format(config.BTC), 'Time Left', 'Tx Hash'])
     for order in orders:
-        if give_asset and order['give_asset'] != give_asset: continue
-        if get_asset and order['get_asset'] != get_asset: continue
+        if give_asset and order['give_asset'] != give_asset:
+            continue
+        if get_asset and order['get_asset'] != get_asset:
+            continue
         order = format_order(order)
         table.add_row(order)
     print('Open Orders')
@@ -196,69 +156,81 @@ def market (give_asset, get_asset):
     print('Feeds')
     print(table)
 
+def get_pubkey(pubkeyhash):
+    if backend.is_valid(proxy, pubkeyhash):
+
+        # If in wallet, get from wallet.
+        if backend.is_mine(proxy, pubkeyhash):
+            return util.hexlify(backend.wallet_pubkeyhash_to_pubkey(proxy, pubkeyhash))
+
+        # If in blockchain (and not in wallet), get from blockchain.
+        try:
+            return backend.pubkeyhash_to_pubkey(proxy, pubkeyhash, provided_pubkeys=None)
+        except script.AddressError:
+            pass
+
+        # If not in wallet and not in blockchain, get from user.
+        answer = input('Public keys (hexadecimal) or Private key (Wallet Import Format) for `{}`: '.format(pub))
+        if script.is_fully_valid(binascii.unhexlify(answer)):
+            pubkey = answer
+        else:
+            private_key = answer
+            pubkey = script.private_key_to_public_key(private_key)
+        if pubkeyhash != backend.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
+            raise transaction.InputError('provided public or private key does not match the source address')
+
+        return pubkey
+
+    return None
 
 def cli(method, params, unsigned):
+
+    # Get provided pubkeys from params.
+    pubkeys = []
+    for address_name in ['source', 'destination']:
+        if address_name in params:
+            address = params[address_name]
+            if script.is_multisig(address):
+                _, pubs, _ = script.extract_array(address)
+                for pub in pubs:
+                    pubkey = get_pubkey(pub)
+                    if pubkey:
+                        pubkeys.append(pubkey)
+            elif address_name != 'destination': # We don’t need the pubkey for a monosig destination.
+                pubkey = get_pubkey(address)
+                if pubkey:
+                    pubkeys.append(pubkey)
+    params['pubkey'] = pubkeys
+
     # Get unsigned transaction serialisation.
-
-    is_multisig = util.is_multisig(params['source'])
-    params['source'] = util.canonical_address(params['source'])
-    pubkey = None
-
-    if not is_multisig:
-        # Get public key for source.
-        source = params['source']
-        if not backend.is_valid(source):
-            raise exceptions.AddressError('Invalid address.')
-        if backend.is_mine(source):
-            backend.wallet_unlock()
-        else:
-            # TODO: Do this only if the encoding method needs it.
-            print('Source not in backend wallet.')
-            answer = input('Public key (hexadecimal) or Private key (Wallet Import Format): ')
-
-            # Public key or private key?
-            try:
-                binascii.unhexlify(answer)  # Check if hex.
-                pubkey = answer   # If hex, assume public key.
-                private_key_wif = None
-            except binascii.Error:
-                private_key_wif = answer    # Else, assume private key.
-                pubkey = bitcoin.private_key_to_public_key(private_key_wif)
-                if params['source'] != pubkey_to_pubkeyhash(pubkey):
-                    raise InputError('provided private key does not match the source address')
-        params['pubkey'] = pubkey
-
     """  # NOTE: For debugging, e.g. with `Invalid Params` error.
     tx_info = sys.modules['lib.send'].compose(db, params['source'], params['destination'], params['asset'], params['quantity'])
-    print(bitcoin.transaction(db, tx_info, encoding=params['encoding'],
+    print(transaction.construct(db, proxy, tx_info, encoding=params['encoding'],
                                         fee_per_kb=params['fee_per_kb'],
                                         regular_dust_size=params['regular_dust_size'],
                                         multisig_dust_size=params['multisig_dust_size'],
                                         op_return_value=params['op_return_value'],
-                                        self_public_key_hex=pubkey,
+                                        provided_pubkeys=params['pubkey'],
                                         allow_unconfirmed_inputs=params['allow_unconfirmed_inputs']))
-    exit(0)
-    """
-
-    # Construct transaction.
+    exit(0)"""
     unsigned_tx_hex = util.api(method, params)
     print('Transaction (unsigned):', unsigned_tx_hex)
 
     # Ask to sign and broadcast (if not multi‐sig).
-    if is_multisig:
+    if script.is_multisig(params['source']):
         print('Multi‐signature transactions are signed and broadcasted manually.')
     elif not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
-        if backend.is_mine(source):
+        if backend.is_mine(proxy, source):
             private_key_wif = None
         elif not private_key_wif:   # If private key was not given earlier.
             private_key_wif = input('Private key (Wallet Import Format): ')
 
         # Sign and broadcast.
-        signed_tx_hex = bitcoin.sign_tx(unsigned_tx_hex, private_key_wif=private_key_wif)
+        signed_tx_hex = transaction.sign_tx(proxy, unsigned_tx_hex, private_key_wif=private_key_wif)
         print('Transaction (signed):', signed_tx_hex)
-        print('Hash of transaction (broadcasted):', bitcoin.broadcast_tx(signed_tx_hex))
+        print('Hash of transaction (broadcasted):', transaction.broadcast_tx(proxy, signed_tx_hex))
 
-def set_options (data_dir=None, backend_rpc_connect=None,
+def set_options(data_dir=None, backend_rpc_connect=None,
                  backend_rpc_port=None, backend_rpc_user=None, backend_rpc_password=None,
                  backend_rpc_ssl=False, backend_rpc_ssl_verify=True,
                  blockchain_service_name=None, blockchain_service_connect=None,
@@ -278,7 +250,8 @@ def set_options (data_dir=None, backend_rpc_connect=None,
         config.DATA_DIR = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.XCP_CLIENT, roaming=True)
     else:
         config.DATA_DIR = os.path.expanduser(data_dir)
-    if not os.path.isdir(config.DATA_DIR): os.mkdir(config.DATA_DIR)
+    if not os.path.isdir(config.DATA_DIR):
+        os.mkdir(config.DATA_DIR)
 
     # Configuration file
     configfile = configparser.ConfigParser()
@@ -288,7 +261,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
         config_path = os.path.join(config.DATA_DIR, '{}.conf'.format(config.XCP_CLIENT))
     configfile.read(config_path)
     has_config = 'Default' in configfile
-    #logging.debug("Config file: %s; Exists: %s" % (config_path, "Yes" if has_config else "No"))
+    #logger.debug("Config file: %s; Exists: %s" % (config_path, "Yes" if has_config else "No"))
 
     # testnet
     if testnet:
@@ -360,7 +333,7 @@ def set_options (data_dir=None, backend_rpc_connect=None,
 
     # Backend Core RPC SSL
     if backend_rpc_ssl:
-        config.BACKEND_RPC_SSL= backend_rpc_ssl
+        config.BACKEND_RPC_SSL = backend_rpc_ssl
     elif has_config and 'backend-rpc-ssl' in configfile['Default'] and configfile['Default']['backend-rpc-ssl']:
         config.BACKEND_RPC_SSL = configfile['Default']['backend-rpc-ssl']
     else:
@@ -532,13 +505,12 @@ def set_options (data_dir=None, backend_rpc_connect=None,
     else:
         config.BROADCAST_TX_MAINNET = '{}'.format(config.BTC_CLIENT)
 
-def balances (address):
-    address = util.canonical_address(address)
-    util.validate_address(address)
-    address_data = get_address(db, address=address)
-    balances = address_data['balances']
+def balances(address):
+    address = script.make_canonical(address)
+    script.validate(address)
+    balances = get_address(address=address)['balances']
     table = PrettyTable(['Asset', 'Amount'])
-    btc_balance = bitcoin.get_btc_balance(address)
+    btc_balance = backend.get_btc_balance(address)
     table.add_row([config.BTC, btc_balance])  # BTC
     for balance in balances:
         asset = balance['asset']
@@ -549,9 +521,9 @@ def balances (address):
 
 def generate_move_random_hash(move):
     move = int(move).to_bytes(2, byteorder='big')
-    random = os.urandom(16)
-    move_random_hash = util.dhash(random+move)
-    return binascii.hexlify(random).decode('utf8'), binascii.hexlify(move_random_hash).decode('utf8')
+    random_bin = os.urandom(16)
+    move_random_hash_bin = util.dhash(random_bin + move)
+    return binascii.hexlify(random_bin).decode('utf8'), binascii.hexlify(move_random_hash_bin).decode('utf8')
 
 
 if __name__ == '__main__':
@@ -616,7 +588,7 @@ if __name__ == '__main__':
     parser_order_fees.add_argument('--fee-fraction-provided', default=config.DEFAULT_FEE_FRACTION_PROVIDED, help='the miners’ fee provided, as a fraction of the {} to be sold'.format(config.BTC))
     parser_order_fees.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
-    parser_btcpay= subparsers.add_parser('{}pay'.format(config.BTC).lower(), help='create and broadcast a *{}pay* message, to settle an Order Match for which you owe {}'.format(config.BTC, config.BTC))
+    parser_btcpay = subparsers.add_parser('{}pay'.format(config.BTC).lower(), help='create and broadcast a *{}pay* message, to settle an Order Match for which you owe {}'.format(config.BTC, config.BTC))
     parser_btcpay.add_argument('--source', required=True, help='the source address')
     parser_btcpay.add_argument('--order-match-id', required=True, help='the concatenation of the hashes of the two transactions which compose the order match')
     parser_btcpay.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
@@ -627,9 +599,6 @@ if __name__ == '__main__':
     parser_issuance.add_argument('--quantity', default=0, help='the quantity of ASSET to be issued')
     parser_issuance.add_argument('--asset', required=True, help='the name of the asset to be issued (if it’s available)')
     parser_issuance.add_argument('--divisible', action='store_true', help='whether or not the asset is divisible (must agree with previous issuances)')
-    parser_issuance.add_argument('--callable', dest='callable_', action='store_true', help='whether or not the asset is callable (must agree with previous issuances)')
-    parser_issuance.add_argument('--call-date', help='the date from which a callable asset may be called back (must agree with previous issuances)')
-    parser_issuance.add_argument('--call-price', help='the price, in XCP per whole unit, at which a callable asset may be called back (must agree with previous issuances)')
     parser_issuance.add_argument('--description', type=str, required=True, help='a description of the asset (set to ‘LOCK’ to lock against further issuances with non‐zero quantitys)')
     parser_issuance.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
@@ -664,16 +633,10 @@ if __name__ == '__main__':
     parser_burn.add_argument('--quantity', required=True, help='quantity of {} to be burned'.format(config.BTC))
     parser_burn.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
-    parser_cancel= subparsers.add_parser('cancel', help='cancel an open order or bet you created')
+    parser_cancel = subparsers.add_parser('cancel', help='cancel an open order or bet you created')
     parser_cancel.add_argument('--source', required=True, help='the source address')
     parser_cancel.add_argument('--offer-hash', required=True, help='the transaction hash of the order or bet')
     parser_cancel.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
-
-    parser_callback = subparsers.add_parser('callback', help='callback a fraction of an asset')
-    parser_callback.add_argument('--source', required=True, help='the source address')
-    parser_callback.add_argument('--fraction', required=True, help='the fraction of ASSET to call back')
-    parser_callback.add_argument('--asset', required=True, help='the asset to callback')
-    parser_callback.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
     parser_rps = subparsers.add_parser('rps', help='open a rock-paper-scissors like game')
     parser_rps.add_argument('--source', required=True, help='the source address')
@@ -722,9 +685,9 @@ if __name__ == '__main__':
 
     parser_wallet = subparsers.add_parser('wallet', help='list the addresses in your backend wallet along with their balances in all {} assets'.format(config.XCP_NAME))
 
-    parser_pending= subparsers.add_parser('pending', help='list pending order matches awaiting {}payment from you'.format(config.BTC))
+    parser_pending = subparsers.add_parser('pending', help='list pending order matches awaiting {}payment from you'.format(config.BTC))
 
-    parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the {} market'.format(config.XCP_NAME) )
+    parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the {} market'.format(config.XCP_NAME))
     parser_market.add_argument('--give-asset', help='only show orders offering to sell GIVE_ASSET')
     parser_market.add_argument('--get-asset', help='only show orders offering to buy GET_ASSET')
 
@@ -734,11 +697,13 @@ if __name__ == '__main__':
     args.fee_per_kb = int(args.fee_per_kb * config.UNIT)
     args.regular_dust_size = int(args.regular_dust_size * config.UNIT)
     args.multisig_dust_size = int(args.multisig_dust_size * config.UNIT)
-    args.op_return_value= int(args.op_return_value * config.UNIT)
+    args.op_return_value = int(args.op_return_value * config.UNIT)
 
     # Hack
-    try: args.force
-    except (NameError, AttributeError): args.force = None
+    try:
+        args.force
+    except (NameError, AttributeError):
+        args.force = None
 
     # Configuration
     set_options(data_dir=args.data_dir,
@@ -757,12 +722,16 @@ if __name__ == '__main__':
                 testcoin=args.testcoin, force=args.force)
 
     # Database
-    logging.info('Status: Connecting to database.')
+    logger.info('Connecting to database.')
     db = database.get_connection()
+
+    # Proxy
+    proxy = backend.get_proxy()
 
     # MESSAGE CREATION
     if args.action == 'send':
-        if args.fee: args.fee = util.value_in(db, args.fee, config.BTC)
+        if args.fee:
+            args.fee = util.value_in(db, args.fee, config.BTC)
         quantity = util.value_in(db, args.quantity, args.asset)
         cli('create_send', {'source': args.source,
                             'destination': args.destination, 'asset':
@@ -776,7 +745,8 @@ if __name__ == '__main__':
             args.unsigned)
 
     elif args.action == 'order':
-        if args.fee: args.fee = util.value_in(db, args.fee, config.BTC)
+        if args.fee:
+            args.fee = util.value_in(db, args.fee, config.BTC)
         fee_required, fee_fraction_provided = D(args.fee_fraction_required), D(args.fee_fraction_provided)
         give_quantity, get_quantity = D(args.give_quantity), D(args.get_quantity)
 
@@ -813,7 +783,8 @@ if __name__ == '__main__':
            args.unsigned)
 
     elif args.action == '{}pay'.format(config.BTC).lower():
-        if args.fee: args.fee = util.value_in(db, args.fee, config.BTC)
+        if args.fee:
+            args.fee = util.value_in(db, args.fee, config.BTC)
         cli('create_btcpay', {'source': args.source,
                               'order_match_id': args.order_match_id, 'fee':
                               args.fee, 'allow_unconfirmed_inputs':
@@ -825,24 +796,14 @@ if __name__ == '__main__':
             args.unsigned)
 
     elif args.action == 'issuance':
-        if args.fee: args.fee = util.value_in(db, args.fee, config.BTC)
+        if args.fee:
+            args.fee = util.value_in(db, args.fee, config.BTC)
         quantity = util.value_in(db, args.quantity, None, divisible=args.divisible)
-        if args.callable_:
-            if not args.call_date:
-                parser.error('must specify call date of callable asset', )
-            if not args.call_price:
-                parser.error('must specify call price of callable asset')
-            call_date = calendar.timegm(dateutil.parser.parse(args.call_date).utctimetuple())
-            call_price = float(args.call_price)
-        else:
-            call_date, call_price = 0, 0
 
         cli('create_issuance', {'source': args.source, 'asset': args.asset,
                                 'quantity': quantity, 'divisible':
                                 args.divisible, 'description':
-                                args.description, 'callable_': args.callable_,
-                                'call_date': call_date, 'call_price':
-                                call_price, 'transfer_destination':
+                                args.description, 'transfer_destination':
                                 args.transfer_destination, 'fee': args.fee,
                                 'allow_unconfirmed_inputs': args.unconfirmed,
                                 'encoding': args.encoding, 'fee_per_kb':
@@ -853,7 +814,8 @@ if __name__ == '__main__':
            args.unsigned)
 
     elif args.action == 'broadcast':
-        if args.fee: args.fee = util.value_in(db, args.fee, config.BTC)
+        if args.fee:
+            args.fee = util.value_in(db, args.fee, config.BTC)
         value = util.value_in(db, args.value, 'value')
         fee_fraction = util.value_in(db, args.fee_fraction, 'fraction')
 
@@ -870,7 +832,8 @@ if __name__ == '__main__':
            args.unsigned)
 
     elif args.action == 'bet':
-        if args.fee: args.fee = util.value_in(db, args.fee, config.BTC)
+        if args.fee:
+            args.fee = util.value_in(db, args.fee, config.BTC)
         deadline = calendar.timegm(dateutil.parser.parse(args.deadline).utctimetuple())
         wager = util.value_in(db, args.wager, config.XCP)
         counterwager = util.value_in(db, args.counterwager, config.XCP)
@@ -879,7 +842,7 @@ if __name__ == '__main__':
 
         cli('create_bet', {'source': args.source,
                            'feed_address': args.feed_address, 'bet_type':
-                           util.BET_TYPE_ID [args.bet_type], 'deadline': deadline, 'wager_quantity': wager,
+                           util.BET_TYPE_ID[args.bet_type], 'deadline': deadline, 'wager_quantity': wager,
                            'counterwager_quantity': counterwager, 'expiration':
                            args.expiration, 'target_value': target_value,
                            'leverage': leverage, 'fee': args.fee,
@@ -892,7 +855,8 @@ if __name__ == '__main__':
             args.unsigned)
 
     elif args.action == 'dividend':
-        if args.fee: args.fee = util.value_in(db, args.fee, config.BTC)
+        if args.fee:
+            args.fee = util.value_in(db, args.fee, config.BTC)
         quantity_per_unit = util.value_in(db, args.quantity_per_unit, config.XCP)
         cli('create_dividend', {'source': args.source,
                                 'quantity_per_unit': quantity_per_unit,
@@ -907,7 +871,8 @@ if __name__ == '__main__':
            args.unsigned)
 
     elif args.action == 'burn':
-        if args.fee: args.fee = util.value_in(db, args.fee, config.BTC)
+        if args.fee:
+            args.fee = util.value_in(db, args.fee, config.BTC)
         quantity = util.value_in(db, args.quantity, config.BTC)
         cli('create_burn', {'source': args.source, 'quantity': quantity,
                             'fee': args.fee, 'allow_unconfirmed_inputs':
@@ -919,7 +884,8 @@ if __name__ == '__main__':
         args.unsigned)
 
     elif args.action == 'cancel':
-        if args.fee: args.fee = util.value_in(db, args.fee, config.BTC)
+        if args.fee:
+            args.fee = util.value_in(db, args.fee, config.BTC)
         cli('create_cancel', {'source': args.source,
                               'offer_hash': args.offer_hash, 'fee': args.fee,
                               'allow_unconfirmed_inputs': args.unconfirmed,
@@ -930,21 +896,9 @@ if __name__ == '__main__':
                               args.op_return_value},
         args.unsigned)
 
-    elif args.action == 'callback':
-        if args.fee: args.fee = util.value_in(db, args.fee, config.BTC)
-        cli('create_callback', {'source': args.source,
-                                'fraction': util.value_in(db, args.fraction, 'fraction'),
-                                'asset': args.asset, 'fee': args.fee,
-                                'allow_unconfirmed_inputs': args.unconfirmed,
-                                'encoding': args.encoding, 'fee_per_kb':
-                                args.fee_per_kb, 'regular_dust_size':
-                                args.regular_dust_size, 'multisig_dust_size':
-                                args.multisig_dust_size, 'op_return_value':
-                                args.op_return_value},
-           args.unsigned)
-
     elif args.action == 'rps':
-        if args.fee: args.fee = util.value_in(db, args.fee, 'BTC')
+        if args.fee:
+            args.fee = util.value_in(db, args.fee, 'BTC')
         wager = util.value_in(db, args.wager, 'XCP')
         random, move_random_hash = generate_move_random_hash(args.move)
         print('random: {}'.format(random))
@@ -952,7 +906,7 @@ if __name__ == '__main__':
         cli('create_rps', {'source': args.source,
                            'possible_moves': args.possible_moves, 'wager': wager,
                            'move_random_hash': move_random_hash, 'expiration': args.expiration,
-                           'fee': args.fee,'allow_unconfirmed_inputs': args.unconfirmed,
+                           'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed,
                            'encoding': args.encoding, 'fee_per_kb':
                            args.fee_per_kb, 'regular_dust_size':
                            args.regular_dust_size, 'multisig_dust_size':
@@ -961,7 +915,8 @@ if __name__ == '__main__':
            args.unsigned)
 
     elif args.action == 'rpsresolve':
-        if args.fee: args.fee = util.value_in(db, args.fee, 'BTC')
+        if args.fee:
+            args.fee = util.value_in(db, args.fee, 'BTC')
         cli('create_rpsresolve', {'source': args.source,
                                 'random': args.random, 'move': args.move,
                                 'rps_match_id': args.rps_match_id, 'fee': args.fee,
@@ -974,7 +929,8 @@ if __name__ == '__main__':
            args.unsigned)
 
     elif args.action == 'publish':
-        if args.fee: args.fee = util.value_in(db, args.fee, 'BTC')
+        if args.fee:
+            args.fee = util.value_in(db, args.fee, 'BTC')
         cli('create_publish', {'source': args.source,
                                'gasprice': args.gasprice, 'startgas':
                                args.startgas, 'endowment': args.endowment,
@@ -987,7 +943,8 @@ if __name__ == '__main__':
                                args.op_return_value}, args.unsigned)
 
     elif args.action == 'execute':
-        if args.fee: args.fee = util.value_in(db, args.fee, 'BTC')
+        if args.fee:
+            args.fee = util.value_in(db, args.fee, 'BTC')
         value = util.value_in(db, args.value, 'XCP')
         startgas = util.value_in(db, args.startgas, 'XCP')
         cli('create_execute', {'source': args.source,
@@ -1003,7 +960,8 @@ if __name__ == '__main__':
             args.unsigned)
 
     elif args.action == 'destroy':
-        if args.fee: args.fee = util.devise(db, args.fee, config.BTC, 'input')
+        if args.fee:
+            args.fee = util.devise(db, args.fee, config.BTC, 'input')
         quantity = util.devise(db, args.quantity, args.asset, 'input')
         cli('create_destroy', {'source': args.source,
                             'asset': args.asset, 'quantity': quantity, 'tag':
@@ -1041,9 +999,6 @@ if __name__ == '__main__':
         print('Locked:', locked)
         print('Supply:', supply)
         print('Issuer:', results['issuer'])
-        print('Callable:', results['callable'])
-        print('Call Date:', call_date)
-        print('Call Price:', call_price)
         print('Description:', '‘' + results['description'] + '’')
 
         if args.asset != config.BTC:
@@ -1052,10 +1007,13 @@ if __name__ == '__main__':
             print('\taddress, quantity, escrow')
             for holder in util.holders(db, args.asset):
                 quantity = holder['address_quantity']
-                if not quantity: continue
+                if not quantity:
+                    continue
                 quantity = util.value_out(db, quantity, args.asset)
-                if holder['escrow']: escrow = holder['escrow']
-                else: escrow = 'None'
+                if holder['escrow']:
+                    escrow = holder['escrow']
+                else:
+                    escrow = 'None'
                 print('\t' + str(holder['address']) + ',' + str(quantity) + ',' + escrow)
 
 
@@ -1064,26 +1022,30 @@ if __name__ == '__main__':
         totals = {}
 
         print()
-        for bunch in get_wallet():
+        for bunch in backend.get_wallet(proxy):
             address, btc_balance = bunch[:2]
-            address_data = get_address(db, address=address)
+            address_data = get_address(address=address)
             balances = address_data['balances']
             table = PrettyTable(['Asset', 'Balance'])
             empty = True
             if btc_balance:
                 table.add_row([config.BTC, btc_balance])  # BTC
-                if config.BTC in totals.keys(): totals[config.BTC] += btc_balance
-                else: totals[config.BTC] = btc_balance
+                if config.BTC in totals.keys():
+                    totals[config.BTC] += btc_balance
+                else:
+                    totals[config.BTC] = btc_balance
                 empty = False
             for balance in balances:
                 asset = balance['asset']
                 try:
                     balance = D(util.value_out(db, balance['quantity'], balance['asset']))
-                except:
+                except Exception:   # TODO
                     balance = None
                 if balance:
-                    if asset in totals.keys(): totals[asset] += balance
-                    else: totals[asset] = balance
+                    if asset in totals.keys():
+                        totals[asset] += balance
+                    else:
+                        totals[asset] = balance
                     table.add_row([asset, balance])
                     empty = False
             if not empty:
@@ -1099,7 +1061,7 @@ if __name__ == '__main__':
 
     elif args.action == 'pending':
         addresses = []
-        for bunch in get_wallet():
+        for bunch in backend.get_wallet(proxy):
             addresses.append(bunch[:2][0])
         filters = [
             ('tx0_address', 'IN', addresses),

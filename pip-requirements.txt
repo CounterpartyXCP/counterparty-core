@@ -31,8 +31,11 @@ pycrypto>=2.6.1
 
 tendo==0.2.6
 
-python-bitcoinlib==0.3.0
+# TODO: python-bitcoinlib==0.3.0
+https://github.com/petertodd/python-bitcoinlib/archive/python-bitcoinlib-v0.3.0.zip
 
 pysha3==0.3
 
 pytest-cov==1.8.0
+
+colorlog==2.4.0
