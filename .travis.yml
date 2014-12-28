@@ -10,6 +10,7 @@ install:
 - unzip apsw-3.8.5-r1.zip
 - cd apsw-3.8.5-r1 && python setup.py fetch --version=3.8.5 --all build --enable-all-extensions install
 - cd .. && pip install -r pip-requirements.txt --use-mirrors
+- pip install python-coveralls --use-mirrors
 script: py.test --cov-config .coveragerc --cov-report term-missing --cov ./ --skiptestbook=all
 notifications:
   slack:
