@@ -899,7 +899,7 @@ if __name__ == '__main__':
 
     elif args.action == 'kickstart':
 
-        blocks.kickstart(db, bitcoind_dir=args.bitcoind_dir)
+        blocks.kickstart(db, proxy, bitcoind_dir=args.bitcoind_dir)
 
     elif args.action == 'server':
         api_status_poller = api.APIStatusPoller()
