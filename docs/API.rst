@@ -1353,3 +1353,6 @@ This section documents any changes to the ``counterpartyd`` API, for version num
 * \*_issuance: ``callable``, ``call_date`` and ``call_price`` are no longer valid parameters
 * \*_callback: removed
 * Bitcoin addresses may everywhere be replaced by pubkeys.
+* The API will no longer search the local wallet for pubkeys, so they must be
+passed to the API manually if being used for the first time. Otherwise, you may
+get a "<address> not published in blockchain" error.
