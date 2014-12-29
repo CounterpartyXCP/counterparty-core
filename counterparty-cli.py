@@ -156,7 +156,7 @@ def market(give_asset, get_asset):
     print('Feeds')
     print(table)
 
-def get_pubkey(pubkeyhash):
+def get_pubkey_monosig(pubkeyhash):
     if backend.is_valid(proxy, pubkeyhash):
 
         # If in wallet, get from wallet.
@@ -176,12 +176,26 @@ def get_pubkey(pubkeyhash):
         else:
             private_key = answer
             pubkey = script.private_key_to_public_key(private_key)
-        if pubkeyhash != backend.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
+        if pubkeyhash != script.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
             raise transaction.InputError('provided public or private key does not match the source address')
 
         return pubkey
 
     return None
+
+def get_pubkeys(address):
+    pubkeys = []
+    if script.is_multisig(address)
+        _, pubs, _ = script.extract_array(address)
+        for pub in pubs:
+            pubkey = get_pubkey_monosig(pub)
+            if pubkey:
+                pubkeys.append(pubkey)
+    else:
+        pubkey = get_pubkey_monosig(address)
+        if pubkey:
+            pubkeys.append(pubkey)
+    return pubkeys
 
 def cli(method, params, unsigned):
 
@@ -190,16 +204,8 @@ def cli(method, params, unsigned):
     for address_name in ['source', 'destination']:
         if address_name in params:
             address = params[address_name]
-            if script.is_multisig(address):
-                _, pubs, _ = script.extract_array(address)
-                for pub in pubs:
-                    pubkey = get_pubkey(pub)
-                    if pubkey:
-                        pubkeys.append(pubkey)
-            elif address_name != 'destination': # We don’t need the pubkey for a monosig destination.
-                pubkey = get_pubkey(address)
-                if pubkey:
-                    pubkeys.append(pubkey)
+            if script.is_multisig(address) or address_name != 'destination':    # We don’t need the pubkey for a monosig destination.
+                pubkeys += get_pubkeys(address)
     params['pubkey'] = pubkeys
 
     # Get unsigned transaction serialisation.
