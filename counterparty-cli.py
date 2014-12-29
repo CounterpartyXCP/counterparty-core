@@ -176,7 +176,7 @@ def get_pubkey(pubkeyhash):
         else:
             private_key = answer
             pubkey = script.private_key_to_public_key(private_key)
-        if pubkeyhash != backend.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
+        if pubkeyhash != script.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
             raise transaction.InputError('provided public or private key does not match the source address')
 
         return pubkey
