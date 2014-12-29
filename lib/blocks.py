@@ -717,7 +717,7 @@ def list_tx(db, proxy, block_hash, block_index, block_time, tx_hash, tx_index):
 
     return tx_index
 
-def kickstart(db, bitcoind_dir):
+def kickstart(db, proxy, bitcoind_dir):
     if bitcoind_dir is None:
         if platform.system() == 'Darwin':
             bitcoind_dir = os.path.expanduser('~/Library/Application Support/Bitcoin/')
@@ -766,7 +766,7 @@ def kickstart(db, bitcoind_dir):
             # Get `tx_info`s for transactions in this block.
             block = block_parser.read_raw_block(current_hash)
             for tx in block['transactions']:
-                source, destination, btc_amount, fee, data = get_tx_info(tx['__data__'], block['block_index'], block_parser)
+                source, destination, btc_amount, fee, data = get_tx_info(proxy, tx['__data__'], block['block_index'], block_parser)
                 if source and (data or destination == config.UNSPENDABLE):
                     transactions.append((
                         tx['tx_hash'], block['block_index'], block['block_hash'], block['block_time'],
