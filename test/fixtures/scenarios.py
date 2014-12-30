@@ -34,7 +34,7 @@ UNITEST_FIXTURE = [
 ]
 
 def generate_standard_scenario(address1, address2, order_matches, rps_matches):
-    """A predefined set of transactions to test different types of signing"""
+    """Return a predefined set of transactions to test different types of signing."""
     return [
         ['burn', (address1, int(.62 * DP['quantity'])), {'encoding': 'multisig'}],
         ['send', (address1, address2, 'XCP', DP['small']), {'encoding': 'multisig'}],
@@ -147,6 +147,6 @@ standard_scenarios_params = {
 INTEGRATION_SCENARIOS = {
     'unittest_fixture': (UNITEST_FIXTURE, 'unittest_fixture')
 }
-# Generate special tests for simplesig, multisig2 and multisig3 using standard scenario
+# Generate special tests for simplesig, multisig2 and multisig3 using standard scenario.
 for scenario_name in standard_scenarios_params:
     INTEGRATION_SCENARIOS[scenario_name] = (generate_standard_scenario(**standard_scenarios_params[scenario_name]), 'simplesig')
