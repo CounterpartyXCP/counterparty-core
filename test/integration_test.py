@@ -4,7 +4,7 @@ import util_test
 
 def test_scenario(scenario_name, base_scenario_name, transactions, rawtransactions_db):
     """Runs the integration tests. Reads UNITEST_FIXTURES to create a holistic integration test run,
-    executes it and then compares the json, sql and log output with data in scenarios/ folder."""
+    executes it and then compares the json, sql and log output with data in 'scenarios/' folder."""
     if pytest.config.option.savescenarios:
         util_test.save_scenario(scenario_name, rawtransactions_db)
 
@@ -22,5 +22,6 @@ def test_scenario(scenario_name, base_scenario_name, transactions, rawtransactio
         assert util_test.compare_strings(clean_new_dump, clean_base_dump) == 0
 
 def test_book(testnet):
+    """Reparses all the transactions in the database to see check blockhain's integrity"""
     util_test.reparse(testnet=testnet)
 

@@ -19,7 +19,7 @@ import bitcoin as bitcoinlib
 import bitcoin.rpc as bitcoinlib_rpc
 
 def pytest_collection_modifyitems(session, config, items):
-    # run contracts_test.py last
+    """Run contracts_test.py last"""
     items[:] = list(reversed(items))
 
 def pytest_generate_tests(metafunc):
@@ -45,7 +45,7 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize('testnet', args)
 
 def pytest_addoption(parser):
-    """Adds useful test suite options"""
+    """Adds useful test suite argument options"""
     parser.addoption("--function", action="append", default=[], help="list of functions to test")
     parser.addoption("--scenario", action="append", default=[], help="list of scenarios to test")
     parser.addoption("--gentxhex", action='store_true', default=False, help="generate and print unsigned hex for *.compose() tests")
@@ -54,6 +54,7 @@ def pytest_addoption(parser):
 
 @pytest.fixture(scope="module")
 def rawtransactions_db(request):
+    """Returns a database object"""
     db = apsw.Connection(util_test.CURR_DIR + '/fixtures/rawtransactions.db')
     if (request.module.__name__ == 'integration_test'):
         util_test.initialise_rawtransactions_db(db)

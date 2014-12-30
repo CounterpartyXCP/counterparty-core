@@ -22,7 +22,6 @@ import binascii
 
 D = decimal.Decimal
 
-
 # Set test environment
 os.environ['TZ'] = 'EST'
 time.tzset()
@@ -49,9 +48,11 @@ class RpcProxy():
         return ctx
 
 def get_proxy():
+    """Returns RPC Proxy object"""
     return RpcProxy()
 
 def dump_database(db):
+    """Creates a new database dump from db object as input"""
     # TEMPORARY
     # .dump command bugs when aspw.Shell is used with 'db' args instead 'args'
     # but this way stay 20x faster than running scenario with file db
@@ -77,7 +78,7 @@ def dump_database(db):
     return new_data
 
 def restore_database(database_filename, dump_filename):
-    """Deletes database dump, then opens another and reads it"""
+    """Deletes database dump, then opens another and loads it in-place"""
     remove_database_files(database_filename)
     db = apsw.Connection(database_filename)
     cursor = db.cursor()
@@ -92,7 +93,7 @@ def remove_database_files(database_filename):
             os.remove(path)
 
 def insert_block(db, block_index, parse_block=False):
-    """Add blocks to the blockchain""""
+    """Add blocks to the blockchain"""
     cursor = db.cursor()
     block_hash = hashlib.sha512(chr(block_index).encode('utf-8')).hexdigest()
     block_time = block_index * 10000000
@@ -183,6 +184,7 @@ def getrawtransaction(db, txid):
     return tx_hex
 
 def initialise_db(db):
+    """Initialise blockchain in the db and insert first block"""
     blocks.initialise(db)
     insert_block(db, config.BURN_START - 1)
 
@@ -249,6 +251,7 @@ def load_scenario_ouput(scenario_name):
     return dump, log, raw_transactions
 
 def clean_scenario_dump(scenario_name, dump):
+    """Replace certain data in the db dump"""
     dump = dump.replace(standard_scenarios_params[scenario_name]['address1'], 'address1')
     dump = dump.replace(standard_scenarios_params[scenario_name]['address2'], 'address2')
     dump = re.sub('[a-f0-9]{64}', 'hash', dump)
@@ -295,7 +298,7 @@ def vector_to_args(vector, functions=[]):
     return args
 
 def exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db):
-    """Executes tested_method within contexts and arguments"""
+    """Executes tested_method within context and arguments"""
     if tx_name == 'transaction' and method == 'construct':
         return tested_method(counterpartyd_db, get_proxy(), inputs[0], **inputs[1])
     elif tx_name == 'util' or tx_name == 'script':
@@ -346,6 +349,7 @@ def compare_strings(string1, string2):
     return len(diff)
 
 def get_block_ledger(db, block_index):
+    """Returns the block's ledger"""
     cursor = db.cursor()
     debits = list(cursor.execute('''SELECT * FROM debits WHERE block_index = ?''', (block_index,)))
     credits = list(cursor.execute('''SELECT * FROM credits WHERE block_index = ?''', (block_index,)))
@@ -355,6 +359,7 @@ def get_block_ledger(db, block_index):
     return ledger
 
 def get_block_txlist(db, block_index):
+    """Returns block's transaction list"""
     cursor = db.cursor()
     txlist = list(cursor.execute('''SELECT * FROM transactions WHERE block_index = ?''', (block_index,)))
     txlist = [json.dumps(m).replace('"', '\'') for m in txlist]
@@ -362,6 +367,7 @@ def get_block_txlist(db, block_index):
     return txlist
 
 def reparse(testnet=True):
+    """Reparse all transaction from the database, create a new blockchain and compare it to the old one"""
     options = dict(COUNTERPARTYD_OPTIONS)
     options.pop('data_dir')
     counterpartyd.set_options(database_file=':memory:', testnet=testnet, **options)
@@ -405,6 +411,7 @@ def reparse(testnet=True):
     blocks.initialise(memory_db)
     previous_ledger_hash = None
     previous_txlist_hash = None
+
     memory_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
     for block in memory_cursor.fetchall():
         try:
