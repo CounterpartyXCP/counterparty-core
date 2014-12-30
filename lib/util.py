@@ -449,25 +449,25 @@ def holders(db, asset):
 
 def xcp_created (db):
     cursor = db.cursor()
-    cursor.execute('''SELECT * FROM burns \
+    cursor.execute('''SELECT SUM(earned) AS total FROM burns \
                       WHERE (status = ?)''', ('valid',))
-    total = sum([burn['earned'] for burn in list(cursor)])
+    total = list(cursor)[0]['total'] or 0
     cursor.close()
     return total
 def xcp_destroyed (db):
     cursor = db.cursor()
     # Destructions
-    cursor.execute('''SELECT * FROM destructions \
+    cursor.execute('''SELECT SUM(quantity) AS total FROM destructions \
                       WHERE (status = ? AND asset = ?)''', ('valid', config.XCP))
-    destroyed_total = sum([destruction['quantity'] for destruction in list(cursor)])
+    destroyed_total = list(cursor)[0]['total'] or 0
     # Subtract issuance fees.
-    cursor.execute('''SELECT * FROM issuances\
+    cursor.execute('''SELECT SUM(fee_paid) AS total FROM issuances\
                       WHERE status = ?''', ('valid',))
-    issuance_fee_total = sum([issuance['fee_paid'] for issuance in cursor.fetchall()])
+    issuance_fee_total = list(cursor)[0]['total'] or 0
     # Subtract dividend fees.
-    cursor.execute('''SELECT * FROM dividends\
+    cursor.execute('''SELECT SUM(fee_paid) AS total FROM dividends\
                       WHERE status = ?''', ('valid',))
-    dividend_fee_total = sum([dividend['fee_paid'] for dividend in cursor.fetchall()])
+    dividend_fee_total = list(cursor)[0]['total'] or 0
     cursor.close()
     return destroyed_total + issuance_fee_total + dividend_fee_total
 def xcp_supply (db):
