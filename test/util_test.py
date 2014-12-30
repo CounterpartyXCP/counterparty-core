@@ -1,3 +1,7 @@
+"""
+This module contains a variety of utility functions used in the test suite.
+"""
+
 import os, sys, hashlib, binascii, time, decimal, logging, locale, re, io
 import difflib, json, inspect, tempfile, shutil
 import apsw, pytest, requests
@@ -17,6 +21,7 @@ import bitcoin as bitcoinlib
 import binascii
 
 D = decimal.Decimal
+
 
 # Set test environment
 os.environ['TZ'] = 'EST'
@@ -72,6 +77,7 @@ def dump_database(db):
     return new_data
 
 def restore_database(database_filename, dump_filename):
+    """Deletes database dump, then opens another and reads it"""
     remove_database_files(database_filename)
     db = apsw.Connection(database_filename)
     cursor = db.cursor()
@@ -80,11 +86,13 @@ def restore_database(database_filename, dump_filename):
     cursor.close()
 
 def remove_database_files(database_filename):
+    """Deletes redundant db dumps"""
     for path in [database_filename, '{}-shm'.format(database_filename), '{}-wal'.format(database_filename)]:
         if os.path.isfile(path):
             os.remove(path)
 
 def insert_block(db, block_index, parse_block=False):
+    """Add blocks to the blockchain""""
     cursor = db.cursor()
     block_hash = hashlib.sha512(chr(block_index).encode('utf-8')).hexdigest()
     block_time = block_index * 10000000
@@ -97,6 +105,7 @@ def insert_block(db, block_index, parse_block=False):
     return block_index, block_hash, block_time
 
 def create_next_block(db, block_index=None, parse_block=False):
+    """Creates faux data for next block"""
     cursor = db.cursor()
     last_block_index = list(cursor.execute("SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1"))[0]['block_index']
     if not block_index:
@@ -107,6 +116,7 @@ def create_next_block(db, block_index=None, parse_block=False):
     return inserted_block_index, block_hash, block_time
 
 def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
+    """Adds a raw transaction to the database"""
     # one transaction per block
     block_index, block_hash, block_time = create_next_block(db)
 
@@ -115,6 +125,7 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
 
     tx_hash = hashlib.sha256('{}{}'.format(tx_index,raw_transaction).encode('utf-8')).hexdigest()
     # print(tx_hash)
+    # Remember to add it to the log dump
     if pytest.config.option.savescenarios:
         save_rawtransaction(rawtransactions_db, tx_hash, raw_transaction)
 
@@ -128,6 +139,7 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
     return tx
 
 def insert_transaction(transaction, db):
+    """Adds a transaction to the database"""
     cursor = db.cursor()
     block = (transaction['block_index'], transaction['block_hash'], transaction['block_time'], None, None, None, None)
     cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty) 
@@ -136,9 +148,9 @@ def insert_transaction(transaction, db):
     cursor.execute('''INSERT INTO transactions ({}) VALUES (?,?,?,?,?,?,?,?,?,?,?)'''.format(keys), tuple(transaction.values()))
     cursor.close()
 
-# table uses for getrawtransaction mock.
-# we use the same database (in memory) for speed
+
 def initialise_rawtransactions_db(db):
+    """Table uses for getrawtransaction mock. We use the same database (in memory) for speed"""
     if pytest.config.option.savescenarios:
         counterpartyd.set_options(testnet=True, **COUNTERPARTYD_OPTIONS)
         cursor = db.cursor()
@@ -153,6 +165,7 @@ def initialise_rawtransactions_db(db):
         cursor.close()
 
 def save_rawtransaction(db, tx_hash, tx_hex):
+    """Inserts the raw transaction into the db"""
     cursor = db.cursor()
     try:
         txid = binascii.hexlify(bitcoinlib.core.lx(tx_hash)).decode()
@@ -162,6 +175,7 @@ def save_rawtransaction(db, tx_hash, tx_hex):
     cursor.close()
 
 def getrawtransaction(db, txid):
+    """Returns raw transactions with specific hash"""
     cursor = db.cursor()
     txid = binascii.hexlify(txid).decode()
     tx_hex = list(cursor.execute('''SELECT tx_hex FROM raw_transactions WHERE tx_hash = ?''', (txid,)))[0][0]
@@ -173,6 +187,7 @@ def initialise_db(db):
     insert_block(db, config.BURN_START - 1)
 
 def run_scenario(scenario, rawtransactions_db):
+    """Executes a scenario for integration test, returns full log of operations"""
     counterpartyd.set_options(database_file=':memory:', testnet=True, **COUNTERPARTYD_OPTIONS)
     config.PREFIX = b'TESTXXXX'
     util.FIRST_MULTISIG_BLOCK_TESTNET = 1
@@ -214,6 +229,7 @@ def run_scenario(scenario, rawtransactions_db):
     return dump, log, json.dumps(raw_transactions, indent=4)
 
 def save_scenario(scenario_name, rawtransactions_db):
+    """Save currently run scenarios output for future testing"""
     dump, log, raw_transactions = run_scenario(INTEGRATION_SCENARIOS[scenario_name][0], rawtransactions_db)
     with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.new.sql', 'w') as f:
         f.writelines(dump)
@@ -223,6 +239,7 @@ def save_scenario(scenario_name, rawtransactions_db):
         f.writelines(raw_transactions)
 
 def load_scenario_ouput(scenario_name):
+    """Read and return the current log output"""
     with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.sql', 'r') as f:
         dump = ("").join(f.readlines())
     with open(CURR_DIR + '/fixtures/scenarios/' + scenario_name + '.log', 'r') as f:
@@ -242,6 +259,7 @@ def clean_scenario_dump(scenario_name, dump):
     return dump
 
 def check_record(record, counterpartyd_db):
+    """Allows direct record access to the db"""
     cursor = counterpartyd_db.cursor()
 
     sql  = '''SELECT COUNT(*) AS c FROM {} '''.format(record['table'])
@@ -260,6 +278,7 @@ def check_record(record, counterpartyd_db):
         assert False
 
 def vector_to_args(vector, functions=[]):
+    """Translates from UNITEST_VECTORS style to function arguments"""
     args = []
     for tx_name in vector:
         for method in vector[tx_name]:
@@ -276,6 +295,7 @@ def vector_to_args(vector, functions=[]):
     return args
 
 def exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db):
+    """Executes tested_method within contexts and arguments"""
     if tx_name == 'transaction' and method == 'construct':
         return tested_method(counterpartyd_db, get_proxy(), inputs[0], **inputs[1])
     elif tx_name == 'util' or tx_name == 'script':
@@ -284,6 +304,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db)
         return tested_method(counterpartyd_db, *inputs)
 
 def check_ouputs(tx_name, method, inputs, outputs, error, records, counterpartyd_db):
+    """Used by unit tests to check outputs of a particular function"""
     try:
         tested_module = sys.modules['lib.{}'.format(tx_name)]
     except KeyError:    # TODO: hack
@@ -317,6 +338,7 @@ def check_ouputs(tx_name, method, inputs, outputs, error, records, counterpartyd
             check_record(record, counterpartyd_db)
 
 def compare_strings(string1, string2):
+    """Diff-style string compare"""
     diff = list(difflib.unified_diff(string1.splitlines(1), string2.splitlines(1), n=0))
     if len(diff):
         print("\nDifferences:")

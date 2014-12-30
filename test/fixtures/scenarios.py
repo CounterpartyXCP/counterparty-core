@@ -1,3 +1,12 @@
+"""
+Defines the input for all the scenarios tested in the integrations tests. The folder `test/fixtures/scenarios` contains the expected output (.json, .log and .sql) for each scenario.
+The integration suite tests if the outputs of all scenarios are identical. It also tests the similarity between the output of a scenario and its base scenario
+(for instance `simplesig` scenario is the base scenario for all mutlisig scenarios).
+
+To add (or update) a transaction in a scenario, or add a scenario, just update `scenarios.py` and run `py.test --skiptestbook=all --savescenarios`
+This command will generates new outputs for each scenario (.new.json, .new.sql and .new.log), if you are satisfied with the new output just rename them (remove the .new). 
+"""
+
 from .params import ADDR, MULTISIGADDR, DEFAULT_PARAMS as DP
 
 UNITEST_FIXTURE = [
@@ -25,6 +34,7 @@ UNITEST_FIXTURE = [
 ]
 
 def generate_standard_scenario(address1, address2, order_matches, rps_matches):
+    """A predefined set of transactions to test different types of signing"""
     return [
         ['burn', (address1, int(.62 * DP['quantity'])), {'encoding': 'multisig'}],
         ['send', (address1, address2, 'XCP', DP['small']), {'encoding': 'multisig'}],
@@ -137,5 +147,6 @@ standard_scenarios_params = {
 INTEGRATION_SCENARIOS = {
     'unittest_fixture': (UNITEST_FIXTURE, 'unittest_fixture')
 }
+# Generates special tests for simplesig, multisig2 and multisig3 using standard scenario
 for scenario_name in standard_scenarios_params:
     INTEGRATION_SCENARIOS[scenario_name] = (generate_standard_scenario(**standard_scenarios_params[scenario_name]), 'simplesig')

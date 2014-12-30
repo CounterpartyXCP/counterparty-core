@@ -1,5 +1,9 @@
 #! /usr/bin/python3
 
+"""
+Test suite configuration
+"""
+
 import json, binascii, apsw
 from datetime import datetime
 
@@ -19,6 +23,7 @@ def pytest_collection_modifyitems(session, config, items):
     items[:] = list(reversed(items))
 
 def pytest_generate_tests(metafunc):
+    """Generates all py.test cases. Checks for different types of tests and creates proper context"""
     if metafunc.function.__name__ == 'test_vector':
         args = util_test.vector_to_args(UNITTEST_VECTOR, pytest.config.option.function)
         metafunc.parametrize('tx_name, method, inputs, outputs, error, records', args)
@@ -40,6 +45,7 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize('testnet', args)
 
 def pytest_addoption(parser):
+    """Adds useful test suite options"""
     parser.addoption("--function", action="append", default=[], help="list of functions to test")
     parser.addoption("--scenario", action="append", default=[], help="list of scenarios to test")
     parser.addoption("--gentxhex", action='store_true', default=False, help="generate and print unsigned hex for *.compose() tests")
@@ -55,6 +61,7 @@ def rawtransactions_db(request):
 
 @pytest.fixture(autouse=True)
 def init_mock_functions(monkeypatch, rawtransactions_db):
+    """These mock functions are available to every test function in this suite"""
 
     util_test.rawtransactions_db = rawtransactions_db
 

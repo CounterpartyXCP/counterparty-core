@@ -1,4 +1,8 @@
 """
+This module test for counterpartyd compability with Ethereum's Smart Contracts.
+"""
+
+"""
 import os
 import pytest
 from pyethereum import tester
@@ -23,7 +27,6 @@ pblogger.log_json = False        # generate machine readable output
 gasprice = 0
 startgas = 10000
 """
-
 
 ### Counterparty compatibility ###
 

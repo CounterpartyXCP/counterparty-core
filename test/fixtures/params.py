@@ -1,3 +1,7 @@
+"""
+This is a collection of default transaction data used to test various components.
+"""
+
 UNIT = 100000000
 
 DEFAULT_PARAMS = {
