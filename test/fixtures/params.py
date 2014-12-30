@@ -1,5 +1,10 @@
+"""
+This is a collection of default transaction data used to test various components.
+"""
+
 UNIT = 100000000
 
+"""This structure is used throughout the test suite to populate transactions with standardized and tested data."""
 DEFAULT_PARAMS = {
     'addresses': [
         ['mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'cPdUqd5EbBWsjcG9xiL1hz8bEyGFiz4SW99maU9JgpL9TEcxUf3j', '0282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0'],

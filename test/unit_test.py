@@ -10,6 +10,7 @@ from lib import (config, util, api, database)
 import counterpartyd
 
 def setup_module():
+    """Initialise the database with default data and wait for server to be ready."""
     counterpartyd.set_options(database_file=tempfile.gettempdir() + '/fixtures.unittest.db', testnet=True, **util_test.COUNTERPARTYD_OPTIONS)
     util_test.restore_database(config.DATABASE, CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql')
     util.FIRST_MULTISIG_BLOCK_TESTNET = 1
@@ -26,10 +27,12 @@ def setup_module():
             time.sleep(0.001)
 
 def teardown_module(function):
+    """Delete the temporary database."""
     util_test.remove_database_files(config.DATABASE)
 
 @pytest.fixture
 def counterpartyd_db(request):
+    """Enable database access for unit test vectors."""
     db = database.get_connection(read_only=False)
     cursor = db.cursor()
     cursor.execute('''BEGIN''')
@@ -37,6 +40,7 @@ def counterpartyd_db(request):
     return db
 
 def test_vector(tx_name, method, inputs, outputs, error, records, counterpartyd_db):
+    """Test the outputs of unit test vector. If testing parse, execute the transaction data on test db."""
     if method == 'parse':
         util_test.insert_transaction(inputs[0], counterpartyd_db)
         inputs += (inputs[0]['data'][4:],) # message arg
