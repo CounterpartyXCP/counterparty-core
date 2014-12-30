@@ -185,7 +185,7 @@ def get_pubkey_monosig(pubkeyhash):
 
 def get_pubkeys(address):
     pubkeys = []
-    if script.is_multisig(address)
+    if script.is_multisig(address):
         _, pubs, _ = script.extract_array(address)
         for pub in pubs:
             pubkey = get_pubkey_monosig(pub)
@@ -226,7 +226,7 @@ def cli(method, params, unsigned):
     if script.is_multisig(params['source']):
         print('Multi‐signature transactions are signed and broadcasted manually.')
     elif not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
-        if backend.is_mine(proxy, source):
+        if backend.is_mine(proxy, params['source']):
             private_key_wif = None
         elif not private_key_wif:   # If private key was not given earlier.
             private_key_wif = input('Private key (Wallet Import Format): ')
@@ -516,7 +516,7 @@ def balances(address):
     script.validate(address)
     balances = get_address(address=address)['balances']
     table = PrettyTable(['Asset', 'Amount'])
-    btc_balance = backend.get_btc_balance(address)
+    btc_balance = backend.get_btc_balance(proxy, address)
     table.add_row([config.BTC, btc_balance])  # BTC
     for balance in balances:
         asset = balance['asset']
