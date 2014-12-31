@@ -15,7 +15,7 @@ from lib import config
 from lib import exceptions
 from lib import util
 
-def set_up(args):
+def set_up(args, logfile=True):
     logger = logging.getLogger()    # Get root logger.
     logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
 
@@ -29,17 +29,18 @@ def set_up(args):
     logger.addHandler(console)
 
     # File Logging
-    max_log_size = 20 * 1024 * 1024 # 20 MB
-    if os.name == 'nt':
-        from lib import util_windows
-        fileh = util_windows.SanitizedRotatingFileHandler(config.LOG, maxBytes=max_log_size, backupCount=5)
-    else:
-        fileh = logging.handlers.RotatingFileHandler(config.LOG, maxBytes=max_log_size, backupCount=5)
-    fileh.setLevel(logging.DEBUG if args.verbose else logging.INFO)
-    LOGFORMAT = '%(asctime)s [%(levelname)s] %(message)s'
-    formatter = logging.Formatter(LOGFORMAT, '%Y-%m-%d-T%H:%M:%S%z')
-    fileh.setFormatter(formatter)
-    logger.addHandler(fileh)
+    if logfile:
+        max_log_size = 20 * 1024 * 1024 # 20 MB
+        if os.name == 'nt':
+            from lib import util_windows
+            fileh = util_windows.SanitizedRotatingFileHandler(config.LOG, maxBytes=max_log_size, backupCount=5)
+        else:
+            fileh = logging.handlers.RotatingFileHandler(config.LOG, maxBytes=max_log_size, backupCount=5)
+        fileh.setLevel(logging.DEBUG if args.verbose else logging.INFO)
+        LOGFORMAT = '%(asctime)s [%(levelname)s] %(message)s'
+        formatter = logging.Formatter(LOGFORMAT, '%Y-%m-%d-T%H:%M:%S%z')
+        fileh.setFormatter(formatter)
+        logger.addHandler(fileh)
 
     # Quieten noisy libraries.
     requests_log = logging.getLogger("requests")

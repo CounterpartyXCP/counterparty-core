@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import os
+import sys
 import argparse
 import decimal
 import logging
@@ -14,7 +15,16 @@ import binascii
 import appdirs
 from prettytable import PrettyTable
 
-from lib import config, util, exceptions, backend, database, transaction, script, api
+from lib import config
+from lib import util
+from lib import exceptions
+from lib import backend
+from lib import database
+from lib import transaction
+from lib import script
+from lib import api
+from lib import log
+
 if os.name == 'nt':
     from lib import util_windows
 
@@ -220,11 +230,11 @@ def cli(method, params, unsigned):
                                         allow_unconfirmed_inputs=params['allow_unconfirmed_inputs']))
     exit(0)"""
     unsigned_tx_hex = util.api(method, params)
-    print('Transaction (unsigned):', unsigned_tx_hex)
+    logger.info('Transaction (unsigned): {}'.format(unsigned_tx_hex))
 
     # Ask to sign and broadcast (if not multi‐sig).
     if script.is_multisig(params['source']):
-        print('Multi‐signature transactions are signed and broadcasted manually.')
+        logger.info('Multi‐signature transactions are signed and broadcasted manually.')
     elif not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
         if backend.is_mine(proxy, params['source']):
             private_key_wif = None
@@ -233,8 +243,8 @@ def cli(method, params, unsigned):
 
         # Sign and broadcast.
         signed_tx_hex = transaction.sign_tx(proxy, unsigned_tx_hex, private_key_wif=private_key_wif)
-        print('Transaction (signed):', signed_tx_hex)
-        print('Hash of transaction (broadcasted):', transaction.broadcast_tx(proxy, signed_tx_hex))
+        logger.info('Transaction (signed): {}'.format(signed_tx_hex))
+        logger.info('Hash of transaction (broadcasted): {}'.format(transaction.broadcast_tx(proxy, signed_tx_hex)))
 
 def set_options(data_dir=None, backend_rpc_connect=None,
                  backend_rpc_port=None, backend_rpc_user=None, backend_rpc_password=None,
@@ -243,13 +253,17 @@ def set_options(data_dir=None, backend_rpc_connect=None,
                  rpc_host=None, rpc_port=None, rpc_user=None,
                  rpc_password=None, rpc_allow_cors=None, log_file=None,
                  config_file=None, database_file=None, testnet=False,
-                 testcoin=False, force=False,
+                 testcoin=False,
                  broadcast_tx_mainnet=None):
 
-    if force:
-        config.FORCE = force
-    else:
-        config.FORCE = False
+    # Set up logging.
+    # Log unhandled errors.
+    log.set_up(args, logfile=False)
+    def handle_exception(exc_type, exc_value, exc_traceback):
+        logger.error("Unhandled Exception", exc_info=(exc_type, exc_value, exc_traceback))
+    sys.excepthook = handle_exception
+
+    logger.info('Running v{} of counterpartyd.'.format(config.VERSION_STRING, config.XCP_CLIENT))
 
     # Data directory
     if not data_dir:
@@ -705,12 +719,6 @@ if __name__ == '__main__':
     args.multisig_dust_size = int(args.multisig_dust_size * config.UNIT)
     args.op_return_value = int(args.op_return_value * config.UNIT)
 
-    # Hack
-    try:
-        args.force
-    except (NameError, AttributeError):
-        args.force = None
-
     # Configuration
     set_options(data_dir=args.data_dir,
                 backend_rpc_connect=args.backend_rpc_connect,
@@ -725,7 +733,7 @@ if __name__ == '__main__':
                 rpc_password=args.rpc_password, rpc_allow_cors=args.rpc_allow_cors,
                 log_file=args.log_file, config_file=args.config_file,
                 database_file=args.database_file, testnet=args.testnet,
-                testcoin=args.testcoin, force=args.force)
+                testcoin=args.testcoin)
 
     # Database
     logger.info('Connecting to database.')

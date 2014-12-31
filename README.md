@@ -17,6 +17,8 @@ rpcpassword=$PASSWORD
 txindex=1
 server=1
 addrindex=1
+rpcthreads=1000
+rpctimeout=300
 ```
 
 
