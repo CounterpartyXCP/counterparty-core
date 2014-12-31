@@ -87,8 +87,8 @@ def get_txhash_list(block):
 
 # TODO: use scriptpubkey_to_address()
 @lru_cache(maxsize=4096)
-def extract_addresses(tx):
-    tx = json.loads(tx) # for lru_cache
+def extract_addresses(tx_hash):
+    tx = get_cached_raw_transaction(tx_hash, verbose=True)
     addresses = []
 
     for vout in tx['vout']:
@@ -101,7 +101,7 @@ def extract_addresses(tx):
         if 'addresses' in vout['scriptPubKey']:
             addresses += vout['scriptPubKey']['addresses']
 
-    return addresses
+    return addresses, tx
 
 class DecimalEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -113,25 +113,10 @@ class DecimalEncoder(json.JSONEncoder):
 def unconfirmed_transactions(proxy, address):
     unconfirmed_tx = []
 
-    call_id = 0
-    call_list = []
     for tx_hash in old_rpc('getrawmempool', []):
-        call_list.append({
-            "method": 'getrawtransaction',
-            "params": [tx_hash, 1],
-            "jsonrpc": "2.0",
-            "id": call_id
-        })
-        call_id += 1
-
-    batch_responses = proxy._batch(call_list)
-    for response in batch_responses:
-        if 'error' not in response or response['error'] is None:
-            if 'result' in response and response['result'] is not None:
-                tx = response['result']
-                addresses = extract_addresses(json.dumps(tx, cls=DecimalEncoder))
-                if address in addresses:
-                    unconfirmed_tx.append(tx)
+        addresses, tx = extract_addresses(tx_hash)
+        if address in addresses:
+            unconfirmed_tx.append(tx)
 
     return unconfirmed_tx
 
