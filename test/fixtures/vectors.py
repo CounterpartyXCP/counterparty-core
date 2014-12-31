@@ -180,11 +180,23 @@ UNITTEST_VECTOR = {
             'in': (ADDR[0], None, 'NOSATOSHI', 1000.5, True, False, None, None, '', DP['default_block']),
             'out': (0, 0.0, ['quantity must be in satoshis'], 0, '', True, None)
         }, {
-            'in': (ADDR[0], None, 'CALLPRICEFLOAT', 1000, True, False, None, 'abc', '', DP['default_block']),
+            'in': (ADDR[0], None, 'CALLPRICEFLOAT', 1000, True, False, None, 100.0, '', DP['default_block']),
+            'out': (0, 0.0, [], 0, '', True, False)
+        }, {
+            'in': (ADDR[0], None, 'CALLPRICEINT', 1000, True, False, None, 100, '', DP['default_block']),
+            'out': (0, 0.0, [], 50000000, '', True, False)
+        }, {
+            'in': (ADDR[0], None, 'CALLPRICESTR', 1000, True, False, None, 'abc', '', DP['default_block']),
             'out': (0, 'abc', ['call_price must be a float'], 0, '', True, None)
         }, {
-            'in': (ADDR[0], None, 'CALLDATEINT', 1000, True, False, 0.9 * 1409401723, None, '', DP['default_block']),
+            'in': (ADDR[0], None, 'CALLDATEINT', 1000, True, False, 1409401723, None, '', DP['default_block']),
+            'out': (0, 0.0, [], 50000000, '', True, False)
+        }, {
+            'in': (ADDR[0], None, 'CALLDATEFLOAT', 1000, True, False, 0.9 * 1409401723, None, '', DP['default_block']),
             'out': (1268461550.7, 0.0, ['call_date must be epoch integer'], 0, '', True, None)
+        }, {
+            'in': (ADDR[0], None, 'CALLDATESTR', 1000, True, False, 'abc', None, '', DP['default_block']),
+            'out': ('abc', 0.0, ['call_date must be epoch integer'], 0, '', True, None)
         }, {
             'in': (ADDR[0], None, 'NEGVALUES', -1000, True, True, -1409401723, -DP['quantity'], '', DP['default_block']),
             'out': (-1409401723, -100000000.0, ['negative quantity', 'negative call price', 'negative call date'], 50000000, '', True, False)
