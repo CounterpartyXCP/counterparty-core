@@ -13,6 +13,72 @@ from lib import exceptions
 from lib import script
 
 UNITTEST_VECTOR = {
+    'bet': {
+        'validate': [{
+            'in': (ADDR[1], ADDR[0], 0, 1388000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': ([], 15120)
+        },  {
+            'in': (ADDR[0], ADDR[1], 3, 1388001000, DP['small'], DP['small'], 0.0, 5040, DP['expiration'], DP['default_block']),
+            'out': (['feed doesn’t exist'], 5040)
+        },  {
+            'in': (ADDR[1], ADDR[0], -1, 1388000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': (['unknown bet type'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 2, 1388000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': (['leverage used with Equal or NotEqual'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 3, 1388000100, DP['small'], DP['small'], 0.0, 5000, DP['expiration'], DP['default_block']),
+            'out': (['leverage used with Equal or NotEqual', 'leverage level too low'], 5000)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 1388000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], 312350),
+            'out': (['CFDs temporarily disabled'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 1388000100, 1.1 * DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': (['wager_quantity must be in satoshis'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 1388000100, DP['small'], 1.1 * DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': (['counterwager_quantity must be in satoshis'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 1388000100, DP['small'], DP['small'], 0.0, 15120, 1.1 * DP['expiration'], DP['default_block']),
+            'out': (['expiration must be expressed as an integer block delta'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 1388000100, -1 * DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': (['non‐positive wager'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 1388000100, DP['small'], -1 * DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': (['non‐positive counterwager'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, -1388000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': ( ['deadline in that feed’s past', 'negative deadline'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 1388000100, DP['small'], DP['small'], 0.0, 15120, -1 * DP['expiration'], DP['default_block']),
+            'out': (['negative expiration'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 1388000100, DP['small'], DP['small'], 1.0, 15120, DP['expiration'], DP['default_block']),
+            'out': (['CFDs have no target value'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 2, 1388000100, DP['small'], DP['small'], -1.0, 5040, DP['expiration'], DP['default_block']),
+            'out': (['negative target value'], 5040)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 1388000100, DP['small'], DP['small'], 0.0, 15120, 8095, DP['default_block']),
+            'out': (['expiration overflow'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 1388000100, 2**63, DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': (['integer overflow'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 1388000100, DP['small'], 2**63, 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': (['integer overflow'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 2**63, 1388000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': (['unknown bet type', 'integer overflow'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 1388000100, DP['small'], DP['small'], 0.0, 2**63, DP['expiration'], DP['default_block']),
+            'out': (['integer overflow'], 2**63)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 2**63, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': (['integer overflow'], 15120)
+        }],
+    },
     'burn': {
         'validate': [{
             'in': (ADDR[0], DP['unspendable'], DP['burn_quantity'], DP['burn_start']),

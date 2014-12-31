@@ -119,3 +119,7 @@ Tx1 fee provided remaining: 0.01; required fee: 7.2e-05
 Order Match: 1.0 XCP for 0.008 BTC (9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b_14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0) [pending]
 Considering: b6db5c8412a58d9fa75bff41f8a7519353ffd4d359c7c8fa7ee1900bc05e4d9d
 Skipping: negative give quantity remaining
+Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
+New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
+Change quantity: 1.9989134 BTC
+Broadcast: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T19:33:20 with a fee of 500.0%% (06f160625d7d0486c33401b7424b11248d1f9c52a9e3711d7d0ec9e712194498) [valid]
