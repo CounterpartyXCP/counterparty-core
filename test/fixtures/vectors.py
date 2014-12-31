@@ -13,6 +13,72 @@ from lib import exceptions
 from lib import script
 
 UNITTEST_VECTOR = {
+    'bet': {
+        'validate': [{
+            'in': (ADDR[1], ADDR[0], 0, 1388000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': ([], 15120)
+        },  {
+            'in': (ADDR[0], ADDR[1], 3, 1388001000, DP['small'], DP['small'], 0.0, 5040, DP['expiration'], DP['default_block']),
+            'out': (['feed doesn’t exist'], 5040)
+        },  {
+            'in': (ADDR[1], ADDR[0], -1, 1388000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': (['unknown bet type'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 2, 1388000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': (['leverage used with Equal or NotEqual'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 3, 1388000100, DP['small'], DP['small'], 0.0, 5000, DP['expiration'], DP['default_block']),
+            'out': (['leverage used with Equal or NotEqual', 'leverage level too low'], 5000)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 1388000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], 312350),
+            'out': (['CFDs temporarily disabled'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 1388000100, 1.1 * DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': (['wager_quantity must be in satoshis'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 1388000100, DP['small'], 1.1 * DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': (['counterwager_quantity must be in satoshis'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 1388000100, DP['small'], DP['small'], 0.0, 15120, 1.1 * DP['expiration'], DP['default_block']),
+            'out': (['expiration must be expressed as an integer block delta'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 1388000100, -1 * DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': (['non‐positive wager'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 1388000100, DP['small'], -1 * DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': (['non‐positive counterwager'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, -1388000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': ( ['deadline in that feed’s past', 'negative deadline'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 1388000100, DP['small'], DP['small'], 0.0, 15120, -1 * DP['expiration'], DP['default_block']),
+            'out': (['negative expiration'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 1388000100, DP['small'], DP['small'], 1.0, 15120, DP['expiration'], DP['default_block']),
+            'out': (['CFDs have no target value'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 2, 1388000100, DP['small'], DP['small'], -1.0, 5040, DP['expiration'], DP['default_block']),
+            'out': (['negative target value'], 5040)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 1388000100, DP['small'], DP['small'], 0.0, 15120, 8095, DP['default_block']),
+            'out': (['expiration overflow'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 1388000100, 2**63, DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': (['integer overflow'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 1388000100, DP['small'], 2**63, 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': (['integer overflow'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 2**63, 1388000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': (['unknown bet type', 'integer overflow'], 15120)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 1388000100, DP['small'], DP['small'], 0.0, 2**63, DP['expiration'], DP['default_block']),
+            'out': (['integer overflow'], 2**63)
+        },  {
+            'in': (ADDR[1], ADDR[0], 1, 2**63, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': (['integer overflow'], 15120)
+        }],
+    },
     'burn': {
         'validate': [{
             'in': (ADDR[0], DP['unspendable'], DP['burn_quantity'], DP['burn_start']),
@@ -113,6 +179,9 @@ UNITTEST_VECTOR = {
         }, {
             'in': (ADDR[0], ADDR[1], 'MAXI', 2**63 + 1),
             'error': (exceptions.ComposeError, 'insufficient funds')
+        }, {
+            'in': (ADDR[0], ADDR[1], 'BTC', DP['quantity']),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 100000000)], None)
         }],
         'parse': [{
             'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block'], 'fee': 10000, 'block_time': 1554090000000, 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
@@ -176,6 +245,24 @@ UNITTEST_VECTOR = {
         }, {
             'in': (ADDR[0], None, 'NOSATOSHI', 1000.5, True, False, None, None, '', DP['default_block']),
             'out': (0, 0.0, ['quantity must be in satoshis'], 0, '', True, None)
+        }, {
+            'in': (ADDR[0], None, 'CALLPRICEFLOAT', 1000, True, False, None, 100.0, '', DP['default_block']),
+            'out': (0, 0.0, [], 0, '', True, False)
+        }, {
+            'in': (ADDR[0], None, 'CALLPRICEINT', 1000, True, False, None, 100, '', DP['default_block']),
+            'out': (0, 0.0, [], 50000000, '', True, False)
+        }, {
+            'in': (ADDR[0], None, 'CALLPRICESTR', 1000, True, False, None, 'abc', '', DP['default_block']),
+            'out': (0, 'abc', ['call_price must be a float'], 0, '', True, None)
+        }, {
+            'in': (ADDR[0], None, 'CALLDATEINT', 1000, True, False, 1409401723, None, '', DP['default_block']),
+            'out': (0, 0.0, [], 50000000, '', True, False)
+        }, {
+            'in': (ADDR[0], None, 'CALLDATEFLOAT', 1000, True, False, 0.9 * 1409401723, None, '', DP['default_block']),
+            'out': (1268461550.7, 0.0, ['call_date must be epoch integer'], 0, '', True, None)
+        }, {
+            'in': (ADDR[0], None, 'CALLDATESTR', 1000, True, False, 'abc', None, '', DP['default_block']),
+            'out': ('abc', 0.0, ['call_date must be epoch integer'], 0, '', True, None)
         }, {
             'in': (ADDR[0], None, 'NEGVALUES', -1000, True, True, -1409401723, -DP['quantity'], '', DP['default_block']),
             'out': (-1409401723, -100000000.0, ['negative quantity', 'negative call price', 'negative call date'], 50000000, '', True, False)
@@ -292,6 +379,9 @@ UNITTEST_VECTOR = {
             'in': (ADDR[0], DP['quantity'] * 1000, 'DIVISIBLE', 'XCP', DP['default_block']),
             'out': (1100000000000, [{'address_quantity': 100000000, 'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'dividend_quantity': 100000000000}, {'address_quantity': 1000000000, 'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'dividend_quantity': 1000000000000}], ['insufficient funds (XCP)'], 0)
         }, {
+            'in': (ADDR[0], DP['quantity'] * -1000, 'DIVISIBLE', 'XCP', DP['default_block']),
+            'out': (-1100000000000, [{'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'dividend_quantity': -100000000000, 'address_quantity': 100000000}, {'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'dividend_quantity': -1000000000000, 'address_quantity': 1000000000}], ['non‐positive quantity per unit'], 0)
+        }, {
             'in': (ADDR[0], DP['quantity'], 'BTC', 'XCP', DP['default_block']),
             'out': (None, None, ['cannot pay dividends to holders of BTC', 'no such asset, BTC.'], 0)
         }, {
@@ -300,6 +390,9 @@ UNITTEST_VECTOR = {
         }, {
             'in': (ADDR[0], DP['quantity'], 'NOASSET', 'XCP', DP['default_block']),
             'out': (None, None, ['no such asset, NOASSET.'], 0)
+        }, {
+            'in': (ADDR[0], 0, 'DIVISIBLE', 'XCP', DP['default_block']),
+            'out': (0,  [{'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'dividend_quantity': 0, 'address_quantity': 100000000}, {'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'dividend_quantity': 0, 'address_quantity': 1000000000}], ['non‐positive quantity per unit', 'zero dividend'], 0)
         }, {
             'in': (ADDR[1], DP['quantity'], 'DIVISIBLE', 'XCP', DP['default_block']),
             'out': (99900000000, [{'dividend_quantity': 98900000000, 'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'address_quantity': 98900000000}, {'dividend_quantity': 1000000000, 'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'address_quantity': 1000000000}], ['only issuer can pay dividends', 'insufficient funds (XCP)'], 0)
