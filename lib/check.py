@@ -4,8 +4,12 @@ import logging
 logger = logging.getLogger(__name__)
 import warnings
 import time
+import sys
 
-from lib import config, util, exceptions, backend
+from lib import config
+from lib import util
+from lib import exceptions
+from lib import backend
 
 CONSENSUS_HASH_SEED = 'We can only see a short distance ahead, but we can see plenty there that needs to be done.'
 
@@ -89,7 +93,7 @@ class VersionError(Exception):
 class VersionUpdateRequiredError(VersionError):
     pass
 
-def check_change(protocol_change, block_index):
+def check_change(protocol_change, change_name, block_index):
 
     # Check client version.
     passed = True
@@ -105,13 +109,17 @@ def check_change(protocol_change, block_index):
     if not passed:
         explanation = 'Your version of counterpartyd is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: ‘{}’. Please upgrade to the latest version and restart the server.'.format(
             config.VERSION_STRING, protocol_change['block_index'], protocol_change['minimum_version_major'], protocol_change['minimum_version_minor'],
-            protocol_change['minimum_version_revision'], protocol_change)
+            protocol_change['minimum_version_revision'], change_name)
         if block_index >= protocol_change['block_index']:
             raise VersionUpdateRequiredError(explanation)
         else:
             warnings.warn(explanation)
 
 def version(block_index):
+    if config.FORCE:
+        return
+    logger.debug('Checking version.')
+
     try:
         host = 'https://counterpartyxcp.github.io/counterpartyd/protocol_changes.json'
         response = requests.get(host, headers={'cache-control': 'no-cache'})
@@ -119,18 +127,15 @@ def version(block_index):
     except Exception:
         raise VersionError('Unable to check version. How’s your Internet access?')
 
-    # TODO: The first branch is for backwards‐compatibility and can be removed
-    # once these changes are pushed to `master`.
-    if 'minimum_version_major' in versions.keys():
-        protocol_change = versions
-        check_change(protocol_change, block_index)
-    else:
-        for change_name in versions:
-            protocol_change = versions[change_name]
-            check_change(protocol_change, block_index)
+    for change_name in versions:
+        protocol_change = versions[change_name]
+        try:
+            check_change(protocol_change, change_name, block_index)
+        except VersionUpdateRequiredError as e:
+            logger.error("Version Update Required", exc_info=sys.exc_info())
+            sys.exit(config.EXITCODE_UPDATE_REQUIRED)
 
     logger.debug('Version check passed.')
-    return
 
 def backend_state(proxy):
     """Checks blocktime of last block to see if {} Core is running behind.""".format(config.BTC_NAME)

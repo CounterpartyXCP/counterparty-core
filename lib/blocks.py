@@ -641,6 +641,8 @@ def reparse(db, block_index=None, quiet=False):
     """
     logger.info('Reparsing all transactions.')
 
+    check.version(block_index)
+
     cursor = db.cursor()
     if quiet:
         root_logger = logging.getLogger()
@@ -850,6 +852,8 @@ def follow(db, proxy):
         if minor_version != config.VERSION_MINOR:
             logger.info('Client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.VERSION_MINOR))
             reparse(db, quiet=False)
+
+        check.version(block_index)
         logger.info('Resuming parsing.')
 
     except exceptions.DatabaseError:
@@ -925,6 +929,10 @@ def follow(db, proxy):
                 block_index = current_index
                 tx_index = get_next_tx_index(db)
                 continue
+
+            # Check version. (Don’t add any blocks to the database while
+            # running an out‐of‐date client!)
+            check.version(block_index)
 
             # Get and parse transactions in this block (atomically).
             block_hash_bin = backend.getblockhash(proxy, current_index)

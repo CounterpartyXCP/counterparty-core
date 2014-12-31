@@ -308,9 +308,8 @@ def init_api_access_log():
     api_logger.propagate = False
 
 class APIStatusPoller(threading.Thread):
-    """Poll every few seconds for the length of time since the last version check, as well as the bitcoin status"""
+    """Perform regular checks on the state of the backend and the database."""
     def __init__(self):
-        self.last_version_check = 0
         self.last_database_check = 0
         threading.Thread.__init__(self)
         self.stop_event = threading.Event()
@@ -326,12 +325,6 @@ class APIStatusPoller(threading.Thread):
 
         while self.stop_event.is_set() != True:
             try:
-                # Check version.
-                if time.time() - self.last_version_check >= 60 * 60: # One hour since last check.
-                    logger.debug('Checking version.')
-                    code = 10
-                    check.version(util.last_block(db)['block_index'])
-                    self.last_version_check = time.time()
                 # Check that bitcoind is running, communicable, and caught up with the blockchain.
                 # Check that the database has caught up with bitcoind.
                 if time.time() - self.last_database_check > 10 * 60: # Ten minutes since last check.
@@ -342,7 +335,7 @@ class APIStatusPoller(threading.Thread):
                     logger.debug('Checking database state.')
                     check.database_state(db, backend.getblockcount(self.proxy))
                     self.last_database_check = time.time()
-            except (check.VersionError, check.BackendError, exceptions.DatabaseError) as e:
+            except (check.BackendError, exceptions.DatabaseError) as e:
                 exception_name = e.__class__.__name__
                 exception_text = str(e)
                 logger.debug("API Status Poller: %s", exception_text)

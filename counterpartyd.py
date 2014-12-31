@@ -638,15 +638,6 @@ if __name__ == '__main__':
         logger.info('Connecting to backend.')
         backend.getblockcount(proxy)
 
-    # Version
-    if args.action in ('server', 'reparse', 'rollback') and not config.FORCE:
-        logger.info('Checking version.')
-        try:
-            check.version(backend.getblockcount(proxy))
-        except check.VersionUpdateRequiredError as e:
-            traceback.print_exc(file=sys.stdout)
-            sys.exit(config.EXITCODE_UPDATE_REQUIRED)
-
     # Lock
     if args.action in ('rollback', 'reparse', 'server', 'kickstart') and not config.FORCE:
         get_lock()
