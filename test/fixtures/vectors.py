@@ -11,6 +11,7 @@ from .params import ADDR, MULTISIGADDR, DEFAULT_PARAMS as DP
 
 from lib import exceptions
 from lib import script
+from lib.messages.scriptlib import processblock
 
 UNITTEST_VECTOR = {
     'bet': {
@@ -176,6 +177,18 @@ UNITTEST_VECTOR = {
         },  {
             'in': (ADDR[0], ADDR[1], 'XCP', 2**62, DP['default_block']),
             'error': (exceptions.ValidateError, 'balance insufficient')
+        }],
+    },
+    'execute': {
+        'compose': [{
+            'in': (ADDR[0], 1, 10, 10, 10, b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80'),
+            'out': (ADDR[0], [], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80')
+        },  {
+            'in': (ADDR[0], 1, 10, -10, 10, b'\x00\x00\x00\x00\x00'),
+            'error': (processblock.ContractError, 'negative startgas')
+        },  {
+            'in': (ADDR[0], 1, -10, 10, 10, b'\x00\x00\x00\x00\x00'),
+            'error': (processblock.ContractError, 'negative gasprice')
         }],
     },
     'send': {
