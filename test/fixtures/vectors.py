@@ -78,6 +78,25 @@ UNITTEST_VECTOR = {
             'in': (ADDR[1], ADDR[0], 1, 2**63, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
             'out': (['integer overflow'], 15120)
         }],
+        'compose': [{
+            'in': (ADDR[1], ADDR[0], 0, 1388000001, DP['small'], DP['small'], 0.0, 15120, DP['expiration']),
+            'out': (ADDR[1], [(ADDR[0], None)], b'\x00\x00\x00(\x00\x00R\xbb3\x01\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n')
+        }],
+    },
+    'broadcast': {
+        'validate': [{
+            'in': (ADDR[0], 1388000001, 1, DP['fee_multiplier'], 'Unit Test', DP['default_block']),
+            'out': ([])
+        },  {
+            'in': (ADDR[0], 1388000001, 1, 4294967296, 'Unit Test', DP['default_block']),
+            'out': (['fee fraction greater than 42.94967295'])
+        },  {
+            'in': (ADDR[0], -1388000000, 1, DP['fee_multiplier'], 'Unit Test', DP['default_block']),
+            'out': (['negative timestamp', 'feed timestamps not monotonically increasing'])
+        },  {
+            'in': (None, 1388000001, 1, DP['fee_multiplier'], 'Unit Test', DP['default_block']),
+            'out': (['null source address'])
+        }],
     },
     'burn': {
         'validate': [{
@@ -130,6 +149,33 @@ UNITTEST_VECTOR = {
                 {'table': 'burns', 'values': {'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_index': DP['default_block'], 'burned': 50000000, 'status': 'valid', 'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'earned': 74996621902, 'tx_index': 502}},
                 {'table': 'credits', 'values': {'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'block_index': DP['default_block'], 'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'asset': 'XCP', 'calling_function': 'burn', 'quantity': 74996621902}}
             ]
+        }],
+    },
+    'destroy': {
+        'validate': [{
+            'in': (ADDR[0], ADDR[1], 'foobar', 1, DP['default_block']),
+            'error': (exceptions.ValidateError, 'asset invalid')
+        },  {
+            'in': ('foobar', ADDR[1], 'XCP', 1, DP['default_block']),
+            'error': (exceptions.ValidateError, 'source address invalid')
+        },  {
+            'in': (ADDR[0], ADDR[1], 'XCP', 1, DP['default_block']),
+            'error': (exceptions.ValidateError, 'destination exists')
+        },  {
+            'in': (ADDR[0], ADDR[1], 'BTC', 1, DP['default_block']),
+            'error': (exceptions.ValidateError, 'cannot destroy BTC')
+        },  {
+            'in': (ADDR[0], ADDR[1], 'XCP', 1.1, DP['default_block']),
+            'error': (exceptions.ValidateError, 'quantity not integer')
+        },  {
+            'in': (ADDR[0], ADDR[1], 'XCP', 2**63, DP['default_block']),
+            'error': (exceptions.ValidateError, 'quantity too large')
+        },  {
+            'in': (ADDR[0], ADDR[1], 'XCP', -1, DP['default_block']),
+            'error': (exceptions.ValidateError, 'quantity negative')
+        },  {
+            'in': (ADDR[0], ADDR[1], 'XCP', 2**62, DP['default_block']),
+            'error': (exceptions.ValidateError, 'balance insufficient')
         }],
     },
     'send': {

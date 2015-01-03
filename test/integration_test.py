@@ -3,8 +3,8 @@ import pytest
 import util_test
 
 def test_scenario(scenario_name, base_scenario_name, transactions, rawtransactions_db):
-    """
-    Run the integration tests.
+    """Run the integration tests.
+
     Reads scenario.py to get all the integration scenarios to create a holistic integration test run,
     executes it and then compares the json, sql and log output with data in 'scenarios/' folder.
     """
