@@ -88,7 +88,7 @@ def format_bet(bet):
     else:
         leverage = util.value_out(db, D(bet['leverage']) / 5040, 'leverage')
 
-    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], util.isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.value_out(db, odds, 'odds'), bet['expire_index'] - util.last_block(db)['block_index'], bet['tx_hash']]
+    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], log.isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.value_out(db, odds, 'odds'), bet['expire_index'] - util.last_block(db)['block_index'], bet['tx_hash']]
 
 def format_order_match(db, order_match):
     order_match_id = util.make_id(order_match['tx0_hash'], order_match['tx1_hash'])
@@ -96,7 +96,7 @@ def format_order_match(db, order_match):
     return [order_match_id, order_match_time_left]
 
 def format_feed(feed):
-    timestamp = util.isodt(feed['timestamp'])
+    timestamp = log.isodt(feed['timestamp'])
     if not feed['text']:
         text = '<Locked>'
     else:
@@ -1004,7 +1004,7 @@ if __name__ == '__main__':
         divisible = results['divisible']
         locked = results['locked']
         supply = util.value_out(db, results['supply'], args.asset)
-        call_date = util.isodt(results['call_date']) if results['call_date'] else results['call_date']
+        call_date = log.isodt(results['call_date']) if results['call_date'] else results['call_date']
         call_price = str(results['call_price']) + ' XCP' if results['call_price'] else results['call_price']
 
         print('Asset Name:', args.asset)
