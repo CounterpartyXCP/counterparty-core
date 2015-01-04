@@ -297,7 +297,7 @@ def broadcast_transaction(proxy, signed_tx_hex):
 
 def do_transaction(db, proxy, name, params, private_key_wif=None, **kwargs):
     unsigned_tx = compose_transaction(db, proxy, name, params, **kwargs)
-    signed_tx = sign_transaction(unsigned_tx, private_key_wif=private_key_wif)
+    signed_tx = sign_transaction(proxy, unsigned_tx, private_key_wif=private_key_wif)
     return broadcast_transaction(proxy, signed_tx)
 
 def init_api_access_log():
