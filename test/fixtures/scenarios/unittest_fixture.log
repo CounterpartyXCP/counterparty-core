@@ -123,3 +123,7 @@ Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Change quantity: 1.9989134 BTC
 Broadcast: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T19:33:20 with a fee of 500.0%% (06f160625d7d0486c33401b7424b11248d1f9c52a9e3711d7d0ec9e712194498) [valid]
+Sorted UTXOs: ['amount: 1.934276; txid: dc4f91c42eb79898b266ee237eed0d501b8b1a843f69aed847ad740e1933f85e; vout: 1; confirmations: 6']
+New input: amount: 1.934276; txid: dc4f91c42eb79898b266ee237eed0d501b8b1a843f69aed847ad740e1933f85e; vout: 1; confirmations: 6
+Change quantity: 1.934098 BTC
+Broadcast: mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH locked his feed (f7499dee61e7684e847dec7fa42d782c01cf0dea956ef8bbb68d62258e339f08) [valid]

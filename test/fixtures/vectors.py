@@ -49,6 +49,9 @@ UNITTEST_VECTOR = {
             'in': (ADDR[1], ADDR[0], 1, 1388000100, DP['small'], -1 * DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
             'out': (['non‐positive counterwager'], 15120)
         },  {
+            'in': (ADDR[1], ADDR[2], 1, 1388000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'out': (['feed is locked'], 15120)
+        },  {
             'in': (ADDR[1], ADDR[0], 1, -1388000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
             'out': ( ['deadline in that feed’s past', 'negative deadline'], 15120)
         },  {
@@ -83,11 +86,28 @@ UNITTEST_VECTOR = {
             'in': (ADDR[1], ADDR[0], 0, 1388000001, DP['small'], DP['small'], 0.0, 15120, DP['expiration']),
             'out': (ADDR[1], [(ADDR[0], None)], b'\x00\x00\x00(\x00\x00R\xbb3\x01\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n')
         }],
+        'get_fee_fraction': [{
+            'in': (ADDR[1],),
+            'out': (0)
+        },  {
+            'in': (ADDR[0],),
+            'out': (0.05)
+        },  {
+            'in': (ADDR[2],),
+            'out': (0)
+        }],
+        'match': [{
+            'in': ({'tx_index': 99999999},),
+            'out': None
+        }],
     },
     'broadcast': {
         'validate': [{
             'in': (ADDR[0], 1388000001, 1, DP['fee_multiplier'], 'Unit Test', DP['default_block']),
             'out': ([])
+        },  {
+            'in': (ADDR[2], 1388000001, 1, DP['fee_multiplier'], 'Unit Test', DP['default_block']),
+            'out': (['locked feed'])
         },  {
             'in': (ADDR[0], 1388000001, 1, 4294967296, 'Unit Test', DP['default_block']),
             'out': (['fee fraction greater than 42.94967295'])
@@ -97,6 +117,13 @@ UNITTEST_VECTOR = {
         },  {
             'in': (None, 1388000001, 1, DP['fee_multiplier'], 'Unit Test', DP['default_block']),
             'out': (['null source address'])
+        }],
+        'compose': [{
+            'in': (ADDR[0], 1388000001, 1, DP['fee_multiplier'], 'Unit Test'),
+            'out': (ADDR[0], [], b'\x00\x00\x00\x1eR\xbb3\x01?\xf0\x00\x00\x00\x00\x00\x00\x00LK@\tUnit Test')
+        },  {
+            'in': (ADDR[0], 1388000001, 1, DP['fee_multiplier'], 'Over 52 characters test test test test test test test test'),
+            'out': (ADDR[0], [], b'\x00\x00\x00\x1eR\xbb3\x01?\xf0\x00\x00\x00\x00\x00\x00\x00LK@Over 52 characters test test test test test test test test')
         }],
     },
     'burn': {
@@ -177,6 +204,18 @@ UNITTEST_VECTOR = {
         },  {
             'in': (ADDR[0], None, 'XCP', 2**62, DP['default_block']),
             'error': (exceptions.BalanceError, 'balance insufficient')
+        }],
+        'pack': [{
+            'in': ('XCP', 1, bytes(9999999)),
+            'out': (b'\x00\x00\x00n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00')
+        }],
+        'unpack': [{
+            'in': (b'\x00\x00\x00n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00',),
+            'error': (exceptions.UnpackError, 'could not unpack')
+        }],
+        'compose': [{
+            'in': (ADDR[0], 'XCP', 1, bytes(9999999)),
+            'out': (ADDR[0], [],  b'\x00\x00\x00n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00')
         }],
     },
     'execute': {
