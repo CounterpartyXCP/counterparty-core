@@ -206,11 +206,11 @@ UNITTEST_VECTOR = {
             'error': (exceptions.BalanceError, 'balance insufficient')
         }],
         'pack': [{
-            'in': ('XCP', 1, bytes(9999999)),
+            'in': ('XCP', 1, bytes(9999999), DP['default_block']),
             'out': (b'\x00\x00\x00n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00')
         }],
         'unpack': [{
-            'in': (b'\x00\x00\x00n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00',),
+            'in': (b'\x00\x00\x00n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00', DP['default_block']),
             'error': (exceptions.UnpackError, 'could not unpack')
         }],
         'compose': [{

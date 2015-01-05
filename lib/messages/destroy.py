@@ -34,15 +34,15 @@ def initialise(db):
                       address_idx ON destructions (source)
                    ''')
 
-def pack(db, asset, quantity, tag):
+def pack(db, asset, quantity, tag, block_index):
     data = struct.pack(config.TXTYPE_FORMAT, ID)
-    data += struct.pack(FORMAT, util.get_asset_id(db, asset, util.last_block(db)['block_index']), quantity, tag)
+    data += struct.pack(FORMAT, util.get_asset_id(db, asset, block_index), quantity, tag)
     return data
 
-def unpack(db, message):
+def unpack(db, message, block_index):
     try:
         asset_id, quantity, tag = struct.unpack(FORMAT, message)
-        asset = util.get_asset_name(db, asset_id, util.last_block(db)['block_index'])
+        asset = util.get_asset_name(db, asset_id, block_index)
 
     except struct.error:
         raise UnpackError('could not unpack')
@@ -88,7 +88,7 @@ def validate (db, source, destination, asset, quantity, block_index):
 def compose (db, source, asset, quantity, tag):
 
     validate(db, source, None, asset, quantity, util.last_block(db)['block_index'])
-    data = pack(db, asset, quantity, tag)
+    data = pack(db, asset, quantity, tag, util.last_block(db)['block_index'])
 
     return (source, [], data)
 
@@ -96,7 +96,7 @@ def parse (db, tx, message):
     status = 'valid'
 
     try:
-        asset, quantity = unpack(message)
+        asset, quantity = unpack(message, tx['block_index'])
         validate(db, tx['source'], tx['destination'], asset, quantity, tx['block_index'])
         util.debit(db, tx['block_index'], tx['source'], asset, quantity, 'destroy', tx['tx_hash'])
 
