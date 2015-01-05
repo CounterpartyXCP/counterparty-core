@@ -11,7 +11,8 @@ from .params import ADDR, MULTISIGADDR, DEFAULT_PARAMS as DP
 
 from lib import exceptions
 from lib import script
-from lib.messages.scriptlib import processblock
+from lib.messages.scriptlib.processblock import ContractError
+from lib.api import APIError
 
 UNITTEST_VECTOR = {
     'bet': {
@@ -224,10 +225,10 @@ UNITTEST_VECTOR = {
             'out': (ADDR[0], [], b'\x00\x00\x00e\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\n\xfa\xf0\x80')
         },  {
             'in': (ADDR[0], 'faf080', 10, -10, 10, 'faf080'),
-            'error': (processblock.ContractError, 'negative startgas')
+            'error': (ContractError, 'negative startgas')
         },  {
             'in': (ADDR[0], 'faf080', -10, 10, 10, 'faf080'),
-            'error': (processblock.ContractError, 'negative gasprice')
+            'error': (ContractError, 'negative gasprice')
         }],
     },
     'send': {
@@ -711,6 +712,51 @@ UNITTEST_VECTOR = {
             'comment': 'free issuance',
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x14\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'), {'encoding': 'multisig'}),
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e0000000000006951210259415bf04af834423d3dd7adb0238d85fcf79a8a619fba5aee7a331919e487e8210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae8c19ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+        }],
+    },
+    'api': {
+        'get_rows': [{
+            'in': ('balances', None, 'AND', None, None, None, None, None, 1000, 0, True),
+            'out': None
+        }, {
+            'in': ('balances', None, 'barfoo', None, None, None, None, None, 1000, 0, True),
+            'error': (APIError, 'Invalid filter operator (OR, AND)')
+        }, {
+            'in': (None, None, 'AND', None, None, None, None, None, 1000, 0, True),
+            'error': (APIError, 'Unknown table')
+        }, {
+            'in': ('balances', None, 'AND', None, 'barfoo', None, None, None, 1000, 0, True),
+            'error': (APIError, 'Invalid order direction (ASC, DESC)')
+        }, {
+            'in': ('balances', None, 'AND', None, None, None, None, None, 1000.0, 0, True),
+            'error': (APIError, 'Invalid limit')
+        }, {
+            'in': ('balances', None, 'AND', None, None, None, None, None, 1001, 0, True),
+            'error': (APIError, 'Limit should be lower or equal to 1000')
+        }, {
+            'in': ('balances', None, 'AND', None, None, None, None, None, 1000, 0.0, True),
+            'error': (APIError, 'Invalid offset')
+        }, {
+            'in': ('balances', None, 'AND', '*', None, None, None, None, 1000, 0, True),
+            'error': (APIError, 'Invalid order_by, must be a field name')
+        }, {
+            'in': ('balances', [0], 'AND', None, None, None, None, None, 1000, 0, True),
+            'error': (APIError, 'Unknown filter type')
+        }, {
+            'in': ('balances', {'field': 'bar', 'op': '='}, 'AND', None, None, None, None, None, 1000, 0, True),
+            'error': (APIError, "A specified filter is missing the 'value' field")
+        }, {
+            'in': ('balances', {'field': 'bar', 'op': '=', 'value': {}}, 'AND', None, None, None, None, None, 1000, 0, True),
+            'error': (APIError, "Invalid value for the field 'bar'")
+        }, {
+            'in': ('balances', {'field': 'bar', 'op': '=', 'value': [0,2]}, 'AND', None, None, None, None, None, 1000, 0, True),
+            'error': (APIError, "Invalid value for the field 'bar'")
+        }, {
+            'in': ('balances', {'field': 'bar', 'op': 'AND', 'value': 0}, 'AND', None, None, None, None, None, 1000, 0, True),
+            'error': (APIError, "Invalid operator for the field 'bar'")
+        }, {
+            'in': ('balances', {'field': 'bar', 'op': '=', 'value': 0, 'case_sensitive': 0}, 'AND', None, None, None, None, None, 1000, 0, True),
+            'error': (APIError, "case_sensitive must be a boolean")
         }],
     },
     'script': {
