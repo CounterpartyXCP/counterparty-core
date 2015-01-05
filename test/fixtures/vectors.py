@@ -154,40 +154,40 @@ UNITTEST_VECTOR = {
     },
     'destroy': {
         'validate': [{
-            'in': (ADDR[0], ADDR[1], 'foobar', 1, DP['default_block']),
-            'error': (exceptions.ValidateError, 'asset invalid')
+            'in': (ADDR[0], None, 'XCP', 1, DP['default_block']),
+            'out': None
         },  {
-            'in': ('foobar', ADDR[1], 'XCP', 1, DP['default_block']),
-            'error': (exceptions.ValidateError, 'source address invalid')
+            'in': (ADDR[0], None, 'foobar', 1, DP['default_block']),
+            'error': (exceptions.ValidateError, 'asset invalid')
         },  {
             'in': (ADDR[0], ADDR[1], 'XCP', 1, DP['default_block']),
             'error': (exceptions.ValidateError, 'destination exists')
         },  {
-            'in': (ADDR[0], ADDR[1], 'BTC', 1, DP['default_block']),
+            'in': (ADDR[0], None, 'BTC', 1, DP['default_block']),
             'error': (exceptions.ValidateError, 'cannot destroy BTC')
         },  {
-            'in': (ADDR[0], ADDR[1], 'XCP', 1.1, DP['default_block']),
+            'in': (ADDR[0], None, 'XCP', 1.1, DP['default_block']),
             'error': (exceptions.ValidateError, 'quantity not integer')
         },  {
-            'in': (ADDR[0], ADDR[1], 'XCP', 2**63, DP['default_block']),
+            'in': (ADDR[0], None, 'XCP', 2**63, DP['default_block']),
             'error': (exceptions.ValidateError, 'quantity too large')
         },  {
-            'in': (ADDR[0], ADDR[1], 'XCP', -1, DP['default_block']),
+            'in': (ADDR[0], None, 'XCP', -1, DP['default_block']),
             'error': (exceptions.ValidateError, 'quantity negative')
         },  {
-            'in': (ADDR[0], ADDR[1], 'XCP', 2**62, DP['default_block']),
-            'error': (exceptions.ValidateError, 'balance insufficient')
+            'in': (ADDR[0], None, 'XCP', 2**62, DP['default_block']),
+            'error': (exceptions.BalanceError, 'balance insufficient')
         }],
     },
     'execute': {
         'compose': [{
-            'in': (ADDR[0], 1, 10, 10, 10, b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80'),
-            'out': (ADDR[0], [], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80')
+            'in': (ADDR[0], 'faf080', 10, 10, 10, 'faf080'),
+            'out': (ADDR[0], [], b'\x00\x00\x00e\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\n\xfa\xf0\x80')
         },  {
-            'in': (ADDR[0], 1, 10, -10, 10, b'\x00\x00\x00\x00\x00'),
+            'in': (ADDR[0], 'faf080', 10, -10, 10, 'faf080'),
             'error': (processblock.ContractError, 'negative startgas')
         },  {
-            'in': (ADDR[0], 1, -10, 10, 10, b'\x00\x00\x00\x00\x00'),
+            'in': (ADDR[0], 'faf080', -10, 10, 10, 'faf080'),
             'error': (processblock.ContractError, 'negative gasprice')
         }],
     },
