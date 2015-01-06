@@ -24,7 +24,7 @@ DEFAULT_PARAMS = {
     'burn_start': 310000,
     'burn_end': 4017708,
     'burn_quantity': int(.62 * UNIT),
-    'default_block': 310000 + 501
+    'default_block': 310000 + 501   # Should be called `block_index`.
 }
 DEFAULT_PARAMS['privkey'] = {addr: priv for (addr, priv, pub) in DEFAULT_PARAMS['addresses']}
 DEFAULT_PARAMS['pubkey'] = {addr: pub for (addr, priv, pub) in DEFAULT_PARAMS['addresses']}

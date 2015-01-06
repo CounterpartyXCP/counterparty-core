@@ -149,7 +149,7 @@ def backend_state(proxy):
 
 def database_state(db, blockcount):
     """Checks {} database to see if is caught up with backend.""".format(config.XCP_NAME)
-    if util.last_block(db)['block_index'] + 1 < blockcount:
+    if util.CURRENT_BLOCK_INDEX + 1 < blockcount:
         raise exceptions.DatabaseError('{} database is behind backend.'.format(config.XCP_NAME))
     logger.debug('Database state check passed.')
     return

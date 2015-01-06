@@ -132,6 +132,9 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
 
     util.BLOCK_LEDGER = []
 
+    # TODO: This shouldn’t be in `util.py`.
+    util.CURRENT_BLOCK_INDEX = block_index
+
     # Expire orders, bets and rps.
     order.expire(db, block_index)
     bet.expire(db, block_index, block_time)
@@ -348,7 +351,7 @@ def initialise(db):
 
 def get_tx_info(proxy, tx_hex, block_index, block_parser=None):
     try:
-        if util.enabled('multisig_addresses', block_index):   # Protocol change.
+        if util.enabled('multisig_addresses'):   # Protocol change.
             tx_info = get_tx_info2(proxy, tx_hex, block_parser=block_parser)
         else:
             tx_info = get_tx_info1(proxy, tx_hex, block_index, block_parser=block_parser)
@@ -844,9 +847,11 @@ def follow(db, proxy):
     initialise(db)
 
     # Get index of last block.
-    try:
-        block_index = util.last_block(db)['block_index'] + 1
-
+    if util.CURRENT_BLOCK_INDEX == 0:
+        logger.warning('New database.')
+        block_index = config.BLOCK_FIRST
+    else:
+        block_index = util.CURRENT_BLOCK_INDEX + 1
         # Reparse all transactions if minor version has changed.
         minor_version = cursor.execute('PRAGMA user_version').fetchall()[0]['user_version']
         if minor_version != config.VERSION_MINOR:
@@ -855,10 +860,6 @@ def follow(db, proxy):
 
         check.version(block_index)
         logger.info('Resuming parsing.')
-
-    except exceptions.DatabaseError:
-        logger.warning('New database.')
-        block_index = config.BLOCK_FIRST
 
     # Get index of last transaction.
     tx_index = get_next_tx_index(db)
@@ -922,7 +923,7 @@ def follow(db, proxy):
             if requires_rollback:
                 # Record reorganisation.
                 logger.warning('Blockchain reorganisation at block {}.'.format(current_index))
-                log.message(db, block_index, 'reorg', None, {'block_index': current_index})
+                log.message(db, 'reorg', None, {'block_index': current_index})
 
                 # Rollback the DB.
                 reparse(db, block_index=current_index-1, quiet=True)

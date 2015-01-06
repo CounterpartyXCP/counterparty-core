@@ -71,8 +71,8 @@ def api (method, params):
 def date_passed(date):
     return date <= time.time()
 
-def price (numerator, denominator, block_index):
-    if block_index >= 294500 or config.TESTNET: # Protocol change.
+def price (numerator, denominator):
+    if CURRENT_BLOCK_INDEX >= 294500 or config.TESTNET: # Protocol change.
         return fractions.Fraction(numerator, denominator)
     else:
         numerator = D(numerator)
@@ -94,17 +94,6 @@ def sortkeypicker(keynames):
        return composite
     return getit
 
-def last_block (db):
-    cursor = db.cursor()
-    blocks = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)'''))
-    if blocks:
-        assert len(blocks) == 1
-        last_block = blocks[0]
-    else:
-        raise exceptions.DatabaseError('No blocks found.')
-    cursor.close()
-    return last_block
-
 def last_message (db):
     cursor = db.cursor()
     messages = list(cursor.execute('''SELECT * FROM messages WHERE message_index = (SELECT MAX(message_index) from messages)'''))
@@ -124,7 +113,7 @@ def generate_asset_id (asset_name, block_index):
         raise exceptions.AssetNameError('too short')
 
     # Numeric asset names.
-    if enabled('numeric_asset_names', block_index):  # Protocol change.
+    if enabled('numeric_asset_names'):  # Protocol change.
         if asset_name[0] == 'A':
             # Must be numeric.
             try:
@@ -164,7 +153,7 @@ def generate_asset_name (asset_id, block_index):
     if asset_id < 26**3:
         raise exceptions.AssetIDError('too low')
 
-    if enabled('numeric_asset_names', block_index):  # Protocol change.
+    if enabled('numeric_asset_names'):  # Protocol change.
         if asset_id <= 2**64 - 1:
             if 26**12 + 1 <= asset_id:
                 asset_name = 'A' + str(asset_id)
@@ -187,7 +176,7 @@ def generate_asset_name (asset_id, block_index):
 
 
 def get_asset_id (db, asset_name, block_index):
-    if not enabled('hotfix_numeric_assets', block_index):
+    if not enabled('hotfix_numeric_assets'):
         return generate_asset_id(asset_name, block_index)
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM assets WHERE asset_name = ?''', (asset_name,))
@@ -198,7 +187,7 @@ def get_asset_id (db, asset_name, block_index):
         raise exceptions.AssetError('No such asset: {}'.format(asset_name))
 
 def get_asset_name (db, asset_id, block_index):
-    if not enabled('hotfix_numeric_assets', block_index):
+    if not enabled('hotfix_numeric_assets'):
         return generate_asset_name(asset_id, block_index)
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM assets WHERE asset_id = ?''', (str(asset_id),))
@@ -210,7 +199,9 @@ def get_asset_name (db, asset_id, block_index):
 
 
 class DebitError (Exception): pass
-def debit (db, block_index, address, asset, quantity, action=None, event=None):
+def debit (db, address, asset, quantity, action=None, event=None):
+    block_index = CURRENT_BLOCK_INDEX
+
     if type(quantity) != int:
         raise DebitError
     if quantity < 0:
@@ -221,7 +212,7 @@ def debit (db, block_index, address, asset, quantity, action=None, event=None):
     debit_cursor = db.cursor()
 
     # Contracts can only hold XCP balances.
-    if enabled('contracts_only_xcp_balances', block_index): # Protocol change.
+    if enabled('contracts_only_xcp_balances'): # Protocol change.
         if len(address) == 40:
             assert asset == config.XCP
 
@@ -265,7 +256,9 @@ def debit (db, block_index, address, asset, quantity, action=None, event=None):
     BLOCK_LEDGER.append('{}{}{}{}'.format(block_index, address, asset, quantity))
 
 class CreditError (Exception): pass
-def credit (db, block_index, address, asset, quantity, action=None, event=None):
+def credit (db, address, asset, quantity, action=None, event=None):
+    block_index = CURRENT_BLOCK_INDEX
+
     if type(quantity) != int:
         raise CreditError
     if quantity < 0:
@@ -276,7 +269,7 @@ def credit (db, block_index, address, asset, quantity, action=None, event=None):
     credit_cursor = db.cursor()
 
     # Contracts can only hold XCP balances.
-    if enabled('contracts_only_xcp_balances', block_index): # Protocol change.
+    if enabled('contracts_only_xcp_balances'): # Protocol change.
         if len(address) == 40:
             assert asset == config.XCP
 
@@ -543,13 +536,13 @@ def hexlify(x):
     return binascii.hexlify(x).decode('ascii')
 
 ### Protocol Changes ###
-def enabled (change_name, block_index):
+def enabled (change_name):
     enable_block_index = PROTOCOL_CHANGES[change_name]['block_index']
 
     if config.TESTNET: 
         return True     # Protocol changes are always retroactive on testnet.
     else:
-        if block_index >= enable_block_index:
+        if CURRENT_BLOCK_INDEX >= enable_block_index:
             return True
         else:
             return False
@@ -557,9 +550,9 @@ def enabled (change_name, block_index):
 
 
 
-def transfer(db, block_index, source, destination, asset, quantity, action, event):
-    debit(db, block_index, source, asset, quantity, action=action, event=event)
-    credit(db, block_index, destination, asset, quantity, action=action, event=event)
+def transfer(db, source, destination, asset, quantity, action, event):
+    debit(db, source, asset, quantity, action=action, event=event)
+    credit(db, destination, asset, quantity, action=action, event=event)
 
 def get_balance (db, address, asset):
     # Get balance of contract or address.

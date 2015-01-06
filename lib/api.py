@@ -196,7 +196,7 @@ def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=N
     # legacy filters
     if not show_expired and table == 'orders':
         #Ignore BTC orders one block early.
-        expire_index = util.last_block(db)['block_index'] + 1
+        expire_index = util.CURRENT_BLOCK_INDEX + 1
         more_conditions.append('''((give_asset == ? AND expire_index > ?) OR give_asset != ?)''')
         bindings += [config.BTC, expire_index, config.BTC]
 
@@ -582,7 +582,7 @@ class APIServer(threading.Thread):
                 caught_up = True
 
             try:
-                last_block = util.last_block(db)
+                last_block = util.CURRENT_BLOCK_INDEX
             except:
                 last_block = {'block_index': None, 'block_hash': None, 'block_time': None}
 
@@ -657,7 +657,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_tx_info(tx_hex):
-            source, destination, btc_amount, fee, data = blocks.get_tx_info(tx_hex, util.last_block(db)['block_index'])
+            source, destination, btc_amount, fee, data = blocks.get_tx_info(tx_hex, util.CURRENT_BLOCK_INDEX)
             return source, destination, btc_amount, fee, util.hexlify(data)
 
         @dispatcher.add_method
@@ -669,7 +669,7 @@ class APIServer(threading.Thread):
             for message_type in API_TRANSACTIONS:
                 if message_type_id == sys.modules['lib.messages.{}'.format(message_type)].ID:
                     unpack_method = sys.modules['lib.messages.{}'.format(message_type)].unpack
-                    unpacked = unpack_method(db, message, util.last_block(db)['block_index'])
+                    unpacked = unpack_method(db, message, util.CURRENT_BLOCK_INDEX)
             return message_type_id, unpacked
 
         def _set_cors_headers(response):

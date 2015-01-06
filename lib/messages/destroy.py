@@ -34,15 +34,15 @@ def initialise(db):
                       address_idx ON destructions (source)
                    ''')
 
-def pack(db, asset, quantity, tag, block_index):
+def pack(db, asset, quantity, tag):
     data = struct.pack(config.TXTYPE_FORMAT, ID)
-    data += struct.pack(FORMAT, util.get_asset_id(db, asset, block_index), quantity, tag)
+    data += struct.pack(FORMAT, util.get_asset_id(db, asset, util.CURRENT_BLOCK_INDEX), quantity, tag)
     return data
 
-def unpack(db, message, block_index):
+def unpack(db, message):
     try:
         asset_id, quantity, tag = struct.unpack(FORMAT, message)
-        asset = util.get_asset_name(db, asset_id, block_index)
+        asset = util.get_asset_name(db, asset_id, util.CURRENT_BLOCK_INDEX)
 
     except struct.error:
         raise UnpackError('could not unpack')
@@ -52,10 +52,10 @@ def unpack(db, message, block_index):
 
     return asset, quantity, tag
 
-def validate (db, source, destination, asset, quantity, block_index):
+def validate (db, source, destination, asset, quantity):
 
     try:
-        util.get_asset_id(db, asset, block_index)
+        util.get_asset_id(db, asset, util.CURRENT_BLOCK_INDEX)
     except AssetError:
         raise ValidateError('asset invalid')
 
@@ -87,8 +87,8 @@ def validate (db, source, destination, asset, quantity, block_index):
 
 def compose (db, source, asset, quantity, tag):
 
-    validate(db, source, None, asset, quantity, util.last_block(db)['block_index'])
-    data = pack(db, asset, quantity, tag, util.last_block(db)['block_index'])
+    validate(db, source, None, asset, quantity)
+    data = pack(db, asset, quantity, tag)
 
     return (source, [], data)
 
@@ -97,8 +97,8 @@ def parse (db, tx, message):
 
     try:
         asset, quantity = unpack(message, tx['block_index'])
-        validate(db, tx['source'], tx['destination'], asset, quantity, tx['block_index'])
-        util.debit(db, tx['block_index'], tx['source'], asset, quantity, 'destroy', tx['tx_hash'])
+        validate(db, tx['source'], tx['destination'], asset, quantity)
+        util.debit(db, tx['source'], asset, quantity, 'destroy', tx['tx_hash'])
 
     except UnpackError as e:
         asset, quantity = None, None

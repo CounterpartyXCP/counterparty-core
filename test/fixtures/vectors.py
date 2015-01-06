@@ -181,36 +181,36 @@ UNITTEST_VECTOR = {
     },
     'destroy': {
         'validate': [{
-            'in': (ADDR[0], None, 'XCP', 1, DP['default_block']),
+            'in': (ADDR[0], None, 'XCP', 1),
             'out': None
         },  {
-            'in': (ADDR[0], None, 'foobar', 1, DP['default_block']),
+            'in': (ADDR[0], None, 'foobar', 1),
             'error': (exceptions.ValidateError, 'asset invalid')
         },  {
-            'in': (ADDR[0], ADDR[1], 'XCP', 1, DP['default_block']),
+            'in': (ADDR[0], ADDR[1], 'XCP', 1),
             'error': (exceptions.ValidateError, 'destination exists')
         },  {
-            'in': (ADDR[0], None, 'BTC', 1, DP['default_block']),
+            'in': (ADDR[0], None, 'BTC', 1),
             'error': (exceptions.ValidateError, 'cannot destroy BTC')
         },  {
-            'in': (ADDR[0], None, 'XCP', 1.1, DP['default_block']),
+            'in': (ADDR[0], None, 'XCP', 1.1),
             'error': (exceptions.ValidateError, 'quantity not integer')
         },  {
-            'in': (ADDR[0], None, 'XCP', 2**63, DP['default_block']),
+            'in': (ADDR[0], None, 'XCP', 2**63),
             'error': (exceptions.ValidateError, 'quantity too large')
         },  {
-            'in': (ADDR[0], None, 'XCP', -1, DP['default_block']),
+            'in': (ADDR[0], None, 'XCP', -1),
             'error': (exceptions.ValidateError, 'quantity negative')
         },  {
-            'in': (ADDR[0], None, 'XCP', 2**62, DP['default_block']),
+            'in': (ADDR[0], None, 'XCP', 2**62),
             'error': (exceptions.BalanceError, 'balance insufficient')
         }],
         'pack': [{
-            'in': ('XCP', 1, bytes(9999999), DP['default_block']),
-            'out': (b'\x00\x00\x00n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00')
+            'in': ('XCP', 1, bytes(9999999)),
+            'out': b'\x00\x00\x00n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00'
         }],
         'unpack': [{
-            'in': (b'\x00\x00\x00n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00', DP['default_block']),
+            'in': (b'\x00\x00\x00n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00',),
             'error': (exceptions.UnpackError, 'could not unpack')
         }],
         'compose': [{
@@ -464,11 +464,11 @@ UNITTEST_VECTOR = {
                 {'table': 'debits', 'values': {'asset': 'XCP', 'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_index': DP['default_block'], 'action': 'issuance fee', 'quantity': 50000000, 'event': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'}}
             ]
         }, {
-            'in': ({'data': b'\x00\x00\x00\x14\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 'tx_index': 502, 'tx_hash': '4188c1f7aaae56ce3097ef256cdbcb644dd43c84e237b4add4f24fd4848cb2c7', 'destination': '', 'fee': 10000, 'btc_amount': 0, 'block_time': 2815010000000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': 281501, 'block_hash': '8e80b430efbe3e1b7cc13d7ec51c1e47a16b0fa23d6dd3c939fb6c4d4cfa311e1f25072500f5f9872373b54c72424b3557fccd68915d00c0afb6523702e11b6a'},),
+            'in': ({'data': b'\x00\x00\x00\x14\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 'tx_index': 502, 'tx_hash': '4188c1f7aaae56ce3097ef256cdbcb644dd43c84e237b4add4f24fd4848cb2c7', 'destination': '', 'fee': 10000, 'btc_amount': 0, 'block_time': 2815010000000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block'], 'block_hash': '8e80b430efbe3e1b7cc13d7ec51c1e47a16b0fa23d6dd3c939fb6c4d4cfa311e1f25072500f5f9872373b54c72424b3557fccd68915d00c0afb6523702e11b6a'},),
             'records': [
-                {'table': 'issuances', 'values': {'transfer': 0, 'tx_hash': '4188c1f7aaae56ce3097ef256cdbcb644dd43c84e237b4add4f24fd4848cb2c7', 'divisible': 1, 'status': 'valid', 'asset': 'A18446744073709551615', 'description': '', 'tx_index': 502, 'issuer': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'fee_paid': 0, 'locked': 0, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_index': 281501, 'quantity': 1000}},
-                {'table': 'credits', 'values': {'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'asset': 'A18446744073709551615', 'event': '4188c1f7aaae56ce3097ef256cdbcb644dd43c84e237b4add4f24fd4848cb2c7', 'block_index': 281501, 'quantity': 1000, 'calling_function': 'issuance'}},
-                {'table': 'debits', 'values': {'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'action': 'issuance fee', 'asset': 'XCP', 'event': '4188c1f7aaae56ce3097ef256cdbcb644dd43c84e237b4add4f24fd4848cb2c7', 'block_index': 281501, 'quantity': 0}}
+                {'table': 'issuances', 'values': {'transfer': 0, 'tx_hash': '4188c1f7aaae56ce3097ef256cdbcb644dd43c84e237b4add4f24fd4848cb2c7', 'divisible': 1, 'status': 'valid', 'asset': 'A18446744073709551615', 'description': '', 'tx_index': 502, 'issuer': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'fee_paid': 0, 'locked': 0, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_index': DP['default_block'], 'quantity': 1000}},
+                {'table': 'credits', 'values': {'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'asset': 'A18446744073709551615', 'event': '4188c1f7aaae56ce3097ef256cdbcb644dd43c84e237b4add4f24fd4848cb2c7', 'block_index': DP['default_block'], 'quantity': 1000, 'calling_function': 'issuance'}},
+                {'table': 'debits', 'values': {'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'action': 'issuance fee', 'asset': 'XCP', 'event': '4188c1f7aaae56ce3097ef256cdbcb644dd43c84e237b4add4f24fd4848cb2c7', 'block_index': DP['default_block'], 'quantity': 0}}
             ]
         }]
     },

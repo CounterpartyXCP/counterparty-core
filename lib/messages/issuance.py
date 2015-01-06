@@ -129,7 +129,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
                               WHERE (address = ? AND asset = ?)''', (source, config.XCP))
             balances = cursor.fetchall()
             cursor.close()
-            if util.enabled('numeric_asset_names', block_index):  # Protocol change.
+            if util.enabled('numeric_asset_names'):  # Protocol change.
                 if len(asset) >= 13:
                     fee = 0
                 else:
@@ -161,10 +161,10 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
 
 def compose (db, source, transfer_destination, asset, quantity, divisible, description):
     callable_, call_date, call_price = False, 0, 0.0
-    call_date, call_price, problems, fee, description, divisible, reissuance = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.last_block(db)['block_index'])
+    call_date, call_price, problems, fee, description, divisible, reissuance = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
 
-    asset_id = util.generate_asset_id(asset, util.last_block(db)['block_index'])
+    asset_id = util.generate_asset_id(asset, util.CURRENT_BLOCK_INDEX)
     data = struct.pack(config.TXTYPE_FORMAT, ID)
     if len(description) <= 42:
         curr_format = FORMAT_2 + '{}p'.format(len(description) + 1)
@@ -227,7 +227,7 @@ def parse (db, tx, message):
 
     # Debit fee.
     if status == 'valid':
-        util.debit(db, tx['block_index'], tx['source'], config.XCP, fee, action="issuance fee", event=tx['tx_hash'])
+        util.debit(db, tx['source'], config.XCP, fee, action="issuance fee", event=tx['tx_hash'])
 
     # Lock?
     lock = False
@@ -276,7 +276,7 @@ def parse (db, tx, message):
 
     # Credit.
     if status == 'valid' and quantity:
-        util.credit(db, tx['block_index'], tx['source'], asset, quantity, action="issuance", event=tx['tx_hash'])
+        util.credit(db, tx['source'], asset, quantity, action="issuance", event=tx['tx_hash'])
 
     issuance_parse_cursor.close()
 

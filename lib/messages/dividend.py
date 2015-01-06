@@ -121,15 +121,15 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
 
 def compose (db, source, quantity_per_unit, asset, dividend_asset):
 
-    dividend_total, outputs, problems, fee = validate(db, source, quantity_per_unit, asset, dividend_asset, util.last_block(db)['block_index'])
+    dividend_total, outputs, problems, fee = validate(db, source, quantity_per_unit, asset, dividend_asset, util.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
     logger.info('Total quantity to be distributed in dividends: {} {}'.format(util.value_out(db, dividend_total, dividend_asset), dividend_asset))
 
     if dividend_asset == config.BTC:
         return (source, [(output['address'], output['dividend_quantity']) for output in outputs], None)
 
-    asset_id = util.get_asset_id(db, asset, util.last_block(db)['block_index'])
-    dividend_asset_id = util.get_asset_id(db, dividend_asset, util.last_block(db)['block_index'])
+    asset_id = util.get_asset_id(db, asset, util.CURRENT_BLOCK_INDEX)
+    dividend_asset_id = util.get_asset_id(db, dividend_asset, util.CURRENT_BLOCK_INDEX)
     data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT_2, quantity_per_unit, asset_id, dividend_asset_id)
     return (source, [], data)
@@ -167,13 +167,13 @@ def parse (db, tx, message):
 
     if status == 'valid':
         # Debit.
-        util.debit(db, tx['block_index'], tx['source'], dividend_asset, dividend_total, action='dividend', event=tx['tx_hash'])
+        util.debit(db, tx['source'], dividend_asset, dividend_total, action='dividend', event=tx['tx_hash'])
         if tx['block_index'] >= 330000 or config.TESTNET: # Protocol change.
-            util.debit(db, tx['block_index'], tx['source'], config.XCP, fee, action='dividend fee', event=tx['tx_hash'])
+            util.debit(db, tx['source'], config.XCP, fee, action='dividend fee', event=tx['tx_hash'])
 
         # Credit.
         for output in outputs:
-            util.credit(db, tx['block_index'], output['address'], dividend_asset, output['dividend_quantity'], action='dividend', event=tx['tx_hash'])
+            util.credit(db, output['address'], dividend_asset, output['dividend_quantity'], action='dividend', event=tx['tx_hash'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

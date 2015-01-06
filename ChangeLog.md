@@ -1,4 +1,8 @@
 ## Client Versions ##
+* v9.49.4 (???)
+	* introduction of global `CURRENT_BLOCK_INDEX`
+	* moved API docs to wiki
+	* improved test coverage
 * v9.49.3 (2014-12-28)
 	* better logging when handling `SIGTERM`, `SIGKILL`
 	* update README

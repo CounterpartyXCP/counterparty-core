@@ -180,9 +180,9 @@ def cancel_bet (db, bet, status, block_index):
     }
     sql='update bets set status = :status where tx_hash = :tx_hash'
     cursor.execute(sql, bindings)
-    log.message(db, block_index, 'update', 'bets', bindings)
+    log.message(db, 'update', 'bets', bindings)
 
-    util.credit(db, block_index, bet['source'], config.XCP, bet['wager_remaining'], action='recredit wager remaining', event=bet['tx_hash'])
+    util.credit(db, bet['source'], config.XCP, bet['wager_remaining'], action='recredit wager remaining', event=bet['tx_hash'])
 
     cursor = db.cursor()
 
@@ -192,11 +192,11 @@ def cancel_bet_match (db, bet_match, status, block_index):
     cursor = db.cursor()
 
     # Recredit tx0 address.
-    util.credit(db, block_index, bet_match['tx0_address'], config.XCP,
+    util.credit(db, bet_match['tx0_address'], config.XCP,
                 bet_match['forward_quantity'], action='recredit forward quantity', event=bet_match['id'])
 
     # Recredit tx1 address.
-    util.credit(db, block_index, bet_match['tx1_address'], config.XCP,
+    util.credit(db, bet_match['tx1_address'], config.XCP,
                 bet_match['backward_quantity'], action='recredit backward quantity', event=bet_match['id'])
 
     # Update status of bet match.
@@ -206,7 +206,7 @@ def cancel_bet_match (db, bet_match, status, block_index):
     }
     sql='update bet_matches set status = :status where id = :bet_match_id'
     cursor.execute(sql, bindings)
-    log.message(db, block_index, 'update', 'bet_matches', bindings)
+    log.message(db, 'update', 'bet_matches', bindings)
 
     cursor.close()
 
@@ -291,7 +291,7 @@ def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
             counterwager_quantity, target_value, leverage, expiration):
 
     problems, leverage = validate(db, source, feed_address, bet_type, deadline, wager_quantity,
-                        counterwager_quantity, target_value, leverage, expiration, util.last_block(db)['block_index'])
+                        counterwager_quantity, target_value, leverage, expiration, util.CURRENT_BLOCK_INDEX)
     if util.date_passed(deadline):
         problems.append('deadline passed')
     if problems: raise exceptions.ComposeError(problems)
@@ -323,7 +323,7 @@ def parse (db, tx, message):
     feed_address = tx['destination']
     if status == 'open':
         try:
-            odds = util.price(wager_quantity, counterwager_quantity, tx['block_index'])
+            odds = util.price(wager_quantity, counterwager_quantity)
         except ZeroDivisionError:
             odds = 0
 
@@ -339,7 +339,7 @@ def parse (db, tx, message):
             balance = balances[0]['quantity']
             if balance < wager_quantity:
                 wager_quantity = balance
-                counterwager_quantity = int(util.price(wager_quantity, odds, tx['block_index']))
+                counterwager_quantity = int(util.price(wager_quantity, odds))
 
         problems, leverage = validate(db, tx['source'], feed_address, bet_type, deadline, wager_quantity,
                             counterwager_quantity, target_value, leverage, expiration, tx['block_index'])
@@ -347,7 +347,7 @@ def parse (db, tx, message):
 
     # Debit quantity wagered. (Escrow.)
     if status == 'open':
-        util.debit(db, tx['block_index'], tx['source'], config.XCP, wager_quantity, action='bet', event=tx['tx_hash'])
+        util.debit(db, tx['source'], config.XCP, wager_quantity, action='bet', event=tx['tx_hash'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {
@@ -406,7 +406,7 @@ def match (db, tx):
     bet_matches = cursor.fetchall()
     if tx['block_index'] > 284500 or config.TESTNET:  # Protocol change.
         sorted(bet_matches, key=lambda x: x['tx_index'])                                        # Sort by tx index second.
-        sorted(bet_matches, key=lambda x: util.price(x['wager_quantity'], x['counterwager_quantity'], tx1['block_index']))   # Sort by price first.
+        sorted(bet_matches, key=lambda x: util.price(x['wager_quantity'], x['counterwager_quantity']))   # Sort by price first.
 
     tx1_status = tx1['status']
     for tx0 in bet_matches:
@@ -443,18 +443,18 @@ def match (db, tx):
 
         # If the odds agree, make the trade. The found order sets the odds,
         # and they trade as much as they can.
-        tx0_odds = util.price(tx0['wager_quantity'], tx0['counterwager_quantity'], tx1['block_index'])
-        tx0_inverse_odds = util.price(tx0['counterwager_quantity'], tx0['wager_quantity'], tx1['block_index'])
-        tx1_odds = util.price(tx1['wager_quantity'], tx1['counterwager_quantity'], tx1['block_index'])
+        tx0_odds = util.price(tx0['wager_quantity'], tx0['counterwager_quantity'])
+        tx0_inverse_odds = util.price(tx0['counterwager_quantity'], tx0['wager_quantity'])
+        tx1_odds = util.price(tx1['wager_quantity'], tx1['counterwager_quantity'])
 
-        if tx['block_index'] < 286000: tx0_inverse_odds = util.price(1, tx0_odds, tx1['block_index']) # Protocol change.
+        if tx['block_index'] < 286000: tx0_inverse_odds = util.price(1, tx0_odds) # Protocol change.
 
         logger.debug('Tx0 Inverse Odds: {}; Tx1 Odds: {}'.format(float(tx0_inverse_odds), float(tx1_odds)))
         if tx0_inverse_odds > tx1_odds:
             logger.debug('Skipping: price mismatch.')
         else:
-            logger.debug('Potential forward quantities: {}, {}'.format(tx0_wager_remaining, int(util.price(tx1_wager_remaining, tx1_odds, tx1['block_index']))))
-            forward_quantity = int(min(tx0_wager_remaining, int(util.price(tx1_wager_remaining, tx1_odds, tx1['block_index']))))
+            logger.debug('Potential forward quantities: {}, {}'.format(tx0_wager_remaining, int(util.price(tx1_wager_remaining, tx1_odds))))
+            forward_quantity = int(min(tx0_wager_remaining, int(util.price(tx1_wager_remaining, tx1_odds))))
             logger.debug('Forward Quantity: {}'.format(forward_quantity))
             backward_quantity = round(forward_quantity / tx0_odds)
             logger.debug('Backward Quantity: {}'.format(backward_quantity))
@@ -481,7 +481,7 @@ def match (db, tx):
             if tx0_wager_remaining <= 0 or tx0_counterwager_remaining <= 0:
                 # Fill order, and recredit give_remaining.
                 tx0_status = 'filled'
-                util.credit(db, tx1['block_index'], tx0['source'], config.XCP, tx0_wager_remaining, event=tx1['tx_hash'], action='filled')
+                util.credit(db, tx0['source'], config.XCP, tx0_wager_remaining, event=tx1['tx_hash'], action='filled')
             bindings = {
                 'wager_remaining': tx0_wager_remaining,
                 'counterwager_remaining': tx0_counterwager_remaining,
@@ -490,13 +490,13 @@ def match (db, tx):
             }
             sql='update bets set wager_remaining = :wager_remaining, counterwager_remaining = :counterwager_remaining, status = :status where tx_hash = :tx_hash'
             cursor.execute(sql, bindings)
-            log.message(db, tx1['block_index'], 'update', 'bets', bindings)
+            log.message(db, 'update', 'bets', bindings)
 
             if tx1['block_index'] >= 292000 or config.TESTNET:  # Protocol change
                 if tx1_wager_remaining <= 0 or tx1_counterwager_remaining <= 0:
                     # Fill order, and recredit give_remaining.
                     tx1_status = 'filled'
-                    util.credit(db, tx1['block_index'], tx1['source'], config.XCP, tx1_wager_remaining, event=tx1['tx_hash'], action='filled')
+                    util.credit(db, tx1['source'], config.XCP, tx1_wager_remaining, event=tx1['tx_hash'], action='filled')
             # tx1
             bindings = {
                 'wager_remaining': tx1_wager_remaining,
@@ -506,7 +506,7 @@ def match (db, tx):
             }
             sql='update bets set wager_remaining = :wager_remaining, counterwager_remaining = :counterwager_remaining, status = :status where tx_hash = :tx_hash'
             cursor.execute(sql, bindings)
-            log.message(db, tx1['block_index'], 'update', 'bets', bindings)
+            log.message(db, 'update', 'bets', bindings)
 
             # Get last value of feed.
             broadcasts = list(cursor.execute('''SELECT * FROM broadcasts WHERE (status = ? AND source = ?) ORDER BY tx_index ASC''', ('valid', feed_address)))
