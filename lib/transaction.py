@@ -158,7 +158,7 @@ def make_fully_valid(pubkey_start):
     return pubkey
 
 
-def serialise (block_index, encoding, inputs, destination_outputs, data_output=None, change_output=None, dust_return_pubkey=None):
+def serialise (encoding, inputs, destination_outputs, data_output=None, change_output=None, dust_return_pubkey=None):
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
     # Number of inputs.
@@ -295,7 +295,6 @@ def construct (db, proxy, tx_info, encoding='auto',
                exact_fee=None, fee_provided=0, provided_pubkeys=None,
                allow_unconfirmed_inputs=False):
 
-    block_index = util.CURRENT_BLOCK_INDEX
     (source, destination_outputs, data) = tx_info
 
     # Sanity checks.
@@ -453,7 +452,7 @@ def construct (db, proxy, tx_info, encoding='auto',
 
 
     # Serialise inputs and outputs.
-    unsigned_tx = serialise(block_index, encoding, inputs, destination_outputs,
+    unsigned_tx = serialise(encoding, inputs, destination_outputs,
                             data_output, change_output,
                             dust_return_pubkey=dust_return_pubkey)
     unsigned_tx_hex = binascii.hexlify(unsigned_tx).decode('utf-8')

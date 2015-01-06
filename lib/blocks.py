@@ -154,8 +154,8 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
     cursor.close()
 
     # Consensus hashes.
-    new_ledger_hash = check.consensus_hash(db, block_index, 'ledger_hash', previous_ledger_hash, util.BLOCK_LEDGER)
-    new_txlist_hash = check.consensus_hash(db, block_index, 'txlist_hash', previous_txlist_hash, txlist)
+    new_ledger_hash = check.consensus_hash(db, 'ledger_hash', previous_ledger_hash, util.BLOCK_LEDGER)
+    new_txlist_hash = check.consensus_hash(db, 'txlist_hash', previous_txlist_hash, txlist)
 
     return new_ledger_hash, new_txlist_hash
 
@@ -349,23 +349,24 @@ def initialise(db):
 
     cursor.close()
 
-def get_tx_info(proxy, tx_hex, block_index, block_parser=None):
+def get_tx_info(proxy, tx_hex, block_parser=None):
     try:
         if util.enabled('multisig_addresses'):   # Protocol change.
             tx_info = get_tx_info2(proxy, tx_hex, block_parser=block_parser)
         else:
-            tx_info = get_tx_info1(proxy, tx_hex, block_index, block_parser=block_parser)
+            tx_info = get_tx_info1(proxy, tx_hex, block_parser=block_parser)
     except (DecodeError, BTCOnlyError) as e:
         # NOTE: For debugging, logger.debug('Could not decode: ' + str(e))
         tx_info = b'', None, None, None, None
 
     return tx_info
 
-def get_tx_info1(proxy, tx_hex, block_index, block_parser=None):
+def get_tx_info1(proxy, tx_hex, block_parser=None):
     """
     The destination, if it exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
+    block_index = util.CURRENT_BLOCK_INDEX
     ctx = backend.deserialize(tx_hex)
 
     def get_pubkeyhash(scriptpubkey):
@@ -644,7 +645,7 @@ def reparse(db, block_index=None, quiet=False):
     """
     logger.info('Reparsing all transactions.')
 
-    check.version(block_index)
+    check.version()
 
     cursor = db.cursor()
     if quiet:
@@ -683,7 +684,7 @@ def list_tx(db, proxy, block_hash, block_index, block_time, tx_hash, tx_index):
 
     # Get the important details about each transaction.
     tx_dict = backend.get_cached_raw_transaction(tx_hash, verbose=True)
-    source, destination, btc_amount, fee, data = get_tx_info(proxy, tx_dict['hex'], block_index)
+    source, destination, btc_amount, fee, data = get_tx_info(proxy, tx_dict['hex'])
 
     # For mempool
     if block_hash == None:
@@ -772,7 +773,7 @@ def kickstart(db, proxy, bitcoind_dir):
             # Get `tx_info`s for transactions in this block.
             block = block_parser.read_raw_block(current_hash)
             for tx in block['transactions']:
-                source, destination, btc_amount, fee, data = get_tx_info(proxy, tx['__data__'], block['block_index'], block_parser)
+                source, destination, btc_amount, fee, data = get_tx_info(proxy, tx['__data__'], block_parser)
                 if source and (data or destination == config.UNSPENDABLE):
                     transactions.append((
                         tx['tx_hash'], block['block_index'], block['block_hash'], block['block_time'],
@@ -858,7 +859,7 @@ def follow(db, proxy):
             logger.info('Client minor version number mismatch ({} ≠ {}).'.format(minor_version, config.VERSION_MINOR))
             reparse(db, quiet=False)
 
-        check.version(block_index)
+        check.version()
         logger.info('Resuming parsing.')
 
     # Get index of last transaction.
@@ -933,7 +934,7 @@ def follow(db, proxy):
 
             # Check version. (Don’t add any blocks to the database while
             # running an out‐of‐date client!)
-            check.version(block_index)
+            check.version()
 
             # Get and parse transactions in this block (atomically).
             block_hash_bin = backend.getblockhash(proxy, current_index)
