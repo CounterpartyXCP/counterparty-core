@@ -1,6 +1,6 @@
 """
 This structure holds the unit test vectors. They are used to generate test cases in conftest.py.
-The results are computed using check_ouputs in util_test.py.
+The results are computed using check_outputs in util_test.py.
 The function supports three types of output checks:
 - Return values - 'out'
 - Errors raised - 'error'
