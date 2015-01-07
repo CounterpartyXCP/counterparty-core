@@ -26,7 +26,6 @@ from bitcoin.core import b2lx
 from lib import config
 from lib import exceptions
 from lib import util
-from lib import blockchain
 from lib import script
 from lib import backend
 
@@ -67,16 +66,16 @@ def op_push (i):
     else:
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
-def get_dust_return_pubkey(proxy, source, provided_pubkeys, encoding):
+def get_dust_return_pubkey(source, provided_pubkeys, encoding):
     # Get `dust_return_pubkey`, if necessary.
     if encoding in ('multisig', 'pubkeyhash'):
 
         # Get hex dust return pubkey.
         if script.is_multisig(source):
-            a, self_pubkeys, b = script.extract_array(backend.multisig_pubkeyhashes_to_pubkeys(proxy, source, provided_pubkeys))
+            a, self_pubkeys, b = script.extract_array(backend.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys))
             dust_return_pubkey_hex = self_pubkeys[0]
         else:
-            dust_return_pubkey_hex = backend.pubkeyhash_to_pubkey(proxy, source, provided_pubkeys)
+            dust_return_pubkey_hex = backend.pubkeyhash_to_pubkey(source, provided_pubkeys)
 
         # Convert hex public key into the (binary) dust return pubkey.
         try:
@@ -287,7 +286,7 @@ def chunks(l, n):
     for i in range(0, len(l), n):
         yield l[i:i+n]
 
-def construct (db, proxy, tx_info, encoding='auto',
+def construct (db, tx_info, encoding='auto',
                fee_per_kb=config.DEFAULT_FEE_PER_KB,
                regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
                multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
@@ -325,7 +324,7 @@ def construct (db, proxy, tx_info, encoding='auto',
         # Address.
         script.validate(address)
         if script.is_multisig(address):
-            destination_outputs_new.append((backend.multisig_pubkeyhashes_to_pubkeys(proxy, address, provided_pubkeys), value))
+            destination_outputs_new.append((backend.multisig_pubkeyhashes_to_pubkeys(address, provided_pubkeys), value))
         else:
             destination_outputs_new.append((address, value))
 
@@ -381,12 +380,11 @@ def construct (db, proxy, tx_info, encoding='auto',
 
     # Source.
         # If public key is necessary for construction of (unsigned)
-        # transaction, either use the public key provided, or derive it from a
-        # private key retrieved from wallet.
+        # transaction, use the public key provided, or find it from the
+        # blockchain.
     if source:
         script.validate(source)
-    dust_return_pubkey = get_dust_return_pubkey(proxy, source,
-                                                provided_pubkeys, encoding)
+    dust_return_pubkey = get_dust_return_pubkey(source, provided_pubkeys, encoding)
 
     # Calculate collective size of outputs, for fee calculation.
     if encoding == 'multisig':
@@ -398,7 +396,7 @@ def construct (db, proxy, tx_info, encoding='auto',
     outputs_size = ((25 + 9) * len(destination_outputs)) + (len(data_array) * data_output_size)
 
     # Get inputs.
-    unspent = backend.get_unspent_txouts(proxy, source)
+    unspent = backend.get_unspent_txouts(source)
     unspent = backend.sort_unspent_txouts(unspent, allow_unconfirmed_inputs)
     logger.debug('Sorted UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
 
@@ -443,7 +441,7 @@ def construct (db, proxy, tx_info, encoding='auto',
     # Change output.
     if change_quantity:
         if script.is_multisig(source):
-            change_address = backend.multisig_pubkeyhashes_to_pubkeys(proxy, source, provided_pubkeys)
+            change_address = backend.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
         else:
             change_address = source
         change_output = (change_address, change_quantity)
@@ -478,7 +476,7 @@ def construct (db, proxy, tx_info, encoding='auto',
 
     # Parsed transaction info.
     try:
-        parsed_source, parsed_destination, x, y, parsed_data = blocks.get_tx_info2(proxy, unsigned_tx_hex)
+        parsed_source, parsed_destination, x, y, parsed_data = blocks.get_tx_info2(unsigned_tx_hex)
     except exceptions.BTCOnlyError:
         # Skip BTC‐only transactions.
         return unsigned_tx_hex
@@ -491,39 +489,31 @@ def construct (db, proxy, tx_info, encoding='auto',
 
     return unsigned_tx_hex
 
-def sign_tx (proxy, unsigned_tx_hex, private_key_wif=None):
+def sign_tx(unsigned_tx_hex, private_key_wif):
     """Sign unsigned transaction serialisation."""
+    
+    for char in private_key_wif:
+        if char not in util.b58_digits:
+            raise exceptions.TransactionError('invalid private key')
 
-    if private_key_wif:
-        for char in private_key_wif:
-            if char not in util.b58_digits:
-                raise exceptions.TransactionError('invalid private key')
-
-        # TODO: Hack! (pybitcointools is Python 2 only)
-        import subprocess
-        i = 0
-        tx_hex = unsigned_tx_hex
-        while True: # pybtctool doesn’t implement `signall`
-            try:
-                tx_hex = subprocess.check_output(['pybtctool', 'sign', tx_hex, str(i), private_key_wif], stderr=subprocess.DEVNULL)
-            except Exception as e:
-                break
-        if tx_hex != unsigned_tx_hex:
-            signed_tx_hex = tx_hex.decode('utf-8')
-            return signed_tx_hex[:-1]   # Get rid of newline.
-        else:
-            raise exceptions.TransactionError('Could not sign transaction with pybtctool.')
-
-    else:   # Assume source is in wallet and wallet is unlocked.
-        result = backend.signrawtransaction(proxy, backend.deserialize(unsigned_tx_hex))
-        if result['complete']:
-            signed_tx_hex = util.hexlify(backend.serialize(result['tx']))
-        else:
-            raise exceptions.TransactionError('Could not sign transaction with Bitcoin Core.')
+    # TODO: Hack! (pybitcointools is Python 2 only)
+    import subprocess
+    i = 0
+    tx_hex = unsigned_tx_hex
+    while True: # pybtctool doesn’t implement `signall`
+        try:
+            tx_hex = subprocess.check_output(['pybtctool', 'sign', tx_hex, str(i), private_key_wif], stderr=subprocess.DEVNULL)
+        except Exception as e:
+            break
+    if tx_hex != unsigned_tx_hex:
+        signed_tx_hex = tx_hex.decode('utf-8')
+        return signed_tx_hex[:-1]   # Get rid of newline.
+    else:
+        raise exceptions.TransactionError('Could not sign transaction with pybtctool.')
 
     return signed_tx_hex
 
-def broadcast_tx (proxy, signed_tx_hex):
-    return b2lx(backend.sendrawtransaction(proxy, backend.deserialize(signed_tx_hex)))
+def broadcast_tx (signed_tx_hex):
+    return backend.sendrawtransaction(signed_tx_hex)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

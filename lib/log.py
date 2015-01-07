@@ -15,13 +15,14 @@ from lib import config
 from lib import exceptions
 from lib import util
 
-def set_up(args, logfile=True):
+def set_up(verbose=False, logfile=True):
     logger = logging.getLogger()    # Get root logger.
-    logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
+    log_level = logging.DEBUG if verbose else logging.INFO
+    logger.setLevel(log_level)
 
     # Console Logging
     console = logging.StreamHandler()
-    console.setLevel(logging.DEBUG if args.verbose else logging.INFO)
+    console.setLevel(log_level)
     LOGFORMAT = '%(log_color)s[%(levelname)s] %(message)s%(reset)s'
     LOGCOLORS = {'WARNING': 'yellow', 'ERROR': 'red', 'CRITICAL': 'red'}
     formatter = ColoredFormatter(LOGFORMAT, log_colors=LOGCOLORS)
@@ -36,7 +37,7 @@ def set_up(args, logfile=True):
             fileh = util_windows.SanitizedRotatingFileHandler(config.LOG, maxBytes=max_log_size, backupCount=5)
         else:
             fileh = logging.handlers.RotatingFileHandler(config.LOG, maxBytes=max_log_size, backupCount=5)
-        fileh.setLevel(logging.DEBUG if args.verbose else logging.INFO)
+        fileh.setLevel(log_level)
         LOGFORMAT = '%(asctime)s [%(levelname)s] %(message)s'
         formatter = logging.Formatter(LOGFORMAT, '%Y-%m-%d-T%H:%M:%S%z')
         fileh.setFormatter(formatter)
@@ -44,10 +45,10 @@ def set_up(args, logfile=True):
 
     # Quieten noisy libraries.
     requests_log = logging.getLogger("requests")
-    requests_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
+    requests_log.setLevel(log_level)
     requests_log.propagate = False
     urllib3_log = logging.getLogger('urllib3')
-    urllib3_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
+    urllib3_log.setLevel(log_level)
     urllib3_log.propagate = False
 
 def curr_time():

@@ -1,0 +1,1 @@
+https://github.com/petertodd/python-bitcoinlib/archive/python-bitcoinlib-v0.3.0.tar.gz#egg=python-bitcoinlib-0.3.0

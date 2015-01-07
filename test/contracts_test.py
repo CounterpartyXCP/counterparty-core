@@ -29,9 +29,7 @@ startgas = 10000
 """
 
 ### Counterparty compatibility ###
-
-import counterpartyd
-from lib import (util, config, database)
+from lib import (util, config, database, server)
 from lib.messages import execute
 from lib.messages.scriptlib import (blocks, rlp, processblock)
 
@@ -211,9 +209,9 @@ tester.a2 = 'dceceaf3fc5c0a63d195d69b1a90011b7b19650d'
 tester.a3 = '598443f1880ef585b21f1d7585bd0577402861e5'
 
 def setup_function(function):
-    counterpartyd.set_options(rpc_port=9999, data_dir=tempfile.gettempdir(), database_file=tempfile.gettempdir()+'/counterpartyd.unittest.db', 
-                              rpc_password='pass', backend_rpc_password='pass',
-                              testnet=True, testcoin=False, backend_rpc_ssl_verify=False)
+    server.set_options(rpc_port=9999, data_dir=tempfile.gettempdir(), database_file=tempfile.gettempdir()+'/counterpartyd.unittest.db', 
+                              rpc_password='pass', backend_password='pass',
+                              testnet=True, testcoin=False, backend_ssl_verify=False)
     try:
         os.remove(config.DATABASE)
     except:

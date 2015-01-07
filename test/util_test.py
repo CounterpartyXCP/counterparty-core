@@ -10,9 +10,8 @@ from requests.auth import HTTPBasicAuth
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
-from lib import (config, api, util, exceptions, blocks, check, backend, database, transaction, script)
+from lib import (config, api, util, exceptions, blocks, check, backend, database, transaction, script, server)
 from lib.messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve)
-import counterpartyd
 
 from fixtures.params import DEFAULT_PARAMS as DP
 from fixtures.scenarios import UNITTEST_FIXTURE, INTEGRATION_SCENARIOS, standard_scenarios_params
@@ -30,26 +29,13 @@ locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 # TODO: This should grab the correct backend port and password, when used for, e.g., saverawtransactions.
 COUNTERPARTYD_OPTIONS = {
     'testcoin': False,
-    'backend_rpc_ssl_verify': False,
     'data_dir': tempfile.gettempdir(),
     'rpc_port': 9999,
     'rpc_password': 'pass',
-    'backend_rpc_port': 8888,
-    'backend_rpc_password': 'pass'
+    'backend_port': 8888,
+    'backend_password': 'pass',
+    'backend_ssl_verify': False
 }
-
-class RpcProxy():
-    def __init__(self, service_url=None):
-        pass
-    @staticmethod
-    def getrawtransaction(txid):
-        tx_hex = getrawtransaction(rawtransactions_db, txid)
-        ctx = backend.deserialize(tx_hex)
-        return ctx
-
-def get_proxy():
-    """Return RPC Proxy object."""
-    return RpcProxy()
 
 def dump_database(db):
     """Create a new database dump from db object as input."""
@@ -131,7 +117,7 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
     if pytest.config.option.savescenarios:
         save_rawtransaction(rawtransactions_db, tx_hash, raw_transaction)
 
-    source, destination, btc_amount, fee, data = blocks.get_tx_info2(get_proxy(), raw_transaction)
+    source, destination, btc_amount, fee, data = blocks.get_tx_info2(raw_transaction)
     transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
     cursor.execute('''INSERT INTO transactions VALUES (?,?,?,?,?,?,?,?,?,?,?)''', transaction)
     tx = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = ?''', (tx_index,)))[0]
@@ -155,7 +141,7 @@ def insert_transaction(transaction, db):
 def initialise_rawtransactions_db(db):
     """Drop old raw transaction table, create new one and populate it from unspent_outputs.json."""
     if pytest.config.option.savescenarios:
-        counterpartyd.set_options(testnet=True, **COUNTERPARTYD_OPTIONS)
+        server.set_options(testnet=True, **COUNTERPARTYD_OPTIONS)
         cursor = db.cursor()
         cursor.execute('DROP TABLE  IF EXISTS raw_transactions')
         cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT)')
@@ -192,7 +178,7 @@ def initialise_db(db):
 
 def run_scenario(scenario, rawtransactions_db):
     """Execute a scenario for integration test, returns a dump of the db, a json with raw transactions and the full log."""
-    counterpartyd.set_options(database_file=':memory:', testnet=True, **COUNTERPARTYD_OPTIONS)
+    server.set_options(database_file=':memory:', testnet=True, **COUNTERPARTYD_OPTIONS)
     config.PREFIX = b'TESTXXXX'
     util.FIRST_MULTISIG_BLOCK_TESTNET = 1
     checkpoints = dict(check.CHECKPOINTS_TESTNET)
@@ -219,7 +205,7 @@ def run_scenario(scenario, rawtransactions_db):
         if tx[0] != 'create_next_block':
             module = sys.modules['lib.messages.{}'.format(tx[0])]
             compose = getattr(module, 'compose')
-            unsigned_tx_hex = transaction.construct(db, get_proxy(), compose(db, *tx[1]), **tx[2])
+            unsigned_tx_hex = transaction.construct(db, compose(db, *tx[1]), **tx[2])
             raw_transactions.append({tx[0]: unsigned_tx_hex})
             insert_raw_transaction(unsigned_tx_hex, db, rawtransactions_db)
         else:
@@ -302,7 +288,7 @@ def vector_to_args(vector, functions=[]):
 def exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db):
     """Execute tested_method within context and arguments."""
     if tx_name == 'transaction' and method == 'construct':
-        return tested_method(counterpartyd_db, get_proxy(), inputs[0], **inputs[1])
+        return tested_method(counterpartyd_db, inputs[0], **inputs[1])
     elif (tx_name == 'util' and (method == 'api' or method == 'date_passed' or method == 'price' or method == 'sortkeypicker' or method == 'generate_asset_id' \
          or method == 'generate_asset_name' or method == 'dhash_string' or method == 'enabled' or method == 'get_url' or method == 'hexlify')) or tx_name == 'script':
         return tested_method(*inputs)
@@ -332,7 +318,7 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, counterparty
             if tx_name == 'order' and inputs[1]=='BTC':
                 print('give btc')
                 tx_params['fee_provided'] = DP['fee_provided']
-            unsigned_tx_hex = transaction.construct(counterpartyd_db, get_proxy(), test_outputs, **tx_params)
+            unsigned_tx_hex = transaction.construct(counterpartyd_db, test_outputs, **tx_params)
             print(tx_name)
             print(unsigned_tx_hex)
 
@@ -374,7 +360,7 @@ def reparse(testnet=True):
     """Reparse all transaction from the database, create a new blockchain and compare it to the old one."""
     options = dict(COUNTERPARTYD_OPTIONS)
     options.pop('data_dir')
-    counterpartyd.set_options(database_file=':memory:', testnet=testnet, **options)
+    server.set_options(database_file=':memory:', testnet=testnet, **options)
 
     if testnet:
         config.PREFIX = b'TESTXXXX'

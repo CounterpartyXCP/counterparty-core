@@ -3,6 +3,14 @@
 	* introduction of global `CURRENT_BLOCK_INDEX`
 	* moved API docs to wiki
 	* improved test coverage
+	* split `counterpartyd.py` into `counteparty-server.py` and `counteparty-client.py`
+	* `counteparty-server.py` manages now only these actions: `server`, `reparse`, `rollback` and `kickstart`
+	* renamed backend parameters: BACKEND_RPC_* are replaced by BACKEND_*
+	* removed support of parameters `bitcoind_rpc_*` in the configuration file
+	* `BLOCKCHAIN_SERVICE_NAME` is replaced by `BACKEND_NAME`
+	* `jmcorgan` is replaced by `addrindex`
+	* support of Insight, Blockr and SoChain are removed
+	* new specific configuration file for `counteparty-client.py`
 * v9.49.3 (2014-12-28)
 	* better logging when handling `SIGTERM`, `SIGKILL`
 	* update README

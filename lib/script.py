@@ -287,5 +287,4 @@ def extract_pubkeys(pub):
             pubkeys.append(pub)
     return pubkeys
 
-
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

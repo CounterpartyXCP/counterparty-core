@@ -138,11 +138,11 @@ def version():
 
     logger.debug('Version check passed.')
 
-def backend_state(proxy):
+def backend_state():
     """Checks blocktime of last block to see if {} Core is running behind.""".format(config.BTC_NAME)
-    block_count = backend.getblockcount(proxy)
-    block_hash_bin = backend.getblockhash(proxy, block_count)
-    cblock = backend.getblock(proxy, block_hash_bin)
+    block_count = backend.getblockcount()
+    block_hash = backend.getblockhash(block_count)
+    cblock = backend.getblock(block_hash)
     time_behind = time.time() - cblock.nTime   # TODO: Block times are not very reliable.
     if time_behind > 60 * 60 * 2:   # Two hours.
         raise BackendError('Bitcoind is running about {} hours behind.'.format(round(time_behind / 3600)))

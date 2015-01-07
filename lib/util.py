@@ -564,6 +564,8 @@ def get_balance (db, address, asset):
 def hexlify(x):
     """Return the hexadecimal representation of the binary data. Decode from ASCII to UTF-8."""
     return binascii.hexlify(x).decode('ascii')
+def unhexlify(hex_string):
+    return binascii.unhexlify(bytes(hex_string, 'utf-8'))
 
 ### Protocol Changes ###
 def enabled (change_name):

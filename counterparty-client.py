@@ -5,7 +5,6 @@ import sys
 import argparse
 import decimal
 import logging
-logger = logging.getLogger(__name__)
 import time
 import dateutil.parser
 import calendar
@@ -15,24 +14,29 @@ import string
 
 import appdirs
 from prettytable import PrettyTable
+from colorlog import ColoredFormatter
 
-from lib import config
-from lib import util
-from lib import exceptions
-from lib import backend
-from lib import database
-from lib import transaction
-from lib import script
-from lib import api
-from lib import log
+from client import config
+from client import util
+from client import script
+from client import wallet
 
 if os.name == 'nt':
-    from lib import util_windows
+    from client import util_windows
 
 D = decimal.Decimal
 
-class ConfigurationError(Exception):
-    pass
+logger = logging.getLogger()
+
+class ConfigurationError(Exception): pass
+class InputError(Exception): pass
+
+def last_db_block_index():
+    sql = '''SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1'''
+    results = util.api('sql', {'query': sql})
+    for result in results:
+        return result['block_index']
+    return 0
 
 def last_db_block_index():
     import apsw
@@ -74,18 +78,18 @@ def get_address(address):
     return address_dict
 
 def format_order(order):
-    give_quantity = util.value_out(db, D(order['give_quantity']), order['give_asset'])
-    get_quantity = util.value_out(db, D(order['get_quantity']), order['get_asset'])
-    give_remaining = util.value_out(db, D(order['give_remaining']), order['give_asset'])
-    get_remaining = util.value_out(db, D(order['get_remaining']), order['get_asset'])
+    give_quantity = util.value_out(D(order['give_quantity']), order['give_asset'])
+    get_quantity = util.value_out(D(order['get_quantity']), order['get_asset'])
+    give_remaining = util.value_out(D(order['give_remaining']), order['give_asset'])
+    get_remaining = util.value_out(D(order['get_remaining']), order['get_asset'])
     give_asset = order['give_asset']
     get_asset = order['get_asset']
 
     if get_asset < give_asset:
-        price = util.value_out(db, D(order['get_quantity']) / D(order['give_quantity']), 'price')
+        price = util.value_out(D(order['get_quantity']) / D(order['give_quantity']), 'price')
         price_assets = get_asset + '/' + give_asset + ' ask'
     else:
-        price = util.value_out(db, D(order['give_quantity']) / D(order['get_quantity']), 'price')
+        price = util.value_out(D(order['give_quantity']) / D(order['get_quantity']), 'price')
         price_assets = give_asset + '/' + get_asset + ' bid'
 
     return [D(give_remaining), give_asset, price, price_assets, str(order['fee_required'] / config.UNIT), str(order['fee_provided'] / config.UNIT), order['expire_index'] - last_db_block_index(), order['tx_hash']]
@@ -100,13 +104,13 @@ def format_bet(bet):
     if not bet['leverage']:
         leverage = None
     else:
-        leverage = util.value_out(db, D(bet['leverage']) / 5040, 'leverage')
+        leverage = util.value_out(D(bet['leverage']) / 5040, 'leverage')
 
-    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], log.isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.value_out(db, odds, 'odds'), bet['expire_index'] - last_db_block_index, bet['tx_hash']]
+    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], util.isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.value_out(odds, 'odds'), bet['expire_index'] - last_db_block_index, bet['tx_hash']]
 
-def format_order_match(db, order_match):
+def format_order_match(order_match):
     order_match_id = util.make_id(order_match['tx0_hash'], order_match['tx1_hash'])
-    order_match_time_left = order_match['match_expire_index'] - last_db_block_index
+    order_match_time_left = order_match['match_expire_index'] - last_db_block_index()
     return [order_match_id, order_match_time_left]
 
 def format_feed(feed):
@@ -121,8 +125,8 @@ def market(give_asset, get_asset):
 
     # Your Pending Orders Matches.
     addresses = []
-    for bunch in backend.get_wallet(proxy):
-        addresses.append(bunch[:2][0])
+    for bunch in wallet.get_wallet():
+        addresses.append(bunch[0])
     filters = [
         ('tx0_address', 'IN', addresses),
         ('tx1_address', 'IN', addresses)
@@ -130,7 +134,7 @@ def market(give_asset, get_asset):
     awaiting_btcs = util.api('get_order_matches', {'filters': filters, 'filterop': 'OR', 'status': 'pending'})
     table = PrettyTable(['Matched Order ID', 'Time Left'])
     for order_match in awaiting_btcs:
-        order_match = format_order_match(db, order_match)
+        order_match = format_order_match(order_match)
         table.add_row(order_match)
     print('Your Pending Order Matches')
     print(table)
@@ -180,15 +184,15 @@ def market(give_asset, get_asset):
     print(table)
 
 def get_pubkey_monosig(pubkeyhash):
-    if backend.is_valid(proxy, pubkeyhash):
+    if wallet.is_valid(pubkeyhash):
 
         # If in wallet, get from wallet.
-        if backend.is_mine(proxy, pubkeyhash):
-            return util.hexlify(backend.wallet_pubkeyhash_to_pubkey(proxy, pubkeyhash))
+        if wallet.is_mine(pubkeyhash):
+            return wallet.get_pubkey(pubkeyhash)
 
         # If in blockchain (and not in wallet), get from blockchain.
         try:
-            return backend.pubkeyhash_to_pubkey(proxy, pubkeyhash, provided_pubkeys=None)
+            return util.api('search_pubkey', {'pubkeyhash':pubkeyhash, 'provided_pubkeys':None})
         except script.AddressError:
             pass
 
@@ -232,17 +236,6 @@ def cli(method, params, unsigned):
                 pubkeys += get_pubkeys(address)
     params['pubkey'] = pubkeys
 
-    # Get unsigned transaction serialisation.
-    """  # NOTE: For debugging, e.g. with `Invalid Params` error.
-    tx_info = sys.modules['lib.send'].compose(db, params['source'], params['destination'], params['asset'], params['quantity'])
-    print(transaction.construct(db, proxy, tx_info, encoding=params['encoding'],
-                                        fee_per_kb=params['fee_per_kb'],
-                                        regular_dust_size=params['regular_dust_size'],
-                                        multisig_dust_size=params['multisig_dust_size'],
-                                        op_return_value=params['op_return_value'],
-                                        provided_pubkeys=params['pubkey'],
-                                        allow_unconfirmed_inputs=params['allow_unconfirmed_inputs']))
-    exit(0)"""
     unsigned_tx_hex = util.api(method, params)
     logger.info('Transaction (unsigned): {}'.format(unsigned_tx_hex))
 
@@ -250,34 +243,28 @@ def cli(method, params, unsigned):
     if script.is_multisig(params['source']):
         logger.info('Multi‐signature transactions are signed and broadcasted manually.')
     elif not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
-        if backend.is_mine(proxy, params['source']):
-            private_key_wif = None
-        elif not private_key_wif:   # If private key was not given earlier.
-            private_key_wif = input('Private key (Wallet Import Format): ')
-
-        # Sign and broadcast.
-        signed_tx_hex = transaction.sign_tx(proxy, unsigned_tx_hex, private_key_wif=private_key_wif)
+        if not wallet.is_mine(params['source']):
+            raise Exception('Source address not in your wallet.')
+        # Sign 
+        signed_tx_hex = wallet.sign_raw_transaction(unsigned_tx_hex)
         logger.info('Transaction (signed): {}'.format(signed_tx_hex))
-        logger.info('Hash of transaction (broadcasted): {}'.format(transaction.broadcast_tx(proxy, signed_tx_hex)))
+        # and broadcast.
+        tx_hash = util.api('broadcast_tx', {'signed_tx_hex': signed_tx_hex})
+        logger.info('Hash of transaction (broadcasted): {}'.format(tx_hash))
 
-def set_options(data_dir=None, backend_rpc_connect=None,
-                 backend_rpc_port=None, backend_rpc_user=None, backend_rpc_password=None,
-                 backend_rpc_ssl=False, backend_rpc_ssl_verify=True,
-                 blockchain_service_name=None, blockchain_service_connect=None,
-                 rpc_host=None, rpc_port=None, rpc_user=None,
-                 rpc_password=None, rpc_allow_cors=None, log_file=None,
-                 config_file=None, database_file=None, testnet=False,
-                 testcoin=False,
-                 broadcast_tx_mainnet=None):
+def set_options(data_dir=None, config_file=None, testnet=False, testcoin=False,
+                counterparty_rpc_connect=None, counterparty_rpc_port=None, 
+                counterparty_rpc_user=None, counterparty_rpc_password=None,
+                counterparty_rpc_ssl=False, counterparty_rpc_ssl_verify=True,
+                wallet_name=None, wallet_connect=None, wallet_port=None, 
+                wallet_user=None, wallet_password=None,
+                wallet_ssl=False, wallet_ssl_verify=True):
 
-    # Set up logging.
-    # Log unhandled errors.
-    log.set_up(args, logfile=False)
     def handle_exception(exc_type, exc_value, exc_traceback):
         logger.error("Unhandled Exception", exc_info=(exc_type, exc_value, exc_traceback))
     sys.excepthook = handle_exception
 
-    logger.info('Running v{} of counterpartyd.'.format(config.VERSION_STRING, config.XCP_CLIENT))
+    logger.info('Running v{} of counterparty-client.'.format(config.VERSION_STRING, config.XCP_CLIENT))
 
     # Data directory
     if not data_dir:
@@ -316,239 +303,167 @@ def set_options(data_dir=None, backend_rpc_connect=None,
     ##############
     # THINGS WE CONNECT TO
 
-    # Backend RPC host (Bitcoin Core)
-    if backend_rpc_connect:
-        config.BACKEND_RPC_CONNECT = backend_rpc_connect
-    elif has_config and 'backend-rpc-connect' in configfile['Default'] and configfile['Default']['backend-rpc-connect']:
-        config.BACKEND_RPC_CONNECT = configfile['Default']['backend-rpc-connect']
-    elif has_config and 'bitcoind-rpc-connect' in configfile['Default'] and configfile['Default']['bitcoind-rpc-connect']:
-        config.BACKEND_RPC_CONNECT = configfile['Default']['bitcoind-rpc-connect']
+    # Counterparty server host (Bitcoin Core)
+    if counterparty_rpc_connect:
+        config.COUNTERPARTY_RPC_CONNECT = counterparty_rpc_connect
+    elif has_config and 'counterparty-rpc-connect' in configfile['Default'] and configfile['Default']['counterparty-rpc-connect']:
+        config.COUNTERPARTY_RPC_CONNECT = configfile['Default']['counterparty-rpc-connect']
     else:
-        config.BACKEND_RPC_CONNECT = 'localhost'
+        config.COUNTERPARTY_RPC_CONNECT = 'localhost'
 
-    # Backend Core RPC port (Bitcoin Core)
-    if backend_rpc_port:
-        config.BACKEND_RPC_PORT = backend_rpc_port
-    elif has_config and 'backend-rpc-port' in configfile['Default'] and configfile['Default']['backend-rpc-port']:
-        config.BACKEND_RPC_PORT = configfile['Default']['backend-rpc-port']
-    elif has_config and 'bitcoind-rpc-port' in configfile['Default'] and configfile['Default']['bitcoind-rpc-port']:
-        config.BACKEND_RPC_PORT = configfile['Default']['bitcoind-rpc-port']
+    # Counterparty server RPC port (Bitcoin Core)
+    if counterparty_rpc_port:
+        config.COUNTERPARTY_RPC_PORT = counterparty_rpc_port
+    elif has_config and 'counterparty-rpc-port' in configfile['Default'] and configfile['Default']['counterparty-rpc-port']:
+        config.COUNTERPARTY_RPC_PORT = configfile['Default']['backend-rpc-port']
     else:
         if config.TESTNET:
-            config.BACKEND_RPC_PORT = config.DEFAULT_BACKEND_RPC_PORT_TESTNET
+            config.COUNTERPARTY_RPC_PORT = config.DEFAULT_COUNTERPARTY_RPC_PORT_TESTNET
         else:
-            config.BACKEND_RPC_PORT = config.DEFAULT_BACKEND_RPC_PORT
+            config.COUNTERPARTY_RPC_PORT = config.DEFAULT_COUNTERPARTY_RPC_PORT
     try:
-        config.BACKEND_RPC_PORT = int(config.BACKEND_RPC_PORT)
-        if not (int(config.BACKEND_RPC_PORT) > 1 and int(config.BACKEND_RPC_PORT) < 65535):
+        config.COUNTERPARTY_RPC_PORT = int(config.COUNTERPARTY_RPC_PORT)
+        if not (int(config.COUNTERPARTY_RPC_PORT) > 1 and int(config.COUNTERPARTY_RPC_PORT) < 65535):
             raise ConfigurationError('invalid backend API port number')
     except:
         raise Exception("Please specific a valid port number backend-rpc-port configuration parameter")
 
-    # Backend Core RPC user (Bitcoin Core)
-    if backend_rpc_user:
-        config.BACKEND_RPC_USER = backend_rpc_user
-    elif has_config and 'backend-rpc-user' in configfile['Default'] and configfile['Default']['backend-rpc-user']:
-        config.BACKEND_RPC_USER = configfile['Default']['backend-rpc-user']
-    elif has_config and 'bitcoind-rpc-user' in configfile['Default'] and configfile['Default']['bitcoind-rpc-user']:
-        config.BACKEND_RPC_USER = configfile['Default']['bitcoind-rpc-user']
+    # Counterparty server RPC user (Bitcoin Core)
+    if counterparty_rpc_user:
+        config.COUNTERPARTY_RPC_USER = counterparty_rpc_user
+    elif has_config and 'counterparty-rpc-user' in configfile['Default'] and configfile['Default']['counterparty-rpc-user']:
+        config.COUNTERPARTY_RPC_USER = configfile['Default']['counterparty-rpc-user']
     else:
-        config.BACKEND_RPC_USER = 'bitcoinrpc'
+        config.COUNTERPARTY_RPC_USER = 'rpc'
 
-    # Backend Core RPC password (Bitcoin Core)
-    if backend_rpc_password:
-        config.BACKEND_RPC_PASSWORD = backend_rpc_password
-    elif has_config and 'backend-rpc-password' in configfile['Default'] and configfile['Default']['backend-rpc-password']:
-        config.BACKEND_RPC_PASSWORD = configfile['Default']['backend-rpc-password']
-    elif has_config and 'bitcoind-rpc-password' in configfile['Default'] and configfile['Default']['bitcoind-rpc-password']:
-        config.BACKEND_RPC_PASSWORD = configfile['Default']['bitcoind-rpc-password']
+    # Counterparty server RPC password (Bitcoin Core)
+    if counterparty_rpc_password:
+        config.COUNTERPARTY_RPC_PASSWORD = counterparty_rpc_password
+    elif has_config and 'counterparty-rpc-password' in configfile['Default'] and configfile['Default']['counterparty-rpc-password']:
+        config.COUNTERPARTY_RPC_PASSWORD = configfile['Default']['counterparty-rpc-password']
     else:
-        raise ConfigurationError('backend RPC password not set. (Use configuration file or --backend-rpc-password=PASSWORD)')
+        raise ConfigurationError('counterparty RPC password not set. (Use configuration file or --counterparty-rpc-password=PASSWORD)')
 
-    # Backend Core RPC SSL
-    if backend_rpc_ssl:
-        config.BACKEND_RPC_SSL = backend_rpc_ssl
-    elif has_config and 'backend-rpc-ssl' in configfile['Default'] and configfile['Default']['backend-rpc-ssl']:
-        config.BACKEND_RPC_SSL = configfile['Default']['backend-rpc-ssl']
+    # Counterparty server RPC SSL
+    if counterparty_rpc_ssl:
+        config.COUNTERPARTY_RPC_SSL = counterparty_rpc_ssl
+    elif has_config and 'counterparty-rpc-ssl' in configfile['Default'] and configfile['Default']['counterparty-rpc-ssl']:
+        config.COUNTERPARTY_RPC_SSL = configfile['Default']['counterparty-rpc-ssl']
     else:
-        config.BACKEND_RPC_SSL = False  # Default to off.
+        config.COUNTERPARTY_RPC_SSL = False  # Default to off.
 
-    # Backend Core RPC SSL Verify
-    if backend_rpc_ssl_verify:
-        config.BACKEND_RPC_SSL_VERIFY = backend_rpc_ssl_verify
-    elif has_config and 'backend-rpc-ssl-verify' in configfile['Default'] and configfile['Default']['backend-rpc-ssl-verify']:
-        config.BACKEND_RPC_SSL_VERIFY = configfile['Default']['backend-rpc-ssl-verify']
+    # Counterparty server RPC SSL Verify
+    if counterparty_rpc_ssl_verify:
+        config.COUNTERPARTY_RPC_SSL_VERIFY = counterparty_rpc_ssl_verify
+    elif has_config and 'counterparty-rpc-ssl-verify' in configfile['Default'] and configfile['Default']['counterparty-rpc-ssl-verify']:
+        config.COUNTERPARTY_RPC_SSL_VERIFY = configfile['Default']['counterparty-rpc-ssl-verify']
     else:
-        config.BACKEND_RPC_SSL_VERIFY = False # Default to off (support self‐signed certificates)
+        config.COUNTERPARTY_RPC_SSL_VERIFY = False # Default to off (support self‐signed certificates)
 
-    # Construct backend URL.
-    config.BACKEND_RPC = config.BACKEND_RPC_USER + ':' + config.BACKEND_RPC_PASSWORD + '@' + config.BACKEND_RPC_CONNECT + ':' + str(config.BACKEND_RPC_PORT)
-    if config.BACKEND_RPC_SSL:
-        config.BACKEND_RPC = 'https://' + config.BACKEND_RPC
+    # Construct Counterparty server URL.
+    config.COUNTERPARTY_RPC = config.COUNTERPARTY_RPC_USER + ':' + config.COUNTERPARTY_RPC_PASSWORD + '@' + config.COUNTERPARTY_RPC_CONNECT + ':' + str(config.COUNTERPARTY_RPC_PORT)
+    if config.COUNTERPARTY_RPC_SSL:
+        config.COUNTERPARTY_RPC = 'https://' + config.COUNTERPARTY_RPC
     else:
-        config.BACKEND_RPC = 'http://' + config.BACKEND_RPC
+        config.COUNTERPARTY_RPC = 'http://' + config.COUNTERPARTY_RPC
 
-    # blockchain service name
-    if blockchain_service_name:
-        config.BLOCKCHAIN_SERVICE_NAME = blockchain_service_name
-    elif has_config and 'blockchain-service-name' in configfile['Default'] and configfile['Default']['blockchain-service-name']:
-        config.BLOCKCHAIN_SERVICE_NAME = configfile['Default']['blockchain-service-name']
+
+    # BTC Wallet name
+    if wallet_name:
+        config.WALLET_NAME = wallet_name
+    elif 'wallet-name' in configfile['Default'] and configfile['Default']['wallet-name']:
+        config.WALLET_NAME = configfile['Default']['wallet-name']
     else:
-        config.BLOCKCHAIN_SERVICE_NAME = 'jmcorgan'
+        config.WALLET_NAME = 'bitcoincore'
 
-    # custom blockchain service API endpoint
-    # leave blank to use the default. if specified, include the scheme prefix and port, without a trailing slash (e.g. http://localhost:3001)
-    if blockchain_service_connect:
-        config.BLOCKCHAIN_SERVICE_CONNECT = blockchain_service_connect
-    elif has_config and 'blockchain-service-connect' in configfile['Default'] and configfile['Default']['blockchain-service-connect']:
-        config.BLOCKCHAIN_SERVICE_CONNECT = configfile['Default']['blockchain-service-connect']
+    # BTC Wallet host
+    if wallet_connect:
+        config.WALLET_CONNECT = wallet_connect
+    elif 'wallet-connect' in configfile['Default'] and configfile['Default']['wallet-connect']:
+        config.WALLET_CONNECT = configfile['Default']['wallet-connect']
     else:
-        config.BLOCKCHAIN_SERVICE_CONNECT = None #use default specified by the library
+        config.WALLET_CONNECT = 'localhost'
 
-
-    ##############
-    # THINGS WE SERVE
-
-    # counterpartyd API RPC host
-    if rpc_host:
-        config.RPC_HOST = rpc_host
-    elif has_config and 'rpc-host' in configfile['Default'] and configfile['Default']['rpc-host']:
-        config.RPC_HOST = configfile['Default']['rpc-host']
-    else:
-        config.RPC_HOST = 'localhost'
-
-    # counterpartyd API RPC port
-    if rpc_port:
-        config.RPC_PORT = rpc_port
-    elif has_config and 'rpc-port' in configfile['Default'] and configfile['Default']['rpc-port']:
-        config.RPC_PORT = configfile['Default']['rpc-port']
+    # BTC Wallet port
+    if wallet_port:
+        config.WALLET_PORT = wallet_port
+    elif 'wallet-port' in configfile['Default'] and configfile['Default']['wallet-port']:
+        config.WALLET_PORT = configfile['Default']['wallet-port']
     else:
         if config.TESTNET:
-            if config.TESTCOIN:
-                config.RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET + 1
-            else:
-                config.RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET
+            config.WALLET_PORT = config.DEFAULT_WALLET_PORT_TESTNET
         else:
-            if config.TESTCOIN:
-                config.RPC_PORT = config.DEFAULT_RPC_PORT + 1
-            else:
-                config.RPC_PORT = config.DEFAULT_RPC_PORT
+            config.WALLET_PORT = config.DEFAULT_WALLET_PORT
     try:
-        config.RPC_PORT = int(config.RPC_PORT)
-        if not (int(config.BACKEND_RPC_PORT) > 1 and int(config.BACKEND_RPC_PORT) < 65535):
-            raise ConfigurationError('invalid counterpartyd API port number')
+        config.WALLET_PORT = int(config.WALLET_PORT)
+        if not (int(config.WALLET_PORT) > 1 and int(config.WALLET_PORT) < 65535):
+            raise ConfigurationError('invalid wallet API port number')
     except:
-        raise Exception("Please specific a valid port number rpc-port configuration parameter")
+        raise ConfigurationError("Please specific a valid port number wallet-port configuration parameter")
 
-    #  counterpartyd API RPC user
-    if rpc_user:
-        config.RPC_USER = rpc_user
-    elif has_config and 'rpc-user' in configfile['Default'] and configfile['Default']['rpc-user']:
-        config.RPC_USER = configfile['Default']['rpc-user']
+    # BTC Wallet user
+    if wallet_user:
+        config.WALLET_USER = wallet_user
+    elif 'wallet-user' in configfile['Default'] and configfile['Default']['wallet-user']:
+        config.WALLET_USER = configfile['Default']['wallet-user']
     else:
-        config.RPC_USER = 'rpc'
+        config.WALLET_USER = 'bitcoinrpc'
 
-    #  counterpartyd API RPC password
-    if rpc_password:
-        config.RPC_PASSWORD = rpc_password
-    elif has_config and 'rpc-password' in configfile['Default'] and configfile['Default']['rpc-password']:
-        config.RPC_PASSWORD = configfile['Default']['rpc-password']
+    # BTC Wallet password
+    if wallet_password:
+        config.WALLET_PASSWORD = wallet_password
+    elif 'wallet-password' in configfile['Default'] and configfile['Default']['wallet-password']:
+        config.WALLET_PASSWORD = configfile['Default']['wallet-password']
     else:
-        raise ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
+        raise ConfigurationError('wallet RPC password not set. (Use configuration file or --wallet-password=PASSWORD)')
 
-    config.RPC = 'http://' + config.RPC_USER + ':' + config.RPC_PASSWORD + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT)
-
-     # RPC CORS
-    if rpc_allow_cors:
-        config.RPC_ALLOW_CORS = rpc_allow_cors
-    elif has_config and 'rpc-allow-cors' in configfile['Default'] and configfile['Default']['rpc-allow-cors']:
-        config.RPC_ALLOW_CORS = configfile['Default'].getboolean('rpc-allow-cors')
+    # BTC Wallet SSL
+    if wallet_ssl:
+        config.WALLET_SSL = wallet_ssl
+    elif 'wallet-ssl' in configfile['Default'] and configfile['Default']['wallet-ssl']:
+        config.WALLET_SSL = configfile['Default']['wallet-ssl']
     else:
-        config.RPC_ALLOW_CORS = True
+        config.WALLET_SSL = False  # Default to off.
 
-    ##############
-    # OTHER SETTINGS
-
-    # Log
-    if log_file:
-        config.LOG = log_file
-    elif has_config and 'log-file' in configfile['Default'] and configfile['Default']['log-file']:
-        config.LOG = configfile['Default']['log-file']
+    # BTC Wallet SSL Verify
+    if wallet_ssl_verify:
+        config.WALLET_SSL_VERIFY = wallet_ssl_verify
+    elif 'wallet-ssl-verify' in configfile['Default'] and configfile['Default']['wallet-ssl-verify']:
+        config.WALLET_SSL_VERIFY = configfile['Default']['wallet-ssl-verify']
     else:
-        string = config.XCP_CLIENT
-        if config.TESTNET:
-            string += '.testnet'
-        if config.TESTCOIN:
-            string += '.testcoin'
-        config.LOG = os.path.join(config.DATA_DIR, string + '.log')
+        config.WALLET_SSL_VERIFY = False # Default to off (support self‐signed certificates)
 
-    # Encoding
-    if config.TESTCOIN:
-        config.PREFIX = b'XX'                   # 2 bytes (possibly accidentally created)
+    # Construct BTC wallet URL.
+    config.WALLET_URL = config.WALLET_USER + ':' + config.WALLET_PASSWORD + '@' + config.WALLET_CONNECT + ':' + str(config.WALLET_PORT)
+    if config.WALLET_SSL:
+        config.WALLET_URL = 'https://' + config.WALLET_URL
     else:
-        config.PREFIX = b'CNTRPRTY'             # 8 bytes
-
-    # Database
-    if database_file:
-        config.DATABASE = database_file
-    elif has_config and 'database-file' in configfile['Default'] and configfile['Default']['database-file']:
-        config.DATABASE = configfile['Default']['database-file']
-    else:
-        string = '{}.'.format(config.XCP_CLIENT) + str(config.VERSION_MAJOR)
-        if config.TESTNET:
-            string += '.testnet'
-        if config.TESTCOIN:
-            string += '.testcoin'
-        config.DATABASE = os.path.join(config.DATA_DIR, string + '.db')
+        config.WALLET_URL = 'http://' + config.WALLET_URL
+        
 
     # (more) Testnet
     if config.TESTNET:
-        config.MAGIC_BYTES = config.MAGIC_BYTES_TESTNET
         if config.TESTCOIN:
             config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
-            config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET_TESTCOIN
-            config.BURN_START = config.BURN_START_TESTNET_TESTCOIN
-            config.BURN_END = config.BURN_END_TESTNET_TESTCOIN
-            config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
         else:
             config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
-            config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET
-            config.BURN_START = config.BURN_START_TESTNET
-            config.BURN_END = config.BURN_END_TESTNET
-            config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
     else:
-        config.MAGIC_BYTES = config.MAGIC_BYTES_MAINNET
         if config.TESTCOIN:
             config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
-            config.BLOCK_FIRST = config.BLOCK_FIRST_MAINNET_TESTCOIN
-            config.BURN_START = config.BURN_START_MAINNET_TESTCOIN
-            config.BURN_END = config.BURN_END_MAINNET_TESTCOIN
-            config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
         else:
             config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
-            config.BLOCK_FIRST = config.BLOCK_FIRST_MAINNET
-            config.BURN_START = config.BURN_START_MAINNET
-            config.BURN_END = config.BURN_END_MAINNET
-            config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
 
-    # method used to broadcast signed transactions. bitcoind or bci (default: bitcoind)
-    if broadcast_tx_mainnet:
-        config.BROADCAST_TX_MAINNET = broadcast_tx_mainnet
-    elif has_config and 'broadcast-tx-mainnet' in configfile['Default']:
-        config.BROADCAST_TX_MAINNET = configfile['Default']['broadcast-tx-mainnet']
-    else:
-        config.BROADCAST_TX_MAINNET = '{}'.format(config.BTC_CLIENT)
 
 def balances(address):
     address = script.make_canonical(address)
     script.validate(address)
     balances = get_address(address=address)['balances']
     table = PrettyTable(['Asset', 'Amount'])
-    btc_balance = backend.get_btc_balance(proxy, address)
+    btc_balance = wallet.get_btc_balance(address)
     table.add_row([config.BTC, btc_balance])  # BTC
     for balance in balances:
         asset = balance['asset']
-        quantity = util.value_out(db, balance['quantity'], balance['asset'])
+        quantity = util.value_out(balance['quantity'], balance['asset'])
         table.add_row([asset, quantity])
     print('Balances')
     print(table.get_string())
@@ -566,7 +481,7 @@ if __name__ == '__main__':
         util_windows.fix_win32_unicode()
 
     # Parse command-line arguments.
-    parser = argparse.ArgumentParser(prog=config.XCP_CLIENT, description='the reference implementation of the {} protocol'.format(config.XCP_NAME))
+    parser = argparse.ArgumentParser(prog=config.XCP_CLIENT, description='Counterparty CLI for counterparty-server')
     parser.add_argument('-V', '--version', action='version', version="{} v{}".format(config.XCP_CLIENT, config.VERSION_STRING))
 
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='sets log level to DEBUG instead of WARNING')
@@ -581,26 +496,23 @@ if __name__ == '__main__':
     parser.add_argument('--unsigned', action='store_true', help='print out unsigned hex of transaction; do not sign or broadcast')
 
     parser.add_argument('--data-dir', help='the directory in which to keep the database, config file and log file, by default')
-    parser.add_argument('--database-file', help='the location of the SQLite3 database')
     parser.add_argument('--config-file', help='the location of the configuration file')
-    parser.add_argument('--log-file', help='the location of the log file')
 
-    parser.add_argument('--backend-rpc-connect', help='the hostname or IP of the backend bitcoind JSON-RPC server')
-    parser.add_argument('--backend-rpc-port', type=int, help='the backend JSON-RPC port to connect to')
-    parser.add_argument('--backend-rpc-user', help='the username used to communicate with backend over JSON-RPC')
-    parser.add_argument('--backend-rpc-password', help='the password used to communicate with backend over JSON-RPC')
-    parser.add_argument('--backend-rpc-ssl', action='store_true', help='use SSL to connect to backend (default: false)')
-    parser.add_argument('--backend-rpc-ssl-verify', action='store_true', help='verify SSL certificate of backend; disallow use of self‐signed certificates (default: false)')
+    parser.add_argument('--counterparty-rpc-connect', help='the hostname or IP of the counterparty JSON-RPC server')
+    parser.add_argument('--counterparty-rpc-port', type=int, help='the counterparty JSON-RPC port to connect to')
+    parser.add_argument('--counterparty-rpc-user', help='the username used to communicate with counterparty over JSON-RPC')
+    parser.add_argument('--counterparty-rpc-password', help='the password used to communicate with counterparty over JSON-RPC')
+    parser.add_argument('--counterparty-rpc-ssl', action='store_true', help='use SSL to connect to counterparty (default: false)')
+    parser.add_argument('--counterparty-rpc-ssl-verify', action='store_true', help='verify SSL certificate of counterparty; disallow use of self‐signed certificates (default: false)')
 
-    parser.add_argument('--blockchain-service-name', help='the blockchain service name to connect to')
-    parser.add_argument('--blockchain-service-connect', help='the blockchain service server URL base to connect to, if not default')
-
-    parser.add_argument('--rpc-host', help='the IP of the interface to bind to for providing JSON-RPC API access (0.0.0.0 for all interfaces)')
-    parser.add_argument('--rpc-port', type=int, help='port on which to provide the {} JSON-RPC API'.format(config.XCP_CLIENT))
-    parser.add_argument('--rpc-user', help='required username to use the {} JSON-RPC API (via HTTP basic auth)'.format(config.XCP_CLIENT))
-    parser.add_argument('--rpc-password', help='required password (for rpc-user) to use the {} JSON-RPC API (via HTTP basic auth)'.format(config.XCP_CLIENT))
-    parser.add_argument('--rpc-allow-cors', action='store_true', default=True, help='Allow ajax cross domain request')
-
+    parser.add_argument('--wallet-name', help='the wallet name to connect to')
+    parser.add_argument('--wallet-connect', help='the hostname or IP of the wallet server')
+    parser.add_argument('--wallet-port', type=int, help='the wallet port to connect to')
+    parser.add_argument('--wallet-user', help='the username used to communicate with wallet')
+    parser.add_argument('--wallet-password', help='the password used to communicate with wallet')
+    parser.add_argument('--wallet-ssl', action='store_true', help='use SSL to connect to wallet (default: false)')
+    parser.add_argument('--wallet-ssl-verify', action='store_true', help='verify SSL certificate of wallet; disallow use of self‐signed certificates (default: false)')
+ 
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
     parser_send = subparsers.add_parser('send', help='create and broadcast a *send* message')
@@ -727,6 +639,26 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    # Console Logging
+    logger = logging.getLogger()    # Get root logger.
+    logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
+
+    console = logging.StreamHandler()
+    console.setLevel(logging.DEBUG if args.verbose else logging.INFO)
+    LOGFORMAT = '%(log_color)s[%(levelname)s] %(message)s%(reset)s'
+    LOGCOLORS = {'WARNING': 'yellow', 'ERROR': 'red', 'CRITICAL': 'red'}
+    formatter = ColoredFormatter(LOGFORMAT, log_colors=LOGCOLORS)
+    console.setFormatter(formatter)
+    logger.addHandler(console)
+
+    # Quieten noisy libraries.
+    requests_log = logging.getLogger("requests")
+    requests_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
+    requests_log.propagate = False
+    urllib3_log = logging.getLogger('urllib3')
+    urllib3_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
+    urllib3_log.propagate = False
+
     # Convert.
     args.fee_per_kb = int(args.fee_per_kb * config.UNIT)
     args.regular_dust_size = int(args.regular_dust_size * config.UNIT)
@@ -734,33 +666,19 @@ if __name__ == '__main__':
     args.op_return_value = int(args.op_return_value * config.UNIT)
 
     # Configuration
-    set_options(data_dir=args.data_dir,
-                backend_rpc_connect=args.backend_rpc_connect,
-                backend_rpc_port=args.backend_rpc_port,
-                backend_rpc_user=args.backend_rpc_user,
-                backend_rpc_password=args.backend_rpc_password,
-                backend_rpc_ssl=args.backend_rpc_ssl,
-                backend_rpc_ssl_verify=args.backend_rpc_ssl_verify,
-                blockchain_service_name=args.blockchain_service_name,
-                blockchain_service_connect=args.blockchain_service_connect,
-                rpc_host=args.rpc_host, rpc_port=args.rpc_port, rpc_user=args.rpc_user,
-                rpc_password=args.rpc_password, rpc_allow_cors=args.rpc_allow_cors,
-                log_file=args.log_file, config_file=args.config_file,
-                database_file=args.database_file, testnet=args.testnet,
-                testcoin=args.testcoin)
-
-    # Database
-    logger.info('Connecting to database.')
-    db = database.get_connection()
-
-    # Proxy
-    proxy = backend.get_proxy()
+    set_options(data_dir=args.data_dir, config_file=args.config_file, testnet=args.testnet, testcoin=args.testcoin,
+                counterparty_rpc_connect=args.counterparty_rpc_connect, counterparty_rpc_port=args.counterparty_rpc_port, 
+                counterparty_rpc_user=args.counterparty_rpc_user, counterparty_rpc_password=args.counterparty_rpc_password,
+                counterparty_rpc_ssl=args.counterparty_rpc_ssl, counterparty_rpc_ssl_verify=args.counterparty_rpc_ssl_verify,
+                wallet_name=args.wallet_name, wallet_connect=args.wallet_connect, wallet_port=args.wallet_port, 
+                wallet_user=args.wallet_user, wallet_password=args.wallet_password,
+                wallet_ssl=args.wallet_ssl, wallet_ssl_verify=args.wallet_ssl_verify)
 
     # MESSAGE CREATION
     if args.action == 'send':
         if args.fee:
-            args.fee = util.value_in(db, args.fee, config.BTC)
-        quantity = util.value_in(db, args.quantity, args.asset)
+            args.fee = util.value_in(args.fee, config.BTC)
+        quantity = util.value_in(args.quantity, args.asset)
         cli('create_send', {'source': args.source,
                             'destination': args.destination, 'asset':
                             args.asset, 'quantity': quantity, 'fee': args.fee,
@@ -774,27 +692,27 @@ if __name__ == '__main__':
 
     elif args.action == 'order':
         if args.fee:
-            args.fee = util.value_in(db, args.fee, config.BTC)
+            args.fee = util.value_in(args.fee, config.BTC)
         fee_required, fee_fraction_provided = D(args.fee_fraction_required), D(args.fee_fraction_provided)
         give_quantity, get_quantity = D(args.give_quantity), D(args.get_quantity)
 
         # Fee argument is either fee_required or fee_provided, as necessary.
         if args.give_asset == config.BTC:
             fee_required = 0
-            fee_fraction_provided = util.value_in(db, fee_fraction_provided, 'fraction')
+            fee_fraction_provided = util.value_in(fee_fraction_provided, 'fraction')
             fee_provided = round(D(fee_fraction_provided) * D(give_quantity) * D(config.UNIT))
-            print('Fee provided: {} {}'.format(util.value_out(db, fee_provided, config.BTC), config.BTC))
+            print('Fee provided: {} {}'.format(util.value_out(fee_provided, config.BTC), config.BTC))
         elif args.get_asset == config.BTC:
             fee_provided = 0
-            fee_fraction_required = util.value_in(db, args.fee_fraction_required, 'fraction')
+            fee_fraction_required = util.value_in(args.fee_fraction_required, 'fraction')
             fee_required = round(D(fee_fraction_required) * D(get_quantity) * D(config.UNIT))
-            print('Fee required: {} {}'.format(util.value_out(db, fee_required, config.BTC), config.BTC))
+            print('Fee required: {} {}'.format(util.value_out(fee_required, config.BTC), config.BTC))
         else:
             fee_required = 0
             fee_provided = 0
 
-        give_quantity = util.value_in(db, give_quantity, args.give_asset)
-        get_quantity = util.value_in(db, get_quantity, args.get_asset)
+        give_quantity = util.value_in(give_quantity, args.give_asset)
+        get_quantity = util.value_in(get_quantity, args.get_asset)
 
         cli('create_order', {'source': args.source,
                              'give_asset': args.give_asset, 'give_quantity':
@@ -812,7 +730,7 @@ if __name__ == '__main__':
 
     elif args.action == '{}pay'.format(config.BTC).lower():
         if args.fee:
-            args.fee = util.value_in(db, args.fee, config.BTC)
+            args.fee = util.value_in(args.fee, config.BTC)
         cli('create_btcpay', {'source': args.source,
                               'order_match_id': args.order_match_id, 'fee':
                               args.fee, 'allow_unconfirmed_inputs':
@@ -825,8 +743,8 @@ if __name__ == '__main__':
 
     elif args.action == 'issuance':
         if args.fee:
-            args.fee = util.value_in(db, args.fee, config.BTC)
-        quantity = util.value_in(db, args.quantity, None, divisible=args.divisible)
+            args.fee = util.value_in(args.fee, config.BTC)
+        quantity = util.value_in(args.quantity, None, divisible=args.divisible)
 
         cli('create_issuance', {'source': args.source, 'asset': args.asset,
                                 'quantity': quantity, 'divisible':
@@ -843,9 +761,9 @@ if __name__ == '__main__':
 
     elif args.action == 'broadcast':
         if args.fee:
-            args.fee = util.value_in(db, args.fee, config.BTC)
-        value = util.value_in(db, args.value, 'value')
-        fee_fraction = util.value_in(db, args.fee_fraction, 'fraction')
+            args.fee = util.value_in(args.fee, config.BTC)
+        value = util.value_in(args.value, 'value')
+        fee_fraction = util.value_in(args.fee_fraction, 'fraction')
 
         cli('create_broadcast', {'source': args.source,
                                  'fee_fraction': fee_fraction, 'text':
@@ -861,12 +779,12 @@ if __name__ == '__main__':
 
     elif args.action == 'bet':
         if args.fee:
-            args.fee = util.value_in(db, args.fee, config.BTC)
+            args.fee = util.value_in(args.fee, config.BTC)
         deadline = calendar.timegm(dateutil.parser.parse(args.deadline).utctimetuple())
-        wager = util.value_in(db, args.wager, config.XCP)
-        counterwager = util.value_in(db, args.counterwager, config.XCP)
-        target_value = util.value_in(db, args.target_value, 'value')
-        leverage = util.value_in(db, args.leverage, 'leverage')
+        wager = util.value_in(args.wager, config.XCP)
+        counterwager = util.value_in(args.counterwager, config.XCP)
+        target_value = util.value_in(args.target_value, 'value')
+        leverage = util.value_in(args.leverage, 'leverage')
 
         cli('create_bet', {'source': args.source,
                            'feed_address': args.feed_address, 'bet_type':
@@ -884,8 +802,8 @@ if __name__ == '__main__':
 
     elif args.action == 'dividend':
         if args.fee:
-            args.fee = util.value_in(db, args.fee, config.BTC)
-        quantity_per_unit = util.value_in(db, args.quantity_per_unit, config.XCP)
+            args.fee = util.value_in(args.fee, config.BTC)
+        quantity_per_unit = util.value_in(args.quantity_per_unit, config.XCP)
         cli('create_dividend', {'source': args.source,
                                 'quantity_per_unit': quantity_per_unit,
                                 'asset': args.asset, 'dividend_asset':
@@ -900,8 +818,8 @@ if __name__ == '__main__':
 
     elif args.action == 'burn':
         if args.fee:
-            args.fee = util.value_in(db, args.fee, config.BTC)
-        quantity = util.value_in(db, args.quantity, config.BTC)
+            args.fee = util.value_in(args.fee, config.BTC)
+        quantity = util.value_in(args.quantity, config.BTC)
         cli('create_burn', {'source': args.source, 'quantity': quantity,
                             'fee': args.fee, 'allow_unconfirmed_inputs':
                             args.unconfirmed, 'encoding': args.encoding,
@@ -913,7 +831,7 @@ if __name__ == '__main__':
 
     elif args.action == 'cancel':
         if args.fee:
-            args.fee = util.value_in(db, args.fee, config.BTC)
+            args.fee = util.value_in(args.fee, config.BTC)
         cli('create_cancel', {'source': args.source,
                               'offer_hash': args.offer_hash, 'fee': args.fee,
                               'allow_unconfirmed_inputs': args.unconfirmed,
@@ -926,8 +844,8 @@ if __name__ == '__main__':
 
     elif args.action == 'rps':
         if args.fee:
-            args.fee = util.value_in(db, args.fee, 'BTC')
-        wager = util.value_in(db, args.wager, 'XCP')
+            args.fee = util.value_in(args.fee, 'BTC')
+        wager = util.value_in(args.wager, 'XCP')
         random, move_random_hash = generate_move_random_hash(args.move)
         print('random: {}'.format(random))
         print('move_random_hash: {}'.format(move_random_hash))
@@ -944,7 +862,7 @@ if __name__ == '__main__':
 
     elif args.action == 'rpsresolve':
         if args.fee:
-            args.fee = util.value_in(db, args.fee, 'BTC')
+            args.fee = util.value_in(args.fee, 'BTC')
         cli('create_rpsresolve', {'source': args.source,
                                 'random': args.random, 'move': args.move,
                                 'rps_match_id': args.rps_match_id, 'fee': args.fee,
@@ -958,7 +876,7 @@ if __name__ == '__main__':
 
     elif args.action == 'publish':
         if args.fee:
-            args.fee = util.value_in(db, args.fee, 'BTC')
+            args.fee = util.value_in(args.fee, 'BTC')
         cli('create_publish', {'source': args.source,
                                'gasprice': args.gasprice, 'startgas':
                                args.startgas, 'endowment': args.endowment,
@@ -972,9 +890,9 @@ if __name__ == '__main__':
 
     elif args.action == 'execute':
         if args.fee:
-            args.fee = util.value_in(db, args.fee, 'BTC')
-        value = util.value_in(db, args.value, 'XCP')
-        startgas = util.value_in(db, args.startgas, 'XCP')
+            args.fee = util.value_in(args.fee, 'BTC')
+        value = util.value_in(args.value, 'XCP')
+        startgas = util.value_in(args.startgas, 'XCP')
         cli('create_execute', {'source': args.source,
                                'contract_id': args.contract_id, 'gasprice':
                                args.gasprice, 'startgas': args.startgas,
@@ -989,8 +907,8 @@ if __name__ == '__main__':
 
     elif args.action == 'destroy':
         if args.fee:
-            args.fee = util.devise(db, args.fee, config.BTC, 'input')
-        quantity = util.devise(db, args.quantity, args.asset, 'input')
+            args.fee = util.value_in(args.fee, 'BTC', 'input')
+        quantity = util.value_in(args.quantity, args.asset, 'input')
         cli('create_destroy', {'source': args.source,
                             'asset': args.asset, 'quantity': quantity, 'tag':
                             args.tag, 'fee': args.fee,
@@ -1014,12 +932,10 @@ if __name__ == '__main__':
             print('Asset ‘{}’ not found.'.format(args.asset))
             exit(0)
 
-        asset_id = util.get_asset_id(db, args.asset, last_db_block_index)
+        asset_id = util.get_asset_id(args.asset, last_db_block_index)
         divisible = results['divisible']
         locked = results['locked']
-        supply = util.value_out(db, results['supply'], args.asset)
-        call_date = log.isodt(results['call_date']) if results['call_date'] else results['call_date']
-        call_price = str(results['call_price']) + ' XCP' if results['call_price'] else results['call_price']
+        supply = util.value_out(results['supply'], args.asset)
 
         print('Asset Name:', args.asset)
         print('Asset ID:', asset_id)
@@ -1033,11 +949,11 @@ if __name__ == '__main__':
             print('Shareholders:')
             balances = util.api('get_balances', {'filters': [('asset', '==', args.asset)]})
             print('\taddress, quantity, escrow')
-            for holder in util.holders(db, args.asset):
+            for holder in util.api('get_holders', {'asset': args.asset}):
                 quantity = holder['address_quantity']
                 if not quantity:
                     continue
-                quantity = util.value_out(db, quantity, args.asset)
+                quantity = util.value_out(quantity, args.asset)
                 if holder['escrow']:
                     escrow = holder['escrow']
                 else:
@@ -1050,8 +966,8 @@ if __name__ == '__main__':
         totals = {}
 
         print()
-        for bunch in backend.get_wallet(proxy):
-            address, btc_balance = bunch[:2]
+        for bunch in wallet.get_wallet():
+            address, btc_balance = bunch
             address_data = get_address(address=address)
             balances = address_data['balances']
             table = PrettyTable(['Asset', 'Balance'])
@@ -1066,7 +982,7 @@ if __name__ == '__main__':
             for balance in balances:
                 asset = balance['asset']
                 try:
-                    balance = D(util.value_out(db, balance['quantity'], balance['asset']))
+                    balance = D(util.value_out(balance['quantity'], balance['asset']))
                 except Exception:   # TODO
                     balance = None
                 if balance:
@@ -1089,8 +1005,8 @@ if __name__ == '__main__':
 
     elif args.action == 'pending':
         addresses = []
-        for bunch in backend.get_wallet(proxy):
-            addresses.append(bunch[:2][0])
+        for bunch in wallet.get_wallet():
+            addresses.append(bunch[0])
         filters = [
             ('tx0_address', 'IN', addresses),
             ('tx1_address', 'IN', addresses)
@@ -1098,7 +1014,7 @@ if __name__ == '__main__':
         awaiting_btcs = util.api('get_order_matches', {'filters': filters, 'filterop': 'OR', 'status': 'pending'})
         table = PrettyTable(['Matched Order ID', 'Time Left'])
         for order_match in awaiting_btcs:
-            order_match = format_order_match(db, order_match)
+            order_match = format_order_match(order_match)
             table.add_row(order_match)
         print(table)
 

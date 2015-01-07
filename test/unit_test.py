@@ -6,12 +6,11 @@ from util_test import CURR_DIR
 from fixtures.vectors import UNITTEST_VECTOR
 from fixtures.params import DEFAULT_PARAMS as DP
 
-from lib import (config, util, api, database)
-import counterpartyd
+from lib import (config, util, api, database, server)
 
 def setup_module():
     """Initialise the database with default data and wait for server to be ready."""
-    counterpartyd.set_options(database_file=tempfile.gettempdir() + '/fixtures.unittest.db', testnet=True, **util_test.COUNTERPARTYD_OPTIONS)
+    server.set_options(database_file=tempfile.gettempdir() + '/fixtures.unittest.db', testnet=True, **util_test.COUNTERPARTYD_OPTIONS)
     util_test.restore_database(config.DATABASE, CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql')
     util.FIRST_MULTISIG_BLOCK_TESTNET = 1
     # start RPC server
