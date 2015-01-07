@@ -13,6 +13,7 @@ from lib import exceptions
 from lib import script
 from lib.messages.scriptlib.processblock import ContractError
 from lib.api import APIError
+from fractions import Fraction
 
 UNITTEST_VECTOR = {
     'bet': {
@@ -1010,6 +1011,50 @@ UNITTEST_VECTOR = {
         }, {
             'in': (2**64, 308000),
             'error': (exceptions.AssetIDError, 'too high')
-        }]
+        }],
+        'price': [{
+            'in': (1, 10, DP['default_block']),
+            'out': Fraction(1, 10)
+        }],
+        'generate_asset_id': [{
+            'in': ('BTC', DP['default_block']),
+            'out': 0
+        },  {
+            'in': ('XCP', DP['default_block']),
+            'out': 1
+        },  {
+            'in': ('FOOBAR', DP['default_block']),
+            'out': 66051301
+        },  {
+            'in': ('FOO', DP['default_block']),
+            'error': (exceptions.AssetNameError, 'too short')
+        },  {
+            'in': ('AAAA', DP['default_block']),
+            'error': (exceptions.AssetNameError, "non‐numeric asset name starts with ‘A’")
+        },  {
+            'in': ('-AAAA', DP['default_block']),
+            'error': (exceptions.AssetNameError, "('invalid character:', '-')")
+        }],
+        'generate_asset_name': [{
+            'in': (0, DP['default_block']),
+            'out': 'BTC'
+        },  {
+            'in': (1, DP['default_block']),
+            'out': 'XCP'
+        },  {
+            'in': (66051301, DP['default_block']),
+            'out': 'FOOBAR'
+        },  {
+            'in': (17575, DP['default_block']),
+            'error': (exceptions.AssetIDError, 'too low')
+        }],
+        'dhash_string': [{
+            'in': ('foobar',),
+            'out': '3f2c7ccae98af81e44c0ec419659f50d8b7d48c681e5d57fc747d0461e42dda1'
+        }],
+        'hexlify': [{
+            'in': (b'\x00\x00\x00\x14\x00\x00\x00\x00\x00\x0b\xfc\xe3',),
+            'out': '0000001400000000000bfce3'
+        }],
     }
 }
