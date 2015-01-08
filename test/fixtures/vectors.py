@@ -1037,7 +1037,7 @@ UNITTEST_VECTOR = {
             'error': (exceptions.AssetIDError, 'too high')
         }],
         'price': [{
-            'in': (1, 10, DP['default_block']),
+            'in': (1, 10),
             'out': Fraction(1, 10)
         }],
         'dhash_string': [{
@@ -1049,10 +1049,10 @@ UNITTEST_VECTOR = {
             'out': '0000001400000000000bfce3'
         }],
         'enabled': [{
-            'in': ('numeric_asset_names', DP['default_block']),
+            'in': ('numeric_asset_names',),
             'out': True
         },  {
-            'in': ('foobar', DP['default_block']),
+            'in': ('foobar',),
             'error': (KeyError, "'foobar'")
         }],
         'date_passed': [{
