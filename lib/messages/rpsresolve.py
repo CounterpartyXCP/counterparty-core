@@ -105,7 +105,7 @@ def compose (db, source, move, random, rps_match_id):
     if problems: raise exceptions.ComposeError(problems)
 
     # Warn if down to the wire.
-    time_left = rps_match['match_expire_index'] - util.last_block(db)['block_index']
+    time_left = rps_match['match_expire_index'] - util.CURRENT_BLOCK_INDEX
     if time_left < 4:
         logger.warning('Only {} blocks until that rps match expires. The conclusion might not make into the blockchain in time.'.format(time_left))
 

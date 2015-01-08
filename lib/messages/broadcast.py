@@ -99,7 +99,7 @@ def compose (db, source, timestamp, value, fee_fraction, text):
     # Store the fee fraction as an integer.
     fee_fraction_int = int(fee_fraction * 1e8)
 
-    problems = validate(db, source, timestamp, value, fee_fraction_int, text, util.last_block(db)['block_index'])
+    problems = validate(db, source, timestamp, value, fee_fraction_int, text, util.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
 
     data = struct.pack(config.TXTYPE_FORMAT, ID)
@@ -236,15 +236,15 @@ def parse (db, tx, message):
                     bull_credit = escrow_less_fee
                     bear_credit = 0
                     bet_match_status = 'settled: liquidated for bull'
-                    util.credit(db, tx['block_index'], bull_address, config.XCP, bull_credit, action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
+                    util.credit(db, bull_address, config.XCP, bull_credit, action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
                 elif bull_credit <= 0:
                     bull_credit = 0
                     bear_credit = escrow_less_fee
                     bet_match_status = 'settled: liquidated for bear'
-                    util.credit(db, tx['block_index'], bear_address, config.XCP, bear_credit, action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
+                    util.credit(db, bear_address, config.XCP, bear_credit, action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
 
                 # Pay fee to feed.
-                util.credit(db, tx['block_index'], bet_match['feed_address'], config.XCP, fee, action='feed fee', event=tx['tx_hash'])
+                util.credit(db, bet_match['feed_address'], config.XCP, fee, action='feed fee', event=tx['tx_hash'])
 
                 # For logging purposes.
                 bindings = {
@@ -265,11 +265,11 @@ def parse (db, tx, message):
             elif timestamp >= bet_match['deadline']:
                 bet_match_status = 'settled'
 
-                util.credit(db, tx['block_index'], bull_address, config.XCP, bull_credit, action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
-                util.credit(db, tx['block_index'], bear_address, config.XCP, bear_credit, action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
+                util.credit(db, bull_address, config.XCP, bull_credit, action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
+                util.credit(db, bear_address, config.XCP, bear_credit, action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
 
                 # Pay fee to feed.
-                util.credit(db, tx['block_index'], bet_match['feed_address'], config.XCP, fee, action='feed fee', event=tx['tx_hash'])
+                util.credit(db, bet_match['feed_address'], config.XCP, fee, action='feed fee', event=tx['tx_hash'])
 
                 # For logging purposes.
                 bindings = {
@@ -301,14 +301,14 @@ def parse (db, tx, message):
             if value == bet_match['target_value']:
                 winner = 'Equal'
                 bet_match_status = 'settled: for equal'
-                util.credit(db, tx['block_index'], equal_address, config.XCP, escrow_less_fee, action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
+                util.credit(db, equal_address, config.XCP, escrow_less_fee, action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
             else:
                 winner = 'NotEqual'
                 bet_match_status = 'settled: for notequal'
-                util.credit(db, tx['block_index'], notequal_address, config.XCP, escrow_less_fee, action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
+                util.credit(db, notequal_address, config.XCP, escrow_less_fee, action='bet {}'.format(bet_match_status), event=tx['tx_hash'])
 
             # Pay fee to feed.
-            util.credit(db, tx['block_index'], bet_match['feed_address'], config.XCP, fee, action='feed fee', event=tx['tx_hash'])
+            util.credit(db, bet_match['feed_address'], config.XCP, fee, action='feed fee', event=tx['tx_hash'])
 
             # For logging purposes.
             bindings = {
@@ -333,7 +333,7 @@ def parse (db, tx, message):
             }
             sql='update bet_matches set status = :status where id = :bet_match_id'
             cursor.execute(sql, bindings)
-            log.message(db, tx['block_index'], 'update', 'bet_matches', bindings)
+            log.message(db, 'update', 'bet_matches', bindings)
 
         broadcast_bet_match_cursor.close()
 

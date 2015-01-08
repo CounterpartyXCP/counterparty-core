@@ -40,8 +40,9 @@ class BackendError(Exception):  # TODO: Redundant with `BitcoindError`
 class ConsensusError(Exception):
     pass
 
-def consensus_hash(db, block_index, field, previous_consensus_hash, content):
+def consensus_hash(db, field, previous_consensus_hash, content):
     cursor = db.cursor()
+    block_index = util.CURRENT_BLOCK_INDEX
 
     # Initialise previous hash on first block.
     if block_index == config.BLOCK_FIRST:
@@ -93,7 +94,7 @@ class VersionError(Exception):
 class VersionUpdateRequiredError(VersionError):
     pass
 
-def check_change(protocol_change, change_name, block_index):
+def check_change(protocol_change, change_name):
 
     # Check client version.
     passed = True
@@ -110,12 +111,12 @@ def check_change(protocol_change, change_name, block_index):
         explanation = 'Your version of counterpartyd is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: ‘{}’. Please upgrade to the latest version and restart the server.'.format(
             config.VERSION_STRING, protocol_change['block_index'], protocol_change['minimum_version_major'], protocol_change['minimum_version_minor'],
             protocol_change['minimum_version_revision'], change_name)
-        if block_index >= protocol_change['block_index']:
+        if util.CURRENT_BLOCK_INDEX >= protocol_change['block_index']:
             raise VersionUpdateRequiredError(explanation)
         else:
             warnings.warn(explanation)
 
-def version(block_index):
+def version():
     if config.FORCE:
         return
     logger.debug('Checking version.')
@@ -130,7 +131,7 @@ def version(block_index):
     for change_name in versions:
         protocol_change = versions[change_name]
         try:
-            check_change(protocol_change, change_name, block_index)
+            check_change(protocol_change, change_name)
         except VersionUpdateRequiredError as e:
             logger.error("Version Update Required", exc_info=sys.exc_info())
             sys.exit(config.EXITCODE_UPDATE_REQUIRED)
@@ -149,7 +150,7 @@ def backend_state(proxy):
 
 def database_state(db, blockcount):
     """Checks {} database to see if is caught up with backend.""".format(config.XCP_NAME)
-    if util.last_block(db)['block_index'] + 1 < blockcount:
+    if util.CURRENT_BLOCK_INDEX + 1 < blockcount:
         raise exceptions.DatabaseError('{} database is behind backend.'.format(config.XCP_NAME))
     logger.debug('Database state check passed.')
     return

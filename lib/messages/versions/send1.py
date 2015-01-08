@@ -22,7 +22,7 @@ def validate (db, source, destination, asset, quantity, block_index):
 
     if quantity < 0: problems.append('negative quantity')
 
-    if util.enabled('send_destination_required', block_index):  # Protocol change.
+    if util.enabled('send_destination_required'):  # Protocol change.
         if not destination:
             status = problems.append('destination is required')
 
@@ -44,7 +44,7 @@ def compose (db, source, destination, asset, quantity):
     if not balances or balances[0]['quantity'] < quantity:
         raise exceptions.ComposeError('insufficient funds')
 
-    block_index = util.last_block(db)['block_index']
+    block_index = util.CURRENT_BLOCK_INDEX
 
     problems = validate(db, source, destination, asset, quantity, block_index)
     if problems: raise exceptions.ComposeError(problems)
@@ -87,8 +87,8 @@ def parse (db, tx, message):
         if problems: status = 'invalid: ' + '; '.join(problems)
 
     if status == 'valid':
-        util.debit(db, tx['block_index'], tx['source'], asset, quantity, action='send', event=tx['tx_hash'])
-        util.credit(db, tx['block_index'], tx['destination'], asset, quantity, action='send', event=tx['tx_hash'])
+        util.debit(db, tx['source'], asset, quantity, action='send', event=tx['tx_hash'])
+        util.credit(db, tx['destination'], asset, quantity, action='send', event=tx['tx_hash'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

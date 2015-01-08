@@ -100,6 +100,7 @@ def insert_block(db, block_index, parse_block=False):
     block = (block_index, block_hash, block_time, None, None, None, None)
     cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty) 
                       VALUES (?,?,?,?,?,?,?)''', block)
+    util.CURRENT_BLOCK_INDEX = block_index  # TODO: Correct?!
     cursor.close()
     if parse_block:
         blocks.parse_block(db, block_index, block_time)
@@ -308,6 +309,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db)
 
 def check_ouputs(tx_name, method, inputs, outputs, error, records, counterpartyd_db):
     """Check actual and expected outputs of a particular function."""
+
     try:
         tested_module = sys.modules['lib.{}'.format(tx_name)]
     except KeyError:    # TODO: hack

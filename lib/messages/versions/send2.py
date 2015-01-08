@@ -76,7 +76,7 @@ def compose(db, source, destination, asset, quantity):
     if asset == config.BTC:
         return (source, [(destination, quantity)], None)
 
-    validate(db, source, destination, asset, quantity, util.last_block(db)['block_index'])
+    validate(db, source, destination, asset, quantity, util.CURRENT_BLOCK_INDEX)
     data = pack(asset, quantity)
 
     return (source, [(destination, None)], data)
@@ -88,7 +88,7 @@ def parse(db, tx, message):
         unpacked = unpack(message)
         asset, quantity = unpacked['asset'], unpacked['quantity']
         validate(db, tx['source'], tx['destination'], asset, quantity, tx['block_index'])
-        util.transfer(db, tx['block_index'], tx['source'], tx['destination'], asset, quantity, 'send', tx['tx_hash'])
+        util.transfer(db, tx['source'], tx['destination'], asset, quantity, 'send', tx['tx_hash'])
 
     except UnpackError as e:
         asset, quantity = None, None

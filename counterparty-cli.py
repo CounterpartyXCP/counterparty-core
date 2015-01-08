@@ -33,6 +33,19 @@ D = decimal.Decimal
 class ConfigurationError(Exception):
     pass
 
+def last_db_block_index():
+    import apsw
+    cursor = db.cursor()
+    blocks = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)'''))
+    try:
+        blocks = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)'''))
+        try:
+            return blocks[0]['block_index']
+        except IndexError:
+            return 0
+    except apsw.SQLError:
+        return 0
+
 def get_address(address):
     address_dict = {}
     address_dict['balances'] = util.api('get_balances', {'filters': [('address', '==', address),]})
@@ -74,7 +87,7 @@ def format_order(order):
         price = util.value_out(db, D(order['give_quantity']) / D(order['get_quantity']), 'price')
         price_assets = give_asset + '/' + get_asset + ' bid'
 
-    return [D(give_remaining), give_asset, price, price_assets, str(order['fee_required'] / config.UNIT), str(order['fee_provided'] / config.UNIT), order['expire_index'] - util.last_block(db)['block_index'], order['tx_hash']]
+    return [D(give_remaining), give_asset, price, price_assets, str(order['fee_required'] / config.UNIT), str(order['fee_provided'] / config.UNIT), order['expire_index'] - last_db_block_index(), order['tx_hash']]
 
 def format_bet(bet):
     odds = D(bet['counterwager_quantity']) / D(bet['wager_quantity'])
@@ -88,11 +101,11 @@ def format_bet(bet):
     else:
         leverage = util.value_out(db, D(bet['leverage']) / 5040, 'leverage')
 
-    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], log.isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.value_out(db, odds, 'odds'), bet['expire_index'] - util.last_block(db)['block_index'], bet['tx_hash']]
+    return [util.BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], log.isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.value_out(db, odds, 'odds'), bet['expire_index'] - last_db_block_index, bet['tx_hash']]
 
 def format_order_match(db, order_match):
     order_match_id = util.make_id(order_match['tx0_hash'], order_match['tx1_hash'])
-    order_match_time_left = order_match['match_expire_index'] - util.last_block(db)['block_index']
+    order_match_time_left = order_match['match_expire_index'] - last_db_block_index
     return [order_match_id, order_match_time_left]
 
 def format_feed(feed):
@@ -153,8 +166,7 @@ def market(give_asset, get_asset):
     seen_addresses = []
     for broadcast in broadcasts:
         # Only show feeds with broadcasts in the last two weeks.
-        last_block_time = util.last_block(db)['block_time']
-        if broadcast['timestamp'] + config.TWO_WEEKS < last_block_time:
+        if broadcast['timestamp'] + config.TWO_WEEKS < time.time(): 
             continue
         # Always show only the latest broadcast from a feed address.
         if broadcast['source'] not in seen_addresses:
@@ -1000,7 +1012,7 @@ if __name__ == '__main__':
             print('Asset ‘{}’ not found.'.format(args.asset))
             exit(0)
 
-        asset_id = util.get_asset_id(db, args.asset, util.last_block(db)['block_index'])
+        asset_id = util.get_asset_id(db, args.asset, last_db_block_index)
         divisible = results['divisible']
         locked = results['locked']
         supply = util.value_out(db, results['supply'], args.asset)

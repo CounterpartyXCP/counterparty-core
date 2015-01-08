@@ -26,6 +26,18 @@ D = decimal.Decimal
 class ConfigurationError(Exception):
     pass
 
+def last_db_block_index():
+    import apsw
+    cursor = db.cursor()
+    try:
+        blocks = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = (SELECT MAX(block_index) from blocks)'''))
+        try:
+            return blocks[0]['block_index']
+        except IndexError:
+            return 0
+    except apsw.SQLError:
+        return 0
+
 def sigterm_handler(_signo, _stack_frame):
     if _signo == 15:
         signal_name = 'SIGTERM'
@@ -645,6 +657,8 @@ if __name__ == '__main__':
     # Database
     logger.info('Connecting to database.')
     db = database.get_connection(read_only=False)
+
+    util.CURRENT_BLOCK_INDEX = last_db_block_index()
 
     # MESSAGE CREATION
     if args.action == 'send':

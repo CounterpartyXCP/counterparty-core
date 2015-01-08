@@ -158,7 +158,7 @@ def make_fully_valid(pubkey_start):
     return pubkey
 
 
-def serialise (block_index, encoding, inputs, destination_outputs, data_output=None, change_output=None, dust_return_pubkey=None):
+def serialise (encoding, inputs, destination_outputs, data_output=None, change_output=None, dust_return_pubkey=None):
     s  = (1).to_bytes(4, byteorder='little')                # Version
 
     # Number of inputs.
@@ -203,7 +203,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
         data_array, value = data_output
         s += value.to_bytes(8, byteorder='little')        # Value
 
-        if util.enabled('multisig_addresses', block_index):   # Protocol change.
+        if util.enabled('multisig_addresses'):   # Protocol change.
             data_chunk = config.PREFIX + data_chunk
 
         # Initialise encryption key (once per output).
@@ -211,7 +211,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
 
         if encoding == 'multisig':
             # Get data (fake) public key.
-            if util.enabled('multisig_addresses', block_index):   # Protocol change.
+            if util.enabled('multisig_addresses'):   # Protocol change.
                 pad_length = (33 * 2) - 1 - 2 - 2 - len(data_chunk)
                 assert pad_length >= 0
                 data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
@@ -242,7 +242,7 @@ def serialise (block_index, encoding, inputs, destination_outputs, data_output=N
                 tx_script += OP_2                                  # OP_2
                 tx_script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
         elif encoding == 'opreturn':
-            if util.enabled('multisig_addresses', block_index):   # Protocol change.
+            if util.enabled('multisig_addresses'):   # Protocol change.
                 data_chunk = key.encrypt(data_chunk)
             tx_script = OP_RETURN                                  # OP_RETURN
             tx_script += op_push(len(data_chunk))                  # Push bytes of data chunk (NOTE: OP_SMALLDATA?)
@@ -295,7 +295,6 @@ def construct (db, proxy, tx_info, encoding='auto',
                exact_fee=None, fee_provided=0, provided_pubkeys=None,
                allow_unconfirmed_inputs=False):
 
-    block_index = util.last_block(db)['block_index']
     (source, destination_outputs, data) = tx_info
 
     # Sanity checks.
@@ -453,7 +452,7 @@ def construct (db, proxy, tx_info, encoding='auto',
 
 
     # Serialise inputs and outputs.
-    unsigned_tx = serialise(block_index, encoding, inputs, destination_outputs,
+    unsigned_tx = serialise(encoding, inputs, destination_outputs,
                             data_output, change_output,
                             dust_return_pubkey=dust_return_pubkey)
     unsigned_tx_hex = binascii.hexlify(unsigned_tx).decode('utf-8')

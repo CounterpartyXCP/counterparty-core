@@ -181,10 +181,10 @@ def cancel_order (db, order, status, block_index):
     }
     sql='update orders set status = :status where tx_hash = :tx_hash'
     cursor.execute(sql, bindings)
-    log.message(db, block_index, 'update', 'orders', bindings)
+    log.message(db, 'update', 'orders', bindings)
 
     if order['give_asset'] != config.BTC:    # Can’t credit BTC.
-        util.credit(db, block_index, order['source'], order['give_asset'], order['give_remaining'], action='cancel order', event=order['tx_hash'])
+        util.credit(db, order['source'], order['give_asset'], order['give_remaining'], action='cancel order', event=order['tx_hash'])
 
     if status == 'expired':
         # Record offer expiration.
@@ -221,7 +221,7 @@ def cancel_order_match (db, order_match, status, block_index):
     }
     sql='update order_matches set status = :status where id = :order_match_id'
     cursor.execute(sql, bindings)
-    log.message(db, block_index, 'update', 'order_matches', bindings)
+    log.message(db, 'update', 'order_matches', bindings)
 
     order_match_id = util.make_id(order_match['tx0_hash'], order_match['tx1_hash'])
 
@@ -234,7 +234,7 @@ def cancel_order_match (db, order_match, status, block_index):
     if tx0_order['status'] in ('expired', 'cancelled'):
         tx0_order_status = tx0_order['status']
         if order_match['forward_asset'] != config.BTC:
-            util.credit(db, block_index, order_match['tx0_address'],
+            util.credit(db, order_match['tx0_address'],
                         order_match['forward_asset'],
                         order_match['forward_quantity'], action='order {}'.format(tx0_order_status), event=order_match['id'])
     else:
@@ -254,7 +254,7 @@ def cancel_order_match (db, order_match, status, block_index):
         }
         sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining where tx_hash = :tx_hash'
         cursor.execute(sql, bindings)
-        log.message(db, block_index, 'update', 'orders', bindings)
+        log.message(db, 'update', 'orders', bindings)
 
     # If tx1 is dead, credit address directly; if not, replenish give remaining, get remaining, and fee required remaining.
     orders = list(cursor.execute('''SELECT * FROM orders \
@@ -265,7 +265,7 @@ def cancel_order_match (db, order_match, status, block_index):
     if tx1_order['status'] in ('expired', 'cancelled'):
         tx1_order_status = tx1_order['status']
         if order_match['backward_asset'] != config.BTC:
-            util.credit(db, block_index, order_match['tx1_address'],
+            util.credit(db, order_match['tx1_address'],
                         order_match['backward_asset'],
                         order_match['backward_quantity'], action='order {}'.format(tx1_order_status), event=order_match['id'])
     else:
@@ -285,7 +285,7 @@ def cancel_order_match (db, order_match, status, block_index):
         }
         sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining where tx_hash = :tx_hash'
         cursor.execute(sql, bindings)
-        log.message(db, block_index, 'update', 'orders', bindings)
+        log.message(db, 'update', 'orders', bindings)
 
     if block_index < 286500:    # Protocol change.
         # Sanity check: one of the two must have expired.
@@ -378,11 +378,11 @@ def compose (db, source, give_asset, give_quantity, get_asset, get_quantity, exp
         if (not balances or balances[0]['quantity'] < give_quantity):
             raise exceptions.ComposeError('insufficient funds')
 
-    problems = validate(db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, util.last_block(db)['block_index'])
+    problems = validate(db, source, give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, util.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
 
-    give_id = util.get_asset_id(db, give_asset, util.last_block(db)['block_index'])
-    get_id = util.get_asset_id(db, get_asset, util.last_block(db)['block_index'])
+    give_id = util.get_asset_id(db, give_asset, util.CURRENT_BLOCK_INDEX)
+    get_id = util.get_asset_id(db, get_asset, util.CURRENT_BLOCK_INDEX)
     data = struct.pack(config.TXTYPE_FORMAT, ID)
     data += struct.pack(FORMAT, give_id, give_quantity, get_id, get_quantity,
                         expiration, fee_required)
@@ -407,7 +407,7 @@ def parse (db, tx, message):
     price = 0
     if status == 'open':
         try:
-            price = util.price(get_quantity, give_quantity, tx['block_index'])
+            price = util.price(get_quantity, give_quantity)
         except ZeroDivisionError:
             price = 0
 
@@ -430,7 +430,7 @@ def parse (db, tx, message):
     # Debit give quantity. (Escrow.)
     if status == 'open':
         if give_asset != config.BTC:  # No need (or way) to debit BTC.
-            util.debit(db, tx['block_index'], tx['source'], give_asset, give_quantity, action='open order', event=tx['tx_hash'])
+            util.debit(db, tx['source'], give_asset, give_quantity, action='open order', event=tx['tx_hash'])
 
     # Add parsed transaction to message-type–specific table.
     bindings = {
@@ -485,7 +485,7 @@ def match (db, tx, block_index=None):
     order_matches = cursor.fetchall()
     if tx['block_index'] > 284500 or config.TESTNET:  # Protocol change.
         order_matches = sorted(order_matches, key=lambda x: x['tx_index'])                              # Sort by tx index second.
-        order_matches = sorted(order_matches, key=lambda x: util.price(x['get_quantity'], x['give_quantity'], tx1['block_index']))   # Sort by price first.
+        order_matches = sorted(order_matches, key=lambda x: util.price(x['get_quantity'], x['give_quantity']))   # Sort by price first.
 
     # Get fee remaining.
     tx1_fee_required_remaining = tx1['fee_required_remaining']
@@ -544,19 +544,19 @@ def match (db, tx, block_index=None):
 
         # If the prices agree, make the trade. The found order sets the price,
         # and they trade as much as they can.
-        tx0_price = util.price(tx0['get_quantity'], tx0['give_quantity'], block_index)
-        tx1_price = util.price(tx1['get_quantity'], tx1['give_quantity'], block_index)
-        tx1_inverse_price = util.price(tx1['give_quantity'], tx1['get_quantity'], block_index)
+        tx0_price = util.price(tx0['get_quantity'], tx0['give_quantity'])
+        tx1_price = util.price(tx1['get_quantity'], tx1['give_quantity'])
+        tx1_inverse_price = util.price(tx1['give_quantity'], tx1['get_quantity'])
 
         # Protocol change.
-        if tx['block_index'] < 286000: tx1_inverse_price = util.price(1, tx1_price, block_index)
+        if tx['block_index'] < 286000: tx1_inverse_price = util.price(1, tx1_price)
 
         logger.debug('Tx0 Price: {}; Tx1 Inverse Price: {}'.format(float(tx0_price), float(tx1_inverse_price)))
         if tx0_price > tx1_inverse_price:
             logger.debug('Skipping: price mismatch.')
         else:
-            logger.debug('Potential forward quantities: {}, {}'.format(tx0_give_remaining, int(util.price(tx1_give_remaining, tx0_price, block_index))))
-            forward_quantity = int(min(tx0_give_remaining, int(util.price(tx1_give_remaining, tx0_price, block_index))))
+            logger.debug('Potential forward quantities: {}, {}'.format(tx0_give_remaining, int(util.price(tx1_give_remaining, tx0_price))))
+            forward_quantity = int(min(tx0_give_remaining, int(util.price(tx1_give_remaining, tx0_price))))
             logger.debug('Forward Quantity: {}'.format(forward_quantity))
             backward_quantity = round(forward_quantity * tx0_price)
             logger.debug('Backward Quantity: {}'.format(backward_quantity))
@@ -583,9 +583,9 @@ def match (db, tx, block_index=None):
                 if tx1['get_asset'] == config.BTC:
 
                     if block_index >= 310500 or config.TESTNET:     # Protocol change.
-                        fee = int(tx1['fee_required'] * util.price(backward_quantity, tx1['give_quantity'], block_index))
+                        fee = int(tx1['fee_required'] * util.price(backward_quantity, tx1['give_quantity']))
                     else:
-                        fee = int(tx1['fee_required_remaining'] * util.price(forward_quantity, tx1_get_remaining, block_index))
+                        fee = int(tx1['fee_required_remaining'] * util.price(forward_quantity, tx1_get_remaining))
 
                     logger.debug('Tx0 fee provided remaining: {}; required fee: {}'.format(tx0_fee_provided_remaining / config.UNIT, fee / config.UNIT))
                     if tx0_fee_provided_remaining < fee:
@@ -599,9 +599,9 @@ def match (db, tx, block_index=None):
                 elif tx1['give_asset'] == config.BTC:
 
                     if block_index >= 310500 or config.TESTNET:      # Protocol change.
-                        fee = int(tx0['fee_required'] * util.price(backward_quantity, tx0['give_quantity'], block_index))
+                        fee = int(tx0['fee_required'] * util.price(backward_quantity, tx0['give_quantity']))
                     else:
-                        fee = int(tx0['fee_required_remaining'] * util.price(backward_quantity, tx0_get_remaining, block_index))
+                        fee = int(tx0['fee_required_remaining'] * util.price(backward_quantity, tx0_get_remaining))
 
                     logger.debug('Tx1 fee provided remaining: {}; required fee: {}'.format(tx1_fee_provided_remaining / config.UNIT, fee / config.UNIT))
                     if tx1_fee_provided_remaining < fee:
@@ -623,9 +623,9 @@ def match (db, tx, block_index=None):
             else:
                 status = 'completed'
                 # Credit.
-                util.credit(db, tx['block_index'], tx1['source'], tx1['get_asset'],
+                util.credit(db, tx1['source'], tx1['get_asset'],
                                     forward_quantity, action='order match', event=order_match_id)
-                util.credit(db, tx['block_index'], tx0['source'], tx0['get_asset'],
+                util.credit(db, tx0['source'], tx0['get_asset'],
                                     backward_quantity, action='order match', event=order_match_id)
 
             # Debit the order, even if it involves giving bitcoins, and so one
@@ -643,7 +643,7 @@ def match (db, tx, block_index=None):
                 if tx0['give_asset'] != config.BTC and tx0['get_asset'] != config.BTC:
                     # Fill order, and recredit give_remaining.
                     tx0_status = 'filled'
-                    util.credit(db, block_index, tx0['source'], tx0['give_asset'], tx0_give_remaining, event=tx1['tx_hash'], action='filled')
+                    util.credit(db, tx0['source'], tx0['give_asset'], tx0_give_remaining, event=tx1['tx_hash'], action='filled')
             bindings = {
                 'give_remaining': tx0_give_remaining,
                 'get_remaining': tx0_get_remaining,
@@ -654,13 +654,13 @@ def match (db, tx, block_index=None):
             }
             sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining, fee_provided_remaining = :fee_provided_remaining, status = :status where tx_hash = :tx_hash'
             cursor.execute(sql, bindings)
-            log.message(db, block_index, 'update', 'orders', bindings)
+            log.message(db, 'update', 'orders', bindings)
             # tx1
             if tx1_give_remaining <= 0 or (tx1_get_remaining <= 0 and (block_index >= 292000 or config.TESTNET)):    # Protocol change
                 if tx1['give_asset'] != config.BTC and tx1['get_asset'] != config.BTC:
                     # Fill order, and recredit give_remaining.
                     tx1_status = 'filled'
-                    util.credit(db, block_index, tx1['source'], tx1['give_asset'], tx1_give_remaining, event=tx0['tx_hash'], action='filled')
+                    util.credit(db, tx1['source'], tx1['give_asset'], tx1_give_remaining, event=tx0['tx_hash'], action='filled')
             bindings = {
                 'give_remaining': tx1_give_remaining,
                 'get_remaining': tx1_get_remaining,
@@ -671,7 +671,7 @@ def match (db, tx, block_index=None):
             }
             sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining, fee_provided_remaining = :fee_provided_remaining, status = :status where tx_hash = :tx_hash'
             cursor.execute(sql, bindings)
-            log.message(db, block_index, 'update', 'orders', bindings)
+            log.message(db, 'update', 'orders', bindings)
 
             # Calculate when the match will expire.
             if block_index >= 308000 or config.TESTNET:      # Protocol change.

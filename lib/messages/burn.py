@@ -54,7 +54,7 @@ def validate (db, source, destination, quantity, block_index, overburn=False):
 def compose (db, source, quantity, overburn=False):
     cursor = db.cursor()
     destination = config.UNSPENDABLE
-    problems = validate(db, source, destination, quantity, util.last_block(db)['block_index'], overburn=overburn)
+    problems = validate(db, source, destination, quantity, util.CURRENT_BLOCK_INDEX, overburn=overburn)
     if problems: raise exceptions.ComposeError(problems)
 
     # Check that a maximum of 1 BTC total is burned per address.
@@ -98,7 +98,7 @@ def parse (db, tx, MAINNET_BURNS, message=None):
             earned = round(burned * multiplier)
 
             # Credit source address with earned XCP.
-            util.credit(db, tx['block_index'], tx['source'], config.XCP, earned, action='burn', event=tx['tx_hash'])
+            util.credit(db, tx['source'], config.XCP, earned, action='burn', event=tx['tx_hash'])
         else:
             burned = 0
             earned = 0
@@ -116,7 +116,7 @@ def parse (db, tx, MAINNET_BURNS, message=None):
         except KeyError:
             return
 
-        util.credit(db, int(line['block_index']), line['source'], config.XCP, int(line['earned']), action='burn', event=line['tx_hash'])
+        util.credit(db, line['source'], config.XCP, int(line['earned']), action='burn', event=line['tx_hash'])
 
         tx_index = line['tx_index']
         tx_hash = line['tx_hash']

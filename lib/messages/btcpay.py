@@ -87,11 +87,11 @@ def validate (db, source, order_match_id, block_index):
 def compose (db, source, order_match_id):
     tx0_hash, tx1_hash = util.parse_id(order_match_id)
 
-    destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(db, source, order_match_id, util.last_block(db)['block_index'])
+    destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(db, source, order_match_id, util.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
 
     # Warn if down to the wire.
-    time_left = order_match['match_expire_index'] - util.last_block(db)['block_index']
+    time_left = order_match['match_expire_index'] - util.CURRENT_BLOCK_INDEX
     if time_left < 4:
         logger.warning('Only {} blocks until that order match expires. The payment might not make into the blockchain in time.'.format(time_left))
     if 10 - time_left < 4:
@@ -128,7 +128,7 @@ def parse (db, tx, message):
         if tx['btc_amount'] >= btc_quantity:
 
             # Credit source address for the currency that he bought with the bitcoins.
-            util.credit(db, tx['block_index'], tx['source'], escrowed_asset, escrowed_quantity, action='btcpay', event=tx['tx_hash'])
+            util.credit(db, tx['source'], escrowed_asset, escrowed_quantity, action='btcpay', event=tx['tx_hash'])
             status = 'valid'
 
             # Update order match.
@@ -138,7 +138,7 @@ def parse (db, tx, message):
             }
             sql='update order_matches set status = :status where id = :order_match_id'
             cursor.execute(sql, bindings)
-            log.message(db, tx['block_index'], 'update', 'order_matches', bindings)
+            log.message(db, 'update', 'order_matches', bindings)
 
     # Add parsed transaction to message-type–specific table.
     bindings = {

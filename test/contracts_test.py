@@ -110,7 +110,7 @@ class tester(object):
             if not sender:
                 sender = '82a978b3f5962a5b0957d9ee9eef472ee55b42f1' # PyEthereum uses ECDSA to derive this string from `sender = 0`.
 
-            util.credit(db, 0, sender, config.XCP, max(endowment*2, 100000000), action='unit test', event='facefeed')
+            util.credit(db, sender, config.XCP, max(endowment*2, 100000000), action='unit test', event='facefeed')
 
             success, data = tester.state.do_send(self, sender, '', endowment, data=code)
             contract_id = data
@@ -176,7 +176,7 @@ class tester(object):
 
             # Execute contract.
             # print('qux', data, type(data))
-            util.credit(db, 0, sender, config.XCP, value + 100000000, action='unit test', event='facefeed')
+            util.credit(db, sender, config.XCP, value + 100000000, action='unit test', event='facefeed')
             success, output = tester.state.do_send(self, sender, to, value, data=data)
             if output:
                 return rlp.decode_datalist(bytes(output))
