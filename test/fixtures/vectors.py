@@ -13,6 +13,7 @@ from lib import exceptions
 from lib import script
 from lib.messages.scriptlib.processblock import ContractError
 from lib.api import APIError
+from lib.util import DebitError
 from fractions import Fraction
 
 UNITTEST_VECTOR = {
@@ -1048,6 +1049,46 @@ UNITTEST_VECTOR = {
             'in': (b'\x00\x00\x00\x14\x00\x00\x00\x00\x00\x0b\xfc\xe3',),
             'out': '0000001400000000000bfce3'
         }],
+        'last_message': [{
+            'in': (),
+            'out': {'bindings': '{"block_index": 310494, "fee_fraction_int": null, "locked": true, "source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "status": "valid", "text": null, "timestamp": 0, "tx_hash": "f7499dee61e7684e847dec7fa42d782c01cf0dea956ef8bbb68d62258e339f08", "tx_index": 495, "value": null}', 'block_index': 310494, 'category': 'broadcasts', 'command': 'insert', 'message_index': 51, 'timestamp': 0}
+        }],
+        'get_asset_id': [{
+            'in': ('XCP', DP['default_block']),
+            'out': 1
+        },  {
+            'in': ('BTC', DP['default_block']),
+            'out': 0
+        },  {
+            'in': ('foobar', DP['default_block']),
+            'error': (exceptions.AssetError, 'No such asset: foobar')
+        }],
+        'debit': [{
+            'in': (ADDR[0], 'XCP', 1),
+            'out': None
+        },  {
+            'in': (ADDR[0], 'BTC', DP['quantity']),
+            'error': (DebitError, 'Cannot debit bitcoins.')
+        },  {
+            'in': (ADDR[0], 'BTC', -1 * DP['quantity']),
+            'error': (DebitError, 'Negative quantity.')
+        },  {
+            'in': (ADDR[0], 'BTC', 1.1 * DP['quantity']),
+            'error': (DebitError, 'Quantity must be an integer.')
+        },  {
+            'in': (ADDR[0], 'XCP', 2**40),
+            'error': (DebitError, 'Insufficient funds.')
+        }],
+        'get_asset_name': [{
+            'in': (1, DP['default_block']),
+            'out': 'XCP'
+        },  {
+            'in': (0, DP['default_block']),
+            'out': 'BTC'
+        },  {
+            'in': (453, DP['default_block']),
+            'out': 0
+        }],
         'enabled': [{
             'in': ('numeric_asset_names',),
             'out': True
@@ -1060,7 +1101,7 @@ UNITTEST_VECTOR = {
             'out': False # Date in the past, mock function overrides this one and always returns False in the test suite
         },  {
             'in': ('5520720007.792',),
-            'out': False # Date far in the future, Mock function overrides this one and always returns False in the test suite        
+            'out': False # Date far in the future, mock function overrides this one and always returns False in the test suite
         }],
     }
 }
