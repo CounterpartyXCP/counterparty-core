@@ -890,6 +890,10 @@ UNITTEST_VECTOR = {
             'in': ('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',),
             'out': ['mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns']
         }],
+        'date_passed': [{
+            'in': ('1020720007.792',),
+            'out': False # Mock function overrides this one and always returns False in the test suite
+        }],
         'is_pubkeyhash': [{
             'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6',),  # Valid Bitcoin Address
             'out': True
