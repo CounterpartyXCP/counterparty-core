@@ -854,28 +854,31 @@ UNITTEST_VECTOR = {
         }],
 
         'test_array': [{
-            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 2),         # Valid array
+            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 2),         # Valid array
             'out': None                                                                                             # No error
         }, {
-            'in': ('Q', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 2),         # Bad first element
+            'in': ('Q', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 2),         # Bad first element
             'error': (script.MultiSigAddressError, 'Signature values not integers.')
         }, {
-            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], None),      # Bad last element
+            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], None),      # Bad last element
             'error': (script.MultiSigAddressError, 'Signature values not integers.')
         }, {
-            'in': ('0', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 2),         # First element too low
+            'in': ('0', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 2),         # First element too low
             'error': (script.MultiSigAddressError, 'Invalid signatures_required.')
         }, {
-            'in': ('4', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 2),         # First element too high
+            'in': ('4', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 2),         # First element too high
             'error': (script.MultiSigAddressError, 'Invalid signatures_required.')
         }, {
-            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 1),         # Last element too low
+            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 1),         # Last element too low
             'error': (script.MultiSigAddressError, 'Invalid signatures_possible.')
         }, {
-            'in': ('2', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 4),         # Last element too high
+            'in': ('2', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 4),         # Last element too high
             'error': (script.MultiSigAddressError, 'Invalid signatures_possible.')
         }, {
-            'in': ('3', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 3),         # Wrong number of pubkeys
+            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 2),
+            'error': (script.MultiSigAddressError, 'Invalid characters in pubkeys/pubkeyhashes.')
+        },  {
+            'in': ('3', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 3),         # Wrong number of pubkeys
             'error': (script.InputError, 'Incorrect number of pubkeys/pubkeyhashes in multi‐signature address.')
         }],
         'construct_array': [{
@@ -889,10 +892,6 @@ UNITTEST_VECTOR = {
         'pubkeyhash_array': [{
             'in': ('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',),
             'out': ['mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns']
-        }],
-        'date_passed': [{
-            'in': ('1020720007.792',),
-            'out': False # Mock function overrides this one and always returns False in the test suite
         }],
         'is_pubkeyhash': [{
             'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6',),  # Valid Bitcoin Address
@@ -1055,6 +1054,13 @@ UNITTEST_VECTOR = {
         },  {
             'in': ('foobar', DP['default_block']),
             'error': (KeyError, "'foobar'")
+        }],
+        'date_passed': [{
+            'in': ('1020720007.792',),
+            'out': False # Date in the past, mock function overrides this one and always returns False in the test suite
+        },  {
+            'in': ('5520720007.792',),
+            'out': False # Date far in the future, Mock function overrides this one and always returns False in the test suite        
         }],
     }
 }

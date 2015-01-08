@@ -133,6 +133,9 @@ def test_array(signatures_required, pubs, signatures_possible):
         raise MultiSigAddressError('Invalid signatures_required.')
     if signatures_possible < 2 or signatures_possible > 3:
         raise MultiSigAddressError('Invalid signatures_possible.')
+    for pubkey in pubs:
+        if '_' in pubkey:
+            raise MultiSigAddressError('Invalid characters in pubkeys/pubkeyhashes.')
     if signatures_possible != len(pubs):
         raise InputError('Incorrect number of pubkeys/pubkeyhashes in multi‐signature address.')
 
