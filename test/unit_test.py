@@ -44,4 +44,4 @@ def test_vector(tx_name, method, inputs, outputs, error, records, counterpartyd_
     if method == 'parse':
         util_test.insert_transaction(inputs[0], counterpartyd_db)
         inputs += (inputs[0]['data'][4:],) # message arg
-    util_test.check_ouputs(tx_name, method, inputs, outputs, error, records, counterpartyd_db)
+    util_test.check_outputs(tx_name, method, inputs, outputs, error, records, counterpartyd_db)

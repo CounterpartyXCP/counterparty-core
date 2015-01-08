@@ -203,11 +203,11 @@ def debit (db, address, asset, quantity, action=None, event=None):
     block_index = CURRENT_BLOCK_INDEX
 
     if type(quantity) != int:
-        raise DebitError
+        raise DebitError('Quantity must be an integer.')
     if quantity < 0:
-        raise DebitError
+        raise DebitError('Negative quantity.')
     if asset == config.BTC:
-        raise DebitError
+        raise DebitError('Cannot debit bitcoins.')
 
     debit_cursor = db.cursor()
 

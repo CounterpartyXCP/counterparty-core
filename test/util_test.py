@@ -149,6 +149,7 @@ def insert_transaction(transaction, db):
     keys = ",".join(transaction.keys())
     cursor.execute('''INSERT INTO transactions ({}) VALUES (?,?,?,?,?,?,?,?,?,?,?)'''.format(keys), tuple(transaction.values()))
     cursor.close()
+    util.CURRENT_BLOCK_INDEX = transaction['block_index']
 
 
 def initialise_rawtransactions_db(db):
@@ -302,12 +303,13 @@ def exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db)
     """Execute tested_method within context and arguments."""
     if tx_name == 'transaction' and method == 'construct':
         return tested_method(counterpartyd_db, get_proxy(), inputs[0], **inputs[1])
-    elif tx_name == 'util' or tx_name == 'script':
+    elif (tx_name == 'util' and not (method == 'last_message' or method == 'get_asset_id' or method == 'get_asset_name' or method == 'debit' \
+          or method == 'credit' or method == 'is_divisible' or method == 'value_in' or method == 'value_out' or method == 'holders' or method == 'get_balance')) or tx_name == 'script':
         return tested_method(*inputs)
     else:
         return tested_method(counterpartyd_db, *inputs)
 
-def check_ouputs(tx_name, method, inputs, outputs, error, records, counterpartyd_db):
+def check_outputs(tx_name, method, inputs, outputs, error, records, counterpartyd_db):
     """Check actual and expected outputs of a particular function."""
 
     try:
