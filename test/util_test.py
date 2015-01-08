@@ -149,6 +149,7 @@ def insert_transaction(transaction, db):
     keys = ",".join(transaction.keys())
     cursor.execute('''INSERT INTO transactions ({}) VALUES (?,?,?,?,?,?,?,?,?,?,?)'''.format(keys), tuple(transaction.values()))
     cursor.close()
+    util.CURRENT_BLOCK_INDEX = transaction['block_index']
 
 
 def initialise_rawtransactions_db(db):
