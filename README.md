@@ -9,8 +9,8 @@ Protocol](https://github.com/CounterpartyXCP/Counterparty).
 # Dependencies
 * [Python 3](http://python.org)
 * Python 3 [packages](https://github.com/CounterpartyXCP/counterpartyd/blob/master/pip-requirements.txt)
-* The [jmcorgan](https://github.com/jmcorgan/bitcoin/tree/addrindex) branch of
-  Bitcoin Core with the following options set:
+* [Patched Bitcoin Core](https://github.com/btcdrak/bitcoin/releases/tag/addrindex-0.10.0) with the following options set:
+
 ```
 rpcuser=bitcoinrpc
 rpcpassword=$PASSWORD
