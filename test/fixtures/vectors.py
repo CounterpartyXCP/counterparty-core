@@ -1,6 +1,6 @@
 """
 This structure holds the unit test vectors. They are used to generate test cases in conftest.py.
-The results are computed using check_ouputs in util_test.py.
+The results are computed using check_outputs in util_test.py.
 The function supports three types of output checks:
 - Return values - 'out'
 - Errors raised - 'error'
@@ -11,7 +11,9 @@ from .params import ADDR, MULTISIGADDR, DEFAULT_PARAMS as DP
 
 from lib import exceptions
 from lib import script
-from lib.messages.scriptlib import processblock
+from lib.messages.scriptlib.processblock import ContractError
+from lib.api import APIError
+from fractions import Fraction
 
 UNITTEST_VECTOR = {
     'bet': {
@@ -224,10 +226,10 @@ UNITTEST_VECTOR = {
             'out': (ADDR[0], [], b'\x00\x00\x00e\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\n\xfa\xf0\x80')
         },  {
             'in': (ADDR[0], 'faf080', 10, -10, 10, 'faf080'),
-            'error': (processblock.ContractError, 'negative startgas')
+            'error': (ContractError, 'negative startgas')
         },  {
             'in': (ADDR[0], 'faf080', -10, 10, 10, 'faf080'),
-            'error': (processblock.ContractError, 'negative gasprice')
+            'error': (ContractError, 'negative gasprice')
         }],
     },
     'send': {
@@ -636,6 +638,27 @@ UNITTEST_VECTOR = {
     },
     'transaction': {
         'construct': [{
+            'in': (('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', [('mvCounterpartyXXXXXXXXXXXXXXW24Hef', 62000000)], None), {'encoding': 'multisig', 'exact_fee': 1.0}),
+            'error': (exceptions.TransactionError, 'Exact fees must be in satoshis.')
+        }, {
+            'in': (('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', [('mvCounterpartyXXXXXXXXXXXXXXW24Hef', 62000000)], None), {'encoding': 'multisig', 'fee_provided': 1.0}),
+            'error': (exceptions.TransactionError, 'Fee provided must be in satoshis.')
+        }, {
+            'in': (('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', [('mvCounterpartyXXXXXXXXXXXXXXW24Hef', 5429)], None), {'encoding': 'singlesig'}),
+            'error': (exceptions.TransactionError, 'Destination output is dust.')
+        }, {
+            'in': (('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', [('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 7799)], None), {'encoding': 'multisig'}),
+            'error': (exceptions.TransactionError, 'Destination output is dust.')
+        }, {
+            'in': (('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', [('mvCounterpartyXXXXXXXXXXXXXXW24Hef', 62000000)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80'), {'encoding': 'foobar'}),
+            'error': (exceptions.TransactionError, 'Unknown encoding‐scheme.')
+        }, {
+            'in': (('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', [('mvCounterpartyXXXXXXXXXXXXXXW24Hef', 62000000)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80\x02\xfa\xf0\x80\x02\xfa\xf0\x80\x02\xfa\xf0\x80\x02\xfa\xf0\x80\x02\xfa\xf0\x80\x02\xfa\xf0\x80\x02\xfa\xf0'), {'encoding': 'opreturn'}),
+            'error': (exceptions.TransactionError, 'One `OP_RETURN` output per transaction.')
+        }, {
+            'in': (('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', [('mvCounterpartyXXXXXXXXXXXXXXW24Hef', 2**30)], b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80'), {'encoding': 'multisig'}),
+            'error': (exceptions.BalanceError,  'Insufficient BTC at address mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns. (Need approximately 10.73759624 BTC.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)')
+        }, {
             'comment': 'burn',
             'in': (('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', [('mvCounterpartyXXXXXXXXXXXXXXW24Hef', 62000000)], None), {'encoding': 'multisig'}),
             'out': '0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff02800bb203000000001976a914a11b66a67b3ff69671c8f82254099faf374b800e88ac70ae4302000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000'
@@ -713,6 +736,51 @@ UNITTEST_VECTOR = {
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e0000000000006951210259415bf04af834423d3dd7adb0238d85fcf79a8a619fba5aee7a331919e487e8210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae8c19ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }],
     },
+    'api': {
+        'get_rows': [{
+            'in': ('balances', None, 'AND', None, None, None, None, None, 1000, 0, True),
+            'out': None
+        }, {
+            'in': ('balances', None, 'barfoo', None, None, None, None, None, 1000, 0, True),
+            'error': (APIError, 'Invalid filter operator (OR, AND)')
+        }, {
+            'in': (None, None, 'AND', None, None, None, None, None, 1000, 0, True),
+            'error': (APIError, 'Unknown table')
+        }, {
+            'in': ('balances', None, 'AND', None, 'barfoo', None, None, None, 1000, 0, True),
+            'error': (APIError, 'Invalid order direction (ASC, DESC)')
+        }, {
+            'in': ('balances', None, 'AND', None, None, None, None, None, 1000.0, 0, True),
+            'error': (APIError, 'Invalid limit')
+        }, {
+            'in': ('balances', None, 'AND', None, None, None, None, None, 1001, 0, True),
+            'error': (APIError, 'Limit should be lower or equal to 1000')
+        }, {
+            'in': ('balances', None, 'AND', None, None, None, None, None, 1000, 0.0, True),
+            'error': (APIError, 'Invalid offset')
+        }, {
+            'in': ('balances', None, 'AND', '*', None, None, None, None, 1000, 0, True),
+            'error': (APIError, 'Invalid order_by, must be a field name')
+        }, {
+            'in': ('balances', [0], 'AND', None, None, None, None, None, 1000, 0, True),
+            'error': (APIError, 'Unknown filter type')
+        }, {
+            'in': ('balances', {'field': 'bar', 'op': '='}, 'AND', None, None, None, None, None, 1000, 0, True),
+            'error': (APIError, "A specified filter is missing the 'value' field")
+        }, {
+            'in': ('balances', {'field': 'bar', 'op': '=', 'value': {}}, 'AND', None, None, None, None, None, 1000, 0, True),
+            'error': (APIError, "Invalid value for the field 'bar'")
+        }, {
+            'in': ('balances', {'field': 'bar', 'op': '=', 'value': [0,2]}, 'AND', None, None, None, None, None, 1000, 0, True),
+            'error': (APIError, "Invalid value for the field 'bar'")
+        }, {
+            'in': ('balances', {'field': 'bar', 'op': 'AND', 'value': 0}, 'AND', None, None, None, None, None, 1000, 0, True),
+            'error': (APIError, "Invalid operator for the field 'bar'")
+        }, {
+            'in': ('balances', {'field': 'bar', 'op': '=', 'value': 0, 'case_sensitive': 0}, 'AND', None, None, None, None, None, 1000, 0, True),
+            'error': (APIError, "case_sensitive must be a boolean")
+        }],
+    },
     'script': {
         'validate': [{
             'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6',),                                          # Valid Bitcoin address
@@ -786,33 +854,45 @@ UNITTEST_VECTOR = {
         }],
 
         'test_array': [{
-            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 2),         # Valid array
+            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 2),         # Valid array
             'out': None                                                                                             # No error
         }, {
-            'in': ('Q', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 2),         # Bad first element
+            'in': ('Q', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 2),         # Bad first element
             'error': (script.MultiSigAddressError, 'Signature values not integers.')
         }, {
-            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], None),      # Bad last element
+            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], None),      # Bad last element
             'error': (script.MultiSigAddressError, 'Signature values not integers.')
         }, {
-            'in': ('0', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 2),         # First element too low
+            'in': ('0', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 2),         # First element too low
             'error': (script.MultiSigAddressError, 'Invalid signatures_required.')
         }, {
-            'in': ('4', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 2),         # First element too high
+            'in': ('4', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 2),         # First element too high
             'error': (script.MultiSigAddressError, 'Invalid signatures_required.')
         }, {
-            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 1),         # Last element too low
+            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 1),         # Last element too low
             'error': (script.MultiSigAddressError, 'Invalid signatures_possible.')
         }, {
-            'in': ('2', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 4),         # Last element too high
+            'in': ('2', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 4),         # Last element too high
             'error': (script.MultiSigAddressError, 'Invalid signatures_possible.')
         }, {
-            'in': ('3', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 3),         # Wrong number of pubkeys
+            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 2),
+            'error': (script.MultiSigAddressError, 'Invalid characters in pubkeys/pubkeyhashes.')
+        },  {
+            'in': ('3', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 3),         # Wrong number of pubkeys
             'error': (script.InputError, 'Incorrect number of pubkeys/pubkeyhashes in multi‐signature address.')
         }],
-
-
-
+        'construct_array': [{
+            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 2),
+            'out': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2'
+        }],
+        'extract_array': [{
+            'in': ('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',),
+            'out': (1, ['mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'], 2)
+        }],
+        'pubkeyhash_array': [{
+            'in': ('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',),
+            'out': ['mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns']
+        }],
         'is_pubkeyhash': [{
             'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6',),  # Valid Bitcoin Address
             'out': True
@@ -895,6 +975,12 @@ UNITTEST_VECTOR = {
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e000000000000695121025a415bf04af834423d3dd7ad96dc727a030865759f9fbc9036a64c1197e587c8210254da540fb2673b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe7246f210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae8c19ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }],
         'generate_asset_id': [{
+            'in': ('BTC', DP['default_block']),
+            'out': 0
+        },  {
+            'in': ('XCP', DP['default_block']),
+            'out': 1
+        },  {
             'in': ('BCD', 308000),
             'error': (exceptions.AssetNameError, 'too short')
         }, {
@@ -926,6 +1012,12 @@ UNITTEST_VECTOR = {
             'out': 26**12 - 1
         }],
         'generate_asset_name': [{
+            'in': (0, DP['default_block']),
+            'out': 'BTC'
+        },  {
+            'in': (1, DP['default_block']),
+            'out': 'XCP'
+        },  {
             'in': (26**12 - 1, 308000),
             'out': 'ZZZZZZZZZZZZ'
         }, {
@@ -943,6 +1035,32 @@ UNITTEST_VECTOR = {
         }, {
             'in': (2**64, 308000),
             'error': (exceptions.AssetIDError, 'too high')
-        }]
+        }],
+        'price': [{
+            'in': (1, 10),
+            'out': Fraction(1, 10)
+        }],
+        'dhash_string': [{
+            'in': ('foobar',),
+            'out': '3f2c7ccae98af81e44c0ec419659f50d8b7d48c681e5d57fc747d0461e42dda1'
+        }],
+        'hexlify': [{
+            'in': (b'\x00\x00\x00\x14\x00\x00\x00\x00\x00\x0b\xfc\xe3',),
+            'out': '0000001400000000000bfce3'
+        }],
+        'enabled': [{
+            'in': ('numeric_asset_names',),
+            'out': True
+        },  {
+            'in': ('foobar',),
+            'error': (KeyError, "'foobar'")
+        }],
+        'date_passed': [{
+            'in': ('1020720007.792',),
+            'out': False # Date in the past, mock function overrides this one and always returns False in the test suite
+        },  {
+            'in': ('5520720007.792',),
+            'out': False # Date far in the future, Mock function overrides this one and always returns False in the test suite        
+        }],
     }
 }

@@ -15,7 +15,7 @@ from lib.messages import (send, order, btcpay, issuance, broadcast, bet, dividen
 import counterpartyd
 
 from fixtures.params import DEFAULT_PARAMS as DP
-from fixtures.scenarios import UNITEST_FIXTURE, INTEGRATION_SCENARIOS, standard_scenarios_params
+from fixtures.scenarios import UNITTEST_FIXTURE, INTEGRATION_SCENARIOS, standard_scenarios_params
 
 import bitcoin as bitcoinlib
 import binascii
@@ -282,7 +282,7 @@ def check_record(record, counterpartyd_db):
         assert False
 
 def vector_to_args(vector, functions=[]):
-    """Translate from UNITEST_VECTORS style to function arguments."""
+    """Translate from UNITTEST_VECTOR style to function arguments."""
     args = []
     for tx_name in vector:
         for method in vector[tx_name]:

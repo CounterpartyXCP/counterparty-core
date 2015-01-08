@@ -7,12 +7,12 @@ scenario (for instance `simplesig` scenario is the base scenario for all mutlisi
 
 To add (or update) a transaction in a scenario, or add a scenario, just update `scenarios.py` and run `py.test --skiptestbook=all --savescenarios`
 This command will generates new outputs for each scenario (.new.json, .new.sql and .new.log), if you are satisfied with the new output just rename them (remove the .new). 
-You need to do this every time you update UNITEST_FIXTURE.
+You need to do this every time you update UNITTEST_FIXTURE.
 """
 
 from .params import ADDR, MULTISIGADDR, DEFAULT_PARAMS as DP
 
-UNITEST_FIXTURE = [
+UNITTEST_FIXTURE = [
     ['burn', (ADDR[0], DP['burn_quantity']), {'encoding': 'multisig'}],
     ['issuance', (ADDR[0], None, 'DIVISIBLE', DP['quantity'] * 1000, True, 'Divisible asset'), {'encoding': 'multisig'}],
     ['issuance', (ADDR[0], None, 'NODIVISIBLE', 1000, False, 'No divisible asset'), {'encoding': 'multisig'}],
@@ -150,7 +150,7 @@ standard_scenarios_params = {
 }
 
 INTEGRATION_SCENARIOS = {
-    'unittest_fixture': (UNITEST_FIXTURE, 'unittest_fixture')
+    'unittest_fixture': (UNITTEST_FIXTURE, 'unittest_fixture')
 }
 # Generate special tests for simplesig, multisig2 and multisig3 using standard scenario.
 for scenario_name in standard_scenarios_params:
