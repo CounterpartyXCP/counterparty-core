@@ -878,9 +878,18 @@ UNITTEST_VECTOR = {
             'in': ('3', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 3),         # Wrong number of pubkeys
             'error': (script.InputError, 'Incorrect number of pubkeys/pubkeyhashes in multi‐signature address.')
         }],
-
-
-
+        'construct_array': [{
+            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 2),
+            'out': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2'
+        }],
+        'extract_array': [{
+            'in': ('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',),
+            'out': (1, ['mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'], 2)
+        }],
+        'pubkeyhash_array': [{
+            'in': ('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',),
+            'out': ['mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns']
+        }],
         'is_pubkeyhash': [{
             'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6',),  # Valid Bitcoin Address
             'out': True
@@ -963,6 +972,12 @@ UNITTEST_VECTOR = {
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e000000000000695121025a415bf04af834423d3dd7ad96dc727a030865759f9fbc9036a64c1197e587c8210254da540fb2673b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe7246f210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae8c19ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }],
         'generate_asset_id': [{
+            'in': ('BTC', DP['default_block']),
+            'out': 0
+        },  {
+            'in': ('XCP', DP['default_block']),
+            'out': 1
+        },  {
             'in': ('BCD', 308000),
             'error': (exceptions.AssetNameError, 'too short')
         }, {
@@ -994,6 +1009,12 @@ UNITTEST_VECTOR = {
             'out': 26**12 - 1
         }],
         'generate_asset_name': [{
+            'in': (0, DP['default_block']),
+            'out': 'BTC'
+        },  {
+            'in': (1, DP['default_block']),
+            'out': 'XCP'
+        },  {
             'in': (26**12 - 1, 308000),
             'out': 'ZZZZZZZZZZZZ'
         }, {
@@ -1016,38 +1037,6 @@ UNITTEST_VECTOR = {
             'in': (1, 10, DP['default_block']),
             'out': Fraction(1, 10)
         }],
-        'generate_asset_id': [{
-            'in': ('BTC', DP['default_block']),
-            'out': 0
-        },  {
-            'in': ('XCP', DP['default_block']),
-            'out': 1
-        },  {
-            'in': ('FOOBAR', DP['default_block']),
-            'out': 66051301
-        },  {
-            'in': ('FOO', DP['default_block']),
-            'error': (exceptions.AssetNameError, 'too short')
-        },  {
-            'in': ('AAAA', DP['default_block']),
-            'error': (exceptions.AssetNameError, "non‐numeric asset name starts with ‘A’")
-        },  {
-            'in': ('-AAAA', DP['default_block']),
-            'error': (exceptions.AssetNameError, "('invalid character:', '-')")
-        }],
-        'generate_asset_name': [{
-            'in': (0, DP['default_block']),
-            'out': 'BTC'
-        },  {
-            'in': (1, DP['default_block']),
-            'out': 'XCP'
-        },  {
-            'in': (66051301, DP['default_block']),
-            'out': 'FOOBAR'
-        },  {
-            'in': (17575, DP['default_block']),
-            'error': (exceptions.AssetIDError, 'too low')
-        }],
         'dhash_string': [{
             'in': ('foobar',),
             'out': '3f2c7ccae98af81e44c0ec419659f50d8b7d48c681e5d57fc747d0461e42dda1'
@@ -1055,6 +1044,13 @@ UNITTEST_VECTOR = {
         'hexlify': [{
             'in': (b'\x00\x00\x00\x14\x00\x00\x00\x00\x00\x0b\xfc\xe3',),
             'out': '0000001400000000000bfce3'
+        }],
+        'enabled': [{
+            'in': ('numeric_asset_names', DP['default_block']),
+            'out': True
+        },  {
+            'in': ('foobar', DP['default_block']),
+            'error': (KeyError, "'foobar'")
         }],
     }
 }
