@@ -13,7 +13,7 @@ from lib import exceptions
 from lib import script
 from lib.messages.scriptlib.processblock import ContractError
 from lib.api import APIError
-from lib.util import DebitError
+from lib.util import (DebitError, CreditError, QuantityError)
 from fractions import Fraction
 
 UNITTEST_VECTOR = {
@@ -1078,6 +1078,99 @@ UNITTEST_VECTOR = {
         },  {
             'in': (ADDR[0], 'XCP', 2**40),
             'error': (DebitError, 'Insufficient funds.')
+        }],
+        'credit': [{
+            'in': (ADDR[0], 'XCP', 1),
+            'out': None
+        },  {
+            'in': (ADDR[0], 'BTC', DP['quantity']),
+            'error': (CreditError, 'Cannot debit bitcoins.')
+        },  {
+            'in': (ADDR[0], 'BTC', -1 * DP['quantity']),
+            'error': (CreditError, 'Negative quantity.')
+        },  {
+            'in': (ADDR[0], 'BTC', 1.1 * DP['quantity']),
+            'error': (CreditError, 'Quantity must be an integer.')
+        }],
+        'is_divisible': [{
+            'in': ('XCP',),
+            'out': True
+        },  {
+            'in': ('BTC',),
+            'out': True
+        },  {
+            'in': ('DIVISIBLE',),
+            'out': True
+        },  {
+            'in': ('NODIVISIBLE',),
+            'out': False
+        },  {
+            'in': ('foobar',),
+            'error': (exceptions.AssetError, 'No such asset: foobar')
+        }],
+        'value_in': [{
+            'in': (1.1, 'leverage',),
+            'out': 1
+        },  {
+            'in': (1/10, 'fraction',),
+            'out': 0.1
+        },  {
+            'in': (1, 'NODIVISIBLE',),
+            'out': 1
+        },  {
+            'in': (1.111111111111, 'DIVISIBLE',),
+            'error': (QuantityError, 'Divisible assets have only eight decimal places of precision.')            
+        },  {
+            'in': (1.1, 'NODIVISIBLE',),
+            'error': (QuantityError, 'Fractional quantities of indivisible assets.')
+        }],
+        'value_out': [{
+            'in': (1.1, 'leverage',),
+            'out': '1.1'
+        },  {
+            'in': (1/10, 'fraction',),
+            'out': '10.0%'
+        },  {
+            'in': (1, 'NODIVISIBLE',),
+            'out': 1
+        },  {
+            'in': (1.1, 'NODIVISIBLE',),
+            'error': (QuantityError, 'Fractional quantities of indivisible assets.')
+        }],
+        'xcp_created': [{
+            'in': (),
+            'out': 93000000000
+        }],
+        'xcp_destroyed': [{
+            'in': (),
+            'out': 250000000
+        }],
+        'xcp_supply': [{
+            'in': (),
+            'out': 92750000000
+        }],
+        'creations': [{
+            'in': (),
+            'out': {'CALLABLE': 1000, 'DIVISIBLE': 100000000000, 'LOCKED': 1000, 'MAXI': 9223372036854775807, 'NODIVISIBLE': 1000, 'XCP': 93000000000}
+        }],
+        'destructions': [{
+            'in': (),
+            'out': {'XCP': 250000000}
+        }],
+        'asset_supply': [{
+            'in': ('XCP',),
+            'out': 92750000000
+        }],
+        'supplies': [{
+            'in': (),
+            'out':  {'CALLABLE': 1000, 'DIVISIBLE': 100000000000, 'LOCKED': 1000, 'MAXI': 9223372036854775807, 'NODIVISIBLE': 1000, 'XCP': 92750000000}
+        }],
+        'get_balance': [{
+            'in': (ADDR[0], 'XCP'),
+            'out': 91950000000
+        },  {
+            'in': (ADDR[0], 'foobar'),
+            'out': 0
         }],
         'get_asset_name': [{
             'in': (1, DP['default_block']),

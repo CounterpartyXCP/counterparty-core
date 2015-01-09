@@ -260,11 +260,11 @@ def credit (db, address, asset, quantity, action=None, event=None):
     block_index = CURRENT_BLOCK_INDEX
 
     if type(quantity) != int:
-        raise CreditError
+        raise CreditError('Quantity must be an integer.')
     if quantity < 0:
-        raise CreditError
+        raise CreditError('Negative quantity.')
     if asset == config.BTC:
-        raise CreditError
+        raise CreditError('Cannot debit bitcoins.')
 
     credit_cursor = db.cursor()
 
@@ -347,7 +347,7 @@ def value_in (db, quantity, asset, divisible=None):
         if quantity == quantity.to_integral():
             return int(quantity)
         else:
-            raise quantityerror('divisible assets have only eight decimal places of precision.')
+            raise QuantityError('Divisible assets have only eight decimal places of precision.')
     else:
         quantity = D(quantity)
         if quantity != round(quantity):
@@ -548,19 +548,9 @@ def enabled (change_name):
             return False
     assert False
 
-
-
 def transfer(db, source, destination, asset, quantity, action, event):
     debit(db, source, asset, quantity, action=action, event=event)
     credit(db, destination, asset, quantity, action=action, event=event)
-
-def get_balance (db, address, asset):
-    # Get balance of contract or address.
-    cursor = db.cursor()
-    balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (address, asset)))
-    cursor.close()
-    if not balances: return 0
-    else: return balances[0]['quantity']
 
 ID_SEPARATOR = '_'
 def make_id(hash_1, hash_2):
