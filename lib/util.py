@@ -548,19 +548,9 @@ def enabled (change_name):
             return False
     assert False
 
-
-
 def transfer(db, source, destination, asset, quantity, action, event):
     debit(db, source, asset, quantity, action=action, event=event)
     credit(db, destination, asset, quantity, action=action, event=event)
-
-def get_balance (db, address, asset):
-    # Get balance of contract or address.
-    cursor = db.cursor()
-    balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (address, asset)))
-    cursor.close()
-    if not balances: return 0
-    else: return balances[0]['quantity']
 
 ID_SEPARATOR = '_'
 def make_id(hash_1, hash_2):
