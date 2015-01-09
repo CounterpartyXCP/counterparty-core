@@ -303,8 +303,8 @@ def exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db)
     """Execute tested_method within context and arguments."""
     if tx_name == 'transaction' and method == 'construct':
         return tested_method(counterpartyd_db, get_proxy(), inputs[0], **inputs[1])
-    elif (tx_name == 'util' and not (method == 'last_message' or method == 'get_asset_id' or method == 'get_asset_name' or method == 'debit' \
-          or method == 'credit' or method == 'is_divisible' or method == 'value_in' or method == 'value_out' or method == 'holders' or method == 'get_balance')) or tx_name == 'script':
+    elif (tx_name == 'util' and (method == 'api' or method == 'date_passed' or method == 'price' or method == 'sortkeypicker' or method == 'generate_asset_id' \
+         or method == 'generate_asset_name' or method == 'dhash_string' or method == 'enabled' or method == 'get_url' or method == 'hexlify')) or tx_name == 'script':
         return tested_method(*inputs)
     else:
         return tested_method(counterpartyd_db, *inputs)
