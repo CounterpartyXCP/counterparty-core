@@ -15,7 +15,7 @@ from lib import config
 from lib import exceptions
 from lib import util
 
-def set_up(verbose=False, logfile=True):
+def set_up(verbose=False, logfile=None):
     logger = logging.getLogger()    # Get root logger.
     log_level = logging.DEBUG if verbose else logging.INFO
     logger.setLevel(log_level)
@@ -34,9 +34,9 @@ def set_up(verbose=False, logfile=True):
         max_log_size = 20 * 1024 * 1024 # 20 MB
         if os.name == 'nt':
             from lib import util_windows
-            fileh = util_windows.SanitizedRotatingFileHandler(config.LOG, maxBytes=max_log_size, backupCount=5)
+            fileh = util_windows.SanitizedRotatingFileHandler(logfile, maxBytes=max_log_size, backupCount=5)
         else:
-            fileh = logging.handlers.RotatingFileHandler(config.LOG, maxBytes=max_log_size, backupCount=5)
+            fileh = logging.handlers.RotatingFileHandler(logfile, maxBytes=max_log_size, backupCount=5)
         fileh.setLevel(log_level)
         LOGFORMAT = '%(asctime)s [%(levelname)s] %(message)s'
         formatter = logging.Formatter(LOGFORMAT, '%Y-%m-%d-T%H:%M:%S%z')

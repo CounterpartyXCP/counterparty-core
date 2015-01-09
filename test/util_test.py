@@ -10,7 +10,8 @@ from requests.auth import HTTPBasicAuth
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
-from lib import (config, api, util, exceptions, blocks, check, backend, database, transaction, script, server)
+import server
+from lib import (config, api, util, exceptions, blocks, check, backend, database, transaction, script)
 from lib.messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve)
 
 from fixtures.params import DEFAULT_PARAMS as DP
@@ -29,7 +30,6 @@ locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 # TODO: This should grab the correct backend port and password, when used for, e.g., saverawtransactions.
 COUNTERPARTYD_OPTIONS = {
     'testcoin': False,
-    'data_dir': tempfile.gettempdir(),
     'rpc_port': 9999,
     'rpc_password': 'pass',
     'backend_port': 8888,
@@ -141,7 +141,7 @@ def insert_transaction(transaction, db):
 def initialise_rawtransactions_db(db):
     """Drop old raw transaction table, create new one and populate it from unspent_outputs.json."""
     if pytest.config.option.savescenarios:
-        server.set_options(testnet=True, **COUNTERPARTYD_OPTIONS)
+        server.initialise(testnet=True, **COUNTERPARTYD_OPTIONS)
         cursor = db.cursor()
         cursor.execute('DROP TABLE  IF EXISTS raw_transactions')
         cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT)')
@@ -178,7 +178,7 @@ def initialise_db(db):
 
 def run_scenario(scenario, rawtransactions_db):
     """Execute a scenario for integration test, returns a dump of the db, a json with raw transactions and the full log."""
-    server.set_options(database_file=':memory:', testnet=True, **COUNTERPARTYD_OPTIONS)
+    server.initialise(database_file=':memory:', testnet=True, **COUNTERPARTYD_OPTIONS)
     config.PREFIX = b'TESTXXXX'
     util.FIRST_MULTISIG_BLOCK_TESTNET = 1
     checkpoints = dict(check.CHECKPOINTS_TESTNET)
@@ -360,7 +360,7 @@ def reparse(testnet=True):
     """Reparse all transaction from the database, create a new blockchain and compare it to the old one."""
     options = dict(COUNTERPARTYD_OPTIONS)
     options.pop('data_dir')
-    server.set_options(database_file=':memory:', testnet=testnet, **options)
+    server.initialise(database_file=':memory:', testnet=testnet, **options)
 
     if testnet:
         config.PREFIX = b'TESTXXXX'

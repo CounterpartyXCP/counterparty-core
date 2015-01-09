@@ -306,11 +306,12 @@ def do_transaction(db, name, params, private_key_wif, **kwargs):
 
 def init_api_access_log():
     """Init API logger."""
-    api_logger = logging.getLogger("tornado")
-    h = logging_handlers.RotatingFileHandler(os.path.join(config.DATA_DIR, "api.access.log"), 'a', API_MAX_LOG_SIZE, API_MAX_LOG_COUNT)
-    api_logger.setLevel(logging.INFO)
-    api_logger.addHandler(h)
-    api_logger.propagate = False
+    if config.API_LOG:
+        api_logger = logging.getLogger("tornado")
+        h = logging_handlers.RotatingFileHandler(config.API_LOG, 'a', API_MAX_LOG_SIZE, API_MAX_LOG_COUNT)
+        api_logger.setLevel(logging.INFO)
+        api_logger.addHandler(h)
+        api_logger.propagate = False
 
 class APIStatusPoller(threading.Thread):
     """Perform regular checks on the state of the backend and the database."""

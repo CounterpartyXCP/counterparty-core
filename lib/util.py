@@ -18,8 +18,9 @@ import sha3
 import bitcoin as bitcoinlib
 import os
 
-from . import (config, exceptions)
-from .exceptions import DecodeError
+from lib import exceptions
+from lib.exceptions import DecodeError
+from lib import config
 
 D = decimal.Decimal
 b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
