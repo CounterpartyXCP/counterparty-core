@@ -13,7 +13,7 @@ from lib import exceptions
 from lib import script
 from lib.messages.scriptlib.processblock import ContractError
 from lib.api import APIError
-from lib.util import DebitError
+from lib.util import (DebitError, CreditError, QuantityError)
 from fractions import Fraction
 
 UNITTEST_VECTOR = {
@@ -1078,6 +1078,51 @@ UNITTEST_VECTOR = {
         },  {
             'in': (ADDR[0], 'XCP', 2**40),
             'error': (DebitError, 'Insufficient funds.')
+        }],
+        'credit': [{
+            'in': (ADDR[0], 'XCP', 1),
+            'out': None
+        },  {
+            'in': (ADDR[0], 'BTC', DP['quantity']),
+            'error': (CreditError, 'Cannot debit bitcoins.')
+        },  {
+            'in': (ADDR[0], 'BTC', -1 * DP['quantity']),
+            'error': (CreditError, 'Negative quantity.')
+        },  {
+            'in': (ADDR[0], 'BTC', 1.1 * DP['quantity']),
+            'error': (CreditError, 'Quantity must be an integer.')
+        }],
+        'is_divisible': [{
+            'in': ('XCP',),
+            'out': True
+        },  {
+            'in': ('BTC',),
+            'out': True
+        },  {
+            'in': ('DIVISIBLE',),
+            'out': True
+        },  {
+            'in': ('NODIVISIBLE',),
+            'out': False
+        },  {
+            'in': ('foobar',),
+            'error': (exceptions.AssetError, 'No such asset: foobar')
+        }],
+        'value_in': [{
+            'in': (1.1, 'leverage',),
+            'out': 1
+        },  {
+            'in': (1/10, 'fraction',),
+            'out': 0.1
+        },  {
+            'in': (1, 'NODIVISIBLE',),
+            'out': 1
+        },  {
+            'in': (1.111111111111, 'DIVISIBLE',),
+            'error': (QuantityError, 'Divisible assets have only eight decimal places of precision.')            
+        },  {
+            'in': (1.1, 'NODIVISIBLE',),
+            'error': (QuantityError, 'Fractional quantities of indivisible assets.')
         }],
         'get_asset_name': [{
             'in': (1, DP['default_block']),
