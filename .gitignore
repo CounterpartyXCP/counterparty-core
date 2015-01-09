@@ -1,0 +1,5 @@
+# precompiled python
+*.pyc
+
+# local dev repo
+counterparty-lib/
