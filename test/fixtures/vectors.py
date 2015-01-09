@@ -1124,6 +1124,54 @@ UNITTEST_VECTOR = {
             'in': (1.1, 'NODIVISIBLE',),
             'error': (QuantityError, 'Fractional quantities of indivisible assets.')
         }],
+        'value_out': [{
+            'in': (1.1, 'leverage',),
+            'out': '1.1'
+        },  {
+            'in': (1/10, 'fraction',),
+            'out': '10.0%'
+        },  {
+            'in': (1, 'NODIVISIBLE',),
+            'out': 1
+        },  {
+            'in': (1.1, 'NODIVISIBLE',),
+            'error': (QuantityError, 'Fractional quantities of indivisible assets.')
+        }],
+        'xcp_created': [{
+            'in': (),
+            'out': 93000000000
+        }],
+        'xcp_destroyed': [{
+            'in': (),
+            'out': 250000000
+        }],
+        'xcp_supply': [{
+            'in': (),
+            'out': 92750000000
+        }],
+        'creations': [{
+            'in': (),
+            'out': {'CALLABLE': 1000, 'DIVISIBLE': 100000000000, 'LOCKED': 1000, 'MAXI': 9223372036854775807, 'NODIVISIBLE': 1000, 'XCP': 93000000000}
+        }],
+        'destructions': [{
+            'in': (),
+            'out': {'XCP': 250000000}
+        }],
+        'asset_supply': [{
+            'in': ('XCP',),
+            'out': 92750000000
+        }],
+        'supplies': [{
+            'in': (),
+            'out':  {'CALLABLE': 1000, 'DIVISIBLE': 100000000000, 'LOCKED': 1000, 'MAXI': 9223372036854775807, 'NODIVISIBLE': 1000, 'XCP': 92750000000}
+        }],
+        'get_balance': [{
+            'in': (ADDR[0], 'XCP'),
+            'out': 91950000000
+        },  {
+            'in': (ADDR[0], 'foobar'),
+            'out': 0
+        }],
         'get_asset_name': [{
             'in': (1, DP['default_block']),
             'out': 'XCP'
