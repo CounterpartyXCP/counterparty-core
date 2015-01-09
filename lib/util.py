@@ -260,11 +260,11 @@ def credit (db, address, asset, quantity, action=None, event=None):
     block_index = CURRENT_BLOCK_INDEX
 
     if type(quantity) != int:
-        raise CreditError
+        raise CreditError('Quantity must be an integer.')
     if quantity < 0:
-        raise CreditError
+        raise CreditError('Negative quantity.')
     if asset == config.BTC:
-        raise CreditError
+        raise CreditError('Cannot debit bitcoins.')
 
     credit_cursor = db.cursor()
 
@@ -347,7 +347,7 @@ def value_in (db, quantity, asset, divisible=None):
         if quantity == quantity.to_integral():
             return int(quantity)
         else:
-            raise quantityerror('divisible assets have only eight decimal places of precision.')
+            raise QuantityError('Divisible assets have only eight decimal places of precision.')
     else:
         quantity = D(quantity)
         if quantity != round(quantity):
