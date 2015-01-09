@@ -9,9 +9,9 @@ install:
 - wget https://github.com/rogerbinns/apsw/releases/download/3.8.5-r1/apsw-3.8.5-r1.zip
 - unzip apsw-3.8.5-r1.zip
 - cd apsw-3.8.5-r1 && python setup.py fetch --version=3.8.5 --all build --enable-all-extensions install
-- cd .. && pip install -r pip-requirements.txt --use-mirrors
+- cd .. && python setup.py install
 - pip install python-coveralls --use-mirrors
-script: py.test --cov-config .coveragerc --cov-report term-missing --cov ./ --skiptestbook=all
+script: cd counterparty; py.test --cov-config .coveragerc --cov-report term-missing --cov ./ --skiptestbook=all
 notifications:
   slack:
     secure: cl0G5fWZNnIK5VQ6BPZ4RtwVO2/nfvX/zjhljfF6cQ20OKyvyiJHq+e67fl2pkCKDlqlEqSWaQJ6G52YzUpDQmf+o7qpH6YnkFxSqYp5h4YF1hJw4sCHJ7bVSLrjogWxU8QaNvH7YpL4YkGe+WOau2FgoIZOcMt6hhKrvWclfuc=
