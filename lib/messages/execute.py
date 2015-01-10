@@ -142,6 +142,8 @@ def parse (db, tx, message):
         tx_obj = Transaction(tx, contract_id, gasprice, startgas, value, payload)
         block_obj = blocks.Block(db, tx['block_hash'])
         success, output, gas_remained = processblock.apply_transaction(db, tx_obj, block_obj)
+        if not success and output == '':
+            status = 'out of gas'
         gas_cost = gasprice * (startgas - gas_remained) # different definition from pyethereum’s
 
     except exceptions.UnpackError as e:
