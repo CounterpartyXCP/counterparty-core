@@ -584,7 +584,7 @@ class APIServer(threading.Thread):
             try:
                 last_block = util.CURRENT_BLOCK_INDEX
             except:
-                last_block = {'block_index': None, 'block_hash': None, 'block_time': None}
+                last_block = None
 
             try:
                 last_message = util.last_message(db)
