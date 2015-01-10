@@ -398,6 +398,7 @@ def value_out (db, quantity, asset, divisible=None):
 ### SUPPLIES ###
 
 def holders(db, asset):
+    """Return holders of the asset."""
     holders = []
     cursor = db.cursor()
     # Balances
@@ -556,6 +557,7 @@ def get_balance (db, address, asset):
 
 # Why on Earth does `binascii.hexlify()` return bytes?!
 def hexlify(x):
+    """Return the hexadecimal representation of the binary data. Decode from ASCII to UTF-8."""
     return binascii.hexlify(x).decode('ascii')
 
 ### Protocol Changes ###
