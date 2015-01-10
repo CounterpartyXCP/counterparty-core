@@ -433,9 +433,14 @@ def holders(db, asset):
             holders.append({'address': rps_match['tx0_address'], 'address_quantity': rps_match['wager'], 'escrow': rps_match['id']})
             holders.append({'address': rps_match['tx1_address'], 'address_quantity': rps_match['wager'], 'escrow': rps_match['id']})
 
-        cursor.execute('''SELECT * FROM executions WHERE status = ?''', ('valid',))
+        cursor.execute('''SELECT * FROM executions WHERE status IN (?,?)''', ('valid','out of gas'))
         for execution in list(cursor):
             holders.append({'address': execution['source'], 'address_quantity': execution['gas_cost'], 'escrow': None})
+
+        # XCP escrowed for not finished executions
+        cursor.execute('''SELECT * FROM executions WHERE status = ?''', ('out of gas',))
+        for execution in list(cursor):
+            holders.append({'address': execution['source'], 'address_quantity': execution['gas_remained'], 'escrow': execution['contract_id']})
 
     cursor.close()
     return holders

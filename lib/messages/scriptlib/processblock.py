@@ -170,7 +170,7 @@ def apply_transaction(db, tx, block):
 
 
     if not result:  # 0 = OOG failure in both cases
-        # pblogger.log('TX FAILED', reason='out of gas', startgas=tx.startgas, gas_remained=gas_remained)
+        pblogger.log('TX FAILED', reason='out of gas', startgas=tx.startgas, gas_remained=gas_remained)
         output = OUT_OF_GAS
     else:
         pblogger.log('TX SUCCESS')
