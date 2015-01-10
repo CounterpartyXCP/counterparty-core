@@ -53,6 +53,7 @@ with open(CURR_DIR + '/../mainnet_burns.csv', 'r') as f:
         MAINNET_BURNS[line['tx_hash']] = line
 
 def parse_tx(db, tx):
+    """Parse the transaction, return True for success."""
     cursor = db.cursor()
 
     # Only one source and one destination allowed for now.
@@ -125,8 +126,9 @@ def parse_tx(db, tx):
 
 def parse_block(db, block_index, block_time, previous_ledger_hash=None,
                 ledger_hash=None, previous_txlist_hash=None, txlist_hash=None):
-    """The unused arguments `ledger_hash` and `txlist_hash` are for the test
-    suite.
+    """Parse the block, return hash of new ledger and txlist.
+
+    The unused arguments `ledger_hash` and `txlist_hash` are for the test suite.
     """
     cursor = db.cursor()
 
@@ -161,6 +163,7 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
 
 
 def initialise(db):
+    """Initialise data, create and populate the database."""
     cursor = db.cursor()
 
     # Blocks
@@ -350,6 +353,7 @@ def initialise(db):
     cursor.close()
 
 def get_tx_info(proxy, tx_hex, block_parser=None):
+    """Get the transaction info. Calls one of two subfunctions depending on signature type."""
     try:
         if util.enabled('multisig_addresses'):   # Protocol change.
             tx_info = get_tx_info2(proxy, tx_hex, block_parser=block_parser)
@@ -362,7 +366,8 @@ def get_tx_info(proxy, tx_hex, block_parser=None):
     return tx_info
 
 def get_tx_info1(proxy, tx_hex, block_parser=None):
-    """
+    """Get singlesig transaction info.
+
     The destination, if it exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
@@ -478,7 +483,8 @@ def get_tx_info1(proxy, tx_hex, block_parser=None):
     return source, destination, btc_amount, fee, data
 
 def get_tx_info2(proxy, tx_hex, block_parser=None):
-    """
+    """Get multisig transaction info.
+
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
@@ -610,6 +616,7 @@ def get_tx_info2(proxy, tx_hex, block_parser=None):
     return sources, destinations, btc_amount, round(fee), data
 
 def reinitialise(db, block_index=None):
+    """Drop all predefined tables and initialise the database once again."""
     cursor = db.cursor()
 
     # Delete all of the results of parsing.
@@ -829,6 +836,7 @@ def kickstart(db, proxy, bitcoind_dir):
     logger.info('Total duration: {:.3f}s'.format(time.time() - start_time_total))
 
 def get_next_tx_index(db):
+    """Return index of next transaction."""
     cursor = db.cursor()
     txes = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = (SELECT MAX(tx_index) from transactions)'''))
     if txes:
