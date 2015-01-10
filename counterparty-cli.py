@@ -11,6 +11,7 @@ import dateutil.parser
 import calendar
 import configparser
 import binascii
+import string
 
 import appdirs
 from prettytable import PrettyTable
@@ -192,14 +193,15 @@ def get_pubkey_monosig(pubkeyhash):
             pass
 
         # If not in wallet and not in blockchain, get from user.
-        answer = input('Public keys (hexadecimal) or Private key (Wallet Import Format) for `{}`: '.format(pub))
-        if script.is_fully_valid(binascii.unhexlify(answer)):
+        answer = input('Public keys (hexadecimal) or Private key (Wallet Import Format) for `{}`: '.format(pubkeyhash))
+        is_answer_hex = all(c in string.hexdigits for c in answer)
+        if is_answer_hex and script.is_fully_valid(binascii.unhexlify(answer)):
             pubkey = answer
         else:
             private_key = answer
             pubkey = script.private_key_to_public_key(private_key)
         if pubkeyhash != script.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
-            raise transaction.InputError('provided public or private key does not match the source address')
+            raise script.InputError('provided public or private key does not match the source address')
 
         return pubkey
 
