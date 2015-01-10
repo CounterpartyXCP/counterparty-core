@@ -114,6 +114,8 @@ def apply_transaction(db, tx, block):
     for key in prices.keys():
         prices[key] = fractions.Fraction(prices[key]) * MULTIPLIER
         prices[key] = math.floor(prices[key].__round__(2))
+        prices[key] = max(prices[key], 1)
+        assert prices[key] > 0
         exec('''global {}; {} = prices['{}']'''.format(key, key, key))
 
     # (3) the gas limit is no smaller than the intrinsic gas,
@@ -186,7 +188,7 @@ def apply_transaction(db, tx, block):
 
     # Kill suicidal contract.
     for s in block.suicides_get():
-        block.del_account(s)
+        block.del_account(s['contract_id'])
     block.suicides_delete()
     # success = output is not OUT_OF_GAS
     # return success, output if success else ''
@@ -337,12 +339,12 @@ def out_of_gas_exception(expense, fee, compustate, op):
 def mem_extend(mem, compustate, op, newsize):
     if len(mem) < ceil32(newsize):
         m_extend = ceil32(newsize) - len(mem)
-        mem.extend([0] * m_extend)
         memfee = GMEMORY * (m_extend // 32)
-        compustate.gas -= memfee
-        if compustate.gas < 0:
+        if compustate.gas < memfee:
             out_of_gas_exception('mem_extend', memfee, compustate, op)
             return False
+        compustate.gas -= memfee
+        mem.extend([0] * m_extend)
     return True
 def to_signed(i):
     return i if i < TT255 else i - TT256

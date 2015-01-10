@@ -170,9 +170,8 @@ class Block(object):
             util.credit(self.db, destination, asset, quantity, action='transfer value', event=tx.tx_hash)
         return True
 
-    def del_account(self, suicide):
+    def del_account(self, contract_id):
         cursor = self.db.cursor()
-        contract_id = suicide['contract_id']
         logger.debug('SUICIDING {}'.format(contract_id))
         bindings = {'contract_id': contract_id}
         log.message(self.db, 'delete', 'contracts', bindings)
