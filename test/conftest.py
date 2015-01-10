@@ -62,7 +62,10 @@ def rawtransactions_db(request):
 
 @pytest.fixture(autouse=True)
 def init_mock_functions(monkeypatch, rawtransactions_db):
-    """These mock functions are available to every test function in this suite."""
+    """Test suit mock functions.
+
+    Mock functions override default behaviour to allow test suit to work - for instance, date_passed is overwritten 
+    so that every date will pass. Those are available to every test function in this suite."""
 
     util_test.rawtransactions_db = rawtransactions_db
 

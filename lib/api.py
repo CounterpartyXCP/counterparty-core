@@ -77,6 +77,7 @@ class APIError(Exception):
 
 # TODO: ALL queries EVERYWHERE should be done with these methods
 def db_query(db, statement, bindings=(), callback=None, **callback_args):
+    """Allow direct access to the database in a parametrized manner."""
     cursor = db.cursor()
     if hasattr(callback, '__call__'):
         cursor.execute(statement, bindings)
@@ -90,7 +91,7 @@ def db_query(db, statement, bindings=(), callback=None, **callback_args):
 
 def get_rows(db, table, filters=None, filterop='AND', order_by=None, order_dir=None, start_block=None, end_block=None,
               status=None, limit=1000, offset=0, show_expired=True):
-    """Filters results based on a filter data structure (as used by the API)"""
+    """SELECT * FROM wrapper. Filters results based on a filter data structure (as used by the API)."""
 
     if filters == None:
         filters = []
@@ -232,6 +233,7 @@ def compose_transaction(db, proxy, name, params,
                         allow_unconfirmed_inputs=False,
                         fee=None,
                         fee_provided=0):
+    """Create and return a transaction."""
 
     # Get provided pubkeys.
     if type(pubkey) == str:
@@ -278,10 +280,12 @@ def compose_transaction(db, proxy, name, params,
         # traceback.print_exc()
 
 def sign_transaction(proxy, unsigned_tx_hex, private_key_wif=None):
+    """Sign the transaction."""
     return transaction.sign_tx(proxy, unsigned_tx_hex,
         private_key_wif=private_key_wif)
 
 def broadcast_transaction(proxy, signed_tx_hex):
+    """Broadcast a transaction."""
     if not config.TESTNET and config.BROADCAST_TX_MAINNET in ['bci', 'bci-failover']:
         url = "https://blockchain.info/pushtx"
         params = {'tx': signed_tx_hex}
@@ -296,11 +300,13 @@ def broadcast_transaction(proxy, signed_tx_hex):
         return transaction.broadcast_tx(proxy, signed_tx_hex)
 
 def do_transaction(db, proxy, name, params, private_key_wif=None, **kwargs):
+    """Create, sign and broadcast transaction."""
     unsigned_tx = compose_transaction(db, proxy, name, params, **kwargs)
     signed_tx = sign_transaction(proxy, unsigned_tx, private_key_wif=private_key_wif)
     return broadcast_transaction(proxy, signed_tx)
 
 def init_api_access_log():
+    """Init API logger."""
     api_logger = logging.getLogger("tornado")
     h = logging_handlers.RotatingFileHandler(os.path.join(config.DATA_DIR, "api.access.log"), 'a', API_MAX_LOG_SIZE, API_MAX_LOG_COUNT)
     api_logger.setLevel(logging.INFO)
@@ -348,6 +354,7 @@ class APIStatusPoller(threading.Thread):
             time.sleep(config.BACKEND_POLL_INTERVAL)
 
 class APIServer(threading.Thread):
+    """Handle JSON-RPC API calls."""
     def __init__(self):
         self.is_ready = False
         threading.Thread.__init__(self)

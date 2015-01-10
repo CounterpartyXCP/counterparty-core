@@ -43,6 +43,7 @@ class RPCError (Exception): pass
 # TODO: Move to `counterparty-cli.py`.
 # TODO: This doesn’t timeout properly. (If server hangs, then unhangs, no result.)
 def api (method, params):
+    """Poll API via JSON-RPC."""
     headers = {'content-type': 'application/json'}
     payload = {
         "method": method,
@@ -69,9 +70,11 @@ def api (method, params):
         raise RPCError('{}'.format(response_json['error']))
 
 def date_passed(date):
+    """Check if the date has already passed."""
     return date <= time.time()
 
 def price (numerator, denominator):
+    """Return price as Fraction or Decimal."""
     if CURRENT_BLOCK_INDEX >= 294500 or config.TESTNET: # Protocol change.
         return fractions.Fraction(numerator, denominator)
     else:
@@ -95,6 +98,7 @@ def sortkeypicker(keynames):
     return getit
 
 def last_message (db):
+    """Return latest message from the db."""
     cursor = db.cursor()
     messages = list(cursor.execute('''SELECT * FROM messages WHERE message_index = (SELECT MAX(message_index) from messages)'''))
     if messages:
@@ -106,6 +110,7 @@ def last_message (db):
     return last_message
 
 def generate_asset_id (asset_name, block_index):
+    """Create asset_id from asset_name."""
     if asset_name == config.BTC: return 0
     elif asset_name == config.XCP: return 1
 
@@ -147,6 +152,7 @@ def generate_asset_id (asset_name, block_index):
     return asset_id
 
 def generate_asset_name (asset_id, block_index):
+    """Create asset_name from asset_id."""
     if asset_id == 0: return config.BTC
     elif asset_id == 1: return config.XCP
 
@@ -176,6 +182,7 @@ def generate_asset_name (asset_id, block_index):
 
 
 def get_asset_id (db, asset_name, block_index):
+    """Return asset_id from asset_name."""
     if not enabled('hotfix_numeric_assets'):
         return generate_asset_id(asset_name, block_index)
     cursor = db.cursor()
@@ -187,6 +194,7 @@ def get_asset_id (db, asset_name, block_index):
         raise exceptions.AssetError('No such asset: {}'.format(asset_name))
 
 def get_asset_name (db, asset_id, block_index):
+    """Return asset_name from asset_id."""
     if not enabled('hotfix_numeric_assets'):
         return generate_asset_name(asset_id, block_index)
     cursor = db.cursor()
@@ -200,6 +208,7 @@ def get_asset_name (db, asset_id, block_index):
 
 class DebitError (Exception): pass
 def debit (db, address, asset, quantity, action=None, event=None):
+    """Debit given address by quantity of asset."""
     block_index = CURRENT_BLOCK_INDEX
 
     if type(quantity) != int:
@@ -257,6 +266,7 @@ def debit (db, address, asset, quantity, action=None, event=None):
 
 class CreditError (Exception): pass
 def credit (db, address, asset, quantity, action=None, event=None):
+    """Credit given address by quantity of asset."""
     block_index = CURRENT_BLOCK_INDEX
 
     if type(quantity) != int:
@@ -321,6 +331,7 @@ def credit (db, address, asset, quantity, action=None, event=None):
 class QuantityError(Exception): pass
 
 def is_divisible(db, asset):
+    """Check if the asset is divisible."""
     if asset in (config.BTC, config.XCP):
         return True
     else:
@@ -332,7 +343,6 @@ def is_divisible(db, asset):
         return issuances[0]['divisible']
 
 def value_in (db, quantity, asset, divisible=None):
-
     if asset == 'leverage':
         return round(quantity)
 
@@ -355,9 +365,8 @@ def value_in (db, quantity, asset, divisible=None):
         return round(quantity)
 
 def value_out (db, quantity, asset, divisible=None):
-
     def norm(num, places):
-        # Round only if necessary.
+        """Round only if necessary."""
         num = round(num, places)
         fmt = '{:.' + str(places) + 'f}'
         num = fmt.format(num)
@@ -389,6 +398,7 @@ def value_out (db, quantity, asset, divisible=None):
 ### SUPPLIES ###
 
 def holders(db, asset):
+    """Return holders of the asset."""
     holders = []
     cursor = db.cursor()
     # Balances
@@ -446,13 +456,16 @@ def holders(db, asset):
     return holders
 
 def xcp_created (db):
+    """Return number of XCP created thus far."""
     cursor = db.cursor()
     cursor.execute('''SELECT SUM(earned) AS total FROM burns \
                       WHERE (status = ?)''', ('valid',))
     total = list(cursor)[0]['total'] or 0
     cursor.close()
     return total
+
 def xcp_destroyed (db):
+    """Return number of XCP destroyed thus far."""
     cursor = db.cursor()
     # Destructions
     cursor.execute('''SELECT SUM(quantity) AS total FROM destructions \
@@ -468,9 +481,13 @@ def xcp_destroyed (db):
     dividend_fee_total = list(cursor)[0]['total'] or 0
     cursor.close()
     return destroyed_total + issuance_fee_total + dividend_fee_total
+
 def xcp_supply (db):
+    """Return the XCP supply."""
     return xcp_created(db) - xcp_destroyed(db)
+
 def creations (db):
+    """Return creations."""
     cursor = db.cursor()
     creations = {config.XCP: xcp_created(db)}
     cursor.execute('''SELECT * from issuances \
@@ -485,7 +502,9 @@ def creations (db):
 
     cursor.close()
     return creations
+
 def destructions (db):
+    """Return destructions."""
     cursor = db.cursor()
     destructions = {config.XCP: xcp_destroyed(db)}
     cursor.execute('''SELECT * from destructions \
@@ -499,13 +518,17 @@ def destructions (db):
             destructions[asset] = quantity
     cursor.close()
     return destructions
+
 def asset_supply (db, asset):
+    """Return asset supply."""
     supply = creations(db)[asset]
     destroyed = destructions(db)
     if asset in destroyed:
         supply -= destroyed[asset]
     return supply
+
 def supplies (db):
+    """Return supplies."""
     d1 = creations(db)
     d2 = destructions(db)
     return {key: d1[key] - d2.get(key, 0) for key in d1.keys()}
@@ -515,6 +538,7 @@ def supplies (db):
 
 class GetURLError (Exception): pass
 def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
+    """Fetch URL using requests.get."""
     try:
         r = requests.get(url, timeout=fetch_timeout)
     except Exception as e:
@@ -529,7 +553,7 @@ def dhash_string(text):
     return binascii.hexlify(hashlib.sha256(hashlib.sha256(bytes(text, 'utf-8')).digest()).digest()).decode()
 
 def get_balance (db, address, asset):
-    # Get balance of contract or address.
+    """Get balance of contract or address."""
     cursor = db.cursor()
     balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (address, asset)))
     cursor.close()
@@ -538,10 +562,12 @@ def get_balance (db, address, asset):
 
 # Why on Earth does `binascii.hexlify()` return bytes?!
 def hexlify(x):
+    """Return the hexadecimal representation of the binary data. Decode from ASCII to UTF-8."""
     return binascii.hexlify(x).decode('ascii')
 
 ### Protocol Changes ###
 def enabled (change_name):
+    """Return True if protocol change is enabled."""
     enable_block_index = PROTOCOL_CHANGES[change_name]['block_index']
 
     if config.TESTNET: 
@@ -554,6 +580,7 @@ def enabled (change_name):
     assert False
 
 def transfer(db, source, destination, asset, quantity, action, event):
+    """Transfer quantity of asset from source to destination."""
     debit(db, source, asset, quantity, action=action, event=event)
     credit(db, destination, asset, quantity, action=action, event=event)
 

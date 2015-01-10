@@ -24,7 +24,7 @@ class MultiSigAddressError(AddressError):
     pass
 
 def validate(address):
-
+    """Make sure the address is valid."""
     # Get array of pubkeyhashes to check.
     if is_multisig(address):
         pubkeyhashes = pubkeyhash_array(address)
@@ -36,6 +36,7 @@ def validate(address):
         base58_check_decode(pubkeyhashes, config.ADDRESSVERSION)
 
 def base58_encode(binary):
+    """Encode the address in base58."""
     # Convert big‐endian bytes to integer
     n = int('0x0' + util.hexlify(binary), 16)
 
@@ -49,6 +50,7 @@ def base58_encode(binary):
     return res
 
 def base58_check_encode(original, version):
+    """Check if base58 encoding is valid."""
     b = binascii.unhexlify(bytes(original, 'utf-8'))
     d = version + b
 
@@ -72,6 +74,7 @@ def base58_check_encode(original, version):
     return address
 
 def base58_check_decode(s, version):
+    """Decode from base58."""
     # Convert the string to an integer
     n = 0
     for c in s:
@@ -106,14 +109,17 @@ def base58_check_decode(s, version):
 
 
 def is_multisig(address):
+    """Check if the address is multi‐signature."""
     array = address.split('_')
     return len(array) > 1
 
 def is_fully_valid(pubkey_bin):
+    """Check if the public key is valid."""
     cpubkey = CPubKey(pubkey_bin)
     return cpubkey.is_fullyvalid
 
 def make_canonical(address):
+    """Return canonical version of the address."""
     if is_multisig(address):
         signatures_required, pubkeyhashes, signatures_possible = extract_array(address)
         try:
@@ -125,6 +131,7 @@ def make_canonical(address):
         return address
 
 def test_array(signatures_required, pubs, signatures_possible):
+    """Check if multi‐signature data is valid."""
     try:
         signatures_required, signatures_possible = int(signatures_required), int(signatures_possible)
     except (ValueError, TypeError):
@@ -140,11 +147,13 @@ def test_array(signatures_required, pubs, signatures_possible):
         raise InputError('Incorrect number of pubkeys/pubkeyhashes in multi‐signature address.')
 
 def construct_array(signatures_required, pubs, signatures_possible):
+    """Create a multi‐signature address."""
     test_array(signatures_required, pubs, signatures_possible)
     address = '_'.join([str(signatures_required)] + sorted(pubs) + [str(signatures_possible)])
     return address
 
 def extract_array(address):
+    """Extract data from multi‐signature address."""
     assert is_multisig(address)
     array = address.split('_')
     signatures_required, pubs, signatures_possible = array[0], sorted(array[1:-1]), array[-1]
@@ -152,6 +161,7 @@ def extract_array(address):
     return int(signatures_required), pubs, int(signatures_possible)
 
 def pubkeyhash_array(address):
+    """Return PubKeyHashes from an address."""
     signatures_required, pubkeyhashes, signatures_possible = extract_array(address)
     if not all([base58_check_decode(pubkeyhash, config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes]):
         raise MultiSigAddressError('Multi‐signature address must use PubKeyHashes, not public keys.')
@@ -164,6 +174,7 @@ def hash160(x):
     return m.digest()
 
 def pubkey_to_pubkeyhash(pubkey):
+    """Convert public key to PubKeyHash."""
     pubkeyhash = hash160(pubkey)
     pubkey = base58_check_encode(binascii.hexlify(pubkeyhash).decode('utf-8'), config.ADDRESSVERSION)
     return pubkey
@@ -220,6 +231,7 @@ from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
 
 class AltcoinSupportError (Exception): pass
 def private_key_to_public_key(private_key_wif):
+    """Convert private key to public key."""
     if config.TESTNET:
         allowable_wif_prefixes = [config.PRIVATEKEY_VERSION_TESTNET]
     else:
@@ -235,9 +247,7 @@ def private_key_to_public_key(private_key_wif):
     return public_key_hex
 
 def is_pubkeyhash(monosig_address):
-    """Check if pubkeyhash (and that’s really all).
-    """
-
+    """Check if PubKeyHash is valid. """
     assert not is_multisig(monosig_address)
     try:
         base58_check_decode(monosig_address, config.ADDRESSVERSION)
@@ -246,6 +256,7 @@ def is_pubkeyhash(monosig_address):
         return False
 
 def make_pubkeyhash(address):
+    """Create a new PubKeyHash."""
     if is_multisig(address):
         signatures_required, pubs, signatures_possible = extract_array(address)
         pubkeyhashes = []
@@ -264,8 +275,7 @@ def make_pubkeyhash(address):
     return pubkeyhash_address
 
 def extract_pubkeys(pub):
-    """Assume pubkey if not pubkeyhash. (Check validity later.)
-    """
+    """Assume pubkey if not pubkeyhash. (Check validity later.)"""
     pubkeys = []
     if is_multisig(pub):
         _, pubs, _ = extract_array(pub)
