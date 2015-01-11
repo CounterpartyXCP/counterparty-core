@@ -290,6 +290,9 @@ def validate (db, source, feed_address, bet_type, deadline, wager_quantity,
 def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
             counterwager_quantity, target_value, leverage, expiration):
 
+    if util.get_balance(db, source, config.XCP) < wager_quantity:
+        raise exceptions.ComposeError('insufficient funds')
+
     problems, leverage = validate(db, source, feed_address, bet_type, deadline, wager_quantity,
                         counterwager_quantity, target_value, leverage, expiration, util.CURRENT_BLOCK_INDEX)
     if util.date_passed(deadline):
