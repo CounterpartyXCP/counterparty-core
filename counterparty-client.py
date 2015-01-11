@@ -100,7 +100,7 @@ def format_bet(bet):
     else:
         leverage = util.value_out(D(bet['leverage']) / 5040, 'leverage')
 
-    return [BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.value_out(odds, 'odds'), bet['expire_index'] - last_db_block_index, bet['tx_hash']]
+    return [BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.value_out(odds, 'odds'), bet['expire_index'] - last_db_block_index(), bet['tx_hash']]
 
 def format_order_match(order_match):
     order_match_id = make_id(order_match['tx0_hash'], order_match['tx1_hash'])
@@ -219,8 +219,6 @@ def get_pubkeys(address):
     return pubkeys
 
 def cli(method, params, unsigned):
-    logging.error(method)
-    logging.error(params)
     # Get provided pubkeys from params.
     pubkeys = []
     for address_name in ['source', 'destination']:

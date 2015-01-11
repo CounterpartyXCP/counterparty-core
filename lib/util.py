@@ -70,11 +70,12 @@ def api(method, params=None):
     return rpc(config.COUNTERPARTY_RPC, method, params=params, ssl_verify=config.COUNTERPARTY_RPC_SSL_VERIFY)
 
 def is_divisible(asset):
-    if asset in (config.BTC, config.XCP):
+    if asset in (config.BTC, config.XCP, 'leverage', 'value', 'fraction', 'price', 'odds'):
         return True
     else:
         sql = '''SELECT * FROM issuances WHERE (status = ? AND asset = ?)'''
         bindings = ['valid', asset]
+        logging.error(bindings)
         issuances = api('sql', {'query': sql, 'bindings': bindings})
 
         if not issuances: raise AssetError('No such asset: {}'.format(asset))
