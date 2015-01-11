@@ -160,7 +160,25 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
     return call_date, call_price, problems, fee, description, divisible, reissuance
 
 def compose (db, source, transfer_destination, asset, quantity, divisible, description):
-    callable_, call_date, call_price = False, 0, 0.0
+
+    # Callability is depreciated, so for re‐issuances set relevant parameters
+    # to old values; for first issuances, make uncallable.
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM issuances \
+                      WHERE (status = ? AND asset = ?)
+                      ORDER BY tx_index ASC''', ('valid', asset))
+    issuances = cursor.fetchall()
+    if issuances:
+        last_issuance = issuances[-1]
+        callable_ = last_issuance['callable']
+        call_date = last_issuance['call_date']
+        call_price = last_issuance['call_price']
+    else:
+        callable_ = False
+        call_date = 0
+        call_price = 0.0
+    cursor.close()
+
     call_date, call_price, problems, fee, description, divisible, reissuance = validate(db, source, transfer_destination, asset, quantity, divisible, callable_, call_date, call_price, description, util.CURRENT_BLOCK_INDEX)
     if problems: raise exceptions.ComposeError(problems)
 
