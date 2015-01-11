@@ -404,6 +404,7 @@ def construct (db, proxy, tx_info, encoding='auto',
 
     inputs = []
     btc_in = 0
+    btc_out = destination_btc_out + data_btc_out
     change_quantity = 0
     sufficient_funds = False
     final_fee = fee_per_kb
@@ -423,7 +424,6 @@ def construct (db, proxy, tx_info, encoding='auto',
             assert final_fee >= 1 * fee_per_kb
 
         # Check if good.
-        btc_out = destination_btc_out + data_btc_out
         change_quantity = btc_in - (btc_out + final_fee)
         logger.debug('Change quantity: {} BTC'.format(change_quantity / config.UNIT))
         # If change is necessary, must not be a dust output.
