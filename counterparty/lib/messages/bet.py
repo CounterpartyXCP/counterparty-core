@@ -180,7 +180,7 @@ def cancel_bet (db, bet, status, block_index):
     }
     sql='update bets set status = :status where tx_hash = :tx_hash'
     cursor.execute(sql, bindings)
-    log.message(db, 'update', 'bets', bindings)
+    log.message(db, block_index, 'update', 'bets', bindings)
 
     util.credit(db, bet['source'], config.XCP, bet['wager_remaining'], action='recredit wager remaining', event=bet['tx_hash'])
 
@@ -206,7 +206,7 @@ def cancel_bet_match (db, bet_match, status, block_index):
     }
     sql='update bet_matches set status = :status where id = :bet_match_id'
     cursor.execute(sql, bindings)
-    log.message(db, 'update', 'bet_matches', bindings)
+    log.message(db, block_index, 'update', 'bet_matches', bindings)
 
     cursor.close()
 
@@ -493,7 +493,7 @@ def match (db, tx):
             }
             sql='update bets set wager_remaining = :wager_remaining, counterwager_remaining = :counterwager_remaining, status = :status where tx_hash = :tx_hash'
             cursor.execute(sql, bindings)
-            log.message(db, 'update', 'bets', bindings)
+            log.message(db, tx['block_index'], 'update', 'bets', bindings)
 
             if tx1['block_index'] >= 292000 or config.TESTNET:  # Protocol change
                 if tx1_wager_remaining <= 0 or tx1_counterwager_remaining <= 0:
@@ -509,7 +509,7 @@ def match (db, tx):
             }
             sql='update bets set wager_remaining = :wager_remaining, counterwager_remaining = :counterwager_remaining, status = :status where tx_hash = :tx_hash'
             cursor.execute(sql, bindings)
-            log.message(db, 'update', 'bets', bindings)
+            log.message(db, tx['block_index'], 'update', 'bets', bindings)
 
             # Get last value of feed.
             broadcasts = list(cursor.execute('''SELECT * FROM broadcasts WHERE (status = ? AND source = ?) ORDER BY tx_index ASC''', ('valid', feed_address)))

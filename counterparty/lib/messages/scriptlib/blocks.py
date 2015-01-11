@@ -102,7 +102,7 @@ class Block(object):
                 'key': key,
                 'value': value
                 }
-            log.message(self.db, 'update', 'storage', bindings)
+            log.message(self.db, self.number, 'update', 'storage', bindings)
             sql='''UPDATE storage SET value = :value WHERE contract_id = :contract_id AND key = :key'''
             cursor.execute(sql, bindings)
         else:           # Insert value.
@@ -111,7 +111,7 @@ class Block(object):
                 'key': key,
                 'value': value
                 }
-            log.message(self.db, 'insert', 'storage', bindings)
+            log.message(self.db, self.number, 'insert', 'storage', bindings)
             sql='''INSERT INTO storage VALUES (:contract_id, :key, :value)'''
             cursor.execute(sql, bindings)
 
@@ -146,10 +146,10 @@ class Block(object):
         nonces = list(cursor)
         bindings = {'address': address, 'nonce': nonce}
         if not nonces:
-            log.message(self.db, 'insert', 'nonces', bindings)
+            log.message(self.db, self.number, 'insert', 'nonces', bindings)
             cursor.execute('''INSERT INTO nonces VALUES(:address, :nonce)''', bindings)
         else:
-            log.message(self.db, 'update', 'nonces', bindings)
+            log.message(self.db, self.number, 'update', 'nonces', bindings)
             cursor.execute('''UPDATE nonces SET nonce = :nonce WHERE (address = :address)''', bindings)
 
     def increment_nonce(self, address):
@@ -174,9 +174,9 @@ class Block(object):
         cursor = self.db.cursor()
         logger.debug('SUICIDING {}'.format(contract_id))
         bindings = {'contract_id': contract_id}
-        log.message(self.db, 'delete', 'contracts', bindings)
+        log.message(self.db, self.number, 'delete', 'contracts', bindings)
         cursor.execute('''DELETE FROM contracts WHERE contract_id = :contract_id''', bindings)
-        log.message(self.db, 'delete', 'storage', bindings)
+        log.message(self.db, self.number, 'delete', 'storage', bindings)
         cursor.execute('''DELETE FROM storage WHERE contract_id = :contract_id''', bindings)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

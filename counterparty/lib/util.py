@@ -98,7 +98,7 @@ def sortkeypicker(keynames):
        return composite
     return getit
 
-def last_message (db):
+def last_message(db):
     """Return latest message from the db."""
     cursor = db.cursor()
     messages = list(cursor.execute('''SELECT * FROM messages WHERE message_index = (SELECT MAX(message_index) from messages)'''))
@@ -110,7 +110,7 @@ def last_message (db):
     cursor.close()
     return last_message
 
-def generate_asset_id (asset_name, block_index):
+def generate_asset_id(asset_name, block_index):
     """Create asset_id from asset_name."""
     if asset_name == config.BTC: return 0
     elif asset_name == config.XCP: return 1

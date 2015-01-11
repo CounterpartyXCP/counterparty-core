@@ -43,7 +43,7 @@ def exectracer(cursor, sql, bindings):
             if category not in ('nonces', 'storage'):  # List message manually.
                 if not (command in ('update') and category in ('orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches', 'contracts')):    # List message manually.
                     # try:
-                        log.message(db, command, category, bindings)
+                        log.message(db, bindings['block_index'], command, category, bindings)
                     # except:
                         # raise TypeError('SQLite3 statements must used named arguments.')
 
