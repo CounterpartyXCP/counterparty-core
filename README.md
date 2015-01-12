@@ -8,6 +8,18 @@
 * [`counterparty-lib`](https://github.com/CounterpartyXCP/counterpartyd)
 * [Bitcoin Core](https://github.com/bitcoin/bitcoin) 
 
+# Installation
+
+`pip install counterparty-cli`
+
+or
+
+```
+git clone https://github.com/CounterpartyXCP/counterparty-cli.git
+cd counterparty-cli
+python setup.py install
+```
+
 # Counterparty server
 
 Use `counterparty-server.py` to start synchronization with the blockchain and RPC server.
