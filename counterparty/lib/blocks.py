@@ -942,7 +942,7 @@ def follow(db):
             if requires_rollback:
                 # Record reorganisation.
                 logger.warning('Blockchain reorganisation at block {}.'.format(current_index))
-                log.message(db, 'reorg', None, {'block_index': current_index})
+                log.message(db, block_index, 'reorg', None, {'block_index': current_index})
 
                 # Rollback the DB.
                 reparse(db, block_index=current_index-1, quiet=True)

@@ -181,7 +181,7 @@ def cancel_order (db, order, status, block_index):
     }
     sql='update orders set status = :status where tx_hash = :tx_hash'
     cursor.execute(sql, bindings)
-    log.message(db, 'update', 'orders', bindings)
+    log.message(db, block_index, 'update', 'orders', bindings)
 
     if order['give_asset'] != config.BTC:    # Can’t credit BTC.
         util.credit(db, order['source'], order['give_asset'], order['give_remaining'], action='cancel order', event=order['tx_hash'])
@@ -221,7 +221,7 @@ def cancel_order_match (db, order_match, status, block_index):
     }
     sql='update order_matches set status = :status where id = :order_match_id'
     cursor.execute(sql, bindings)
-    log.message(db, 'update', 'order_matches', bindings)
+    log.message(db, block_index, 'update', 'order_matches', bindings)
 
     order_match_id = util.make_id(order_match['tx0_hash'], order_match['tx1_hash'])
 
@@ -254,7 +254,7 @@ def cancel_order_match (db, order_match, status, block_index):
         }
         sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining where tx_hash = :tx_hash'
         cursor.execute(sql, bindings)
-        log.message(db, 'update', 'orders', bindings)
+        log.message(db, block_index, 'update', 'orders', bindings)
 
     # If tx1 is dead, credit address directly; if not, replenish give remaining, get remaining, and fee required remaining.
     orders = list(cursor.execute('''SELECT * FROM orders \
@@ -285,7 +285,7 @@ def cancel_order_match (db, order_match, status, block_index):
         }
         sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining where tx_hash = :tx_hash'
         cursor.execute(sql, bindings)
-        log.message(db, 'update', 'orders', bindings)
+        log.message(db, block_index, 'update', 'orders', bindings)
 
     if block_index < 286500:    # Protocol change.
         # Sanity check: one of the two must have expired.
@@ -654,7 +654,7 @@ def match (db, tx, block_index=None):
             }
             sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining, fee_provided_remaining = :fee_provided_remaining, status = :status where tx_hash = :tx_hash'
             cursor.execute(sql, bindings)
-            log.message(db, 'update', 'orders', bindings)
+            log.message(db, block_index, 'update', 'orders', bindings)
             # tx1
             if tx1_give_remaining <= 0 or (tx1_get_remaining <= 0 and (block_index >= 292000 or config.TESTNET)):    # Protocol change
                 if tx1['give_asset'] != config.BTC and tx1['get_asset'] != config.BTC:
@@ -671,7 +671,7 @@ def match (db, tx, block_index=None):
             }
             sql='update orders set give_remaining = :give_remaining, get_remaining = :get_remaining, fee_required_remaining = :fee_required_remaining, fee_provided_remaining = :fee_provided_remaining, status = :status where tx_hash = :tx_hash'
             cursor.execute(sql, bindings)
-            log.message(db, 'update', 'orders', bindings)
+            log.message(db, block_index, 'update', 'orders', bindings)
 
             # Calculate when the match will expire.
             if block_index >= 308000 or config.TESTNET:      # Protocol change.

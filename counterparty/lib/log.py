@@ -60,8 +60,7 @@ def isodt (epoch_time):
     except OSError:
         return '<datetime>'
 
-def message (db, command, category, bindings, tx_hash=None):
-    block_index = util.CURRENT_BLOCK_INDEX
+def message(db, block_index, command, category, bindings, tx_hash=None):
     cursor = db.cursor()
 
     # Get last message index.
