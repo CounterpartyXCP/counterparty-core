@@ -292,8 +292,6 @@ def exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db)
     elif (tx_name == 'util' and (method == 'api' or method == 'date_passed' or method == 'price' or method == 'sortkeypicker' or method == 'generate_asset_id' \
          or method == 'generate_asset_name' or method == 'dhash_string' or method == 'enabled' or method == 'get_url' or method == 'hexlify')) or tx_name == 'script':
         return tested_method(*inputs)
-    elif tx_name == 'blocks' and (method == 'get_tx_info' or method == 'get_tx_info1' or method == 'get_tx_info2'):
-        return tested_method(get_proxy(), inputs[0])
     else:
         return tested_method(counterpartyd_db, *inputs)
 
