@@ -15,9 +15,7 @@ from counterparty.lib.messages.scriptlib import processblock
 from counterparty.lib.messages.scriptlib.processblock import ContractError
 from counterparty.lib.api import APIError
 from counterparty.lib.util import (DebitError, CreditError, QuantityError)
-
 from fractions import Fraction
-
 
 UNITTEST_VECTOR = {
     'bet': {
@@ -105,6 +103,38 @@ UNITTEST_VECTOR = {
         'match': [{
             'in': ({'tx_index': 99999999},),
             'out': None
+        }],
+    },
+    'blocks': {
+        'parse_tx': [{
+            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc-mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'supported': 1, 'block_index': DP['default_block'], 'fee': 10000, 'block_time': 1554090000000, 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
+            'out': None
+        },  {
+            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block'], 'fee': 10000, 'block_time': 1554090000000, 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns-mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj'},),
+            'out': None
+        },  {
+            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block'], 'fee': 10000, 'block_time': 1554090000000, 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'tx_index': 502, 'destination': 'mvCounterpartyXXXXXXXXXXXXXXW24Hef'},),
+            'out': None
+        }],
+        'parse_block': [{
+            'in': (DP['default_block'] - 1, 1420914478.0),
+            'out': ('e5c99981fc226278ae7039136ed28d8f34514da2fa3973bb489c5c8e9d81b79d', '9351b9918a61ab1bd82bacbf5299dc4d5ae4cbeff72a88897aec4ff60cb08b3b')
+        }],
+        'get_next_tx_index': [{
+            'in': (),
+            'out': 496
+        }],
+        'get_tx_info': [{
+            'in': ('f7499dee61e7684e847dec7fa42d782c01cf0dea956ef8bbb68d62258e339f08',),
+            'out': ()
+        }],
+        'get_tx_info1': [{
+            'in': ('f7499dee61e7684e847dec7fa42d782c01cf0dea956ef8bbb68d62258e339f08',),
+            'out': ()
+        }],
+        'get_tx_info2': [{
+            'in': ('f7499dee61e7684e847dec7fa42d782c01cf0dea956ef8bbb68d62258e339f08',),
+            'out': ()
         }],
     },
     'broadcast': {
@@ -858,31 +888,31 @@ UNITTEST_VECTOR = {
         }],
 
         'test_array': [{
-            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 2),         # Valid array
-            'out': None                                                                                             # No error
+            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 2),
+            'out': None
         }, {
-            'in': ('Q', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 2),         # Bad first element
+            'in': ('Q', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 2),
             'error': (script.MultiSigAddressError, 'Signature values not integers.')
         }, {
-            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], None),      # Bad last element
+            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], None),
             'error': (script.MultiSigAddressError, 'Signature values not integers.')
         }, {
-            'in': ('0', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 2),         # First element too low
+            'in': ('0', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 2),
             'error': (script.MultiSigAddressError, 'Invalid signatures_required.')
         }, {
-            'in': ('4', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 2),         # First element too high
+            'in': ('4', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 2),
             'error': (script.MultiSigAddressError, 'Invalid signatures_required.')
         }, {
-            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 1),         # Last element too low
+            'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 1),
             'error': (script.MultiSigAddressError, 'Invalid signatures_possible.')
         }, {
-            'in': ('2', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 4),         # Last element too high
+            'in': ('2', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 4),
             'error': (script.MultiSigAddressError, 'Invalid signatures_possible.')
         }, {
             'in': ('1', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_2'], 2),
             'error': (script.MultiSigAddressError, 'Invalid characters in pubkeys/pubkeyhashes.')
         },  {
-            'in': ('3', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 3),         # Wrong number of pubkeys
+            'in': ('3', ['mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'], 3),
             'error': (script.InputError, 'Incorrect number of pubkeys/pubkeyhashes in multi‐signature address.')
         }],
         'construct_array': [{
@@ -1122,7 +1152,7 @@ UNITTEST_VECTOR = {
             'out': 1
         },  {
             'in': (1.111111111111, 'DIVISIBLE',),
-            'error': (QuantityError, 'Divisible assets have only eight decimal places of precision.')            
+            'error': (QuantityError, 'Divisible assets have only eight decimal places of precision.')
         },  {
             'in': (1.1, 'NODIVISIBLE',),
             'error': (QuantityError, 'Fractional quantities of indivisible assets.')
