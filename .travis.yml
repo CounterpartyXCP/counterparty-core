@@ -1,15 +1,8 @@
 language: python
 python:
 - "3.4"
-before_install:
-- sudo apt-get update -qq
-- sudo apt-get install -y unzip wget
 install:
-- git clone https://github.com/ethereum/serpent.git && cd serpent && make && sudo make install && cd ..
-- wget https://github.com/rogerbinns/apsw/releases/download/3.8.5-r1/apsw-3.8.5-r1.zip
-- unzip apsw-3.8.5-r1.zip
-- cd apsw-3.8.5-r1 && python setup.py fetch --version=3.8.5 --all build --enable-all-extensions install
-- cd .. && python setup.py install
+- python setup.py install
 - pip install python-coveralls --use-mirrors
 script: cd counterparty; py.test --cov-config .coveragerc --cov-report term-missing --cov ./ --skiptestbook=all
 notifications:
