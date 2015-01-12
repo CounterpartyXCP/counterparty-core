@@ -10,7 +10,7 @@
 	* `BLOCKCHAIN_SERVICE_NAME` is replaced by `BACKEND_NAME`
 	* `jmcorgan` is replaced by `addrindex`
 	* support of Insight, Blockr and SoChain are removed
-	* new specific configuration file for `counteparty-client.py`
+	* CLIs has been moved to `counterparty-cli` repository
 * v9.49.3 (2014-12-28)
 	* better logging when handling `SIGTERM`, `SIGKILL`
 	* update README
