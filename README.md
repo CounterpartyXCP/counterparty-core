@@ -22,14 +22,14 @@ python setup.py install
 
 # Counterparty server
 
-Use `counterparty-server.py` to start synchronization with the blockchain and RPC server.
+Use `counterparty-server` to start synchronization with the blockchain and RPC server.
 
 For a list of the available command‐line arguments and options, see
-`$ ./counterparty-server.py --help`.
+`$ counterparty-server --help`.
 
 Example:
 
-`./counterparty-server.py --testnet server`
+`counterparty-server --testnet server`
 
 Configuration file:
 
@@ -53,16 +53,16 @@ A counterparty-server configuration file looks like this:
 
 
 # Counterparty client
-Use `counterparty-client.py` to manage you Counterparty wallet.
+Use `counterparty-client` to manage you Counterparty wallet.
 
 For a list of the available command‐line arguments and options, see
-`$ ./counterparty-client.py --help`.
+`$ ./counterparty-client --help`.
 For a list of the available arguments for a particular command, see
-`$ ./counterparty-client.py send --help`.
+`$ ./counterparty-client send --help`.
 
 Example:
 
-`./counterparty-client.py --testnet send --source=mi9Q6EVaXL1n85J4pRAsR3nVoo2yfDmquV --asset=XCP --quantity=0.1 --destination=muQjaj46wghHprjSjpgU7D55JxKyK5dJtZ`
+`./counterparty-client --testnet send --source=mi9Q6EVaXL1n85J4pRAsR3nVoo2yfDmquV --asset=XCP --quantity=0.1 --destination=muQjaj46wghHprjSjpgU7D55JxKyK5dJtZ`
 
 Configuration file:
 
