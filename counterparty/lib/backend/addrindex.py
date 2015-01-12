@@ -14,9 +14,7 @@ from functools import lru_cache
 
 bitcoin_rpc_session = None
 
-class BitcoindError(Exception):
-    pass
-class BitcoindRPCError(BitcoindError):
+class BackendRPCError(Exception):
     pass
 
 def rpc(method, params):
@@ -43,7 +41,7 @@ def rpc(method, params):
         except requests.exceptions.SSLError as e:
             raise e
         except requests.exceptions.ConnectionError:
-            logger.debug('Could not connect to Bitcoind. (Try {}/{})'.format(i+1, TRIES))
+            logger.debug('Could not connect to backend. (Try {}/{})'.format(i+1, TRIES))
             time.sleep(5)
 
     if response == None:
@@ -51,21 +49,26 @@ def rpc(method, params):
             network = 'testnet'
         else:
             network = 'mainnet'
-        raise BitcoindRPCError('Cannot communicate with {} Core. ({} is set to run on {}, is {} Core?)'.format(config.BTC_NAME, config.XCP_CLIENT, network, config.BTC_NAME))
+        raise BackendRPCError('Cannot communicate with backend. ({} is set to run on {}, is backend?)'.format(config.XCP_CLIENT, network))
     elif response.status_code not in (200, 500):
-        raise BitcoindRPCError(str(response.status_code) + ' ' + response.reason)
+        raise BackendRPCError(str(response.status_code) + ' ' + response.reason)
 
     # Return result, with error handling.
     response_json = response.json()
     if 'error' not in response_json.keys() or response_json['error'] == None:
         return response_json['result']
     elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
-        raise BitcoindError('{} Is txindex enabled in {} Core?'.format(response_json['error'], config.BTC_NAME))
+        raise BackendRPCError('{} Is `txindex` enabled in {} Core?'.format(response_json['error'], config.BTC_NAME))
     elif response_json['error']['code'] == -4:   # Unknown private key (locked wallet?)
-        raise BitcoindError('Unknown private key. (Locked wallet?)')
+        raise BackendRPCError('Unknown private key. (Locked wallet?)')
+    elif response_json['error']['code'] == -28:   # “Verifying blocks...”
+        logger.debug('Backend not ready. Sleeping for ten seconds.', file=sys.stderr)
+        time.sleep(10)
+        return rpc(method, params)
     else:
-        raise BitcoindError('{}'.format(response_json['error']))
+        raise BackendRPCError('{}'.format(response_json['error']))
 
+# TODO: ???
 def check():
     return True
 
@@ -101,11 +104,11 @@ def searchrawtransactions(address):
     unconfirmed = unconfirmed_transactions(address)
     try:
         rawtransactions = rpc('searchrawtransactions', [address, 1, 0, 9999999])
-    except backend.BitcoindRPCError as e:
+    except BackendRPCError as e:
         if str(e) == '404 Not Found':
-            raise BitcoindRPCError('Unknown RPC command: `searchrawtransactions`. Either, switch to jmcorgan (recommended), use Insight, or use sochain or blockr.')
+            raise BackendRPCError('Unknown RPC command: `searchrawtransactions`. Either, switch to jmcorgan (recommended), use Insight, or use sochain or blockr.')
         else:
-            raise BitcoindRPCError(str(e))
+            raise BackendRPCError(str(e))
     confirmed = [tx for tx in rawtransactions if tx['confirmations'] > 0]
     return unconfirmed + confirmed
 
@@ -128,7 +131,5 @@ def getrawmempool():
 
 def sendrawtransaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
-
-
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

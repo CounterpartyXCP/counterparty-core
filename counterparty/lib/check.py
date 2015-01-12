@@ -34,10 +34,11 @@ CHECKPOINTS_TESTNET = {
     315000: {'ledger_hash': '3590d88d26075b5b933a04c63c1987acdb5ffa2e1a6c7dc21ffa9199eb719669', 'txlist_hash': '7416592ee403a6751ec5a7740d449efd3df0d92b17903b920cf8f1a5f4c6d27f'}
 }
 
-class BackendError(Exception):  # TODO: Redundant with `BitcoindError`
-    pass
-
 class ConsensusError(Exception):
+    pass
+class BackendError(Exception):
+    pass
+class DatabaseError(Exception):
     pass
 
 def consensus_hash(db, field, previous_consensus_hash, content):
@@ -151,7 +152,7 @@ def backend_state():
 def database_state(db, blockcount):
     """Checks {} database to see if is caught up with backend.""".format(config.XCP_NAME)
     if util.CURRENT_BLOCK_INDEX + 1 < blockcount:
-        raise exceptions.DatabaseError('{} database is behind backend.'.format(config.XCP_NAME))
+        raise DatabaseError('{} database is behind backend.'.format(config.XCP_NAME))
     logger.debug('Database state check passed.')
     return
 

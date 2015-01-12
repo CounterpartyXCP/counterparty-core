@@ -340,7 +340,7 @@ class APIStatusPoller(threading.Thread):
                     logger.debug('Checking database state.')
                     check.database_state(db, backend.getblockcount())
                     self.last_database_check = time.time()
-            except (check.BackendError, exceptions.DatabaseError) as e:
+            except (check.BackendError, check.DatabaseError) as e:
                 exception_name = e.__class__.__name__
                 exception_text = str(e)
                 logger.debug("API Status Poller: %s", exception_text)
