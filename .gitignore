@@ -1,5 +1,11 @@
 # precompiled python
 *.pyc
 
-# local dev repo
-counterparty-lib/
+# Setuptools distribution folder.
+/dist/
+
+# Setuptools build folder.
+/build/
+
+# Python egg metadata, regenerated from source files by setuptools.
+/*.egg-info

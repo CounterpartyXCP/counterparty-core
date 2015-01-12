@@ -15,8 +15,8 @@ import appdirs
 from prettytable import PrettyTable
 from colorlog import ColoredFormatter
 
-from lib import util
-from lib import wallet
+from counterpartycli import util
+from counterpartycli import wallet
 
 from counterparty.lib import config
 from counterparty.lib import script
@@ -454,7 +454,7 @@ def generate_move_random_hash(move):
     return binascii.hexlify(random_bin).decode('utf8'), binascii.hexlify(move_random_hash_bin).decode('utf8')
 
 
-if __name__ == '__main__':
+def main():
     if os.name == 'nt':
         #patch up cmd.exe's "challenged" (i.e. broken/non-existent) UTF-8 logging
         util_windows.fix_win32_unicode()

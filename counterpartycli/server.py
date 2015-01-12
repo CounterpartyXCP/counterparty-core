@@ -11,7 +11,7 @@ from counterparty.lib import config
 APP_NAME = 'counterparty-server'
 APP_VERSION = '1.0.0'
 
-if __name__ == '__main__':
+def main():
     if os.name == 'nt':
         from lib import util_windows
         #patch up cmd.exe's "challenged" (i.e. broken/non-existent) UTF-8 logging
