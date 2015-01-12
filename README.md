@@ -27,17 +27,34 @@ rpctimeout=300
 * Minor version changes require a(n automatic) database reparse.
 * All protocol changes are retroactive on testnet.
 
+# Installation
 
-# Usage
+`pip install counterparty-lib`
 
-To get started, run `$ counterpartyd.py --rpc-password=$PASSWORD server`.
+or
 
-For a summary of the available command‐line arguments and options, see
-`$ counterpartyd.py --help` and `$ counterparty-cli.py --help`.
+```
+git clone https://github.com/CounterpartyXCP/counterpartyd.git
+cd counterpartyd
+python setup.py install`
+```
 
-The test suite is invoked with `$ py.test` in the root directory of the
+# Example
+
+```
+from counterparty import server
+
+# initialise the server
+db = server.initialise(...)
+
+# start synchronisation with the blockchain and RPC server
+server.start_all(db)
+```
+
+# Test suite
+
+The test suite is invoked with `$ py.test` in the `counterparty` directory of the
 repository.
-
 
 ### Input and Output
 * Quantities of divisible assets are written to eight decimal places.
