@@ -9,7 +9,7 @@ Protocol](https://github.com/CounterpartyXCP/Counterparty).
 # Dependencies
 * [Python 3](http://python.org)
 * Python 3 [packages](https://github.com/CounterpartyXCP/counterpartyd/blob/master/pip-requirements.txt)
-* [Patched Bitcoin Core](https://github.com/btcdrak/bitcoin/releases/tag/addrindex-0.10.0) with the following options set:
+* [Patched Bitcoin Core](https://github.com/btcdrak/bitcoin/releases) with the following options set:
 
 ```
 rpcuser=bitcoinrpc
