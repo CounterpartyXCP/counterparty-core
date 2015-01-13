@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 
 from setuptools import setup, find_packages
-import os
+import py2exe
+import os, sys
+import counterparty, certifi
+import shutil
+import ctypes.util
 
 def readme():
     here = os.path.abspath(os.path.dirname(__file__))
@@ -38,4 +42,34 @@ setup_options = {
     'scripts': ['bin/counterparty-client', 'bin/counterparty-server']
 }
 
+
+if sys.argv[1] == 'py2exe':
+    WIN_DIST_DIR = 'counterparty-cli-win32-{}'.format(setup_options['version'])
+    setup_options.update({
+        'console': setup_options['scripts'],
+        'zipfile': 'library/site-packages.zip',
+        'options': {'py2exe': {'dist_dir': WIN_DIST_DIR}}
+    })
+    shutil.rmtree(WIN_DIST_DIR)
+
 setup(**setup_options)
+
+# tweak Windows distribution
+if sys.argv[1] == 'py2exe':
+    # py2exe copies only pyc files in site-packages.zip
+    # modules with no pyc files must be copied in 'dist/library/'
+    additionals_modules = [counterparty, certifi]
+
+    for module in additionals_modules:
+        moudle_file = os.path.dirname(module.__file__)
+        dest_file = '{}/library/{}'.format(WIN_DIST_DIR, module.__name__)
+        shutil.copytree(moudle_file, dest_file)
+
+    # additionals DLLs
+    dlls = ['ssleay32.dll', 'libssl32.dll', 'libeay32.dll']
+    dlls.append(ctypes.util.find_msvcrt())
+
+    dlls_path = dlls
+    for dll in dlls:
+        dll_path = ctypes.util.find_library(dll)
+        shutil.copy(dll_path, WIN_DIST_DIR)
