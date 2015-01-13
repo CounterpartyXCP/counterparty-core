@@ -17,7 +17,7 @@ or
 ```
 git clone https://github.com/CounterpartyXCP/counterparty-cli.git
 cd counterparty-cli
-python setup.py install
+python3 setup.py install
 ```
 
 # Counterparty server
