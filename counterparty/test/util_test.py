@@ -141,7 +141,7 @@ def insert_transaction(transaction, db):
 def initialise_rawtransactions_db(db):
     """Drop old raw transaction table, create new one and populate it from unspent_outputs.json."""
     if pytest.config.option.savescenarios:
-        server.initialise(testnet=True, **COUNTERPARTYD_OPTIONS)
+        server.initialise(database_file=':memory:', testnet=True, **COUNTERPARTYD_OPTIONS)
         cursor = db.cursor()
         cursor.execute('DROP TABLE  IF EXISTS raw_transactions')
         cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT)')
