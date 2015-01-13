@@ -13,7 +13,7 @@ APP_VERSION = '1.0.0'
 
 def main():
     if os.name == 'nt':
-        from lib import util_windows
+        from counterparty.lib import util_windows
         #patch up cmd.exe's "challenged" (i.e. broken/non-existent) UTF-8 logging
         util_windows.fix_win32_unicode()
 
@@ -67,18 +67,16 @@ def main():
     else:
         args.data_dir = os.path.expanduser(args.data_dir)
     if not os.path.isdir(args.data_dir):
-        os.mkdir(args.data_dir)
+        os.makedirs(args.data_dir)
 
     # Configuration file
     config_file_changed = False
     configfile = configparser.ConfigParser()
     if not args.config_file:
         args.config_file = os.path.join(args.data_dir, '{}.conf'.format(APP_NAME))
-    print(args.config_file)
     configfile.read(args.config_file)
     if not 'Default' in configfile:
         configfile['Default'] = {}
-
     # testnet
     if not args.testnet and 'testnet' in configfile['Default'] and configfile['Default'].getboolean('testnet'):
         args.testnet = True
