@@ -510,7 +510,7 @@ def balances(address):
     script.validate(address)
     balances = get_address(address=address)['balances']
     table = PrettyTable(['Asset', 'Amount'])
-    btc_balance = backend.get_btc_balance(address)
+    btc_balance = backend.get_btc_balance(proxy, address)
     table.add_row([config.BTC, btc_balance])  # BTC
     for balance in balances:
         asset = balance['asset']
