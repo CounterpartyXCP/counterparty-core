@@ -45,3 +45,24 @@ def test_vector(tx_name, method, inputs, outputs, error, records, counterpartyd_
         util_test.insert_transaction(inputs[0], counterpartyd_db)
         inputs += (inputs[0]['data'][4:],) # message arg
     util_test.check_outputs(tx_name, method, inputs, outputs, error, records, counterpartyd_db)
+
+# def test_gen(counterpartyd_db, rawtransactions_db):
+#     """Test cases generator.
+
+#     This snippet generates test cases that can be used to add new tests.
+#     You need to customize it to output specific transaction (tx_info) or database changes.
+#     Run unit test with -s switch to see the output of print, ie. py.test test/unit_test.py -s.
+#     """
+#     from counterparty.lib.messages import broadcast
+#     tx_info = broadcast.compose(counterpartyd_db, DP['addresses'][1][0], 1388000100, DP['small'], 0.0, 'LOCK')
+#     print('tx_info')
+#     print(tx_info)
+#     tx_hex = transaction.construct(counterpartyd_db, tx_info, encoding='multisig', allow_unconfirmed_inputs=True)
+#     print('tx_hex')
+#     print(tx_hex)
+#     tx = util_test.insert_raw_transaction(tx_hex, counterpartyd_db, rawtransactions_db)
+#     print('tx')
+#     print(tx)
+#     message = list(counterpartyd_db.cursor().execute("SELECT * FROM bet_matches WHERE (feed_address=?)", (DP['addresses'][1][0],)))
+#     print('database')
+#     print(message)

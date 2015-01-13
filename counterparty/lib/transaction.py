@@ -432,6 +432,7 @@ def construct (db, tx_info, encoding='auto',
     if not sufficient_funds:
         # Approximate needed change, fee by with most recently calculated
         # quantities.
+        btc_out = destination_btc_out + data_btc_out
         total_btc_out = btc_out + max(change_quantity, 0) + final_fee
         raise exceptions.BalanceError('Insufficient {} at address {}. (Need approximately {} {}.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)'.format(config.BTC, source, total_btc_out / config.UNIT, config.BTC))
 

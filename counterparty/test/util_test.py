@@ -141,7 +141,7 @@ def insert_transaction(transaction, db):
 def initialise_rawtransactions_db(db):
     """Drop old raw transaction table, create new one and populate it from unspent_outputs.json."""
     if pytest.config.option.savescenarios:
-        server.initialise(testnet=True, **COUNTERPARTYD_OPTIONS)
+        server.initialise(database_file=':memory:', testnet=True, **COUNTERPARTYD_OPTIONS)
         cursor = db.cursor()
         cursor.execute('DROP TABLE  IF EXISTS raw_transactions')
         cursor.execute('CREATE TABLE IF NOT EXISTS raw_transactions(tx_hash TEXT UNIQUE, tx_hex TEXT)')
@@ -290,7 +290,8 @@ def exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db)
     if tx_name == 'transaction' and method == 'construct':
         return tested_method(counterpartyd_db, inputs[0], **inputs[1])
     elif (tx_name == 'util' and (method == 'api' or method == 'date_passed' or method == 'price' or method == 'sortkeypicker' or method == 'generate_asset_id' \
-         or method == 'generate_asset_name' or method == 'dhash_string' or method == 'enabled' or method == 'get_url' or method == 'hexlify')) or tx_name == 'script':
+         or method == 'generate_asset_name' or method == 'dhash_string' or method == 'enabled' or method == 'get_url' or method == 'hexlify')) or tx_name == 'script' \
+        or (tx_name == 'blocks' and (method == 'get_tx_info' or method == 'get_tx_info1' or method == 'get_tx_info2')):
         return tested_method(*inputs)
     else:
         return tested_method(counterpartyd_db, *inputs)
