@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
 from setuptools import setup, find_packages
-import py2exe
 import os, sys
 import counterparty, certifi
 import shutil
 import ctypes.util
+
+if sys.argv[1] == 'py2exe':
+    import py2exe
 
 def readme():
     here = os.path.abspath(os.path.dirname(__file__))
