@@ -39,11 +39,6 @@ def install_serpent():
     print("clean files.")
     os.system('rm -rf serpent-master && rm serpent.zip')
 
-def readme():
-    here = os.path.abspath(os.path.dirname(__file__))
-    with open(os.path.join(here, 'README.md')) as f:
-        return f.read()
-
 required_packages = [
     'appdirs==1.4.0',
     'prettytable==0.7.2',
@@ -70,13 +65,20 @@ required_repos = [
 setup_options = {
     'name': 'counterparty-lib',
     'version': '9.49.3',
-    'description': 'Reference implementation of the Counterparty protocol.',
-    'long_description': readme(),
+    'author': 'Counterparty Foundation',
+    'author_email': 'support@counterparty.io',
+    'maintainer': 'Adam Krellenstein',
+    'maintainer_email': 'adamk@counterparty.io',
+    'url': 'http://counterparty.io',
+    'license': 'MIT',
+    'description': 'Reference implementation of the Counterparty protocol',
+    'long_description': '',
+    'keywords': 'counterparty, bitcoin',
     'classifiers': [
       "Programming Language :: Python",
     ],
-    'url': 'https://github.com/CounterpartyXCP/counterpartyd',
-    'keywords': 'counterparty, bitcoin',
+    'download_url': 'https://github.com/CounterpartyXCP/counterpartyd/releases/tag/v9.49.3',
+    'provides': ['counterpartylib'],
     'packages': find_packages(),
     'zip_safe': False,
     'dependency_links': required_repos,
