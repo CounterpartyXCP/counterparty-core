@@ -9,11 +9,6 @@ import ctypes.util
 if sys.argv[1] == 'py2exe':
     import py2exe
 
-def readme():
-    here = os.path.abspath(os.path.dirname(__file__))
-    with open(os.path.join(here, 'README.md'), 'r', encoding="utf-8") as f:
-        return f.read()
-
 required_packages = [
     'appdirs==1.4.0',
     'prettytable==0.7.2',
@@ -30,13 +25,20 @@ required_repos = [
 setup_options = {
     'name': 'counterparty-cli',
     'version': '1.0.0',
-    'description': 'CLI for the Counterparty protocol.',
-    'long_description': readme(),
+    'author': 'Counterparty Foundation',
+    'author_email': 'support@counterparty.io',
+    'maintainer': 'Adam Krellenstein',
+    'maintainer_email': 'adamk@counterparty.io',
+    'url': 'http://counterparty.io',
+    'license': 'MIT',
+    'description': 'Counterparty CLI',
+    'long_description': '',
+    'keywords': 'counterparty,bitcoin',
     'classifiers': [
       "Programming Language :: Python",
     ],
-    'url': 'https://github.com/CounterpartyXCP/counterparty-cli',
-    'keywords': 'counterparty, bitcoin',
+    'download_url': 'https://github.com/CounterpartyXCP/counterparty-cli/releases/tag/v1.0.0-RC2',
+    'provides': ['counterpartycli'],
     'packages': find_packages(),
     'zip_safe': False,
     'dependency_links': required_repos,
