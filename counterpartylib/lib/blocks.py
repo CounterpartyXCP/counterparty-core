@@ -565,7 +565,11 @@ def get_tx_info2(tx_hex, block_parser=None):
         else:
             raise DecodeError('unrecognised output type')
         assert not (new_destination and new_data)
-        assert new_destination != None or new_data != None
+        assert new_destination != None or new_data != None  # `decode_*()` should never return `None, None`.
+
+        if util.enabled('null_data_check'):
+            if new_data == []:
+                raise DecodeError('new destination is `None`')
 
         # All destinations come before all data.
         if not data and not new_data and destinations != [config.UNSPENDABLE,]:
