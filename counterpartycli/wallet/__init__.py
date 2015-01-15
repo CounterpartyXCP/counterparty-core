@@ -7,7 +7,7 @@ import json
 import time
 
 from counterpartycli.wallet import bitcoincore
-from counterparty.lib import config
+from counterpartylib.lib import config
 
 def WALLET():
     return sys.modules['counterpartycli.wallet.{}'.format(config.WALLET_NAME)] 

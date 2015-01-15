@@ -18,13 +18,13 @@ from colorlog import ColoredFormatter
 from counterpartycli import util
 from counterpartycli import wallet
 
-from counterparty.lib import config
-from counterparty.lib import script
-from counterparty.lib.util import make_id, BET_TYPE_NAME, BET_TYPE_ID, dhash
-from counterparty.lib.log import isodt
+from counterpartylib.lib import config
+from counterpartylib.lib import script
+from counterpartylib.lib.util import make_id, BET_TYPE_NAME, BET_TYPE_ID, dhash
+from counterpartylib.lib.log import isodt
 
 if os.name == 'nt':
-    from counterparty.lib import util_windows
+    from counterpartylib.lib import util_windows
 
 APP_NAME = 'counterparty-client'
 APP_VERSION = '1.0.0'

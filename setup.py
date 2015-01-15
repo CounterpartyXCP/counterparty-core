@@ -2,7 +2,7 @@
 
 from setuptools import setup, find_packages
 import os, sys
-import counterparty, certifi
+import counterpartylib, certifi
 import shutil
 import ctypes.util
 
@@ -62,7 +62,7 @@ setup(**setup_options)
 if sys.argv[1] == 'py2exe':
     # py2exe copies only pyc files in site-packages.zip
     # modules with no pyc files must be copied in 'dist/library/'
-    additionals_modules = [counterparty, certifi]
+    additionals_modules = [counterpartylib, certifi]
 
     for module in additionals_modules:
         moudle_file = os.path.dirname(module.__file__)

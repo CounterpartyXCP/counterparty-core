@@ -5,15 +5,15 @@ import argparse
 import configparser
 import appdirs
 
-from counterparty import server
-from counterparty.lib import config
+from counterpartylib import server
+from counterpartylib.lib import config
 
 APP_NAME = 'counterparty-server'
 APP_VERSION = '1.0.0'
 
 def main():
     if os.name == 'nt':
-        from counterparty.lib import util_windows
+        from counterpartylib.lib import util_windows
         #patch up cmd.exe's "challenged" (i.e. broken/non-existent) UTF-8 logging
         util_windows.fix_win32_unicode()
 

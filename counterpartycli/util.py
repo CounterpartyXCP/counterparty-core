@@ -17,8 +17,8 @@ from dateutil.tz import tzlocal
 logger = logging.getLogger(__name__)
 D = decimal.Decimal
 
-from counterparty.lib import config
-from counterparty.lib.util import value_input, value_output
+from counterpartylib.lib import config
+from counterpartylib.lib.util import value_input, value_output
 
 rpc_sessions = {}
 

@@ -7,7 +7,7 @@ import json
 import time
 import requests
 
-from counterparty.lib import config
+from counterpartylib.lib import config
     
 bitcoin_rpc_session = None
 
