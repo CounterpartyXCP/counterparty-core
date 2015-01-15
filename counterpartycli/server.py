@@ -49,7 +49,7 @@ def main():
 
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
-    parser_server = subparsers.add_parser('server', help='run the server')
+    parser_server = subparsers.add_parser('start', help='run the server')
 
     parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database')
    
@@ -184,7 +184,7 @@ def main():
     elif args.action == 'kickstart':
         server.kickstart(db, bitcoind_dir=args.bitcoind_dir)
 
-    elif args.action == 'server':
+    elif args.action == 'start':
         server.start_all(db)
 
     else:
