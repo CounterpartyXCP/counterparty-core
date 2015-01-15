@@ -1,2 +1,2 @@
-include counterparty/mainnet_burns.csv
-include counterparty/protocol_changes.json
+include counterpartylib/mainnet_burns.csv
+include counterpartylib/protocol_changes.json
