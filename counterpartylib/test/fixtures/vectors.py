@@ -119,6 +119,12 @@ UNITTEST_VECTOR = {
             'in': ({'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'block_time': 3105010000000, 'data': b'\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'block_index': 310501, 'supported': 1, 'btc_amount': 5430, 'tx_index': 502, 'tx_hash': 'a0ed83b170344b996bdd71799dd774ab10f5410f8572079a292f681d36ebc42c', 'fee': 10000, 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'},),
             'out': None
         }],
+        'cancel_bet': [{
+            'in': ({'deadline': 1388000200, 'counterwager_quantity': 1, 'wager_remaining': 1, 'expiration': 10, 'expire_index': 310505, 'target_value': 0.0, 'tx_hash': '280e45b6c8757f2294a970a99b1226812bb5e5805a2482d2823dbf626cde9b25', 'leverage': 5040, 'counterwager_remaining': 1, 'fee_fraction_int': 5000000, 'status': 'open', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'block_index': 310495, 'wager_quantity': 1, 'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'bet_type': 1, 'tx_index': 496}, 'filled', DP['default_block']),
+            'records': [
+                {'table': 'bets', 'values': {'deadline': 1388000200, 'counterwager_quantity': 1, 'wager_remaining': 1, 'expiration': 10, 'expire_index': 310505, 'target_value': 0.0, 'tx_hash': '280e45b6c8757f2294a970a99b1226812bb5e5805a2482d2823dbf626cde9b25', 'leverage': 5040, 'counterwager_remaining': 1, 'fee_fraction_int': 5000000, 'status': 'filled', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'block_index': 310495, 'wager_quantity': 1, 'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'bet_type': 1, 'tx_index': 496}}
+            ]
+        }],
     },
     'blocks': {
         'parse_tx': [{
