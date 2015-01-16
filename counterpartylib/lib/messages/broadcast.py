@@ -34,7 +34,7 @@ from counterpartylib.lib import util
 from counterpartylib.lib import log
 from . import (bet)
 
-FORMAT = '>IdI'
+FORMAT = '>QdI'
 LENGTH = 4 + 8 + 4
 ID = 30
 # NOTE: Pascal strings are used for storing texts for backwards‐compatibility.
