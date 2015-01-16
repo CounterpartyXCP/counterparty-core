@@ -72,7 +72,7 @@ def api(method, params):
 
 def date_passed(date):
     """Check if the date has already passed."""
-    return date <= time.time()
+    return date <= int(time.time())
 
 def price (numerator, denominator):
     """Return price as Fraction or Decimal."""

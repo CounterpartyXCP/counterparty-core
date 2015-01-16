@@ -8,6 +8,13 @@ scenario (for instance `simplesig` scenario is the base scenario for all mutlisi
 To add (or update) a transaction in a scenario, or add a scenario, just update `scenarios.py` and run `py.test --skiptestbook=all --savescenarios`
 This command will generates new outputs for each scenario (.new.json, .new.sql and .new.log), if you are satisfied with the new output just rename them (remove the .new). 
 You need to do this every time you update UNITTEST_FIXTURE.
+
+Moreover, some functions' output depends on scenarios staying the same (for instance, function returning the last message).
+Here's a list of unit tests that will fail and need to be updated:
+- blocks.get_next_tx_index
+- blocks.parse_block
+- util.last_message
+- util.get_balance
 """
 
 from .params import ADDR, MULTISIGADDR, DEFAULT_PARAMS as DP
@@ -30,11 +37,15 @@ UNITTEST_FIXTURE = [
     ['send', (ADDR[0], ADDR[1], 'NODIVISIBLE', 5), {'encoding': 'multisig'}],
     ['send', (ADDR[0], MULTISIGADDR[0], 'NODIVISIBLE', 10), {'encoding': 'multisig'}],
     ['issuance', (ADDR[0], None, 'MAXI', 2**63 - 1, True, 'Maximum quantity'), {'encoding': 'multisig'}],
+    ['broadcast', (ADDR[0], 1388000000, 1, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],
+    ['broadcast', (ADDR[2], 1288000000, 1, 0.0, 'lock'), {'encoding': 'multisig'}],
     ['create_next_block', 490],
     ['order', (ADDR[0], 'XCP', DP['quantity'], 'BTC', round(DP['quantity'] / 125), 2000, DP['fee_required']), {'encoding': 'multisig'}],
     ['order', (ADDR[1], 'BTC', round(DP['quantity'] / 125), 'XCP', DP['quantity'], 2000, 0), {'encoding': 'multisig', 'fee_provided': DP['fee_provided']}],
-    ['broadcast', (ADDR[0], 1388000000, 1, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],
-    ['broadcast', (ADDR[2], 1288000000, 1, 0.0, 'lock'), {'encoding': 'multisig'}],
+    ['bet', (ADDR[1], ADDR[0], 3, 1388000200, 1, 1, 0.0, 5040, DP['expiration']), {'encoding': 'multisig'}],
+    ['bet', (ADDR[0], ADDR[0], 1, 1388000001, 9, 9, 0.0, 5040, DP['expiration']), {'encoding': 'multisig'}],
+    ['bet', (ADDR[1], ADDR[0], 0, 1388000001, 9, 9, 0.0, 5040, DP['expiration']), {'encoding': 'multisig'}],
+    ['broadcast', (ADDR[0], 1388000002, 1, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],
     ['create_next_block', 500]
 ]
 

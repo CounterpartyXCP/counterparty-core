@@ -82,7 +82,7 @@ def insert_block(db, block_index, parse_block=False):
     """Add blocks to the blockchain."""
     cursor = db.cursor()
     block_hash = hashlib.sha512(chr(block_index).encode('utf-8')).hexdigest()
-    block_time = block_index * 10000000
+    block_time = block_index * 1000
     block = (block_index, block_hash, block_time, None, None, None, None)
     cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty) 
                       VALUES (?,?,?,?,?,?,?)''', block)
