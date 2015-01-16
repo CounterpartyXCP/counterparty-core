@@ -127,3 +127,8 @@ Sorted UTXOs: ['amount: 1.934276; txid: dc4f91c42eb79898b266ee237eed0d501b8b1a84
 New input: amount: 1.934276; txid: dc4f91c42eb79898b266ee237eed0d501b8b1a843f69aed847ad740e1933f85e; vout: 1; confirmations: 6
 Change quantity: 1.934098 BTC
 Broadcast: mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH locked his feed (f7499dee61e7684e847dec7fa42d782c01cf0dea956ef8bbb68d62258e339f08) [valid]
+Sorted UTXOs: ['amount: 1.0; txid: e43c357b78baf473fd21cbc1481ac450746b60cf1d2702ce3a73a8811811e3eb; vout: 0; confirmations: 2', 'amount: 0.11121663; txid: b9fc3aa355b77ecb63282fc96e63912a253e98bf9cf441fbfbecc3fb277c4985; vout: 0; confirmations: 74']
+New input: amount: 1.0; txid: e43c357b78baf473fd21cbc1481ac450746b60cf1d2702ce3a73a8811811e3eb; vout: 0; confirmations: 2
+Change quantity: 0.9997677 BTC
+Debit: 0.00000001 XCP from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #bet# <280e45b6c8757f2294a970a99b1226812bb5e5805a2482d2823dbf626cde9b25>
+Bet: 0.00000001 XCP against 0.00000001 XCP, by mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns, on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc

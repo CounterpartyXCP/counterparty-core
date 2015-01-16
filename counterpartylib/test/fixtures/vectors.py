@@ -119,6 +119,12 @@ UNITTEST_VECTOR = {
             'in': ({'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'block_time': 3105010000000, 'data': b'\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'block_index': 310501, 'supported': 1, 'btc_amount': 5430, 'tx_index': 502, 'tx_hash': 'a0ed83b170344b996bdd71799dd774ab10f5410f8572079a292f681d36ebc42c', 'fee': 10000, 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'},),
             'out': None
         }],
+        'cancel_bet': [{
+            'in': ({'deadline': 1388000200, 'counterwager_quantity': 1, 'wager_remaining': 1, 'expiration': 10, 'expire_index': 310505, 'target_value': 0.0, 'tx_hash': '280e45b6c8757f2294a970a99b1226812bb5e5805a2482d2823dbf626cde9b25', 'leverage': 5040, 'counterwager_remaining': 1, 'fee_fraction_int': 5000000, 'status': 'open', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'block_index': 310495, 'wager_quantity': 1, 'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'bet_type': 1, 'tx_index': 496}, 'filled', DP['default_block']),
+            'records': [
+                {'table': 'bets', 'values': {'deadline': 1388000200, 'counterwager_quantity': 1, 'wager_remaining': 1, 'expiration': 10, 'expire_index': 310505, 'target_value': 0.0, 'tx_hash': '280e45b6c8757f2294a970a99b1226812bb5e5805a2482d2823dbf626cde9b25', 'leverage': 5040, 'counterwager_remaining': 1, 'fee_fraction_int': 5000000, 'status': 'filled', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'block_index': 310495, 'wager_quantity': 1, 'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'bet_type': 1, 'tx_index': 496}}
+            ]
+        }],
     },
     'blocks': {
         'parse_tx': [{
@@ -130,11 +136,11 @@ UNITTEST_VECTOR = {
         }],
         'parse_block': [{
             'in': (DP['default_block'] - 1, 1420914478.0),
-            'out': ('e5c99981fc226278ae7039136ed28d8f34514da2fa3973bb489c5c8e9d81b79d', '9351b9918a61ab1bd82bacbf5299dc4d5ae4cbeff72a88897aec4ff60cb08b3b')
+            'out': ('57556e0d3b4b14b6b349e597c3d5fff1e04c1cc6390a4259e99a40899c455303', '8f97da4fb44de84541e1cccbf3954d4622872ee54e5b316d457140116a6b23e8')
         }],
         'get_next_tx_index': [{
             'in': (),
-            'out': 496
+            'out': 497
         }],
         'get_tx_info': [{
             'in': (b'0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac781e000000000000695121035ca51ea175f108a1c63588683dc4c43a7146c46799f864a300263c0813f5fe352102309a14a1a30202f2e76f46acdb2917752371ca42b97460f7928ade8ecb02ea17210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97753ae4286f505000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000',),
@@ -181,6 +187,11 @@ UNITTEST_VECTOR = {
             'records': [
                 {'table': 'broadcasts', 'values': {'text': 'BARFOO', 'block_index': 310501, 'fee_fraction_int': 0, 'status': 'valid', 'locked': 0, 'timestamp': 1388000100, 'tx_index': 502, 'value': 50000000.0, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea'}},
            ]
+        },  {
+            'in': ({'block_index': 310501, 'destination': '', 'block_time': 3105010000000, 'data': b'\x00\x00\x00\x1eR\xbb3d\xc0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\tBETCANCEL', 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'fee': 10000, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'supported': 1, 'btc_amount': 0, 'tx_hash': '2ade1b146b093d7e5e1bd69ba312738a20ad1e636134564d1dc4b83c66fc29ea'},),
+            'records': [
+                {'table': 'broadcasts', 'values': {'tx_hash': '2ade1b146b093d7e5e1bd69ba312738a20ad1e636134564d1dc4b83c66fc29ea', 'fee_fraction_int': 0, 'status': 'valid', 'tx_index': 502, 'value': -2.0, 'text': 'BETCANCEL', 'block_index': 310501, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'locked': 0, 'timestamp': 1388000100}},
+                {'table': 'bets', 'values': {'wager_quantity': 1, 'leverage': 5040, 'status': 'open', 'tx_hash': '280e45b6c8757f2294a970a99b1226812bb5e5805a2482d2823dbf626cde9b25', 'bet_type': 1, 'counterwager_quantity': 1, 'fee_fraction_int': 5000000, 'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'expiration': 10, 'counterwager_remaining': 1, 'tx_index': 496, 'expire_index': 310505, 'wager_remaining': 1, 'block_index': 310495, 'deadline': 1388000200, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'target_value': 0.0}}            ]
         },  {
             'in': ({'btc_amount': 0, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': '', 'block_index': 310501, 'fee': 10000, 'supported': 1, 'block_time': 3105010000000, 'tx_hash': '6b4a62b80f35b0e66df4591c8a445d453d995609e2df12afe93e742bea10dd86', 'tx_index': 502, 'data': b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\x04LOCK'},),
             'records': [
@@ -655,16 +666,16 @@ UNITTEST_VECTOR = {
         }, {
             'in': ({'fee': 10000, 'block_time': 1554090000000, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': None, 'supported': 1, 'tx_index': 502, 'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\n,+\x07\xd0\x00\x00\x00\x00\x00\x00\x00\x00', 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'btc_amount': None, 'block_index': DP['default_block']},),
             'records': [
-                {'table': 'orders', 'values': {'fee_required_remaining': 0, 'expire_index': DP['default_block'] + 2000, 'status': 'open', 'expiration': 2000, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'get_remaining': 0, 'give_remaining': 0, 'get_quantity': 666667, 'fee_required': 0, 'fee_provided_remaining': 10000, 'fee_provided': 10000, 'block_index': DP['default_block'], 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'give_quantity': 100000000, 'tx_index': 502, 'give_asset': 'XCP', 'get_asset': 'BTC'}},
-                {'table': 'order_matches', 'values': {'forward_asset': 'BTC', 'id': '8a63e7a516d36c17ac32999222ac282ab94fb9c5ea30637cd06660b3139510f6_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'tx1_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'forward_quantity': 666667, 'match_expire_index': DP['default_block'] + 20, 'tx1_block_index': DP['default_block'], 'backward_quantity': 100000000, 'block_index': DP['default_block'], 'fee_paid': 0, 'tx1_index': 502, 'tx1_expiration': 2000, 'tx0_hash': '8a63e7a516d36c17ac32999222ac282ab94fb9c5ea30637cd06660b3139510f6', 'tx1_address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx0_index': 12, 'tx0_block_index': DP['default_block'] - 490, 'backward_asset': 'XCP', 'tx0_expiration': 2000, 'status': 'pending'}},
-                {'table': 'debits', 'values': {'action': 'open order', 'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'asset': 'XCP', 'block_index': DP['default_block'], 'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'quantity': 100000000}}
+                {'table': 'orders', 'values': {'fee_required': 0, 'fee_provided': 10000, 'tx_index': 502, 'fee_provided_remaining': 10000, 'give_remaining': 149, 'block_index': 310501, 'expire_index': 312501, 'get_asset': 'BTC', 'expiration': 2000, 'fee_required_remaining': 0, 'give_asset': 'XCP', 'give_quantity': 99999999, 'status': 'open', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'get_remaining': 0, 'get_quantity': 666666}},
+                {'table': 'order_matches', 'values': {'tx1_address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx0_index': 12, 'tx0_expiration': 2000, 'block_index': 310501, 'backward_asset': 'XCP', 'tx1_index': 502, 'fee_paid': 0, 'forward_asset': 'BTC', 'tx1_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'tx1_block_index': 310501, 'id': '8a63e7a516d36c17ac32999222ac282ab94fb9c5ea30637cd06660b3139510f6_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'backward_quantity': 99999850, 'forward_quantity': 666666, 'tx0_hash': '8a63e7a516d36c17ac32999222ac282ab94fb9c5ea30637cd06660b3139510f6', 'tx1_expiration': 2000, 'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'status': 'pending', 'match_expire_index': 310521, 'tx0_block_index': 310011}},
+                {'table': 'debits', 'values': {'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'asset': 'XCP', 'quantity': 99999999, 'block_index': 310501, 'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'action': 'open order'}},
             ]
         }, {
             'in': ({'block_time': 1554090000000, 'destination': None, 'btc_amount': None, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x1e\x84\x80\x07\xd0\x00\x00\x00\x00\x00\x00\x00\x00', 'supported': 1, 'fee': 10000, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx_index': 502, 'block_index': DP['default_block'], 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8'},),
             'records': [
-                {'table': 'orders', 'values': {'fee_provided_remaining': 10000, 'get_asset': 'BTC', 'give_remaining': 100000000, 'get_remaining': 2000000, 'get_quantity': 2000000, 'give_asset': 'XCP', 'block_index': DP['default_block'], 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'expiration': 2000, 'expire_index': DP['default_block'] + 2000, 'tx_index': 502, 'status': 'open', 'give_quantity': 100000000, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'fee_required_remaining': 0, 'fee_provided': 10000, 'fee_required': 0}},
-                {'table': 'debits', 'values': {'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'quantity': 100000000, 'action': 'open order', 'asset': 'XCP', 'block_index': DP['default_block']}}
-            ]
+                {'table': 'orders', 'values': {'give_remaining': 99999999, 'give_quantity': 99999999, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'get_asset': 'BTC', 'give_asset': 'XCP', 'get_quantity': 1999999, 'fee_provided': 10000, 'get_remaining': 1999999, 'expire_index': 312501, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'status': 'open', 'block_index': 310501, 'fee_provided_remaining': 10000, 'expiration': 2000, 'fee_required': 0, 'fee_required_remaining': 0, 'tx_index': 502}},
+                {'table': 'debits', 'values': {'action': 'open order', 'block_index': 310501, 'quantity': 99999999, 'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'asset': 'XCP'}}
+           ]
         }, {
             'in': ({'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x07\xa1 \x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x07\xd0\x00\x00\x00\x00\x00\x00\x00\x00', 'tx_index': 502, 'destination': None, 'block_index': DP['default_block'], 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'btc_amount': None, 'block_time': 1554090000000, 'supported': 1, 'fee': 1000000, 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
             'records': [
@@ -1110,7 +1121,7 @@ UNITTEST_VECTOR = {
         }],
         'last_message': [{
             'in': (),
-            'out': {'bindings': '{"block_index": 310494, "fee_fraction_int": null, "locked": true, "source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "status": "valid", "text": null, "timestamp": 0, "tx_hash": "f7499dee61e7684e847dec7fa42d782c01cf0dea956ef8bbb68d62258e339f08", "tx_index": 495, "value": null}', 'block_index': 310494, 'category': 'broadcasts', 'command': 'insert', 'message_index': 51, 'timestamp': 0}
+            'out': {'bindings': '{"bet_type": 1, "block_index": 310495, "counterwager_quantity": 1, "counterwager_remaining": 1, "deadline": 1388000200, "expiration": 10, "expire_index": 310505, "fee_fraction_int": 5000000.0, "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "leverage": 5040, "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "status": "open", "target_value": 0.0, "tx_hash": "280e45b6c8757f2294a970a99b1226812bb5e5805a2482d2823dbf626cde9b25", "tx_index": 496, "wager_quantity": 1, "wager_remaining": 1}', 'block_index': 310495, 'category': 'bets', 'command': 'insert', 'message_index': 53, 'timestamp': 0}
         }],
         'get_asset_id': [{
             'in': ('XCP', DP['default_block']),
