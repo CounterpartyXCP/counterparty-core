@@ -53,8 +53,9 @@ def test_vector(tx_name, method, inputs, outputs, error, records, counterpartyd_
 #     You need to customize it to output specific transaction (tx_info) or database changes.
 #     Run unit test with -s switch to see the output of print, ie. py.test test/unit_test.py -s.
 #     """
-#     from counterpartylib.lib.messages import broadcast
-#     tx_info = broadcast.compose(counterpartyd_db, DP['addresses'][1][0], 1388000100, DP['small'], 0.0, 'LOCK')
+#     from counterpartylib.lib import transaction
+#     from counterpartylib.lib.messages import bet
+#     tx_info = bet.compose(counterpartyd_db, DP['addresses'][0][0], DP['addresses'][0][0], 0, 1488000000, DP['small'] * 2, DP['small'] * 2, 0.0, 5040, DP['expiration'])
 #     print('tx_info')
 #     print(tx_info)
 #     tx_hex = transaction.construct(counterpartyd_db, tx_info, encoding='multisig', allow_unconfirmed_inputs=True)
@@ -63,6 +64,6 @@ def test_vector(tx_name, method, inputs, outputs, error, records, counterpartyd_
 #     tx = util_test.insert_raw_transaction(tx_hex, counterpartyd_db, rawtransactions_db)
 #     print('tx')
 #     print(tx)
-#     message = list(counterpartyd_db.cursor().execute("SELECT * FROM bet_matches WHERE (feed_address=?)", (DP['addresses'][1][0],)))
+#     message = list(counterpartyd_db.cursor().execute("SELECT * FROM bets WHERE (feed_address=?)", (DP['addresses'][0][0],)))
 #     print('database')
 #     print(message)

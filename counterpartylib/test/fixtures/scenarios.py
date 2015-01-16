@@ -37,12 +37,15 @@ UNITTEST_FIXTURE = [
     ['send', (ADDR[0], ADDR[1], 'NODIVISIBLE', 5), {'encoding': 'multisig'}],
     ['send', (ADDR[0], MULTISIGADDR[0], 'NODIVISIBLE', 10), {'encoding': 'multisig'}],
     ['issuance', (ADDR[0], None, 'MAXI', 2**63 - 1, True, 'Maximum quantity'), {'encoding': 'multisig'}],
+    ['broadcast', (ADDR[0], 1388000000, 1, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],
+    ['broadcast', (ADDR[2], 1288000000, 1, 0.0, 'lock'), {'encoding': 'multisig'}],
     ['create_next_block', 490],
     ['order', (ADDR[0], 'XCP', DP['quantity'], 'BTC', round(DP['quantity'] / 125), 2000, DP['fee_required']), {'encoding': 'multisig'}],
     ['order', (ADDR[1], 'BTC', round(DP['quantity'] / 125), 'XCP', DP['quantity'], 2000, 0), {'encoding': 'multisig', 'fee_provided': DP['fee_provided']}],
-    ['broadcast', (ADDR[0], 1388000000, 1, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],
-    ['broadcast', (ADDR[2], 1288000000, 1, 0.0, 'lock'), {'encoding': 'multisig'}],
-    ['bet', (ADDR[1], ADDR[0], 1, 1388000200, 1, 1, 0.0, 5040, DP['expiration']), {'encoding': 'multisig'}],
+    ['bet', (ADDR[1], ADDR[0], 3, 1388000200, 1, 1, 0.0, 5040, DP['expiration']), {'encoding': 'multisig'}],
+    ['bet', (ADDR[0], ADDR[0], 1, 1388000001, 9, 9, 0.0, 5040, DP['expiration']), {'encoding': 'multisig'}],
+    ['bet', (ADDR[1], ADDR[0], 0, 1388000001, 9, 9, 0.0, 5040, DP['expiration']), {'encoding': 'multisig'}],
+    ['broadcast', (ADDR[0], 1388000002, 1, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],
     ['create_next_block', 500]
 ]
 
