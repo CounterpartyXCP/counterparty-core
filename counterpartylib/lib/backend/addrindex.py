@@ -36,7 +36,7 @@ def rpc(method, params):
         try:
             response = bitcoin_rpc_session.post(url, data=json.dumps(payload), headers=headers, verify=config.BACKEND_SSL_VERIFY)
             if i > 0:
-                logger.debug('Successfully connected.', file=sys.stderr)
+                logger.debug('Successfully connected.')
             break
         except requests.exceptions.SSLError as e:
             raise e
@@ -62,7 +62,7 @@ def rpc(method, params):
     elif response_json['error']['code'] == -4:   # Unknown private key (locked wallet?)
         raise BackendRPCError('Unknown private key. (Locked wallet?)')
     elif response_json['error']['code'] == -28:   # “Verifying blocks...”
-        logger.debug('Backend not ready. Sleeping for ten seconds.', file=sys.stderr)
+        logger.debug('Backend not ready. Sleeping for ten seconds.')
         time.sleep(10)
         return rpc(method, params)
     else:
