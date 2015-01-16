@@ -1,5 +1,10 @@
 #! /usr/bin/python3
 
+"""
+The database connections are read‐only, so SQL injection attacks can’t be a
+problem.
+"""
+
 import sys
 import os
 import threading
@@ -326,7 +331,7 @@ class APIStatusPoller(threading.Thread):
     def run(self):
         logger.debug('Starting API Status Poller.')
         global current_api_status_code, current_api_status_response_json
-        db = database.get_connection(integrity_check=False)
+        db = database.get_connection(read_only=True, integrity_check=False)
 
         while self.stop_event.is_set() != True:
             try:
@@ -367,7 +372,7 @@ class APIServer(threading.Thread):
 
     def run(self):
         logger.debug('Starting API Server.')
-        db = database.get_connection(integrity_check=False)
+        db = database.get_connection(read_only=True, integrity_check=False)
         app = flask.Flask(__name__)
         auth = HTTPBasicAuth()
 
