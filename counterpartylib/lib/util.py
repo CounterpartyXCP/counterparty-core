@@ -72,9 +72,6 @@ def api(method, params):
 
 def date_passed(date):
     """Check if the date has already passed."""
-    # TODO FIXME
-    # The date_passed function uses time.time(), which returns a float.
-    # The deadline is an int, so I guess this doesn't work at all?
     return date <= time.time()
 
 def price (numerator, denominator):

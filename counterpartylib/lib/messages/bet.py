@@ -24,7 +24,7 @@ from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
 from counterpartylib.lib import log
 
-FORMAT = '>HQQQdII'
+FORMAT = '>HIQQdII'
 LENGTH = 2 + 4 + 8 + 8 + 8 + 4 + 4
 ID = 40
 
@@ -295,9 +295,6 @@ def compose (db, source, feed_address, bet_type, deadline, wager_quantity,
 
     problems, leverage = validate(db, source, feed_address, bet_type, deadline, wager_quantity,
                         counterwager_quantity, target_value, leverage, expiration, util.CURRENT_BLOCK_INDEX)
-    # TODO FIXME
-    # The date_passed function uses time.time(), which returns a float.
-    # The deadline is an int, so I guess this doesn't work at all?
     if util.date_passed(deadline):
         problems.append('deadline passed')
     if problems: raise exceptions.ComposeError(problems)
