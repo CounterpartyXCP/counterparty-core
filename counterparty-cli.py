@@ -220,7 +220,7 @@ def cli(method, params, unsigned):
     if script.is_multisig(params['source']):
         print('Multi‐signature transactions are signed and broadcasted manually.')
     elif not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
-        if backend.is_mine(proxy, source):
+        if backend.is_mine(proxy, params['source']):
             private_key_wif = None
         elif not private_key_wif:   # If private key was not given earlier.
             private_key_wif = input('Private key (Wallet Import Format): ')
