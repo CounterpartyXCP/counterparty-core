@@ -66,7 +66,10 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
         cursor.execute('''PRAGMA foreign_keys = ON''')
         cursor.execute('''PRAGMA defer_foreign_keys = ON''')
         rows = list(cursor.execute('''PRAGMA foreign_key_check'''))
-        if rows: raise exceptions.DatabaseError('Foreign key check failed.')
+        if rows:
+            for row in rows:
+                logger.debug('Foreign Key Error: {}'.format(row))
+            raise exceptions.DatabaseError('Foreign key check failed.')
 
         # So that writers don’t block readers.
         cursor.execute('''PRAGMA journal_mode = WAL''')
