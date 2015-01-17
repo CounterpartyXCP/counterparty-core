@@ -42,7 +42,7 @@ python setup.py install`
 # Example
 
 ```
-from counterparty import server
+from counterpartylib import server
 
 # initialise the server
 db = server.initialise(...)
@@ -53,7 +53,7 @@ server.start_all(db)
 
 # Test suite
 
-The test suite is invoked with `$ py.test` in the `counterparty` directory of the
+The test suite is invoked with `$ py.test` in the `counterpartylib` directory of the
 repository.
 
 ### Input and Output
@@ -68,4 +68,4 @@ places of precision.
 # Further Reading
 
 * [Official Documentation](http://counterparty.io/docs/)
-* [Community Wiki](https://github.com/CounterpartyXCP/Community/wiki)
+* [Wiki](https://github.com/CounterpartyXCP/Wiki/wiki)
