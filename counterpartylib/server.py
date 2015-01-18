@@ -342,7 +342,7 @@ def reparse(db, block_index=None):
 
 def kickstart(db, bitcoind_dir):
     connect_to_backend()
-    blocks.kickstart(db, bitcoind_dir=args.bitcoind_dir)
+    blocks.kickstart(db, bitcoind_dir=bitcoind_dir)
 
 def generate_move_random_hash(move):
     move = int(move).to_bytes(2, byteorder='big')
