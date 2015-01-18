@@ -70,10 +70,6 @@ def rpc(method, params):
     else:
         raise BackendRPCError('{}'.format(response_json['error']))
 
-# TODO: ???
-def check():
-    return True
-
 # TODO: use scriptpubkey_to_address()
 @lru_cache(maxsize=4096)
 def extract_addresses(tx_hash):

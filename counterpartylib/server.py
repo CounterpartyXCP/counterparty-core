@@ -19,8 +19,10 @@ from counterpartylib.lib import api, config, util, exceptions, blocks, check, ba
 
 D = decimal.Decimal
 
+
 class ConfigurationError(Exception):
     pass
+
 
 def sigterm_handler(_signo, _stack_frame):
     if _signo == 15:
@@ -40,6 +42,7 @@ def sigterm_handler(_signo, _stack_frame):
     sys.exit(0)
 signal.signal(signal.SIGTERM, sigterm_handler)
 signal.signal(signal.SIGINT, sigterm_handler)
+
 
 # Lock database access by opening a socket.
 class LockingError(Exception):
@@ -64,6 +67,7 @@ def get_lock():
     except socket.error:
         raise LockingError(error)
     logger.debug('Lock acquired.')
+
 
 def initialise(database_file=None, log_file=None, api_log_file=None,
                 testnet=False, testcoin=False,
@@ -301,48 +305,42 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
 
     return db
 
+
 def connect_to_backend():
     if not config.FORCE:
         logger.info('Connecting to backend.')
         backend.getblockcount()
 
+
 def start_all(db):
+
+    # Backend.
     connect_to_backend()
+
+    # API Status Poller.
     api_status_poller = api.APIStatusPoller()
     api_status_poller.daemon = True
     api_status_poller.start()
 
+    # API Server.
+    api_status_poller = api.APIStatusPoller()
     api_server = api.APIServer()
     api_server.daemon = True
     api_server.start()
 
-    # Check blockchain explorer.
-    if not config.FORCE:
-        time_wait = 10
-        num_tries = 10
-        for i in range(1, num_tries + 1):
-            try:
-                backend.check()
-            except Exception as e: # TODO
-                logging.exception(e)
-                logging.warn("Blockchain backend (%s) not yet initialized. Waiting %i seconds and trying again (try %i of %i)..." % (
-                    config.BACKEND_NAME, time_wait, i, num_tries))
-                time.sleep(time_wait)
-            else:
-                break
-        else:
-            raise Exception("Blockchain backend (%s) not initialized! Aborting startup after %i tries." % (
-                config.BACKEND_NAME, num_tries))
-
+    # Server.
     blocks.follow(db)
+
 
 def reparse(db, block_index=None):
     connect_to_backend()
     blocks.reparse(db, block_index=block_index)
 
+
 def kickstart(db, bitcoind_dir):
     connect_to_backend()
     blocks.kickstart(db, bitcoind_dir=bitcoind_dir)
+
 
 def generate_move_random_hash(move):
     move = int(move).to_bytes(2, byteorder='big')
