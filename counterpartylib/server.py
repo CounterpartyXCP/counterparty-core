@@ -338,7 +338,6 @@ def reparse(db, block_index=None):
 
 
 def kickstart(db, bitcoind_dir):
-    connect_to_backend()
     blocks.kickstart(db, bitcoind_dir=bitcoind_dir)
 
 
