@@ -26,7 +26,6 @@ def main():
     parser.add_argument('--testcoin', action='store_true', help='use the test {} network on every blockchain'.format(config.XCP_NAME))
     parser.add_argument('--force', action='store_true', help='skip backend check, version check, process lock (NOT FOR USE ON PRODUCTION SYSTEMS)')
 
-    parser.add_argument('--data-dir', help='the directory in which to keep the database, config file and log file, by default')
     parser.add_argument('--database-file', help='the location of the SQLite3 database')
     parser.add_argument('--config-file', help='the location of the configuration file')
     parser.add_argument('--log-file', help='the location of the log file')
@@ -62,10 +61,8 @@ def main():
     args = parser.parse_args()
 
     # Data directory
-    if not args.data_dir:
-        args.data_dir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=APP_NAME, roaming=True)
-    else:
-        args.data_dir = os.path.expanduser(args.data_dir)
+    args.data_dir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=APP_NAME, roaming=True)
+
     if not os.path.isdir(args.data_dir):
         os.makedirs(args.data_dir)
 
