@@ -25,6 +25,13 @@ addrindex=1
 * Minor version changes require a(n automatic) database reparse.
 * All protocol changes are retroactive on testnet.
 
+# Installation
+
+Many systems still have Python 2 installed. Make sure that you're always using Python 3.
+`apsw` requires SQLite 3.8.5 or higher.
+```
+$ pip3 install -r pip-requirements.txt
+```
 
 # Usage
 
