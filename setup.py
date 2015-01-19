@@ -2,7 +2,6 @@
 
 from setuptools import setup, find_packages
 import os, sys
-import counterpartylib, certifi
 import shutil
 import ctypes.util
 
@@ -62,6 +61,7 @@ setup(**setup_options)
 if sys.argv[1] == 'py2exe':
     # py2exe copies only pyc files in site-packages.zip
     # modules with no pyc files must be copied in 'dist/library/'
+    import counterpartylib, certifi
     additionals_modules = [counterpartylib, certifi]
 
     for module in additionals_modules:
@@ -77,3 +77,130 @@ if sys.argv[1] == 'py2exe':
     for dll in dlls:
         dll_path = ctypes.util.find_library(dll)
         shutil.copy(dll_path, WIN_DIST_DIR)
+
+if sys.argv[1] == 'install':
+    # Generate configfiles from old files or bitcoind config file
+    import appdirs, configparser, platform
+    from counterpartylib.lib import config, util
+    import counterpartycli.server
+    import counterpartycli.client
+
+    old_appdir = appdirs.user_config_dir(appauthor='Counterparty', appname='counterpartyd', roaming=True)
+    old_configfile = os.path.join(old_appdir, 'counterpartyd.conf')
+    old_database = os.path.join(old_appdir, 'counterpartyd.9.db')
+    old_database_testnet = os.path.join(old_appdir, 'counterpartyd.9.testnet.db')
+
+    new_server_appdir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=counterpartycli.server.APP_NAME, roaming=True)
+    new_client_appdir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=counterpartycli.client.APP_NAME, roaming=True)
+    new_server_configfile = os.path.join(new_server_appdir, '{}.conf'.format(counterpartycli.server.APP_NAME,))
+    new_client_configfile = os.path.join(new_client_appdir, '{}.conf'.format(counterpartycli.client.APP_NAME))
+    new_database = os.path.join(new_server_appdir, '{}.{}.db'.format(config.XCP_NAME.lower(), config.VERSION_MAJOR))
+    new_database_testnet = os.path.join(new_server_appdir, '{}.{}.testnet.db'.format(config.XCP_NAME.lower(), config.VERSION_MAJOR))
+
+    # User have an old version of `counterpartyd`
+    if os.path.exists(old_appdir):
+        # User don't have a `counterparty-server` data_dir
+        if not os.path.exists(new_server_appdir):
+            # Copy and rename files from `counterpartyd/` to  `counterparty-server/`
+            os.makedirs(new_server_appdir)
+            files_to_copy = {
+                old_configfile: new_server_configfile,
+                old_database: new_database,
+                old_database_testnet: new_database_testnet
+            }
+            for src_file in files_to_copy:
+                if os.path.exists(src_file):
+                    shutil.copy(src_file, files_to_copy[src_file])
+
+            # Replace `backend-rpc-*` by `backend-*`
+            if os.path.exists(new_server_configfile):
+                with open(new_server_configfile, 'r') as f:
+                    new_config = ("").join(f.readlines())
+                new_config = new_config.replace('backend-rpc-', 'backend-')
+                new_config = new_config.replace('blockchain-service-name', 'backend-name')
+                new_config = new_config.replace('jmcorgan', 'addrindex')
+                with open(new_server_configfile, 'w+') as f:
+                    f.writelines(new_config)
+
+    # Still not have a `counterparty-server` configuration file
+    if not os.path.exists(new_server_configfile):
+        # Figure out the path to the bitcoin.conf file
+        if platform.system() == 'Darwin':
+            btc_conf_file = os.path.expanduser('~/Library/Application Support/Bitcoin/')
+        elif platform.system() == 'Windows':
+            btc_conf_file = os.path.join(os.environ['APPDATA'], 'Bitcoin')
+        else:
+            btc_conf_file = os.path.expanduser('~/.bitcoin')
+        btc_conf_file = os.path.join(btc_conf_file, 'bitcoin.conf')
+
+        # Extract contents of bitcoin.conf to build service_url
+        if os.path.exists(btc_conf_file):
+            with open(btc_conf_file, 'r') as fd:
+
+                server_configfile = configparser.ConfigParser()
+                server_configfile['Default'] = {}
+
+                # Bitcoin Core accepts empty rpcuser, not specified in btc_conf_file
+                conf = {}
+                for line in fd.readlines():
+                    if '#' in line or '=' not in line:
+                        continue
+                    k, v = line.split('=', 1)
+                    conf[k.strip()] = v.strip()
+
+                config_keys = {
+                    'rpcport': 'backend-port',
+                    'rpcuser': 'backend-user',
+                    'rpcpassword': 'backend-password',
+                    'rpcssl': 'backend-ssl'
+                }
+
+                for bitcoind_key in config_keys:
+                    if bitcoind_key in conf:
+                        counterparty_key = config_keys[bitcoind_key]
+                        server_configfile['Default'][counterparty_key] = conf[bitcoind_key]
+
+                server_configfile['Default']['rpc-password'] = util.hexlify(util.dhash(os.urandom(16)))
+                os.makedirs(new_server_appdir)
+                with open(new_server_configfile, 'w+') as fw:
+                    server_configfile.write(fw)
+
+    # Still not have a `counterparty-server` configuration file
+    if not os.path.exists(new_server_configfile):
+        server_configfile = configparser.ConfigParser()
+        server_configfile['Default'] = {}
+        # generate a password
+        server_configfile['Default']['rpc-password'] = util.hexlify(util.dhash(os.urandom(16)))
+        os.makedirs(new_server_appdir)
+        with open(new_server_configfile, 'w+') as fw:
+            server_configfile.write(fw)
+
+    # User don't have a `counterparty-client` data_dir
+    if not os.path.exists(new_client_appdir):
+        # generate a configuration file from `counterparty-server.conf`
+        server_configfile = configparser.ConfigParser()
+        server_configfile.read(new_server_configfile)
+
+        client_configfile = configparser.ConfigParser()
+        client_configfile['Default'] = {}
+        #
+        config_keys = {
+            'backend-connect': 'wallet-connect',
+            'backend-port': 'wallet-port',
+            'backend-user': 'wallet-user',
+            'backend-password': 'wallet-password',
+            'backend-ssl': 'wallet-ssl',
+            'backend-ssl-verify': 'wallet-ssl-verify',
+            'rpc-host': 'counterparty-server-connect',
+            'rpc-port': 'counterparty-server-port',
+            'rpc-user': 'counterparty-server-user',
+            'rpc-password': 'counterparty-server-password'
+        }
+        for server_key in config_keys:
+            if server_key in server_configfile['Default']:
+                client_key = config_keys[server_key]
+                client_configfile['Default'][client_key] = server_configfile['Default'][server_key]
+
+        os.makedirs(new_client_appdir)
+        with open(new_client_configfile, 'w+') as fw:
+            client_configfile.write(fw)
