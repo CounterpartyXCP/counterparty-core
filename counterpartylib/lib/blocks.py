@@ -352,25 +352,26 @@ def initialise(db):
 
     cursor.close()
 
-def get_tx_info(tx_hex, block_parser=None):
+def get_tx_info(tx_hex, block_parser=None, block_index=None):
     """Get the transaction info. Calls one of two subfunctions depending on signature type."""
+    if not block_index:
+        block_index = util.CURRENT_BLOCK_INDEX
     try:
         if util.enabled('multisig_addresses'):   # Protocol change.
             tx_info = get_tx_info2(tx_hex, block_parser=block_parser)
         else:
-            tx_info = get_tx_info1(tx_hex, block_parser=block_parser)
+            tx_info = get_tx_info1(tx_hex, block_index, block_parser=block_parser)
     except (DecodeError, BTCOnlyError) as e:
         # NOTE: For debugging, logger.debug('Could not decode: ' + str(e))
         tx_info = b'', None, None, None, None
 
     return tx_info
 
-def get_tx_info1(tx_hex, block_parser=None):
+def get_tx_info1(tx_hex, block_index, block_parser=None):
     """Get singlesig transaction info.
     The destination, if it exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
-    block_index = util.CURRENT_BLOCK_INDEX
     ctx = backend.deserialize(tx_hex)
 
     def get_pubkeyhash(scriptpubkey):
@@ -779,7 +780,7 @@ def kickstart(db, bitcoind_dir):
             # Get `tx_info`s for transactions in this block.
             block = block_parser.read_raw_block(current_hash)
             for tx in block['transactions']:
-                source, destination, btc_amount, fee, data = get_tx_info(tx['__data__'], block_parser=block_parser)
+                source, destination, btc_amount, fee, data = get_tx_info(tx['__data__'], block_parser=block_parser, block_index=block['block_index'])
                 if source and (data or destination == config.UNSPENDABLE):
                     transactions.append((
                         tx['tx_hash'], block['block_index'], block['block_hash'], block['block_time'],
