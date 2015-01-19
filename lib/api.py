@@ -664,7 +664,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_tx_info(tx_hex):
-            source, destination, btc_amount, fee, data = blocks.get_tx_info(tx_hex, util.last_block(db)['block_index'])
+            source, destination, btc_amount, fee, data = blocks.get_tx_info(self.proxy, tx_hex, util.last_block(db)['block_index'])
             return source, destination, btc_amount, fee, util.hexlify(data)
 
         @dispatcher.add_method
