@@ -22,10 +22,6 @@ from counterpartylib.lib.backend import addrindex
 def BACKEND():
     return sys.modules['counterpartylib.lib.backend.{}'.format(config.BACKEND_NAME)] 
 
-def check():
-    logger.info('Connecting to block explorer.')
-    return BACKEND().check()
-
 # TODO: Generate this block of code dynamically?
 
 def getblockcount():

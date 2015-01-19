@@ -63,14 +63,12 @@ def rpc(method, params):
         raise BackendRPCError('Unknown private key. (Locked wallet?)')
     elif response_json['error']['code'] == -28:   # “Verifying blocks...”
         logger.debug('Backend not ready. Sleeping for ten seconds.')
+        # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
+        # seconds to start, this’ll hit the maximum recursion depth limit.
         time.sleep(10)
         return rpc(method, params)
     else:
         raise BackendRPCError('{}'.format(response_json['error']))
-
-# TODO: ???
-def check():
-    return True
 
 # TODO: use scriptpubkey_to_address()
 @lru_cache(maxsize=4096)

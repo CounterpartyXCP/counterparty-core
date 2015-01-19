@@ -371,7 +371,7 @@ class APIServer(threading.Thread):
         self.stop_event.set()
 
     def run(self):
-        logger.debug('Starting API Server.')
+        logger.info('Starting API Server.')
         db = database.get_connection(read_only=True, integrity_check=False)
         app = flask.Flask(__name__)
         auth = HTTPBasicAuth()
@@ -662,7 +662,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_tx_info(tx_hex):
-            source, destination, btc_amount, fee, data = blocks.get_tx_info(tx_hex, util.CURRENT_BLOCK_INDEX)
+            source, destination, btc_amount, fee, data = blocks.get_tx_info(tx_hex)
             return source, destination, btc_amount, fee, util.hexlify(data)
 
         @dispatcher.add_method

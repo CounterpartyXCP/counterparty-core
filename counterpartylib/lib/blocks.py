@@ -779,7 +779,7 @@ def kickstart(db, bitcoind_dir):
             # Get `tx_info`s for transactions in this block.
             block = block_parser.read_raw_block(current_hash)
             for tx in block['transactions']:
-                source, destination, btc_amount, fee, data = get_tx_info(tx['__data__'], block_parser)
+                source, destination, btc_amount, fee, data = get_tx_info(tx['__data__'], block_parser=block_parser)
                 if source and (data or destination == config.UNSPENDABLE):
                     transactions.append((
                         tx['tx_hash'], block['block_index'], block['block_hash'], block['block_time'],
@@ -1044,7 +1044,7 @@ def follow(db):
                             # List transaction.
                             try:    # Sometimes the transactions can’t be found: `{'code': -5, 'message': 'No information available about transaction'} Is txindex enabled in Bitcoind?`
                                 mempool_tx_index = list_tx(db, None, block_index, curr_time, tx_hash, mempool_tx_index)
-                            except backend.BitcoindError:
+                            except backend.addrindex.BackendRPCError:
                                 raise MempoolError
 
                             # Parse transaction.

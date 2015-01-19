@@ -63,24 +63,28 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
 
     # For integrity, security.
     if foreign_keys and not read_only:
+        # logger.debug('Checking database foreign keys.')
         cursor.execute('''PRAGMA foreign_keys = ON''')
         cursor.execute('''PRAGMA defer_foreign_keys = ON''')
         rows = list(cursor.execute('''PRAGMA foreign_key_check'''))
-        if rows: raise exceptions.DatabaseError('Foreign key check failed.')
+        if rows:
+            for row in rows:
+                logger.debug('Foreign Key Error: {}'.format(row))
+            raise exceptions.DatabaseError('Foreign key check failed.')
 
         # So that writers don’t block readers.
         cursor.execute('''PRAGMA journal_mode = WAL''')
+        # logger.debug('Foreign key check completed.')
 
     # Make case sensitive the `LIKE` operator.
     # For insensitive queries use 'UPPER(fieldname) LIKE value.upper()''
     cursor.execute('''PRAGMA case_sensitive_like = ON''')
 
     if integrity_check:
-        # Integrity check
+        logger.debug('Checking database integrity.')
         integral = False
         for i in range(10): # DUPE
             try:
-                logger.debug('Checking database integrity.')
                 cursor.execute('''PRAGMA integrity_check''')
                 rows = cursor.fetchall()
                 if not (len(rows) == 1 and rows[0][0] == 'ok'):
@@ -92,6 +96,7 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
                 continue
         if not integral:
             raise exceptions.DatabaseError('Could not perform integrity check.')
+        # logger.debug('Integrity check completed.')
 
     db.setrowtrace(rowtracer)
     db.setexectrace(exectracer)

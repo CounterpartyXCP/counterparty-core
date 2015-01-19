@@ -118,7 +118,7 @@ def parse (db, tx, MAINNET_BURNS, message=None):
 
         util.credit(db, line['source'], config.XCP, int(line['earned']), action='burn', event=line['tx_hash'])
 
-        tx_index = line['tx_index']
+        tx_index = tx['tx_index']
         tx_hash = line['tx_hash']
         block_index = line['block_index']
         source = line['source']
