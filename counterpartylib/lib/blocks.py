@@ -779,7 +779,7 @@ def kickstart(db, bitcoind_dir):
             # Get `tx_info`s for transactions in this block.
             block = block_parser.read_raw_block(current_hash)
             for tx in block['transactions']:
-                source, destination, btc_amount, fee, data = get_tx_info(tx['__data__'], block_parser)
+                source, destination, btc_amount, fee, data = get_tx_info(tx['__data__'], block_parser=block_parser)
                 if source and (data or destination == config.UNSPENDABLE):
                     transactions.append((
                         tx['tx_hash'], block['block_index'], block['block_hash'], block['block_time'],
