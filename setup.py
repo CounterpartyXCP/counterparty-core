@@ -42,8 +42,11 @@ def install_serpent():
     with zipfile.ZipFile('serpent.zip', 'r') as zip_file:
         zip_file.extractall()
 
-    print("install serpent.")
-    os.system('cd serpent-master && make && sudo make install')
+    print("making serpent.")
+    os.system('cd serpent-master && make')
+    print("install serpent using sudo.")
+    print("hence it might request a password.")
+    os.system('cd serpent-master && sudo make install')
 
     print("clean files.")
     os.system('rm -rf serpent-master && rm serpent.zip')
