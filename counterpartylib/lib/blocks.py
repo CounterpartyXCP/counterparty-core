@@ -829,8 +829,8 @@ def kickstart(db, bitcoind_dir):
         cursor.execute('''UPDATE transactions SET tx_index = tx_index + ?''', (tx_index,))
         logger.info('Reordered transactions in {:.3f}s.'.format(time.time() - start_time))
 
-        # Parse all transactions in database.
-        reparse(db)
+    # Parse all transactions in database.
+    reparse(db)
 
     cursor.close()
     logger.info('Total duration: {:.3f}s'.format(time.time() - start_time_total))
