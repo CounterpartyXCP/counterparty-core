@@ -53,7 +53,7 @@ A counterparty-server configuration file looks like this:
 
 
 # Counterparty client
-Use `counterparty-client` to manage you Counterparty wallet.
+Use `counterparty-client` to manage your Counterparty wallet.
 
 For a list of the available command‐line arguments and options, see
 `$ ./counterparty-client --help`.
