@@ -592,7 +592,11 @@ class APIServer(threading.Thread):
                 caught_up = True
 
             try:
-                last_block = util.CURRENT_BLOCK_INDEX
+                cursor = db.cursor()
+                blocks = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (util.CURRENT_BLOCK_INDEX, )))
+                assert len(blocks) == 1
+                last_block = blocks[0]
+                cursor.close()
             except:
                 last_block = None
 
