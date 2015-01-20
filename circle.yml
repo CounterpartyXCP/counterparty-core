@@ -1,0 +1,9 @@
+dependencies:
+    override:
+        - python setup.py install
+test:
+    override:
+        - cd counterpartylib && py.test --skiptestbook=all --cov-config=../.coveragerc --cov-report=term-missing --cov=./bin/test
+machine:
+    python:
+        version: 3.4.1
