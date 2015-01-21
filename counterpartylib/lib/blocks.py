@@ -357,7 +357,7 @@ def get_tx_info(tx_hex, block_parser=None, block_index=None):
     if not block_index:
         block_index = util.CURRENT_BLOCK_INDEX
     try:
-        if util.enabled('multisig_addresses'):   # Protocol change.
+        if util.enabled('multisig_addresses', block_index=block_index):   # Protocol change.
             tx_info = get_tx_info2(tx_hex, block_parser=block_parser)
         else:
             tx_info = get_tx_info1(tx_hex, block_index, block_parser=block_parser)
