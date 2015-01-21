@@ -4,6 +4,7 @@ from setuptools import setup, find_packages
 import os
 import zipfile
 import urllib.request
+import sys
 
 def install_apsw():
     try:
@@ -19,8 +20,16 @@ def install_apsw():
     with zipfile.ZipFile('apsw-3.8.7.3-r1.zip', 'r') as zip_file:
         zip_file.extractall()
 
+    executable = sys.executable
+    if executable is None:
+        executable = "python"
+
     print("install apsw.")
-    os.system('cd apsw-3.8.7.3-r1 && python setup.py fetch --version=3.8.7.3 --all build --enable-all-extensions install')
+    install_command = ('cd apsw-3.8.7.3-r1 && {executable} '
+      'setup.py fetch --version=3.8.7.3 --all build '
+      '--enable-all-extensions install'.format(executable=executable)
+    )
+    os.system(install_command)
 
     print("clean files.")
     os.system('rm -rf apsw-3.8.7.3-r1 && rm apsw-3.8.7.3-r1.zip')
@@ -33,8 +42,11 @@ def install_serpent():
     with zipfile.ZipFile('serpent.zip', 'r') as zip_file:
         zip_file.extractall()
 
-    print("install serpent.")
-    os.system('cd serpent-master && make && sudo make install')
+    print("making serpent.")
+    os.system('cd serpent-master && make')
+    print("install serpent using sudo.")
+    print("hence it might request a password.")
+    os.system('cd serpent-master && sudo make install')
 
     print("clean files.")
     os.system('rm -rf serpent-master && rm serpent.zip')

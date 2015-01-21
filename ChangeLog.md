@@ -1,16 +1,20 @@
 ## Client Versions ##
 * v9.49.4 (???)
-	* introduction of global `CURRENT_BLOCK_INDEX`
+	* reconceived this package as a libary
+	* moved CLI to new repository: `counterparty-cli`
+	* created `setup.py` build script
+	* return to using `requests` for handling connections to backend
+	* introduced global variable `CURRENT_BLOCK_INDEX`
+	* renamed configuration parameter: `jmcorgan` -> `addrindex`
+	* renamed configuration parameter: `BACKEND_RPC_*` -> `BACKEND_*`
+	* renamed configuration parameter: `BLOCKCHAIN_SERVICE_NAME` -> `BACKEND_NAME`
+	* prepared version check for repository rename to `counterparty-lib`
 	* moved API docs to wiki
 	* improved test coverage
-	* split `counterpartyd.py` into `counteparty-server.py` and `counteparty-client.py`
-	* `counteparty-server.py` manages now only these actions: `server`, `reparse`, `rollback` and `kickstart`
-	* renamed backend parameters: BACKEND_RPC_* are replaced by BACKEND_*
-	* removed support of parameters `bitcoind_rpc_*` in the configuration file
-	* `BLOCKCHAIN_SERVICE_NAME` is replaced by `BACKEND_NAME`
-	* `jmcorgan` is replaced by `addrindex`
-	* support of Insight, Blockr and SoChain are removed
-	* CLIs has been moved to `counterparty-cli` repository
+	* miscellaneous bug fixes
+	* improved docstring coverage
+	* removed option to use Insight, Blockr and SoChain as a backend
+	* tweaked Coveralls configuration
 * v9.49.3 (2014-12-28)
 	* better logging when handling `SIGTERM`, `SIGKILL`
 	* update README

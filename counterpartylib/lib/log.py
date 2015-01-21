@@ -106,7 +106,7 @@ def log (db, command, category, bindings):
     for element in bindings.keys():
         try:
             str(bindings[element])
-        except Exception:
+        except KeyError:
             bindings[element] = '<Error>'
 
     # Slow?!
