@@ -167,6 +167,10 @@ UNITTEST_VECTOR = {
             'in': (),
             'out': 494
         }],
+        'last_db_index': [{
+            'in': (),
+            'out': 310500
+        }],
         'get_tx_info': [{
             'in': (b'0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac781e000000000000695121035ca51ea175f108a1c63588683dc4c43a7146c46799f864a300263c0813f5fe352102309a14a1a30202f2e76f46acdb2917752371ca42b97460f7928ade8ecb02ea17210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97753ae4286f505000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000',),
             'out': ('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 5430, 10000, b'\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n')
@@ -178,6 +182,31 @@ UNITTEST_VECTOR = {
         'get_tx_info2': [{
             'in': (b'0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac781e000000000000695121035ca51ea175f108a1c63588683dc4c43a7146c46799f864a300263c0813f5fe352102309a14a1a30202f2e76f46acdb2917752371ca42b97460f7928ade8ecb02ea17210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97753ae4286f505000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000',),
             'out': ('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 5430, 10000, b'\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n')
+        }],
+    },
+    'cancel': {
+        'compose': [{
+            'in': (ADDR[1], 'ba0ef1dfbbc87df94e1d198b0e9e3c06301710d4aab3d85116cbc8199954644a'),
+            'out': ('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', [], b'\x00\x00\x00F\xba\x0e\xf1\xdf\xbb\xc8}\xf9N\x1d\x19\x8b\x0e\x9e<\x060\x17\x10\xd4\xaa\xb3\xd8Q\x16\xcb\xc8\x19\x99TdJ')
+        },  {
+            'in': (ADDR[1], 'foobar'),
+            'error': (exceptions.ComposeError, "['no open offer with that hash']")
+        },  {
+            'in': ('foobar', 'ba0ef1dfbbc87df94e1d198b0e9e3c06301710d4aab3d85116cbc8199954644a'),
+            'error': (exceptions.ComposeError, "['incorrect source address']")
+        },  {
+            'in': (ADDR[1], '90c1314847b1fe9b4520a3610dc98c71d39a1cb4b96edb9b02b6fed844a4b1e5'),
+            'error': (exceptions.ComposeError, "['offer not open']")
+        }],
+        'parse': [{
+            'in': ({'block_index': 310501, 'btc_amount': 0, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'data': b'\x00\x00\x00F\xba\x0e\xf1\xdf\xbb\xc8}\xf9N\x1d\x19\x8b\x0e\x9e<\x060\x17\x10\xd4\xaa\xb3\xd8Q\x16\xcb\xc8\x19\x99TdJ', 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'fee': 10000, 'block_time': 310501000, 'tx_hash': 'fb645106e276bfa1abd587f4a251b26f491a2a9ae61ca46a669794109728b122', 'destination': '', 'supported': 1},),
+            'out': None
+        },  {
+            'in': ({'block_index': 310501, 'btc_amount': 0, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'data': b'\x00\x00\x00F\xba\x0e\xf1\xdf\xbb\xc8}\xf9N\x1d\x19\x8b\x0e\x9e<\x060\x17\x10\xd4\xaa\xb3\xd8Q\x16\xcb\xc8\x19\x99TdJ', 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'fee': 10000, 'block_time': 310501000, 'tx_hash': 'fb645106e276bfa1abd587f4a251b26f491a2a9ae61ca46a669794109728b122', 'destination': '', 'supported': 1},),
+            'records': [
+                {'table': 'cancels', 'values': {'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'block_index': 310501, 'offer_hash': 'ba0ef1dfbbc87df94e1d198b0e9e3c06301710d4aab3d85116cbc8199954644a', 'tx_index': 502, 'tx_hash': 'fb645106e276bfa1abd587f4a251b26f491a2a9ae61ca46a669794109728b122', 'status': 'valid'}},
+                {'table': 'bets', 'values': {'counterwager_quantity': 10, 'wager_remaining': 10, 'target_value': 0.0, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'counterwager_remaining': 10, 'tx_index': 102, 'block_index': 310101, 'deadline': 1388000200, 'bet_type': 3, 'expiration': 1000, 'expire_index': 311101, 'tx_hash': 'ba0ef1dfbbc87df94e1d198b0e9e3c06301710d4aab3d85116cbc8199954644a', 'leverage': 5040, 'wager_quantity': 10, 'fee_fraction_int': 5000000, 'status': 'cancelled'}}
+           ]
         }],
     },
     'broadcast': {
@@ -734,6 +763,40 @@ UNITTEST_VECTOR = {
         }]
     },
     'transaction': {
+        'var_int': [{
+            'in': (252,),
+            'out': b'\xfc'
+        }, {
+            'in': (65535,),
+            'out': b'\xfd\xff\xff'
+        }, {
+            'in': (4294967295,),
+            'out': b'\xfe\xff\xff\xff\xff'
+        }, {
+            'in': (4294967296,),
+            'out': b'\xff\x00\x00\x00\x00\x01\x00\x00\x00'
+        }],
+        'op_push': [{
+            'in': (75,),
+            'out': b'K'
+        }, {
+            'in': (255,),
+            'out': b'L\xff'
+        }, {
+            'in': (65535,),
+            'out': b'M\xff\xff'
+        }, {
+            'in': (65536,),
+            'out': b'N\x00\x00\x01\x00'
+        }],
+        'get_multisig_script': [{
+            'in': ('1_0282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0_0319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b977_2',),
+            'out': b'Q!\x02\x82\xb8\x86\xc0\x87\xeb7\xdc\x81\x82\xf1K\xa6\xcc>\x94\x85\xeda\x8b\x95\x80MD\xae\xcc\x17\xc3\x00\xb5\x85\xb0!\x03\x19\xf6\xe0{\x0b\x8duaV9K\x9d\xcf;\x01\x1f\xe9\xac\x19\xf2p\x0b\xd6\xb6\x9aj\x17\x83\xdb\xb8\xb9wR\xae'
+        }],
+        'get_monosig_script': [{
+            'in': (ADDR[1],),
+            'out': b'v\xa9\x14\x8dj\xe8\xa3\xb3\x81f1\x18\xb4\xe1\xef\xf4\xcf\xc7\xd0\x95M\xd6\xec\x88\xac'
+        }],
         'construct': [{
             'in': (('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', [('mvCounterpartyXXXXXXXXXXXXXXW24Hef', 62000000)], None), {'encoding': 'multisig', 'exact_fee': 1.0}),
             'error': (exceptions.TransactionError, 'Exact fees must be in satoshis.')
