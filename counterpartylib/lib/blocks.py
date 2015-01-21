@@ -156,8 +156,8 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
     cursor.close()
 
     # Consensus hashes.
-    new_ledger_hash = check.consensus_hash(db, 'ledger_hash', previous_ledger_hash, util.BLOCK_LEDGER)
     new_txlist_hash = check.consensus_hash(db, 'txlist_hash', previous_txlist_hash, txlist)
+    new_ledger_hash = check.consensus_hash(db, 'ledger_hash', previous_ledger_hash, util.BLOCK_LEDGER)
 
     return new_ledger_hash, new_txlist_hash
 
