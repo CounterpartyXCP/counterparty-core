@@ -572,14 +572,17 @@ def unhexlify(hex_string):
     return binascii.unhexlify(bytes(hex_string, 'utf-8'))
 
 ### Protocol Changes ###
-def enabled (change_name):
+def enabled(change_name, block_index=None):
     """Return True if protocol change is enabled."""
     enable_block_index = PROTOCOL_CHANGES[change_name]['block_index']
+
+    if not block_index:
+        block_index = CURRENT_BLOCK_INDEX
 
     if config.TESTNET: 
         return True     # Protocol changes are always retroactive on testnet.
     else:
-        if CURRENT_BLOCK_INDEX >= enable_block_index:
+        if block_index >= enable_block_index:
             return True
         else:
             return False
