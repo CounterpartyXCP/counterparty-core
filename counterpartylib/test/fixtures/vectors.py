@@ -970,6 +970,14 @@ UNITTEST_VECTOR = {
             'in': ('1_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_2',),   # Valid multi‐sig
             'out': None                                                                             # No Error
         }],
+        'scriptpubkey_to_address': [{
+            'in': (['mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH'],),
+            'out': None
+        }],
+        'get_asm': [{
+            'in': ([],),
+            'error': (exceptions.DecodeError, 'empty output')
+        }],
         'base58_encode': [{
             'in': (b'\x82\xe3\x069\x16\x17I\x12S\x81\xeaQC\xa6J\xac',),                             # Random bytes
             'out': 'HARXEpbq7gJQGcSVUtubYo'
@@ -1070,6 +1078,9 @@ UNITTEST_VECTOR = {
         'pubkeyhash_array': [{
             'in': ('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',),
             'out': ['mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns']
+        },  {
+            'in': ('1_mnMrocns5$@##$#kBjPZ!xRxXb5A1gx7gAoRZWPP6_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_2',),
+            'error': (exceptions.InvalidBase58Error, 'Not a valid Base58 character: ‘$’')
         }],
         'is_pubkeyhash': [{
             'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6',),  # Valid Bitcoin Address
