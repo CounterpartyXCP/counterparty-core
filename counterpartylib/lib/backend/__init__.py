@@ -108,6 +108,23 @@ def get_btc_supply(normalize=False):
             blocks_remaining = 0
     return total_supply if normalize else int(total_supply * config.UNIT)
 
+def is_vout_spendable(vout, source):
+    # TODO: Support multi‐sig sources.
+    source = script.make_canonical(source)
+    scriptpubkey_hex = vout['scriptPubKey']['hex']
+    c_scriptpubkey = bitcoinlib.core.CScript(bitcoinlib.core.x(scriptpubkey_hex))
+    vout_address = script.scriptpubkey_to_address(c_scriptpubkey)
+    if not vout_address:
+        return False
+    if script.is_multisig(vout_address):
+        signatures_required, pubkeyhashes, signatures_possible = script.extract_array(vout_address)
+        if signatures_required == 1 and source in pubkeyhashes:
+            return True
+    else:
+        if vout_address == source:
+            return True
+    return False
+
 def get_unspent_txouts(source, return_confirmed=False):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
@@ -121,19 +138,16 @@ def get_unspent_txouts(source, return_confirmed=False):
         pubkeyhashes = [source]
         raw_transactions = searchrawtransactions(source)
 
-    canonical_source = script.make_canonical(source)
-
     for tx in raw_transactions:
         for vout in tx['vout']:
-            scriptpubkey = vout['scriptPubKey']
-            if script.scriptpubkey_to_address(bitcoinlib.core.CScript(bitcoinlib.core.x(scriptpubkey['hex']))) == canonical_source:
+            if is_vout_spendable(vout, source):
                 txid = tx['txid']
                 confirmations = tx['confirmations'] if 'confirmations' in tx else 0
                 outkey = '{}{}'.format(txid, vout['n'])
                 if outkey not in outputs or outputs[outkey]['confirmations'] < confirmations:
                     coin = {'amount': float(vout['value']),
                             'confirmations': confirmations,
-                            'scriptPubKey': scriptpubkey['hex'],
+                            'scriptPubKey': vout['scriptPubKey']['hex'],
                             'txid': txid,
                             'vout': vout['n']
                            }
