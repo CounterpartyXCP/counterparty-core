@@ -1094,9 +1094,6 @@ UNITTEST_VECTOR = {
         'pubkeyhash_array': [{
             'in': ('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',),
             'out': ['mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns']
-        },  {
-            'in': ('1_mnMrocns5$@##$#kBjPZ!xRxXb5A1gx7gAoRZWPP6_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_2',),
-            'error': (exceptions.InvalidBase58Error, 'Not a valid Base58 character: ‘$’')
         }],
         'is_pubkeyhash': [{
             'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6',),  # Valid Bitcoin Address
