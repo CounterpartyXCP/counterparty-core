@@ -34,9 +34,7 @@ BTC = 'BTC'
 XCP = 'XCP'
 
 BTC_NAME = 'Bitcoin'
-BTC_CLIENT = 'bitcoind'
 XCP_NAME = 'Counterparty'
-XCP_CLIENT = 'counterpartyd'
 
 DEFAULT_RPC_PORT_TESTNET = 14000
 DEFAULT_RPC_PORT = 4000

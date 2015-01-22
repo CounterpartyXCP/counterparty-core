@@ -55,11 +55,11 @@ def get_lock():
         # Not database‐specific.
         socket_family = socket.AF_INET
         socket_address = ('localhost', 8999)
-        error = 'Another copy of {} is currently running.'.format(config.XCP_CLIENT)
+        error = 'Another copy of server is currently running.'
     else:
         socket_family = socket.AF_UNIX
         socket_address = '\0' + config.DATABASE
-        error = 'Another copy of {} is currently writing to database {}'.format(config.XCP_CLIENT, config.DATABASE)
+        error = 'Another copy of server is currently writing to database {}'.format(config.DATABASE)
 
     lock_socket = socket.socket(socket_family, socket.SOCK_DGRAM)
     try:
@@ -279,7 +279,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     if broadcast_tx_mainnet:
         config.BROADCAST_TX_MAINNET = broadcast_tx_mainnet
     else:
-        config.BROADCAST_TX_MAINNET = '{}'.format(config.BTC_CLIENT)
+        config.BROADCAST_TX_MAINNET = 'bitcoind'
 
     # Set up logging.
     log.set_up(verbose, logfile=config.LOG)
@@ -288,7 +288,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
         logger.error("Unhandled Exception", exc_info=(exc_type, exc_value, exc_traceback))
     sys.excepthook = handle_exception
 
-    logger.info('Running v{} of counterpartyd.'.format(config.VERSION_STRING, config.XCP_CLIENT))
+    logger.info('Running v{} of counterparty-lib.'.format(config.VERSION_STRING))
 
     if config.FORCE:
         logger.warning('THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.')

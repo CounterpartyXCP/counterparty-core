@@ -20,6 +20,8 @@ from fixtures.scenarios import UNITTEST_FIXTURE, INTEGRATION_SCENARIOS, standard
 import bitcoin as bitcoinlib
 import binascii
 
+import appdirs
+
 D = decimal.Decimal
 
 # Set test environment
@@ -360,7 +362,6 @@ def get_block_txlist(db, block_index):
 def reparse(testnet=True):
     """Reparse all transaction from the database, create a new blockchain and compare it to the old one."""
     options = dict(COUNTERPARTYD_OPTIONS)
-    options.pop('data_dir')
     server.initialise(database_file=':memory:', testnet=testnet, **options)
 
     if testnet:
@@ -376,7 +377,8 @@ def reparse(testnet=True):
     memory_db = database.get_connection(read_only=False)
     initialise_db(memory_db)
 
-    prod_db_path = os.path.join(config.DATA_DIR, '{}.{}{}.db'.format(config.XCP_CLIENT, str(config.VERSION_MAJOR), '.testnet' if testnet else ''))
+    config.DATA_DIR = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname='counterparty-server', roaming=True)
+    prod_db_path = os.path.join(config.DATA_DIR, '{}.{}{}.db'.format(config.XCP_NAME.lower(), str(config.VERSION_MAJOR), '.testnet' if testnet else ''))
     prod_db = apsw.Connection(prod_db_path)
     prod_db.setrowtrace(database.rowtracer)
 
