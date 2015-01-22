@@ -385,12 +385,21 @@ def reparse(testnet=True):
     with memory_db.backup("main", prod_db, "main") as backup:
         backup.step()
 
-    # here we don't use block.reparse() because it reparse db in transaction (`with db`)
+    # Here we don’t use block.reparse() because it reparse db in transaction (`with db`).
     memory_cursor = memory_db.cursor()
     for table in blocks.TABLES + ['balances']:
         memory_cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
 
-    # clean consensus hashes if first block hash don't match with checkpoint.
+    # Check that all checkpoint blocks are in the database to be tested.
+    if testnet:
+        CHECKPOINTS = check.CHECKPOINTS_TESTNET
+    else:
+        CHECKPOINTS = check.CHECKPOINTS_MAINNET
+    for block_index in CHECKPOINTS.keys():
+        block_exists = bool(list(memory_cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,))))
+        assert block_exists
+
+    # Clean consensus hashes if first block hash don’t match with checkpoint.
     checkpoints = check.CHECKPOINTS_TESTNET if config.TESTNET else check.CHECKPOINTS_MAINNET
     columns = [column['name'] for column in memory_cursor.execute('''PRAGMA table_info(blocks)''')]
     for field in ['ledger_hash', 'txlist_hash']:
