@@ -35,7 +35,7 @@ def rpc(method, params):
         try:
             response = bitcoin_rpc_session.post(url, data=json.dumps(payload), headers=headers, verify=config.WALLET_SSL_VERIFY)
             if i > 0:
-                logger.debug('Successfully connected.', file=sys.stderr)
+                logger.debug('Successfully connected.')
             break
         except requests.exceptions.SSLError as e:
             raise e
