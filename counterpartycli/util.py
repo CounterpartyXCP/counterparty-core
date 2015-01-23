@@ -75,7 +75,6 @@ def is_divisible(asset):
     else:
         sql = '''SELECT * FROM issuances WHERE (status = ? AND asset = ?)'''
         bindings = ['valid', asset]
-        logging.error(bindings)
         issuances = api('sql', {'query': sql, 'bindings': bindings})
 
         if not issuances: raise AssetError('No such asset: {}'.format(asset))
