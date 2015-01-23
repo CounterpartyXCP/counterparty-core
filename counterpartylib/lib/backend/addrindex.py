@@ -89,25 +89,32 @@ def extract_addresses(tx_hash):
     return addresses, tx
 
 def unconfirmed_transactions(address):
-    unconfirmed_tx = []
+    # NOTE: This operation can be very slow.
+    logger.debug('Getting unconfirmed transactions.')
 
+    unconfirmed_tx = []
     for tx_hash in getrawmempool():
         addresses, tx = extract_addresses(tx_hash)
         if address in addresses:
             unconfirmed_tx.append(tx)
-
     return unconfirmed_tx
 
 def searchrawtransactions(address):
+    logger.debug('Searching raw transactions.')
+
+    # Get unconfirmed transactions.
     unconfirmed = unconfirmed_transactions(address)
+
+    # Get confirmed transactions.
     try:
         rawtransactions = rpc('searchrawtransactions', [address, 1, 0, 9999999])
     except BackendRPCError as e:
         if str(e) == '404 Not Found':
-            raise BackendRPCError('Unknown RPC command: `searchrawtransactions`. Either, switch to jmcorgan (recommended), use Insight, or use sochain or blockr.')
+            raise BackendRPCError('Unknown RPC command: `searchrawtransactions`. Please use a version of {} Core which supports an address index.'.format(config.BTC_NAME))
         else:
             raise BackendRPCError(str(e))
     confirmed = [tx for tx in rawtransactions if tx['confirmations'] > 0]
+
     return unconfirmed + confirmed
 
 def getblockcount():

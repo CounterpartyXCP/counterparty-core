@@ -81,6 +81,7 @@ def sort_unspent_txouts(unspent, allow_unconfirmed_inputs):
     unspent = sorted(unspent, key=lambda x: input_value_weight(x['amount']))
 
     # Remove unconfirmed txouts, if desired.
+    # TODO: Move this filter to `searchrawtransactions()`.
     if allow_unconfirmed_inputs:
         # Hackish: Allow only inputs which are either already confirmed or were seen only recently. (Skip outputs from slow‐to‐confirm transanctions.)
         try:
