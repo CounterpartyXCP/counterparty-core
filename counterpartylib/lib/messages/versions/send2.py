@@ -65,8 +65,8 @@ def validate(db, source, destination, asset, quantity, block_index):
     if quantity > config.MAX_INT:
         raise ValidateError('quantity too large')
 
-    if quantity < 0:
-        raise ValidateError('quantity negative')
+    if quantity <= 0:
+        raise ValidateError('quantity non‐positive')
 
     if util.get_balance(db, source, asset) < quantity:
         raise BalanceError('balance insufficient')
