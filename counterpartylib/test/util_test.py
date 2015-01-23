@@ -20,6 +20,8 @@ from fixtures.scenarios import UNITTEST_FIXTURE, INTEGRATION_SCENARIOS, standard
 import bitcoin as bitcoinlib
 import binascii
 
+import appdirs
+
 D = decimal.Decimal
 
 # Set test environment
@@ -291,7 +293,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db)
         return tested_method(counterpartyd_db, inputs[0], **inputs[1])
     elif (tx_name == 'util' and (method == 'api' or method == 'date_passed' or method == 'price' or method == 'sortkeypicker' or method == 'generate_asset_id' \
          or method == 'generate_asset_name' or method == 'dhash_string' or method == 'enabled' or method == 'get_url' or method == 'hexlify')) or tx_name == 'script' \
-        or (tx_name == 'blocks' and (method == 'get_tx_info' or method == 'get_tx_info1' or method == 'get_tx_info2')):
+        or (tx_name == 'blocks' and (method == 'get_tx_info' or method == 'get_tx_info1' or method == 'get_tx_info2')) or tx_name == 'transaction':
         return tested_method(*inputs)
     else:
         return tested_method(counterpartyd_db, *inputs)
@@ -360,7 +362,6 @@ def get_block_txlist(db, block_index):
 def reparse(testnet=True):
     """Reparse all transaction from the database, create a new blockchain and compare it to the old one."""
     options = dict(COUNTERPARTYD_OPTIONS)
-    options.pop('data_dir')
     server.initialise(database_file=':memory:', testnet=testnet, **options)
 
     if testnet:
@@ -376,19 +377,29 @@ def reparse(testnet=True):
     memory_db = database.get_connection(read_only=False)
     initialise_db(memory_db)
 
-    prod_db_path = os.path.join(config.DATA_DIR, '{}.{}{}.db'.format(config.XCP_CLIENT, str(config.VERSION_MAJOR), '.testnet' if testnet else ''))
+    config.DATA_DIR = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname='counterparty-server', roaming=True)
+    prod_db_path = os.path.join(config.DATA_DIR, '{}.{}{}.db'.format(config.XCP_NAME.lower(), str(config.VERSION_MAJOR), '.testnet' if testnet else ''))
     prod_db = apsw.Connection(prod_db_path)
     prod_db.setrowtrace(database.rowtracer)
 
     with memory_db.backup("main", prod_db, "main") as backup:
         backup.step()
 
-    # here we don't use block.reparse() because it reparse db in transaction (`with db`)
+    # Here we don’t use block.reparse() because it reparse db in transaction (`with db`).
     memory_cursor = memory_db.cursor()
     for table in blocks.TABLES + ['balances']:
         memory_cursor.execute('''DROP TABLE IF EXISTS {}'''.format(table))
 
-    # clean consensus hashes if first block hash don't match with checkpoint.
+    # Check that all checkpoint blocks are in the database to be tested.
+    if testnet:
+        CHECKPOINTS = check.CHECKPOINTS_TESTNET
+    else:
+        CHECKPOINTS = check.CHECKPOINTS_MAINNET
+    for block_index in CHECKPOINTS.keys():
+        block_exists = bool(list(memory_cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,))))
+        assert block_exists
+
+    # Clean consensus hashes if first block hash don’t match with checkpoint.
     checkpoints = check.CHECKPOINTS_TESTNET if config.TESTNET else check.CHECKPOINTS_MAINNET
     columns = [column['name'] for column in memory_cursor.execute('''PRAGMA table_info(blocks)''')]
     for field in ['ledger_hash', 'txlist_hash']:

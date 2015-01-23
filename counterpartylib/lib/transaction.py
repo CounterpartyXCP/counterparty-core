@@ -103,14 +103,13 @@ def get_multisig_script(address):
         raise script.InputError('Required signatures must be 1, 2 or 3.')
 
     # Required signatures.
-    if signatures_possible == 1:
-        op_total = OP_1
-    elif signatures_possible == 2:
+    # Note 1-of-1 addresses are not supported (they don't go through extract_array anyway).
+    if signatures_possible == 2:
         op_total = OP_2
     elif signatures_possible == 3:
         op_total = OP_3
     else:
-        raise script.InputError('Total possible signatures must be 1, 2 or 3.')
+        raise script.InputError('Total possible signatures must be 2 or 3.')
 
     # Construct script.
     tx_script = op_required                                # Required signatures

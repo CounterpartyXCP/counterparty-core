@@ -156,8 +156,8 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
     cursor.close()
 
     # Consensus hashes.
-    new_ledger_hash = check.consensus_hash(db, 'ledger_hash', previous_ledger_hash, util.BLOCK_LEDGER)
     new_txlist_hash = check.consensus_hash(db, 'txlist_hash', previous_txlist_hash, txlist)
+    new_ledger_hash = check.consensus_hash(db, 'ledger_hash', previous_ledger_hash, util.BLOCK_LEDGER)
 
     return new_ledger_hash, new_txlist_hash
 
@@ -357,7 +357,7 @@ def get_tx_info(tx_hex, block_parser=None, block_index=None):
     if not block_index:
         block_index = util.CURRENT_BLOCK_INDEX
     try:
-        if util.enabled('multisig_addresses'):   # Protocol change.
+        if util.enabled('multisig_addresses', block_index=block_index):   # Protocol change.
             tx_info = get_tx_info2(tx_hex, block_parser=block_parser)
         else:
             tx_info = get_tx_info1(tx_hex, block_index, block_parser=block_parser)
@@ -829,8 +829,8 @@ def kickstart(db, bitcoind_dir):
         cursor.execute('''UPDATE transactions SET tx_index = tx_index + ?''', (tx_index,))
         logger.info('Reordered transactions in {:.3f}s.'.format(time.time() - start_time))
 
-        # Parse all transactions in database.
-        reparse(db)
+    # Parse all transactions in database.
+    reparse(db)
 
     cursor.close()
     logger.info('Total duration: {:.3f}s'.format(time.time() - start_time_total))

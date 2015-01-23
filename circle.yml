@@ -3,7 +3,11 @@ dependencies:
         - python setup.py install
 test:
     override:
-        - cd counterpartylib && py.test --skiptestbook=all --cov-config=../.coveragerc --cov-report=term-missing --cov=./bin/test
+        - cd counterpartylib; py.test --verbose --capture=no --cov-config=../.coveragerc --cov-report=term-missing --cov=./
 machine:
+    pre:
+        - mkdir -p ~/.config/counterparty-server
+        - cd ~/.config/counterparty-server; wget https://s3.amazonaws.com/counterparty-bootstrap/counterpartyd-db.latest.tar.gz; tar xvzf counterpartyd-db.latest.tar.gz; mv counterpartyd.9.db counterparty.9.db
+        - cd ~/.config/counterparty-server; wget https://s3.amazonaws.com/counterparty-bootstrap/counterpartyd-testnet-db.latest.tar.gz; tar xvzf counterpartyd-testnet-db.latest.tar.gz; mv counterpartyd.9.testnet.db counterparty.9.testnet.db
     python:
         version: 3.4.1

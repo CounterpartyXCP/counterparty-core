@@ -49,7 +49,7 @@ def rpc(method, params):
             network = 'testnet'
         else:
             network = 'mainnet'
-        raise BackendRPCError('Cannot communicate with backend. ({} is set to run on {}, is backend?)'.format(config.XCP_CLIENT, network))
+        raise BackendRPCError('Cannot communicate with backend. (server is set to run on {}, is backend?)'.format(network))
     elif response.status_code not in (200, 500):
         raise BackendRPCError(str(response.status_code) + ' ' + response.reason)
 

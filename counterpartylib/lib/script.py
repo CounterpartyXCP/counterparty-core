@@ -162,9 +162,10 @@ def extract_array(address):
 
 def pubkeyhash_array(address):
     """Return PubKeyHashes from an address."""
-    signatures_required, pubkeyhashes, signatures_possible = extract_array(address)
-    if not all([base58_check_decode(pubkeyhash, config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes]):
+    signatures_required, pubs, signatures_possible = extract_array(address)
+    if not all([is_pubkeyhash(pub) for pub in pubs]):
         raise MultiSigAddressError('Multi‐signature address must use PubKeyHashes, not public keys.')
+    pubkeyhashes = pubs
     return pubkeyhashes
 
 def hash160(x):

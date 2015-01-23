@@ -592,7 +592,11 @@ class APIServer(threading.Thread):
                 caught_up = True
 
             try:
-                last_block = util.CURRENT_BLOCK_INDEX
+                cursor = db.cursor()
+                blocks = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (util.CURRENT_BLOCK_INDEX, )))
+                assert len(blocks) == 1
+                last_block = blocks[0]
+                cursor.close()
             except:
                 last_block = None
 
@@ -732,7 +736,7 @@ class APIServer(threading.Thread):
             self.is_ready = True
             self.ioloop.start()
         except OSError:
-            raise APIError("Cannot start the API subsystem. Is {} already running, or is something else listening on port {}?".format(config.XCP_CLIENT, config.RPC_PORT))
+            raise APIError("Cannot start the API subsystem. Is server already running, or is something else listening on port {}?".format(config.RPC_PORT))
 
         db.close()
         http_server.stop()
