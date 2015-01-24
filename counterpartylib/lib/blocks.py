@@ -137,11 +137,6 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
     # TODO: This shouldn’t be in `util.py`.
     util.CURRENT_BLOCK_INDEX = block_index
 
-    # Expire orders, bets and rps.
-    order.expire(db, block_index)
-    bet.expire(db, block_index, block_time)
-    rps.expire(db, block_index)
-
     # Parse transactions, sorting them by type.
     cursor.execute('''SELECT * FROM transactions \
                       WHERE block_index=? ORDER BY tx_index''',
@@ -154,6 +149,11 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
                                             binascii.hexlify(tx['data']).decode('UTF-8')))
 
     cursor.close()
+
+    # Expire orders, bets and rps.
+    order.expire(db, block_index)
+    bet.expire(db, block_index, block_time)
+    rps.expire(db, block_index)
 
     # Consensus hashes.
     new_txlist_hash = check.consensus_hash(db, 'txlist_hash', previous_txlist_hash, txlist)
