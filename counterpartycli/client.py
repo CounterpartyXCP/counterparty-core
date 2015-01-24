@@ -432,8 +432,38 @@ def set_options(data_dir=None, config_file=None, testnet=False, testcoin=False,
     else:
         config.WALLET_URL = 'http://' + config.WALLET_URL
 
+    # (more) Testnet
+    if config.TESTNET:
+        config.MAGIC_BYTES = config.MAGIC_BYTES_TESTNET
+        if config.TESTCOIN:
+            config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
+            config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET_TESTCOIN
+            config.BURN_START = config.BURN_START_TESTNET_TESTCOIN
+            config.BURN_END = config.BURN_END_TESTNET_TESTCOIN
+            config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
+        else:
+            config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
+            config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET
+            config.BURN_START = config.BURN_START_TESTNET
+            config.BURN_END = config.BURN_END_TESTNET
+            config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
+    else:
+        config.MAGIC_BYTES = config.MAGIC_BYTES_MAINNET
+        if config.TESTCOIN:
+            config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
+            config.BLOCK_FIRST = config.BLOCK_FIRST_MAINNET_TESTCOIN
+            config.BURN_START = config.BURN_START_MAINNET_TESTCOIN
+            config.BURN_END = config.BURN_END_MAINNET_TESTCOIN
+            config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
+        else:
+            config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
+            config.BLOCK_FIRST = config.BLOCK_FIRST_MAINNET
+            config.BURN_START = config.BURN_START_MAINNET
+            config.BURN_END = config.BURN_END_MAINNET
+            config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
 
-def balances(address):
+
+def get_balances(address):
     address = script.make_canonical(address)
     script.validate(address)
     balances = get_address(address=address)['balances']
@@ -901,7 +931,7 @@ def main():
 
     # VIEWING (temporary)
     elif args.action == 'balances':
-        balances(args.address)
+        get_balances(args.address)
 
     elif args.action == 'asset':
         results = util.api('get_asset_info', {'assets': [args.asset]})
