@@ -5,6 +5,8 @@ import os
 import zipfile
 import urllib.request
 import sys
+import shutil
+import logging
 
 def install_apsw():
     try:
@@ -32,7 +34,8 @@ def install_apsw():
     os.system(install_command)
 
     print("clean files.")
-    os.system('rm -rf apsw-3.8.7.3-r1 && rm apsw-3.8.7.3-r1.zip')
+    shutil.rmtree('apsw-3.8.7.3-r1')
+    os.remove('apsw-3.8.7.3-r1.zip')
 
 def install_serpent():
     print("downloading serpent.")
@@ -49,7 +52,8 @@ def install_serpent():
     os.system('cd serpent-master && sudo make install')
 
     print("clean files.")
-    os.system('rm -rf serpent-master && rm serpent.zip')
+    shutil.rmtree('serpent-master')
+    os.remove('serpent.zip')
 
 required_packages = [
     'appdirs==1.4.0',
@@ -98,6 +102,14 @@ setup_options = {
     'include_package_data': True
 }
 
-install_serpent()
-install_apsw()
 setup(**setup_options)
+
+# In Windows APSW and Serpent should be installed manually
+if os.name != 'nt':
+    install_apsw()
+    install_serpent()
+else:
+    logging.warning('''Warning:
+To complete the installation you have to install:
+- APSW: https://github.com/rogerbinns/apsw/releases
+- Serpent: https://github.com/ethereum/serpent''')

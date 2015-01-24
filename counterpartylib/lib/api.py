@@ -704,6 +704,8 @@ class APIServer(threading.Thread):
         @app.route('/api/', methods=["POST",])
         @auth.login_required
         def handle_post():
+
+            # Check for valid request format.
             try:
                 request_json = flask.request.get_data().decode('utf-8')
                 request_data = json.loads(request_json)
@@ -711,18 +713,19 @@ class APIServer(threading.Thread):
                 # params may be omitted
             except:
                 obj_error = jsonrpc.exceptions.JSONRPCInvalidRequest(data="Invalid JSON-RPC 2.0 request format")
-                return flask.Response(obj_error.json.encode(), 200, mimetype='application/json')
+                return flask.Response(obj_error.json.encode(), 400, mimetype='application/json')
 
-            #only arguments passed as a dict are supported
+            # Only arguments passed as a `dict` are supported.
             if request_data.get('params', None) and not isinstance(request_data['params'], dict):
                 obj_error = jsonrpc.exceptions.JSONRPCInvalidRequest(
                     data='Arguments must be passed as a JSON object (list of unnamed arguments not supported)')
-                return flask.Response(obj_error.json.encode(), 200, mimetype='application/json')
+                return flask.Response(obj_error.json.encode(), 400, mimetype='application/json')
 
-            #return an error if API fails checks
+            # Return an error if the API Status Poller checks fail.
             if not config.FORCE and current_api_status_code:
-                return flask.Response(current_api_status_response_json, 200, mimetype='application/json')
+                return flask.Response(current_api_status_response_json, 503, mimetype='application/json')
 
+            # Answer request normally.
             jsonrpc_response = jsonrpc.JSONRPCResponseManager.handle(request_json, dispatcher)
             response = flask.Response(jsonrpc_response.json.encode(), 200, mimetype='application/json')
             _set_cors_headers(response)
