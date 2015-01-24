@@ -80,7 +80,7 @@ required_repos = [
 
 setup_options = {
     'name': 'counterparty-lib',
-    'version': '9.49.3',
+    'version': '9.49.4',
     'author': 'Counterparty Foundation',
     'author_email': 'support@counterparty.io',
     'maintainer': 'Adam Krellenstein',
