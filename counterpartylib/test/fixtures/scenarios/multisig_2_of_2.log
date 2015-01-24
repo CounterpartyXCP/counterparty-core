@@ -83,10 +83,10 @@ New input: amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46fb574
 Change quantity: 2.999744 BTC
 Debit: 0.5 XCP from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #bet# <6ec162e8abe733631652b93cb00e1dd6417f68b7205d3c54e690111518c092a1>
 Bet: 0.5 XCP against 0.25 XCP, by 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2, on 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2
-Expired order: 21553a43dab2c64ea38eebb4bb68406adabe478ab682a4c57f3f9c38325d4fc7
 Sorted UTXOs: ['amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46fb574af7fd86fd417bc; vout: 0; confirmations: 6']
 New input: amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46fb574af7fd86fd417bc; vout: 0; confirmations: 6
 Change quantity: 2.999744 BTC
+Expired order: 21553a43dab2c64ea38eebb4bb68406adabe478ab682a4c57f3f9c38325d4fc7
 Debit: 0.25 XCP from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #bet# <f0d2a7c5d14e94a67b9917282b3d7198535e444a5d3c1d2b84260aea2ce5d48b>
 Bet: 0.25 XCP against 0.415 XCP, by 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2, on 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2
 Considering: 6ec162e8abe733631652b93cb00e1dd6417f68b7205d3c54e690111518c092a1
@@ -96,11 +96,11 @@ Forward Quantity: 41500000
 Backward Quantity: 20750000
 Credit: 0.0425 XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #filled# <f0d2a7c5d14e94a67b9917282b3d7198535e444a5d3c1d2b84260aea2ce5d48b>
 Bet Match: BullCFD for 0.415 XCP against BearCFD for 0.2075 XCP on 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 at 2013-12-25T19:35:00 that 0.0 value, leveraged 3.0x (6ec162e8abe733631652b93cb00e1dd6417f68b7205d3c54e690111518c092a1_f0d2a7c5d14e94a67b9917282b3d7198535e444a5d3c1d2b84260aea2ce5d48b) [pending]
-Credit: 0.05 XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #cancel order# <dabd54da622c526e5e0114734a216530219588c48fde8a2f2b3bf2eb52f4e643>
-Expired order: dabd54da622c526e5e0114734a216530219588c48fde8a2f2b3bf2eb52f4e643
 Sorted UTXOs: ['amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46fb574af7fd86fd417bc; vout: 0; confirmations: 6']
 New input: amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46fb574af7fd86fd417bc; vout: 0; confirmations: 6
 Change quantity: 2.999744 BTC
+Credit: 0.05 XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #cancel order# <dabd54da622c526e5e0114734a216530219588c48fde8a2f2b3bf2eb52f4e643>
+Expired order: dabd54da622c526e5e0114734a216530219588c48fde8a2f2b3bf2eb52f4e643
 Debit: 1.5 XCP from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #bet# <a7049b5fa97a608a0b3de5d169a12b8a585e94e038ab89852c630744e9b60f36>
 Bet: 1.5 XCP against 3.5 XCP, by 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2, on 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2
 Sorted UTXOs: ['amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46fb574af7fd86fd417bc; vout: 0; confirmations: 6']
@@ -171,11 +171,11 @@ New input: amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46fb574
 Change quantity: 1.9999 BTC
 Credit: 569.99887262 XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #burn# <702e60afb8f29d914c6d06d44f1e15be1d872c73d0796fe9d29dd5c45b31a5c4>
 Burn: 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 burned 0.38 BTC for 569.99887262 XCP (702e60afb8f29d914c6d06d44f1e15be1d872c73d0796fe9d29dd5c45b31a5c4) [valid]
-Credit: 0.085 XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #recredit wager remaining# <6ec162e8abe733631652b93cb00e1dd6417f68b7205d3c54e690111518c092a1>
-Expired bet: 6ec162e8abe733631652b93cb00e1dd6417f68b7205d3c54e690111518c092a1
 Sorted UTXOs: ['amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46fb574af7fd86fd417bc; vout: 0; confirmations: 6']
 New input: amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46fb574af7fd86fd417bc; vout: 0; confirmations: 6
 Change quantity: 2.999744 BTC
+Credit: 0.085 XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #recredit wager remaining# <6ec162e8abe733631652b93cb00e1dd6417f68b7205d3c54e690111518c092a1>
+Expired bet: 6ec162e8abe733631652b93cb00e1dd6417f68b7205d3c54e690111518c092a1
 Debit: 10000 BBBC from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #send# <80a30ebcb3366a99961ce3f1f20ce3a66252cb534158154776832d6dac72174b>
 Credit: 10000 BBBC to 2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #send# <80a30ebcb3366a99961ce3f1f20ce3a66252cb534158154776832d6dac72174b>
 Send: 10000 BBBC from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 to 2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (80a30ebcb3366a99961ce3f1f20ce3a66252cb534158154776832d6dac72174b) [valid]

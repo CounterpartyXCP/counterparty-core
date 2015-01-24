@@ -553,7 +553,7 @@ def expire (db, block_index, block_time):
 
     # Expire bets and give refunds for the quantity wager_remaining.
     cursor.execute('''SELECT * FROM bets \
-                      WHERE (status = ? AND expire_index <= ?)''', ('open', block_index))
+                      WHERE (status = ? AND expire_index < ?)''', ('open', block_index))
     for bet in cursor.fetchall():
         cancel_bet(db, bet, 'expired', block_index)
 
@@ -569,7 +569,7 @@ def expire (db, block_index, block_time):
 
     # Expire bet matches whose deadline is more than two weeks before the current block time.
     cursor.execute('''SELECT * FROM bet_matches \
-                      WHERE (status = ? AND deadline <= ?)''', ('pending', block_time - config.TWO_WEEKS))
+                      WHERE (status = ? AND deadline < ?)''', ('pending', block_time - config.TWO_WEEKS))
     for bet_match in cursor.fetchall():
         cancel_bet_match(db, bet_match, 'expired', block_index)
 

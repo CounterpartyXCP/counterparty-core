@@ -83,10 +83,10 @@ New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553
 Change quantity: 1.9988591 BTC
 Debit: 0.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #bet# <5da0ca591e5336da0304bc8f7a201af3465685c492b284495898da35a402e32a>
 Bet: 0.5 XCP against 0.25 XCP, by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc, on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-Expired order: ad6082998925f47865b58b6d344c1b1cf0ab059d091f33334ccb92436f37eb8a
 Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Change quantity: 1.9988591 BTC
+Expired order: ad6082998925f47865b58b6d344c1b1cf0ab059d091f33334ccb92436f37eb8a
 Debit: 0.25 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #bet# <edd28543ae87ae56f5bd55437cab05f7f4d8a1709cb12e139dab176eb5f7e74a>
 Bet: 0.25 XCP against 0.415 XCP, by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc, on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Considering: 5da0ca591e5336da0304bc8f7a201af3465685c492b284495898da35a402e32a
@@ -96,11 +96,11 @@ Forward Quantity: 41500000
 Backward Quantity: 20750000
 Credit: 0.0425 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #filled# <edd28543ae87ae56f5bd55437cab05f7f4d8a1709cb12e139dab176eb5f7e74a>
 Bet Match: BullCFD for 0.415 XCP against BearCFD for 0.2075 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T19:35:00 that 0.0 value, leveraged 3.0x (5da0ca591e5336da0304bc8f7a201af3465685c492b284495898da35a402e32a_edd28543ae87ae56f5bd55437cab05f7f4d8a1709cb12e139dab176eb5f7e74a) [pending]
-Credit: 0.05 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #cancel order# <833ac1c9139acc7a9aaabbf04bdf3e4af95a3425762d39d8cc2cc23113861d2a>
-Expired order: 833ac1c9139acc7a9aaabbf04bdf3e4af95a3425762d39d8cc2cc23113861d2a
 Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Change quantity: 1.9988591 BTC
+Credit: 0.05 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #cancel order# <833ac1c9139acc7a9aaabbf04bdf3e4af95a3425762d39d8cc2cc23113861d2a>
+Expired order: 833ac1c9139acc7a9aaabbf04bdf3e4af95a3425762d39d8cc2cc23113861d2a
 Debit: 1.5 XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #bet# <bc42268279947c6dd5a517df41ae838c22c7194c686180700d8087dc3c8ce36c>
 Bet: 1.5 XCP against 3.5 XCP, by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc, on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
@@ -171,11 +171,11 @@ New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553
 Change quantity: 0.9989914 BTC
 Credit: 569.99887262 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #burn# <6d1a0e0dedda4a78cf11ac7a1c6fd2c32d9fd7c99d97ae7d524f223641646b85>
 Burn: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 0.38 BTC for 569.99887262 XCP (6d1a0e0dedda4a78cf11ac7a1c6fd2c32d9fd7c99d97ae7d524f223641646b85) [valid]
-Credit: 0.085 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #recredit wager remaining# <5da0ca591e5336da0304bc8f7a201af3465685c492b284495898da35a402e32a>
-Expired bet: 5da0ca591e5336da0304bc8f7a201af3465685c492b284495898da35a402e32a
 Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Change quantity: 1.9988591 BTC
+Credit: 0.085 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #recredit wager remaining# <5da0ca591e5336da0304bc8f7a201af3465685c492b284495898da35a402e32a>
+Expired bet: 5da0ca591e5336da0304bc8f7a201af3465685c492b284495898da35a402e32a
 Debit: 10000 BBBC from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #send# <a40605acb5b55718ba35b408883c20eecd845425ec463c0720b57901585820e2>
 Credit: 10000 BBBC to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #send# <a40605acb5b55718ba35b408883c20eecd845425ec463c0720b57901585820e2>
 Send: 10000 BBBC from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (a40605acb5b55718ba35b408883c20eecd845425ec463c0720b57901585820e2) [valid]

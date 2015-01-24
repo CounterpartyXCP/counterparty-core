@@ -717,14 +717,14 @@ def expire (db, block_index):
 
     # Expire orders and give refunds for the quantity give_remaining (if non-zero; if not BTC).
     cursor.execute('''SELECT * FROM orders \
-                      WHERE (status = ? AND expire_index <= ?)''', ('open', block_index))
+                      WHERE (status = ? AND expire_index < ?)''', ('open', block_index))
     orders = list(cursor)
     for order in orders:
         cancel_order(db, order, 'expired', block_index)
 
     # Expire order_matches for BTC with no BTC.
     cursor.execute('''SELECT * FROM order_matches \
-                      WHERE (status = ? and match_expire_index <= ?)''', ('pending', block_index))
+                      WHERE (status = ? and match_expire_index < ?)''', ('pending', block_index))
     order_matches = list(cursor)
     for order_match in order_matches:
         cancel_order_match(db, order_match, 'expired', block_index)
