@@ -264,7 +264,7 @@ def set_options(data_dir=None, config_file=None, testnet=False, testcoin=False,
     else:
         config.DATA_DIR = os.path.expanduser(data_dir)
     if not os.path.isdir(config.DATA_DIR):
-        os.mkdir(config.DATA_DIR)
+        os.makedirs(config.DATA_DIR)
 
     # Configuration file
     configfile = configparser.ConfigParser()
