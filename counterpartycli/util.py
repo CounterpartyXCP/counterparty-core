@@ -67,7 +67,7 @@ def rpc(url, method, params=None, ssl_verify=False):
         raise RPCError('{}'.format(response_json['error']))
 
 def api(method, params=None):
-    return rpc(config.COUNTERPARTY_SERVER, method, params=params, ssl_verify=config.COUNTERPARTY_SERVER_SSL_VERIFY)
+    return rpc(config.COUNTERPARTY_RPC, method, params=params, ssl_verify=config.COUNTERPARTY_RPC_SSL_VERIFY)
 
 def is_divisible(asset):
     if asset in (config.BTC, config.XCP, 'leverage', 'value', 'fraction', 'price', 'odds'):

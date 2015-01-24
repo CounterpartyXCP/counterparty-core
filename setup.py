@@ -191,10 +191,10 @@ if sys.argv[1] == 'install':
             'backend-password': 'wallet-password',
             'backend-ssl': 'wallet-ssl',
             'backend-ssl-verify': 'wallet-ssl-verify',
-            'rpc-host': 'counterparty-server-connect',
-            'rpc-port': 'counterparty-server-port',
-            'rpc-user': 'counterparty-server-user',
-            'rpc-password': 'counterparty-server-password'
+            'rpc-host': 'counterparty-rpc-connect',
+            'rpc-port': 'counterparty-rpc-port',
+            'rpc-user': 'counterparty-rpc-user',
+            'rpc-password': 'counterparty-rpc-password'
         }
         for server_key in config_keys:
             if server_key in server_configfile['Default']:
