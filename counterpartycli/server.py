@@ -60,20 +60,21 @@ def main():
     
     args = parser.parse_args()
 
-    # Data directory
-    args.data_dir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=APP_NAME, roaming=True)
-
-    if not os.path.isdir(args.data_dir):
-        os.makedirs(args.data_dir)
+    # Config directory
+    config_dir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=APP_NAME, roaming=True)
+    if not os.path.isdir(config_dir):
+        os.makedirs(config_dir)
 
     # Configuration file
     config_file_changed = False
     configfile = configparser.ConfigParser()
     if not args.config_file:
-        args.config_file = os.path.join(args.data_dir, '{}.conf'.format(APP_NAME))
+        args.config_file = os.path.join(config_dir, '{}.conf'.format(APP_NAME))
     configfile.read(args.config_file)
     if not 'Default' in configfile:
         configfile['Default'] = {}
+
+    #TODO: dry (use a loop)
     # testnet
     if not args.testnet and 'testnet' in configfile['Default'] and configfile['Default'].getboolean('testnet'):
         args.testnet = True
@@ -86,40 +87,15 @@ def main():
     # force
     if not args.force and 'force' in configfile['Default'] and configfile['Default'].getboolean('force'):
         args.force = True
-
     # Database
     if not args.database_file and 'database-file' in configfile['Default'] and configfile['Default']['database-file']:
         args.database_file = configfile['Default']['database-file']
-    elif not args.database_file:
-        string = '{}.'.format(config.XCP_NAME.lower()) + str(config.VERSION_MAJOR)
-        if args.testnet:
-            string += '.testnet'
-        if args.testcoin:
-            string += '.testcoin'
-        args.database_file = os.path.join(args.data_dir, string + '.db')
-
     # Log
     if not args.log_file and 'log-file' in configfile['Default'] and configfile['Default']['log-file']:
         args.log_file = configfile['Default']['log-file']
-    else:
-        string = config.XCP_NAME.lower()
-        if args.testnet:
-            string += '.testnet'
-        if args.testcoin:
-            string += '.testcoin'
-        args.log_file = os.path.join(args.data_dir, string + '.log')
-
     # API Log
     if not args.api_log_file and 'api-log-file' in configfile['Default'] and configfile['Default']['api-log-file']:
         args.api_log_file = configfile['Default']['api-log-file']
-    else:
-        string = "api"
-        if args.testnet:
-            string += '.testnet'
-        if args.testcoin:
-            string += '.testcoin'
-        args.api_log_file = os.path.join(args.data_dir, string + '.log')
-
     # Backend
     if not args.backend_name and 'backend-name' in configfile['Default'] and configfile['Default']['backend-name']:
         args.backend_name = configfile['Default']['backend-name']
@@ -137,7 +113,6 @@ def main():
         args.backend_ssl_verify = configfile['Default']['backend-ssl-verify']
     if not args.backend_poll_interval and 'backend-poll-interval' in configfile['Default'] and configfile['Default']['backend-poll-interval']:
         args.backend_poll_interval = configfile['Default']['backend-poll-interval']
-    
     # RPC
     if not args.rpc_host and 'rpc-host' in configfile['Default'] and configfile['Default']['rpc-host']:
         args.rpc_host = configfile['Default']['rpc-host']
@@ -156,20 +131,20 @@ def main():
 
     # Configuration
     db = server.initialise(database_file=args.database_file, 
-                        log_file=args.log_file, api_log_file=args.api_log_file,
-                        testnet=args.testnet, testcoin=args.testcoin,
-                        backend_name=args.backend_name,
-                        backend_connect=args.backend_connect,
-                        backend_port=args.backend_port,
-                        backend_user=args.backend_user,
-                        backend_password=args.backend_password,
-                        backend_ssl=args.backend_ssl,
-                        backend_ssl_verify=args.backend_ssl_verify,
-                        backend_poll_interval=args.backend_poll_interval,
-                        rpc_host=args.rpc_host, rpc_port=args.rpc_port, rpc_user=args.rpc_user,
-                        rpc_password=args.rpc_password, rpc_allow_cors=args.rpc_allow_cors,
-                        force=args.force, verbose=args.verbose,
-                        broadcast_tx_mainnet=broadcast_tx_mainnet)
+                            log_file=args.log_file, api_log_file=args.api_log_file,
+                            testnet=args.testnet, testcoin=args.testcoin,
+                            backend_name=args.backend_name,
+                            backend_connect=args.backend_connect,
+                            backend_port=args.backend_port,
+                            backend_user=args.backend_user,
+                            backend_password=args.backend_password,
+                            backend_ssl=args.backend_ssl,
+                            backend_ssl_verify=args.backend_ssl_verify,
+                            backend_poll_interval=args.backend_poll_interval,
+                            rpc_host=args.rpc_host, rpc_port=args.rpc_port, rpc_user=args.rpc_user,
+                            rpc_password=args.rpc_password, rpc_allow_cors=args.rpc_allow_cors,
+                            force=args.force, verbose=args.verbose,
+                            broadcast_tx_mainnet=broadcast_tx_mainnet)
 
     # PARSING
     if args.action == 'reparse':
