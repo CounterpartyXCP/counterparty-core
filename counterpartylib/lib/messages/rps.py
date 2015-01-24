@@ -353,7 +353,7 @@ def expire (db, block_index):
     cursor = db.cursor()
 
     # Expire rps and give refunds for the quantity wager.
-    cursor.execute('''SELECT * FROM rps WHERE (status = ? AND expire_index < ?)''', ('open', block_index))
+    cursor.execute('''SELECT * FROM rps WHERE (status = ? AND expire_index <= ?)''', ('open', block_index))
     for rps in cursor.fetchall():
         cancel_rps(db, rps, 'expired', block_index)
 
@@ -369,7 +369,7 @@ def expire (db, block_index):
 
     # Expire rps matches
     expire_bindings = ('pending', 'pending and resolved', 'resolved and pending', block_index)
-    cursor.execute('''SELECT * FROM rps_matches WHERE (status IN (?, ?, ?) AND match_expire_index < ?)''', expire_bindings)
+    cursor.execute('''SELECT * FROM rps_matches WHERE (status IN (?, ?, ?) AND match_expire_index <= ?)''', expire_bindings)
     for rps_match in cursor.fetchall():
 
         new_rps_match_status = 'expired'

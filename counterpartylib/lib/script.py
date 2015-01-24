@@ -164,7 +164,7 @@ def pubkeyhash_array(address):
     """Return PubKeyHashes from an address."""
     signatures_required, pubs, signatures_possible = extract_array(address)
     if not all([is_pubkeyhash(pub) for pub in pubs]):
-        raise MultiSigAddressError('Multi‐signature address must use PubKeyHashes, not public keys.')
+        raise MultiSigAddressError('Invalid PubKeyHashes. Multi‐signature address must use PubKeyHashes, not public keys.')
     pubkeyhashes = pubs
     return pubkeyhashes
 
