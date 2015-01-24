@@ -53,7 +53,8 @@ if sys.argv[1] == 'py2exe':
         'zipfile': 'library/site-packages.zip',
         'options': {'py2exe': {'dist_dir': WIN_DIST_DIR}}
     })
-    shutil.rmtree(WIN_DIST_DIR)
+    if os.path.exists(WIN_DIST_DIR):
+        shutil.rmtree(WIN_DIST_DIR)
 
 setup(**setup_options)
 
