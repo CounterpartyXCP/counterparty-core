@@ -62,8 +62,7 @@ repository.
 * Quantities of indivisible assets are written as integers.
 * All other quantities, i.e. prices, odds, leverages, feed values and target
 values, fee multipliers, are represented internally as fractions, but printed
-to four decimal places. Call prices are stored as integers with six decimal
-places of precision.
+to four decimal places. 
 
 
 # Further Reading
