@@ -28,6 +28,7 @@ cd counterpartyd
 python3 setup.py install`
 ```
 
+
 # Usage
 
 ```
@@ -39,11 +40,6 @@ db = server.initialise(...)
 # start synchronisation with the blockchain and RPC server
 server.start_all(db)
 ```
-
-# Test suite
-
-The test suite is invoked with `$ py.test-3.4` in the `counterpartylib` directory of the
-repository.
 
 
 # Further Reading
