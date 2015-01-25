@@ -42,7 +42,12 @@ setup_options = {
     'zip_safe': False,
     'dependency_links': required_repos,
     'install_requires': required_packages,
-    'scripts': ['bin/counterparty-client', 'bin/counterparty-server']
+    'entry_points': {
+        'console_scripts': [
+            'counterparty-client = counterpartycli:client_main',
+            'counterparty-server = counterpartycli:server_main',
+        ]
+    }
 }
 
 
