@@ -3,13 +3,10 @@
 [![Coverage Status](https://coveralls.io/repos/CounterpartyXCP/counterpartyd/badge.png?branch=develop)](https://coveralls.io/r/CounterpartyXCP/counterpartyd?branch=develop)
 
 # Description
-`counterpartyd` is the reference implementation of the [Counterparty
-Protocol](https://github.com/CounterpartyXCP/Counterparty).
+`counterparty-lib` is the reference implementation of the [Counterparty Protocol](https://counterparty.io).
 
 
-# Dependencies
-* [Python 3](http://python.org)
-* Python 3 [packages](https://github.com/CounterpartyXCP/counterpartyd/blob/master/pip-requirements.txt)
+# Requirements
 * [Patched Bitcoin Core](https://github.com/btcdrak/bitcoin/releases) with the following options set:
 
 ```
@@ -23,24 +20,15 @@ rpctimeout=300
 ```
 
 
-# Versioning
-* Major version changes require a full (automatic) rebuild of the database.
-* Minor version changes require a(n automatic) database reparse.
-* All protocol changes are retroactive on testnet.
-
 # Installation
-
-`pip install counterparty-lib`
-
-or
 
 ```
 git clone https://github.com/CounterpartyXCP/counterpartyd.git
 cd counterpartyd
-python setup.py install`
+python3 setup.py install`
 ```
 
-# Example
+# Usage
 
 ```
 from counterpartylib import server
@@ -54,19 +42,10 @@ server.start_all(db)
 
 # Test suite
 
-The test suite is invoked with `$ py.test` in the `counterpartylib` directory of the
+The test suite is invoked with `$ py.test-3.4` in the `counterpartylib` directory of the
 repository.
-
-### Input and Output
-* Quantities of divisible assets are written to eight decimal places.
-* Quantities of indivisible assets are written as integers.
-* All other quantities, i.e. prices, odds, leverages, feed values and target
-values, fee multipliers, are represented internally as fractions, but printed
-to four decimal places. Call prices are stored as integers with six decimal
-places of precision.
 
 
 # Further Reading
 
-* [Official Documentation](http://counterparty.io/docs/)
-* [Wiki](https://github.com/CounterpartyXCP/Wiki/wiki)
+* [Official Project Documentation](http://counterparty.io/docs/)
