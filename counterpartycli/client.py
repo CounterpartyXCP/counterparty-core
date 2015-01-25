@@ -21,6 +21,7 @@ from counterpartycli import wallet
 from counterpartylib.lib import config
 from counterpartylib.lib import script
 from counterpartylib.lib.util import make_id, BET_TYPE_NAME, BET_TYPE_ID, dhash
+from counterpartylib.lib import log
 from counterpartylib.lib.log import isodt
 
 if os.name == 'nt':
@@ -272,6 +273,7 @@ def set_options(data_dir=None, config_file=None, testnet=False, testcoin=False,
         config_path = config_file
     else:
         config_path = os.path.join(config.DATA_DIR, '{}.conf'.format(APP_NAME))
+    logger.info('Loading configuration file: `{}`'.format(config_path))
     configfile.read(config_path)
     has_config = 'Default' in configfile
     #logger.debug("Config file: %s; Exists: %s" % (config_path, "Yes" if has_config else "No"))
@@ -648,25 +650,8 @@ def main():
 
     args = parser.parse_args()
 
-    # Console Logging
-    logger = logging.getLogger()    # Get root logger.
-    logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
-
-    console = logging.StreamHandler()
-    console.setLevel(logging.DEBUG if args.verbose else logging.INFO)
-    LOGFORMAT = '%(log_color)s[%(levelname)s] %(message)s%(reset)s'
-    LOGCOLORS = {'WARNING': 'yellow', 'ERROR': 'red', 'CRITICAL': 'red'}
-    formatter = ColoredFormatter(LOGFORMAT, log_colors=LOGCOLORS)
-    console.setFormatter(formatter)
-    logger.addHandler(console)
-
-    # Quieten noisy libraries.
-    requests_log = logging.getLogger("requests")
-    requests_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
-    requests_log.propagate = False
-    urllib3_log = logging.getLogger('urllib3')
-    urllib3_log.setLevel(logging.DEBUG if args.verbose else logging.WARNING)
-    urllib3_log.propagate = False
+    # Logging
+    log.set_up(False)
 
     # Convert.
     args.fee_per_kb = int(args.fee_per_kb * config.UNIT)

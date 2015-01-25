@@ -4,12 +4,16 @@ import os
 import argparse
 import configparser
 import appdirs
+import logging
 
 from counterpartylib import server
 from counterpartylib.lib import config
+from counterpartylib.lib import log
 
 APP_NAME = 'counterparty-server'
 APP_VERSION = '1.0.0'
+
+logger = logging.getLogger()
 
 def main():
     if os.name == 'nt':
@@ -60,16 +64,22 @@ def main():
     
     args = parser.parse_args()
 
+    # Logging
+    log.set_up(False)
+
     # Config directory
     config_dir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=APP_NAME, roaming=True)
     if not os.path.isdir(config_dir):
         os.makedirs(config_dir)
+
+    logger.info('Running v{} of {}.'.format(APP_VERSION, APP_NAME))
 
     # Configuration file
     config_file_changed = False
     configfile = configparser.ConfigParser()
     if not args.config_file:
         args.config_file = os.path.join(config_dir, '{}.conf'.format(APP_NAME))
+    logger.info('Loading configuration file: `{}`'.format(args.config_file))
     configfile.read(args.config_file)
     if not 'Default' in configfile:
         configfile['Default'] = {}
