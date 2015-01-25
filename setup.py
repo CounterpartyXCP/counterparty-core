@@ -18,7 +18,8 @@ required_packages = [
 ]
 
 required_repos = [
-    'https://github.com/CounterpartyXCP/counterpartyd/archive/develop.zip#egg=counterparty-lib-9.49.3'
+    'https://github.com/CounterpartyXCP/counterpartyd/archive/develop.zip#egg=counterparty-lib-9.49.3',
+    'https://github.com/petertodd/python-bitcoinlib/archive/c481254c623cc9a002187dc23263cce3e05f5754.zip#egg=python-bitcoinlib-0.3.0'
 ]
 
 setup_options = {
@@ -42,6 +43,7 @@ setup_options = {
     'zip_safe': False,
     'dependency_links': required_repos,
     'install_requires': required_packages,
+    'setup_requires': ['appdirs==1.4.0', 'counterparty-lib==9.49.3'],
     'entry_points': {
         'console_scripts': [
             'counterparty-client = counterpartycli:client_main',
@@ -93,17 +95,12 @@ if sys.argv[1] == 'install':
 
     old_appdir = appdirs.user_config_dir(appauthor='Counterparty', appname='counterpartyd', roaming=True)
     old_configfile = os.path.join(old_appdir, 'counterpartyd.conf')
-    old_database = os.path.join(old_appdir, 'counterpartyd.9.db')
-    old_database_testnet = os.path.join(old_appdir, 'counterpartyd.9.testnet.db')
 
     new_server_configdir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=counterpartycli.server.APP_NAME, roaming=True)
-    new_server_datadir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.XCP_NAME.lower(), roaming=True)
     new_client_configdir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=counterpartycli.client.APP_NAME, roaming=True)
 
     new_server_configfile = os.path.join(new_server_configdir, '{}.conf'.format(counterpartycli.server.APP_NAME,))
     new_client_configfile = os.path.join(new_client_configdir, '{}.conf'.format(counterpartycli.client.APP_NAME))
-    new_database = os.path.join(new_server_datadir, '{}.{}.db'.format(config.XCP_NAME.lower(), config.VERSION_MAJOR))
-    new_database_testnet = os.path.join(new_server_datadir, '{}.{}.testnet.db'.format(config.XCP_NAME.lower(), config.VERSION_MAJOR))
 
     # User have an old version of `counterpartyd`
     if os.path.exists(old_appdir):
@@ -122,17 +119,6 @@ if sys.argv[1] == 'install':
                 new_config = new_config.replace('jmcorgan', 'addrindex')
                 with open(new_server_configfile, 'w+') as f:
                     f.writelines(new_config)
-
-        # Move database
-        if not os.path.exists(new_server_datadir):
-            os.makedirs(new_server_datadir)
-            files_to_copy = {
-                old_database: new_database,
-                old_database_testnet: new_database_testnet
-            }
-            for src_file in files_to_copy:
-                if os.path.exists(src_file):
-                    shutil.copy(src_file, files_to_copy[src_file])
 
     # Still not have a `counterparty-server` configuration file
     if not os.path.exists(new_server_configfile):
