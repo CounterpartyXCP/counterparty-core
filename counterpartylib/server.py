@@ -85,7 +85,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     if database_file:
         config.DATABASE = database_file
     else:
-        raise ConfigurationError("Please specific a valid sqlite3 database file path")
+        raise ConfigurationError("Invalid SQLite3 database path")
 
     # Logs
     if log_file:
