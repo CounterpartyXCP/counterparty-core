@@ -61,7 +61,7 @@ required_packages = [
     'python-dateutil==2.2',
     'flask==0.10.1',
     'json-rpc==1.7',
-    'pytest==2.6.3',
+    'pytest==2.6.4',
     'pycoin==0.52',
     'requests==2.4.2',
     'Flask-HTTPAuth==2.3.0',
