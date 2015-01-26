@@ -5,8 +5,18 @@ import os, sys
 import shutil
 import ctypes.util
 
+
 if sys.argv[1] == 'py2exe':
     import py2exe
+    WIN_DIST_DIR = 'counterparty-cli-win32-{}'.format(setup_options['version'])
+    setup_options.update({
+        'console': setup_options['scripts'],
+        'zipfile': 'library/site-packages.zip',
+        'options': {'py2exe': {'dist_dir': WIN_DIST_DIR}}
+    })
+    if os.path.exists(WIN_DIST_DIR):
+        shutil.rmtree(WIN_DIST_DIR)
+
 
 required_packages = [
     'appdirs==1.4.0',
@@ -14,12 +24,7 @@ required_packages = [
     'python-dateutil==2.2',
     'requests==2.4.2',
     'colorlog==2.4.0',
-    'counterparty-lib==9.49.3'
-]
-
-required_repos = [
-    'https://github.com/CounterpartyXCP/counterpartyd/archive/develop.zip#egg=counterparty-lib-9.49.3',
-    'https://github.com/petertodd/python-bitcoinlib/archive/c481254c623cc9a002187dc23263cce3e05f5754.zip#egg=python-bitcoinlib-0.3.0'
+    'counterparty-lib>=9.49.3'
 ]
 
 setup_options = {
@@ -41,7 +46,6 @@ setup_options = {
     'provides': ['counterpartycli'],
     'packages': find_packages(),
     'zip_safe': False,
-    'dependency_links': required_repos,
     'install_requires': required_packages,
     'setup_requires': ['appdirs==1.4.0', 'counterparty-lib==9.49.3'],
     'entry_points': {
@@ -52,18 +56,8 @@ setup_options = {
     }
 }
 
-
-if sys.argv[1] == 'py2exe':
-    WIN_DIST_DIR = 'counterparty-cli-win32-{}'.format(setup_options['version'])
-    setup_options.update({
-        'console': setup_options['scripts'],
-        'zipfile': 'library/site-packages.zip',
-        'options': {'py2exe': {'dist_dir': WIN_DIST_DIR}}
-    })
-    if os.path.exists(WIN_DIST_DIR):
-        shutil.rmtree(WIN_DIST_DIR)
-
 setup(**setup_options)
+
 
 # tweak Windows distribution
 if sys.argv[1] == 'py2exe':
