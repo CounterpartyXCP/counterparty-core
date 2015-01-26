@@ -6,6 +6,9 @@ import shutil
 import ctypes.util
 
 
+CURRENT_VERSION = '1.0.0rc4'
+
+
 if sys.argv[1] == 'py2exe':
     import py2exe
     WIN_DIST_DIR = 'counterparty-cli-win32-{}'.format(setup_options['version'])
@@ -29,7 +32,7 @@ required_packages = [
 
 setup_options = {
     'name': 'counterparty-cli',
-    'version': '1.0.0',
+    'version': CURRENT_VERSION,
     'author': 'Counterparty Foundation',
     'author_email': 'support@counterparty.io',
     'maintainer': 'Adam Krellenstein',
@@ -42,12 +45,12 @@ setup_options = {
     'classifiers': [
       "Programming Language :: Python",
     ],
-    'download_url': 'https://github.com/CounterpartyXCP/counterparty-cli/releases/tag/v1.0.0-RC2',
+    'download_url': 'https://github.com/CounterpartyXCP/counterparty-cli/releases/tag/v' + CURRENT_VERSION,
     'provides': ['counterpartycli'],
     'packages': find_packages(),
     'zip_safe': False,
     'install_requires': required_packages,
-    'setup_requires': ['appdirs==1.4.0', 'counterparty-lib==9.49.3'],
+    'setup_requires': ['appdirs==1.4.0', 'counterparty-lib>=9.49.3'],
     'entry_points': {
         'console_scripts': [
             'counterparty-client = counterpartycli:client_main',
