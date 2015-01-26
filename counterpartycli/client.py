@@ -309,7 +309,7 @@ def set_options(data_dir=None, config_file=None, testnet=False, testcoin=False,
     if counterparty_rpc_port:
         config.COUNTERPARTY_RPC_PORT = counterparty_rpc_port
     elif has_config and 'counterparty-rpc-port' in configfile['Default'] and configfile['Default']['counterparty-rpc-port']:
-        config.COUNTERPARTY_RPC_PORT = configfile['Default']['backend-rpc-port']
+        config.COUNTERPARTY_RPC_PORT = configfile['Default']['counterparty-rpc-port']
     else:
         if config.TESTNET:
             config.COUNTERPARTY_RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET
@@ -318,9 +318,9 @@ def set_options(data_dir=None, config_file=None, testnet=False, testcoin=False,
     try:
         config.COUNTERPARTY_RPC_PORT = int(config.COUNTERPARTY_RPC_PORT)
         if not (int(config.COUNTERPARTY_RPC_PORT) > 1 and int(config.COUNTERPARTY_RPC_PORT) < 65535):
-            raise ConfigurationError('invalid backend API port number')
+            raise ConfigurationError('invalid RPC port number')
     except:
-        raise Exception("Please specific a valid port number backend-rpc-port configuration parameter")
+        raise Exception("Please specific a valid port number counterparty-rpc-port configuration parameter")
 
     # Counterparty server RPC user (Bitcoin Core)
     if counterparty_rpc_user:
