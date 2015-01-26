@@ -377,7 +377,7 @@ def reparse(testnet=True):
     memory_db = database.get_connection(read_only=False)
     initialise_db(memory_db)
 
-    config.DATA_DIR = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname='counterparty-server', roaming=True)
+    config.DATA_DIR = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.XCP_NAME.lower(), roaming=True)
     prod_db_path = os.path.join(config.DATA_DIR, '{}.{}{}.db'.format(config.XCP_NAME.lower(), str(config.VERSION_MAJOR), '.testnet' if testnet else ''))
     prod_db = apsw.Connection(prod_db_path)
     prod_db.setrowtrace(database.rowtracer)
