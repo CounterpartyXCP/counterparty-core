@@ -110,20 +110,14 @@ def get_btc_supply(normalize=False):
     return total_supply if normalize else int(total_supply * config.UNIT)
 
 def is_vout_spendable(vout, source):
-    # TODO: Support multi‐sig sources.
     source = script.make_canonical(source)
     scriptpubkey_hex = vout['scriptPubKey']['hex']
     c_scriptpubkey = bitcoinlib.core.CScript(bitcoinlib.core.x(scriptpubkey_hex))
     vout_address = script.scriptpubkey_to_address(c_scriptpubkey)
     if not vout_address:
         return False
-    if script.is_multisig(vout_address) and not script.is_multisig(source):
-        signatures_required, pubkeyhashes, signatures_possible = script.extract_array(vout_address)
-        if signatures_required == 1 and source in pubkeyhashes:
-            return True
-    else:
-        if vout_address == source:
-            return True
+    if vout_address == source:
+        return True
     return False
 
 def get_unspent_txouts(source, return_confirmed=False):
