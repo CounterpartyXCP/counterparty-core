@@ -156,7 +156,8 @@ if sys.argv[1] == 'install':
                         server_configfile['Default'][counterparty_key] = conf[bitcoind_key]
 
                 server_configfile['Default']['rpc-password'] = util.hexlify(util.dhash(os.urandom(16)))
-                os.makedirs(new_server_configdir)
+                if not os.path.exists(new_server_configdir):
+                    os.makedirs(new_server_configdir)
                 with open(new_server_configfile, 'w+') as fw:
                     server_configfile.write(fw)
 
@@ -166,7 +167,8 @@ if sys.argv[1] == 'install':
         server_configfile['Default'] = {}
         # generate a password
         server_configfile['Default']['rpc-password'] = util.hexlify(util.dhash(os.urandom(16)))
-        os.makedirs(new_server_configdir)
+        if not os.path.exists(new_server_configdir):
+            os.makedirs(new_server_configdir)
         with open(new_server_configfile, 'w+') as fw:
             server_configfile.write(fw)
 
@@ -196,6 +198,7 @@ if sys.argv[1] == 'install':
                 client_key = config_keys[server_key]
                 client_configfile['Default'][client_key] = server_configfile['Default'][server_key]
 
-        os.makedirs(new_client_configdir)
+        if not os.path.exists(new_client_configdir):
+            os.makedirs(new_client_configdir)
         with open(new_client_configfile, 'w+') as fw:
             client_configfile.write(fw)
