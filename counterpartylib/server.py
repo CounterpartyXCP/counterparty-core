@@ -301,7 +301,8 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
         config.BROADCAST_TX_MAINNET = 'bitcoind'
 
     # Set up logging.
-    log.set_up(verbose, logfile=config.LOG)
+    root_logger = logging.getLogger()    # Get root logger.
+    log.set_up(root_logger, verbose=verbose, logfile=config.LOG)
     # Log unhandled errors.
     def handle_exception(exc_type, exc_value, exc_traceback):
         logger.error("Unhandled Exception", exc_info=(exc_type, exc_value, exc_traceback))

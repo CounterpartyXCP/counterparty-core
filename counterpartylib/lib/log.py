@@ -15,8 +15,7 @@ from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
 
-def set_up(verbose=False, logfile=None):
-    logger = logging.getLogger()    # Get root logger.
+def set_up(logger, verbose=False, logfile=None):
     log_level = logging.DEBUG if verbose else logging.INFO
     logger.setLevel(log_level)
 
