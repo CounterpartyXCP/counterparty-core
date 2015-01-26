@@ -8,7 +8,7 @@ import sys
 import shutil
 import logging
 
-CURRENT_VERSION = '9.49.4rc3'
+CURRENT_VERSION = '9.49.4rc4'
 
 # NOTE: Why we don’t use the the PyPi package (https://pypi.python.org/pypi/apsw/3.8.5-r1)
 """PLEASE NOTE Unfortunately a version of apsw will generally only work with a
