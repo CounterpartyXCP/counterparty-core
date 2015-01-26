@@ -1,17 +1,18 @@
 **@adamkrellenstein:**
 
 - Quality Assurance
-- Update ``CHANGELOG.md``
-- Update ``lib.config.py``: ``VERSION_*``
-- Update ``protocol_changes.json`` (if necessary)
+- Update `CHANGELOG.md`
+- Update `lib.config.py`: `VERSION_*`
+- Update `protocol_changes.json` (if necessary)
+- Update `setup.py`
 - Update test suite (as necessary)
 - Run test suite
 - Update documentation (as appropriate).
 - Tag and Sign Release
-- Merge branch into both ``master`` and ``develop``.
-- Rebase ``gh-pages`` to ``master``
+- Merge branch into both `master` and `develop`
+- Rebase `gh-pages` to `master`
 - Write [Release Notes](https://github.com/CounterpartyXCP/counterpartyd/releases)
-- Upload package to PyPi
+- Upload (signed) package to PyPi with `twine`
 
 **@ivanazuber:**:
 

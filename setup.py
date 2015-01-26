@@ -8,6 +8,8 @@ import sys
 import shutil
 import logging
 
+CURRENT_VERSION = '9.49.4rc3'
+
 def install_apsw():
     try:
         import apsw
@@ -76,20 +78,20 @@ required_packages = [
 
 setup_options = {
     'name': 'counterparty-lib',
-    'version': '9.49.4rc3',
+    'version': CURRENT_VERSION,
     'author': 'Counterparty Foundation',
     'author_email': 'support@counterparty.io',
     'maintainer': 'Adam Krellenstein',
     'maintainer_email': 'adamk@counterparty.io',
     'url': 'http://counterparty.io',
     'license': 'MIT',
-    'description': 'Reference implementation of the Counterparty protocol',
+    'description': 'Counterparty Protocol Reference Implementation',
     'long_description': '',
     'keywords': 'counterparty, bitcoin',
     'classifiers': [
       "Programming Language :: Python",
     ],
-    'download_url': 'https://github.com/CounterpartyXCP/counterpartyd/releases/tag/v9.49.3',
+    'download_url': 'https://github.com/CounterpartyXCP/counterpartyd/releases/tag/v' + CURRENT_VERSION,
     'provides': ['counterpartylib'],
     'packages': find_packages(),
     'zip_safe': False,
