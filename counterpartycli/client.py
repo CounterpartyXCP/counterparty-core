@@ -651,7 +651,7 @@ def main():
     args = parser.parse_args()
 
     # Logging
-    log.set_up(False)
+    log.set_up(logger)
 
     # Convert.
     args.fee_per_kb = int(args.fee_per_kb * config.UNIT)

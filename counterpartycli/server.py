@@ -13,7 +13,7 @@ from counterpartylib.lib import log
 APP_NAME = 'counterparty-server'
 APP_VERSION = '1.0.0'
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)                                            
 
 def main():
     if os.name == 'nt':
@@ -65,7 +65,7 @@ def main():
     args = parser.parse_args()
 
     # Logging
-    log.set_up(False)
+    log.set_up(logger)
 
     # Config directory
     config_dir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=APP_NAME, roaming=True)
