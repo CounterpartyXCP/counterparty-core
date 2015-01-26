@@ -63,7 +63,7 @@ required_packages = [
     'python-dateutil==2.2',
     'flask==0.10.1',
     'json-rpc==1.7',
-    'pytest==2.6.3',
+    'pytest==2.6.4',
     'pycoin==0.52',
     'requests==2.4.2',
     'Flask-HTTPAuth==2.3.0',
@@ -96,6 +96,7 @@ setup_options = {
     'packages': find_packages(),
     'zip_safe': False,
     'install_requires': required_packages,
+    'setup_requires': ['appdirs==1.4.0'],
     'include_package_data': True
 }
 
@@ -110,3 +111,31 @@ else:
 To complete the installation you have to install:
 - APSW: https://github.com/rogerbinns/apsw/releases
 - Serpent: https://github.com/ethereum/serpent''')
+
+if sys.argv[1] == 'install':
+    # Move database from old to new default data directory
+    import appdirs
+    from counterpartylib.lib import config
+
+    old_datadir = appdirs.user_config_dir(appauthor='Counterparty', appname='counterpartyd', roaming=True)
+    old_database = os.path.join(old_datadir, 'counterpartyd.9.db')
+    old_database_testnet = os.path.join(old_datadir, 'counterpartyd.9.testnet.db')
+
+    new_datadir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.XCP_NAME.lower(), roaming=True)
+    new_database = os.path.join(new_datadir, '{}.{}.db'.format(config.XCP_NAME.lower(), config.VERSION_MAJOR))
+    new_database_testnet = os.path.join(new_datadir, '{}.{}.testnet.db'.format(config.XCP_NAME.lower(), config.VERSION_MAJOR))
+
+    # User have an old version of `counterpartyd`
+    if os.path.exists(old_datadir):
+        # Move database
+        if not os.path.exists(new_datadir):
+            os.makedirs(new_datadir)
+            files_to_copy = {
+                old_database: new_database,
+                old_database_testnet: new_database_testnet
+            }
+            for src_file in files_to_copy:
+                if os.path.exists(src_file):
+                    dest_file = files_to_copy[src_file]
+                    logging.warning('Copy {} to {}'.format(src_file, dest_file))
+                    shutil.copy(src_file, dest_file)
