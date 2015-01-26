@@ -93,7 +93,6 @@ setup_options = {
     'provides': ['counterpartylib'],
     'packages': find_packages(),
     'zip_safe': False,
-    'dependency_links': required_repos,
     'install_requires': required_packages,
     'include_package_data': True
 }
