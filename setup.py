@@ -71,11 +71,7 @@ required_packages = [
     'pysha3==0.3',
     'pytest-cov==1.8.0',
     'colorlog==2.4.0',
-    'python-bitcoinlib==0.3.0'
-]
-
-required_repos = [
-    'https://github.com/petertodd/python-bitcoinlib/archive/c481254c623cc9a002187dc23263cce3e05f5754.zip#egg=python-bitcoinlib-0.3.0'
+    'python-bitcoinlib==0.2.1'
 ]
 
 setup_options = {
