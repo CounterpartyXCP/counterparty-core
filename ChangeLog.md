@@ -1,6 +1,4 @@
 ## Client Versions ##
-* v9.49.5 (???)
-	* automatically spend 1‐of‐`N` multisig outputs
 * v9.49.4 (???)
 	* reconceived this package as a libary
 	* moved CLI to new repository: `counterparty-cli`
