@@ -8,6 +8,8 @@ import sys
 import shutil
 import logging
 
+CURRENT_VERSION = '9.49.4rc3'
+
 def install_apsw():
     try:
         import apsw
@@ -71,33 +73,28 @@ required_packages = [
     'pysha3==0.3',
     'pytest-cov==1.8.0',
     'colorlog==2.4.0',
-    'python-bitcoinlib==0.3.0'
-]
-
-required_repos = [
-    'https://github.com/petertodd/python-bitcoinlib/archive/c481254c623cc9a002187dc23263cce3e05f5754.zip#egg=python-bitcoinlib-0.3.0'
+    'python-bitcoinlib==0.2.1'
 ]
 
 setup_options = {
     'name': 'counterparty-lib',
-    'version': '9.49.3',
+    'version': CURRENT_VERSION,
     'author': 'Counterparty Foundation',
     'author_email': 'support@counterparty.io',
     'maintainer': 'Adam Krellenstein',
     'maintainer_email': 'adamk@counterparty.io',
     'url': 'http://counterparty.io',
     'license': 'MIT',
-    'description': 'Reference implementation of the Counterparty protocol',
+    'description': 'Counterparty Protocol Reference Implementation',
     'long_description': '',
     'keywords': 'counterparty, bitcoin',
     'classifiers': [
       "Programming Language :: Python",
     ],
-    'download_url': 'https://github.com/CounterpartyXCP/counterpartyd/releases/tag/v9.49.3',
+    'download_url': 'https://github.com/CounterpartyXCP/counterpartyd/releases/tag/v' + CURRENT_VERSION,
     'provides': ['counterpartylib'],
     'packages': find_packages(),
     'zip_safe': False,
-    'dependency_links': required_repos,
     'install_requires': required_packages,
     'setup_requires': ['appdirs==1.4.0'],
     'include_package_data': True
