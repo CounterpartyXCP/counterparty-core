@@ -57,7 +57,7 @@ def rpc(url, method, params=None, ssl_verify=False):
     if response == None:
         raise RPCError('Cannot communicate with {}.'.format(url))
     elif response.status_code not in (200, 500):
-        raise RPCError(str(response.status_code) + ' ' + response.reason)
+        raise RPCError(str(response.status_code) + ' ' + response.reason + ' ' + response.text)
 
     # Return result, with error handling.
     response_json = response.json()
