@@ -2,6 +2,46 @@
 [![Build Status](https://circleci.com/gh/CounterpartyXCP/counterpartyd.svg?&style=shield)](https://circleci.com/gh/CounterpartyXCP/counterpartyd)
 [![Coverage Status](https://coveralls.io/repos/CounterpartyXCP/counterpartyd/badge.png?branch=develop)](https://coveralls.io/r/CounterpartyXCP/counterpartyd?branch=develop)
 
-`counterparty-lib` is the reference implementation of the **Counterparty Protocol**.
+# Description
+`counterparty-lib` is the reference implementation of the [Counterparty Protocol](https://counterparty.io).
 
-All project documentation is available on the Counterparty [website](http://counterparty.io/docs/).
+
+# Requirements
+* [Patched Bitcoin Core](https://github.com/btcdrak/bitcoin/releases) with the following options set:
+
+```
+rpcuser=bitcoinrpc
+rpcpassword=$PASSWORD
+txindex=1
+server=1
+addrindex=1
+rpcthreads=1000
+rpctimeout=300
+```
+
+
+# Installation
+
+```
+git clone https://github.com/CounterpartyXCP/counterpartyd.git
+cd counterpartyd
+python3 setup.py install`
+```
+
+
+# Usage
+
+```
+from counterpartylib import server
+
+# initialise the server
+db = server.initialise(...)
+
+# start synchronisation with the blockchain and RPC server
+server.start_all(db)
+```
+
+
+# Further Reading
+
+* [Official Project Documentation](http://counterparty.io/docs/)

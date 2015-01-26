@@ -81,10 +81,22 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
                 force=False, verbose=False,
                 broadcast_tx_mainnet=None):
 
-     # Data directory
-    config.DATA_DIR = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.XCP_NAME.lower(), roaming=True)
-    if not os.path.isdir(config.DATA_DIR):
-        os.makedirs(config.DATA_DIR)
+    # Database
+    if database_file:
+        config.DATABASE = database_file
+    else:
+        raise ConfigurationError("Invalid SQLite3 database path")
+
+    # Logs
+    if log_file:
+        config.LOG = log_file
+    else:
+        config.LOG = None
+
+    if api_log_file:
+        config.API_LOG = api_log_file
+    else:
+        config.API_LOG = None
 
     # testnet
     if testnet:
@@ -97,37 +109,6 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
         config.TESTCOIN = testcoin
     else:
         config.TESTCOIN = False
-
-    network = ''
-    if config.TESTNET:
-        network += '.testnet'
-    if config.TESTCOIN:
-        network += '.testcoin'
-
-    # Database
-    if database_file:
-        config.DATABASE = database_file
-    else:
-        filename = '{}.{}{}.db'.format(config.XCP_NAME.lower(), config.VERSION_MAJOR, network)
-        config.DATABASE = os.path.join(config.DATA_DIR, filename)
-
-    # Log directory
-    config.LOG_DIR = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.XCP_NAME.lower())
-    if not os.path.isdir(config.LOG_DIR):
-        os.makedirs(config.LOG_DIR)
-
-    # Log
-    if log_file:
-        config.LOG = log_file
-    else:
-        filename = '{}{}.log'.format(config.XCP_NAME.lower(), network)
-        config.LOG = os.path.join(config.LOG_DIR, filename)
-
-    if api_log_file:
-        config.API_LOG = api_log_file
-    else:
-        filename = '{}{}.api.log'.format(config.XCP_NAME.lower(), network)
-        config.API_LOG = os.path.join(config.LOG_DIR, filename)
 
     ##############
     # THINGS WE CONNECT TO
