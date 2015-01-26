@@ -10,6 +10,14 @@ import logging
 
 CURRENT_VERSION = '9.49.4rc3'
 
+# NOTE: Why we don’t use the the PyPi package (https://pypi.python.org/pypi/apsw/3.8.5-r1)
+"""PLEASE NOTE Unfortunately a version of apsw will generally only work with a
+specific version of SQLite. There are no provisions to detect SQLite version
+and expose an appropriate API. Be mindful of the version of SQLite you have
+installed. Also be mindful of updates to apsw. If you need a specific version
+of apsw or need to build against a specific version of SQLite then please
+follow these instuctions ->
+http://rogerbinns.github.io/apsw/build.html#recommended"""
 def install_apsw():
     try:
         import apsw
