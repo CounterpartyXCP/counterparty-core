@@ -76,7 +76,7 @@ required_packages = [
 
 setup_options = {
     'name': 'counterparty-lib',
-    'version': '9.49.3',
+    'version': '9.49.4rc3',
     'author': 'Counterparty Foundation',
     'author_email': 'support@counterparty.io',
     'maintainer': 'Adam Krellenstein',
