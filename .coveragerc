@@ -4,4 +4,5 @@ branch = True
 [report]
 omit =
 	test/*
+	lib/util_windows.py
 precision = 2
