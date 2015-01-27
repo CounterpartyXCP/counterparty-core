@@ -245,7 +245,7 @@ def cli(method, params, unsigned):
         tx_hash = util.api('broadcast_tx', {'signed_tx_hex': signed_tx_hex})
         logger.info('Hash of transaction (broadcasted): {}'.format(tx_hash))
 
-def set_options(data_dir=None, config_file=None, testnet=False, testcoin=False,
+def set_options(config_file=None, testnet=False, testcoin=False,
                 counterparty_rpc_connect=None, counterparty_rpc_port=None, 
                 counterparty_rpc_user=None, counterparty_rpc_password=None,
                 counterparty_rpc_ssl=False, counterparty_rpc_ssl_verify=True,
@@ -259,24 +259,20 @@ def set_options(data_dir=None, config_file=None, testnet=False, testcoin=False,
 
     logger.info('Running v{} of {}.'.format(APP_VERSION, APP_NAME))
 
-    # Data directory
-    if not data_dir:
-        config.DATA_DIR = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=APP_NAME, roaming=True)
-    else:
-        config.DATA_DIR = os.path.expanduser(data_dir)
-    if not os.path.isdir(config.DATA_DIR):
-        os.makedirs(config.DATA_DIR)
+    # Config directory
+    config_dir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+    if not os.path.isdir(config_dir):
+        os.makedirs(config_dir)
 
     # Configuration file
+    config_file_changed = False
     configfile = configparser.ConfigParser()
-    if config_file:
-        config_path = config_file
-    else:
-        config_path = os.path.join(config.DATA_DIR, '{}.conf'.format(APP_NAME))
-    logger.info('Loading configuration file: `{}`'.format(config_path))
-    configfile.read(config_path)
-    has_config = 'Default' in configfile
-    #logger.debug("Config file: %s; Exists: %s" % (config_path, "Yes" if has_config else "No"))
+    if not args.config_file:
+        args.config_file = os.path.join(config_dir, 'client.conf')
+    logger.info('Loading configuration file: `{}`'.format(args.config_file))
+    configfile.read(args.config_file)
+    if not 'Default' in configfile:
+        configfile['Default'] = {}
 
     # testnet
     if testnet:
@@ -506,7 +502,6 @@ def main():
     parser.add_argument('--op-return-value', type=D, default=D(config.DEFAULT_OP_RETURN_VALUE / config.UNIT), help='value for OP_RETURN outputs, in {}'.format(config.BTC))
     parser.add_argument('--unsigned', action='store_true', help='print out unsigned hex of transaction; do not sign or broadcast')
 
-    parser.add_argument('--data-dir', help='the directory in which to keep the database, config file and log file, by default')
     parser.add_argument('--config-file', help='the location of the configuration file')
 
     parser.add_argument('--counterparty-rpc-connect', help='the hostname or IP of the counterparty JSON-RPC server')
@@ -660,7 +655,7 @@ def main():
     args.op_return_value = int(args.op_return_value * config.UNIT)
 
     # Configuration
-    set_options(data_dir=args.data_dir, config_file=args.config_file, testnet=args.testnet, testcoin=args.testcoin,
+    set_options(config_file=args.config_file, testnet=args.testnet, testcoin=args.testcoin,
                 counterparty_rpc_connect=args.counterparty_rpc_connect, counterparty_rpc_port=args.counterparty_rpc_port,
                 counterparty_rpc_user=args.counterparty_rpc_user, counterparty_rpc_password=args.counterparty_rpc_password,
                 counterparty_rpc_ssl=args.counterparty_rpc_ssl, counterparty_rpc_ssl_verify=args.counterparty_rpc_ssl_verify,

@@ -45,9 +45,9 @@ def main():
     parser.add_argument('--backend-poll-interval', type=float, help='poll interval, in seconds (default: 2.0)')
 
     parser.add_argument('--rpc-host', help='the IP of the interface to bind to for providing JSON-RPC API access (0.0.0.0 for all interfaces)')
-    parser.add_argument('--rpc-port', type=int, help='port on which to provide the {} JSON-RPC API'.format(APP_NAME))
-    parser.add_argument('--rpc-user', help='required username to use the {} JSON-RPC API (via HTTP basic auth)'.format(APP_NAME))
-    parser.add_argument('--rpc-password', help='required password (for rpc-user) to use the {} JSON-RPC API (via HTTP basic auth)'.format(APP_NAME))
+    parser.add_argument('--rpc-port', type=int, help='port on which to provide the {} JSON-RPC API'.format(config.APP_NAME))
+    parser.add_argument('--rpc-user', help='required username to use the {} JSON-RPC API (via HTTP basic auth)'.format(config.APP_NAME))
+    parser.add_argument('--rpc-password', help='required password (for rpc-user) to use the {} JSON-RPC API (via HTTP basic auth)'.format(config.APP_NAME))
     parser.add_argument('--rpc-allow-cors', action='store_true', default=True, help='Allow ajax cross domain request')
 
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
@@ -68,7 +68,7 @@ def main():
     log.set_up(logger)
 
     # Config directory
-    config_dir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=APP_NAME, roaming=True)
+    config_dir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
     if not os.path.isdir(config_dir):
         os.makedirs(config_dir)
 
@@ -78,7 +78,7 @@ def main():
     config_file_changed = False
     configfile = configparser.ConfigParser()
     if not args.config_file:
-        args.config_file = os.path.join(config_dir, '{}.conf'.format(APP_NAME))
+        args.config_file = os.path.join(config_dir, 'server.conf')
     logger.info('Loading configuration file: `{}`'.format(args.config_file))
     configfile.read(args.config_file)
     if not 'Default' in configfile:

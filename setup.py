@@ -104,11 +104,11 @@ if sys.argv[1] == 'install':
     old_appdir = appdirs.user_config_dir(appauthor='Counterparty', appname='counterpartyd', roaming=True)
     old_configfile = os.path.join(old_appdir, 'counterpartyd.conf')
 
-    new_server_configdir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=counterpartycli.server.APP_NAME, roaming=True)
-    new_client_configdir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=counterpartycli.client.APP_NAME, roaming=True)
+    new_server_configdir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+    new_client_configdir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
 
-    new_server_configfile = os.path.join(new_server_configdir, '{}.conf'.format(counterpartycli.server.APP_NAME,))
-    new_client_configfile = os.path.join(new_client_configdir, '{}.conf'.format(counterpartycli.client.APP_NAME))
+    new_server_configfile = os.path.join(new_server_configdir, 'server.conf')
+    new_client_configfile = os.path.join(new_client_configdir, 'client.conf')
 
     # User have an old version of `counterpartyd`
     if os.path.exists(old_appdir):
