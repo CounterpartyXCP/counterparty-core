@@ -27,7 +27,7 @@ required_packages = [
     'python-dateutil==2.2',
     'requests==2.4.2',
     'colorlog==2.4.0',
-    'counterparty-lib>=9.49.3'
+    'counterparty-lib>=9.49.4rc1'
 ]
 
 setup_options = {
@@ -61,7 +61,7 @@ setup_options = {
     'packages': find_packages(),
     'zip_safe': False,
     'install_requires': required_packages,
-    'setup_requires': ['appdirs==1.4.0', 'counterparty-lib>=9.49.3'],
+    'setup_requires': ['appdirs==1.4.0', 'counterparty-lib>=9.49.4rc1'],
     'entry_points': {
         'console_scripts': [
             'counterparty-client = counterpartycli:client_main',
