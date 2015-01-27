@@ -13,6 +13,9 @@
 - Rebase `gh-pages` to `master`
 - Write [Release Notes](https://github.com/CounterpartyXCP/counterpartyd/releases)
 - Upload (signed) package to PyPi with `twine`
+	* `sudo python3 setup.py sdist build`
+	* `sudo python3 setup.py bdist_wheel build`
+	* `twine upload -s dist/*`
 
 **@ivanazuber:**:
 
