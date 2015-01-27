@@ -2,7 +2,7 @@
 from setuptools.command.install import install as _install
 from setuptools import setup, find_packages, Command
 import os
-import zipfile, tarfile
+import zipfile
 import urllib.request
 import sys
 import shutil
@@ -121,65 +121,14 @@ class move_old_db(Command):
                         dest_file = files_to_copy[src_file]
                         print('Copy {} to {}'.format(src_file, dest_file))
                         shutil.copy(src_file, dest_file)
-
-class bootstrap(Command):
-    description = "Download bootstrap database"
-    user_options = []
-    boolean_options = []
-
-    def initialize_options(self):
-        self.no_confirmation = False
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        import appdirs
-        from counterpartylib.lib import config
-
-        bootstrap_url = 'https://s3.amazonaws.com/counterparty-bootstrap/counterpartyd-db.latest.tar.gz'
-        bootstrap_url_testnet = 'https://s3.amazonaws.com/counterparty-bootstrap/counterpartyd-testnet-db.latest.tar.gz'
-
-        data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
-        database = os.path.join(data_dir, '{}.{}.db'.format(config.APP_NAME, config.VERSION_MAJOR))
-        database_testnet = os.path.join(data_dir, '{}.{}.testnet.db'.format(config.APP_NAME, config.VERSION_MAJOR))
-
-        if not os.path.exists(data_dir):
-            os.makedirs(data_dir)
-
-        print("downloading mainnet database from {}.".format(bootstrap_url))
-        urllib.request.urlretrieve(bootstrap_url, 'counterpartyd-db.latest.tar.gz')
-        print("extracting.")
-        with tarfile.open('counterpartyd-db.latest.tar.gz', 'r:gz') as tar_file:
-            tar_file.extractall()
-        print('Copy {} to {}'.format('counterpartyd.9.db', database))
-        shutil.copy('counterpartyd.9.db', database)
-
-        print("downloading testnet database from {}.".format(bootstrap_url_testnet))
-        urllib.request.urlretrieve(bootstrap_url_testnet, 'counterpartyd-testnet-db.latest.tar.gz')
-        print("extracting.")
-        with tarfile.open('counterpartyd-testnet-db.latest.tar.gz', 'r:gz') as tar_file:
-            tar_file.extractall()
-        print('Copy {} to {}'.format('counterpartyd.9.testnet.db', database_testnet))
-        shutil.copy('counterpartyd.9.testnet.db', database_testnet)
              
 class install(_install):
     description = "Install counterparty-cli and dependencies"
-    user_options = _install.user_options + [
-        ("bootstrap", None, "Download bootstrap database")
-    ]
-    boolean_options = _install.boolean_options + ['bootstrap']
-
-    def initialize_options(self):
-        self.bootstrap = False
-        self.no_bootstrap = False
-        _install.initialize_options(self)
 
     def run(self):
         _install.do_egg_install(self)
         self.run_command('install_apsw')
         self.run_command('install_serpent')
-        if self.bootstrap:
-            self.run_command('bootstrap')
         self.run_command('move_old_db')
 
 required_packages = [
@@ -235,7 +184,6 @@ setup_options = {
     'include_package_data': True,
     'cmdclass': {
         'install': install,
-        'bootstrap': bootstrap,
         'move_old_db': move_old_db,
         'install_apsw': install_apsw,
         'install_serpent': install_serpent

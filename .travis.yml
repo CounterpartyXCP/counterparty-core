@@ -2,7 +2,7 @@ language: python
 python:
 - "3.4"
 install:
-- python setup.py install --no-bootstrap
+- python setup.py install
 - pip install python-coveralls --use-mirrors
 script: cd counterpartylib; py.test --skiptestbook=all --cov-config=../.coveragerc --cov-report=term-missing --cov=./
 notifications:
