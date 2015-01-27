@@ -170,8 +170,8 @@ class download_bootstrap_db(Command):
         print("extracting.")
         with tarfile.open('counterpartyd-testnet-db.latest.tar.gz', 'r:gz') as tar_file:
             tar_file.extractall()
-        print('Copy {} to {}'.format('counterpartyd.9.testnet.db', database))
-        shutil.copy('counterpartyd.9.testnet.db', database)
+        print('Copy {} to {}'.format('counterpartyd.9.testnet.db', database_testnet))
+        shutil.copy('counterpartyd.9.testnet.db', database_testnet)
 
     def run(self):
         if self.yes:
