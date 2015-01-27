@@ -13,36 +13,33 @@
 # Requirements
 * [Patched Bitcoin Core](https://github.com/btcdrak/bitcoin/releases) with the following options set:
 
-```
-rpcuser=bitcoinrpc
-rpcpassword=$PASSWORD
-txindex=1
-server=1
-addrindex=1
-rpcthreads=1000
-rpctimeout=300
-```
+	```
+	rpcuser=bitcoinrpc
+	rpcpassword=<password>
+	server=1
+	txindex=1
+	addrindex=1
+	rpcthreads=1000
+	rpctimeout=300
+	```
 
 
 # Installation
 
 ```
-git clone https://github.com/CounterpartyXCP/counterpartyd.git
-cd counterpartyd
-python3 setup.py install`
+$ git clone https://github.com/CounterpartyXCP/counterpartyd.git
+$ cd counterpartyd
+$ python3 setup.py install
 ```
 
 
 # Usage
 
 ```
-from counterpartylib import server
-
-# initialise the server
-db = server.initialise(...)
-
-# start synchronisation with the blockchain and RPC server
-server.start_all(db)
+$ python3
+>>> from counterpartylib import server
+>>> db = server.initialise(<options>)
+>>> server.start_all(db)
 ```
 
 
