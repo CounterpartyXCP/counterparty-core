@@ -103,9 +103,9 @@ class move_old_db(Command):
         old_database = os.path.join(old_data_dir, 'counterpartyd.9.db')
         old_database_testnet = os.path.join(old_data_dir, 'counterpartyd.9.testnet.db')
 
-        new_data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.XCP_NAME.lower(), roaming=True)
-        new_database = os.path.join(new_data_dir, '{}.{}.db'.format(config.XCP_NAME.lower(), config.VERSION_MAJOR))
-        new_database_testnet = os.path.join(new_data_dir, '{}.{}.testnet.db'.format(config.XCP_NAME.lower(), config.VERSION_MAJOR))
+        new_data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+        new_database = os.path.join(new_data_dir, '{}.{}.db'.format(config.APP_NAME, config.VERSION_MAJOR))
+        new_database_testnet = os.path.join(new_data_dir, '{}.{}.testnet.db'.format(config.APP_NAME, config.VERSION_MAJOR))
 
         # User have an old version of `counterpartyd`
         if os.path.exists(old_data_dir):
@@ -139,9 +139,9 @@ class bootstrap(Command):
         bootstrap_url = 'https://s3.amazonaws.com/counterparty-bootstrap/counterpartyd-db.latest.tar.gz'
         bootstrap_url_testnet = 'https://s3.amazonaws.com/counterparty-bootstrap/counterpartyd-testnet-db.latest.tar.gz'
 
-        data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.XCP_NAME.lower(), roaming=True)
-        database = os.path.join(data_dir, '{}.{}.db'.format(config.XCP_NAME.lower(), config.VERSION_MAJOR))
-        database_testnet = os.path.join(data_dir, '{}.{}.testnet.db'.format(config.XCP_NAME.lower(), config.VERSION_MAJOR))
+        data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+        database = os.path.join(data_dir, '{}.{}.db'.format(config.APP_NAME, config.VERSION_MAJOR))
+        database_testnet = os.path.join(data_dir, '{}.{}.testnet.db'.format(config.APP_NAME, config.VERSION_MAJOR))
 
         if not os.path.exists(data_dir):
             os.makedirs(data_dir)
