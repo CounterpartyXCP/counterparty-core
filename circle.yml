@@ -1,6 +1,6 @@
 dependencies:
     override:
-        - python setup.py download_bootstrap_db --yes install
+        - python setup.py install --bootstrap
 test:
     override:
         - cd counterpartylib; py.test --verbose --capture=no --cov-config=../.coveragerc --cov-report=term-missing --cov=./

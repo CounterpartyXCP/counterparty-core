@@ -18,8 +18,8 @@ of apsw or need to build against a specific version of SQLite then please
 follow these instuctions ->
 http://rogerbinns.github.io/apsw/build.html#recommended"""
 class install_apsw(Command):
-    description="Install APSW 3.8.7.3-r1 with the appropriate version of SQLite"
-    user_options=[]
+    description = "Install APSW 3.8.7.3-r1 with the appropriate version of SQLite"
+    user_options = []
 
     def initialize_options(self):
         pass
@@ -61,8 +61,8 @@ class install_apsw(Command):
         os.remove('apsw-3.8.7.3-r1.zip')
 
 class install_serpent(Command):
-    description="Install Ethereum Serpent"
-    user_options=[]
+    description = "Install Ethereum Serpent"
+    user_options = []
 
     def initialize_options(self):
         pass
@@ -93,8 +93,8 @@ class install_serpent(Command):
         os.remove('serpent.zip')
 
 class move_old_db(Command):
-    description="Move database from old to new default data directory"
-    user_options=[]
+    description = "Move database from old to new default data directory"
+    user_options = []
 
     def initialize_options(self):
         pass
@@ -128,23 +128,17 @@ class move_old_db(Command):
                         print('Copy {} to {}'.format(src_file, dest_file))
                         shutil.copy(src_file, dest_file)
 
-class download_bootstrap_db(Command):    
-    description="Download bootstrap database"
-    user_options=[
-        ("yes", None, "Download bootstrap database"),
-        ("no", None, "Don't download bootstrap database"),
-        ("ask", None, "Ask to download bootstrap database")
+class bootstrap(Command):
+    description = "Download bootstrap database"
+    user_options = [
+        ("no-confirmation", None, "Download bootstrap database")
     ]
-    boolean_options=['yes', 'no', 'ask']
+    boolean_options = ['no-confirmation']
 
     def initialize_options(self):
-        self.yes = False
-        self.no = False
-        self.ask = True
-
+        self.no_confirmation = False
     def finalize_options(self):
-        if self.yes or self.no:
-            self.ask = False
+        pass
 
     def download(self):
         import appdirs
@@ -174,18 +168,36 @@ class download_bootstrap_db(Command):
         shutil.copy('counterpartyd.9.testnet.db', database_testnet)
 
     def run(self):
-        if self.yes:
+        if self.no_confirmation:
             self.download()
-        elif self.ask:
-            if input('Do you want to download the Counterparty database from https://s3.amazonaws.com/counterparty-bootstrap/? (y/N) : ').lower() == 'y':
-                self.download()
+        elif input('Do you want to download the Counterparty database from https://s3.amazonaws.com/counterparty-bootstrap/? (y/N) : ').lower() == 'y':
+            self.download()
              
 class install(_install):
+    description = "Install counterparty-cli and dependencies"
+    user_options = _install.user_options + [
+        ("bootstrap", None, "Download bootstrap database"),
+        ("no-bootstrap", None, "Don't download bootstrap database")
+    ]
+    boolean_options = _install.boolean_options + ['bootstrap', 'no-bootstrap']
+
+    def initialize_options(self):
+        self.bootstrap = False
+        self.no_bootstrap = False
+        _install.initialize_options(self)
+
     def run(self):
         _install.do_egg_install(self)
         self.run_command('install_apsw')
         self.run_command('install_serpent')
-        self.run_command('download_bootstrap_db')
+
+        if self.bootstrap:
+            cmd_obj = self.distribution.get_command_obj('bootstrap')
+            cmd_obj.no_confirmation = True
+            self.run_command('bootstrap')
+        elif not self.no_bootstrap:
+            self.run_command('bootstrap')
+
         self.run_command('move_old_db')
 
 required_packages = [
@@ -241,7 +253,7 @@ setup_options = {
     'include_package_data': True,
     'cmdclass': {
         'install': install,
-        'download_bootstrap_db': download_bootstrap_db,
+        'bootstrap': bootstrap,
         'move_old_db': move_old_db,
         'install_apsw': install_apsw,
         'install_serpent': install_serpent
