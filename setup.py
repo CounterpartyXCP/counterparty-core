@@ -9,14 +9,8 @@ import shutil
 
 CURRENT_VERSION = '9.49.4rc4'
 
-# NOTE: Why we don’t use the the PyPi package (https://pypi.python.org/pypi/apsw/3.8.5-r1)
-"""PLEASE NOTE Unfortunately a version of apsw will generally only work with a
-specific version of SQLite. There are no provisions to detect SQLite version
-and expose an appropriate API. Be mindful of the version of SQLite you have
-installed. Also be mindful of updates to apsw. If you need a specific version
-of apsw or need to build against a specific version of SQLite then please
-follow these instuctions ->
-http://rogerbinns.github.io/apsw/build.html#recommended"""
+# NOTE: Why we don’t use the the PyPi package:
+# <https://code.google.com/p/apsw/source/detail?r=358a9623d051>
 class install_apsw(Command):
     description = "Install APSW 3.8.7.3-r1 with the appropriate version of SQLite"
     user_options = []
