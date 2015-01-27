@@ -53,7 +53,7 @@ class DatabaseIntegrityError(exceptions.DatabaseError):
     pass
 def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
     """Connects to the SQLite database, returning a db `Connection` object"""
-    logger.debug('Creating connection to `{}`.'.format(config.DATABASE.split('/').pop()))
+    logger.debug('Creating connection to `{}`.'.format(config.DATABASE))
 
     if read_only:
         db = apsw.Connection(config.DATABASE, flags=0x00000001)
