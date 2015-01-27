@@ -5,6 +5,9 @@ import argparse
 import configparser
 import appdirs
 import logging
+import tarfile
+import urllib.request
+import shutil
 
 from counterpartylib import server
 from counterpartylib.lib import config
@@ -14,6 +17,45 @@ APP_NAME = 'counterparty-server'
 APP_VERSION = '1.0.0'
 
 logger = logging.getLogger(__name__)
+
+
+# Download bootstrap database
+def bootstrap(check_if_exists=False, ask_confirmation=False):
+    bootstrap_url = 'https://s3.amazonaws.com/counterparty-bootstrap/counterpartyd-db.latest.tar.gz'
+    bootstrap_url_testnet = 'https://s3.amazonaws.com/counterparty-bootstrap/counterpartyd-testnet-db.latest.tar.gz'
+
+    data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+    database = os.path.join(data_dir, '{}.{}.db'.format(config.APP_NAME, config.VERSION_MAJOR))
+    database_testnet = os.path.join(data_dir, '{}.{}.testnet.db'.format(config.APP_NAME, config.VERSION_MAJOR))
+
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+
+    if check_if_exists and os.path.exists(database):
+        return
+
+    if ask_confirmation:
+        question = 'Do you want to download bootstrap database from https://s3.amazonaws.com/counterparty-bootstrap/ ? (y/N): '
+        if input(question).lower() != 'y':
+            return
+
+    print("downloading mainnet database from {}.".format(bootstrap_url))
+    urllib.request.urlretrieve(bootstrap_url, 'counterpartyd-db.latest.tar.gz')
+    print("extracting.")
+    with tarfile.open('counterpartyd-db.latest.tar.gz', 'r:gz') as tar_file:
+        tar_file.extractall()
+    print('Copy {} to {}'.format('counterpartyd.9.db', database))
+    shutil.copy('counterpartyd.9.db', database)
+    os.remove('counterpartyd-db.latest.tar.gz')
+
+    print("downloading testnet database from {}.".format(bootstrap_url_testnet))
+    urllib.request.urlretrieve(bootstrap_url_testnet, 'counterpartyd-testnet-db.latest.tar.gz')
+    print("extracting.")
+    with tarfile.open('counterpartyd-testnet-db.latest.tar.gz', 'r:gz') as tar_file:
+        tar_file.extractall()
+    print('Copy {} to {}'.format('counterpartyd.9.testnet.db', database_testnet))
+    shutil.copy('counterpartyd.9.testnet.db', database_testnet)
+    os.remove('counterpartyd-testnet-db.latest.tar.gz')
 
 def main():
     if os.name == 'nt':
@@ -61,6 +103,8 @@ def main():
     
     parser_kickstart = subparsers.add_parser('kickstart', help='rapidly bring database up to the present')
     parser_kickstart.add_argument('--bitcoind-dir', help='Bitcoin Core data directory')
+
+    parser_bootstrap = subparsers.add_parser('bootstrap', help='download bootstrap database')
     
     args = parser.parse_args()
 
@@ -138,6 +182,13 @@ def main():
     broadcast_tx_mainnet = None
     if 'broadcast-tx-mainnet' in configfile['Default']:
         broadcast_tx_mainnet = configfile['Default']['broadcast-tx-mainnet']
+
+    # Bootstrapping
+    if args.action == 'bootstrap':
+        bootstrap()
+        exit()
+    elif args.action == 'start':
+        bootstrap(check_if_exists=True, ask_confirmation=True)
 
     # Configuration
     db = server.initialise(database_file=args.database_file, 
