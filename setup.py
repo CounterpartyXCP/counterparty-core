@@ -52,8 +52,7 @@ setup_options = {
         "Natural Language :: English",
         "Operating System :: Microsoft :: Windows",
         "Operating System :: POSIX",
-        "Programming Language :: Python",
-        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3 :: Only",
         "Topic :: Office/Business :: Financial",
         "Topic :: System :: Distributed Computing"
     ],
