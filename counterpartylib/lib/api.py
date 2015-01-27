@@ -24,6 +24,7 @@ import struct
 import apsw
 import flask
 from flask.ext.httpauth import HTTPBasicAuth
+import tornado
 from tornado.wsgi import WSGIContainer
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
@@ -310,13 +311,16 @@ def do_transaction(db, name, params, private_key_wif, **kwargs):
     return broadcast_transaction(proxy, signed_tx)
 
 def init_api_access_log():
-    """Init API logger."""
+    """Initialize API logger."""
     if config.API_LOG:
-        api_logger = logging.getLogger("tornado")
-        h = logging_handlers.RotatingFileHandler(config.API_LOG, 'a', API_MAX_LOG_SIZE, API_MAX_LOG_COUNT)
-        api_logger.setLevel(logging.INFO)
-        api_logger.addHandler(h)
-        api_logger.propagate = False
+        access_logger = logging.getLogger("tornado.access")
+        access_logger.setLevel(logging.INFO)
+        access_logger.propagate = False
+
+        handler = logging_handlers.RotatingFileHandler(config.API_LOG, 'a', API_MAX_LOG_SIZE, API_MAX_LOG_COUNT)
+        formatter = tornado.log.LogFormatter(datefmt='%Y-%m-%d-T%H:%M:%S%z')    # Default date format is nuts.
+        handler.setFormatter(formatter)
+        access_logger.addHandler(handler)
 
 class APIStatusPoller(threading.Thread):
     """Perform regular checks on the state of the backend and the database."""
