@@ -13,7 +13,7 @@ from counterpartylib.lib import log
 APP_NAME = 'counterparty-server'
 APP_VERSION = '1.0.0'
 
-logger = logging.getLogger(__name__)                                            
+logger = logging.getLogger(__name__)
 
 def main():
     if os.name == 'nt':
