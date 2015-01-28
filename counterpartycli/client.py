@@ -570,6 +570,8 @@ def main():
     parser_market.add_argument('--give-asset', help='only show orders offering to sell GIVE_ASSET')
     parser_market.add_argument('--get-asset', help='only show orders offering to buy GET_ASSET')
 
+    parser_getrunninginfo = subparsers.add_parser('get_running_info', help='get the current state of the server')
+
     args = parser.parse_args()
 
     # Logging
@@ -936,6 +938,9 @@ def main():
 
     elif args.action == 'market':
         market(args.give_asset, args.get_asset)
+
+    elif args.action == 'get_running_info':
+        util.json_print(util.api('get_running_info'))
 
     else:
         parser.print_help()

@@ -29,6 +29,8 @@ from counterpartylib.lib.util import value_input, value_output
 
 rpc_sessions = {}
 
+json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
+
 class RPCError(Exception):
     pass
 
