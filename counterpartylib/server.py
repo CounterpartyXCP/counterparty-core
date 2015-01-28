@@ -120,13 +120,13 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     if log_file:
         config.LOG = log_file
     else:
-        filename = '{}{}.log'.format(config.APP_NAME, network)
+        filename = 'server{}.log'.format(network)
         config.LOG = os.path.join(config.LOG_DIR, filename)
 
     if api_log_file:
         config.API_LOG = api_log_file
     else:
-        filename = '{}{}.api.log'.format(config.APP_NAME, network)
+        filename = 'server{}.api.log'.format(network)
         config.API_LOG = os.path.join(config.LOG_DIR, filename)
 
     ##############
