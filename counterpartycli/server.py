@@ -105,7 +105,7 @@ def main():
     parser_kickstart.add_argument('--bitcoind-dir', help='Bitcoin Core data directory')
 
     parser_bootstrap = subparsers.add_parser('bootstrap', help='download bootstrap database')
-    
+
     args = parser.parse_args()
 
     # Logging
@@ -187,8 +187,6 @@ def main():
     if args.action == 'bootstrap':
         bootstrap()
         exit()
-    elif args.action == 'start':
-        bootstrap(check_if_exists=True, ask_confirmation=True)
 
     # Configuration
     db = server.initialise(database_file=args.database_file, 
