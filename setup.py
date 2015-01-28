@@ -26,8 +26,8 @@ class generate_configuration_files(Command):
         old_appdir = appdirs.user_config_dir(appauthor='Counterparty', appname='counterpartyd', roaming=True)
         old_configfile = os.path.join(old_appdir, 'counterpartyd.conf')
 
-        new_server_configdir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname='counterparty-server', roaming=True)
-        new_client_configdir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname='counterparty-client', roaming=True)
+        new_server_configdir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+        new_client_configdir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
 
         new_server_configfile = os.path.join(new_server_configdir, 'server.conf')
         new_client_configfile = os.path.join(new_client_configdir, 'client.conf')
