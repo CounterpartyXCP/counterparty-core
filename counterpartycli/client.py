@@ -17,6 +17,7 @@ from colorlog import ColoredFormatter
 
 from counterpartycli import util
 from counterpartycli import wallet
+from counterpartycli.util import bootstrap, add_config_arguments
 
 from counterpartylib.lib import config
 from counterpartylib.lib import script
@@ -33,6 +34,34 @@ APP_VERSION = '1.0.0'
 D = decimal.Decimal
 
 logger = logging.getLogger()
+
+CONFIG_ARGS = [
+    [('-v', '--verbose'), {'dest': 'verbose', 'action': 'store_true', 'help': 'sets log level to DEBUG instead of WARNING'}],
+    [('--testnet',), {'action': 'store_true', 'help': 'use {} testnet addresses and block numbers'.format(config.BTC_NAME)}],
+    [('--testcoin',), {'action': 'store_true', 'help': 'use the test {} network on every blockchain'.format(config.XCP_NAME)}],
+    [('--unconfirmed',), {'action': 'store_true', 'help': 'allow the spending of unconfirmed transaction outputs'}],
+    [('--encoding',), {'default': 'auto', 'type': str, 'help': 'data encoding method'}],
+    [('--fee-per-kb',), {'type': D, 'default': D(config.DEFAULT_FEE_PER_KB / config.UNIT), 'help': 'fee per kilobyte, in {}'.format(config.BTC)}],
+    [('--regular-dust-size',), {'type': D, 'default': D(config.DEFAULT_REGULAR_DUST_SIZE / config.UNIT), 'help': 'value for dust Pay‐to‐Pubkey‐Hash outputs, in {}'.format(config.BTC)}],
+    [('--multisig-dust-size',), {'type': D, 'default': D(config.DEFAULT_MULTISIG_DUST_SIZE / config.UNIT), 'help': 'for dust OP_CHECKMULTISIG outputs, in {}'.format(config.BTC)}],
+    [('--op-return-value',), {'type': D, 'default': D(config.DEFAULT_OP_RETURN_VALUE / config.UNIT), 'help': 'value for OP_RETURN outputs, in {}'.format(config.BTC)}],
+    [('--unsigned',), {'action': 'store_true', 'help': 'print out unsigned hex of transaction; do not sign or broadcast'}],
+
+    [('--counterparty-rpc-connect',), {'help': 'the hostname or IP of the counterparty JSON-RPC server'}],
+    [('--counterparty-rpc-port',), {'type': int, 'help': 'the counterparty JSON-RPC port to connect to'}],
+    [('--counterparty-rpc-user',), {'help': 'the username used to communicate with counterparty over JSON-RPC'}],
+    [('--counterparty-rpc-password',), {'help': 'the password used to communicate with counterparty over JSON-RPC'}],
+    [('--counterparty-rpc-ssl',), {'action': 'store_true', 'help': 'use SSL to connect to counterparty (default: false)'}],
+    [('--counterparty-rpc-ssl-verify',), {'action': 'store_true', 'help': 'verify SSL certificate of counterparty; disallow use of self‐signed certificates (default: false)'}],
+
+    [('--wallet-name',), {'help': 'the wallet name to connect to'}],
+    [('--wallet-connect',), {'help': 'the hostname or IP of the wallet server'}],
+    [('--wallet-port',), {'type': int, 'help': 'the wallet port to connect to'}],
+    [('--wallet-user',), {'help': 'the username used to communicate with wallet'}],
+    [('--wallet-password',), {'help': 'the password used to communicate with wallet'}],
+    [('--wallet-ssl',), {'action': 'store_true', 'help': 'use SSL to connect to wallet (default: false)'}],
+    [('--wallet-ssl-verify',), {'action': 'store_true', 'help': 'verify SSL certificate of wallet; disallow use of self‐signed certificates (default: false)'}]
+]
 
 # TODO: move all these function in lib/
 
@@ -245,7 +274,8 @@ def cli(method, params, unsigned):
         tx_hash = util.api('broadcast_tx', {'signed_tx_hex': signed_tx_hex})
         logger.info('Hash of transaction (broadcasted): {}'.format(tx_hash))
 
-def set_options(config_file=None, testnet=False, testcoin=False,
+
+def set_options(testnet=False, testcoin=False,
                 counterparty_rpc_connect=None, counterparty_rpc_port=None, 
                 counterparty_rpc_user=None, counterparty_rpc_password=None,
                 counterparty_rpc_ssl=False, counterparty_rpc_ssl_verify=True,
@@ -259,53 +289,21 @@ def set_options(config_file=None, testnet=False, testcoin=False,
 
     logger.info('Running v{} of {}.'.format(APP_VERSION, APP_NAME))
 
-    # Config directory
-    config_dir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
-    if not os.path.isdir(config_dir):
-        os.makedirs(config_dir)
-
-    # Configuration file
-    config_file_changed = False
-    configfile = configparser.ConfigParser()
-    if not args.config_file:
-        args.config_file = os.path.join(config_dir, 'client.conf')
-    logger.info('Loading configuration file: `{}`'.format(args.config_file))
-    configfile.read(args.config_file)
-    if not 'Default' in configfile:
-        configfile['Default'] = {}
-
     # testnet
-    if testnet:
-        config.TESTNET = testnet
-    elif has_config and 'testnet' in configfile['Default']:
-        config.TESTNET = configfile['Default'].getboolean('testnet')
-    else:
-        config.TESTNET = False
+    config.TESTNET = testnet or False
 
     # testcoin
-    if testcoin:
-        config.TESTCOIN = testcoin
-    elif has_config and 'testcoin' in configfile['Default']:
-        config.TESTCOIN = configfile['Default'].getboolean('testcoin')
-    else:
-        config.TESTCOIN = False
+    config.TESTCOIN = testcoin or False
 
     ##############
     # THINGS WE CONNECT TO
 
     # Counterparty server host (Bitcoin Core)
-    if counterparty_rpc_connect:
-        config.COUNTERPARTY_RPC_CONNECT = counterparty_rpc_connect
-    elif has_config and 'counterparty-rpc-connect' in configfile['Default'] and configfile['Default']['counterparty-rpc-connect']:
-        config.COUNTERPARTY_RPC_CONNECT = configfile['Default']['counterparty-rpc-connect']
-    else:
-        config.COUNTERPARTY_RPC_CONNECT = 'localhost'
+    config.COUNTERPARTY_RPC_CONNECT = counterparty_rpc_connect or 'localhost'
 
     # Counterparty server RPC port (Bitcoin Core)
     if counterparty_rpc_port:
         config.COUNTERPARTY_RPC_PORT = counterparty_rpc_port
-    elif has_config and 'counterparty-rpc-port' in configfile['Default'] and configfile['Default']['counterparty-rpc-port']:
-        config.COUNTERPARTY_RPC_PORT = configfile['Default']['counterparty-rpc-port']
     else:
         if config.TESTNET:
             config.COUNTERPARTY_RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET
@@ -319,36 +317,19 @@ def set_options(config_file=None, testnet=False, testcoin=False,
         raise Exception("Please specific a valid port number counterparty-rpc-port configuration parameter")
 
     # Counterparty server RPC user (Bitcoin Core)
-    if counterparty_rpc_user:
-        config.COUNTERPARTY_RPC_USER = counterparty_rpc_user
-    elif has_config and 'counterparty-rpc-user' in configfile['Default'] and configfile['Default']['counterparty-rpc-user']:
-        config.COUNTERPARTY_RPC_USER = configfile['Default']['counterparty-rpc-user']
-    else:
-        config.COUNTERPARTY_RPC_USER = 'rpc'
+    config.COUNTERPARTY_RPC_USER = counterparty_rpc_user or 'rpc'
 
     # Counterparty server RPC password (Bitcoin Core)
     if counterparty_rpc_password:
         config.COUNTERPARTY_RPC_PASSWORD = counterparty_rpc_password
-    elif has_config and 'counterparty-rpc-password' in configfile['Default'] and configfile['Default']['counterparty-rpc-password']:
-        config.COUNTERPARTY_RPC_PASSWORD = configfile['Default']['counterparty-rpc-password']
     else:
         raise ConfigurationError('counterparty RPC password not set. (Use configuration file or --counterparty-rpc-password=PASSWORD)')
 
     # Counterparty server RPC SSL
-    if counterparty_rpc_ssl:
-        config.COUNTERPARTY_RPC_SSL = counterparty_rpc_ssl
-    elif has_config and 'counterparty-rpc-ssl' in configfile['Default'] and configfile['Default']['counterparty-rpc-ssl']:
-        config.COUNTERPARTY_RPC_SSL = configfile['Default']['counterparty-rpc-ssl']
-    else:
-        config.COUNTERPARTY_RPC_SSL = False  # Default to off.
+    config.COUNTERPARTY_RPC_SSL = counterparty_rpc_ssl or False  # Default to off.
 
     # Counterparty server RPC SSL Verify
-    if counterparty_rpc_ssl_verify:
-        config.COUNTERPARTY_RPC_SSL_VERIFY = counterparty_rpc_ssl_verify
-    elif has_config and 'counterparty-rpc-ssl-verify' in configfile['Default'] and configfile['Default']['counterparty-rpc-ssl-verify']:
-        config.COUNTERPARTY_RPC_SSL_VERIFY = configfile['Default']['counterparty-rpc-ssl-verify']
-    else:
-        config.COUNTERPARTY_RPC_SSL_VERIFY = False # Default to off (support self‐signed certificates)
+    config.COUNTERPARTY_RPC_SSL_VERIFY = counterparty_rpc_ssl_verify or False # Default to off (support self‐signed certificates)
 
     # Construct Counterparty server URL.
     config.COUNTERPARTY_RPC = config.COUNTERPARTY_RPC_USER + ':' + config.COUNTERPARTY_RPC_PASSWORD + '@' + config.COUNTERPARTY_RPC_CONNECT + ':' + str(config.COUNTERPARTY_RPC_PORT)
@@ -359,26 +340,14 @@ def set_options(config_file=None, testnet=False, testcoin=False,
 
 
     # BTC Wallet name
-    if wallet_name:
-        config.WALLET_NAME = wallet_name
-    elif 'wallet-name' in configfile['Default'] and configfile['Default']['wallet-name']:
-        config.WALLET_NAME = configfile['Default']['wallet-name']
-    else:
-        config.WALLET_NAME = 'bitcoincore'
+    config.WALLET_NAME = wallet_name or 'bitcoincore'
 
     # BTC Wallet host
-    if wallet_connect:
-        config.WALLET_CONNECT = wallet_connect
-    elif 'wallet-connect' in configfile['Default'] and configfile['Default']['wallet-connect']:
-        config.WALLET_CONNECT = configfile['Default']['wallet-connect']
-    else:
-        config.WALLET_CONNECT = 'localhost'
+    config.WALLET_CONNECT = wallet_connect or 'localhost'
 
     # BTC Wallet port
     if wallet_port:
         config.WALLET_PORT = wallet_port
-    elif 'wallet-port' in configfile['Default'] and configfile['Default']['wallet-port']:
-        config.WALLET_PORT = configfile['Default']['wallet-port']
     else:
         if config.TESTNET:
             config.WALLET_PORT = config.DEFAULT_BACKEND_PORT_TESTNET
@@ -392,36 +361,19 @@ def set_options(config_file=None, testnet=False, testcoin=False,
         raise ConfigurationError("Please specific a valid port number wallet-port configuration parameter")
 
     # BTC Wallet user
-    if wallet_user:
-        config.WALLET_USER = wallet_user
-    elif 'wallet-user' in configfile['Default'] and configfile['Default']['wallet-user']:
-        config.WALLET_USER = configfile['Default']['wallet-user']
-    else:
-        config.WALLET_USER = 'bitcoinrpc'
+    config.WALLET_USER = wallet_user or 'bitcoinrpc'
 
     # BTC Wallet password
     if wallet_password:
         config.WALLET_PASSWORD = wallet_password
-    elif 'wallet-password' in configfile['Default'] and configfile['Default']['wallet-password']:
-        config.WALLET_PASSWORD = configfile['Default']['wallet-password']
     else:
         raise ConfigurationError('wallet RPC password not set. (Use configuration file or --wallet-password=PASSWORD)')
 
     # BTC Wallet SSL
-    if wallet_ssl:
-        config.WALLET_SSL = wallet_ssl
-    elif 'wallet-ssl' in configfile['Default'] and configfile['Default']['wallet-ssl']:
-        config.WALLET_SSL = configfile['Default']['wallet-ssl']
-    else:
-        config.WALLET_SSL = False  # Default to off.
+    config.WALLET_SSL = wallet_ssl or False  # Default to off.
 
     # BTC Wallet SSL Verify
-    if wallet_ssl_verify:
-        config.WALLET_SSL_VERIFY = wallet_ssl_verify
-    elif 'wallet-ssl-verify' in configfile['Default'] and configfile['Default']['wallet-ssl-verify']:
-        config.WALLET_SSL_VERIFY = configfile['Default']['wallet-ssl-verify']
-    else:
-        config.WALLET_SSL_VERIFY = False # Default to off (support self‐signed certificates)
+    config.WALLET_SSL_VERIFY = wallet_ssl_verify or False # Default to off (support self‐signed certificates)
 
     # Construct BTC wallet URL.
     config.WALLET_URL = config.WALLET_USER + ':' + config.WALLET_PASSWORD + '@' + config.WALLET_CONNECT + ':' + str(config.WALLET_PORT)
@@ -490,35 +442,10 @@ def main():
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(prog=APP_NAME, description='Counterparty CLI for counterparty-server')
     parser.add_argument('-V', '--version', action='version', version="{} v{}".format(APP_NAME, APP_VERSION))
-
-    parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='sets log level to DEBUG instead of WARNING')
-    parser.add_argument('--testnet', action='store_true', help='use {} testnet addresses and block numbers'.format(config.BTC_NAME))
-    parser.add_argument('--testcoin', action='store_true', help='use the test {} network on every blockchain'.format(config.XCP_NAME))
-    parser.add_argument('--unconfirmed', action='store_true', help='allow the spending of unconfirmed transaction outputs')
-    parser.add_argument('--encoding', default='auto', type=str, help='data encoding method')
-    parser.add_argument('--fee-per-kb', type=D, default=D(config.DEFAULT_FEE_PER_KB / config.UNIT), help='fee per kilobyte, in {}'.format(config.BTC))
-    parser.add_argument('--regular-dust-size', type=D, default=D(config.DEFAULT_REGULAR_DUST_SIZE / config.UNIT), help='value for dust Pay‐to‐Pubkey‐Hash outputs, in {}'.format(config.BTC))
-    parser.add_argument('--multisig-dust-size', type=D, default=D(config.DEFAULT_MULTISIG_DUST_SIZE / config.UNIT), help='for dust OP_CHECKMULTISIG outputs, in {}'.format(config.BTC))
-    parser.add_argument('--op-return-value', type=D, default=D(config.DEFAULT_OP_RETURN_VALUE / config.UNIT), help='value for OP_RETURN outputs, in {}'.format(config.BTC))
-    parser.add_argument('--unsigned', action='store_true', help='print out unsigned hex of transaction; do not sign or broadcast')
-
     parser.add_argument('--config-file', help='the location of the configuration file')
 
-    parser.add_argument('--counterparty-rpc-connect', help='the hostname or IP of the counterparty JSON-RPC server')
-    parser.add_argument('--counterparty-rpc-port', type=int, help='the counterparty JSON-RPC port to connect to')
-    parser.add_argument('--counterparty-rpc-user', help='the username used to communicate with counterparty over JSON-RPC')
-    parser.add_argument('--counterparty-rpc-password', help='the password used to communicate with counterparty over JSON-RPC')
-    parser.add_argument('--counterparty-rpc-ssl', action='store_true', help='use SSL to connect to counterparty (default: false)')
-    parser.add_argument('--counterparty-rpc-ssl-verify', action='store_true', help='verify SSL certificate of counterparty; disallow use of self‐signed certificates (default: false)')
+    parser = add_config_arguments(parser, CONFIG_ARGS, 'client.conf')
 
-    parser.add_argument('--wallet-name', help='the wallet name to connect to')
-    parser.add_argument('--wallet-connect', help='the hostname or IP of the wallet server')
-    parser.add_argument('--wallet-port', type=int, help='the wallet port to connect to')
-    parser.add_argument('--wallet-user', help='the username used to communicate with wallet')
-    parser.add_argument('--wallet-password', help='the password used to communicate with wallet')
-    parser.add_argument('--wallet-ssl', action='store_true', help='use SSL to connect to wallet (default: false)')
-    parser.add_argument('--wallet-ssl-verify', action='store_true', help='verify SSL certificate of wallet; disallow use of self‐signed certificates (default: false)')
- 
     subparsers = parser.add_subparsers(dest='action', help='the action to be taken')
 
     parser_send = subparsers.add_parser('send', help='create and broadcast a *send* message')
@@ -655,7 +582,7 @@ def main():
     args.op_return_value = int(args.op_return_value * config.UNIT)
 
     # Configuration
-    set_options(config_file=args.config_file, testnet=args.testnet, testcoin=args.testcoin,
+    set_options(testnet=args.testnet, testcoin=args.testcoin,
                 counterparty_rpc_connect=args.counterparty_rpc_connect, counterparty_rpc_port=args.counterparty_rpc_port,
                 counterparty_rpc_user=args.counterparty_rpc_user, counterparty_rpc_password=args.counterparty_rpc_password,
                 counterparty_rpc_ssl=args.counterparty_rpc_ssl, counterparty_rpc_ssl_verify=args.counterparty_rpc_ssl_verify,
