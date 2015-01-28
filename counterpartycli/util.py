@@ -139,27 +139,26 @@ def bootstrap(check_if_exists=False, ask_confirmation=False):
         return
 
     if ask_confirmation:
-        question = 'Do you want to download bootstrap database from https://s3.amazonaws.com/counterparty-bootstrap/ ? (y/N): '
+        question = 'Would you like to bootstrap your local Counterparty database from ‘https://s3.amazonaws.com/counterparty-bootstrap/’? (y/N): '
         if input(question).lower() != 'y':
             return
 
-    print("downloading mainnet database from {}.".format(bootstrap_url))
+    print('Downloading mainnet database from {}…'.format(bootstrap_url))
     urllib.request.urlretrieve(bootstrap_url, 'counterpartyd-db.latest.tar.gz')
-    print("extracting.")
+    print('Extracting…')
     with tarfile.open('counterpartyd-db.latest.tar.gz', 'r:gz') as tar_file:
         tar_file.extractall()
-    print('Copy {} to {}'.format('counterpartyd.9.db', database))
+    print('Copying {} to {}…'.format('counterpartyd.9.db', database))
     shutil.copy('counterpartyd.9.db', database)
     os.remove('counterpartyd-db.latest.tar.gz')
 
-    print("downloading testnet database from {}.".format(bootstrap_url_testnet))
+    print('Downloading testnet database from {}…'.format(bootstrap_url_testnet))
     urllib.request.urlretrieve(bootstrap_url_testnet, 'counterpartyd-testnet-db.latest.tar.gz')
-    print("extracting.")
+    print('Extracting…')
     with tarfile.open('counterpartyd-testnet-db.latest.tar.gz', 'r:gz') as tar_file:
         tar_file.extractall()
-    print('Copy {} to {}'.format('counterpartyd.9.testnet.db', database_testnet))
+    print('Copying {} to {}…'.format('counterpartyd.9.testnet.db', database_testnet))
     shutil.copy('counterpartyd.9.testnet.db', database_testnet)
     os.remove('counterpartyd-testnet-db.latest.tar.gz')
-
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
