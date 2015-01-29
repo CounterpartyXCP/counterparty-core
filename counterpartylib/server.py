@@ -84,7 +84,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
      # Data directory
     config.DATA_DIR = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
     if not os.path.isdir(config.DATA_DIR):
-        os.makedirs(config.DATA_DIR)
+        os.makedirs(config.DATA_DIR, mode=0o755)
 
     # testnet
     if testnet:
@@ -114,7 +114,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     # Log directory
     config.LOG_DIR = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
     if not os.path.isdir(config.LOG_DIR):
-        os.makedirs(config.LOG_DIR)
+        os.makedirs(config.LOG_DIR, mode=0o755)
 
     # Log
     if log_file:
