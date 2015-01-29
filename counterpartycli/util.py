@@ -105,7 +105,7 @@ def add_config_arguments(arg_parser, config_args, default_config_file):
     if not cmd_args.config_file:
         config_dir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
         if not os.path.isdir(config_dir):
-            os.makedirs(config_dir)
+            os.makedirs(config_dir, mode=0o755)
         cmd_args.config_file = os.path.join(config_dir, default_config_file)
 
     logger.info('Loading configuration file: `{}`'.format(cmd_args.config_file))
@@ -133,7 +133,7 @@ def generate_config_file(filename, config_args, known_config={}, overwrite=False
 
     config_dir = os.path.dirname(os.path.abspath(filename))
     if not os.path.exists(config_dir):
-        os.makedirs(config_dir)
+        os.makedirs(config_dir, mode=0o755)
 
     config_lines = []
     config_lines.append('[Default]')
@@ -160,6 +160,7 @@ def generate_config_file(filename, config_args, known_config={}, overwrite=False
 
     with open(filename, 'w') as config_file:
         config_file.writelines("\n".join(config_lines))
+    os.chmod(filename, 0o660)
 
 # Download bootstrap database
 def bootstrap(overwrite=True, ask_confirmation=False):
@@ -171,7 +172,7 @@ def bootstrap(overwrite=True, ask_confirmation=False):
     database_testnet = os.path.join(data_dir, '{}.{}.testnet.db'.format(config.APP_NAME, config.VERSION_MAJOR))
 
     if not os.path.exists(data_dir):
-        os.makedirs(data_dir)
+        os.makedirs(data_dir, mode=0o755)
 
     if not overwrite and os.path.exists(database):
         return
@@ -188,6 +189,7 @@ def bootstrap(overwrite=True, ask_confirmation=False):
         tar_file.extractall()
     print('Copying {} to {}…'.format('counterpartyd.9.db', database))
     shutil.copy('counterpartyd.9.db', database)
+    os.chmod(database, 0o660)
     os.remove('counterpartyd-db.latest.tar.gz')
 
     print('Downloading testnet database from {}…'.format(bootstrap_url_testnet))
@@ -197,6 +199,7 @@ def bootstrap(overwrite=True, ask_confirmation=False):
         tar_file.extractall()
     print('Copying {} to {}…'.format('counterpartyd.9.testnet.db', database_testnet))
     shutil.copy('counterpartyd.9.testnet.db', database_testnet)
+    os.chmod(database_testnet, 0o660)
     os.remove('counterpartyd-testnet-db.latest.tar.gz')
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
