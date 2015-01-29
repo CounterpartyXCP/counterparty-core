@@ -313,9 +313,8 @@ def do_transaction(db, name, params, private_key_wif, **kwargs):
     return broadcast_transaction(proxy, signed_tx)
 
 
-# HTTP REST API
-
-# Block information. Since counterpartylib doesn't store block hexes, we only support JSON.
+# HTTP REST API helper functions.
+# Block information.
 def get_block_hex(block_hash):
     """Return hex data of specified block."""
     try:
@@ -331,7 +330,7 @@ def get_block_binary(block_hash):
     block_bin = binascii.unhexlify(block_hex)
     return block_bin
 
-def get_block_json(block_hash):
+def get_block_json(db, block_hash):
     """Return JSON data of specified block."""
     cursor = db.cursor()
     blocks = list(cursor.execute('''SELECT * FROM blocks WHERE block_hash = ?''', (block_hash,)))
@@ -360,7 +359,7 @@ def get_tx_binary(tx_hash):
     tx_bin = binascii.unhexlify(tx_hex)
     return tx_bin
 
-def get_tx_json(tx_hash):
+def get_tx_json(db, tx_hash):
     """Return JSON data of specified transaction."""
     cursor = db.cursor()
     txs = list(cursor.execute('''SELECT * FROM transactions WHERE tx_hash = ?''', (tx_hash,)))
@@ -460,7 +459,7 @@ class APIServer(threading.Thread):
                 return flask.Response(error, 400, mimetype='text/plain')
             try:
                 if format == 'json':
-                    response_data = get_block_json(block_hash)
+                    response_data = get_block_json(db, block_hash)
                     response = flask.Response(response_data, 200, mimetype='application/json')
                     return response
                 else:
@@ -480,7 +479,7 @@ class APIServer(threading.Thread):
             try:
                 if format == 'json':
                     # JSON
-                    response_data = get_tx_json(tx_hash)
+                    response_data = get_tx_json(db, tx_hash)
                     response = flask.Response(response_data, 200, mimetype='application/json')
                     return response
                 elif format == 'dat':
@@ -498,7 +497,7 @@ class APIServer(threading.Thread):
                     return flask.Response(error, 400, mimetype='text/plain')
             except exceptions.DatabaseError as e:
                 # Show the database error that was raised as 400.
-                return flask.Response(str(e), 400, mimetype='application/txt')        
+                return flask.Response(str(e), 400, mimetype='text/plain')
 
         ######################
         #READ API
