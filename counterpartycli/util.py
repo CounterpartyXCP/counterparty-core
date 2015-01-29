@@ -158,7 +158,7 @@ def generate_config_file(filename, config_args, known_config={}, overwrite=False
         config_lines.append('{} = {}'.format(key, value))
         config_lines.append('')
 
-    with open(filename, 'w') as config_file:
+    with open(filename, 'w', encoding='utf8') as config_file:
         config_file.writelines("\n".join(config_lines))
     os.chmod(filename, 0o660)
 
