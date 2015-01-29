@@ -79,7 +79,8 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
                 rpc_user=None, rpc_password=None,
                 rpc_allow_cors=None,
                 force=False, verbose=False,
-                broadcast_tx_mainnet=None):
+                broadcast_tx_mainnet=None,
+                http_rest=False):
 
      # Data directory
     config.DATA_DIR = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
@@ -255,6 +256,12 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     else:
         config.RPC_ALLOW_CORS = True
 
+    # HTTP REST API
+    if http_rest:
+        config.HTTP_REST = True
+    else:
+        config.HTTP_REST = False
+
     ##############
     # OTHER SETTINGS
 
@@ -355,9 +362,10 @@ def start_all(db):
     api_server.start()
 
     # HTTP REST API Server
-    http_rest_server = http_rest.HTTPRESTServer()
-    http_rest_server.daemon = True
-    http_rest_server.start()
+    if config.HTTP_REST:
+        http_rest_server = http_rest.HTTPRESTServer()
+        http_rest_server.daemon = True
+        http_rest_server.start()
 
     # Server.
     blocks.follow(db)
