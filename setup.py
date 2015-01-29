@@ -10,7 +10,7 @@ from counterpartycli.server import CONFIG_ARGS as SERVER_CONFIG_ARGS
 from counterpartycli.client import CONFIG_ARGS as CLIENT_CONFIG_ARGS
 from counterpartycli.util import generate_config_file
 
-CURRENT_VERSION = '1.0.0rc4'
+CURRENT_VERSION = '1.0.0rc5'
 
 def extract_old_config():
     import appdirs
