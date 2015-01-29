@@ -12,9 +12,9 @@
 - Merge branch into both `master` and `develop`
 - Rebase `gh-pages` to `master`
 - Write [Release Notes](https://github.com/CounterpartyXCP/counterpartyd/releases)
-- Upload (signed) package to PyPi with `twine`
+- Upload (signed) package to PyPi
 	* `sudo python3 setup.py sdist build`
-	* `sudo python3 setup.py bdist_wheel build`
+	<!-- * `sudo python3 setup.py bdist_wheel build`	# Does not work with `apsw` and `ethereum-serpent` installs. -->
 	* `twine upload -s dist/*`
 
 **@ivanazuber:**:
