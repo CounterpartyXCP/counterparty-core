@@ -132,22 +132,22 @@ class install(_install):
         self.run_command('move_old_db')
 
 required_packages = [
-    'appdirs==1.4.0',
-    'prettytable==0.7.2',
-    'python-dateutil==2.2',
-    'flask==0.10.1',
-    'json-rpc==1.7',
-    'pytest==2.6.4',
-    'pycoin==0.52',
-    'requests==2.4.2',
-    'Flask-HTTPAuth==2.3.0',
-    'tornado==4.0.2',
-    'pycrypto>=2.6.1',
-    'tendo==0.2.6',
-    'pysha3==0.3',
-    'pytest-cov==1.8.0',
-    'colorlog==2.4.0',
-    'python-bitcoinlib==0.2.1'
+    'appdirs>=1.4.0',
+    'prettytable>=0.7.2',
+    'python-dateutil>=2.2',
+    'flask>=0.10.1',
+    'json-rpc>=1.7',
+    'pytest>=2.6.4',
+    'pycoin>=0.52',
+    'requests>=2.3.0',
+    'Flask-HTTPAuth>=2.3.0',
+    'tornado>=4.0',
+    'pycrypto>=2.6',
+    'tendo>=0.2.6',
+    'pysha3>=0.3',
+    'pytest-cov>=1.8.0',
+    'colorlog>=2.4.0',
+    'python-bitcoinlib>=0.2.1'
 ]
 
 setup_options = {
