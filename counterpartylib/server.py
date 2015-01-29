@@ -15,7 +15,7 @@ import signal
 import appdirs
 import platform
 
-from counterpartylib.lib import api, config, util, exceptions, blocks, check, backend, database, transaction, script, log, http_rest
+from counterpartylib.lib import api, config, util, exceptions, blocks, check, backend, database, transaction, script, log
 
 D = decimal.Decimal
 
@@ -70,7 +70,7 @@ def get_lock():
 
 
 def initialise(database_file=None, log_file=None, api_log_file=None,
-                http_rest_log_file=None, testnet=False, testcoin=False,
+                testnet=False, testcoin=False,
                 backend_name=None, backend_connect=None, backend_port=None,
                 backend_user=None, backend_password=None,
                 backend_ssl=False, backend_ssl_verify=True,
@@ -79,8 +79,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
                 rpc_user=None, rpc_password=None,
                 rpc_allow_cors=None,
                 force=False, verbose=False,
-                broadcast_tx_mainnet=None,
-                http_rest=False):
+                broadcast_tx_mainnet=None):
 
      # Data directory
     config.DATA_DIR = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
@@ -129,12 +128,6 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     else:
         filename = 'server{}.api.log'.format(network)
         config.API_LOG = os.path.join(config.LOG_DIR, filename)
-
-    if http_rest_log_file:
-        config.HTTP_REST_LOG = http_rest_log_file
-    else:
-        filename = 'server{}.http.rest.log'.format(network)
-        config.HTTP_REST_LOG = os.path.join(config.LOG_DIR, filename)
 
     ##############
     # THINGS WE CONNECT TO
@@ -256,12 +249,6 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     else:
         config.RPC_ALLOW_CORS = True
 
-    # HTTP REST API
-    if http_rest:
-        config.HTTP_REST = True
-    else:
-        config.HTTP_REST = False
-
     ##############
     # OTHER SETTINGS
 
@@ -360,12 +347,6 @@ def start_all(db):
     api_server = api.APIServer()
     api_server.daemon = True
     api_server.start()
-
-    # HTTP REST API Server
-    if config.HTTP_REST:
-        http_rest_server = http_rest.HTTPRESTServer()
-        http_rest_server.daemon = True
-        http_rest_server.start()
 
     # Server.
     blocks.follow(db)
