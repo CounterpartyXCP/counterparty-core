@@ -98,10 +98,10 @@ def value_in(quantity, asset):
 def value_out(quantity, asset):
     return value_output(quantity, asset, is_divisible(asset))
 
+# Set default values of command line arguments with config file
 def add_config_arguments(arg_parser, config_args, default_config_file):
-    # Confg file
     cmd_args = arg_parser.parse_known_args()[0]
-    #print(cmd_args)
+
     if not cmd_args.config_file:
         config_dir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
         if not os.path.isdir(config_dir):
@@ -118,16 +118,51 @@ def add_config_arguments(arg_parser, config_args, default_config_file):
     # Initialize default values with the config file.
     for arg in config_args:
         key = arg[0][-1].replace('--', '')
-        if 'action' in arg[1] and arg[1]['action'] == 'store_true' and key in configfile['Default'] and configfile['Default'].getboolean(key):
-            arg[1]['default'] = True
+        if 'action' in arg[1] and arg[1]['action'] == 'store_true' and key in configfile['Default']:
+            arg[1]['default'] = configfile['Default'].getboolean(key)
         elif key in configfile['Default'] and configfile['Default'][key]:
             arg[1]['default'] = configfile['Default'][key]
         arg_parser.add_argument(*arg[0], **arg[1])
 
     return arg_parser
 
+# generate commented config file from arguments list (client.CONFIG_ARGS and server.CONFIG_ARGS) and known values
+def generate_config_file(filename, config_args, known_config={}, overwrite=False):
+    if not overwrite and os.path.exists(filename):
+        return
+
+    config_dir = os.path.dirname(os.path.abspath(filename))
+    if not os.path.exists(config_dir):
+        os.makedirs(config_dir)
+
+    config_lines = []
+    config_lines.append('[Default]')
+    config_lines.append('')
+
+    for arg in config_args:
+        key = arg[0][-1].replace('--', '')
+        value = None
+        if key in known_config:
+            value = known_config[key]
+        elif 'default' in arg[1]:
+            value = arg[1]['default']
+        if value is None:
+            key = '# {}'.format(key)
+            value = ''
+        elif isinstance(value, bool):
+            value = '1' if value else '0'
+        elif isinstance(value, (float, D)):
+            value = format(value, '.8f')
+
+        config_lines.append('# {}'.format(arg[1]['help']))
+        config_lines.append('{} = {}'.format(key, value))
+        config_lines.append('')
+
+    with open(filename, 'w') as config_file:
+        config_file.writelines("\n".join(config_lines))
+
 # Download bootstrap database
-def bootstrap(check_if_exists=False, ask_confirmation=False):
+def bootstrap(overwrite=True, ask_confirmation=False):
     bootstrap_url = 'https://s3.amazonaws.com/counterparty-bootstrap/counterpartyd-db.latest.tar.gz'
     bootstrap_url_testnet = 'https://s3.amazonaws.com/counterparty-bootstrap/counterpartyd-testnet-db.latest.tar.gz'
 
@@ -138,7 +173,7 @@ def bootstrap(check_if_exists=False, ask_confirmation=False):
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
 
-    if check_if_exists and os.path.exists(database):
+    if not overwrite and os.path.exists(database):
         return
 
     if ask_confirmation:

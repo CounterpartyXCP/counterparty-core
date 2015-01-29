@@ -36,31 +36,32 @@ D = decimal.Decimal
 logger = logging.getLogger()
 
 CONFIG_ARGS = [
+    [('--testnet',), {'action': 'store_true', 'default': False, 'help': 'use {} testnet addresses and block numbers'.format(config.BTC_NAME)}],    
+
+    [('--counterparty-rpc-connect',), {'default': 'localhost', 'help': 'the hostname or IP of the counterparty JSON-RPC server'}],
+    [('--counterparty-rpc-port',), {'type': int, 'help': 'the counterparty JSON-RPC port to connect to'}],
+    [('--counterparty-rpc-user',), {'default': 'rpc', 'help': 'the username used to communicate with counterparty over JSON-RPC'}],
+    [('--counterparty-rpc-password',), {'help': 'the password used to communicate with counterparty over JSON-RPC'}],
+    [('--counterparty-rpc-ssl',), {'default': False, 'action': 'store_true', 'help': 'use SSL to connect to counterparty (default: false)'}],
+    [('--counterparty-rpc-ssl-verify',), {'default': False, 'action': 'store_true', 'help': 'verify SSL certificate of counterparty; disallow use of self‐signed certificates (default: false)'}],
+
+    [('--wallet-name',), {'default': 'bitcoincore', 'help': 'the wallet name to connect to'}],
+    [('--wallet-connect',), {'default': 'localhost', 'help': 'the hostname or IP of the wallet server'}],
+    [('--wallet-port',), {'type': int, 'help': 'the wallet port to connect to'}],
+    [('--wallet-user',), {'default': 'bitcoinrpc', 'help': 'the username used to communicate with wallet'}],
+    [('--wallet-password',), {'help': 'the password used to communicate with wallet'}],
+    [('--wallet-ssl',), {'action': 'store_true', 'default': False, 'help': 'use SSL to connect to wallet (default: false)'}],
+    [('--wallet-ssl-verify',), {'action': 'store_true', 'default': False, 'help': 'verify SSL certificate of wallet; disallow use of self‐signed certificates (default: false)'}],
+
     [('-v', '--verbose'), {'dest': 'verbose', 'action': 'store_true', 'help': 'sets log level to DEBUG instead of WARNING'}],
-    [('--testnet',), {'action': 'store_true', 'help': 'use {} testnet addresses and block numbers'.format(config.BTC_NAME)}],
-    [('--testcoin',), {'action': 'store_true', 'help': 'use the test {} network on every blockchain'.format(config.XCP_NAME)}],
-    [('--unconfirmed',), {'action': 'store_true', 'help': 'allow the spending of unconfirmed transaction outputs'}],
+    [('--testcoin',), {'action': 'store_true', 'default': False, 'help': 'use the test {} network on every blockchain'.format(config.XCP_NAME)}],
+    [('--unconfirmed',), {'action': 'store_true', 'default': False, 'help': 'allow the spending of unconfirmed transaction outputs'}],
     [('--encoding',), {'default': 'auto', 'type': str, 'help': 'data encoding method'}],
     [('--fee-per-kb',), {'type': D, 'default': D(config.DEFAULT_FEE_PER_KB / config.UNIT), 'help': 'fee per kilobyte, in {}'.format(config.BTC)}],
     [('--regular-dust-size',), {'type': D, 'default': D(config.DEFAULT_REGULAR_DUST_SIZE / config.UNIT), 'help': 'value for dust Pay‐to‐Pubkey‐Hash outputs, in {}'.format(config.BTC)}],
     [('--multisig-dust-size',), {'type': D, 'default': D(config.DEFAULT_MULTISIG_DUST_SIZE / config.UNIT), 'help': 'for dust OP_CHECKMULTISIG outputs, in {}'.format(config.BTC)}],
     [('--op-return-value',), {'type': D, 'default': D(config.DEFAULT_OP_RETURN_VALUE / config.UNIT), 'help': 'value for OP_RETURN outputs, in {}'.format(config.BTC)}],
-    [('--unsigned',), {'action': 'store_true', 'help': 'print out unsigned hex of transaction; do not sign or broadcast'}],
-
-    [('--counterparty-rpc-connect',), {'help': 'the hostname or IP of the counterparty JSON-RPC server'}],
-    [('--counterparty-rpc-port',), {'type': int, 'help': 'the counterparty JSON-RPC port to connect to'}],
-    [('--counterparty-rpc-user',), {'help': 'the username used to communicate with counterparty over JSON-RPC'}],
-    [('--counterparty-rpc-password',), {'help': 'the password used to communicate with counterparty over JSON-RPC'}],
-    [('--counterparty-rpc-ssl',), {'action': 'store_true', 'help': 'use SSL to connect to counterparty (default: false)'}],
-    [('--counterparty-rpc-ssl-verify',), {'action': 'store_true', 'help': 'verify SSL certificate of counterparty; disallow use of self‐signed certificates (default: false)'}],
-
-    [('--wallet-name',), {'help': 'the wallet name to connect to'}],
-    [('--wallet-connect',), {'help': 'the hostname or IP of the wallet server'}],
-    [('--wallet-port',), {'type': int, 'help': 'the wallet port to connect to'}],
-    [('--wallet-user',), {'help': 'the username used to communicate with wallet'}],
-    [('--wallet-password',), {'help': 'the password used to communicate with wallet'}],
-    [('--wallet-ssl',), {'action': 'store_true', 'help': 'use SSL to connect to wallet (default: false)'}],
-    [('--wallet-ssl-verify',), {'action': 'store_true', 'help': 'verify SSL certificate of wallet; disallow use of self‐signed certificates (default: false)'}]
+    [('--unsigned',), {'action': 'store_true', 'default': False, 'help': 'print out unsigned hex of transaction; do not sign or broadcast'}]
 ]
 
 # TODO: move all these function in lib/
@@ -278,10 +279,10 @@ def cli(method, params, unsigned):
 def set_options(testnet=False, testcoin=False,
                 counterparty_rpc_connect=None, counterparty_rpc_port=None, 
                 counterparty_rpc_user=None, counterparty_rpc_password=None,
-                counterparty_rpc_ssl=False, counterparty_rpc_ssl_verify=True,
+                counterparty_rpc_ssl=False, counterparty_rpc_ssl_verify=False,
                 wallet_name=None, wallet_connect=None, wallet_port=None, 
                 wallet_user=None, wallet_password=None,
-                wallet_ssl=False, wallet_ssl_verify=True):
+                wallet_ssl=False, wallet_ssl_verify=False):
 
     def handle_exception(exc_type, exc_value, exc_traceback):
         logger.error("Unhandled Exception", exc_info=(exc_type, exc_value, exc_traceback))

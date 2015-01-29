@@ -16,31 +16,32 @@ APP_NAME = 'counterparty-server'
 APP_VERSION = '1.0.0'
 
 CONFIG_ARGS = [
-    [('-v', '--verbose'), {'dest': 'verbose', 'action': 'store_true', 'help': 'sets log level to DEBUG instead of WARNING'}],
-    [('--testnet',), {'action': 'store_true', 'help': 'use {} testnet addresses and block numbers'.format(config.BTC_NAME)}],
-    [('--testcoin',), {'action': 'store_true', 'help': 'use the test {} network on every blockchain'.format(config.XCP_NAME)}],
-    [('--force',), {'action': 'store_true', 'help': 'skip backend check, version check, process lock (NOT FOR USE ON PRODUCTION SYSTEMS)'}],
+    [('--testnet',), {'action': 'store_true', 'default': False, 'help': 'use {} testnet addresses and block numbers'.format(config.BTC_NAME)}],
 
-    [('--database-file',), {'help': 'the location of the SQLite3 database'}],
-    [('--log-file',), {'help': 'the location of the log file'}],
-    [('--api-log-file',), {'help': 'the location of the API log file'}],
-
-    [('--backend-name',), {'help': 'the backend name to connect to'}],
-    [('--backend-connect',), {'help': 'the hostname or IP of the backend server'}],
+    [('--backend-name',), {'default': 'addrindex', 'help': 'the backend name to connect to'}],
+    [('--backend-connect',), {'default': 'localhost', 'help': 'the hostname or IP of the backend server'}],
     [('--backend-port',), {'type': int, 'help': 'the backend port to connect to'}],
-    [('--backend-user',), {'help': 'the username used to communicate with backend'}],
+    [('--backend-user',), {'default': 'bitcoinrpc', 'help': 'the username used to communicate with backend'}],
     [('--backend-password',), {'help': 'the password used to communicate with backend'}],
-    [('--backend-ssl',), {'action': 'store_true', 'help': 'use SSL to connect to backend (default: false)'}],
-    [('--backend-ssl-verify',), {'action': 'store_true', 'help': 'verify SSL certificate of backend; disallow use of self‐signed certificates (default: false)'}],
-    [('--backend-poll-interval',), {'type': float, 'help': 'poll interval, in seconds (default: 2.0)'}],
+    [('--backend-ssl',), {'action': 'store_true', 'default': False, 'help': 'use SSL to connect to backend (default: false)'}],
+    [('--backend-ssl-verify',), {'action': 'store_true', 'default': False, 'help': 'verify SSL certificate of backend; disallow use of self‐signed certificates (default: false)'}],
+    [('--backend-poll-interval',), {'type': float, 'default': 2.0, 'help': 'poll interval, in seconds (default: 2.0)'}],
 
-    [('--rpc-host',), {'help': 'the IP of the interface to bind to for providing JSON-RPC API access (0.0.0.0 for all interfaces)'}],
+    [('--rpc-host',), {'default': 'localhost', 'help': 'the IP of the interface to bind to for providing JSON-RPC API access (0.0.0.0 for all interfaces)'}],
     [('--rpc-port',), {'type': int, 'help': 'port on which to provide the {} JSON-RPC API'.format(config.APP_NAME)}],
-    [('--rpc-user',), {'help': 'required username to use the {} JSON-RPC API (via HTTP basic auth)'.format(config.APP_NAME)}],
+    [('--rpc-user',), {'default': 'rpc', 'help': 'required username to use the {} JSON-RPC API (via HTTP basic auth)'.format(config.APP_NAME)}],
     [('--rpc-password',), {'help': 'required password (for rpc-user) to use the {} JSON-RPC API (via HTTP basic auth)'.format(config.APP_NAME)}],
     [('--rpc-allow-cors',), {'action': 'store_true', 'default': True, 'help': 'Allow ajax cross domain request'}],
 
-    [('--broadcast-tx-mainnet',), {'action': 'store_true', 'default': True, 'help': 'Method used to broadcast signed transactions'}]
+    [('-v', '--verbose'), {'dest': 'verbose', 'action': 'store_true', 'default': False, 'help': 'sets log level to DEBUG instead of WARNING'}],
+    [('--testcoin',), {'action': 'store_true', 'default': False, 'help': 'use the test {} network on every blockchain'.format(config.XCP_NAME)}],
+    [('--force',), {'action': 'store_true', 'default': False, 'help': 'skip backend check, version check, process lock (NOT FOR USE ON PRODUCTION SYSTEMS)'}],
+
+    [('--database-file',), {'default': None, 'help': 'the location of the SQLite3 database'}],
+    [('--log-file',), {'default': None, 'help': 'the location of the log file'}],
+    [('--api-log-file',), {'default': None, 'help': 'the location of the API log file'}],
+
+    [('--broadcast-tx-mainnet',), {'default': 'bitcoind', 'help': 'Method used to broadcast signed transactions'}]
 ]
 
 def main():
