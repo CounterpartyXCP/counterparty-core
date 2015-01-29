@@ -143,11 +143,11 @@ class install(_install):
         self.run_command('generate_configuration_files')
         
 required_packages = [
-    'appdirs==1.4.0',
-    'prettytable==0.7.2',
-    'python-dateutil==2.2',
-    'requests==2.4.2',
-    'colorlog==2.4.0',
+    'appdirs>=1.4.0',
+    'prettytable>=0.7.2',
+    'python-dateutil>=2.2',
+    'requests>=2.3.0',
+    'colorlog>=2.4.0',
     'counterparty-lib>=9.49.4rc1'
 ]
 
