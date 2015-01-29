@@ -4,11 +4,12 @@ import os
 import argparse
 import logging
 
+from counterpartylib.lib import log
 logger = logging.getLogger(__name__)
+log.set_up(logger)
 
 from counterpartylib import server
 from counterpartylib.lib import config
-from counterpartylib.lib import log
 from counterpartycli.util import bootstrap, add_config_arguments
 
 APP_NAME = 'counterparty-server'
@@ -43,6 +44,8 @@ CONFIG_ARGS = [
 ]
 
 def main():
+    logger.info('Running v{} of {}.'.format(APP_VERSION, APP_NAME))
+
     if os.name == 'nt':
         from counterpartylib.lib import util_windows
         #patch up cmd.exe's "challenged" (i.e. broken/non-existent) UTF-8 logging
@@ -70,11 +73,6 @@ def main():
     parser_bootstrap = subparsers.add_parser('bootstrap', help='download bootstrap database')
 
     args = parser.parse_args()
-
-    # Logging
-    log.set_up(logger)
-
-    logger.info('Running v{} of {}.'.format(APP_VERSION, APP_NAME))
 
     # Bootstrapping
     if args.action == 'bootstrap':
