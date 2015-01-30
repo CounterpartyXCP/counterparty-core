@@ -7,12 +7,7 @@ import configparser, platform
 import urllib.request
 import tarfile
 import appdirs
-
-from counterpartylib.lib import config, util
-
 from decimal import Decimal as D
-
-CURRENT_VERSION = '1.0.0rc4'
 
 # generate commented config file from arguments list (client.CONFIG_ARGS and server.CONFIG_ARGS) and known values
 def generate_config_file(filename, config_args, known_config={}, overwrite=False):
@@ -143,24 +138,23 @@ def server_to_client_config(server_config):
 def generate_config_files():
     from counterpartycli.server import CONFIG_ARGS as SERVER_CONFIG_ARGS
     from counterpartycli.client import CONFIG_ARGS as CLIENT_CONFIG_ARGS
+    from counterpartylib.lib import config, util
 
     configdir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+
     server_configfile = os.path.join(configdir, 'server.conf')
-    client_configfile = os.path.join(configdir, 'client.conf')
-
-    server_known_config = get_server_known_config()
-
-    # generate random password
-    if 'rpc-password' not in server_known_config:
-        server_known_config['rpc-password'] = util.hexlify(util.dhash(os.urandom(16)))
-
-    client_known_config = server_to_client_config(server_known_config)
-
     if not os.path.exists(server_configfile):
+        # extract known configuration
+        server_known_config = get_server_known_config()
+        # generate random password
+        if 'rpc-password' not in server_known_config:
+            server_known_config['rpc-password'] = util.hexlify(util.dhash(os.urandom(16)))
         generate_config_file(server_configfile, SERVER_CONFIG_ARGS, server_known_config)
 
-    if not os.path.exists(client_configfile):
-        generate_config_file(client_configfile, CLIENT_CONFIG_ARGS, client_known_config)
+        client_configfile = os.path.join(configdir, 'client.conf')
+        if not os.path.exists(client_configfile):
+            client_known_config = server_to_client_config(server_known_config)
+            generate_config_file(client_configfile, CLIENT_CONFIG_ARGS, client_known_config)
 
 def tweak_py2exe_build():
     # py2exe copies only pyc files in site-packages.zip
@@ -184,6 +178,8 @@ def tweak_py2exe_build():
 
 # Download bootstrap database
 def bootstrap(overwrite=True, ask_confirmation=False):
+    from counterpartylib.lib import config
+
     bootstrap_url = 'https://s3.amazonaws.com/counterparty-bootstrap/counterpartyd-db.latest.tar.gz'
     bootstrap_url_testnet = 'https://s3.amazonaws.com/counterparty-bootstrap/counterpartyd-testnet-db.latest.tar.gz'
 

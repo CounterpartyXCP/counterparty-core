@@ -11,7 +11,7 @@ log.set_up(logger)
 from counterpartylib import server
 from counterpartylib.lib import config
 from counterpartycli.util import add_config_arguments
-from counterpartycli.setup import bootstrap
+from counterpartycli.setup import bootstrap, generate_config_files
 
 APP_NAME = 'counterparty-server'
 APP_VERSION = '1.0.0'
@@ -52,6 +52,9 @@ def main():
         from counterpartylib.lib import util_windows
         #patch up cmd.exe's "challenged" (i.e. broken/non-existent) UTF-8 logging
         util_windows.fix_win32_unicode()
+
+    # Post installation tasks
+    generate_config_files()
 
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(prog=APP_NAME, description='Server for the {} protocol'.format(config.XCP_NAME), add_help=False)

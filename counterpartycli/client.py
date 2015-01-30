@@ -18,6 +18,7 @@ from colorlog import ColoredFormatter
 from counterpartycli import util
 from counterpartycli import wallet
 from counterpartycli.util import add_config_arguments
+from counterpartycli.setup import generate_config_files
 
 from counterpartylib.lib import config
 from counterpartylib.lib import script
@@ -436,9 +437,14 @@ def generate_move_random_hash(move):
 
 
 def main():
+    logger.info('Running v{} of {}.'.format(APP_VERSION, APP_NAME))
+
     if os.name == 'nt':
         #patch up cmd.exe's "challenged" (i.e. broken/non-existent) UTF-8 logging
         util_windows.fix_win32_unicode()
+
+    # Post installation tasks
+    generate_config_files()
 
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(prog=APP_NAME, description='Counterparty CLI for counterparty-server', add_help=False)
