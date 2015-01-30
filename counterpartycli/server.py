@@ -54,7 +54,8 @@ def main():
         util_windows.fix_win32_unicode()
 
     # Parse command-line arguments.
-    parser = argparse.ArgumentParser(prog=APP_NAME, description='Server for the {} protocol'.format(config.XCP_NAME))
+    parser = argparse.ArgumentParser(prog=APP_NAME, description='Server for the {} protocol'.format(config.XCP_NAME), add_help=False)
+    parser.add_argument('-h', '--help', dest='help', action='store_true', help='show this help message and exit')
     parser.add_argument('-V', '--version', action='version', version="{} v{}".format(APP_NAME, APP_VERSION))
     parser.add_argument('--config-file', help='the path to the configuration file')
 
@@ -75,6 +76,11 @@ def main():
     parser_bootstrap = subparsers.add_parser('bootstrap', help='download bootstrap database')
 
     args = parser.parse_args()
+
+    # Help message
+    if args.action == 'help':
+        parser.print_help()
+        exit()
 
     # Bootstrapping
     if args.action == 'bootstrap':

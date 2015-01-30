@@ -441,7 +441,8 @@ def main():
         util_windows.fix_win32_unicode()
 
     # Parse command-line arguments.
-    parser = argparse.ArgumentParser(prog=APP_NAME, description='Counterparty CLI for counterparty-server')
+    parser = argparse.ArgumentParser(prog=APP_NAME, description='Counterparty CLI for counterparty-server', add_help=False)
+    parser.add_argument('-h', '--help', dest='help', action='store_true', help='show this help message and exit')
     parser.add_argument('-V', '--version', action='version', version="{} v{}".format(APP_NAME, APP_VERSION))
     parser.add_argument('--config-file', help='the location of the configuration file')
 
@@ -574,6 +575,11 @@ def main():
     parser_getrunninginfo = subparsers.add_parser('get_running_info', help='get the current state of the server')
 
     args = parser.parse_args()
+
+    # Help message
+    if args.action == 'help':
+        parser.print_help()
+        exit()
 
     # Logging
     log.set_up(logger)
