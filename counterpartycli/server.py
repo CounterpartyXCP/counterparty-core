@@ -10,7 +10,8 @@ log.set_up(logger)
 
 from counterpartylib import server
 from counterpartylib.lib import config
-from counterpartycli.util import bootstrap, add_config_arguments
+from counterpartycli.util import add_config_arguments
+from counterpartycli.setup import bootstrap
 
 APP_NAME = 'counterparty-server'
 APP_VERSION = '1.0.0'

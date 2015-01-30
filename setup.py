@@ -6,103 +6,9 @@ import shutil
 import ctypes.util
 import configparser, platform
 
-from counterpartycli.server import CONFIG_ARGS as SERVER_CONFIG_ARGS
-from counterpartycli.client import CONFIG_ARGS as CLIENT_CONFIG_ARGS
-from counterpartycli.util import generate_config_file
+from counterpartycli.setup import generate_config_files, tweak_py2exe_build
 
 CURRENT_VERSION = '1.0.0rc5'
-
-def extract_old_config():
-    import appdirs
-
-    old_config = {}
-
-    old_appdir = appdirs.user_config_dir(appauthor='Counterparty', appname='counterpartyd', roaming=True)
-    old_configfile = os.path.join(old_appdir, 'counterpartyd.conf')
-
-    if os.path.exists(old_configfile):
-        configfile = configparser.ConfigParser()
-        configfile.read(old_configfile)
-        if 'Default' in configfile:
-            for key in configfile['Default']:
-                new_key = key.replace('backend-rpc-', 'backend-')
-                new_key = new_key.replace('blockchain-service-name', 'backend-name')
-                new_value = configfile['Default'][key].replace('jmcorgan', 'addrindex')
-                old_config[new_key] = new_value
-
-    return old_config
-
-def extract_bitcoincore_config():
-    bitcoincore_config = {}
-
-    # Figure out the path to the bitcoin.conf file
-    if platform.system() == 'Darwin':
-        btc_conf_file = os.path.expanduser('~/Library/Application Support/Bitcoin/')
-    elif platform.system() == 'Windows':
-        btc_conf_file = os.path.join(os.environ['APPDATA'], 'Bitcoin')
-    else:
-        btc_conf_file = os.path.expanduser('~/.bitcoin')
-    btc_conf_file = os.path.join(btc_conf_file, 'bitcoin.conf')
-
-    # Extract contents of bitcoin.conf to build service_url
-    if os.path.exists(btc_conf_file):
-        conf = {}
-        with open(btc_conf_file, 'r') as fd:
-            # Bitcoin Core accepts empty rpcuser, not specified in btc_conf_file
-            for line in fd.readlines():
-                if '#' in line or '=' not in line:
-                    continue
-                k, v = line.split('=', 1)
-                conf[k.strip()] = v.strip()
-
-            config_keys = {
-                'rpcport': 'backend-port',
-                'rpcuser': 'backend-user',
-                'rpcpassword': 'backend-password',
-                'rpcssl': 'backend-ssl'
-            }
-
-            for bitcoind_key in config_keys:
-                if bitcoind_key in conf:
-                    counterparty_key = config_keys[bitcoind_key]
-                    bitcoincore_config[counterparty_key] = conf[bitcoind_key]
-
-    return bitcoincore_config
-
-def get_server_known_config():
-    server_known_config = {}
-
-    bitcoincore_config = extract_bitcoincore_config()
-    server_known_config.update(bitcoincore_config)
-
-    old_config = extract_old_config()
-    server_known_config.update(old_config)
-
-    return server_known_config
-
-# generate client config from server config
-def server_to_client_config(server_config):
-    client_config = {}
-
-    config_keys = {
-        'backend-connect': 'wallet-connect',
-        'backend-port': 'wallet-port',
-        'backend-user': 'wallet-user',
-        'backend-password': 'wallet-password',
-        'backend-ssl': 'wallet-ssl',
-        'backend-ssl-verify': 'wallet-ssl-verify',
-        'rpc-host': 'counterparty-rpc-connect',
-        'rpc-port': 'counterparty-rpc-port',
-        'rpc-user': 'counterparty-rpc-user',
-        'rpc-password': 'counterparty-rpc-password'
-    }
-
-    for server_key in config_keys:
-        if server_key in server_config:
-            client_key = config_keys[server_key]
-            client_config[client_key] = server_config[server_key]
-
-    return client_config
 
 class generate_configuration_files(Command):
     description = "Generate configfiles from old files or bitcoind config file"
@@ -114,26 +20,7 @@ class generate_configuration_files(Command):
         pass
 
     def run(self):
-        import appdirs
-        from counterpartylib.lib import config, util
-
-        configdir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
-        server_configfile = os.path.join(configdir, 'server.conf')
-        client_configfile = os.path.join(configdir, 'client.conf')
-
-        server_known_config = get_server_known_config()
-
-        # generate random password
-        if 'rpc-password' not in server_known_config:
-            server_known_config['rpc-password'] = util.hexlify(util.dhash(os.urandom(16)))
-
-        client_known_config = server_to_client_config(server_known_config)
-
-        if not os.path.exists(server_configfile):
-            generate_config_file(server_configfile, SERVER_CONFIG_ARGS, server_known_config)
-
-        if not os.path.exists(client_configfile):
-            generate_config_file(client_configfile, CLIENT_CONFIG_ARGS, client_known_config)
+        generate_config_files()
 
 class install(_install):
     description = "Install counterparty-cli and dependencies"
@@ -197,37 +84,39 @@ setup_options = {
 
 if sys.argv[1] == 'py2exe':
     import py2exe
-    WIN_DIST_DIR = 'counterparty-cli-win32-{}'.format(setup_options['version'])
+    from py2exe.distutils_buildexe import py2exe as _py2exe
+
+    WIN_DIST_DIR = 'counterparty-cli-win32-{}'.format(CURRENT_VERSION)
+    
+    class py2exe(_py2exe):
+        def __init__(self, dist):
+            _py2exe.__init__(self, dist)
+            
+        def run(self):
+            # Clean previous build
+            if os.path.exists(WIN_DIST_DIR):
+                shutil.rmtree(WIN_DIST_DIR)
+            # build exe's
+            _py2exe.run(self)
+            # tweaks
+            tweak_py2exe_build()
+    
+    # Update setup_options with py2exe specifics options
     setup_options.update({
-        'console': setup_options['scripts'],
+        'console': [
+            'C:\Python34\Scripts\counterparty-client-script.py',
+            'C:\Python34\Scripts\counterparty-server-script.py'
+        ],
         'zipfile': 'library/site-packages.zip',
-        'options': {'py2exe': {'dist_dir': WIN_DIST_DIR}}
+        'options': {
+            'py2exe': {
+                'dist_dir': WIN_DIST_DIR
+            }
+        },
+        'cmdclass': {
+            'py2exe': py2exe
+        }
     })
-    if os.path.exists(WIN_DIST_DIR):
-        shutil.rmtree(WIN_DIST_DIR)
-
+    
+    
 setup(**setup_options)
-
-
-# tweak Windows distribution
-if sys.argv[1] == 'py2exe':
-    # py2exe copies only pyc files in site-packages.zip
-    # modules with no pyc files must be copied in 'dist/library/'
-    import counterpartylib, certifi
-    additionals_modules = [counterpartylib, certifi]
-
-    for module in additionals_modules:
-        moudle_file = os.path.dirname(module.__file__)
-        dest_file = '{}/library/{}'.format(WIN_DIST_DIR, module.__name__)
-        shutil.copytree(moudle_file, dest_file)
-
-    # additionals DLLs
-    dlls = ['ssleay32.dll', 'libssl32.dll', 'libeay32.dll']
-    dlls.append(ctypes.util.find_msvcrt())
-
-    dlls_path = dlls
-    for dll in dlls:
-        dll_path = ctypes.util.find_library(dll)
-        shutil.copy(dll_path, WIN_DIST_DIR)
-
-

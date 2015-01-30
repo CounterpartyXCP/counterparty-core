@@ -17,7 +17,7 @@ from colorlog import ColoredFormatter
 
 from counterpartycli import util
 from counterpartycli import wallet
-from counterpartycli.util import bootstrap, add_config_arguments
+from counterpartycli.util import add_config_arguments
 
 from counterpartylib.lib import config
 from counterpartylib.lib import script
