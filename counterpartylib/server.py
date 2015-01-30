@@ -122,12 +122,14 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     else:
         filename = 'server{}.log'.format(network)
         config.LOG = os.path.join(log_dir, filename)
+    logger.debug('Writing server log to file: `{}`'.format(config.LOG))
 
     if api_log_file:
         config.API_LOG = api_log_file
     else:
         filename = 'server{}.api.log'.format(network)
         config.API_LOG = os.path.join(log_dir, filename)
+    logger.debug('Writing API log to file: `{}`'.format(config.API_LOG))
 
     ##############
     # THINGS WE CONNECT TO
