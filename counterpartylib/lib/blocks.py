@@ -134,8 +134,7 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
 
     util.BLOCK_LEDGER = []
 
-    # TODO: This shouldn’t be in `util.py`.
-    util.CURRENT_BLOCK_INDEX = block_index
+    assert block_index == util.CURRENT_BLOCK_INDEX
 
     # Expire orders, bets and rps.
     order.expire(db, block_index)
@@ -670,6 +669,7 @@ def reparse(db, block_index=None, quiet=False):
         cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
         for block in cursor.fetchall():
             logger.info('Block (re‐parse): {}'.format(str(block['block_index'])))
+            util.CURRENT_BLOCK_INDEX = block['block_index']
             previous_ledger_hash, previous_txlist_hash = parse_block(db, block['block_index'], block['block_time'],
                                                                      previous_ledger_hash, previous_txlist_hash)
 
@@ -688,6 +688,7 @@ def reparse(db, block_index=None, quiet=False):
 
 def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index):
     assert type(tx_hash) == str
+    assert block_index == util.CURRENT_BLOCK_INDEX
 
     # Get the important details about each transaction.
     tx_hex = backend.getrawtransaction(tx_hash)
@@ -962,6 +963,8 @@ def follow(db):
             block_time = block.nTime
             txhash_list = backend.get_txhash_list(block)
             with db:
+                util.CURRENT_BLOCK_INDEX = block_index
+
                 # List the block.
                 cursor.execute('''INSERT INTO blocks(
                                     block_index,
