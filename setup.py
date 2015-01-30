@@ -46,7 +46,7 @@ setup_options = {
     'maintainer_email': 'adamk@counterparty.io',
     'url': 'http://counterparty.io',
     'license': 'MIT',
-    'description': 'Counterparty Protocol Command‐Line Interface',
+    'description': 'Counterparty Protocol Command-Line Interface',
     'long_description': '',
     'keywords': 'counterparty,bitcoin',
     'classifiers': [
