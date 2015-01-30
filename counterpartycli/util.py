@@ -108,7 +108,7 @@ def add_config_arguments(arg_parser, config_args, default_config_file):
             os.makedirs(config_dir, mode=0o755)
         cmd_args.config_file = os.path.join(config_dir, default_config_file)
 
-    logger.info('Loading configuration file: `{}`'.format(cmd_args.config_file))
+    logger.debug('Loading configuration file: `{}`'.format(cmd_args.config_file))
     configfile = configparser.ConfigParser()
     configfile.read(cmd_args.config_file)
 

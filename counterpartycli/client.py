@@ -288,7 +288,7 @@ def set_options(testnet=False, testcoin=False,
         logger.error("Unhandled Exception", exc_info=(exc_type, exc_value, exc_traceback))
     sys.excepthook = handle_exception
 
-    logger.info('Running v{} of {}.'.format(APP_VERSION, APP_NAME))
+    logger.debug('Running v{} of {}.'.format(APP_VERSION, APP_NAME))
 
     # testnet
     config.TESTNET = testnet or False
