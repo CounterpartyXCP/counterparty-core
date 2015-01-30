@@ -37,9 +37,9 @@ CONFIG_ARGS = [
     [('--testcoin',), {'action': 'store_true', 'default': False, 'help': 'use the test {} network on every blockchain'.format(config.XCP_NAME)}],
     [('--force',), {'action': 'store_true', 'default': False, 'help': 'skip backend check, version check, process lock (NOT FOR USE ON PRODUCTION SYSTEMS)'}],
 
-    [('--database-file',), {'default': None, 'help': 'the location of the SQLite3 database'}],
-    [('--log-file',), {'default': None, 'help': 'the location of the log file'}],
-    [('--api-log-file',), {'default': None, 'help': 'the location of the API log file'}],
+    [('--database-file',), {'default': None, 'help': 'the path to the SQLite3 database file'}],
+    [('--log-file',), {'default': None, 'help': 'the path to the server log file'}],
+    [('--api-log-file',), {'default': None, 'help': 'the path to the API log file'}],
 
     [('--broadcast-tx-mainnet',), {'default': 'bitcoind', 'help': 'Method used to broadcast signed transactions'}]
 ]
@@ -55,7 +55,7 @@ def main():
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(prog=APP_NAME, description='Server for the {} protocol'.format(config.XCP_NAME))
     parser.add_argument('-V', '--version', action='version', version="{} v{}".format(APP_NAME, APP_VERSION))
-    parser.add_argument('--config-file', help='the location of the configuration file')
+    parser.add_argument('--config-file', help='the path to the configuration file')
 
     parser = add_config_arguments(parser, CONFIG_ARGS, 'server.conf')
 
