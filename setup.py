@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from setuptools.command.install import install as _install
+from setuptools.command.bdist_egg import bdist_egg as _bdist_egg
 from setuptools import setup, find_packages, Command
 import os
 import zipfile
@@ -121,15 +122,21 @@ class move_old_db(Command):
                         dest_file = files_to_copy[src_file]
                         print('Copy {} to {}'.format(src_file, dest_file))
                         shutil.copy(src_file, dest_file)
+
+def post_install(cmd):
+    cmd.run_command('install_apsw')
+    cmd.run_command('install_serpent')
+    cmd.run_command('move_old_db')
              
 class install(_install):
-    description = "Install counterparty-cli and dependencies"
-
     def run(self):
         _install.do_egg_install(self)
-        self.run_command('install_apsw')
-        self.run_command('install_serpent')
-        self.run_command('move_old_db')
+        post_install(self)
+        
+class bdist_egg(_bdist_egg):
+    def run(self):
+        _bdist_egg.run(self)
+        post_install(self)
 
 required_packages = [
     'appdirs>=1.4.0',
