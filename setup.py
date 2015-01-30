@@ -99,7 +99,7 @@ if sys.argv[1] == 'py2exe':
             # build exe's
             _py2exe.run(self)
             # tweaks
-            tweak_py2exe_build()
+            tweak_py2exe_build(WIN_DIST_DIR)
     
     # Update setup_options with py2exe specifics options
     setup_options.update({

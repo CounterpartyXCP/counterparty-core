@@ -5,8 +5,9 @@ import shutil
 import ctypes.util
 import configparser, platform
 import urllib.request
-import tarfile
+import tarfile, zipfile
 import appdirs
+import hashlib
 from decimal import Decimal as D
 
 # generate commented config file from arguments list (client.CONFIG_ARGS and server.CONFIG_ARGS) and known values
@@ -156,7 +157,20 @@ def generate_config_files():
             client_known_config = server_to_client_config(server_known_config)
             generate_config_file(client_configfile, CLIENT_CONFIG_ARGS, client_known_config)
 
-def tweak_py2exe_build():
+def zip_folder(folder_path, zip_path):
+    zip_file = zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED)
+    for root, dirs, files in os.walk(folder_path):
+        for a_file in files:
+            zip_file.write(os.path.join(root, a_file))
+    zip_file.close()
+
+def tweak_py2exe_build(win_dist_dir):
+    # rename exe files
+    for exe_name in ['server', 'client']:
+        exe_src = os.path.join(win_dist_dir, 'counterparty-{}-script.exe'.format(exe_name))
+        exe_dest = os.path.join(win_dist_dir, 'counterparty-{}.exe'.format(exe_name))
+        os.rename(exe_src, exe_dest)
+
     # py2exe copies only pyc files in site-packages.zip
     # modules with no pyc files must be copied in 'dist/library/'
     import counterpartylib, certifi
@@ -164,7 +178,7 @@ def tweak_py2exe_build():
 
     for module in additionals_modules:
         moudle_file = os.path.dirname(module.__file__)
-        dest_file = '{}/library/{}'.format(WIN_DIST_DIR, module.__name__)
+        dest_file = os.path.join(win_dist_dir, 'library', module.__name__)
         shutil.copytree(moudle_file, dest_file)
 
     # additionals DLLs
@@ -174,7 +188,23 @@ def tweak_py2exe_build():
     dlls_path = dlls
     for dll in dlls:
         dll_path = ctypes.util.find_library(dll)
-        shutil.copy(dll_path, WIN_DIST_DIR)
+        shutil.copy(dll_path, win_dist_dir)
+
+    # compress distribution folder
+    zip_path = '{}.zip'.format(win_dist_dir)
+    zip_folder(win_dist_dir, zip_path)
+
+    # Open,close, read file and calculate MD5 on its contents 
+    with open(zip_path, 'rb') as zip_file:
+        data = zip_file.read()    
+        md5 = hashlib.md5(data).hexdigest()
+
+    # include MD5 in the zip name
+    new_zip_path = '{}-{}.zip'.format(win_dist_dir, md5)
+    os.rename(zip_path, new_zip_path)
+
+    # clean build folder
+    shutil.rmtree(win_dist_dir)
 
 # Download bootstrap database
 def bootstrap(overwrite=True, ask_confirmation=False):
