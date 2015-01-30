@@ -5,10 +5,10 @@ WIN_EXE_LIB = os.path.normpath(os.path.join(CURR_DIR, 'library'))
 if os.path.isdir(WIN_EXE_LIB):
     sys.path.insert(0, WIN_EXE_LIB)
 
-from counterpartycli import client, server
-
 def client_main():
+    from counterpartycli import client
     client.main()
 
 def server_main():
+    from counterpartycli import server
     server.main()

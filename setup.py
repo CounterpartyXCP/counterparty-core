@@ -6,8 +6,6 @@ import shutil
 import ctypes.util
 import configparser, platform
 
-from counterpartycli.setup import generate_config_files, tweak_py2exe_build
-
 CURRENT_VERSION = '1.0.0rc5'
 
 class generate_configuration_files(Command):
@@ -20,6 +18,7 @@ class generate_configuration_files(Command):
         pass
 
     def run(self):
+        from counterpartycli.setup import generate_config_files
         generate_config_files()
 
 class install(_install):
@@ -69,7 +68,7 @@ setup_options = {
     'packages': find_packages(),
     'zip_safe': False,
     'install_requires': required_packages,
-    'setup_requires': ['appdirs==1.4.0', 'counterparty-lib>=9.49.4rc1'],
+    'setup_requires': required_packages,
     'entry_points': {
         'console_scripts': [
             'counterparty-client = counterpartycli:client_main',
@@ -93,6 +92,7 @@ if sys.argv[1] == 'py2exe':
             _py2exe.__init__(self, dist)
             
         def run(self):
+            from counterpartycli.setup import tweak_py2exe_build
             # Clean previous build
             if os.path.exists(WIN_DIST_DIR):
                 shutil.rmtree(WIN_DIST_DIR)
