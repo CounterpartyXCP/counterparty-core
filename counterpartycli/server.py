@@ -73,10 +73,10 @@ def main():
     parser_rollback = subparsers.add_parser('rollback', help='rollback database')
     parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
     
-    parser_kickstart = subparsers.add_parser('kickstart', help='rapidly bring database up to the present')
+    parser_kickstart = subparsers.add_parser('kickstart', help='rapidly build database by reading from Bitcoin Core blockchain')
     parser_kickstart.add_argument('--bitcoind-dir', help='Bitcoin Core data directory')
 
-    parser_bootstrap = subparsers.add_parser('bootstrap', help='download bootstrap database')
+    parser_bootstrap = subparsers.add_parser('bootstrap', help='bootstrap database with hosted snapshot')
 
     args = parser.parse_args()
 
