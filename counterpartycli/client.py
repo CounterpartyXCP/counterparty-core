@@ -223,8 +223,15 @@ def get_pubkey_monosig(pubkeyhash):
             pass
 
         # If not in wallet and not in blockchain, get from user.
-        answer = input('Public keys (hexadecimal) or Private key (Wallet Import Format) for `{}`: '.format(pub))
-        if script.is_fully_valid(binascii.unhexlify(answer)):
+        answer = input('Public keys (hexadecimal) or Private key (Wallet Import Format) for `{}`: '.format(pubkeyhash))
+
+        # Public Key or Private Key?
+        is_fully_valid_pubkey = True
+        try:
+            is_fully_valid_pubkey = script.is_fully_valid(binascii.unhexlify(answer))
+        except binascii.Error:
+            is_fully_valid_pubkey = False
+        if is_fully_valid_pubkey:
             pubkey = answer
         else:
             private_key = answer
