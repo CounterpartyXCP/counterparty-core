@@ -286,7 +286,7 @@ def compose_transaction(db, name, params,
 
 def sign_transaction(unsigned_tx_hex, private_key_wif):
     """Sign the transaction."""
-    return transaction.sign_tx(proxy, unsigned_tx_hex,
+    return transaction.sign_tx(unsigned_tx_hex,
         private_key_wif=private_key_wif)
 
 def broadcast_transaction(signed_tx_hex):
@@ -306,9 +306,9 @@ def broadcast_transaction(signed_tx_hex):
 
 def do_transaction(db, name, params, private_key_wif, **kwargs):
     """Create, sign and broadcast transaction."""
-    unsigned_tx = compose_transaction(db, proxy, name, params, **kwargs)
-    signed_tx = sign_transaction(proxy, unsigned_tx, private_key_wif=private_key_wif)
-    return broadcast_transaction(proxy, signed_tx)
+    unsigned_tx = compose_transaction(db, name, params, **kwargs)
+    signed_tx = sign_transaction(unsigned_tx, private_key_wif=private_key_wif)
+    return broadcast_transaction(signed_tx)
 
 def init_api_access_log():
     """Initialize API logger."""
