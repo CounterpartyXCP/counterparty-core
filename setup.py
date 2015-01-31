@@ -6,7 +6,7 @@ import shutil
 import ctypes.util
 import configparser, platform
 
-CURRENT_VERSION = '1.0.0rc5'
+CURRENT_VERSION = '1.0.0rc6'
 
 class generate_configuration_files(Command):
     description = "Generate configfiles from old files or bitcoind config file"
