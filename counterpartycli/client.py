@@ -219,7 +219,7 @@ def get_pubkey_monosig(pubkeyhash):
         # If in blockchain (and not in wallet), get from blockchain.
         try:
             return util.api('search_pubkey', {'pubkeyhash':pubkeyhash, 'provided_pubkeys':None})
-        except script.AddressError:
+        except util.RPCError:
             pass
 
         # If not in wallet and not in blockchain, get from user.
