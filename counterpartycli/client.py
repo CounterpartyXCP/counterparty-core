@@ -263,25 +263,26 @@ def cli(method, params, unsigned):
     for address_name in ['source', 'destination']:
         if address_name in params:
             address = params[address_name]
-            if script.is_multisig(address) or address_name != 'destination':    # We don’t need the pubkey for a monosig destination.
+            if script.is_multisig(address) or address_name != 'destination':    # We don’t need the pubkey for a mono‐sig destination.
                 pubkeys += get_pubkeys(address)
     params['pubkey'] = pubkeys
 
     unsigned_tx_hex = util.api(method, params)
     logger.info('Transaction (unsigned): {}'.format(unsigned_tx_hex))
 
-    # Ask to sign and broadcast (if not multi‐sig).
-    if script.is_multisig(params['source']):
-        logger.info('Multi‐signature transactions are signed and broadcasted manually.')
-    elif not unsigned and input('Sign and broadcast? (y/N) ') == 'y':
-        if not wallet.is_mine(params['source']):
-            raise Exception('Source address not in your wallet.')
-        # Sign 
-        signed_tx_hex = wallet.sign_raw_transaction(unsigned_tx_hex)
-        logger.info('Transaction (signed): {}'.format(signed_tx_hex))
-        # and broadcast.
-        tx_hash = util.api('broadcast_tx', {'signed_tx_hex': signed_tx_hex})
-        logger.info('Hash of transaction (broadcasted): {}'.format(tx_hash))
+    # Sign and broadcast?
+    if not unsigned:
+        if script.is_multisig(params['source']):
+            logger.info('Multi‐signature transactions are signed and broadcasted manually.')
+        else:
+            if wallet.is_mine(params['source']):
+                if input('Sign and broadcast? (y/N) ') == 'y':
+                    signed_tx_hex = wallet.sign_raw_transaction(unsigned_tx_hex)
+                    logger.info('Transaction (signed): {}'.format(signed_tx_hex))
+                    tx_hash = util.api('broadcast_tx', {'signed_tx_hex': signed_tx_hex})
+                    logger.info('Hash of transaction (broadcasted): {}'.format(tx_hash))
+            else:
+                logger.info('Source address not in wallet.')
 
 
 def set_options(testnet=False, testcoin=False,
