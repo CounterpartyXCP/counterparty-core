@@ -10,6 +10,7 @@ import dateutil.parser
 import calendar
 import configparser
 import binascii
+import string
 
 import appdirs
 from prettytable import PrettyTable
@@ -213,17 +214,23 @@ def get_pubkey_monosig(pubkeyhash):
     if wallet.is_valid(pubkeyhash):
 
         # If in wallet, get from wallet.
+        logging.debug('Looking for public key for `{}` in wallet.'.format(pubkeyhash))
         if wallet.is_mine(pubkeyhash):
             return wallet.get_pubkey(pubkeyhash)
+        logging.debug('Public key for `{}` not found in wallet.'.format(pubkeyhash))
 
         # If in blockchain (and not in wallet), get from blockchain.
+        logging.debug('Looking for public key for `{}` in blockchain.'.format(pubkeyhash))
         try:
             return util.api('search_pubkey', {'pubkeyhash':pubkeyhash, 'provided_pubkeys':None})
         except util.RPCError:
             pass
+        logging.debug('Public key for `{}` not found in blockchain.'.format(pubkeyhash))
 
         # If not in wallet and not in blockchain, get from user.
         answer = input('Public keys (hexadecimal) or Private key (Wallet Import Format) for `{}`: '.format(pubkeyhash))
+        if not answer:
+            return None
 
         # Public Key or Private Key?
         is_fully_valid_pubkey = True
@@ -232,10 +239,15 @@ def get_pubkey_monosig(pubkeyhash):
         except binascii.Error:
             is_fully_valid_pubkey = False
         if is_fully_valid_pubkey:
+            logging.debug('Answer was a fully valid public key.')
             pubkey = answer
         else:
+            logging.debug('Answer was not a fully valid public key. Assuming answer was a private key.')
             private_key = answer
-            pubkey = script.private_key_to_public_key(private_key)
+            try:
+                pubkey = script.private_key_to_public_key(private_key)
+            except script.AltcoinSupportError:
+                raise InputError('invalid private key')
         if pubkeyhash != script.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
             raise InputError('provided public or private key does not match the source address')
 
@@ -596,7 +608,7 @@ def main():
         exit()
 
     # Logging
-    log.set_up(logger)
+    log.set_up(logger, verbose=args.verbose)
 
     # Convert.
     args.fee_per_kb = int(args.fee_per_kb * config.UNIT)
