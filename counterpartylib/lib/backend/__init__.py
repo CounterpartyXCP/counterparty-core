@@ -207,7 +207,7 @@ def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
             if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
                 return pubkey
 
-    raise script.AddressError('Public key for address ‘{}’ not published in blockchain.'.format(pubkeyhash))
+    raise script.AddressError('Public key for address ‘{}’ neither provided nor published in the blockchain.'.format(pubkeyhash))
 
 def multisig_pubkeyhashes_to_pubkeys(address, provided_pubkeys=None):
     signatures_required, pubkeyhashes, signatures_possible = script.extract_array(address)
