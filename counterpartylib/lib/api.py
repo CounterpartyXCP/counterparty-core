@@ -688,7 +688,9 @@ class APIServer(threading.Thread):
             return message_type_id, unpacked
 
         @dispatcher.add_method
+        # TODO: Rename this method.
         def search_pubkey(pubkeyhash, provided_pubkeys=None):
+            # Returns `None` if the public key cannot be found.
             return backend.pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=provided_pubkeys)
 
         def _set_cors_headers(response):
