@@ -132,7 +132,7 @@ class install(_install):
     def run(self):
         _install.do_egg_install(self)
         post_install(self)
-        
+
 class bdist_egg(_bdist_egg):
     def run(self):
         _bdist_egg.run(self)
