@@ -688,7 +688,6 @@ def reparse(db, block_index=None, quiet=False):
 
 def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index):
     assert type(tx_hash) == str
-    assert block_index == util.CURRENT_BLOCK_INDEX
 
     # Get the important details about each transaction.
     tx_hex = backend.getrawtransaction(tx_hash)
@@ -699,6 +698,8 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index):
         block_hash = config.MEMPOOL_BLOCK_HASH
         block_index = config.MEMPOOL_BLOCK_INDEX
         backend.extract_addresses(tx_hash) # prepare cache for backend.unconfirmed_transactions().
+    else:
+        assert block_index == util.CURRENT_BLOCK_INDEX
 
     if source and (data or destination == config.UNSPENDABLE):
         logger.debug('Saving transaction: {}'.format(tx_hash))
