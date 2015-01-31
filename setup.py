@@ -34,7 +34,7 @@ required_packages = [
     'python-dateutil>=2.2',
     'requests>=2.3.0',
     'colorlog>=2.4.0',
-    'counterparty-lib>=9.49.4rc1'
+    'counterparty-lib>=9.49.4rc7'
 ]
 
 setup_options = {

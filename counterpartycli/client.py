@@ -216,15 +216,16 @@ def get_pubkey_monosig(pubkeyhash):
         # If in wallet, get from wallet.
         logging.debug('Looking for public key for `{}` in wallet.'.format(pubkeyhash))
         if wallet.is_mine(pubkeyhash):
-            return wallet.get_pubkey(pubkeyhash)
+            pubkey = wallet.get_pubkey(pubkeyhash)
+            if pubkey:
+                return pubkey
         logging.debug('Public key for `{}` not found in wallet.'.format(pubkeyhash))
 
         # If in blockchain (and not in wallet), get from blockchain.
         logging.debug('Looking for public key for `{}` in blockchain.'.format(pubkeyhash))
-        try:
-            return util.api('search_pubkey', {'pubkeyhash':pubkeyhash, 'provided_pubkeys':None})
-        except util.RPCError:
-            pass
+        pubkey = util.api('search_pubkey', {'pubkeyhash': pubkeyhash, 'provided_pubkeys': None})
+        if pubkey:
+            return pubkey
         logging.debug('Public key for `{}` not found in blockchain.'.format(pubkeyhash))
 
         # If not in wallet and not in blockchain, get from user.
