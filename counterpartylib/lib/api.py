@@ -317,8 +317,7 @@ def do_transaction(db, name, params, private_key_wif, **kwargs):
 def get_block_hex(block_hash):
     """Return hex data of specified block."""
     try:
-        block = backend.getblock(block_hash)
-        block_hex = block['block_hex']
+        block_hex = backend.getblock(block_hash)
         return block_hex
     except KeyError:
         raise exceptions.DatabaseError('No block data for hash %s.' % tx_hash)
@@ -346,8 +345,7 @@ def get_block_json(db, block_hash):
 def get_tx_hex(tx_hash):
     """Return hex data of specified transaction."""
     try:
-        tx = backend.getrawtransaction(tx_hash)
-        tx_hex = tx['tx_hex']
+        tx_hex = backend.getrawtransaction(tx_hash)
         return tx_hex
     except KeyError:
         raise exceptions.DatabaseError('No transaction data for hash %s.' % tx_hash)
@@ -811,6 +809,16 @@ class APIServer(threading.Thread):
                 if format == 'json':
                     response_data = get_block_json(db, block_hash)
                     response = flask.Response(response_data, 200, mimetype='application/json')
+                    return response
+                elif format == 'dat':
+                    # Binary
+                    response_data = get_block_binary(block_hash)
+                    response = flask.Response(response_data, 200, mimetype='application/octet-stream')
+                    return response
+                elif format == 'txt':
+                    # Hex
+                    response_data = get_block_hex(block_hash)
+                    response = flask.Response(response_data, 200, mimetype='text/plain')
                     return response
                 else:
                     error = 'Invalid file format: %s. Supported format is .json.' % format
