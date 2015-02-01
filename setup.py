@@ -123,20 +123,30 @@ class move_old_db(Command):
                         print('Copy {} to {}'.format(src_file, dest_file))
                         shutil.copy(src_file, dest_file)
 
-def post_install(cmd):
+def post_install(cmd, install_serpent=False):
     cmd.run_command('install_apsw')
-    cmd.run_command('install_serpent')
+    if install_serpent:
+        cmd.run_command('install_serpent')
     cmd.run_command('move_old_db')
              
 class install(_install):
+    user_options = _install.user_options + [
+        ("with-serpent", None, "Install Ethereum Serpent"),
+    ]
+    boolean_options = _install.boolean_options + ['with-serpent']
+
+    def initialize_options(self):
+        self.with_serpent = False
+        _install.initialize_options(self)
+
     def run(self):
         _install.do_egg_install(self)
-        post_install(self)
+        post_install(self, self.with_serpent)
 
 class bdist_egg(_bdist_egg):
     def run(self):
         _bdist_egg.run(self)
-        post_install(self)
+        post_install(self, False)
 
 required_packages = [
     'appdirs>=1.4.0',
