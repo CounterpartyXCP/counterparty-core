@@ -284,32 +284,6 @@ def compose_transaction(db, name, params,
         # import traceback
         # traceback.print_exc()
 
-def sign_transaction(unsigned_tx_hex, private_key_wif):
-    """Sign the transaction."""
-    return transaction.sign_tx(unsigned_tx_hex,
-        private_key_wif=private_key_wif)
-
-def broadcast_transaction(signed_tx_hex):
-    """Broadcast a transaction."""
-    if not config.TESTNET and config.BROADCAST_TX_MAINNET in ['bci', 'bci-failover']:
-        url = "https://blockchain.info/pushtx"
-        params = {'tx': signed_tx_hex}
-        response = requests.post(url, data=params)
-        if response.text.lower() != 'transaction submitted' or response.status_code != 200:
-            if config.BROADCAST_TX_MAINNET == 'bci-failover':
-                return transaction.broadcast_tx(signed_tx_hex)
-            else:
-                raise APIError(response.text)
-        return response.text
-    else:
-        return transaction.broadcast_tx(signed_tx_hex)
-
-def do_transaction(db, name, params, private_key_wif, **kwargs):
-    """Create, sign and broadcast transaction."""
-    unsigned_tx = compose_transaction(db, name, params, **kwargs)
-    signed_tx = sign_transaction(unsigned_tx, private_key_wif=private_key_wif)
-    return broadcast_transaction(signed_tx)
-
 def init_api_access_log():
     """Initialize API logger."""
     if config.API_LOG:
@@ -413,7 +387,7 @@ class APIServer(threading.Thread):
         ######################
         #WRITE/ACTION API
 
-        # Generate dynamically create_{transaction} and do_{transaction} methods
+        # Generate dynamically create_{transaction} methods
         def generate_create_method(tx):
 
             def split_params(**kwargs):
@@ -436,29 +410,12 @@ class APIServer(threading.Thread):
                 except TypeError as e:          #TODO: generalise for all API methods
                     raise APIError(str(e))
 
-            def do_method(**kwargs):
-                try:
-                    transaction_args, common_args, private_key_wif = split_params(**kwargs)
-                    return do_transaction(db, name=tx, params=transaction_args, private_key_wif=private_key_wif, **common_args)
-                except TypeError as e:          #TODO: generalise for all API methods
-                    raise APIError(str(e))
-
-            return create_method, do_method
+            return create_method
 
         for tx in API_TRANSACTIONS:
-            create_method, do_method = generate_create_method(tx)
+            create_method = generate_create_method(tx)
             create_method.__name__ = 'create_{}'.format(tx)
-            do_method.__name__ = 'do_{}'.format(tx)
             dispatcher.add_method(create_method)
-            dispatcher.add_method(do_method)
-
-        @dispatcher.add_method
-        def sign_tx(unsigned_tx_hex, privkey):
-            return sign_transaction(unsigned_tx_hex, private_key_wif=privkey)
-
-        @dispatcher.add_method
-        def broadcast_tx(signed_tx_hex):
-            return broadcast_transaction(signed_tx_hex)
 
         @dispatcher.add_method
         def get_messages(block_index):
