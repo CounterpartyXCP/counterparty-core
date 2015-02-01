@@ -606,7 +606,7 @@ def main():
     # Help message
     if args.action == 'help':
         parser.print_help()
-        exit()
+        sys.exit()
 
     # Logging
     log.set_up(logger, verbose=args.verbose)

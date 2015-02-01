@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import os
+import sys
 import argparse
 import logging
 
@@ -83,12 +84,12 @@ def main():
     # Help message
     if args.action == 'help':
         parser.print_help()
-        exit()
+        sys.exit()
 
     # Bootstrapping
     if args.action == 'bootstrap':
         bootstrap()
-        exit()
+        sys.exit()
 
     # Configuration
     if args.action in ['reparse', 'rollback', 'kickstart', 'start']:
