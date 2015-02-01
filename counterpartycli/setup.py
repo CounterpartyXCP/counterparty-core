@@ -217,6 +217,7 @@ def after_py2exe_build(win_dist_dir):
     # Clean Hack
     os.remove('C:\\Python34\\Lib\\site-packages\\flask\\ext\\httpauth.py')
 
+
 # Download bootstrap database
 def bootstrap(overwrite=True, ask_confirmation=False):
     from counterpartylib.lib import config
@@ -239,8 +240,21 @@ def bootstrap(overwrite=True, ask_confirmation=False):
         if input(question).lower() != 'y':
             return
 
+    # Progress bar
+    def reporthook(blocknum, blocksize, totalsize):
+        readsofar = blocknum * blocksize
+        if totalsize > 0:
+            percent = readsofar * 1e2 / totalsize
+            s = "\r%5.1f%% %*d / %d" % (
+                percent, len(str(totalsize)), readsofar, totalsize)
+            sys.stderr.write(s)
+            if readsofar >= totalsize: # near the end
+                sys.stderr.write("\n")
+        else: # total size is unknown
+            sys.stderr.write("read %d\n" % (readsofar,))
+
     print('Downloading mainnet database from {}…'.format(bootstrap_url))
-    urllib.request.urlretrieve(bootstrap_url, 'counterpartyd-db.latest.tar.gz')
+    urllib.request.urlretrieve(bootstrap_url, 'counterpartyd-db.latest.tar.gz', reporthook)
     print('Extracting…')
     with tarfile.open('counterpartyd-db.latest.tar.gz', 'r:gz') as tar_file:
         tar_file.extractall()
@@ -250,7 +264,7 @@ def bootstrap(overwrite=True, ask_confirmation=False):
     os.remove('counterpartyd-db.latest.tar.gz')
 
     print('Downloading testnet database from {}…'.format(bootstrap_url_testnet))
-    urllib.request.urlretrieve(bootstrap_url_testnet, 'counterpartyd-testnet-db.latest.tar.gz')
+    urllib.request.urlretrieve(bootstrap_url_testnet, 'counterpartyd-testnet-db.latest.tar.gz', reporthook)
     print('Extracting…')
     with tarfile.open('counterpartyd-testnet-db.latest.tar.gz', 'r:gz') as tar_file:
         tar_file.extractall()
