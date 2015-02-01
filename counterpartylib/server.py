@@ -82,9 +82,9 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
                 broadcast_tx_mainnet=None):
 
      # Data directory
-    config.DATA_DIR = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
-    if not os.path.isdir(config.DATA_DIR):
-        os.makedirs(config.DATA_DIR)
+    data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+    if not os.path.isdir(data_dir):
+        os.makedirs(data_dir, mode=0o755)
 
     # testnet
     if testnet:
@@ -109,25 +109,27 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
         config.DATABASE = database_file
     else:
         filename = '{}.{}{}.db'.format(config.APP_NAME, config.VERSION_MAJOR, network)
-        config.DATABASE = os.path.join(config.DATA_DIR, filename)
+        config.DATABASE = os.path.join(data_dir, filename)
 
     # Log directory
-    config.LOG_DIR = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
-    if not os.path.isdir(config.LOG_DIR):
-        os.makedirs(config.LOG_DIR)
+    log_dir = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
+    if not os.path.isdir(log_dir):
+        os.makedirs(log_dir, mode=0o755)
 
     # Log
     if log_file:
         config.LOG = log_file
     else:
         filename = 'server{}.log'.format(network)
-        config.LOG = os.path.join(config.LOG_DIR, filename)
+        config.LOG = os.path.join(log_dir, filename)
+    logger.debug('Writing server log to file: `{}`'.format(config.LOG))
 
     if api_log_file:
         config.API_LOG = api_log_file
     else:
         filename = 'server{}.api.log'.format(network)
-        config.API_LOG = os.path.join(config.LOG_DIR, filename)
+        config.API_LOG = os.path.join(log_dir, filename)
+    logger.debug('Writing API log to file: `{}`'.format(config.API_LOG))
 
     ##############
     # THINGS WE CONNECT TO

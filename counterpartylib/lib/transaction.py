@@ -491,9 +491,12 @@ def construct (db, tx_info, encoding='auto',
 
 def sign_tx(unsigned_tx_hex, private_key_wif):
     """Sign unsigned transaction serialisation."""
+
+    if not private_key_wif:
+        raise exceptions.TransactionError('invalid private key')
     
     for char in private_key_wif:
-        if char not in util.b58_digits:
+        if char not in script.b58_digits:
             raise exceptions.TransactionError('invalid private key')
 
     # TODO: Hack! (pybitcointools is Python 2 only)

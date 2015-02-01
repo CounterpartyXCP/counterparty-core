@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from setuptools.command.install import install as _install
+from setuptools.command.bdist_egg import bdist_egg as _bdist_egg
 from setuptools import setup, find_packages, Command
 import os
 import zipfile
@@ -7,7 +8,7 @@ import urllib.request
 import sys
 import shutil
 
-CURRENT_VERSION = '9.49.4rc4'
+CURRENT_VERSION = '9.49.4rc7'
 
 # NOTE: Why we don’t use the the PyPi package:
 # <https://code.google.com/p/apsw/source/detail?r=358a9623d051>
@@ -121,33 +122,39 @@ class move_old_db(Command):
                         dest_file = files_to_copy[src_file]
                         print('Copy {} to {}'.format(src_file, dest_file))
                         shutil.copy(src_file, dest_file)
+
+def post_install(cmd):
+    cmd.run_command('install_apsw')
+    cmd.run_command('install_serpent')
+    cmd.run_command('move_old_db')
              
 class install(_install):
-    description = "Install counterparty-cli and dependencies"
-
     def run(self):
         _install.do_egg_install(self)
-        self.run_command('install_apsw')
-        self.run_command('install_serpent')
-        self.run_command('move_old_db')
+        post_install(self)
+
+class bdist_egg(_bdist_egg):
+    def run(self):
+        _bdist_egg.run(self)
+        post_install(self)
 
 required_packages = [
-    'appdirs==1.4.0',
-    'prettytable==0.7.2',
-    'python-dateutil==2.2',
-    'flask==0.10.1',
-    'json-rpc==1.7',
-    'pytest==2.6.4',
-    'pycoin==0.52',
-    'requests==2.4.2',
-    'Flask-HTTPAuth==2.3.0',
-    'tornado==4.0.2',
-    'pycrypto>=2.6.1',
-    'tendo==0.2.6',
-    'pysha3==0.3',
-    'pytest-cov==1.8.0',
-    'colorlog==2.4.0',
-    'python-bitcoinlib==0.2.1'
+    'appdirs>=1.4.0',
+    'prettytable>=0.7.2',
+    'python-dateutil>=2.2',
+    'flask>=0.10.1',
+    'json-rpc>=1.7',
+    'pytest>=2.6.4',
+    'pycoin>=0.52',
+    'requests>=2.3.0',
+    'Flask-HTTPAuth>=2.3.0',
+    'tornado>=4.0',
+    'pycrypto>=2.6',
+    'tendo>=0.2.6',
+    'pysha3>=0.3',
+    'pytest-cov>=1.8.0',
+    'colorlog>=2.4.0',
+    'python-bitcoinlib>=0.2.1'
 ]
 
 setup_options = {

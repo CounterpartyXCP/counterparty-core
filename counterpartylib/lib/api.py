@@ -288,7 +288,7 @@ def compose_transaction(db, name, params,
 
 def sign_transaction(unsigned_tx_hex, private_key_wif):
     """Sign the transaction."""
-    return transaction.sign_tx(proxy, unsigned_tx_hex,
+    return transaction.sign_tx(unsigned_tx_hex,
         private_key_wif=private_key_wif)
 
 def broadcast_transaction(signed_tx_hex):
@@ -308,9 +308,9 @@ def broadcast_transaction(signed_tx_hex):
 
 def do_transaction(db, name, params, private_key_wif, **kwargs):
     """Create, sign and broadcast transaction."""
-    unsigned_tx = compose_transaction(db, proxy, name, params, **kwargs)
-    signed_tx = sign_transaction(proxy, unsigned_tx, private_key_wif=private_key_wif)
-    return broadcast_transaction(proxy, signed_tx)
+    unsigned_tx = compose_transaction(db, name, params, **kwargs)
+    signed_tx = sign_transaction(unsigned_tx, private_key_wif=private_key_wif)
+    return broadcast_transaction(signed_tx)
 
 
 # HTTP REST API helper functions.
@@ -703,7 +703,7 @@ class APIServer(threading.Thread):
 
             try:
                 check.database_state(db, latestBlockIndex)
-            except exceptions.DatabaseError:
+            except check.DatabaseError:
                 caught_up = False
             else:
                 caught_up = True
@@ -801,7 +801,9 @@ class APIServer(threading.Thread):
             return message_type_id, unpacked
 
         @dispatcher.add_method
+        # TODO: Rename this method.
         def search_pubkey(pubkeyhash, provided_pubkeys=None):
+            # Returns `None` if the public key cannot be found.
             return backend.pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=provided_pubkeys)
 
         def _set_cors_headers(response):

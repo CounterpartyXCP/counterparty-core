@@ -125,6 +125,7 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
     tx = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = ?''', (tx_index,)))[0]
     cursor.close()
 
+    util.CURRENT_BLOCK_INDEX = block_index  # TODO: Correct?!
     blocks.parse_block(db, block_index, block_time)
     return tx
 
@@ -377,8 +378,8 @@ def reparse(testnet=True):
     memory_db = database.get_connection(read_only=False)
     initialise_db(memory_db)
 
-    config.DATA_DIR = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
-    prod_db_path = os.path.join(config.DATA_DIR, '{}.{}{}.db'.format(config.APP_NAME, str(config.VERSION_MAJOR), '.testnet' if testnet else ''))
+    data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+    prod_db_path = os.path.join(data_dir, '{}.{}{}.db'.format(config.APP_NAME, str(config.VERSION_MAJOR), '.testnet' if testnet else ''))
     prod_db = apsw.Connection(prod_db_path)
     prod_db.setrowtrace(database.rowtracer)
 
@@ -418,6 +419,7 @@ def reparse(testnet=True):
     for block in memory_cursor.fetchall():
         try:
             logger.info('Block (re‐parse): {}'.format(str(block['block_index'])))
+            util.CURRENT_BLOCK_INDEX = block['block_index']  # TODO: Correct?!
             previous_ledger_hash, previous_txlist_hash = blocks.parse_block(memory_db, block['block_index'], block['block_time'],
                                                                                     previous_ledger_hash, block['ledger_hash'],
                                                                                     previous_txlist_hash, block['txlist_hash'])

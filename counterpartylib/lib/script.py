@@ -1,5 +1,5 @@
 """
-None of the functions/objects in this module need be passed `db` or `proxy`.
+None of the functions/objects in this module need be passed `db`.
 
 Naming convention: a `pub` is either a pubkey or a pubkeyhash
 """
