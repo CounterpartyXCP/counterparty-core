@@ -43,7 +43,7 @@ CONFIG_ARGS = [
     [('--log-file',), {'default': None, 'help': 'the path to the server log file'}],
     [('--api-log-file',), {'default': None, 'help': 'the path to the API log file'}],
 
-    [('--broadcast-tx-mainnet',), {'default': 'bitcoind', 'help': 'Method used to broadcast signed transactions'}]
+    # [('--broadcast-tx-mainnet',), {'default': 'bitcoind', 'help': 'Method used to broadcast signed transactions'}]
 ]
 
 def main():
@@ -106,8 +106,8 @@ def main():
                                 backend_poll_interval=args.backend_poll_interval,
                                 rpc_host=args.rpc_host, rpc_port=args.rpc_port, rpc_user=args.rpc_user,
                                 rpc_password=args.rpc_password, rpc_allow_cors=args.rpc_allow_cors,
-                                force=args.force, verbose=args.verbose,
-                                broadcast_tx_mainnet=args.broadcast_tx_mainnet)
+                                force=args.force, verbose=args.verbose)
+                                #,broadcast_tx_mainnet=args.broadcast_tx_mainnet)
 
     # PARSING
     if args.action == 'reparse':

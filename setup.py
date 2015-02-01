@@ -30,9 +30,9 @@ class install(_install):
 required_packages = [
     'appdirs>=1.4.0',
     'prettytable>=0.7.2',
+    'colorlog>=2.4.0',
     'python-dateutil>=2.2',
     'requests>=2.3.0',
-    'colorlog>=2.4.0',
     'counterparty-lib>=9.49.4rc7'
 ]
 
