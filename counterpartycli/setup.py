@@ -224,7 +224,7 @@ def bootstrap(overwrite=True, ask_confirmation=False):
         return
 
     if ask_confirmation:
-        question = 'Would you like to bootstrap your local Counterparty database from ‘https://s3.amazonaws.com/counterparty-bootstrap/’? (y/N): '
+        question = 'Would you like to bootstrap your local Counterparty database from `https://s3.amazonaws.com/counterparty-bootstrap/`? (y/N): '
         if input(question).lower() != 'y':
             return
 
