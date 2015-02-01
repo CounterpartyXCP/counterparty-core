@@ -18,9 +18,6 @@
 
 * Make (almost) all pull requests against the `develop` branch.
 
-* Verify that your fork passes all tests. The test suite is invoked with `$
-  py.test-3.4` in the `counterpartylib` directory of the repository.
-
 * All original code should follow [PEP8](https://www.python.org/dev/peps/pep-0008/).
 
 * Code contributions should be well‐commented.
