@@ -19,6 +19,7 @@ import appdirs
 import tarfile
 import urllib.request
 import shutil
+import codecs
 
 from counterpartylib.lib import log
 logger = logging.getLogger(__name__)
@@ -108,9 +109,27 @@ def add_config_arguments(arg_parser, config_args, default_config_file):
             os.makedirs(config_dir, mode=0o755)
         cmd_args.config_file = os.path.join(config_dir, default_config_file)
 
+    # clean BOM
+    BUFSIZE = 4096
+    BOMLEN = len(codecs.BOM_UTF8)
+    with codecs.open(cmd_args.config_file, 'r+b') as fp:
+        chunk = fp.read(BUFSIZE)
+        if chunk.startswith(codecs.BOM_UTF8):
+            i = 0
+            chunk = chunk[BOMLEN:]
+            while chunk:
+                fp.seek(i)
+                fp.write(chunk)
+                i += len(chunk)
+                fp.seek(BOMLEN, os.SEEK_CUR)
+                chunk = fp.read(BUFSIZE)
+            fp.seek(-BOMLEN, os.SEEK_CUR)
+            fp.truncate()
+
     logger.debug('Loading configuration file: `{}`'.format(cmd_args.config_file))
     configfile = configparser.ConfigParser()
-    configfile.read(cmd_args.config_file)
+    with codecs.open(cmd_args.config_file, 'r', encoding='utf8') as fp:
+        configfile.readfp(fp)
 
     if not 'Default' in configfile:
         configfile['Default'] = {}
