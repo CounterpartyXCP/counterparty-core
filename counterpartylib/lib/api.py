@@ -315,20 +315,20 @@ def do_transaction(db, name, params, private_key_wif, **kwargs):
 
 # HTTP REST API helper functions.
 # Block information.
-def get_block_hex(block_hash):
-    """Return hex data of specified block."""
-    try:
-        block_data = backend.getblock(block_hash)
-        block_hex = util.hexlify(CBlock.serialize(block_data))
-        return block_hex
-    except KeyError:
-        raise exceptions.DatabaseError('No block data for hash %s.' % tx_hash)
-
 def get_block_binary(block_hash):
     """Return binary data of specified block."""
-    block_hex = get_block_hex(block_hash)
-    block_bin = util.unhexlify(block_hex)
-    return block_bin
+    try:
+        block_data = backend.getblock(block_hash)
+        block_binary = CBlock.serialize(block_data)
+        return block_binary
+    except KeyError:
+        raise exceptions.DatabaseError('No block data for hash %s.' % block_hash)
+
+def get_block_hex(block_hash):
+    """Return hex data of specified block."""
+    block_binary = get_block_binary(block_hash)
+    block_hex = util.hexlify(block_binary)
+    return block_hex
 
 def get_block_json(db, block_hash):
     """Return JSON data of specified block."""
