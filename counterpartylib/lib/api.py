@@ -54,6 +54,7 @@ from counterpartylib.lib.messages import rps
 from counterpartylib.lib.messages import rpsresolve
 from counterpartylib.lib.messages import publish
 from counterpartylib.lib.messages import execute
+from counterpartylib.lib.backend.addrindex import BackendRPCError
 
 API_TABLES = ['assets', 'balances', 'credits', 'debits', 'bets', 'bet_matches',
               'broadcasts', 'btcpays', 'burns', 'cancels',
@@ -76,8 +77,6 @@ API_MAX_LOG_COUNT = 10
 
 current_api_status_code = None #is updated by the APIStatusPoller
 current_api_status_response_json = None #is updated by the APIStatusPoller
-
-b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
 class APIError(Exception):
     pass
@@ -449,57 +448,6 @@ class APIServer(threading.Thread):
             return None
 
         ######################
-        # HTTP REST API
-        # Handle blocks route.
-        @app.route('/rest/block/<block_hash>.<format>', methods=["GET",])
-        def handle_get_block(block_hash, format):
-            # Check for tx_hash validity.
-            if block_hash == None or block_hash == '' or any([c not in b58_digits for c in block_hash]):
-                error = 'Invalid block hash: %s' % block_hash
-                return flask.Response(error, 400, mimetype='text/plain')
-            try:
-                if format == 'json':
-                    response_data = get_block_json(db, block_hash)
-                    response = flask.Response(response_data, 200, mimetype='application/json')
-                    return response
-                else:
-                    error = 'Invalid file format: %s. Supported format is .json.' % format
-                    return flask.Response(error, 400, mimetype='text/plain')
-            except exceptions.DatabaseError as e:
-                # Show the database error that was raised as 400.
-                return flask.Response(str(e), 400, mimetype='text/plain')
-
-        # Handle transaction route.
-        @app.route('/rest/tx/<tx_hash>.<format>', methods=["GET",])
-        def handle_get_tx(tx_hash, format):
-            # Check for tx_hash validity.
-            if tx_hash == None or tx_hash == '' or any([c not in b58_digits for c in tx_hash]):
-                error = 'Invalid transaction hash: %s' % tx_hash
-                return flask.Response(error, 400, mimetype='application/txt')
-            try:
-                if format == 'json':
-                    # JSON
-                    response_data = get_tx_json(db, tx_hash)
-                    response = flask.Response(response_data, 200, mimetype='application/json')
-                    return response
-                elif format == 'dat':
-                    # Binary
-                    response_data = get_tx_bin(tx_hash)
-                    response = flask.Response(response_data, 200, mimetype='application/octet-stream')
-                    return response
-                elif format == 'txt':
-                    # Hex
-                    response_data = get_tx_hex(tx_hash)
-                    response = flask.Response(response_data, 200, mimetype='text/plain')
-                    return response
-                else:
-                    error = 'Invalid file format: %s. Supported formats are .json, .dat, .txt.' % format
-                    return flask.Response(error, 400, mimetype='text/plain')
-            except exceptions.DatabaseError as e:
-                # Show the database error that was raised as 400.
-                return flask.Response(str(e), 400, mimetype='text/plain')
-
-        ######################
         #READ API
 
         # Generate dynamically get_{table} methods
@@ -521,7 +469,6 @@ class APIServer(threading.Thread):
             if bindings == None:
                 bindings = []
             return db_query(db, query, tuple(bindings))
-
 
         ######################
         #WRITE/ACTION API
@@ -849,6 +796,58 @@ class APIServer(threading.Thread):
             response = flask.Response(jsonrpc_response.json.encode(), 200, mimetype='application/json')
             _set_cors_headers(response)
             return response
+
+        ######################
+        # HTTP REST API
+        ######################
+        # Handle blocks route.
+        @app.route('/rest/block/<block_hash>.<format>', methods=["GET",])
+        def handle_get_block(block_hash, format):
+            # Check for tx_hash validity.
+            if block_hash == None or block_hash == '' or not block_hash.isalnum():
+                error = 'Invalid block hash: %s' % block_hash
+                return flask.Response(error, 400, mimetype='text/plain')
+            try:
+                if format == 'json':
+                    response_data = get_block_json(db, block_hash)
+                    response = flask.Response(response_data, 200, mimetype='application/json')
+                    return response
+                else:
+                    error = 'Invalid file format: %s. Supported format is .json.' % format
+                    return flask.Response(error, 400, mimetype='text/plain')
+            except (exceptions.DatabaseError, BackendRPCError) as e:
+                # Show the database error that was raised as 400.
+                return flask.Response(str(e), 400, mimetype='text/plain')
+
+        # Handle transaction route.
+        @app.route('/rest/tx/<tx_hash>.<format>', methods=["GET",])
+        def handle_get_tx(tx_hash, format):
+            # Check for tx_hash validity. Also prevents SQL injection attacks.
+            if tx_hash == None or tx_hash == '' or not tx_hash.isalnum():
+                error = 'Invalid transaction hash: %s' % tx_hash
+                return flask.Response(error, 400, mimetype='application/txt')
+            try:
+                if format == 'json':
+                    # JSON
+                    response_data = get_tx_json(db, tx_hash)
+                    response = flask.Response(response_data, 200, mimetype='application/json')
+                    return response
+                elif format == 'dat':
+                    # Binary
+                    response_data = get_tx_binary(tx_hash)
+                    response = flask.Response(response_data, 200, mimetype='application/octet-stream')
+                    return response
+                elif format == 'txt':
+                    # Hex
+                    response_data = get_tx_hex(tx_hash)
+                    response = flask.Response(response_data, 200, mimetype='text/plain')
+                    return response
+                else:
+                    error = 'Invalid file format: %s. Supported formats are .json, .dat, .txt.' % format
+                    return flask.Response(error, 400, mimetype='text/plain')
+            except (exceptions.DatabaseError, BackendRPCError) as e:
+                # Show the database error that was raised as 400.
+                return flask.Response(str(e), 400, mimetype='text/plain')
 
         init_api_access_log()
 
