@@ -88,24 +88,20 @@ if sys.argv[1] == 'py2exe':
     WIN_DIST_DIR = 'counterparty-cli-win32-{}'.format(CURRENT_VERSION)
     
     class py2exe(_py2exe):
-        def __init__(self, dist):
-            _py2exe.__init__(self, dist)
-            
         def run(self):
-            from counterpartycli.setup import tweak_py2exe_build
-            # Clean previous build
-            if os.path.exists(WIN_DIST_DIR):
-                shutil.rmtree(WIN_DIST_DIR)
+            from counterpartycli.setup import before_py2exe_build, after_py2exe_build
+            # prepare build
+            before_py2exe_build(WIN_DIST_DIR)
             # build exe's
             _py2exe.run(self)
-            # tweaks
-            tweak_py2exe_build(WIN_DIST_DIR)
-    
+            # tweak build
+            after_py2exe_build(WIN_DIST_DIR)
+
     # Update setup_options with py2exe specifics options
     setup_options.update({
         'console': [
-            'C:\Python34\Scripts\counterparty-client-script.py',
-            'C:\Python34\Scripts\counterparty-server-script.py'
+            'counterparty-client.py',
+            'counterparty-server.py'
         ],
         'zipfile': 'library/site-packages.zip',
         'options': {
@@ -117,6 +113,5 @@ if sys.argv[1] == 'py2exe':
             'py2exe': py2exe
         }
     })
-    
-    
+
 setup(**setup_options)

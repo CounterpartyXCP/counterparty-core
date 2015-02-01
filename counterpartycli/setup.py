@@ -164,27 +164,35 @@ def zip_folder(folder_path, zip_path):
             zip_file.write(os.path.join(root, a_file))
     zip_file.close()
 
-def tweak_py2exe_build(win_dist_dir):
-    # rename exe files
-    for exe_name in ['server', 'client']:
-        exe_src = os.path.join(win_dist_dir, 'counterparty-{}-script.exe'.format(exe_name))
-        exe_dest = os.path.join(win_dist_dir, 'counterparty-{}.exe'.format(exe_name))
-        os.rename(exe_src, exe_dest)
+def before_py2exe_build(win_dist_dir):
+    # Clean previous build
+    if os.path.exists(win_dist_dir):
+        shutil.rmtree(win_dist_dir)
+    # py2exe don't manages entry_points
+    for exe_name in ['client', 'server']:
+        shutil.copy('counterpartycli/__init__.py', 'counterparty-{}.py'.format(exe_name))
+        with open('counterparty-{}.py'.format(exe_name), 'a') as fp:
+            fp.write('{}_main()'.format(exe_name))
+    # Hack
+    src = 'C:\\Python34\\Lib\\site-packages\\flask_httpauth.py'
+    dst = 'C:\\Python34\\Lib\\site-packages\\flask\\ext\\httpauth.py'
+    shutil.copy(src, dst)
 
+def after_py2exe_build(win_dist_dir):
+    # clean temporaries scripts
+    for exe_name in ['client', 'server']:
+        os.remove('counterparty-{}.py'.format(exe_name))
     # py2exe copies only pyc files in site-packages.zip
     # modules with no pyc files must be copied in 'dist/library/'
     import counterpartylib, certifi
     additionals_modules = [counterpartylib, certifi]
-
     for module in additionals_modules:
         moudle_file = os.path.dirname(module.__file__)
         dest_file = os.path.join(win_dist_dir, 'library', module.__name__)
         shutil.copytree(moudle_file, dest_file)
-
     # additionals DLLs
     dlls = ['ssleay32.dll', 'libssl32.dll', 'libeay32.dll']
     dlls.append(ctypes.util.find_msvcrt())
-
     dlls_path = dlls
     for dll in dlls:
         dll_path = ctypes.util.find_library(dll)
@@ -205,6 +213,9 @@ def tweak_py2exe_build(win_dist_dir):
 
     # clean build folder
     shutil.rmtree(win_dist_dir)
+
+    # Clean Hack
+    os.remove('C:\\Python34\\Lib\\site-packages\\flask\\ext\\httpauth.py')
 
 # Download bootstrap database
 def bootstrap(overwrite=True, ask_confirmation=False):
