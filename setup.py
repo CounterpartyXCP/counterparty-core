@@ -150,19 +150,18 @@ class bdist_egg(_bdist_egg):
 
 required_packages = [
     'appdirs>=1.4.0',
-    'prettytable>=0.7.2',
     'python-dateutil>=2.2',
     'flask>=0.10.1',
+    'Flask-HTTPAuth>=2.3.0',
     'json-rpc>=1.7',
     'pytest>=2.6.4',
+    'pytest-cov>=1.8.0',
     'pycoin>=0.52',
     'requests>=2.3.0',
-    'Flask-HTTPAuth>=2.3.0',
     'tornado>=4.0',
     'pycrypto>=2.6',
     'tendo>=0.2.6',
     'pysha3>=0.3',
-    'pytest-cov>=1.8.0',
     'colorlog>=2.4.0',
     'python-bitcoinlib>=0.2.1'
 ]
