@@ -1,6 +1,6 @@
 dependencies:
     override:
-        - python setup.py install
+        - python setup.py install --with-serpent
 test:
     override:
         - cd counterpartylib; py.test --verbose --capture=no --cov-config=../.coveragerc --cov-report=term-missing --cov=./
