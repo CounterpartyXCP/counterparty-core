@@ -11,12 +11,11 @@
     * `cd counterparty-cli`
     * `python setup.py install`
     * `python setup.py py2exe`
-- Write Release Notes with the MD5 of the generated ZIP file included in it
-- Send  he Release Notes to @adamkrellenstein
+- Send @adamkrellenstein the MD5 of the generated ZIP file
 
 **@adamkrellenstein:**
 
-- Tag and Sign Release
+- Tag and Sign Release (include MD5 hash in message)
 - Write [Release Notes](https://github.com/CounterpartyXCP/counterpartyd/releases)
 - Upload (signed) package to PyPi
     * `sudo python3 setup.py sdist build`
