@@ -31,6 +31,7 @@ from tornado.ioloop import IOLoop
 import jsonrpc
 from jsonrpc import dispatcher
 import inspect
+from bitcoin.core import CBlock
 
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
@@ -317,7 +318,8 @@ def do_transaction(db, name, params, private_key_wif, **kwargs):
 def get_block_hex(block_hash):
     """Return hex data of specified block."""
     try:
-        block_hex = backend.getblock(block_hash)
+        block_data = backend.getblock(block_hash)
+        block_hex = util.hexlify(CBlock.serialize(block_data))
         return block_hex
     except KeyError:
         raise exceptions.DatabaseError('No block data for hash %s.' % tx_hash)
@@ -325,7 +327,7 @@ def get_block_hex(block_hash):
 def get_block_binary(block_hash):
     """Return binary data of specified block."""
     block_hex = get_block_hex(block_hash)
-    block_bin = binascii.unhexlify(block_hex)
+    block_bin = util.unhexlify(block_hex)
     return block_bin
 
 def get_block_json(db, block_hash):
@@ -353,7 +355,7 @@ def get_tx_hex(tx_hash):
 def get_tx_binary(tx_hash):
     """Return binary data of specified transaction."""
     tx_hex = get_tx_hex(tx_hash)
-    tx_bin = binascii.unhexlify(tx_hex)
+    tx_bin = util.unhexlify(tx_hex)
     return tx_bin
 
 def get_tx_json(db, tx_hash):
