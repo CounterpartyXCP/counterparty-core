@@ -5,8 +5,7 @@ import os, sys
 import shutil
 import ctypes.util
 import configparser, platform
-
-CURRENT_VERSION = '1.0.0rc6'
+from counterpartycli import APP_VERSION
 
 class generate_configuration_files(Command):
     description = "Generate configfiles from old files or bitcoind config file"
@@ -39,7 +38,7 @@ required_packages = [
 
 setup_options = {
     'name': 'counterparty-cli',
-    'version': CURRENT_VERSION,
+    'version': APP_VERSION,
     'author': 'Counterparty Foundation',
     'author_email': 'support@counterparty.io',
     'maintainer': 'Adam Krellenstein',
@@ -63,7 +62,7 @@ setup_options = {
         "Topic :: Office/Business :: Financial",
         "Topic :: System :: Distributed Computing"
     ],
-    'download_url': 'https://github.com/CounterpartyXCP/counterparty-cli/releases/tag/v' + CURRENT_VERSION,
+    'download_url': 'https://github.com/CounterpartyXCP/counterparty-cli/releases/tag/v' + APP_VERSION,
     'provides': ['counterpartycli'],
     'packages': find_packages(),
     'zip_safe': False,
@@ -85,7 +84,7 @@ if sys.argv[1] == 'py2exe':
     import py2exe
     from py2exe.distutils_buildexe import py2exe as _py2exe
 
-    WIN_DIST_DIR = 'counterparty-cli-win32-{}'.format(CURRENT_VERSION)
+    WIN_DIST_DIR = 'counterparty-cli-win32-{}'.format(APP_VERSION)
     
     class py2exe(_py2exe):
         def run(self):

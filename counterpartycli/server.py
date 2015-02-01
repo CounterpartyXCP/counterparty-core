@@ -13,9 +13,9 @@ from counterpartylib import server
 from counterpartylib.lib import config
 from counterpartycli.util import add_config_arguments
 from counterpartycli.setup import bootstrap, generate_config_files
+from counterpartycli import APP_VERSION
 
 APP_NAME = 'counterparty-server'
-APP_VERSION = '1.0.0'
 
 CONFIG_ARGS = [
     [('--testnet',), {'action': 'store_true', 'default': False, 'help': 'use {} testnet addresses and block numbers'.format(config.BTC_NAME)}],

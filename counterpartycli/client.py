@@ -18,6 +18,7 @@ from colorlog import ColoredFormatter
 
 from counterpartycli import util
 from counterpartycli import wallet
+from counterpartycli import APP_VERSION
 from counterpartycli.util import add_config_arguments
 from counterpartycli.setup import generate_config_files
 
@@ -31,7 +32,6 @@ if os.name == 'nt':
     from counterpartylib.lib import util_windows
 
 APP_NAME = 'counterparty-client'
-APP_VERSION = '1.0.0'
 
 D = decimal.Decimal
 
