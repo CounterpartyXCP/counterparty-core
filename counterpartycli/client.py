@@ -270,6 +270,38 @@ def get_pubkeys(address):
             pubkeys.append(pubkey)
     return pubkeys
 
+def sign_tx(unsigned_tx_hex, source):
+    """Sign unsigned transaction serialisation."""
+
+    if wallet.is_mine(source):
+        return signed_tx_hex = wallet.sign_raw_transaction(unsigned_tx_hex)
+
+    private_key_wif = input('Source address not in wallet. Please enter the private key in WIF formar for {}:'.format(source))
+
+    if not private_key_wif:
+        raise exceptions.TransactionError('invalid private key')
+
+    for char in private_key_wif:
+        if char not in script.b58_digits:
+            raise exceptions.TransactionError('invalid private key')
+
+    # TODO: Hack! (pybitcointools is Python 2 only)
+    import subprocess
+    i = 0
+    tx_hex = unsigned_tx_hex
+    while True: # pybtctool doesn’t implement `signall`
+        try:
+            tx_hex = subprocess.check_output(['pybtctool', 'sign', tx_hex, str(i), private_key_wif], stderr=subprocess.DEVNULL)
+        except Exception as e:
+            break
+    if tx_hex != unsigned_tx_hex:
+        signed_tx_hex = tx_hex.decode('utf-8')
+        return signed_tx_hex[:-1]   # Get rid of newline.
+    else:
+        raise exceptions.TransactionError('Could not sign transaction with pybtctool.')
+
+    return signed_tx_hex
+
 def cli(method, params, unsigned):
     # Get provided pubkeys from params.
     pubkeys = []
@@ -287,16 +319,11 @@ def cli(method, params, unsigned):
     if not unsigned:
         if script.is_multisig(params['source']):
             logger.info('Multi‐signature transactions are signed and broadcasted manually.')
-        else:
-            if wallet.is_mine(params['source']):
-                if input('Sign and broadcast? (y/N) ') == 'y':
-                    signed_tx_hex = wallet.sign_raw_transaction(unsigned_tx_hex)
-                    logger.info('Transaction (signed): {}'.format(signed_tx_hex))
-                    tx_hash = util.api('broadcast_tx', {'signed_tx_hex': signed_tx_hex})
-                    logger.info('Hash of transaction (broadcasted): {}'.format(tx_hash))
-            else:
-                logger.info('Source address not in wallet.')
-
+        elif input('Sign and broadcast? (y/N) ') == 'y':
+            signed_tx_hex = sign_tx(unsigned_tx_hex, source)
+            logger.info('Transaction (signed): {}'.format(signed_tx_hex))
+            tx_hash = util.api('broadcast_tx', {'signed_tx_hex': signed_tx_hex})
+            logger.info('Hash of transaction (broadcasted): {}'.format(tx_hash))
 
 def set_options(testnet=False, testcoin=False,
                 counterparty_rpc_connect=None, counterparty_rpc_port=None, 
