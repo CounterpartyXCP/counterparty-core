@@ -6,16 +6,6 @@ class DatabaseError (Exception):
 class TransactionError(Exception):
     pass
 
-class VersionByteError (Exception):
-    pass
-
-class Base58Error (Exception):
-    pass
-class InvalidBase58Error (Base58Error):
-    pass
-class Base58ChecksumError (Base58Error):
-    pass
-
 class AssetError (Exception):
     pass
 class AssetNameError (AssetError):

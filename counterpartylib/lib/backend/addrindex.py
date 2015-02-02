@@ -41,7 +41,7 @@ def rpc(method, params):
         except requests.exceptions.SSLError as e:
             raise e
         except requests.exceptions.ConnectionError:
-            logger.debug('Could not connect to backend. (Try {}/{})'.format(i+1, TRIES))
+            logger.debug('Could not connect to backend at `{}`. (Try {}/{})'.format(url, i+1, TRIES))
             time.sleep(5)
 
     if response == None:
@@ -49,7 +49,7 @@ def rpc(method, params):
             network = 'testnet'
         else:
             network = 'mainnet'
-        raise BackendRPCError('Cannot communicate with backend. (server is set to run on {}, is backend?)'.format(network))
+        raise BackendRPCError('Cannot communicate with backend at `{}`. (server is set to run on {}, is backend?)'.format(url, network))
     elif response.status_code not in (200, 500):
         raise BackendRPCError(str(response.status_code) + ' ' + response.reason)
 

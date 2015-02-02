@@ -286,32 +286,6 @@ def compose_transaction(db, name, params,
         # import traceback
         # traceback.print_exc()
 
-def sign_transaction(unsigned_tx_hex, private_key_wif):
-    """Sign the transaction."""
-    return transaction.sign_tx(unsigned_tx_hex,
-        private_key_wif=private_key_wif)
-
-def broadcast_transaction(signed_tx_hex):
-    """Broadcast a transaction."""
-    if not config.TESTNET and config.BROADCAST_TX_MAINNET in ['bci', 'bci-failover']:
-        url = "https://blockchain.info/pushtx"
-        params = {'tx': signed_tx_hex}
-        response = requests.post(url, data=params)
-        if response.text.lower() != 'transaction submitted' or response.status_code != 200:
-            if config.BROADCAST_TX_MAINNET == 'bci-failover':
-                return transaction.broadcast_tx(signed_tx_hex)
-            else:
-                raise APIError(response.text)
-        return response.text
-    else:
-        return transaction.broadcast_tx(signed_tx_hex)
-
-def do_transaction(db, name, params, private_key_wif, **kwargs):
-    """Create, sign and broadcast transaction."""
-    unsigned_tx = compose_transaction(db, name, params, **kwargs)
-    signed_tx = sign_transaction(unsigned_tx, private_key_wif=private_key_wif)
-    return broadcast_transaction(signed_tx)
-
 # HTTP REST API helper functions.
 # Block information.
 def get_block_binary(block_hash):

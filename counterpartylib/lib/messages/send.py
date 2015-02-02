@@ -1,7 +1,6 @@
 #! /usr/bin/python3
 
 from counterpartylib.lib.messages.versions import send1
-from counterpartylib.lib.messages.versions import send2
 
 ID = send1.ID
 
@@ -32,7 +31,7 @@ def initialise (db):
                    ''')
 
 def unpack(db, message, block_index):
-    return send2.unpack(db, message, block_index)
+    return send1.unpack(db, message, block_index)
 
 def validate (db, source, destination, asset, quantity, block_index):
     return send1.validate(db, source, destination, asset, quantity, block_index)

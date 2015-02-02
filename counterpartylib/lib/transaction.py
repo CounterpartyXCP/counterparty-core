@@ -486,37 +486,6 @@ def construct (db, tx_info, encoding='auto',
     if (desired_source, desired_destination, desired_data) != (parsed_source, parsed_destination, parsed_data):
         raise exceptions.TransactionError('constructed transaction does not parse correctly')
 
-
     return unsigned_tx_hex
-
-def sign_tx(unsigned_tx_hex, private_key_wif):
-    """Sign unsigned transaction serialisation."""
-
-    if not private_key_wif:
-        raise exceptions.TransactionError('invalid private key')
-    
-    for char in private_key_wif:
-        if char not in script.b58_digits:
-            raise exceptions.TransactionError('invalid private key')
-
-    # TODO: Hack! (pybitcointools is Python 2 only)
-    import subprocess
-    i = 0
-    tx_hex = unsigned_tx_hex
-    while True: # pybtctool doesn’t implement `signall`
-        try:
-            tx_hex = subprocess.check_output(['pybtctool', 'sign', tx_hex, str(i), private_key_wif], stderr=subprocess.DEVNULL)
-        except Exception as e:
-            break
-    if tx_hex != unsigned_tx_hex:
-        signed_tx_hex = tx_hex.decode('utf-8')
-        return signed_tx_hex[:-1]   # Get rid of newline.
-    else:
-        raise exceptions.TransactionError('Could not sign transaction with pybtctool.')
-
-    return signed_tx_hex
-
-def broadcast_tx (signed_tx_hex):
-    return backend.sendrawtransaction(signed_tx_hex)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

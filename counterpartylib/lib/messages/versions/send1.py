@@ -10,6 +10,23 @@ FORMAT = '>QQ'
 LENGTH = 8 + 8
 ID = 0
 
+def unpack(db, message, block_index):
+    # Only used for `unpack` API call at the moment.
+    try:
+        asset_id, quantity = struct.unpack(FORMAT, message)
+        asset = util.get_asset_name(db, asset_id, block_index)
+
+    except struct.error:
+        raise UnpackError('could not unpack')
+
+    except AssetNameError:
+        raise UnpackError('asset id invalid')
+
+    unpacked = {
+                'asset': asset,
+                'quantity': quantity
+               }
+    return unpacked
 
 def validate (db, source, destination, asset, quantity, block_index):
     problems = []

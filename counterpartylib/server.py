@@ -14,6 +14,7 @@ import socket
 import signal
 import appdirs
 import platform
+from urllib.parse import quote_plus as urlencode
 
 from counterpartylib.lib import api, config, util, exceptions, blocks, check, backend, database, transaction, script, log
 
@@ -78,8 +79,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
                 rpc_host=None, rpc_port=None,
                 rpc_user=None, rpc_password=None,
                 rpc_allow_cors=None,
-                force=False, verbose=False,
-                broadcast_tx_mainnet=None):
+                force=False, verbose=False):
 
      # Data directory
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
@@ -243,7 +243,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     else:
         raise ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
 
-    config.RPC = 'http://' + config.RPC_USER + ':' + config.RPC_PASSWORD + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT)
+    config.RPC = 'http://' + urlencode(config.RPC_USER) + ':' + urlencode(config.RPC_PASSWORD) + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT)
 
     # RPC CORS
     if rpc_allow_cors:
@@ -295,12 +295,6 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
             config.BURN_START = config.BURN_START_MAINNET
             config.BURN_END = config.BURN_END_MAINNET
             config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
-
-    # method used to broadcast signed transactions. bitcoind or bci (default: bitcoind)
-    if broadcast_tx_mainnet:
-        config.BROADCAST_TX_MAINNET = broadcast_tx_mainnet
-    else:
-        config.BROADCAST_TX_MAINNET = 'bitcoind'
 
     # Set up logging.
     root_logger = logging.getLogger()    # Get root logger.

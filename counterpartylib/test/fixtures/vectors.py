@@ -981,7 +981,7 @@ UNITTEST_VECTOR = {
             'out': None                                                                             # No Error
         }, {
             'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP7',),                                          # Invalid Bitcoin address: bad checksum
-            'error': (exceptions.Base58ChecksumError, 'Checksum mismatch: 0x00285aa2 ≠ 0x00285aa1')
+            'error': (script.Base58ChecksumError, 'Checksum mismatch: 0x00285aa2 ≠ 0x00285aa1')
         }, {
             'in': ('1_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_2',),   # Valid multi‐sig
             'out': None                                                                             # No Error
@@ -1013,16 +1013,16 @@ UNITTEST_VECTOR = {
             'out': b"\x01\tfw`\x06\x95=UgC\x9e^9\xf8j\r';\xee"
         }, {
             'in': ('26UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM', b'\x00'),                                   # Wrong version byte
-            'error': (exceptions.VersionByteError, 'incorrect version byte')
+            'error': (script.VersionByteError, 'incorrect version byte')
         }, {
             'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvN', b'\x00'),                                   # Invalid mainnet Bitcoin address: bad checksum
-            'error': (exceptions.Base58ChecksumError, 'Checksum mismatch: 0xd61967f7 ≠ 0xd61967f6')
+            'error': (script.Base58ChecksumError, 'Checksum mismatch: 0xd61967f7 ≠ 0xd61967f6')
         }, {
             'in': (ADDR[0], b'\x6f'),                                                               # TODO: What is this?
             'out': b'H8\xd8\xb3X\x8cL{\xa7\xc1\xd0o\x86n\x9b79\xc607'
         }, {
             'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjv0', b'\x00'),                                   # Invalid mainnet Bitcoin address: invalid character
-            'error': (exceptions.InvalidBase58Error, "Not a valid Base58 character: ‘0’")
+            'error': (script.Base58Error, "Not a valid Base58 character: ‘0’")
         }],
         'is_multisig': [{
             'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM',),                                           # Mono‐sig

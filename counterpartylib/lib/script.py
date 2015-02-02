@@ -22,9 +22,18 @@ class AddressError(Exception):
     pass
 class MultiSigAddressError(AddressError):
     pass
+class VersionByteError (AddressError):
+    pass
+class Base58Error (AddressError):
+    pass
+class Base58ChecksumError (Base58Error):
+    pass
 
 def validate(address):
-    """Make sure the address is valid."""
+    """Make sure the address is valid.
+    
+    May throw `AddressError`.
+    """
     # Get array of pubkeyhashes to check.
     if is_multisig(address):
         pubkeyhashes = pubkeyhash_array(address)
@@ -80,7 +89,7 @@ def base58_check_decode(s, version):
     for c in s:
         n *= 58
         if c not in b58_digits:
-            raise exceptions.InvalidBase58Error('Not a valid Base58 character: ‘{}’'.format(c))
+            raise Base58Error('Not a valid Base58 character: ‘{}’'.format(c))
         digit = b58_digits.index(c)
         n += digit
 
@@ -101,10 +110,10 @@ def base58_check_decode(s, version):
 
     addrbyte, data, chk0 = k[0:1], k[1:-4], k[-4:]
     if addrbyte != version:
-        raise exceptions.VersionByteError('incorrect version byte')
+        raise VersionByteError('incorrect version byte')
     chk1 = util.dhash(addrbyte + data)[:4]
     if chk0 != chk1:
-        raise exceptions.Base58ChecksumError('Checksum mismatch: 0x{} ≠ 0x{}'.format(util.hexlify(chk0), util.hexlify(chk1)))
+        raise Base58ChecksumError('Checksum mismatch: 0x{} ≠ 0x{}'.format(util.hexlify(chk0), util.hexlify(chk1)))
     return data
 
 
@@ -124,7 +133,7 @@ def make_canonical(address):
         signatures_required, pubkeyhashes, signatures_possible = extract_array(address)
         try:
             [base58_check_decode(pubkeyhash, config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes]
-        except exceptions.InvalidBase58Error:
+        except Base58Error:
             raise MultiSigAddressError('Multi‐signature address must use PubKeyHashes, not public keys.')
         return construct_array(signatures_required, pubkeyhashes, signatures_possible)
     else:
@@ -253,7 +262,7 @@ def is_pubkeyhash(monosig_address):
     try:
         base58_check_decode(monosig_address, config.ADDRESSVERSION)
         return True
-    except (exceptions.Base58Error, exceptions.VersionByteError):
+    except (Base58Error, VersionByteError):
         return False
 
 def make_pubkeyhash(address):

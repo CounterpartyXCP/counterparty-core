@@ -4,6 +4,7 @@
 * v9.49.4 (???)
 	* reconceived this package as a libary
 	* moved CLI to new repository: `counterparty-cli`
+	* remove signing and broadcast functionality from API (`do_*`, `sign_tx`, `broadcast_tx` calls)
 	* created `setup.py` build script
 	* return to using `requests` for handling connections to backend
 	* introduced global variable `CURRENT_BLOCK_INDEX`
