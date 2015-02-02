@@ -11,6 +11,7 @@ import calendar
 import configparser
 import binascii
 import string
+from urllib.parse import quote_plus as urlencode
 
 import appdirs
 from prettytable import PrettyTable
@@ -382,7 +383,7 @@ def set_options(testnet=False, testcoin=False,
     config.COUNTERPARTY_RPC_SSL_VERIFY = counterparty_rpc_ssl_verify or False # Default to off (support self‐signed certificates)
 
     # Construct Counterparty server URL.
-    config.COUNTERPARTY_RPC = config.COUNTERPARTY_RPC_USER + ':' + config.COUNTERPARTY_RPC_PASSWORD + '@' + config.COUNTERPARTY_RPC_CONNECT + ':' + str(config.COUNTERPARTY_RPC_PORT)
+    config.COUNTERPARTY_RPC = urlencode(config.COUNTERPARTY_RPC_USER) + ':' + urlencode(config.COUNTERPARTY_RPC_PASSWORD) + '@' + config.COUNTERPARTY_RPC_CONNECT + ':' + str(config.COUNTERPARTY_RPC_PORT)
     if config.COUNTERPARTY_RPC_SSL:
         config.COUNTERPARTY_RPC = 'https://' + config.COUNTERPARTY_RPC
     else:
@@ -426,7 +427,7 @@ def set_options(testnet=False, testcoin=False,
     config.WALLET_SSL_VERIFY = wallet_ssl_verify or False # Default to off (support self‐signed certificates)
 
     # Construct BTC wallet URL.
-    config.WALLET_URL = config.WALLET_USER + ':' + config.WALLET_PASSWORD + '@' + config.WALLET_CONNECT + ':' + str(config.WALLET_PORT)
+    config.WALLET_URL = urlencode(config.WALLET_USER) + ':' + urlencode(config.WALLET_PASSWORD) + '@' + config.WALLET_CONNECT + ':' + str(config.WALLET_PORT)
     if config.WALLET_SSL:
         config.WALLET_URL = 'https://' + config.WALLET_URL
     else:
