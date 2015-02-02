@@ -310,7 +310,7 @@ def get_block_json(db, block_hash):
     elif len(blocks) > 1:
         raise exceptions.DatabaseError('More than one block found for hash: %s.' % block_hash)
     block = blocks[0]
-    block_json = json.dumps(block, use_decimal=True)
+    block_json = json.dumps(block)
     return block_json
 
 # Transaction information.
@@ -335,7 +335,7 @@ def get_tx_json(db, tx_hash):
     elif len(txs) > 1:
         raise exceptions.DatabaseError('More than one transaction found for hash %s.' % tx_hash)
     tx_info = txs[0]
-    tx_json = json.dumps(tx_info, use_decimal=True)
+    tx_json = json.dumps(tx_info)
     return tx_json
 
 def init_api_access_log():
@@ -752,7 +752,7 @@ class APIServer(threading.Thread):
         # Handle blocks route.
         @app.route('/rest/block/<block_hash>.<format>', methods=["GET",])
         def handle_get_block(block_hash, format):
-            # Check for tx_hash validity.
+            # Check for block_hash validity. Also prevents SQL injection attacks.
             if block_hash == None or block_hash == '' or not block_hash.isalnum():
                 error = 'Invalid block hash: %s' % block_hash
                 return flask.Response(error, 400, mimetype='text/plain')
