@@ -439,8 +439,7 @@ class APIServer(threading.Thread):
 
         ######################
         #WRITE/ACTION API
-
-        # Generate dynamically create_{transaction} and do_{transaction} methods
+        # Generate dynamically create_{transaction} methods
         def generate_create_method(tx):
 
             def split_params(**kwargs):
@@ -463,29 +462,12 @@ class APIServer(threading.Thread):
                 except TypeError as e:          #TODO: generalise for all API methods
                     raise APIError(str(e))
 
-            def do_method(**kwargs):
-                try:
-                    transaction_args, common_args, private_key_wif = split_params(**kwargs)
-                    return do_transaction(db, name=tx, params=transaction_args, private_key_wif=private_key_wif, **common_args)
-                except TypeError as e:          #TODO: generalise for all API methods
-                    raise APIError(str(e))
-
-            return create_method, do_method
+            return create_method
 
         for tx in API_TRANSACTIONS:
-            create_method, do_method = generate_create_method(tx)
+            create_method = generate_create_method(tx)
             create_method.__name__ = 'create_{}'.format(tx)
-            do_method.__name__ = 'do_{}'.format(tx)
             dispatcher.add_method(create_method)
-            dispatcher.add_method(do_method)
-
-        @dispatcher.add_method
-        def sign_tx(unsigned_tx_hex, privkey):
-            return sign_transaction(unsigned_tx_hex, private_key_wif=privkey)
-
-        @dispatcher.add_method
-        def broadcast_tx(signed_tx_hex):
-            return broadcast_transaction(signed_tx_hex)
 
         @dispatcher.add_method
         def get_messages(block_index):
