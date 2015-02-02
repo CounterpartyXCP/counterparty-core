@@ -121,7 +121,7 @@ UNITTEST_VECTOR = {
             'in': (ADDR[2],),
             'out': (0)
         }],
-        # Test match by calling parse. Add all skipping modes
+        # TODO: Test match by calling parse. Add all skipping modes.
         'match': [{
             'in': ({'tx_index': 99999999},),
             'out': None
@@ -130,7 +130,7 @@ UNITTEST_VECTOR = {
             'out': None
         }],
         # Testing expiration of normal bets is impossible - either the bet is expired automatically with expiry < 310500 or
-        # with expire > 310500 insert fails with FOREING KEY error on block_index (which doesn't exist). With expiry 310500 nothing happens.
+        # with expire > 310500 insert fails with FOREIGN KEY error on block_index (which doesn't exist). With expiry 310500 nothing happens.
         # Testing bet_match expirations is impossible too, since if you add a bet_match with 'pending' status to the fixtures, it raises a ConsensusError in blocks.parse_block.
         # 'expire': [{
         #     'in': (DP['default_block'] - 1, 5388000200,),

@@ -31,6 +31,7 @@ from tornado.ioloop import IOLoop
 import jsonrpc
 from jsonrpc import dispatcher
 import inspect
+from bitcoin.core import CBlock
 
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
@@ -54,6 +55,7 @@ from counterpartylib.lib.messages import rps
 from counterpartylib.lib.messages import rpsresolve
 from counterpartylib.lib.messages import publish
 from counterpartylib.lib.messages import execute
+from counterpartylib.lib.backend.addrindex import BackendRPCError
 
 API_TABLES = ['assets', 'balances', 'credits', 'debits', 'bets', 'bet_matches',
               'broadcasts', 'btcpays', 'burns', 'cancels',
@@ -284,6 +286,58 @@ def compose_transaction(db, name, params,
         # import traceback
         # traceback.print_exc()
 
+# HTTP REST API helper functions.
+# Block information.
+def get_block_binary(block_hash):
+    """Return binary data of specified block."""
+    block_data = backend.getblock(block_hash)
+    block_binary = CBlock.serialize(block_data)
+    return block_binary
+
+def get_block_hex(block_hash):
+    """Return hex data of specified block."""
+    block_binary = get_block_binary(block_hash)
+    block_hex = util.hexlify(block_binary)
+    return block_hex
+
+def get_block_json(db, block_hash):
+    """Return JSON data of specified block."""
+    cursor = db.cursor()
+    blocks = list(cursor.execute('''SELECT * FROM blocks WHERE block_hash = ?''', (block_hash,)))
+    cursor.close()
+    if len(blocks) == 0:
+        raise exceptions.DatabaseError('No block found for hash: %s.' % block_hash)
+    elif len(blocks) > 1:
+        raise exceptions.DatabaseError('More than one block found for hash: %s.' % block_hash)
+    block = blocks[0]
+    block_json = json.dumps(block)
+    return block_json
+
+# Transaction information.
+def get_tx_hex(tx_hash):
+    """Return hex data of specified transaction."""
+    tx_hex = backend.getrawtransaction(tx_hash)
+    return tx_hex
+
+def get_tx_binary(tx_hash):
+    """Return binary data of specified transaction."""
+    tx_hex = get_tx_hex(tx_hash)
+    tx_bin = util.unhexlify(tx_hex)
+    return tx_bin
+
+def get_tx_json(db, tx_hash):
+    """Return JSON data of specified transaction."""
+    cursor = db.cursor()
+    txs = list(cursor.execute('''SELECT * FROM transactions WHERE tx_hash = ?''', (tx_hash,)))
+    cursor.close()
+    if len(txs) == 0:
+        raise exceptions.DatabaseError('No transaction found for hash %s.' % tx_hash)
+    elif len(txs) > 1:
+        raise exceptions.DatabaseError('More than one transaction found for hash %s.' % tx_hash)
+    tx_info = txs[0]
+    tx_json = json.dumps(tx_info)
+    return tx_json
+
 def init_api_access_log():
     """Initialize API logger."""
     if config.API_LOG:
@@ -383,10 +437,8 @@ class APIServer(threading.Thread):
                 bindings = []
             return db_query(db, query, tuple(bindings))
 
-
         ######################
         #WRITE/ACTION API
-
         # Generate dynamically create_{transaction} methods
         def generate_create_method(tx):
 
@@ -693,6 +745,68 @@ class APIServer(threading.Thread):
             response = flask.Response(jsonrpc_response.json.encode(), 200, mimetype='application/json')
             _set_cors_headers(response)
             return response
+
+        ######################
+        # HTTP REST API
+        ######################
+        # Handle blocks route.
+        @app.route('/rest/block/<block_hash>.<format>', methods=["GET",])
+        def handle_get_block(block_hash, format):
+            # Check for block_hash validity. Also prevents SQL injection attacks.
+            if block_hash == None or block_hash == '' or not block_hash.isalnum():
+                error = 'Invalid block hash: %s' % block_hash
+                return flask.Response(error, 400, mimetype='text/plain')
+            try:
+                if format == 'json':
+                    response_data = get_block_json(db, block_hash)
+                    response = flask.Response(response_data, 200, mimetype='application/json')
+                    return response
+                elif format == 'dat':
+                    # Binary
+                    response_data = get_block_binary(block_hash)
+                    response = flask.Response(response_data, 200, mimetype='application/octet-stream')
+                    return response
+                elif format == 'txt':
+                    # Hex
+                    response_data = get_block_hex(block_hash)
+                    response = flask.Response(response_data, 200, mimetype='text/plain')
+                    return response
+                else:
+                    error = 'Invalid file format: %s. Supported format is .json.' % format
+                    return flask.Response(error, 400, mimetype='text/plain')
+            except (exceptions.DatabaseError, BackendRPCError) as e:
+                # Show the database error that was raised as 400.
+                return flask.Response(str(e), 400, mimetype='text/plain')
+
+        # Handle transaction route.
+        @app.route('/rest/tx/<tx_hash>.<format>', methods=["GET",])
+        def handle_get_tx(tx_hash, format):
+            # Check for tx_hash validity. Also prevents SQL injection attacks.
+            if tx_hash == None or tx_hash == '' or not tx_hash.isalnum():
+                error = 'Invalid transaction hash: %s' % tx_hash
+                return flask.Response(error, 400, mimetype='application/txt')
+            try:
+                if format == 'json':
+                    # JSON
+                    response_data = get_tx_json(db, tx_hash)
+                    response = flask.Response(response_data, 200, mimetype='application/json')
+                    return response
+                elif format == 'dat':
+                    # Binary
+                    response_data = get_tx_binary(tx_hash)
+                    response = flask.Response(response_data, 200, mimetype='application/octet-stream')
+                    return response
+                elif format == 'txt':
+                    # Hex
+                    response_data = get_tx_hex(tx_hash)
+                    response = flask.Response(response_data, 200, mimetype='text/plain')
+                    return response
+                else:
+                    error = 'Invalid file format: %s. Supported formats are .json, .dat, .txt.' % format
+                    return flask.Response(error, 400, mimetype='text/plain')
+            except (exceptions.DatabaseError, BackendRPCError) as e:
+                # Show the database error that was raised as 400.
+                return flask.Response(str(e), 400, mimetype='text/plain')
 
         init_api_access_log()
 
