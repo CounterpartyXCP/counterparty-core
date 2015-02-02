@@ -14,6 +14,7 @@ import socket
 import signal
 import appdirs
 import platform
+from urllib.parse import quote_plus as urlencode
 
 from counterpartylib.lib import api, config, util, exceptions, blocks, check, backend, database, transaction, script, log
 
@@ -242,7 +243,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     else:
         raise ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
 
-    config.RPC = 'http://' + config.RPC_USER + ':' + config.RPC_PASSWORD + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT)
+    config.RPC = 'http://' + urlencode(config.RPC_USER) + ':' + urlencode(config.RPC_PASSWORD) + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT)
 
     # RPC CORS
     if rpc_allow_cors:
