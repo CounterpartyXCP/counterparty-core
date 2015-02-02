@@ -312,17 +312,13 @@ def do_transaction(db, name, params, private_key_wif, **kwargs):
     signed_tx = sign_transaction(unsigned_tx, private_key_wif=private_key_wif)
     return broadcast_transaction(signed_tx)
 
-
 # HTTP REST API helper functions.
 # Block information.
 def get_block_binary(block_hash):
     """Return binary data of specified block."""
-    try:
-        block_data = backend.getblock(block_hash)
-        block_binary = CBlock.serialize(block_data)
-        return block_binary
-    except KeyError:
-        raise exceptions.DatabaseError('No block data for hash %s.' % block_hash)
+    block_data = backend.getblock(block_hash)
+    block_binary = CBlock.serialize(block_data)
+    return block_binary
 
 def get_block_hex(block_hash):
     """Return hex data of specified block."""
@@ -346,11 +342,8 @@ def get_block_json(db, block_hash):
 # Transaction information.
 def get_tx_hex(tx_hash):
     """Return hex data of specified transaction."""
-    try:
-        tx_hex = backend.getrawtransaction(tx_hash)
-        return tx_hex
-    except KeyError:
-        raise exceptions.DatabaseError('No transaction data for hash %s.' % tx_hash)
+    tx_hex = backend.getrawtransaction(tx_hash)
+    return tx_hex
 
 def get_tx_binary(tx_hash):
     """Return binary data of specified transaction."""
