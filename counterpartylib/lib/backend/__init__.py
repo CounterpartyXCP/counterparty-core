@@ -55,7 +55,7 @@ def is_valid(address):
     try:
         script.validate(address)
         return True
-    except (exceptions.InvalidBase58Error, exceptions.VersionByteError, exceptions.Base58ChecksumError):
+    except script.AddressError:
         return False
 
 def get_txhash_list(block):
