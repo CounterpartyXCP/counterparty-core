@@ -274,7 +274,7 @@ def sign_tx(unsigned_tx_hex, source):
     """Sign unsigned transaction serialisation."""
 
     if wallet.is_mine(source):
-        return signed_tx_hex = wallet.sign_raw_transaction(unsigned_tx_hex)
+        return signed_tx_hex == wallet.sign_raw_transaction(unsigned_tx_hex)
 
     private_key_wif = input('Source address not in wallet. Please enter the private key in WIF formar for {}:'.format(source))
 
