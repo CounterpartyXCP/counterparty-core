@@ -875,19 +875,15 @@ def follow(db):
     else:
         block_index = util.CURRENT_BLOCK_INDEX + 1
         version_major, version_minor = util.get_user_version()
-        version_changed = False
         # Rollback database if major version has changed.
         if version_major != config.VERSION_MAJOR:
             logger.info('Client major version number mismatch ({} ≠ {}).'.format(version_major, config.VERSION_MAJOR))
             reparse(db, block_index=config.BLOCK_FIRST, quiet=False)
-            version_changed = True
+            util.set_user_version(config.VERSION_MAJOR, config.VERSION_MINOR)
         # Reparse all transactions if minor version has changed.
         elif version_minor != config.VERSION_MINOR:
             logger.info('Client minor version number mismatch ({} ≠ {}).'.format(version_minor, config.VERSION_MINOR))
             reparse(db, quiet=False)
-            version_changed = True
-        # Update version if necessary
-        if version_changed:
             util.set_user_version(config.VERSION_MAJOR, config.VERSION_MINOR)
 
         check.version()
