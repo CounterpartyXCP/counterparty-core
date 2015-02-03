@@ -600,4 +600,16 @@ def parse_id(match_id):
     assert match_id[64] == ID_SEPARATOR
     return match_id[:64], match_id[65:] # UTF-8 encoding means that the indices are doubled.
 
+
+def get_user_version():
+    user_version = cursor.execute('PRAGMA user_version').fetchall()[0]['user_version']
+    version_minor = user_version % 1000
+    version_major = int((user_version - version_minor) / 1000)
+    return version_major, version_minor
+
+def set_user_version(version_major, version_minor):
+    user_version = (int(version_major) * 1000) + int(version_minor)
+    cursor.execute('PRAGMA user_version = {}'.format(user_version)) # Syntax?!
+    logger.info('Database version number updated.')
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
