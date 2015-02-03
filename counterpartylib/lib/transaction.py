@@ -350,7 +350,7 @@ def construct (db, tx_info, encoding='auto',
     if data:
         if encoding == 'auto':
             if len(data) <= config.OP_RETURN_MAX_SIZE:
-                encoding = 'multisig'   # BTCGuild isn’t mining `OP_RETURN`?!
+                encoding = 'opreturn'
             else:
                 encoding = 'multisig'
         elif encoding not in ('pubkeyhash', 'multisig', 'opreturn'):
