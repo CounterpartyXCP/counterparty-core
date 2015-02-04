@@ -107,8 +107,14 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
 def version(db):
     cursor = db.cursor()
     user_version = cursor.execute('PRAGMA user_version').fetchall()[0]['user_version']
-    version_minor = user_version % 1000
-    version_major = user_version // 1000
+    # manage old user_version
+    if user_version == config.VERSION_MINOR:
+        version_minor = user_version
+        version_major = config.VERSION_MAJOR
+        update_version(db)
+    else:
+        version_minor = user_version % 1000
+        version_major = user_version // 1000
     return version_major, version_minor
 
 def update_version(db):
