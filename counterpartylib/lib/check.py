@@ -122,7 +122,7 @@ def check_change(protocol_change, change_name):
         else:
             warnings.warn(explanation)
 
-def version():
+def software_version():
     if config.FORCE:
         return
     logger.debug('Checking version.')

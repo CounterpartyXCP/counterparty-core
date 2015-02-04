@@ -652,7 +652,7 @@ def reparse(db, block_index=None, quiet=False):
     """
     logger.info('Reparsing all transactions.')
 
-    check.version()
+    check.software_version()
 
     cursor = db.cursor()
     if quiet:
@@ -866,8 +866,8 @@ def get_next_tx_index(db):
 class MempoolError(Exception):
     pass
 def follow(db):
-    # Check codebase version.
-    check.version()
+    # Check software version.
+    check.software_version()
 
     # Initialise.
     initialise(db)
@@ -964,7 +964,7 @@ def follow(db):
 
             # Check version. (Don’t add any blocks to the database while
             # running an out‐of‐date client!)
-            check.version()
+            check.software_version()
 
             # Get and parse transactions in this block (atomically).
             block_hash = backend.getblockhash(current_index)
