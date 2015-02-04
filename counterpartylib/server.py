@@ -185,7 +185,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     if backend_ssl_verify:
         config.BACKEND_SSL_VERIFY = backend_ssl_verify
     else:
-        config.BACKEND_SSL_VERIFY = False # Default to off (support self‐signed certificates)
+        config.BACKEND_SSL_VERIFY = True # Default to on (don't support self‐signed certificates)
 
     # Backend Poll Interval
     if backend_poll_interval:

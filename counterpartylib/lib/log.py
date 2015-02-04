@@ -50,6 +50,10 @@ def set_up(logger, verbose=False, logfile=None):
     urllib3_log.setLevel(log_level)
     urllib3_log.propagate = False
 
+    # Disable InsecureRequestWarning
+    import requests
+    requests.packages.urllib3.disable_warnings()
+
 def curr_time():
     return int(time.time())
 
