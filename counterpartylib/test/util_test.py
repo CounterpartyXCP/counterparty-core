@@ -73,6 +73,7 @@ def restore_database(database_filename, dump_filename):
     with open(dump_filename, 'r') as sql_dump:
         cursor.execute(sql_dump.read())
     cursor.close()
+    return db
 
 def remove_database_files(database_filename):
     """Delete temporary db dumps."""
@@ -256,20 +257,26 @@ def check_record(record, counterpartyd_db):
     """Allow direct record access to the db."""
     cursor = counterpartyd_db.cursor()
 
-    sql  = '''SELECT COUNT(*) AS c FROM {} '''.format(record['table'])
-    sql += '''WHERE '''
-    bindings = []
-    conditions = []
-    for field in record['values']:
-        if record['values'][field] is not None:
-            conditions.append('''{} = ?'''.format(field))
-            bindings.append(record['values'][field])
-    sql += " AND ".join(conditions)
+    if record['table'] == 'pragma':
+        field = record['field']
+        sql = '''PRAGMA {}'''.format(field)
+        value = cursor.execute(sql).fetchall()[0][field]
+        assert value == record['value']
+    else:
+        sql  = '''SELECT COUNT(*) AS c FROM {} '''.format(record['table'])
+        sql += '''WHERE '''
+        bindings = []
+        conditions = []
+        for field in record['values']:
+            if record['values'][field] is not None:
+                conditions.append('''{} = ?'''.format(field))
+                bindings.append(record['values'][field])
+        sql += " AND ".join(conditions)
 
-    count = list(cursor.execute(sql, tuple(bindings)))[0]['c']
-    if count != 1:
-        print(list(cursor.execute('''SELECT * FROM {} WHERE block_index = ?'''.format(record['table']), (record['values']['block_index'],))))
-        assert False
+        count = list(cursor.execute(sql, tuple(bindings)))[0]['c']
+        if count != 1:
+            print(list(cursor.execute('''SELECT * FROM {} WHERE block_index = ?'''.format(record['table']), (record['values']['block_index'],))))
+            assert False
 
 def vector_to_args(vector, functions=[]):
     """Translate from UNITTEST_VECTOR style to function arguments."""

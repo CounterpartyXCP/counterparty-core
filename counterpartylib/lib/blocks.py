@@ -882,7 +882,7 @@ def follow(db):
     # Check database version.
     try:
         check.database_version(db)
-    except util.DatabaseVersionError as e:
+    except check.DatabaseVersionError as e:
         logger.info(str(e))
         # no need to reparse or rollback a new database
         if block_index != config.BLOCK_FIRST:

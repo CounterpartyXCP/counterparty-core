@@ -1,7 +1,12 @@
 #! /usr/bin/python3
+import tempfile
 import pytest
-import util_test
 
+import util_test
+from util_test import CURR_DIR
+import server
+from counterpartylib.lib import (config, check, database)
+'''
 def test_scenario(scenario_name, base_scenario_name, transactions, rawtransactions_db):
     """Run the integration tests.
 
@@ -27,4 +32,25 @@ def test_scenario(scenario_name, base_scenario_name, transactions, rawtransactio
 def test_book(testnet):
     """Reparse all the transactions in the database to see check blockhain's integrity."""
     util_test.reparse(testnet=testnet)
+'''
+def test_check_database_version():
+    server.initialise(database_file=tempfile.gettempdir() + '/fixtures.unittest.db', testnet=True, **util_test.COUNTERPARTYD_OPTIONS)
+    util_test.restore_database(config.DATABASE, CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql')
+    db = database.get_connection(read_only=False)
+    database.update_version(db)
 
+    version_major, version_minor = database.version(db)
+    assert config.VERSION_MAJOR == version_major
+    assert config.VERSION_MINOR == version_minor
+
+    check.database_version(db)
+
+    config.VERSION_MINOR += 1
+    with pytest.raises(check.DatabaseVersionError) as exception:
+        check.database_version(db)
+    assert exception.value.reparse_block_index == None
+
+    config.VERSION_MAJOR += 1
+    with pytest.raises(check.DatabaseVersionError) as exception:
+        check.database_version(db)
+    assert exception.value.reparse_block_index == config.BLOCK_FIRST

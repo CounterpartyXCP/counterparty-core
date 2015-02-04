@@ -5,10 +5,12 @@ The function supports three types of output checks:
 - Return values - 'out'
 - Errors raised - 'error'
 - Database changes - 'records'
+- PRAGMA changes - 'pragma'
 """
 
 from .params import ADDR, MULTISIGADDR, DEFAULT_PARAMS as DP
 
+from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import script
 from counterpartylib.lib.messages.scriptlib import processblock
@@ -1400,5 +1402,18 @@ UNITTEST_VECTOR = {
             'in': ('5520720007',),
             'out': False # Date far in the future, mock function overrides this one and always returns False in the test suite
         }],
+    },
+    'database': {
+        'version': [{
+            'in': (),
+            'out': (config.VERSION_MAJOR, config.VERSION_MINOR)
+        }],
+        'update_version': [{
+            'in': (),
+            'records': [
+                {'table': 'pragma', 'field':'user_version', 'value': (config.VERSION_MAJOR * 1000) + config.VERSION_MINOR}
+            ]
+        }]
     }
+
 }
