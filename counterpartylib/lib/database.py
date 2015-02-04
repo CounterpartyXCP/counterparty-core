@@ -111,7 +111,8 @@ def version(db):
     if user_version == config.VERSION_MINOR:
         version_minor = user_version
         version_major = config.VERSION_MAJOR
-        update_version(db)
+        user_version = (config.VERSION_MAJOR * 1000) + version_minor
+        cursor.execute('PRAGMA user_version = {}'.format(user_version))
     else:
         version_minor = user_version % 1000
         version_major = user_version // 1000
