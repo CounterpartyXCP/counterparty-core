@@ -226,8 +226,8 @@ def bootstrap(overwrite=True, ask_confirmation=False):
     bootstrap_url_testnet = 'https://s3.amazonaws.com/counterparty-bootstrap/counterpartyd-testnet-db.latest.tar.gz'
 
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
-    database = os.path.join(data_dir, '{}.{}.db'.format(config.APP_NAME, config.VERSION_MAJOR))
-    database_testnet = os.path.join(data_dir, '{}.{}.testnet.db'.format(config.APP_NAME, config.VERSION_MAJOR))
+    database = os.path.join(data_dir, '{}.db'.format(config.APP_NAME))
+    database_testnet = os.path.join(data_dir, '{}.testnet.db'.format(config.APP_NAME))
 
     if not os.path.exists(data_dir):
         os.makedirs(data_dir, mode=0o755)
