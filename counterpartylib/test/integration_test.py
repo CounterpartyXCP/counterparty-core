@@ -6,7 +6,7 @@ import util_test
 from util_test import CURR_DIR
 import server
 from counterpartylib.lib import (config, check, database)
-'''
+
 def test_scenario(scenario_name, base_scenario_name, transactions, rawtransactions_db):
     """Run the integration tests.
 
@@ -32,7 +32,7 @@ def test_scenario(scenario_name, base_scenario_name, transactions, rawtransactio
 def test_book(testnet):
     """Reparse all the transactions in the database to see check blockhain's integrity."""
     util_test.reparse(testnet=testnet)
-'''
+
 def test_check_database_version():
     server.initialise(database_file=tempfile.gettempdir() + '/fixtures.unittest.db', testnet=True, **util_test.COUNTERPARTYD_OPTIONS)
     util_test.restore_database(config.DATABASE, CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql')
