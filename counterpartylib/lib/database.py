@@ -104,4 +104,17 @@ def get_connection(read_only=True, foreign_keys=True, integrity_check=True):
     cursor.close()
     return db
 
+def version(db):
+    cursor = db.cursor()
+    user_version = cursor.execute('PRAGMA user_version').fetchall()[0]['user_version']
+    version_minor = user_version % 1000
+    version_major = user_version // 1000
+    return version_major, version_minor
+
+def update_version(db):
+    cursor = db.cursor()
+    user_version = (config.VERSION_MAJOR * 1000) + config.VERSION_MINOR
+    cursor.execute('PRAGMA user_version = {}'.format(user_version)) # Syntax?!
+    logger.info('Database version number updated.')
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

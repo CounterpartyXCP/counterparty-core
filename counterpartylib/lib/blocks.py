@@ -28,6 +28,7 @@ from counterpartylib.lib import check
 from counterpartylib.lib import script
 from counterpartylib.lib import backend
 from counterpartylib.lib import log
+from counterpartylib.lib import database
 from .messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve, publish, execute, destroy)
 
 from .kickstart.blocks_parser import BlockchainParser, ChainstateParser
@@ -860,10 +861,13 @@ def get_next_tx_index(db):
     cursor.close()
     return tx_index
 
+
+
 class MempoolError(Exception):
     pass
 def follow(db):
-    cursor = db.cursor()
+    # Check codebase version.
+    check.version()
 
     # Initialise.
     initialise(db)
@@ -874,20 +878,18 @@ def follow(db):
         block_index = config.BLOCK_FIRST
     else:
         block_index = util.CURRENT_BLOCK_INDEX + 1
-        version_major, version_minor = util.get_user_version()
-        # Rollback database if major version has changed.
-        if version_major != config.VERSION_MAJOR:
-            logger.info('Client major version number mismatch ({} ≠ {}).'.format(version_major, config.VERSION_MAJOR))
-            reparse(db, block_index=config.BLOCK_FIRST, quiet=False)
-            util.set_user_version(config.VERSION_MAJOR, config.VERSION_MINOR)
-        # Reparse all transactions if minor version has changed.
-        elif version_minor != config.VERSION_MINOR:
-            logger.info('Client minor version number mismatch ({} ≠ {}).'.format(version_minor, config.VERSION_MINOR))
-            reparse(db, quiet=False)
-            util.set_user_version(config.VERSION_MAJOR, config.VERSION_MINOR)
 
-        check.version()
-        logger.info('Resuming parsing.')
+    # Check database version.
+    try:
+        check.database_version(db)
+    except util.DatabaseVersionError as e:
+        logger.info(str(e))
+        # no need to reparse or rollback a new database
+        if block_index != config.BLOCK_FIRST:
+            reparse(db, block_index=e.reparse_block_index, quiet=False)
+        database.update_version(db)
+
+    logger.info('Resuming parsing.')
 
     # Get index of last transaction.
     tx_index = get_next_tx_index(db)
@@ -896,9 +898,10 @@ def follow(db):
     not_supported_sorted = collections.deque()
     # ^ Entries in form of (block_index, tx_hash), oldest first. Allows for easy removal of past, unncessary entries
     mempool_initialised = False
+    cursor = db.cursor()
     # a reorg can happen without the block count increasing, or even for that
-        # matter, with the block count decreasing. This should only delay
-        # processing of the new blocks a bit.
+    # matter, with the block count decreasing. This should only delay
+    # processing of the new blocks a bit.
     while True:
         starttime = time.time()
 

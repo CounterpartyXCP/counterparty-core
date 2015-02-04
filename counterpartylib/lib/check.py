@@ -10,6 +10,7 @@ from counterpartylib.lib import config
 from counterpartylib.lib import util
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import backend
+from counterpartylib.lib import database
 
 CONSENSUS_HASH_SEED = 'We can only see a short distance ahead, but we can see plenty there that needs to be done.'
 
@@ -163,5 +164,23 @@ def database_state(db, blockcount):
         raise DatabaseError('{} database is behind backend.'.format(config.XCP_NAME))
     logger.debug('Database state check passed.')
     return
+
+class DatabaseVersionError(Exception):
+    def __init__(self, message, reparse_block_index):
+        super(DatabaseVersionError, self).__init__(message)
+        self.reparse_block_index = reparse_block_index
+
+def database_version(db):
+    if config.FORCE:
+        return
+    logger.debug('Checking database version.')
+
+    version_major, version_minor = database.version(db)
+    if version_major != config.VERSION_MAJOR:
+        # Rollback database if major version has changed.
+        raise DatabaseVersionError('Client major version number mismatch ({} ≠ {}).'.format(version_major, config.VERSION_MAJOR), config.BLOCK_FIRST)
+    elif version_minor != config.VERSION_MINOR:
+        # Reparse all transactions if minor version has changed.
+        raise DatabaseVersionError('Client minor version number mismatch ({} ≠ {}).'.format(version_minor, config.VERSION_MINOR), None)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
