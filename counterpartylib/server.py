@@ -108,7 +108,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     if database_file:
         config.DATABASE = database_file
     else:
-        filename = '{}.{}{}.db'.format(config.APP_NAME, config.VERSION_MAJOR, network)
+        filename = '{}{}.db'.format(config.APP_NAME, network)
         config.DATABASE = os.path.join(data_dir, filename)
 
     # Log directory

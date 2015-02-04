@@ -12,7 +12,7 @@ import server
 def setup_module():
     """Initialise the database with default data and wait for server to be ready."""
     server.initialise(database_file=tempfile.gettempdir() + '/fixtures.unittest.db', testnet=True, **util_test.COUNTERPARTYD_OPTIONS)
-    util_test.restore_database(config.DATABASE, CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql')
+    db = util_test.restore_database(config.DATABASE, CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql')
     util.FIRST_MULTISIG_BLOCK_TESTNET = 1
     # start RPC server
     api_server = api.APIServer()
@@ -34,6 +34,7 @@ def teardown_module(function):
 def counterpartyd_db(request):
     """Enable database access for unit test vectors."""
     db = database.get_connection(read_only=False)
+    database.update_version(db)
     cursor = db.cursor()
     cursor.execute('''BEGIN''')
     request.addfinalizer(lambda: cursor.execute('''ROLLBACK'''))
