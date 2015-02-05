@@ -321,7 +321,7 @@ def cli(method, params, unsigned):
         if script.is_multisig(params['source']):
             logger.info('Multi‐signature transactions are signed and broadcasted manually.')
         elif input('Sign and broadcast? (y/N) ') == 'y':
-            signed_tx_hex = sign_tx(unsigned_tx_hex, source)
+            signed_tx_hex = sign_tx(unsigned_tx_hex, params['source'])
             logger.info('Transaction (signed): {}'.format(signed_tx_hex))
             tx_hash = util.api('broadcast_tx', {'signed_tx_hex': signed_tx_hex})
             logger.info('Hash of transaction (broadcasted): {}'.format(tx_hash))
