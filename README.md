@@ -4,7 +4,7 @@
 [![Latest Version](https://pypip.in/version/counterparty-lib/badge.svg)](https://pypi.python.org/pypi/counterparty-lib/)
 [![Supported Python versions](https://pypip.in/py_versions/counterparty-lib/badge.svg)](https://pypi.python.org/pypi/counterparty-lib/)
 [![License](https://pypip.in/license/counterparty-lib/badge.svg)](https://pypi.python.org/pypi/counterparty-lib/)
-[![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/CounterpartyXCP/Technical)
+[![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/CounterpartyXCP/General)
 
 
 # Description
