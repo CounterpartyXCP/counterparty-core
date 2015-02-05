@@ -1,7 +1,7 @@
 ## Client Versions ##
 * v9.49.5 (???)
 	* automatically spend 1‐of‐`N` multisig outputs
-* v9.49.4 (???)
+* v9.49.4 (2014-02-05)
 	* reconceived this package as a libary
 	* moved CLI to new repository: `counterparty-cli`
 	* remove signing and broadcast functionality from API (`do_*`, `sign_tx`, `broadcast_tx` calls)
@@ -18,7 +18,7 @@
 	* improved docstring coverage
 	* removed option to use Insight, Blockr and SoChain as a backend
 	* tweaked Coveralls configuration
-	* Rename the database file name from `counterpartyd.9.db` to `counterparty.db`
+	* Add BTCD support
 * v9.49.3 (2014-12-28)
 	* better logging when handling `SIGTERM`, `SIGKILL`
 	* update README
