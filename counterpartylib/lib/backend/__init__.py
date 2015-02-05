@@ -17,7 +17,7 @@ from counterpartylib.lib import script
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 
-from counterpartylib.lib.backend import addrindex
+from counterpartylib.lib.backend import addrindex, btcd
 
 def BACKEND():
     return sys.modules['counterpartylib.lib.backend.{}'.format(config.BACKEND_NAME)] 
