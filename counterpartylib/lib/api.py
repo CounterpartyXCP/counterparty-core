@@ -31,6 +31,7 @@ from tornado.ioloop import IOLoop
 import jsonrpc
 from jsonrpc import dispatcher
 import inspect
+from xmltodict import unparse as serialize_to_xml
 
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
@@ -283,6 +284,14 @@ def compose_transaction(db, name, params,
     # except:
         # import traceback
         # traceback.print_exc()
+
+def conditional_decorator(decorator, condition):
+    """Checks the condition and if True applies specified decorator."""
+    def gen_decorator(f):
+        if not condition:
+            return f
+        return decorator(f)
+    return gen_decorator
 
 def init_api_access_log():
     """Initialize API logger."""
@@ -615,21 +624,50 @@ class APIServer(threading.Thread):
                 response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
                 response.headers['Access-Control-Allow-Headers'] = 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type'
 
-        @app.route('/', methods=["OPTIONS",])
-        @app.route('/api/', methods=["OPTIONS",])
-        def handle_options():
+        @app.route('/', defaults={'args_path': ''}, methods=['GET', 'POST', 'OPTIONS'])
+        @app.route('/<path:args_path>',  methods=['GET', 'POST', 'OPTIONS'])
+        # Only require authentication if RPC_PASSWORD is set.
+        @conditional_decorator(auth.login_required, hasattr(config, 'RPC_PASSWORD'))
+        def handle_root(args_path):
+            """Handle all paths, decide where to forward the query."""
+            if args_path.startswith('api/') or args_path.startswith('API/') or \
+               args_path.startswith('rpc/') or args_path.startswith('RPC/'):
+                if flask.request.method == 'POST':
+                    # Need to get those here because it might not be available in this aux function.
+                    request_json = flask.request.get_data().decode('utf-8')
+                    response = handle_rpc_post(request_json)
+                    return response
+                elif flask.request.method == 'OPTIONS':
+                    response = handle_rpc_options()
+                    return response
+                else:
+                    error = 'Invalid method.'
+                    return flask.Response(error, 405, mimetype='application/json')
+            elif args_path.startswith('rest/') or args_path.startswith('REST/'):
+                if flask.request.method == 'GET' or flask.request.method == 'POST':
+                    # Pass the URL path without /REST/ part and Flask request object.
+                    rest_path = args_path.split('/', 1)[1]
+                    response = handle_rest(rest_path, flask.request)
+                    return response
+                else:
+                    error = 'Invalid method.'
+                    return flask.Response(error, 405, mimetype='application/json')
+            else:
+                # Not found
+                return flask.Response(None, 404, mimetype='application/json')
+
+        ######################
+        # JSON-RPC API
+        ######################
+        def handle_rpc_options():
             response = flask.Response('', 204)
             _set_cors_headers(response)
             return response
 
-        @app.route('/', methods=["POST",])
-        @app.route('/api/', methods=["POST",])
-        @auth.login_required
-        def handle_post():
-
+        def handle_rpc_post(request_json):
+            """Handle /API/ POST route. Call relevant get_rows/create_transaction wrapper."""
             # Check for valid request format.
             try:
-                request_json = flask.request.get_data().decode('utf-8')
                 request_data = json.loads(request_json)
                 assert 'id' in request_data and request_data['jsonrpc'] == "2.0" and request_data['method']
                 # params may be omitted
@@ -653,6 +691,98 @@ class APIServer(threading.Thread):
             _set_cors_headers(response)
             return response
 
+        ######################
+        # HTTP REST API
+        ######################
+        def handle_rest(path_args, flask_request):
+            """Handle /REST/ route. Query the database using get_rows or create transaction using compose_transaction."""
+            url_action = flask_request.path.split('/')[-1]
+            if url_action == 'compose':
+                compose = True
+            elif url_action == 'get':
+                compose = False
+            else:
+                error = 'Invalid action "%s".' % url_action
+                return flask.Response(error, 400, mimetype='application/json')
+
+            # Get all arguments passed via URL.
+            url_args = path_args.split('/')
+            try:
+                query_type = url_args.pop(0).lower()
+            except IndexError:
+                error = 'No query_type provided.'
+                return flask.Response(error, 400, mimetype='application/json')
+            # Check if message type or table name are valid.
+            if (compose and query_type not in API_TRANSACTIONS) or \
+               (not compose and query_type not in API_TABLES):
+                error = 'No such query type in supported queries: "%s".' % query_type
+                return flask.Response(error, 400, mimetype='application/json')
+
+            # Parse the additional arguments.
+            extra_args = flask_request.args.items()
+            query_data = {}
+
+            if compose:
+                common_args = {}
+                transaction_args = {}
+                for (key, value) in extra_args:
+                    # Determine value type.
+                    try:
+                        value = int(value)
+                    except ValueError:
+                        try:
+                            value = float(value)
+                        except ValueError:
+                            pass
+                    # Split keys into common and transaction-specific arguments. Discard the privkey.
+                    if key in COMMONS_ARGS:
+                        common_args[key] = value
+                    elif key == 'privkey':
+                        pass
+                    else:
+                        transaction_args[key] = value
+
+                # Must have some additional transaction arguments.
+                if not len(transaction_args):
+                    error = 'No transaction arguments provided.'
+                    return flask.Response(error, 400, mimetype='application/json')
+
+                # Compose the transaction.
+                try:
+                    query_data = compose_transaction(db, name=query_type, params=transaction_args, **common_args)
+                except (script.AddressError, exceptions.ComposeError, exceptions.TransactionError, exceptions.BalanceError) as error:
+                    error_msg = str(error.__class__.__name__) + ': ' + str(error)
+                    return flask.Response(error_msg, 400, mimetype='application/json')                        
+            else:
+                # Need to de-generate extra_args to pass it through.
+                query_args = dict([item for item in extra_args])
+                operator = query_args.pop('op', 'AND')
+                # Put the data into specific dictionary format.
+                data_filter = [{'field': key, 'op': '==', 'value': value} for (key, value) in query_args.items()]
+
+                # Run the query.
+                try:
+                    query_data = get_rows(db, table=query_type, filters=data_filter, filterop=operator)
+                except APIError as error:
+                    return flask.Response(str(error), 400, mimetype='application/json')
+
+            # See which encoding to choose from.
+            file_format = flask_request.headers['Accept']
+            # JSON as default.
+            if file_format == 'application/json' or file_format == '*/*':
+                response_data = json.dumps(query_data)
+            elif file_format == 'application/xml':
+                # Add document root for XML. Note when xmltodict encounters a list, it produces separate tags for every item.
+                # Hence we end up with multiple query_type roots. To combat this we put it in a separate item dict.
+                response_data = serialize_to_xml({query_type: {'item': query_data}})
+            else:
+                error = 'Invalid file format: "%s".' % file_format
+                return flask.Response(error, 400, mimetype='application/json')
+
+            response = flask.Response(response_data, 200, mimetype=file_format)
+            return response
+
+        # Init the HTTP Server.
         init_api_access_log()
 
         http_server = HTTPServer(WSGIContainer(app), xheaders=True)

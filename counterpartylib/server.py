@@ -210,6 +210,9 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     else:
         config.RPC_HOST = 'localhost'
 
+    # The web root directory for API calls, eg. localhost:14000/rpc/
+    config.RPC_WEBROOT = '/rpc/'
+
     # counterpartyd API RPC port
     if rpc_port:
         config.RPC_PORT = rpc_port
@@ -240,10 +243,9 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     #  counterpartyd API RPC password
     if rpc_password:
         config.RPC_PASSWORD = rpc_password
+        config.RPC = 'http://' + urlencode(config.RPC_USER) + ':' + urlencode(config.RPC_PASSWORD) + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT) + config.RPC_WEBROOT
     else:
-        raise ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
-
-    config.RPC = 'http://' + urlencode(config.RPC_USER) + ':' + urlencode(config.RPC_PASSWORD) + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT)
+        config.RPC = 'http://' + config.RPC_HOST + ':' + str(config.RPC_PORT) + config.RPC_WEBROOT
 
     # RPC CORS
     if rpc_no_allow_cors:
