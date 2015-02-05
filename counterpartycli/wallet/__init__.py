@@ -34,4 +34,7 @@ def is_mine(address):
 def get_btc_balance(address):
     return WALLET().get_btc_balance(address)
 
+def send_raw_transaction(tx_hex):
+	return WALLET().send_raw_transaction(tx_hex)
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

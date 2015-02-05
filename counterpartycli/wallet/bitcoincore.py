@@ -110,4 +110,7 @@ def wallet_unlock():
     else:
         return True    # Wallet is unencrypted.
 
+def send_raw_transaction(tx_hex):
+    return rpc('sendrawtransaction', [tx_hex])
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
