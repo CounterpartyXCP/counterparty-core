@@ -716,9 +716,9 @@ class APIServer(threading.Thread):
         def handle_rest_get():
             """Handle GET / route. Query the database using api.get_rows."""
             # Get all arguments passed via URL.
-            url_args = flask.Request.script_root.split('/')
-            table_name = url_args.pop(0)
-            if table_name.lower() not in API_TABLES:
+            url_args = flask.request.script_root.split('/')
+            table_name = url_args.pop(0).lower()
+            if table_name not in API_TABLES:
                 error = 'No such table: %s' % table_name
                 return flask.Response(error, 400, mimetype='text/plain')
             extra_args = {}
@@ -737,7 +737,6 @@ class APIServer(threading.Thread):
                 if any([arg_key not in GET_ROWS_PARAMS for arg_key in arg_keys]):
                     error = 'Invalid argument parameter.'
                     return flask.Response(error, 400, mimetype='text/plain')
-
                 # Create a dictionary from arg_keys and arg_values.
                 extra_args = dict(zip(arg_keys, arg_values))
 
@@ -747,9 +746,9 @@ class APIServer(threading.Thread):
             except APIError as error:
                 return flask.Response(str(error), 400, mimetype='text/plain')
 
-            # See which encoding to chose from.
+            # See which encoding to choose from.
             try:
-                file_format = flask.Request.headers['Accept']
+                file_format = flask.request.headers['Accept']
             except KeyError:
                 # Use JSON as default.
                 file_format = 'application/json'
@@ -767,9 +766,9 @@ class APIServer(threading.Thread):
         def handle_rest_post():
             """Handle POST / route. Generate a transaction through api.compose_transaction."""
             # Get all arguments passed via URL.
-            url_args = flask.Request.script_root.split('/')
-            message_type = url_args.pop(0)
-            if message_type.lower() not in API_TRANSACTIONS:
+            url_args = flask.request.script_root.split('/')
+            message_type = url_args.pop(0).lower()
+            if message_type not in API_TRANSACTIONS:
                 error = 'No such message: %s' % message_type
                 return flask.Response(error, 400, mimetype='text/plain')
 
@@ -786,13 +785,8 @@ class APIServer(threading.Thread):
                 if len(arg_keys) != len(arg_values):
                     error = 'Not all keys have associated values.'
                     return flask.Response(error, 400, mimetype='text/plain')
-                # Check if all keys are valid parameters.
-                # Note this directly conflicts with the division in common and transaction args below.
-                # if any([arg_key not in COMMONS_ARGS for arg_key in arg_keys]):
-                #     error = 'Invalid argument parameter.'
-                #     return flask.Response(error, 400, mimetype='text/plain')
 
-                # Create a dictionary from arg_keys and arg_values and split it into two parts.
+                # Create a dictionary from arg_keys and arg_values and split it into common and transaction-specific args.
                 post_args = dict(zip(arg_keys, arg_values))
                 for key in post_args:
                     if key in COMMONS_ARGS:
@@ -809,8 +803,8 @@ class APIServer(threading.Thread):
             except (script.AddressError, exceptions.TransactionError, exceptions.BalanceError) as error:
                 return flask.Response(str(error), 400, mimetype='text/plain')
 
-            # See which encoding to chose from.
-            file_format = flask.Request.headers['Accept']
+            # See which encoding to choose from.
+            file_format = flask.request.headers['Accept']
             if file_format == 'application/json':
                 response_data = json.dumps(post_data)
             elif file_format == 'application/xml':
