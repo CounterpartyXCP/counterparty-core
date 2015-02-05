@@ -71,6 +71,10 @@ COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
                 'multisig_dust_size', 'op_return_value', 'pubkey',
                 'allow_unconfirmed_inputs', 'fee', 'fee_provided']
 
+# Parameters of get_rows function besides db and name.
+GET_ROWS_PARAMS = ['filters', 'filterop', 'order_by', 'order_dir', 'start_block',
+                  'end_block', 'status', 'limit', 'offset', 'show_expired']
+
 API_MAX_LOG_SIZE = 10 * 1024 * 1024 #max log size of 20 MB before rotation (make configurable later)
 API_MAX_LOG_COUNT = 10
 
@@ -284,11 +288,17 @@ def compose_transaction(db, name, params,
         # import traceback
         # traceback.print_exc()
 
-def dict_to_xml(data):
-    """Simple XML serializer for dictionaries."""
-    response = '<?xml version="1.0" encoding="UTF-8"?>'
-    for (key, value) in data.items():
-        xml_data += '<%s>%s</%s>' % (key, str(value), key)
+def serialize_to_xml(data):
+    """Simple XML serializer."""
+    xml_data = '<?xml version="1.0" encoding="UTF-8"?>'
+    if type(data) == list:
+        for item in data:
+            xml_data += '<item>%s</item>' % str(item)
+    elif type(data) == dict:
+        for (key, value) in data.items():
+            xml_data += '<%s>%s</%s>' % (key, str(value), key)
+    else:
+        xml_data += '<data>%s</data>' % str(data)
     return xml_data
 
 def init_api_access_log():
@@ -711,9 +721,6 @@ class APIServer(threading.Thread):
             if table_name.lower() not in API_TABLES:
                 error = 'No such table: %s' % table_name
                 return flask.Response(error, 400, mimetype='text/plain')
-            # Parameters of get_rows function besides db and name.
-            GET_PARAMS = ['filters', 'filterop', 'order_by', 'order_dir', 'start_block', 'end_block',
-                          'status', 'limit', 'offset', 'show_expired']
             extra_args = {}
             # If there are any extra arguments parse them first.
             if len(url_args > 0):
@@ -727,7 +734,7 @@ class APIServer(threading.Thread):
                     error = 'Not all keys have associated values.'
                     return flask.Response(error, 400, mimetype='text/plain')
                 # Check if all keys are valid get_rows parameters.
-                if any([arg_key not in GET_PARAMS for arg_key in arg_keys]):
+                if any([arg_key not in GET_ROWS_PARAMS for arg_key in arg_keys]):
                     error = 'Invalid argument parameter.'
                     return flask.Response(error, 400, mimetype='text/plain')
 
@@ -749,7 +756,7 @@ class APIServer(threading.Thread):
             if file_format == 'application/json':
                 response_data = json.dumps(get_data)
             elif file_format == 'application/xml':
-                response_data = dict_to_xml(get_data)
+                response_data = serialize_to_xml(get_data)
             else:
                 error = 'Invalid file format %s.' % file_format
                 return flask.Response(error, 400, mimetype='text/plain')
@@ -766,9 +773,6 @@ class APIServer(threading.Thread):
                 error = 'No such message: %s' % message_type
                 return flask.Response(error, 400, mimetype='text/plain')
 
-            # Paramaters of compose_transaction function besides db, name and params.
-            POST_PARAMS = ['encoding', 'fee_per_kb', 'regular_dust_size', 'multisig_dust_size',
-                    'op_return_value', 'pubkey', 'allow_unconfirmed_inputs', 'fee', 'fee_provided']
             transaction_args = {}
             common_args = {}
             # If there are any additional arguments parse them first.
@@ -782,10 +786,11 @@ class APIServer(threading.Thread):
                 if len(arg_keys) != len(arg_values):
                     error = 'Not all keys have associated values.'
                     return flask.Response(error, 400, mimetype='text/plain')
-                # Check if all keys are valid parameters
-                if any([arg_key not in POST_PARAMS for arg_key in arg_keys]):
-                    error = 'Invalid argument parameter.'
-                    return flask.Response(error, 400, mimetype='text/plain')
+                # Check if all keys are valid parameters.
+                # Note this directly conflicts with the division in common and transaction args below.
+                # if any([arg_key not in COMMONS_ARGS for arg_key in arg_keys]):
+                #     error = 'Invalid argument parameter.'
+                #     return flask.Response(error, 400, mimetype='text/plain')
 
                 # Create a dictionary from arg_keys and arg_values and split it into two parts.
                 post_args = dict(zip(arg_keys, arg_values))
@@ -809,7 +814,7 @@ class APIServer(threading.Thread):
             if file_format == 'application/json':
                 response_data = json.dumps(post_data)
             elif file_format == 'application/xml':
-                response_data = dict_to_xml(post_data)
+                response_data = serialize_to_xml(post_data)
             else:
                 error = 'Invalid file format %s.' % file_format
                 return flask.Response(error, 400, mimetype='text/plain')
