@@ -8,7 +8,7 @@ import urllib.request
 import sys
 import shutil
 
-CURRENT_VERSION = '9.49.4rc7'
+CURRENT_VERSION = '9.49.4'
 
 # NOTE: Why we don’t use the the PyPi package:
 # <https://code.google.com/p/apsw/source/detail?r=358a9623d051>
