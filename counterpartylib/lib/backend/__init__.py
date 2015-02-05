@@ -117,7 +117,7 @@ def is_vout_spendable(vout, source):
     vout_address = script.scriptpubkey_to_address(c_scriptpubkey)
     if not vout_address:
         return False
-    if script.is_multisig(vout_address):
+    if script.is_multisig(vout_address) and not script.is_multisig(source):
         signatures_required, pubkeyhashes, signatures_possible = script.extract_array(vout_address)
         if signatures_required == 1 and source in pubkeyhashes:
             return True
