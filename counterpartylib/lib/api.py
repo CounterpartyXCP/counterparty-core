@@ -801,8 +801,8 @@ class APIServer(threading.Thread):
             # Compose the transaction.
             try:
                 post_data = compose_transaction(db, name=message_type, params=transaction_args, **common_args)
-            except APIError as e:
-                return flask.Response(str(e), 400, mimetype='text/plain')
+            except (script.AddressError, exceptions.TransactionError, exceptions.BalanceError) as error:
+                return flask.Response(str(error), 400, mimetype='text/plain')
 
             # See which encoding to chose from.
             file_format = flask.Request.headers['Accept']
