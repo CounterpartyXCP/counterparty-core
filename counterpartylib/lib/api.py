@@ -741,17 +741,21 @@ class APIServer(threading.Thread):
                 get_data = get_rows(db, table=table_name, **extra_args)
             except APIError as error:
                 return flask.Response(str(error), 400, mimetype='text/plain')
+
             # See which encoding to chose from.
-            file_format = flask.Request.path.split('.')[1]
-            if file_format == 'json':
+            try:
+                file_format = flask.Request.headers['Accept']
+            except KeyError:
+                # Use JSON as default.
+                file_format = 'application/json'
+            if file_format == 'application/json':
                 response_data = json.dumps(get_data)
-                response = flask.Reponse(response_data, 200, mimetype='application/json')
-            elif file_format == 'xml':
+            elif file_format == 'application/xml':
                 response_data = dict_to_xml(get_data)
-                response = flask.Reponse(response_data, 200, mimetype='application/xml')
             else:
                 error = 'Invalid file format %s.' % file_format
                 return flask.Response(error, 400, mimetype='text/plain')
+            response = flask.Reponse(response_data, 200, mimetype=file_format)
             return response
 
         @app.route('/rest/', methods=["POST",])
@@ -798,21 +802,20 @@ class APIServer(threading.Thread):
 
             # Compose the transaction.
             try:
-                response_data = compose_transaction(db, name=message_type, params=transaction_args, **common_args)
+                post_data = compose_transaction(db, name=message_type, params=transaction_args, **common_args)
             except APIError as e:
                 return flask.Response(str(e), 400, mimetype='text/plain')
 
             # See which encoding to chose from.
-            file_format = flask.Request.path.split('.')[1]
-            if file_format == 'json':
-                response_data = json.dumps(get_data)
-                response = flask.Reponse(response_data, 200, mimetype='application/json')
-            elif file_format == 'xml':
-                response_data = dict_to_xml(get_data)
-                response = flask.Reponse(response_data, 200, mimetype='application/xml')
+            file_format = flask.Request.headers['Accept']
+            if file_format == 'application/json':
+                response_data = json.dumps(post_data)
+            elif file_format == 'application/xml':
+                response_data = dict_to_xml(post_data)
             else:
                 error = 'Invalid file format %s.' % file_format
                 return flask.Response(error, 400, mimetype='text/plain')
+            response = flask.Reponse(response_data, 200, mimetype=file_format)
             return response
 
         init_api_access_log()
