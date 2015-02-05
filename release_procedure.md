@@ -19,7 +19,7 @@
 - Write [Release Notes](https://github.com/CounterpartyXCP/counterpartyd/releases)
 - Upload (signed) package to PyPi
     * `sudo python3 setup.py sdist build`
-    * `twine upload -s dist/*`
+    * `twine upload -s dist/$NEW_FILES`
 
 **@ouziel-slama:**
 
