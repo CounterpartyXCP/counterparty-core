@@ -1,5 +1,8 @@
+# NOTE: See <http://nedbatchelder.com/code/coverage/>.
 [run]
-omit = test/*
+branch = True
 [report]
-show_missing = True
+omit =
+	test/*
+	lib/util_windows.py
 precision = 2
