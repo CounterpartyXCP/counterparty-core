@@ -18,6 +18,7 @@
 	* improved docstring coverage
 	* removed option to use Insight, Blockr and SoChain as a backend
 	* tweaked Coveralls configuration
+	* Rename the database file name from `counterpartyd.9.db` to `counterparty.db`
 	* Add BTCD support
 * v9.49.3 (2014-12-28)
 	* better logging when handling `SIGTERM`, `SIGKILL`
