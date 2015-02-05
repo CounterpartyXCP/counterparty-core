@@ -182,7 +182,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
         config.BACKEND_SSL = False  # Default to off.
 
     # Backend Core RPC SSL Verify
-    if backend_ssl_verify:
+    if backend_ssl_verify is not None:
         config.BACKEND_SSL_VERIFY = backend_ssl_verify
     else:
         config.BACKEND_SSL_VERIFY = True # Default to on (don't support self‐signed certificates)
@@ -246,7 +246,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     config.RPC = 'http://' + urlencode(config.RPC_USER) + ':' + urlencode(config.RPC_PASSWORD) + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT)
 
     # RPC CORS
-    if rpc_allow_cors:
+    if rpc_allow_cors is not None:
         config.RPC_ALLOW_CORS = rpc_allow_cors
     else:
         config.RPC_ALLOW_CORS = True
