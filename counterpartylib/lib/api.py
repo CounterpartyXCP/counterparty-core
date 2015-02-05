@@ -663,14 +663,12 @@ class APIServer(threading.Thread):
                 response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
                 response.headers['Access-Control-Allow-Headers'] = 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type'
 
-        @app.route('/', methods=["OPTIONS",])
         @app.route('/api/', methods=["OPTIONS",])
         def handle_options():
             response = flask.Response('', 204)
             _set_cors_headers(response)
             return response
 
-        @app.route('/', methods=["POST",])
         @app.route('/api/', methods=["POST",])
         @auth.login_required
         def handle_post():
@@ -704,12 +702,12 @@ class APIServer(threading.Thread):
         ######################
         # HTTP REST API
         ######################
-        @app.route('/rest/', methods=["GET",])
+        @app.route('/', methods=["GET",])
         def handle_rest_get():
-            """Handle GET /rest/ route. Query the database using api.get_rows."""
-            # Get all arguments passed via URL besides /rest/.
-            url_args = flask.Request.script_root[1:].split('/')
-            table_name = url_args[0]
+            """Handle GET / route. Query the database using api.get_rows."""
+            # Get all arguments passed via URL.
+            url_args = flask.Request.script_root.split('/')
+            table_name = url_args.pop(0)
             if table_name.lower() not in API_TABLES:
                 error = 'No such table: %s' % table_name
                 return flask.Response(error, 400, mimetype='text/plain')
@@ -758,12 +756,12 @@ class APIServer(threading.Thread):
             response = flask.Reponse(response_data, 200, mimetype=file_format)
             return response
 
-        @app.route('/rest/', methods=["POST",])
+        @app.route('/', methods=["POST",])
         def handle_rest_post():
-            """Handle POST /rest/ route. Generate a transaction through api.compose_transaction."""
-            # Get all arguments passed via URL besides /rest/.
-            url_args = flask.Request.script_root[1:].split('/')
-            message_type = url_args[0]
+            """Handle POST / route. Generate a transaction through api.compose_transaction."""
+            # Get all arguments passed via URL.
+            url_args = flask.Request.script_root.split('/')
+            message_type = url_args.pop(0)
             if message_type.lower() not in API_TRANSACTIONS:
                 error = 'No such message: %s' % message_type
                 return flask.Response(error, 400, mimetype='text/plain')
