@@ -694,6 +694,99 @@ class APIServer(threading.Thread):
             _set_cors_headers(response)
             return response
 
+        ######################
+        # HTTP REST API
+        ######################
+        @app.route('/rest/', methods=["GET",])
+        def handle_rest_get():
+            """Handle GET /rest/ route. Query the database using api.get_rows."""
+            # Get all arguments passed via URL besides /rest/.
+            url_args = split(flask.Request.script_root[1:], '/')
+            table_name = url_args[0]
+            if table_name.lower() not in API_TABLES:
+                error = 'No such table: %s' % table_name
+                return flask.Response(error, 400, mimetype='text/plain')
+            # Parameters of get_rows function besides db and name.
+            get_parameters = ['filters', 'filterop', 'order_by', 'order_dir', 'start_block', 'end_block', 'status', 'limit', 
+                              'offset', 'show_expired']
+            get_args = None
+            # If there are any additional arguments parse them first.
+            if len(url_args > 1):
+                # Keys are even elements and values are odd.
+                arg_keys = url_args[0:][::2]
+                arg_values = url_args[1:][::2]
+                # Transform keys to lowercase
+                arg_keys = [arg_key.lower() for arg_key in arg_keys]
+                # Check if all keys have associated values.
+                if len(arg_keys) != len(arg_values):
+                    error = 'Not all keys have associated values.'
+                    return flask.Response(error, 400, mimetype='text/plain')
+                # Check if all keys are valid parameters
+                if any([arg_keys not in get_parameters]):
+                    error = 'Invalid argument parameter.'
+                    return flask.Response(error, 400, mimetype='text/plain')
+
+                # Create a dictionary from arg_keys and arg_values.
+                get_args = dict(zip(arg_keys, arg_values))
+
+            try:
+                response_data = get_rows(db, table=table_name, **get_args)
+            except APIError as e:
+                return flask.Response(str(e), 400, mimetype='text/plain')
+
+            response = flask.Reponse(response_data, 200, mimetype='application/json')
+            return response
+
+        @app.route('/rest/', methods=["POST",])
+        def handle_rest_post():
+            """Handle POST /rest/ route. Generate a transaction through api.compose_transaction."""
+            # Get all arguments passed via URL besides /rest/.
+            url_args = split(flask.Request.script_root[1:], '/')
+            message_type = url_args[0]
+            if message_type.lower() not in API_TRANSACTIONS:
+                error = 'No such message: %s' % message_type
+                return flask.Response(error, 400, mimetype='text/plain')
+
+            # Paramaters of compose_transaction function besides db, name and params.
+            post_parameters = ['encoding', 'fee_per_kb', 'regular_dust_size', 'multisig_dust_size',
+                    'op_return_value', 'pubkey', 'allow_unconfirmed_inputs', 'fee', 'fee_provided']
+            transaction_args = {}
+            common_args = {}
+            # If there are any additional arguments parse them first.
+            if len(url_args > 1):
+                # Keys are even elements and values are odd.
+                arg_keys = url_args[0:][::2]
+                arg_values = url_args[1:][::2]
+                # Transform keys to lowercase
+                arg_keys = [arg_key.lower() for arg_key in arg_keys]
+                # Check if all keys have associated values.
+                if len(arg_keys) != len(arg_values):
+                    error = 'Not all keys have associated values.'
+                    return flask.Response(error, 400, mimetype='text/plain')
+                # Check if all keys are valid parameters
+                if any([arg_keys not in post_parameters]):
+                    error = 'Invalid argument parameter.'
+                    return flask.Response(error, 400, mimetype='text/plain')
+
+                # Create a dictionary from arg_keys and arg_values and split it into two parts.
+                post_args = dict(zip(arg_keys, arg_values))
+                for key in post_args:
+                    if key in COMMONS_ARGS:
+                        common_args[key] = post_args[key]
+                    # Discard the privkey.
+                    elif key == 'privkey':
+                        pass
+                    else:
+                        transaction_args[key] = post_args[key]
+
+            try:
+                response_data = compose_transaction(db, name=message_type, params=transaction_args, **common_args)
+            except APIError as e:
+                return flask.Response(str(e), 400, mimetype='text/plain')
+
+            response = flask.Reponse(response_data, 200, mimetype='application/json')
+            return response
+
         init_api_access_log()
 
         http_server = HTTPServer(WSGIContainer(app), xheaders=True)
