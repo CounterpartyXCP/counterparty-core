@@ -24,9 +24,15 @@ class install(_install):
     description = "Install counterparty-cli and dependencies"
 
     def run(self):
-        _install.do_egg_install(self)
+        caller = sys._getframe(2)
+        caller_module = caller.f_globals.get('__name__','')
+        caller_name = caller.f_code.co_name
+        if caller_module == 'distutils.dist' or caller_name == 'run_commands':
+            _install.run(self)
+        else:
+            self.do_egg_install()
         self.run_command('generate_configuration_files')
-        
+
 required_packages = [
     'appdirs>=1.4.0',
     'prettytable>=0.7.2',
@@ -85,7 +91,7 @@ if sys.argv[1] == 'py2exe':
     from py2exe.distutils_buildexe import py2exe as _py2exe
 
     WIN_DIST_DIR = 'counterparty-cli-win32-{}'.format(APP_VERSION)
-    
+
     class py2exe(_py2exe):
         def run(self):
             from counterpartycli.setup import before_py2exe_build, after_py2exe_build
