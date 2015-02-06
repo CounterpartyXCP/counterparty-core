@@ -128,7 +128,7 @@ def post_install(cmd, install_serpent=False):
     if install_serpent:
         cmd.run_command('install_serpent')
     cmd.run_command('move_old_db')
-             
+
 class install(_install):
     user_options = _install.user_options + [
         ("with-serpent", None, "Install Ethereum Serpent"),
@@ -140,7 +140,13 @@ class install(_install):
         _install.initialize_options(self)
 
     def run(self):
-        _install.do_egg_install(self)
+        caller = sys._getframe(2)
+        caller_module = caller.f_globals.get('__name__','')
+        caller_name = caller.f_code.co_name
+        if caller_module == 'distutils.dist' or caller_name == 'run_commands':
+            _install.run(self)
+        else:
+            self.do_egg_install()
         post_install(self, self.with_serpent)
 
 class bdist_egg(_bdist_egg):
