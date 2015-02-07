@@ -294,7 +294,8 @@ def serialize_to_xml(data):
     if type(data) == list:
         xml_data += '<list>'
         for item in data:
-            xml_data += '<item>%s</item>' % str(item)
+            parsed_item = serialize_to_xml(item)
+            xml_data += '<item>%s</item>' % str(parsed_item)
         xml_data += '</list>'
     elif type(data) == dict:
         xml_data += '<dict>'
