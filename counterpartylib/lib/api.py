@@ -288,24 +288,26 @@ def compose_transaction(db, name, params,
         # import traceback
         # traceback.print_exc()
 
-def serialize_to_xml(data):
+def serialize_to_xml(input_data):
     """Simple XML serializer."""
-    xml_data = '<?xml version="1.0" encoding="UTF-8"?>'
-    if type(data) == list:
-        xml_data += '<list>'
-        for item in data:
-            parsed_item = serialize_to_xml(item)
-            xml_data += '<item>%s</item>' % str(parsed_item)
-        xml_data += '</list>'
-    elif type(data) == dict:
-        xml_data += '<dict>'
-        for (key, value) in data.items():
-            parsed_value = serialize_to_xml(value)
-            xml_data += '<%s>%s</%s>' % (key, str(parsed_value), key)
-        xml_data += '</dict>'
-    else:
-        xml_data += '%s' % str(data)
-    return xml_data
+    ret_data = '<?xml version="1.0" encoding="UTF-8"?>'
+        def serialize_recurse(data):
+            if type(data) == list:
+                xml_data += '<list>'
+                for item in data:
+                    parsed_item = serialize_recurse(item)
+                    xml_data += '<item>%s</item>' % str(parsed_item)
+                xml_data += '</list>'
+            elif type(data) == dict:
+                xml_data += '<dict>'
+                for (key, value) in data.items():
+                    parsed_value = serialize_recurse(value)
+                    xml_data += '<%s>%s</%s>' % (key, str(parsed_value), key)
+                xml_data += '</dict>'
+            else:
+                xml_data += '%s' % str(data)
+            return xml_data
+    ret_data += serialize_recurse(input_data)
 
 def init_api_access_log():
     """Initialize API logger."""
