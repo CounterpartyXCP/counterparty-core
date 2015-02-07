@@ -26,14 +26,14 @@ CONFIG_ARGS = [
     [('--backend-user',), {'default': 'bitcoinrpc', 'help': 'the username used to communicate with backend'}],
     [('--backend-password',), {'help': 'the password used to communicate with backend'}],
     [('--backend-ssl',), {'action': 'store_true', 'default': False, 'help': 'use SSL to connect to backend (default: false)'}],
-    [('--backend-ssl-verify',), {'action': 'store_true', 'default': True, 'help': 'verify SSL certificate of backend; disallow use of self‐signed certificates (default: true)'}],
+    [('--backend-ssl-no-verify',), {'action': 'store_true', 'default': False, 'help': 'verify SSL certificate of backend; disallow use of self‐signed certificates (default: true)'}],
     [('--backend-poll-interval',), {'type': float, 'default': 2.0, 'help': 'poll interval, in seconds (default: 2.0)'}],
 
     [('--rpc-host',), {'default': 'localhost', 'help': 'the IP of the interface to bind to for providing JSON-RPC API access (0.0.0.0 for all interfaces)'}],
     [('--rpc-port',), {'type': int, 'help': 'port on which to provide the {} JSON-RPC API'.format(config.APP_NAME)}],
     [('--rpc-user',), {'default': 'rpc', 'help': 'required username to use the {} JSON-RPC API (via HTTP basic auth)'.format(config.APP_NAME)}],
     [('--rpc-password',), {'help': 'required password (for rpc-user) to use the {} JSON-RPC API (via HTTP basic auth)'.format(config.APP_NAME)}],
-    [('--rpc-allow-cors',), {'action': 'store_true', 'default': True, 'help': 'Allow ajax cross domain request'}],
+    [('--rpc-no-allow-cors',), {'action': 'store_true', 'default': False, 'help': 'Allow ajax cross domain request'}],
 
     [('-v', '--verbose'), {'dest': 'verbose', 'action': 'store_true', 'default': False, 'help': 'sets log level to DEBUG instead of WARNING'}],
     [('--testcoin',), {'action': 'store_true', 'default': False, 'help': 'use the test {} network on every blockchain'.format(config.XCP_NAME)}],
@@ -102,10 +102,10 @@ def main():
                                 backend_user=args.backend_user,
                                 backend_password=args.backend_password,
                                 backend_ssl=args.backend_ssl,
-                                backend_ssl_verify=args.backend_ssl_verify,
+                                backend_ssl_no_verify=args.backend_ssl_no_verify,
                                 backend_poll_interval=args.backend_poll_interval,
                                 rpc_host=args.rpc_host, rpc_port=args.rpc_port, rpc_user=args.rpc_user,
-                                rpc_password=args.rpc_password, rpc_allow_cors=args.rpc_allow_cors,
+                                rpc_password=args.rpc_password, rpc_no_allow_cors=args.rpc_no_allow_cors,
                                 force=args.force, verbose=args.verbose)
                                 #,broadcast_tx_mainnet=args.broadcast_tx_mainnet)
 
