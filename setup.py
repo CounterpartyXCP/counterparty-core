@@ -85,7 +85,7 @@ setup_options = {
         'generate_configuration_files': generate_configuration_files
     }
 }
-
+# prepare Windows binaries
 if sys.argv[1] == 'py2exe':
     import py2exe
     from py2exe.distutils_buildexe import py2exe as _py2exe
@@ -118,5 +118,9 @@ if sys.argv[1] == 'py2exe':
             'py2exe': py2exe
         }
     })
+# prepare PyPi package
+elif sys.argv[1] == 'sdist':
+    setup_options['long_description_markdown_filename'] = 'README.md'
+    setup_options['setup_requires'].append('setuptools-markdown')
 
 setup(**setup_options)
