@@ -176,7 +176,6 @@ setup_options = {
     'url': 'http://counterparty.io',
     'license': 'MIT',
     'description': 'Counterparty Protocol Reference Implementation',
-    'long_description': '',
     'keywords': 'counterparty, bitcoin',
     'classifiers': [
         "Development Status :: 5 - Production/Stable",
@@ -205,5 +204,9 @@ setup_options = {
         'install_serpent': install_serpent
     }
 }
+
+if sys.argv[1] == 'sdist':
+    setup_options['long_description_markdown_filename'] = 'README.md'
+    setup_options['setup_requires'].append('setuptools-markdown')
 
 setup(**setup_options)
