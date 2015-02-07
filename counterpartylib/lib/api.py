@@ -712,18 +712,26 @@ class APIServer(threading.Thread):
         ######################
         # HTTP REST API
         ######################
-        @app.route('/', methods=["GET",])
-        def handle_rest_get():
+        @app.route('/rest/<path:path_args>', methods=["GET",])
+        def handle_rest_get(path_args):
             """Handle GET / route. Query the database using api.get_rows."""
             # Get all arguments passed via URL.
-            url_args = flask.request.script_root.split('/')
-            table_name = url_args.pop(0).lower()
+            # Remove last element which is an empty string (if the path ends with /)
+            url_args = path_args.split('/')
+            if url_args[-1] == '':
+                url_args.pop(-1)
+            try:
+                table_name = url_args.pop(0).lower()
+            except IndexError:
+                error = 'No table name provided.'
+                return flask.Response(error, 400, mimetype='text/plain')
             if table_name not in API_TABLES:
                 error = 'No such table: %s' % table_name
                 return flask.Response(error, 400, mimetype='text/plain')
+
             extra_args = {}
             # If there are any extra arguments parse them first.
-            if len(url_args > 0):
+            if len(url_args) > 0:
                 # Even elements are keys, odd are values.
                 arg_keys = url_args[0:][::2]
                 arg_values = url_args[1:][::2]
@@ -734,6 +742,7 @@ class APIServer(threading.Thread):
                     error = 'Not all keys have associated values.'
                     return flask.Response(error, 400, mimetype='text/plain')
                 # Check if all keys are valid get_rows parameters.
+                # TODO: Rework this so it's actually correct
                 if any([arg_key not in GET_ROWS_PARAMS for arg_key in arg_keys]):
                     error = 'Invalid argument parameter.'
                     return flask.Response(error, 400, mimetype='text/plain')
@@ -759,15 +768,21 @@ class APIServer(threading.Thread):
             else:
                 error = 'Invalid file format %s.' % file_format
                 return flask.Response(error, 400, mimetype='text/plain')
-            response = flask.Reponse(response_data, 200, mimetype=file_format)
+            response = flask.Response(response_data, 200, mimetype=file_format)
             return response
 
-        @app.route('/', methods=["POST",])
-        def handle_rest_post():
+        @app.route('/rest/<path:path_args>', methods=["POST",])
+        def handle_rest_post(path_args):
             """Handle POST / route. Generate a transaction through api.compose_transaction."""
             # Get all arguments passed via URL.
-            url_args = flask.request.script_root.split('/')
-            message_type = url_args.pop(0).lower()
+            url_args = path_args.split('/')
+            if url_args[-1] == '':
+                url_args.pop(-1)
+            try:
+                message_type = url_args.pop(0).lower()
+            except IndexError:
+                error = 'No message type provided.'
+                return flask.Response(error, 400, mimetype='text/plain')
             if message_type not in API_TRANSACTIONS:
                 error = 'No such message: %s' % message_type
                 return flask.Response(error, 400, mimetype='text/plain')
@@ -775,7 +790,7 @@ class APIServer(threading.Thread):
             transaction_args = {}
             common_args = {}
             # If there are any additional arguments parse them first.
-            if len(url_args > 0):
+            if len(url_args) > 0:
                 # Keys are even elements and values are odd.
                 arg_keys = url_args[0:][::2]
                 arg_values = url_args[1:][::2]
@@ -812,7 +827,7 @@ class APIServer(threading.Thread):
             else:
                 error = 'Invalid file format %s.' % file_format
                 return flask.Response(error, 400, mimetype='text/plain')
-            response = flask.Reponse(response_data, 200, mimetype=file_format)
+            response = flask.Response(response_data, 200, mimetype=file_format)
             return response
 
         init_api_access_log()
