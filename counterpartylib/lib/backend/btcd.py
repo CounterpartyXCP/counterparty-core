@@ -34,7 +34,7 @@ def rpc(method, params):
     TRIES = 12
     for i in range(TRIES):
         try:
-            response = bitcoin_rpc_session.post(url, data=json.dumps(payload), headers=headers, verify=config.BACKEND_SSL_VERIFY)
+            response = bitcoin_rpc_session.post(url, data=json.dumps(payload), headers=headers, verify=(not config.BACKEND_SSL_NO_VERIFY))
             if i > 0:
                 logger.debug('Successfully connected.')
             break

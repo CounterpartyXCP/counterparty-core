@@ -651,7 +651,7 @@ class APIServer(threading.Thread):
             return backend.pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=provided_pubkeys)
 
         def _set_cors_headers(response):
-            if config.RPC_ALLOW_CORS:
+            if not config.RPC_NO_ALLOW_CORS:
                 response.headers['Access-Control-Allow-Origin'] = '*'
                 response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
                 response.headers['Access-Control-Allow-Headers'] = 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type'

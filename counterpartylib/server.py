@@ -74,11 +74,11 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
                 testnet=False, testcoin=False,
                 backend_name=None, backend_connect=None, backend_port=None,
                 backend_user=None, backend_password=None,
-                backend_ssl=False, backend_ssl_verify=True,
+                backend_ssl=False, backend_ssl_no_verify=False,
                 backend_poll_interval=None, 
                 rpc_host=None, rpc_port=None,
                 rpc_user=None, rpc_password=None,
-                rpc_allow_cors=None,
+                rpc_no_allow_cors=False,
                 force=False, verbose=False):
 
      # Data directory
@@ -182,10 +182,10 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
         config.BACKEND_SSL = False  # Default to off.
 
     # Backend Core RPC SSL Verify
-    if backend_ssl_verify is not None:
-        config.BACKEND_SSL_VERIFY = backend_ssl_verify
+    if backend_ssl_no_verify:
+        config.BACKEND_SSL_NO_VERIFY = backend_ssl_no_verify
     else:
-        config.BACKEND_SSL_VERIFY = True # Default to on (don't support self‐signed certificates)
+        config.BACKEND_SSL_NO_VERIFY = False # Default to on (don't support self‐signed certificates)
 
     # Backend Poll Interval
     if backend_poll_interval:
@@ -246,10 +246,10 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     config.RPC = 'http://' + urlencode(config.RPC_USER) + ':' + urlencode(config.RPC_PASSWORD) + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT)
 
     # RPC CORS
-    if rpc_allow_cors is not None:
-        config.RPC_ALLOW_CORS = rpc_allow_cors
+    if rpc_no_allow_cors:
+        config.RPC_NO_ALLOW_CORS = rpc_no_allow_cors
     else:
-        config.RPC_ALLOW_CORS = True
+        config.RPC_NO_ALLOW_CORS = False
 
     ##############
     # OTHER SETTINGS
