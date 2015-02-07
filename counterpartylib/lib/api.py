@@ -292,13 +292,18 @@ def serialize_to_xml(data):
     """Simple XML serializer."""
     xml_data = '<?xml version="1.0" encoding="UTF-8"?>'
     if type(data) == list:
+        xml_data += '<list>'
         for item in data:
             xml_data += '<item>%s</item>' % str(item)
+        xml_data += '</list>'
     elif type(data) == dict:
+        xml_data += '<dict>'
         for (key, value) in data.items():
-            xml_data += '<%s>%s</%s>' % (key, str(value), key)
+            parsed_value = serialize_to_xml(value)
+            xml_data += '<%s>%s</%s>' % (key, str(parsed_value), key)
+        xml_data += '</dict>'
     else:
-        xml_data += '<data>%s</data>' % str(data)
+        xml_data += '%s' % str(data)
     return xml_data
 
 def init_api_access_log():
@@ -800,7 +805,6 @@ class APIServer(threading.Thread):
                 if len(arg_keys) != len(arg_values):
                     error = 'Not all keys have associated values.'
                     return flask.Response(error, 400, mimetype='text/plain')
-
                 # Create a dictionary from arg_keys and arg_values and split it into common and transaction-specific args.
                 post_args = dict(zip(arg_keys, arg_values))
                 for key in post_args:
