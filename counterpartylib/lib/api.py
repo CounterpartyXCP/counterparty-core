@@ -71,10 +71,6 @@ COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
                 'multisig_dust_size', 'op_return_value', 'pubkey',
                 'allow_unconfirmed_inputs', 'fee', 'fee_provided']
 
-# Parameters of get_rows function besides db and name.
-GET_ROWS_PARAMS = ['filters', 'filterop', 'order_by', 'order_dir', 'start_block',
-                  'end_block', 'status', 'limit', 'offset', 'show_expired']
-
 API_MAX_LOG_SIZE = 10 * 1024 * 1024 #max log size of 20 MB before rotation (make configurable later)
 API_MAX_LOG_COUNT = 10
 
@@ -681,19 +677,42 @@ class APIServer(threading.Thread):
                 response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
                 response.headers['Access-Control-Allow-Headers'] = 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type'
 
-        @app.route('/api/', methods=["OPTIONS",])
-        def handle_options():
+        @app.route('/', defaults={'args_path': ''})
+        @app.route('/<path:args_path>')
+        def handle_all(args_path):
+            if args_path.startswith('api/'):
+                if request.method == 'POST':
+                    # Need to get those here because it might not be available in this aux function.
+                    request_json = flask.request.get_data().decode('utf-8')
+                    handle_api_post(request_json)
+                elif request.method == 'OPTIONS':
+                    handle_api_options()
+                else:
+                    error = 'Invalid method.'
+                    return flask.Response(error, 405, mimetype='text/plain')
+            elif args_path.startswith('rest/'):
+                if request.method == 'GET':
+                    # Grab everything besides rest/ and include the headers too.
+                    rest_path = args_path.split('/', 1)[1]
+                    handle_rest_get(rest_path, flask.request.headers)
+                elif request.method == 'POST':
+                    rest_path = args_path.split('/', 1)[1]
+                    handle_rest_post(rest_path, flask.request.headers)
+                else:
+                    error = 'Invalid method.'
+                    return flask.Response(error, 405, mimetype='text/plain')
+            else:
+                # Not found
+                return flask.Response(None, 404, mimetype='text/plain')
+
+        def handle_api_options():
             response = flask.Response('', 204)
             _set_cors_headers(response)
             return response
 
-        @app.route('/api/', methods=["POST",])
-        @auth.login_required
-        def handle_post():
-
+        def handle_api_post(request_json):
             # Check for valid request format.
             try:
-                request_json = flask.request.get_data().decode('utf-8')
                 request_data = json.loads(request_json)
                 assert 'id' in request_data and request_data['jsonrpc'] == "2.0" and request_data['method']
                 # params may be omitted
@@ -720,14 +739,12 @@ class APIServer(threading.Thread):
         ######################
         # HTTP REST API
         ######################
-        @app.route('/rest/<path:path_args>', methods=["GET",])
-        def handle_rest_get(path_args):
+        def handle_rest_get(path_args, request_headers):
             """Handle GET / route. Query the database using api.get_rows."""
             # Get all arguments passed via URL.
-            # Remove last element which is an empty string (if the path ends with /)
             url_args = path_args.split('/')
-            if url_args[-1] == '':
-                url_args.pop(-1)
+            data_filter = []
+            operator = 'AND'
             try:
                 table_name = url_args.pop(0).lower()
             except IndexError:
@@ -737,9 +754,11 @@ class APIServer(threading.Thread):
                 error = 'No such table: %s' % table_name
                 return flask.Response(error, 400, mimetype='text/plain')
 
-            extra_args = {}
             # If there are any extra arguments parse them first.
             if len(url_args) > 0:
+                # This can either be a specific operator or '' string.
+                operator = url_args.pop(-1).upper()
+                operator = operator if operator != '' else 'AND'
                 # Even elements are keys, odd are values.
                 arg_keys = url_args[0:][::2]
                 arg_values = url_args[1:][::2]
@@ -749,27 +768,20 @@ class APIServer(threading.Thread):
                 if len(arg_keys) != len(arg_values):
                     error = 'Not all keys have associated values.'
                     return flask.Response(error, 400, mimetype='text/plain')
-                # Check if all keys are valid get_rows parameters.
-                # TODO: Rework this so it's actually correct
-                if any([arg_key not in GET_ROWS_PARAMS for arg_key in arg_keys]):
-                    error = 'Invalid argument parameter.'
-                    return flask.Response(error, 400, mimetype='text/plain')
-                # Create a dictionary from arg_keys and arg_values.
-                extra_args = dict(zip(arg_keys, arg_values))
+                # Create a tuple list from arg_keys and arg_values.
+                extra_args = zip(arg_keys, arg_values)
+                data_filter = [{'field': key, 'op': '==', 'value': value} for (key, value) in extra_args]
 
             # Run the query.
             try:
-                get_data = get_rows(db, table=table_name, **extra_args)
+                get_data = get_rows(db, table=table_name, filter=data_filter, filterop=operator)
             except APIError as error:
                 return flask.Response(str(error), 400, mimetype='text/plain')
 
             # See which encoding to choose from.
-            try:
-                file_format = flask.request.headers['Accept']
-            except KeyError:
-                # Use JSON as default.
-                file_format = 'application/json'
-            if file_format == 'application/json':
+            file_format = request_headers['Accept']
+            # JSON as default.
+            if file_format == 'application/json' or file_format == '*//*':
                 response_data = json.dumps(get_data)
             elif file_format == 'application/xml':
                 response_data = serialize_to_xml(get_data)
@@ -779,8 +791,7 @@ class APIServer(threading.Thread):
             response = flask.Response(response_data, 200, mimetype=file_format)
             return response
 
-        @app.route('/rest/<path:path_args>', methods=["POST",])
-        def handle_rest_post(path_args):
+        def handle_rest_post(path_args, request_headers):
             """Handle POST / route. Generate a transaction through api.compose_transaction."""
             # Get all arguments passed via URL.
             url_args = path_args.split('/')
@@ -826,7 +837,7 @@ class APIServer(threading.Thread):
                 return flask.Response(str(error), 400, mimetype='text/plain')
 
             # See which encoding to choose from.
-            file_format = flask.request.headers['Accept']
+            file_format = request_headers['Accept']
             if file_format == 'application/json':
                 response_data = json.dumps(post_data)
             elif file_format == 'application/xml':
