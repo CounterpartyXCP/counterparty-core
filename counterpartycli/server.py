@@ -82,7 +82,7 @@ def main():
     args = parser.parse_args()
 
     # Help message
-    if args.action == 'help':
+    if args.help:
         parser.print_help()
         sys.exit()
 
