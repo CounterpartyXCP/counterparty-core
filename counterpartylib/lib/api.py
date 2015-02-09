@@ -690,7 +690,7 @@ class APIServer(threading.Thread):
         @app.route('/', defaults={'args_path': ''})
         @app.route('/<path:args_path>')
         # Only require authentication if RPC_PASSWORD is set.
-        @conditional_decorator(auth.login_required, config.RPC_PASSWORD != '')
+        @conditional_decorator(auth.login_required, hasattr(config, 'RPC_PASSWORD'))
         def handle_root(args_path):
             """Handle all paths, decide where to forward the query."""
             if args_path.startswith('api/'):
