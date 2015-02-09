@@ -288,6 +288,7 @@ def serialize_to_xml(input_data):
     """Simple XML serializer."""
     ret_data = '<?xml version="1.0" encoding="UTF-8"?>'
     def serialize_recurse(data):
+        xml_data = ''
         if type(data) == list:
             xml_data += '<list>'
             for item in data:
@@ -304,6 +305,7 @@ def serialize_to_xml(input_data):
             xml_data += '%s' % str(data)
         return xml_data
     ret_data += serialize_recurse(input_data)
+    return ret_data
 
 def init_api_access_log():
     """Initialize API logger."""
