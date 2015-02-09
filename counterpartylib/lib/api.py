@@ -840,16 +840,16 @@ class APIServer(threading.Thread):
                 if len(arg_keys) != len(arg_values):
                     error = 'Not all keys have associated values.'
                     return flask.Response(error, 400, mimetype='text/plain')
-                # Create a dictionary from arg_keys and arg_values and split it into common and transaction-specific args.
-                post_args = dict(zip(arg_keys, arg_values))
-                for key in post_args:
+                # Create a tuple list from arg_keys and arg_values and split it into common and transaction-specific args.
+                post_args = zip(arg_keys, arg_values)
+                for (key, value) in post_args:
                     if key in COMMONS_ARGS:
-                        common_args[key] = post_args[key]
+                        common_args[key] = value
                     # Discard the privkey.
                     elif key == 'privkey':
                         pass
                     else:
-                        transaction_args[key] = post_args[key]
+                        transaction_args[key] = value
 
             # Compose the transaction.
             try:
@@ -859,7 +859,8 @@ class APIServer(threading.Thread):
 
             # See which encoding to choose from.
             file_format = request_headers['Accept']
-            if file_format == 'application/json':
+            # JSON as default.
+            if file_format == 'application/json' or file_format == '*/*':
                 response_data = json.dumps(post_data)
             elif file_format == 'application/xml':
                 response_data = serialize_to_xml(post_data)
