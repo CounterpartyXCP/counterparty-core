@@ -307,6 +307,14 @@ def serialize_to_xml(input_data):
     ret_data += serialize_recurse(input_data)
     return ret_data
 
+def conditional_decorator(decorator, condition):
+    """Checks the condition and if True applies specified decorator."""
+    def gen_decorator(f):
+        if not condition:
+            return f
+        return decorator(f)
+    return gen_decorator
+
 def init_api_access_log():
     """Initialize API logger."""
     if config.API_LOG:
@@ -681,7 +689,10 @@ class APIServer(threading.Thread):
 
         @app.route('/', defaults={'args_path': ''})
         @app.route('/<path:args_path>')
+        # Only require authentication if RPC_PASSWORD is set.
+        @conditional_decorator(auth.login_required, config.RPC_PASSWORD != '')
         def handle_root(args_path):
+            """Handle all paths, decide where to forward the query."""
             if args_path.startswith('api/'):
                 if flask.request.method == 'POST':
                     # Need to get those here because it might not be available in this aux function.
@@ -711,12 +722,16 @@ class APIServer(threading.Thread):
                 # Not found
                 return flask.Response(None, 404, mimetype='text/plain')
 
+        ######################
+        # JSON-RPC API
+        ######################
         def handle_api_options():
             response = flask.Response('', 204)
             _set_cors_headers(response)
             return response
 
         def handle_api_post(request_json):
+            """Handle /API/ POST route. Call relevant get_rows/create_transaction wrapper."""
             # Check for valid request format.
             try:
                 request_data = json.loads(request_json)
@@ -746,7 +761,7 @@ class APIServer(threading.Thread):
         # HTTP REST API
         ######################
         def handle_rest_get(path_args, request_headers):
-            """Handle GET / route. Query the database using api.get_rows."""
+            """Handle GET / route. Query the database using get_rows."""
             # Get all arguments passed via URL.
             url_args = path_args.split('/')
             data_filter = []
@@ -798,7 +813,7 @@ class APIServer(threading.Thread):
             return response
 
         def handle_rest_post(path_args, request_headers):
-            """Handle POST / route. Generate a transaction through api.compose_transaction."""
+            """Handle POST / route. Generate a transaction through compose_transaction."""
             # Get all arguments passed via URL.
             url_args = path_args.split('/')
             if url_args[-1] == '':
