@@ -287,22 +287,22 @@ def compose_transaction(db, name, params,
 def serialize_to_xml(input_data):
     """Simple XML serializer."""
     ret_data = '<?xml version="1.0" encoding="UTF-8"?>'
-        def serialize_recurse(data):
-            if type(data) == list:
-                xml_data += '<list>'
-                for item in data:
-                    parsed_item = serialize_recurse(item)
-                    xml_data += '<item>%s</item>' % str(parsed_item)
-                xml_data += '</list>'
-            elif type(data) == dict:
-                xml_data += '<dict>'
-                for (key, value) in data.items():
-                    parsed_value = serialize_recurse(value)
-                    xml_data += '<%s>%s</%s>' % (key, str(parsed_value), key)
-                xml_data += '</dict>'
-            else:
-                xml_data += '%s' % str(data)
-            return xml_data
+    def serialize_recurse(data):
+        if type(data) == list:
+            xml_data += '<list>'
+            for item in data:
+                parsed_item = serialize_recurse(item)
+                xml_data += '<item>%s</item>' % str(parsed_item)
+            xml_data += '</list>'
+        elif type(data) == dict:
+            xml_data += '<dict>'
+            for (key, value) in data.items():
+                parsed_value = serialize_recurse(value)
+                xml_data += '<%s>%s</%s>' % (key, str(parsed_value), key)
+            xml_data += '</dict>'
+        else:
+            xml_data += '%s' % str(data)
+        return xml_data
     ret_data += serialize_recurse(input_data)
 
 def init_api_access_log():
@@ -679,25 +679,29 @@ class APIServer(threading.Thread):
 
         @app.route('/', defaults={'args_path': ''})
         @app.route('/<path:args_path>')
-        def handle_all(args_path):
+        def handle_root(args_path):
             if args_path.startswith('api/'):
-                if request.method == 'POST':
+                if flask.request.method == 'POST':
                     # Need to get those here because it might not be available in this aux function.
                     request_json = flask.request.get_data().decode('utf-8')
-                    handle_api_post(request_json)
-                elif request.method == 'OPTIONS':
-                    handle_api_options()
+                    response = handle_api_post(request_json)
+                    return response
+                elif flask.request.method == 'OPTIONS':
+                    response = handle_api_options()
+                    return response
                 else:
                     error = 'Invalid method.'
                     return flask.Response(error, 405, mimetype='text/plain')
             elif args_path.startswith('rest/'):
-                if request.method == 'GET':
+                if flask.request.method == 'GET':
                     # Grab everything besides rest/ and include the headers too.
                     rest_path = args_path.split('/', 1)[1]
-                    handle_rest_get(rest_path, flask.request.headers)
-                elif request.method == 'POST':
+                    response = handle_rest_get(rest_path, flask.request.headers)
+                    return response
+                elif flask.request.method == 'POST':
                     rest_path = args_path.split('/', 1)[1]
-                    handle_rest_post(rest_path, flask.request.headers)
+                    response = handle_rest_post(rest_path, flask.request.headers)
+                    return response
                 else:
                     error = 'Invalid method.'
                     return flask.Response(error, 405, mimetype='text/plain')
@@ -774,14 +778,14 @@ class APIServer(threading.Thread):
 
             # Run the query.
             try:
-                get_data = get_rows(db, table=table_name, filter=data_filter, filterop=operator)
+                get_data = get_rows(db, table=table_name, filters=data_filter, filterop=operator)
             except APIError as error:
                 return flask.Response(str(error), 400, mimetype='text/plain')
 
             # See which encoding to choose from.
             file_format = request_headers['Accept']
             # JSON as default.
-            if file_format == 'application/json' or file_format == '*//*':
+            if file_format == 'application/json' or file_format == '*/*':
                 response_data = json.dumps(get_data)
             elif file_format == 'application/xml':
                 response_data = serialize_to_xml(get_data)
