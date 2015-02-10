@@ -18,6 +18,7 @@ from prettytable import PrettyTable
 from colorlog import ColoredFormatter
 
 from counterpartycli import util
+from counterpartycli import messages
 from counterpartycli import wallet
 from counterpartycli import APP_VERSION
 from counterpartycli.util import add_config_arguments
@@ -212,120 +213,44 @@ def market(give_asset, get_asset):
     print('Feeds')
     print(table)
 
-def get_pubkey_monosig(pubkeyhash):
-    if wallet.is_valid(pubkeyhash):
-
-        # If in wallet, get from wallet.
-        logging.debug('Looking for public key for `{}` in wallet.'.format(pubkeyhash))
-        if wallet.is_mine(pubkeyhash):
-            pubkey = wallet.get_pubkey(pubkeyhash)
-            if pubkey:
-                return pubkey
-        logging.debug('Public key for `{}` not found in wallet.'.format(pubkeyhash))
-
-        # If in blockchain (and not in wallet), get from blockchain.
-        logging.debug('Looking for public key for `{}` in blockchain.'.format(pubkeyhash))
-        pubkey = util.api('search_pubkey', {'pubkeyhash': pubkeyhash, 'provided_pubkeys': None})
-        if pubkey:
-            return pubkey
-        logging.debug('Public key for `{}` not found in blockchain.'.format(pubkeyhash))
-
-        # If not in wallet and not in blockchain, get from user.
-        answer = input('Public keys (hexadecimal) or Private key (Wallet Import Format) for `{}`: '.format(pubkeyhash))
-        if not answer:
-            return None
-
-        # Public Key or Private Key?
-        is_fully_valid_pubkey = True
-        try:
-            is_fully_valid_pubkey = script.is_fully_valid(binascii.unhexlify(answer))
-        except binascii.Error:
-            is_fully_valid_pubkey = False
-        if is_fully_valid_pubkey:
-            logging.debug('Answer was a fully valid public key.')
-            pubkey = answer
-        else:
-            logging.debug('Answer was not a fully valid public key. Assuming answer was a private key.')
-            private_key = answer
-            try:
-                pubkey = script.private_key_to_public_key(private_key)
-            except script.AltcoinSupportError:
-                raise InputError('invalid private key')
-        if pubkeyhash != script.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, 'utf-8'))):
-            raise InputError('provided public or private key does not match the source address')
-
-        return pubkey
-
-    return None
-
-def get_pubkeys(address):
-    pubkeys = []
-    if script.is_multisig(address):
-        _, pubs, _ = script.extract_array(address)
-        for pub in pubs:
-            pubkey = get_pubkey_monosig(pub)
-            if pubkey:
-                pubkeys.append(pubkey)
-    else:
-        pubkey = get_pubkey_monosig(address)
-        if pubkey:
-            pubkeys.append(pubkey)
-    return pubkeys
-
 def sign_tx(unsigned_tx_hex, source):
     """Sign unsigned transaction serialisation."""
-
-    if wallet.is_mine(source):
-        return wallet.sign_raw_transaction(unsigned_tx_hex)
-
-    private_key_wif = input('Source address not in wallet. Please enter the private key in WIF formar for {}:'.format(source))
-
-    if not private_key_wif:
-        raise exceptions.TransactionError('invalid private key')
-
-    for char in private_key_wif:
-        if char not in script.b58_digits:
-            raise exceptions.TransactionError('invalid private key')
-
-    # TODO: Hack! (pybitcointools is Python 2 only)
-    import subprocess
-    i = 0
-    tx_hex = unsigned_tx_hex
-    while True: # pybtctool doesn’t implement `signall`
-        try:
-            tx_hex = subprocess.check_output(['pybtctool', 'sign', tx_hex, str(i), private_key_wif], stderr=subprocess.DEVNULL)
-        except Exception as e:
-            break
-    if tx_hex != unsigned_tx_hex:
-        signed_tx_hex = tx_hex.decode('utf-8')
-        return signed_tx_hex[:-1]   # Get rid of newline.
-    else:
-        raise exceptions.TransactionError('Could not sign transaction with pybtctool.')
-
-    return signed_tx_hex
-
-def cli(method, params, unsigned):
-    # Get provided pubkeys from params.
-    pubkeys = []
-    for address_name in ['source', 'destination']:
-        if address_name in params:
-            address = params[address_name]
-            if script.is_multisig(address) or address_name != 'destination':    # We don’t need the pubkey for a mono‐sig destination.
-                pubkeys += get_pubkeys(address)
-    params['pubkey'] = pubkeys
-
-    unsigned_tx_hex = util.api(method, params)
     logger.info('Transaction (unsigned): {}'.format(unsigned_tx_hex))
 
-    # Sign and broadcast?
-    if not unsigned:
-        if script.is_multisig(params['source']):
-            logger.info('Multi‐signature transactions are signed and broadcasted manually.')
-        elif input('Sign and broadcast? (y/N) ') == 'y':
-            signed_tx_hex = sign_tx(unsigned_tx_hex, params['source'])
-            logger.info('Transaction (signed): {}'.format(signed_tx_hex))
-            tx_hash = wallet.send_raw_transaction(signed_tx_hex)
-            logger.info('Hash of transaction (broadcasted): {}'.format(tx_hash))
+    if script.is_multisig(source):
+        logger.info('Multi‐signature transactions are signed and broadcasted manually.')
+    
+    elif input('Sign and broadcast? (y/N) ') == 'y':
+        if wallet.is_mine(source):
+            signed_tx_hex = wallet.sign_raw_transaction(unsigned_tx_hex)
+        else:
+            private_key_wif = input('Source address not in wallet. Please enter the private key in WIF formar for {}:'.format(source))
+
+            if not private_key_wif:
+                raise exceptions.TransactionError('invalid private key')
+
+            for char in private_key_wif:
+                if char not in script.b58_digits:
+                    raise exceptions.TransactionError('invalid private key')
+
+            # TODO: Hack! (pybitcointools is Python 2 only)
+            import subprocess
+            i = 0
+            tx_hex = unsigned_tx_hex
+            while True: # pybtctool doesn’t implement `signall`
+                try:
+                    tx_hex = subprocess.check_output(['pybtctool', 'sign', tx_hex, str(i), private_key_wif], stderr=subprocess.DEVNULL)
+                except Exception as e:
+                    break
+            if tx_hex != unsigned_tx_hex:
+                signed_tx_hex = tx_hex.decode('utf-8')
+                signed_tx_hex = signed_tx_hex[:-1]   # Get rid of newline.
+            else:
+                raise exceptions.TransactionError('Could not sign transaction with pybtctool.')
+
+        logger.info('Transaction (signed): {}'.format(signed_tx_hex))
+        tx_hash = wallet.send_raw_transaction(signed_tx_hex)
+        logger.info('Hash of transaction (broadcasted): {}'.format(tx_hash))
 
 def set_options(testnet=False, testcoin=False,
                 counterparty_rpc_connect=None, counterparty_rpc_port=None, 
@@ -478,13 +403,6 @@ def get_balances(address):
         table.add_row([asset, quantity])
     print('Balances')
     print(table.get_string())
-
-def generate_move_random_hash(move):
-    move = int(move).to_bytes(2, byteorder='big')
-    random_bin = os.urandom(16)
-    move_random_hash_bin = dhash(random_bin + move)
-    return binascii.hexlify(random_bin).decode('utf8'), binascii.hexlify(move_random_hash_bin).decode('utf8')
-
 
 def main():
     logger.info('Running v{} of {}.'.format(APP_VERSION, APP_NAME))
@@ -640,12 +558,6 @@ def main():
     # Logging
     log.set_up(logger, verbose=args.verbose)
 
-    # Convert.
-    args.fee_per_kb = int(args.fee_per_kb * config.UNIT)
-    args.regular_dust_size = int(args.regular_dust_size * config.UNIT)
-    args.multisig_dust_size = int(args.multisig_dust_size * config.UNIT)
-    args.op_return_value = int(args.op_return_value * config.UNIT)
-
     # Configuration
     set_options(testnet=args.testnet, testcoin=args.testcoin,
                 counterparty_rpc_connect=args.counterparty_rpc_connect, counterparty_rpc_port=args.counterparty_rpc_port,
@@ -656,250 +568,10 @@ def main():
                 wallet_ssl=args.wallet_ssl, wallet_ssl_verify=args.wallet_ssl_verify)
 
     # MESSAGE CREATION
-    if args.action == 'send':
-        if args.fee:
-            args.fee = util.value_in(args.fee, config.BTC)
-        quantity = util.value_in(args.quantity, args.asset)
-        cli('create_send', {'source': args.source,
-                            'destination': args.destination, 'asset':
-                            args.asset, 'quantity': quantity, 'fee': args.fee,
-                            'allow_unconfirmed_inputs': args.unconfirmed,
-                            'encoding': args.encoding, 'fee_per_kb':
-                            args.fee_per_kb, 'regular_dust_size':
-                            args.regular_dust_size, 'multisig_dust_size':
-                            args.multisig_dust_size, 'op_return_value':
-                            args.op_return_value},
-            args.unsigned)
-
-    elif args.action == 'order':
-        if args.fee:
-            args.fee = util.value_in(args.fee, config.BTC)
-        fee_required, fee_fraction_provided = D(args.fee_fraction_required), D(args.fee_fraction_provided)
-        give_quantity, get_quantity = D(args.give_quantity), D(args.get_quantity)
-
-        # Fee argument is either fee_required or fee_provided, as necessary.
-        if args.give_asset == config.BTC:
-            fee_required = 0
-            fee_fraction_provided = util.value_in(fee_fraction_provided, 'fraction')
-            fee_provided = round(D(fee_fraction_provided) * D(give_quantity) * D(config.UNIT))
-            print('Fee provided: {} {}'.format(util.value_out(fee_provided, config.BTC), config.BTC))
-        elif args.get_asset == config.BTC:
-            fee_provided = 0
-            fee_fraction_required = util.value_in(args.fee_fraction_required, 'fraction')
-            fee_required = round(D(fee_fraction_required) * D(get_quantity) * D(config.UNIT))
-            print('Fee required: {} {}'.format(util.value_out(fee_required, config.BTC), config.BTC))
-        else:
-            fee_required = 0
-            fee_provided = 0
-
-        give_quantity = util.value_in(give_quantity, args.give_asset)
-        get_quantity = util.value_in(get_quantity, args.get_asset)
-
-        cli('create_order', {'source': args.source,
-                             'give_asset': args.give_asset, 'give_quantity':
-                             give_quantity, 'get_asset': args.get_asset,
-                             'get_quantity': get_quantity, 'expiration':
-                             args.expiration, 'fee_required': fee_required,
-                             'fee_provided': fee_provided, 'fee': args.fee,
-                             'allow_unconfirmed_inputs': args.unconfirmed,
-                             'encoding': args.encoding, 'fee_per_kb':
-                             args.fee_per_kb, 'regular_dust_size':
-                             args.regular_dust_size, 'multisig_dust_size':
-                             args.multisig_dust_size, 'op_return_value':
-                             args.op_return_value},
-           args.unsigned)
-
-    elif args.action == '{}pay'.format(config.BTC).lower():
-        if args.fee:
-            args.fee = util.value_in(args.fee, config.BTC)
-        cli('create_btcpay', {'source': args.source,
-                              'order_match_id': args.order_match_id, 'fee':
-                              args.fee, 'allow_unconfirmed_inputs':
-                              args.unconfirmed, 'encoding': args.encoding,
-                              'fee_per_kb': args.fee_per_kb,
-                              'regular_dust_size': args.regular_dust_size,
-                              'multisig_dust_size': args.multisig_dust_size,
-                              'op_return_value': args.op_return_value},
-            args.unsigned)
-
-    elif args.action == 'issuance':
-        if args.fee:
-            args.fee = util.value_in(args.fee, config.BTC)
-        quantity = util.value_in(args.quantity, None, divisible=args.divisible)
-
-        cli('create_issuance', {'source': args.source, 'asset': args.asset,
-                                'quantity': quantity, 'divisible':
-                                args.divisible, 'description':
-                                args.description, 'transfer_destination':
-                                args.transfer_destination, 'fee': args.fee,
-                                'allow_unconfirmed_inputs': args.unconfirmed,
-                                'encoding': args.encoding, 'fee_per_kb':
-                                args.fee_per_kb, 'regular_dust_size':
-                                args.regular_dust_size, 'multisig_dust_size':
-                                args.multisig_dust_size, 'op_return_value':
-                                args.op_return_value},
-           args.unsigned)
-
-    elif args.action == 'broadcast':
-        if args.fee:
-            args.fee = util.value_in(args.fee, config.BTC)
-        value = util.value_in(args.value, 'value')
-        fee_fraction = util.value_in(args.fee_fraction, 'fraction')
-
-        cli('create_broadcast', {'source': args.source,
-                                 'fee_fraction': fee_fraction, 'text':
-                                 args.text, 'timestamp': int(time.time()),
-                                 'value': value, 'fee': args.fee,
-                                 'allow_unconfirmed_inputs': args.unconfirmed,
-                                 'encoding': args.encoding, 'fee_per_kb':
-                                 args.fee_per_kb, 'regular_dust_size':
-                                 args.regular_dust_size, 'multisig_dust_size':
-                                 args.multisig_dust_size, 'op_return_value':
-                                 args.op_return_value},
-           args.unsigned)
-
-    elif args.action == 'bet':
-        if args.fee:
-            args.fee = util.value_in(args.fee, config.BTC)
-        deadline = calendar.timegm(dateutil.parser.parse(args.deadline).utctimetuple())
-        wager = util.value_in(args.wager, config.XCP)
-        counterwager = util.value_in(args.counterwager, config.XCP)
-        target_value = util.value_in(args.target_value, 'value')
-        leverage = util.value_in(args.leverage, 'leverage')
-
-        cli('create_bet', {'source': args.source,
-                           'feed_address': args.feed_address, 'bet_type':
-                           BET_TYPE_ID[args.bet_type], 'deadline': deadline, 'wager_quantity': wager,
-                           'counterwager_quantity': counterwager, 'expiration':
-                           args.expiration, 'target_value': target_value,
-                           'leverage': leverage, 'fee': args.fee,
-                           'allow_unconfirmed_inputs': args.unconfirmed,
-                           'encoding': args.encoding, 'fee_per_kb':
-                           args.fee_per_kb, 'regular_dust_size':
-                           args.regular_dust_size, 'multisig_dust_size':
-                           args.multisig_dust_size, 'op_return_value':
-                           args.op_return_value},
-            args.unsigned)
-
-    elif args.action == 'dividend':
-        if args.fee:
-            args.fee = util.value_in(args.fee, config.BTC)
-        quantity_per_unit = util.value_in(args.quantity_per_unit, config.XCP)
-        cli('create_dividend', {'source': args.source,
-                                'quantity_per_unit': quantity_per_unit,
-                                'asset': args.asset, 'dividend_asset':
-                                args.dividend_asset, 'fee': args.fee,
-                                'allow_unconfirmed_inputs': args.unconfirmed,
-                                'encoding': args.encoding, 'fee_per_kb':
-                                args.fee_per_kb, 'regular_dust_size':
-                                args.regular_dust_size, 'multisig_dust_size':
-                                args.multisig_dust_size, 'op_return_value':
-                                args.op_return_value},
-           args.unsigned)
-
-    elif args.action == 'burn':
-        if args.fee:
-            args.fee = util.value_in(args.fee, config.BTC)
-        quantity = util.value_in(args.quantity, config.BTC)
-        cli('create_burn', {'source': args.source, 'quantity': quantity,
-                            'fee': args.fee, 'allow_unconfirmed_inputs':
-                            args.unconfirmed, 'encoding': args.encoding,
-                            'fee_per_kb': args.fee_per_kb, 'regular_dust_size':
-                            args.regular_dust_size, 'multisig_dust_size':
-                            args.multisig_dust_size, 'op_return_value':
-                            args.op_return_value},
-        args.unsigned)
-
-    elif args.action == 'cancel':
-        if args.fee:
-            args.fee = util.value_in(args.fee, config.BTC)
-        cli('create_cancel', {'source': args.source,
-                              'offer_hash': args.offer_hash, 'fee': args.fee,
-                              'allow_unconfirmed_inputs': args.unconfirmed,
-                              'encoding': args.encoding, 'fee_per_kb':
-                              args.fee_per_kb, 'regular_dust_size':
-                              args.regular_dust_size, 'multisig_dust_size':
-                              args.multisig_dust_size, 'op_return_value':
-                              args.op_return_value},
-        args.unsigned)
-
-    elif args.action == 'rps':
-        if args.fee:
-            args.fee = util.value_in(args.fee, 'BTC')
-        wager = util.value_in(args.wager, 'XCP')
-        random, move_random_hash = generate_move_random_hash(args.move)
-        print('random: {}'.format(random))
-        print('move_random_hash: {}'.format(move_random_hash))
-        cli('create_rps', {'source': args.source,
-                           'possible_moves': args.possible_moves, 'wager': wager,
-                           'move_random_hash': move_random_hash, 'expiration': args.expiration,
-                           'fee': args.fee, 'allow_unconfirmed_inputs': args.unconfirmed,
-                           'encoding': args.encoding, 'fee_per_kb':
-                           args.fee_per_kb, 'regular_dust_size':
-                           args.regular_dust_size, 'multisig_dust_size':
-                           args.multisig_dust_size, 'op_return_value':
-                           args.op_return_value},
-           args.unsigned)
-
-    elif args.action == 'rpsresolve':
-        if args.fee:
-            args.fee = util.value_in(args.fee, 'BTC')
-        cli('create_rpsresolve', {'source': args.source,
-                                'random': args.random, 'move': args.move,
-                                'rps_match_id': args.rps_match_id, 'fee': args.fee,
-                                'allow_unconfirmed_inputs': args.unconfirmed,
-                                'encoding': args.encoding, 'fee_per_kb':
-                                args.fee_per_kb, 'regular_dust_size':
-                                args.regular_dust_size, 'multisig_dust_size':
-                                args.multisig_dust_size, 'op_return_value':
-                                args.op_return_value},
-           args.unsigned)
-
-    elif args.action == 'publish':
-        if args.fee:
-            args.fee = util.value_in(args.fee, 'BTC')
-        cli('create_publish', {'source': args.source,
-                               'gasprice': args.gasprice, 'startgas':
-                               args.startgas, 'endowment': args.endowment,
-                               'code_hex': args.code_hex, 'fee': args.fee,
-                               'allow_unconfirmed_inputs': args.unconfirmed,
-                               'encoding': args.encoding, 'fee_per_kb':
-                               args.fee_per_kb, 'regular_dust_size':
-                               args.regular_dust_size, 'multisig_dust_size':
-                               args.multisig_dust_size, 'op_return_value':
-                               args.op_return_value}, args.unsigned)
-
-    elif args.action == 'execute':
-        if args.fee:
-            args.fee = util.value_in(args.fee, 'BTC')
-        value = util.value_in(args.value, 'XCP')
-        startgas = util.value_in(args.startgas, 'XCP')
-        cli('create_execute', {'source': args.source,
-                               'contract_id': args.contract_id, 'gasprice':
-                               args.gasprice, 'startgas': args.startgas,
-                               'value': value, 'payload_hex': args.payload_hex, 'fee':
-                               args.fee, 'allow_unconfirmed_inputs':
-                               args.unconfirmed, 'encoding': args.encoding,
-                               'fee_per_kb': args.fee_per_kb,
-                               'regular_dust_size': args.regular_dust_size,
-                               'multisig_dust_size': args.multisig_dust_size,
-                               'op_return_value': args.op_return_value},
-            args.unsigned)
-
-    elif args.action == 'destroy':
-        if args.fee:
-            args.fee = util.value_in(args.fee, 'BTC', 'input')
-        quantity = util.value_in(args.quantity, args.asset, 'input')
-        cli('create_destroy', {'source': args.source,
-                            'asset': args.asset, 'quantity': quantity, 'tag':
-                            args.tag, 'fee': args.fee,
-                            'allow_unconfirmed_inputs': args.unconfirmed,
-                            'encoding': args.encoding, 'fee_per_kb':
-                            args.fee_per_kb, 'regular_dust_size':
-                            args.regular_dust_size, 'multisig_dust_size':
-                            args.multisig_dust_size, 'op_return_value':
-                            args.op_return_value}, args.unsigned)
-
+    if args.action in list(messages.MESSAGE_PARAMS.keys()):
+        unsigned_hex = messages.compose(args.action, args)
+        if not args.unsigned:
+            sign_tx(unsigned_hex, args.source)
 
     # VIEWING (temporary)
     elif args.action == 'balances':
