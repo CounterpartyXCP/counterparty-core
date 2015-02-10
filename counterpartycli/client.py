@@ -588,10 +588,10 @@ def main():
             print(os.linesep.join(lines))
 
     elif args.action == 'wallet':
+        result = wallet.wallet()
         if args.json_output:
-            util.json_print(wallet.wallet())
-        else:
-            result = wallet.wallet()
+            util.json_print(result)
+        else:            
             lines = [] 
             for address in result['addresses']:
                 table = PrettyTable(['Asset', 'Balance'])
@@ -611,19 +611,15 @@ def main():
             print(os.linesep.join(lines))
 
     elif args.action == 'pending':
-        addresses = []
-        for bunch in wallet.get_btc_balances():
-            addresses.append(bunch[0])
-        filters = [
-            ('tx0_address', 'IN', addresses),
-            ('tx1_address', 'IN', addresses)
-        ]
-        awaiting_btcs = util.api('get_order_matches', {'filters': filters, 'filterop': 'OR', 'status': 'pending'})
-        table = PrettyTable(['Matched Order ID', 'Time Left'])
-        for order_match in awaiting_btcs:
-            order_match = format_order_match(order_match)
-            table.add_row(order_match)
-        print(table)
+        awaiting_btcs = wallet.pending()
+        if args.json_output:
+            util.json_print(awaiting_btcs)
+        else:
+            table = PrettyTable(['Matched Order ID', 'Time Left'])
+            for order_match in awaiting_btcs:
+                order_match = format_order_match(order_match)
+                table.add_row(order_match)
+            print(table)
 
     elif args.action == 'market':
         market(args.give_asset, args.get_asset)
