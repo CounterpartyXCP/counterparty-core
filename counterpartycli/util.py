@@ -33,9 +33,18 @@ from counterpartylib.lib.util import value_input, value_output
 
 rpc_sessions = {}
 
-json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
+class JsonDecimalEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o,  D):
+            return str(o)
+        return super(JsonDecimalEncoder, self).default(o)
+
+json_dump = lambda x: json.dumps(x, sort_keys=True, indent=4, cls=JsonDecimalEncoder)
+json_print = lambda x: print(json_dump(x))
 
 class RPCError(Exception):
+    pass
+class AssetError(Exception):
     pass
 
 def rpc(url, method, params=None, ssl_verify=False):
@@ -93,11 +102,15 @@ def is_divisible(asset):
         if not issuances: raise AssetError('No such asset: {}'.format(asset))
         return issuances[0]['divisible']
 
-def value_in(quantity, asset):
-    return value_input(quantity, asset, is_divisible(asset))
+def value_in(quantity, asset, divisible=None):
+    if divisible is None:
+        divisible = is_divisible(asset)
+    return value_input(quantity, asset, divisible)
 
-def value_out(quantity, asset):
-    return value_output(quantity, asset, is_divisible(asset))
+def value_out(quantity, asset, divisible=None):
+    if divisible is None:
+        divisible = is_divisible(asset)
+    return value_output(quantity, asset, divisible)
 
 # Set default values of command line arguments with config file
 def add_config_arguments(arg_parser, config_args, default_config_file):

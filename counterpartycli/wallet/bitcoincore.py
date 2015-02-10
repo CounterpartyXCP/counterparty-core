@@ -69,7 +69,7 @@ def get_wallet_addresses():
             addresses.append(address)
     return addresses
 
-def get_wallet():
+def get_btc_balances():
     for group in rpc('listaddressgroupings', []):
         for bunch in group:
             yield bunch[:2]

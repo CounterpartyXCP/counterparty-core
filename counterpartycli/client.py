@@ -56,6 +56,7 @@ CONFIG_ARGS = [
     [('--wallet-ssl',), {'action': 'store_true', 'default': False, 'help': 'use SSL to connect to wallet (default: false)'}],
     [('--wallet-ssl-verify',), {'action': 'store_true', 'default': False, 'help': 'verify SSL certificate of wallet; disallow use of self‐signed certificates (default: false)'}],
 
+    [('--json-output',), {'action': 'store_true', 'default': False, 'help': 'display result in json format'}],
     [('-v', '--verbose'), {'dest': 'verbose', 'action': 'store_true', 'help': 'sets log level to DEBUG instead of WARNING'}],
     [('--testcoin',), {'action': 'store_true', 'default': False, 'help': 'use the test {} network on every blockchain'.format(config.XCP_NAME)}],
     [('--unconfirmed',), {'action': 'store_true', 'default': False, 'help': 'allow the spending of unconfirmed transaction outputs'}],
@@ -153,7 +154,7 @@ def market(give_asset, get_asset):
 
     # Your Pending Orders Matches.
     addresses = []
-    for bunch in wallet.get_wallet():
+    for bunch in wallet.get_btc_balances():
         addresses.append(bunch[0])
     filters = [
         ('tx0_address', 'IN', addresses),
@@ -905,87 +906,70 @@ def main():
         get_balances(args.address)
 
     elif args.action == 'asset':
-        results = util.api('get_asset_info', {'assets': [args.asset]})
-        if results:
-            results = results[0]    # HACK
+        result = wallet.asset(args.asset)
+        if args.json_output:
+            util.json_print(result)
         else:
-            print('Asset ‘{}’ not found.'.format(args.asset))
-            exit(0)
+            lines = []
+            lines.append('')
+            lines.append('Informations')
+            table = PrettyTable(header=False, align='l')
+            table.add_row(['Asset Name:', args.asset])
+            table.add_row(['Asset ID:', result['asset_id']])
+            table.add_row(['Divisible:', result['divisible']])
+            table.add_row(['Locked:', result['locked']])
+            table.add_row(['Supply:', result['supply']])
+            table.add_row(['Issuer:', result['issuer']])
+            table.add_row(['Description:', '‘' + result['description'] + '’'])
+            table.add_row(['Balance:', result['balance']])
+            lines.append(table.get_string())
 
-        asset_id = util.api('get_assets', {'filters': [('asset_name', '==', args.asset),]})[0]['asset_id']
-        divisible = results['divisible']
-        locked = results['locked']
-        supply = util.value_out(results['supply'], args.asset)
+            if result['addresses']:
+                lines.append('')
+                lines.append('Addresses')
+                table = PrettyTable(['Address', 'Balance'])
+                for address in result['addresses']:
+                    balance = result['addresses'][address]
+                    table.add_row([address, balance])
+                lines.append(table.get_string())
 
-        print('Asset Name:', args.asset)
-        print('Asset ID:', asset_id)
-        print('Divisible:', divisible)
-        print('Locked:', locked)
-        print('Supply:', supply)
-        print('Issuer:', results['issuer'])
-        print('Description:', '‘' + results['description'] + '’')
+            if result['sends']:
+                lines.append('')
+                lines.append('Sends')
+                table = PrettyTable(['Type', 'Quantity', 'Source', 'Destination'])
+                for send in result['sends']:
+                    table.add_row([send['type'], send['quantity'], send['source'], send['destination']])
+                lines.append(table.get_string())
 
-        if args.asset != config.BTC:
-            print('Shareholders:')
-            balances = util.api('get_balances', {'filters': [('asset', '==', args.asset)]})
-            print('\taddress, quantity, escrow')
-            for holder in util.api('get_holders', {'asset': args.asset}):
-                quantity = holder['address_quantity']
-                if not quantity:
-                    continue
-                quantity = util.value_out(quantity, args.asset)
-                if holder['escrow']:
-                    escrow = holder['escrow']
-                else:
-                    escrow = 'None'
-                print('\t' + str(holder['address']) + ',' + str(quantity) + ',' + escrow)
-
+            lines.append('')
+            print(os.linesep.join(lines))
 
     elif args.action == 'wallet':
-        total_table = PrettyTable(['Asset', 'Balance'])
-        totals = {}
-
-        print()
-        for bunch in wallet.get_wallet():
-            address, btc_balance = bunch
-            address_data = get_address(address=address)
-            balances = address_data['balances']
-            table = PrettyTable(['Asset', 'Balance'])
-            empty = True
-            if btc_balance:
-                table.add_row([config.BTC, btc_balance])  # BTC
-                if config.BTC in totals.keys():
-                    totals[config.BTC] += btc_balance
-                else:
-                    totals[config.BTC] = btc_balance
-                empty = False
-            for balance in balances:
-                asset = balance['asset']
-                try:
-                    balance = D(util.value_out(balance['quantity'], balance['asset']))
-                except Exception:   # TODO
-                    balance = None
-                if balance:
-                    if asset in totals.keys():
-                        totals[asset] += balance
-                    else:
-                        totals[asset] = balance
+        if args.json_output:
+            util.json_print(wallet.wallet())
+        else:
+            result = wallet.wallet()
+            lines = [] 
+            for address in result['addresses']:
+                table = PrettyTable(['Asset', 'Balance'])
+                for asset in result['addresses'][address]:
+                    balance = result['addresses'][address][asset]
                     table.add_row([asset, balance])
-                    empty = False
-            if not empty:
-                print(address)
-                print(table.get_string())
-                print()
-        for asset in totals.keys():
-            balance = totals[asset]
-            total_table.add_row([asset, round(balance, 8)])
-        print('TOTAL')
-        print(total_table.get_string())
-        print()
+                lines.append(address)
+                lines.append(table.get_string())
+                lines.append('')
+            total_table = PrettyTable(['Asset', 'Balance'])
+            for asset in result['assets']:
+                balance = result['assets'][asset]
+                total_table.add_row([asset, balance])
+            lines.append('TOTAL')
+            lines.append(total_table.get_string())
+            lines.append('')
+            print(os.linesep.join(lines))
 
     elif args.action == 'pending':
         addresses = []
-        for bunch in wallet.get_wallet():
+        for bunch in wallet.get_btc_balances():
             addresses.append(bunch[0])
         filters = [
             ('tx0_address', 'IN', addresses),
