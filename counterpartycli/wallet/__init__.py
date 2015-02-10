@@ -148,5 +148,15 @@ def asset(asset_name):
 
     return asset_info
 
+def balances(address):
+    result = {
+        'BTC': get_btc_balance(address)
+    }
+    balances = api('get_balances', {'filters': [('address', '==', address),]})
+    for balance in balances:
+        asset = balance['asset']
+        balance = D(value_out(balance['quantity'], asset))
+        result[asset] =  balance
+    return result
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

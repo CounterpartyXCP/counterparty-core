@@ -81,32 +81,6 @@ def last_db_block_index():
         return result['block_index']
     return 0
 
-def get_address(address):
-    address_dict = {}
-    address_dict['balances'] = util.api('get_balances', {'filters': [('address', '==', address),]})
-    address_dict['debits'] = util.api('get_debits', {'filters': [('address', '==', address),]})
-    address_dict['credits'] = util.api('get_credits', {'filters': [('address', '==', address),]})
-    address_dict['burns'] = util.api('get_burns', {'filters': [('source', '==', address),]})
-    address_dict['sends'] = util.api('get_sends', {'filters': [('source', '==', address), ('destination', '==', address)], 'filterop': 'or'})
-    address_dict['orders'] = util.api('get_orders', {'filters': [('source', '==', address),]})
-    address_dict['order_matches'] = util.api('get_order_matches', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
-    address_dict['btcpays'] = util.api('get_btcpays', {'filters': [('source', '==', address), ('destination', '==', address)], 'filterop': 'or'})
-    address_dict['issuances'] = util.api('get_issuances', {'filters': [('source', '==', address),]})
-    address_dict['broadcasts'] = util.api('get_broadcasts', {'filters': [('source', '==', address),]})
-    address_dict['bets'] = util.api('get_bets', {'filters': [('source', '==', address),]})
-    address_dict['bet_matches'] = util.api('get_bet_matches', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
-    address_dict['dividends'] = util.api('get_dividends', {'filters': [('source', '==', address),]})
-    address_dict['cancels'] = util.api('get_cancels', {'filters': [('source', '==', address),]})
-    address_dict['rps'] = util.api('get_rps', {'filters': [('source', '==', address),]})
-    address_dict['rps_matches'] = util.api('get_rps_matches', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
-    address_dict['bet_expirations'] = util.api('get_bet_expirations', {'filters': [('source', '==', address),]})
-    address_dict['order_expirations'] = util.api('get_order_expirations', {'filters': [('source', '==', address),]})
-    address_dict['rps_expirations'] = util.api('get_rps_expirations', {'filters': [('source', '==', address),]})
-    address_dict['bet_match_expirations'] = util.api('get_bet_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
-    address_dict['order_match_expirations'] = util.api('get_order_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
-    address_dict['rps_match_expirations'] = util.api('get_rps_match_expirations', {'filters': [('tx0_address', '==', address), ('tx1_address', '==', address)], 'filterop': 'or'})
-    return address_dict
-
 def format_order(order):
     give_quantity = util.value_out(D(order['give_quantity']), order['give_asset'])
     get_quantity = util.value_out(D(order['get_quantity']), order['get_asset'])
@@ -389,21 +363,6 @@ def set_options(testnet=False, testcoin=False,
             config.BURN_END = config.BURN_END_MAINNET
             config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
 
-
-def get_balances(address):
-    address = script.make_canonical(address)
-    script.validate(address)
-    balances = get_address(address=address)['balances']
-    table = PrettyTable(['Asset', 'Amount'])
-    btc_balance = wallet.get_btc_balance(address)
-    table.add_row([config.BTC, btc_balance])  # BTC
-    for balance in balances:
-        asset = balance['asset']
-        quantity = util.value_out(balance['quantity'], balance['asset'])
-        table.add_row([asset, quantity])
-    print('Balances')
-    print(table.get_string())
-
 def main():
     logger.info('Running v{} of {}.'.format(APP_VERSION, APP_NAME))
 
@@ -575,7 +534,19 @@ def main():
 
     # VIEWING (temporary)
     elif args.action == 'balances':
-        get_balances(args.address)
+        result = wallet.balances(args.address)
+        if args.json_output:
+            util.json_print(result)
+        else:
+            lines = []
+            lines.append('')
+            lines.append('Balances')
+            table = PrettyTable(['Asset', 'Amount'])
+            for asset in result:
+                table.add_row([asset, result[asset]])
+            lines.append(table.get_string())
+            lines.append('')
+            print(os.linesep.join(lines))
 
     elif args.action == 'asset':
         result = wallet.asset(args.asset)
