@@ -23,6 +23,7 @@ from counterpartycli import wallet
 from counterpartycli import APP_VERSION
 from counterpartycli.util import add_config_arguments
 from counterpartycli.setup import generate_config_files
+from counterpartycli import console
 
 from counterpartylib.lib import config
 from counterpartylib.lib import script
@@ -505,7 +506,7 @@ def main():
     parser_market.add_argument('--give-asset', help='only show orders offering to sell GIVE_ASSET')
     parser_market.add_argument('--get-asset', help='only show orders offering to buy GET_ASSET')
 
-    parser_getrunninginfo = subparsers.add_parser('get_running_info', help='get the current state of the server')
+    parser_getrunninginfo = subparsers.add_parser('getinfo', help='get the current state of the server')
 
     args = parser.parse_args()
 
@@ -532,100 +533,20 @@ def main():
         if not args.unsigned:
             sign_tx(unsigned_hex, args.source)
 
-    # VIEWING (temporary)
-    elif args.action == 'balances':
-        result = wallet.balances(args.address)
+    # VIEWING
+    elif args.action in ['balances', 'asset', 'wallet', 'pending', 'getinfo']:
+        view = console.get_view(args.action, args)
         if args.json_output:
-            util.json_print(result)
+            util.json_print(view)
         else:
-            lines = []
-            lines.append('')
-            lines.append('Balances')
-            table = PrettyTable(['Asset', 'Amount'])
-            for asset in result:
-                table.add_row([asset, result[asset]])
-            lines.append(table.get_string())
-            lines.append('')
-            print(os.linesep.join(lines))
-
-    elif args.action == 'asset':
-        result = wallet.asset(args.asset)
-        if args.json_output:
-            util.json_print(result)
-        else:
-            lines = []
-            lines.append('')
-            lines.append('Informations')
-            table = PrettyTable(header=False, align='l')
-            table.add_row(['Asset Name:', args.asset])
-            table.add_row(['Asset ID:', result['asset_id']])
-            table.add_row(['Divisible:', result['divisible']])
-            table.add_row(['Locked:', result['locked']])
-            table.add_row(['Supply:', result['supply']])
-            table.add_row(['Issuer:', result['issuer']])
-            table.add_row(['Description:', '‘' + result['description'] + '’'])
-            table.add_row(['Balance:', result['balance']])
-            lines.append(table.get_string())
-
-            if result['addresses']:
-                lines.append('')
-                lines.append('Addresses')
-                table = PrettyTable(['Address', 'Balance'])
-                for address in result['addresses']:
-                    balance = result['addresses'][address]
-                    table.add_row([address, balance])
-                lines.append(table.get_string())
-
-            if result['sends']:
-                lines.append('')
-                lines.append('Sends')
-                table = PrettyTable(['Type', 'Quantity', 'Source', 'Destination'])
-                for send in result['sends']:
-                    table.add_row([send['type'], send['quantity'], send['source'], send['destination']])
-                lines.append(table.get_string())
-
-            lines.append('')
-            print(os.linesep.join(lines))
-
-    elif args.action == 'wallet':
-        result = wallet.wallet()
-        if args.json_output:
-            util.json_print(result)
-        else:            
-            lines = [] 
-            for address in result['addresses']:
-                table = PrettyTable(['Asset', 'Balance'])
-                for asset in result['addresses'][address]:
-                    balance = result['addresses'][address][asset]
-                    table.add_row([asset, balance])
-                lines.append(address)
-                lines.append(table.get_string())
-                lines.append('')
-            total_table = PrettyTable(['Asset', 'Balance'])
-            for asset in result['assets']:
-                balance = result['assets'][asset]
-                total_table.add_row([asset, balance])
-            lines.append('TOTAL')
-            lines.append(total_table.get_string())
-            lines.append('')
-            print(os.linesep.join(lines))
-
-    elif args.action == 'pending':
-        awaiting_btcs = wallet.pending()
-        if args.json_output:
-            util.json_print(awaiting_btcs)
-        else:
-            table = PrettyTable(['Matched Order ID', 'Time Left'])
-            for order_match in awaiting_btcs:
-                order_match = format_order_match(order_match)
-                table.add_row(order_match)
-            print(table)
+            print_method = getattr(console, 'print_{}'.format(args.action), None)
+            if print_method:
+                print_method(view)
+            else:
+                util.json_print(view)
 
     elif args.action == 'market':
         market(args.give_asset, args.get_asset)
-
-    elif args.action == 'get_running_info':
-        util.json_print(util.api('get_running_info'))
 
     else:
         parser.print_help()

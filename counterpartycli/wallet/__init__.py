@@ -161,7 +161,7 @@ def balances(address):
 
 def pending():
     addresses = []
-    for bunch in wallet.get_btc_balances():
+    for bunch in get_btc_balances():
         addresses.append(bunch[0])
     filters = [
         ('tx0_address', 'IN', addresses),
