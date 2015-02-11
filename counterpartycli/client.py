@@ -3,19 +3,9 @@
 import os
 import sys
 import argparse
-import decimal
 import logging
-import time
-import dateutil.parser
-import calendar
 import configparser
-import binascii
-import string
-from urllib.parse import quote_plus as urlencode
-
 import appdirs
-from prettytable import PrettyTable
-from colorlog import ColoredFormatter
 
 from counterpartycli import util
 from counterpartycli import messages
@@ -28,16 +18,16 @@ from counterpartycli import clientapi
 
 from counterpartylib.lib import config
 from counterpartylib.lib import script
-from counterpartylib.lib.util import make_id, BET_TYPE_NAME, BET_TYPE_ID, dhash
+from counterpartylib.lib.util import make_id, BET_TYPE_NAME
 from counterpartylib.lib import log
 from counterpartylib.lib.log import isodt
+
+from decimal import Decimal as D
 
 if os.name == 'nt':
     from counterpartylib.lib import util_windows
 
 APP_NAME = 'counterparty-client'
-
-D = decimal.Decimal
 
 logger = logging.getLogger()
 
