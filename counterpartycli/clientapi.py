@@ -8,6 +8,9 @@ from counterpartycli import wallet
 
 logger = logging.getLogger()
 
+class ConfigurationError(Exception):
+    pass
+
 def initialize(testnet=False, testcoin=False,
                 counterparty_rpc_connect=None, counterparty_rpc_port=None, 
                 counterparty_rpc_user=None, counterparty_rpc_password=None,

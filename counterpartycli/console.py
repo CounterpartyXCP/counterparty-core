@@ -1,8 +1,8 @@
-#! /usr/bin/env python3
 import os
 from prettytable import PrettyTable
 from counterpartycli import wallet, util
 
+# TODO: inelegant
 def get_view(view_name, args):
     if view_name == 'balances':
         return wallet.balances(args.address)

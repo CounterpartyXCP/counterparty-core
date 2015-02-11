@@ -4,32 +4,20 @@ import os
 import sys
 import argparse
 import logging
-import configparser
-import appdirs
-
-from counterpartycli import util
-from counterpartycli import messages
-from counterpartycli import wallet
-from counterpartycli import APP_VERSION
-from counterpartycli.util import add_config_arguments
-from counterpartycli.setup import generate_config_files
-from counterpartycli import console
-from counterpartycli import clientapi
-
-from counterpartylib.lib import config
-from counterpartylib.lib import script
-from counterpartylib.lib.util import make_id, BET_TYPE_NAME
-from counterpartylib.lib import log
-from counterpartylib.lib.log import isodt
-
 from decimal import Decimal as D
 
-if os.name == 'nt':
-    from counterpartylib.lib import util_windows
+from counterpartylib.lib import log
+logger = logging.getLogger(__name__)
+log.set_up(logger)
+
+from counterpartylib.lib import config, script
+from counterpartylib.lib.util import make_id, BET_TYPE_NAME
+from counterpartylib.lib.log import isodt
+from counterpartycli.util import add_config_arguments
+from counterpartycli.setup import generate_config_files
+from counterpartycli import APP_VERSION, util, messages, wallet, console, clientapi
 
 APP_NAME = 'counterparty-client'
-
-logger = logging.getLogger()
 
 CONFIG_ARGS = [
     [('--testnet',), {'action': 'store_true', 'default': False, 'help': 'use {} testnet addresses and block numbers'.format(config.BTC_NAME)}],    
@@ -61,51 +49,11 @@ CONFIG_ARGS = [
     [('--unsigned',), {'action': 'store_true', 'default': False, 'help': 'print out unsigned hex of transaction; do not sign or broadcast'}]
 ]
 
-class ConfigurationError(Exception): pass
-
-def sign_tx(unsigned_tx_hex, source):
-    """Sign unsigned transaction serialisation."""
-    logger.info('Transaction (unsigned): {}'.format(unsigned_tx_hex))
-
-    if script.is_multisig(source):
-        logger.info('Multi‐signature transactions are signed and broadcasted manually.')
-    
-    elif input('Sign and broadcast? (y/N) ') == 'y':
-        if wallet.is_mine(source):
-            signed_tx_hex = wallet.sign_raw_transaction(unsigned_tx_hex)
-        else:
-            private_key_wif = input('Source address not in wallet. Please enter the private key in WIF formar for {}:'.format(source))
-
-            if not private_key_wif:
-                raise exceptions.TransactionError('invalid private key')
-
-            for char in private_key_wif:
-                if char not in script.b58_digits:
-                    raise exceptions.TransactionError('invalid private key')
-
-            # TODO: Hack! (pybitcointools is Python 2 only)
-            import subprocess
-            i = 0
-            tx_hex = unsigned_tx_hex
-            while True: # pybtctool doesn’t implement `signall`
-                try:
-                    tx_hex = subprocess.check_output(['pybtctool', 'sign', tx_hex, str(i), private_key_wif], stderr=subprocess.DEVNULL)
-                except Exception as e:
-                    break
-            if tx_hex != unsigned_tx_hex:
-                signed_tx_hex = tx_hex.decode('utf-8')
-                signed_tx_hex = signed_tx_hex[:-1]   # Get rid of newline.
-            else:
-                raise exceptions.TransactionError('Could not sign transaction with pybtctool.')
-
-        logger.info('Transaction (signed): {}'.format(signed_tx_hex))
-        tx_hash = wallet.send_raw_transaction(signed_tx_hex)
-        logger.info('Hash of transaction (broadcasted): {}'.format(tx_hash))
-
 def main():
     logger.info('Running v{} of {}.'.format(APP_VERSION, APP_NAME))
 
     if os.name == 'nt':
+        from counterpartylib.lib import util_windows
         #patch up cmd.exe's "challenged" (i.e. broken/non-existent) UTF-8 logging
         util_windows.fix_win32_unicode()
 
@@ -280,20 +228,34 @@ def main():
     # MESSAGE CREATION
     if args.action in list(messages.MESSAGE_PARAMS.keys()):
         unsigned_hex = messages.compose(args.action, args)
+        logger.info('Transaction (unsigned): {}'.format(unsigned_hex))
         if not args.unsigned:
-            sign_tx(unsigned_hex, args.source)
+            if script.is_multisig(args.source):
+                logger.info('Multi‐signature transactions are signed and broadcasted manually.')
+            
+            elif input('Sign and broadcast? (y/N) ') == 'y':
+
+                if wallet.is_mine(args.source):
+                    signed_tx_hex = wallet.sign_raw_transaction(unsigned_hex)
+                else:
+                    private_key_wif = input('Source address not in wallet. Please enter the private key in WIF formar for {}:'.format(args.source))
+                    if not private_key_wif:
+                        raise exceptions.TransactionError('invalid private key')
+                    signed_tx_hex = wallet.sign_raw_transaction(unsigned_hex, private_key_wif=private_key_wif)
+
+                logger.info('Transaction (signed): {}'.format(signed_tx_hex))
+                tx_hash = wallet.send_raw_transaction(signed_tx_hex)
+                logger.info('Hash of transaction (broadcasted): {}'.format(tx_hash))
+
 
     # VIEWING
     elif args.action in ['balances', 'asset', 'wallet', 'pending', 'getinfo', 'getrows']:
         view = console.get_view(args.action, args)
-        if args.json_output:
+        print_method = getattr(console, 'print_{}'.format(args.action), None)
+        if args.json_output or print_method is None:
             util.json_print(view)
         else:
-            print_method = getattr(console, 'print_{}'.format(args.action), None)
-            if print_method:
-                print_method(view)
-            else:
-                util.json_print(view)
+            print_method(view)
 
     else:
         parser.print_help()

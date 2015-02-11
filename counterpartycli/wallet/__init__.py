@@ -25,8 +25,28 @@ def get_btc_balances():
     for address, btc_balance in WALLET().get_btc_balances():
     	yield [address, btc_balance]
 
-def sign_raw_transaction(tx_hex):
-    return WALLET().sign_raw_transaction(tx_hex)
+def sign_raw_transaction(tx_hex, private_key_wif=None):
+    if private_key_wif is None:
+        return WALLET().sign_raw_transaction(tx_hex)
+    else:
+        for char in private_key_wif:
+            if char not in script.b58_digits:
+                raise exceptions.TransactionError('invalid private key')
+
+        # TODO: Hack! (pybitcointools is Python 2 only)
+        import subprocess
+        i = 0
+        tx_hex = unsigned_tx_hex
+        while True: # pybtctool doesn’t implement `signall`
+            try:
+                tx_hex = subprocess.check_output(['pybtctool', 'sign', tx_hex, str(i), private_key_wif], stderr=subprocess.DEVNULL)
+            except Exception as e:
+                break
+        if tx_hex != unsigned_tx_hex:
+            signed_tx_hex = tx_hex.decode('utf-8')
+            return signed_tx_hex[:-1]   # Get rid of newline.
+        else:
+            raise exceptions.TransactionError('Could not sign transaction with pybtctool.')
 
 def get_pubkey(address):
     return WALLET().get_pubkey(address)
