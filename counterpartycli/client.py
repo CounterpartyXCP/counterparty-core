@@ -70,123 +70,7 @@ CONFIG_ARGS = [
     [('--unsigned',), {'action': 'store_true', 'default': False, 'help': 'print out unsigned hex of transaction; do not sign or broadcast'}]
 ]
 
-# TODO: move all these function in lib/
-
 class ConfigurationError(Exception): pass
-class InputError(Exception): pass
-
-def last_db_block_index():
-    sql = '''SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1'''
-    results = util.api('sql', {'query': sql})
-    for result in results:
-        return result['block_index']
-    return 0
-
-def format_order(order):
-    give_quantity = util.value_out(D(order['give_quantity']), order['give_asset'])
-    get_quantity = util.value_out(D(order['get_quantity']), order['get_asset'])
-    give_remaining = util.value_out(D(order['give_remaining']), order['give_asset'])
-    get_remaining = util.value_out(D(order['get_remaining']), order['get_asset'])
-    give_asset = order['give_asset']
-    get_asset = order['get_asset']
-
-    if get_asset < give_asset:
-        price = util.value_out(D(order['get_quantity']) / D(order['give_quantity']), 'price')
-        price_assets = get_asset + '/' + give_asset + ' ask'
-    else:
-        price = util.value_out(D(order['give_quantity']) / D(order['get_quantity']), 'price')
-        price_assets = give_asset + '/' + get_asset + ' bid'
-
-    return [D(give_remaining), give_asset, price, price_assets, str(order['fee_required'] / config.UNIT), str(order['fee_provided'] / config.UNIT), order['expire_index'] - last_db_block_index(), order['tx_hash']]
-
-def format_bet(bet):
-    odds = D(bet['counterwager_quantity']) / D(bet['wager_quantity'])
-
-    if not bet['target_value']:
-        target_value = None
-    else:
-        target_value = bet['target_value']
-    if not bet['leverage']:
-        leverage = None
-    else:
-        leverage = util.value_out(D(bet['leverage']) / 5040, 'leverage')
-
-    return [BET_TYPE_NAME[bet['bet_type']], bet['feed_address'], isodt(bet['deadline']), target_value, leverage, str(bet['wager_remaining'] / config.UNIT) + ' XCP', util.value_out(odds, 'odds'), bet['expire_index'] - last_db_block_index(), bet['tx_hash']]
-
-def format_order_match(order_match):
-    order_match_id = make_id(order_match['tx0_hash'], order_match['tx1_hash'])
-    order_match_time_left = order_match['match_expire_index'] - last_db_block_index()
-    return [order_match_id, order_match_time_left]
-
-def format_feed(feed):
-    timestamp = isodt(feed['timestamp'])
-    if not feed['text']:
-        text = '<Locked>'
-    else:
-        text = feed['text']
-    return [feed['source'], timestamp, text, feed['value'], D(feed['fee_fraction_int']) / D(1e8)]
-
-def market(give_asset, get_asset):
-
-    # Your Pending Orders Matches.
-    addresses = []
-    for bunch in wallet.get_btc_balances():
-        addresses.append(bunch[0])
-    filters = [
-        ('tx0_address', 'IN', addresses),
-        ('tx1_address', 'IN', addresses)
-    ]
-    awaiting_btcs = util.api('get_order_matches', {'filters': filters, 'filterop': 'OR', 'status': 'pending'})
-    table = PrettyTable(['Matched Order ID', 'Time Left'])
-    for order_match in awaiting_btcs:
-        order_match = format_order_match(order_match)
-        table.add_row(order_match)
-    print('Your Pending Order Matches')
-    print(table)
-    print('\n')
-
-    # Open orders.
-    orders = util.api('get_orders', {'status': 'open'})
-    table = PrettyTable(['Give Quantity', 'Give Asset', 'Price', 'Price Assets', 'Required {} Fee'.format(config.BTC), 'Provided {} Fee'.format(config.BTC), 'Time Left', 'Tx Hash'])
-    for order in orders:
-        if give_asset and order['give_asset'] != give_asset:
-            continue
-        if get_asset and order['get_asset'] != get_asset:
-            continue
-        order = format_order(order)
-        table.add_row(order)
-    print('Open Orders')
-    table = table.get_string(sortby='Price')
-    print(table)
-    print('\n')
-
-    # Open bets.
-    bets = util.api('get_bets', {'status': 'open'})
-    table = PrettyTable(['Bet Type', 'Feed Address', 'Deadline', 'Target Value', 'Leverage', 'Wager', 'Odds', 'Time Left', 'Tx Hash'])
-    for bet in bets:
-        bet = format_bet(bet)
-        table.add_row(bet)
-    print('Open Bets')
-    print(table)
-    print('\n')
-
-    # Feeds
-    broadcasts = util.api('get_broadcasts', {'status': 'valid', 'order_by': 'timestamp', 'order_dir': 'desc'})
-    table = PrettyTable(['Feed Address', 'Timestamp', 'Text', 'Value', 'Fee Fraction'])
-    seen_addresses = []
-    for broadcast in broadcasts:
-        # Only show feeds with broadcasts in the last two weeks.
-        if broadcast['timestamp'] + config.TWO_WEEKS < time.time(): 
-            continue
-        # Always show only the latest broadcast from a feed address.
-        if broadcast['source'] not in seen_addresses:
-            feed = format_feed(broadcast)
-            table.add_row(feed)
-            seen_addresses.append(broadcast['source'])
-        else:
-            continue
-    print('Feeds')
-    print(table)
 
 def sign_tx(unsigned_tx_hex, source):
     """Sign unsigned transaction serialisation."""
@@ -556,9 +440,6 @@ def main():
                 print_method(view)
             else:
                 util.json_print(view)
-
-    elif args.action == 'market':
-        market(args.give_asset, args.get_asset)
 
     else:
         parser.print_help()
