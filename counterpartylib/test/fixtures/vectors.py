@@ -627,6 +627,9 @@ UNITTEST_VECTOR = {
         }, {
             'in': (ADDR[0], DP['quantity'], 'DIVISIBLE', 'NOASSET', DP['default_block']),
             'out': (None, None, ['no such dividend asset, NOASSET.'], 0)
+        }, {
+            'in': (ADDR[0], 8359090909, 'DIVISIBLE', 'XCP', DP['default_block']),
+            'out': (91949999999, [{'address_quantity': 100000000, 'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'dividend_quantity': 8359090909}, {'address_quantity': 1000000000, 'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'dividend_quantity': 83590909090}], ['insufficient funds (XCP)'], 40000)
         }],
         'compose': [{
             'in': (ADDR[0], DP['quantity'], 'DIVISIBLE', 'XCP'),
