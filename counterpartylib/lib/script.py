@@ -41,8 +41,8 @@ def validate(address):
         pubkeyhashes = [address]
 
     # Check validity by attempting to decode.
-    for pubkeyhashes in pubkeyhashes:
-        base58_check_decode(pubkeyhashes, config.ADDRESSVERSION)
+    for pubkeyhash in pubkeyhashes:
+        base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
 
 def base58_encode(binary):
     """Encode the address in base58."""
