@@ -506,6 +506,18 @@ def main():
     parser_market.add_argument('--give-asset', help='only show orders offering to sell GIVE_ASSET')
     parser_market.add_argument('--get-asset', help='only show orders offering to buy GET_ASSET')
 
+    parser_getrows = subparsers.add_parser('getrows', help='get rows from a Counterparty table')
+    parser_getrows.add_argument('--table', required=True, help='table name')
+    parser_getrows.add_argument('--filter', nargs=3, action='append', help='filters to get specific rows')
+    parser_getrows.add_argument('--filter-op', choices=['AND', 'OR'], help='operator uses to combine filters', default='AND')
+    parser_getrows.add_argument('--order-by', help='field used to order results')
+    parser_getrows.add_argument('--order-dir', choices=['ASC', 'DESC'], help='direction used to order results')
+    parser_getrows.add_argument('--start-block', help='return only rows with block_index greater than start-block')
+    parser_getrows.add_argument('--end-block', help='return only rows with block_index lower than end-block')
+    parser_getrows.add_argument('--status', help='return only rows with the specified status')
+    parser_getrows.add_argument('--limit', help='number of rows to return', default=100)
+    parser_getrows.add_argument('--offset', help='number of rows to skip', default=0)
+
     parser_getrunninginfo = subparsers.add_parser('getinfo', help='get the current state of the server')
 
     args = parser.parse_args()
@@ -534,7 +546,7 @@ def main():
             sign_tx(unsigned_hex, args.source)
 
     # VIEWING
-    elif args.action in ['balances', 'asset', 'wallet', 'pending', 'getinfo']:
+    elif args.action in ['balances', 'asset', 'wallet', 'pending', 'getinfo', 'getrows']:
         view = console.get_view(args.action, args)
         if args.json_output:
             util.json_print(view)

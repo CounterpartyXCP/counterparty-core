@@ -14,6 +14,21 @@ def get_view(view_name, args):
         return wallet.pending()
     elif view_name == 'getinfo':
         return util.api('get_running_info')
+    elif view_name == 'getrows':
+        method = 'get_{}'.format(args.table)
+        filters = [tuple(f) for f in args.filter]
+        params = {
+            'filters': filters,
+            'filterop': args.filter_op,
+            'order_by': args.order_by,
+            'order_dir': args.order_dir,
+            'start_block': args.start_block,
+            'end_block': args.end_block,
+            'status': args.status,
+            'limit': args.limit,
+            'offset': args.offset
+        }
+        return util.api(method, params)
 
 def print_balances(balances):
     lines = []
@@ -86,5 +101,16 @@ def print_pending(awaiting_btcs):
         order_match = format_order_match(order_match)
         table.add_row(order_match)
     print(table)
+
+def print_getrows(rows):
+    if len(rows) > 0:
+        headers = list(rows[0].keys())
+        table = PrettyTable(headers)
+        for row in rows:
+            values = list(row.values())
+            table.add_row(values)
+        print(table)
+    else:
+        print("No result.")
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
