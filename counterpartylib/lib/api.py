@@ -630,7 +630,7 @@ class APIServer(threading.Thread):
         @conditional_decorator(auth.login_required, hasattr(config, 'RPC_PASSWORD'))
         def handle_root(args_path):
             """Handle all paths, decide where to forward the query."""
-            if args_path.startswith('api/'):
+            if args_path.startswith('api/') or args_path.startswith('API/'):
                 if flask.request.method == 'POST':
                     # Need to get those here because it might not be available in this aux function.
                     request_json = flask.request.get_data().decode('utf-8')
@@ -642,7 +642,7 @@ class APIServer(threading.Thread):
                 else:
                     error = 'Invalid method.'
                     return flask.Response(error, 405, mimetype='text/plain')
-            elif args_path.startswith('rest/'):
+            elif args_path.startswith('rest/') or args_path.startswith('REST/'):
                 if flask.request.method == 'GET':
                     # Grab everything besides rest/ and include the headers too.
                     rest_path = args_path.split('/', 1)[1]
@@ -698,7 +698,7 @@ class APIServer(threading.Thread):
         # HTTP REST API
         ######################
         def handle_rest_get(path_args, request_headers):
-            """Handle GET / route. Query the database using get_rows."""
+            """Handle GET /REST/ route. Query the database using get_rows."""
             # Get all arguments passed via URL.
             url_args = path_args.split('/')
             data_filter = []
@@ -717,10 +717,9 @@ class APIServer(threading.Thread):
                 # This can either be a specific operator or '' string.
                 operator = url_args.pop(-1).upper()
                 operator = operator if operator != '' else 'AND'
-                # Even elements are keys, odd are values.
+                # Even elements are keys, odd elements are values.
                 arg_keys = url_args[0:][::2]
                 arg_values = url_args[1:][::2]
-                # Transform keys to lowercase
                 arg_keys = [arg_key.lower() for arg_key in arg_keys]
                 # Check if all keys have associated values.
                 if len(arg_keys) != len(arg_values):
@@ -747,11 +746,12 @@ class APIServer(threading.Thread):
             else:
                 error = 'Invalid file format %s.' % file_format
                 return flask.Response(error, 400, mimetype='text/plain')
+
             response = flask.Response(response_data, 200, mimetype=file_format)
             return response
 
         def handle_rest_post(path_args, request_headers):
-            """Handle POST / route. Generate a transaction through compose_transaction."""
+            """Handle POST /rest/ route. Generate a transaction through compose_transaction."""
             # Get all arguments passed via URL.
             url_args = path_args.split('/')
             if url_args[-1] == '':
@@ -769,10 +769,9 @@ class APIServer(threading.Thread):
             common_args = {}
             # Parse the additional arguments.
             if len(url_args) > 0:
-                # Keys are even elements and values are odd.
+                # Even elements are keys, odd elements are values.
                 arg_keys = url_args[0:][::2]
                 arg_values = url_args[1:][::2]
-                # Transform keys to lowercase
                 arg_keys = [arg_key.lower() for arg_key in arg_keys]
                 # Check if all keys have associated values.
                 if len(arg_keys) != len(arg_values):
@@ -781,7 +780,7 @@ class APIServer(threading.Thread):
                 # Create a tuple list from arg_keys and arg_values and split it into common and transaction-specific args.
                 post_args = zip(arg_keys, arg_values)
                 for (key, value) in post_args:
-                    # Determine value type
+                    # Determine value type.
                     try:
                         value = int(value)
                     except ValueError:
@@ -815,9 +814,11 @@ class APIServer(threading.Thread):
             else:
                 error = 'Invalid file format %s.' % file_format
                 return flask.Response(error, 400, mimetype='text/plain')
+
             response = flask.Response(response_data, 200, mimetype=file_format)
             return response
 
+        # Init the HTTP Server.
         init_api_access_log()
 
         http_server = HTTPServer(WSGIContainer(app), xheaders=True)
