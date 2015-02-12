@@ -31,6 +31,7 @@ from tornado.ioloop import IOLoop
 import jsonrpc
 from jsonrpc import dispatcher
 import inspect
+from xmltodict import unparse as serialize_to_xml
 
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
@@ -283,29 +284,6 @@ def compose_transaction(db, name, params,
     # except:
         # import traceback
         # traceback.print_exc()
-
-def serialize_to_xml(input_data):
-    """Simple XML serializer."""
-    ret_data = '<?xml version="1.0" encoding="UTF-8"?>'
-    def serialize_recurse(data):
-        xml_data = ''
-        if type(data) == list:
-            xml_data += '<list>'
-            for item in data:
-                parsed_item = serialize_recurse(item)
-                xml_data += '<item>%s</item>' % str(parsed_item)
-            xml_data += '</list>'
-        elif type(data) == dict:
-            xml_data += '<dict>'
-            for (key, value) in data.items():
-                parsed_value = serialize_recurse(value)
-                xml_data += '<%s>%s</%s>' % (key, str(parsed_value), key)
-            xml_data += '</dict>'
-        else:
-            xml_data += '%s' % str(data)
-        return xml_data
-    ret_data += serialize_recurse(input_data)
-    return ret_data
 
 def conditional_decorator(decorator, condition):
     """Checks the condition and if True applies specified decorator."""
@@ -687,8 +665,8 @@ class APIServer(threading.Thread):
                 response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
                 response.headers['Access-Control-Allow-Headers'] = 'DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type'
 
-        @app.route('/', defaults={'args_path': ''})
-        @app.route('/<path:args_path>')
+        @app.route('/', defaults={'args_path': ''}, methods=['GET', 'POST', 'OPTIONS'])
+        @app.route('/<path:args_path>',  methods=['GET', 'POST', 'OPTIONS'])
         # Only require authentication if RPC_PASSWORD is set.
         @conditional_decorator(auth.login_required, hasattr(config, 'RPC_PASSWORD'))
         def handle_root(args_path):
@@ -775,7 +753,7 @@ class APIServer(threading.Thread):
                 error = 'No such table: %s' % table_name
                 return flask.Response(error, 400, mimetype='text/plain')
 
-            # If there are any extra arguments parse them first.
+            # Parse the additional arguments.
             if len(url_args) > 0:
                 # This can either be a specific operator or '' string.
                 operator = url_args.pop(-1).upper()
@@ -805,7 +783,8 @@ class APIServer(threading.Thread):
             if file_format == 'application/json' or file_format == '*/*':
                 response_data = json.dumps(get_data)
             elif file_format == 'application/xml':
-                response_data = serialize_to_xml(get_data)
+                # Add document root for XML.
+                response_data = serialize_to_xml({table_name: get_data})
             else:
                 error = 'Invalid file format %s.' % file_format
                 return flask.Response(error, 400, mimetype='text/plain')
@@ -824,12 +803,12 @@ class APIServer(threading.Thread):
                 error = 'No message type provided.'
                 return flask.Response(error, 400, mimetype='text/plain')
             if message_type not in API_TRANSACTIONS:
-                error = 'No such message: %s' % message_type
+                error = 'No such message type: %s.' % message_type
                 return flask.Response(error, 400, mimetype='text/plain')
 
             transaction_args = {}
             common_args = {}
-            # If there are any additional arguments parse them first.
+            # Parse the additional arguments.
             if len(url_args) > 0:
                 # Keys are even elements and values are odd.
                 arg_keys = url_args[0:][::2]
@@ -843,6 +822,14 @@ class APIServer(threading.Thread):
                 # Create a tuple list from arg_keys and arg_values and split it into common and transaction-specific args.
                 post_args = zip(arg_keys, arg_values)
                 for (key, value) in post_args:
+                    # Determine value type
+                    try:
+                        value = int(value)
+                    except ValueError:
+                        try:
+                            value = float(value)
+                        except ValueError:
+                            pass
                     if key in COMMONS_ARGS:
                         common_args[key] = value
                     # Discard the privkey.
@@ -854,8 +841,9 @@ class APIServer(threading.Thread):
             # Compose the transaction.
             try:
                 post_data = compose_transaction(db, name=message_type, params=transaction_args, **common_args)
-            except (script.AddressError, exceptions.TransactionError, exceptions.BalanceError) as error:
-                return flask.Response(str(error), 400, mimetype='text/plain')
+            except (script.AddressError, exceptions.ComposeError, exceptions.TransactionError, exceptions.BalanceError) as error:
+                error_msg = str(error.__class__.__name__) + ': ' + str(error)
+                return flask.Response(error_msg, 400, mimetype='text/plain')
 
             # See which encoding to choose from.
             file_format = request_headers['Accept']
@@ -863,7 +851,8 @@ class APIServer(threading.Thread):
             if file_format == 'application/json' or file_format == '*/*':
                 response_data = json.dumps(post_data)
             elif file_format == 'application/xml':
-                response_data = serialize_to_xml(post_data)
+                # Add document root for XML.
+                response_data = serialize_to_xml({message_type: post_data})
             else:
                 error = 'Invalid file format %s.' % file_format
                 return flask.Response(error, 400, mimetype='text/plain')

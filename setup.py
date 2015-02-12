@@ -163,7 +163,8 @@ required_packages = [
     'tendo>=0.2.6',
     'pysha3>=0.3',
     'colorlog>=2.4.0',
-    'python-bitcoinlib>=0.2.1'
+    'python-bitcoinlib>=0.2.1',
+    'xmltodict'
 ]
 
 setup_options = {
