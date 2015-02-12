@@ -47,6 +47,10 @@ UNITTEST_FIXTURE = [
     ['create_next_block', 490],
     ['order', (ADDR[0], 'XCP', DP['quantity'], 'BTC', round(DP['quantity'] / 125), 2000, DP['fee_required']), {'encoding': 'multisig'}],
     ['order', (ADDR[1], 'BTC', round(DP['quantity'] / 125), 'XCP', DP['quantity'], 2000, 0), {'encoding': 'multisig', 'fee_provided': DP['fee_provided']}],
+    ['burn', (ADDR[2], DP['burn_quantity']), {'encoding': 'multisig'}],
+    ['issuance', (ADDR[2], None, 'DIVIDEND', 100, True, 'Test dividend'), {'encoding': 'multisig'}],
+    ['send', (ADDR[2], ADDR[3], 'DIVIDEND', 10), {'encoding': 'multisig'}],
+    ['send', (ADDR[2], ADDR[3], 'XCP', 92945878046), {'encoding': 'multisig'}],
     ['create_next_block', 500]
 ]
 
