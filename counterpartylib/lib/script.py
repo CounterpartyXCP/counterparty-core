@@ -41,8 +41,8 @@ def validate(address):
         pubkeyhashes = [address]
 
     # Check validity by attempting to decode.
-    for pubkeyhashes in pubkeyhashes:
-        base58_check_decode(pubkeyhashes, config.ADDRESSVERSION)
+    for pubkeyhash in pubkeyhashes:
+        base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
 
 def base58_encode(binary):
     """Encode the address in base58."""
@@ -190,12 +190,16 @@ def pubkey_to_pubkeyhash(pubkey):
     return pubkey
 
 def get_asm(scriptpubkey):
+    # TODO: When is an exception thrown here? Can this `try` block be tighter? Can it be replaced by a conditional?
     try:
         asm = []
+        # TODO: This should be `for element in scriptpubkey`.
         for op in scriptpubkey:
             if type(op) == bitcoinlib.core.script.CScriptOp:
+                # TODO: `op = element`
                 asm.append(str(op))
             else:
+                # TODO: `data = element` (?)
                 asm.append(op)
     except bitcoinlib.core.script.CScriptTruncatedPushDataError:
         raise exceptions.DecodeError('invalid pushdata due to truncation')

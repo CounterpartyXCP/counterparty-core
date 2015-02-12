@@ -8,7 +8,7 @@ import urllib.request
 import sys
 import shutil
 
-CURRENT_VERSION = '9.49.4rc7'
+CURRENT_VERSION = '9.49.4'
 
 # NOTE: Why we don’t use the the PyPi package:
 # <https://code.google.com/p/apsw/source/detail?r=358a9623d051>
@@ -149,21 +149,21 @@ class bdist_egg(_bdist_egg):
         post_install(self, False)
 
 required_packages = [
-    'appdirs>=1.4.0',
-    'python-dateutil>=2.2',
-    'flask>=0.10.1',
-    'Flask-HTTPAuth>=2.3.0',
-    'json-rpc>=1.7',
-    'pytest>=2.6.4',
-    'pytest-cov>=1.8.0',
-    'pycoin>=0.52',
-    'requests>=2.3.0',
-    'tornado>=4.0',
-    'pycrypto>=2.6',
-    'tendo>=0.2.6',
-    'pysha3>=0.3',
-    'colorlog>=2.4.0',
-    'python-bitcoinlib>=0.2.1',
+    'appdirs',
+    'python-dateutil',
+    'Flask-HTTPAuth',
+    'Flask',
+    'json-rpc',
+    'pytest',
+    'pytest-cov',
+    'pycoin',
+    'requests',
+    'tornado',
+    'pycrypto',
+    'tendo',
+    'pysha3',
+    'colorlog',
+    'python-bitcoinlib',
     'xmltodict'
 ]
 
@@ -177,7 +177,6 @@ setup_options = {
     'url': 'http://counterparty.io',
     'license': 'MIT',
     'description': 'Counterparty Protocol Reference Implementation',
-    'long_description': '',
     'keywords': 'counterparty, bitcoin',
     'classifiers': [
         "Development Status :: 5 - Production/Stable",
@@ -196,7 +195,7 @@ setup_options = {
     'provides': ['counterpartylib'],
     'packages': find_packages(),
     'zip_safe': False,
-    'setup_requires': ['appdirs==1.4.0'],
+    'setup_requires': ['appdirs'],
     'install_requires': required_packages,
     'include_package_data': True,
     'cmdclass': {
@@ -206,5 +205,9 @@ setup_options = {
         'install_serpent': install_serpent
     }
 }
+
+if sys.argv[1] == 'sdist':
+    setup_options['long_description_markdown_filename'] = 'README.md'
+    setup_options['setup_requires'].append('setuptools-markdown')
 
 setup(**setup_options)

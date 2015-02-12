@@ -1,6 +1,5 @@
 """
-Construct, serialize, sign and broadcast the Bitcoin transactions that are
-Counterparty transactions.
+Construct and serialize the Bitcoin transactions that are Counterparty transactions.
 
 This module contains no consensus‐critical code.
 """
@@ -67,8 +66,14 @@ def op_push (i):
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
 def get_dust_return_pubkey(source, provided_pubkeys, encoding):
+    """Return the pubkey to which dust from data outputs will be sent.
+
+    This pubkey is used in multi-sig data outputs (as the only real pubkey) to
+    make those the outputs spendable. It is derived from the source address, so
+    that the dust is spendable by the creator of the transaction.
+    """ 
     # Get `dust_return_pubkey`, if necessary.
-    if encoding in ('multisig', 'pubkeyhash'):
+    if encoding == 'multisig':
 
         # Get hex dust return pubkey.
         if script.is_multisig(source):
@@ -136,6 +141,14 @@ def get_monosig_script(address):
     return tx_script
 
 def make_fully_valid(pubkey_start):
+    """Take a too short data pubkey and make it look like a real pubkey.
+    
+    Take an obfuscated chunk of data that is two bytes too short to be a pubkey and
+    add a sign byte to its beginning and a nonce byte to its end. Choose these
+    bytes so that the resulting sequence of bytes is a fully valid pubkey (i.e. on
+    the ECDSA curve). Find the correct bytes by guessing randomly until the check
+    passes. (In parsing, these two bytes are ignored.)
+    """
     assert type(pubkey_start) == bytes
     assert len(pubkey_start) == 31    # One sign byte and one nonce byte required (for 33 bytes).
 

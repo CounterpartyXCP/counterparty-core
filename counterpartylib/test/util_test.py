@@ -36,7 +36,7 @@ COUNTERPARTYD_OPTIONS = {
     'rpc_password': 'pass',
     'backend_port': 8888,
     'backend_password': 'pass',
-    'backend_ssl_verify': False
+    'backend_ssl_no_verify': True
 }
 
 def dump_database(db):
