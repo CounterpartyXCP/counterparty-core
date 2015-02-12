@@ -18,7 +18,9 @@ from counterpartycli import APP_VERSION
 APP_NAME = 'counterparty-server'
 
 CONFIG_ARGS = [
+    [('-v', '--verbose'), {'dest': 'verbose', 'action': 'store_true', 'default': False, 'help': 'sets log level to DEBUG instead of WARNING'}],
     [('--testnet',), {'action': 'store_true', 'default': False, 'help': 'use {} testnet addresses and block numbers'.format(config.BTC_NAME)}],
+    [('--testcoin',), {'action': 'store_true', 'default': False, 'help': 'use the test {} network on every blockchain'.format(config.XCP_NAME)}],
 
     [('--backend-name',), {'default': 'addrindex', 'help': 'the backend name to connect to'}],
     [('--backend-connect',), {'default': 'localhost', 'help': 'the hostname or IP of the backend server'}],
@@ -35,15 +37,10 @@ CONFIG_ARGS = [
     [('--rpc-password',), {'help': 'required password (for rpc-user) to use the {} JSON-RPC API (via HTTP basic auth)'.format(config.APP_NAME)}],
     [('--rpc-no-allow-cors',), {'action': 'store_true', 'default': False, 'help': 'Allow ajax cross domain request'}],
 
-    [('-v', '--verbose'), {'dest': 'verbose', 'action': 'store_true', 'default': False, 'help': 'sets log level to DEBUG instead of WARNING'}],
-    [('--testcoin',), {'action': 'store_true', 'default': False, 'help': 'use the test {} network on every blockchain'.format(config.XCP_NAME)}],
     [('--force',), {'action': 'store_true', 'default': False, 'help': 'skip backend check, version check, process lock (NOT FOR USE ON PRODUCTION SYSTEMS)'}],
-
     [('--database-file',), {'default': None, 'help': 'the path to the SQLite3 database file'}],
     [('--log-file',), {'default': None, 'help': 'the path to the server log file'}],
-    [('--api-log-file',), {'default': None, 'help': 'the path to the API log file'}],
-
-    # [('--broadcast-tx-mainnet',), {'default': 'bitcoind', 'help': 'Method used to broadcast signed transactions'}]
+    [('--api-log-file',), {'default': None, 'help': 'the path to the API log file'}]
 ]
 
 def main():

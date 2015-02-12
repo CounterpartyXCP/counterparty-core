@@ -113,19 +113,20 @@ def value_out(quantity, asset, divisible=None):
     return value_output(quantity, asset, divisible)
 
 # Set default values of command line arguments with config file
-def add_config_arguments(arg_parser, config_args, default_config_file):
+def add_config_arguments(arg_parser, config_args, default_config_file, config_file_arg_name='config_file'):
     cmd_args = arg_parser.parse_known_args()[0]
 
-    if not cmd_args.config_file:
+    config_file = getattr(cmd_args, config_file_arg_name, None)
+    if not config_file:
         config_dir = appdirs.user_config_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir, mode=0o755)
-        cmd_args.config_file = os.path.join(config_dir, default_config_file)
+        config_file = os.path.join(config_dir, default_config_file)
 
     # clean BOM
     BUFSIZE = 4096
     BOMLEN = len(codecs.BOM_UTF8)
-    with codecs.open(cmd_args.config_file, 'r+b') as fp:
+    with codecs.open(config_file, 'r+b') as fp:
         chunk = fp.read(BUFSIZE)
         if chunk.startswith(codecs.BOM_UTF8):
             i = 0
@@ -139,9 +140,9 @@ def add_config_arguments(arg_parser, config_args, default_config_file):
             fp.seek(-BOMLEN, os.SEEK_CUR)
             fp.truncate()
 
-    logger.debug('Loading configuration file: `{}`'.format(cmd_args.config_file))
+    logger.debug('Loading configuration file: `{}`'.format(config_file))
     configfile = configparser.ConfigParser()
-    with codecs.open(cmd_args.config_file, 'r', encoding='utf8') as fp:
+    with codecs.open(config_file, 'r', encoding='utf8') as fp:
         configfile.readfp(fp)
 
     if not 'Default' in configfile:

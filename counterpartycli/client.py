@@ -20,8 +20,10 @@ from counterpartycli import APP_VERSION, util, messages, wallet, console, client
 APP_NAME = 'counterparty-client'
 
 CONFIG_ARGS = [
+    [('-v', '--verbose'), {'dest': 'verbose', 'action': 'store_true', 'help': 'sets log level to DEBUG instead of WARNING'}],
     [('--testnet',), {'action': 'store_true', 'default': False, 'help': 'use {} testnet addresses and block numbers'.format(config.BTC_NAME)}],    
-
+    [('--testcoin',), {'action': 'store_true', 'default': False, 'help': 'use the test {} network on every blockchain'.format(config.XCP_NAME)}],
+    
     [('--counterparty-rpc-connect',), {'default': 'localhost', 'help': 'the hostname or IP of the counterparty JSON-RPC server'}],
     [('--counterparty-rpc-port',), {'type': int, 'help': 'the counterparty JSON-RPC port to connect to'}],
     [('--counterparty-rpc-user',), {'default': 'rpc', 'help': 'the username used to communicate with counterparty over JSON-RPC'}],
@@ -38,8 +40,6 @@ CONFIG_ARGS = [
     [('--wallet-ssl-verify',), {'action': 'store_true', 'default': False, 'help': 'verify SSL certificate of wallet; disallow use of self‐signed certificates (default: false)'}],
 
     [('--json-output',), {'action': 'store_true', 'default': False, 'help': 'display result in json format'}],
-    [('-v', '--verbose'), {'dest': 'verbose', 'action': 'store_true', 'help': 'sets log level to DEBUG instead of WARNING'}],
-    [('--testcoin',), {'action': 'store_true', 'default': False, 'help': 'use the test {} network on every blockchain'.format(config.XCP_NAME)}],
     [('--unconfirmed',), {'action': 'store_true', 'default': False, 'help': 'allow the spending of unconfirmed transaction outputs'}],
     [('--encoding',), {'default': 'auto', 'type': str, 'help': 'data encoding method'}],
     [('--fee-per-kb',), {'type': D, 'default': D(config.DEFAULT_FEE_PER_KB / config.UNIT), 'help': 'fee per kilobyte, in {}'.format(config.BTC)}],
