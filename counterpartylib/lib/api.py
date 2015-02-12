@@ -830,9 +830,9 @@ class APIServer(threading.Thread):
                             value = float(value)
                         except ValueError:
                             pass
+                    # Split keys into common and transaction-specific arguments. Discard the privkey.
                     if key in COMMONS_ARGS:
                         common_args[key] = value
-                    # Discard the privkey.
                     elif key == 'privkey':
                         pass
                     else:
