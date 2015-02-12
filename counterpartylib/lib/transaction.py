@@ -1,6 +1,5 @@
 """
-Construct, serialize, sign and broadcast the Bitcoin transactions that are
-Counterparty transactions.
+Construct and serialize the Bitcoin transactions that are Counterparty transactions.
 
 This module contains no consensus‐critical code.
 """
