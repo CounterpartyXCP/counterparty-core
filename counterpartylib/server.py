@@ -210,8 +210,8 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     else:
         config.RPC_HOST = 'localhost'
 
-    # The web root directory for API calls, eg. localhost:14000/api/
-    config.RPC_WEBROOT = '/api/'
+    # The web root directory for API calls, eg. localhost:14000/rpc/
+    config.RPC_WEBROOT = '/rpc/'
 
     # counterpartyd API RPC port
     if rpc_port:
