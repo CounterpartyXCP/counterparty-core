@@ -253,21 +253,21 @@ def bootstrap(overwrite=True, ask_confirmation=False):
         else: # total size is unknown
             sys.stderr.write("read %d\n" % (readsofar,))
 
-    print('Downloading mainnet database from {}…'.format(bootstrap_url))
+    print('Downloading mainnet database from {}...'.format(bootstrap_url))
     urllib.request.urlretrieve(bootstrap_url, 'counterpartyd-db.latest.tar.gz', reporthook)
-    print('Extracting…')
+    print('Extracting...')
     with tarfile.open('counterpartyd-db.latest.tar.gz', 'r:gz') as tar_file:
         tar_file.extractall()
-    print('Copying {} to {}…'.format('counterpartyd.9.db', database))
+    print('Copying {} to {}...'.format('counterpartyd.9.db', database))
     shutil.move('counterpartyd.9.db', database)
     os.chmod(database, 0o660)
 
-    print('Downloading testnet database from {}…'.format(bootstrap_url_testnet))
+    print('Downloading testnet database from {}...'.format(bootstrap_url_testnet))
     urllib.request.urlretrieve(bootstrap_url_testnet, 'counterpartyd-testnet-db.latest.tar.gz', reporthook)
-    print('Extracting…')
+    print('Extracting...')
     with tarfile.open('counterpartyd-testnet-db.latest.tar.gz', 'r:gz') as tar_file:
         tar_file.extractall()
-    print('Copying {} to {}…'.format('counterpartyd.9.testnet.db', database_testnet))
+    print('Copying {} to {}...'.format('counterpartyd.9.testnet.db', database_testnet))
     shutil.move('counterpartyd.9.testnet.db', database_testnet)
     os.chmod(database_testnet, 0o660)
 
