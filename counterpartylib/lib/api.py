@@ -630,7 +630,8 @@ class APIServer(threading.Thread):
         @conditional_decorator(auth.login_required, hasattr(config, 'RPC_PASSWORD'))
         def handle_root(args_path):
             """Handle all paths, decide where to forward the query."""
-            if args_path.startswith('api/') or args_path.startswith('API/'):
+            if args_path.startswith('api/') or args_path.startswith('API/') or \
+               args_path.startswith('rpc/') or args_path.startswith('RPC/'):
                 if flask.request.method == 'POST':
                     # Need to get those here because it might not be available in this aux function.
                     request_json = flask.request.get_data().decode('utf-8')
@@ -643,14 +644,10 @@ class APIServer(threading.Thread):
                     error = 'Invalid method.'
                     return flask.Response(error, 405, mimetype='text/plain')
             elif args_path.startswith('rest/') or args_path.startswith('REST/'):
-                if flask.request.method == 'GET':
-                    # Grab everything besides rest/ and include the headers too.
+                if flask.request.method == 'GET' or flask.request.method == 'POST':
+                    # Pass the URL path without /REST/ part and Flask request object.
                     rest_path = args_path.split('/', 1)[1]
-                    response = handle_rest_get(rest_path, flask.request.headers)
-                    return response
-                elif flask.request.method == 'POST':
-                    rest_path = args_path.split('/', 1)[1]
-                    response = handle_rest_post(rest_path, flask.request.headers)
+                    response = handle_rest(rest_path, flask.request)
                     return response
                 else:
                     error = 'Invalid method.'
@@ -697,89 +694,38 @@ class APIServer(threading.Thread):
         ######################
         # HTTP REST API
         ######################
-        def handle_rest_get(path_args, request_headers):
-            """Handle GET /REST/ route. Query the database using get_rows."""
-            # Get all arguments passed via URL.
-            url_args = path_args.split('/')
-            data_filter = []
-            operator = 'AND'
-            try:
-                table_name = url_args.pop(0).lower()
-            except IndexError:
-                error = 'No table name provided.'
-                return flask.Response(error, 400, mimetype='text/plain')
-            if table_name not in API_TABLES:
-                error = 'No such table: %s' % table_name
-                return flask.Response(error, 400, mimetype='text/plain')
-
-            # Parse the additional arguments.
-            if len(url_args) > 0:
-                # This can either be a specific operator or '' string.
-                operator = url_args.pop(-1).upper()
-                operator = operator if operator != '' else 'AND'
-                # Even elements are keys, odd elements are values.
-                arg_keys = url_args[0:][::2]
-                arg_values = url_args[1:][::2]
-                arg_keys = [arg_key.lower() for arg_key in arg_keys]
-                # Check if all keys have associated values.
-                if len(arg_keys) != len(arg_values):
-                    error = 'Not all keys have associated values.'
-                    return flask.Response(error, 400, mimetype='text/plain')
-                # Create a tuple list from arg_keys and arg_values.
-                extra_args = zip(arg_keys, arg_values)
-                data_filter = [{'field': key, 'op': '==', 'value': value} for (key, value) in extra_args]
-
-            # Run the query.
-            try:
-                get_data = get_rows(db, table=table_name, filters=data_filter, filterop=operator)
-            except APIError as error:
-                return flask.Response(str(error), 400, mimetype='text/plain')
-
-            # See which encoding to choose from.
-            file_format = request_headers['Accept']
-            # JSON as default.
-            if file_format == 'application/json' or file_format == '*/*':
-                response_data = json.dumps(get_data)
-            elif file_format == 'application/xml':
-                # Add document root for XML.
-                response_data = serialize_to_xml({table_name: get_data})
+        def handle_rest(path_args, flask_request):
+            """Handle /REST/ route. Query the database using get_rows or create transaction using compose_transaction."""
+            url_action = flask_request.path.split('/')[-1]
+            if url_action == 'compose':
+                compose = True
+            elif url_action == 'get':
+                compose = False
             else:
-                error = 'Invalid file format %s.' % file_format
+                error = 'Invalid action "%s".' % url_action
                 return flask.Response(error, 400, mimetype='text/plain')
 
-            response = flask.Response(response_data, 200, mimetype=file_format)
-            return response
-
-        def handle_rest_post(path_args, request_headers):
-            """Handle POST /rest/ route. Generate a transaction through compose_transaction."""
             # Get all arguments passed via URL.
             url_args = path_args.split('/')
-            if url_args[-1] == '':
-                url_args.pop(-1)
             try:
-                message_type = url_args.pop(0).lower()
+                query_type = url_args.pop(0).lower()
             except IndexError:
-                error = 'No message type provided.'
+                error = 'No query_type provided.'
                 return flask.Response(error, 400, mimetype='text/plain')
-            if message_type not in API_TRANSACTIONS:
-                error = 'No such message type: %s.' % message_type
+            # Check if message type or table name are valid.
+            if (compose and query_type not in API_TRANSACTIONS) or \
+               (not compose and query_type not in API_TABLES):
+                error = 'No such query type in supported queries: "%s".' % query_type
                 return flask.Response(error, 400, mimetype='text/plain')
 
-            transaction_args = {}
-            common_args = {}
             # Parse the additional arguments.
-            if len(url_args) > 0:
-                # Even elements are keys, odd elements are values.
-                arg_keys = url_args[0:][::2]
-                arg_values = url_args[1:][::2]
-                arg_keys = [arg_key.lower() for arg_key in arg_keys]
-                # Check if all keys have associated values.
-                if len(arg_keys) != len(arg_values):
-                    error = 'Not all keys have associated values.'
-                    return flask.Response(error, 400, mimetype='text/plain')
-                # Create a tuple list from arg_keys and arg_values and split it into common and transaction-specific args.
-                post_args = zip(arg_keys, arg_values)
-                for (key, value) in post_args:
+            extra_args = flask_request.args.items()
+            query_data = {}
+
+            if compose:
+                common_args = {}
+                transaction_args = {}
+                for (key, value) in extra_args:
                     # Determine value type.
                     try:
                         value = int(value)
@@ -796,23 +742,44 @@ class APIServer(threading.Thread):
                     else:
                         transaction_args[key] = value
 
-            # Compose the transaction.
-            try:
-                post_data = compose_transaction(db, name=message_type, params=transaction_args, **common_args)
-            except (script.AddressError, exceptions.ComposeError, exceptions.TransactionError, exceptions.BalanceError) as error:
-                error_msg = str(error.__class__.__name__) + ': ' + str(error)
-                return flask.Response(error_msg, 400, mimetype='text/plain')
+                # Must have some additional transaction arguments.
+                if not len(transaction_args):
+                    error = 'No transaction arguments provided.'
+                    return flask.Response(error, 400, mimetype='text/plain')
+
+                # Compose the transaction.
+                try:
+                    query_data = compose_transaction(db, name=query_type, params=transaction_args, **common_args)
+                except (script.AddressError, exceptions.ComposeError, exceptions.TransactionError, exceptions.BalanceError) as error:
+                    error_msg = str(error.__class__.__name__) + ': ' + str(error)
+                    return flask.Response(error_msg, 400, mimetype='text/plain')                        
+            else:
+                # Need to de-generate extra_args to pass it through.
+                query_args = dict([item for item in extra_args])
+                try:
+                    operator = query_args.pop('op')
+                except KeyError:
+                    operator = 'AND'
+                # Put the data into specific dictionary format.
+                data_filter = [{'field': key, 'op': '==', 'value': value} for (key, value) in query_args.items()]
+
+                # Run the query.
+                try:
+                    query_data = get_rows(db, table=query_type, filters=data_filter, filterop=operator)
+                except APIError as error:
+                    return flask.Response(str(error), 400, mimetype='text/plain')
 
             # See which encoding to choose from.
-            file_format = request_headers['Accept']
+            file_format = flask_request.headers['Accept']
             # JSON as default.
             if file_format == 'application/json' or file_format == '*/*':
-                response_data = json.dumps(post_data)
+                response_data = json.dumps(query_data)
             elif file_format == 'application/xml':
-                # Add document root for XML.
-                response_data = serialize_to_xml({message_type: post_data})
+                # Add document root for XML. Note when xmltodict encounters a list, it produces separate tags for every item.
+                # Hence we end up with multiple query_type roots. To combat this we put it in a separate item dict.
+                response_data = serialize_to_xml({query_type: {'item': query_data}})
             else:
-                error = 'Invalid file format %s.' % file_format
+                error = 'Invalid file format: "%s".' % file_format
                 return flask.Response(error, 400, mimetype='text/plain')
 
             response = flask.Response(response_data, 200, mimetype=file_format)
