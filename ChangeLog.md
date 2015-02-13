@@ -4,6 +4,8 @@
 	* remove `get_asset_info(assets)` method from the API
 	* replace `get_xcp_supply()` method from the API by `get_supply(asset)`
 	* added HTTP REST API
+	* authentication on JSON-RPC API is off by default
+	* RPC password is not mandatory now
 * v9.49.4 (2014-02-05)
 	* reconceived this package as a libary
 	* moved CLI to new repository: `counterparty-cli`
