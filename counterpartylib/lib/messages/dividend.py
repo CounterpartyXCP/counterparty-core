@@ -102,8 +102,8 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     if not dividend_total: problems.append('zero dividend')
 
     if dividend_asset != config.BTC:
-        balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, dividend_asset)))
-        if not balances or balances[0]['quantity'] < dividend_total:
+        dividend_balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, dividend_asset)))
+        if not dividend_balances or dividend_balances[0]['quantity'] < dividend_total:
             problems.append('insufficient funds ({})'.format(dividend_asset))
 
     fee = 0
@@ -115,6 +115,11 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
             balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, config.XCP)))
             if not balances or balances[0]['quantity'] < fee:
                 problems.append('insufficient funds ({})'.format(config.XCP))
+
+    if not problems and dividend_asset == config.XCP:
+        total_cost = dividend_total + fee
+        if not dividend_balances or dividend_balances[0]['quantity'] < total_cost:
+            problems.append('insufficient funds ({})'.format(dividend_asset))
 
     cursor.close()
     return dividend_total, outputs, problems, fee
