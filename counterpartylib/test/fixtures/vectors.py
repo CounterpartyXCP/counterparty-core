@@ -163,11 +163,11 @@ UNITTEST_VECTOR = {
         }],
         'parse_block': [{
             'in': (DP['default_block'] - 1, 1420914478),
-            'out': ('7fc1c1ff7c74e6f97cc2e9bca87aabd05f6824cb19af52504491d288481d8c9d', 'c2ebb78ec3d120a5540852de844b4c8bed1d17e4714585539601baf9b25adcd1')
+            'out': ('a2c6628a0375250e1042f234ee08d3399602d5313f31f3b197c56f67b2bc3c2f', '66ac69a1e8e01dbb545efeb886496a453797b11c854fdd34ccb83a7d194ad44c')
         }],
         'get_next_tx_index': [{
             'in': (),
-            'out': 494
+            'out': 498
         }],
         'last_db_index': [{
             'in': (),
@@ -421,7 +421,12 @@ UNITTEST_VECTOR = {
         }, {
             'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'btc_amount': 7800, 'block_index': DP['default_block'], 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x0b\xeb\xc2\x00', 'block_time': 155409000, 'fee': 10000, 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'tx_index': 502, 'supported': 1},),
             'records': [
-                {'table': 'sends', 'values': {'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'quantity': 200000000, 'block_index': DP['default_block'], 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'asset': 'XCP', 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'tx_index': 502, 'status': 'invalid: insufficient funds'}}
+                {'table': 'sends', 'values': {'status': 'valid', 'quantity': 0, 'asset': 'XCP', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_index': 310501, 'tx_index': 502, 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH'}}
+            ]
+        }, {
+            'in':({'tx_index': 502, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00X\xb1\x14\x00', 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'block_time': 310501000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_hash': '736ecc18f9f41b3ccf67dded1252969e4929404d6ad657b2039b937a7785cf3e', 'supported': 1, 'destination': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'btc_amount': 5430, 'block_index': 310501, 'fee': 10000},),
+            'records': [
+                {'table': 'sends', 'values': {'asset': 'XCP', 'status': 'valid', 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'destination': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'tx_index': 502, 'tx_hash': '736ecc18f9f41b3ccf67dded1252969e4929404d6ad657b2039b937a7785cf3e', 'block_index': 310501, 'quantity': 0}}
             ]
         }, {
             'in': ({'block_index': DP['default_block'], 'btc_amount': 7800, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_time': 155409000, 'fee': 10000, 'tx_index': 502, 'data': b'\x00\x00\x00\x00\x00\x06\xca\xd8\xdc\x7f\x0bf\x00\x00\x00\x00\x00\x00\x01\xf4', 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1},),
@@ -627,6 +632,12 @@ UNITTEST_VECTOR = {
         }, {
             'in': (ADDR[0], DP['quantity'], 'DIVISIBLE', 'NOASSET', DP['default_block']),
             'out': (None, None, ['no such dividend asset, NOASSET.'], 0)
+        }, {
+            'in': (ADDR[0], 8359090909, 'DIVISIBLE', 'XCP', DP['default_block']),
+            'out': (91949999999, [{'address_quantity': 100000000, 'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'dividend_quantity': 8359090909}, {'address_quantity': 1000000000, 'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'dividend_quantity': 83590909090}], ['insufficient funds (XCP)'], 40000)
+        }, {
+            'in': (ADDR[2], 100000000, 'DIVIDEND', 'DIVIDEND', DP['default_block']),
+            'out': (10, [{'address_quantity': 10, 'address': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'dividend_quantity': 10}], ['insufficient funds (XCP)'], 20000)
         }],
         'compose': [{
             'in': (ADDR[0], DP['quantity'], 'DIVISIBLE', 'XCP'),
@@ -1257,7 +1268,7 @@ UNITTEST_VECTOR = {
         }],
         'last_message': [{
             'in': (),
-            'out': {'bindings': '{"backward_asset": "BTC", "backward_quantity": 800000, "block_index": 310492, "fee_paid": 7200, "forward_asset": "XCP", "forward_quantity": 100000000, "id": "9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b_14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0", "match_expire_index": 310512, "status": "pending", "tx0_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx0_block_index": 310491, "tx0_expiration": 2000, "tx0_hash": "9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b", "tx0_index": 492, "tx1_address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "tx1_block_index": 310492, "tx1_expiration": 2000, "tx1_hash": "14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0", "tx1_index": 493}', 'block_index': 310492,'category': 'order_matches', 'command': 'insert', 'message_index': 68, 'timestamp': 0}
+            'out': {'command': 'insert', 'block_index': 310496, 'message_index': 79, 'category': 'sends', 'timestamp': 0, 'bindings': '{"asset": "XCP", "block_index": 310496, "destination": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj", "quantity": 92945878046, "source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "status": "valid", "tx_hash": "54f4c7b383ea19147e62d2be9f3e7f70b6c379baac15e8b4cf43f7c21578c1ef", "tx_index": 497}'}
         }],
         'get_asset_id': [{
             'in': ('XCP', DP['default_block']),
@@ -1345,31 +1356,31 @@ UNITTEST_VECTOR = {
         }],
         'xcp_created': [{
             'in': (),
-            'out': 93000000000
+            'out': 185995878046
         }],
         'xcp_destroyed': [{
             'in': (),
-            'out': 250000000
+            'out': 300000000
         }],
         'xcp_supply': [{
             'in': (),
-            'out': 92750000000
+            'out': 185695878046
         }],
         'creations': [{
             'in': (),
-            'out': {'CALLABLE': 1000, 'DIVISIBLE': 100000000000, 'LOCKED': 1000, 'MAXI': 9223372036854775807, 'NODIVISIBLE': 1000, 'XCP': 93000000000}
+            'out': {'CALLABLE': 1000, 'DIVIDEND': 100, 'DIVISIBLE': 100000000000, 'LOCKED': 1000, 'MAXI': 9223372036854775807, 'NODIVISIBLE': 1000, 'XCP': 185995878046}
         }],
         'destructions': [{
             'in': (),
-            'out': {'XCP': 250000000}
+            'out': {'XCP': 300000000}
         }],
         'asset_supply': [{
             'in': ('XCP',),
-            'out': 92750000000
+            'out': 185695878046
         }],
         'supplies': [{
             'in': (),
-            'out':  {'CALLABLE': 1000, 'DIVISIBLE': 100000000000, 'LOCKED': 1000, 'MAXI': 9223372036854775807, 'NODIVISIBLE': 1000, 'XCP': 92750000000}
+            'out':  {'CALLABLE': 1000, 'DIVIDEND': 100, 'DIVISIBLE': 100000000000, 'LOCKED': 1000, 'MAXI': 9223372036854775807, 'NODIVISIBLE': 1000, 'XCP': 185695878046}
         }],
         'get_balance': [{
             'in': (ADDR[0], 'XCP'),
