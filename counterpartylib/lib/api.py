@@ -635,14 +635,14 @@ class APIServer(threading.Thread):
                 if flask.request.method == 'POST':
                     # Need to get those here because it might not be available in this aux function.
                     request_json = flask.request.get_data().decode('utf-8')
-                    response = handle_api_post(request_json)
+                    response = handle_rpc_post(request_json)
                     return response
                 elif flask.request.method == 'OPTIONS':
-                    response = handle_api_options()
+                    response = handle_rpc_options()
                     return response
                 else:
                     error = 'Invalid method.'
-                    return flask.Response(error, 405, mimetype='text/plain')
+                    return flask.Response(error, 405, mimetype='application/json')
             elif args_path.startswith('rest/') or args_path.startswith('REST/'):
                 if flask.request.method == 'GET' or flask.request.method == 'POST':
                     # Pass the URL path without /REST/ part and Flask request object.
@@ -651,20 +651,20 @@ class APIServer(threading.Thread):
                     return response
                 else:
                     error = 'Invalid method.'
-                    return flask.Response(error, 405, mimetype='text/plain')
+                    return flask.Response(error, 405, mimetype='application/json')
             else:
                 # Not found
-                return flask.Response(None, 404, mimetype='text/plain')
+                return flask.Response(None, 404, mimetype='application/json')
 
         ######################
         # JSON-RPC API
         ######################
-        def handle_api_options():
+        def handle_rpc_options():
             response = flask.Response('', 204)
             _set_cors_headers(response)
             return response
 
-        def handle_api_post(request_json):
+        def handle_rpc_post(request_json):
             """Handle /API/ POST route. Call relevant get_rows/create_transaction wrapper."""
             # Check for valid request format.
             try:
@@ -703,7 +703,7 @@ class APIServer(threading.Thread):
                 compose = False
             else:
                 error = 'Invalid action "%s".' % url_action
-                return flask.Response(error, 400, mimetype='text/plain')
+                return flask.Response(error, 400, mimetype='application/json')
 
             # Get all arguments passed via URL.
             url_args = path_args.split('/')
@@ -711,12 +711,12 @@ class APIServer(threading.Thread):
                 query_type = url_args.pop(0).lower()
             except IndexError:
                 error = 'No query_type provided.'
-                return flask.Response(error, 400, mimetype='text/plain')
+                return flask.Response(error, 400, mimetype='application/json')
             # Check if message type or table name are valid.
             if (compose and query_type not in API_TRANSACTIONS) or \
                (not compose and query_type not in API_TABLES):
                 error = 'No such query type in supported queries: "%s".' % query_type
-                return flask.Response(error, 400, mimetype='text/plain')
+                return flask.Response(error, 400, mimetype='application/json')
 
             # Parse the additional arguments.
             extra_args = flask_request.args.items()
@@ -745,21 +745,18 @@ class APIServer(threading.Thread):
                 # Must have some additional transaction arguments.
                 if not len(transaction_args):
                     error = 'No transaction arguments provided.'
-                    return flask.Response(error, 400, mimetype='text/plain')
+                    return flask.Response(error, 400, mimetype='application/json')
 
                 # Compose the transaction.
                 try:
                     query_data = compose_transaction(db, name=query_type, params=transaction_args, **common_args)
                 except (script.AddressError, exceptions.ComposeError, exceptions.TransactionError, exceptions.BalanceError) as error:
                     error_msg = str(error.__class__.__name__) + ': ' + str(error)
-                    return flask.Response(error_msg, 400, mimetype='text/plain')                        
+                    return flask.Response(error_msg, 400, mimetype='application/json')                        
             else:
                 # Need to de-generate extra_args to pass it through.
                 query_args = dict([item for item in extra_args])
-                try:
-                    operator = query_args.pop('op')
-                except KeyError:
-                    operator = 'AND'
+                operator = query_args.pop('op', 'AND')
                 # Put the data into specific dictionary format.
                 data_filter = [{'field': key, 'op': '==', 'value': value} for (key, value) in query_args.items()]
 
@@ -767,7 +764,7 @@ class APIServer(threading.Thread):
                 try:
                     query_data = get_rows(db, table=query_type, filters=data_filter, filterop=operator)
                 except APIError as error:
-                    return flask.Response(str(error), 400, mimetype='text/plain')
+                    return flask.Response(str(error), 400, mimetype='application/json')
 
             # See which encoding to choose from.
             file_format = flask_request.headers['Accept']
@@ -780,7 +777,7 @@ class APIServer(threading.Thread):
                 response_data = serialize_to_xml({query_type: {'item': query_data}})
             else:
                 error = 'Invalid file format: "%s".' % file_format
-                return flask.Response(error, 400, mimetype='text/plain')
+                return flask.Response(error, 400, mimetype='application/json')
 
             response = flask.Response(response_data, 200, mimetype=file_format)
             return response
