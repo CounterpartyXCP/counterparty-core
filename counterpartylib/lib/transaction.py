@@ -214,47 +214,32 @@ def serialise (encoding, inputs, destination_outputs, data_output=None, change_o
         data_array, value = data_output
         s += value.to_bytes(8, byteorder='little')        # Value
 
-        if util.enabled('multisig_addresses'):   # Protocol change.
-            data_chunk = config.PREFIX + data_chunk
+        data_chunk = config.PREFIX + data_chunk
 
         # Initialise encryption key (once per output).
         key = ARC4.new(binascii.unhexlify(inputs[0]['txid']))  # Arbitrary, easy‐to‐find, unique key.
 
         if encoding == 'multisig':
             # Get data (fake) public key.
-            if util.enabled('multisig_addresses'):   # Protocol change.
-                pad_length = (33 * 2) - 1 - 2 - 2 - len(data_chunk)
-                assert pad_length >= 0
-                data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
-                data_chunk = key.encrypt(data_chunk)
-                data_pubkey_1 = make_fully_valid(data_chunk[:31])
-                data_pubkey_2 = make_fully_valid(data_chunk[31:])
+            pad_length = (33 * 2) - 1 - 2 - 2 - len(data_chunk)
+            assert pad_length >= 0
+            data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
+            data_chunk = key.encrypt(data_chunk)
+            data_pubkey_1 = make_fully_valid(data_chunk[:31])
+            data_pubkey_2 = make_fully_valid(data_chunk[31:])
 
-                # Construct script.
-                tx_script = OP_1                                   # OP_1
-                tx_script += op_push(33)                           # Push bytes of data chunk (fake) public key    (1/2)
-                tx_script += data_pubkey_1                         # (Fake) public key                  (1/2)
-                tx_script += op_push(33)                           # Push bytes of data chunk (fake) public key    (2/2)
-                tx_script += data_pubkey_2                         # (Fake) public key                  (2/2)
-                tx_script += op_push(len(dust_return_pubkey))  # Push bytes of source public key
-                tx_script += dust_return_pubkey                       # Source public key
-                tx_script += OP_3                                  # OP_3
-                tx_script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
-            else:
-                pad_length = 33 - 1 - len(data_chunk)
-                assert pad_length >= 0
-                data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
-                # Construct script.
-                tx_script = OP_1                                   # OP_1
-                tx_script += op_push(len(dust_return_pubkey))  # Push bytes of source public key
-                tx_script += dust_return_pubkey                       # Source public key
-                tx_script += op_push(len(data_chunk))              # Push bytes of data chunk (fake) public key
-                tx_script += data_chunk                            # (Fake) public key
-                tx_script += OP_2                                  # OP_2
-                tx_script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
+            # Construct script.
+            tx_script = OP_1                                   # OP_1
+            tx_script += op_push(33)                           # Push bytes of data chunk (fake) public key    (1/2)
+            tx_script += data_pubkey_1                         # (Fake) public key                  (1/2)
+            tx_script += op_push(33)                           # Push bytes of data chunk (fake) public key    (2/2)
+            tx_script += data_pubkey_2                         # (Fake) public key                  (2/2)
+            tx_script += op_push(len(dust_return_pubkey))  # Push bytes of source public key
+            tx_script += dust_return_pubkey                       # Source public key
+            tx_script += OP_3                                  # OP_3
+            tx_script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
         elif encoding == 'opreturn':
-            if util.enabled('multisig_addresses'):   # Protocol change.
-                data_chunk = key.encrypt(data_chunk)
+            data_chunk = key.encrypt(data_chunk)
             tx_script = OP_RETURN                                  # OP_RETURN
             tx_script += op_push(len(data_chunk))                  # Push bytes of data chunk (NOTE: OP_SMALLDATA?)
             tx_script += data_chunk                                # Data
