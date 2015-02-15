@@ -990,14 +990,17 @@ UNITTEST_VECTOR = {
     },
     'script': {
         'validate': [{
-            'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6',),                                          # Valid Bitcoin address
-            'out': None                                                                             # No Error
+            'comment': 'valid bitcoin address',
+            'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6',),
+            'out': None
         }, {
-            'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP7',),                                          # Invalid Bitcoin address: bad checksum
+            'comment': 'invalid bitcoin address: bad checksum',
+            'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP7',),
             'error': (script.Base58ChecksumError, 'Checksum mismatch: 0x00285aa2 ≠ 0x00285aa1')
         }, {
-            'in': ('1_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_2',),   # Valid multi‐sig
-            'out': None                                                                             # No Error
+            'comment': 'valid multi‐sig',
+            'in': ('1_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_2',),
+            'out': None
         }],
         'scriptpubkey_to_address': [{
             'in': (['mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH'],),
@@ -1008,50 +1011,62 @@ UNITTEST_VECTOR = {
             'error': (exceptions.DecodeError, 'empty output')
         }],
         'base58_encode': [{
-            'in': (b'\x82\xe3\x069\x16\x17I\x12S\x81\xeaQC\xa6J\xac',),                             # Random bytes
+            'comment': 'random bytes',
+            'in': (b'\x82\xe3\x069\x16\x17I\x12S\x81\xeaQC\xa6J\xac',),
             'out': 'HARXEpbq7gJQGcSVUtubYo'
         }, {
             'in': (b"\x01\tfw`\x06\x95=UgC\x9e^9\xf8j\r';\xee",),
             'out': 'qb3y62fmEEVTPySXPQ77WXok6H'
         }],
         'base58_check_encode': [{
-            'in': ('010966776006953d5567439e5e39f86a0d273bee', b'\x00'),                            # Valid mainnet Bitcoin address
+            'comment': 'valid mainnet bitcoin address',
+            'in': ('010966776006953d5567439e5e39f86a0d273bee', b'\x00'),
             'out': '16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM'
         # TODO }, {
-        #    'in': ('SOMETHING', b'\x00'),                            # Invalid mainnet Bitcoin address: leading zero byte
+        #    'invalid mainnet bitcoin address: leading zero byte,
+        #    'in': ('SOMETHING', b'\x00'),
         #    'error': (script.AddressError, 'encoded address does not decode properly')
         }],
         'base58_check_decode': [{
-            'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM', b'\x00'),                                   # Valid mainnet Bitcoin address
+            'comment': 'valid mainnet bitcoin address',
+            'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM', b'\x00'),
             'out': b"\x01\tfw`\x06\x95=UgC\x9e^9\xf8j\r';\xee"
         }, {
-            'in': ('26UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM', b'\x00'),                                   # Wrong version byte
+            'comment': 'wrong version byte',
+            'in': ('26UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM', b'\x00'),
             'error': (script.VersionByteError, 'incorrect version byte')
         }, {
-            'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvN', b'\x00'),                                   # Invalid mainnet Bitcoin address: bad checksum
+            'comment': 'invalid mainnet bitcoin address: bad checksum',
+            'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvN', b'\x00'),
             'error': (script.Base58ChecksumError, 'Checksum mismatch: 0xd61967f7 ≠ 0xd61967f6')
         }, {
             'in': (ADDR[0], b'\x6f'),                                                               # TODO: What is this?
             'out': b'H8\xd8\xb3X\x8cL{\xa7\xc1\xd0o\x86n\x9b79\xc607'
         }, {
-            'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjv0', b'\x00'),                                   # Invalid mainnet Bitcoin address: invalid character
+            'comment': 'invalid mainnet bitcoin address: invalid character',
+            'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjv0', b'\x00'),
             'error': (script.Base58Error, "Not a valid Base58 character: ‘0’")
         }],
         'is_multisig': [{
-            'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM',),                                           # Mono‐sig
+            'comment': 'mono‐sig',
+            'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM',),
             'out': False
         }, {
-            'in': ('1_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_2',),   # Multi‐sig
+            'comment': 'multi‐sig',
+            'in': ('1_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_2',),
             'out': True
         }],
         'is_fully_valid': [{
-            'in': (b'\x03T\xdaT\x0f\xb2g;u\xe6\xc3\xc9\x94\xf8\n\xd0\xc8C\x16C\xba\xb2\x8c\xedx<\xd9@y\xbb\xe7$E',), # Fully valid compressed public key
+            'comment': 'fully valid compressed public key',
+            'in': (b'\x03T\xdaT\x0f\xb2g;u\xe6\xc3\xc9\x94\xf8\n\xd0\xc8C\x16C\xba\xb2\x8c\xedx<\xd9@y\xbb\xe7$E',),
             'out': True
         }, {
-            'in': (b'\x03T\xdaT\x0f\xb2g;u\xe6\xc3\xc9\x94\xf8\n\xd0\xc8C\x16C\xba\xb2\x8c\xedx<\xd9@y\xbb\xe7$D',), # Not fully valid compressed public key: last byte decremented; not on curve
+            'comment': 'not fully valid compressed public key: last byte decremented; not on curve',
+            'in': (b'\x03T\xdaT\x0f\xb2g;u\xe6\xc3\xc9\x94\xf8\n\xd0\xc8C\x16C\xba\xb2\x8c\xedx<\xd9@y\xbb\xe7$D',),
             'out': False
         }, {
-            'in': (b'\x01T\xdaT\x0f\xb2g;u\xe6\xc3\xc9\x94\xf8\n\xd0\xc8C\x16C\xba\xb2\x8c\xedx<\xd9@y\xbb\xe7$E',), # Invalid compressed public key: first byte not `\x02` or `\x03`
+            'comment': 'invalid compressed public key: first byte not `\x02` or `\x03`',
+            'in': (b'\x01T\xdaT\x0f\xb2g;u\xe6\xc3\xc9\x94\xf8\n\xd0\xc8C\x16C\xba\xb2\x8c\xedx<\xd9@y\xbb\xe7$E',),
             'out': False
         }],
         'make_canonical': [{
@@ -1061,7 +1076,8 @@ UNITTEST_VECTOR = {
             'in': ('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',),                   # TODO: Pubkeys out of order
             'out': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2'
         }, {
-            'in': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',),                                                          # Mono‐sig
+            'comment': 'mono‐sig',
+            'in': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',),
             'out': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'
         }, {
             'in': ('1_02513522cbf07b0bd553b0d8f8414c476c9275334fd3edfa368386412e3a193558_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_2',),
@@ -1112,30 +1128,38 @@ UNITTEST_VECTOR = {
             'out': ['mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns']
         }],
         'is_pubkeyhash': [{
-            'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6',),  # Valid Bitcoin Address
+            'comment': 'valid bitcoin address',
+            'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6',),
             'out': True
         }, {
-            'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP7',),  # Invalid Checksum
+            'comment': 'invalid checksum',
+            'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP7',),
             'out': False
         }, {
-            'in': ('LnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6',),  # Invalid Version Byte
+            'comment': 'invalid version byte',
+            'in': ('LnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6',),
             'out': False
         }],
         'make_pubkeyhash': [{
-            'in': ('02513522cbf07b0bd553b0d8f8414c476c9275334fd3edfa368386412e3a193558',),                                          # Mono‐sig
+            'comment': 'mono‐sig',
+            'in': ('02513522cbf07b0bd553b0d8f8414c476c9275334fd3edfa368386412e3a193558',),
             'out': 'mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6'
         }, {
-            'in': ('1_02513522cbf07b0bd553b0d8f8414c476c9275334fd3edfa368386412e3a193558_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_2',),   # Multi‐sig, with pubkey in first position and pubkeyhash in second
+            'comment': 'multi‐sig, with pubkey in first position and pubkeyhash in second',
+            'in': ('1_02513522cbf07b0bd553b0d8f8414c476c9275334fd3edfa368386412e3a193558_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_2',),
             'out': '1_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_2'
         }],
         'extract_pubkeys': [{
-            'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6',),                                                                          # PubkeyHash
+            'comment': 'pubkeyhash',
+            'in': ('mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6',),
             'out': []
         }, {
-            'in': ('02513522cbf07b0bd553b0d8f8414c476c9275334fd3edfa368386412e3a193558',),                                          # Mono‐sig
+            'comment': 'mono‐sig',
+            'in': ('02513522cbf07b0bd553b0d8f8414c476c9275334fd3edfa368386412e3a193558',),
             'out': ['02513522cbf07b0bd553b0d8f8414c476c9275334fd3edfa368386412e3a193558']
         }, {
-            'in': ('1_02513522cbf07b0bd553b0d8f8414c476c9275334fd3edfa368386412e3a193558_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_2',),   # Multi‐sig, with pubkey in first position and pubkeyhash in second
+            'comment': 'multi‐sig, with pubkey in first position and pubkeyhash in second',
+            'in': ('1_02513522cbf07b0bd553b0d8f8414c476c9275334fd3edfa368386412e3a193558_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_2',),
             'out': ['02513522cbf07b0bd553b0d8f8414c476c9275334fd3edfa368386412e3a193558']
         }]
     },
@@ -1407,11 +1431,13 @@ UNITTEST_VECTOR = {
             'error': (KeyError, "'foobar'")
         }],
         'date_passed': [{
+            'comment': 'date in the past, mock function overrides this one and always returns `False` in the test suite',
             'in': ('1020720007',),
-            'out': False # Date in the past, mock function overrides this one and always returns False in the test suite
+            'out': False
         },  {
+            'comment': 'date far in the future, mock function overrides this one and always returns `False` in the test suite',
             'in': ('5520720007',),
-            'out': False # Date far in the future, mock function overrides this one and always returns False in the test suite
+            'out': False
         }],
     },
     'database': {
