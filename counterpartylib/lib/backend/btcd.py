@@ -57,16 +57,6 @@ def rpc(method, params):
     response_json = response.json()
     if 'error' not in response_json.keys() or response_json['error'] == None:
         return response_json['result']
-    elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
-        raise BackendRPCError('{} Is `txindex` enabled in {} Core?'.format(response_json['error'], config.BTC_NAME))
-    elif response_json['error']['code'] == -4:   # Unknown private key (locked wallet?)
-        raise BackendRPCError('Unknown private key. (Locked wallet?)')
-    elif response_json['error']['code'] == -28:   # “Verifying blocks...”
-        logger.debug('Backend not ready. Sleeping for ten seconds.')
-        # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
-        # seconds to start, this’ll hit the maximum recursion depth limit.
-        time.sleep(10)
-        return rpc(method, params)
     else:
         raise BackendRPCError('{}'.format(response_json['error']))
 
@@ -77,12 +67,9 @@ def searchrawtransactions(address):
     logger.debug('Searching raw transactions.')
 
     try:
-        rawtransactions = rpc('searchrawtransaction', [address, True, 0, 9999999])
+        rawtransactions = rpc('searchrawtransactions', [address, True, 0, 9999999])
     except BackendRPCError as e:
-        if str(e) == '404 Not Found':
-            raise BackendRPCError('Unknown RPC command: `searchrawtransaction`. Please use a version of {} Core which supports an address index.'.format(config.BTC_NAME))
-        else:
-            raise BackendRPCError(str(e))
+        raise BackendRPCError(str(e))
     
     return rawtransactions
 

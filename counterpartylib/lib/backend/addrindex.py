@@ -59,8 +59,6 @@ def rpc(method, params):
         return response_json['result']
     elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
         raise BackendRPCError('{} Is `txindex` enabled in {} Core?'.format(response_json['error'], config.BTC_NAME))
-    elif response_json['error']['code'] == -4:   # Unknown private key (locked wallet?)
-        raise BackendRPCError('Unknown private key. (Locked wallet?)')
     elif response_json['error']['code'] == -28:   # “Verifying blocks...”
         logger.debug('Backend not ready. Sleeping for ten seconds.')
         # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
