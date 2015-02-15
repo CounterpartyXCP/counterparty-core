@@ -142,7 +142,7 @@ def get_monosig_script(address):
 
 def make_fully_valid(pubkey_start):
     """Take a too short data pubkey and make it look like a real pubkey.
-    
+
     Take an obfuscated chunk of data that is two bytes too short to be a pubkey and
     add a sign byte to its beginning and a nonce byte to its end. Choose these
     bytes so that the resulting sequence of bytes is a fully valid pubkey (i.e. on
