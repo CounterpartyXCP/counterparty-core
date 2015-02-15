@@ -313,7 +313,7 @@ class APIStatusPoller(threading.Thread):
 
         while self.stop_event.is_set() != True:
             try:
-                # Check that bitcoind is running, communicable, and caught up with the blockchain.
+                # Check that backend is running, communicable, and caught up with the blockchain.
                 # Check that the database has caught up with bitcoind.
                 if time.time() - self.last_database_check > 10 * 60: # Ten minutes since last check.
                     code = 11

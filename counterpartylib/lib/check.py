@@ -135,8 +135,9 @@ def software_version():
             host = 'https://counterpartyxcp.github.io/counterpartyd/counterpartylib/protocol_changes.json'  # Old Location
             response = requests.get(host, headers={'cache-control': 'no-cache'})
         versions = json.loads(response.text)
-    except (requests.exceptions.ConnectionError, ConnectionRefusedError, ValueError):
-        raise VersionError('Unable to check version. How’s your Internet access?')
+    except (requests.exceptions.ConnectionError, ConnectionRefusedError, ValueError) as e:
+        logger.warning('Unable to check version! ' + str(sys.exc_info()[1]))
+        return
 
     for change_name in versions:
         protocol_change = versions[change_name]
