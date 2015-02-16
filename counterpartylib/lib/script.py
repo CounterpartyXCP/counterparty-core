@@ -240,6 +240,7 @@ def scriptpubkey_to_address(scriptpubkey):
 
 
 
+# TODO: Use `python-bitcointools` instead. (Get rid of `pycoin` dependency.)
 from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_sec, EncodingError
 from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
 

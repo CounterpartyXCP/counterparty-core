@@ -16,7 +16,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 import requests
-from pycoin.encoding import EncodingError
 from Crypto.Cipher import ARC4
 from bitcoin.core.script import CScript
 from bitcoin.core import x
