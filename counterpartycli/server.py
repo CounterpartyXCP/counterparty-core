@@ -11,8 +11,8 @@ log.set_up(logger)
 
 from counterpartylib import server
 from counterpartylib.lib import config
-from counterpartycli.util import add_config_arguments
-from counterpartycli.setup import bootstrap, generate_config_files
+from counterpartycli.util import add_config_arguments, bootstrap
+from counterpartycli.setup import generate_config_files
 from counterpartycli import APP_VERSION
 
 APP_NAME = 'counterparty-server'
@@ -85,7 +85,7 @@ def main():
 
     # Bootstrapping
     if args.action == 'bootstrap':
-        bootstrap()
+        bootstrap(testnet=args.testnet)
         sys.exit()
 
     # Configuration

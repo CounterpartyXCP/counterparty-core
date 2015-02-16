@@ -112,6 +112,55 @@ def value_out(quantity, asset, divisible=None):
         divisible = is_divisible(asset)
     return value_output(quantity, asset, divisible)
 
+def bootstrap(testnet=False, overwrite=True, ask_confirmation=False):
+    data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
+
+    # Set Constants.
+    if testnet:
+        BOOTSTRAP_URL = 'https://s3.amazonaws.com/counterparty-bootstrap/counterpartyd-testnet-db.latest.tar.gz'
+        TARBALL_FILENAME = 'counterpartyd-testnet-db.latest.tar.gz'
+        DATABASE_FILENAME = 'counterpartyd.9.testnet.db'
+        DATABASE_PATH = os.path.join(data_dir, '{}.testnet.db'.format(config.APP_NAME))
+    else:
+        BOOTSTRAP_URL = 'https://s3.amazonaws.com/counterparty-bootstrap/counterpartyd-db.latest.tar.gz'
+        TARBALL_FILENAME = 'counterpartyd-db.latest.tar.gz'
+        DATABASE_FILENAME = 'counterpartyd.9.db'
+        DATABASE_PATH = os.path.join(data_dir, '{}.db'.format(config.APP_NAME))
+
+    # Prepare Directory.
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir, mode=0o755)
+    if not overwrite and os.path.exists(DATABASE_PATH):
+        return
+
+    # Define Progress Bar.
+    def reporthook(blocknum, blocksize, totalsize):
+        readsofar = blocknum * blocksize
+        if totalsize > 0:
+            percent = readsofar * 1e2 / totalsize
+            s = "\r%5.1f%% %*d / %d" % (
+                percent, len(str(totalsize)), readsofar, totalsize)
+            sys.stderr.write(s)
+            if readsofar >= totalsize: # near the end
+                sys.stderr.write("\n")
+        else: # total size is unknown
+            sys.stderr.write("read %d\n" % (readsofar,))
+
+    print('Downloading database from {}...'.format(BOOTSTRAP_URL))
+    urllib.request.urlretrieve(BOOTSTRAP_URL, TARBALL_FILENAME, reporthook)
+
+    print('Extracting...')
+    with tarfile.open(TARBALL_FILENAME, 'r:gz') as tar_file:
+        tar_file.extractall()
+
+    print('Copying {} to {}...'.format(DATABASE_FILENAME, DATABASE_PATH))
+    shutil.move(DATABASE_FILENAME, DATABASE_PATH)
+    os.chmod(DATABASE_PATH, 0o660)
+
+    # Clean files.
+    os.remove(TARBALL_FILENAME)
+    os.remove('checksums.txt')
+
 # Set default values of command line arguments with config file
 def add_config_arguments(arg_parser, config_args, default_config_file, config_file_arg_name='config_file'):
     cmd_args = arg_parser.parse_known_args()[0]

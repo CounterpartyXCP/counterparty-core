@@ -220,58 +220,9 @@ def after_py2exe_build(win_dist_dir):
 
 # Download bootstrap database
 def bootstrap(overwrite=True, ask_confirmation=False):
-    from counterpartylib.lib import config
-
-    bootstrap_url = 'https://s3.amazonaws.com/counterparty-bootstrap/counterpartyd-db.latest.tar.gz'
-    bootstrap_url_testnet = 'https://s3.amazonaws.com/counterparty-bootstrap/counterpartyd-testnet-db.latest.tar.gz'
-
-    data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
-    database = os.path.join(data_dir, '{}.db'.format(config.APP_NAME))
-    database_testnet = os.path.join(data_dir, '{}.testnet.db'.format(config.APP_NAME))
-
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir, mode=0o755)
-
-    if not overwrite and os.path.exists(database):
-        return
-
     if ask_confirmation:
         question = 'Would you like to bootstrap your local Counterparty database from `https://s3.amazonaws.com/counterparty-bootstrap/`? (y/N): '
         if input(question).lower() != 'y':
             return
-
-    # Progress bar
-    def reporthook(blocknum, blocksize, totalsize):
-        readsofar = blocknum * blocksize
-        if totalsize > 0:
-            percent = readsofar * 1e2 / totalsize
-            s = "\r%5.1f%% %*d / %d" % (
-                percent, len(str(totalsize)), readsofar, totalsize)
-            sys.stderr.write(s)
-            if readsofar >= totalsize: # near the end
-                sys.stderr.write("\n")
-        else: # total size is unknown
-            sys.stderr.write("read %d\n" % (readsofar,))
-
-    print('Downloading mainnet database from {}...'.format(bootstrap_url))
-    urllib.request.urlretrieve(bootstrap_url, 'counterpartyd-db.latest.tar.gz', reporthook)
-    print('Extracting...')
-    with tarfile.open('counterpartyd-db.latest.tar.gz', 'r:gz') as tar_file:
-        tar_file.extractall()
-    print('Copying {} to {}...'.format('counterpartyd.9.db', database))
-    shutil.move('counterpartyd.9.db', database)
-    os.chmod(database, 0o660)
-
-    print('Downloading testnet database from {}...'.format(bootstrap_url_testnet))
-    urllib.request.urlretrieve(bootstrap_url_testnet, 'counterpartyd-testnet-db.latest.tar.gz', reporthook)
-    print('Extracting...')
-    with tarfile.open('counterpartyd-testnet-db.latest.tar.gz', 'r:gz') as tar_file:
-        tar_file.extractall()
-    print('Copying {} to {}...'.format('counterpartyd.9.testnet.db', database_testnet))
-    shutil.move('counterpartyd.9.testnet.db', database_testnet)
-    os.chmod(database_testnet, 0o660)
-
-    # Clean files
-    os.remove('counterpartyd-db.latest.tar.gz')
-    os.remove('counterpartyd-testnet-db.latest.tar.gz')
-    os.remove('checksums.txt')
+    util.bootstrap(testnet=False)
+    util.bootstrap(testnet=True)
