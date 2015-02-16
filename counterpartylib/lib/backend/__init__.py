@@ -6,7 +6,6 @@ import sys
 import json
 import time
 from decimal import Decimal as D
-from functools import lru_cache
 
 import bitcoin as bitcoinlib
 import bitcoin.rpc as bitcoinlib_rpc

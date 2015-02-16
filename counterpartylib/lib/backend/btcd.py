@@ -79,11 +79,11 @@ def getblockcount():
 def getblockhash(blockcount):
     return rpc('getblockhash', [blockcount])
 
-@lru_cache(maxsize=4096)
+@lru_cache(maxsize=64)      # Assume each block is 50 KB.
 def getblock(block_hash):
     return rpc('getblock', [block_hash, False])
 
-@lru_cache(maxsize=4096)
+@lru_cache(maxsize=16384)   # Assume each transaction is 4 KB.
 def getrawtransaction(tx_hash, verbose=False):
     return rpc('getrawtransaction', [tx_hash, 1 if verbose else 0])
 
