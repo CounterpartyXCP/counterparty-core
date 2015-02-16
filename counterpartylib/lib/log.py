@@ -30,13 +30,13 @@ def set_up(logger, verbose=False, logfile=None):
 
     # File Logging
     if logfile:
-        max_log_size = 20 * 1024 * 1024 # 20 MB
+        max_log_size = 128 * 1024 * 1024 # 128 MB
         if os.name == 'nt':
             from counterpartylib.lib import util_windows
             fileh = util_windows.SanitizedRotatingFileHandler(logfile, maxBytes=max_log_size, backupCount=5)
         else:
             fileh = logging.handlers.RotatingFileHandler(logfile, maxBytes=max_log_size, backupCount=5)
-        fileh.setLevel(log_level)
+        fileh.setLevel(logging.DEBUG)
         LOGFORMAT = '%(asctime)s [%(levelname)s] %(message)s'
         formatter = logging.Formatter(LOGFORMAT, '%Y-%m-%d-T%H:%M:%S%z')
         fileh.setFormatter(formatter)
