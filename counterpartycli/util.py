@@ -66,7 +66,7 @@ def rpc(url, method, params=None, ssl_verify=False):
     TRIES = 12
     for i in range(TRIES):
         try:
-            response = rpc_session.post(url, data=json.dumps(payload), headers=headers, verify=ssl_verify)
+            response = rpc_session.post(url + '/rpc/', data=json.dumps(payload), headers=headers, verify=ssl_verify)
             if i > 0:
                 logger.debug('Successfully connected.')
             break
