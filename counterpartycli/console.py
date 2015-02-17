@@ -16,7 +16,10 @@ def get_view(view_name, args):
         return util.api('get_running_info')
     elif view_name == 'getrows':
         method = 'get_{}'.format(args.table)
-        filters = [tuple(f) for f in args.filter]
+        if args.filter:
+            filters = [tuple(f) for f in args.filter]
+        else:
+            filters = []
         params = {
             'filters': filters,
             'filterop': args.filter_op,
