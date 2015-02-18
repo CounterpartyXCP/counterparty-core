@@ -14,7 +14,6 @@ from bitcoin.core import CBlock
 from counterpartylib.lib import util
 from counterpartylib.lib import script
 from counterpartylib.lib import config
-from counterpartylib.lib import exceptions
 
 from counterpartylib.lib.backend import addrindex, btcd
 
@@ -187,6 +186,9 @@ def get_btc_balance(address, confirmed=True):
     return sum(out['amount'] for out in unspent)
 
 
+class UnknownPubKeyError(Exception):
+    pass
+
 def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
     # Search provided pubkeys.
     if provided_pubkeys:
@@ -206,8 +208,8 @@ def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
             if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
                 return pubkey
 
-    # Public key for address neither provided nor published in the blockchain.
-    return None
+    raise UnknownPubKeyError('Public key was neither provided nor published in blockchain.')
+
 
 def multisig_pubkeyhashes_to_pubkeys(address, provided_pubkeys=None):
     signatures_required, pubkeyhashes, signatures_possible = script.extract_array(address)

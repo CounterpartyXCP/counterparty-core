@@ -71,24 +71,19 @@ def get_dust_return_pubkey(source, provided_pubkeys, encoding):
     make those the outputs spendable. It is derived from the source address, so
     that the dust is spendable by the creator of the transaction.
     """ 
-    # Get `dust_return_pubkey`, if necessary.
-    if encoding == 'multisig':
-
-        # Get hex dust return pubkey.
-        if script.is_multisig(source):
-            a, self_pubkeys, b = script.extract_array(backend.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys))
-            dust_return_pubkey_hex = self_pubkeys[0]
-        else:
-            dust_return_pubkey_hex = backend.pubkeyhash_to_pubkey(source, provided_pubkeys)
-
-        # Convert hex public key into the (binary) dust return pubkey.
-        try:
-            dust_return_pubkey = binascii.unhexlify(dust_return_pubkey_hex)
-        except binascii.Error:
-            raise script.InputError('Invalid private key.')
-
+    # Get hex dust return pubkey.
+    if script.is_multisig(source):
+        a, self_pubkeys, b = script.extract_array(backend.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys))
+        dust_return_pubkey_hex = self_pubkeys[0]
     else:
-        dust_return_pubkey = None
+        dust_return_pubkey_hex = backend.pubkeyhash_to_pubkey(source, provided_pubkeys)
+
+    # Convert hex public key into the (binary) dust return pubkey.
+    try:
+        dust_return_pubkey = binascii.unhexlify(dust_return_pubkey_hex)
+    except binascii.Error:
+        raise script.InputError('Invalid private key.')
+
     return dust_return_pubkey
 
 def get_multisig_script(address):
@@ -219,6 +214,7 @@ def serialise (encoding, inputs, destination_outputs, data_output=None, change_o
         key = ARC4.new(binascii.unhexlify(inputs[0]['txid']))  # Arbitrary, easy‐to‐find, unique key.
 
         if encoding == 'multisig':
+            assert dust_return_pubkey
             # Get data (fake) public key.
             pad_length = (33 * 2) - 1 - 2 - 2 - len(data_chunk)
             assert pad_length >= 0
@@ -380,7 +376,10 @@ def construct (db, tx_info, encoding='auto',
         # blockchain.
     if source:
         script.validate(source)
-    dust_return_pubkey = get_dust_return_pubkey(source, provided_pubkeys, encoding)
+    if encoding == 'multisig':
+        dust_return_pubkey = get_dust_return_pubkey(source, provided_pubkeys, encoding)
+    else:
+        dust_return_pubkey = None
 
     # Calculate collective size of outputs, for fee calculation.
     if encoding == 'multisig':

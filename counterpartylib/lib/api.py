@@ -615,7 +615,6 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         # TODO: Rename this method.
         def search_pubkey(pubkeyhash, provided_pubkeys=None):
-            # Returns `None` if the public key cannot be found.
             return backend.pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=provided_pubkeys)
 
         def _set_cors_headers(response):
@@ -686,6 +685,7 @@ class APIServer(threading.Thread):
                 return flask.Response(current_api_status_response_json, 503, mimetype='application/json')
 
             # Answer request normally.
+            # NOTE: `UnboundLocalError: local variable 'output' referenced before assignment` means the method doesn’t return anything.
             jsonrpc_response = jsonrpc.JSONRPCResponseManager.handle(request_json, dispatcher)
             response = flask.Response(jsonrpc_response.json.encode(), 200, mimetype='application/json')
             _set_cors_headers(response)
