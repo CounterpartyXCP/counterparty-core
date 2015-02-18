@@ -147,9 +147,6 @@ def generate_config_files():
     if not os.path.exists(server_configfile):
         # extract known configuration
         server_known_config = get_server_known_config()
-        # generate random password
-        if 'rpc-password' not in server_known_config:
-            server_known_config['rpc-password'] = util.hexlify(util.dhash(os.urandom(16)))
         generate_config_file(server_configfile, SERVER_CONFIG_ARGS, server_known_config)
 
         client_configfile = os.path.join(configdir, 'client.conf')
