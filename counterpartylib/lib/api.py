@@ -629,7 +629,7 @@ class APIServer(threading.Thread):
         @conditional_decorator(auth.login_required, hasattr(config, 'RPC_PASSWORD'))
         def handle_root(args_path):
             """Handle all paths, decide where to forward the query."""
-            if args_path.startswith('api/') or args_path.startswith('API/') or \
+            if args_path == '' or args_path.startswith('api/') or args_path.startswith('API/') or \
                args_path.startswith('rpc/') or args_path.startswith('RPC/'):
                 if flask.request.method == 'POST':
                     # Need to get those here because it might not be available in this aux function.
