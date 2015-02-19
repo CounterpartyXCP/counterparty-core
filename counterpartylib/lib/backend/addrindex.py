@@ -71,6 +71,7 @@ def rpc(method, params):
 # TODO: use scriptpubkey_to_address()
 @lru_cache(maxsize=4096)
 def extract_addresses(tx_hash):
+    # TODO: Use `rpc._batch` here.
     tx = getrawtransaction(tx_hash, verbose=True)
     addresses = []
 
@@ -88,19 +89,21 @@ def extract_addresses(tx_hash):
 
 def unconfirmed_transactions(address):
     # NOTE: This operation can be very slow.
-    logger.debug('Getting unconfirmed transactions.')
+    logger.debug('Checking mempool for UTXOs.')
 
     unconfirmed_tx = []
-    for tx_hash in getrawmempool():
+    mempool = getrawmempool()
+    for index, tx_hash in enumerate(mempool):
+        logger.debug('Possible mempool UTXO: {} ({}/{})'.format(tx_hash, index, len(mempool)))
         addresses, tx = extract_addresses(tx_hash)
         if address in addresses:
             unconfirmed_tx.append(tx)
     return unconfirmed_tx
 
 def searchrawtransactions(address, unconfirmed=False):
-    logger.debug('Searching raw transactions.')
 
     # Get unconfirmed transactions.
+    logger.debug('Getting unconfirmed transactions.')
     if unconfirmed:
         unconfirmed = unconfirmed_transactions(address)
     else:
@@ -108,6 +111,7 @@ def searchrawtransactions(address, unconfirmed=False):
 
     # Get confirmed transactions.
     try:
+        logger.debug('Searching raw transactions.')
         rawtransactions = rpc('searchrawtransactions', [address, 1, 0, 9999999])
     except BackendRPCError as e:
         if str(e) == '404 Not Found':

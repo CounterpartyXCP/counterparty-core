@@ -117,6 +117,8 @@ def get_unspent_txouts(source, unconfirmed=False):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
     """
+    logger.debug('Listing transaction outputs.')
+
     # Get all coins.
     outputs = {}
     if script.is_multisig(source):
@@ -128,6 +130,7 @@ def get_unspent_txouts(source, unconfirmed=False):
 
     for tx in raw_transactions:
         for vout in tx['vout']:
+            logger.debug('Considering vout: {}'.format(vout))
             if is_vout_spendable(vout, source):
                 txid = tx['txid']
                 confirmations = tx['confirmations'] if 'confirmations' in tx else 0
@@ -142,10 +145,12 @@ def get_unspent_txouts(source, unconfirmed=False):
                     outputs[outkey] = coin
     outputs = outputs.values()
 
+    logger.debug('Pruning spent transaction outputs.')
     # Prune away spent coins.
     unspent = []
     confirmed_unspent = []
     for output in outputs:
+        logger.debug('Considering output: {}'.format(output))
         spent = False
         confirmed_spent = False
         for tx in raw_transactions:

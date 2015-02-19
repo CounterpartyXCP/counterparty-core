@@ -770,7 +770,7 @@ def kickstart(db, bitcoind_dir):
     with db:
 
         # Prepare SQLite database. # TODO: Be more specific!
-        logger.info('Preparing database…')
+        logger.info('Preparing database.')
         start_time = time.time()
         reinitialise(db, block_index=config.BLOCK_FIRST - 1)
         logger.info('Prepared database in {:.3f}s'.format(time.time() - start_time))
@@ -827,7 +827,7 @@ def kickstart(db, bitcoind_dir):
         block_parser.close()
 
         # Reorder all transactions in database.
-        logger.info('Reordering transactions…')
+        logger.info('Reordering transactions.')
         start_time = time.time()
         cursor.execute('''UPDATE transactions SET tx_index = tx_index + ?''', (tx_index,))
         logger.info('Reordered transactions in {:.3f}s.'.format(time.time() - start_time))
