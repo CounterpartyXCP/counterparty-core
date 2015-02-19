@@ -103,8 +103,8 @@ def unconfirmed_transactions(address):
 def searchrawtransactions(address, unconfirmed=False):
 
     # Get unconfirmed transactions.
-    logger.debug('Getting unconfirmed transactions.')
     if unconfirmed:
+        logger.debug('Getting unconfirmed transactions.')
         unconfirmed = unconfirmed_transactions(address)
     else:
         unconfirmed = []
