@@ -582,12 +582,12 @@ class APIServer(threading.Thread):
             return holders
 
         @dispatcher.add_method
-        def search_raw_transactions(address):
-            return backend.searchrawtransactions(address)
+        def search_raw_transactions(address, unconfirmed=True):
+            return backend.searchrawtransactions(address, unconfirmed=unconfirmed)
 
         @dispatcher.add_method
-        def get_unspent_txouts(address, return_confirmed=False):
-            result = backend.get_unspent_txouts(address, return_confirmed=return_confirmed)
+        def get_unspent_txouts(address, unconfirmed=False):
+            result = backend.get_unspent_txouts(address, unconfirmed=unconfirmed)
             if return_confirmed:
                 return {'all': result[0], 'confirmed': result[1]}
             else:

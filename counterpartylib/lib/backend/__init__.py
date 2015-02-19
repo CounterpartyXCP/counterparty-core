@@ -30,8 +30,8 @@ def getblock(block_hash):
     block_hex = BACKEND().getblock(block_hash)
     return CBlock.deserialize(util.unhexlify(block_hex))
 
-def searchrawtransactions(address):
-    return BACKEND().searchrawtransactions(address)
+def searchrawtransactions(address, unconfirmed=False):
+    return BACKEND().searchrawtransactions(address, unconfirmed=unconfirmed)
 def getrawtransaction(tx_hash, verbose=False):
     return BACKEND().getrawtransaction(tx_hash, verbose=verbose)
 def sendrawtransaction(tx_hex):
@@ -66,7 +66,7 @@ def input_value_weight(amount):
     else:
         return 1 / amount
 
-def sort_unspent_txouts(unspent, allow_unconfirmed_inputs):
+def sort_unspent_txouts(unspent, unconfirmed=False):
     # Get deterministic results (for multiAPIConsensus type requirements), sort by timestamp and vout index.
     # (Oldest to newest so the nodes don’t have to be exactly caught up to each other for consensus to be achieved.)
     # searchrawtransactions doesn’t support unconfirmed transactions
@@ -77,17 +77,6 @@ def sort_unspent_txouts(unspent, allow_unconfirmed_inputs):
 
     # Sort by amount.
     unspent = sorted(unspent, key=lambda x: input_value_weight(x['amount']))
-
-    # Remove unconfirmed txouts, if desired.
-    # TODO: Move this filter to `searchrawtransactions()`.
-    if allow_unconfirmed_inputs:
-        # Hackish: Allow only inputs which are either already confirmed or were seen only recently. (Skip outputs from slow‐to‐confirm transanctions.)
-        try:
-            unspent = [coin for coin in unspent if coin['confirmations'] > 0 or (time.time() - coin['ts']) < 6 * 3600] # Cutoff: six hours
-        except (KeyError, TypeError):
-            pass
-    else:
-        unspent = [coin for coin in unspent if coin['confirmations'] > 0]
 
     return unspent
 
@@ -124,7 +113,7 @@ def is_vout_spendable(vout, source):
             return True
     return False
 
-def get_unspent_txouts(source, return_confirmed=False):
+def get_unspent_txouts(source, unconfirmed=False):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
     """
@@ -132,10 +121,10 @@ def get_unspent_txouts(source, return_confirmed=False):
     outputs = {}
     if script.is_multisig(source):
         pubkeyhashes = script.pubkeyhash_array(source)
-        raw_transactions = searchrawtransactions(pubkeyhashes[1])
+        raw_transactions = searchrawtransactions(pubkeyhashes[1], unconfirmed=unconfirmed)
     else:
         pubkeyhashes = [source]
-        raw_transactions = searchrawtransactions(source)
+        raw_transactions = searchrawtransactions(source, unconfirmed=unconfirmed)
 
     for tx in raw_transactions:
         for vout in tx['vout']:
@@ -175,16 +164,17 @@ def get_unspent_txouts(source, return_confirmed=False):
     unspent = sorted(unspent, key=lambda x: x['txid'])
     confirmed_unspent = sorted(confirmed_unspent, key=lambda x: x['txid'])
 
-    if return_confirmed:
-        return unspent, confirmed_unspent
+    # Remove unconfirmed txouts, if desired.
+    if unconfirmed:
+        unspent = [coin for coin in unspent if coin['confirmations'] > 0]
     else:
-        return unspent
+        # Hackish: Allow only inputs which are either already confirmed or were seen only recently. (Skip outputs from slow‐to‐confirm transanctions.)
+        try:
+            unspent = [coin for coin in unspent if coin['confirmations'] > 0 or (time.time() - coin['ts']) < 6 * 3600] # Cutoff: six hours
+        except (KeyError, TypeError):
+            pass
 
-def get_btc_balance(address, confirmed=True):
-    all_unspent, confirmed_unspent = get_unspent_txouts(address, return_confirmed=True)
-    unspent = confirmed_unspent if confirmed else all_unspent
-    return sum(out['amount'] for out in unspent)
-
+    return unspent
 
 class UnknownPubKeyError(Exception):
     pass
@@ -199,7 +189,7 @@ def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
                 return pubkey
 
     # Search blockchain.
-    raw_transactions = searchrawtransactions(pubkeyhash)
+    raw_transactions = searchrawtransactions(pubkeyhash, unconfirmed=True)
     for tx in raw_transactions:
         for vin in tx['vin']:
             scriptsig = vin['scriptSig']

@@ -76,14 +76,11 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
 
     util_test.rawtransactions_db = rawtransactions_db
 
-    def get_unspent_txouts(address, return_confirmed=False):
+    def get_unspent_txouts(address, unconfirmed=False):
         with open(util_test.CURR_DIR + '/fixtures/unspent_outputs.json', 'r') as listunspent_test_file:
             wallet_unspent = json.load(listunspent_test_file)
             unspent_txouts = [output for output in wallet_unspent if output['address'] == address]
-            if return_confirmed:
-                return unspent_txouts, unspent_txouts
-            else:
-                return unspent_txouts
+            return unspent_txouts
 
     def isodt(epoch_time):
         return datetime.utcfromtimestamp(epoch_time).isoformat()

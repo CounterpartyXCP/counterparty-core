@@ -97,11 +97,14 @@ def unconfirmed_transactions(address):
             unconfirmed_tx.append(tx)
     return unconfirmed_tx
 
-def searchrawtransactions(address):
+def searchrawtransactions(address, unconfirmed=False):
     logger.debug('Searching raw transactions.')
 
     # Get unconfirmed transactions.
-    unconfirmed = unconfirmed_transactions(address)
+    if unconfirmed:
+        unconfirmed = unconfirmed_transactions(address)
+    else:
+        unconfirmed = []
 
     # Get confirmed transactions.
     try:

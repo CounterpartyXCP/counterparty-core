@@ -63,7 +63,7 @@ def rpc(method, params):
 def extract_addresses(tx_hash):
     pass
 
-def searchrawtransactions(address):
+def searchrawtransactions(address, unconfirmed=False):
     logger.debug('Searching raw transactions.')
 
     try:
