@@ -20,6 +20,7 @@ import tarfile
 import urllib.request
 import shutil
 import codecs
+import tempfile
 
 from counterpartylib.lib import log
 logger = logging.getLogger(__name__)
@@ -118,13 +119,11 @@ def bootstrap(testnet=False, overwrite=True, ask_confirmation=False):
     # Set Constants.
     if testnet:
         BOOTSTRAP_URL = 'https://s3.amazonaws.com/counterparty-bootstrap/counterpartyd-testnet-db.latest.tar.gz'
-        TARBALL_FILENAME = 'counterpartyd-testnet-db.latest.tar.gz'
-        DATABASE_FILENAME = 'counterpartyd.9.testnet.db'
+        TARBALL_PATH = os.path.join(tempfile.gettempdir(), 'counterpartyd-testnet-db.latest.tar.gz')
         DATABASE_PATH = os.path.join(data_dir, '{}.testnet.db'.format(config.APP_NAME))
     else:
         BOOTSTRAP_URL = 'https://s3.amazonaws.com/counterparty-bootstrap/counterpartyd-db.latest.tar.gz'
-        TARBALL_FILENAME = 'counterpartyd-db.latest.tar.gz'
-        DATABASE_FILENAME = 'counterpartyd.9.db'
+        TARBALL_PATH = os.path.join(tempfile.gettempdir(), 'counterpartyd-db.latest.tar.gz')
         DATABASE_PATH = os.path.join(data_dir, '{}.db'.format(config.APP_NAME))
 
     # Prepare Directory.
@@ -147,19 +146,18 @@ def bootstrap(testnet=False, overwrite=True, ask_confirmation=False):
             sys.stderr.write("read %d\n" % (readsofar,))
 
     print('Downloading database from {}...'.format(BOOTSTRAP_URL))
-    urllib.request.urlretrieve(BOOTSTRAP_URL, TARBALL_FILENAME, reporthook)
+    urllib.request.urlretrieve(BOOTSTRAP_URL, TARBALL_PATH, reporthook)
 
-    print('Extracting...')
-    with tarfile.open(TARBALL_FILENAME, 'r:gz') as tar_file:
-        tar_file.extractall()
+    print('Extracting to "%s"...' % data_dir)
+    with tarfile.open(TARBALL_PATH, 'r:gz') as tar_file:
+        tar_file.extractall(path=data_dir)
 
-    print('Copying {} to {}...'.format(DATABASE_FILENAME, DATABASE_PATH))
-    shutil.move(DATABASE_FILENAME, DATABASE_PATH)
+    assert os.path.exists(DATABASE_PATH)
     os.chmod(DATABASE_PATH, 0o660)
 
-    # Clean files.
-    os.remove(TARBALL_FILENAME)
-    os.remove('checksums.txt')
+    print('Cleaning up...')
+    os.remove(TARBALL_PATH)
+    os.remove(os.path.join(data_dir, 'checksums.txt'))
 
 # Set default values of command line arguments with config file
 def add_config_arguments(arg_parser, config_args, default_config_file, config_file_arg_name='config_file'):
