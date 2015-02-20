@@ -30,7 +30,7 @@ def set_up(logger, verbose=False, logfile=None):
 
     # File Logging
     if logfile:
-        max_log_size = 128 * 1024 * 1024 # 128 MB
+        max_log_size = 20 * 1024 * 1024 # 20 MB
         if os.name == 'nt':
             from counterpartylib.lib import util_windows
             fileh = util_windows.SanitizedRotatingFileHandler(logfile, maxBytes=max_log_size, backupCount=5)
