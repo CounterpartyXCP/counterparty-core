@@ -96,14 +96,15 @@ def get_btc_supply(normalize=False):
             blocks_remaining = 0
     return total_supply if normalize else int(total_supply * config.UNIT)
 
-def is_vout_spendable(vout, source):
+def is_scriptpubkey_spendable(scriptpubkey_hex, source):
     # TODO: Support multi‐sig sources.
-    source = script.make_canonical(source)
-    scriptpubkey_hex = vout['scriptPubKey']['hex']
+
     c_scriptpubkey = bitcoinlib.core.CScript(bitcoinlib.core.x(scriptpubkey_hex))
     vout_address = script.scriptpubkey_to_address(c_scriptpubkey)
     if not vout_address:
         return False
+
+    source = script.make_canonical(source)
     if script.is_multisig(vout_address) and not script.is_multisig(source):
         signatures_required, pubkeyhashes, signatures_possible = script.extract_array(vout_address)
         if signatures_required == 1 and source in pubkeyhashes:
@@ -111,16 +112,16 @@ def is_vout_spendable(vout, source):
     else:
         if vout_address == source:
             return True
+
     return False
 
 def get_unspent_txouts(source, unconfirmed=False):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
     """
-    logger.debug('Listing transaction outputs.')
 
     # Get all outputs.
-    outputs = {}
+    logger.debug('Getting outputs.')
     if script.is_multisig(source):
         pubkeyhashes = script.pubkeyhash_array(source)
         raw_transactions = searchrawtransactions(pubkeyhashes[1], unconfirmed=unconfirmed)
@@ -129,25 +130,32 @@ def get_unspent_txouts(source, unconfirmed=False):
         raw_transactions = searchrawtransactions(source, unconfirmed=unconfirmed)
     raw_transactions = sorted(raw_transactions, key=lambda x: x['confirmations'])
 
+    # Change format.
+    # TODO: Slow.
+    logger.debug('Formatting outputs.')
+    outputs = []
     for tx in raw_transactions:
         for vout in tx['vout']:
-            logger.debug('Considering vout: {}'.format(vout))
-            if is_vout_spendable(vout, source):
-                txid = tx['txid']
-                confirmations = tx['confirmations'] if 'confirmations' in tx else 0
-                outkey = '{}{}'.format(txid, vout['n'])
-                if outkey not in outputs or outputs[outkey]['confirmations'] < confirmations:
-                    coin = {'amount': float(vout['value']),
-                            'confirmations': confirmations,
-                            'scriptPubKey': vout['scriptPubKey']['hex'],
-                            'txid': txid,
-                            'vout': vout['n']
-                           }
-                    outputs[outkey] = coin
-    outputs = sorted(outputs.values(), key=lambda x: x['confirmations'])
+            txid = tx['txid']
+            confirmations = tx['confirmations'] if 'confirmations' in tx else 0
+            outkey = '{}{}'.format(txid, vout['n'])
+            if outkey not in outputs or outputs[outkey]['confirmations'] < confirmations:
+                coin = {
+                        'amount': float(vout['value']),
+                        'confirmations': confirmations,
+                        'scriptPubKey': vout['scriptPubKey']['hex'],
+                        'txid': txid,
+                        'vout': vout['n']
+                       }
+                outputs.append(coin)
+
+    # Prune unspendable.
+    logger.debug('Pruning unspendable outputs.')
+    # TODO: Slow.
+    outputs = [output for output in outputs if is_scriptpubkey_spendable(output['scriptPubKey'], source)]
 
     # Prune spent outputs.
-    logger.debug('Pruning spent transaction outputs.')
+    logger.debug('Pruning spent outputs.')
     vins = {(vin['txid'], vin['vout']) for tx in raw_transactions for vin in tx['vin']}
     unspent = []
     for output in outputs:
