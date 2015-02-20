@@ -119,7 +119,7 @@ def get_unspent_txouts(source, unconfirmed=False):
     """
     logger.debug('Listing transaction outputs.')
 
-    # Get all coins.
+    # Get all outputs.
     outputs = {}
     if script.is_multisig(source):
         pubkeyhashes = script.pubkeyhash_array(source)
@@ -127,6 +127,7 @@ def get_unspent_txouts(source, unconfirmed=False):
     else:
         pubkeyhashes = [source]
         raw_transactions = searchrawtransactions(source, unconfirmed=unconfirmed)
+    raw_transactions = sorted(raw_transactions, key=lambda x: x['confirmations'])
 
     for tx in raw_transactions:
         for vout in tx['vout']:
@@ -143,39 +144,24 @@ def get_unspent_txouts(source, unconfirmed=False):
                             'vout': vout['n']
                            }
                     outputs[outkey] = coin
-    outputs = outputs.values()
+    outputs = sorted(outputs.values(), key=lambda x: x['confirmations'])
 
+    # Prune spent outputs.
     logger.debug('Pruning spent transaction outputs.')
-    # Prune away spent coins.
+    vins = {(vin['txid'], vin['vout']) for tx in raw_transactions for vin in tx['vin']}
     unspent = []
-    confirmed_unspent = []
     for output in outputs:
-        logger.debug('Considering output: {}'.format(output))
-        spent = False
-        confirmed_spent = False
-        for tx in raw_transactions:
-            for vin in tx['vin']:
-                if 'coinbase' in vin:
-                    continue
-                if (vin['txid'], vin['vout']) == (output['txid'], output['vout']):
-                    spent = True
-                    if 'confirmations' in tx and tx['confirmations'] > 0:
-                        confirmed_spent = True
-        if not spent:
+        if (output['txid'], output['vout']) not in vins:
             unspent.append(output)
-        if not confirmed_spent and output['confirmations'] > 0:
-            confirmed_unspent.append(output)
-
     unspent = sorted(unspent, key=lambda x: x['txid'])
-    confirmed_unspent = sorted(confirmed_unspent, key=lambda x: x['txid'])
 
     # Remove unconfirmed txouts, if desired.
     if unconfirmed:
-        unspent = [coin for coin in unspent if coin['confirmations'] > 0]
+        unspent = [output for output in unspent if output['confirmations'] > 0]
     else:
         # Hackish: Allow only inputs which are either already confirmed or were seen only recently. (Skip outputs from slow‐to‐confirm transanctions.)
         try:
-            unspent = [coin for coin in unspent if coin['confirmations'] > 0 or (time.time() - coin['ts']) < 6 * 3600] # Cutoff: six hours
+            unspent = [output for output in unspent if output['confirmations'] > 0 or (time.time() - output['ts']) < 6 * 3600] # Cutoff: six hours
         except (KeyError, TypeError):
             pass
 
