@@ -341,7 +341,6 @@ def start_all(db):
     api_status_poller.start()
 
     # API Server.
-    api_status_poller = api.APIStatusPoller()
     api_server = api.APIServer()
     api_server.daemon = True
     api_server.start()
