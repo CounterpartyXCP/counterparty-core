@@ -167,9 +167,9 @@ def call(method, args):
     """
     if method in WALLET_METHODS:
         func = getattr(wallet, method)
-        func(**args)
+        return func(**args)
     else:
-        util.api(method, args)
+        return util.api(method, args)
 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
