@@ -30,7 +30,7 @@ def generate_config_file(filename, config_args, known_config={}, overwrite=False
             value = known_config[key]
         elif 'default' in arg[1]:
             value = arg[1]['default']
-        if value is None:
+        if value is None or value == '':
             key = '# {}'.format(key)
             value = ''
         elif isinstance(value, bool):
