@@ -479,8 +479,10 @@ def construct (db, tx_info, encoding='auto',
     desired_source = script.make_canonical(desired_source)
 
     # Check desired info against parsed info.
-    if (desired_source, desired_destination, desired_data) != (parsed_source, parsed_destination, parsed_data):
-        raise exceptions.TransactionError('constructed transaction does not parse correctly')
+    desired = (desired_source, desired_destination, desired_data)
+    parsed = (parsed_source, parsed_destination, parsed_data)
+    if desired != parsed:
+        raise exceptions.TransactionError('Constructed transaction does not parse correctly: {} ≠ {}'.format(desired, parsed))
 
     return unsigned_tx_hex
 
