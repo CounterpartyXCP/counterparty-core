@@ -128,7 +128,6 @@ def get_unspent_txouts(source, unconfirmed=False):
     else:
         pubkeyhashes = [source]
         raw_transactions = searchrawtransactions(source, unconfirmed=unconfirmed)
-    raw_transactions = sorted(raw_transactions, key=lambda x: x['confirmations'])
 
     # Change format.
     # TODO: Slow.
@@ -148,6 +147,7 @@ def get_unspent_txouts(source, unconfirmed=False):
                         'vout': vout['n']
                        }
                 outputs.append(coin)
+    outputs = sorted(outputs, key=lambda x: x['confirmations'])
 
     # Prune unspendable.
     logger.debug('Pruning unspendable outputs.')
