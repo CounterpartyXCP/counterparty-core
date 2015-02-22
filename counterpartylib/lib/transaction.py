@@ -481,7 +481,7 @@ def construct (db, tx_info, encoding='auto',
     # Check desired info against parsed info.
     desired = (desired_source, desired_destination, desired_data)
     parsed = (parsed_source, parsed_destination, parsed_data)
-    if desired != parsed:
+    if (desired_destination, desired_data) != (parsed_destination, parsed_data) or desired_source not in parsed_source:
         raise exceptions.TransactionError('Constructed transaction does not parse correctly: {} ≠ {}'.format(desired, parsed))
 
     return unsigned_tx_hex
