@@ -587,11 +587,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_unspent_txouts(address, unconfirmed=False):
-            result = backend.get_unspent_txouts(address, unconfirmed=unconfirmed)
-            if return_confirmed:
-                return {'all': result[0], 'confirmed': result[1]}
-            else:
-                return result
+            return backend.get_unspent_txouts(address, unconfirmed=unconfirmed, multisig_inputs=False)
 
         @dispatcher.add_method
         def get_tx_info(tx_hex):

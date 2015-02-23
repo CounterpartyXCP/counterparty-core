@@ -96,7 +96,7 @@ def get_btc_supply(normalize=False):
             blocks_remaining = 0
     return total_supply if normalize else int(total_supply * config.UNIT)
 
-def is_scriptpubkey_spendable(scriptpubkey_hex, source):
+def is_scriptpubkey_spendable(scriptpubkey_hex, source, multisig_inputs=False):
     # TODO: Support multi‐sig sources.
 
     c_scriptpubkey = bitcoinlib.core.CScript(bitcoinlib.core.x(scriptpubkey_hex))
@@ -105,7 +105,10 @@ def is_scriptpubkey_spendable(scriptpubkey_hex, source):
         return False
 
     source = script.make_canonical(source)
-    if script.is_multisig(vout_address) and not script.is_multisig(source):
+    if multisig_inputs and script.is_multisig(vout_address) and not script.is_multisig(source):
+        # TODO: This is just for BTC transactions while BTC fees must be paid
+        # by source, because then inputs must be multi‐sig only when source is
+        # multi‐sig.)
         signatures_required, pubkeyhashes, signatures_possible = script.extract_array(vout_address)
         if signatures_required == 1 and source in pubkeyhashes:
             return True
@@ -115,7 +118,7 @@ def is_scriptpubkey_spendable(scriptpubkey_hex, source):
 
     return False
 
-def get_unspent_txouts(source, unconfirmed=False):
+def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
     """
