@@ -67,11 +67,13 @@ def rpc(url, method, params=None, ssl_verify=False):
     TRIES = 12
     for i in range(TRIES):
         try:
-            response = rpc_session.post(url + '/rpc/', data=json.dumps(payload), headers=headers, verify=ssl_verify)
+            response = rpc_session.post(url + '/rpc/', data=json.dumps(payload), headers=headers, verify=ssl_verify, timeout=config.REQUESTS_TIMEOUT)
             if i > 0:
                 logger.debug('Successfully connected.')
             break
         except requests.exceptions.SSLError as e:
+            raise e
+        except requests.exceptions.Timeout as e:
             raise e
         except requests.exceptions.ConnectionError:
             logger.debug('Could not connect to {}. (Try {}/{})'.format(url, i+1, TRIES))

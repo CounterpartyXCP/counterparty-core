@@ -46,7 +46,8 @@ CONFIG_ARGS = [
     [('--regular-dust-size',), {'type': D, 'default': D(config.DEFAULT_REGULAR_DUST_SIZE / config.UNIT), 'help': 'value for dust Pay‐to‐Pubkey‐Hash outputs, in {}'.format(config.BTC)}],
     [('--multisig-dust-size',), {'type': D, 'default': D(config.DEFAULT_MULTISIG_DUST_SIZE / config.UNIT), 'help': 'for dust OP_CHECKMULTISIG outputs, in {}'.format(config.BTC)}],
     [('--op-return-value',), {'type': D, 'default': D(config.DEFAULT_OP_RETURN_VALUE / config.UNIT), 'help': 'value for OP_RETURN outputs, in {}'.format(config.BTC)}],
-    [('--unsigned',), {'action': 'store_true', 'default': False, 'help': 'print out unsigned hex of transaction; do not sign or broadcast'}]
+    [('--unsigned',), {'action': 'store_true', 'default': False, 'help': 'print out unsigned hex of transaction; do not sign or broadcast'}],
+    [('--requests-timeout',), {'type': int, 'default': clientapi.DEFAULT_REQUESTS_TIMEOUT, 'help': 'Timeout used for all http requests'}]
 ]
 
 def main():
@@ -223,7 +224,8 @@ def main():
                         counterparty_rpc_ssl=args.counterparty_rpc_ssl, counterparty_rpc_ssl_verify=args.counterparty_rpc_ssl_verify,
                         wallet_name=args.wallet_name, wallet_connect=args.wallet_connect, wallet_port=args.wallet_port, 
                         wallet_user=args.wallet_user, wallet_password=args.wallet_password,
-                        wallet_ssl=args.wallet_ssl, wallet_ssl_verify=args.wallet_ssl_verify)
+                        wallet_ssl=args.wallet_ssl, wallet_ssl_verify=args.wallet_ssl_verify,
+                        requests_timeout=args.requests_timeout)
 
     # MESSAGE CREATION
     if args.action in list(messages.MESSAGE_PARAMS.keys()):

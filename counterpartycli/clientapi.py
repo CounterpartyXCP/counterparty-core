@@ -8,6 +8,8 @@ from counterpartycli import wallet
 
 logger = logging.getLogger()
 
+DEFAULT_REQUESTS_TIMEOUT = 30 # seconds
+
 class ConfigurationError(Exception):
     pass
 
@@ -17,7 +19,8 @@ def initialize(testnet=False, testcoin=False,
                 counterparty_rpc_ssl=False, counterparty_rpc_ssl_verify=False,
                 wallet_name=None, wallet_connect=None, wallet_port=None, 
                 wallet_user=None, wallet_password=None,
-                wallet_ssl=False, wallet_ssl_verify=False):
+                wallet_ssl=False, wallet_ssl_verify=False,
+                requests_timeout=DEFAULT_REQUESTS_TIMEOUT):
 
     def handle_exception(exc_type, exc_value, exc_traceback):
         logger.error("Unhandled Exception", exc_info=(exc_type, exc_value, exc_traceback))
@@ -116,6 +119,8 @@ def initialize(testnet=False, testcoin=False,
         config.WALLET_URL = 'https://' + config.WALLET_URL
     else:
         config.WALLET_URL = 'http://' + config.WALLET_URL
+
+    config.REQUESTS_TIMEOUT = requests_timeout
 
     # (more) Testnet
     if config.TESTNET:
