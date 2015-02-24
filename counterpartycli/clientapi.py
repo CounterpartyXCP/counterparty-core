@@ -57,7 +57,7 @@ def initialize(testnet=False, testcoin=False,
     if counterparty_rpc_password:
         config.COUNTERPARTY_RPC_PASSWORD = counterparty_rpc_password
     else:
-        raise ConfigurationError('counterparty RPC password not set. (Use configuration file or --counterparty-rpc-password=PASSWORD)')
+        config.COUNTERPARTY_RPC_PASSWORD = None
 
     # Counterparty server RPC SSL
     config.COUNTERPARTY_RPC_SSL = counterparty_rpc_ssl or False  # Default to off.
@@ -66,12 +66,13 @@ def initialize(testnet=False, testcoin=False,
     config.COUNTERPARTY_RPC_SSL_VERIFY = counterparty_rpc_ssl_verify or False # Default to off (support self‐signed certificates)
 
     # Construct Counterparty server URL.
-    config.COUNTERPARTY_RPC = urlencode(config.COUNTERPARTY_RPC_USER) + ':' + urlencode(config.COUNTERPARTY_RPC_PASSWORD) + '@' + config.COUNTERPARTY_RPC_CONNECT + ':' + str(config.COUNTERPARTY_RPC_PORT)
+    config.COUNTERPARTY_RPC = config.COUNTERPARTY_RPC_CONNECT + ':' + str(config.COUNTERPARTY_RPC_PORT)
+    if config.COUNTERPARTY_RPC_PASSWORD:
+        config.COUNTERPARTY_RPC = urlencode(config.COUNTERPARTY_RPC_USER) + ':' + urlencode(config.COUNTERPARTY_RPC_PASSWORD) + '@' + config.COUNTERPARTY_RPC
     if config.COUNTERPARTY_RPC_SSL:
         config.COUNTERPARTY_RPC = 'https://' + config.COUNTERPARTY_RPC
     else:
         config.COUNTERPARTY_RPC = 'http://' + config.COUNTERPARTY_RPC
-
 
     # BTC Wallet name
     config.WALLET_NAME = wallet_name or 'bitcoincore'
