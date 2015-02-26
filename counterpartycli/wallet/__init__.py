@@ -156,7 +156,7 @@ def asset(asset_name):
         for send in all_sends:
             if send['asset'] == asset_name:
                 if send['source'] in addresses and send['destination'] in addresses:
-                    tx_type = 'swap'
+                    tx_type = 'in-wallet'
                 elif send['source'] in addresses:
                     tx_type = 'send'
                 elif send['destination'] in addresses:
