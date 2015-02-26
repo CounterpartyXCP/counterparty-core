@@ -189,10 +189,6 @@ def main():
 
     parser_pending = subparsers.add_parser('pending', help='list pending order matches awaiting {}payment from you'.format(config.BTC))
 
-    parser_market = subparsers.add_parser('market', help='fill the screen with an always up-to-date summary of the {} market'.format(config.XCP_NAME))
-    parser_market.add_argument('--give-asset', help='only show orders offering to sell GIVE_ASSET')
-    parser_market.add_argument('--get-asset', help='only show orders offering to buy GET_ASSET')
-
     parser_getrows = subparsers.add_parser('getrows', help='get rows from a Counterparty table')
     parser_getrows.add_argument('--table', required=True, help='table name')
     parser_getrows.add_argument('--filter', nargs=3, action='append', help='filters to get specific rows')
