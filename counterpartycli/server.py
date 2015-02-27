@@ -7,7 +7,6 @@ import logging
 
 from counterpartylib.lib import log
 logger = logging.getLogger(__name__)
-log.set_up(logger)
 
 from counterpartylib import server
 from counterpartylib.lib import config
@@ -44,8 +43,6 @@ CONFIG_ARGS = [
 ]
 
 def main():
-    logger.info('Running v{} of {}.'.format(APP_VERSION, APP_NAME))
-
     if os.name == 'nt':
         from counterpartylib.lib import util_windows
         #patch up cmd.exe's "challenged" (i.e. broken/non-existent) UTF-8 logging
@@ -77,6 +74,10 @@ def main():
     parser_bootstrap = subparsers.add_parser('bootstrap', help='bootstrap database with hosted snapshot')
 
     args = parser.parse_args()
+
+    log.set_up(logger, verbose=args.verbose)
+    
+    logger.info('Running v{} of {}.'.format(APP_VERSION, APP_NAME))
 
     # Help message
     if args.help:

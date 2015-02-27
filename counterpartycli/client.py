@@ -8,7 +8,6 @@ from decimal import Decimal as D
 
 from counterpartylib.lib import log
 logger = logging.getLogger(__name__)
-log.set_up(logger)
 
 from counterpartylib.lib import config, script
 from counterpartylib.lib.util import make_id, BET_TYPE_NAME
@@ -51,8 +50,6 @@ CONFIG_ARGS = [
 ]
 
 def main():
-    logger.info('Running v{} of {}.'.format(APP_VERSION, APP_NAME))
-
     if os.name == 'nt':
         from counterpartylib.lib import util_windows
         #patch up cmd.exe's "challenged" (i.e. broken/non-existent) UTF-8 logging
@@ -205,13 +202,16 @@ def main():
 
     args = parser.parse_args()
 
+    # Logging
+    log.set_up(logger, verbose=args.verbose)
+    logger.propagate = False
+
+    logger.info('Running v{} of {}.'.format(APP_VERSION, APP_NAME))
+
     # Help message
     if args.help:
         parser.print_help()
         sys.exit()
-
-    # Logging
-    log.set_up(logger, verbose=args.verbose)
 
     # Configuration
     clientapi.initialize(testnet=args.testnet, testcoin=args.testcoin,
