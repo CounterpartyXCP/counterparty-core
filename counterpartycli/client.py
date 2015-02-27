@@ -4,6 +4,7 @@ import os
 import sys
 import argparse
 import logging
+import getpass
 from decimal import Decimal as D
 
 from counterpartylib.lib import log
@@ -234,6 +235,10 @@ def main():
             elif input('Sign and broadcast? (y/N) ') == 'y':
 
                 if wallet.is_mine(args.source):
+                    if wallet.is_locked():
+                        passphrase = getpass.getpass('Enter your wallet passhrase: ')
+                        logger.info('Unlocking wallet for 60 (more) seconds.')
+                        wallet.unlock(passphrase)
                     signed_tx_hex = wallet.sign_raw_transaction(unsigned_hex)
                 else:
                     private_key_wif = input('Source address not in wallet. Please enter the private key in WIF formar for {}:'.format(args.source))

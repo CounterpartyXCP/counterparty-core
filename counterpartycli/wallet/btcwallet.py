@@ -1,4 +1,3 @@
-import getpass
 import binascii
 import logging
 logger = logging.getLogger(__name__)
@@ -28,7 +27,6 @@ def get_btc_balances():
         yield [address, addresses[address]]
 
 def sign_raw_transaction(tx_hex):
-    wallet_unlock()
     return rpc('signrawtransaction', [tx_hex])['hex']
 
 def is_valid(address):
@@ -50,13 +48,11 @@ def get_btc_balance(address):
             balance += output['amount']
     return balance
 
-def wallet_unlock():
-    if not rpc('walletislocked', []):
-        return True # Wallet is unlocked for at least the next 60 seconds.
-    else:
-        passphrase = getpass.getpass('Enter your btcwallet passhrase: ')
-        print('Unlocking wallet for 60 (more) seconds.')
-        rpc('walletpassphrase', [passphrase, 60])
+def is_locked():
+    return rpc('walletislocked', [])
+
+def unlock(passphrase):
+    return rpc('walletpassphrase', [passphrase, 60])
 
 def send_raw_transaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])

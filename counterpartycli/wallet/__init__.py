@@ -15,6 +15,9 @@ from counterpartycli.util import api, value_out
 class WalletError(Exception):
     pass
 
+class LockedWalletError(WalletError):
+    pass
+
 def WALLET():
     return sys.modules['counterpartycli.wallet.{}'.format(config.WALLET_NAME)] 
 
@@ -27,6 +30,8 @@ def get_btc_balances():
 
 def sign_raw_transaction(tx_hex, private_key_wif=None):
     if private_key_wif is None:
+        if WALLET().is_locked():
+            raise LockedWalletError('Wallet is locked.')
         return WALLET().sign_raw_transaction(tx_hex)
     else:
         for char in private_key_wif:
@@ -63,6 +68,11 @@ def get_btc_balance(address):
 def send_raw_transaction(tx_hex):
 	return WALLET().send_raw_transaction(tx_hex)
 
+def is_locked():
+    return WALLET().is_locked()
+
+def unlock(passphrase):
+    return WALLET().unlock(passphrase)
 
 def wallet():
     wallet = {
