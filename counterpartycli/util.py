@@ -94,6 +94,9 @@ def rpc(url, method, params=None, ssl_verify=False):
 def api(method, params=None):
     return rpc(config.COUNTERPARTY_RPC, method, params=params, ssl_verify=config.COUNTERPARTY_RPC_SSL_VERIFY)
 
+def wallet_api(method, params=None):
+    return rpc(config.WALLET_URL, method, params=params, ssl_verify=config.WALLET_SSL_VERIFY)
+
 def is_divisible(asset):
     if asset in (config.BTC, config.XCP, 'leverage', 'value', 'fraction', 'price', 'odds'):
         return True

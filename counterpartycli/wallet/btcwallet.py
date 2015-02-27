@@ -8,10 +8,7 @@ import time
 import requests
 
 from counterpartylib.lib import config
-from counterpartycli import util
-
-def rpc(method, params):
-    return util.rpc(config.WALLET_URL, method, params=params, ssl_verify=config.WALLET_SSL_VERIFY)
+from counterpartycli.util import wallet_api as rpc
 
 def get_wallet_addresses():
     addresses = []

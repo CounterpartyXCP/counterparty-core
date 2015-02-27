@@ -8,60 +8,7 @@ import time
 import requests
 
 from counterpartylib.lib import config
-    
-bitcoin_rpc_session = None
-
-class BitcoindError(Exception):
-    pass
-class BitcoindRPCError(BitcoindError):
-    pass
-
-def rpc(method, params):
-    url = config.WALLET_URL
-    headers = {'content-type': 'application/json'}
-    payload = {
-        "method": method,
-        "params": params,
-        "jsonrpc": "2.0",
-        "id": 0,
-    }
-
-    global bitcoin_rpc_session
-    if not bitcoin_rpc_session:
-        bitcoin_rpc_session = requests.Session()
-    response = None
-    TRIES = 12
-    for i in range(TRIES):
-        try:
-            response = bitcoin_rpc_session.post(url, data=json.dumps(payload), headers=headers, verify=config.WALLET_SSL_VERIFY, timeout=config.REQUESTS_TIMEOUT)
-            if i > 0:
-                logger.debug('Successfully connected.')
-            break
-        except requests.exceptions.SSLError as e:
-            raise e
-        except requests.exceptions.Timeout as e:
-            raise e
-        except requests.exceptions.ConnectionError:
-            logger.debug('Could not connect to Bitcoind. (Try {}/{})'.format(i+1, TRIES))
-            time.sleep(5)
-
-    if response == None:
-        if config.TESTNET:
-            network = 'testnet'
-        else:
-            network = 'mainnet'
-        raise BitcoindRPCError('Cannot communicate with Bitcoin Core')
-    elif response.status_code not in (200, 500):
-        raise BitcoindRPCError(str(response.status_code) + ' ' + response.reason)
-
-    # Return result, with error handling.
-    response_json = response.json()
-    if 'error' not in response_json.keys() or response_json['error'] == None:
-        return response_json['result']
-    elif response_json['error']['code'] == -4:   # Unknown private key (locked wallet?)
-        raise BitcoindError('Unknown private key. (Locked wallet?)')
-    else:
-        raise BitcoindError('{}'.format(response_json['error']))
+from counterpartycli.util import wallet_api as rpc
 
 def get_wallet_addresses():
     addresses = []
