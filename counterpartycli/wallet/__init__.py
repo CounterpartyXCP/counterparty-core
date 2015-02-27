@@ -8,7 +8,7 @@ import json
 import time
 from decimal import Decimal as D
 
-from counterpartycli.wallet import bitcoincore
+from counterpartycli.wallet import bitcoincore, btcwallet
 from counterpartylib.lib import config, util
 from counterpartycli.util import api, value_out
 

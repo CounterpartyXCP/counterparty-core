@@ -76,6 +76,7 @@ def initialize(testnet=False, testcoin=False,
         config.COUNTERPARTY_RPC = 'https://' + config.COUNTERPARTY_RPC
     else:
         config.COUNTERPARTY_RPC = 'http://' + config.COUNTERPARTY_RPC
+    config.COUNTERPARTY_RPC += '/rpc/'
 
     # BTC Wallet name
     config.WALLET_NAME = wallet_name or 'bitcoincore'
