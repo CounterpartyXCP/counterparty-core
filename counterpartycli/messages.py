@@ -1,5 +1,6 @@
 import logging
 from decimal import Decimal as D
+import binascii
 
 from counterpartylib.lib import script, config
 from counterpartylib.lib.util import make_id, BET_TYPE_NAME, BET_TYPE_ID, dhash
@@ -32,7 +33,7 @@ class MessageArgs:
     def __init__(self, dict_args):
         self.__dict__.update(dict_args)
 
-def get_pubkey_monosig(pubkeyhash):
+def get_pubkey_monosig(pubkeyhash, input_method=None):
     if wallet.is_valid(pubkeyhash):
 
         # If in wallet, get from wallet.
@@ -45,13 +46,20 @@ def get_pubkey_monosig(pubkeyhash):
 
         # If in blockchain (and not in wallet), get from blockchain.
         logging.debug('Looking for public key for `{}` in blockchain.'.format(pubkeyhash))
-        pubkey = util.api('search_pubkey', {'pubkeyhash': pubkeyhash, 'provided_pubkeys': None})
+        try:
+            pubkey = util.api('search_pubkey', {'pubkeyhash': pubkeyhash, 'provided_pubkeys': None})
+        except util.RPCError as e:
+            pubkey = None
         if pubkey:
             return pubkey
         logging.debug('Public key for `{}` not found in blockchain.'.format(pubkeyhash))
 
         # If not in wallet and not in blockchain, get from user.
-        answer = input('Public keys (hexadecimal) or Private key (Wallet Import Format) for `{}`: '.format(pubkeyhash))
+        input_message = 'Public keys (hexadecimal) or Private key (Wallet Import Format) for `{}`: '.format(pubkeyhash)
+        if callable(input_method):
+            answer = input_method(input_message)
+        else:
+            answer = input(input_message)
         if not answer:
             return None
 
@@ -78,16 +86,16 @@ def get_pubkey_monosig(pubkeyhash):
 
     return None
 
-def get_pubkeys(address):
+def get_pubkeys(address, input_method=None):
     pubkeys = []
     if script.is_multisig(address):
         _, pubs, _ = script.extract_array(address)
         for pub in pubs:
-            pubkey = get_pubkey_monosig(pub)
+            pubkey = get_pubkey_monosig(pub, input_method=input_method)
             if pubkey:
                 pubkeys.append(pubkey)
     else:
-        pubkey = get_pubkey_monosig(address)
+        pubkey = get_pubkey_monosig(address, input_method=input_method)
         if pubkey:
             pubkeys.append(pubkey)
     return pubkeys

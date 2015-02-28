@@ -2,9 +2,10 @@ import sys
 import logging
 from urllib.parse import quote_plus as urlencode
 
-from counterpartylib.lib import config
+from counterpartylib.lib import config, script
 from counterpartycli import util
 from counterpartycli import wallet
+from counterpartycli.messages import get_pubkeys
 
 logger = logging.getLogger()
 
@@ -159,7 +160,7 @@ WALLET_METHODS = [
     'wallet', 'asset', 'balances', 'pending', 'is_locked', 'unlock'
 ]
 
-def call(method, args):
+def call(method, args, input_method=None):
     """
         Unified function to call Wallet and Counterparty API methods
         Should be used by applications like `counterparty-gui`
@@ -176,6 +177,16 @@ def call(method, args):
         func = getattr(wallet, method)
         return func(**args)
     else:
+        if method.startswith('create_'):
+            # Get provided pubkeys from params.
+            pubkeys = []
+            for address_name in ['source', 'destination']:
+                if address_name in args:
+                    address = args[address_name]
+                    if script.is_multisig(address) or address_name != 'destination':    # We don’t need the pubkey for a mono‐sig destination.
+                        pubkeys += get_pubkeys(address, input_method=input_method)
+            args['pubkey'] = pubkeys
+
         return util.api(method, args)
 
 
