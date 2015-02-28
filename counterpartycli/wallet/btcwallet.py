@@ -30,10 +30,17 @@ def sign_raw_transaction(tx_hex):
     return rpc('signrawtransaction', [tx_hex])['hex']
 
 def is_valid(address):
-    return rpc('validateaddress', [address])['isvalid']
+    address_info = rpc('validateaddress', [address])
+    # btcwallet return valid for pubkey
+    if address_info['isvalid'] and address_info['address'] == address:
+        return True
+    return False
 
 def is_mine(address):
-    return rpc('validateaddress', [address])['ismine']
+    address_info = rpc('validateaddress', [address])
+    if 'ismine' not in address_info:
+        return False
+    return address_info['ismine']
 
 def get_pubkey(address):
     address_infos = rpc('validateaddress', [address])
