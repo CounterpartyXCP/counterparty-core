@@ -22,9 +22,7 @@ import shutil
 import codecs
 import tempfile
 
-from counterpartylib.lib import log
 logger = logging.getLogger(__name__)
-log.set_up(logger)
 
 D = decimal.Decimal
 
