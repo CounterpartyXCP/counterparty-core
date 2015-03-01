@@ -61,4 +61,8 @@ def unlock(passphrase):
 def send_raw_transaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
 
+def wallet_last_block():
+    getinfo = rpc('getinfo', [])
+    return getinfo['blocks']
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

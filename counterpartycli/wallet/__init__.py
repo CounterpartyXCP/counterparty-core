@@ -74,6 +74,9 @@ def is_locked():
 def unlock(passphrase):
     return WALLET().unlock(passphrase)
 
+def wallet_last_block():
+    return WALLET().wallet_last_block()
+
 def wallet():
     wallet = {
         'addresses': {},
