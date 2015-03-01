@@ -33,7 +33,11 @@ class MessageArgs:
     def __init__(self, dict_args):
         self.__dict__.update(dict_args)
 
-def get_pubkey_monosig(pubkeyhash, input_method=None):
+def input_pubkey(address):
+    input_message = 'Public keys (hexadecimal) or Private key (Wallet Import Format) for `{}`: '.format(address)
+    return input(input_message)
+
+def get_pubkey_monosig(pubkeyhash, pubkey_resolver=input_pubkey):
     if wallet.is_valid(pubkeyhash):
 
         # If in wallet, get from wallet.
@@ -55,11 +59,7 @@ def get_pubkey_monosig(pubkeyhash, input_method=None):
         logging.debug('Public key for `{}` not found in blockchain.'.format(pubkeyhash))
 
         # If not in wallet and not in blockchain, get from user.
-        input_message = 'Public keys (hexadecimal) or Private key (Wallet Import Format) for `{}`: '.format(pubkeyhash)
-        if callable(input_method):
-            answer = input_method(input_message)
-        else:
-            answer = input(input_message)
+        answer = pubkey_resolver(pubkeyhash)
         if not answer:
             return None
 
@@ -86,16 +86,16 @@ def get_pubkey_monosig(pubkeyhash, input_method=None):
 
     return None
 
-def get_pubkeys(address, input_method=None):
+def get_pubkeys(address, pubkey_resolver=input_pubkey):
     pubkeys = []
     if script.is_multisig(address):
         _, pubs, _ = script.extract_array(address)
         for pub in pubs:
-            pubkey = get_pubkey_monosig(pub, input_method=input_method)
+            pubkey = get_pubkey_monosig(pub, pubkey_resolver=pubkey_resolver)
             if pubkey:
                 pubkeys.append(pubkey)
     else:
-        pubkey = get_pubkey_monosig(address, input_method=input_method)
+        pubkey = get_pubkey_monosig(address, pubkey_resolver=pubkey_resolver)
         if pubkey:
             pubkeys.append(pubkey)
     return pubkeys

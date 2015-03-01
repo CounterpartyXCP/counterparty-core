@@ -160,7 +160,7 @@ WALLET_METHODS = [
     'wallet', 'asset', 'balances', 'pending', 'is_locked', 'unlock'
 ]
 
-def call(method, args, input_method=None):
+def call(method, args, pubkey_resolver=None):
     """
         Unified function to call Wallet and Counterparty API methods
         Should be used by applications like `counterparty-gui`
@@ -184,7 +184,7 @@ def call(method, args, input_method=None):
                 if address_name in args:
                     address = args[address_name]
                     if script.is_multisig(address) or address_name != 'destination':    # We don’t need the pubkey for a mono‐sig destination.
-                        pubkeys += get_pubkeys(address, input_method=input_method)
+                        pubkeys += get_pubkeys(address, pubkey_resolver=pubkey_resolver)
             args['pubkey'] = pubkeys
 
         return util.api(method, args)
