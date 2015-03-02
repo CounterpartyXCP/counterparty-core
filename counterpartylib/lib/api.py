@@ -85,6 +85,13 @@ class APIError(Exception):
 def db_query(db, statement, bindings=(), callback=None, **callback_args):
     """Allow direct access to the database in a parametrized manner."""
     cursor = db.cursor()
+
+    # Sanitize.
+    forbidden_words = ['pragma', 'attach', 'database']
+    for word in forbidden_words:
+        if word in statement.lower() or any([word in binding.lower() for binding in bindings]):
+            raise APIError("Forbidden word in query: '{}'.".format(word))
+
     if hasattr(callback, '__call__'):
         cursor.execute(statement, bindings)
         for row in cursor:
