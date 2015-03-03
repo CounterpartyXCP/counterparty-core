@@ -87,7 +87,7 @@ def db_query(db, statement, bindings=(), callback=None, **callback_args):
     cursor = db.cursor()
 
     # Sanitize.
-    forbidden_words = ['pragma', 'attach', 'database']
+    forbidden_words = ['pragma', 'attach', 'database', 'begin', 'transaction']
     for word in forbidden_words:
         if word in statement.lower() or any([word in binding.lower() for binding in bindings]):
             raise APIError("Forbidden word in query: '{}'.".format(word))
