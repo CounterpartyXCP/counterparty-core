@@ -196,9 +196,10 @@ def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
         for vin in tx['vin']:
             scriptsig = vin['scriptSig']
             asm = scriptsig['asm'].split(' ')
-            pubkey = asm[1]
-            if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
-                return pubkey
+            if len(asm) >= 2:
+                pubkey = asm[1]
+                if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                    return pubkey
 
     raise UnknownPubKeyError('Public key was neither provided nor published in blockchain.')
 
