@@ -13,6 +13,7 @@ from counterpartylib.lib import log
 FORMAT = '>32s32s'
 LENGTH = 32 + 32
 ID = 11
+FORMAT_DESCRIPTION = ['tx0_hash_bytes', 'tx1_hash_bytes']
 
 def initialise(db):
     cursor = db.cursor()

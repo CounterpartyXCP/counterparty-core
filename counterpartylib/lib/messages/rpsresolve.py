@@ -13,6 +13,7 @@ from . import rps
 FORMAT = '>H16s32s32s'
 LENGTH = 2 + 16 + 32 + 32
 ID = 81
+FORMAT_DESCRIPTION = ['move', 'random', 'tx0_hash_bytes', 'tx1_hash_bytes']
 
 def initialise (db):
     cursor = db.cursor()

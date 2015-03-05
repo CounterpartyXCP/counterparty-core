@@ -15,6 +15,13 @@ LENGTH_1 = 8 + 8 + 1
 FORMAT_2 = '>QQ??If'
 LENGTH_2 = 8 + 8 + 1 + 1 + 4 + 4
 ID = 20
+
+def FORMAT(message):
+    if len(message) - LENGTH_2 <= 42:
+        return FORMAT_2 + '{}p'.format(len(message) - LENGTH_2)
+    else:
+        return FORMAT_2 + '{}s'.format(len(message) - LENGTH_2)
+FORMAT_DESCRIPTION = ['asset_id', 'quantity', 'divisible', 'callable_', 'call_date', 'call_price', 'description']
 # NOTE: Pascal strings are used for storing descriptions for backwards‐compatibility.
 
 def initialise(db):

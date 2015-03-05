@@ -13,6 +13,7 @@ from .scriptlib import (utils, blocks, processblock)
 FORMAT = '>20sQQQ'
 LENGTH = 44
 ID = 101
+FORMAT_DESCRIPTION = ['contract_id', 'gasprice', 'startgas', 'value', 'payload']
 
 def initialise (db):
     cursor = db.cursor()

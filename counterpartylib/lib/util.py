@@ -110,7 +110,7 @@ def last_message(db):
     cursor.close()
     return last_message
 
-def generate_asset_id(asset_name, block_index):
+def generate_asset_id(asset_name, block_index=None):
     """Create asset_id from asset_name."""
     if asset_name == config.BTC: return 0
     elif asset_name == config.XCP: return 1
@@ -119,7 +119,7 @@ def generate_asset_id(asset_name, block_index):
         raise exceptions.AssetNameError('too short')
 
     # Numeric asset names.
-    if enabled('numeric_asset_names'):  # Protocol change.
+    if enabled('numeric_asset_names', block_index=block_index):  # Protocol change.
         if asset_name[0] == 'A':
             # Must be numeric.
             try:
@@ -152,7 +152,7 @@ def generate_asset_id(asset_name, block_index):
 
     return asset_id
 
-def generate_asset_name (asset_id, block_index):
+def generate_asset_name (asset_id, block_index=None):
     """Create asset_name from asset_id."""
     if asset_id == 0: return config.BTC
     elif asset_id == 1: return config.XCP
@@ -160,7 +160,7 @@ def generate_asset_name (asset_id, block_index):
     if asset_id < 26**3:
         raise exceptions.AssetIDError('too low')
 
-    if enabled('numeric_asset_names'):  # Protocol change.
+    if enabled('numeric_asset_names', block_index=block_index):  # Protocol change.
         if asset_id <= 2**64 - 1:
             if 26**12 + 1 <= asset_id:
                 asset_name = 'A' + str(asset_id)

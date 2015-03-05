@@ -11,6 +11,7 @@ from . import execute
 FORMAT = '>QQQ'
 LENGTH = 8 + 8 + 8
 ID = 100
+FORMAT_DESCRIPTION = ['gasprice', 'startgas', 'endowment']
 
 def initialise (db):
     cursor = db.cursor()

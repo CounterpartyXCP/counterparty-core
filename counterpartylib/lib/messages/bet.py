@@ -27,6 +27,7 @@ from counterpartylib.lib import log
 FORMAT = '>HIQQdII'
 LENGTH = 2 + 4 + 8 + 8 + 8 + 4 + 4
 ID = 40
+FORMAT_DESCRIPTION = ['bet_type', 'deadline', 'wager_quantity', 'counterwager_quantity', 'target_value', 'leverage', 'expiration']
 
 def initialise (db):
     cursor = db.cursor()

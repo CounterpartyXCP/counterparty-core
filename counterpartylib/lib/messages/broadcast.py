@@ -37,6 +37,7 @@ from . import (bet)
 FORMAT = '>IdI'
 LENGTH = 4 + 8 + 4
 ID = 30
+FORMAT_DESCRIPTION = ['timestamp', 'value', 'fee_fraction_int', 'text']
 # NOTE: Pascal strings are used for storing texts for backwards‐compatibility.
 
 def initialise(db):

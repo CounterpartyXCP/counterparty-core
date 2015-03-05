@@ -13,6 +13,7 @@ from . import (order, bet, rps)
 FORMAT = '>32s'
 LENGTH = 32
 ID = 70
+FORMAT_DESCRIPTION = ['offer_hash_bytes']
 
 def initialise (db):
     cursor = db.cursor()

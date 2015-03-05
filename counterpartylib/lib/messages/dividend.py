@@ -15,6 +15,8 @@ LENGTH_1 = 8 + 8
 FORMAT_2 = '>QQQ'
 LENGTH_2 = 8 + 8 + 8
 ID = 50
+FORMAT = FORMAT_2
+FORMAT_DESCRIPTION = ['quantity_per_unit', 'asset_id', 'dividend_asset_id']
 
 def initialise (db):
     cursor = db.cursor()

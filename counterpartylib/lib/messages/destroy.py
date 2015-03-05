@@ -13,6 +13,7 @@ from counterpartylib.lib.exceptions import *
 FORMAT = '>QQ8s'
 LENGTH = 8 + 8 + 8
 ID = 110
+FORMAT_DESCRIPTION = ['asset_id', 'quantity', 'tag']
 
 def initialise(db):
     cursor = db.cursor()

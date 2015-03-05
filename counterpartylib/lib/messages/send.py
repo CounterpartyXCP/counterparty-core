@@ -3,6 +3,8 @@
 from counterpartylib.lib.messages.versions import send1
 
 ID = send1.ID
+FORMAT = send1.FORMAT
+FORMAT_DESCRIPTION = ['asset_id', 'quantity']
 
 def initialise (db):
     cursor = db.cursor()

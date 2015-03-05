@@ -292,6 +292,36 @@ def compose_transaction(db, name, params,
         # import traceback
         # traceback.print_exc()
 
+class UnpackError(Exception):
+    pass
+def raw_unpack_data(data_hex):
+    """
+    This method don't use the database or the backend.
+    It should be used by a lightweight client to check generated transaction.
+    """
+    try:
+        data = binascii.unhexlify(data_hex)
+        message_type_id = struct.unpack(config.TXTYPE_FORMAT, data[:4])[0]
+        message = data[4:]
+
+        for message_type in API_TRANSACTIONS:
+            message_module = sys.modules['counterpartylib.lib.messages.{}'.format(message_type)]
+            if message_type_id == message_module.ID:
+                params = {
+                    'message': message_type
+                }
+                if hasattr(message_module, 'FORMAT'):
+                    format = message_module.FORMAT() if callable(message_module.FORMAT) else message_module.FORMAT
+                    unpacked = struct.unpack(format, message)
+                    for p in range(len(unpacked)):
+                        param_name = message_module.FORMAT_DESCRIPTION[p]
+                        params[param_name] = unpacked[p]
+                    return params
+    except Exception as e:
+        raise UnpackError(e)
+
+    raise UnpackError("Invalid data")
+
 def conditional_decorator(decorator, condition):
     """Checks the condition and if True applies specified decorator."""
     def gen_decorator(f):
@@ -667,6 +697,7 @@ class APIServer(threading.Thread):
             else:
                 raise APIError('unsupported message type')
             unpacked = unpack_method(db, message, util.CURRENT_BLOCK_INDEX)
+
             return message_type_id, unpacked
 
         @dispatcher.add_method

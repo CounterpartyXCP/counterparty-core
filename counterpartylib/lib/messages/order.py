@@ -18,6 +18,7 @@ from counterpartylib.lib import log
 FORMAT = '>QQQQHQ'
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8
 ID = 10
+FORMAT_DESCRIPTION = ['give_id', 'give_quantity', 'get_id', 'get_quantity', 'expiration', 'fee_required']
 
 def initialise(db):
     cursor = db.cursor()
