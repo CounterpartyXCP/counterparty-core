@@ -470,6 +470,12 @@ UNITTEST_VECTOR = {
             'in': (ADDR[0], None, 'ASSET', 1000, True, False, None, None, '', DP['default_block']),
             'out': (0, 0.0, [], 50000000, '', True, False)
         }, {
+            'in': (ADDR[2], None, 'DIVIDEND', 1000, False, False, None, None, '', DP['default_block']),
+            'out': (0, 0.0, ['cannot change divisibility'], 0, '', False, True)
+        }, {
+            'in': (ADDR[2], None, 'DIVIDEND', 1000, True, True, None, None, '', DP['default_block']),
+            'out': (0, 0.0, ['cannot change callability'], 0, '', True, True)
+        }, {
             'in': (ADDR[0], None, 'BTC', 1000, True, False, None, None, '', DP['default_block']),
             'out': (0, 0.0, ['cannot issue BTC or XCP'], 50000000, '', True, False)
         }, {
@@ -539,6 +545,9 @@ UNITTEST_VECTOR = {
         }, {
             'in': (ADDR[0], None, 'BSSET', 1000, True, ''),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x14\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+        }, {
+            'in': (ADDR[0], None, 'BSSET', 1000, True, 'description much much much longer than 42 letters'),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x14\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00description much much much longer than 42 letters')
         }, {
             'in': (ADDR[0], ADDR[1], 'DIVISIBLE', 0, True, ''),
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', None)], b'\x00\x00\x00\x14\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
@@ -671,6 +680,9 @@ UNITTEST_VECTOR = {
             'in': (ADDR[0], 'DIVISIBLE', DP['quantity'], 'XCP', DP['quantity'], 2000, 0, DP['default_block']),
             'out': ([])
         }, {
+            'in': (ADDR[0], 'DIVISIBLE', DP['quantity'], 'XCP', DP['quantity'], 2000, 0.5, DP['default_block']),
+            'out': (['fee_required must be in satoshis'])
+        }, {
             'in': (ADDR[0], 'BTC', DP['quantity'], 'BTC', DP['quantity'], 2000, 0, DP['default_block']),
             'out': (['cannot trade BTC for itself'])
         },{
@@ -750,10 +762,21 @@ UNITTEST_VECTOR = {
                 {'table': 'orders', 'values': {'block_index': DP['default_block'], 'fee_required_remaining': 0, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'give_remaining': 500000, 'expiration': 2000, 'give_quantity': 500000, 'get_asset': 'XCP', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'fee_provided_remaining': 1000000, 'tx_index': 502, 'fee_required': 0, 'give_asset': 'BTC', 'expire_index': DP['default_block'] + 2000, 'get_remaining': 100000000, 'fee_provided': 1000000, 'get_quantity': 100000000, 'status': 'open'}}
             ]
         }, {
+            'in': ({'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'btc_amount': None, 'tx_index': 502, 'supported': 1, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'fee': 10000, 'block_time': 155409000, 'block_index': DP['default_block'], 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00 foo\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xe1\x00\x07\xd0\x00\x00\x00\x00\x00\x00\x00\x00', 'destination': None},),
+            'records': [
+                {'table': 'orders', 'values': {'get_asset': '0', 'tx_index': 502, 'fee_required': 0, 'status': 'invalid: could not unpack', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'fee_required_remaining': 0, 'give_remaining': 0, 'fee_provided_remaining': 10000, 'fee_provided': 10000, 'expire_index': 310501, 'get_quantity': 0, 'expiration': 0, 'give_asset': '0', 'block_index': 310501, 'get_remaining': 0, 'give_quantity': 0}},
+            ]
+        }, {
             'in': ({'btc_amount': None, 'block_time': 155409000, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'tx_index': 502, 'supported': 1, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'destination': None, 'block_index': DP['default_block'], 'data': b'\x00\x00\x00\n\x00\x06\xca\xd8\xdc\x7f\x0bf\x00\x00\x00\x00\x00\x00\x01\xf4\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x07\xd0\x00\x00\x00\x00\x00\x00\x00\x00', 'fee': 10000},),
             'records': [
                 {'table': 'orders', 'values': {'fee_required_remaining': 0, 'fee_provided_remaining': 10000, 'block_index': DP['default_block'], 'give_remaining': 500, 'status': 'open', 'fee_required': 0, 'fee_provided': 10000, 'expiration': 2000, 'give_quantity': 500, 'get_asset': 'XCP', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'tx_index': 502, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'get_remaining': 100000000, 'get_quantity': 100000000, 'give_asset': 'NODIVISIBLE', 'expire_index': DP['default_block'] + 2000}},
                 {'table': 'debits', 'values': {'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_index': DP['default_block'], 'quantity': 500, 'action': 'open order', 'asset': 'NODIVISIBLE'}}
+            ]
+        }, {
+            'in': ({'block_index': DP['default_block'], 'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'destination': '', 'fee': 10000, 'tx_index': 502, 'supported': 1, 'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'block_time': 155409000, 'btc_amount': 0},),
+            'records': [
+                {'table': 'orders', 'values': {'block_index': DP['default_block'], 'expiration': 10, 'expire_index': DP['default_block'] + 10, 'fee_required_remaining': 0, 'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'fee_provided': 10000, 'status': 'open', 'give_asset': 'BTC', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'get_remaining': 0, 'give_remaining': 49000000, 'tx_index': 502, 'get_asset': 'XCP', 'fee_provided_remaining': 1000, 'fee_required': 0, 'give_quantity': 50000000, 'get_quantity': 100000000}},
+                {'table': 'order_matches', 'values': {'backward_quantity': 1000000, 'tx0_hash': 'b6db5c8412a58d9fa75bff41f8a7519353ffd4d359c7c8fa7ee1900bc05e4d9d', 'tx1_block_index': DP['default_block'], 'match_expire_index': DP['default_block'] + 20, 'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'tx0_block_index': DP['default_block'] - 491, 'status': 'pending', 'block_index': DP['default_block'], 'tx1_address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'forward_quantity': 100000000, 'tx1_index': 502, 'fee_paid': 9000, 'id': 'b6db5c8412a58d9fa75bff41f8a7519353ffd4d359c7c8fa7ee1900bc05e4d9d_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'forward_asset': 'XCP', 'tx0_expiration': 2000, 'tx1_expiration': 10, 'backward_asset': 'BTC', 'tx0_index': 11, 'tx1_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d'}}
             ]
         }, {
             'in': ({'block_index': DP['default_block'], 'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'destination': '', 'fee': 10000, 'tx_index': 502, 'supported': 1, 'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'block_time': 155409000, 'btc_amount': 0},),
@@ -773,6 +796,10 @@ UNITTEST_VECTOR = {
                 {'table': 'orders', 'values': {'fee_provided_remaining': 10000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_index': DP['default_block'], 'tx_index': 502, 'fee_required': 900000, 'give_asset': 'MAXI', 'status': 'open', 'get_remaining': 100000000, 'give_quantity': 9223372036854775807, 'give_remaining': 9223372036854775807, 'expiration': 10, 'get_asset': 'XCP', 'tx_hash': '0ec7da68a67e165693afd6c97566f8f509d302bceec8d1be0100335718a40fe5', 'expire_index': DP['default_block'] + 10, 'fee_provided': 10000, 'get_quantity': 100000000, 'fee_required_remaining': 900000}},
                 {'table': 'debits', 'values': {'quantity': 9223372036854775807, 'asset': 'MAXI', 'action': 'open order', 'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'event': '0ec7da68a67e165693afd6c97566f8f509d302bceec8d1be0100335718a40fe5', 'block_index': DP['default_block']}}
             ]
+        }],
+        'expire': [{
+            'in': (310500,),
+            'out': None
         }]
     },
     'transaction': {
@@ -1452,5 +1479,4 @@ UNITTEST_VECTOR = {
             ]
         }]
     }
-
 }
