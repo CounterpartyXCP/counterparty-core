@@ -484,66 +484,91 @@ def get_tx_info1(tx_hex, block_index, block_parser=None):
 
     return source, destination, btc_amount, fee, data
 
-def get_tx_info2(tx_hex, block_parser=None):
+def arc4_decrypt(cyphertext, ctx):
+    '''Un‐obfuscate. Initialise key once per attempt.'''
+    key = ARC4.new(ctx.vin[0].prevout.hash[::-1])
+    return key.decrypt(cyphertext)
+
+def get_opreturn(asm):
+    if len(asm) == 2 and asm[0] == 'OP_RETURN':
+        pubkeyhash = asm[1]
+        if type(pubkeyhash) == bytes:
+            return pubkeyhash
+    raise DecodeError('invalid OP_RETURN')
+
+def decode_opreturn(asm, ctx):
+    chunk = get_opreturn(asm)
+    chunk = arc4_decrypt(chunk, ctx)
+    if chunk[:len(config.PREFIX)] == config.PREFIX:             # Data
+        destination, data = None, chunk[len(config.PREFIX):]
+    else:
+        raise DecodeError('unrecognised OP_RETURN output')
+
+    return destination, data
+
+def decode_checksig(asm, ctx):
+    pubkeyhash = script.get_checksig(asm)
+    chunk = arc4_decrypt(pubkeyhash, ctx)
+    if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
+        # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
+        chunk_length = chunk[0]
+        chunk = chunk[1:chunk_length + 1]
+        destination, data = None, chunk[len(config.PREFIX):]
+    else:                                                       # Destination
+        pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
+        destination, data = script.base58_check_encode(pubkeyhash, config.ADDRESSVERSION), None
+
+    return destination, data
+
+def decode_checkmultisig(asm, ctx):
+    pubkeys, signatures_required = script.get_checkmultisig(asm)
+    chunk = b''
+    for pubkey in pubkeys[:-1]:     # (No data in last pubkey.)
+        chunk += pubkey[1:-1]       # Skip sign byte and nonce byte.
+    chunk = arc4_decrypt(chunk, ctx)
+    if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
+        # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
+        chunk_length = chunk[0]
+        chunk = chunk[1:chunk_length + 1]
+        destination, data = None, chunk[len(config.PREFIX):]
+    else:                                                       # Destination
+        pubkeyhashes = [script.pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
+        destination, data = script.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes)), None
+
+    return destination, data
+
+def decode_output(vout, ctx):
+    # Ignore transactions with invalid script.
+    try:
+      asm = script.get_asm(vout.scriptPubKey)
+    except CScriptInvalidError as e:
+      raise DecodeError(e)
+
+    if asm[0] == 'OP_RETURN':
+        new_destination, new_data = decode_opreturn(asm)
+    elif asm[-1] == 'OP_CHECKSIG':
+        new_destination, new_data = decode_checksig(asm)
+    elif asm[-1] == 'OP_CHECKMULTISIG':
+        new_destination, new_data = decode_checkmultisig(asm)
+    else:
+        raise DecodeError('unrecognised output type')
+
+    assert not (new_destination and new_data)
+    assert new_destination != None or new_data != None  # `decode_*()` should never return `None, None`.
+
+    if util.enabled('null_data_check'):
+        if new_data == []:
+            raise DecodeError('new destination is `None`')
+
+    return new_destination, new_data, output_type
+
+def get_tx_info2(tx_hex, block_parser=None, no_parse_input=False):
     """Get multisig transaction info.
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
     # Decode transaction binary.
     ctx = backend.deserialize(tx_hex)
-
-    def arc4_decrypt(cyphertext):
-        '''Un‐obfuscate. Initialise key once per attempt.'''
-        key = ARC4.new(ctx.vin[0].prevout.hash[::-1])
-        return key.decrypt(cyphertext)
-
-    def get_opreturn(asm):
-        if len(asm) == 2 and asm[0] == 'OP_RETURN':
-            pubkeyhash = asm[1]
-            if type(pubkeyhash) == bytes:
-                return pubkeyhash
-        raise DecodeError('invalid OP_RETURN')
-
-    def decode_opreturn(asm):
-        chunk = get_opreturn(asm)
-        chunk = arc4_decrypt(chunk)
-        if chunk[:len(config.PREFIX)] == config.PREFIX:             # Data
-            destination, data = None, chunk[len(config.PREFIX):]
-        else:
-            raise DecodeError('unrecognised OP_RETURN output')
-
-        return destination, data
-
-    def decode_checksig(asm):
-        pubkeyhash = script.get_checksig(asm)
-        chunk = arc4_decrypt(pubkeyhash)
-        if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
-            # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
-            chunk_length = chunk[0]
-            chunk = chunk[1:chunk_length + 1]
-            destination, data = None, chunk[len(config.PREFIX):]
-        else:                                                       # Destination
-            pubkeyhash = binascii.hexlify(pubkeyhash).decode('utf-8')
-            destination, data = script.base58_check_encode(pubkeyhash, config.ADDRESSVERSION), None
-
-        return destination, data
-
-    def decode_checkmultisig(asm):
-        pubkeys, signatures_required = script.get_checkmultisig(asm)
-        chunk = b''
-        for pubkey in pubkeys[:-1]:     # (No data in last pubkey.)
-            chunk += pubkey[1:-1]       # Skip sign byte and nonce byte.
-        chunk = arc4_decrypt(chunk)
-        if chunk[1:len(config.PREFIX) + 1] == config.PREFIX:        # Data
-            # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
-            chunk_length = chunk[0]
-            chunk = chunk[1:chunk_length + 1]
-            destination, data = None, chunk[len(config.PREFIX):]
-        else:                                                       # Destination
-            pubkeyhashes = [script.pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
-            destination, data = script.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes)), None
-
-        return destination, data
 
     # Ignore coinbase transactions.
     if ctx.is_coinbase():
@@ -555,27 +580,7 @@ def get_tx_info2(tx_hex, block_parser=None):
         # Fee is the input values minus output values.
         output_value = vout.nValue
         fee -= output_value
-
-        # Ignore transactions with invalid script.
-        try:
-          asm = script.get_asm(vout.scriptPubKey)
-        except CScriptInvalidError as e:
-          raise DecodeError(e)
-
-        if asm[0] == 'OP_RETURN':
-            new_destination, new_data = decode_opreturn(asm)
-        elif asm[-1] == 'OP_CHECKSIG':
-            new_destination, new_data = decode_checksig(asm)
-        elif asm[-1] == 'OP_CHECKMULTISIG':
-            new_destination, new_data = decode_checkmultisig(asm)
-        else:
-            raise DecodeError('unrecognised output type')
-        assert not (new_destination and new_data)
-        assert new_destination != None or new_data != None  # `decode_*()` should never return `None, None`.
-
-        if util.enabled('null_data_check'):
-            if new_data == []:
-                raise DecodeError('new destination is `None`')
+        new_destination, new_data, _ = decode_output(vout, ctx)
 
         # All destinations come before all data.
         if not data and not new_data and destinations != [config.UNSPENDABLE,]:
@@ -607,11 +612,11 @@ def get_tx_info2(tx_hex, block_parser=None):
 
         asm = script.get_asm(vout.scriptPubKey)
         if asm[-1] == 'OP_CHECKSIG':
-            new_source, new_data = decode_checksig(asm)
+            new_source, new_data = decode_checksig(asm, ctx)
             if new_data or not new_source:
                 raise DecodeError('data in source')
         elif asm[-1] == 'OP_CHECKMULTISIG':
-            new_source, new_data = decode_checkmultisig(asm)
+            new_source, new_data = decode_checkmultisig(asm, ctx)
             if new_data or not new_source:
                 raise DecodeError('data in source')
         else:
