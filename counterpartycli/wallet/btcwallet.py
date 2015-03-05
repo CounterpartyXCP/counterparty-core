@@ -26,6 +26,9 @@ def get_btc_balances():
     for address in addresses:
         yield [address, addresses[address]]
 
+def list_unspent():
+    return rpc('listunspent', [0, 99999])
+
 def sign_raw_transaction(tx_hex):
     return rpc('signrawtransaction', [tx_hex])['hex']
 
