@@ -588,21 +588,37 @@ def check_outputs(method, params, tx_hex):
         if desired_message_type != returned_message_type:
             raise exceptions.TransactionError('invalid message type')
 
-        # asset_id to asset name (hackish)
-        asset_param_list = {
-            'asset_id': 'asset', 
-            'give_id': 'give_asset', 
-            'get_id': 'get_asset',
-            'dividend_asset_id': 'dividend_asset'
-        }
-        for asset_param in asset_param_list:
-            if asset_param in data:
-                asset_id = data.pop(asset_param)
-                param_name = asset_param_list[asset_param]
+        # format data
+        for param in data:
+            # asset_id to asset name (hackish)
+            param_suffix = '_'.join(param.split('_')[-2:])
+            if param_suffix == 'asset_id':
+                asset_id = data.pop(param)
+                param_name = param.replace('_id', '')
                 try:
                     data[param_name] = util.generate_asset_name(asset_id, block_index=333501)
                 except exceptions.AssetIDError:
                     data[param_name] = util.generate_asset_name(asset_id, block_index=333499)
+            # bytes to hex
+            param_suffix = param.split('_')[-1:]
+            if param_suffix == 'bytes':
+                hex_param = data.pop(param)
+                param_name = param.replace('_bytes', '')
+                data[param_name] = binascii.hexlify(hex_param).decode('utf-8')
+            # int to float
+            if param_suffix == 'int':
+                int_param = data.pop('param')
+                param_name = param.replace('_int', '')
+                data[param_name] = int_param / 1e8
+
+        # make match id
+        if 'tx0_hash' in params and 'tx1_hash' in params:
+            tx0_hash, tx1_hash = params.pop('tx0_hash'), params.pop('tx1_hash')
+            match_id = util.make_id(tx0_hash, tx1_hash)
+            if desired_message_type == 'order':
+                data['order_match_id'] = match_id
+            elif desired_message_type == 'rpsresolve':
+                data['rps_match_id'] = match_id
             
         # check change address
         if tx_info['change'][0] != None and tx_info['change'][0] != params['source']:
@@ -627,9 +643,7 @@ def check_outputs(method, params, tx_hex):
                 raise exceptions.TransactionError('incorrect default value for `{}` : {} ≠ {}'.format(param_name, data[param_name], optional_params[param_name]))
 
         # TODO: check all messages
-        if desired_message_type == 'bet':
-            params['destination'] = params['feed_address']
-
+        
         # No destination
         if desired_message_type in ['order', 'dividend', 'broadcast', 'cancel', 'destroy', 'execute', 'publish', 'rps', 'rpsresolve']:
             if len(tx_info['destinations'].keys()) != 0:
@@ -645,18 +659,22 @@ def check_outputs(method, params, tx_hex):
         
         # only one destination
         elif desired_message_type in ['send', 'bet', 'btcpay']:
+            destination_name = 'destination'
+            if desired_message_type == 'bet':
+                destination_name = 'feed_address'
+               
             if len(tx_info['destinations'].keys()) != 1:
                 raise exceptions.TransactionError('incorrect number of destinations')
             # if there is one should be the desired destination
-            if params['destination'] not in tx_info['destinations']:
+            if params[destination_name] not in tx_info['destinations']:
                 raise exceptions.TransactionError('desired destination not present')
             
             if desired_message_type == 'btcpay':
                 # quantity should be the desired quantity
-                if tx_info['destinations'][params['destination']] != params['quantity']:
+                if tx_info['destinations'][params[destination_name]] != params['quantity']:
                     raise exceptions.TransactionError('invalid quantity for the destination')
             # quantity should be a dust value
-            elif tx_info['destinations'][params['destination']] > config.DEFAULT_MULTISIG_DUST_SIZE:
+            elif tx_info['destinations'][params[destination_name]] > config.DEFAULT_MULTISIG_DUST_SIZE:
                 raise exceptions.TransactionError('invalid quantity for the destination')
 
         # check data value

@@ -35,7 +35,7 @@ from counterpartylib.lib import log
 FORMAT = '>HQ32sI'
 LENGTH = 2 + 8 + 32 + 4
 ID = 80
-FORMAT_DESCRIPTION = ['possible_moves', 'wager', 'move_random_hash', 'expiration']
+FORMAT_DESCRIPTION = ['possible_moves', 'wager', 'move_random_hash_bytes', 'expiration']
 
 def initialise (db):
     cursor = db.cursor()
