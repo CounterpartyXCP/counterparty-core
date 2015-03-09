@@ -12,6 +12,7 @@ import hashlib
 import re
 import time
 import decimal
+import struct
 import logging
 logger = logging.getLogger(__name__)
 
@@ -20,12 +21,15 @@ from Crypto.Cipher import ARC4
 from bitcoin.core.script import CScript
 from bitcoin.core import x
 from bitcoin.core import b2lx
+import bitcoin as bitcoinlib
 
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
 from counterpartylib.lib import script
 from counterpartylib.lib import backend
+from counterpartylib.lib import messages
+from counterpartylib.lib import blocks
 
 # Constants
 OP_RETURN = b'\x6a'
@@ -486,5 +490,209 @@ def construct (db, tx_info, encoding='auto',
         raise exceptions.TransactionError('Constructed transaction does not parse correctly: {} ≠ {}'.format(desired, parsed))
 
     return unsigned_tx_hex
+
+
+"""
+Client side checking: never uses database or backend.
+"""
+
+def raw_unpack_data(data_hex):
+    """
+    Unpack data with no validation (for instance asset name may not exists).
+    Only the structure of the message is checked.
+    Returned data should be compared by the client with the paramters passed to the API.
+    """
+    from counterpartylib.lib.api import API_TRANSACTIONS
+
+    try:
+        data = binascii.unhexlify(data_hex)
+        message_type_id = struct.unpack(config.TXTYPE_FORMAT, data[:4])[0]
+        message = data[4:]
+
+        for message_type in API_TRANSACTIONS:
+            message_module = sys.modules['counterpartylib.lib.messages.{}'.format(message_type)]
+            if message_type_id == message_module.ID:
+                params = {
+                    'message': message_type
+                }
+                if hasattr(message_module, 'FORMAT'):
+                    format = message_module.FORMAT(message) if callable(message_module.FORMAT) else message_module.FORMAT
+                    unpacked = struct.unpack(format, message)
+                    for p in range(len(unpacked)):
+                        param_name = message_module.FORMAT_DESCRIPTION[p]
+                        params[param_name] = unpacked[p]
+                    return params
+    except struct.error as e:
+        raise exceptions.UnpackError(e)
+
+    raise exceptions.UnpackError("unknown message ID")
+
+def get_outputs_info(tx_hex): 
+    # Decode transaction binary.
+    ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
+
+    # Ignore coinbase transactions.
+    if ctx.is_coinbase():
+        raise exceptions.TransactionError('coinbase transaction')
+
+    # Get destinations and data outputs.
+    destinations, btc_amount, data, change = [], 0, b'', (None, 0)
+
+    outputs_info = {
+        'data': b'',
+        'data_value': 0,
+        'data_output_count': 0,
+        'data_output_type': None,
+        'total_value': 0,
+        'destinations': {},
+        'change': (None, 0)
+    }
+    for vout in ctx.vout:
+        # change always last
+        if outputs_info['change'][0] is not None:
+            raise exceptions.TransactionError('constructed transaction contains more than one change output')
+
+        new_destination, new_data, output_type = blocks.decode_output(vout, ctx)
+
+        # All destinations come before all data.
+        if not outputs_info['data'] and not new_data:
+            outputs_info['destinations'][new_destination] = vout.nValue
+        else:
+            if new_destination:     # Change.
+                outputs_info['change'] = (new_destination, vout.nValue)
+            else:                   # Data.
+                outputs_info['data'] += new_data
+                outputs_info['data_value'] += vout.nValue
+                outputs_info['data_output_count'] += 1
+                if outputs_info['data_output_type'] is not None and outputs_info['data_output_type'] != output_type:
+                    raise exceptions.TransactionError('constructed transaction contains invalid data outputs')
+                outputs_info['data_output_type'] = output_type
+        outputs_info['total_value'] += vout.nValue
+
+    return outputs_info
+
+def check_outputs(method, params, tx_hex):
+    tx_info = get_outputs_info(tx_hex)
+    #print(tx_info)
+    desired_message_type = method.split('_')[1]
+
+    if tx_info['data']:
+        
+        data_hex = binascii.hexlify(tx_info['data'])
+        data = raw_unpack_data(data_hex)
+        #print(params)
+        #print(data)
+
+        # check message type
+        returned_message_type = data.pop('message')
+        if desired_message_type != returned_message_type:
+            raise exceptions.TransactionError('invalid message type')
+
+        # asset_id to asset name (hackish)
+        asset_param_list = {
+            'asset_id': 'asset', 
+            'give_id': 'give_asset', 
+            'get_id': 'get_asset',
+            'dividend_asset_id': 'dividend_asset'
+        }
+        for asset_param in asset_param_list:
+            if asset_param in data:
+                asset_id = data.pop(asset_param)
+                param_name = asset_param_list[asset_param]
+                try:
+                    data[param_name] = util.generate_asset_name(asset_id, block_index=333501)
+                except exceptions.AssetIDError:
+                    data[param_name] = util.generate_asset_name(asset_id, block_index=333499)
+            
+        # check change address
+        if tx_info['change'][0] != None and tx_info['change'][0] != params['source']:
+            raise exceptions.TransactionError('invalid change address')
+
+        # check parameters
+        optional_params = {
+            'call_price': 0.0,
+            'description': '',
+            'call_date': 0,
+            'callable_': False,
+            'divisible': True
+        }
+        for param_name in data:
+            if param_name == 'description':
+                data[param_name] = data[param_name].decode('utf-8')
+            if param_name not in params and param_name not in optional_params:
+                raise exceptions.TransactionError('no desired parameter present in data: {}'.format(param_name))
+            if param_name in params and params[param_name] is not None and data[param_name] != params[param_name]:
+                raise exceptions.TransactionError('incorrect value for `{}` : {} ≠ {}'.format(param_name, data[param_name], params[param_name]))
+            if param_name not in params and param_name in optional_params and data[param_name] != optional_params[param_name]:
+                raise exceptions.TransactionError('incorrect default value for `{}` : {} ≠ {}'.format(param_name, data[param_name], optional_params[param_name]))
+
+        # TODO: check all messages
+        if desired_message_type == 'bet':
+            params['destination'] = params['feed_address']
+
+        # No destination
+        if desired_message_type in ['order', 'dividend', 'broadcast', 'cancel', 'destroy', 'execute', 'publish', 'rps', 'rpsresolve']:
+            if len(tx_info['destinations'].keys()) != 0:
+                raise exceptions.TransactionError('too much destination address')
+        # No destination or one destination
+        elif desired_message_type in ['issuance']:
+            if len(tx_info['destinations'].keys()) > 1:
+                raise exceptions.TransactionError('too much destination address')
+            # if there is one should be the `transfer_destination`
+            if len(tx_info['destinations'].keys()) == 1 and params['transfer_destination'] not in tx_info['destinations']:
+                raise exceptions.TransactionError('destination differs from the desired address')
+        # only one destination
+        elif desired_message_type in ['send', 'bet']:
+            if len(tx_info['destinations'].keys()) != 1:
+                raise exceptions.TransactionError('incorrect number of destinations')
+            # if there is one should be the desired destination
+            if params['destination'] not in tx_info['destinations']:
+                raise exceptions.TransactionError('desired destination not present')
+            # quantity should be a dust value
+            if tx_info['destinations'][params['destination']] > config.DEFAULT_MULTISIG_DUST_SIZE:
+                raise exceptions.TransactionError('invalid quantity for the destination')
+        # only one unknown destination and amount
+        elif desired_message_type == 'btcpay':
+            if len(tx_info['destinations'].keys()) != 1:
+                raise exceptions.TransactionError('incorrect number of destinations')
+
+        # check data value
+        max_data_value = 0
+        if tx_info['data_output_type'] == 'OP_CHECKSIG':
+            dust_size = params['regular_dust_size'] if 'regular_dust_size' in params and params['regular_dust_size'] else config.DEFAULT_REGULAR_DUST_SIZE
+            max_data_value = tx_info['data_output_count'] * dust_size
+        elif tx_info['data_output_type'] == 'OP_CHECKMULTISIG':
+            dust_size = params['multisig_dust_size'] if 'multisig_dust_size' in params and params['multisig_dust_size'] else config.DEFAULT_MULTISIG_DUST_SIZE
+            max_data_value = tx_info['data_output_count'] * dust_size
+        if tx_info['data_value'] > max_data_value:
+            raise exceptions.TransactionError('invalid dust quantity for data outputs')
+
+    else:
+        # only BTC sends does not contain data
+        if (method != 'create_burn') and (method != 'create_send' or params['asset'] != 'BTC'):
+            raise exceptions.TransactionError('constructed transaction does not contains data') 
+        if method == 'create_burn':
+            params['destination'] = config.UNSPENDABLE
+
+        # check change address (change should be in destinations)
+        if tx_info['change'][0] is not None:
+            raise exceptions.TransactionError('invalid change address')
+        # check if desired destination is here 
+        if params['destination'] not in tx_info['destinations']:
+            raise exceptions.TransactionError('desired destination not present')
+        # maximum two destinations: the destination and the change
+        if len(tx_info['destinations'].keys()) > 2:
+            raise exceptions.TransactionError('too much destinations')
+        # if there is a change, it should be equal to the source
+        if len(tx_info['destinations'].keys()) > 1 and params['source'] not in tx_info['destinations']:
+            raise exceptions.TransactionError('invalid change address')
+        # quantity should be the desired quantity
+        if tx_info['destinations'][params['destination']] != params['quantity']:
+            raise exceptions.TransactionError('invalid quantity')
+         # data value should be null
+        if tx_info['data_value'] != 0:
+            raise exceptions.TransactionError('invalid data output')
+
+    return tx_info 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

@@ -279,7 +279,7 @@ def compose_transaction(db, name, params,
 
     # try:  # NOTE: For debugging, e.g. with `Invalid Params` error.
     tx_info = compose_method(db, **params)
-    return transaction.construct(db, tx_info, encoding=encoding,
+    unsigned_hex = transaction.construct(db, tx_info, encoding=encoding,
                                         fee_per_kb=fee_per_kb,
                                         regular_dust_size=regular_dust_size,
                                         multisig_dust_size=multisig_dust_size,
@@ -288,39 +288,13 @@ def compose_transaction(db, name, params,
                                         allow_unconfirmed_inputs=allow_unconfirmed_inputs,
                                         exact_fee=fee,
                                         fee_provided=fee_provided)
+    # sanity check
+    transaction.check_outputs('create_{}'.format(name), params, unsigned_hex)
+    
+    return unsigned_hex
     # except:
         # import traceback
         # traceback.print_exc()
-
-class UnpackError(Exception):
-    pass
-def raw_unpack_data(data_hex):
-    """
-    This method don't use the database or the backend.
-    It should be used by a lightweight client to check generated transaction.
-    """
-    try:
-        data = binascii.unhexlify(data_hex)
-        message_type_id = struct.unpack(config.TXTYPE_FORMAT, data[:4])[0]
-        message = data[4:]
-
-        for message_type in API_TRANSACTIONS:
-            message_module = sys.modules['counterpartylib.lib.messages.{}'.format(message_type)]
-            if message_type_id == message_module.ID:
-                params = {
-                    'message': message_type
-                }
-                if hasattr(message_module, 'FORMAT'):
-                    format = message_module.FORMAT() if callable(message_module.FORMAT) else message_module.FORMAT
-                    unpacked = struct.unpack(format, message)
-                    for p in range(len(unpacked)):
-                        param_name = message_module.FORMAT_DESCRIPTION[p]
-                        params[param_name] = unpacked[p]
-                    return params
-    except Exception as e:
-        raise UnpackError(e)
-
-    raise UnpackError("Invalid data")
 
 def conditional_decorator(decorator, condition):
     """Checks the condition and if True applies specified decorator."""
