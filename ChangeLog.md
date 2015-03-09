@@ -1,4 +1,6 @@
 ## Client Versions ##
+* v9.51.1 (2015-04-??)
+	* add two required parameters for `create_btcpay` method: `quantity` and `destination`
 * v9.51.0 (2015-04-01)
 	* Check for null data chunks (protocol change: 352000)
 	* Disable rock‐paper‐scissors (protocol change: 352000)

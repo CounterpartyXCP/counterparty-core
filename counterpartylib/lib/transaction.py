@@ -634,6 +634,7 @@ def check_outputs(method, params, tx_hex):
         if desired_message_type in ['order', 'dividend', 'broadcast', 'cancel', 'destroy', 'execute', 'publish', 'rps', 'rpsresolve']:
             if len(tx_info['destinations'].keys()) != 0:
                 raise exceptions.TransactionError('too much destination address')
+        
         # No destination or one destination
         elif desired_message_type in ['issuance']:
             if len(tx_info['destinations'].keys()) > 1:
@@ -641,20 +642,22 @@ def check_outputs(method, params, tx_hex):
             # if there is one should be the `transfer_destination`
             if len(tx_info['destinations'].keys()) == 1 and params['transfer_destination'] not in tx_info['destinations']:
                 raise exceptions.TransactionError('destination differs from the desired address')
+        
         # only one destination
-        elif desired_message_type in ['send', 'bet']:
+        elif desired_message_type in ['send', 'bet', 'btcpay']:
             if len(tx_info['destinations'].keys()) != 1:
                 raise exceptions.TransactionError('incorrect number of destinations')
             # if there is one should be the desired destination
             if params['destination'] not in tx_info['destinations']:
                 raise exceptions.TransactionError('desired destination not present')
+            
+            if desired_message_type == 'btcpay':
+                # quantity should be the desired quantity
+                if tx_info['destinations'][params['destination']] != params['quantity']:
+                    raise exceptions.TransactionError('invalid quantity for the destination')
             # quantity should be a dust value
-            if tx_info['destinations'][params['destination']] > config.DEFAULT_MULTISIG_DUST_SIZE:
+            elif tx_info['destinations'][params['destination']] > config.DEFAULT_MULTISIG_DUST_SIZE:
                 raise exceptions.TransactionError('invalid quantity for the destination')
-        # only one unknown destination and amount
-        elif desired_message_type == 'btcpay':
-            if len(tx_info['destinations'].keys()) != 1:
-                raise exceptions.TransactionError('incorrect number of destinations')
 
         # check data value
         max_data_value = 0
