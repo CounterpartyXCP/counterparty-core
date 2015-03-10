@@ -10,7 +10,7 @@ from counterpartycli.messages import get_pubkeys
 
 logger = logging.getLogger()
 
-DEFAULT_REQUESTS_TIMEOUT = 30 # seconds
+DEFAULT_REQUESTS_TIMEOUT = 5 # seconds
 
 class ConfigurationError(Exception):
     pass
