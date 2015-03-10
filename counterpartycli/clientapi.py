@@ -5,11 +5,12 @@ from urllib.parse import quote_plus as urlencode
 from counterpartylib.lib import config, script
 from counterpartycli import util
 from counterpartycli import wallet
+from counterpartycli import messages
 from counterpartycli.messages import get_pubkeys
 
 logger = logging.getLogger()
 
-DEFAULT_REQUESTS_TIMEOUT = 30 # seconds
+DEFAULT_REQUESTS_TIMEOUT = 5 # seconds
 
 class ConfigurationError(Exception):
     pass
@@ -124,6 +125,12 @@ def initialize(testnet=False, testcoin=False,
 
     config.REQUESTS_TIMEOUT = requests_timeout
 
+    # Encoding
+    if config.TESTCOIN:
+        config.PREFIX = b'XX'                   # 2 bytes (possibly accidentally created)
+    else:
+        config.PREFIX = b'CNTRPRTY'             # 8 bytes
+
     # (more) Testnet
     if config.TESTNET:
         config.MAGIC_BYTES = config.MAGIC_BYTES_TESTNET
@@ -187,7 +194,12 @@ def call(method, args, pubkey_resolver=None):
                         pubkeys += get_pubkeys(address, pubkey_resolver=pubkey_resolver)
             args['pubkey'] = pubkeys
 
-        return util.api(method, args)
+        result = util.api(method, args)
+
+        if method.startswith('create_'):
+            messages.check_transaction(method, args, result)
+
+        return result
 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

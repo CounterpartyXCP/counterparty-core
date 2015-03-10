@@ -65,6 +65,9 @@ def is_mine(address):
 def get_btc_balance(address):
     return WALLET().get_btc_balance(address)
 
+def list_unspent():
+    return WALLET().list_unspent()
+
 def send_raw_transaction(tx_hex):
 	return WALLET().send_raw_transaction(tx_hex)
 

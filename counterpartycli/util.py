@@ -46,7 +46,7 @@ class RPCError(Exception):
 class AssetError(Exception):
     pass
 
-def rpc(url, method, params=None, ssl_verify=False):
+def rpc(url, method, params=None, ssl_verify=False, tries=1):
     headers = {'content-type': 'application/json'}
     payload = {
         "method": method,
@@ -62,8 +62,7 @@ def rpc(url, method, params=None, ssl_verify=False):
     	rpc_session = rpc_sessions[url]
 
     response = None
-    TRIES = 12
-    for i in range(TRIES):
+    for i in range(tries):
         try:
             response = rpc_session.post(url, data=json.dumps(payload), headers=headers, verify=ssl_verify, timeout=config.REQUESTS_TIMEOUT)
             if i > 0:
@@ -74,7 +73,7 @@ def rpc(url, method, params=None, ssl_verify=False):
         except requests.exceptions.Timeout as e:
             raise e
         except requests.exceptions.ConnectionError:
-            logger.debug('Could not connect to {}. (Try {}/{})'.format(url, i+1, TRIES))
+            logger.debug('Could not connect to {}. (Try {}/{})'.format(url, i+1, tries))
             time.sleep(5)
 
     if response == None:

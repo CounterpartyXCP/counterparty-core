@@ -1,11 +1,15 @@
 import logging
 from decimal import Decimal as D
 import binascii
+from math import ceil
 
-from counterpartylib.lib import script, config
-from counterpartylib.lib.util import make_id, BET_TYPE_NAME, BET_TYPE_ID, dhash
+from counterpartylib.lib import script, config, blocks, exceptions, api, transaction
+from counterpartylib.lib.util import make_id, BET_TYPE_NAME, BET_TYPE_ID, dhash, generate_asset_name
+from counterpartylib.lib.kickstart.utils import ib2h
 from counterpartycli import util
 from counterpartycli import wallet
+
+import bitcoin as bitcoinlib
 
 MESSAGE_PARAMS = {
     'send': ['source', 'destination', 'asset', 'quantity'],
@@ -208,6 +212,38 @@ def extract_args(args, keys):
             params[key] = dargs[key]
     return params
 
+def get_input_value(tx_hex):
+    unspents = wallet.list_unspent()
+    ctx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
+    
+    inputs_value = 0
+    for vin in ctx.vin:
+        vin_tx_hash = ib2h(vin.prevout.hash)
+        vout_n = vin.prevout.n
+        found = False
+        for output in unspents:
+            if output['txid'] == vin_tx_hash and output['vout'] == vout_n:
+                inputs_value += int(output['amount'] * config.UNIT)
+                found = True
+        if not found:
+            raise exceptions.TransactionError('input not found in wallet list unspents')
+
+    return inputs_value
+
+def check_transaction(method, params, tx_hex):
+    tx_info = transaction.check_outputs(method, params, tx_hex)
+    input_value = get_input_value(tx_hex)
+    fee = input_value - tx_info['total_value']
+    fee_per_kb = params['fee_per_kb'] if 'fee_per_kb' in params else config.DEFAULT_FEE_PER_KB
+
+    if 'fee' in params and params['fee']:
+        necessary_fee = params['fee']
+    else:
+        necessary_fee = ceil(((len(tx_hex) / 2) / 1024)) * fee_per_kb # TODO
+
+    if fee > necessary_fee:
+        raise exceptions.TransactionError('Incorrect fee ({} > {})'.format(fee, necessary_fee))
+
 def compose_transaction(args, message_name, param_names):
     args = prepare_args(args, message_name)
     common_params = common_args(args)
@@ -225,6 +261,9 @@ def compose_transaction(args, message_name, param_names):
 
     method = 'create_{}'.format(message_name)
     unsigned_tx_hex = util.api(method, params)
+    
+    check_transaction(method, params, unsigned_tx_hex)
+
     return unsigned_tx_hex
 
 def compose(message, args):
