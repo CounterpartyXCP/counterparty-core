@@ -336,7 +336,11 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, counterparty
     if outputs is not None:
         assert outputs == test_outputs
     if error is not None:
-        assert str(exception.value) == error[1]
+        try:
+            message = json.loads(str(exception.value).replace("'",'"'))['data']['message']
+        except: #TODO
+            message = str(exception.value)
+        assert message == error[1]
     if records is not None:
         for record in records:
             check_record(record, counterpartyd_db)

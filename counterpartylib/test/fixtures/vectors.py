@@ -7,6 +7,7 @@ The function supports three types of output checks:
 - Database changes - 'records'
 - PRAGMA changes - 'pragma'
 """
+import time
 
 from .params import ADDR, MULTISIGADDR, DEFAULT_PARAMS as DP
 
@@ -16,7 +17,7 @@ from counterpartylib.lib import script
 from counterpartylib.lib.messages.scriptlib import processblock
 from counterpartylib.lib.messages.scriptlib.processblock import ContractError
 from counterpartylib.lib.api import APIError
-from counterpartylib.lib.util import (DebitError, CreditError, QuantityError)
+from counterpartylib.lib.util import (DebitError, CreditError, QuantityError, RPCError)
 from fractions import Fraction
 
 UNITTEST_VECTOR = {
@@ -1242,6 +1243,35 @@ UNITTEST_VECTOR = {
         }, {
             'in': ('create_dividend', {'source': ADDR[0], 'quantity_per_unit': 1, 'asset': 'NODIVISIBLE', 'dividend_asset': 'XCP', 'encoding': 'multisig'}),
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e000000000000695121025a415bf04af834423d3dd7ad96dc727a030865759f9fbc9036a64c1197e587c8210254da540fb2673b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe7246f210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae8c19ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+        }, {
+            'in': ('create_broadcast', {'source': ADDR[0], 'timestamp': 1427052593, 'value': 0, 'fee_fraction': 0.05, 'text': 'Bitcoin value in a week dec=1, const=2, inc=3', 'encoding': 'multisig'}),
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03781e0000000000006951210343415bf04af834423d3dd7adba897d62320865759e9fba5aee7a7f51b1c8c51421023dae3760db081b0387afb9043963bee2223634dfd7e7cd1c59ba7d4897c74730210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae781e000000000000695121036b415bf04af834423d52b9ded0e1405623610b16a3acba5aee7a331af1e587d4210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae14fbe90b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+        }, {
+            'in': ('create_bet', {'source': ADDR[1], 'feed_address': ADDR[0], 'bet_type': 3, 'deadline': 1427052593, 'wager_quantity': 10, 'counterwager_quantity': 20, 'expiration':20, 'target_value':2, 'encoding': 'multisig'}),
+            'out': '0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac781e000000000000695121035ca51ea175f108a1c63588683dc4c73dc56d916799f864a1fad6b60813f5fe0c21033260e435e30202f2e76f46acdb293fd52371ca5cb97460f7928ade8ecb02ea96210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97753ae4286f505000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000'
+        }, {
+            # cancel bet
+            'in': ('create_cancel', {'source': ADDR[1], 'offer_hash': 'ba0ef1dfbbc87df94e1d198b0e9e3c06301710d4aab3d85116cbc8199954644a', 'encoding': 'multisig'}),
+            'out': '0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff02781e0000000000006951210242a51ea175f108a1c6358868537eca9915ce681a60b679b871d8223415c5e900210322b44e927b5314392f76dff8bf632c652371ca48b97460f7928ade8ecb02ea71210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97753ae789bf505000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000'
+        }, {
+            # cancel order
+            'in': ('create_cancel', {'source': ADDR[1], 'offer_hash': '14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0', 'encoding': 'multisig'}),
+            'out': '0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff02781e0000000000006951210242a51ea175f108a1c635886853d0084e99e14107aaacf780a6e4ca793e5535a921022f1729af7af086b6f12e3ff31ce92c652371ca48b97460f7928ade8ecb02ea74210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97753ae789bf505000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000'
+        }, {
+            'in': ('create_btcpay', {'source': ADDR[1], 'order_match_id': '9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b_14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0', 'encoding': 'multisig'}),
+            'error': (RPCError, '`destination` parameter required for `btcpay`')
+        }, {
+            'in': ('create_btcpay', {'source': ADDR[1], 'order_match_id': '9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b_14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0', 'destination': ADDR[0], 'encoding': 'multisig'}),
+            'error': (RPCError, '`quantity` parameter required for `btcpay`')
+        }, {
+            'in': ('create_btcpay', {'source': ADDR[1], 'order_match_id': '9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b_14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0', 'destination': ADDR[0], 'quantity': 800000, 'encoding': 'multisig'}),
+            'out': '0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff0400350c00000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac781e0000000000006951210353a51ea175f108a1c63588681e5457a7140eadf091bc93c06416c1c122c80a1d21038deeebc58d7fba139b6d668fed2238a905225ea9d9473464b3d6ecf8ba2f4a9b210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97753ae781e0000000000006951210379a51ea175f108a1c6fe951fd84a1d9a4e31b626e0a7a361fad6bc0813f5feec21023260e421a30202f2e76f46acdb292c652371ca48b97460f7928ade8ecb02ea66210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97753ae0048e905000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000'
+        }, {
+            'in': ('create_btcpay', {'source': ADDR[1], 'order_match_id': '9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b_14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0', 'destination': ADDR[0], 'quantity': 80000, 'encoding': 'multisig'}),
+            'error': (RPCError, 'incorrect `quantity` parameter (80000 ≠ 800000)')
+        }, {
+            'in': ('create_btcpay', {'source': ADDR[1], 'order_match_id': '9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b_14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0', 'destination':ADDR[1], 'quantity': 800000, 'encoding': 'multisig'}),
+            'error': (RPCError, 'incorrect `destination` parameter ({} ≠ {})'.format(ADDR[1], ADDR[0]))
         }],
         'generate_asset_id': [{
             'in': ('BTC', DP['default_block']),

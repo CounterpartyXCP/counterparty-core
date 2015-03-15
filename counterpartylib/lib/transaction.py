@@ -573,15 +573,11 @@ def get_outputs_info(tx_hex):
 
 def check_outputs(method, params, tx_hex):
     tx_info = get_outputs_info(tx_hex)
-    #print(tx_info)
     desired_message_type = method.split('_')[1]
 
     if tx_info['data']:
-        
         data_hex = binascii.hexlify(tx_info['data'])
         data = raw_unpack_data(data_hex)
-        #print(params)
-        #print(data)
 
         # check message type
         returned_message_type = data.pop('message')
@@ -600,22 +596,25 @@ def check_outputs(method, params, tx_hex):
                 except exceptions.AssetIDError:
                     data[param_name] = util.generate_asset_name(asset_id, block_index=333499)
             # bytes to hex
-            param_suffix = param.split('_')[-1:]
+            param_suffix = param.split('_')[-1:][0]
             if param_suffix == 'bytes':
                 hex_param = data.pop(param)
                 param_name = param.replace('_bytes', '')
                 data[param_name] = binascii.hexlify(hex_param).decode('utf-8')
             # int to float
             if param_suffix == 'int':
-                int_param = data.pop('param')
+                int_param = data.pop(param)
                 param_name = param.replace('_int', '')
                 data[param_name] = int_param / 1e8
+            # bytes to string
+            if param in ['description', 'text']:
+                data[param] = data[param].decode('utf-8')
 
         # make match id
-        if 'tx0_hash' in params and 'tx1_hash' in params:
-            tx0_hash, tx1_hash = params.pop('tx0_hash'), params.pop('tx1_hash')
+        if 'tx0_hash' in data and 'tx1_hash' in data:
+            tx0_hash, tx1_hash = data.pop('tx0_hash'), data.pop('tx1_hash')
             match_id = util.make_id(tx0_hash, tx1_hash)
-            if desired_message_type == 'order':
+            if desired_message_type == 'btcpay':
                 data['order_match_id'] = match_id
             elif desired_message_type == 'rpsresolve':
                 data['rps_match_id'] = match_id
@@ -633,23 +632,19 @@ def check_outputs(method, params, tx_hex):
             'divisible': True
         }
         for param_name in data:
-            if param_name == 'description':
-                data[param_name] = data[param_name].decode('utf-8')
             if param_name not in params and param_name not in optional_params:
                 raise exceptions.TransactionError('no desired parameter present in data: {}'.format(param_name))
             if param_name in params and params[param_name] is not None and data[param_name] != params[param_name]:
                 raise exceptions.TransactionError('incorrect value for `{}` : {} ≠ {}'.format(param_name, data[param_name], params[param_name]))
             if param_name not in params and param_name in optional_params and data[param_name] != optional_params[param_name]:
                 raise exceptions.TransactionError('incorrect default value for `{}` : {} ≠ {}'.format(param_name, data[param_name], optional_params[param_name]))
-
-        # TODO: check all messages
         
-        # No destination
+        # Transaction must not contain destination
         if desired_message_type in ['order', 'dividend', 'broadcast', 'cancel', 'destroy', 'execute', 'publish', 'rps', 'rpsresolve']:
             if len(tx_info['destinations'].keys()) != 0:
                 raise exceptions.TransactionError('too much destination address')
         
-        # No destination or one destination
+        # must contain zero or one destination
         elif desired_message_type in ['issuance']:
             if len(tx_info['destinations'].keys()) > 1:
                 raise exceptions.TransactionError('too much destination address')
@@ -657,7 +652,7 @@ def check_outputs(method, params, tx_hex):
             if len(tx_info['destinations'].keys()) == 1 and params['transfer_destination'] not in tx_info['destinations']:
                 raise exceptions.TransactionError('destination differs from the desired address')
         
-        # only one destination
+        # must contain only one destination
         elif desired_message_type in ['send', 'bet', 'btcpay']:
             destination_name = 'destination'
             if desired_message_type == 'bet':

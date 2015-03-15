@@ -34,10 +34,17 @@ from counterpartylib.lib import util
 from counterpartylib.lib import log
 from . import (bet)
 
-FORMAT = '>IdI'
+BASE_FORMAT = '>IdI'
 LENGTH = 4 + 8 + 4
 ID = 30
 FORMAT_DESCRIPTION = ['timestamp', 'value', 'fee_fraction_int', 'text']
+
+def FORMAT(message):
+    if len(message) - LENGTH <= 52:
+        return BASE_FORMAT + '{}p'.format(len(message) - LENGTH)
+    else:
+        return BASE_FORMAT + '{}s'.format(len(message) - LENGTH)
+
 # NOTE: Pascal strings are used for storing texts for backwards‐compatibility.
 
 def initialise(db):
@@ -105,9 +112,9 @@ def compose (db, source, timestamp, value, fee_fraction, text):
 
     data = struct.pack(config.TXTYPE_FORMAT, ID)
     if len(text) <= 52:
-        curr_format = FORMAT + '{}p'.format(len(text) + 1)
+        curr_format = BASE_FORMAT + '{}p'.format(len(text) + 1)
     else:
-        curr_format = FORMAT + '{}s'.format(len(text))
+        curr_format = BASE_FORMAT + '{}s'.format(len(text))
     data += struct.pack(curr_format, timestamp, value, fee_fraction_int,
                         text.encode('utf-8'))
     return (source, [], data)
@@ -117,11 +124,7 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
-        if len(message) - LENGTH <= 52:
-            curr_format = FORMAT + '{}p'.format(len(message) - LENGTH)
-        else:
-            curr_format = FORMAT + '{}s'.format(len(message) - LENGTH)
-        timestamp, value, fee_fraction_int, text = struct.unpack(curr_format, message)
+        timestamp, value, fee_fraction_int, text = struct.unpack(FORMAT(message), message)
 
         try:
             text = text.decode('utf-8')

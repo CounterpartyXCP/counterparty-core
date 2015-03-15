@@ -279,18 +279,21 @@ def compose_transaction(db, name, params,
 
     # additional required parameters for `btcpay`
     # to enable client side validation
+    tmp = {}
     if name == 'btcpay':
         if 'destination' not in params:
             raise APIError('`destination` parameter required for `btcpay`')
         if 'quantity' not in params:
             raise APIError('`quantity` parameter required for `btcpay`')
-        destination, quantity, _, _, _, problems = validate(db, params['source'], params['order_match_id'], util.CURRENT_BLOCK_INDEX)
+        destination, quantity, _, _, _, problems = btcpay.validate(db, params['source'], params['order_match_id'], util.CURRENT_BLOCK_INDEX)
         if problems: 
             raise exceptions.ComposeError(problems)
         if params['destination'] != destination:
             raise APIError('incorrect `destination` parameter ({} ≠ {})'.format(params['destination'], destination))
         if params['quantity'] != quantity:
             raise APIError('incorrect `quantity` parameter ({} ≠ {})'.format(params['quantity'], quantity))
+        tmp['destination'] = params.pop('destination')
+        tmp['quantity'] = params.pop('quantity')
 
     # try:  # NOTE: For debugging, e.g. with `Invalid Params` error.
     tx_info = compose_method(db, **params)
@@ -304,6 +307,7 @@ def compose_transaction(db, name, params,
                                         exact_fee=fee,
                                         fee_provided=fee_provided)
     # sanity check
+    params.update(tmp)
     transaction.check_outputs('create_{}'.format(name), params, unsigned_hex)
 
     return unsigned_hex
