@@ -62,7 +62,7 @@ def main():
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(prog=APP_NAME, description='Counterparty CLI for counterparty-server', add_help=False)
     parser.add_argument('-h', '--help', dest='help', action='store_true', help='show this help message and exit')
-    parser.add_argument('-V', '--version', action='version', version="{} v{}".format(APP_NAME, APP_VERSION))
+    parser.add_argument('-V', '--version', action='version', version="{} v{}; {} v{}".format(APP_NAME, APP_VERSION, 'counterparty-lib', config.VERSION_STRING))
     parser.add_argument('--config-file', help='the location of the configuration file')
 
     parser = add_config_arguments(parser, CONFIG_ARGS, 'client.conf')
