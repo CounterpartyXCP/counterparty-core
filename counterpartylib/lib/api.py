@@ -608,12 +608,12 @@ class APIServer(threading.Thread):
             message_type_id = struct.unpack(config.TXTYPE_FORMAT, data[:4])[0]
             message = data[4:]
 
-            # TODO: This works for precisely those messages for which
-            # `unpack()` is defined.
-            for message_type in API_TRANSACTIONS:
-                if message_type_id == sys.modules['lib.messages.{}'.format(message_type)].ID:
-                    unpack_method = sys.modules['lib.messages.{}'.format(message_type)].unpack
-                    unpacked = unpack_method(db, message, util.CURRENT_BLOCK_INDEX)
+            # TODO: Enabled only for `send`.
+            if message_type_id == send.ID:
+                unpack_method = send.unpack
+            else:
+                raise APIError('unsupported message type')
+            unpacked = unpack_method(db, message, util.CURRENT_BLOCK_INDEX)
             return message_type_id, unpacked
 
         @dispatcher.add_method
