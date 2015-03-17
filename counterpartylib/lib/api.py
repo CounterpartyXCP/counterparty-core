@@ -332,13 +332,14 @@ class APIStatusPoller(threading.Thread):
                 # Check that backend is running, communicable, and caught up with the blockchain.
                 # Check that the database has caught up with bitcoind.
                 if time.time() - self.last_database_check > 10 * 60: # Ten minutes since last check.
-                    code = 11
-                    logger.debug('Checking backend state.')
-                    check.backend_state()
-                    code = 12
-                    logger.debug('Checking database state.')
-                    check.database_state(db, backend.getblockcount())
-                    self.last_database_check = time.time()
+                    if not config.FORCE:
+                        code = 11
+                        logger.debug('Checking backend state.')
+                        check.backend_state()
+                        code = 12
+                        logger.debug('Checking database state.')
+                        check.database_state(db, backend.getblockcount())
+                        self.last_database_check = time.time()
             except (check.BackendError, check.DatabaseError) as e:
                 exception_name = e.__class__.__name__
                 exception_text = str(e)

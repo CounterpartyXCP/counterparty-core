@@ -910,7 +910,7 @@ def follow(db):
         # and try again repeatedly.
         try:
             block_count = backend.getblockcount()
-        except (ConnectionRefusedError, http.client.CannotSendRequest) as e:
+        except (ConnectionRefusedError, http.client.CannotSendRequest, backend.addrindex.BackendRPCError) as e:
             if config.FORCE:
                 time.sleep(config.BACKEND_POLL_INTERVAL)
                 continue
