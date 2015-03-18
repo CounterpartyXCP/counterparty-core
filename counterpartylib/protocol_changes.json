@@ -34,5 +34,12 @@
 			"minimum_version_minor": 49,
 			"minimum_version_revision": 0,
 			"block_index": 334000
+		},
+	"hotfix_integer_overflow":      {
+			"minimum_version_major": 9,
+			"minimum_version_minor": 50,
+			"minimum_version_revision": 0,
+			"block_index": 0
 		}
+
 }
