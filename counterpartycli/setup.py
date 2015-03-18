@@ -222,8 +222,8 @@ def after_py2exe_build(win_dist_dir):
 def bootstrap(overwrite=True, ask_confirmation=False):
     from counterpartylib.lib import config
 
-    bootstrap_url = 'https://s3.amazonaws.com/counterparty-bootstrap/counterpartyd-db.latest.tar.gz'
-    bootstrap_url_testnet = 'https://s3.amazonaws.com/counterparty-bootstrap/counterpartyd-testnet-db.latest.tar.gz'
+    bootstrap_url = 'https://s3.amazonaws.com/counterparty-bootstrap/counterparty-db.latest.tar.gz'
+    bootstrap_url_testnet = 'https://s3.amazonaws.com/counterparty-bootstrap/counterparty-db-testnet.latest.tar.gz'
 
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
     database = os.path.join(data_dir, '{}.db'.format(config.APP_NAME))
@@ -258,8 +258,8 @@ def bootstrap(overwrite=True, ask_confirmation=False):
     print('Extracting…')
     with tarfile.open('counterpartyd-db.latest.tar.gz', 'r:gz') as tar_file:
         tar_file.extractall()
-    print('Copying {} to {}…'.format('counterpartyd.9.db', database))
-    shutil.move('counterpartyd.9.db', database)
+    print('Copying {} to {}…'.format('counterparty.db', database))
+    shutil.move('counterparty.db', database)
     os.chmod(database, 0o660)
 
     print('Downloading testnet database from {}…'.format(bootstrap_url_testnet))
@@ -267,8 +267,8 @@ def bootstrap(overwrite=True, ask_confirmation=False):
     print('Extracting…')
     with tarfile.open('counterpartyd-testnet-db.latest.tar.gz', 'r:gz') as tar_file:
         tar_file.extractall()
-    print('Copying {} to {}…'.format('counterpartyd.9.testnet.db', database_testnet))
-    shutil.move('counterpartyd.9.testnet.db', database_testnet)
+    print('Copying {} to {}…'.format('counterparty.testnet.db', database_testnet))
+    shutil.move('counterparty.testnet.db', database_testnet)
     os.chmod(database_testnet, 0o660)
 
     # Clean files
