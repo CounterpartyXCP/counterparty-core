@@ -8,7 +8,9 @@ import urllib.request
 import sys
 import shutil
 
-CURRENT_VERSION = '9.50.0'
+from counterpartylib.lib import config
+
+CURRENT_VERSION = config.VERSION_STRING
 
 # NOTE: Why we don’t use the the PyPi package:
 # <https://code.google.com/p/apsw/source/detail?r=358a9623d051>
@@ -98,7 +100,6 @@ class move_old_db(Command):
 
     def run(self):
         import appdirs
-        from counterpartylib.lib import config
 
         old_data_dir = appdirs.user_config_dir(appauthor='Counterparty', appname='counterpartyd', roaming=True)
         old_database = os.path.join(old_data_dir, 'counterpartyd.9.db')
