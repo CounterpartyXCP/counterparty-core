@@ -128,11 +128,11 @@ def software_version():
     logger.debug('Checking version.')
 
     try:
-        host = 'https://counterpartyxcp.github.io/counterparty-lib/protocol_changes.json'
+        host = 'https://counterpartyxcp.github.io/counterparty-lib/counterpartylib/protocol_changes.json'
         response = requests.get(host, headers={'cache-control': 'no-cache'})
         # TODO: Temporary
         if response.status_code != 200:
-            host = 'https://counterpartyxcp.github.io/counterpartyd/protocol_changes.json'  # Old Location
+            host = 'https://counterpartyxcp.github.io/counterpartyd/counterpartylib/protocol_changes.json'  # Old Location
             response = requests.get(host, headers={'cache-control': 'no-cache'})
         versions = json.loads(response.text)
     except (requests.exceptions.ConnectionError, ConnectionRefusedError, ValueError):
