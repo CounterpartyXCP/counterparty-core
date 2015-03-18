@@ -97,9 +97,11 @@ def parse (db, tx, message):
         elif balances[0]['quantity'] < quantity:
             quantity = min(balances[0]['quantity'], quantity)
 
-    if status == 'valid':
-        # For SQLite3
+    # For SQLite3
+    if quantity:
         quantity = min(quantity, config.MAX_INT)
+
+    if status == 'valid':
         problems = validate(db, tx['source'], tx['destination'], asset, quantity, tx['block_index'])
         if problems: status = 'invalid: ' + '; '.join(problems)
 
