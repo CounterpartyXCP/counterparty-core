@@ -879,15 +879,15 @@ def follow(db):
     else:
         block_index = util.CURRENT_BLOCK_INDEX + 1
 
-    # Check database version.
-    try:
-        check.database_version(db)
-    except check.DatabaseVersionError as e:
-        logger.info(str(e))
-        # no need to reparse or rollback a new database
-        if block_index != config.BLOCK_FIRST:
-            reparse(db, block_index=e.reparse_block_index, quiet=False)
-        database.update_version(db)
+        # Check database version.
+        try:
+            check.database_version(db)
+        except check.DatabaseVersionError as e:
+            logger.info(str(e))
+            # no need to reparse or rollback a new database
+            if block_index != config.BLOCK_FIRST:
+                reparse(db, block_index=e.reparse_block_index, quiet=False)
+            database.update_version(db)
 
     logger.info('Resuming parsing.')
 
