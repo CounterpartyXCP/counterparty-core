@@ -20,6 +20,7 @@ import csv
 import http
 
 import bitcoin as bitcoinlib
+from bitcoin.core.script import CScriptInvalidError
 
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
@@ -555,7 +556,12 @@ def get_tx_info2(tx_hex, block_parser=None):
         output_value = vout.nValue
         fee -= output_value
 
-        asm = script.get_asm(vout.scriptPubKey)
+        # Ignore transactions with invalid script.
+        try:
+          asm = script.get_asm(vout.scriptPubKey)
+        except CScriptInvalidError as e:
+          raise DecodeError(e)
+
         if asm[0] == 'OP_RETURN':
             new_destination, new_data = decode_opreturn(asm)
         elif asm[-1] == 'OP_CHECKSIG':
