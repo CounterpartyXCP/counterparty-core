@@ -1,6 +1,5 @@
 ## Client Versions ##
-* v9.50.1 (???)
-	* automatically spend 1‐of‐`N` multisig outputs
+* v9.51.0 (2015-03-28)
 	* remove `get_asset_info(assets)` method from the API
 	* replace `get_xcp_supply()` method from the API by `get_supply(asset)`
 	* disable rock‐paper‐scissors (protocol change: ???)
@@ -9,9 +8,12 @@
 	* authentication on JSON-RPC API is off by default
 	* RPC password is not mandatory now
 	* `get_unspent_txouts` API method parameter and return values changed
-* v9.50.0 (2014-03-18)
+	* Fix Unhandled Exception with invalid script on tesnet
+	* Disable RPS
+	* Check for Null Data Chunks
+* v9.50.0 (2015-03-18)
 	* hotfix: global integer overflow
-* v9.49.4 (2014-02-05)
+* v9.49.4 (2015-02-05)
 	* reconceived this package as a libary
 	* moved CLI to new repository: `counterparty-cli`
 	* remove signing and broadcast functionality from API (`do_*`, `sign_tx`, `broadcast_tx` calls)
