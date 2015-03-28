@@ -1,7 +1,9 @@
 ## Client Versions ##
-* v9.50.0 (2014-03-18)
+* v9.51.0 (2015-03-18)
+	* hotfix: Unhandled Exception with invalid script
+* v9.50.0 (2015-03-18)
 	* hotfix: global integer overflow
-* v9.49.4 (2014-02-05)
+* v9.49.4 (2015-02-05)
 	* reconceived this package as a libary
 	* moved CLI to new repository: `counterparty-cli`
 	* remove signing and broadcast functionality from API (`do_*`, `sign_tx`, `broadcast_tx` calls)
