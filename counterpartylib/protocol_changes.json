@@ -40,12 +40,6 @@
 			"minimum_version_minor": 50,
 			"minimum_version_revision": 0,
 			"block_index": 0
-		},
-	"hotfix_invalid_script":      {
-			"minimum_version_major": 9,
-			"minimum_version_minor": 51,
-			"minimum_version_revision": 0,
-			"block_index": 0
 		}
 
 }
