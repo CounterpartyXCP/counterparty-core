@@ -97,24 +97,15 @@ def get_btc_supply(normalize=False):
     return total_supply if normalize else int(total_supply * config.UNIT)
 
 def is_scriptpubkey_spendable(scriptpubkey_hex, source, multisig_inputs=False):
-    # TODO: Support multi‐sig sources.
-
     c_scriptpubkey = bitcoinlib.core.CScript(bitcoinlib.core.x(scriptpubkey_hex))
     vout_address = script.scriptpubkey_to_address(c_scriptpubkey)
     if not vout_address:
         return False
 
     source = script.make_canonical(source)
-    if multisig_inputs and script.is_multisig(vout_address) and not script.is_multisig(source):
-        # TODO: This is just for BTC transactions while BTC fees must be paid
-        # by source, because then inputs must be multi‐sig only when source is
-        # multi‐sig.)
-        signatures_required, pubkeyhashes, signatures_possible = script.extract_array(vout_address)
-        if signatures_required == 1 and source in pubkeyhashes:
-            return True
-    else:
-        if vout_address == source:
-            return True
+
+    if vout_address == source:
+        return True
 
     return False
 
