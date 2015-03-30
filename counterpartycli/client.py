@@ -242,7 +242,7 @@ def main():
                         wallet.unlock(passphrase)
                     signed_tx_hex = wallet.sign_raw_transaction(unsigned_hex)
                 else:
-                    private_key_wif = input('Source address not in wallet. Please enter the private key in WIF formar for {}:'.format(args.source))
+                    private_key_wif = input('Source address not in wallet. Please enter the private key in WIF format for {}:'.format(args.source))
                     if not private_key_wif:
                         raise TransactionError('invalid private key')
                     signed_tx_hex = wallet.sign_raw_transaction(unsigned_hex, private_key_wif=private_key_wif)
