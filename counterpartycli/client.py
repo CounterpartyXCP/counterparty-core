@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 from counterpartylib.lib import config, script
 from counterpartylib.lib.util import make_id, BET_TYPE_NAME
 from counterpartylib.lib.log import isodt
-from counterpartylib.exceptions import TransactionError
+from counterpartylib.lib.exceptions import TransactionError
 from counterpartycli.util import add_config_arguments
 from counterpartycli.setup import generate_config_files
 from counterpartycli import APP_VERSION, util, messages, wallet, console, clientapi
