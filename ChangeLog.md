@@ -1,16 +1,15 @@
 ## Client Versions ##
 * v9.51.0 (2015-03-28)
-	* remove `get_asset_info(assets)` method from the API
-	* replace `get_xcp_supply()` method from the API by `get_supply(asset)`
-	* disable rock‐paper‐scissors (protocol change: ???)
-	* default to using `opreturn` encoding when possible
-	* added HTTP REST API
-	* authentication on JSON-RPC API is off by default
-	* RPC password is not mandatory now
+	* Check for null data chunks (protocol change: 352000)
+	* Disable rock‐paper‐scissors (protocol change: 352000)
+	* Remove `get_asset_info(assets)` API method
+	* Replace `get_xcp_supply()` API method with `get_supply(asset)`
+	* Default to using `opreturn` encoding when possible
+	* Added HTTP REST API
+	* Authentication on JSON‐RPC API is off by default
+	* JSON‐RPC password is no longer mandatory
 	* `get_unspent_txouts` API method parameter and return values changed
-	* Fix Unhandled Exception with invalid script on tesnet
-	* Disable RPS
-	* Check for Null Data Chunks
+	* Catch unhandled exception with invalid script on tesnet
 * v9.50.0 (2015-03-18)
 	* hotfix: global integer overflow
 * v9.49.4 (2015-02-05)
