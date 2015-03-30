@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 from counterpartylib.lib import config, script
 from counterpartylib.lib.util import make_id, BET_TYPE_NAME
 from counterpartylib.lib.log import isodt
+from counterpartylib.exceptions import TransactionError
 from counterpartycli.util import add_config_arguments
 from counterpartycli.setup import generate_config_files
 from counterpartycli import APP_VERSION, util, messages, wallet, console, clientapi
@@ -243,7 +244,7 @@ def main():
                 else:
                     private_key_wif = input('Source address not in wallet. Please enter the private key in WIF formar for {}:'.format(args.source))
                     if not private_key_wif:
-                        raise exceptions.TransactionError('invalid private key')
+                        raise TransactionError('invalid private key')
                     signed_tx_hex = wallet.sign_raw_transaction(unsigned_hex, private_key_wif=private_key_wif)
 
                 logger.info('Transaction (signed): {}'.format(signed_tx_hex))
