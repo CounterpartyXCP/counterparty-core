@@ -474,6 +474,58 @@ class APIServer(threading.Thread):
                 return util.asset_supply(db, asset)
 
         @dispatcher.add_method
+        def get_xcp_supply():
+            logger.warning("Depreciated method: `get_xcp_supply`")
+            return util.xcp_supply(db)
+
+        @dispatcher.add_method
+        def get_asset_info(assets):
+            logger.warning("Depreciated method: `get_asset_info`")
+            if not isinstance(assets, list):
+                raise APIError("assets must be a list of asset names, even if it just contains one entry")
+            assetsInfo = []
+            for asset in assets:
+
+                # BTC and XCP.
+                if asset in [config.BTC, config.XCP]:
+                    if asset == config.BTC:
+                        supply = backend.get_btc_supply(normalize=False)
+                    else:
+                        supply = util.xcp_supply(db)
+
+                    assetsInfo.append({
+                        'asset': asset,
+                        'owner': None,
+                        'divisible': True,
+                        'locked': False,
+                        'supply': supply,
+                        'description': '',
+                        'issuer': None
+                    })
+                    continue
+
+                # User‐created asset.
+                cursor = db.cursor()
+                issuances = list(cursor.execute('''SELECT * FROM issuances WHERE (status = ? AND asset = ?) ORDER BY block_index ASC''', ('valid', asset)))
+                cursor.close()
+                if not issuances:
+                    continue #asset not found, most likely
+                else:
+                    last_issuance = issuances[-1]
+                locked = False
+                for e in issuances:
+                    if e['locked']: locked = True
+                assetsInfo.append({
+                    'asset': asset,
+                    'owner': last_issuance['issuer'],
+                    'divisible': bool(last_issuance['divisible']),
+                    'locked': locked,
+                    'supply': util.asset_supply(db, asset),
+                    'description': last_issuance['description'],
+                    'issuer': last_issuance['issuer']})
+            return assetsInfo
+
+        @dispatcher.add_method
         def get_block_info(block_index):
             assert isinstance(block_index, int)
             cursor = db.cursor()
