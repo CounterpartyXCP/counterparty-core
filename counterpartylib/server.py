@@ -79,7 +79,8 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
                 rpc_host=None, rpc_port=None,
                 rpc_user=None, rpc_password=None,
                 rpc_no_allow_cors=False,
-                force=False, verbose=False):
+                force=False, verbose=False,
+                backend_ssl_verify=None, rpc_allow_cors=None):
 
      # Data directory
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
@@ -182,10 +183,14 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
         config.BACKEND_SSL = False  # Default to off.
 
     # Backend Core RPC SSL Verify
-    if backend_ssl_no_verify:
-        config.BACKEND_SSL_NO_VERIFY = backend_ssl_no_verify
+    if backend_ssl_verify is not None:
+        logger.warning('`backend_ssl_verify` is deprecated, please use `backend_ssl_no_verify`.')
+        config.BACKEND_SSL_NO_VERIFY = not backend_ssl_verify
     else:
-        config.BACKEND_SSL_NO_VERIFY = False # Default to on (don't support self‐signed certificates)
+        if backend_ssl_no_verify:
+            config.BACKEND_SSL_NO_VERIFY = backend_ssl_no_verify
+        else:
+            config.BACKEND_SSL_NO_VERIFY = False # Default to on (don't support self‐signed certificates)
 
     # Backend Poll Interval
     if backend_poll_interval:
@@ -248,10 +253,14 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
         config.RPC = 'http://' + config.RPC_HOST + ':' + str(config.RPC_PORT) + config.RPC_WEBROOT
 
     # RPC CORS
-    if rpc_no_allow_cors:
-        config.RPC_NO_ALLOW_CORS = rpc_no_allow_cors
+    if rpc_allow_cors is not None:
+        logger.warning('`rpc_allow_cors` is deprecated, please use `rpc_no_allow_cors`.')
+        config.RPC_NO_ALLOW_CORS = not rpc_allow_cors
     else:
-        config.RPC_NO_ALLOW_CORS = False
+        if rpc_no_allow_cors:
+            config.RPC_NO_ALLOW_CORS = rpc_no_allow_cors
+        else:
+            config.RPC_NO_ALLOW_CORS = False
 
     ##############
     # OTHER SETTINGS
