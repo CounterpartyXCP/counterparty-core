@@ -42,6 +42,8 @@ CONFIG_ARGS = [
     [('--api-log-file',), {'default': None, 'help': 'the path to the API log file'}]
 ]
 
+class VersionError(Exception):
+    pass
 def main():
     if os.name == 'nt':
         from counterpartylib.lib import util_windows
@@ -91,7 +93,8 @@ def main():
 
     # Configuration
     if args.action in ['reparse', 'rollback', 'kickstart', 'start']:
-        db = server.initialise(database_file=args.database_file,
+        try:
+            db = server.initialise(database_file=args.database_file,
                                 log_file=args.log_file, api_log_file=args.api_log_file,
                                 testnet=args.testnet, testcoin=args.testcoin,
                                 backend_name=args.backend_name,
@@ -106,6 +109,11 @@ def main():
                                 rpc_password=args.rpc_password, rpc_no_allow_cors=args.rpc_no_allow_cors,
                                 force=args.force, verbose=args.verbose)
                                 #,broadcast_tx_mainnet=args.broadcast_tx_mainnet)
+        except TypeError as e:
+            if 'unexpected keyword argument' in str(e):
+                raise VersionError('Unsupported Server Parameter. CLI/Library Version Incompatibility.')
+            else:
+                raise e
 
     # PARSING
     if args.action == 'reparse':
