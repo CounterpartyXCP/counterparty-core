@@ -4,12 +4,12 @@
 	* Disable rock‐paper‐scissors (protocol change: 352000)
 	* Remove `get_asset_info(assets)` API method
 	* Replace `get_xcp_supply()` API method with `get_supply(asset)`
-	* Default to using `opreturn` encoding when possible
-	* Added HTTP REST API
-	* Authentication on JSON‐RPC API is off by default
-	* JSON‐RPC password is no longer mandatory
 	* `get_unspent_txouts` API method parameter and return values changed
-	* Catch unhandled exception with invalid script on tesnet
+	* Authentication on JSON‐RPC API is off by default
+	* `rpc_password` configuration parameter is no longer mandatory
+	* Default to using `opreturn` encoding when possible
+	* Catch unhandled exception with invalid script on testnet
+	* Added HTTP REST API
 * v9.50.0 (2015-03-18)
 	* hotfix: global integer overflow
 * v9.49.4 (2015-02-05)
