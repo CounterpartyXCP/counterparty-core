@@ -475,12 +475,12 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_xcp_supply():
-            logger.warning("Depreciated method: `get_xcp_supply`")
+            logger.warning("Deprecated method: `get_xcp_supply`")
             return util.xcp_supply(db)
 
         @dispatcher.add_method
         def get_asset_info(assets):
-            logger.warning("Depreciated method: `get_asset_info`")
+            logger.warning("Deprecated method: `get_asset_info`")
             if not isinstance(assets, list):
                 raise APIError("assets must be a list of asset names, even if it just contains one entry")
             assetsInfo = []

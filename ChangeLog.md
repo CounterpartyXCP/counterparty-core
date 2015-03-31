@@ -36,7 +36,7 @@
 	* update README
 	* if no RPC password is specified, generate automatically
 	* allow manually providing pubkeys for multi‐sig addresses
-	* removed depreciated callback functionality
+	* removed deprecated callback functionality
 	* new log format, architecture
 	* fixed API Status Poller
 	* fixed troublesome `socket.timeout` error
