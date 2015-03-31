@@ -262,7 +262,7 @@ def compose_transaction(args, message_name, param_names):
     method = 'create_{}'.format(message_name)
     unsigned_tx_hex = util.api(method, params)
     
-    check_transaction(method, params, unsigned_tx_hex)
+    # check_transaction(method, params, unsigned_tx_hex)
 
     return unsigned_tx_hex
 
