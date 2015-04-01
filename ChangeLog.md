@@ -1,5 +1,5 @@
 ## Client Versions ##
-* v9.51.0 (2015-03-28)
+* v9.51.0 (2015-04-01)
 	* Check for null data chunks (protocol change: 352000)
 	* Disable rock‐paper‐scissors (protocol change: 352000)
 	* Remove `get_asset_info(assets)` API method
