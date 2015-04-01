@@ -28,4 +28,5 @@
 
 * Verify that your fork passes all tests. The test suite is invoked with `$
   py.test-3.4` in the `counterpartylib` directory of the repository. The
-`ethereum-serpent` dependency is satisfied by running `setup.py install --with-serpent`
+`ethereum-serpent` dependency is satisfied by running `setup.py install
+--with-serpent` and `sudo pip2 install ethereum-serpent==1.6.7`.

@@ -1,5 +1,6 @@
 dependencies:
     override:
+        - pip install -r requirements.txt
         - python setup.py install --with-serpent
 test:
     override:
@@ -7,7 +8,7 @@ test:
 machine:
     pre:
         - mkdir -p ~/.local/share/counterparty
-        - cd ~/.local/share/counterparty; wget https://s3.amazonaws.com/counterparty-bootstrap/counterpartyd-db.latest.tar.gz; tar xvzf counterpartyd-db.latest.tar.gz; mv counterpartyd.9.db counterparty.db
-        - cd ~/.local/share/counterparty; wget https://s3.amazonaws.com/counterparty-bootstrap/counterpartyd-testnet-db.latest.tar.gz; tar xvzf counterpartyd-testnet-db.latest.tar.gz; mv counterpartyd.9.testnet.db counterparty.testnet.db
+        - cd ~/.local/share/counterparty; wget https://s3.amazonaws.com/counterparty-bootstrap/counterparty-db.latest.tar.gz; tar xvzf counterparty-db.latest.tar.gz;
+        - cd ~/.local/share/counterparty; wget https://s3.amazonaws.com/counterparty-bootstrap/counterparty-db-testnet.latest.tar.gz; tar xvzf counterparty-db-testnet.latest.tar.gz;
     python:
         version: 3.4.1

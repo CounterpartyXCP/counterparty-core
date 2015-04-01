@@ -129,7 +129,7 @@ def post_install(cmd, install_serpent=False):
     if install_serpent:
         cmd.run_command('install_serpent')
     cmd.run_command('move_old_db')
-             
+
 class install(_install):
     user_options = _install.user_options + [
         ("with-serpent", None, "Install Ethereum Serpent"),
@@ -141,7 +141,13 @@ class install(_install):
         _install.initialize_options(self)
 
     def run(self):
-        _install.do_egg_install(self)
+        caller = sys._getframe(2)
+        caller_module = caller.f_globals.get('__name__','')
+        caller_name = caller.f_code.co_name
+        if caller_module == 'distutils.dist' or caller_name == 'run_commands':
+            _install.run(self)
+        else:
+            self.do_egg_install()
         post_install(self, self.with_serpent)
 
 class bdist_egg(_bdist_egg):
@@ -150,21 +156,22 @@ class bdist_egg(_bdist_egg):
         post_install(self, False)
 
 required_packages = [
-    'appdirs>=1.4.0',
-    'python-dateutil>=2.2',
-    'flask>=0.10.1',
-    'Flask-HTTPAuth>=2.3.0',
-    'json-rpc>=1.7',
-    'pytest>=2.6.4',
-    'pytest-cov>=1.8.0',
-    'pycoin>=0.52',
-    'requests>=2.3.0',
-    'tornado>=4.0',
-    'pycrypto>=2.6',
-    'tendo>=0.2.6',
-    'pysha3>=0.3',
-    'colorlog>=2.4.0',
-    'python-bitcoinlib>=0.2.1'
+    'appdirs',
+    'python-dateutil',
+    'Flask-HTTPAuth',
+    'Flask',
+    'json-rpc',
+    'pytest',
+    'pytest-cov',
+    'pycoin',
+    'requests',
+    'tornado',
+    'pycrypto',
+    'tendo',
+    'pysha3',
+    'colorlog',
+    'python-bitcoinlib',
+    'xmltodict'
 ]
 
 setup_options = {
@@ -177,7 +184,6 @@ setup_options = {
     'url': 'http://counterparty.io',
     'license': 'MIT',
     'description': 'Counterparty Protocol Reference Implementation',
-    'long_description': '',
     'keywords': 'counterparty, bitcoin',
     'classifiers': [
         "Development Status :: 5 - Production/Stable",
@@ -196,7 +202,7 @@ setup_options = {
     'provides': ['counterpartylib'],
     'packages': find_packages(),
     'zip_safe': False,
-    'setup_requires': ['appdirs==1.4.0'],
+    'setup_requires': ['appdirs'],
     'install_requires': required_packages,
     'include_package_data': True,
     'cmdclass': {
@@ -206,5 +212,9 @@ setup_options = {
         'install_serpent': install_serpent
     }
 }
+
+if sys.argv[1] == 'sdist':
+    setup_options['long_description_markdown_filename'] = 'README.md'
+    setup_options['setup_requires'].append('setuptools-markdown')
 
 setup(**setup_options)

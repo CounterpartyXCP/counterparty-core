@@ -2,8 +2,9 @@ language: python
 python:
 - "3.4"
 install:
+- pip install -r requirements.txt
+- pip install python-coveralls
 - python setup.py install --with-serpent
-- pip install python-coveralls --use-mirrors
 script: cd counterpartylib; py.test --skiptestbook=all --cov-config=../.coveragerc --cov-report=term-missing --cov=./
 notifications:
   slack:

@@ -1,6 +1,5 @@
 """
-Construct, serialize, sign and broadcast the Bitcoin transactions that are
-Counterparty transactions.
+Construct and serialize the Bitcoin transactions that are Counterparty transactions.
 
 This module contains no consensus‐critical code.
 """
@@ -17,7 +16,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 import requests
-from pycoin.encoding import EncodingError
 from Crypto.Cipher import ARC4
 from bitcoin.core.script import CScript
 from bitcoin.core import x
@@ -67,24 +65,25 @@ def op_push (i):
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
 
 def get_dust_return_pubkey(source, provided_pubkeys, encoding):
-    # Get `dust_return_pubkey`, if necessary.
-    if encoding in ('multisig', 'pubkeyhash'):
+    """Return the pubkey to which dust from data outputs will be sent.
 
-        # Get hex dust return pubkey.
-        if script.is_multisig(source):
-            a, self_pubkeys, b = script.extract_array(backend.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys))
-            dust_return_pubkey_hex = self_pubkeys[0]
-        else:
-            dust_return_pubkey_hex = backend.pubkeyhash_to_pubkey(source, provided_pubkeys)
-
-        # Convert hex public key into the (binary) dust return pubkey.
-        try:
-            dust_return_pubkey = binascii.unhexlify(dust_return_pubkey_hex)
-        except binascii.Error:
-            raise script.InputError('Invalid private key.')
-
+    This pubkey is used in multi-sig data outputs (as the only real pubkey) to
+    make those the outputs spendable. It is derived from the source address, so
+    that the dust is spendable by the creator of the transaction.
+    """ 
+    # Get hex dust return pubkey.
+    if script.is_multisig(source):
+        a, self_pubkeys, b = script.extract_array(backend.multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys))
+        dust_return_pubkey_hex = self_pubkeys[0]
     else:
-        dust_return_pubkey = None
+        dust_return_pubkey_hex = backend.pubkeyhash_to_pubkey(source, provided_pubkeys)
+
+    # Convert hex public key into the (binary) dust return pubkey.
+    try:
+        dust_return_pubkey = binascii.unhexlify(dust_return_pubkey_hex)
+    except binascii.Error:
+        raise script.InputError('Invalid private key.')
+
     return dust_return_pubkey
 
 def get_multisig_script(address):
@@ -136,6 +135,14 @@ def get_monosig_script(address):
     return tx_script
 
 def make_fully_valid(pubkey_start):
+    """Take a too short data pubkey and make it look like a real pubkey.
+
+    Take an obfuscated chunk of data that is two bytes too short to be a pubkey and
+    add a sign byte to its beginning and a nonce byte to its end. Choose these
+    bytes so that the resulting sequence of bytes is a fully valid pubkey (i.e. on
+    the ECDSA curve). Find the correct bytes by guessing randomly until the check
+    passes. (In parsing, these two bytes are ignored.)
+    """
     assert type(pubkey_start) == bytes
     assert len(pubkey_start) == 31    # One sign byte and one nonce byte required (for 33 bytes).
 
@@ -201,47 +208,33 @@ def serialise (encoding, inputs, destination_outputs, data_output=None, change_o
         data_array, value = data_output
         s += value.to_bytes(8, byteorder='little')        # Value
 
-        if util.enabled('multisig_addresses'):   # Protocol change.
-            data_chunk = config.PREFIX + data_chunk
+        data_chunk = config.PREFIX + data_chunk
 
         # Initialise encryption key (once per output).
         key = ARC4.new(binascii.unhexlify(inputs[0]['txid']))  # Arbitrary, easy‐to‐find, unique key.
 
         if encoding == 'multisig':
+            assert dust_return_pubkey
             # Get data (fake) public key.
-            if util.enabled('multisig_addresses'):   # Protocol change.
-                pad_length = (33 * 2) - 1 - 2 - 2 - len(data_chunk)
-                assert pad_length >= 0
-                data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
-                data_chunk = key.encrypt(data_chunk)
-                data_pubkey_1 = make_fully_valid(data_chunk[:31])
-                data_pubkey_2 = make_fully_valid(data_chunk[31:])
+            pad_length = (33 * 2) - 1 - 2 - 2 - len(data_chunk)
+            assert pad_length >= 0
+            data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
+            data_chunk = key.encrypt(data_chunk)
+            data_pubkey_1 = make_fully_valid(data_chunk[:31])
+            data_pubkey_2 = make_fully_valid(data_chunk[31:])
 
-                # Construct script.
-                tx_script = OP_1                                   # OP_1
-                tx_script += op_push(33)                           # Push bytes of data chunk (fake) public key    (1/2)
-                tx_script += data_pubkey_1                         # (Fake) public key                  (1/2)
-                tx_script += op_push(33)                           # Push bytes of data chunk (fake) public key    (2/2)
-                tx_script += data_pubkey_2                         # (Fake) public key                  (2/2)
-                tx_script += op_push(len(dust_return_pubkey))  # Push bytes of source public key
-                tx_script += dust_return_pubkey                       # Source public key
-                tx_script += OP_3                                  # OP_3
-                tx_script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
-            else:
-                pad_length = 33 - 1 - len(data_chunk)
-                assert pad_length >= 0
-                data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b'\x00')
-                # Construct script.
-                tx_script = OP_1                                   # OP_1
-                tx_script += op_push(len(dust_return_pubkey))  # Push bytes of source public key
-                tx_script += dust_return_pubkey                       # Source public key
-                tx_script += op_push(len(data_chunk))              # Push bytes of data chunk (fake) public key
-                tx_script += data_chunk                            # (Fake) public key
-                tx_script += OP_2                                  # OP_2
-                tx_script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
+            # Construct script.
+            tx_script = OP_1                                   # OP_1
+            tx_script += op_push(33)                           # Push bytes of data chunk (fake) public key    (1/2)
+            tx_script += data_pubkey_1                         # (Fake) public key                  (1/2)
+            tx_script += op_push(33)                           # Push bytes of data chunk (fake) public key    (2/2)
+            tx_script += data_pubkey_2                         # (Fake) public key                  (2/2)
+            tx_script += op_push(len(dust_return_pubkey))  # Push bytes of source public key
+            tx_script += dust_return_pubkey                       # Source public key
+            tx_script += OP_3                                  # OP_3
+            tx_script += OP_CHECKMULTISIG                      # OP_CHECKMULTISIG
         elif encoding == 'opreturn':
-            if util.enabled('multisig_addresses'):   # Protocol change.
-                data_chunk = key.encrypt(data_chunk)
+            data_chunk = key.encrypt(data_chunk)
             tx_script = OP_RETURN                                  # OP_RETURN
             tx_script += op_push(len(data_chunk))                  # Push bytes of data chunk (NOTE: OP_SMALLDATA?)
             tx_script += data_chunk                                # Data
@@ -337,7 +330,7 @@ def construct (db, tx_info, encoding='auto',
     if data:
         if encoding == 'auto':
             if len(data) <= config.OP_RETURN_MAX_SIZE:
-                encoding = 'multisig'   # BTCGuild isn’t mining `OP_RETURN`?!
+                encoding = 'opreturn'
             else:
                 encoding = 'multisig'
         elif encoding not in ('pubkeyhash', 'multisig', 'opreturn'):
@@ -383,7 +376,10 @@ def construct (db, tx_info, encoding='auto',
         # blockchain.
     if source:
         script.validate(source)
-    dust_return_pubkey = get_dust_return_pubkey(source, provided_pubkeys, encoding)
+    if encoding == 'multisig':
+        dust_return_pubkey = get_dust_return_pubkey(source, provided_pubkeys, encoding)
+    else:
+        dust_return_pubkey = None
 
     # Calculate collective size of outputs, for fee calculation.
     if encoding == 'multisig':
@@ -395,8 +391,9 @@ def construct (db, tx_info, encoding='auto',
     outputs_size = ((25 + 9) * len(destination_outputs)) + (len(data_array) * data_output_size)
 
     # Get inputs.
-    unspent = backend.get_unspent_txouts(source)
-    unspent = backend.sort_unspent_txouts(unspent, allow_unconfirmed_inputs)
+    multisig_inputs = not data
+    unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, multisig_inputs=multisig_inputs)
+    unspent = backend.sort_unspent_txouts(unspent)
     logger.debug('Sorted UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
 
     inputs = []
@@ -483,8 +480,10 @@ def construct (db, tx_info, encoding='auto',
     desired_source = script.make_canonical(desired_source)
 
     # Check desired info against parsed info.
-    if (desired_source, desired_destination, desired_data) != (parsed_source, parsed_destination, parsed_data):
-        raise exceptions.TransactionError('constructed transaction does not parse correctly')
+    desired = (desired_source, desired_destination, desired_data)
+    parsed = (parsed_source, parsed_destination, parsed_data)
+    if desired != parsed:
+        raise exceptions.TransactionError('Constructed transaction does not parse correctly: {} ≠ {}'.format(desired, parsed))
 
     return unsigned_tx_hex
 

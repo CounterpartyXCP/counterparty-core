@@ -9,6 +9,8 @@
 # Description
 `counterparty-lib` is the reference implementation of the [Counterparty Protocol](https://counterparty.io).
 
+**Note:** for the command-line interface that used to be called `counterpartyd`, see [`counterparty-cli`](https://github.com/CounterpartyXCP/counterparty-cli).
+
 
 # Requirements
 * [Patched Bitcoin Core](https://github.com/btcdrak/bitcoin/releases) with the following options set:

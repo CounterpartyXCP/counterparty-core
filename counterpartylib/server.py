@@ -74,12 +74,13 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
                 testnet=False, testcoin=False,
                 backend_name=None, backend_connect=None, backend_port=None,
                 backend_user=None, backend_password=None,
-                backend_ssl=False, backend_ssl_verify=True,
+                backend_ssl=False, backend_ssl_no_verify=False,
                 backend_poll_interval=None, 
                 rpc_host=None, rpc_port=None,
                 rpc_user=None, rpc_password=None,
-                rpc_allow_cors=None,
-                force=False, verbose=False):
+                rpc_no_allow_cors=False,
+                force=False, verbose=False,
+                backend_ssl_verify=None, rpc_allow_cors=None):
 
      # Data directory
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
@@ -130,6 +131,14 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
         filename = 'server{}.api.log'.format(network)
         config.API_LOG = os.path.join(log_dir, filename)
     logger.debug('Writing API log to file: `{}`'.format(config.API_LOG))
+
+    # Set up logging.
+    root_logger = logging.getLogger()    # Get root logger.
+    log.set_up(root_logger, verbose=verbose, logfile=config.LOG)
+    # Log unhandled errors.
+    def handle_exception(exc_type, exc_value, exc_traceback):
+        logger.error("Unhandled Exception", exc_info=(exc_type, exc_value, exc_traceback))
+    sys.excepthook = handle_exception
 
     ##############
     # THINGS WE CONNECT TO
@@ -183,9 +192,13 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
 
     # Backend Core RPC SSL Verify
     if backend_ssl_verify is not None:
-        config.BACKEND_SSL_VERIFY = backend_ssl_verify
+        logger.warning('The server parameter `backend_ssl_verify` is deprecated. Use `backend_ssl_no_verify` instead.')
+        config.BACKEND_SSL_NO_VERIFY = not backend_ssl_verify
     else:
-        config.BACKEND_SSL_VERIFY = True # Default to on (don't support self‐signed certificates)
+        if backend_ssl_no_verify:
+            config.BACKEND_SSL_NO_VERIFY = backend_ssl_no_verify
+        else:
+            config.BACKEND_SSL_NO_VERIFY = False # Default to on (don't support self‐signed certificates)
 
     # Backend Poll Interval
     if backend_poll_interval:
@@ -209,6 +222,9 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
         config.RPC_HOST = rpc_host
     else:
         config.RPC_HOST = 'localhost'
+
+    # The web root directory for API calls, eg. localhost:14000/rpc/
+    config.RPC_WEBROOT = '/rpc/'
 
     # counterpartyd API RPC port
     if rpc_port:
@@ -240,16 +256,19 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     #  counterpartyd API RPC password
     if rpc_password:
         config.RPC_PASSWORD = rpc_password
+        config.RPC = 'http://' + urlencode(config.RPC_USER) + ':' + urlencode(config.RPC_PASSWORD) + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT) + config.RPC_WEBROOT
     else:
-        raise ConfigurationError('RPC password not set. (Use configuration file or --rpc-password=PASSWORD)')
-
-    config.RPC = 'http://' + urlencode(config.RPC_USER) + ':' + urlencode(config.RPC_PASSWORD) + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT)
+        config.RPC = 'http://' + config.RPC_HOST + ':' + str(config.RPC_PORT) + config.RPC_WEBROOT
 
     # RPC CORS
     if rpc_allow_cors is not None:
-        config.RPC_ALLOW_CORS = rpc_allow_cors
+        logger.warning('The server parameter `rpc_allow_cors` is deprecated. Use `rpc_no_allow_cors` instead.')
+        config.RPC_NO_ALLOW_CORS = not rpc_allow_cors
     else:
-        config.RPC_ALLOW_CORS = True
+        if rpc_no_allow_cors:
+            config.RPC_NO_ALLOW_CORS = rpc_no_allow_cors
+        else:
+            config.RPC_NO_ALLOW_CORS = False
 
     ##############
     # OTHER SETTINGS
@@ -296,14 +315,6 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
             config.BURN_END = config.BURN_END_MAINNET
             config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
 
-    # Set up logging.
-    root_logger = logging.getLogger()    # Get root logger.
-    log.set_up(root_logger, verbose=verbose, logfile=config.LOG)
-    # Log unhandled errors.
-    def handle_exception(exc_type, exc_value, exc_traceback):
-        logger.error("Unhandled Exception", exc_info=(exc_type, exc_value, exc_traceback))
-    sys.excepthook = handle_exception
-
     logger.info('Running v{} of counterparty-lib.'.format(config.VERSION_STRING))
 
     if config.FORCE:
@@ -339,7 +350,6 @@ def start_all(db):
     api_status_poller.start()
 
     # API Server.
-    api_status_poller = api.APIStatusPoller()
     api_server = api.APIServer()
     api_server.daemon = True
     api_server.start()

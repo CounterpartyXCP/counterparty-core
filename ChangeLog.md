@@ -1,7 +1,18 @@
 ## Client Versions ##
-* v9.50.0 (2014-03-18)
+* v9.51.0 (2015-04-01)
+	* Check for null data chunks (protocol change: 352000)
+	* Disable rock‐paper‐scissors (protocol change: 352000)
+	* Remove `get_asset_info(assets)` API method
+	* Replace `get_xcp_supply()` API method with `get_supply(asset)`
+	* `get_unspent_txouts` API method parameter and return values changed
+	* Authentication on JSON‐RPC API is off by default
+	* `rpc_password` configuration parameter is no longer mandatory
+	* Default to using `opreturn` encoding when possible
+	* Catch unhandled exception with invalid script on testnet
+	* Added HTTP REST API
+* v9.50.0 (2015-03-18)
 	* hotfix: global integer overflow
-* v9.49.4 (2014-02-05)
+* v9.49.4 (2015-02-05)
 	* reconceived this package as a libary
 	* moved CLI to new repository: `counterparty-cli`
 	* remove signing and broadcast functionality from API (`do_*`, `sign_tx`, `broadcast_tx` calls)
@@ -25,7 +36,7 @@
 	* update README
 	* if no RPC password is specified, generate automatically
 	* allow manually providing pubkeys for multi‐sig addresses
-	* removed depreciated callback functionality
+	* removed deprecated callback functionality
 	* new log format, architecture
 	* fixed API Status Poller
 	* fixed troublesome `socket.timeout` error

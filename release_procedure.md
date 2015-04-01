@@ -3,11 +3,11 @@
 - Quality Assurance
 - Update `CHANGELOG.md`
 - Update `lib.config.py`: `VERSION_*`
-- Update `protocol_changes.json` (if necessary)
-- Update `setup.py`
+- Update `protocol_changes.json` (as necessary)
+- Update `setup.py` (as necessary)
 - Update test suite (as necessary)
 - Run test suite
-- Update documentation (as appropriate).
+- Update documentation (as appropriate)
 - Tag and Sign Release
 - Merge branch into both `master` and `develop`
 - Rebase `gh-pages` to `master`

@@ -161,7 +161,7 @@ def validate (db, source, destination, asset, quantity, divisible, callable_, ca
 
 def compose (db, source, transfer_destination, asset, quantity, divisible, description):
 
-    # Callability is depreciated, so for re‐issuances set relevant parameters
+    # Callability is deprecated, so for re‐issuances set relevant parameters
     # to old values; for first issuances, make uncallable.
     cursor = db.cursor()
     cursor.execute('''SELECT * FROM issuances \

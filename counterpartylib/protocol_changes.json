@@ -40,6 +40,17 @@
 			"minimum_version_minor": 50,
 			"minimum_version_revision": 0,
 			"block_index": 0
+		},
+	"disable_rps": {
+			"minimum_version_major": 9,
+			"minimum_version_minor": 51,
+			"minimum_version_revision": 0,
+			"block_index": 352000
+		},
+	"null_data_check":      {
+			"minimum_version_major": 9,
+			"minimum_version_minor": 51,
+			"minimum_version_revision": 0,
+			"block_index": 352000
 		}
-
 }

@@ -34,7 +34,7 @@ def rpc(method, params):
     TRIES = 12
     for i in range(TRIES):
         try:
-            response = bitcoin_rpc_session.post(url, data=json.dumps(payload), headers=headers, verify=config.BACKEND_SSL_VERIFY)
+            response = bitcoin_rpc_session.post(url, data=json.dumps(payload), headers=headers, verify=(not config.BACKEND_SSL_NO_VERIFY))
             if i > 0:
                 logger.debug('Successfully connected.')
             break
@@ -59,8 +59,6 @@ def rpc(method, params):
         return response_json['result']
     elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
         raise BackendRPCError('{} Is `txindex` enabled in {} Core?'.format(response_json['error'], config.BTC_NAME))
-    elif response_json['error']['code'] == -4:   # Unknown private key (locked wallet?)
-        raise BackendRPCError('Unknown private key. (Locked wallet?)')
     elif response_json['error']['code'] == -28:   # “Verifying blocks...”
         logger.debug('Backend not ready. Sleeping for ten seconds.')
         # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
@@ -73,6 +71,7 @@ def rpc(method, params):
 # TODO: use scriptpubkey_to_address()
 @lru_cache(maxsize=4096)
 def extract_addresses(tx_hash):
+    # TODO: Use `rpc._batch` here.
     tx = getrawtransaction(tx_hash, verbose=True)
     addresses = []
 
@@ -90,23 +89,29 @@ def extract_addresses(tx_hash):
 
 def unconfirmed_transactions(address):
     # NOTE: This operation can be very slow.
-    logger.debug('Getting unconfirmed transactions.')
+    logger.debug('Checking mempool for UTXOs.')
 
     unconfirmed_tx = []
-    for tx_hash in getrawmempool():
+    mempool = getrawmempool()
+    for index, tx_hash in enumerate(mempool):
+        logger.debug('Possible mempool UTXO: {} ({}/{})'.format(tx_hash, index, len(mempool)))
         addresses, tx = extract_addresses(tx_hash)
         if address in addresses:
             unconfirmed_tx.append(tx)
     return unconfirmed_tx
 
-def searchrawtransactions(address):
-    logger.debug('Searching raw transactions.')
+def searchrawtransactions(address, unconfirmed=False):
 
     # Get unconfirmed transactions.
-    unconfirmed = unconfirmed_transactions(address)
+    if unconfirmed:
+        logger.debug('Getting unconfirmed transactions.')
+        unconfirmed = unconfirmed_transactions(address)
+    else:
+        unconfirmed = []
 
     # Get confirmed transactions.
     try:
+        logger.debug('Searching raw transactions.')
         rawtransactions = rpc('searchrawtransactions', [address, 1, 0, 9999999])
     except BackendRPCError as e:
         if str(e) == '404 Not Found':
@@ -123,11 +128,9 @@ def getblockcount():
 def getblockhash(blockcount):
     return rpc('getblockhash', [blockcount])
 
-@lru_cache(maxsize=4096)
 def getblock(block_hash):
     return rpc('getblock', [block_hash, False])
 
-@lru_cache(maxsize=4096)
 def getrawtransaction(tx_hash, verbose=False):
     return rpc('getrawtransaction', [tx_hash, 1 if verbose else 0])
 

@@ -20,6 +20,7 @@ import csv
 import http
 
 import bitcoin as bitcoinlib
+from bitcoin.core.script import CScriptInvalidError
 
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
@@ -555,7 +556,12 @@ def get_tx_info2(tx_hex, block_parser=None):
         output_value = vout.nValue
         fee -= output_value
 
-        asm = script.get_asm(vout.scriptPubKey)
+        # Ignore transactions with invalid script.
+        try:
+          asm = script.get_asm(vout.scriptPubKey)
+        except CScriptInvalidError as e:
+          raise DecodeError(e)
+
         if asm[0] == 'OP_RETURN':
             new_destination, new_data = decode_opreturn(asm)
         elif asm[-1] == 'OP_CHECKSIG':
@@ -565,7 +571,11 @@ def get_tx_info2(tx_hex, block_parser=None):
         else:
             raise DecodeError('unrecognised output type')
         assert not (new_destination and new_data)
-        assert new_destination != None or new_data != None
+        assert new_destination != None or new_data != None  # `decode_*()` should never return `None, None`.
+
+        if util.enabled('null_data_check'):
+            if new_data == []:
+                raise DecodeError('new destination is `None`')
 
         # All destinations come before all data.
         if not data and not new_data and destinations != [config.UNSPENDABLE,]:
@@ -770,7 +780,7 @@ def kickstart(db, bitcoind_dir):
     with db:
 
         # Prepare SQLite database. # TODO: Be more specific!
-        logger.info('Preparing database…')
+        logger.info('Preparing database.')
         start_time = time.time()
         reinitialise(db, block_index=config.BLOCK_FIRST - 1)
         logger.info('Prepared database in {:.3f}s'.format(time.time() - start_time))
@@ -827,7 +837,7 @@ def kickstart(db, bitcoind_dir):
         block_parser.close()
 
         # Reorder all transactions in database.
-        logger.info('Reordering transactions…')
+        logger.info('Reordering transactions.')
         start_time = time.time()
         cursor.execute('''UPDATE transactions SET tx_index = tx_index + ?''', (tx_index,))
         logger.info('Reordered transactions in {:.3f}s.'.format(time.time() - start_time))
@@ -879,15 +889,15 @@ def follow(db):
     else:
         block_index = util.CURRENT_BLOCK_INDEX + 1
 
-    # Check database version.
-    try:
-        check.database_version(db)
-    except check.DatabaseVersionError as e:
-        logger.info(str(e))
-        # no need to reparse or rollback a new database
-        if block_index != config.BLOCK_FIRST:
-            reparse(db, block_index=e.reparse_block_index, quiet=False)
-        database.update_version(db)
+        # Check database version.
+        try:
+            check.database_version(db)
+        except check.DatabaseVersionError as e:
+            logger.info(str(e))
+            # no need to reparse or rollback a new database
+            if block_index != config.BLOCK_FIRST:
+                reparse(db, block_index=e.reparse_block_index, quiet=False)
+            database.update_version(db)
 
     logger.info('Resuming parsing.')
 
@@ -910,7 +920,7 @@ def follow(db):
         # and try again repeatedly.
         try:
             block_count = backend.getblockcount()
-        except (ConnectionRefusedError, http.client.CannotSendRequest) as e:
+        except (ConnectionRefusedError, http.client.CannotSendRequest, backend.addrindex.BackendRPCError) as e:
             if config.FORCE:
                 time.sleep(config.BACKEND_POLL_INTERVAL)
                 continue
