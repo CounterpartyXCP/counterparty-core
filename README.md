@@ -25,12 +25,18 @@
 
 # Installation
 
+**Linux and Mac OS X
+
 ```
 $ git clone https://github.com/CounterpartyXCP/counterparty-cli.git
 $ cd counterparty-cli
+$ pip3 install -r requirements.txt
 $ python3 setup.py install
 ```
 
+**Windows**
+
+Download and decompress standalone [binaries](https://github.com/CounterpartyXCP/counterparty-cli/releases).
 
 # Usage
 

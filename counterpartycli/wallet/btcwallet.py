@@ -11,16 +11,20 @@ from counterpartycli.util import wallet_api as rpc
 
 def get_wallet_addresses():
     addresses = []
-    for group in rpc('listaddressgroupings', []):
-        for bunch in group:
-            address, btc_balance = bunch[:2]
-            addresses.append(address)
+    for output in rpc('listunspent', [0, 99999]):
+        if output['address'] not in addresses:
+            addresses.append(output['address'])
     return addresses
 
 def get_btc_balances():
-    for group in rpc('listaddressgroupings', []):
-        for bunch in group:
-            yield bunch[:2]
+    addresses = {}
+    for output in rpc('listunspent', [0, 99999]):
+        if output['address'] not in addresses:
+            addresses[output['address']] = 0
+        addresses[output['address']] += output['amount']
+
+    for address in addresses:
+        yield [address, addresses[address]]
 
 def list_unspent():
     return rpc('listunspent', [0, 99999])
@@ -29,10 +33,17 @@ def sign_raw_transaction(tx_hex):
     return rpc('signrawtransaction', [tx_hex])['hex']
 
 def is_valid(address):
-    return rpc('validateaddress', [address])['isvalid']
+    address_info = rpc('validateaddress', [address])
+    # btcwallet return valid for pubkey
+    if address_info['isvalid'] and address_info['address'] == address:
+        return True
+    return False
 
 def is_mine(address):
-    return rpc('validateaddress', [address])['ismine']
+    address_info = rpc('validateaddress', [address])
+    if 'ismine' not in address_info:
+        return False
+    return address_info['ismine']
 
 def get_pubkey(address):
     address_infos = rpc('validateaddress', [address])
@@ -41,22 +52,14 @@ def get_pubkey(address):
     return None
 
 def get_btc_balance(address):
-    for group in rpc('listaddressgroupings', []):
-        for bunch in group:
-            btc_address, btc_balance = bunch[:2]
-            if btc_address == address:
-                return btc_balance
-    return 0
+    balance = 0
+    for output in rpc('listunspent', [0, 99999]):
+        if output['address'] == addresses:
+            balance += output['amount']
+    return balance
 
 def is_locked():
-    getinfo = rpc('getinfo', [])
-    if 'unlocked_until' in getinfo:
-        if getinfo['unlocked_until'] >= 10:
-            return False # Wallet is unlocked for at least the next 10 seconds.
-        else:
-            return True # Wallet is locked
-    else:
-        False
+    return rpc('walletislocked', [])
 
 def unlock(passphrase):
     return rpc('walletpassphrase', [passphrase, 60])
