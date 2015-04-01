@@ -9,8 +9,12 @@ import time
 from decimal import Decimal as D
 
 from counterpartycli.wallet import bitcoincore, btcwallet
-from counterpartylib.lib import config, util
+from counterpartylib.lib import config, util, exceptions, script
 from counterpartycli.util import api, value_out
+
+from pycoin.tx import Tx, SIGHASH_ALL
+from pycoin.encoding import wif_to_tuple_of_secret_exponent_compressed, public_pair_to_hash160_sec
+from pycoin.ecdsa import generator_secp256k1, public_pair_for_secret_exponent
 
 class WalletError(Exception):
     pass
@@ -28,30 +32,35 @@ def get_btc_balances():
     for address, btc_balance in WALLET().get_btc_balances():
     	yield [address, btc_balance]
 
+def pycoin_sign_raw_transaction(tx_hex, private_key_wif):
+    for char in private_key_wif:
+        if char not in script.b58_digits:
+            raise exceptions.TransactionError('invalid private key')
+
+    if config.TESTNET:
+        allowable_wif_prefixes = [config.PRIVATEKEY_VERSION_TESTNET]
+    else:
+        allowable_wif_prefixes = [config.PRIVATEKEY_VERSION_MAINNET]
+
+    secret_exponent, compressed = wif_to_tuple_of_secret_exponent_compressed(
+                    private_key_wif, allowable_wif_prefixes=allowable_wif_prefixes)
+    public_pair = public_pair_for_secret_exponent(generator_secp256k1, secret_exponent)
+    hash160 = public_pair_to_hash160_sec(public_pair, compressed)
+    hash160_lookup = {hash160: (secret_exponent, public_pair, compressed)}
+
+    tx = Tx.tx_from_hex(tx_hex)
+    for idx, tx_in in enumerate(tx.txs_in):
+        tx.sign_tx_in(hash160_lookup, idx, tx_in.script, hash_type=SIGHASH_ALL)
+
+    return tx.as_hex()
+
 def sign_raw_transaction(tx_hex, private_key_wif=None):
     if private_key_wif is None:
         if WALLET().is_locked():
             raise LockedWalletError('Wallet is locked.')
         return WALLET().sign_raw_transaction(tx_hex)
     else:
-        for char in private_key_wif:
-            if char not in script.b58_digits:
-                raise exceptions.TransactionError('invalid private key')
-
-        # TODO: Hack! (pybitcointools is Python 2 only)
-        import subprocess
-        i = 0
-        tx_hex = unsigned_tx_hex
-        while True: # pybtctool doesn’t implement `signall`
-            try:
-                tx_hex = subprocess.check_output(['pybtctool', 'sign', tx_hex, str(i), private_key_wif], stderr=subprocess.DEVNULL)
-            except Exception as e:
-                break
-        if tx_hex != unsigned_tx_hex:
-            signed_tx_hex = tx_hex.decode('utf-8')
-            return signed_tx_hex[:-1]   # Get rid of newline.
-        else:
-            raise exceptions.TransactionError('Could not sign transaction with pybtctool.')
+        return pycoin_sign_raw_transaction(tx_hex, private_key_wif)
 
 def get_pubkey(address):
     return WALLET().get_pubkey(address)
