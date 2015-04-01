@@ -192,7 +192,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
 
     # Backend Core RPC SSL Verify
     if backend_ssl_verify is not None:
-        logger.warning('`backend_ssl_verify` is deprecated, please use `backend_ssl_no_verify`.')
+        logger.warning('The server parameter `backend_ssl_verify` is deprecated. Use `backend_ssl_no_verify` instead.')
         config.BACKEND_SSL_NO_VERIFY = not backend_ssl_verify
     else:
         if backend_ssl_no_verify:
@@ -262,7 +262,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
 
     # RPC CORS
     if rpc_allow_cors is not None:
-        logger.warning('`rpc_allow_cors` is deprecated, please use `rpc_no_allow_cors`.')
+        logger.warning('The server parameter `rpc_allow_cors` is deprecated. Use `rpc_no_allow_cors` instead.')
         config.RPC_NO_ALLOW_CORS = not rpc_allow_cors
     else:
         if rpc_no_allow_cors:
