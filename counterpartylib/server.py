@@ -132,6 +132,14 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
         config.API_LOG = os.path.join(log_dir, filename)
     logger.debug('Writing API log to file: `{}`'.format(config.API_LOG))
 
+    # Set up logging.
+    root_logger = logging.getLogger()    # Get root logger.
+    log.set_up(root_logger, verbose=verbose, logfile=config.LOG)
+    # Log unhandled errors.
+    def handle_exception(exc_type, exc_value, exc_traceback):
+        logger.error("Unhandled Exception", exc_info=(exc_type, exc_value, exc_traceback))
+    sys.excepthook = handle_exception
+
     ##############
     # THINGS WE CONNECT TO
 
@@ -306,14 +314,6 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
             config.BURN_START = config.BURN_START_MAINNET
             config.BURN_END = config.BURN_END_MAINNET
             config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
-
-    # Set up logging.
-    root_logger = logging.getLogger()    # Get root logger.
-    log.set_up(root_logger, verbose=verbose, logfile=config.LOG)
-    # Log unhandled errors.
-    def handle_exception(exc_type, exc_value, exc_traceback):
-        logger.error("Unhandled Exception", exc_info=(exc_type, exc_value, exc_traceback))
-    sys.excepthook = handle_exception
 
     logger.info('Running v{} of counterparty-lib.'.format(config.VERSION_STRING))
 
