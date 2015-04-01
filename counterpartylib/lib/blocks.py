@@ -545,11 +545,14 @@ def decode_output(vout, ctx):
       raise DecodeError(e)
 
     if asm[0] == 'OP_RETURN':
-        new_destination, new_data = decode_opreturn(asm)
+        new_destination, new_data = decode_opreturn(asm, ctx)
+        output_type = 'OP_RETURN'
     elif asm[-1] == 'OP_CHECKSIG':
-        new_destination, new_data = decode_checksig(asm)
+        new_destination, new_data = decode_checksig(asm, ctx)
+        output_type = 'OP_CHECKSIG'
     elif asm[-1] == 'OP_CHECKMULTISIG':
-        new_destination, new_data = decode_checkmultisig(asm)
+        new_destination, new_data = decode_checkmultisig(asm, ctx)
+        output_type = 'OP_CHECKMULTISIG'
     else:
         raise DecodeError('unrecognised output type')
 
