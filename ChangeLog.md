@@ -2,8 +2,8 @@
 * v9.51.0 (2015-04-01)
 	* Check for null data chunks (protocol change: 352000)
 	* Disable rock‐paper‐scissors (protocol change: 352000)
-	* Remove `get_asset_info(assets)` API method
-	* Replace `get_xcp_supply()` API method with `get_supply(asset)`
+	* Deprecate `get_asset_info(assets)` API method
+	* Deprecate `get_xcp_supply()` API method in favor of `get_supply(asset)`
 	* `get_unspent_txouts` API method parameter and return values changed
 	* Authentication on JSON‐RPC API is off by default
 	* `rpc_password` configuration parameter is no longer mandatory
