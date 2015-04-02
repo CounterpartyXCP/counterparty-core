@@ -128,9 +128,9 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     if api_log_file:
         config.API_LOG = api_log_file
     else:
-        filename = 'server{}.api.log'.format(network)
+        filename = 'server{}.access.log'.format(network)
         config.API_LOG = os.path.join(log_dir, filename)
-    logger.debug('Writing API log to file: `{}`'.format(config.API_LOG))
+    logger.debug('Writing API accesses log to file: `{}`'.format(config.API_LOG))
 
     # Set up logging.
     root_logger = logging.getLogger()    # Get root logger.
