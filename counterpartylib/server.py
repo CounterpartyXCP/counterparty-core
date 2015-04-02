@@ -80,6 +80,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
                 rpc_user=None, rpc_password=None,
                 rpc_no_allow_cors=False,
                 force=False, verbose=False,
+                requests_timeout=config.DEFAULT_REQUESTS_TIMEOUT,
                 backend_ssl_verify=None, rpc_allow_cors=None):
 
      # Data directory
@@ -269,6 +270,8 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
             config.RPC_NO_ALLOW_CORS = rpc_no_allow_cors
         else:
             config.RPC_NO_ALLOW_CORS = False
+
+    config.REQUESTS_TIMEOUT = requests_timeout
 
     ##############
     # OTHER SETTINGS

@@ -1,6 +1,7 @@
 ## Client Versions ##
 * v9.51.1 (2015-04-??)
 	* Rename `server.api.log` to `server.access.log`
+	* Add `requests_timeout` parameter
 * v9.51.0 (2015-04-01)
 	* Check for null data chunks (protocol change: 352000)
 	* Disable rock‐paper‐scissors (protocol change: 352000)

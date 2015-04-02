@@ -7,6 +7,7 @@ from counterpartylib.lib import script
 from counterpartylib.lib import config
 
 import requests
+from requests.exceptions import Timeout, ReadTimeout, ConnectionError
 import time
 import json
 
@@ -34,13 +35,11 @@ def rpc(method, params):
     TRIES = 12
     for i in range(TRIES):
         try:
-            response = bitcoin_rpc_session.post(url, data=json.dumps(payload), headers=headers, verify=(not config.BACKEND_SSL_NO_VERIFY))
+            response = bitcoin_rpc_session.post(url, data=json.dumps(payload), headers=headers, verify=(not config.BACKEND_SSL_NO_VERIFY), timeout=config.REQUESTS_TIMEOUT)
             if i > 0:
                 logger.debug('Successfully connected.')
             break
-        except requests.exceptions.SSLError as e:
-            raise e
-        except requests.exceptions.ConnectionError:
+        except (Timeout, ReadTimeout, ConnectionError):
             logger.debug('Could not connect to backend at `{}`. (Try {}/{})'.format(url, i+1, TRIES))
             time.sleep(5)
 
