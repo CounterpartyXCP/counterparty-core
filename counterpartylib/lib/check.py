@@ -127,8 +127,8 @@ def check_change(protocol_change, change_name):
                 passed = False
 
     if not passed:
-        explanation = 'Your version of counterpartyd is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: ‘{}’. Please upgrade to the latest version and restart the server.'.format(
-            config.VERSION_STRING, protocol_change['block_index'], protocol_change['minimum_version_major'], protocol_change['minimum_version_minor'],
+        explanation = 'Your version of {} is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: ‘{}’. Please upgrade to the latest version and restart the server.'.format(
+            config.APP_NAME, config.VERSION_STRING, protocol_change['block_index'], protocol_change['minimum_version_major'], protocol_change['minimum_version_minor'],
             protocol_change['minimum_version_revision'], change_name)
         if util.CURRENT_BLOCK_INDEX >= protocol_change['block_index']:
             raise VersionUpdateRequiredError(explanation)

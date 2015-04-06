@@ -1028,7 +1028,7 @@ def follow(db):
             else:
                 logger.debug('Initialising mempool.')
 
-            # Get old counterpartyd mempool.
+            # Get old mempool.
             old_mempool = list(cursor.execute('''SELECT * FROM mempool'''))
             old_mempool_hashes = [message['tx_hash'] for message in old_mempool]
 
@@ -1043,7 +1043,7 @@ def follow(db):
             mempool = []
             for tx_hash in backend.getrawmempool():
 
-                # If already in counterpartyd mempool, copy to new one.
+                # If already in mempool, copy to new one.
                 if tx_hash in old_mempool_hashes:
                     for message in old_mempool:
                         if message['tx_hash'] == tx_hash:
