@@ -253,9 +253,9 @@ def clean_scenario_dump(scenario_name, dump):
     dump = re.sub(',5430,10000,\'data\',1\)', ',0,10000,\'data\',1\)', dump)
     return dump
 
-def check_record(record, counterpartyd_db):
+def check_record(record, server_db):
     """Allow direct record access to the db."""
-    cursor = counterpartyd_db.cursor()
+    cursor = server_db.cursor()
 
     if record['table'] == 'pragma':
         field = record['field']
@@ -295,18 +295,18 @@ def vector_to_args(vector, functions=[]):
                     args.append((tx_name, method, params['in'], outputs, error, records))
     return args
 
-def exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db):
+def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
     """Execute tested_method within context and arguments."""
     if tx_name == 'transaction' and method == 'construct':
-        return tested_method(counterpartyd_db, inputs[0], **inputs[1])
+        return tested_method(server_db, inputs[0], **inputs[1])
     elif (tx_name == 'util' and (method == 'api' or method == 'date_passed' or method == 'price' or method == 'sortkeypicker' or method == 'generate_asset_id' \
          or method == 'generate_asset_name' or method == 'dhash_string' or method == 'enabled' or method == 'get_url' or method == 'hexlify')) or tx_name == 'script' \
         or (tx_name == 'blocks' and (method == 'get_tx_info' or method == 'get_tx_info1' or method == 'get_tx_info2')) or tx_name == 'transaction':
         return tested_method(*inputs)
     else:
-        return tested_method(counterpartyd_db, *inputs)
+        return tested_method(server_db, *inputs)
 
-def check_outputs(tx_name, method, inputs, outputs, error, records, counterpartyd_db):
+def check_outputs(tx_name, method, inputs, outputs, error, records, server_db):
     """Check actual and expected outputs of a particular function."""
 
     try:
@@ -318,9 +318,9 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, counterparty
     test_outputs = None
     if error is not None:
         with pytest.raises(error[0]) as exception:
-            test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db)
+            test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, server_db)
     else:
-        test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, counterpartyd_db)
+        test_outputs = exec_tested_method(tx_name, method, tested_method, inputs, server_db)
         if pytest.config.option.gentxhex and method == 'compose':
             print('')
             tx_params = {
@@ -329,7 +329,7 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, counterparty
             if tx_name == 'order' and inputs[1]=='BTC':
                 print('give btc')
                 tx_params['fee_provided'] = DP['fee_provided']
-            unsigned_tx_hex = transaction.construct(counterpartyd_db, test_outputs, **tx_params)
+            unsigned_tx_hex = transaction.construct(server_db, test_outputs, **tx_params)
             print(tx_name)
             print(unsigned_tx_hex)
 
@@ -339,7 +339,7 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, counterparty
         assert str(exception.value) == error[1]
     if records is not None:
         for record in records:
-            check_record(record, counterpartyd_db)
+            check_record(record, server_db)
 
 def compare_strings(string1, string2):
     """Compare strings diff-style."""

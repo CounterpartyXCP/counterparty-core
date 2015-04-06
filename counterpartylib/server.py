@@ -218,7 +218,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     ##############
     # THINGS WE SERVE
 
-    # counterpartyd API RPC host
+    # Server API RPC host
     if rpc_host:
         config.RPC_HOST = rpc_host
     else:
@@ -227,7 +227,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     # The web root directory for API calls, eg. localhost:14000/rpc/
     config.RPC_WEBROOT = '/rpc/'
 
-    # counterpartyd API RPC port
+    # Server API RPC port
     if rpc_port:
         config.RPC_PORT = rpc_port
     else:
@@ -244,17 +244,17 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     try:
         config.RPC_PORT = int(config.RPC_PORT)
         if not (int(config.RPC_PORT) > 1 and int(config.RPC_PORT) < 65535):
-            raise ConfigurationError('invalid counterpartyd API port number')
+            raise ConfigurationError('invalid server API port number')
     except:
         raise ConfigurationError("Please specific a valid port number rpc-port configuration parameter")
 
-    #  counterpartyd API RPC user
+    # Server API RPC user
     if rpc_user:
         config.RPC_USER = rpc_user
     else:
         config.RPC_USER = 'rpc'
 
-    #  counterpartyd API RPC password
+    # Server API RPC password
     if rpc_password:
         config.RPC_PASSWORD = rpc_password
         config.RPC = 'http://' + urlencode(config.RPC_USER) + ':' + urlencode(config.RPC_PASSWORD) + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT) + config.RPC_WEBROOT
