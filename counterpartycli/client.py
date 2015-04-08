@@ -25,12 +25,12 @@ CONFIG_ARGS = [
     [('--testnet',), {'action': 'store_true', 'default': False, 'help': 'use {} testnet addresses and block numbers'.format(config.BTC_NAME)}],    
     [('--testcoin',), {'action': 'store_true', 'default': False, 'help': 'use the test {} network on every blockchain'.format(config.XCP_NAME)}],
     
-    [('--counterparty-rpc-connect',), {'default': 'localhost', 'help': 'the hostname or IP of the counterparty JSON-RPC server'}],
-    [('--counterparty-rpc-port',), {'type': int, 'help': 'the counterparty JSON-RPC port to connect to'}],
-    [('--counterparty-rpc-user',), {'default': 'rpc', 'help': 'the username used to communicate with counterparty over JSON-RPC'}],
-    [('--counterparty-rpc-password',), {'help': 'the password used to communicate with counterparty over JSON-RPC'}],
-    [('--counterparty-rpc-ssl',), {'default': False, 'action': 'store_true', 'help': 'use SSL to connect to counterparty (default: false)'}],
-    [('--counterparty-rpc-ssl-verify',), {'default': False, 'action': 'store_true', 'help': 'verify SSL certificate of counterparty; disallow use of self‐signed certificates (default: false)'}],
+    [('--counterparty-rpc-connect',), {'default': 'localhost', 'help': 'the hostname or IP of the Counterparty JSON-RPC server'}],
+    [('--counterparty-rpc-port',), {'type': int, 'help': 'the port of the Counterparty JSON-RPC server'}],
+    [('--counterparty-rpc-user',), {'default': 'rpc', 'help': 'the username for the Counterparty JSON-RPC server'}],
+    [('--counterparty-rpc-password',), {'help': 'the password for the Counterparty JSON-RPC server'}],
+    [('--counterparty-rpc-ssl',), {'default': False, 'action': 'store_true', 'help': 'use SSL to connect to the Counterparty server (default: false)'}],
+    [('--counterparty-rpc-ssl-verify',), {'default': False, 'action': 'store_true', 'help': 'verify SSL certificate of the Counterparty server; disallow use of self‐signed certificates (default: false)'}],
 
     [('--wallet-name',), {'default': 'bitcoincore', 'help': 'the wallet name to connect to'}],
     [('--wallet-connect',), {'default': 'localhost', 'help': 'the hostname or IP of the wallet server'}],
