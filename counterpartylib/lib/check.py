@@ -70,7 +70,10 @@ def consensus_hash(db, field, previous_consensus_hash, content):
 
     # Get previous hash.
     if not previous_consensus_hash:
-        previous_consensus_hash = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index - 1,)))[0][field]
+        try:
+            previous_consensus_hash = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index - 1,)))[0][field]
+        except IndexError:
+            previous_consensus_hash = None
         if not previous_consensus_hash:
             raise ConsensusError('Empty previous {} for block {}. Please launch a `reparse`.'.format(field, block_index))
 
