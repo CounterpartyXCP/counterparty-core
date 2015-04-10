@@ -18,16 +18,10 @@ bitcoin_rpc_session = None
 class BackendRPCError(Exception):
     pass
 
-def rpc(method, params):
+def rpc_call(payload):
     url = config.BACKEND_URL
     headers = {'content-type': 'application/json'}
-    payload = {
-        "method": method,
-        "params": params,
-        "jsonrpc": "2.0",
-        "id": 0,
-    }
-    
+
     global bitcoin_rpc_session
     if not bitcoin_rpc_session:
         bitcoin_rpc_session = requests.Session()
@@ -59,6 +53,27 @@ def rpc(method, params):
     else:
         raise BackendRPCError('{}'.format(response_json['error']))
 
+def rpc(method, params):
+    payload = {
+        "method": method,
+        "params": params,
+        "jsonrpc": "2.0",
+        "id": 0,
+    }
+    return rpc_call(payload)
+
+def rpc_batch(payload):
+
+    def get_chunks(l, n):
+        n = max(1, n)
+        return [l[i:i + n] for i in range(0, len(l), n)]
+
+    chunks = get_chunks(payload, config.RPC_BATCH_SIZE)
+    responses = []
+    for chunk in chunks:
+        responses += rpc_call(chunk)
+    return responses
+
 def extract_addresses(tx_hash):
     pass
 
@@ -88,5 +103,31 @@ def getrawtransaction(tx_hash, verbose=False):
 
 def getrawmempool():
     return rpc('getrawmempool', [])
+
+def getrawtransactions(txhash_list, verbose=False):
+    result = {}
+    tx_hash_call_id = {}
+    call_id = 0
+    payload = []
+    for tx_hash in txhash_list:
+        payload.append({
+            "method": 'getrawtransaction',
+            "params": [tx_hash, 1 if verbose else 0],
+            "jsonrpc": "2.0",
+            "id": call_id
+        })
+        tx_hash_call_id[call_id] = tx_hash
+        call_id += 1
+
+    batch_responses = rpc_batch(payload)
+    for response in batch_responses:
+        if 'error' not in response or response['error'] is None:
+            tx_hex = response['result']
+            tx_hash = tx_hash_call_id[response['id']]
+            result[tx_hash] = tx_hex
+        else:
+            raise BackendRPCError('{}'.format(response['error']))
+
+    return result
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

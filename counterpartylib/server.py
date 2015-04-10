@@ -81,6 +81,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
                 rpc_no_allow_cors=False,
                 force=False, verbose=False,
                 requests_timeout=config.DEFAULT_REQUESTS_TIMEOUT,
+                rpc_batch_size=config.DEFAULT_RPC_BATCH_SIZE,
                 backend_ssl_verify=None, rpc_allow_cors=None):
 
      # Data directory
@@ -272,6 +273,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
             config.RPC_NO_ALLOW_CORS = False
 
     config.REQUESTS_TIMEOUT = requests_timeout
+    config.RPC_BATCH_SIZE = rpc_batch_size
 
     ##############
     # OTHER SETTINGS
