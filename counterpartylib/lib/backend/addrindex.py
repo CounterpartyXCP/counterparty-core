@@ -73,6 +73,17 @@ def rpc(method, params):
     }
     return rpc_call(payload)
     
+def rpc_batch(payload):
+
+    def get_chunks(l, n):
+        n = max(1, n)
+        return [l[i:i + n] for i in range(0, len(l), n)]
+
+    chunks = get_chunks(payload, config.RPC_BATCH_SIZE)
+    responses = []
+    for chunk in chunks:
+        responses += rpc_call(chunk)
+    return responses
 
 # TODO: use scriptpubkey_to_address()
 @lru_cache(maxsize=4096)
@@ -146,7 +157,6 @@ def getrawmempool():
 def sendrawtransaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
 
-
 def getrawtransactions(txhash_list, verbose=False):
     result = {}
     tx_hash_call_id = {}
@@ -162,7 +172,8 @@ def getrawtransactions(txhash_list, verbose=False):
         tx_hash_call_id[call_id] = tx_hash
         call_id += 1
 
-    batch_responses = rpc_call(payload)
+    batch_responses = rpc_batch(payload)
+
     for response in batch_responses:
         if 'error' not in response or response['error'] is None:
             tx_hex = response['result']
