@@ -104,7 +104,7 @@ def getrawtransaction(tx_hash, verbose=False):
 def getrawmempool():
     return rpc('getrawmempool', [])
 
-def getrawtransactions(txhash_list, verbose=False):
+def getrawtransaction_batch(txhash_list, verbose=False):
     result = {}
     tx_hash_call_id = {}
     call_id = 0

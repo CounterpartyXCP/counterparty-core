@@ -157,7 +157,7 @@ def getrawmempool():
 def sendrawtransaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
 
-def getrawtransactions(txhash_list, verbose=False):
+def getrawtransaction_batch(txhash_list, verbose=False):
     result = {}
     tx_hash_call_id = {}
     call_id = 0

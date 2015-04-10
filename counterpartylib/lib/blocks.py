@@ -983,7 +983,7 @@ def follow(db):
             previous_block_hash = bitcoinlib.core.b2lx(block.hashPrevBlock)
             block_time = block.nTime
             txhash_list = backend.get_txhash_list(block)
-            raw_transactions = backend.getrawtransactions(txhash_list)
+            raw_transactions = backend.getrawtransaction_batch(txhash_list)
             with db:
                 util.CURRENT_BLOCK_INDEX = block_index
 
