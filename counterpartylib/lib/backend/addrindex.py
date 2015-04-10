@@ -18,15 +18,9 @@ bitcoin_rpc_session = None
 class BackendRPCError(Exception):
     pass
 
-def rpc(method, params):
+def rpc_call(payload):
     url = config.BACKEND_URL
     headers = {'content-type': 'application/json'}
-    payload = {
-        "method": method,
-        "params": params,
-        "jsonrpc": "2.0",
-        "id": 0,
-    }
 
     global bitcoin_rpc_session
     if not bitcoin_rpc_session:
@@ -54,6 +48,9 @@ def rpc(method, params):
 
     # Return result, with error handling.
     response_json = response.json()
+    # Batch query returns a list
+    if isinstance(response_json, list):
+        return response_json
     if 'error' not in response_json.keys() or response_json['error'] == None:
         return response_json['result']
     elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
@@ -66,6 +63,16 @@ def rpc(method, params):
         return rpc(method, params)
     else:
         raise BackendRPCError('{}'.format(response_json['error']))
+
+def rpc(method, params):
+    payload = {
+        "method": method,
+        "params": params,
+        "jsonrpc": "2.0",
+        "id": 0,
+    }
+    return rpc_call(payload)
+    
 
 # TODO: use scriptpubkey_to_address()
 @lru_cache(maxsize=4096)
@@ -138,5 +145,32 @@ def getrawmempool():
 
 def sendrawtransaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
+
+
+def getrawtransactions(txhash_list, verbose=False):
+    result = {}
+    tx_hash_call_id = {}
+    call_id = 0
+    payload = []
+    for tx_hash in txhash_list:
+        payload.append({
+            "method": 'getrawtransaction',
+            "params": [tx_hash, 1 if verbose else 0],
+            "jsonrpc": "2.0",
+            "id": call_id
+        })
+        tx_hash_call_id[call_id] = tx_hash
+        call_id += 1
+
+    batch_responses = rpc_call(payload)
+    for response in batch_responses:
+        if 'error' not in response or response['error'] is None:
+            tx_hex = response['result']
+            tx_hash = tx_hash_call_id[response['id']]
+            result[tx_hash] = tx_hex
+        else:
+            raise BackendRPCError('{}'.format(response['error']))
+
+    return result
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
