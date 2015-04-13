@@ -97,7 +97,7 @@ def extract_addresses(tx_hash):
             addresses += vout['scriptPubKey']['addresses']
 
     txhash_list = [vin['txid'] for vin in tx['vin']]
-    raw_transactions = getrawtransaction_batch(txhash_list)
+    raw_transactions = getrawtransaction_batch(txhash_list, verbose=True)
     for vin in tx['vin']:
         vin_tx = raw_transactions[vin['txid']]
         vout = vin_tx['vout'][vin['vout']]
