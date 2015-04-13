@@ -54,10 +54,6 @@ CHECKPOINTS_TESTNET = {
 
 class ConsensusError(Exception):
     pass
-class BackendError(Exception):
-    pass
-class DatabaseError(Exception):
-    pass
 
 def consensus_hash(db, field, previous_consensus_hash, content):
     cursor = db.cursor()
@@ -166,22 +162,6 @@ def software_version():
 
     logger.debug('Version check passed.')
 
-def backend_state():
-    """Checks blocktime of last block to see if {} Core is running behind.""".format(config.BTC_NAME)
-    block_count = backend.getblockcount()
-    block_hash = backend.getblockhash(block_count)
-    cblock = backend.getblock(block_hash)
-    time_behind = time.time() - cblock.nTime   # TODO: Block times are not very reliable.
-    if time_behind > 60 * 60 * 2:   # Two hours.
-        raise BackendError('Bitcoind is running about {} hours behind.'.format(round(time_behind / 3600)))
-    logger.debug('Backend state check passed.')
-
-def database_state(db, blockcount):
-    """Checks {} database to see if is caught up with backend.""".format(config.XCP_NAME)
-    if util.CURRENT_BLOCK_INDEX + 1 < blockcount:
-        raise DatabaseError('{} database is behind backend.'.format(config.XCP_NAME))
-    logger.debug('Database state check passed.')
-    return
 
 class DatabaseVersionError(Exception):
     def __init__(self, message, reparse_block_index):
