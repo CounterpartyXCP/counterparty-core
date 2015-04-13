@@ -17,6 +17,21 @@ from counterpartylib.lib import config
 
 from counterpartylib.lib.backend import addrindex, btcd
 
+def sortkeypicker(keynames):
+    """http://stackoverflow.com/a/1143719"""
+    negate = set()
+    for i, k in enumerate(keynames):
+        if k[:1] == '-':
+            keynames[i] = k[1:]
+            negate.add(k[1:])
+    def getit(adict):
+       composite = [adict[k] for k in keynames]
+       for i, (k, v) in enumerate(zip(keynames, composite)):
+           if k in negate:
+               composite[i] = -v
+       return composite
+    return getit
+
 def BACKEND():
     return sys.modules['counterpartylib.lib.backend.{}'.format(config.BACKEND_NAME)] 
 
@@ -73,7 +88,7 @@ def sort_unspent_txouts(unspent, unconfirmed=False):
     # (Oldest to newest so the nodes don’t have to be exactly caught up to each other for consensus to be achieved.)
     # searchrawtransactions doesn’t support unconfirmed transactions
     try:
-        unspent = sorted(unspent, key=util.sortkeypicker(['ts', 'vout']))
+        unspent = sorted(unspent, key=sortkeypicker(['ts', 'vout']))
     except KeyError: # If timestamp isn’t given.
         pass
 

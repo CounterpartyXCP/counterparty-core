@@ -83,21 +83,6 @@ def price (numerator, denominator):
         denominator = D(denominator)
         return D(numerator / denominator)
 
-def sortkeypicker(keynames):
-    """http://stackoverflow.com/a/1143719"""
-    negate = set()
-    for i, k in enumerate(keynames):
-        if k[:1] == '-':
-            keynames[i] = k[1:]
-            negate.add(k[1:])
-    def getit(adict):
-       composite = [adict[k] for k in keynames]
-       for i, (k, v) in enumerate(zip(keynames, composite)):
-           if k in negate:
-               composite[i] = -v
-       return composite
-    return getit
-
 def last_message(db):
     """Return latest message from the db."""
     cursor = db.cursor()
