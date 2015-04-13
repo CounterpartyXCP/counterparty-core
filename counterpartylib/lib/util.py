@@ -494,15 +494,13 @@ def creations (db):
     """Return creations."""
     cursor = db.cursor()
     creations = {config.XCP: xcp_created(db)}
-    cursor.execute('''SELECT * from issuances \
-                      WHERE status = ?''', ('valid',))
-    for issuance in list(cursor):
+    cursor.execute('''SELECT asset, SUM(quantity) AS created FROM issuances \
+                      WHERE status = ? GROUP BY asset''', ('valid',))
+
+    for issuance in cursor:
         asset = issuance['asset']
-        quantity = issuance['quantity']
-        if asset in creations.keys():
-            creations[asset] += quantity
-        else:
-            creations[asset] = quantity
+        created = issuance['created']
+        creations[asset] = created            
 
     cursor.close()
     return creations
@@ -511,15 +509,14 @@ def destructions (db):
     """Return destructions."""
     cursor = db.cursor()
     destructions = {config.XCP: xcp_destroyed(db)}
-    cursor.execute('''SELECT * from destructions \
-                      WHERE (status = ? AND asset != ?)''', ('valid', config.XCP))
-    for destruction in list(cursor):
+    cursor.execute('''SELECT asset, SUM(quantity) AS destroyed FROM destructions \
+                      WHERE (status = ? AND asset != ?) GROUP BY asset''', ('valid', config.XCP))
+
+    for destruction in cursor:
         asset = destruction['asset']
-        quantity = destruction['burned']
-        if asset in destructions.keys():
-            destructions[asset] += quantity
-        else:
-            destructions[asset] = quantity
+        destroyed = destruction['destroyed']
+        destructions[asset] = destroyed
+
     cursor.close()
     return destructions
 
@@ -536,6 +533,41 @@ def supplies (db):
     d1 = creations(db)
     d2 = destructions(db)
     return {key: d1[key] - d2.get(key, 0) for key in d1.keys()}
+
+def held (db): #TODO: Rename ?
+    sql = '''SELECT asset, SUM(total) AS total FROM (
+                SELECT asset, SUM(quantity) AS total FROM balances GROUP BY asset 
+                UNION ALL
+                SELECT give_asset AS asset, SUM(give_remaining) AS total FROM orders WHERE status = 'open' GROUP BY asset
+                UNION ALL
+                SELECT forward_asset AS asset, SUM(forward_quantity) AS total FROM order_matches WHERE status = 'pending' GROUP BY asset
+                UNION ALL
+                SELECT backward_asset AS asset, SUM(backward_quantity) AS total FROM order_matches WHERE status = 'pending' GROUP BY asset
+                UNION ALL
+                SELECT 'XCP' AS asset, SUM(wager_remaining) AS total FROM bets WHERE status = 'open'
+                UNION ALL
+                SELECT 'XCP' AS asset, SUM(forward_quantity) AS total FROM bet_matches WHERE status = 'pending'
+                UNION ALL
+                SELECT 'XCP' AS asset, SUM(backward_quantity) AS total FROM bet_matches WHERE status = 'pending'
+                UNION ALL
+                SELECT 'XCP' AS asset, SUM(wager) AS total FROM rps WHERE status = 'open'
+                UNION ALL
+                SELECT 'XCP' AS asset, SUM(wager * 2) AS total FROM rps_matches WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')
+                UNION ALL
+                SELECT 'XCP' AS asset, SUM(gas_cost) AS total FROM executions WHERE status IN ('valid', 'out of gas')
+                UNION ALL
+                SELECT 'XCP' AS asset, SUM(gas_remained) AS total FROM executions WHERE status  = 'out of gas'
+            ) GROUP BY asset;'''
+
+    cursor = db.cursor()
+    cursor.execute(sql)
+    held = {}
+    for row in cursor:
+        asset = row['asset']
+        total = row['total']
+        held[asset] = total
+
+    return held
 
 ### SUPPLIES ###
 

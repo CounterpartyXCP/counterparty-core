@@ -104,12 +104,13 @@ class SanityError(Exception):
 def asset_conservation(db):
     logger.debug('Checking for conservation of assets.')
     supplies = util.supplies(db)
+    held = util.held(db)
     for asset in supplies.keys():
-        issued = supplies[asset]
-        held = sum([holder['address_quantity'] for holder in util.holders(db, asset)])
-        if held != issued:
-            raise SanityError('{} {} issued ≠ {} {} held'.format(util.value_out(db, issued, asset), asset, util.value_out(db, held, asset), asset))
-        logger.debug('{} has been conserved ({} {} both issued and held)'.format(asset, util.value_out(db, issued, asset), asset))
+        asset_issued = supplies[asset]
+        asset_held = held[asset] if asset in held else 0
+        if asset_issued != asset_held:
+            raise SanityError('{} {} issued ≠ {} {} held'.format(util.value_out(db, asset_issued, asset), asset, util.value_out(db, asset_held, asset), asset))
+        logger.debug('{} has been conserved ({} {} both issued and held)'.format(asset, util.value_out(db, asset_issued, asset), asset))
 
 class VersionError(Exception):
     pass

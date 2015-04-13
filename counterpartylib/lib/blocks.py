@@ -1010,8 +1010,8 @@ def follow(db):
                 parse_block(db, block_index, block_time)
 
             # When newly caught up, check for conservation of assets.
-            if block_index == block_count:
-                check.asset_conservation(db)
+            if block_index == block_count and config.CHECK_ASSET_CONSERVATION:
+              check.asset_conservation(db)
 
             # Remove any non‐supported transactions older than ten blocks.
             while len(not_supported_sorted) and not_supported_sorted[0][0] <= block_index - 10:
