@@ -909,7 +909,7 @@ def follow(db):
     not_supported_sorted = collections.deque()
     # ^ Entries in form of (block_index, tx_hash), oldest first. Allows for easy removal of past, unncessary entries
     mempool_initialised = False
-    if config.PARSE_MEMPOOL:
+    if config.ENABLE_MEMPOOL:
         backend.init_mempool_cache()
     cursor = db.cursor()
     # a reorg can happen without the block count increasing, or even for that
@@ -1028,100 +1028,97 @@ def follow(db):
             block_index += 1
 
         else:
-            if not config.PARSE_MEMPOOL:
-                db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
-                time.sleep(config.BACKEND_POLL_INTERVAL)
-                continue
-                
-            # First mempool fill for session?
-            if mempool_initialised:
-                logger.debug('Updating mempool.')
-            else:
-                logger.debug('Initialising mempool.')
+            if config.ENABLE_MEMPOOL:    
+                # First mempool fill for session?
+                if mempool_initialised:
+                    logger.debug('Updating mempool.')
+                else:
+                    logger.debug('Initialising mempool.')
 
-            # Get old mempool.
-            old_mempool = list(cursor.execute('''SELECT * FROM mempool'''))
-            old_mempool_hashes = [message['tx_hash'] for message in old_mempool]
+                # Get old mempool.
+                old_mempool = list(cursor.execute('''SELECT * FROM mempool'''))
+                old_mempool_hashes = [message['tx_hash'] for message in old_mempool]
 
-            # Fake values for fake block.
-            curr_time = int(time.time())
-            mempool_tx_index = tx_index
+                # Fake values for fake block.
+                curr_time = int(time.time())
+                mempool_tx_index = tx_index
 
-            # For each transaction in Bitcoin Core mempool, if it’s new, create
-            # a fake block, a fake transaction, capture the generated messages,
-            # and then save those messages.
-            # Every transaction in mempool is parsed independently. (DB is rolled back after each one.)
-            mempool = []
-            for tx_hash in backend.getrawmempool():
+                # For each transaction in Bitcoin Core mempool, if it’s new, create
+                # a fake block, a fake transaction, capture the generated messages,
+                # and then save those messages.
+                # Every transaction in mempool is parsed independently. (DB is rolled back after each one.)
+                mempool = []
+                for tx_hash in backend.getrawmempool():
 
-                # If already in mempool, copy to new one.
-                if tx_hash in old_mempool_hashes:
-                    for message in old_mempool:
-                        if message['tx_hash'] == tx_hash:
-                            mempool.append((tx_hash, message))
-
-                # If already skipped, skip it again.
-                elif tx_hash not in not_supported:
-
-                    # Else: list, parse and save it.
-                    try:
-                        with db:
-                            # List the fake block.
-                            cursor.execute('''INSERT INTO blocks(
-                                                block_index,
-                                                block_hash,
-                                                block_time) VALUES(?,?,?)''',
-                                                (config.MEMPOOL_BLOCK_INDEX,
-                                                 config.MEMPOOL_BLOCK_HASH,
-                                                 curr_time)
-                                          )
-
-                            # List transaction.
-                            try:    # Sometimes the transactions can’t be found: `{'code': -5, 'message': 'No information available about transaction'} Is txindex enabled in Bitcoind?`
-                                mempool_tx_index = list_tx(db, None, block_index, curr_time, tx_hash, mempool_tx_index)
-                            except backend.addrindex.BackendRPCError:
-                                raise MempoolError
-
-                            # Parse transaction.
-                            cursor.execute('''SELECT * FROM transactions \
-                                              WHERE tx_hash = ?''',
-                                           (tx_hash,))
-                            transactions = list(cursor)
-                            if transactions:
-                                assert len(transactions) == 1
-                                transaction = transactions[0]
-                                supported = parse_tx(db, transaction)
-                                if not supported:
-                                    not_supported[tx_hash] = ''
-                                    not_supported_sorted.append((block_index, tx_hash))
-                            else:
-                                # If a transaction hasn’t been added to the
-                                # table `transactions`, then it’s not a
-                                # Counterparty transaction.
-                                not_supported[tx_hash] = ''
-                                not_supported_sorted.append((block_index, tx_hash))
-                                raise MempoolError
-
-                            # Save transaction and side‐effects in memory.
-                            cursor.execute('''SELECT * FROM messages WHERE block_index = ?''', (config.MEMPOOL_BLOCK_INDEX,))
-                            for message in list(cursor):
+                    # If already in mempool, copy to new one.
+                    if tx_hash in old_mempool_hashes:
+                        for message in old_mempool:
+                            if message['tx_hash'] == tx_hash:
                                 mempool.append((tx_hash, message))
 
-                            # Rollback.
-                            raise MempoolError
-                    except MempoolError:
-                        pass
+                    # If already skipped, skip it again.
+                    elif tx_hash not in not_supported:
 
-            # Re‐write mempool messages to database.
-            with db:
-                cursor.execute('''DELETE FROM mempool''')
-                for message in mempool:
-                    tx_hash, new_message = message
-                    new_message['tx_hash'] = tx_hash
-                    cursor.execute('''INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp)''', (new_message))
+                        # Else: list, parse and save it.
+                        try:
+                            with db:
+                                # List the fake block.
+                                cursor.execute('''INSERT INTO blocks(
+                                                    block_index,
+                                                    block_hash,
+                                                    block_time) VALUES(?,?,?)''',
+                                                    (config.MEMPOOL_BLOCK_INDEX,
+                                                     config.MEMPOOL_BLOCK_HASH,
+                                                     curr_time)
+                                              )
 
-            # Wait
-            mempool_initialised = True
+                                # List transaction.
+                                try:    # Sometimes the transactions can’t be found: `{'code': -5, 'message': 'No information available about transaction'} Is txindex enabled in Bitcoind?`
+                                    mempool_tx_index = list_tx(db, None, block_index, curr_time, tx_hash, mempool_tx_index)
+                                except backend.addrindex.BackendRPCError:
+                                    raise MempoolError
+
+                                # Parse transaction.
+                                cursor.execute('''SELECT * FROM transactions \
+                                                  WHERE tx_hash = ?''',
+                                               (tx_hash,))
+                                transactions = list(cursor)
+                                if transactions:
+                                    assert len(transactions) == 1
+                                    transaction = transactions[0]
+                                    supported = parse_tx(db, transaction)
+                                    if not supported:
+                                        not_supported[tx_hash] = ''
+                                        not_supported_sorted.append((block_index, tx_hash))
+                                else:
+                                    # If a transaction hasn’t been added to the
+                                    # table `transactions`, then it’s not a
+                                    # Counterparty transaction.
+                                    not_supported[tx_hash] = ''
+                                    not_supported_sorted.append((block_index, tx_hash))
+                                    raise MempoolError
+
+                                # Save transaction and side‐effects in memory.
+                                cursor.execute('''SELECT * FROM messages WHERE block_index = ?''', (config.MEMPOOL_BLOCK_INDEX,))
+                                for message in list(cursor):
+                                    mempool.append((tx_hash, message))
+
+                                # Rollback.
+                                raise MempoolError
+                        except MempoolError:
+                            pass
+
+                # Re‐write mempool messages to database.
+                with db:
+                    cursor.execute('''DELETE FROM mempool''')
+                    for message in mempool:
+                        tx_hash, new_message = message
+                        new_message['tx_hash'] = tx_hash
+                        cursor.execute('''INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp)''', (new_message))
+
+                # Wait
+                mempool_initialised = True
+
             db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
             time.sleep(config.BACKEND_POLL_INTERVAL)
 
