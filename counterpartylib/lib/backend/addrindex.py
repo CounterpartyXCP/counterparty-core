@@ -88,6 +88,7 @@ def rpc_batch(payload):
 # TODO: use scriptpubkey_to_address()
 @lru_cache(maxsize=4096)
 def extract_addresses(tx_hash):
+    logger.debug('Extract addresses: {}'.format(tx_hash))
     # TODO: Use `rpc._batch` here.
     tx = getrawtransaction(tx_hash, verbose=True)
     addresses = []
@@ -151,7 +152,7 @@ def getblock(block_hash):
     return rpc('getblock', [block_hash, False])
 
 def getrawtransaction(tx_hash, verbose=False):
-    return rpc('getrawtransaction', [tx_hash, 1 if verbose else 0])
+    return getrawtransaction_batch([tx_hash], verbose=verbose)[tx_hash]
 
 def getrawmempool():
     return rpc('getrawmempool', [])
@@ -159,30 +160,40 @@ def getrawmempool():
 def sendrawtransaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
 
+
+RAW_TRANSACTIONS_CACHE = {}
+
 def getrawtransaction_batch(txhash_list, verbose=False):
-    result = {}
     tx_hash_call_id = {}
     call_id = 0
     payload = []
     for tx_hash in txhash_list:
-        payload.append({
-            "method": 'getrawtransaction',
-            "params": [tx_hash, 1 if verbose else 0],
-            "jsonrpc": "2.0",
-            "id": call_id
-        })
-        tx_hash_call_id[call_id] = tx_hash
-        call_id += 1
+        if tx_hash not in RAW_TRANSACTIONS_CACHE:
+            payload.append({
+                "method": 'getrawtransaction',
+                "params": [tx_hash, 1],
+                "jsonrpc": "2.0",
+                "id": call_id
+            })
+            tx_hash_call_id[call_id] = tx_hash
+            call_id += 1
 
-    batch_responses = rpc_batch(payload)
+    if len(payload) > 0:
+        batch_responses = rpc_batch(payload)
+        for response in batch_responses:
+            if 'error' not in response or response['error'] is None:
+                tx_hex = response['result']
+                tx_hash = tx_hash_call_id[response['id']]
+                RAW_TRANSACTIONS_CACHE[tx_hash] = tx_hex
+            else:
+                raise BackendRPCError('{}'.format(response['error']))
 
-    for response in batch_responses:
-        if 'error' not in response or response['error'] is None:
-            tx_hex = response['result']
-            tx_hash = tx_hash_call_id[response['id']]
-            result[tx_hash] = tx_hex
+    result = {}
+    for tx_hash in txhash_list:
+        if verbose:
+            result[tx_hash] = RAW_TRANSACTIONS_CACHE[tx_hash]
         else:
-            raise BackendRPCError('{}'.format(response['error']))
+            result[tx_hash] = RAW_TRANSACTIONS_CACHE[tx_hash]['hex']
 
     return result
 
