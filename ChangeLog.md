@@ -1,18 +1,21 @@
 ## Client Versions ##
 * v9.51.1 (2015-04-??)
-	* Rename `server.api.log` to `server.access.log`
-	* Add `requests_timeout` parameter
+	* rename `server.api.log` to `server.access.log`
+	* add `requests_timeout` parameter
+	* Use batch queries to get transactions hex from backend
+	* optimise asset conservation check
+	* code reorganisation
 * v9.51.0 (2015-04-01)
-	* Check for null data chunks (protocol change: 352000)
-	* Disable rock‐paper‐scissors (protocol change: 352000)
-	* Deprecate `get_asset_info(assets)` API method
-	* Deprecate `get_xcp_supply()` API method in favor of `get_supply(asset)`
+	* check for null data chunks (protocol change: 352000)
+	* disable rock‐paper‐scissors (protocol change: 352000)
+	* deprecate `get_asset_info(assets)` API method
+	* deprecate `get_xcp_supply()` API method in favor of `get_supply(asset)`
 	* `get_unspent_txouts` API method parameter and return values changed
-	* Authentication on JSON‐RPC API is off by default
+	* authentication on JSON‐RPC API is off by default
 	* `rpc_password` configuration parameter is no longer mandatory
-	* Default to using `opreturn` encoding when possible
-	* Catch unhandled exception with invalid script on testnet
-	* Added HTTP REST API
+	* default to using `opreturn` encoding when possible
+	* catch unhandled exception with invalid script on testnet
+	* added HTTP REST API
 * v9.50.0 (2015-03-18)
 	* hotfix: global integer overflow
 * v9.49.4 (2015-02-05)
