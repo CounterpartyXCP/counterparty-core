@@ -60,7 +60,7 @@ def rpc_call(payload):
         # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
         # seconds to start, this’ll hit the maximum recursion depth limit.
         time.sleep(10)
-        return rpc(method, params)
+        return rpc_call(payload)
     else:
         raise BackendRPCError('{}'.format(response_json['error']))
 
