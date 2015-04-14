@@ -5,6 +5,7 @@
 	* Use batch queries to get transactions hex from backend
 	* optimise asset conservation check
 	* code reorganisation
+	* faster rollbacks
 * v9.51.0 (2015-04-01)
 	* check for null data chunks (protocol change: 352000)
 	* disable rock‐paper‐scissors (protocol change: 352000)

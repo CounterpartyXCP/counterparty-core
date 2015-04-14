@@ -18,6 +18,8 @@ from Crypto.Cipher import ARC4
 import apsw
 import csv
 import http
+import string
+import random
 
 import bitcoin as bitcoinlib
 from bitcoin.core.script import CScriptInvalidError
@@ -46,6 +48,8 @@ TABLES = ['credits', 'debits', 'messages'] + \
          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
          'rps_matches', 'rps', 'executions', 'storage', 'suicides', 'nonces',
          'postqueue', 'contracts', 'destructions', 'assets']
+
+SAVEPOINTS = {}
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(CURR_DIR + '/../mainnet_burns.csv', 'r') as f:
@@ -660,8 +664,6 @@ def reparse(db, block_index=None, quiet=False):
     """Reparse all transactions (atomically). If block_index is set, rollback
     to the end of that block.
     """
-    logger.info('Reparsing all transactions.')
-
     check.software_version()
 
     cursor = db.cursor()
@@ -669,6 +671,21 @@ def reparse(db, block_index=None, quiet=False):
         root_logger = logging.getLogger()
         root_level = logger.getEffectiveLevel()
 
+    # Optimize rollbacks to avoid reparses: if there is a savepoint at
+    # `block_index`, just jump there and `return`.
+    global SAVEPOINTS
+    if block_index != None:
+        for savepoint_name in SAVEPOINTS.keys():
+            savepoint_index = SAVEPOINTS[savepoint_name]
+            if savepoint_index == block_index:
+                logger.debug('Rolling back to savepoint {} at block {}.'.format(savepoint_name, savepoint_index))
+                cursor.execute('''ROLLBACK TO {}'''.format(savepoint_name))
+                cursor.execute('''COMMIT''')    # Clear all other savepoints (for simplicity).
+                SAVEPOINTS = {}
+                return                          # Skip reparse.
+        logger.debug('No savepoints available.')
+
+    logger.info('Reparsing all transactions.')
     with db:
         reinitialise(db, block_index)
 
@@ -1009,9 +1026,23 @@ def follow(db):
                 # Parse the transactions in the block.
                 parse_block(db, block_index, block_time)
 
-            # When newly caught up, check for conservation of assets.
-            if block_index == block_count and config.CHECK_ASSET_CONSERVATION:
-              check.asset_conservation(db)
+            # When just caught up…
+            if block_index == block_count:
+                # Check for conservation of assets.
+                if config.CHECK_ASSET_CONSERVATION:
+                    check.asset_conservation(db)
+
+                # Create a savepoint after each block, for faster rollbacks.
+                global SAVEPOINTS
+                savepoint_name = ''.join(random.SystemRandom().choice(string.ascii_lowercase) for _ in range(16))
+                SAVEPOINTS[savepoint_name] = block_index
+                logger.debug('Creating savepoint {} at block {}.'.format(savepoint_name, block_index))
+                cursor.execute('''SAVEPOINT {}'''.format(savepoint_name))
+                if block_index % 100 == 0:  # TODO: Tweak value. This is to save memory.
+                    logger.debug('Releasing all savepoints.')
+                    # Clear all savepoints.
+                    cursor.execute('''COMMIT''')
+                    SAVEPOINTS = {}
 
             # Remove any non‐supported transactions older than ten blocks.
             while len(not_supported_sorted) and not_supported_sorted[0][0] <= block_index - 10:
