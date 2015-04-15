@@ -135,31 +135,28 @@ def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False):
     """
     global MEMPOOL_CACHE_INITIALIZED
 
-    if unconfirmed:
-        if not config.ENABLE_MEMPOOL:
-            raise MempoolError('Mempool is not enabled.')
-        elif not MEMPOOL_CACHE_INITIALIZED:
-            raise MempoolError('Mempool is not yet ready; please try again in a few minutes.')
+    if unconfirmed and not MEMPOOL_CACHE_INITIALIZED:
+        raise MempoolError('Mempool is not yet ready; please try again in a few minutes.')
 
     # Get all outputs.
     logger.debug('Getting outputs.')
     if script.is_multisig(source):
         pubkeyhashes = script.pubkeyhash_array(source)
-        raw_transactions = searchrawtransactions(pubkeyhashes[1], unconfirmed=unconfirmed)
+        raw_transactions = searchrawtransactions(pubkeyhashes[1], unconfirmed=True) # unconfirmed=True to prune unconfirmed spent outputs
     else:
         pubkeyhashes = [source]
-        raw_transactions = searchrawtransactions(source, unconfirmed=unconfirmed)
+        raw_transactions = searchrawtransactions(source, unconfirmed=True)
 
     # Change format.
     # TODO: Slow.
     logger.debug('Formatting outputs.')
-    outputs = []
+    outputs = {}
     for tx in raw_transactions:
         for vout in tx['vout']:
             txid = tx['txid']
             confirmations = tx['confirmations'] if 'confirmations' in tx else 0
-            outkey = '{}{}'.format(txid, vout['n'])
-            if outkey not in outputs or outputs[outkey]['confirmations'] < confirmations:
+            outkey = '{}{}'.format(txid, vout['n']) # edge case: avoid duplicate output
+            if outkey not in outputs or outputs[outkey]['confirmations'] < confirmations: 
                 coin = {
                         'amount': float(vout['value']),
                         'confirmations': confirmations,
@@ -167,8 +164,8 @@ def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False):
                         'txid': txid,
                         'vout': vout['n']
                        }
-                outputs.append(coin)
-    outputs = sorted(outputs, key=lambda x: x['confirmations'])
+                outputs[outkey] = coin
+    outputs = sorted(outputs.values(), key=lambda x: x['confirmations'])
 
     # Prune unspendable.
     logger.debug('Pruning unspendable outputs.')
@@ -185,7 +182,7 @@ def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False):
     unspent = sorted(unspent, key=lambda x: x['txid'])
 
     # Remove unconfirmed txouts, if desired.
-    if unconfirmed:
+    if not unconfirmed:
         unspent = [output for output in unspent if output['confirmations'] > 0]
     else:
         # Hackish: Allow only inputs which are either already confirmed or were seen only recently. (Skip outputs from slow‐to‐confirm transanctions.)
