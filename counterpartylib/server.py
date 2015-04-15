@@ -83,6 +83,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
                 requests_timeout=config.DEFAULT_REQUESTS_TIMEOUT,
                 rpc_batch_size=config.DEFAULT_RPC_BATCH_SIZE,
                 check_asset_conservation=config.DEFAULT_CHECK_ASSET_CONSERVATION,
+                enable_mempool = config.DEFAULT_ENABLE_MEMPOOL,
                 backend_ssl_verify=None, rpc_allow_cors=None):
 
      # Data directory
@@ -276,6 +277,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     config.REQUESTS_TIMEOUT = requests_timeout
     config.RPC_BATCH_SIZE = rpc_batch_size
     config.CHECK_ASSET_CONSERVATION = check_asset_conservation
+    config.ENABLE_MEMPOOL = enable_mempool
 
     ##############
     # OTHER SETTINGS
