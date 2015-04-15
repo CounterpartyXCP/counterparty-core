@@ -135,11 +135,8 @@ def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False):
     """
     global MEMPOOL_CACHE_INITIALIZED
 
-    if unconfirmed:
-        if not config.ENABLE_MEMPOOL:
-            raise MempoolError('Mempool is not enabled.')
-        elif not MEMPOOL_CACHE_INITIALIZED:
-            raise MempoolError('Mempool is not yet ready; please try again in a few minutes.')
+    if unconfirmed and not MEMPOOL_CACHE_INITIALIZED:
+        raise MempoolError('Mempool is not yet ready; please try again in a few minutes.')
 
     # Get all outputs.
     logger.debug('Getting outputs.')

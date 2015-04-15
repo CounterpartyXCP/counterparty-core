@@ -95,6 +95,5 @@ EXITCODE_UPDATE_REQUIRED = 5
 
 
 DEFAULT_CHECK_ASSET_CONSERVATION = True
-DEFAULT_ENABLE_MEMPOOL = False
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
