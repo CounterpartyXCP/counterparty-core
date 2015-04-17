@@ -165,9 +165,16 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
         config.BACKEND_PORT = backend_port
     else:
         if config.TESTNET:
-            config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_TESTNET
+            if config.BACKEND_NAME == 'btcd':
+                config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_TESTNET_BTCD
+            else:
+                config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_TESTNET
         else:
-            config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT
+            if config.BACKEND_NAME == 'btcd':
+                config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_BTCD
+            else:
+                config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT
+
     try:
         config.BACKEND_PORT = int(config.BACKEND_PORT)
         if not (int(config.BACKEND_PORT) > 1 and int(config.BACKEND_PORT) < 65535):
