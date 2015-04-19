@@ -26,21 +26,23 @@ def generate_config_file(filename, config_args, known_config={}, overwrite=False
     for arg in config_args:
         key = arg[0][-1].replace('--', '')
         value = None
+
         if key in known_config:
             value = known_config[key]
         elif 'default' in arg[1]:
             value = arg[1]['default']
-        if value is None or value == '':
-            key = '# {}'.format(key)
+
+        if value is None:
             value = ''
         elif isinstance(value, bool):
             value = '1' if value else '0'
         elif isinstance(value, (float, D)):
             value = format(value, '.8f')
 
-        config_lines.append('# {}'.format(arg[1]['help']))
-        config_lines.append('{} = {}'.format(key, value))
-        config_lines.append('')
+        if 'default' in arg[1] or value == '':
+            key = '# {}'.format(key)
+
+        config_lines.append('{} = {}\t\t\t\t# {}'.format(key, value, arg[1]['help']))
 
     with open(filename, 'w', encoding='utf8') as config_file:
         config_file.writelines("\n".join(config_lines))
