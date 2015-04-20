@@ -2,6 +2,7 @@ import logging
 from decimal import Decimal as D
 import binascii
 from math import ceil
+import time
 
 from counterpartylib.lib import script, config, blocks, exceptions, api, transaction
 from counterpartylib.lib.util import make_id, BET_TYPE_NAME, BET_TYPE_ID, dhash, generate_asset_name
@@ -161,6 +162,7 @@ def prepare_args(args, action):
     if action == 'broadcast':
         args.value = util.value_in(args.value, 'value')
         args.fee_fraction = util.value_in(args.fee_fraction, 'fraction')
+        args.timestamp = int(time.time())
 
     # bet
     if action == 'bet':

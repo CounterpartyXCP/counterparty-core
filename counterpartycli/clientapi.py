@@ -37,10 +37,10 @@ def initialize(testnet=False, testcoin=False,
     ##############
     # THINGS WE CONNECT TO
 
-    # Counterparty server host (Bitcoin Core)
+    # Server host (Bitcoin Core)
     config.COUNTERPARTY_RPC_CONNECT = counterparty_rpc_connect or 'localhost'
 
-    # Counterparty server RPC port (Bitcoin Core)
+    # Server RPC port (Bitcoin Core)
     if counterparty_rpc_port:
         config.COUNTERPARTY_RPC_PORT = counterparty_rpc_port
     else:
@@ -55,22 +55,22 @@ def initialize(testnet=False, testcoin=False,
     except:
         raise Exception("Please specific a valid port number counterparty-rpc-port configuration parameter")
 
-    # Counterparty server RPC user (Bitcoin Core)
+    # Server RPC user (Bitcoin Core)
     config.COUNTERPARTY_RPC_USER = counterparty_rpc_user or 'rpc'
 
-    # Counterparty server RPC password (Bitcoin Core)
+    # Server RPC password (Bitcoin Core)
     if counterparty_rpc_password:
         config.COUNTERPARTY_RPC_PASSWORD = counterparty_rpc_password
     else:
         config.COUNTERPARTY_RPC_PASSWORD = None
 
-    # Counterparty server RPC SSL
+    # Server RPC SSL
     config.COUNTERPARTY_RPC_SSL = counterparty_rpc_ssl or False  # Default to off.
 
-    # Counterparty server RPC SSL Verify
+    # Server RPC SSL Verify
     config.COUNTERPARTY_RPC_SSL_VERIFY = counterparty_rpc_ssl_verify or False # Default to off (support self‐signed certificates)
 
-    # Construct Counterparty server URL.
+    # Construct server URL.
     config.COUNTERPARTY_RPC = config.COUNTERPARTY_RPC_CONNECT + ':' + str(config.COUNTERPARTY_RPC_PORT)
     if config.COUNTERPARTY_RPC_PASSWORD:
         config.COUNTERPARTY_RPC = urlencode(config.COUNTERPARTY_RPC_USER) + ':' + urlencode(config.COUNTERPARTY_RPC_PASSWORD) + '@' + config.COUNTERPARTY_RPC
@@ -169,7 +169,7 @@ WALLET_METHODS = [
 
 def call(method, args, pubkey_resolver=None):
     """
-        Unified function to call Wallet and Counterparty API methods
+        Unified function to call Wallet and Server API methods
         Should be used by applications like `counterparty-gui`
 
         :Example:
