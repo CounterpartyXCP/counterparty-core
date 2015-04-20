@@ -1,10 +1,10 @@
 ## Client Versions ##
-* v9.51.1 (2015-04-??)
+* v9.51.1 (2015-04-20)
 	* rename `server.api.log` to `server.access.log`
 	* add `requests_timeout` parameter
 	* add `rpc_batch_size` parameter and optimize RPC calls for block parsing and UTXO search
 	* add `check_asset_conservation` parameter and optimize assets conservation checking
-	* add `enable_mempool` parameter and disable mempool parsing by default
+	* miscellaneous bug fixes
 	* code reorganisation
 * v9.51.0 (2015-04-01)
 	* check for null data chunks (protocol change: 352000)
