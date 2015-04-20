@@ -1,4 +1,8 @@
 ## Command Line Interface Versions ##
+* v1.1.1 (2015/04/20)
+	* Fix `broadcast` command
+	* Cleaner, Commented-out Default Config Files
+	* Support new configuration parameter: `no-check-asset-conservation`, `rpc-batch-size`, `requests-timeout`
 * v1.1.0 (2015/03/31)
 	* Code reorganisation
 	* Remove `market` command
