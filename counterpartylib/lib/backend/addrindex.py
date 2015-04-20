@@ -160,8 +160,10 @@ def getrawmempool():
 def sendrawtransaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
 
-
+# TODO: move to __init__.py
 RAW_TRANSACTIONS_CACHE = {}
+RAW_TRANSACTIONS_CACHE_KEYS = []
+RAW_TRANSACTIONS_CACHE_SIZE = 10000
 
 def getrawtransaction_batch(txhash_list, verbose=False):
     tx_hash_call_id = {}
@@ -185,6 +187,11 @@ def getrawtransaction_batch(txhash_list, verbose=False):
                 tx_hex = response['result']
                 tx_hash = tx_hash_call_id[response['id']]
                 RAW_TRANSACTIONS_CACHE[tx_hash] = tx_hex
+                RAW_TRANSACTIONS_CACHE_KEYS.append(tx_hash)
+                while len(RAW_TRANSACTIONS_CACHE_KEYS) > RAW_TRANSACTIONS_CACHE_SIZE:
+                    first_hash = RAW_TRANSACTIONS_CACHE_KEYS[0]
+                    del(RAW_TRANSACTIONS_CACHE[first_hash])
+                    RAW_TRANSACTIONS_CACHE_KEYS.pop(0)
             else:
                 raise BackendRPCError('{}'.format(response['error']))
 

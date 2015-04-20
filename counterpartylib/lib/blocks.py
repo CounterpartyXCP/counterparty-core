@@ -1012,7 +1012,6 @@ def follow(db):
 
             # When newly caught up, check for conservation of assets.
             if block_index == block_count:
-                backend.clear_mempool_cache()
                 if config.CHECK_ASSET_CONSERVATION:
                     check.asset_conservation(db)
 

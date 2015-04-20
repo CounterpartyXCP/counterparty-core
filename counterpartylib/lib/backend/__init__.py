@@ -245,8 +245,4 @@ def init_mempool_cache():
     logger.debug('Mempool cache initialized: {}s for {} transactions'.format(time.time() - start, len(txhash_list) + len(vin_txhash_list)))
 
 
-def clear_mempool_cache():
-    logger.debug('Clear mempool cache')
-    BACKEND().RAW_TRANSACTIONS_CACHE = {}
-
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

@@ -77,7 +77,7 @@ def rpc_batch(payload):
         responses += rpc_call(chunk)
     '''
     for query in payload:
-        responses += rpc_call(query)
+        responses.append(rpc_call(query))
 
     return responses
 
@@ -111,7 +111,10 @@ def getrawtransaction(tx_hash, verbose=False):
 def getrawmempool():
     return rpc('getrawmempool', [])
 
+# TODO: move to __init__.py
 RAW_TRANSACTIONS_CACHE = {}
+RAW_TRANSACTIONS_CACHE_KEYS = []
+RAW_TRANSACTIONS_CACHE_SIZE = 10000
 
 def getrawtransaction_batch(txhash_list, verbose=False):
     tx_hash_call_id = {}
@@ -130,13 +133,14 @@ def getrawtransaction_batch(txhash_list, verbose=False):
 
     if len(payload) > 0:
         batch_responses = rpc_batch(payload)
-        for response in batch_responses:
-            if 'error' not in response or response['error'] is None:
-                tx_hex = response['result']
-                tx_hash = tx_hash_call_id[response['id']]
-                RAW_TRANSACTIONS_CACHE[tx_hash] = tx_hex
-            else:
-                raise BackendRPCError('{}'.format(response['error']))
+        for tx_hex in batch_responses:
+            tx_hash = tx_hex['txid']
+            RAW_TRANSACTIONS_CACHE[tx_hash] = tx_hex
+            RAW_TRANSACTIONS_CACHE_KEYS.append(tx_hash)
+            while len(RAW_TRANSACTIONS_CACHE_KEYS) > RAW_TRANSACTIONS_CACHE_SIZE:
+                first_hash = RAW_TRANSACTIONS_CACHE_KEYS[0]
+                del(RAW_TRANSACTIONS_CACHE[first_hash])
+                RAW_TRANSACTIONS_CACHE_KEYS.pop(0)
 
     result = {}
     for tx_hash in txhash_list:
