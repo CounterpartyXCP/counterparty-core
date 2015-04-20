@@ -80,6 +80,9 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
                 rpc_user=None, rpc_password=None,
                 rpc_no_allow_cors=False,
                 force=False, verbose=False,
+                requests_timeout=config.DEFAULT_REQUESTS_TIMEOUT,
+                rpc_batch_size=config.DEFAULT_RPC_BATCH_SIZE,
+                check_asset_conservation=config.DEFAULT_CHECK_ASSET_CONSERVATION,
                 backend_ssl_verify=None, rpc_allow_cors=None):
 
      # Data directory
@@ -128,9 +131,9 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     if api_log_file:
         config.API_LOG = api_log_file
     else:
-        filename = 'server{}.api.log'.format(network)
+        filename = 'server{}.access.log'.format(network)
         config.API_LOG = os.path.join(log_dir, filename)
-    logger.debug('Writing API log to file: `{}`'.format(config.API_LOG))
+    logger.debug('Writing API accesses log to file: `{}`'.format(config.API_LOG))
 
     # Set up logging.
     root_logger = logging.getLogger()    # Get root logger.
@@ -162,9 +165,16 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
         config.BACKEND_PORT = backend_port
     else:
         if config.TESTNET:
-            config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_TESTNET
+            if config.BACKEND_NAME == 'btcd':
+                config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_TESTNET_BTCD
+            else:
+                config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_TESTNET
         else:
-            config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT
+            if config.BACKEND_NAME == 'btcd':
+                config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_BTCD
+            else:
+                config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT
+
     try:
         config.BACKEND_PORT = int(config.BACKEND_PORT)
         if not (int(config.BACKEND_PORT) > 1 and int(config.BACKEND_PORT) < 65535):
@@ -217,7 +227,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     ##############
     # THINGS WE SERVE
 
-    # counterpartyd API RPC host
+    # Server API RPC host
     if rpc_host:
         config.RPC_HOST = rpc_host
     else:
@@ -226,7 +236,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     # The web root directory for API calls, eg. localhost:14000/rpc/
     config.RPC_WEBROOT = '/rpc/'
 
-    # counterpartyd API RPC port
+    # Server API RPC port
     if rpc_port:
         config.RPC_PORT = rpc_port
     else:
@@ -243,17 +253,17 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     try:
         config.RPC_PORT = int(config.RPC_PORT)
         if not (int(config.RPC_PORT) > 1 and int(config.RPC_PORT) < 65535):
-            raise ConfigurationError('invalid counterpartyd API port number')
+            raise ConfigurationError('invalid server API port number')
     except:
         raise ConfigurationError("Please specific a valid port number rpc-port configuration parameter")
 
-    #  counterpartyd API RPC user
+    # Server API RPC user
     if rpc_user:
         config.RPC_USER = rpc_user
     else:
         config.RPC_USER = 'rpc'
 
-    #  counterpartyd API RPC password
+    # Server API RPC password
     if rpc_password:
         config.RPC_PASSWORD = rpc_password
         config.RPC = 'http://' + urlencode(config.RPC_USER) + ':' + urlencode(config.RPC_PASSWORD) + '@' + config.RPC_HOST + ':' + str(config.RPC_PORT) + config.RPC_WEBROOT
@@ -269,6 +279,10 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
             config.RPC_NO_ALLOW_CORS = rpc_no_allow_cors
         else:
             config.RPC_NO_ALLOW_CORS = False
+
+    config.REQUESTS_TIMEOUT = requests_timeout
+    config.RPC_BATCH_SIZE = rpc_batch_size
+    config.CHECK_ASSET_CONSERVATION = check_asset_conservation
 
     ##############
     # OTHER SETTINGS

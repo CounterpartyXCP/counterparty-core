@@ -54,10 +54,6 @@ CHECKPOINTS_TESTNET = {
 
 class ConsensusError(Exception):
     pass
-class BackendError(Exception):
-    pass
-class DatabaseError(Exception):
-    pass
 
 def consensus_hash(db, field, previous_consensus_hash, content):
     cursor = db.cursor()
@@ -70,7 +66,10 @@ def consensus_hash(db, field, previous_consensus_hash, content):
 
     # Get previous hash.
     if not previous_consensus_hash:
-        previous_consensus_hash = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index - 1,)))[0][field]
+        try:
+            previous_consensus_hash = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index - 1,)))[0][field]
+        except IndexError:
+            previous_consensus_hash = None
         if not previous_consensus_hash:
             raise ConsensusError('Empty previous {} for block {}. Please launch a `reparse`.'.format(field, block_index))
 
@@ -101,12 +100,13 @@ class SanityError(Exception):
 def asset_conservation(db):
     logger.debug('Checking for conservation of assets.')
     supplies = util.supplies(db)
+    held = util.held(db)
     for asset in supplies.keys():
-        issued = supplies[asset]
-        held = sum([holder['address_quantity'] for holder in util.holders(db, asset)])
-        if held != issued:
-            raise SanityError('{} {} issued ≠ {} {} held'.format(util.value_out(db, issued, asset), asset, util.value_out(db, held, asset), asset))
-        logger.debug('{} has been conserved ({} {} both issued and held)'.format(asset, util.value_out(db, issued, asset), asset))
+        asset_issued = supplies[asset]
+        asset_held = held[asset] if asset in held and held[asset] != None else 0
+        if asset_issued != asset_held:
+            raise SanityError('{} {} issued ≠ {} {} held'.format(util.value_out(db, asset_issued, asset), asset, util.value_out(db, asset_held, asset), asset))
+        logger.debug('{} has been conserved ({} {} both issued and held)'.format(asset, util.value_out(db, asset_issued, asset), asset))
 
 class VersionError(Exception):
     pass
@@ -127,8 +127,8 @@ def check_change(protocol_change, change_name):
                 passed = False
 
     if not passed:
-        explanation = 'Your version of counterpartyd is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: ‘{}’. Please upgrade to the latest version and restart the server.'.format(
-            config.VERSION_STRING, protocol_change['block_index'], protocol_change['minimum_version_major'], protocol_change['minimum_version_minor'],
+        explanation = 'Your version of {} is v{}, but, as of block {}, the minimum version is v{}.{}.{}. Reason: ‘{}’. Please upgrade to the latest version and restart the server.'.format(
+            config.APP_NAME, config.VERSION_STRING, protocol_change['block_index'], protocol_change['minimum_version_major'], protocol_change['minimum_version_minor'],
             protocol_change['minimum_version_revision'], change_name)
         if util.CURRENT_BLOCK_INDEX >= protocol_change['block_index']:
             raise VersionUpdateRequiredError(explanation)
@@ -162,22 +162,6 @@ def software_version():
 
     logger.debug('Version check passed.')
 
-def backend_state():
-    """Checks blocktime of last block to see if {} Core is running behind.""".format(config.BTC_NAME)
-    block_count = backend.getblockcount()
-    block_hash = backend.getblockhash(block_count)
-    cblock = backend.getblock(block_hash)
-    time_behind = time.time() - cblock.nTime   # TODO: Block times are not very reliable.
-    if time_behind > 60 * 60 * 2:   # Two hours.
-        raise BackendError('Bitcoind is running about {} hours behind.'.format(round(time_behind / 3600)))
-    logger.debug('Backend state check passed.')
-
-def database_state(db, blockcount):
-    """Checks {} database to see if is caught up with backend.""".format(config.XCP_NAME)
-    if util.CURRENT_BLOCK_INDEX + 1 < blockcount:
-        raise DatabaseError('{} database is behind backend.'.format(config.XCP_NAME))
-    logger.debug('Database state check passed.')
-    return
 
 class DatabaseVersionError(Exception):
     def __init__(self, message, reparse_block_index):

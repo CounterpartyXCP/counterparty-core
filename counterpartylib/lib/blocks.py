@@ -697,11 +697,12 @@ def reparse(db, block_index=None, quiet=False):
     cursor.close()
     return
 
-def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index):
+def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=None):
     assert type(tx_hash) == str
 
     # Get the important details about each transaction.
-    tx_hex = backend.getrawtransaction(tx_hash)
+    if tx_hex is None:
+        tx_hex = backend.getrawtransaction(tx_hash)
     source, destination, btc_amount, fee, data = get_tx_info(tx_hex)
 
     # For mempool
@@ -908,6 +909,7 @@ def follow(db):
     not_supported_sorted = collections.deque()
     # ^ Entries in form of (block_index, tx_hash), oldest first. Allows for easy removal of past, unncessary entries
     mempool_initialised = False
+    backend.init_mempool_cache()
     cursor = db.cursor()
     # a reorg can happen without the block count increasing, or even for that
     # matter, with the block count decreasing. This should only delay
@@ -982,6 +984,7 @@ def follow(db):
             previous_block_hash = bitcoinlib.core.b2lx(block.hashPrevBlock)
             block_time = block.nTime
             txhash_list = backend.get_txhash_list(block)
+            raw_transactions = backend.getrawtransaction_batch(txhash_list)
             with db:
                 util.CURRENT_BLOCK_INDEX = block_index
 
@@ -1001,15 +1004,16 @@ def follow(db):
 
                 # List the transactions in the block.
                 for tx_hash in txhash_list:
-                    # TODO: use rpc._batch to get all transactions with one RPC call
-                    tx_index = list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index)
+                    tx_hex = raw_transactions[tx_hash]
+                    tx_index = list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex)
 
                 # Parse the transactions in the block.
                 parse_block(db, block_index, block_time)
 
             # When newly caught up, check for conservation of assets.
             if block_index == block_count:
-                check.asset_conservation(db)
+                if config.CHECK_ASSET_CONSERVATION:
+                    check.asset_conservation(db)
 
             # Remove any non‐supported transactions older than ten blocks.
             while len(not_supported_sorted) and not_supported_sorted[0][0] <= block_index - 10:
@@ -1021,14 +1025,14 @@ def follow(db):
             block_count = backend.getblockcount()
             block_index += 1
 
-        else:
+        else:   
             # First mempool fill for session?
             if mempool_initialised:
                 logger.debug('Updating mempool.')
             else:
                 logger.debug('Initialising mempool.')
 
-            # Get old counterpartyd mempool.
+            # Get old mempool.
             old_mempool = list(cursor.execute('''SELECT * FROM mempool'''))
             old_mempool_hashes = [message['tx_hash'] for message in old_mempool]
 
@@ -1043,7 +1047,7 @@ def follow(db):
             mempool = []
             for tx_hash in backend.getrawmempool():
 
-                # If already in counterpartyd mempool, copy to new one.
+                # If already in mempool, copy to new one.
                 if tx_hash in old_mempool_hashes:
                     for message in old_mempool:
                         if message['tx_hash'] == tx_hash:

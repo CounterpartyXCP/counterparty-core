@@ -17,6 +17,21 @@ from counterpartylib.lib import config
 
 from counterpartylib.lib.backend import addrindex, btcd
 
+def sortkeypicker(keynames):
+    """http://stackoverflow.com/a/1143719"""
+    negate = set()
+    for i, k in enumerate(keynames):
+        if k[:1] == '-':
+            keynames[i] = k[1:]
+            negate.add(k[1:])
+    def getit(adict):
+       composite = [adict[k] for k in keynames]
+       for i, (k, v) in enumerate(zip(keynames, composite)):
+           if k in negate:
+               composite[i] = -v
+       return composite
+    return getit
+
 def BACKEND():
     return sys.modules['counterpartylib.lib.backend.{}'.format(config.BACKEND_NAME)] 
 
@@ -34,6 +49,8 @@ def searchrawtransactions(address, unconfirmed=False):
     return BACKEND().searchrawtransactions(address, unconfirmed=unconfirmed)
 def getrawtransaction(tx_hash, verbose=False):
     return BACKEND().getrawtransaction(tx_hash, verbose=verbose)
+def getrawtransaction_batch(txhash_list, verbose=False):
+    return BACKEND().getrawtransaction_batch(txhash_list, verbose=verbose)
 def sendrawtransaction(tx_hex):
     return BACKEND().sendrawtransaction(tx_hex)
 
@@ -71,7 +88,7 @@ def sort_unspent_txouts(unspent, unconfirmed=False):
     # (Oldest to newest so the nodes don’t have to be exactly caught up to each other for consensus to be achieved.)
     # searchrawtransactions doesn’t support unconfirmed transactions
     try:
-        unspent = sorted(unspent, key=util.sortkeypicker(['ts', 'vout']))
+        unspent = sorted(unspent, key=sortkeypicker(['ts', 'vout']))
     except KeyError: # If timestamp isn’t given.
         pass
 
@@ -109,30 +126,37 @@ def is_scriptpubkey_spendable(scriptpubkey_hex, source, multisig_inputs=False):
 
     return False
 
+class MempoolError(Exception):
+    pass
+
 def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
     """
+    global MEMPOOL_CACHE_INITIALIZED
+
+    if not MEMPOOL_CACHE_INITIALIZED:
+        raise MempoolError('Mempool is not yet ready; please try again in a few minutes.')
 
     # Get all outputs.
     logger.debug('Getting outputs.')
     if script.is_multisig(source):
         pubkeyhashes = script.pubkeyhash_array(source)
-        raw_transactions = searchrawtransactions(pubkeyhashes[1], unconfirmed=unconfirmed)
+        raw_transactions = searchrawtransactions(pubkeyhashes[1], unconfirmed=True) # unconfirmed=True to prune unconfirmed spent outputs
     else:
         pubkeyhashes = [source]
-        raw_transactions = searchrawtransactions(source, unconfirmed=unconfirmed)
+        raw_transactions = searchrawtransactions(source, unconfirmed=True)
 
     # Change format.
     # TODO: Slow.
     logger.debug('Formatting outputs.')
-    outputs = []
+    outputs = {}
     for tx in raw_transactions:
         for vout in tx['vout']:
             txid = tx['txid']
             confirmations = tx['confirmations'] if 'confirmations' in tx else 0
-            outkey = '{}{}'.format(txid, vout['n'])
-            if outkey not in outputs or outputs[outkey]['confirmations'] < confirmations:
+            outkey = '{}{}'.format(txid, vout['n']) # edge case: avoid duplicate output
+            if outkey not in outputs or outputs[outkey]['confirmations'] < confirmations: 
                 coin = {
                         'amount': float(vout['value']),
                         'confirmations': confirmations,
@@ -140,8 +164,8 @@ def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False):
                         'txid': txid,
                         'vout': vout['n']
                        }
-                outputs.append(coin)
-    outputs = sorted(outputs, key=lambda x: x['confirmations'])
+                outputs[outkey] = coin
+    outputs = sorted(outputs.values(), key=lambda x: x['confirmations'])
 
     # Prune unspendable.
     logger.debug('Pruning unspendable outputs.')
@@ -158,7 +182,7 @@ def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False):
     unspent = sorted(unspent, key=lambda x: x['txid'])
 
     # Remove unconfirmed txouts, if desired.
-    if unconfirmed:
+    if not unconfirmed:
         unspent = [output for output in unspent if output['confirmations'] > 0]
     else:
         # Hackish: Allow only inputs which are either already confirmed or were seen only recently. (Skip outputs from slow‐to‐confirm transanctions.)
@@ -199,6 +223,26 @@ def multisig_pubkeyhashes_to_pubkeys(address, provided_pubkeys=None):
     signatures_required, pubkeyhashes, signatures_possible = script.extract_array(address)
     pubkeys = [pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys) for pubkeyhash in pubkeyhashes]
     return script.construct_array(signatures_required, pubkeys, signatures_possible)
+
+
+MEMPOOL_CACHE_INITIALIZED = False
+
+def init_mempool_cache():
+    global MEMPOOL_CACHE_INITIALIZED
+
+    logger.debug('Initialize mempool cache')
+    start = time.time()
+
+    txhash_list = BACKEND().getrawmempool()
+    mempool_tx = BACKEND().getrawtransaction_batch(txhash_list, verbose=True)
+    vin_txhash_list = []
+    for txid in mempool_tx:
+        tx = mempool_tx[txid]
+        vin_txhash_list += [vin['txid'] for vin in tx['vin']]
+    BACKEND().getrawtransaction_batch(vin_txhash_list, verbose=True)
+
+    MEMPOOL_CACHE_INITIALIZED = True
+    logger.debug('Mempool cache initialized: {}s for {} transactions'.format(time.time() - start, len(txhash_list) + len(vin_txhash_list)))
 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

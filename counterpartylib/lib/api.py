@@ -81,6 +81,29 @@ current_api_status_response_json = None #is updated by the APIStatusPoller
 class APIError(Exception):
     pass
 
+
+class BackendError(Exception):
+    pass
+def check_backend_state():
+    """Checks blocktime of last block to see if {} Core is running behind.""".format(config.BTC_NAME)
+    block_count = backend.getblockcount()
+    block_hash = backend.getblockhash(block_count)
+    cblock = backend.getblock(block_hash)
+    time_behind = time.time() - cblock.nTime   # TODO: Block times are not very reliable.
+    if time_behind > 60 * 60 * 2:   # Two hours.
+        raise BackendError('Bitcoind is running about {} hours behind.'.format(round(time_behind / 3600)))
+    logger.debug('Backend state check passed.')
+
+class DatabaseError(Exception):
+    pass
+def check_database_state(db, blockcount):
+    """Checks {} database to see if is caught up with backend.""".format(config.XCP_NAME)
+    if util.CURRENT_BLOCK_INDEX + 1 < blockcount:
+        raise DatabaseError('{} database is behind backend.'.format(config.XCP_NAME))
+    logger.debug('Database state check passed.')
+    return
+
+
 # TODO: ALL queries EVERYWHERE should be done with these methods
 def db_query(db, statement, bindings=(), callback=None, **callback_args):
     """Allow direct access to the database in a parametrized manner."""
@@ -335,12 +358,12 @@ class APIStatusPoller(threading.Thread):
                     if not config.FORCE:
                         code = 11
                         logger.debug('Checking backend state.')
-                        check.backend_state()
+                        check_backend_state()
                         code = 12
                         logger.debug('Checking database state.')
-                        check.database_state(db, backend.getblockcount())
+                        check_database_state(db, backend.getblockcount())
                         self.last_database_check = time.time()
-            except (check.BackendError, check.DatabaseError) as e:
+            except (BackendError, DatabaseError) as e:
                 exception_name = e.__class__.__name__
                 exception_text = str(e)
                 logger.debug("API Status Poller: %s", exception_text)
@@ -574,8 +597,8 @@ class APIServer(threading.Thread):
             latestBlockIndex = backend.getblockcount()
 
             try:
-                check.database_state(db, latestBlockIndex)
-            except check.DatabaseError:
+                check_database_state(db, latestBlockIndex)
+            except DatabaseError:
                 caught_up = False
             else:
                 caught_up = True

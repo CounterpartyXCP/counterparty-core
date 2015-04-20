@@ -1,5 +1,5 @@
 """
-This module test for counterpartyd compability with Ethereum's Smart Contracts.
+This module tests for compability with Ethereum's Smart Contracts.
 """
 
 """
@@ -210,7 +210,7 @@ tester.a2 = 'dceceaf3fc5c0a63d195d69b1a90011b7b19650d'
 tester.a3 = '598443f1880ef585b21f1d7585bd0577402861e5'
 
 def setup_function(function):
-    server.initialise(database_file=tempfile.gettempdir()+'/counterpartyd.unittest.db', 
+    server.initialise(database_file=tempfile.gettempdir()+'/counterparty.unittest.db', 
                       rpc_port=9999, rpc_password='pass', 
                       backend_password='pass',
                       testnet=True, testcoin=False)
