@@ -68,10 +68,17 @@ def rpc_batch(payload):
         n = max(1, n)
         return [l[i:i + n] for i in range(0, len(l), n)]
 
-    chunks = get_chunks(payload, config.RPC_BATCH_SIZE)
     responses = []
+
+    # TODO: waiting for https://github.com/btcsuite/btcd/issues/329
+    '''
+    chunks = get_chunks(payload, config.RPC_BATCH_SIZE)
     for chunk in chunks:
         responses += rpc_call(chunk)
+    '''
+    for query in payload:
+        responses += rpc_call(query)
+
     return responses
 
 def extract_addresses(tx_hash):
