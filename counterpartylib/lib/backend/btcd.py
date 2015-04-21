@@ -120,6 +120,7 @@ def getrawtransaction_batch(txhash_list, verbose=False):
     tx_hash_call_id = {}
     call_id = 0
     payload = []
+    # payload for transactions not in cache
     for tx_hash in txhash_list:
         if tx_hash not in RAW_TRANSACTIONS_CACHE:
             payload.append({
@@ -131,13 +132,16 @@ def getrawtransaction_batch(txhash_list, verbose=False):
             tx_hash_call_id[call_id] = tx_hash
             call_id += 1
 
+    # populate cache
     if len(payload) > 0:
         batch_responses = rpc_batch(payload)
         for tx_hex in batch_responses:
             tx_hash = tx_hex['txid']
-            RAW_TRANSACTIONS_CACHE[tx_hash] = tx_hex
-            RAW_TRANSACTIONS_CACHE_KEYS.append(tx_hash)
+            if tx_hash not in RAW_TRANSACTIONS_CACHE:
+                RAW_TRANSACTIONS_CACHE[tx_hash] = tx_hex
+                RAW_TRANSACTIONS_CACHE_KEYS.append(tx_hash)
 
+    # get transactions from cache
     result = {}
     for tx_hash in txhash_list:
         if verbose:
