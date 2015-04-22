@@ -88,7 +88,7 @@ def searchrawtransactions(address, unconfirmed=False):
     logger.debug('Searching raw transactions.')
 
     try:
-        rawtransactions = rpc('searchrawtransactions', [address, True, 0, 9999999])
+        rawtransactions = rpc('searchrawtransactions', [address, 1, 0, 9999999])
     except BackendRPCError as e:
         raise BackendRPCError(str(e))
     
