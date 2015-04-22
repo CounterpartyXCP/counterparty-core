@@ -12,7 +12,7 @@
 	* `sudo python3 setup.py sdist build`
 	<!-- * `sudo python3 setup.py bdist_wheel build`	# Does not work with `apsw` and `ethereum-serpent` installs. -->
 	* `twine upload -s dist/$NEW_FILES`
-- Write [Release Notes](https://github.com/CounterpartyXCP/counterpartyd/releases)
+- Write [Release Notes](https://github.com/CounterpartyXCP/counterparty-lib/releases)
 - Update documentation (as appropriate)
 
 **@ivanazuber:**:
