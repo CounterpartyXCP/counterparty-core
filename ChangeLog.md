@@ -1,4 +1,8 @@
 ## Client Versions ##
+* v9.51.2 (2015-04-23)
+	* miscellaneous bug fixes
+	* dramatically reduced default batch size (from 5000 to 20)
+	* renamed repository to `counterparty-lib`
 * v9.51.1 (2015-04-20)
 	* rename `server.api.log` to `server.access.log`
 	* add `requests_timeout` parameter
