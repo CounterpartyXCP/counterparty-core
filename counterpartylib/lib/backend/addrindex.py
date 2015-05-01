@@ -55,7 +55,8 @@ def rpc_call(payload):
         return response_json['result']
     elif response_json['error']['code'] == -5:   # RPC_INVALID_ADDRESS_OR_KEY
         raise BackendRPCError('{} Is `txindex` enabled in {} Core?'.format(response_json['error'], config.BTC_NAME))
-    elif response_json['error']['code'] in [-28, -8]:   # “Verifying blocks...” or “Block height out of range”
+    elif response_json['error']['code'] in [-28, -8, -2]:  
+        # “Verifying blocks...” or “Block height out of range” or “The network does not appear to fully agree!“ 
         logger.debug('Backend not ready. Sleeping for ten seconds.')
         # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
         # seconds to start, this’ll hit the maximum recursion depth limit.
