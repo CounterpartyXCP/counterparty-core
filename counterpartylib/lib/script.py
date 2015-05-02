@@ -230,7 +230,11 @@ def get_checkmultisig(asm):
 def scriptpubkey_to_address(scriptpubkey):
     asm = get_asm(scriptpubkey)
     if asm[-1] == 'OP_CHECKSIG':
-        return base58_check_encode(binascii.hexlify(get_checksig(asm)).decode('utf-8'), config.ADDRESSVERSION)
+        try:
+            checksig = get_checksig(asm)
+        except exceptions.DecodeError: # coinbase
+            return None
+        return base58_check_encode(binascii.hexlify(checksig).decode('utf-8'), config.ADDRESSVERSION)
     elif asm[-1] == 'OP_CHECKMULTISIG':
         pubkeys, signatures_required = get_checkmultisig(asm)
         pubkeyhashes = [pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
