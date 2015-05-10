@@ -329,10 +329,7 @@ def construct (db, tx_info, encoding='auto',
     # Data encoding methods (choose and validate).
     if data:
         if encoding == 'auto':
-            if len(data) <= config.OP_RETURN_MAX_SIZE:
-                encoding = 'opreturn'
-            else:
-                encoding = 'multisig'
+            encoding = 'multisig'
         elif encoding not in ('pubkeyhash', 'multisig', 'opreturn'):
             raise exceptions.TransactionError('Unknown encoding‐scheme.')
 
