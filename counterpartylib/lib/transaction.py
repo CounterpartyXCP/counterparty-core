@@ -329,7 +329,7 @@ def construct (db, tx_info, encoding='auto',
     # Data encoding methods (choose and validate).
     if data:
         if encoding == 'auto':
-            if len(data) <= config.OP_RETURN_MAX_SIZE:
+            if len(data) + len(config.PREFIX) <= config.OP_RETURN_MAX_SIZE:
                 encoding = 'opreturn'
             else:
                 encoding = 'multisig'
@@ -347,7 +347,7 @@ def construct (db, tx_info, encoding='auto',
             chunk_size = (33 * 2) - 1 - 8 - 2 - 2
         elif encoding == 'opreturn':
             chunk_size = config.OP_RETURN_MAX_SIZE
-            if len(data) > chunk_size:
+            if len(data) + len(config.PREFIX) > chunk_size:
                 raise exceptions.TransactionError('One `OP_RETURN` output per transaction.')
         data_array = list(chunks(data, chunk_size))
     else:
