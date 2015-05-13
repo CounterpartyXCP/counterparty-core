@@ -1,4 +1,9 @@
 ## Client Versions ##
+* v9.51.3 (2015-05-13)
+	* Handle correctly -2 error (reorg) from RPC queries
+	* `scriptpubkey_to_address()` return None for coinbase
+	* Thread-safe raw transactions cache
+	* Include prefix to calculate total data length
 * v9.51.2 (2015-04-23)
 	* miscellaneous bug fixes
 	* dramatically reduced default batch size (from 5000 to 20)
