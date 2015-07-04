@@ -25,7 +25,7 @@
 
 # Installation
 
-**Linux and Mac OS X
+**Linux and Mac OS X**
 
 ```
 $ git clone https://github.com/CounterpartyXCP/counterparty-cli.git
