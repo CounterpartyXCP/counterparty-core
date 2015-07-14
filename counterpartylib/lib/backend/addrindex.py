@@ -182,20 +182,22 @@ def getrawtransaction_batch(txhash_list, verbose=False):
                 tx_hash_call_id[call_id] = tx_hash
                 call_id += 1
 
-        # populate cache
-        if len(payload) > 0:
-            batch_responses = rpc_batch(payload)
-            for response in batch_responses:
-                if 'error' not in response or response['error'] is None:
-                    tx_hex = response['result']
-                    tx_hash = tx_hash_call_id[response['id']]
+    # populate cache
+    if len(payload) > 0:
+        batch_responses = rpc_batch(payload)
+        for response in batch_responses:
+            if 'error' not in response or response['error'] is None:
+                tx_hex = response['result']
+                tx_hash = tx_hash_call_id[response['id']]
+                with raw_transaction_cache_lock:
                     if tx_hash not in RAW_TRANSACTIONS_CACHE:
                         RAW_TRANSACTIONS_CACHE[tx_hash] = tx_hex
                         RAW_TRANSACTIONS_CACHE_KEYS.append(tx_hash)
-                else:
-                    raise BackendRPCError('{}'.format(response['error']))
+            else:
+                raise BackendRPCError('{}'.format(response['error']))
 
-        # get transactions from cache
+    # get transactions from cache
+    with raw_transaction_cache_lock:
         result = {}
         for tx_hash in txhash_list:
             if verbose:
