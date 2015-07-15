@@ -193,6 +193,9 @@ def getrawtransaction_batch(txhash_list, verbose=False):
                     if tx_hash not in RAW_TRANSACTIONS_CACHE:
                         RAW_TRANSACTIONS_CACHE[tx_hash] = tx_hex
                         RAW_TRANSACTIONS_CACHE_KEYS.append(tx_hash)
+                    else: #"refresh" the entry (at O(n) cost)
+                        RAW_TRANSACTIONS_CACHE_KEYS.remove(tx_hash)
+                        RAW_TRANSACTIONS_CACHE_KEYS.append(tx_hash)
             else:
                 raise BackendRPCError('{}'.format(response['error']))
 
