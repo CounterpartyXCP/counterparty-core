@@ -14,11 +14,10 @@ from counterpartylib.lib import config, script, util
 
 MEMPOOL_CACHE_INITIALIZED = False
 MEMPOOL_CACHE = None
-RAW_TRANSACTIONS_CACHE_SIZE = 20000
 
 bitcoin_rpc_session = requests.Session()
 bitcoin_rpc_session.headers.update({'content-type': 'application/json'})
-raw_transactions_cache = util.DictCache(size=RAW_TRANSACTIONS_CACHE_SIZE) #used in getrawtransaction_batch()
+raw_transactions_cache = util.DictCache(size=config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE) #used in getrawtransaction_batch()
 
 class BackendRPCError(Exception):
     pass
@@ -94,7 +93,7 @@ def rpc_batch(request_list):
     return list(responses)
 
 # TODO: use scriptpubkey_to_address()
-@lru_cache(maxsize=RAW_TRANSACTIONS_CACHE_SIZE)
+@lru_cache(maxsize=config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)
 def extract_addresses(tx_hash):
     logger.debug('Extract addresses: {}'.format(tx_hash))
     tx = getrawtransaction(tx_hash, verbose=True)

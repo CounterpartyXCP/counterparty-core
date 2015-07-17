@@ -224,16 +224,25 @@ def multisig_pubkeyhashes_to_pubkeys(address, provided_pubkeys=None):
 
 
 def init_mempool_cache():
+    """prime the mempool cache, so that functioning is faster...
+    """
     logger.debug('Initialize mempool cache')
     start = time.time()
 
     BACKEND().MEMPOOL_CACHE = BACKEND().getrawmempool()
-    mempool_tx = BACKEND().getrawtransaction_batch(BACKEND().MEMPOOL_CACHE, verbose=True)
+
+    #with this function, don't try to load in more than BACKEND_RAW_TRANSACTIONS_CACHE_SIZE entries
+    num_tx = max(len(BACKEND().MEMPOOL_CACHE), config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)
+    
+    mempool_tx = BACKEND().getrawtransaction_batch(BACKEND().MEMPOOL_CACHE[:num_tx], verbose=True)
+    
     vin_txhash_list = []
-    for txid in mempool_tx:
-        tx = mempool_tx[txid]
-        vin_txhash_list += [vin['txid'] for vin in tx['vin']]
-    BACKEND().getrawtransaction_batch(vin_txhash_list, verbose=True)
+    remaining_num_tx = config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE - num_tx
+    if remaining_num_tx:
+        for txid in mempool_tx:
+            tx = mempool_tx[txid]
+            vin_txhash_list += [vin['txid'] for vin in tx['vin']]
+        BACKEND().getrawtransaction_batch(vin_txhash_list[:remaining_num_tx], verbose=True)
 
     BACKEND().MEMPOOL_CACHE_INITIALIZED = True
     logger.debug('Mempool cache initialized: {}s for {} transactions'.format(time.time() - start, len(BACKEND().MEMPOOL_CACHE) + len(vin_txhash_list)))
