@@ -760,9 +760,9 @@ def kickstart(db, bitcoind_dir):
 
     logger.warning('''Warning:
 - Ensure that bitcoind is stopped.
-- You must reindex bitcoind after the initialisation is complete (restart with `-reindex=1`)
-- The initialisation may take a while.''')
-    if input('Procede with the initialisation? (y/N) : ') != 'y':
+- You must reindex bitcoind after the initialization is complete (restart with `-reindex=1`)
+- The initialization may take a while.''')
+    if input('Proceed with the initialization? (y/N) : ') != 'y':
         return
 
     first_hash = config.BLOCK_FIRST_TESTNET_HASH if config.TESTNET else config.BLOCK_FIRST_MAINNET_HASH

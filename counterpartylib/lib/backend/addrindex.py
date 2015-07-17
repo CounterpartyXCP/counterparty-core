@@ -6,6 +6,8 @@ import requests
 from requests.exceptions import Timeout, ReadTimeout, ConnectionError
 import time
 import threading
+import concurrent.futures
+import collections
 from functools import lru_cache
 
 from counterpartylib.lib import script
@@ -16,18 +18,56 @@ bitcoin_rpc_session = None
 class BackendRPCError(Exception):
     pass
 
-def rpc_call(payload):
+#TODO: possibly move this class out into lib/util.py?
+class DictCache: 
+    """Threadsafe FIFO dict cache"""
+    def __init__(self, size=100):  
+        if int(size) < 1 :  
+            raise AttributeError('size < 1 or not a number')  
+        self.size = size  
+        self.dict = collections.OrderedDict()  
+        self.lock = threading.Lock()  
+  
+    def __getitem__(self,key):  
+        with self.lock:  
+            return self.dict[key]  
+  
+    def __setitem__(self,key,value):  
+        with self.lock:  
+            while len(self.dict) >= self.size:  
+                self.dict.popitem(last=False)  
+            self.dict[key] = value  
+  
+    def __delitem__(self,key):  
+        with self.lock:  
+            del self.dict[key]
+
+    def __len__(self):
+        with self.lock:
+            return len(self.dict)
+            
+    def __contains__(self, key):
+        with self.lock: 
+            return key in self.dict
+    
+    def refresh(self, key):
+        with self.lock:
+            value = self.dict[key]
+            del self.dict[key]
+            self.dict[key] = value
+
+def rpc_call(payload, session=None):
     url = config.BACKEND_URL
-    headers = {'content-type': 'application/json'}
 
     global bitcoin_rpc_session
     if not bitcoin_rpc_session:
         bitcoin_rpc_session = requests.Session()
+        bitcoin_rpc_session.headers.update({'content-type': 'application/json'})
     response = None
     TRIES = 12
     for i in range(TRIES):
         try:
-            response = bitcoin_rpc_session.post(url, data=json.dumps(payload), headers=headers, verify=(not config.BACKEND_SSL_NO_VERIFY), timeout=config.REQUESTS_TIMEOUT)
+            response = bitcoin_rpc_session.post(url, data=json.dumps(payload), verify=(not config.BACKEND_SSL_NO_VERIFY), timeout=config.REQUESTS_TIMEOUT)
             if i > 0:
                 logger.debug('Successfully connected.')
             break
@@ -72,17 +112,25 @@ def rpc(method, params):
     }
     return rpc_call(payload)
     
-def rpc_batch(payload):
-
-    def get_chunks(l, n):
+def rpc_batch(request_list):
+    responses = collections.deque()
+    logger.info("CALL rpc_batch, request_list size %i" % len(request_list))
+    def get_requests_chunk(l, n):
         n = max(1, n)
         return [l[i:i + n] for i in range(0, len(l), n)]
-
-    chunks = get_chunks(payload, config.RPC_BATCH_SIZE)
-    responses = []
-    for chunk in chunks:
-        responses += rpc_call(chunk)
-    return responses
+ 
+    def make_call(chunk):
+        #send a list of requests to bitcoind to be executed
+        #note that this is list executed serially, in the same thread in bitcoind
+        #e.g. see: https://github.com/bitcoin/bitcoin/blob/master/src/rpcserver.cpp#L939
+        responses.extend(rpc_call(chunk))
+ 
+    chunks = get_requests_chunk(request_list, config.RPC_BATCH_SIZE)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        for chunk in chunks:
+            #logger.info("TEMP: Executing chunk of size %i" % len(chunk))
+            executor.submit(make_call, chunk)
+    return list(responses)
 
 # TODO: use scriptpubkey_to_address()
 @lru_cache(maxsize=4096)
@@ -120,7 +168,6 @@ def unconfirmed_transactions(address):
     return unconfirmed_tx
 
 def searchrawtransactions(address, unconfirmed=False):
-
     # Get unconfirmed transactions.
     if unconfirmed:
         logger.debug('Getting unconfirmed transactions.')
@@ -159,61 +206,71 @@ def getrawmempool():
 def sendrawtransaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
 
-# TODO: move to __init__.py
-RAW_TRANSACTIONS_CACHE = {}
-RAW_TRANSACTIONS_CACHE_KEYS = []
-RAW_TRANSACTIONS_CACHE_SIZE = 10000
-raw_transaction_cache_lock = threading.Lock()
-
+raw_transactions_cache = DictCache(size=15000)
 def getrawtransaction_batch(txhash_list, verbose=False):
-    with raw_transaction_cache_lock:
-        tx_hash_call_id = {}
-        call_id = 0
-        payload = []
-        # payload for transactions not in cache
-        for tx_hash in txhash_list:
-            if tx_hash not in RAW_TRANSACTIONS_CACHE:
-                payload.append({
-                    "method": 'getrawtransaction',
-                    "params": [tx_hash, 1],
-                    "jsonrpc": "2.0",
-                    "id": call_id
-                })
-                tx_hash_call_id[call_id] = tx_hash
-                call_id += 1
+    tx_hash_call_id = {}
+    call_id = 0
+    payload = []
+    noncached_txhashes = []
+    logger.info("!!!!getrawtransaction_batch START -- txhash list SIZE %i , RAW tx cache SIZE %i" % (len(txhash_list), len(raw_transactions_cache)))
+    # payload for transactions not in cache
+    for tx_hash in txhash_list:
+        if tx_hash not in raw_transactions_cache:
+            payload.append({
+                "method": 'getrawtransaction',
+                "params": [tx_hash, 1],
+                "jsonrpc": "2.0",
+                "id": call_id
+            })
+            noncached_txhashes.append(tx_hash)
+            tx_hash_call_id[call_id] = tx_hash
+            call_id += 1
+    #refresh any/all cache entries that already exist in the cache,
+    # so they're not inadvertently removed by another thread before we can consult them
+    cache_entries_to_refresh = set(txhash_list).difference(set(noncached_txhashes))
+    logger.info("# CACHE ENTRIES TO REFRESH: %i" % len(cache_entries_to_refresh))
+    for tx_hash in cache_entries_to_refresh:
+        raw_transactions_cache.refresh(tx_hash)
 
     # populate cache
     if len(payload) > 0:
         batch_responses = rpc_batch(payload)
-        for response in batch_responses:
+        i = 0
+        while i < len(batch_responses):
+            response = batch_responses[i]
+            #logger.info("working with entry %i" % i)
             if 'error' not in response or response['error'] is None:
                 tx_hex = response['result']
                 tx_hash = tx_hash_call_id[response['id']]
-                with raw_transaction_cache_lock:
-                    if tx_hash not in RAW_TRANSACTIONS_CACHE:
-                        RAW_TRANSACTIONS_CACHE[tx_hash] = tx_hex
-                        RAW_TRANSACTIONS_CACHE_KEYS.append(tx_hash)
-                    else: #"refresh" the entry (at O(n) cost)
-                        RAW_TRANSACTIONS_CACHE_KEYS.remove(tx_hash)
-                        RAW_TRANSACTIONS_CACHE_KEYS.append(tx_hash)
+                
+                if tx_hash not in txhash_list: #sanity check
+                    logger.warn("txhash returned from RPC call ({}) not in txhash_list!".format(tx_hash))
+                
+                if tx_hash not in raw_transactions_cache:
+                    raw_transactions_cache[tx_hash] = tx_hex
             else:
-                raise BackendRPCError('{}'.format(response['error']))
+                #if this call came back with error code -5, try it again after a second...
+                if response_json['error']['code'] == -5: #"No information available about transaction"
+                    tx_hash = tx_hash_call_id[response['id']]
+                    logger.warn("'No information available about transaction' returned for txhash {}. Retrying after 2 seconds...".format(tx_hash))
+                    time.sleep(2)
+                    response = rpc('getrawtransaction', [tx_hash, 1])
+                    if 'error' not in response or response['error'] is None: #still not found, abort...
+                        logger.warn("TEMP: {} (txhash:: {})".format(response['error'], tx_hash_call_id.get(response.get('id', '??'), '??')))
+                        raise BackendRPCError('{} (txhash:: {})'.format(response['error'], tx_hash_call_id.get(response.get('id', '??'), '??')))
+                    else: #yay, it worked this time, tack it on the end...
+                        logger.warn("TEMP YAY!!: We overcame a -5 error!")
+                        batch_responses.append(response)
+            i += 1
 
     # get transactions from cache
-    with raw_transaction_cache_lock:
-        result = {}
-        for tx_hash in txhash_list:
-            if verbose:
-                result[tx_hash] = RAW_TRANSACTIONS_CACHE[tx_hash]
-            else:
-                result[tx_hash] = RAW_TRANSACTIONS_CACHE[tx_hash]['hex']
-
-        # remove oldest hashes from cache
-        while len(RAW_TRANSACTIONS_CACHE_KEYS) > RAW_TRANSACTIONS_CACHE_SIZE:
-            first_hash = RAW_TRANSACTIONS_CACHE_KEYS[0]
-            del(RAW_TRANSACTIONS_CACHE[first_hash])
-            RAW_TRANSACTIONS_CACHE_KEYS.pop(0) 
-
-        return result
+    result = {}
+    for tx_hash in txhash_list:
+        if verbose:
+            result[tx_hash] = raw_transactions_cache[tx_hash]
+        else:
+            result[tx_hash] = raw_transactions_cache[tx_hash]['hex']
+    logger.info("getrawtransaction_batch END")
+    return result
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
