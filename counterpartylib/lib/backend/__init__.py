@@ -232,7 +232,7 @@ def init_mempool_cache():
     BACKEND().MEMPOOL_CACHE = BACKEND().getrawmempool()
 
     #with this function, don't try to load in more than BACKEND_RAW_TRANSACTIONS_CACHE_SIZE entries
-    num_tx = max(len(BACKEND().MEMPOOL_CACHE), config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)
+    num_tx = min(len(BACKEND().MEMPOOL_CACHE), config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)
     
     mempool_tx = BACKEND().getrawtransaction_batch(BACKEND().MEMPOOL_CACHE[:num_tx], verbose=True)
     
