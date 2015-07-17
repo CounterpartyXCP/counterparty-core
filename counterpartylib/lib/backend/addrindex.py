@@ -10,61 +10,24 @@ import concurrent.futures
 import collections
 from functools import lru_cache
 
-from counterpartylib.lib import script
-from counterpartylib.lib import config
+from counterpartylib.lib import config, script, util
 
-bitcoin_rpc_session = None
+MEMPOOL_CACHE_INITIALIZED = False
+MEMPOOL_CACHE = None
+RAW_TRANSACTIONS_CACHE_SIZE = 20000
+
+bitcoin_rpc_session = requests.Session()
+bitcoin_rpc_session.headers.update({'content-type': 'application/json'})
+raw_transactions_cache = util.DictCache(size=RAW_TRANSACTIONS_CACHE_SIZE) #used in getrawtransaction_batch()
 
 class BackendRPCError(Exception):
     pass
 
-#TODO: possibly move this class out into lib/util.py?
-class DictCache: 
-    """Threadsafe FIFO dict cache"""
-    def __init__(self, size=100):  
-        if int(size) < 1 :  
-            raise AttributeError('size < 1 or not a number')  
-        self.size = size  
-        self.dict = collections.OrderedDict()  
-        self.lock = threading.Lock()  
-  
-    def __getitem__(self,key):  
-        with self.lock:  
-            return self.dict[key]  
-  
-    def __setitem__(self,key,value):  
-        with self.lock:  
-            while len(self.dict) >= self.size:  
-                self.dict.popitem(last=False)  
-            self.dict[key] = value  
-  
-    def __delitem__(self,key):  
-        with self.lock:  
-            del self.dict[key]
-
-    def __len__(self):
-        with self.lock:
-            return len(self.dict)
-            
-    def __contains__(self, key):
-        with self.lock: 
-            return key in self.dict
-    
-    def refresh(self, key):
-        with self.lock:
-            value = self.dict[key]
-            del self.dict[key]
-            self.dict[key] = value
-
 def rpc_call(payload, session=None):
     url = config.BACKEND_URL
-
-    global bitcoin_rpc_session
-    if not bitcoin_rpc_session:
-        bitcoin_rpc_session = requests.Session()
-        bitcoin_rpc_session.headers.update({'content-type': 'application/json'})
     response = None
     TRIES = 12
+
     for i in range(TRIES):
         try:
             response = bitcoin_rpc_session.post(url, data=json.dumps(payload), verify=(not config.BACKEND_SSL_NO_VERIFY), timeout=config.REQUESTS_TIMEOUT)
@@ -131,16 +94,15 @@ def rpc_batch(request_list):
     return list(responses)
 
 # TODO: use scriptpubkey_to_address()
-@lru_cache(maxsize=4096)
+@lru_cache(maxsize=RAW_TRANSACTIONS_CACHE_SIZE)
 def extract_addresses(tx_hash):
     logger.debug('Extract addresses: {}'.format(tx_hash))
-    # TODO: Use `rpc._batch` here.
     tx = getrawtransaction(tx_hash, verbose=True)
-    addresses = []
+    addresses = set() #use set to avoid duplicates
 
     for vout in tx['vout']:
         if 'addresses' in vout['scriptPubKey']:
-            addresses += vout['scriptPubKey']['addresses']
+            addresses.add(tuple(vout['scriptPubKey']['addresses']))
 
     txhash_list = [vin['txid'] for vin in tx['vin']]
     raw_transactions = getrawtransaction_batch(txhash_list, verbose=True)
@@ -148,16 +110,15 @@ def extract_addresses(tx_hash):
         vin_tx = raw_transactions[vin['txid']]
         vout = vin_tx['vout'][vin['vout']]
         if 'addresses' in vout['scriptPubKey']:
-            addresses += vout['scriptPubKey']['addresses']
-
-    return addresses, tx
+            addresses.add(tuple(vout['scriptPubKey']['addresses']))
+    return list(addresses), tx
 
 def unconfirmed_transactions(address):
     # NOTE: This operation can be very slow.
-    logger.debug('Checking mempool for UTXOs.')
+    logger.info('Checking mempool for UTXOs -- extract_addresses cache stats: {!s}'.format(extract_addresses.cache_into()))
 
     unconfirmed_tx = []
-    mempool = getrawmempool()
+    mempool = MEMPOOL_CACHE
     for index, tx_hash in enumerate(mempool):
         logger.debug('Possible mempool UTXO: {} ({}/{})'.format(tx_hash, index, len(mempool)))
         addresses, tx = extract_addresses(tx_hash)
@@ -204,12 +165,12 @@ def getrawmempool():
 def sendrawtransaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
 
-raw_transactions_cache = DictCache(size=15000)
 def getrawtransaction_batch(txhash_list, verbose=False):
     tx_hash_call_id = {}
     call_id = 0
     payload = []
     noncached_txhashes = []
+    
     # payload for transactions not in cache
     for tx_hash in txhash_list:
         if tx_hash not in raw_transactions_cache:
@@ -224,8 +185,12 @@ def getrawtransaction_batch(txhash_list, verbose=False):
             call_id += 1
     #refresh any/all cache entries that already exist in the cache,
     # so they're not inadvertently removed by another thread before we can consult them
+    #(this assumes that the size of the working set for any given workload doesn't exceed the max size of the cache)
     for tx_hash in set(txhash_list).difference(set(noncached_txhashes)):
         raw_transactions_cache.refresh(tx_hash)
+
+    logger.info("getrawtransaction_batch called, txhash_list size: {} / raw_transactions_cache size: {} / # rpc_batch calls: {}".format(
+        len(txhash_list), len(raw_transactions_cache), len(payload)))
 
     # populate cache
     if len(payload) > 0:

@@ -1045,7 +1045,8 @@ def follow(db):
             # and then save those messages.
             # Every transaction in mempool is parsed independently. (DB is rolled back after each one.)
             mempool = []
-            for tx_hash in backend.getrawmempool():
+            backend.refresh_mempool_cache()
+            for tx_hash in backend.get_mempool_cache():
 
                 # If already in mempool, copy to new one.
                 if tx_hash in old_mempool_hashes:

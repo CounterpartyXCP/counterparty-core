@@ -133,9 +133,7 @@ def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
     """
-    global MEMPOOL_CACHE_INITIALIZED
-
-    if not MEMPOOL_CACHE_INITIALIZED:
+    if not BACKEND().MEMPOOL_CACHE_INITIALIZED:
         raise MempoolError('Mempool is not yet ready; please try again in a few minutes.')
 
     # Get all outputs.
@@ -225,24 +223,26 @@ def multisig_pubkeyhashes_to_pubkeys(address, provided_pubkeys=None):
     return script.construct_array(signatures_required, pubkeys, signatures_possible)
 
 
-MEMPOOL_CACHE_INITIALIZED = False
-
 def init_mempool_cache():
-    global MEMPOOL_CACHE_INITIALIZED
-
     logger.debug('Initialize mempool cache')
     start = time.time()
 
-    txhash_list = BACKEND().getrawmempool()
-    mempool_tx = BACKEND().getrawtransaction_batch(txhash_list, verbose=True)
+    BACKEND().MEMPOOL_CACHE = BACKEND().getrawmempool()
+    mempool_tx = BACKEND().getrawtransaction_batch(BACKEND().MEMPOOL_CACHE, verbose=True)
     vin_txhash_list = []
     for txid in mempool_tx:
         tx = mempool_tx[txid]
         vin_txhash_list += [vin['txid'] for vin in tx['vin']]
     BACKEND().getrawtransaction_batch(vin_txhash_list, verbose=True)
 
-    MEMPOOL_CACHE_INITIALIZED = True
-    logger.debug('Mempool cache initialized: {}s for {} transactions'.format(time.time() - start, len(txhash_list) + len(vin_txhash_list)))
+    BACKEND().MEMPOOL_CACHE_INITIALIZED = True
+    logger.debug('Mempool cache initialized: {}s for {} transactions'.format(time.time() - start, len(BACKEND().MEMPOOL_CACHE) + len(vin_txhash_list)))
+
+def refresh_mempool_cache():
+    BACKEND().MEMPOOL_CACHE = BACKEND().getrawmempool()
+    
+def get_mempool_cache():
+    return BACKEND().MEMPOOL_CACHE
 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

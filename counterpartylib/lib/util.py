@@ -17,6 +17,8 @@ import hashlib
 import sha3
 import bitcoin as bitcoinlib
 import os
+import collections
+import threading
 
 from counterpartylib.lib import exceptions
 from counterpartylib.lib.exceptions import DecodeError
@@ -616,5 +618,42 @@ def make_id(hash_1, hash_2):
 def parse_id(match_id):
     assert match_id[64] == ID_SEPARATOR
     return match_id[:64], match_id[65:] # UTF-8 encoding means that the indices are doubled.
+
+class DictCache: 
+    """Threadsafe FIFO dict cache"""
+    def __init__(self, size=100):  
+        if int(size) < 1 :  
+            raise AttributeError('size < 1 or not a number')  
+        self.size = size  
+        self.dict = collections.OrderedDict()  
+        self.lock = threading.Lock()  
+  
+    def __getitem__(self,key):  
+        with self.lock:  
+            return self.dict[key]  
+  
+    def __setitem__(self,key,value):  
+        with self.lock:  
+            while len(self.dict) >= self.size:  
+                self.dict.popitem(last=False)  
+            self.dict[key] = value  
+  
+    def __delitem__(self,key):  
+        with self.lock:  
+            del self.dict[key]
+
+    def __len__(self):
+        with self.lock:
+            return len(self.dict)
+            
+    def __contains__(self, key):
+        with self.lock: 
+            return key in self.dict
+    
+    def refresh(self, key):
+        with self.lock:
+            value = self.dict[key]
+            del self.dict[key]
+            self.dict[key] = value
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
