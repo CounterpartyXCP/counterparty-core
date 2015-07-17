@@ -114,7 +114,6 @@ def rpc(method, params):
     
 def rpc_batch(request_list):
     responses = collections.deque()
-    logger.info("CALL rpc_batch, request_list size %i" % len(request_list))
     def get_requests_chunk(l, n):
         n = max(1, n)
         return [l[i:i + n] for i in range(0, len(l), n)]
@@ -128,7 +127,6 @@ def rpc_batch(request_list):
     chunks = get_requests_chunk(request_list, config.RPC_BATCH_SIZE)
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
         for chunk in chunks:
-            #logger.info("TEMP: Executing chunk of size %i" % len(chunk))
             executor.submit(make_call, chunk)
     return list(responses)
 
@@ -212,7 +210,6 @@ def getrawtransaction_batch(txhash_list, verbose=False):
     call_id = 0
     payload = []
     noncached_txhashes = []
-    logger.info("!!!!getrawtransaction_batch START -- txhash list SIZE %i , RAW tx cache SIZE %i" % (len(txhash_list), len(raw_transactions_cache)))
     # payload for transactions not in cache
     for tx_hash in txhash_list:
         if tx_hash not in raw_transactions_cache:
@@ -227,9 +224,7 @@ def getrawtransaction_batch(txhash_list, verbose=False):
             call_id += 1
     #refresh any/all cache entries that already exist in the cache,
     # so they're not inadvertently removed by another thread before we can consult them
-    cache_entries_to_refresh = set(txhash_list).difference(set(noncached_txhashes))
-    logger.info("# CACHE ENTRIES TO REFRESH: %i" % len(cache_entries_to_refresh))
-    for tx_hash in cache_entries_to_refresh:
+    for tx_hash in set(txhash_list).difference(set(noncached_txhashes)):
         raw_transactions_cache.refresh(tx_hash)
 
     # populate cache
@@ -238,7 +233,6 @@ def getrawtransaction_batch(txhash_list, verbose=False):
         i = 0
         while i < len(batch_responses):
             response = batch_responses[i]
-            #logger.info("working with entry %i" % i)
             if 'error' not in response or response['error'] is None:
                 tx_hex = response['result']
                 tx_hash = tx_hash_call_id[response['id']]
@@ -256,10 +250,8 @@ def getrawtransaction_batch(txhash_list, verbose=False):
                     time.sleep(2)
                     response = rpc('getrawtransaction', [tx_hash, 1])
                     if 'error' not in response or response['error'] is None: #still not found, abort...
-                        logger.warn("TEMP: {} (txhash:: {})".format(response['error'], tx_hash_call_id.get(response.get('id', '??'), '??')))
                         raise BackendRPCError('{} (txhash:: {})'.format(response['error'], tx_hash_call_id.get(response.get('id', '??'), '??')))
                     else: #yay, it worked this time, tack it on the end...
-                        logger.warn("TEMP YAY!!: We overcame a -5 error!")
                         batch_responses.append(response)
             i += 1
 
@@ -270,7 +262,6 @@ def getrawtransaction_batch(txhash_list, verbose=False):
             result[tx_hash] = raw_transactions_cache[tx_hash]
         else:
             result[tx_hash] = raw_transactions_cache[tx_hash]['hex']
-    logger.info("getrawtransaction_batch END")
     return result
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
