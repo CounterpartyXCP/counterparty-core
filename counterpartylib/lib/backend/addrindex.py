@@ -169,7 +169,7 @@ def getrawtransaction_batch(txhash_list, verbose=False):
     call_id = 0
     payload = []
     noncached_txhashes = []
-    
+
     # payload for transactions not in cache
     for tx_hash in txhash_list:
         if tx_hash not in raw_transactions_cache:
@@ -208,7 +208,7 @@ def getrawtransaction_batch(txhash_list, verbose=False):
                     raw_transactions_cache[tx_hash] = tx_hex
             else:
                 #if this call came back with error code -5, try it again after a second...
-                if response_json['error']['code'] == -5: #"No information available about transaction"
+                if response['error']['code'] == -5: #"No information available about transaction"
                     tx_hash = tx_hash_call_id[response['id']]
                     logger.warn("'No information available about transaction' returned for txhash {}. Retrying after 2 seconds...".format(tx_hash))
                     time.sleep(2)
