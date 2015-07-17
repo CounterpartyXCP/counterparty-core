@@ -114,7 +114,7 @@ def extract_addresses(tx_hash):
 
 def unconfirmed_transactions(address):
     # NOTE: This operation can be very slow.
-    logger.info('Checking mempool for UTXOs -- extract_addresses cache stats: {!s}'.format(extract_addresses.cache_into()))
+    logger.debug('Checking mempool for UTXOs -- extract_addresses cache stats: {}'.format(str(extract_addresses.cache_info())))
 
     unconfirmed_tx = []
     mempool = MEMPOOL_CACHE
@@ -188,7 +188,7 @@ def getrawtransaction_batch(txhash_list, verbose=False):
     for tx_hash in set(txhash_list).difference(set(noncached_txhashes)):
         raw_transactions_cache.refresh(tx_hash)
 
-    logger.info("getrawtransaction_batch called, txhash_list size: {} / raw_transactions_cache size: {} / # rpc_batch calls: {}".format(
+    logger.debug("getrawtransaction_batch called, txhash_list size: {} / raw_transactions_cache size: {} / # rpc_batch calls: {}".format(
         len(txhash_list), len(raw_transactions_cache), len(payload)))
 
     # populate cache
