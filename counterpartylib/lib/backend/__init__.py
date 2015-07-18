@@ -233,7 +233,6 @@ def init_mempool_cache():
 
     #with this function, don't try to load in more than BACKEND_RAW_TRANSACTIONS_CACHE_SIZE entries
     num_tx = min(len(BACKEND().MEMPOOL_CACHE), config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)
-    
     mempool_tx = BACKEND().getrawtransaction_batch(BACKEND().MEMPOOL_CACHE[:num_tx], verbose=True)
     
     vin_txhash_list = []
@@ -245,7 +244,7 @@ def init_mempool_cache():
         BACKEND().getrawtransaction_batch(vin_txhash_list[:remaining_num_tx], verbose=True)
 
     BACKEND().MEMPOOL_CACHE_INITIALIZED = True
-    logger.info('Mempool cache initialized: {:.2f}s for {:,} transactions'.format(time.time() - start, len(BACKEND().MEMPOOL_CACHE) + len(vin_txhash_list)))
+    logger.info('Mempool cache initialized: {:.2f}s for {:,} transactions'.format(time.time() - start, num_tx + remaining_num_tx))
 
 def refresh_mempool_cache():
     BACKEND().MEMPOOL_CACHE = BACKEND().getrawmempool()
