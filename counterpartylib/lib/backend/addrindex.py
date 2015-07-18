@@ -203,22 +203,13 @@ def getrawtransaction_batch(txhash_list, verbose=False):
                 tx_hash = tx_hash_call_id[response['id']]
                 
                 if tx_hash not in txhash_list: #sanity check
-                    logger.warn("txhash returned from RPC call ({}) not in txhash_list!".format(tx_hash))
+                    raise AssertionError("txhash returned from RPC call ({}) not in txhash_list!".format(tx_hash))
                 
                 if tx_hash not in raw_transactions_cache:
                     raw_transactions_cache[tx_hash] = tx_hex
             else:
+                #TODO: this seems to happen for bogus transactions? Maybe handle it more gracefully than just erroring out?
                 raise BackendRPCError('{} (txhash:: {})'.format(response['error'], tx_hash_call_id.get(response.get('id', '??'), '??')))
-                #if this call came back with error code -5, try it again after a second...
-                #if response['error']['code'] == -5: #"No information available about transaction"
-                #    tx_hash = tx_hash_call_id[response['id']]
-                #    logger.warn("'No information available about transaction' returned for txhash {}. Retrying after 2 seconds...".format(tx_hash))
-                #    time.sleep(2)
-                #    response = rpc('getrawtransaction', [tx_hash, 1])
-                #    if 'error' not in response or response['error'] is None: #still not found, abort...
-                #        raise BackendRPCError('{} (txhash:: {})'.format(response['error'], tx_hash_call_id.get(response.get('id', '??'), '??')))
-                #    else: #yay, it worked this time, tack it on the end...
-                #        batch_responses.append(response)
             i += 1
 
     # get transactions from cache
