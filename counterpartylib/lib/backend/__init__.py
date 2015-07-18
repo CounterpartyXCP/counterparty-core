@@ -245,7 +245,7 @@ def init_mempool_cache():
         BACKEND().getrawtransaction_batch(vin_txhash_list[:remaining_num_tx], verbose=True)
 
     BACKEND().MEMPOOL_CACHE_INITIALIZED = True
-    logger.debug('Mempool cache initialized: {}s for {} transactions'.format(time.time() - start, len(BACKEND().MEMPOOL_CACHE) + len(vin_txhash_list)))
+    logger.info('Mempool cache initialized: {:.2f}s for {:,} transactions'.format(time.time() - start, len(BACKEND().MEMPOOL_CACHE) + len(vin_txhash_list)))
 
 def refresh_mempool_cache():
     BACKEND().MEMPOOL_CACHE = BACKEND().getrawmempool()

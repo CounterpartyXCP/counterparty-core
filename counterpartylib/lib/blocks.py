@@ -908,8 +908,6 @@ def follow(db):
     not_supported = {}   # No false positives. Use a dict to allow for O(1) lookups
     not_supported_sorted = collections.deque()
     # ^ Entries in form of (block_index, tx_hash), oldest first. Allows for easy removal of past, unncessary entries
-    mempool_initialised = False
-    backend.init_mempool_cache()
     cursor = db.cursor()
     # a reorg can happen without the block count increasing, or even for that
     # matter, with the block count decreasing. This should only delay
@@ -1025,12 +1023,12 @@ def follow(db):
             block_count = backend.getblockcount()
             block_index += 1
 
-        else:   
-            # First mempool fill for session?
-            if mempool_initialised:
-                logger.debug('Updating mempool.')
+        else:
+            if backend.get_mempool_cache() is None:
+                backend.init_mempool_cache()
+                logger.info("Ready for queries.")
             else:
-                logger.debug('Initialising mempool.')
+                backend.refresh_mempool_cache()
 
             # Get old mempool.
             old_mempool = list(cursor.execute('''SELECT * FROM mempool'''))
@@ -1045,7 +1043,6 @@ def follow(db):
             # and then save those messages.
             # Every transaction in mempool is parsed independently. (DB is rolled back after each one.)
             mempool = []
-            backend.refresh_mempool_cache()
             for tx_hash in backend.get_mempool_cache():
 
                 # If already in mempool, copy to new one.
@@ -1115,7 +1112,6 @@ def follow(db):
                     cursor.execute('''INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp)''', (new_message))
 
             # Wait
-            mempool_initialised = True
             db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
             time.sleep(config.BACKEND_POLL_INTERVAL)
 
