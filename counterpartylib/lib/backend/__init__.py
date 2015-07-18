@@ -236,15 +236,15 @@ def init_mempool_cache():
     mempool_tx = BACKEND().getrawtransaction_batch(BACKEND().MEMPOOL_CACHE[:num_tx], verbose=True)
     
     vin_txhash_list = []
-    remaining_num_tx = config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE - num_tx
-    if remaining_num_tx:
+    max_remaining_num_tx = config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE - num_tx
+    if max_remaining_num_tx:
         for txid in mempool_tx:
             tx = mempool_tx[txid]
             vin_txhash_list += [vin['txid'] for vin in tx['vin']]
-        BACKEND().getrawtransaction_batch(vin_txhash_list[:remaining_num_tx], verbose=True)
+        BACKEND().getrawtransaction_batch(vin_txhash_list[:max_remaining_num_tx], verbose=True)
 
     BACKEND().MEMPOOL_CACHE_INITIALIZED = True
-    logger.info('Mempool cache initialized: {:.2f}s for {:,} transactions'.format(time.time() - start, num_tx + remaining_num_tx))
+    logger.info('Mempool cache initialized: {:.2f}s for {:,} transactions'.format(time.time() - start, num_tx + min(max_remaining_num_tx, len(vin_txhash_list))))
 
 def refresh_mempool_cache():
     BACKEND().MEMPOOL_CACHE = BACKEND().getrawmempool()
