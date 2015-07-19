@@ -172,7 +172,7 @@ def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False):
 
     # Prune spent outputs.
     logger.debug('Pruning spent outputs.')
-    vins = {(vin['txid'], vin['vout']) for tx in raw_transactions for vin in tx['vin']}
+    vins = {(vin['txid'], vin['vout']) for tx in raw_transactions for vin in tx['vin'] if 'coinbase' not in vin}
     unspent = []
     for output in outputs:
         if (output['txid'], output['vout']) not in vins:
@@ -207,12 +207,13 @@ def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
     raw_transactions = searchrawtransactions(pubkeyhash, unconfirmed=True)
     for tx in raw_transactions:
         for vin in tx['vin']:
-            scriptsig = vin['scriptSig']
-            asm = scriptsig['asm'].split(' ')
-            if len(asm) >= 2:
-                pubkey = asm[1]
-                if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
-                    return pubkey
+            if 'coinbase' not in vin:
+                scriptsig = vin['scriptSig']
+                asm = scriptsig['asm'].split(' ')
+                if len(asm) >= 2:
+                    pubkey = asm[1]
+                    if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                        return pubkey
 
     raise UnknownPubKeyError('Public key was neither provided nor published in blockchain.')
 
