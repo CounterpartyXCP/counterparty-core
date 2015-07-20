@@ -143,7 +143,7 @@ def searchrawtransactions(address, unconfirmed=False):
             raise BackendRPCError('Unknown RPC command: `searchrawtransactions`. Please use a version of {} Core which supports an address index.'.format(config.BTC_NAME))
         else:
             raise BackendRPCError(str(e))
-    confirmed = [tx for tx in rawtransactions if tx['confirmations'] > 0]
+    confirmed = [tx for tx in rawtransactions if 'confirmations' in tx and tx['confirmations'] > 0]
 
     return unconfirmed + confirmed
 
