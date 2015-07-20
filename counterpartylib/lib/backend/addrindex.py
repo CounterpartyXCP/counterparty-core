@@ -213,17 +213,17 @@ def getrawtransaction_batch(txhash_list, verbose=False):
 
     # get transactions from cache
     result = {}
-    try: #TEMP error handling for better diagnosis
-        for tx_hash in txhash_list:
+    for tx_hash in txhash_list:
+        try: #TEMP error handling for better diagnosis
             if verbose:
                 result[tx_hash] = raw_transactions_cache[tx_hash]
             else:
                 result[tx_hash] = raw_transactions_cache[tx_hash]['hex']
-    except KeyError:
-        logger.warn("getrawtransaction_batch EXTRA INFO, txhash_list size: {} / raw_transactions_cache size: {} / # rpc_batch calls: {}".format(
-            len(txhash_list), len(raw_transactions_cache), len(payload)))
-        logger.warn("txhash in noncached_txhashes: %s" % (tx_hash in noncached_txhashes,))
-        raise
+        except KeyError:
+            logger.warn("getrawtransaction_batch EXTRA INFO, txhash_list size: {} / raw_transactions_cache size: {} / # rpc_batch calls: {}".format(
+                len(txhash_list), len(raw_transactions_cache), len(payload)))
+            logger.warn("txhash in noncached_txhashes: %s" % (tx_hash in noncached_txhashes,))
+            raise
 
     return result
 
