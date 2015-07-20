@@ -652,6 +652,6 @@ class DictCache:
     
     def refresh(self, key):
         with self.lock:
-            self.dict.move_to_end(key, last=False)
+            self.dict.move_to_end(key, last=True)
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
