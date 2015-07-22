@@ -1,6 +1,7 @@
 import logging
 logger = logging.getLogger(__name__)
 import sys
+import os
 import json
 import requests
 from requests.exceptions import Timeout, ReadTimeout, ConnectionError
@@ -8,7 +9,7 @@ import time
 import threading
 import concurrent.futures
 import collections
-import random
+import binascii
 from functools import lru_cache
 
 from counterpartylib.lib import config, script, util
