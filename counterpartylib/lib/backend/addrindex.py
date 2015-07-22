@@ -8,6 +8,7 @@ import time
 import threading
 import concurrent.futures
 import collections
+import random
 from functools import lru_cache
 
 from counterpartylib.lib import config, script, util
@@ -16,8 +17,6 @@ BACKEND_RPC_BATCH_MAX_WORKERS = 6
 MEMPOOL_CACHE_INITIALIZED = False
 MEMPOOL_CACHE = None
 
-bitcoin_rpc_session = requests.Session()
-bitcoin_rpc_session.headers.update({'content-type': 'application/json'})
 raw_transactions_cache = util.DictCache(size=config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE) #used in getrawtransaction_batch()
 
 class BackendRPCError(Exception):
@@ -30,7 +29,8 @@ def rpc_call(payload, session=None):
 
     for i in range(TRIES):
         try:
-            response = bitcoin_rpc_session.post(url, data=json.dumps(payload), verify=(not config.BACKEND_SSL_NO_VERIFY), timeout=config.REQUESTS_TIMEOUT)
+            response = requests.post(url, data=json.dumps(payload), headers={'content-type': 'application/json'},
+                verify=(not config.BACKEND_SSL_NO_VERIFY), timeout=config.REQUESTS_TIMEOUT)
             if i > 0:
                 logger.debug('Successfully connected.')
             break
@@ -94,7 +94,7 @@ def rpc_batch(request_list):
     return list(responses)
 
 # TODO: use scriptpubkey_to_address()
-@lru_cache(maxsize=config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)
+@lru_cache(maxsize=4096)
 def extract_addresses(tx_hash):
     logger.debug('Extract addresses: {}'.format(tx_hash))
     tx = getrawtransaction(tx_hash, verbose=True)
@@ -165,69 +165,66 @@ def getrawmempool():
 def sendrawtransaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
 
-test_lock = threading.Lock() 
 def getrawtransaction_batch(txhash_list, verbose=False):
     tx_hash_call_id = {}
-    call_id = 0
     payload = []
     noncached_txhashes = []
 
     # payload for transactions not in cache
-    with test_lock:
-        for tx_hash in txhash_list:
-            if tx_hash not in raw_transactions_cache:
-                payload.append({
-                    "method": 'getrawtransaction',
-                    "params": [tx_hash, 1],
-                    "jsonrpc": "2.0",
-                    "id": call_id
-                })
-                noncached_txhashes.append(tx_hash)
-                tx_hash_call_id[call_id] = tx_hash
-                call_id += 1
-        #refresh any/all cache entries that already exist in the cache,
-        # so they're not inadvertently removed by another thread before we can consult them
-        #(this assumes that the size of the working set for any given workload doesn't exceed the max size of the cache)
-        for tx_hash in set(txhash_list).difference(set(noncached_txhashes)):
-            raw_transactions_cache.refresh(tx_hash)
+    for tx_hash in txhash_list:
+        if tx_hash not in raw_transactions_cache:
+            call_id = binascii.hexlify(os.urandom(5)).decode('utf8')
+            payload.append({
+                "method": 'getrawtransaction',
+                "params": [tx_hash, 1],
+                "jsonrpc": "2.0",
+                "id": call_id
+            })
+            noncached_txhashes.append(tx_hash)
+            tx_hash_call_id[call_id] = tx_hash
+    #refresh any/all cache entries that already exist in the cache,
+    # so they're not inadvertently removed by another thread before we can consult them
+    #(this assumes that the size of the working set for any given workload doesn't exceed the max size of the cache)
+    for tx_hash in set(txhash_list).difference(set(noncached_txhashes)):
+        raw_transactions_cache.refresh(tx_hash)
 
     logger.debug("getrawtransaction_batch called, txhash_list size: {} / raw_transactions_cache size: {} / # rpc_batch calls: {}".format(
         len(txhash_list), len(raw_transactions_cache), len(payload)))
 
     # populate cache
+    added_entries_to_cache = []
     if len(payload) > 0:
         batch_responses = rpc_batch(payload)
-        i = 0
-        while i < len(batch_responses):
-            response = batch_responses[i]
+        for response in batch_responses:
             if 'error' not in response or response['error'] is None:
                 tx_hex = response['result']
                 tx_hash = tx_hash_call_id[response['id']]
                 
-                with test_lock:
-                    if tx_hash not in txhash_list: #sanity check
-                        raise AssertionError("txhash returned from RPC call ({}) not in txhash_list!".format(tx_hash))
+                #TEMP sanity check for better diagnosis. REMOVE before pushing to master
+                if tx_hash not in txhash_list: #sanity check
+                    raise AssertionError("txhash returned from RPC call ({}) not in txhash_list!".format(tx_hash))
                     
-                    raw_transactions_cache[tx_hash] = tx_hex
+                raw_transactions_cache[tx_hash] = tx_hex
+                added_entries_to_cache.append(tx_hash)
             else:
                 #TODO: this seems to happen for bogus transactions? Maybe handle it more gracefully than just erroring out?
                 raise BackendRPCError('{} (txhash:: {})'.format(response['error'], tx_hash_call_id.get(response.get('id', '??'), '??')))
-            i += 1
 
     # get transactions from cache
     result = {}
     for tx_hash in txhash_list:
-        with test_lock:
-            try: #TEMP error handling for better diagnosis
-                if verbose:
-                    result[tx_hash] = raw_transactions_cache[tx_hash]
-                else:
-                    result[tx_hash] = raw_transactions_cache[tx_hash]['hex']
-            except KeyError:
-                logger.warn("getrawtransaction_batch EXTRA INFO, txhash_list size: {} / raw_transactions_cache size: {} / # rpc_batch calls: {}".format(
-                    len(txhash_list), len(raw_transactions_cache), len(payload)))
-                logger.warn("txhash in noncached_txhashes: %s" % (tx_hash in noncached_txhashes,))
-                raise
+        try: #TEMP error handling for better race condition diagnosis. REMOVE before pushing to master
+            if verbose:
+                result[tx_hash] = raw_transactions_cache[tx_hash]
+            else:
+                result[tx_hash] = raw_transactions_cache[tx_hash]['hex']
+        except KeyError:
+            logger.warn("getrawtransaction_batch EXTRA INFO, txhash_list size: {} / raw_transactions_cache size: {} / # rpc_batch calls: {}".format(
+                len(txhash_list), len(raw_transactions_cache), len(payload)))
+            logger.warn("txhash in noncached_txhashes: %s, in txhash_list: %s -- list %s" % (
+                tx_hash in noncached_txhashes, tx_hash in txhash_list, list(set(txhash_list).difference(set(noncached_txhashes))) ))
+            logger.warn("added_entries_to_cache: %s" % added_entries_to_cache)
+            raise
 
     return result
 
