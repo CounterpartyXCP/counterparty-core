@@ -868,10 +868,6 @@ class APIServer(threading.Thread):
         # Init the HTTP Server.
         init_api_access_log()
         
-        # Supress json-rpc exception logging to console
-        json_rpc_logger = logging.getLogger('jsonrpc.manager')
-        json_rpc_logger.propagate = False
-
         http_server = HTTPServer(WSGIContainer(app), xheaders=True)
         try:
             http_server.listen(config.RPC_PORT, address=config.RPC_HOST)
