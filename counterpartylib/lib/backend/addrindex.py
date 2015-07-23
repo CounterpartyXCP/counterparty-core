@@ -14,7 +14,6 @@ from functools import lru_cache
 
 from counterpartylib.lib import config, script, util
 
-BACKEND_RPC_BATCH_MAX_WORKERS = 6
 MEMPOOL_CACHE_INITIALIZED = False
 MEMPOOL_CACHE = None
 
@@ -89,7 +88,7 @@ def rpc_batch(request_list):
         responses.extend(rpc_call(chunk))
  
     chunks = get_requests_chunk(request_list, config.RPC_BATCH_SIZE)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=BACKEND_RPC_BATCH_MAX_WORKERS) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=config.BACKEND_RPC_BATCH_NUM_WORKERS) as executor:
         for chunk in chunks:
             executor.submit(make_call, chunk)
     return list(responses)
