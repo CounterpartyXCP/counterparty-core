@@ -23,7 +23,7 @@ raw_transactions_cache = util.DictCache(size=config.BACKEND_RAW_TRANSACTIONS_CAC
 class BackendRPCError(Exception):
     pass
 
-def rpc_call(payload, session=None):
+def rpc_call(payload):
     url = config.BACKEND_URL
     response = None
     TRIES = 12
