@@ -193,20 +193,13 @@ def getrawtransaction_batch(txhash_list, verbose=False):
         len(txhash_list), len(raw_transactions_cache), len(payload)))
 
     # populate cache
-    added_entries_to_cache = []
     if len(payload) > 0:
         batch_responses = rpc_batch(payload)
         for response in batch_responses:
             if 'error' not in response or response['error'] is None:
                 tx_hex = response['result']
                 tx_hash = tx_hash_call_id[response['id']]
-                
-                #TEMP sanity check for better diagnosis. REMOVE before pushing to master
-                if tx_hash not in txhash_list: #sanity check
-                    raise AssertionError("txhash returned from RPC call ({}) not in txhash_list!".format(tx_hash))
-                    
                 raw_transactions_cache[tx_hash] = tx_hex
-                added_entries_to_cache.append(tx_hash)
             else:
                 #TODO: this seems to happen for bogus transactions? Maybe handle it more gracefully than just erroring out?
                 raise BackendRPCError('{} (txhash:: {})'.format(response['error'], tx_hash_call_id.get(response.get('id', '??'), '??')))
@@ -214,18 +207,10 @@ def getrawtransaction_batch(txhash_list, verbose=False):
     # get transactions from cache
     result = {}
     for tx_hash in txhash_list:
-        try: #TEMP error handling for better race condition diagnosis. REMOVE before pushing to master
-            if verbose:
-                result[tx_hash] = raw_transactions_cache[tx_hash]
-            else:
-                result[tx_hash] = raw_transactions_cache[tx_hash]['hex']
-        except KeyError:
-            logger.warn("getrawtransaction_batch EXTRA INFO, txhash_list size: {} / raw_transactions_cache size: {} / # rpc_batch calls: {}".format(
-                len(txhash_list), len(raw_transactions_cache), len(payload)))
-            logger.warn("txhash in noncached_txhashes: %s, in txhash_list: %s -- list %s" % (
-                tx_hash in noncached_txhashes, tx_hash in txhash_list, list(set(txhash_list).difference(set(noncached_txhashes))) ))
-            logger.warn("added_entries_to_cache: %s" % added_entries_to_cache)
-            raise
+        if verbose:
+            result[tx_hash] = raw_transactions_cache[tx_hash]
+        else:
+            result[tx_hash] = raw_transactions_cache[tx_hash]['hex']
 
     return result
 
