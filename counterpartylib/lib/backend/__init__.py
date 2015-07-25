@@ -129,7 +129,7 @@ def is_scriptpubkey_spendable(scriptpubkey_hex, source, multisig_inputs=False):
 class MempoolError(Exception):
     pass
 
-def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False):
+def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False, unspent_tx_hash=None):
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
     """
@@ -138,12 +138,15 @@ def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False):
 
     # Get all outputs.
     logger.debug('Getting outputs.')
-    if script.is_multisig(source):
-        pubkeyhashes = script.pubkeyhash_array(source)
-        raw_transactions = searchrawtransactions(pubkeyhashes[1], unconfirmed=True) # unconfirmed=True to prune unconfirmed spent outputs
+    if unspent_tx_hash:
+        raw_transactions = [getrawtransaction(unspent_tx_hash, verbose=True)]
     else:
-        pubkeyhashes = [source]
-        raw_transactions = searchrawtransactions(source, unconfirmed=True)
+        if script.is_multisig(source):
+            pubkeyhashes = script.pubkeyhash_array(source)
+            raw_transactions = searchrawtransactions(pubkeyhashes[1], unconfirmed=True) # unconfirmed=True to prune unconfirmed spent outputs
+        else:
+            pubkeyhashes = [source]
+            raw_transactions = searchrawtransactions(source, unconfirmed=True)
 
     # Change format.
     # TODO: Slow.
