@@ -121,7 +121,7 @@ def unconfirmed_transactions(address):
     for index, tx_hash in enumerate(MEMPOOL_CACHE):
         logger.debug('Possible mempool UTXO: {} ({}/{})'.format(tx_hash, index, len(MEMPOOL_CACHE)))
         addresses, tx = extract_addresses(tx_hash)
-        if address in addresses:
+        if (address,) in addresses:
             unconfirmed_tx.append(tx)
     return unconfirmed_tx
 
