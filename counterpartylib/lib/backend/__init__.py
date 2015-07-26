@@ -17,6 +17,8 @@ from counterpartylib.lib import config
 
 from counterpartylib.lib.backend import addrindex, btcd
 
+MEMPOOL_CACHE_INITIALIZED = False
+
 def sortkeypicker(keynames):
     """http://stackoverflow.com/a/1143719"""
     negate = set()
@@ -133,7 +135,7 @@ def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False, unspent
     """returns a list of unspent outputs for a specific address
     @return: A list of dicts, with each entry in the dict having the following keys:
     """
-    if not BACKEND().MEMPOOL_CACHE_INITIALIZED:
+    if not MEMPOOL_CACHE_INITIALIZED:
         raise MempoolError('Mempool is not yet ready; please try again in a few minutes.')
 
     # Get all outputs.
@@ -230,14 +232,15 @@ def multisig_pubkeyhashes_to_pubkeys(address, provided_pubkeys=None):
 def init_mempool_cache():
     """prime the mempool cache, so that functioning is faster...
     """
+    global MEMPOOL_CACHE_INITIALIZED
     logger.debug('Initialize mempool cache')
     start = time.time()
 
-    BACKEND().MEMPOOL_CACHE = BACKEND().getrawmempool()
+    mempool_txhash_list = BACKEND().getrawmempool()
 
     #with this function, don't try to load in more than BACKEND_RAW_TRANSACTIONS_CACHE_SIZE entries
-    num_tx = min(len(BACKEND().MEMPOOL_CACHE), config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)
-    mempool_tx = BACKEND().getrawtransaction_batch(BACKEND().MEMPOOL_CACHE[:num_tx], verbose=True)
+    num_tx = min(len(mempool_txhash_list), config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)
+    mempool_tx = BACKEND().getrawtransaction_batch(mempool_txhash_list[:num_tx], verbose=True)
     
     vin_txhash_list = []
     max_remaining_num_tx = config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE - num_tx
@@ -247,14 +250,8 @@ def init_mempool_cache():
             vin_txhash_list += [vin['txid'] for vin in tx['vin']]
         BACKEND().getrawtransaction_batch(vin_txhash_list[:max_remaining_num_tx], verbose=True)
 
-    BACKEND().MEMPOOL_CACHE_INITIALIZED = True
+    MEMPOOL_CACHE_INITIALIZED = True
     logger.info('Mempool cache initialized: {:.2f}s for {:,} transactions'.format(time.time() - start, num_tx + min(max_remaining_num_tx, len(vin_txhash_list))))
-
-def refresh_mempool_cache():
-    BACKEND().MEMPOOL_CACHE = BACKEND().getrawmempool()
-    
-def get_mempool_cache():
-    return BACKEND().MEMPOOL_CACHE
 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

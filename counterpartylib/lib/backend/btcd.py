@@ -13,9 +13,6 @@ import json
 
 from functools import lru_cache
 
-MEMPOOL_CACHE_INITIALIZED = False
-MEMPOOL_CACHE = None
-
 bitcoin_rpc_session = None
 
 class BackendRPCError(Exception):

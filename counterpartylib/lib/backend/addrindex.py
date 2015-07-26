@@ -14,9 +14,6 @@ from functools import lru_cache
 
 from counterpartylib.lib import config, script, util
 
-MEMPOOL_CACHE_INITIALIZED = False
-MEMPOOL_CACHE = None
-
 raw_transactions_cache = util.DictCache(size=config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE) #used in getrawtransaction_batch()
 
 class BackendRPCError(Exception):
@@ -118,8 +115,9 @@ def unconfirmed_transactions(address):
     logger.debug('Checking mempool for UTXOs -- extract_addresses cache stats: {}'.format(str(extract_addresses.cache_info())))
 
     unconfirmed_tx = []
-    for index, tx_hash in enumerate(MEMPOOL_CACHE):
-        logger.debug('Possible mempool UTXO: {} ({}/{})'.format(tx_hash, index, len(MEMPOOL_CACHE)))
+    mempool_txhash_list = getrawmempool()
+    for index, tx_hash in enumerate(mempool_txhash_list):
+        logger.debug('Possible mempool UTXO: {} ({}/{})'.format(tx_hash, index, len(mempool_txhash_list)))
         addresses, tx = extract_addresses(tx_hash)
         if (address,) in addresses:
             unconfirmed_tx.append(tx)
