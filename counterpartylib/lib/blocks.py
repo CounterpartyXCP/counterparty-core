@@ -1024,11 +1024,9 @@ def follow(db):
             block_index += 1
 
         else:
-            if backend.get_mempool_cache() is None:
+            if backend.MEMPOOL_CACHE_INITIALIZED is False:
                 backend.init_mempool_cache()
                 logger.info("Ready for queries.")
-            else:
-                backend.refresh_mempool_cache()
 
             # Get old mempool.
             old_mempool = list(cursor.execute('''SELECT * FROM mempool'''))
