@@ -284,7 +284,7 @@ def construct (db, tx_info, encoding='auto',
                multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
                op_return_value=config.DEFAULT_OP_RETURN_VALUE,
                exact_fee=None, fee_provided=0, provided_pubkeys=None,
-               allow_unconfirmed_inputs=False):
+               allow_unconfirmed_inputs=False, unspent_tx_hash=None):
 
     (source, destination_outputs, data) = tx_info
 
@@ -392,7 +392,11 @@ def construct (db, tx_info, encoding='auto',
 
     # Get inputs.
     multisig_inputs = not data
-    unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, multisig_inputs=multisig_inputs)
+    if unspent_tx_hash is not None:
+        unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, unspent_tx_hash=unspent_tx_hash, multisig_inputs=multisig_inputs)
+    else:
+        unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, multisig_inputs=multisig_inputs)
+
     unspent = backend.sort_unspent_txouts(unspent)
     logger.debug('Sorted UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
 

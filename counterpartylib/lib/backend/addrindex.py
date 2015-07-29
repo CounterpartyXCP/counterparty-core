@@ -1,33 +1,33 @@
 import logging
 logger = logging.getLogger(__name__)
 import sys
+import os
 import json
 import requests
 from requests.exceptions import Timeout, ReadTimeout, ConnectionError
 import time
 import threading
+import concurrent.futures
+import collections
+import binascii
 from functools import lru_cache
 
-from counterpartylib.lib import script
-from counterpartylib.lib import config
+from counterpartylib.lib import config, script, util
 
-bitcoin_rpc_session = None
+raw_transactions_cache = util.DictCache(size=config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE) #used in getrawtransaction_batch()
 
 class BackendRPCError(Exception):
     pass
 
 def rpc_call(payload):
     url = config.BACKEND_URL
-    headers = {'content-type': 'application/json'}
-
-    global bitcoin_rpc_session
-    if not bitcoin_rpc_session:
-        bitcoin_rpc_session = requests.Session()
     response = None
     TRIES = 12
+
     for i in range(TRIES):
         try:
-            response = bitcoin_rpc_session.post(url, data=json.dumps(payload), headers=headers, verify=(not config.BACKEND_SSL_NO_VERIFY), timeout=config.REQUESTS_TIMEOUT)
+            response = requests.post(url, data=json.dumps(payload), headers={'content-type': 'application/json'},
+                verify=(not config.BACKEND_SSL_NO_VERIFY), timeout=config.REQUESTS_TIMEOUT)
             if i > 0:
                 logger.debug('Successfully connected.')
             break
@@ -72,29 +72,34 @@ def rpc(method, params):
     }
     return rpc_call(payload)
     
-def rpc_batch(payload):
-
-    def get_chunks(l, n):
+def rpc_batch(request_list):
+    responses = collections.deque()
+    def get_requests_chunk(l, n):
         n = max(1, n)
         return [l[i:i + n] for i in range(0, len(l), n)]
-
-    chunks = get_chunks(payload, config.RPC_BATCH_SIZE)
-    responses = []
-    for chunk in chunks:
-        responses += rpc_call(chunk)
-    return responses
+ 
+    def make_call(chunk):
+        #send a list of requests to bitcoind to be executed
+        #note that this is list executed serially, in the same thread in bitcoind
+        #e.g. see: https://github.com/bitcoin/bitcoin/blob/master/src/rpcserver.cpp#L939
+        responses.extend(rpc_call(chunk))
+ 
+    chunks = get_requests_chunk(request_list, config.RPC_BATCH_SIZE)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=config.BACKEND_RPC_BATCH_NUM_WORKERS) as executor:
+        for chunk in chunks:
+            executor.submit(make_call, chunk)
+    return list(responses)
 
 # TODO: use scriptpubkey_to_address()
 @lru_cache(maxsize=4096)
 def extract_addresses(tx_hash):
     logger.debug('Extract addresses: {}'.format(tx_hash))
-    # TODO: Use `rpc._batch` here.
     tx = getrawtransaction(tx_hash, verbose=True)
-    addresses = []
+    addresses = set() #use set to avoid duplicates
 
     for vout in tx['vout']:
         if 'addresses' in vout['scriptPubKey']:
-            addresses += vout['scriptPubKey']['addresses']
+            addresses.add(tuple(vout['scriptPubKey']['addresses']))
 
     txhash_list = [vin['txid'] for vin in tx['vin']]
     raw_transactions = getrawtransaction_batch(txhash_list, verbose=True)
@@ -102,25 +107,23 @@ def extract_addresses(tx_hash):
         vin_tx = raw_transactions[vin['txid']]
         vout = vin_tx['vout'][vin['vout']]
         if 'addresses' in vout['scriptPubKey']:
-            addresses += vout['scriptPubKey']['addresses']
-
-    return addresses, tx
+            addresses.add(tuple(vout['scriptPubKey']['addresses']))
+    return list(addresses), tx
 
 def unconfirmed_transactions(address):
     # NOTE: This operation can be very slow.
-    logger.debug('Checking mempool for UTXOs.')
+    logger.debug('Checking mempool for UTXOs -- extract_addresses cache stats: {}'.format(str(extract_addresses.cache_info())))
 
     unconfirmed_tx = []
-    mempool = getrawmempool()
-    for index, tx_hash in enumerate(mempool):
-        logger.debug('Possible mempool UTXO: {} ({}/{})'.format(tx_hash, index, len(mempool)))
+    mempool_txhash_list = getrawmempool()
+    for index, tx_hash in enumerate(mempool_txhash_list):
+        logger.debug('Possible mempool UTXO: {} ({}/{})'.format(tx_hash, index, len(mempool_txhash_list)))
         addresses, tx = extract_addresses(tx_hash)
-        if address in addresses:
+        if (address,) in addresses:
             unconfirmed_tx.append(tx)
     return unconfirmed_tx
 
 def searchrawtransactions(address, unconfirmed=False):
-
     # Get unconfirmed transactions.
     if unconfirmed:
         logger.debug('Getting unconfirmed transactions.')
@@ -137,7 +140,7 @@ def searchrawtransactions(address, unconfirmed=False):
             raise BackendRPCError('Unknown RPC command: `searchrawtransactions`. Please use a version of {} Core which supports an address index.'.format(config.BTC_NAME))
         else:
             raise BackendRPCError(str(e))
-    confirmed = [tx for tx in rawtransactions if tx['confirmations'] > 0]
+    confirmed = [tx for tx in rawtransactions if 'confirmations' in tx and tx['confirmations'] > 0]
 
     return unconfirmed + confirmed
 
@@ -159,56 +162,52 @@ def getrawmempool():
 def sendrawtransaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
 
-# TODO: move to __init__.py
-RAW_TRANSACTIONS_CACHE = {}
-RAW_TRANSACTIONS_CACHE_KEYS = []
-RAW_TRANSACTIONS_CACHE_SIZE = 10000
-raw_transaction_cache_lock = threading.Lock()
-
 def getrawtransaction_batch(txhash_list, verbose=False):
-    with raw_transaction_cache_lock:
-        tx_hash_call_id = {}
-        call_id = 0
-        payload = []
-        # payload for transactions not in cache
-        for tx_hash in txhash_list:
-            if tx_hash not in RAW_TRANSACTIONS_CACHE:
-                payload.append({
-                    "method": 'getrawtransaction',
-                    "params": [tx_hash, 1],
-                    "jsonrpc": "2.0",
-                    "id": call_id
-                })
-                tx_hash_call_id[call_id] = tx_hash
-                call_id += 1
+    tx_hash_call_id = {}
+    payload = []
+    noncached_txhashes = []
 
-        # populate cache
-        if len(payload) > 0:
-            batch_responses = rpc_batch(payload)
-            for response in batch_responses:
-                if 'error' not in response or response['error'] is None:
-                    tx_hex = response['result']
-                    tx_hash = tx_hash_call_id[response['id']]
-                    if tx_hash not in RAW_TRANSACTIONS_CACHE:
-                        RAW_TRANSACTIONS_CACHE[tx_hash] = tx_hex
-                        RAW_TRANSACTIONS_CACHE_KEYS.append(tx_hash)
-                else:
-                    raise BackendRPCError('{}'.format(response['error']))
+    # payload for transactions not in cache
+    for tx_hash in txhash_list:
+        if tx_hash not in raw_transactions_cache:
+            call_id = binascii.hexlify(os.urandom(5)).decode('utf8')
+            payload.append({
+                "method": 'getrawtransaction',
+                "params": [tx_hash, 1],
+                "jsonrpc": "2.0",
+                "id": call_id
+            })
+            noncached_txhashes.append(tx_hash)
+            tx_hash_call_id[call_id] = tx_hash
+    #refresh any/all cache entries that already exist in the cache,
+    # so they're not inadvertently removed by another thread before we can consult them
+    #(this assumes that the size of the working set for any given workload doesn't exceed the max size of the cache)
+    for tx_hash in set(txhash_list).difference(set(noncached_txhashes)):
+        raw_transactions_cache.refresh(tx_hash)
 
-        # get transactions from cache
-        result = {}
-        for tx_hash in txhash_list:
-            if verbose:
-                result[tx_hash] = RAW_TRANSACTIONS_CACHE[tx_hash]
+    logger.debug("getrawtransaction_batch called, txhash_list size: {} / raw_transactions_cache size: {} / # rpc_batch calls: {}".format(
+        len(txhash_list), len(raw_transactions_cache), len(payload)))
+
+    # populate cache
+    if len(payload) > 0:
+        batch_responses = rpc_batch(payload)
+        for response in batch_responses:
+            if 'error' not in response or response['error'] is None:
+                tx_hex = response['result']
+                tx_hash = tx_hash_call_id[response['id']]
+                raw_transactions_cache[tx_hash] = tx_hex
             else:
-                result[tx_hash] = RAW_TRANSACTIONS_CACHE[tx_hash]['hex']
+                #TODO: this seems to happen for bogus transactions? Maybe handle it more gracefully than just erroring out?
+                raise BackendRPCError('{} (txhash:: {})'.format(response['error'], tx_hash_call_id.get(response.get('id', '??'), '??')))
 
-        # remove oldest hashes from cache
-        while len(RAW_TRANSACTIONS_CACHE_KEYS) > RAW_TRANSACTIONS_CACHE_SIZE:
-            first_hash = RAW_TRANSACTIONS_CACHE_KEYS[0]
-            del(RAW_TRANSACTIONS_CACHE[first_hash])
-            RAW_TRANSACTIONS_CACHE_KEYS.pop(0) 
+    # get transactions from cache
+    result = {}
+    for tx_hash in txhash_list:
+        if verbose:
+            result[tx_hash] = raw_transactions_cache[tx_hash]
+        else:
+            result[tx_hash] = raw_transactions_cache[tx_hash]['hex']
 
-        return result
+    return result
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

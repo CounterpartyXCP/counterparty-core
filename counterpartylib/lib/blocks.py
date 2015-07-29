@@ -760,9 +760,9 @@ def kickstart(db, bitcoind_dir):
 
     logger.warning('''Warning:
 - Ensure that bitcoind is stopped.
-- You must reindex bitcoind after the initialisation is complete (restart with `-reindex=1`)
-- The initialisation may take a while.''')
-    if input('Procede with the initialisation? (y/N) : ') != 'y':
+- You must reindex bitcoind after the initialization is complete (restart with `-reindex=1`)
+- The initialization may take a while.''')
+    if input('Proceed with the initialization? (y/N) : ') != 'y':
         return
 
     first_hash = config.BLOCK_FIRST_TESTNET_HASH if config.TESTNET else config.BLOCK_FIRST_MAINNET_HASH
@@ -908,8 +908,6 @@ def follow(db):
     not_supported = {}   # No false positives. Use a dict to allow for O(1) lookups
     not_supported_sorted = collections.deque()
     # ^ Entries in form of (block_index, tx_hash), oldest first. Allows for easy removal of past, unncessary entries
-    mempool_initialised = False
-    backend.init_mempool_cache()
     cursor = db.cursor()
     # a reorg can happen without the block count increasing, or even for that
     # matter, with the block count decreasing. This should only delay
@@ -1025,12 +1023,10 @@ def follow(db):
             block_count = backend.getblockcount()
             block_index += 1
 
-        else:   
-            # First mempool fill for session?
-            if mempool_initialised:
-                logger.debug('Updating mempool.')
-            else:
-                logger.debug('Initialising mempool.')
+        else:
+            if backend.MEMPOOL_CACHE_INITIALIZED is False:
+                backend.init_mempool_cache()
+                logger.info("Ready for queries.")
 
             # Get old mempool.
             old_mempool = list(cursor.execute('''SELECT * FROM mempool'''))
@@ -1046,7 +1042,6 @@ def follow(db):
             # Every transaction in mempool is parsed independently. (DB is rolled back after each one.)
             mempool = []
             for tx_hash in backend.getrawmempool():
-
                 # If already in mempool, copy to new one.
                 if tx_hash in old_mempool_hashes:
                     for message in old_mempool:
@@ -1114,7 +1109,6 @@ def follow(db):
                     cursor.execute('''INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp)''', (new_message))
 
             # Wait
-            mempool_initialised = True
             db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
             time.sleep(config.BACKEND_POLL_INTERVAL)
 
