@@ -139,21 +139,6 @@ def main():
     parser_cancel.add_argument('--offer-hash', required=True, help='the transaction hash of the order or bet')
     parser_cancel.add_argument('--fee', help='the exact {} fee to be paid to miners'.format(config.BTC))
 
-    parser_rps = subparsers.add_parser('rps', help='open a rock-paper-scissors like game')
-    parser_rps.add_argument('--source', required=True, help='the source address')
-    parser_rps.add_argument('--wager', required=True, help='the quantity of XCP to wager')
-    parser_rps.add_argument('--move', type=int, required=True, help='the selected move')
-    parser_rps.add_argument('--possible-moves', type=int, required=True, help='the number of possible moves (odd number greater or equal than 3)')
-    parser_rps.add_argument('--expiration', type=int, required=True, help='the number of blocks for which the bet should be valid')
-    parser_rps.add_argument('--fee', help='the exact BTC fee to be paid to miners')
-
-    parser_rpsresolve = subparsers.add_parser('rpsresolve', help='resolve a rock-paper-scissors like game')
-    parser_rpsresolve.add_argument('--source', required=True, help='the source address')
-    parser_rpsresolve.add_argument('--random', type=str, required=True, help='the random number used in the corresponding rps transaction')
-    parser_rpsresolve.add_argument('--move', type=int, required=True, help='the selected move in the corresponding rps transaction')
-    parser_rpsresolve.add_argument('--rps-match-id', required=True, help='the concatenation of the hashes of the two transactions which compose the rps match')
-    parser_rpsresolve.add_argument('--fee', help='the exact BTC fee to be paid to miners')
-
     parser_publish = subparsers.add_parser('publish', help='publish contract code in the blockchain')
     parser_publish.add_argument('--source', required=True, help='the source address')
     parser_publish.add_argument('--gasprice', required=True, type=int, help='the price of gas')
