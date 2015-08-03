@@ -21,6 +21,8 @@
 	addrindex=1
 	rpcthreads=1000
 	rpctimeout=300
+	minrelaytxfee=0.00005
+	limitfreerelay=0
 	```
 
 # Installation
