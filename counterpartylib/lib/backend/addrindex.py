@@ -162,7 +162,7 @@ def getrawmempool():
 def sendrawtransaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
 
-def getrawtransaction_batch(txhash_list, verbose=False):
+def getrawtransaction_batch(txhash_list, verbose=False, _recursing=False):
     tx_hash_call_id = {}
     payload = []
     noncached_txhashes = []
@@ -189,6 +189,7 @@ def getrawtransaction_batch(txhash_list, verbose=False):
         len(txhash_list), len(raw_transactions_cache), len(payload)))
 
     # populate cache
+    added_entries_to_cache = []
     if len(payload) > 0:
         batch_responses = rpc_batch(payload)
         for response in batch_responses:
@@ -196,6 +197,7 @@ def getrawtransaction_batch(txhash_list, verbose=False):
                 tx_hex = response['result']
                 tx_hash = tx_hash_call_id[response['id']]
                 raw_transactions_cache[tx_hash] = tx_hex
+                added_entries_to_cache.append(tx_hash) #for debugging
             else:
                 #TODO: this seems to happen for bogus transactions? Maybe handle it more gracefully than just erroring out?
                 raise BackendRPCError('{} (txhash:: {})'.format(response['error'], tx_hash_call_id.get(response.get('id', '??'), '??')))
@@ -203,10 +205,22 @@ def getrawtransaction_batch(txhash_list, verbose=False):
     # get transactions from cache
     result = {}
     for tx_hash in txhash_list:
-        if verbose:
-            result[tx_hash] = raw_transactions_cache[tx_hash]
-        else:
-            result[tx_hash] = raw_transactions_cache[tx_hash]['hex']
+        try: #TEMP error handling for better race condition diagnosis. REMOVE before pushing to master
+            if verbose:
+                result[tx_hash] = raw_transactions_cache[tx_hash]
+            else:
+                result[tx_hash] = raw_transactions_cache[tx_hash]['hex']
+        except KeyError: #likely race condition
+            logger.warn("getrawtransaction_batch EXTRA INFO, txhash_list size: {} / raw_transactions_cache size: {} / # rpc_batch calls: {}".format(
+                len(txhash_list), len(raw_transactions_cache), len(payload)))
+            logger.warn("txhash in noncached_txhashes: %s, in txhash_list: %s -- list %s" % (
+                tx_hash in noncached_txhashes, tx_hash in txhash_list, list(set(txhash_list).difference(set(noncached_txhashes))) ))
+            logger.warn("added_entries_to_cache: %s" % added_entries_to_cache)
+            if not _recursing: #try again
+                r = getrawtransaction_batch([tx_hash], verbose=verbose, _recursing=True)
+                result[tx_hash] = r[tx_hash]
+            else:
+                raise #already tried again, give up
 
     return result
 
