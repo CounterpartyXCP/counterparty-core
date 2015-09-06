@@ -699,6 +699,13 @@ def reparse(db, block_index=None, quiet=False):
 
 def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=None):
     assert type(tx_hash) == str
+    cursor = db.cursor()
+
+    # Edge case: confirmed tx_hash also in mempool
+    cursor.execute('''SELECT * FROM transactions WHERE tx_hash = ?''', (tx_hash,))
+    transactions = list(cursor)
+    if transactions:
+        return tx_index
 
     # Get the important details about each transaction.
     if tx_hex is None:
@@ -715,7 +722,6 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
 
     if source and (data or destination == config.UNSPENDABLE):
         logger.debug('Saving transaction: {}'.format(tx_hash))
-        cursor = db.cursor()
         cursor.execute('''INSERT INTO transactions(
                             tx_index,
                             tx_hash,
