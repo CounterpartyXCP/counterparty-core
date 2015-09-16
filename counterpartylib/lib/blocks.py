@@ -919,7 +919,7 @@ def follow(db):
     # matter, with the block count decreasing. This should only delay
     # processing of the new blocks a bit.
     while True:
-        starttime = time.time()
+        start_time = time.time()
 
         # Get block count.
         # If the backend is unreachable and `config.FORCE` is set, just sleep
@@ -1024,7 +1024,7 @@ def follow(db):
                 tx_h = not_supported_sorted.popleft()[1]
                 del not_supported[tx_h]
 
-            logger.info('Block: %s (%ss)'%(str(block_index), "{:.2f}".format(time.time() - starttime, 3)))
+            logger.info('Block: %s (%ss)'%(str(block_index), "{:.2f}".format(time.time() - start_time, 3)))
             # Increment block index.
             block_count = backend.getblockcount()
             block_index += 1
@@ -1118,12 +1118,16 @@ def follow(db):
                     
             backend.refresh_unconfirmed_transactions_cache([message['tx_hash'] for message in old_mempool])
 
-            logger.debug('Refresh mempool: %s CP txs seen, out of %s total entries (%ss)' % (
-                len(mempool), len(raw_mempool), "{:.2f}".format(time.time() - starttime, 3)))
+
+            elapsed_time = time.time() - start_time
+            sleep_time = config.BACKEND_POLL_INTERVAL - elapsed_time if elapsed_time <= config.BACKEND_POLL_INTERVAL else 0
+
+            logger.debug('Refresh mempool: %s CP txs seen, out of %s total entries (took %ss, next refresh in %ss)' % (
+                len(mempool), len(raw_mempool), "{:.2f}".format(elapsed_time, 3), "{:.2f}".format(sleep_time, 3)))
 
             # Wait
             db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
-            time.sleep(config.BACKEND_POLL_INTERVAL)
+            time.sleep(sleep_time)
 
     cursor.close()
 

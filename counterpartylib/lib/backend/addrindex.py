@@ -195,7 +195,9 @@ def getrawtransaction_batch(txhash_list, verbose=False, _recursing=False):
     
     tx_hash_call_id = {}
     payload = []
-    noncached_txhashes = []
+    noncached_txhashes = set()
+    
+    txhash_list = set(txhash_list)
 
     # payload for transactions not in cache
     for tx_hash in txhash_list:
@@ -207,12 +209,12 @@ def getrawtransaction_batch(txhash_list, verbose=False, _recursing=False):
                 "jsonrpc": "2.0",
                 "id": call_id
             })
-            noncached_txhashes.append(tx_hash)
+            noncached_txhashes.add(tx_hash)
             tx_hash_call_id[call_id] = tx_hash
     #refresh any/all cache entries that already exist in the cache,
     # so they're not inadvertently removed by another thread before we can consult them
     #(this assumes that the size of the working set for any given workload doesn't exceed the max size of the cache)
-    for tx_hash in set(txhash_list).difference(set(noncached_txhashes)):
+    for tx_hash in txhash_list.difference(noncached_txhashes):
         raw_transactions_cache.refresh(tx_hash)
 
     logger.debug("getrawtransaction_batch: txhash_list size: {} / raw_transactions_cache size: {} / # getrawtransaction calls: {}".format(
@@ -243,8 +245,8 @@ def getrawtransaction_batch(txhash_list, verbose=False, _recursing=False):
         except KeyError: #likely race condition
             import hashlib
             logger.warn("tx missing in rawtx cache: {} -- txhash_list size: {}, hash: {} / raw_transactions_cache size: {} / # rpc_batch calls: {} / txhash in noncached_txhashes: {} / txhash in txhash_list: {} -- list {}".format(
-                e, len(txhash_list), hashlib.md5(json.dumps(txhash_list).encode()).hexdigest(), len(raw_transactions_cache), len(payload),
-                tx_hash in noncached_txhashes, tx_hash in txhash_list, list(set(txhash_list).difference(set(noncached_txhashes))) ))
+                e, len(txhash_list), hashlib.md5(json.dumps(list(txhash_list)).encode()).hexdigest(), len(raw_transactions_cache), len(payload),
+                tx_hash in noncached_txhashes, tx_hash in txhash_list, list(txhash_list.difference(noncached_txhashes)) ))
             if not _recursing: #try again
                 r = getrawtransaction_batch([tx_hash], verbose=verbose, _recursing=True)
                 result[tx_hash] = r[tx_hash]
