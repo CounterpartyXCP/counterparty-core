@@ -716,7 +716,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
     if block_hash == None:
         block_hash = config.MEMPOOL_BLOCK_HASH
         block_index = config.MEMPOOL_BLOCK_INDEX
-        backend.extract_addresses(tx_hash) # prepare cache for backend.unconfirmed_transactions().
+        backend.extract_addresses([tx_hash,]) # prepare cache for backend.unconfirmed_transactions().
     else:
         assert block_index == util.CURRENT_BLOCK_INDEX
 
@@ -932,7 +932,7 @@ def follow(db):
                 continue
             else:
                 raise e
-
+            
         # Get new blocks.
         if block_index <= block_count:
 
@@ -1030,13 +1030,14 @@ def follow(db):
             block_index += 1
 
         else:
-            if backend.MEMPOOL_CACHE_INITIALIZED is False:
-                backend.init_mempool_cache()
-                logger.info("Ready for queries.")
-
             # Get old mempool.
             old_mempool = list(cursor.execute('''SELECT * FROM mempool'''))
             old_mempool_hashes = [message['tx_hash'] for message in old_mempool]
+
+            if backend.MEMPOOL_CACHE_INITIALIZED is False:
+                backend.init_mempool_cache()
+                backend.refresh_unconfirmed_transactions_cache(old_mempool_hashes)
+                logger.info("Ready for queries.")
 
             # Fake values for fake block.
             curr_time = int(time.time())
@@ -1047,7 +1048,8 @@ def follow(db):
             # and then save those messages.
             # Every transaction in mempool is parsed independently. (DB is rolled back after each one.)
             mempool = []
-            for tx_hash in backend.getrawmempool():
+            raw_mempool = backend.getrawmempool()
+            for tx_hash in raw_mempool:
                 # If already in mempool, copy to new one.
                 if tx_hash in old_mempool_hashes:
                     for message in old_mempool:
@@ -1113,6 +1115,11 @@ def follow(db):
                     tx_hash, new_message = message
                     new_message['tx_hash'] = tx_hash
                     cursor.execute('''INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp)''', (new_message))
+                    
+            backend.refresh_unconfirmed_transactions_cache([message['tx_hash'] for message in old_mempool])
+
+            logger.debug('Refresh mempool: %s CP txs seen, out of %s total entries (%ss)' % (
+                len(mempool), len(raw_mempool), "{:.2f}".format(time.time() - starttime, 3)))
 
             # Wait
             db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)

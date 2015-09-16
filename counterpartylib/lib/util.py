@@ -72,6 +72,10 @@ def api(method, params):
     else:
         raise RPCError('{}'.format(response_json['error']))
 
+def chunkify(l, n):
+    n = max(1, n)
+    return [l[i:i + n] for i in range(0, len(l), n)]
+
 def date_passed(date):
     """Check if the date has already passed."""
     return date <= int(time.time())

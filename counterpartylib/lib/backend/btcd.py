@@ -81,8 +81,8 @@ def rpc_batch(payload):
 
     return responses
 
-def extract_addresses(tx_hash):
-    pass
+def extract_addresses(txhash_list):
+    raise NotImplementedError
 
 def searchrawtransactions(address, unconfirmed=False):
     logger.debug('Searching raw transactions.')
@@ -93,6 +93,12 @@ def searchrawtransactions(address, unconfirmed=False):
         raise BackendRPCError(str(e))
     
     return rawtransactions
+
+def unconfirmed_transactions():
+    raise NotImplementedError
+
+def refresh_unconfirmed_transactions_cache():
+    raise NotImplementedError
 
 def getblockcount():
     return rpc('getblockcount', [])

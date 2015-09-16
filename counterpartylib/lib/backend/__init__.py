@@ -51,16 +51,21 @@ def searchrawtransactions(address, unconfirmed=False):
     return BACKEND().searchrawtransactions(address, unconfirmed=unconfirmed)
 def getrawtransaction(tx_hash, verbose=False):
     return BACKEND().getrawtransaction(tx_hash, verbose=verbose)
+
 def getrawtransaction_batch(txhash_list, verbose=False):
     return BACKEND().getrawtransaction_batch(txhash_list, verbose=verbose)
+
 def sendrawtransaction(tx_hex):
     return BACKEND().sendrawtransaction(tx_hex)
 
 def getrawmempool():
     return BACKEND().getrawmempool()
 
-def extract_addresses(tx_hash):
-    return BACKEND().extract_addresses(tx_hash)
+def extract_addresses(txhash_list):
+    return BACKEND().extract_addresses(txhash_list)
+
+def refresh_unconfirmed_transactions_cache(mempool_txhash_list):
+    return BACKEND().refresh_unconfirmed_transactions_cache(mempool_txhash_list)
 
 def deserialize(tx_hex):
     return bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
@@ -233,10 +238,10 @@ def init_mempool_cache():
     """prime the mempool cache, so that functioning is faster...
     """
     global MEMPOOL_CACHE_INITIALIZED
-    logger.debug('Initialize mempool cache')
+    logger.debug('Initializing mempool cache...')
     start = time.time()
 
-    mempool_txhash_list = BACKEND().getrawmempool()
+    mempool_txhash_list = getrawmempool()
 
     #with this function, don't try to load in more than BACKEND_RAW_TRANSACTIONS_CACHE_SIZE entries
     num_tx = min(len(mempool_txhash_list), config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)
