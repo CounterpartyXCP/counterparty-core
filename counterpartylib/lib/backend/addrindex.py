@@ -10,7 +10,7 @@ import threading
 import concurrent.futures
 import collections
 import binascii
-from functools import lru_cache
+import hashlib
 
 from counterpartylib.lib import config, script, util
 
@@ -89,12 +89,6 @@ def rpc_batch(request_list):
     return list(responses)
 
 def extract_addresses(txhash_list):
-    #Algorithm not very space efficient, but very time efficient, via maxing out RPC batching, and allowing RPC concurrency to be fully utilized
-    #tx_hashes_tx[<hash>] contains transaction object
-    #tx_hashes_addresses[<hash>] contains list of extracted addresses for that hash (and all inputs and outputs listed in _hashes)
-    #tx_inputs_hashes contains al txhashes for all transaction's inputs
-    
-    #logger.debug('Extract addresses, {} entries'.format(len(txhash_list)))
     tx_hashes_tx = getrawtransaction_batch(txhash_list, verbose=True)
     tx_hashes_addresses = {}
     tx_inputs_hashes = set() #use set to avoid duplicates
@@ -243,7 +237,6 @@ def getrawtransaction_batch(txhash_list, verbose=False, _recursing=False):
             else:
                 result[tx_hash] = raw_transactions_cache[tx_hash]['hex']
         except KeyError: #likely race condition
-            import hashlib
             logger.warn("tx missing in rawtx cache: {} -- txhash_list size: {}, hash: {} / raw_transactions_cache size: {} / # rpc_batch calls: {} / txhash in noncached_txhashes: {} / txhash in txhash_list: {} -- list {}".format(
                 e, len(txhash_list), hashlib.md5(json.dumps(list(txhash_list)).encode()).hexdigest(), len(raw_transactions_cache), len(payload),
                 tx_hash in noncached_txhashes, tx_hash in txhash_list, list(txhash_list.difference(noncached_txhashes)) ))
