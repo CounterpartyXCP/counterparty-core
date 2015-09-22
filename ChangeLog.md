@@ -3,7 +3,7 @@
     * Significant performance and caching optimizations around bitcoind addrindex interaction
     * Fixed issues around responsiveness with larger mempool sizes
     * Mempool refresh period changed from 2 seconds to .5 seconds
-    * Bugfixes with coinbase transaction processing
+    * Bug fixes with coinbase transaction processing
     * `unspent_tx_hash` argument added to `transaction.construct()`
     * Faster transaction chaining
     * Checkpoint hashes updated
