@@ -94,11 +94,6 @@ def extract_addresses(txhash_list):
     tx_inputs_hashes = set() #use set to avoid duplicates
     
     for tx_hash, tx in tx_hashes_tx.items():
-        if tx is None: #bogus tx
-            tx_hashes_tx[tx_hash] = None
-            tx_hashes_addresses[tx_hash] = set()
-            continue
-        
         tx_hashes_addresses[tx_hash] = set()
         for vout in tx['vout']:
             if 'addresses' in vout['scriptPubKey']:
