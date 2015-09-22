@@ -353,16 +353,6 @@ def initialise(db):
 
     # Undolog
     # create undolog tables
-    
-    #TODO: REMOVE
-    #cursor.execute('''DROP TABLE IF EXISTS undolog''')
-    #cursor.execute('''DROP TABLE IF EXISTS undolog_block''')
-    #Redo triggers
-    #for table in TABLES + ['balances']:
-    #    for a in ['it', 'ut', 'dt']:
-    #        cursor.execute('''DROP TRIGGER IF EXISTS _{}_{}'''.format(table, a))
-    # END TODO
-    
     cursor.execute('''CREATE TABLE IF NOT EXISTS undolog(
                         seq INTEGER primary key,
                         sql TEXT)
@@ -674,7 +664,7 @@ def reinitialise(db, block_index=None):
     # Create missing tables
     initialise(db)
 
-    # clean consensus hashes if first block hash don't match with checkpoint.
+    # clean consensus hashes if first block hash doesn't match with checkpoint.
     checkpoints = check.CHECKPOINTS_TESTNET if config.TESTNET else check.CHECKPOINTS_MAINNET
     columns = [column['name'] for column in cursor.execute('''PRAGMA table_info(blocks)''')]
     for field in ['ledger_hash', 'txlist_hash']:
@@ -701,9 +691,8 @@ def reparse(db, block_index=None, quiet=False):
     def reparse_from_undolog(db, block_index, quiet):
         """speedy reparse method that utilizes the undolog. 
         if fails, fallback to the full reparse method"""
-
+        assert block_index
         undolog_cursor = db.cursor()
-        #remove the row tracer and exec tracer on this cursor, so we don't utilize them here...
         undolog_cursor.setexectrace(None)
         undolog_cursor.setrowtrace(None)
 
@@ -724,14 +713,19 @@ def reparse(db, block_index=None, quiet=False):
                 logger.info("entry: %s" % (entry,))
                 logger.debug("Executing undolog seq {}: {}".format(entry[0], entry[1]))
                 undolog_cursor.execute(entry[1])
-            return True
+
+            undolog_cursor.execute('''DELETE FROM transactions WHERE block_index > ?''', (block_index,))
+            undolog_cursor.execute('''DELETE FROM blocks WHERE block_index > ?''', (block_index,))
+        undolog_cursor.close()
+        return True
+
 
     logger.info('Reparsing all transactions.')
 
     check.software_version()
 
     #reparse from the undolog if possible
-    reparsed = reparse_from_undolog(db, block_index, quiet)
+    reparsed = reparse_from_undolog(db, block_index, quiet) if block_index else False
 
     cursor = db.cursor()
     
@@ -1103,9 +1097,9 @@ def follow(db):
                 first_seqs = list(undolog_cursor.execute('''SELECT first_seq FROM undolog_block WHERE block_index IN (?,?) ORDER BY block_index ASC''',
                     (block_index - config.UNDOLOG_MAX_PAST_BLOCKS,
                      block_index - config.UNDOLOG_MAX_PAST_BLOCKS + 1)))
-                if len(first_seqs) == 2 and all([f['first_seq'] for f in first_seqs]):
-                    if first_seqs[0]['first_seq'] != first_seqs[1]['first_seq']:
-                        undolog_cursor.execute('''DELETE FROM undolog WHERE seq < ?''', (first_seqs[1]['first_seq'],))
+                if len(first_seqs) == 2 and all([f[0] for f in first_seqs]):
+                    if first_seqs[0][0] != first_seqs[1][0]:
+                        undolog_cursor.execute('''DELETE FROM undolog WHERE seq < ?''', (first_seqs[1][0],))
                 undolog_cursor.execute('''DELETE FROM undolog_block WHERE block_index <= ?''',
                     (block_index - config.UNDOLOG_MAX_PAST_BLOCKS,))
                 

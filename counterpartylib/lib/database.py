@@ -21,6 +21,10 @@ def exectracer(cursor, sql, bindings):
     # TODO: Need sanity checks here.
     sql = sql.lower()
 
+    if sql.startswith('create trigger'):
+        #CREATE TRIGGER stmts may include an "insert" or "update" as part of them
+        return True 
+
     # Parse SQL.
     array = sql.split('(')[0].split(' ')
     command = array[0]
@@ -29,6 +33,7 @@ def exectracer(cursor, sql, bindings):
     elif 'update' in sql:
         category = array[1]
     else:
+        #CREATE TABLE, etc
         return True
 
     db = cursor.getconnection()
