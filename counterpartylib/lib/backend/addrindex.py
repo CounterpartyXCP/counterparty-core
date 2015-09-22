@@ -128,7 +128,6 @@ def refresh_unconfirmed_transactions_cache(mempool_txhash_list):
     global unconfirmed_transactions_cache
 
     unconfirmed_txes = {}
-    #mempool_txhash_list = getrawmempool()
     tx_hashes_addresses, tx_hashes_tx = extract_addresses(mempool_txhash_list)
     for tx_hash, addresses in tx_hashes_addresses.items():
         for address in addresses:
