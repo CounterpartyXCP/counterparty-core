@@ -18,7 +18,7 @@ def rowtracer(cursor, sql):
 
 def exectracer(cursor, sql, bindings):
     # This means that all changes to database must use a very simple syntax.
-        # TODO: Need sanity checks here.
+    # TODO: Need sanity checks here.
     sql = sql.lower()
 
     # Parse SQL.
@@ -36,7 +36,7 @@ def exectracer(cursor, sql, bindings):
 
     # Skip blocks, transactions.
     if 'blocks' in sql or 'transactions' in sql: return True
-
+    
     # Record alteration in database.
     if category not in ('balances', 'messages', 'mempool', 'assets'):
         if category not in ('suicides', 'postqueue'):  # These tables are ephemeral.

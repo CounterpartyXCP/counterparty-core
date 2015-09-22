@@ -101,4 +101,6 @@ DEFAULT_CHECK_ASSET_CONSERVATION = True
 BACKEND_RAW_TRANSACTIONS_CACHE_SIZE = 20000
 BACKEND_RPC_BATCH_NUM_WORKERS = 6
 
+UNDOLOG_MAX_PAST_BLOCKS = 7 #should be 1 higher than the max reorg length we are engineered to handle
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
