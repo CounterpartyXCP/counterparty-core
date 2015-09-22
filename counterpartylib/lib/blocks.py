@@ -133,10 +133,31 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
     The unused arguments `ledger_hash` and `txlist_hash` are for the test suite.
     """
     cursor = db.cursor()
-
+    undolog_cursor = db.cursor()
+    #remove the row tracer and exec tracer on this cursor, so we don't utilize them with undolog operations...
+    undolog_cursor.setexectrace(None)
+    undolog_cursor.setrowtrace(None)
+    
     util.BLOCK_LEDGER = []
-
+    
     assert block_index == util.CURRENT_BLOCK_INDEX
+
+    # Set undolog barrier for this block
+    if block_index != config.BLOCK_FIRST:
+        undolog_cursor.execute('''INSERT INTO undolog_block(block_index, first_seq)
+            SELECT ?, seq+1 FROM SQLITE_SEQUENCE WHERE name='undolog' ''', (block_index,))
+    else:
+        undolog_cursor.execute('''INSERT INTO undolog_block(block_index, first_seq)
+            VALUES(?,?)''', (block_index, 0,))
+    # Remove undolog records for any block older than we should be tracking 
+    first_seqs = list(undolog_cursor.execute('''SELECT first_seq FROM undolog_block WHERE block_index IN (?,?) ORDER BY block_index ASC''',
+        (block_index - config.UNDOLOG_MAX_PAST_BLOCKS,
+         block_index - config.UNDOLOG_MAX_PAST_BLOCKS + 1)))
+    if len(first_seqs) == 2 and all([f[0] for f in first_seqs]):
+        if first_seqs[0][0] != first_seqs[1][0]:
+            undolog_cursor.execute('''DELETE FROM undolog WHERE seq < ?''', (first_seqs[1][0],))
+    undolog_cursor.execute('''DELETE FROM undolog_block WHERE block_index <= ?''',
+        (block_index - config.UNDOLOG_MAX_PAST_BLOCKS,))
 
     # Expire orders, bets and rps.
     order.expire(db, block_index)
@@ -354,11 +375,11 @@ def initialise(db):
     # Undolog
     # create undolog tables
     cursor.execute('''CREATE TABLE IF NOT EXISTS undolog(
-                        seq INTEGER primary key,
+                        seq INTEGER PRIMARY KEY AUTOINCREMENT,
                         sql TEXT)
                    ''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS undolog_block(
-                        block_index INTEGER primary key,
+                        block_index INTEGER PRIMARY KEY,
                         first_seq INTEGER)
                    ''')
     # create undolog triggers
@@ -697,14 +718,14 @@ def reparse(db, block_index=None, quiet=False):
         undolog_cursor.setrowtrace(None)
 
         with db:
-            #ensure that we can reparse
+            # Ensure that we can reparse
             first_seq = list(undolog_cursor.execute(
                 '''SELECT first_seq FROM undolog_block WHERE block_index == ?''', (block_index,)))
             if len(first_seq) != 1:  # undolog doesn't go that far back....
                 return False
             first_seq = first_seq[0][0]
 
-            #grab the undolog...
+            # Grab the undolog...
             undolog = undolog_cursor.execute(
                 '''SELECT seq, sql FROM undolog WHERE seq >= ? ORDER BY seq DESC''', (first_seq,))
             
@@ -714,8 +735,13 @@ def reparse(db, block_index=None, quiet=False):
                 logger.debug("Executing undolog seq {}: {}".format(entry[0], entry[1]))
                 undolog_cursor.execute(entry[1])
 
+            # Trim back tx and blocks
             undolog_cursor.execute('''DELETE FROM transactions WHERE block_index > ?''', (block_index,))
             undolog_cursor.execute('''DELETE FROM blocks WHERE block_index > ?''', (block_index,))
+            # As well as undolog entries...
+            undolog_cursor.execute('''DELETE FROM undolog WHERE seq >= ?''', (first_seq,))
+            undolog_cursor.execute('''DELETE FROM undolog_block WHERE block_index >= ?''', (block_index,))
+
         undolog_cursor.close()
         return True
 
@@ -724,7 +750,7 @@ def reparse(db, block_index=None, quiet=False):
 
     check.software_version()
 
-    #reparse from the undolog if possible
+    # Reparse from the undolog if possible
     reparsed = reparse_from_undolog(db, block_index, quiet) if block_index else False
 
     cursor = db.cursor()
@@ -985,11 +1011,6 @@ def follow(db):
     # ^ Entries in form of (block_index, tx_hash), oldest first. Allows for easy removal of past, unncessary entries
     cursor = db.cursor()
     
-    undolog_cursor = db.cursor()
-    #remove the row tracer and exec tracer on this cursor, so we don't utilize them with undolog operations...
-    undolog_cursor.setexectrace(None)
-    undolog_cursor.setrowtrace(None)
-    
     # a reorg can happen without the block count increasing, or even for that
     # matter, with the block count decreasing. This should only delay
     # processing of the new blocks a bit.
@@ -1085,23 +1106,6 @@ def follow(db):
                 for tx_hash in txhash_list:
                     tx_hex = raw_transactions[tx_hash]
                     tx_index = list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex)
-                
-                # Set undolog barrier for this block
-                if block_index != config.BLOCK_FIRST:
-                    undolog_cursor.execute('''INSERT INTO undolog_block(block_index, first_seq)
-                        SELECT ?, MAX(seq)+1 FROM undolog''', (block_index,))
-                else:
-                    undolog_cursor.execute('''INSERT INTO undolog_block(block_index, first_seq)
-                        VALUES(?,?)''', (block_index, 0,))
-                #remove undolog records for any block older than we should be tracking 
-                first_seqs = list(undolog_cursor.execute('''SELECT first_seq FROM undolog_block WHERE block_index IN (?,?) ORDER BY block_index ASC''',
-                    (block_index - config.UNDOLOG_MAX_PAST_BLOCKS,
-                     block_index - config.UNDOLOG_MAX_PAST_BLOCKS + 1)))
-                if len(first_seqs) == 2 and all([f[0] for f in first_seqs]):
-                    if first_seqs[0][0] != first_seqs[1][0]:
-                        undolog_cursor.execute('''DELETE FROM undolog WHERE seq < ?''', (first_seqs[1][0],))
-                undolog_cursor.execute('''DELETE FROM undolog_block WHERE block_index <= ?''',
-                    (block_index - config.UNDOLOG_MAX_PAST_BLOCKS,))
                 
                 # Parse the transactions in the block.
                 parse_block(db, block_index, block_time)
