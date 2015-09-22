@@ -1,4 +1,8 @@
 ## Client Versions ##
+* v9.51.4 (2015-09-22)
+    * Significant performance and caching optimizations around bitcoind addrindex interaction
+    * Fixed issues around responsiveness issues with larger mempool sizes
+    * Mempool refresh period changed from 2 seconds down to .5 seconds
 * v9.51.3 (2015-05-13)
 	* Handle correctly -2 error (reorg) from RPC queries
 	* `scriptpubkey_to_address()` return None for coinbase
