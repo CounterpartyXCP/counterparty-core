@@ -148,16 +148,15 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
             SELECT ?, seq+1 FROM SQLITE_SEQUENCE WHERE name='undolog' ''', (block_index,))
     else:
         undolog_cursor.execute('''INSERT INTO undolog_block(block_index, first_seq)
-            VALUES(?,?)''', (block_index, 0,))
+            VALUES(?,?)''', (block_index, 1,))
     # Remove undolog records for any block older than we should be tracking 
-    first_seqs = list(undolog_cursor.execute('''SELECT first_seq FROM undolog_block WHERE block_index IN (?,?) ORDER BY block_index ASC''',
-        (block_index - config.UNDOLOG_MAX_PAST_BLOCKS,
-         block_index - config.UNDOLOG_MAX_PAST_BLOCKS + 1)))
-    if len(first_seqs) == 2 and all([f[0] for f in first_seqs]):
-        if first_seqs[0][0] != first_seqs[1][0]:
-            undolog_cursor.execute('''DELETE FROM undolog WHERE seq < ?''', (first_seqs[1][0],))
-    undolog_cursor.execute('''DELETE FROM undolog_block WHERE block_index <= ?''',
-        (block_index - config.UNDOLOG_MAX_PAST_BLOCKS,))
+    undolog_oldest_block_index = block_index - config.UNDOLOG_MAX_PAST_BLOCKS
+    first_seq = list(undolog_cursor.execute('''SELECT first_seq FROM undolog_block WHERE block_index == ?''', (
+        undolog_oldest_block_index))
+    if len(first_seq) == 1 and first_seq[0] is not None:
+        undolog_cursor.execute('''DELETE FROM undolog WHERE seq < ?''', (first_seq[0],))
+    undolog_cursor.execute('''DELETE FROM undolog_block WHERE block_index < ?''',
+        (undolog_oldest_block_index,))
 
     # Expire orders, bets and rps.
     order.expire(db, block_index)
@@ -179,6 +178,7 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
 
     # Consensus hashes.
     new_txlist_hash = check.consensus_hash(db, 'txlist_hash', previous_txlist_hash, txlist)
+    logger.info("util.BLOCK_LEDGER: %s" % (util.BLOCK_LEDGER,))
     new_ledger_hash = check.consensus_hash(db, 'ledger_hash', previous_ledger_hash, util.BLOCK_LEDGER)
 
     return new_ledger_hash, new_txlist_hash
@@ -187,6 +187,37 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
 def initialise(db):
     """Initialise data, create and populate the database."""
     cursor = db.cursor()
+
+    # Create the undolog tables and triggers first, so we capture any appropriate events into them
+    # (such as populating the initial XCP abd BTC entries into the assets table, for instance)
+    # Create undolog tables
+    cursor.execute('''CREATE TABLE IF NOT EXISTS undolog(
+                        seq INTEGER PRIMARY KEY AUTOINCREMENT,
+                        sql TEXT)
+                   ''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS undolog_block(
+                        block_index INTEGER PRIMARY KEY,
+                        first_seq INTEGER)
+                   ''')
+    # Create undolog triggers
+    for table in TABLES + ['balances']:
+        columns = [column['name'] for column in cursor.execute('''PRAGMA table_info({})'''.format(table))]
+        cursor.execute('''CREATE TRIGGER IF NOT EXISTS _{}_it AFTER INSERT ON {} BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM {} WHERE rowid='||new.rowid);
+                            END;
+                       '''.format(table, table, table))
+
+        columns_parts = ["{}='||quote(old.{})||'".format(c, c) for c in columns]
+        cursor.execute('''CREATE TRIGGER IF NOT EXISTS _{}_ut AFTER UPDATE ON {} BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE {} SET {} WHERE rowid='||old.rowid);
+                            END;
+                       '''.format(table, table, table, ','.join(columns_parts)))
+
+        columns_parts = ["'||quote(old.{})||'".format(c) for c in columns]
+        cursor.execute('''CREATE TRIGGER IF NOT EXISTS _{}_dt BEFORE DELETE ON {} BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO {}(rowid,{}) VALUES('||old.rowid||',{})');
+                            END;
+                       '''.format(table, table, table, ','.join(columns), ','.join(columns_parts)))
 
     # Blocks
     cursor.execute('''CREATE TABLE IF NOT EXISTS blocks(
@@ -371,36 +402,6 @@ def initialise(db):
                       bindings TEXT,
                       timestamp INTEGER)
                   ''')
-
-    # Undolog
-    # create undolog tables
-    cursor.execute('''CREATE TABLE IF NOT EXISTS undolog(
-                        seq INTEGER PRIMARY KEY AUTOINCREMENT,
-                        sql TEXT)
-                   ''')
-    cursor.execute('''CREATE TABLE IF NOT EXISTS undolog_block(
-                        block_index INTEGER PRIMARY KEY,
-                        first_seq INTEGER)
-                   ''')
-    # create undolog triggers
-    for table in TABLES + ['balances']:
-        columns = [column['name'] for column in cursor.execute('''PRAGMA table_info({})'''.format(table))]
-        cursor.execute('''CREATE TRIGGER IF NOT EXISTS _{}_it AFTER INSERT ON {} BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM {} WHERE rowid='||new.rowid);
-                            END;
-                       '''.format(table, table, table))
-
-        columns_parts = ["{}='||quote(old.{})||'".format(c, c) for c in columns]
-        cursor.execute('''CREATE TRIGGER IF NOT EXISTS _{}_ut AFTER UPDATE ON {} BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'UPDATE {} SET {} WHERE rowid='||old.rowid);
-                            END;
-                       '''.format(table, table, table, ','.join(columns_parts)))
-
-        columns_parts = ["'||quote(old.{})||'".format(c) for c in columns]
-        cursor.execute('''CREATE TRIGGER IF NOT EXISTS _{}_dt BEFORE DELETE ON {} BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO {}(rowid,{}) VALUES('||old.rowid||',{})');
-                            END;
-                       '''.format(table, table, table, ','.join(columns), ','.join(columns_parts)))
 
 def get_tx_info(tx_hex, block_parser=None, block_index=None):
     """Get the transaction info. Calls one of two subfunctions depending on signature type."""
@@ -712,26 +713,29 @@ def reparse(db, block_index=None, quiet=False):
     def reparse_from_undolog(db, block_index, quiet):
         """speedy reparse method that utilizes the undolog. 
         if fails, fallback to the full reparse method"""
-        assert block_index
+        if not block_index:
+            return False # Can't reparse from undolog
+        
         undolog_cursor = db.cursor()
         undolog_cursor.setexectrace(None)
         undolog_cursor.setrowtrace(None)
 
         with db:
-            # Ensure that we can reparse
+            # Check if we can reparse from the undolog
             first_seq = list(undolog_cursor.execute(
                 '''SELECT first_seq FROM undolog_block WHERE block_index == ?''', (block_index,)))
-            if len(first_seq) != 1:  # undolog doesn't go that far back....
-                return False
+            
+            if len(first_seq) != 1:  
+                return False # Undolog doesn't go that far back, full reparse required...
+            
             first_seq = first_seq[0][0]
 
             # Grab the undolog...
-            undolog = undolog_cursor.execute(
-                '''SELECT seq, sql FROM undolog WHERE seq >= ? ORDER BY seq DESC''', (first_seq,))
+            undolog = list(undolog_cursor.execute(
+                '''SELECT seq, sql FROM undolog WHERE seq >= ? ORDER BY seq DESC''', (first_seq,)))
             
-            #replay the undolog backwards, from the last entry to first_seq...
-            for entry in undolog.fetchall():
-                logger.info("entry: %s" % (entry,))
+            # Replay the undolog backwards, from the last entry to first_seq...
+            for entry in undolog:
                 logger.debug("Executing undolog seq {}: {}".format(entry[0], entry[1]))
                 undolog_cursor.execute(entry[1])
 
@@ -751,7 +755,7 @@ def reparse(db, block_index=None, quiet=False):
     check.software_version()
 
     # Reparse from the undolog if possible
-    reparsed = reparse_from_undolog(db, block_index, quiet) if block_index else False
+    reparsed = reparse_from_undolog(db, block_index, quiet)
 
     cursor = db.cursor()
     
@@ -1108,7 +1112,7 @@ def follow(db):
                     tx_index = list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex)
                 
                 # Parse the transactions in the block.
-                parse_block(db, block_index, block_time)
+                new_ledger_hash, new_txlist_hash = parse_block(db, block_index, block_time)
 
             # When newly caught up, check for conservation of assets.
             if block_index == block_count:
@@ -1120,7 +1124,11 @@ def follow(db):
                 tx_h = not_supported_sorted.popleft()[1]
                 del not_supported[tx_h]
 
-            logger.info('Block: %s (%ss)'%(str(block_index), "{:.2f}".format(time.time() - start_time, 3)))
+            logger.info('Block: %s (%ss)' % (str(block_index), "{:.2f}".format(time.time() - start_time, 3)))
+            
+            #TODO: change this logging to debug...
+            logger.info('Block {} - ledger hash: {}, txlist hash: {}'.format(block_index, new_ledger_hash, new_txlist_hash))
+            
             # Increment block index.
             block_count = backend.getblockcount()
             block_index += 1
