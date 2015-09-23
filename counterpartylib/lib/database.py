@@ -39,11 +39,6 @@ def exectracer(cursor, sql, bindings):
     db = cursor.getconnection()
     dictionary = {'command': command, 'category': category, 'bindings': bindings}
 
-<<<<<<< HEAD
-    # Skip blocks, transactions.
-    if 'blocks' in sql or 'transactions' in sql: return True
-    
-=======
     skip_tables = [
         'blocks', 'transactions',
         'balances', 'messages', 'mempool', 'assets', 
@@ -54,7 +49,6 @@ def exectracer(cursor, sql, bindings):
         # List message manually.
         skip_tables += ['orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches', 'contracts']
 
->>>>>>> 741696696a3e31adc1da9200b41af7443bc8b5a1
     # Record alteration in database.
     if category not in skip_tables:
         log.message(db, bindings['block_index'], command, category, bindings)

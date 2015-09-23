@@ -151,10 +151,10 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
             VALUES(?,?)''', (block_index, 1,))
     # Remove undolog records for any block older than we should be tracking 
     undolog_oldest_block_index = block_index - config.UNDOLOG_MAX_PAST_BLOCKS
-    first_seq = list(undolog_cursor.execute('''SELECT first_seq FROM undolog_block WHERE block_index == ?''', (
-        undolog_oldest_block_index))
+    first_seq = list(undolog_cursor.execute('''SELECT first_seq FROM undolog_block WHERE block_index == ?''',
+        (undolog_oldest_block_index,)))
     if len(first_seq) == 1 and first_seq[0] is not None:
-        undolog_cursor.execute('''DELETE FROM undolog WHERE seq < ?''', (first_seq[0],))
+        undolog_cursor.execute('''DELETE FROM undolog WHERE seq < ?''', (first_seq[0][0],))
     undolog_cursor.execute('''DELETE FROM undolog_block WHERE block_index < ?''',
         (undolog_oldest_block_index,))
 
@@ -178,7 +178,6 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
 
     # Consensus hashes.
     new_txlist_hash = check.consensus_hash(db, 'txlist_hash', previous_txlist_hash, txlist)
-    logger.info("util.BLOCK_LEDGER: %s" % (util.BLOCK_LEDGER,))
     new_ledger_hash = check.consensus_hash(db, 'ledger_hash', previous_ledger_hash, util.BLOCK_LEDGER)
 
     return new_ledger_hash, new_txlist_hash
