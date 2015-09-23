@@ -34,18 +34,19 @@ def exectracer(cursor, sql, bindings):
     db = cursor.getconnection()
     dictionary = {'command': command, 'category': category, 'bindings': bindings}
 
-    # Skip blocks, transactions.
-    if 'blocks' in sql or 'transactions' in sql: return True
+    skip_tables = [
+        'blocks', 'transactions',
+        'balances', 'messages', 'mempool', 'assets', 
+        'suicides', 'postqueue', # These tables are ephemeral.
+        'nonces', 'storage' # List message manually.
+    ]
+    if command == 'update':
+        # List message manually.
+        skip_tables += ['orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches', 'contracts']
 
     # Record alteration in database.
-    if category not in ('balances', 'messages', 'mempool', 'assets'):
-        if category not in ('suicides', 'postqueue'):  # These tables are ephemeral.
-            if category not in ('nonces', 'storage'):  # List message manually.
-                if not (command in ('update') and category in ('orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches', 'contracts')):    # List message manually.
-                    # try:
-                        log.message(db, bindings['block_index'], command, category, bindings)
-                    # except:
-                        # raise TypeError('SQLite3 statements must used named arguments.')
+    if category not in skip_tables:
+        log.message(db, bindings['block_index'], command, category, bindings)
 
     return True
 
