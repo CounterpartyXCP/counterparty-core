@@ -16,6 +16,15 @@ INSERT INTO assets VALUES('1','XCP',NULL);
 INSERT INTO assets VALUES('18279','BBBB',310005);
 INSERT INTO assets VALUES('18280','BBBC',310006);
 -- Triggers and indices on  assets
+CREATE TRIGGER _assets_dt BEFORE DELETE ON assets BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO assets(rowid,asset_id,asset_name,block_index) VALUES('||old.rowid||','||quote(old.asset_id)||','||quote(old.asset_name)||','||quote(old.block_index)||')');
+                            END;
+CREATE TRIGGER _assets_it AFTER INSERT ON assets BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM assets WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _assets_ut AFTER UPDATE ON assets BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE assets SET asset_id='||quote(old.asset_id)||',asset_name='||quote(old.asset_name)||',block_index='||quote(old.block_index)||' WHERE rowid='||old.rowid);
+                            END;
 CREATE INDEX id_idx ON assets (asset_id);
 CREATE INDEX name_idx ON assets (asset_name);
 
@@ -32,6 +41,15 @@ INSERT INTO balances VALUES('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZN
 INSERT INTO balances VALUES('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj_3','BBBB',4000000);
 INSERT INTO balances VALUES('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj_3','BBBC',10526);
 -- Triggers and indices on  balances
+CREATE TRIGGER _balances_dt BEFORE DELETE ON balances BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO balances(rowid,address,asset,quantity) VALUES('||old.rowid||','||quote(old.address)||','||quote(old.asset)||','||quote(old.quantity)||')');
+                            END;
+CREATE TRIGGER _balances_it AFTER INSERT ON balances BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM balances WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _balances_ut AFTER UPDATE ON balances BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE balances SET address='||quote(old.address)||',asset='||quote(old.asset)||',quantity='||quote(old.quantity)||' WHERE rowid='||old.rowid);
+                            END;
 CREATE INDEX address_asset_idx ON balances (address, asset);
 
 -- Table  bet_expirations
@@ -44,6 +62,16 @@ CREATE TABLE bet_expirations(
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index),
                       FOREIGN KEY (bet_index, bet_hash) REFERENCES bets(tx_index, tx_hash));
 INSERT INTO bet_expirations VALUES(13,'0e0de93eee84d5b96c696cf0c3d84b6ff1f197fa13718ea3faaf68e4648bda3a','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',310023);
+-- Triggers and indices on  bet_expirations
+CREATE TRIGGER _bet_expirations_dt BEFORE DELETE ON bet_expirations BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO bet_expirations(rowid,bet_index,bet_hash,source,block_index) VALUES('||old.rowid||','||quote(old.bet_index)||','||quote(old.bet_hash)||','||quote(old.source)||','||quote(old.block_index)||')');
+                            END;
+CREATE TRIGGER _bet_expirations_it AFTER INSERT ON bet_expirations BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM bet_expirations WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _bet_expirations_ut AFTER UPDATE ON bet_expirations BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE bet_expirations SET bet_index='||quote(old.bet_index)||',bet_hash='||quote(old.bet_hash)||',source='||quote(old.source)||',block_index='||quote(old.block_index)||' WHERE rowid='||old.rowid);
+                            END;
 
 -- Table  bet_match_expirations
 DROP TABLE IF EXISTS bet_match_expirations;
@@ -54,6 +82,16 @@ CREATE TABLE bet_match_expirations(
                       block_index INTEGER,
                       FOREIGN KEY (bet_match_id) REFERENCES bet_matches(id),
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index));
+-- Triggers and indices on  bet_match_expirations
+CREATE TRIGGER _bet_match_expirations_dt BEFORE DELETE ON bet_match_expirations BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO bet_match_expirations(rowid,bet_match_id,tx0_address,tx1_address,block_index) VALUES('||old.rowid||','||quote(old.bet_match_id)||','||quote(old.tx0_address)||','||quote(old.tx1_address)||','||quote(old.block_index)||')');
+                            END;
+CREATE TRIGGER _bet_match_expirations_it AFTER INSERT ON bet_match_expirations BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM bet_match_expirations WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _bet_match_expirations_ut AFTER UPDATE ON bet_match_expirations BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE bet_match_expirations SET bet_match_id='||quote(old.bet_match_id)||',tx0_address='||quote(old.tx0_address)||',tx1_address='||quote(old.tx1_address)||',block_index='||quote(old.block_index)||' WHERE rowid='||old.rowid);
+                            END;
 
 -- Table  bet_match_resolutions
 DROP TABLE IF EXISTS bet_match_resolutions;
@@ -72,6 +110,16 @@ CREATE TABLE bet_match_resolutions(
 INSERT INTO bet_match_resolutions VALUES('0e0de93eee84d5b96c696cf0c3d84b6ff1f197fa13718ea3faaf68e4648bda3a_64e1f1f443ebfd3ca20600ab3ad57791340bc6b8034795d7f009346bccc1aa78',1,310018,'0',0,59137500,NULL,NULL,3112500);
 INSERT INTO bet_match_resolutions VALUES('11bc78cc61d9ca7cb5fec0bbbe04caeae2037a98bf04cf6d3e0f4a7d98f5707d_c5c6127eb0ba121d4b5d9c7e3b372634e32ac8cc4d4299e6ae9233afe43c5460',1,310019,'1',159300000,315700000,NULL,NULL,25000000);
 INSERT INTO bet_match_resolutions VALUES('274a5b05b135bd9af40c6c9751d837784f53bcc6cf940e87cee449782de9f4e9_f61ffdef0cb63ea09da9458b028d3d73a918a0f2de9d0e6c02d3e765ea15c50c',5,310020,NULL,NULL,NULL,'NotEqual',1330000000,70000000);
+-- Triggers and indices on  bet_match_resolutions
+CREATE TRIGGER _bet_match_resolutions_dt BEFORE DELETE ON bet_match_resolutions BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO bet_match_resolutions(rowid,bet_match_id,bet_match_type_id,block_index,winner,settled,bull_credit,bear_credit,escrow_less_fee,fee) VALUES('||old.rowid||','||quote(old.bet_match_id)||','||quote(old.bet_match_type_id)||','||quote(old.block_index)||','||quote(old.winner)||','||quote(old.settled)||','||quote(old.bull_credit)||','||quote(old.bear_credit)||','||quote(old.escrow_less_fee)||','||quote(old.fee)||')');
+                            END;
+CREATE TRIGGER _bet_match_resolutions_it AFTER INSERT ON bet_match_resolutions BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM bet_match_resolutions WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _bet_match_resolutions_ut AFTER UPDATE ON bet_match_resolutions BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE bet_match_resolutions SET bet_match_id='||quote(old.bet_match_id)||',bet_match_type_id='||quote(old.bet_match_type_id)||',block_index='||quote(old.block_index)||',winner='||quote(old.winner)||',settled='||quote(old.settled)||',bull_credit='||quote(old.bull_credit)||',bear_credit='||quote(old.bear_credit)||',escrow_less_fee='||quote(old.escrow_less_fee)||',fee='||quote(old.fee)||' WHERE rowid='||old.rowid);
+                            END;
 
 -- Table  bet_matches
 DROP TABLE IF EXISTS bet_matches;
@@ -106,6 +154,15 @@ INSERT INTO bet_matches VALUES('0e0de93eee84d5b96c696cf0c3d84b6ff1f197fa13718ea3
 INSERT INTO bet_matches VALUES('11bc78cc61d9ca7cb5fec0bbbe04caeae2037a98bf04cf6d3e0f4a7d98f5707d_c5c6127eb0ba121d4b5d9c7e3b372634e32ac8cc4d4299e6ae9233afe43c5460',15,'11bc78cc61d9ca7cb5fec0bbbe04caeae2037a98bf04cf6d3e0f4a7d98f5707d','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',16,'c5c6127eb0ba121d4b5d9c7e3b372634e32ac8cc4d4299e6ae9233afe43c5460','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',0,1,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',100,1388000100,0.0,5040,150000000,350000000,310014,310015,310015,10,10,310024,5000000,'settled');
 INSERT INTO bet_matches VALUES('274a5b05b135bd9af40c6c9751d837784f53bcc6cf940e87cee449782de9f4e9_f61ffdef0cb63ea09da9458b028d3d73a918a0f2de9d0e6c02d3e765ea15c50c',17,'274a5b05b135bd9af40c6c9751d837784f53bcc6cf940e87cee449782de9f4e9','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',18,'f61ffdef0cb63ea09da9458b028d3d73a918a0f2de9d0e6c02d3e765ea15c50c','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',2,3,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',100,1388000200,1.0,5040,750000000,650000000,310016,310017,310017,10,10,310026,5000000,'settled: for notequal');
 -- Triggers and indices on  bet_matches
+CREATE TRIGGER _bet_matches_dt BEFORE DELETE ON bet_matches BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO bet_matches(rowid,id,tx0_index,tx0_hash,tx0_address,tx1_index,tx1_hash,tx1_address,tx0_bet_type,tx1_bet_type,feed_address,initial_value,deadline,target_value,leverage,forward_quantity,backward_quantity,tx0_block_index,tx1_block_index,block_index,tx0_expiration,tx1_expiration,match_expire_index,fee_fraction_int,status) VALUES('||old.rowid||','||quote(old.id)||','||quote(old.tx0_index)||','||quote(old.tx0_hash)||','||quote(old.tx0_address)||','||quote(old.tx1_index)||','||quote(old.tx1_hash)||','||quote(old.tx1_address)||','||quote(old.tx0_bet_type)||','||quote(old.tx1_bet_type)||','||quote(old.feed_address)||','||quote(old.initial_value)||','||quote(old.deadline)||','||quote(old.target_value)||','||quote(old.leverage)||','||quote(old.forward_quantity)||','||quote(old.backward_quantity)||','||quote(old.tx0_block_index)||','||quote(old.tx1_block_index)||','||quote(old.block_index)||','||quote(old.tx0_expiration)||','||quote(old.tx1_expiration)||','||quote(old.match_expire_index)||','||quote(old.fee_fraction_int)||','||quote(old.status)||')');
+                            END;
+CREATE TRIGGER _bet_matches_it AFTER INSERT ON bet_matches BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM bet_matches WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _bet_matches_ut AFTER UPDATE ON bet_matches BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE bet_matches SET id='||quote(old.id)||',tx0_index='||quote(old.tx0_index)||',tx0_hash='||quote(old.tx0_hash)||',tx0_address='||quote(old.tx0_address)||',tx1_index='||quote(old.tx1_index)||',tx1_hash='||quote(old.tx1_hash)||',tx1_address='||quote(old.tx1_address)||',tx0_bet_type='||quote(old.tx0_bet_type)||',tx1_bet_type='||quote(old.tx1_bet_type)||',feed_address='||quote(old.feed_address)||',initial_value='||quote(old.initial_value)||',deadline='||quote(old.deadline)||',target_value='||quote(old.target_value)||',leverage='||quote(old.leverage)||',forward_quantity='||quote(old.forward_quantity)||',backward_quantity='||quote(old.backward_quantity)||',tx0_block_index='||quote(old.tx0_block_index)||',tx1_block_index='||quote(old.tx1_block_index)||',block_index='||quote(old.block_index)||',tx0_expiration='||quote(old.tx0_expiration)||',tx1_expiration='||quote(old.tx1_expiration)||',match_expire_index='||quote(old.match_expire_index)||',fee_fraction_int='||quote(old.fee_fraction_int)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
+                            END;
 CREATE INDEX valid_feed_idx ON bet_matches (feed_address, status);
 
 -- Table  bets
@@ -137,6 +194,15 @@ INSERT INTO bets VALUES(16,'c5c6127eb0ba121d4b5d9c7e3b372634e32ac8cc4d4299e6ae92
 INSERT INTO bets VALUES(17,'274a5b05b135bd9af40c6c9751d837784f53bcc6cf940e87cee449782de9f4e9',310016,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',2,1388000200,750000000,0,650000000,0,1.0,5040,10,310026,5000000,'filled');
 INSERT INTO bets VALUES(18,'f61ffdef0cb63ea09da9458b028d3d73a918a0f2de9d0e6c02d3e765ea15c50c',310017,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',3,1388000200,650000000,0,750000000,0,1.0,5040,10,310027,5000000,'filled');
 -- Triggers and indices on  bets
+CREATE TRIGGER _bets_dt BEFORE DELETE ON bets BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO bets(rowid,tx_index,tx_hash,block_index,source,feed_address,bet_type,deadline,wager_quantity,wager_remaining,counterwager_quantity,counterwager_remaining,target_value,leverage,expiration,expire_index,fee_fraction_int,status) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.feed_address)||','||quote(old.bet_type)||','||quote(old.deadline)||','||quote(old.wager_quantity)||','||quote(old.wager_remaining)||','||quote(old.counterwager_quantity)||','||quote(old.counterwager_remaining)||','||quote(old.target_value)||','||quote(old.leverage)||','||quote(old.expiration)||','||quote(old.expire_index)||','||quote(old.fee_fraction_int)||','||quote(old.status)||')');
+                            END;
+CREATE TRIGGER _bets_it AFTER INSERT ON bets BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM bets WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _bets_ut AFTER UPDATE ON bets BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE bets SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',feed_address='||quote(old.feed_address)||',bet_type='||quote(old.bet_type)||',deadline='||quote(old.deadline)||',wager_quantity='||quote(old.wager_quantity)||',wager_remaining='||quote(old.wager_remaining)||',counterwager_quantity='||quote(old.counterwager_quantity)||',counterwager_remaining='||quote(old.counterwager_remaining)||',target_value='||quote(old.target_value)||',leverage='||quote(old.leverage)||',expiration='||quote(old.expiration)||',expire_index='||quote(old.expire_index)||',fee_fraction_int='||quote(old.fee_fraction_int)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
+                            END;
 CREATE INDEX feed_valid_bettype_idx ON bets (feed_address, status, bet_type);
 
 -- Table  blocks
@@ -274,6 +340,15 @@ INSERT INTO broadcasts VALUES(19,'9419f0ab4bbbf7eb6bce2cfa731d619f4e583b228ede77
 INSERT INTO broadcasts VALUES(20,'84e21df5f3d10795c5439a66dda03399e4f6cb915f7c141e684565e9fb55bbdc',310019,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',1388000101,100.343,5000000,'Unit Test',0,'valid');
 INSERT INTO broadcasts VALUES(21,'f63fdf467229e05304c42e373e215ef86c1bc4e6cc7d9d0615301168b32cede7',310020,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',1388000201,2.0,5000000,'Unit Test',0,'valid');
 -- Triggers and indices on  broadcasts
+CREATE TRIGGER _broadcasts_dt BEFORE DELETE ON broadcasts BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO broadcasts(rowid,tx_index,tx_hash,block_index,source,timestamp,value,fee_fraction_int,text,locked,status) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.timestamp)||','||quote(old.value)||','||quote(old.fee_fraction_int)||','||quote(old.text)||','||quote(old.locked)||','||quote(old.status)||')');
+                            END;
+CREATE TRIGGER _broadcasts_it AFTER INSERT ON broadcasts BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM broadcasts WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _broadcasts_ut AFTER UPDATE ON broadcasts BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE broadcasts SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',timestamp='||quote(old.timestamp)||',value='||quote(old.value)||',fee_fraction_int='||quote(old.fee_fraction_int)||',text='||quote(old.text)||',locked='||quote(old.locked)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
+                            END;
 CREATE INDEX status_source_idx ON broadcasts (status, source);
 CREATE INDEX status_source_index_idx ON broadcasts (status, source, tx_index);
 CREATE INDEX timestamp_idx ON broadcasts (timestamp);
@@ -291,6 +366,16 @@ CREATE TABLE btcpays(
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 INSERT INTO btcpays VALUES(5,'6dff822c561bf6ff5504a16e54cc3bd8a591f294fbd7a404ed60e7a7b7524988',310004,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',50000000,'e1c19fef00aa067d54fcd72239999d499470c41f878807bb67e681a03ee61517_9bc459c9d72bcc916e391d7d393cabb21fb3edb9369837452babc6f0e0c9d83d','valid');
+-- Triggers and indices on  btcpays
+CREATE TRIGGER _btcpays_dt BEFORE DELETE ON btcpays BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO btcpays(rowid,tx_index,tx_hash,block_index,source,destination,btc_amount,order_match_id,status) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.destination)||','||quote(old.btc_amount)||','||quote(old.order_match_id)||','||quote(old.status)||')');
+                            END;
+CREATE TRIGGER _btcpays_it AFTER INSERT ON btcpays BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM btcpays WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _btcpays_ut AFTER UPDATE ON btcpays BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE btcpays SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',destination='||quote(old.destination)||',btc_amount='||quote(old.btc_amount)||',order_match_id='||quote(old.order_match_id)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
+                            END;
 
 -- Table  burns
 DROP TABLE IF EXISTS burns;
@@ -305,6 +390,16 @@ CREATE TABLE burns(
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 INSERT INTO burns VALUES(1,'37f2ff45d34097306c63d4cbb9699354bd6ab9cac6cc362eb8be563de3e74981',310000,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',62000000,93000000000,'valid');
 INSERT INTO burns VALUES(23,'5b1c6a89eb129c3193bc6c6e2876f9e5aaff3c65ef58d591fe743a5a59a51e94',310022,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',38000000,56999887262,'valid');
+-- Triggers and indices on  burns
+CREATE TRIGGER _burns_dt BEFORE DELETE ON burns BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO burns(rowid,tx_index,tx_hash,block_index,source,burned,earned,status) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.burned)||','||quote(old.earned)||','||quote(old.status)||')');
+                            END;
+CREATE TRIGGER _burns_it AFTER INSERT ON burns BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM burns WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _burns_ut AFTER UPDATE ON burns BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE burns SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',burned='||quote(old.burned)||',earned='||quote(old.earned)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
+                            END;
 
 -- Table  cancels
 DROP TABLE IF EXISTS cancels;
@@ -317,6 +412,15 @@ CREATE TABLE cancels(
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 -- Triggers and indices on  cancels
+CREATE TRIGGER _cancels_dt BEFORE DELETE ON cancels BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO cancels(rowid,tx_index,tx_hash,block_index,source,offer_hash,status) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.offer_hash)||','||quote(old.status)||')');
+                            END;
+CREATE TRIGGER _cancels_it AFTER INSERT ON cancels BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM cancels WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _cancels_ut AFTER UPDATE ON cancels BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE cancels SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',offer_hash='||quote(old.offer_hash)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
+                            END;
 CREATE INDEX cancels_block_index_idx ON cancels (block_index);
 
 -- Table  contracts
@@ -331,6 +435,15 @@ CREATE TABLE contracts(
                       nonce INTEGER,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 -- Triggers and indices on  contracts
+CREATE TRIGGER _contracts_dt BEFORE DELETE ON contracts BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO contracts(rowid,contract_id,tx_index,tx_hash,block_index,source,code,nonce) VALUES('||old.rowid||','||quote(old.contract_id)||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.code)||','||quote(old.nonce)||')');
+                            END;
+CREATE TRIGGER _contracts_it AFTER INSERT ON contracts BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM contracts WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _contracts_ut AFTER UPDATE ON contracts BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE contracts SET contract_id='||quote(old.contract_id)||',tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',code='||quote(old.code)||',nonce='||quote(old.nonce)||' WHERE rowid='||old.rowid);
+                            END;
 CREATE INDEX contract_id_idx ON contracts(contract_id);
 
 -- Table  credits
@@ -369,6 +482,16 @@ INSERT INTO credits VALUES(310022,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmdd
 INSERT INTO credits VALUES(310023,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','XCP',8500000,'recredit wager remaining','0e0de93eee84d5b96c696cf0c3d84b6ff1f197fa13718ea3faaf68e4648bda3a');
 INSERT INTO credits VALUES(310023,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj_3','BBBC',10000,'send','07fd8a2913753c3ca53cddc3992bf2be36119b23082ba29a8c33192f09131594');
 INSERT INTO credits VALUES(310032,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','BBBB',50000000,'cancel order','8b53787bd6551eddb5302769b48361275d1402039b46eb1ae87d1e90d3711e07');
+-- Triggers and indices on  credits
+CREATE TRIGGER _credits_dt BEFORE DELETE ON credits BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO credits(rowid,block_index,address,asset,quantity,calling_function,event) VALUES('||old.rowid||','||quote(old.block_index)||','||quote(old.address)||','||quote(old.asset)||','||quote(old.quantity)||','||quote(old.calling_function)||','||quote(old.event)||')');
+                            END;
+CREATE TRIGGER _credits_it AFTER INSERT ON credits BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM credits WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _credits_ut AFTER UPDATE ON credits BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE credits SET block_index='||quote(old.block_index)||',address='||quote(old.address)||',asset='||quote(old.asset)||',quantity='||quote(old.quantity)||',calling_function='||quote(old.calling_function)||',event='||quote(old.event)||' WHERE rowid='||old.rowid);
+                            END;
 
 -- Table  debits
 DROP TABLE IF EXISTS debits;
@@ -399,6 +522,15 @@ INSERT INTO debits VALUES(310017,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddV
 INSERT INTO debits VALUES(310021,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','BBBB',50000000,'open order','8b53787bd6551eddb5302769b48361275d1402039b46eb1ae87d1e90d3711e07');
 INSERT INTO debits VALUES(310023,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','BBBC',10000,'send','07fd8a2913753c3ca53cddc3992bf2be36119b23082ba29a8c33192f09131594');
 -- Triggers and indices on  debits
+CREATE TRIGGER _debits_dt BEFORE DELETE ON debits BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO debits(rowid,block_index,address,asset,quantity,action,event) VALUES('||old.rowid||','||quote(old.block_index)||','||quote(old.address)||','||quote(old.asset)||','||quote(old.quantity)||','||quote(old.action)||','||quote(old.event)||')');
+                            END;
+CREATE TRIGGER _debits_it AFTER INSERT ON debits BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM debits WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _debits_ut AFTER UPDATE ON debits BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE debits SET block_index='||quote(old.block_index)||',address='||quote(old.address)||',asset='||quote(old.asset)||',quantity='||quote(old.quantity)||',action='||quote(old.action)||',event='||quote(old.event)||' WHERE rowid='||old.rowid);
+                            END;
 CREATE INDEX address_idx ON debits (address);
 CREATE INDEX asset_idx ON debits (asset);
 
@@ -415,6 +547,15 @@ CREATE TABLE destructions(
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 -- Triggers and indices on  destructions
+CREATE TRIGGER _destructions_dt BEFORE DELETE ON destructions BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO destructions(rowid,tx_index,tx_hash,block_index,source,asset,quantity,tag,status) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.asset)||','||quote(old.quantity)||','||quote(old.tag)||','||quote(old.status)||')');
+                            END;
+CREATE TRIGGER _destructions_it AFTER INSERT ON destructions BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM destructions WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _destructions_ut AFTER UPDATE ON destructions BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE destructions SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',asset='||quote(old.asset)||',quantity='||quote(old.quantity)||',tag='||quote(old.tag)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
+                            END;
 CREATE INDEX status_idx ON destructions (status);
 
 -- Table  dividends
@@ -432,6 +573,16 @@ CREATE TABLE dividends(
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 INSERT INTO dividends VALUES(10,'78f94515b5769fa354cbd5b857e48665f1f826ac65eb18c34ad958f85e29a6dd',310009,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','BBBB','XCP',600,20000,'valid');
 INSERT INTO dividends VALUES(11,'25ec88deb553d89c45619a83794e060a76953a7fefbdbba20df4009300c37550',310010,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','BBBC','XCP',800,20000,'valid');
+-- Triggers and indices on  dividends
+CREATE TRIGGER _dividends_dt BEFORE DELETE ON dividends BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO dividends(rowid,tx_index,tx_hash,block_index,source,asset,dividend_asset,quantity_per_unit,fee_paid,status) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.asset)||','||quote(old.dividend_asset)||','||quote(old.quantity_per_unit)||','||quote(old.fee_paid)||','||quote(old.status)||')');
+                            END;
+CREATE TRIGGER _dividends_it AFTER INSERT ON dividends BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM dividends WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _dividends_ut AFTER UPDATE ON dividends BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE dividends SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',asset='||quote(old.asset)||',dividend_asset='||quote(old.dividend_asset)||',quantity_per_unit='||quote(old.quantity_per_unit)||',fee_paid='||quote(old.fee_paid)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
+                            END;
 
 -- Table  executions
 DROP TABLE IF EXISTS executions;
@@ -450,6 +601,16 @@ CREATE TABLE executions(
                       output BLOB,
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
+-- Triggers and indices on  executions
+CREATE TRIGGER _executions_dt BEFORE DELETE ON executions BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO executions(rowid,tx_index,tx_hash,block_index,source,contract_id,gas_price,gas_start,gas_cost,gas_remained,value,data,output,status) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.contract_id)||','||quote(old.gas_price)||','||quote(old.gas_start)||','||quote(old.gas_cost)||','||quote(old.gas_remained)||','||quote(old.value)||','||quote(old.data)||','||quote(old.output)||','||quote(old.status)||')');
+                            END;
+CREATE TRIGGER _executions_it AFTER INSERT ON executions BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM executions WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _executions_ut AFTER UPDATE ON executions BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE executions SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',contract_id='||quote(old.contract_id)||',gas_price='||quote(old.gas_price)||',gas_start='||quote(old.gas_start)||',gas_cost='||quote(old.gas_cost)||',gas_remained='||quote(old.gas_remained)||',value='||quote(old.value)||',data='||quote(old.data)||',output='||quote(old.output)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
+                            END;
 
 -- Table  issuances
 DROP TABLE IF EXISTS issuances;
@@ -474,6 +635,15 @@ CREATE TABLE issuances(
 INSERT INTO issuances VALUES(6,'39dc01835ecabc07f3f7390f692dfbf495adfab0f3bedda4ddc6647904c7e719',310005,'BBBB',1000000000,1,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',0,0,0,0.0,'',50000000,0,'valid');
 INSERT INTO issuances VALUES(7,'ac50584491e6a6f76dfb70b23ffd0cbc1f06426126588b8477b26064eba41aa2',310006,'BBBC',100000,0,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',0,0,0,0.0,'foobar',50000000,0,'valid');
 -- Triggers and indices on  issuances
+CREATE TRIGGER _issuances_dt BEFORE DELETE ON issuances BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO issuances(rowid,tx_index,tx_hash,block_index,asset,quantity,divisible,source,issuer,transfer,callable,call_date,call_price,description,fee_paid,locked,status) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.asset)||','||quote(old.quantity)||','||quote(old.divisible)||','||quote(old.source)||','||quote(old.issuer)||','||quote(old.transfer)||','||quote(old.callable)||','||quote(old.call_date)||','||quote(old.call_price)||','||quote(old.description)||','||quote(old.fee_paid)||','||quote(old.locked)||','||quote(old.status)||')');
+                            END;
+CREATE TRIGGER _issuances_it AFTER INSERT ON issuances BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM issuances WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _issuances_ut AFTER UPDATE ON issuances BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE issuances SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',asset='||quote(old.asset)||',quantity='||quote(old.quantity)||',divisible='||quote(old.divisible)||',source='||quote(old.source)||',issuer='||quote(old.issuer)||',transfer='||quote(old.transfer)||',callable='||quote(old.callable)||',call_date='||quote(old.call_date)||',call_price='||quote(old.call_price)||',description='||quote(old.description)||',fee_paid='||quote(old.fee_paid)||',locked='||quote(old.locked)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
+                            END;
 CREATE INDEX valid_asset_idx ON issuances (asset, status);
 
 -- Table  mempool
@@ -590,6 +760,15 @@ INSERT INTO messages VALUES(92,310032,'update','orders','{"status": "expired", "
 INSERT INTO messages VALUES(93,310032,'insert','credits','{"action": "cancel order", "address": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3", "asset": "BBBB", "block_index": 310032, "event": "8b53787bd6551eddb5302769b48361275d1402039b46eb1ae87d1e90d3711e07", "quantity": 50000000}',0);
 INSERT INTO messages VALUES(94,310032,'insert','order_expirations','{"block_index": 310032, "order_hash": "8b53787bd6551eddb5302769b48361275d1402039b46eb1ae87d1e90d3711e07", "order_index": 22, "source": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3"}',0);
 -- Triggers and indices on  messages
+CREATE TRIGGER _messages_dt BEFORE DELETE ON messages BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO messages(rowid,message_index,block_index,command,category,bindings,timestamp) VALUES('||old.rowid||','||quote(old.message_index)||','||quote(old.block_index)||','||quote(old.command)||','||quote(old.category)||','||quote(old.bindings)||','||quote(old.timestamp)||')');
+                            END;
+CREATE TRIGGER _messages_it AFTER INSERT ON messages BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM messages WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _messages_ut AFTER UPDATE ON messages BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE messages SET message_index='||quote(old.message_index)||',block_index='||quote(old.block_index)||',command='||quote(old.command)||',category='||quote(old.category)||',bindings='||quote(old.bindings)||',timestamp='||quote(old.timestamp)||' WHERE rowid='||old.rowid);
+                            END;
 CREATE INDEX block_index_message_index_idx ON messages (block_index, message_index);
 
 -- Table  nonces
@@ -597,6 +776,16 @@ DROP TABLE IF EXISTS nonces;
 CREATE TABLE nonces(
                       address TEXT PRIMARY KEY,
                       nonce INTEGER);
+-- Triggers and indices on  nonces
+CREATE TRIGGER _nonces_dt BEFORE DELETE ON nonces BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO nonces(rowid,address,nonce) VALUES('||old.rowid||','||quote(old.address)||','||quote(old.nonce)||')');
+                            END;
+CREATE TRIGGER _nonces_it AFTER INSERT ON nonces BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM nonces WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _nonces_ut AFTER UPDATE ON nonces BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE nonces SET address='||quote(old.address)||',nonce='||quote(old.nonce)||' WHERE rowid='||old.rowid);
+                            END;
 
 -- Table  order_expirations
 DROP TABLE IF EXISTS order_expirations;
@@ -610,6 +799,16 @@ CREATE TABLE order_expirations(
 INSERT INTO order_expirations VALUES(3,'e1c19fef00aa067d54fcd72239999d499470c41f878807bb67e681a03ee61517','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',310013);
 INSERT INTO order_expirations VALUES(4,'9bc459c9d72bcc916e391d7d393cabb21fb3edb9369837452babc6f0e0c9d83d','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',310014);
 INSERT INTO order_expirations VALUES(22,'8b53787bd6551eddb5302769b48361275d1402039b46eb1ae87d1e90d3711e07','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',310032);
+-- Triggers and indices on  order_expirations
+CREATE TRIGGER _order_expirations_dt BEFORE DELETE ON order_expirations BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO order_expirations(rowid,order_index,order_hash,source,block_index) VALUES('||old.rowid||','||quote(old.order_index)||','||quote(old.order_hash)||','||quote(old.source)||','||quote(old.block_index)||')');
+                            END;
+CREATE TRIGGER _order_expirations_it AFTER INSERT ON order_expirations BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM order_expirations WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _order_expirations_ut AFTER UPDATE ON order_expirations BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE order_expirations SET order_index='||quote(old.order_index)||',order_hash='||quote(old.order_hash)||',source='||quote(old.source)||',block_index='||quote(old.block_index)||' WHERE rowid='||old.rowid);
+                            END;
 
 -- Table  order_match_expirations
 DROP TABLE IF EXISTS order_match_expirations;
@@ -620,6 +819,16 @@ CREATE TABLE order_match_expirations(
                       block_index INTEGER,
                       FOREIGN KEY (order_match_id) REFERENCES order_matches(id),
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index));
+-- Triggers and indices on  order_match_expirations
+CREATE TRIGGER _order_match_expirations_dt BEFORE DELETE ON order_match_expirations BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO order_match_expirations(rowid,order_match_id,tx0_address,tx1_address,block_index) VALUES('||old.rowid||','||quote(old.order_match_id)||','||quote(old.tx0_address)||','||quote(old.tx1_address)||','||quote(old.block_index)||')');
+                            END;
+CREATE TRIGGER _order_match_expirations_it AFTER INSERT ON order_match_expirations BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM order_match_expirations WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _order_match_expirations_ut AFTER UPDATE ON order_match_expirations BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE order_match_expirations SET order_match_id='||quote(old.order_match_id)||',tx0_address='||quote(old.tx0_address)||',tx1_address='||quote(old.tx1_address)||',block_index='||quote(old.block_index)||' WHERE rowid='||old.rowid);
+                            END;
 
 -- Table  order_matches
 DROP TABLE IF EXISTS order_matches;
@@ -647,6 +856,15 @@ CREATE TABLE order_matches(
                       FOREIGN KEY (tx1_index, tx1_hash, tx1_block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 INSERT INTO order_matches VALUES('e1c19fef00aa067d54fcd72239999d499470c41f878807bb67e681a03ee61517_9bc459c9d72bcc916e391d7d393cabb21fb3edb9369837452babc6f0e0c9d83d',3,'e1c19fef00aa067d54fcd72239999d499470c41f878807bb67e681a03ee61517','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',4,'9bc459c9d72bcc916e391d7d393cabb21fb3edb9369837452babc6f0e0c9d83d','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','BTC',50000000,'XCP',100000000,310002,310003,310003,10,10,310023,857142,'completed');
 -- Triggers and indices on  order_matches
+CREATE TRIGGER _order_matches_dt BEFORE DELETE ON order_matches BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO order_matches(rowid,id,tx0_index,tx0_hash,tx0_address,tx1_index,tx1_hash,tx1_address,forward_asset,forward_quantity,backward_asset,backward_quantity,tx0_block_index,tx1_block_index,block_index,tx0_expiration,tx1_expiration,match_expire_index,fee_paid,status) VALUES('||old.rowid||','||quote(old.id)||','||quote(old.tx0_index)||','||quote(old.tx0_hash)||','||quote(old.tx0_address)||','||quote(old.tx1_index)||','||quote(old.tx1_hash)||','||quote(old.tx1_address)||','||quote(old.forward_asset)||','||quote(old.forward_quantity)||','||quote(old.backward_asset)||','||quote(old.backward_quantity)||','||quote(old.tx0_block_index)||','||quote(old.tx1_block_index)||','||quote(old.block_index)||','||quote(old.tx0_expiration)||','||quote(old.tx1_expiration)||','||quote(old.match_expire_index)||','||quote(old.fee_paid)||','||quote(old.status)||')');
+                            END;
+CREATE TRIGGER _order_matches_it AFTER INSERT ON order_matches BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM order_matches WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _order_matches_ut AFTER UPDATE ON order_matches BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE order_matches SET id='||quote(old.id)||',tx0_index='||quote(old.tx0_index)||',tx0_hash='||quote(old.tx0_hash)||',tx0_address='||quote(old.tx0_address)||',tx1_index='||quote(old.tx1_index)||',tx1_hash='||quote(old.tx1_hash)||',tx1_address='||quote(old.tx1_address)||',forward_asset='||quote(old.forward_asset)||',forward_quantity='||quote(old.forward_quantity)||',backward_asset='||quote(old.backward_asset)||',backward_quantity='||quote(old.backward_quantity)||',tx0_block_index='||quote(old.tx0_block_index)||',tx1_block_index='||quote(old.tx1_block_index)||',block_index='||quote(old.block_index)||',tx0_expiration='||quote(old.tx0_expiration)||',tx1_expiration='||quote(old.tx1_expiration)||',match_expire_index='||quote(old.match_expire_index)||',fee_paid='||quote(old.fee_paid)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
+                            END;
 CREATE INDEX backward_status_idx ON order_matches (backward_asset, status);
 CREATE INDEX forward_status_idx ON order_matches (forward_asset, status);
 CREATE INDEX match_expire_idx ON order_matches (status, match_expire_index);
@@ -679,6 +897,15 @@ INSERT INTO orders VALUES(3,'e1c19fef00aa067d54fcd72239999d499470c41f878807bb67e
 INSERT INTO orders VALUES(4,'9bc459c9d72bcc916e391d7d393cabb21fb3edb9369837452babc6f0e0c9d83d',310003,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','XCP',105000000,5000000,'BTC',50000000,0,10,310013,900000,42858,10000,10000,'expired');
 INSERT INTO orders VALUES(22,'8b53787bd6551eddb5302769b48361275d1402039b46eb1ae87d1e90d3711e07',310021,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','BBBB',50000000,50000000,'XCP',50000000,50000000,10,310031,0,0,10000,10000,'expired');
 -- Triggers and indices on  orders
+CREATE TRIGGER _orders_dt BEFORE DELETE ON orders BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO orders(rowid,tx_index,tx_hash,block_index,source,give_asset,give_quantity,give_remaining,get_asset,get_quantity,get_remaining,expiration,expire_index,fee_required,fee_required_remaining,fee_provided,fee_provided_remaining,status) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.give_asset)||','||quote(old.give_quantity)||','||quote(old.give_remaining)||','||quote(old.get_asset)||','||quote(old.get_quantity)||','||quote(old.get_remaining)||','||quote(old.expiration)||','||quote(old.expire_index)||','||quote(old.fee_required)||','||quote(old.fee_required_remaining)||','||quote(old.fee_provided)||','||quote(old.fee_provided_remaining)||','||quote(old.status)||')');
+                            END;
+CREATE TRIGGER _orders_it AFTER INSERT ON orders BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM orders WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _orders_ut AFTER UPDATE ON orders BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE orders SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',give_asset='||quote(old.give_asset)||',give_quantity='||quote(old.give_quantity)||',give_remaining='||quote(old.give_remaining)||',get_asset='||quote(old.get_asset)||',get_quantity='||quote(old.get_quantity)||',get_remaining='||quote(old.get_remaining)||',expiration='||quote(old.expiration)||',expire_index='||quote(old.expire_index)||',fee_required='||quote(old.fee_required)||',fee_required_remaining='||quote(old.fee_required_remaining)||',fee_provided='||quote(old.fee_provided)||',fee_provided_remaining='||quote(old.fee_provided_remaining)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
+                            END;
 CREATE INDEX expire_idx ON orders (expire_index, status);
 CREATE INDEX give_asset_idx ON orders (give_asset);
 CREATE INDEX give_get_status_idx ON orders (get_asset, give_asset, status);
@@ -689,6 +916,16 @@ CREATE INDEX source_give_status_idx ON orders (source, give_asset, status);
 DROP TABLE IF EXISTS postqueue;
 CREATE TABLE postqueue(
                       message BLOB);
+-- Triggers and indices on  postqueue
+CREATE TRIGGER _postqueue_dt BEFORE DELETE ON postqueue BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO postqueue(rowid,message) VALUES('||old.rowid||','||quote(old.message)||')');
+                            END;
+CREATE TRIGGER _postqueue_it AFTER INSERT ON postqueue BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM postqueue WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _postqueue_ut AFTER UPDATE ON postqueue BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE postqueue SET message='||quote(old.message)||' WHERE rowid='||old.rowid);
+                            END;
 
 -- Table  rps
 DROP TABLE IF EXISTS rps;
@@ -706,6 +943,15 @@ CREATE TABLE rps(
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                       PRIMARY KEY (tx_index, tx_hash));
 -- Triggers and indices on  rps
+CREATE TRIGGER _rps_dt BEFORE DELETE ON rps BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO rps(rowid,tx_index,tx_hash,block_index,source,possible_moves,wager,move_random_hash,expiration,expire_index,status) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.possible_moves)||','||quote(old.wager)||','||quote(old.move_random_hash)||','||quote(old.expiration)||','||quote(old.expire_index)||','||quote(old.status)||')');
+                            END;
+CREATE TRIGGER _rps_it AFTER INSERT ON rps BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM rps WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _rps_ut AFTER UPDATE ON rps BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE rps SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',possible_moves='||quote(old.possible_moves)||',wager='||quote(old.wager)||',move_random_hash='||quote(old.move_random_hash)||',expiration='||quote(old.expiration)||',expire_index='||quote(old.expire_index)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
+                            END;
 CREATE INDEX matching_idx ON rps (wager, possible_moves);
 
 -- Table  rps_expirations
@@ -717,6 +963,16 @@ CREATE TABLE rps_expirations(
                       block_index INTEGER,
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index),
                       FOREIGN KEY (rps_index, rps_hash) REFERENCES rps(tx_index, tx_hash));
+-- Triggers and indices on  rps_expirations
+CREATE TRIGGER _rps_expirations_dt BEFORE DELETE ON rps_expirations BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO rps_expirations(rowid,rps_index,rps_hash,source,block_index) VALUES('||old.rowid||','||quote(old.rps_index)||','||quote(old.rps_hash)||','||quote(old.source)||','||quote(old.block_index)||')');
+                            END;
+CREATE TRIGGER _rps_expirations_it AFTER INSERT ON rps_expirations BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM rps_expirations WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _rps_expirations_ut AFTER UPDATE ON rps_expirations BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE rps_expirations SET rps_index='||quote(old.rps_index)||',rps_hash='||quote(old.rps_hash)||',source='||quote(old.source)||',block_index='||quote(old.block_index)||' WHERE rowid='||old.rowid);
+                            END;
 
 -- Table  rps_match_expirations
 DROP TABLE IF EXISTS rps_match_expirations;
@@ -727,6 +983,16 @@ CREATE TABLE rps_match_expirations(
                       block_index INTEGER,
                       FOREIGN KEY (rps_match_id) REFERENCES rps_matches(id),
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index));
+-- Triggers and indices on  rps_match_expirations
+CREATE TRIGGER _rps_match_expirations_dt BEFORE DELETE ON rps_match_expirations BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO rps_match_expirations(rowid,rps_match_id,tx0_address,tx1_address,block_index) VALUES('||old.rowid||','||quote(old.rps_match_id)||','||quote(old.tx0_address)||','||quote(old.tx1_address)||','||quote(old.block_index)||')');
+                            END;
+CREATE TRIGGER _rps_match_expirations_it AFTER INSERT ON rps_match_expirations BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM rps_match_expirations WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _rps_match_expirations_ut AFTER UPDATE ON rps_match_expirations BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE rps_match_expirations SET rps_match_id='||quote(old.rps_match_id)||',tx0_address='||quote(old.tx0_address)||',tx1_address='||quote(old.tx1_address)||',block_index='||quote(old.block_index)||' WHERE rowid='||old.rowid);
+                            END;
 
 -- Table  rps_matches
 DROP TABLE IF EXISTS rps_matches;
@@ -752,6 +1018,15 @@ CREATE TABLE rps_matches(
                       FOREIGN KEY (tx0_index, tx0_hash, tx0_block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                       FOREIGN KEY (tx1_index, tx1_hash, tx1_block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 -- Triggers and indices on  rps_matches
+CREATE TRIGGER _rps_matches_dt BEFORE DELETE ON rps_matches BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO rps_matches(rowid,id,tx0_index,tx0_hash,tx0_address,tx1_index,tx1_hash,tx1_address,tx0_move_random_hash,tx1_move_random_hash,wager,possible_moves,tx0_block_index,tx1_block_index,block_index,tx0_expiration,tx1_expiration,match_expire_index,status) VALUES('||old.rowid||','||quote(old.id)||','||quote(old.tx0_index)||','||quote(old.tx0_hash)||','||quote(old.tx0_address)||','||quote(old.tx1_index)||','||quote(old.tx1_hash)||','||quote(old.tx1_address)||','||quote(old.tx0_move_random_hash)||','||quote(old.tx1_move_random_hash)||','||quote(old.wager)||','||quote(old.possible_moves)||','||quote(old.tx0_block_index)||','||quote(old.tx1_block_index)||','||quote(old.block_index)||','||quote(old.tx0_expiration)||','||quote(old.tx1_expiration)||','||quote(old.match_expire_index)||','||quote(old.status)||')');
+                            END;
+CREATE TRIGGER _rps_matches_it AFTER INSERT ON rps_matches BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM rps_matches WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _rps_matches_ut AFTER UPDATE ON rps_matches BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE rps_matches SET id='||quote(old.id)||',tx0_index='||quote(old.tx0_index)||',tx0_hash='||quote(old.tx0_hash)||',tx0_address='||quote(old.tx0_address)||',tx1_index='||quote(old.tx1_index)||',tx1_hash='||quote(old.tx1_hash)||',tx1_address='||quote(old.tx1_address)||',tx0_move_random_hash='||quote(old.tx0_move_random_hash)||',tx1_move_random_hash='||quote(old.tx1_move_random_hash)||',wager='||quote(old.wager)||',possible_moves='||quote(old.possible_moves)||',tx0_block_index='||quote(old.tx0_block_index)||',tx1_block_index='||quote(old.tx1_block_index)||',block_index='||quote(old.block_index)||',tx0_expiration='||quote(old.tx0_expiration)||',tx1_expiration='||quote(old.tx1_expiration)||',match_expire_index='||quote(old.match_expire_index)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
+                            END;
 CREATE INDEX rps_match_expire_idx ON rps_matches (status, match_expire_index);
 CREATE INDEX rps_tx0_address_idx ON rps_matches (tx0_address);
 CREATE INDEX rps_tx1_address_idx ON rps_matches (tx1_address);
@@ -769,6 +1044,15 @@ CREATE TABLE rpsresolves(
                       status TEXT,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 -- Triggers and indices on  rpsresolves
+CREATE TRIGGER _rpsresolves_dt BEFORE DELETE ON rpsresolves BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO rpsresolves(rowid,tx_index,tx_hash,block_index,source,move,random,rps_match_id,status) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.move)||','||quote(old.random)||','||quote(old.rps_match_id)||','||quote(old.status)||')');
+                            END;
+CREATE TRIGGER _rpsresolves_it AFTER INSERT ON rpsresolves BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM rpsresolves WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _rpsresolves_ut AFTER UPDATE ON rpsresolves BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE rpsresolves SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',move='||quote(old.move)||',random='||quote(old.random)||',rps_match_id='||quote(old.rps_match_id)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
+                            END;
 CREATE INDEX rps_match_id_idx ON rpsresolves (rps_match_id);
 
 -- Table  sends
@@ -788,6 +1072,15 @@ INSERT INTO sends VALUES(8,'893ba7699b526e4a1a919ad7671e901d6fabf13ac22d2fb54f2b
 INSERT INTO sends VALUES(9,'fe27b3bea249061f253b4219793d244dd41448e8ddff7177d3045f5eeefa3fe1',310008,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj_3','BBBC',526,'valid');
 INSERT INTO sends VALUES(24,'07fd8a2913753c3ca53cddc3992bf2be36119b23082ba29a8c33192f09131594',310023,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj_3','BBBC',10000,'valid');
 -- Triggers and indices on  sends
+CREATE TRIGGER _sends_dt BEFORE DELETE ON sends BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO sends(rowid,tx_index,tx_hash,block_index,source,destination,asset,quantity,status) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.destination)||','||quote(old.asset)||','||quote(old.quantity)||','||quote(old.status)||')');
+                            END;
+CREATE TRIGGER _sends_it AFTER INSERT ON sends BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM sends WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _sends_ut AFTER UPDATE ON sends BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE sends SET tx_index='||quote(old.tx_index)||',tx_hash='||quote(old.tx_hash)||',block_index='||quote(old.block_index)||',source='||quote(old.source)||',destination='||quote(old.destination)||',asset='||quote(old.asset)||',quantity='||quote(old.quantity)||',status='||quote(old.status)||' WHERE rowid='||old.rowid);
+                            END;
 CREATE INDEX destination_idx ON sends (destination);
 CREATE INDEX source_idx ON sends (source);
 
@@ -798,12 +1091,32 @@ CREATE TABLE storage(
                       key BLOB,
                       value BLOB,
                       FOREIGN KEY (contract_id) REFERENCES contracts(contract_id));
+-- Triggers and indices on  storage
+CREATE TRIGGER _storage_dt BEFORE DELETE ON storage BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO storage(rowid,contract_id,key,value) VALUES('||old.rowid||','||quote(old.contract_id)||','||quote(old.key)||','||quote(old.value)||')');
+                            END;
+CREATE TRIGGER _storage_it AFTER INSERT ON storage BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM storage WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _storage_ut AFTER UPDATE ON storage BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE storage SET contract_id='||quote(old.contract_id)||',key='||quote(old.key)||',value='||quote(old.value)||' WHERE rowid='||old.rowid);
+                            END;
 
 -- Table  suicides
 DROP TABLE IF EXISTS suicides;
 CREATE TABLE suicides(
                       contract_id TEXT PRIMARY KEY,
                       FOREIGN KEY (contract_id) REFERENCES contracts(contract_id));
+-- Triggers and indices on  suicides
+CREATE TRIGGER _suicides_dt BEFORE DELETE ON suicides BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO suicides(rowid,contract_id) VALUES('||old.rowid||','||quote(old.contract_id)||')');
+                            END;
+CREATE TRIGGER _suicides_it AFTER INSERT ON suicides BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM suicides WHERE rowid='||new.rowid);
+                            END;
+CREATE TRIGGER _suicides_ut AFTER UPDATE ON suicides BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE suicides SET contract_id='||quote(old.contract_id)||' WHERE rowid='||old.rowid);
+                            END;
 
 -- Table  transactions
 DROP TABLE IF EXISTS transactions;
@@ -850,5 +1163,48 @@ CREATE INDEX index_hash_index_idx ON transactions (tx_index, tx_hash, block_inde
 CREATE INDEX index_index_idx ON transactions (block_index, tx_index);
 CREATE INDEX tx_hash_idx ON transactions (tx_hash);
 CREATE INDEX tx_index_idx ON transactions (tx_index);
+
+-- Table  undolog
+DROP TABLE IF EXISTS undolog;
+CREATE TABLE undolog(
+                        seq INTEGER PRIMARY KEY AUTOINCREMENT,
+                        sql TEXT);
+
+-- Table  undolog_block
+DROP TABLE IF EXISTS undolog_block;
+CREATE TABLE undolog_block(
+                        block_index INTEGER PRIMARY KEY,
+                        first_seq INTEGER);
+INSERT INTO undolog_block VALUES(310076,237);
+INSERT INTO undolog_block VALUES(310077,237);
+INSERT INTO undolog_block VALUES(310078,237);
+INSERT INTO undolog_block VALUES(310079,237);
+INSERT INTO undolog_block VALUES(310080,237);
+INSERT INTO undolog_block VALUES(310081,237);
+INSERT INTO undolog_block VALUES(310082,237);
+INSERT INTO undolog_block VALUES(310083,237);
+INSERT INTO undolog_block VALUES(310084,237);
+INSERT INTO undolog_block VALUES(310085,237);
+INSERT INTO undolog_block VALUES(310086,237);
+INSERT INTO undolog_block VALUES(310087,237);
+INSERT INTO undolog_block VALUES(310088,237);
+INSERT INTO undolog_block VALUES(310089,237);
+INSERT INTO undolog_block VALUES(310090,237);
+INSERT INTO undolog_block VALUES(310091,237);
+INSERT INTO undolog_block VALUES(310092,237);
+INSERT INTO undolog_block VALUES(310093,237);
+INSERT INTO undolog_block VALUES(310094,237);
+INSERT INTO undolog_block VALUES(310095,237);
+INSERT INTO undolog_block VALUES(310096,237);
+INSERT INTO undolog_block VALUES(310097,237);
+INSERT INTO undolog_block VALUES(310098,237);
+INSERT INTO undolog_block VALUES(310099,237);
+INSERT INTO undolog_block VALUES(310100,237);
+INSERT INTO undolog_block VALUES(310101,237);
+
+-- For primary key autoincrements the next id to use is stored in
+-- sqlite_sequence
+DELETE FROM main.sqlite_sequence WHERE name='undolog';
+INSERT INTO main.sqlite_sequence VALUES ('undolog', 236);
 
 COMMIT TRANSACTION;
