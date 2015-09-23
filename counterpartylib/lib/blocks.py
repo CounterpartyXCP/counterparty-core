@@ -1232,8 +1232,7 @@ def follow(db):
                     new_message['tx_hash'] = tx_hash
                     cursor.execute('''INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp)''', (new_message))
                     
-            backend.refresh_unconfirmed_transactions_cache([message['tx_hash'] for message in old_mempool])
-
+            backend.refresh_unconfirmed_transactions_cache([tx_hash for tx_hash, message in mempool])
 
             elapsed_time = time.time() - start_time
             sleep_time = config.BACKEND_POLL_INTERVAL - elapsed_time if elapsed_time <= config.BACKEND_POLL_INTERVAL else 0
