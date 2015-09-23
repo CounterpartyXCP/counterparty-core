@@ -187,37 +187,6 @@ def initialise(db):
     """Initialise data, create and populate the database."""
     cursor = db.cursor()
 
-    # Create the undolog tables and triggers first, so we capture any appropriate events into them
-    # (such as populating the initial XCP abd BTC entries into the assets table, for instance)
-    # Create undolog tables
-    cursor.execute('''CREATE TABLE IF NOT EXISTS undolog(
-                        seq INTEGER PRIMARY KEY AUTOINCREMENT,
-                        sql TEXT)
-                   ''')
-    cursor.execute('''CREATE TABLE IF NOT EXISTS undolog_block(
-                        block_index INTEGER PRIMARY KEY,
-                        first_seq INTEGER)
-                   ''')
-    # Create undolog triggers
-    for table in TABLES + ['balances']:
-        columns = [column['name'] for column in cursor.execute('''PRAGMA table_info({})'''.format(table))]
-        cursor.execute('''CREATE TRIGGER IF NOT EXISTS _{}_it AFTER INSERT ON {} BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM {} WHERE rowid='||new.rowid);
-                            END;
-                       '''.format(table, table, table))
-
-        columns_parts = ["{}='||quote(old.{})||'".format(c, c) for c in columns]
-        cursor.execute('''CREATE TRIGGER IF NOT EXISTS _{}_ut AFTER UPDATE ON {} BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'UPDATE {} SET {} WHERE rowid='||old.rowid);
-                            END;
-                       '''.format(table, table, table, ','.join(columns_parts)))
-
-        columns_parts = ["'||quote(old.{})||'".format(c) for c in columns]
-        cursor.execute('''CREATE TRIGGER IF NOT EXISTS _{}_dt BEFORE DELETE ON {} BEGIN
-                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO {}(rowid,{}) VALUES('||old.rowid||',{})');
-                            END;
-                       '''.format(table, table, table, ','.join(columns), ','.join(columns_parts)))
-
     # Blocks
     cursor.execute('''CREATE TABLE IF NOT EXISTS blocks(
                       block_index INTEGER UNIQUE,
@@ -390,6 +359,35 @@ def initialise(db):
     cursor.execute('''CREATE INDEX IF NOT EXISTS
                       block_index_message_index_idx ON messages (block_index, message_index)
                    ''')
+
+    # Create undolog tables
+    cursor.execute('''CREATE TABLE IF NOT EXISTS undolog(
+                        seq INTEGER PRIMARY KEY AUTOINCREMENT,
+                        sql TEXT)
+                   ''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS undolog_block(
+                        block_index INTEGER PRIMARY KEY,
+                        first_seq INTEGER)
+                   ''')
+    # Create undolog triggers
+    for table in TABLES + ['balances']:
+        columns = [column['name'] for column in cursor.execute('''PRAGMA table_info({})'''.format(table))]
+        cursor.execute('''CREATE TRIGGER IF NOT EXISTS _{}_it AFTER INSERT ON {} BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'DELETE FROM {} WHERE rowid='||new.rowid);
+                            END;
+                       '''.format(table, table, table))
+
+        columns_parts = ["{}='||quote(old.{})||'".format(c, c) for c in columns]
+        cursor.execute('''CREATE TRIGGER IF NOT EXISTS _{}_ut AFTER UPDATE ON {} BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'UPDATE {} SET {} WHERE rowid='||old.rowid);
+                            END;
+                       '''.format(table, table, table, ','.join(columns_parts)))
+
+        columns_parts = ["'||quote(old.{})||'".format(c) for c in columns]
+        cursor.execute('''CREATE TRIGGER IF NOT EXISTS _{}_dt BEFORE DELETE ON {} BEGIN
+                            INSERT INTO undolog VALUES(NULL, 'INSERT INTO {}(rowid,{}) VALUES('||old.rowid||',{})');
+                            END;
+                       '''.format(table, table, table, ','.join(columns), ','.join(columns_parts)))
 
     # Mempool messages
     # NOTE: `status`, 'block_index` are removed from bindings.
@@ -718,36 +716,51 @@ def reparse(db, block_index=None, quiet=False):
         undolog_cursor = db.cursor()
         undolog_cursor.setexectrace(None)
         undolog_cursor.setrowtrace(None)
+        
+        def get_block_for_seq(seqs, seq):
+            for block_index, first_seq in seqs.items(): #in order
+                if seq < first_seq:
+                    return block_index - 1
+            else:
+                return next(reversed(seqs)) #the last inserted block_index
 
         with db:
             # Check if we can reparse from the undolog
-            first_seq = list(undolog_cursor.execute(
-                '''SELECT first_seq FROM undolog_block WHERE block_index == ?''', (block_index,)))
-            
-            if len(first_seq) != 1:  
+            seqs_rows = list(undolog_cursor.execute(
+                '''SELECT block_index, first_seq FROM undolog_block WHERE block_index >= ? ORDER BY block_index ASC''', (block_index,)))
+            seqs = collections.OrderedDict()
+            for e in seqs_rows:
+                seqs[e[0]] = e[1]
+                
+            undo_start_block_index = block_index + 1
+
+            if undo_start_block_index not in seqs and block_index in seqs:
+                # Edge case, should only happen if we're "rolling back" to current block (e.g. via cmd line)
+                return True #skip undo
+            elif undo_start_block_index not in seqs:
                 return False # Undolog doesn't go that far back, full reparse required...
             
-            first_seq = first_seq[0][0]
-
             # Grab the undolog...
             undolog = list(undolog_cursor.execute(
-                '''SELECT seq, sql FROM undolog WHERE seq >= ? ORDER BY seq DESC''', (first_seq,)))
+                '''SELECT seq, sql FROM undolog WHERE seq >= ? ORDER BY seq DESC''', (seqs[undo_start_block_index],)))
             
             # Replay the undolog backwards, from the last entry to first_seq...
             for entry in undolog:
-                logger.debug("Executing undolog seq {}: {}".format(entry[0], entry[1]))
+                
+                #TODO: change to .debug logging
+                logger.info("Undolog: Block {} (seq {}): {}".format(get_block_for_seq(seqs, entry[0]), entry[0], entry[1]))
+                
                 undolog_cursor.execute(entry[1])
 
             # Trim back tx and blocks
             undolog_cursor.execute('''DELETE FROM transactions WHERE block_index > ?''', (block_index,))
             undolog_cursor.execute('''DELETE FROM blocks WHERE block_index > ?''', (block_index,))
             # As well as undolog entries...
-            undolog_cursor.execute('''DELETE FROM undolog WHERE seq >= ?''', (first_seq,))
-            undolog_cursor.execute('''DELETE FROM undolog_block WHERE block_index >= ?''', (block_index,))
+            undolog_cursor.execute('''DELETE FROM undolog WHERE seq >= ?''', (seqs[undo_start_block_index],))
+            undolog_cursor.execute('''DELETE FROM undolog_block WHERE block_index >= ?''', (undo_start_block_index,))
 
         undolog_cursor.close()
         return True
-
 
     logger.info('Reparsing all transactions.')
 

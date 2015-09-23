@@ -101,6 +101,6 @@ DEFAULT_CHECK_ASSET_CONSERVATION = True
 BACKEND_RAW_TRANSACTIONS_CACHE_SIZE = 20000
 BACKEND_RPC_BATCH_NUM_WORKERS = 6
 
-UNDOLOG_MAX_PAST_BLOCKS = 14 #the number of past blocks that we store undolog history
+UNDOLOG_MAX_PAST_BLOCKS = 25 #the number of past blocks that we store undolog history
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
