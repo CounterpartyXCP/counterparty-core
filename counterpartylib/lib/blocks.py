@@ -735,7 +735,7 @@ def reparse(db, block_index=None, quiet=False):
             undo_start_block_index = block_index + 1
 
             if undo_start_block_index not in seqs and block_index in seqs:
-                # Edge case, should only happen if we're "rolling back" to current block (e.g. via cmd line)
+                # Edge case, should only happen if we're "rolling back" to latest block (e.g. via cmd line)
                 return True #skip undo
             elif undo_start_block_index not in seqs:
                 return False # Undolog doesn't go that far back, full reparse required...
