@@ -137,18 +137,24 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
     #remove the row tracer and exec tracer on this cursor, so we don't utilize them with undolog operations...
     undolog_cursor.setexectrace(None)
     undolog_cursor.setrowtrace(None)
-    
+
     util.BLOCK_LEDGER = []
-    
+
     assert block_index == util.CURRENT_BLOCK_INDEX
 
+    transaction_list = list(cursor.execute('''SELECT * FROM transactions \
+                                              WHERE block_index=? ORDER BY tx_index''',
+                                              (block_index,)))
+
     # Set undolog barrier for this block
-    if block_index != config.BLOCK_FIRST:
-        undolog_cursor.execute('''INSERT INTO undolog_block(block_index, first_seq)
-            SELECT ?, seq+1 FROM SQLITE_SEQUENCE WHERE name='undolog' ''', (block_index,))
-    else:
-        undolog_cursor.execute('''INSERT INTO undolog_block(block_index, first_seq)
-            VALUES(?,?)''', (block_index, 1,))
+    if len(transaction_list) > 0:
+        if block_index != config.BLOCK_FIRST:
+            undolog_cursor.execute('''INSERT INTO undolog_block(block_index, first_seq)
+                SELECT ?, seq+1 FROM SQLITE_SEQUENCE WHERE name='undolog' ''', (block_index,))
+        else:
+            undolog_cursor.execute('''INSERT INTO undolog_block(block_index, first_seq)
+                VALUES(?,?)''', (block_index, 1,))
+
     # Remove undolog records for any block older than we should be tracking 
     undolog_oldest_block_index = block_index - config.UNDOLOG_MAX_PAST_BLOCKS
     first_seq = list(undolog_cursor.execute('''SELECT first_seq FROM undolog_block WHERE block_index == ?''',
@@ -168,7 +174,7 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
                       WHERE block_index=? ORDER BY tx_index''',
                    (block_index,))
     txlist = []
-    for tx in list(cursor):
+    for tx in transaction_list:
         parse_tx(db, tx)
         txlist.append('{}{}{}{}{}{}'.format(tx['tx_hash'], tx['source'], tx['destination'],
                                             tx['btc_amount'], tx['fee'],
@@ -213,7 +219,6 @@ def initialise(db):
         cursor.execute('''ALTER TABLE blocks ADD COLUMN previous_block_hash TEXT''')
     if 'difficulty' not in columns:
         cursor.execute('''ALTER TABLE blocks ADD COLUMN difficulty TEXT''')
-
 
     # Check that first block in DB is BLOCK_FIRST.
     cursor.execute('''SELECT * from blocks ORDER BY block_index''')
@@ -712,11 +717,11 @@ def reparse(db, block_index=None, quiet=False):
         if fails, fallback to the full reparse method"""
         if not block_index:
             return False # Can't reparse from undolog
-        
+
         undolog_cursor = db.cursor()
         undolog_cursor.setexectrace(None)
         undolog_cursor.setrowtrace(None)
-        
+
         def get_block_for_seq(seqs, seq):
             for block_index, first_seq in seqs.items(): #in order
                 if seq < first_seq:
@@ -739,17 +744,17 @@ def reparse(db, block_index=None, quiet=False):
                 return True #skip undo
             elif undo_start_block_index not in seqs:
                 return False # Undolog doesn't go that far back, full reparse required...
-            
+
             # Grab the undolog...
             undolog = list(undolog_cursor.execute(
                 '''SELECT seq, sql FROM undolog WHERE seq >= ? ORDER BY seq DESC''', (seqs[undo_start_block_index],)))
-            
+
             # Replay the undolog backwards, from the last entry to first_seq...
             for entry in undolog:
                 
                 #TODO: change to .debug logging
                 logger.info("Undolog: Block {} (seq {}): {}".format(get_block_for_seq(seqs, entry[0]), entry[0], entry[1]))
-                
+
                 undolog_cursor.execute(entry[1])
 
             # Trim back tx and blocks
@@ -781,11 +786,11 @@ def reparse(db, block_index=None, quiet=False):
 
         with db:
             reinitialise(db, block_index)
-    
+
             # Reparse all blocks, transactions.
             if quiet:
                 root_logger.setLevel(logging.WARNING)
-    
+
             previous_ledger_hash, previous_txlist_hash = None, None
             cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
             for block in cursor.fetchall():
