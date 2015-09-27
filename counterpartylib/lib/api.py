@@ -99,7 +99,7 @@ class DatabaseError(Exception):
     pass
 def check_database_state(db, blockcount):
     """Checks {} database to see if is caught up with backend.""".format(config.XCP_NAME)
-    if util.CURRENT_BLOCK_INDEX + 1 < blockcount:
+    if util.CURRENT_BLOCK_INDEX + 1 < blockcount and not util.REPARSING:
         raise DatabaseError('{} database is behind backend.'.format(config.XCP_NAME))
     logger.debug('Database state check passed.')
     return
@@ -629,7 +629,8 @@ class APIServer(threading.Thread):
                 'running_testcoin': config.TESTCOIN,
                 'version_major': config.VERSION_MAJOR,
                 'version_minor': config.VERSION_MINOR,
-                'version_revision': config.VERSION_REVISION
+                'version_revision': config.VERSION_REVISION,
+                'reparsing': util.REPARSING
             }
 
         @dispatcher.add_method

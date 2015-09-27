@@ -661,6 +661,7 @@ def reparse(db, block_index=None, quiet=False):
     to the end of that block.
     """
     logger.info('Reparsing all transactions.')
+    util.REPARSING = True
 
     check.software_version()
 
@@ -694,6 +695,7 @@ def reparse(db, block_index=None, quiet=False):
         cursor.execute('PRAGMA user_version = {}'.format(int(config.VERSION_MINOR))) # Syntax?!
         logger.info('Database minor version number updated.')
 
+    util.REPARSING = False
     cursor.close()
     return
 
@@ -883,6 +885,8 @@ def get_next_tx_index(db):
 class MempoolError(Exception):
     pass
 def follow(db):
+    util.REPARSING = False
+
     # Check software version.
     check.software_version()
 
