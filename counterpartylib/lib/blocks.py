@@ -1141,10 +1141,8 @@ def follow(db):
                 tx_h = not_supported_sorted.popleft()[1]
                 del not_supported[tx_h]
 
-            logger.info('Block: %s (%ss)' % (str(block_index), "{:.2f}".format(time.time() - start_time, 3)))
-            
-            #TODO: change this logging to debug...
-            logger.info('Block {} - ledger hash: {}, txlist hash: {}'.format(block_index, new_ledger_hash, new_txlist_hash))
+            logger.info('Block: %s (%ss, Lhash: %s, TXhash: %s)' % (
+                str(block_index), "{:.2f}".format(time.time() - start_time, 3), new_ledger_hash[-5:], new_txlist_hash[-5:]))
             
             # Increment block index.
             block_count = backend.getblockcount()
