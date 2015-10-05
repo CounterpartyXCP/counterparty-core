@@ -142,19 +142,6 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
 
     assert block_index == util.CURRENT_BLOCK_INDEX
 
-    transaction_list = list(cursor.execute('''SELECT * FROM transactions \
-                                              WHERE block_index=? ORDER BY tx_index''',
-                                              (block_index,)))
-
-    # Set undolog barrier for this block
-    if len(transaction_list) > 0:
-        if block_index != config.BLOCK_FIRST:
-            undolog_cursor.execute('''INSERT INTO undolog_block(block_index, first_seq)
-                SELECT ?, seq+1 FROM SQLITE_SEQUENCE WHERE name='undolog' ''', (block_index,))
-        else:
-            undolog_cursor.execute('''INSERT INTO undolog_block(block_index, first_seq)
-                VALUES(?,?)''', (block_index, 1,))
-
     # Remove undolog records for any block older than we should be tracking 
     undolog_oldest_block_index = block_index - config.UNDOLOG_MAX_PAST_BLOCKS
     first_seq = list(undolog_cursor.execute('''SELECT first_seq FROM undolog_block WHERE block_index == ?''',
@@ -163,6 +150,17 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
         undolog_cursor.execute('''DELETE FROM undolog WHERE seq < ?''', (first_seq[0][0],))
     undolog_cursor.execute('''DELETE FROM undolog_block WHERE block_index < ?''',
         (undolog_oldest_block_index,))
+
+    # Set undolog barrier for this block
+    transaction_list = list(cursor.execute('''SELECT * FROM transactions \
+                                              WHERE block_index=? ORDER BY tx_index''',
+                                              (block_index,)))
+    if block_index != config.BLOCK_FIRST:
+        undolog_cursor.execute('''INSERT INTO undolog_block(block_index, first_seq)
+            SELECT ?, seq+1 FROM SQLITE_SEQUENCE WHERE name='undolog' ''', (block_index,))
+    else:
+        undolog_cursor.execute('''INSERT INTO undolog_block(block_index, first_seq)
+            VALUES(?,?)''', (block_index, 1,))
 
     # Expire orders, bets and rps.
     order.expire(db, block_index)
@@ -182,7 +180,7 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
 
     cursor.close()
 
-    # Consensus hashes.
+    # Calculate consensus hashes.
     new_txlist_hash = check.consensus_hash(db, 'txlist_hash', previous_txlist_hash, txlist)
     new_ledger_hash = check.consensus_hash(db, 'ledger_hash', previous_ledger_hash, util.BLOCK_LEDGER)
 
@@ -739,11 +737,13 @@ def reparse(db, block_index=None, quiet=False):
                 
             undo_start_block_index = block_index + 1
 
-            if undo_start_block_index not in seqs and block_index in seqs:
-                # Edge case, should only happen if we're "rolling back" to latest block (e.g. via cmd line)
-                return True #skip undo
-            elif undo_start_block_index not in seqs:
-                return False # Undolog doesn't go that far back, full reparse required...
+            if undo_start_block_index not in seqs:
+                if block_index in seqs:
+                    # Edge case, should only happen if we're "rolling back" to latest block (e.g. via cmd line)
+                    return True #skip undo
+                else:
+                    logger.info("FALSE RETURNED. SEQ: %s" % (seqs,))
+                    return False # Undolog doesn't go that far back, full reparse required...
 
             # Grab the undolog...
             undolog = list(undolog_cursor.execute(
@@ -751,7 +751,6 @@ def reparse(db, block_index=None, quiet=False):
 
             # Replay the undolog backwards, from the last entry to first_seq...
             for entry in undolog:
-                
                 #TODO: change to .debug logging
                 logger.info("Undolog: Block {} (seq {}): {}".format(get_block_for_seq(seqs, entry[0]), entry[0], entry[1]))
 
@@ -766,8 +765,11 @@ def reparse(db, block_index=None, quiet=False):
 
         undolog_cursor.close()
         return True
-
-    logger.info('Reparsing all transactions.')
+    
+    if block_index:
+        logger.info('Reparsing all transactions back to block {}.'.format(block_index))
+    else:
+        logger.info('Reparsing all transactions.')
 
     check.software_version()
 
@@ -811,7 +813,6 @@ def reparse(db, block_index=None, quiet=False):
         logger.info('Database minor version number updated.')
 
     cursor.close()
-    return
 
 def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=None):
     assert type(tx_hash) == str
