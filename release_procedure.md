@@ -1,7 +1,7 @@
 **@adamkrellenstein:**
 
 - Update ChangeLog
-- Update `lib.config.py`: `VERSION_*`
+- Update `lib/config.py`: `VERSION_*`
 - Update `protocol_changes.json` (as necessary)
 - Update `setup.py` (as necessary)
 - Run test suite
