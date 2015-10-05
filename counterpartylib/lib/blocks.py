@@ -742,7 +742,6 @@ def reparse(db, block_index=None, quiet=False):
                     # Edge case, should only happen if we're "rolling back" to latest block (e.g. via cmd line)
                     return True #skip undo
                 else:
-                    logger.info("FALSE RETURNED. SEQ: %s" % (seqs,))
                     return False # Undolog doesn't go that far back, full reparse required...
 
             # Grab the undolog...
@@ -767,7 +766,7 @@ def reparse(db, block_index=None, quiet=False):
         return True
     
     if block_index:
-        logger.info('Reparsing all transactions back to block {}.'.format(block_index))
+        logger.info('Rolling back transactions to block {}.'.format(block_index))
     else:
         logger.info('Reparsing all transactions.')
 
@@ -779,8 +778,8 @@ def reparse(db, block_index=None, quiet=False):
     cursor = db.cursor()
     
     if not reparsed:
-        logger.info("Could not reparse from undolog. Performing full reparse...")
-        #TODO^: change to info
+        if block_index:
+            logger.info("Could not roll back from undolog. Performing full reparse instead...")
 
         if quiet:
             root_logger = logging.getLogger()
