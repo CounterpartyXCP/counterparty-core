@@ -14,7 +14,6 @@ import time
 import decimal
 import logging
 logger = logging.getLogger(__name__)
-import pprint
 import requests
 from Crypto.Cipher import ARC4
 from bitcoin.core.script import CScript
