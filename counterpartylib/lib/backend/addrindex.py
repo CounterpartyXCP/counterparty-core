@@ -209,7 +209,6 @@ def getrawtransaction_batch(txhash_list, verbose=False, _recursing=False):
         len(txhash_list), len(raw_transactions_cache), len(payload)))
 
     # populate cache
-    added_entries_to_cache = []
     if len(payload) > 0:
         batch_responses = rpc_batch(payload)
         for response in batch_responses:
@@ -217,7 +216,6 @@ def getrawtransaction_batch(txhash_list, verbose=False, _recursing=False):
                 tx_hex = response['result']
                 tx_hash = tx_hash_call_id[response['id']]
                 raw_transactions_cache[tx_hash] = tx_hex
-                added_entries_to_cache.append(tx_hash) #for debugging
             else:
                 #TODO: this seems to happen for bogus transactions? Maybe handle it more gracefully than just erroring out?
                 raise BackendRPCError('{} (txhash:: {})'.format(response['error'], tx_hash_call_id.get(response.get('id', '??'), '??')))
