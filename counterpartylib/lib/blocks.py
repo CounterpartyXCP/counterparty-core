@@ -750,9 +750,7 @@ def reparse(db, block_index=None, quiet=False):
 
             # Replay the undolog backwards, from the last entry to first_seq...
             for entry in undolog:
-                #TODO: change to .debug logging
-                logger.info("Undolog: Block {} (seq {}): {}".format(get_block_for_seq(seqs, entry[0]), entry[0], entry[1]))
-
+                logger.debug("Undolog: Block {} (seq {}): {}".format(get_block_for_seq(seqs, entry[0]), entry[0], entry[1]))
                 undolog_cursor.execute(entry[1])
 
             # Trim back tx and blocks
