@@ -1169,34 +1169,38 @@ DROP TABLE IF EXISTS undolog;
 CREATE TABLE undolog(
                         seq INTEGER PRIMARY KEY AUTOINCREMENT,
                         sql TEXT);
-INSERT INTO undolog VALUES(215,'UPDATE bets SET tx_index=13,tx_hash=''5da0ca591e5336da0304bc8f7a201af3465685c492b284495898da35a402e32a'',block_index=310012,source=''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'',feed_address=''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'',bet_type=0,deadline=1388000100,wager_quantity=50000000,wager_remaining=8500000,counterwager_quantity=25000000,counterwager_remaining=4250000,target_value=0.0,leverage=15120,expiration=10,expire_index=310022,fee_fraction_int=5000000,status=''open'' WHERE rowid=1');
-INSERT INTO undolog VALUES(216,'DELETE FROM messages WHERE rowid=86');
-INSERT INTO undolog VALUES(217,'UPDATE balances SET address=''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'',asset=''XCP'',quantity=149840926438 WHERE rowid=1');
-INSERT INTO undolog VALUES(218,'DELETE FROM messages WHERE rowid=87');
-INSERT INTO undolog VALUES(219,'DELETE FROM credits WHERE rowid=24');
-INSERT INTO undolog VALUES(220,'DELETE FROM messages WHERE rowid=88');
-INSERT INTO undolog VALUES(221,'DELETE FROM bet_expirations WHERE rowid=13');
-INSERT INTO undolog VALUES(222,'UPDATE balances SET address=''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'',asset=''BBBC'',quantity=99474 WHERE rowid=4');
-INSERT INTO undolog VALUES(223,'DELETE FROM messages WHERE rowid=89');
-INSERT INTO undolog VALUES(224,'DELETE FROM debits WHERE rowid=18');
-INSERT INTO undolog VALUES(225,'UPDATE balances SET address=''mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'',asset=''BBBC'',quantity=526 WHERE rowid=6');
-INSERT INTO undolog VALUES(226,'DELETE FROM messages WHERE rowid=90');
-INSERT INTO undolog VALUES(227,'DELETE FROM credits WHERE rowid=25');
-INSERT INTO undolog VALUES(228,'DELETE FROM messages WHERE rowid=91');
-INSERT INTO undolog VALUES(229,'DELETE FROM sends WHERE rowid=24');
-INSERT INTO undolog VALUES(230,'UPDATE orders SET tx_index=22,tx_hash=''38d5ec6c73a559b1d1409e0506e2bec30b7db9fd6ca385f2b50202ede6cede56'',block_index=310021,source=''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'',give_asset=''BBBB'',give_quantity=50000000,give_remaining=50000000,get_asset=''XCP'',get_quantity=50000000,get_remaining=50000000,expiration=10,expire_index=310031,fee_required=0,fee_required_remaining=0,fee_provided=10000,fee_provided_remaining=10000,status=''open'' WHERE rowid=3');
-INSERT INTO undolog VALUES(231,'DELETE FROM messages WHERE rowid=92');
-INSERT INTO undolog VALUES(232,'UPDATE balances SET address=''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'',asset=''BBBB'',quantity=946000000 WHERE rowid=3');
-INSERT INTO undolog VALUES(233,'DELETE FROM messages WHERE rowid=93');
-INSERT INTO undolog VALUES(234,'DELETE FROM credits WHERE rowid=26');
-INSERT INTO undolog VALUES(235,'DELETE FROM messages WHERE rowid=94');
-INSERT INTO undolog VALUES(236,'DELETE FROM order_expirations WHERE rowid=22');
 
 -- Table  undolog_block
 DROP TABLE IF EXISTS undolog_block;
 CREATE TABLE undolog_block(
                         block_index INTEGER PRIMARY KEY,
                         first_seq INTEGER);
+INSERT INTO undolog_block VALUES(310076,237);
+INSERT INTO undolog_block VALUES(310077,237);
+INSERT INTO undolog_block VALUES(310078,237);
+INSERT INTO undolog_block VALUES(310079,237);
+INSERT INTO undolog_block VALUES(310080,237);
+INSERT INTO undolog_block VALUES(310081,237);
+INSERT INTO undolog_block VALUES(310082,237);
+INSERT INTO undolog_block VALUES(310083,237);
+INSERT INTO undolog_block VALUES(310084,237);
+INSERT INTO undolog_block VALUES(310085,237);
+INSERT INTO undolog_block VALUES(310086,237);
+INSERT INTO undolog_block VALUES(310087,237);
+INSERT INTO undolog_block VALUES(310088,237);
+INSERT INTO undolog_block VALUES(310089,237);
+INSERT INTO undolog_block VALUES(310090,237);
+INSERT INTO undolog_block VALUES(310091,237);
+INSERT INTO undolog_block VALUES(310092,237);
+INSERT INTO undolog_block VALUES(310093,237);
+INSERT INTO undolog_block VALUES(310094,237);
+INSERT INTO undolog_block VALUES(310095,237);
+INSERT INTO undolog_block VALUES(310096,237);
+INSERT INTO undolog_block VALUES(310097,237);
+INSERT INTO undolog_block VALUES(310098,237);
+INSERT INTO undolog_block VALUES(310099,237);
+INSERT INTO undolog_block VALUES(310100,237);
+INSERT INTO undolog_block VALUES(310101,237);
 
 -- For primary key autoincrements the next id to use is stored in
 -- sqlite_sequence
