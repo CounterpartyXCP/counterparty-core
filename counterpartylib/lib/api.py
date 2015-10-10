@@ -676,6 +676,14 @@ class APIServer(threading.Thread):
             return backend.get_unspent_txouts(address, unconfirmed=unconfirmed, multisig_inputs=False)
 
         @dispatcher.add_method
+        def getrawtransaction(tx_hash, verbose=False):
+            return backend.getrawtransaction(tx_hash, verbose=verbose)
+
+        @dispatcher.add_method
+        def getrawtransaction_batch(txhash_list, verbose=False):
+            return backend.getrawtransaction_batch(txhash_list, verbose=verbose)
+
+        @dispatcher.add_method
         def get_tx_info(tx_hex, block_index=None):
             # block_index mandatory for transactions before block 335000
             source, destination, btc_amount, fee, data = blocks.get_tx_info(tx_hex, block_index=block_index)
