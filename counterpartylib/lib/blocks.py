@@ -132,7 +132,6 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
 
     The unused arguments `ledger_hash` and `txlist_hash` are for the test suite.
     """
-    cursor = db.cursor()
     undolog_cursor = db.cursor()
     #remove the row tracer and exec tracer on this cursor, so we don't utilize them with undolog operations...
     undolog_cursor.setexectrace(None)
@@ -152,15 +151,13 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
         (undolog_oldest_block_index,))
 
     # Set undolog barrier for this block
-    transaction_list = list(cursor.execute('''SELECT * FROM transactions \
-                                              WHERE block_index=? ORDER BY tx_index''',
-                                              (block_index,)))
     if block_index != config.BLOCK_FIRST:
         undolog_cursor.execute('''INSERT OR REPLACE INTO undolog_block(block_index, first_undo_index)
             SELECT ?, seq+1 FROM SQLITE_SEQUENCE WHERE name='undolog' ''', (block_index,))
     else:
         undolog_cursor.execute('''INSERT OR REPLACE INTO undolog_block(block_index, first_undo_index)
             VALUES(?,?)''', (block_index, 1,))
+    undolog_cursor.close()
 
     # Expire orders, bets and rps.
     order.expire(db, block_index)
@@ -168,11 +165,12 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
     rps.expire(db, block_index)
 
     # Parse transactions, sorting them by type.
+    cursor = db.cursor()
     cursor.execute('''SELECT * FROM transactions \
                       WHERE block_index=? ORDER BY tx_index''',
                    (block_index,))
     txlist = []
-    for tx in transaction_list:
+    for tx in list(cursor):
         parse_tx(db, tx)
         txlist.append('{}{}{}{}{}{}'.format(tx['tx_hash'], tx['source'], tx['destination'],
                                             tx['btc_amount'], tx['fee'],
