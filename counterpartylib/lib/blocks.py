@@ -144,10 +144,10 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
 
     # Remove undolog records for any block older than we should be tracking 
     undolog_oldest_block_index = block_index - config.UNDOLOG_MAX_PAST_BLOCKS
-    first_seq = list(undolog_cursor.execute('''SELECT first_seq FROM undolog_block WHERE block_index == ?''',
+    first_undo_index = list(undolog_cursor.execute('''SELECT first_undo_index FROM undolog_block WHERE block_index == ?''',
         (undolog_oldest_block_index,)))
-    if len(first_seq) == 1 and first_seq[0] is not None:
-        undolog_cursor.execute('''DELETE FROM undolog WHERE seq < ?''', (first_seq[0][0],))
+    if len(first_undo_index) == 1 and first_undo_index[0] is not None:
+        undolog_cursor.execute('''DELETE FROM undolog WHERE undo_index < ?''', (first_undo_index[0][0],))
     undolog_cursor.execute('''DELETE FROM undolog_block WHERE block_index < ?''',
         (undolog_oldest_block_index,))
 
@@ -156,10 +156,10 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
                                               WHERE block_index=? ORDER BY tx_index''',
                                               (block_index,)))
     if block_index != config.BLOCK_FIRST:
-        undolog_cursor.execute('''INSERT OR REPLACE INTO undolog_block(block_index, first_seq)
+        undolog_cursor.execute('''INSERT OR REPLACE INTO undolog_block(block_index, first_undo_index)
             SELECT ?, seq+1 FROM SQLITE_SEQUENCE WHERE name='undolog' ''', (block_index,))
     else:
-        undolog_cursor.execute('''INSERT OR REPLACE INTO undolog_block(block_index, first_seq)
+        undolog_cursor.execute('''INSERT OR REPLACE INTO undolog_block(block_index, first_undo_index)
             VALUES(?,?)''', (block_index, 1,))
 
     # Expire orders, bets and rps.
@@ -365,29 +365,29 @@ def initialise(db):
 
     # Create undolog tables
     cursor.execute('''CREATE TABLE IF NOT EXISTS undolog(
-                        seq INTEGER PRIMARY KEY AUTOINCREMENT,
+                        undo_index INTEGER PRIMARY KEY AUTOINCREMENT,
                         sql TEXT)
                    ''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS undolog_block(
                         block_index INTEGER PRIMARY KEY,
-                        first_seq INTEGER)
+                        first_undo_index INTEGER)
                    ''')
-    # Create undolog triggers
+    # Create undolog triggers for all tables in TABLES list, plus the 'balances' table
     for table in TABLES + ['balances']:
         columns = [column['name'] for column in cursor.execute('''PRAGMA table_info({})'''.format(table))]
-        cursor.execute('''CREATE TRIGGER IF NOT EXISTS _{}_it AFTER INSERT ON {} BEGIN
+        cursor.execute('''CREATE TRIGGER IF NOT EXISTS _{}_insert AFTER INSERT ON {} BEGIN
                             INSERT INTO undolog VALUES(NULL, 'DELETE FROM {} WHERE rowid='||new.rowid);
                             END;
                        '''.format(table, table, table))
 
         columns_parts = ["{}='||quote(old.{})||'".format(c, c) for c in columns]
-        cursor.execute('''CREATE TRIGGER IF NOT EXISTS _{}_ut AFTER UPDATE ON {} BEGIN
+        cursor.execute('''CREATE TRIGGER IF NOT EXISTS _{}_update AFTER UPDATE ON {} BEGIN
                             INSERT INTO undolog VALUES(NULL, 'UPDATE {} SET {} WHERE rowid='||old.rowid);
                             END;
                        '''.format(table, table, table, ','.join(columns_parts)))
 
         columns_parts = ["'||quote(old.{})||'".format(c) for c in columns]
-        cursor.execute('''CREATE TRIGGER IF NOT EXISTS _{}_dt BEFORE DELETE ON {} BEGIN
+        cursor.execute('''CREATE TRIGGER IF NOT EXISTS _{}_delete BEFORE DELETE ON {} BEGIN
                             INSERT INTO undolog VALUES(NULL, 'INSERT INTO {}(rowid,{}) VALUES('||old.rowid||',{})');
                             END;
                        '''.format(table, table, table, ','.join(columns), ','.join(columns_parts)))
@@ -720,25 +720,25 @@ def reparse(db, block_index=None, quiet=False):
         undolog_cursor.setexectrace(None)
         undolog_cursor.setrowtrace(None)
 
-        def get_block_for_seq(seqs, seq):
-            for block_index, first_seq in seqs.items(): #in order
-                if seq < first_seq:
+        def get_block_index_for_undo_index(undo_indexes, undo_index):
+            for block_index, first_undo_index in undo_indexes.items(): #in order
+                if undo_index < first_undo_index:
                     return block_index - 1
             else:
-                return next(reversed(seqs)) #the last inserted block_index
+                return next(reversed(undo_indexes)) #the last inserted block_index
 
         with db:
             # Check if we can reparse from the undolog
-            seqs_rows = list(undolog_cursor.execute(
-                '''SELECT block_index, first_seq FROM undolog_block WHERE block_index >= ? ORDER BY block_index ASC''', (block_index,)))
-            seqs = collections.OrderedDict()
-            for e in seqs_rows:
-                seqs[e[0]] = e[1]
+            results = list(undolog_cursor.execute(
+                '''SELECT block_index, first_undo_index FROM undolog_block WHERE block_index >= ? ORDER BY block_index ASC''', (block_index,)))
+            undo_indexes = collections.OrderedDict()
+            for result in results:
+                undo_indexes[result[0]] = result[1]
                 
             undo_start_block_index = block_index + 1
 
-            if undo_start_block_index not in seqs:
-                if block_index in seqs:
+            if undo_start_block_index not in undo_indexes:
+                if block_index in undo_indexes:
                     # Edge case, should only happen if we're "rolling back" to latest block (e.g. via cmd line)
                     return True #skip undo
                 else:
@@ -746,18 +746,20 @@ def reparse(db, block_index=None, quiet=False):
 
             # Grab the undolog...
             undolog = list(undolog_cursor.execute(
-                '''SELECT seq, sql FROM undolog WHERE seq >= ? ORDER BY seq DESC''', (seqs[undo_start_block_index],)))
+                '''SELECT undo_index, sql FROM undolog WHERE undo_index >= ? ORDER BY undo_index DESC''',
+                (undo_indexes[undo_start_block_index],)))
 
-            # Replay the undolog backwards, from the last entry to first_seq...
+            # Replay the undolog backwards, from the last entry to first_undo_index...
             for entry in undolog:
-                logger.debug("Undolog: Block {} (seq {}): {}".format(get_block_for_seq(seqs, entry[0]), entry[0], entry[1]))
+                logger.info("Undolog: Block {} (undo_index {}): {}".format(
+                    get_block_index_for_undo_index(undo_indexes, entry[0]), entry[0], entry[1]))
                 undolog_cursor.execute(entry[1])
 
             # Trim back tx and blocks
             undolog_cursor.execute('''DELETE FROM transactions WHERE block_index > ?''', (block_index,))
             undolog_cursor.execute('''DELETE FROM blocks WHERE block_index > ?''', (block_index,))
             # As well as undolog entries...
-            undolog_cursor.execute('''DELETE FROM undolog WHERE seq >= ?''', (seqs[undo_start_block_index],))
+            undolog_cursor.execute('''DELETE FROM undolog WHERE undo_index >= ?''', (undo_indexes[undo_start_block_index],))
             undolog_cursor.execute('''DELETE FROM undolog_block WHERE block_index >= ?''', (undo_start_block_index,))
 
         undolog_cursor.close()
