@@ -1568,21 +1568,6 @@ DROP TABLE IF EXISTS undolog;
 CREATE TABLE undolog(
                         seq INTEGER PRIMARY KEY AUTOINCREMENT,
                         sql TEXT);
-INSERT INTO undolog VALUES(152,'DELETE FROM messages WHERE rowid=57');
-INSERT INTO undolog VALUES(153,'DELETE FROM broadcasts WHERE rowid=103');
-INSERT INTO undolog VALUES(154,'UPDATE balances SET address=''mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'',asset=''XCP'',quantity=99999981 WHERE rowid=7');
-INSERT INTO undolog VALUES(155,'DELETE FROM messages WHERE rowid=58');
-INSERT INTO undolog VALUES(156,'DELETE FROM credits WHERE rowid=15');
-INSERT INTO undolog VALUES(157,'UPDATE balances SET address=''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'',asset=''XCP'',quantity=92049999991 WHERE rowid=1');
-INSERT INTO undolog VALUES(158,'DELETE FROM messages WHERE rowid=59');
-INSERT INTO undolog VALUES(159,'DELETE FROM credits WHERE rowid=16');
-INSERT INTO undolog VALUES(160,'UPDATE balances SET address=''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'',asset=''XCP'',quantity=92050000000 WHERE rowid=1');
-INSERT INTO undolog VALUES(161,'DELETE FROM messages WHERE rowid=60');
-INSERT INTO undolog VALUES(162,'DELETE FROM credits WHERE rowid=17');
-INSERT INTO undolog VALUES(163,'DELETE FROM messages WHERE rowid=61');
-INSERT INTO undolog VALUES(164,'DELETE FROM bet_match_resolutions WHERE rowid=1');
-INSERT INTO undolog VALUES(165,'UPDATE bet_matches SET id=''be15d34c959fde8f2baff8577d73d28c864e7684cc76ecba33e5d6d79ca6d6bd_90c1314847b1fe9b4520a3610dc98c71d39a1cb4b96edb9b02b6fed844a4b1e5'',tx0_index=20,tx0_hash=''be15d34c959fde8f2baff8577d73d28c864e7684cc76ecba33e5d6d79ca6d6bd'',tx0_address=''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'',tx1_index=21,tx1_hash=''90c1314847b1fe9b4520a3610dc98c71d39a1cb4b96edb9b02b6fed844a4b1e5'',tx1_address=''mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'',tx0_bet_type=1,tx1_bet_type=0,feed_address=''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'',initial_value=1,deadline=1388000001,target_value=0.0,leverage=5040,forward_quantity=9,backward_quantity=9,tx0_block_index=310019,tx1_block_index=310020,block_index=310020,tx0_expiration=100,tx1_expiration=100,match_expire_index=310119,fee_fraction_int=5000000,status=''pending'' WHERE rowid=1');
-INSERT INTO undolog VALUES(166,'DELETE FROM messages WHERE rowid=62');
 INSERT INTO undolog VALUES(167,'UPDATE balances SET address=''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'',asset=''XCP'',quantity=92050000000 WHERE rowid=1');
 INSERT INTO undolog VALUES(168,'DELETE FROM messages WHERE rowid=63');
 INSERT INTO undolog VALUES(169,'DELETE FROM debits WHERE rowid=19');
@@ -1632,12 +1617,32 @@ DROP TABLE IF EXISTS undolog_block;
 CREATE TABLE undolog_block(
                         block_index INTEGER PRIMARY KEY,
                         first_seq INTEGER);
+INSERT INTO undolog_block VALUES(310475,167);
+INSERT INTO undolog_block VALUES(310476,167);
+INSERT INTO undolog_block VALUES(310477,167);
+INSERT INTO undolog_block VALUES(310478,167);
+INSERT INTO undolog_block VALUES(310479,167);
+INSERT INTO undolog_block VALUES(310480,167);
+INSERT INTO undolog_block VALUES(310481,167);
+INSERT INTO undolog_block VALUES(310482,167);
+INSERT INTO undolog_block VALUES(310483,167);
+INSERT INTO undolog_block VALUES(310484,167);
+INSERT INTO undolog_block VALUES(310485,167);
+INSERT INTO undolog_block VALUES(310486,167);
+INSERT INTO undolog_block VALUES(310487,167);
+INSERT INTO undolog_block VALUES(310488,167);
+INSERT INTO undolog_block VALUES(310489,167);
+INSERT INTO undolog_block VALUES(310490,167);
 INSERT INTO undolog_block VALUES(310491,167);
 INSERT INTO undolog_block VALUES(310492,172);
 INSERT INTO undolog_block VALUES(310493,180);
 INSERT INTO undolog_block VALUES(310494,185);
 INSERT INTO undolog_block VALUES(310495,194);
 INSERT INTO undolog_block VALUES(310496,202);
+INSERT INTO undolog_block VALUES(310497,210);
+INSERT INTO undolog_block VALUES(310498,210);
+INSERT INTO undolog_block VALUES(310499,210);
+INSERT INTO undolog_block VALUES(310500,210);
 
 -- For primary key autoincrements the next id to use is stored in
 -- sqlite_sequence

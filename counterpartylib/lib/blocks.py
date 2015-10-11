@@ -156,10 +156,10 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
                                               WHERE block_index=? ORDER BY tx_index''',
                                               (block_index,)))
     if block_index != config.BLOCK_FIRST:
-        undolog_cursor.execute('''INSERT INTO undolog_block(block_index, first_seq)
+        undolog_cursor.execute('''INSERT OR REPLACE INTO undolog_block(block_index, first_seq)
             SELECT ?, seq+1 FROM SQLITE_SEQUENCE WHERE name='undolog' ''', (block_index,))
     else:
-        undolog_cursor.execute('''INSERT INTO undolog_block(block_index, first_seq)
+        undolog_cursor.execute('''INSERT OR REPLACE INTO undolog_block(block_index, first_seq)
             VALUES(?,?)''', (block_index, 1,))
 
     # Expire orders, bets and rps.
