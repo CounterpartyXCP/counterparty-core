@@ -874,6 +874,7 @@ class APIServer(threading.Thread):
         init_api_access_log(app)
         
         # Run app server (blocking)
+        self.is_ready = True
         app.run(host=config.RPC_HOST, port=config.RPC_PORT, threaded=True)
             
         db.close()
