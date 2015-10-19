@@ -165,7 +165,6 @@ required_packages = [
     'pytest-cov',
     'pycoin',
     'requests',
-    'tornado',
     'pycrypto',
     'tendo',
     'pysha3',
