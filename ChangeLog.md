@@ -3,6 +3,7 @@
     * Added "undolog" functionality to avoid full reparses when encountering a blockchain reorganisation
     * Removed use of `tornado` library in the API module. We use `flask`'s threaded server instead
     * Added `getrawtransaction` and `getrawtransaction_batch` methods to the API
+    * Added optional `custom_inputs` parameter to API calls, which allows for controlling the exact UTXOs to use in transactions (thanks, tokenly)
 * v9.51.4 (2015-09-26)
 	* Significant performance and caching optimizations around bitcoind addrindex interaction
    	* Fixed issues around responsiveness with larger mempool sizes
