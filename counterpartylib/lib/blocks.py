@@ -800,7 +800,6 @@ def reparse(db, block_index=None, quiet=False):
             cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
             for block in cursor.fetchall():
                 util.CURRENT_BLOCK_INDEX = block['block_index']
-                start_time = time.time()
                 previous_ledger_hash, previous_txlist_hash, previous_messages_hash, previous_found_messages_hash = parse_block(
                                                                          db, block['block_index'], block['block_time'],
                                                                          previous_ledger_hash=previous_ledger_hash,

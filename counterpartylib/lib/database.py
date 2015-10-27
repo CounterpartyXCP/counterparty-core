@@ -59,7 +59,6 @@ def exectracer(cursor, sql, bindings):
     # Record alteration in computation of message feed hash for the block
     if category not in skip_tables_block_messages:
         sorted_bindings = sorted(bindings.items()) if isinstance(bindings, dict) else [bindings,] 
-        #logging.info('{}{}{}'.format(command, category, sorted_bindings))
         BLOCK_MESSAGES.append('{}{}{}'.format(command, category, sorted_bindings))
 
     return True
