@@ -1,5 +1,5 @@
 ## Client Versions ##
-* v9.51.5 (2015-10-22)
+* v9.52.0 (2015-xx-xx)
     * Added "undolog" functionality to avoid full reparses when encountering a blockchain reorganisation
     * Removed use of `tornado` library in the API module. We use `flask`'s threaded server instead
     * Added `getrawtransaction` and `getrawtransaction_batch` methods to the API
