@@ -334,7 +334,10 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, server_db):
             print(unsigned_tx_hex)
 
     if outputs is not None:
-        assert outputs == test_outputs
+        try:
+            assert outputs == test_outputs
+        except AssertionError:
+            raise Exception("outputs don't match test_outputs: outputs=%s  ---  test_outputs=%s" % (outputs, test_outputs))
     if error is not None:
         assert str(exception.value) == error[1]
     if records is not None:
