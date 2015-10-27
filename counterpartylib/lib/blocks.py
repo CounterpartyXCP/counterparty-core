@@ -806,11 +806,9 @@ def reparse(db, block_index=None, quiet=False):
                                                                          previous_ledger_hash=previous_ledger_hash,
                                                                          previous_txlist_hash=previous_txlist_hash,
                                                                          previous_messages_hash=previous_messages_hash)
-                logger.info('Block (re-parse): %s (%s, hashes: L:%s / TX:%s / M:%s%s)' % (
-                    str(block_index), "{:.2f}".format(time.time() - start_time, 5),
-                    previous_ledger_hash[-5:], previous_txlist_hash[-5:], previous_messages_hash[-5:],
+                logger.info('Block (re-parse): %s (hashes: L:%s / TX:%s / M:%s%s)' % (
+                    block['block_index'], previous_ledger_hash[-5:], previous_txlist_hash[-5:], previous_messages_hash[-5:],
                     (' [overwrote %s]' % previous_found_messages_hash) if previous_found_messages_hash and previous_found_messages_hash != previous_messages_hash else ''))
-                
 
         if quiet:
             root_logger.setLevel(root_level)
@@ -820,7 +818,7 @@ def reparse(db, block_index=None, quiet=False):
         check.asset_conservation(db)
 
         # Update database version number.
-        database.update_version()
+        database.update_version(db)
 
     cursor.close()
 
