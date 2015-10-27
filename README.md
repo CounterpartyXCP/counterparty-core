@@ -1,7 +1,7 @@
 [![Latest Version](https://pypip.in/version/counterparty-cli/badge.svg)](https://pypi.python.org/pypi/counterparty-cli/)
 [![Supported Python versions](https://pypip.in/py_versions/counterparty-cli/badge.svg)](https://pypi.python.org/pypi/counterparty-cli/)
 [![License](https://pypip.in/license/counterparty-cli/badge.svg)](https://pypi.python.org/pypi/counterparty-cli/)
-[![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/CounterpartyXCP/General)
+[![Slack Status](http://slack.counterparty.io/badge.svg)](http://slack.counterparty.io)
 
 
 # Description
