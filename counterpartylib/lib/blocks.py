@@ -129,10 +129,10 @@ def parse_tx(db, tx):
 def parse_block(db, block_index, block_time,
                 previous_ledger_hash=None, ledger_hash=None,
                 previous_txlist_hash=None, txlist_hash=None,
-                previous_messages_hash=None, messages_hash=None):
+                previous_messages_hash=None):
     """Parse the block, return hash of new ledger, txlist and messages.
 
-    The unused arguments `ledger_hash`, `txlist_hash`, `messages_hash` are for the test suite.
+    The unused arguments `ledger_hash` and `txlist_hash` are for the test suite.
     """
     undolog_cursor = db.cursor()
     #remove the row tracer and exec tracer on this cursor, so we don't utilize them with undolog operations...

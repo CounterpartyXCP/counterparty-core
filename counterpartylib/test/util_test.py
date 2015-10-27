@@ -428,11 +428,17 @@ def reparse(testnet=True):
     memory_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
     for block in memory_cursor.fetchall():
         try:
-            logger.info('Block (re‐parse): {}'.format(str(block['block_index'])))
-            util.CURRENT_BLOCK_INDEX = block['block_index']  # TODO: Correct?!
-            previous_ledger_hash, previous_txlist_hash = blocks.parse_block(memory_db, block['block_index'], block['block_time'],
-                                                                                    previous_ledger_hash, block['ledger_hash'],
-                                                                                    previous_txlist_hash, block['txlist_hash'])
+            util.CURRENT_BLOCK_INDEX = block['block_index']
+            previous_ledger_hash, previous_txlist_hash, previous_messages_hash, previous_found_messages_hash = blocks.parse_block(
+                                                                     memory_db, block['block_index'], block['block_time'],
+                                                                     previous_ledger_hash=previous_ledger_hash, ledger_hash=block['ledger_hash'],
+                                                                     previous_txlist_hash=previous_txlist_hash, txlist_hash=block['txlist_hash'],
+                                                                     previous_messages_hash=previous_messages_hash)
+            logger.info('Block (re-parse): %s (hashes: L:%s / TX:%s / M:%s%s)' % (
+                block['block_index'], previous_ledger_hash[-5:], previous_txlist_hash[-5:], previous_messages_hash[-5:],
+                (' [overwrote %s]' % previous_found_messages_hash) if previous_found_messages_hash and previous_found_messages_hash != previous_messages_hash else ''))
+
+        
         except check.ConsensusError as e:
             message = str(e)
             if message.find('ledger_hash') != -1:
