@@ -819,9 +819,8 @@ def reparse(db, block_index=None, quiet=False):
         # Check for conservation of assets.
         check.asset_conservation(db)
 
-        # Update minor version number.
-        cursor.execute('PRAGMA user_version = {}'.format(int(config.VERSION_MINOR))) # Syntax?!
-        logger.info('Database minor version number updated.')
+        # Update database version number.
+        database.update_version()
 
     cursor.close()
 
@@ -1032,7 +1031,8 @@ def follow(db):
             # no need to reparse or rollback a new database
             if block_index != config.BLOCK_FIRST:
                 reparse(db, block_index=e.reparse_block_index, quiet=False)
-            database.update_version(db)
+            else: #version update was included in reparse(), so don't do it twice
+                database.update_version(db)
 
     logger.info('Resuming parsing.')
 
