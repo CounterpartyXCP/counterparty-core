@@ -54,7 +54,7 @@ def get_pubkey(address):
 def get_btc_balance(address):
     balance = 0
     for output in rpc('listunspent', [0, 99999]):
-        if output['address'] == addresses:
+        if output['address'] == address:
             balance += output['amount']
     return balance
 
