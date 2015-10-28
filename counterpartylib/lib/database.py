@@ -2,12 +2,15 @@ import apsw
 import logging
 logger = logging.getLogger(__name__)
 import time
-
+import collections
+import copy
 
 from counterpartylib.lib import config
 from counterpartylib.lib import util
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import log
+
+BLOCK_MESSAGES = []
 
 def rowtracer(cursor, sql):
     """Converts fetched SQL data into dict-style"""
@@ -45,6 +48,7 @@ def exectracer(cursor, sql, bindings):
         'suicides', 'postqueue', # These tables are ephemeral.
         'nonces', 'storage' # List message manually.
     ]
+    skip_tables_block_messages = copy.copy(skip_tables)
     if command == 'update':
         # List message manually.
         skip_tables += ['orders', 'bets', 'rps', 'order_matches', 'bet_matches', 'rps_matches', 'contracts']
@@ -52,6 +56,10 @@ def exectracer(cursor, sql, bindings):
     # Record alteration in database.
     if category not in skip_tables:
         log.message(db, bindings['block_index'], command, category, bindings)
+    # Record alteration in computation of message feed hash for the block
+    if category not in skip_tables_block_messages:
+        sorted_bindings = sorted(bindings.items()) if isinstance(bindings, dict) else [bindings,] 
+        BLOCK_MESSAGES.append('{}{}{}'.format(command, category, sorted_bindings))
 
     return True
 

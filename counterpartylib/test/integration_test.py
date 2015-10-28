@@ -19,15 +19,15 @@ def test_scenario(scenario_name, base_scenario_name, transactions, rawtransactio
     new_dump, new_log, new_raw_transactions = util_test.run_scenario(transactions, rawtransactions_db)
     old_dump, old_log, old_raw_transactions = util_test.load_scenario_ouput(scenario_name)
 
-    assert util_test.compare_strings(new_dump, old_dump) == 0
-    assert util_test.compare_strings(new_log, old_log) == 0
-    assert util_test.compare_strings(new_raw_transactions, old_raw_transactions) == 0
+    assert util_test.compare_strings(old_dump, new_dump) == 0
+    assert util_test.compare_strings(old_log, new_log) == 0
+    assert util_test.compare_strings(old_raw_transactions, new_raw_transactions) == 0
 
     if base_scenario_name and base_scenario_name != scenario_name:
         base_dump, base_log, base_raw_transactions = util_test.load_scenario_ouput(base_scenario_name)
         clean_new_dump = util_test.clean_scenario_dump(scenario_name, new_dump)
         clean_base_dump = util_test.clean_scenario_dump(base_scenario_name, base_dump)
-        assert util_test.compare_strings(clean_new_dump, clean_base_dump) == 0
+        assert util_test.compare_strings(clean_base_dump, clean_new_dump) == 0
 
 def test_book(testnet):
     """Reparse all the transactions in the database to see check blockhain's integrity."""

@@ -163,7 +163,7 @@ UNITTEST_VECTOR = {
         }],
         'parse_block': [{
             'in': (DP['default_block'] - 1, 1420914478),
-            'out': ('bc2a2e09a881d5e382904ee20025c7b0c50006a445ac4635d4282234212429a1', '7a345ce55acea2b33aeefd37dcc20bbf8dd6cd98b6b0a4f0697c001f854af85a')
+            'out': ('bc2a2e09a881d5e382904ee20025c7b0c50006a445ac4635d4282234212429a1', '7a345ce55acea2b33aeefd37dcc20bbf8dd6cd98b6b0a4f0697c001f854af85a', '73581237adaf4842a9fba69241f2989588427488b3833ed371bc8ca239187b63', '73581237adaf4842a9fba69241f2989588427488b3833ed371bc8ca239187b63')
         }],
         'get_next_tx_index': [{
             'in': (),

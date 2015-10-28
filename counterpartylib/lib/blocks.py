@@ -126,9 +126,11 @@ def parse_tx(db, tx):
     return True
 
 
-def parse_block(db, block_index, block_time, previous_ledger_hash=None,
-                ledger_hash=None, previous_txlist_hash=None, txlist_hash=None):
-    """Parse the block, return hash of new ledger and txlist.
+def parse_block(db, block_index, block_time,
+                previous_ledger_hash=None, ledger_hash=None,
+                previous_txlist_hash=None, txlist_hash=None,
+                previous_messages_hash=None):
+    """Parse the block, return hash of new ledger, txlist and messages.
 
     The unused arguments `ledger_hash` and `txlist_hash` are for the test suite.
     """
@@ -138,6 +140,7 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
     undolog_cursor.setrowtrace(None)
 
     util.BLOCK_LEDGER = []
+    database.BLOCK_MESSAGES = []
 
     assert block_index == util.CURRENT_BLOCK_INDEX
 
@@ -179,10 +182,11 @@ def parse_block(db, block_index, block_time, previous_ledger_hash=None,
     cursor.close()
 
     # Calculate consensus hashes.
-    new_txlist_hash = check.consensus_hash(db, 'txlist_hash', previous_txlist_hash, txlist)
-    new_ledger_hash = check.consensus_hash(db, 'ledger_hash', previous_ledger_hash, util.BLOCK_LEDGER)
+    new_txlist_hash, found_txlist_hash = check.consensus_hash(db, 'txlist_hash', previous_txlist_hash, txlist)
+    new_ledger_hash, found_ledger_hash = check.consensus_hash(db, 'ledger_hash', previous_ledger_hash, util.BLOCK_LEDGER)
+    new_messages_hash, found_messages_hash = check.consensus_hash(db, 'messages_hash', previous_messages_hash, database.BLOCK_MESSAGES)
 
-    return new_ledger_hash, new_txlist_hash
+    return new_ledger_hash, new_txlist_hash, new_messages_hash, found_messages_hash
 
 
 def initialise(db):
@@ -211,6 +215,8 @@ def initialise(db):
         cursor.execute('''ALTER TABLE blocks ADD COLUMN ledger_hash TEXT''')
     if 'txlist_hash' not in columns:
         cursor.execute('''ALTER TABLE blocks ADD COLUMN txlist_hash TEXT''')
+    if 'messages_hash' not in columns:
+        cursor.execute('''ALTER TABLE blocks ADD COLUMN messages_hash TEXT''')
     if 'previous_block_hash' not in columns:
         cursor.execute('''ALTER TABLE blocks ADD COLUMN previous_block_hash TEXT''')
     if 'difficulty' not in columns:
@@ -790,13 +796,18 @@ def reparse(db, block_index=None, quiet=False):
             if quiet:
                 root_logger.setLevel(logging.WARNING)
 
-            previous_ledger_hash, previous_txlist_hash = None, None
+            previous_ledger_hash, previous_txlist_hash, previous_messages_hash = None, None, None
             cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
             for block in cursor.fetchall():
-                logger.info('Block (re‐parse): {}'.format(str(block['block_index'])))
                 util.CURRENT_BLOCK_INDEX = block['block_index']
-                previous_ledger_hash, previous_txlist_hash = parse_block(db, block['block_index'], block['block_time'],
-                                                                         previous_ledger_hash, previous_txlist_hash)
+                previous_ledger_hash, previous_txlist_hash, previous_messages_hash, previous_found_messages_hash = parse_block(
+                                                                         db, block['block_index'], block['block_time'],
+                                                                         previous_ledger_hash=previous_ledger_hash,
+                                                                         previous_txlist_hash=previous_txlist_hash,
+                                                                         previous_messages_hash=previous_messages_hash)
+                logger.info('Block (re-parse): %s (hashes: L:%s / TX:%s / M:%s%s)' % (
+                    block['block_index'], previous_ledger_hash[-5:], previous_txlist_hash[-5:], previous_messages_hash[-5:],
+                    (' [overwrote %s]' % previous_found_messages_hash) if previous_found_messages_hash and previous_found_messages_hash != previous_messages_hash else ''))
 
         if quiet:
             root_logger.setLevel(root_level)
@@ -805,9 +816,8 @@ def reparse(db, block_index=None, quiet=False):
         # Check for conservation of assets.
         check.asset_conservation(db)
 
-        # Update minor version number.
-        cursor.execute('PRAGMA user_version = {}'.format(int(config.VERSION_MINOR))) # Syntax?!
-        logger.info('Database minor version number updated.')
+        # Update database version number.
+        database.update_version(db)
 
     cursor.close()
 
@@ -1018,7 +1028,8 @@ def follow(db):
             # no need to reparse or rollback a new database
             if block_index != config.BLOCK_FIRST:
                 reparse(db, block_index=e.reparse_block_index, quiet=False)
-            database.update_version(db)
+            else: #version update was included in reparse(), so don't do it twice
+                database.update_version(db)
 
     logger.info('Resuming parsing.')
 
@@ -1127,7 +1138,7 @@ def follow(db):
                     tx_index = list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex)
                 
                 # Parse the transactions in the block.
-                new_ledger_hash, new_txlist_hash = parse_block(db, block_index, block_time)
+                new_ledger_hash, new_txlist_hash, new_messages_hash, found_messages_hash = parse_block(db, block_index, block_time)
 
             # When newly caught up, check for conservation of assets.
             if block_index == block_count:
@@ -1139,8 +1150,10 @@ def follow(db):
                 tx_h = not_supported_sorted.popleft()[1]
                 del not_supported[tx_h]
 
-            logger.info('Block: %s (%ss, Lhash: %s, TXhash: %s)' % (
-                str(block_index), "{:.2f}".format(time.time() - start_time, 3), new_ledger_hash[-5:], new_txlist_hash[-5:]))
+            logger.info('Block: %s (%ss, hashes: L:%s / TX:%s / M:%s%s)' % (
+                str(block_index), "{:.2f}".format(time.time() - start_time, 3),
+                new_ledger_hash[-5:], new_txlist_hash[-5:], new_messages_hash[-5:],
+                (' [overwrote %s]' % found_messages_hash) if found_messages_hash and found_messages_hash != new_messages_hash else ''))
             
             # Increment block index.
             block_count = backend.getblockcount()
