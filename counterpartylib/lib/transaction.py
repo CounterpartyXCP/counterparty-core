@@ -14,7 +14,6 @@ import time
 import decimal
 import logging
 logger = logging.getLogger(__name__)
-
 import requests
 from Crypto.Cipher import ARC4
 from bitcoin.core.script import CScript
@@ -284,7 +283,7 @@ def construct (db, tx_info, encoding='auto',
                multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
                op_return_value=config.DEFAULT_OP_RETURN_VALUE,
                exact_fee=None, fee_provided=0, provided_pubkeys=None,
-               allow_unconfirmed_inputs=False, unspent_tx_hash=None):
+               allow_unconfirmed_inputs=False, unspent_tx_hash=None, custom_inputs=None):
 
     (source, destination_outputs, data) = tx_info
 
@@ -392,20 +391,25 @@ def construct (db, tx_info, encoding='auto',
 
     # Get inputs.
     multisig_inputs = not data
-    if unspent_tx_hash is not None:
-        unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, unspent_tx_hash=unspent_tx_hash, multisig_inputs=multisig_inputs)
-    else:
-        unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, multisig_inputs=multisig_inputs)
 
-    unspent = backend.sort_unspent_txouts(unspent)
-    logger.debug('Sorted UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
+    use_inputs = custom_inputs # Array of UTXOs, as retrieved by listunspent function from bitcoind
+    if custom_inputs is None:
+        if unspent_tx_hash is not None:
+            unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, unspent_tx_hash=unspent_tx_hash, multisig_inputs=multisig_inputs)
+        else:
+            unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, multisig_inputs=multisig_inputs)
+
+        unspent = backend.sort_unspent_txouts(unspent)
+        logger.debug('Sorted UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
+        use_inputs = unspent
+
 
     inputs = []
     btc_in = 0
     change_quantity = 0
     sufficient_funds = False
     final_fee = fee_per_kb
-    for coin in unspent:
+    for coin in use_inputs:
         logger.debug('New input: {}'.format(print_coin(coin)))
         inputs.append(coin)
         btc_in += round(coin['amount'] * config.UNIT)

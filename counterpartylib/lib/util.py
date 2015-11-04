@@ -223,8 +223,10 @@ def debit (db, address, asset, quantity, action=None, event=None):
     debit_cursor.execute('''SELECT * FROM balances \
                             WHERE (address = ? AND asset = ?)''', (address, asset))
     balances = debit_cursor.fetchall()
-    if not len(balances) == 1: old_balance = 0
-    else: old_balance = balances[0]['quantity']
+    if not len(balances) == 1:
+        old_balance = 0
+    else:
+        old_balance = balances[0]['quantity']
 
     if old_balance < quantity:
         raise DebitError('Insufficient funds.')

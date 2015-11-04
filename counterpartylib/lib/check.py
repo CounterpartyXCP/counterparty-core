@@ -39,7 +39,10 @@ CHECKPOINTS_MAINNET = {
     355000: {'ledger_hash': 'a84b17992217c7845e133a8597dac84eba1ee8c48bcc7f74bcf512837120f463', 'txlist_hash': '210d96b42644432b9e1a3433a29af9acb3bad212b67a7ae1dbc011a11b04bc24'},
     360000: {'ledger_hash': 'ddca07ea43b336b703fb8ebab6c0dc30582eb360d6f0eb0446e1fe58b53dee0a', 'txlist_hash': '31d0ff3e3782cf9464081829c5595b3de5ac477290dc069d98672f3f552767f8'},
     365000: {'ledger_hash': '2d55b126cca3eca15c07b5da683988f9e01d7346d2ca430e940fd7c07ce84fd7', 'txlist_hash': '7988a823cc1e3234953cc87d261d3c1fede8493d0a31b103357eb23cc7dc2eda'},
-    366000: {'ledger_hash': '64ce274df2784f9ca88a8d7071613ec6527e506ec31cd434eca64c6a3345a6b7', 'txlist_hash': '0d4374da6100e279b24f4ba4a2d6afbfc4fb0fc2d312330a515806e8c5f49404'} 
+    366000: {'ledger_hash': '64ce274df2784f9ca88a8d7071613ec6527e506ec31cd434eca64c6a3345a6b7', 'txlist_hash': '0d4374da6100e279b24f4ba4a2d6afbfc4fb0fc2d312330a515806e8c5f49404'}, 
+    370000: {'ledger_hash': 'fabb2a2e91fad3fe7734169d554cca396c1030243044cef42fcf65717cf0fa61', 'txlist_hash': '41d1732868c9ac25951ace5ca9f311a15d5eca9bf8d548e0d988c050bd2aff87'},
+    375000: {'ledger_hash': 'a7ac4e2948cea0c426c8fc201cf57d9c313027ea7bff2b32a25ed28d3dbaa581', 'txlist_hash': '96118a7aa2ca753488755b7419a0f44a7fbc371bc58dcc7ab083c70fc14ef8b3'},
+    380000: {'ledger_hash': '70453ba04c1c0198c4771e7964cffa25f9456c2f71456a8b05dfe935d5fcdc88', 'txlist_hash': '8bf2070103cca6f0bde507b7d20b0ba0630da6349beb560fa64c926d08dbcaef'},
 }
 
 CONSENSUS_HASH_VERSION_TESTNET = 6
@@ -54,8 +57,10 @@ CHECKPOINTS_TESTNET = {
     350000: {'ledger_hash': '03000561ca9871223836a214ec1200fb035b70388fbd108bb9351d891844cd9e', 'txlist_hash': '0716337ad4b354823aab46e46f316161adab4fc083f315d4b2c2e7c7b17e0a67'},
     400000: {'ledger_hash': '7a1bbf50517d098afbb3ecdc77d41f8bd35555e0937a71c2a2b1a4d072416f4e', 'txlist_hash': 'e28fbecaac4d82ed1d9a8eb2a4a43ab9b2b32c1ca8ce20ca300cc8848a690966'},
     450000: {'ledger_hash': 'ce34985ad5400195edc90a5cd50aaa07c3fb746b663aafefb4ff3bb5990fa837', 'txlist_hash': '1667c7a08471cffcccb55056a8e080d0141486b430b673bee5b7cda54ee2387c'},
-    500000: {'ledger_hash': '703632461af220490f6f9cb006a4741ed07d54dd8d5f0da81297308934745819', 'txlist_hash': '5f32a0d9c49c7788ce0f154c72e9e227c42f7d1ab8a2ff5031701fd46c15eec5'}
+    500000: {'ledger_hash': '703632461af220490f6f9cb006a4741ed07d54dd8d5f0da81297308934745819', 'txlist_hash': '5f32a0d9c49c7788ce0f154c72e9e227c42f7d1ab8a2ff5031701fd46c15eec5'},
+    550000: {'ledger_hash': '042f52c7944512e4386dd4a3a5c4666ae1ba6234ef9d7d7c14bcba1b39bd75c7', 'txlist_hash': '362613cc234336cb30f645894f3587db636c8b9cba45a01e74934e349063714c'},
 }
+
 
 class ConsensusError(Exception):
     pass
@@ -83,21 +88,23 @@ def consensus_hash(db, field, previous_consensus_hash, content):
     calculated_hash = util.dhash_string(previous_consensus_hash + '{}{}'.format(consensus_hash_version, ''.join(content)))
 
     # Verify hash (if already in database) or save hash (if not).
-    found_hash = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,)))[0][field]
-    if found_hash:
+    # NOTE: do not enforce this for messages_hashes, those are more informational (for now at least)
+    found_hash = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,)))[0][field] or None
+    if found_hash and field != 'messages_hash':
         # Check against existing value.
         if calculated_hash != found_hash:
-            raise ConsensusError('Inconsistent {} for block {}.'.format(field, block_index))
+            raise ConsensusError('Inconsistent {} for block {} (calculated {}, vs {} in database).'.format(
+                field, block_index, calculated_hash, found_hash))
     else:
         # Save new hash.
         cursor.execute('''UPDATE blocks SET {} = ? WHERE block_index = ?'''.format(field), (calculated_hash, block_index))
 
     # Check against checkpoints.
     checkpoints = CHECKPOINTS_TESTNET if config.TESTNET else CHECKPOINTS_MAINNET
-    if block_index in checkpoints and checkpoints[block_index][field] != calculated_hash:
+    if field != 'messages_hash' and block_index in checkpoints and checkpoints[block_index][field] != calculated_hash:
         raise ConsensusError('Incorrect {} for block {}.'.format(field, block_index))
 
-    return calculated_hash
+    return calculated_hash, found_hash
 
 class SanityError(Exception):
     pass

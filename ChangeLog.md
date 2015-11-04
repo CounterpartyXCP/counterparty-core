@@ -1,4 +1,10 @@
 ## Client Versions ##
+* v9.52.0 (2015-10-31)
+    * Added "undolog" functionality to avoid full reparses when encountering a blockchain reorganisation
+    * Removed use of `tornado` library in the API module. We use `flask`'s threaded server instead
+    * Added `getrawtransaction` and `getrawtransaction_batch` methods to the API
+    * Added optional `custom_inputs` parameter to API calls, which allows for controlling the exact UTXOs to use in transactions (thanks, tokenly)
+    * Added `message_hash`, derived from changes to the `counterparty-lib` database. Displayed on each new block, makes checking for DB-level consensus easier
 * v9.51.4 (2015-09-26)
 	* Significant performance and caching optimizations around bitcoind addrindex interaction
    	* Fixed issues around responsiveness with larger mempool sizes

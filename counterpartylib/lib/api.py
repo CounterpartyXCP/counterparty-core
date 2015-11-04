@@ -24,10 +24,6 @@ import struct
 import apsw
 import flask
 from flask.ext.httpauth import HTTPBasicAuth
-import tornado
-from tornado.wsgi import WSGIContainer
-from tornado.httpserver import HTTPServer
-from tornado.ioloop import IOLoop
 import jsonrpc
 from jsonrpc import dispatcher
 import inspect
@@ -71,7 +67,7 @@ API_TRANSACTIONS = ['bet', 'broadcast', 'btcpay', 'burn', 'cancel',
 COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
                 'multisig_dust_size', 'op_return_value', 'pubkey',
                 'allow_unconfirmed_inputs', 'fee', 'fee_provided',
-                'unspent_tx_hash']
+                'unspent_tx_hash','custom_inputs']
 
 API_MAX_LOG_SIZE = 10 * 1024 * 1024 #max log size of 20 MB before rotation (make configurable later)
 API_MAX_LOG_COUNT = 10
@@ -270,7 +266,7 @@ def compose_transaction(db, name, params,
                         allow_unconfirmed_inputs=False,
                         fee=None,
                         fee_provided=0,
-                        unspent_tx_hash=None):
+                        unspent_tx_hash=None, custom_inputs=None):
     """Create and return a transaction."""
 
     # Get provided pubkeys.
@@ -313,7 +309,7 @@ def compose_transaction(db, name, params,
                                         allow_unconfirmed_inputs=allow_unconfirmed_inputs,
                                         exact_fee=fee,
                                         fee_provided=fee_provided,
-                                        unspent_tx_hash=unspent_tx_hash)
+                                        unspent_tx_hash=unspent_tx_hash, custom_inputs=custom_inputs)
     # except:
         # import traceback
         # traceback.print_exc()
@@ -326,17 +322,20 @@ def conditional_decorator(decorator, condition):
         return decorator(f)
     return gen_decorator
 
-def init_api_access_log():
+def init_api_access_log(app):
     """Initialize API logger."""
-    if config.API_LOG:
-        access_logger = logging.getLogger("tornado.access")
-        access_logger.setLevel(logging.INFO)
-        access_logger.propagate = False
+    loggers = (logging.getLogger('werkzeug'), app.logger)
+    
+    # Disable console logging...
+    for l in loggers:
+        l.setLevel(logging.INFO)
+        l.propagate = False
 
+    # Log to file, if configured...    
+    if config.API_LOG:
         handler = logging_handlers.RotatingFileHandler(config.API_LOG, 'a', API_MAX_LOG_SIZE, API_MAX_LOG_COUNT)
-        formatter = tornado.log.LogFormatter(datefmt='%Y-%m-%d-T%H:%M:%S%z')    # Default date format is nuts.
-        handler.setFormatter(formatter)
-        access_logger.addHandler(handler)
+        for l in loggers:
+            l.addHandler(handler)
 
 class APIStatusPoller(threading.Thread):
     """Perform regular checks on the state of the backend and the database."""
@@ -384,10 +383,8 @@ class APIServer(threading.Thread):
         self.is_ready = False
         threading.Thread.__init__(self)
         self.stop_event = threading.Event()
-        self.ioloop = IOLoop.instance()
 
     def stop(self):
-        self.ioloop.stop()
         self.join()
         self.stop_event.set()
 
@@ -676,6 +673,14 @@ class APIServer(threading.Thread):
             return backend.get_unspent_txouts(address, unconfirmed=unconfirmed, multisig_inputs=False)
 
         @dispatcher.add_method
+        def getrawtransaction(tx_hash, verbose=False):
+            return backend.getrawtransaction(tx_hash, verbose=verbose)
+
+        @dispatcher.add_method
+        def getrawtransaction_batch(txhash_list, verbose=False):
+            return backend.getrawtransaction_batch(txhash_list, verbose=verbose)
+
+        @dispatcher.add_method
         def get_tx_info(tx_hex, block_index=None):
             # block_index mandatory for transactions before block 335000
             source, destination, btc_amount, fee, data = blocks.get_tx_info(tx_hex, block_index=block_index)
@@ -866,19 +871,13 @@ class APIServer(threading.Thread):
             return response
 
         # Init the HTTP Server.
-        init_api_access_log()
+        init_api_access_log(app)
         
-        http_server = HTTPServer(WSGIContainer(app), xheaders=True)
-        try:
-            http_server.listen(config.RPC_PORT, address=config.RPC_HOST)
-            self.is_ready = True
-            self.ioloop.start()
-        except OSError:
-            raise APIError("Cannot start the API subsystem. Is server already running, or is something else listening on port {}?".format(config.RPC_PORT))
-
+        # Run app server (blocking)
+        self.is_ready = True
+        app.run(host=config.RPC_HOST, port=config.RPC_PORT, threaded=True)
+            
         db.close()
-        http_server.stop()
-        self.ioloop.close()
         return
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

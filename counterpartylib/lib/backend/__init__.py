@@ -37,18 +37,19 @@ def sortkeypicker(keynames):
 def BACKEND():
     return sys.modules['counterpartylib.lib.backend.{}'.format(config.BACKEND_NAME)] 
 
-# TODO: Generate this block of code dynamically?
-
 def getblockcount():
     return BACKEND().getblockcount()
+
 def getblockhash(blockcount):
     return BACKEND().getblockhash(blockcount)
+
 def getblock(block_hash):
     block_hex = BACKEND().getblock(block_hash)
     return CBlock.deserialize(util.unhexlify(block_hex))
 
 def searchrawtransactions(address, unconfirmed=False):
     return BACKEND().searchrawtransactions(address, unconfirmed=unconfirmed)
+
 def getrawtransaction(tx_hash, verbose=False):
     return BACKEND().getrawtransaction(tx_hash, verbose=verbose)
 
@@ -69,9 +70,9 @@ def refresh_unconfirmed_transactions_cache(mempool_txhash_list):
 
 def deserialize(tx_hex):
     return bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
+
 def serialize(ctx):
     return bitcoinlib.core.CTransaction.serialize(ctx)
-
 
 def is_valid(address):
     try:

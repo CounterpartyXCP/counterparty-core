@@ -6,8 +6,8 @@ UNIT = 100000000        # The same across assets.
 
 # Versions
 VERSION_MAJOR = 9
-VERSION_MINOR = 51
-VERSION_REVISION = 4
+VERSION_MINOR = 52
+VERSION_REVISION = 0
 VERSION_STRING = str(VERSION_MAJOR) + '.' + str(VERSION_MINOR) + '.' + str(VERSION_REVISION)
 
 
@@ -100,5 +100,7 @@ DEFAULT_CHECK_ASSET_CONSERVATION = True
 
 BACKEND_RAW_TRANSACTIONS_CACHE_SIZE = 20000
 BACKEND_RPC_BATCH_NUM_WORKERS = 6
+
+UNDOLOG_MAX_PAST_BLOCKS = 100 #the number of past blocks that we store undolog history
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
