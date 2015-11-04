@@ -424,6 +424,7 @@ def reparse(testnet=True):
     blocks.initialise(memory_db)
     previous_ledger_hash = None
     previous_txlist_hash = None
+    previous_messages_hash = None
 
     memory_cursor.execute('''SELECT * FROM blocks ORDER BY block_index''')
     for block in memory_cursor.fetchall():
