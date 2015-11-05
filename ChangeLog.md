@@ -1,4 +1,4 @@
-## Client Versions ##
+## Changelog ##
 * v9.52.0 (2015-10-31)
     * Added "undolog" functionality to avoid full reparses when encountering a blockchain reorganisation
     * Removed use of `tornado` library in the API module. We use `flask`'s threaded server instead
