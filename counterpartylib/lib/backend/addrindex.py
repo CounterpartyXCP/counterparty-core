@@ -6,6 +6,7 @@ import json
 import requests
 from requests.exceptions import Timeout, ReadTimeout, ConnectionError
 import time
+import copy
 import threading
 import concurrent.futures
 import collections
@@ -127,8 +128,8 @@ def refresh_unconfirmed_transactions_cache(mempool_txhash_list):
     for tx_hash, addresses in tx_hashes_addresses.items():
         for address in addresses:
             if address not in unconfirmed_txes:
-                unconfirmed_txes[address] = []
-            unconfirmed_txes[address].append(tx_hashes_tx[tx_hash])
+                unconfirmed_txes[copy.copy(address)] = []
+            unconfirmed_txes[address].append(copy.deepcopy(tx_hashes_tx[tx_hash]))
     unconfirmed_transactions_cache = unconfirmed_txes
     logger.debug('Unconfirmed transactions cache refreshed ({} entries, from {} supported mempool txes)'.format(
         len(unconfirmed_transactions_cache), len(mempool_txhash_list)))
@@ -213,8 +214,9 @@ def getrawtransaction_batch(txhash_list, verbose=False, _recursing=False):
         batch_responses = rpc_batch(payload)
         for response in batch_responses:
             if 'error' not in response or response['error'] is None:
-                tx_hex = response['result']
-                tx_hash = tx_hash_call_id[response['id']]
+                #use copy module to avoid lingering references to batch_responses
+                tx_hash = copy.copy(tx_hash_call_id[response['id']])
+                tx_hex = copy.deepcopy(response['result'])
                 raw_transactions_cache[tx_hash] = tx_hex
             else:
                 #TODO: this seems to happen for bogus transactions? Maybe handle it more gracefully than just erroring out?
