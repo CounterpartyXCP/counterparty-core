@@ -17,6 +17,7 @@ import platform
 from Crypto.Cipher import ARC4
 import apsw
 import csv
+import copy
 import http
 
 import bitcoin as bitcoinlib
@@ -46,6 +47,10 @@ TABLES = ['credits', 'debits', 'messages'] + \
          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
          'rps_matches', 'rps', 'executions', 'storage', 'suicides', 'nonces',
          'postqueue', 'contracts', 'destructions', 'assets']
+# Compose list of tables tracked by undolog
+UNDOLOG_TABLES = copy.copy(TABLES)
+UNDOLOG_TABLES.remove('messages')
+UNDOLOG_TABLES += ['balances']
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(CURR_DIR + '/../mainnet_burns.csv', 'r') as f:
@@ -377,7 +382,7 @@ def initialise(db):
                         first_undo_index INTEGER)
                    ''')
     # Create undolog triggers for all tables in TABLES list, plus the 'balances' table
-    for table in TABLES + ['balances']:
+    for table in UNDOLOG_TABLES:
         columns = [column['name'] for column in cursor.execute('''PRAGMA table_info({})'''.format(table))]
         cursor.execute('''CREATE TRIGGER IF NOT EXISTS _{}_insert AFTER INSERT ON {} BEGIN
                             INSERT INTO undolog VALUES(NULL, 'DELETE FROM {} WHERE rowid='||new.rowid);
@@ -395,6 +400,9 @@ def initialise(db):
                             INSERT INTO undolog VALUES(NULL, 'INSERT INTO {}(rowid,{}) VALUES('||old.rowid||',{})');
                             END;
                        '''.format(table, table, table, ','.join(columns), ','.join(columns_parts)))
+    # Drop undolog tables on messages table if they exist (fix for adding them in 9.52.0)
+    for trigger_type in ('insert', 'update', 'delete'):
+        cursor.execute("DROP TRIGGER IF EXISTS _messages_{}".format(trigger_type))
 
     # Mempool messages
     # NOTE: `status`, 'block_index` are removed from bindings.
