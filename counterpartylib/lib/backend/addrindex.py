@@ -172,7 +172,8 @@ def getrawmempool():
 def sendrawtransaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
 
-def getrawtransaction_batch(txhash_list, verbose=False, _recursing=False):
+GETRAWTRANSACTION_MAX_RETRIES=2
+def getrawtransaction_batch(txhash_list, verbose=False, _retry=0):
     if len(txhash_list) > config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE:
         #don't try to load in more than BACKEND_RAW_TRANSACTIONS_CACHE_SIZE entries in a single call
         txhash_list_chunks = util.chunkify(txhash_list, config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)
@@ -229,11 +230,11 @@ def getrawtransaction_batch(txhash_list, verbose=False, _recursing=False):
             else:
                 result[tx_hash] = raw_transactions_cache[tx_hash]['hex']
         except KeyError as e: #shows up most likely due to finickyness with addrindex not always returning results that we need...
-            logger.debug("tx missing in rawtx cache: {} -- txhash_list size: {}, hash: {} / raw_transactions_cache size: {} / # rpc_batch calls: {} / txhash in noncached_txhashes: {} / txhash in txhash_list: {} -- list {}".format(
+            logger.warning("tx missing in rawtx cache: {} -- txhash_list size: {}, hash: {} / raw_transactions_cache size: {} / # rpc_batch calls: {} / txhash in noncached_txhashes: {} / txhash in txhash_list: {} -- list {}".format(
                 e, len(txhash_list), hashlib.md5(json.dumps(list(txhash_list)).encode()).hexdigest(), len(raw_transactions_cache), len(payload),
                 tx_hash in noncached_txhashes, tx_hash in txhash_list, list(txhash_list.difference(noncached_txhashes)) ))
-            if not _recursing: #try again
-                r = getrawtransaction_batch([tx_hash], verbose=verbose, _recursing=True)
+            if  _retry < GETRAWTRANSACTION_MAX_RETRIES: #try again
+                r = getrawtransaction_batch([tx_hash], verbose=verbose, _retry=_retry+1)
                 result[tx_hash] = r[tx_hash]
             else:
                 raise #already tried again, give up
