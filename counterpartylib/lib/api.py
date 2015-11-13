@@ -564,8 +564,12 @@ class APIServer(threading.Thread):
             return block
 
         @dispatcher.add_method
-        def get_blocks(block_indexes):
-            """fetches block info and messages for the specified block indexes"""
+        def get_blocks(block_indexes, min_message_index=None):
+            """fetches block info and messages for the specified block indexes
+            @param min_message_index: Retrieve blocks from the message feed on or after this specific message index
+              (useful since blocks may appear in the message feed more than once, if a reorg occurred). Note that
+              if this parameter is not specified, the messages for the first block will be returned.
+            """
             if not isinstance(block_indexes, (list, tuple)):
                 raise APIError("block_indexes must be a list of integers.")
             if len(block_indexes) >= 250:
@@ -574,20 +578,26 @@ class APIServer(threading.Thread):
             block_indexes_str = ','.join([str(x) for x in block_indexes])
             cursor = db.cursor()
 
+            # The blocks table gets rolled back from undolog, so min_message_index doesn't matter for this query
             cursor.execute('SELECT * FROM blocks WHERE block_index IN (%s) ORDER BY block_index ASC'
                 % (block_indexes_str,))
             blocks = cursor.fetchall()
 
-            cursor.execute('SELECT * FROM messages WHERE block_index IN (%s) ORDER BY block_index ASC, message_index ASC'
+            cursor.execute('SELECT * FROM messages WHERE block_index IN (%s) ORDER BY message_index ASC'
                 % (block_indexes_str,))
             messages = collections.deque(cursor.fetchall())
+            
+            # Discard any messages less than min_message_index
+            if min_message_index:
+                while len(messages) and messages[0]['message_index'] < min_message_index:
+                    messages.popleft()
 
+            # Packages messages into their appropriate block in the data structure to be returned
             for block in blocks:
-                # messages_in_block = []
                 block['_messages'] = []
                 while len(messages) and messages[0]['block_index'] == block['block_index']:
                     block['_messages'].append(messages.popleft())
-            assert not len(messages) #should have been cleared out
+            #NOTE: if len(messages), then we're only returning the messages for the first set of blocks before the reorg
 
             cursor.close()
             return blocks
