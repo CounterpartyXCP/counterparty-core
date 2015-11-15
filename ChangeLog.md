@@ -1,4 +1,4 @@
-## Client Versions ##
+## Library Versions ##
 * v9.53.0 (2015-11-xx)
     * Remove `messages` table from being covered by "undolog" functionality added in `v9.52.0`.
     * Add `min_message_index` to `get_blocks` API call.
