@@ -26,6 +26,7 @@ import flask
 from flask.ext.httpauth import HTTPBasicAuth
 import jsonrpc
 from jsonrpc import dispatcher
+from jsonrpc.exceptions import JSONRPCDispatchException
 import inspect
 from xmltodict import unparse as serialize_to_xml
 
@@ -71,6 +72,7 @@ COMMONS_ARGS = ['encoding', 'fee_per_kb', 'regular_dust_size',
 
 API_MAX_LOG_SIZE = 10 * 1024 * 1024 #max log size of 20 MB before rotation (make configurable later)
 API_MAX_LOG_COUNT = 10
+JSON_RPC_ERROR_API_COMPOSE = -32001 #code to use for error composing transaction result
 
 current_api_status_code = None #is updated by the APIStatusPoller
 current_api_status_response_json = None #is updated by the APIStatusPoller
@@ -298,7 +300,6 @@ def compose_transaction(db, name, params,
     for param in missing_params:
         params[param] = None
 
-    # try:  # NOTE: For debugging, e.g. with `Invalid Params` error.
     tx_info = compose_method(db, **params)
     return transaction.construct(db, tx_info, encoding=encoding,
                                         fee_per_kb=fee_per_kb,
@@ -310,9 +311,6 @@ def compose_transaction(db, name, params,
                                         exact_fee=fee,
                                         fee_provided=fee_provided,
                                         unspent_tx_hash=unspent_tx_hash, custom_inputs=custom_inputs)
-    # except:
-        # import traceback
-        # traceback.print_exc()
 
 def conditional_decorator(decorator, condition):
     """Checks the condition and if True applies specified decorator."""
@@ -447,9 +445,13 @@ class APIServer(threading.Thread):
                 try:
                     transaction_args, common_args, private_key_wif = split_params(**kwargs)
                     return compose_transaction(db, name=tx, params=transaction_args, **common_args)
-                except TypeError as e:          #TODO: generalise for all API methods
+                except TypeError as e:
                     raise APIError(str(e))
-
+                except (script.AddressError, exceptions.ComposeError, exceptions.TransactionError, exceptions.BalanceError) as error:
+                    error_msg = "Error composing {} transaction via API: {}".format(tx, str(error))
+                    logging.warning(error_msg)
+                    raise JSONRPCDispatchException(code=JSON_RPC_ERROR_API_COMPOSE, message=error_msg)
+            
             return create_method
 
         for tx in API_TRANSACTIONS:
@@ -849,7 +851,8 @@ class APIServer(threading.Thread):
                 try:
                     query_data = compose_transaction(db, name=query_type, params=transaction_args, **common_args)
                 except (script.AddressError, exceptions.ComposeError, exceptions.TransactionError, exceptions.BalanceError) as error:
-                    error_msg = str(error.__class__.__name__) + ': ' + str(error)
+                    error_msg = logging.warning("{} -- error composing {} transaction via API: {}".format(
+                        str(error.__class__.__name__), query_type, str(error)))
                     return flask.Response(error_msg, 400, mimetype='application/json')                        
             else:
                 # Need to de-generate extra_args to pass it through.
