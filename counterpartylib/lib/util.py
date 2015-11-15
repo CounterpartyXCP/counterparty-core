@@ -641,7 +641,7 @@ class DictCache:
     def __setitem__(self,key,value):  
         with self.lock:  
             while len(self.dict) >= self.size:  
-                self.dict.popitem(last=False)
+                self.dict.popitem(last=False)  
             self.dict[key] = value  
   
     def __delitem__(self,key):  
