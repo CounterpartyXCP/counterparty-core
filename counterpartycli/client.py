@@ -48,7 +48,7 @@ CONFIG_ARGS = [
     [('--multisig-dust-size',), {'type': D, 'default': D(config.DEFAULT_MULTISIG_DUST_SIZE / config.UNIT), 'help': 'for dust OP_CHECKMULTISIG outputs, in {}'.format(config.BTC)}],
     [('--op-return-value',), {'type': D, 'default': D(config.DEFAULT_OP_RETURN_VALUE / config.UNIT), 'help': 'value for OP_RETURN outputs, in {}'.format(config.BTC)}],
     [('--unsigned',), {'action': 'store_true', 'default': False, 'help': 'print out unsigned hex of transaction; do not sign or broadcast'}],
-    [('--requests-timeout',), {'type': int, 'default': clientapi.DEFAULT_REQUESTS_TIMEOUT, 'help': 'Timeout used for all http requests'}]
+    [('--requests-timeout',), {'type': int, 'default': clientapi.DEFAULT_REQUESTS_TIMEOUT, 'help': 'timeout value (in seconds) used for all HTTP requests (default: 5)'}]
 ]
 
 def main():
