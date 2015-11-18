@@ -190,7 +190,7 @@ def add_config_arguments(arg_parser, config_args, default_config_file, config_fi
             fp.truncate()
 
     logger.debug('Loading configuration file: `{}`'.format(config_file))
-    configfile = configparser.ConfigParser()
+    configfile = configparser.ConfigParser(inline_comment_prefixes=('#', ';'))
     with codecs.open(config_file, 'r', encoding='utf8') as fp:
         configfile.readfp(fp)
 
