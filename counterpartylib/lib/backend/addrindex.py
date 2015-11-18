@@ -114,10 +114,15 @@ def extract_addresses(txhash_list):
     return tx_hashes_addresses, tx_hashes_tx
 
 def unconfirmed_transactions(address):
-    logger.debug("unconfirmed_transactions called: %s" % address)
+    logger.info("unconfirmed_transactions called: %s" % address)
     if unconfirmed_transactions_cache is None:
         raise Exception("Unconfirmed transactions cache is not initialized")
-    return list(unconfirmed_transactions_cache.get(address, {}).values())
+
+    tx_hashes = unconfirmed_transactions_cache.get(address, set())
+
+    logger.info("unconfirmed_transcations found: %s" % ",".join(list(tx_hashes)))
+
+    return list(getrawtransaction_batch(list(tx_hashes), verbose=True).values()) if len(tx_hashes) else []
 
 def refresh_unconfirmed_transactions_cache(mempool_txhash_list):
     global unconfirmed_transactions_cache, reverse_unconfirmed_transactions_cache
@@ -144,7 +149,7 @@ def refresh_unconfirmed_transactions_cache(mempool_txhash_list):
     # cleanup the dropped txs
     for tx_hash in old_tx_hash_list:
         for address in reverse_unconfirmed_transactions_cache[tx_hash]:
-            del unconfirmed_transactions_cache[address][tx_hash]
+            unconfirmed_transactions_cache[address].remove(tx_hash)
 
         del reverse_unconfirmed_transactions_cache[tx_hash]
 
@@ -165,8 +170,8 @@ def refresh_unconfirmed_transactions_cache(mempool_txhash_list):
         reverse_unconfirmed_transactions_cache.setdefault(tx_hash, set())
 
         for address in addresses:
-            unconfirmed_transactions_cache.setdefault(address, {})
-            unconfirmed_transactions_cache[address][tx_hash] = tx_hashes_tx[tx_hash]
+            unconfirmed_transactions_cache.setdefault(address, set())
+            unconfirmed_transactions_cache[address].add(tx_hash)
             reverse_unconfirmed_transactions_cache[tx_hash].add(address)
 
     cache_time = time.time() - cache_start_time
