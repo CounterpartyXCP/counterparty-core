@@ -5,6 +5,7 @@ Sieve blockchain for Counterparty transactions, and add them to the database.
 """
 
 import os
+import psutil
 import time
 import binascii
 import struct
@@ -37,6 +38,8 @@ from .kickstart.blocks_parser import BlockchainParser, ChainstateParser
 from .kickstart.utils import ib2h
 
 from .exceptions import DecodeError, BTCOnlyError
+
+process = psutil.Process(os.getpid())
 
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['credits', 'debits', 'messages'] + \
@@ -1263,11 +1266,13 @@ def follow(db):
             elapsed_time = time.time() - start_time
             sleep_time = config.BACKEND_POLL_INTERVAL - elapsed_time if elapsed_time <= config.BACKEND_POLL_INTERVAL else 0
 
-            logger.info('Refresh mempool: %s XCP txs seen, out of %s total entries (took %ss (%ss was backend refresh), next refresh in %ss)' % (
+            logger.info('Refresh mempool: %s XCP txs seen, out of %s total entries '
+                        '(took %ss (%ss was backend refresh), next refresh in %ss) - mem %sMB' % (
                 len(xcp_mempool), len(raw_mempool),
                 "{:.2f}".format(elapsed_time, 3),
                 "{:.2f}".format(refresh_time, 3),
-                "{:.2f}".format(sleep_time, 3)))
+                "{:.2f}".format(sleep_time, 3),
+                "{:.2f}".format(process.memory_info().rss / 1000 / 1000)))
 
             # Wait
             db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
