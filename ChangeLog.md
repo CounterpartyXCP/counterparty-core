@@ -1,4 +1,10 @@
-## Client Versions ##
+## Library Versions ##
+* v9.53.0 (2015-11-xx)
+    * Remove `messages` table from being covered by "undolog" functionality added in `v9.52.0`.
+    * Add `min_message_index` to `get_blocks` API call.
+    * Retry more than once with `getrawtransaction_batch` if a specific txhash is not found in `bitcoind`'s addrindex.
+    * Update `setup.py` to properly utilize (newer) egg-style install. Previously the "old" style install was invoked when it shouldn't have been.
+    * NOTE: This versions mhash (message hash) will be different than that of nodes running `9.52.0`, but the other hashes should continue to match.
 * v9.52.0 (2015-10-31)
     * Added "undolog" functionality to avoid full reparses when encountering a blockchain reorganisation
     * Removed use of `tornado` library in the API module. We use `flask`'s threaded server instead

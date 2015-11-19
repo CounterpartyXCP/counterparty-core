@@ -1,4 +1,4 @@
 --index-url https://pypi.python.org/simple/
 
-requests>=2.5.1
+requests>=2.8.1
 -e .

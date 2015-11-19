@@ -2,6 +2,7 @@
 from setuptools.command.install import install as _install
 from setuptools.command.bdist_egg import bdist_egg as _bdist_egg
 from setuptools import setup, find_packages, Command
+import inspect
 import os
 import zipfile
 import urllib.request
@@ -140,20 +141,50 @@ class install(_install):
         self.with_serpent = False
         _install.initialize_options(self)
 
+    #Some of this code taken from https://bitbucket.org/pypa/setuptools/src/4ce518784af886e6977fa2dbe58359d0fe161d0d/setuptools/command/install.py?at=default&fileviewer=file-view-default
+    @staticmethod
+    def _called_from_setup(run_frame):
+        """
+        Attempt to detect whether run() was called from setup() or by another
+        command.  If called by setup(), the parent caller will be the
+        'run_command' method in 'distutils.dist', and *its* caller will be
+        the 'run_commands' method.  If called any other way, the
+        immediate caller *might* be 'run_command', but it won't have been
+        called by 'run_commands'. Return True in that case or if a call stack
+        is unavailable. Return False otherwise.
+        """
+        if run_frame is None:
+            msg = "Call stack not available. bdist_* commands may fail."
+            warnings.warn(msg)
+            if platform.python_implementation() == 'IronPython':
+                msg = "For best results, pass -X:Frames to enable call stack."
+                warnings.warn(msg)
+            return True
+        res = inspect.getouterframes(run_frame)[2]
+        caller, = res[:1]
+        info = inspect.getframeinfo(caller)
+        caller_module = caller.f_globals.get('__name__', '')
+        return (
+            caller_module == 'distutils.dist'
+            and info.function == 'run_commands'
+        )
+        
     def run(self):
-        caller = sys._getframe(2)
-        caller_module = caller.f_globals.get('__name__','')
-        caller_name = caller.f_code.co_name
-        if caller_module == 'distutils.dist' or caller_name == 'run_commands':
+        # Explicit request for old-style install?  Just do it
+        if self.old_and_unmanageable or self.single_version_externally_managed:
+            return _install.run(self)
+
+        if not self._called_from_setup(inspect.currentframe()):
+            # Run in backward-compatibility mode to support bdist_* commands.
             _install.run(self)
         else:
             self.do_egg_install()
-        post_install(self, self.with_serpent)
+        self.execute(post_install, (self, self.with_serpent), msg="Running post install tasks")
 
 class bdist_egg(_bdist_egg):
     def run(self):
         _bdist_egg.run(self)
-        post_install(self, False)
+        self.execute(post_install, (self, False), msg="Running post install tasks")
 
 required_packages = [
     'appdirs',

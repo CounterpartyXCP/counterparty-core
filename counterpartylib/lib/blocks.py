@@ -5,6 +5,7 @@ Sieve blockchain for Counterparty transactions, and add them to the database.
 """
 
 import os
+import psutil
 import time
 import binascii
 import struct
@@ -17,6 +18,7 @@ import platform
 from Crypto.Cipher import ARC4
 import apsw
 import csv
+import copy
 import http
 
 import bitcoin as bitcoinlib
@@ -37,6 +39,8 @@ from .kickstart.utils import ib2h
 
 from .exceptions import DecodeError, BTCOnlyError
 
+process = psutil.Process(os.getpid())
+
 # Order matters for FOREIGN KEY constraints.
 TABLES = ['credits', 'debits', 'messages'] + \
          ['bet_match_resolutions', 'order_match_expirations', 'order_matches',
@@ -46,6 +50,10 @@ TABLES = ['credits', 'debits', 'messages'] + \
          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
          'rps_matches', 'rps', 'executions', 'storage', 'suicides', 'nonces',
          'postqueue', 'contracts', 'destructions', 'assets']
+# Compose list of tables tracked by undolog
+UNDOLOG_TABLES = copy.copy(TABLES)
+UNDOLOG_TABLES.remove('messages')
+UNDOLOG_TABLES += ['balances']
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(CURR_DIR + '/../mainnet_burns.csv', 'r') as f:
@@ -377,7 +385,7 @@ def initialise(db):
                         first_undo_index INTEGER)
                    ''')
     # Create undolog triggers for all tables in TABLES list, plus the 'balances' table
-    for table in TABLES + ['balances']:
+    for table in UNDOLOG_TABLES:
         columns = [column['name'] for column in cursor.execute('''PRAGMA table_info({})'''.format(table))]
         cursor.execute('''CREATE TRIGGER IF NOT EXISTS _{}_insert AFTER INSERT ON {} BEGIN
                             INSERT INTO undolog VALUES(NULL, 'DELETE FROM {} WHERE rowid='||new.rowid);
@@ -395,6 +403,9 @@ def initialise(db):
                             INSERT INTO undolog VALUES(NULL, 'INSERT INTO {}(rowid,{}) VALUES('||old.rowid||',{})');
                             END;
                        '''.format(table, table, table, ','.join(columns), ','.join(columns_parts)))
+    # Drop undolog tables on messages table if they exist (fix for adding them in 9.52.0)
+    for trigger_type in ('insert', 'update', 'delete'):
+        cursor.execute("DROP TRIGGER IF EXISTS _messages_{}".format(trigger_type))
 
     # Mempool messages
     # NOTE: `status`, 'block_index` are removed from bindings.
@@ -1177,19 +1188,21 @@ def follow(db):
             # a fake block, a fake transaction, capture the generated messages,
             # and then save those messages.
             # Every transaction in mempool is parsed independently. (DB is rolled back after each one.)
-            mempool = []
+            xcp_mempool = []
             raw_mempool = backend.getrawmempool()
             for tx_hash in raw_mempool:
                 # If already in mempool, copy to new one.
                 if tx_hash in old_mempool_hashes:
                     for message in old_mempool:
                         if message['tx_hash'] == tx_hash:
-                            mempool.append((tx_hash, message))
+                            xcp_mempool.append((tx_hash, message))
 
-                # If already skipped, skip it again.
-                elif tx_hash not in not_supported:
+                # If not a supported XCP transaction, skip.
+                elif tx_hash in not_supported:
+                    pass
 
-                    # Else: list, parse and save it.
+                # Else: list, parse and save it.
+                else:
                     try:
                         with db:
                             # List the fake block.
@@ -1231,7 +1244,7 @@ def follow(db):
                             # Save transaction and side‐effects in memory.
                             cursor.execute('''SELECT * FROM messages WHERE block_index = ?''', (config.MEMPOOL_BLOCK_INDEX,))
                             for message in list(cursor):
-                                mempool.append((tx_hash, message))
+                                xcp_mempool.append((tx_hash, message))
 
                             # Rollback.
                             raise MempoolError
@@ -1241,18 +1254,25 @@ def follow(db):
             # Re‐write mempool messages to database.
             with db:
                 cursor.execute('''DELETE FROM mempool''')
-                for message in mempool:
+                for message in xcp_mempool:
                     tx_hash, new_message = message
                     new_message['tx_hash'] = tx_hash
                     cursor.execute('''INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp)''', (new_message))
                     
-            backend.refresh_unconfirmed_transactions_cache([tx_hash for tx_hash, message in mempool])
+            refresh_start_time = time.time()
+            backend.refresh_unconfirmed_transactions_cache(raw_mempool)
+            refresh_time = time.time() - refresh_start_time
 
             elapsed_time = time.time() - start_time
             sleep_time = config.BACKEND_POLL_INTERVAL - elapsed_time if elapsed_time <= config.BACKEND_POLL_INTERVAL else 0
 
-            logger.debug('Refresh mempool: %s CP txs seen, out of %s total entries (took %ss, next refresh in %ss)' % (
-                len(mempool), len(raw_mempool), "{:.2f}".format(elapsed_time, 3), "{:.2f}".format(sleep_time, 3)))
+            logger.info('Refresh mempool: %s XCP txs seen, out of %s total entries '
+                        '(took %ss (%ss was backend refresh), next refresh in %ss) - mem %sMB' % (
+                len(xcp_mempool), len(raw_mempool),
+                "{:.2f}".format(elapsed_time, 3),
+                "{:.2f}".format(refresh_time, 3),
+                "{:.2f}".format(sleep_time, 3),
+                "{:.2f}".format(process.memory_info().rss / 1000 / 1000)))
 
             # Wait
             db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)
