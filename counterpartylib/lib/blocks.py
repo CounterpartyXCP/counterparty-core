@@ -488,15 +488,24 @@ def get_tx_info1(tx_hex, block_index, block_parser=None):
                 raise DecodeError('coinbase transaction')
             obj1 = ARC4.new(ctx.vin[0].prevout.hash[::-1])
             data_pubkey = obj1.decrypt(pubkeyhash)
+
+            # print('data_pubkey', data_pubkey)
+
             if data_pubkey[1:9] == config.PREFIX or pubkeyhash_encoding:
                 pubkeyhash_encoding = True
                 data_chunk_length = data_pubkey[0]  # No ord() necessary.
                 data_chunk = data_pubkey[1:data_chunk_length + 1]
-                if data_chunk[-8:] == config.PREFIX:
-                    data += data_chunk[:-8]
+
+                # print('data_chunk', data_chunk, data_chunk[-len(config.PREFIX):] == config.PREFIX, data_chunk[:len(config.PREFIX)] == config.PREFIX)
+
+                if data_chunk[-len(config.PREFIX):] == config.PREFIX:
+                    data += data_chunk[:-len(config.PREFIX)]
                     break
+                elif data_chunk[:len(config.PREFIX)] == config.PREFIX:
+                    data += data_chunk[len(config.PREFIX):]
                 else:
-                    data += data_chunk
+                    break
+                    # data += data_chunk
 
         # Destination is the first output before the data.
         if not destination and not btc_amount and not data:
@@ -505,12 +514,14 @@ def get_tx_info1(tx_hex, block_index, block_parser=None):
                 destination = address
                 btc_amount = vout.nValue
 
+    # print('data', data)
+
     # Check for, and strip away, prefix (except for burns).
     if destination == config.UNSPENDABLE:
         pass
     elif data[:len(config.PREFIX)] == config.PREFIX:
         data = data[len(config.PREFIX):]
-    else:
+    elif not pubkeyhash_encoding:
         raise DecodeError('no prefix')
 
     # Only look for source if data were found or destination is UNSPENDABLE, for speed.
