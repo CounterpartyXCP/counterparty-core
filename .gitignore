@@ -1,4 +1,5 @@
 env
+venv
 docs/_build/*
 
 profile.txt
@@ -23,6 +24,9 @@ test/fixtures/scenarios/*.new.*
 /*.egg-info
 
 # Virtualenv folders
-bin/
-lib/
-include/
+/bin/
+/lib/
+/include/
+
+# Cache folders
+.cache
