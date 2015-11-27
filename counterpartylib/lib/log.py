@@ -15,18 +15,79 @@ from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
 
-def set_up(logger, verbose=False, logfile=None):
+
+class ModuleLoggingFilter(logging.Filter):
+    """
+    module level logging filter (NodeJS-style), ie:
+        filters="*,-counterpartylib.lib,counterpartylib.lib.api"
+
+        will log:
+         - counterpartycli.server
+         - counterpartylib.lib.api
+
+        but will not log:
+         - counterpartylib.lib
+         - counterpartylib.lib.backend.addrindex
+    """
+
+    def __init__(self, filters):
+        self.filters = str(filters).split(",")
+
+        self.catchall = "*" in self.filters
+        if self.catchall:
+            self.filters.remove("*")
+
+    def filter(self, record):
+        """
+        Determine if specified record should be logged or not
+        """
+        result = None
+
+        for filter in self.filters:
+            if filter[:1] == "-":
+                if result is None and ModuleLoggingFilter.ismatch(record, filter[1:]):
+                    result = False
+            else:
+                if ModuleLoggingFilter.ismatch(record, filter):
+                    result = True
+
+        if result is None:
+            return self.catchall
+
+        return result
+
+    @classmethod
+    def ismatch(cls, record, name):
+        """
+        Determine if the specified record matches the name, in the same way as original logging.Filter does, ie:
+            'counterpartylib.lib' will match 'counterpartylib.lib.check'
+        """
+        nlen = len(name)
+        if nlen == 0:
+            return True
+        elif name == record.name:
+            return True
+        elif record.name.find(name, 0, nlen) != 0:
+            return False
+        return record.name[nlen] == "."
+
+def set_up(logger, verbose=False, logfile=None, console_logfilter=None):
     log_level = logging.DEBUG if verbose else logging.INFO
     logger.setLevel(log_level)
 
     # Console Logging
     console = logging.StreamHandler()
     console.setLevel(log_level)
-    LOGFORMAT = '%(log_color)s[%(levelname)s] %(message)s%(reset)s'
+
+    # only add [%(name)s] to LOGFORMAT if we're using console_logfilter
+    LOGFORMAT = '%(log_color)s[%(levelname)s]' + ('' if console_logfilter is None else '[%(name)s]') + ' %(message)s%(reset)s'
     LOGCOLORS = {'WARNING': 'yellow', 'ERROR': 'red', 'CRITICAL': 'red'}
     formatter = ColoredFormatter(LOGFORMAT, log_colors=LOGCOLORS)
     console.setFormatter(formatter)
     logger.addHandler(console)
+
+    if console_logfilter:
+        console.addFilter(ModuleLoggingFilter(console_logfilter))
 
     # File Logging
     if logfile:
