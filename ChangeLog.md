@@ -4,6 +4,8 @@
     * Add `min_message_index` to `get_blocks` API call.
     * Retry more than once with `getrawtransaction_batch` if a specific txhash is not found in `bitcoind`'s addrindex.
     * Update `setup.py` to properly utilize (newer) egg-style install. Previously the "old" style install was invoked when it shouldn't have been.
+    * Update backend mempool caching code to keep full mempool, instead of just XCP transactions (thanks @rubensayshi)
+    * Add ModuleLoggingFilter for (NodeJS-style) module-level log filtering (thanks @rubensayshi)
     * NOTE: This versions mhash (message hash) will be different than that of nodes running `9.52.0`, but the other hashes should continue to match.
 * v9.52.0 (2015-10-31)
     * Added "undolog" functionality to avoid full reparses when encountering a blockchain reorganisation
