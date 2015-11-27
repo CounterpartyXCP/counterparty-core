@@ -16,6 +16,7 @@ from counterpartylib.lib import config, script, util
 
 raw_transactions_cache = util.DictCache(size=config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE) #used in getrawtransaction_batch()
 unconfirmed_transactions_cache = None
+reverse_unconfirmed_transactions_cache = None
 
 class BackendRPCError(Exception):
     pass
@@ -116,22 +117,74 @@ def unconfirmed_transactions(address):
     logger.debug("unconfirmed_transactions called: %s" % address)
     if unconfirmed_transactions_cache is None:
         raise Exception("Unconfirmed transactions cache is not initialized")
-    return unconfirmed_transactions_cache.get(address, [])
+
+    tx_hashes = unconfirmed_transactions_cache.get(address, set())
+
+    logger.debug("unconfirmed_transcations found: %s" % ",".join(list(tx_hashes)))
+
+    return list(getrawtransaction_batch(list(tx_hashes), verbose=True).values()) if len(tx_hashes) else []
 
 def refresh_unconfirmed_transactions_cache(mempool_txhash_list):
-    # NOTE: This operation can be very slow.
-    global unconfirmed_transactions_cache
+    global unconfirmed_transactions_cache, reverse_unconfirmed_transactions_cache
 
-    unconfirmed_txes = {}
-    tx_hashes_addresses, tx_hashes_tx = extract_addresses(mempool_txhash_list)
+    # turn list into set for better performance
+    mempool_txhash_list = set(mempool_txhash_list)
+
+    if unconfirmed_transactions_cache is None:
+        unconfirmed_transactions_cache = {}
+    if reverse_unconfirmed_transactions_cache is None:
+        reverse_unconfirmed_transactions_cache = {}
+
+    intersect_start_time = time.time()
+
+    # create diffs of new txs and txs that have been dropped
+    known_tx_hash_list = set(reverse_unconfirmed_transactions_cache.keys())
+    new_tx_hash_list = mempool_txhash_list.difference(known_tx_hash_list)  # mempool_txhash_list - known_tx_hash_list
+    old_tx_hash_list = known_tx_hash_list.difference(mempool_txhash_list)  # known_tx_hash_list - mempool_txhash_list
+
+    intersect_time = time.time() - intersect_start_time
+
+    cleanup_start_time = time.time()
+
+    # cleanup the dropped txs
+    for tx_hash in old_tx_hash_list:
+        for address in reverse_unconfirmed_transactions_cache[tx_hash]:
+            unconfirmed_transactions_cache[address].remove(tx_hash)
+
+        del reverse_unconfirmed_transactions_cache[tx_hash]
+
+    cleanup_time = time.time() - cleanup_start_time
+
+    extract_start_time = time.time()
+
+    # tx_hashes_addresses is dict with tx addresses keyed by tx_hash
+    # tx_hashes_tx is dict with tx info keyed by tx_hash
+    tx_hashes_addresses, tx_hashes_tx = extract_addresses(new_tx_hash_list)
+
+    extract_time = time.time() - extract_start_time
+
+    cache_start_time = time.time()
+
+    # add txs to cache and reverse cache
     for tx_hash, addresses in tx_hashes_addresses.items():
+        reverse_unconfirmed_transactions_cache.setdefault(tx_hash, set())
+
         for address in addresses:
-            if address not in unconfirmed_txes:
-                unconfirmed_txes[address] = []
-            unconfirmed_txes[address].append(tx_hashes_tx[tx_hash])
-    unconfirmed_transactions_cache = unconfirmed_txes
-    logger.debug('Unconfirmed transactions cache refreshed ({} entries, from {} supported mempool txes)'.format(
-        len(unconfirmed_transactions_cache), len(mempool_txhash_list)))
+            unconfirmed_transactions_cache.setdefault(address, set())
+            unconfirmed_transactions_cache[address].add(tx_hash)
+            reverse_unconfirmed_transactions_cache[tx_hash].add(address)
+
+    cache_time = time.time() - cache_start_time
+
+    logger.debug('Unconfirmed transactions cache refreshed (from {} mempool txs, contained {} entries, {} new entries required parsing, {} were deleted)'.format(
+        len(mempool_txhash_list), len(reverse_unconfirmed_transactions_cache.keys()), len(new_tx_hash_list), len(old_tx_hash_list)))
+
+    logger.debug('timings; intersect: {}, cleanup: {}, extract: {}, cache: {}'.format(
+        "{:.2f}".format(intersect_time, 3),
+        "{:.2f}".format(cleanup_time, 3),
+        "{:.2f}".format(extract_time, 3),
+        "{:.2f}".format(cache_time, 3),
+    ))
 
 def searchrawtransactions(address, unconfirmed=False):
     # Get unconfirmed transactions.
