@@ -291,7 +291,18 @@ def vector_to_args(vector, functions=[]):
                     error = params['error']
                 if 'records' in params:
                     records = params['records']
-                if functions == [] or (tx_name + '.' + method) in functions:
+
+                test_name = (tx_name + '.' + method)
+
+                add_test = not functions or not len(functions)
+                add_test = add_test or test_name in functions
+
+                if not add_test:
+                    for function in filter(lambda f: f[-1:] == "*", functions):
+                        if test_name.find(function[:-1], 0) == 0:
+                            add_test = True
+
+                if add_test:
                     args.append((tx_name, method, params['in'], outputs, error, records))
     return args
 
