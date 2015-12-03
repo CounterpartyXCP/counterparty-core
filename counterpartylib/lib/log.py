@@ -80,9 +80,9 @@ def set_up(logger, verbose=False, logfile=None, console_logfilter=None):
     console.setLevel(log_level)
 
     # only add [%(name)s] to LOGFORMAT if we're using console_logfilter
-    LOGFORMAT = '%(log_color)s[%(levelname)s]' + ('' if console_logfilter is None else '[%(name)s]') + ' %(message)s%(reset)s'
+    LOGFORMAT = '%(log_color)s[%(asctime)s][%(levelname)s]' + ('' if console_logfilter is None else '[%(name)s]') + ' %(message)s%(reset)s'
     LOGCOLORS = {'WARNING': 'yellow', 'ERROR': 'red', 'CRITICAL': 'red'}
-    formatter = ColoredFormatter(LOGFORMAT, log_colors=LOGCOLORS)
+    formatter = ColoredFormatter(LOGFORMAT, "%Y-%m-%d %H:%M:%S", log_colors=LOGCOLORS)
     console.setFormatter(formatter)
     logger.addHandler(console)
 
