@@ -152,6 +152,8 @@ def refresh_unconfirmed_transactions_cache(mempool_txhash_list):
 
     intersect_time = time.time() - intersect_start_time
 
+    logger.debug("refresh_unconfirmed_transactions_cache: %d txs, %d new, %d dropped" % (len(mempool_txhash_list), len(new_tx_hash_list), len(old_tx_hash_list)))
+
     cleanup_start_time = time.time()
 
     # cleanup the dropped txs

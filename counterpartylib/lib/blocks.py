@@ -878,7 +878,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
         cursor.close()
         return tx_index + 1
     else:
-        logger.debug('Skipping transaction: {}'.format(tx_hash))
+        logger.getChild('list_tx.skip').debug('Skipping transaction: {}'.format(tx_hash))
 
     return tx_index
 
@@ -1065,6 +1065,8 @@ def follow(db):
                 continue
             else:
                 raise e
+
+        logger.debug('follow %d <= %d' % (block_index, block_count))
             
         # Get new blocks.
         if block_index <= block_count:
