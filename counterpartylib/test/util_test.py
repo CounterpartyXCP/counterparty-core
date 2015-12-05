@@ -284,15 +284,12 @@ def vector_to_args(vector, functions=[]):
     for tx_name in vector:
         for method in vector[tx_name]:
             for params in vector[tx_name][method]:
-                error = outputs = records = None
-                if 'out' in params:
-                    outputs = params['out']
-                if 'error' in params:
-                    error = params['error']
-                if 'records' in params:
-                    records = params['records']
+                error = params.get('error', None)
+                outputs = params.get('out', None)
+                records = params.get('records', None)
+                comment = params.get('comment', None)
                 if functions == [] or (tx_name + '.' + method) in functions:
-                    args.append((tx_name, method, params['in'], outputs, error, records))
+                    args.append((tx_name, method, params['in'], outputs, error, records, comment))
     return args
 
 def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
@@ -306,7 +303,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
     else:
         return tested_method(server_db, *inputs)
 
-def check_outputs(tx_name, method, inputs, outputs, error, records, server_db):
+def check_outputs(tx_name, method, inputs, outputs, error, records, comment, server_db):
     """Check actual and expected outputs of a particular function."""
 
     try:
