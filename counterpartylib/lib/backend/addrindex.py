@@ -106,7 +106,7 @@ def extract_addresses(txhash_list):
     logger.debug('extract_addresses, input TXs: %d' % (len(tx_inputs_hashes), ))
 
     # chunk txs to avoid huge memory spikes
-    for tx_inputs_hashes_chunk in util.chunkify(list(tx_inputs_hashes), config.BACKEND_RAW_TRANSACTIONS_BATCH_SIZE):
+    for tx_inputs_hashes_chunk in util.chunkify(list(tx_inputs_hashes), config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE):
         raw_transactions = getrawtransaction_batch(tx_inputs_hashes_chunk, verbose=True)
         for tx_hash, tx in tx_hashes_tx.items():
             for vin in tx['vin']:
