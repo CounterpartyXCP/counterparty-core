@@ -848,7 +848,6 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
     if block_hash == None:
         block_hash = config.MEMPOOL_BLOCK_HASH
         block_index = config.MEMPOOL_BLOCK_INDEX
-        backend.extract_addresses([tx_hash,]) # prepare cache for backend.unconfirmed_transactions().
     else:
         assert block_index == util.CURRENT_BLOCK_INDEX
 
