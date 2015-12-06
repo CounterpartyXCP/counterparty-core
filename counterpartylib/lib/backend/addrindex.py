@@ -90,26 +90,34 @@ def rpc_batch(request_list):
     return list(responses)
 
 def extract_addresses(txhash_list):
+    logger.debug('extract_addresses, txs: %d' % (len(txhash_list), ))
     tx_hashes_tx = getrawtransaction_batch(txhash_list, verbose=True)
     tx_hashes_addresses = {}
-    tx_inputs_hashes = set() #use set to avoid duplicates
-    
+    tx_inputs_hashes = set()  # use set to avoid duplicates
+
     for tx_hash, tx in tx_hashes_tx.items():
         tx_hashes_addresses[tx_hash] = set()
         for vout in tx['vout']:
             if 'addresses' in vout['scriptPubKey']:
                 tx_hashes_addresses[tx_hash].update(tuple(vout['scriptPubKey']['addresses']))
+
         tx_inputs_hashes.update([vin['txid'] for vin in tx['vin']])
 
-    raw_transactions = getrawtransaction_batch(list(tx_inputs_hashes), verbose=True)
-    for tx_hash, tx in tx_hashes_tx.items():
-        for vin in tx['vin']:
-            vin_tx = raw_transactions[vin['txid']]
-            if vin_tx is None: #bogus transaction
-                continue
-            vout = vin_tx['vout'][vin['vout']]
-            if 'addresses' in vout['scriptPubKey']:
-                tx_hashes_addresses[tx_hash].update(tuple(vout['scriptPubKey']['addresses']))
+    logger.debug('extract_addresses, input TXs: %d' % (len(tx_inputs_hashes), ))
+
+    # chunk txs to avoid huge memory spikes
+    for tx_inputs_hashes_chunk in util.chunkify(list(tx_inputs_hashes), config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE):
+        raw_transactions = getrawtransaction_batch(tx_inputs_hashes_chunk, verbose=True)
+        for tx_hash, tx in tx_hashes_tx.items():
+            for vin in tx['vin']:
+                vin_tx = raw_transactions.get(vin['txid'], None)
+
+                if not vin_tx:
+                    continue
+
+                vout = vin_tx['vout'][vin['vout']]
+                if 'addresses' in vout['scriptPubKey']:
+                    tx_hashes_addresses[tx_hash].update(tuple(vout['scriptPubKey']['addresses']))
 
     return tx_hashes_addresses, tx_hashes_tx
 
@@ -143,6 +151,8 @@ def refresh_unconfirmed_transactions_cache(mempool_txhash_list):
     old_tx_hash_list = known_tx_hash_list.difference(mempool_txhash_list)  # known_tx_hash_list - mempool_txhash_list
 
     intersect_time = time.time() - intersect_start_time
+
+    logger.debug("refresh_unconfirmed_transactions_cache: %d txs, %d new, %d dropped" % (len(mempool_txhash_list), len(new_tx_hash_list), len(old_tx_hash_list)))
 
     cleanup_start_time = time.time()
 
