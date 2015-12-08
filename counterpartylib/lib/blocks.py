@@ -620,9 +620,9 @@ def get_tx_info2(tx_hex, block_parser=None):
 
         # Ignore transactions with invalid script.
         try:
-          asm = script.get_asm(vout.scriptPubKey)
+            asm = script.get_asm(vout.scriptPubKey)
         except CScriptInvalidError as e:
-          raise DecodeError(e)
+            raise DecodeError(e)
 
         if asm[0] == 'OP_RETURN':
             new_destination, new_data = decode_opreturn(asm)
