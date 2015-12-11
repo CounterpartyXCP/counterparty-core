@@ -169,7 +169,7 @@ def refresh_unconfirmed_transactions_cache(mempool_txhash_list):
 
     # tx_hashes_addresses is dict with tx addresses keyed by tx_hash
     # tx_hashes_tx is dict with tx info keyed by tx_hash
-    tx_hashes_addresses, tx_hashes_tx = extract_addresses(new_tx_hash_list)
+    tx_hashes_addresses, tx_hashes_tx = extract_addresses(list(new_tx_hash_list))
 
     extract_time = time.time() - extract_start_time
 
