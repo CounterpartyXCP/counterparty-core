@@ -1059,6 +1059,10 @@ UNITTEST_VECTOR = {
             'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM', b'\x00'),
             'out': b"\x01\tfw`\x06\x95=UgC\x9e^9\xf8j\r';\xee"
         }, {
+            'comment': 'valid mainnet bitcoin address that contains a padding byte',
+            'in': ('13PGb7v3nmTDugLDStRJWXw6TzsNLUKJKC', b'\x00'),
+            'out': b'\x1a&jGxV\xea\xd2\x9e\xcb\xe6\xaeQ\xad:,\x8dG<\xf4'
+        }, {
             'comment': 'wrong version byte',
             'in': ('26UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM', b'\x00'),
             'error': (script.VersionByteError, 'incorrect version byte')
@@ -1067,7 +1071,8 @@ UNITTEST_VECTOR = {
             'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvN', b'\x00'),
             'error': (script.Base58ChecksumError, 'Checksum mismatch: 0xd61967f7 ≠ 0xd61967f6')
         }, {
-            'in': (ADDR[0], b'\x6f'),                                                               # TODO: What is this?
+            'comment': 'valid testnet bitcoin address that we use in many tests',
+            'in': (ADDR[0], b'\x6f'),
             'out': b'H8\xd8\xb3X\x8cL{\xa7\xc1\xd0o\x86n\x9b79\xc607'
         }, {
             'comment': 'invalid mainnet bitcoin address: invalid character',
