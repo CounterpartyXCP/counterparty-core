@@ -685,12 +685,12 @@ class APIServer(threading.Thread):
             return backend.get_unspent_txouts(address, unconfirmed=unconfirmed, multisig_inputs=False, unspent_tx_hash=unspent_tx_hash)
 
         @dispatcher.add_method
-        def getrawtransaction(tx_hash, verbose=False):
-            return backend.getrawtransaction(tx_hash, verbose=verbose)
+        def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
+            return backend.getrawtransaction(tx_hash, verbose=verbose, skip_missing=skip_missing)
 
         @dispatcher.add_method
-        def getrawtransaction_batch(txhash_list, verbose=False):
-            return backend.getrawtransaction_batch(txhash_list, verbose=verbose)
+        def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False):
+            return backend.getrawtransaction_batch(txhash_list, verbose=verbose, skip_missing=skip_missing)
 
         @dispatcher.add_method
         def get_tx_info(tx_hex, block_index=None):

@@ -226,8 +226,8 @@ def getblockhash(blockcount):
 def getblock(block_hash):
     return rpc('getblock', [block_hash, False])
 
-def getrawtransaction(tx_hash, verbose=False):
-    return getrawtransaction_batch([tx_hash], verbose=verbose)[tx_hash]
+def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
+    return getrawtransaction_batch([tx_hash], verbose=verbose, skip_missing=skip_missing)[tx_hash]
 
 def getrawmempool():
     return rpc('getrawmempool', [])
@@ -236,7 +236,7 @@ def sendrawtransaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
 
 GETRAWTRANSACTION_MAX_RETRIES=2
-def getrawtransaction_batch(txhash_list, verbose=False, _retry=0):
+def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _retry=0):
     _logger = logger.getChild("getrawtransaction_batch")
 
     if len(txhash_list) > config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE:
@@ -244,7 +244,7 @@ def getrawtransaction_batch(txhash_list, verbose=False, _retry=0):
         txhash_list_chunks = util.chunkify(txhash_list, config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)
         txes = {}
         for txhash_list_chunk in txhash_list_chunks:
-            txes.update(getrawtransaction_batch(txhash_list_chunk, verbose=verbose))
+            txes.update(getrawtransaction_batch(txhash_list_chunk, verbose=verbose, skip_missing=skip_missing))
         return txes
     
     tx_hash_call_id = {}
@@ -282,6 +282,10 @@ def getrawtransaction_batch(txhash_list, verbose=False, _retry=0):
                 tx_hex = response['result']
                 tx_hash = tx_hash_call_id[response['id']]
                 raw_transactions_cache[tx_hash] = tx_hex
+            elif skip_missing and 'error' in response and response['error']['code'] == -5:
+                raw_transactions_cache[tx_hash] = None
+                logging.debug('Missing TX with no raw info skipped (txhash: {}): {}'.format(
+                    tx_hash_call_id.get(response.get('id', '??'), '??'), response['error']))
             else:
                 #TODO: this seems to happen for bogus transactions? Maybe handle it more gracefully than just erroring out?
                 raise BackendRPCError('{} (txhash:: {})'.format(response['error'], tx_hash_call_id.get(response.get('id', '??'), '??')))
@@ -293,13 +297,13 @@ def getrawtransaction_batch(txhash_list, verbose=False, _retry=0):
             if verbose:
                 result[tx_hash] = raw_transactions_cache[tx_hash]
             else:
-                result[tx_hash] = raw_transactions_cache[tx_hash]['hex']
+                result[tx_hash] = raw_transactions_cache[tx_hash]['hex'] if raw_transactions_cache[tx_hash] is not None else None
         except KeyError as e: #shows up most likely due to finickyness with addrindex not always returning results that we need...
             _logger.warning("tx missing in rawtx cache: {} -- txhash_list size: {}, hash: {} / raw_transactions_cache size: {} / # rpc_batch calls: {} / txhash in noncached_txhashes: {} / txhash in txhash_list: {} -- list {}".format(
                 e, len(txhash_list), hashlib.md5(json.dumps(list(txhash_list)).encode()).hexdigest(), len(raw_transactions_cache), len(payload),
                 tx_hash in noncached_txhashes, tx_hash in txhash_list, list(txhash_list.difference(noncached_txhashes)) ))
             if  _retry < GETRAWTRANSACTION_MAX_RETRIES: #try again
-                r = getrawtransaction_batch([tx_hash], verbose=verbose, _retry=_retry+1)
+                r = getrawtransaction_batch([tx_hash], verbose=verbose, skip_missing=skip_missing, _retry=_retry+1)
                 result[tx_hash] = r[tx_hash]
             else:
                 raise #already tried again, give up
