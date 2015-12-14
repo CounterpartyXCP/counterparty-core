@@ -111,8 +111,8 @@ def getblock(block_hash):
     return rpc('getblock', [block_hash, False])
 
 @lru_cache(maxsize=16384)   # Assume each transaction is 4 KB.
-def getrawtransaction(tx_hash, verbose=False):
-    return getrawtransaction_batch([tx_hash], verbose=verbose)[tx_hash]
+def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
+    return getrawtransaction_batch([tx_hash], verbose=verbose, skip_missing=skip_missing)[tx_hash]
 
 def getrawmempool():
     return rpc('getrawmempool', [])
@@ -122,7 +122,7 @@ RAW_TRANSACTIONS_CACHE = {}
 RAW_TRANSACTIONS_CACHE_KEYS = []
 RAW_TRANSACTIONS_CACHE_SIZE = 10000
 
-def getrawtransaction_batch(txhash_list, verbose=False):
+def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False):
     tx_hash_call_id = {}
     call_id = 0
     payload = []

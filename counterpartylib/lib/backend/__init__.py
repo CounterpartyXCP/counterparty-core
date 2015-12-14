@@ -50,11 +50,11 @@ def getblock(block_hash):
 def searchrawtransactions(address, unconfirmed=False):
     return BACKEND().searchrawtransactions(address, unconfirmed=unconfirmed)
 
-def getrawtransaction(tx_hash, verbose=False):
-    return BACKEND().getrawtransaction(tx_hash, verbose=verbose)
+def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
+    return BACKEND().getrawtransaction(tx_hash, verbose=verbose, skip_missing=skip_missing)
 
-def getrawtransaction_batch(txhash_list, verbose=False):
-    return BACKEND().getrawtransaction_batch(txhash_list, verbose=verbose)
+def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False):
+    return BACKEND().getrawtransaction_batch(txhash_list, verbose=verbose, skip_missing=skip_missing)
 
 def sendrawtransaction(tx_hex):
     return BACKEND().sendrawtransaction(tx_hex)
