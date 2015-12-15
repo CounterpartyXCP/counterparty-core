@@ -26,7 +26,7 @@ MAX_INT = 2**63 - 1
 
 
 # Bitcoin Core
-OP_RETURN_MAX_SIZE = 40 # bytes
+OP_RETURN_MAX_SIZE = 80 # bytes
 
 
 # Currency agnosticism
