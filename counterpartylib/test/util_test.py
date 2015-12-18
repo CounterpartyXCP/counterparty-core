@@ -149,7 +149,7 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
     if pytest.config.option.savescenarios:
         save_rawtransaction(rawtransactions_db, tx_hash, raw_transaction)
 
-    source, destination, btc_amount, fee, data = blocks.get_tx_info2(raw_transaction)
+    source, destination, btc_amount, fee, data = blocks._get_tx_info(raw_transaction)
     transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
     cursor.execute('''INSERT INTO transactions VALUES (?,?,?,?,?,?,?,?,?,?,?)''', transaction)
     tx = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = ?''', (tx_index,)))[0]
@@ -333,8 +333,9 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
     if tx_name == 'transaction' and method == 'construct':
         return tested_method(server_db, inputs[0], **inputs[1])
     elif (tx_name == 'util' and (method == 'api' or method == 'date_passed' or method == 'price' or method == 'generate_asset_id' \
-         or method == 'generate_asset_name' or method == 'dhash_string' or method == 'enabled' or method == 'get_url' or method == 'hexlify')) or tx_name == 'script' \
-        or (tx_name == 'blocks' and (method == 'get_tx_info' or method == 'get_tx_info1' or method == 'get_tx_info2')) or tx_name == 'transaction' or method == 'sortkeypicker':
+        or method == 'generate_asset_name' or method == 'dhash_string' or method == 'enabled' or method == 'get_url' or method == 'hexlify')) or tx_name == 'script' \
+        or (tx_name == 'blocks' and (method[:len('get_tx_info')] == 'get_tx_info')) or tx_name == 'transaction' or method == 'sortkeypicker'\
+        or tx_name == 'backend':
         return tested_method(*inputs)
     else:
         return tested_method(server_db, *inputs)
@@ -451,7 +452,7 @@ def reparse(testnet=True):
         CHECKPOINTS = check.CHECKPOINTS_MAINNET
     for block_index in CHECKPOINTS.keys():
         block_exists = bool(list(memory_cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,))))
-        assert block_exists
+        assert block_exists, "block #%d does not exist" % block_index
 
     # Clean consensus hashes if first block hash don’t match with checkpoint.
     checkpoints = check.CHECKPOINTS_TESTNET if config.TESTNET else check.CHECKPOINTS_MAINNET

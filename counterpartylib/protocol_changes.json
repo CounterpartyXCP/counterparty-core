@@ -1,4 +1,10 @@
 {
+	"p2sh_addresses":	{
+			"minimum_version_major": 9,
+			"minimum_version_minor": 52,
+			"minimum_version_revision": 9,
+			"block_index": 500000
+		},
 	"numeric_asset_names":	{
 			"minimum_version_major": 9,
 			"minimum_version_minor": 47,

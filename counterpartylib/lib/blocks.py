@@ -416,19 +416,23 @@ def initialise(db):
                   ''')
 
 def get_tx_info(tx_hex, block_parser=None, block_index=None):
+    """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
+    try:
+        return _get_tx_info(tx_hex, block_parser, block_index)
+    except (DecodeError, BTCOnlyError) as e:
+        # NOTE: For debugging, logger.debug('Could not decode: ' + str(e))
+        return b'', None, None, None, None
+
+def _get_tx_info(tx_hex, block_parser=None, block_index=None):
     """Get the transaction info. Calls one of two subfunctions depending on signature type."""
     if not block_index:
         block_index = util.CURRENT_BLOCK_INDEX
-    try:
-        if util.enabled('multisig_addresses', block_index=block_index):   # Protocol change.
-            tx_info = get_tx_info2(tx_hex, block_parser=block_parser)
-        else:
-            tx_info = get_tx_info1(tx_hex, block_index, block_parser=block_parser)
-    except (DecodeError, BTCOnlyError) as e:
-        # NOTE: For debugging, logger.debug('Could not decode: ' + str(e))
-        tx_info = b'', None, None, None, None
-
-    return tx_info
+    if util.enabled('p2sh_addresses', block_index=block_index):   # Protocol change.
+        return  get_tx_info3(tx_hex, block_parser=block_parser)
+    elif util.enabled('multisig_addresses', block_index=block_index):   # Protocol change.
+        return get_tx_info2(tx_hex, block_parser=block_parser)
+    else:
+        return get_tx_info1(tx_hex, block_index, block_parser=block_parser)
 
 def get_tx_info1(tx_hex, block_index, block_parser=None):
     """Get singlesig transaction info.
@@ -546,7 +550,10 @@ def get_tx_info1(tx_hex, block_index, block_parser=None):
 
     return source, destination, btc_amount, fee, data
 
-def get_tx_info2(tx_hex, block_parser=None):
+def get_tx_info3(tx_hex, block_parser=None):
+    return get_tx_info2(tx_hex, block_parser=block_parser, p2sh_support=True)
+
+def get_tx_info2(tx_hex, block_parser=None, p2sh_support=False):
     """Get multisig transaction info.
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
@@ -590,6 +597,11 @@ def get_tx_info2(tx_hex, block_parser=None):
 
         return destination, data
 
+    def decode_scripthash(asm):
+        destination = script.base58_check_encode(binascii.hexlify(asm[1]).decode('utf-8'), config.P2SH_ADDRESSVERSION)
+
+        return destination, None
+
     def decode_checkmultisig(asm):
         pubkeys, signatures_required = script.get_checkmultisig(asm)
         chunk = b''
@@ -630,6 +642,8 @@ def get_tx_info2(tx_hex, block_parser=None):
             new_destination, new_data = decode_checksig(asm)
         elif asm[-1] == 'OP_CHECKMULTISIG':
             new_destination, new_data = decode_checkmultisig(asm)
+        elif p2sh_support and asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:
+            new_destination, new_data = decode_scripthash(asm)
         else:
             raise DecodeError('unrecognised output type')
         assert not (new_destination and new_data)
@@ -674,6 +688,10 @@ def get_tx_info2(tx_hex, block_parser=None):
                 raise DecodeError('data in source')
         elif asm[-1] == 'OP_CHECKMULTISIG':
             new_source, new_data = decode_checkmultisig(asm)
+            if new_data or not new_source:
+                raise DecodeError('data in source')
+        elif p2sh_support and asm[0] == 'OP_HASH160' and asm[-1] == 'OP_EQUAL' and len(asm) == 3:
+            new_source, new_data = decode_scripthash(asm)
             if new_data or not new_source:
                 raise DecodeError('data in source')
         else:
