@@ -14,6 +14,7 @@ from bitcoin.core import CBlock
 from counterpartylib.lib import util
 from counterpartylib.lib import script
 from counterpartylib.lib import config
+from counterpartylib.lib import exceptions
 
 from counterpartylib.lib.backend import addrindex, btcd
 
@@ -123,7 +124,12 @@ def get_btc_supply(normalize=False):
 
 def is_scriptpubkey_spendable(scriptpubkey_hex, source, multisig_inputs=False):
     c_scriptpubkey = bitcoinlib.core.CScript(bitcoinlib.core.x(scriptpubkey_hex))
-    vout_address = script.scriptpubkey_to_address(c_scriptpubkey)
+
+    try:
+        vout_address = script.scriptpubkey_to_address(c_scriptpubkey)
+    except exceptions.DecodeError:
+        return False
+
     if not vout_address:
         return False
 

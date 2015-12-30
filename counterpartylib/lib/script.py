@@ -202,7 +202,7 @@ def get_asm(scriptpubkey):
                 # TODO: `data = element` (?)
                 asm.append(op)
     except bitcoinlib.core.script.CScriptTruncatedPushDataError:
-        raise exceptions.DecodeError('invalid pushdata due to truncation')
+        raise exceptions.PushDataDecodeError('invalid pushdata due to truncation')
     if not asm:
         raise exceptions.DecodeError('empty output')
     return asm
@@ -229,16 +229,20 @@ def get_checkmultisig(asm):
 
 def scriptpubkey_to_address(scriptpubkey):
     asm = get_asm(scriptpubkey)
+
     if asm[-1] == 'OP_CHECKSIG':
         try:
             checksig = get_checksig(asm)
-        except exceptions.DecodeError: # coinbase
+        except exceptions.DecodeError:  # coinbase
             return None
+
         return base58_check_encode(binascii.hexlify(checksig).decode('utf-8'), config.ADDRESSVERSION)
+
     elif asm[-1] == 'OP_CHECKMULTISIG':
         pubkeys, signatures_required = get_checkmultisig(asm)
         pubkeyhashes = [pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
         return construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes))
+
     return None
 
 
