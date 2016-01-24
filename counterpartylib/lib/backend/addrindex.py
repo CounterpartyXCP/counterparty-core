@@ -16,6 +16,7 @@ from counterpartylib.lib import config, script, util
 
 raw_transactions_cache = util.DictCache(size=config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE) #used in getrawtransaction_batch()
 unconfirmed_transactions_cache = None
+reverse_unconfirmed_transactions_cache = None
 
 class BackendRPCError(Exception):
     pass
@@ -89,26 +90,34 @@ def rpc_batch(request_list):
     return list(responses)
 
 def extract_addresses(txhash_list):
+    logger.debug('extract_addresses, txs: %d' % (len(txhash_list), ))
     tx_hashes_tx = getrawtransaction_batch(txhash_list, verbose=True)
     tx_hashes_addresses = {}
-    tx_inputs_hashes = set() #use set to avoid duplicates
-    
+    tx_inputs_hashes = set()  # use set to avoid duplicates
+
     for tx_hash, tx in tx_hashes_tx.items():
         tx_hashes_addresses[tx_hash] = set()
         for vout in tx['vout']:
             if 'addresses' in vout['scriptPubKey']:
                 tx_hashes_addresses[tx_hash].update(tuple(vout['scriptPubKey']['addresses']))
+
         tx_inputs_hashes.update([vin['txid'] for vin in tx['vin']])
 
-    raw_transactions = getrawtransaction_batch(list(tx_inputs_hashes), verbose=True)
-    for tx_hash, tx in tx_hashes_tx.items():
-        for vin in tx['vin']:
-            vin_tx = raw_transactions[vin['txid']]
-            if vin_tx is None: #bogus transaction
-                continue
-            vout = vin_tx['vout'][vin['vout']]
-            if 'addresses' in vout['scriptPubKey']:
-                tx_hashes_addresses[tx_hash].update(tuple(vout['scriptPubKey']['addresses']))
+    logger.debug('extract_addresses, input TXs: %d' % (len(tx_inputs_hashes), ))
+
+    # chunk txs to avoid huge memory spikes
+    for tx_inputs_hashes_chunk in util.chunkify(list(tx_inputs_hashes), config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE):
+        raw_transactions = getrawtransaction_batch(tx_inputs_hashes_chunk, verbose=True)
+        for tx_hash, tx in tx_hashes_tx.items():
+            for vin in tx['vin']:
+                vin_tx = raw_transactions.get(vin['txid'], None)
+
+                if not vin_tx:
+                    continue
+
+                vout = vin_tx['vout'][vin['vout']]
+                if 'addresses' in vout['scriptPubKey']:
+                    tx_hashes_addresses[tx_hash].update(tuple(vout['scriptPubKey']['addresses']))
 
     return tx_hashes_addresses, tx_hashes_tx
 
@@ -116,22 +125,76 @@ def unconfirmed_transactions(address):
     logger.debug("unconfirmed_transactions called: %s" % address)
     if unconfirmed_transactions_cache is None:
         raise Exception("Unconfirmed transactions cache is not initialized")
-    return unconfirmed_transactions_cache.get(address, [])
+
+    tx_hashes = unconfirmed_transactions_cache.get(address, set())
+
+    logger.debug("unconfirmed_transcations found: %s" % ",".join(list(tx_hashes)))
+
+    return list(getrawtransaction_batch(list(tx_hashes), verbose=True).values()) if len(tx_hashes) else []
 
 def refresh_unconfirmed_transactions_cache(mempool_txhash_list):
-    # NOTE: This operation can be very slow.
-    global unconfirmed_transactions_cache
+    global unconfirmed_transactions_cache, reverse_unconfirmed_transactions_cache
 
-    unconfirmed_txes = {}
-    tx_hashes_addresses, tx_hashes_tx = extract_addresses(mempool_txhash_list)
+    # turn list into set for better performance
+    mempool_txhash_list = set(mempool_txhash_list)
+
+    if unconfirmed_transactions_cache is None:
+        unconfirmed_transactions_cache = {}
+    if reverse_unconfirmed_transactions_cache is None:
+        reverse_unconfirmed_transactions_cache = {}
+
+    intersect_start_time = time.time()
+
+    # create diffs of new txs and txs that have been dropped
+    known_tx_hash_list = set(reverse_unconfirmed_transactions_cache.keys())
+    new_tx_hash_list = mempool_txhash_list.difference(known_tx_hash_list)  # mempool_txhash_list - known_tx_hash_list
+    old_tx_hash_list = known_tx_hash_list.difference(mempool_txhash_list)  # known_tx_hash_list - mempool_txhash_list
+
+    intersect_time = time.time() - intersect_start_time
+
+    logger.debug("refresh_unconfirmed_transactions_cache: %d txs, %d new, %d dropped" % (len(mempool_txhash_list), len(new_tx_hash_list), len(old_tx_hash_list)))
+
+    cleanup_start_time = time.time()
+
+    # cleanup the dropped txs
+    for tx_hash in old_tx_hash_list:
+        for address in reverse_unconfirmed_transactions_cache[tx_hash]:
+            unconfirmed_transactions_cache[address].remove(tx_hash)
+
+        del reverse_unconfirmed_transactions_cache[tx_hash]
+
+    cleanup_time = time.time() - cleanup_start_time
+
+    extract_start_time = time.time()
+
+    # tx_hashes_addresses is dict with tx addresses keyed by tx_hash
+    # tx_hashes_tx is dict with tx info keyed by tx_hash
+    tx_hashes_addresses, tx_hashes_tx = extract_addresses(list(new_tx_hash_list))
+
+    extract_time = time.time() - extract_start_time
+
+    cache_start_time = time.time()
+
+    # add txs to cache and reverse cache
     for tx_hash, addresses in tx_hashes_addresses.items():
+        reverse_unconfirmed_transactions_cache.setdefault(tx_hash, set())
+
         for address in addresses:
-            if address not in unconfirmed_txes:
-                unconfirmed_txes[address] = []
-            unconfirmed_txes[address].append(tx_hashes_tx[tx_hash])
-    unconfirmed_transactions_cache = unconfirmed_txes
-    logger.debug('Unconfirmed transactions cache refreshed ({} entries, from {} supported mempool txes)'.format(
-        len(unconfirmed_transactions_cache), len(mempool_txhash_list)))
+            unconfirmed_transactions_cache.setdefault(address, set())
+            unconfirmed_transactions_cache[address].add(tx_hash)
+            reverse_unconfirmed_transactions_cache[tx_hash].add(address)
+
+    cache_time = time.time() - cache_start_time
+
+    logger.debug('Unconfirmed transactions cache refreshed (from {} mempool txs, contained {} entries, {} new entries required parsing, {} were deleted)'.format(
+        len(mempool_txhash_list), len(reverse_unconfirmed_transactions_cache.keys()), len(new_tx_hash_list), len(old_tx_hash_list)))
+
+    logger.debug('timings; intersect: {}, cleanup: {}, extract: {}, cache: {}'.format(
+        "{:.2f}".format(intersect_time, 3),
+        "{:.2f}".format(cleanup_time, 3),
+        "{:.2f}".format(extract_time, 3),
+        "{:.2f}".format(cache_time, 3),
+    ))
 
 def searchrawtransactions(address, unconfirmed=False):
     # Get unconfirmed transactions.
@@ -163,8 +226,8 @@ def getblockhash(blockcount):
 def getblock(block_hash):
     return rpc('getblock', [block_hash, False])
 
-def getrawtransaction(tx_hash, verbose=False):
-    return getrawtransaction_batch([tx_hash], verbose=verbose)[tx_hash]
+def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
+    return getrawtransaction_batch([tx_hash], verbose=verbose, skip_missing=skip_missing)[tx_hash]
 
 def getrawmempool():
     return rpc('getrawmempool', [])
@@ -172,13 +235,16 @@ def getrawmempool():
 def sendrawtransaction(tx_hex):
     return rpc('sendrawtransaction', [tx_hex])
 
-def getrawtransaction_batch(txhash_list, verbose=False, _recursing=False):
+GETRAWTRANSACTION_MAX_RETRIES=2
+def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _retry=0):
+    _logger = logger.getChild("getrawtransaction_batch")
+
     if len(txhash_list) > config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE:
         #don't try to load in more than BACKEND_RAW_TRANSACTIONS_CACHE_SIZE entries in a single call
         txhash_list_chunks = util.chunkify(txhash_list, config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)
         txes = {}
         for txhash_list_chunk in txhash_list_chunks:
-            txes.update(getrawtransaction_batch(txhash_list_chunk, verbose=verbose))
+            txes.update(getrawtransaction_batch(txhash_list_chunk, verbose=verbose, skip_missing=skip_missing))
         return txes
     
     tx_hash_call_id = {}
@@ -205,7 +271,7 @@ def getrawtransaction_batch(txhash_list, verbose=False, _recursing=False):
     for tx_hash in txhash_list.difference(noncached_txhashes):
         raw_transactions_cache.refresh(tx_hash)
 
-    logger.debug("getrawtransaction_batch: txhash_list size: {} / raw_transactions_cache size: {} / # getrawtransaction calls: {}".format(
+    _logger.debug("getrawtransaction_batch: txhash_list size: {} / raw_transactions_cache size: {} / # getrawtransaction calls: {}".format(
         len(txhash_list), len(raw_transactions_cache), len(payload)))
 
     # populate cache
@@ -216,6 +282,10 @@ def getrawtransaction_batch(txhash_list, verbose=False, _recursing=False):
                 tx_hex = response['result']
                 tx_hash = tx_hash_call_id[response['id']]
                 raw_transactions_cache[tx_hash] = tx_hex
+            elif skip_missing and 'error' in response and response['error']['code'] == -5:
+                raw_transactions_cache[tx_hash] = None
+                logging.debug('Missing TX with no raw info skipped (txhash: {}): {}'.format(
+                    tx_hash_call_id.get(response.get('id', '??'), '??'), response['error']))
             else:
                 #TODO: this seems to happen for bogus transactions? Maybe handle it more gracefully than just erroring out?
                 raise BackendRPCError('{} (txhash:: {})'.format(response['error'], tx_hash_call_id.get(response.get('id', '??'), '??')))
@@ -227,13 +297,13 @@ def getrawtransaction_batch(txhash_list, verbose=False, _recursing=False):
             if verbose:
                 result[tx_hash] = raw_transactions_cache[tx_hash]
             else:
-                result[tx_hash] = raw_transactions_cache[tx_hash]['hex']
+                result[tx_hash] = raw_transactions_cache[tx_hash]['hex'] if raw_transactions_cache[tx_hash] is not None else None
         except KeyError as e: #shows up most likely due to finickyness with addrindex not always returning results that we need...
-            logger.debug("tx missing in rawtx cache: {} -- txhash_list size: {}, hash: {} / raw_transactions_cache size: {} / # rpc_batch calls: {} / txhash in noncached_txhashes: {} / txhash in txhash_list: {} -- list {}".format(
+            _logger.warning("tx missing in rawtx cache: {} -- txhash_list size: {}, hash: {} / raw_transactions_cache size: {} / # rpc_batch calls: {} / txhash in noncached_txhashes: {} / txhash in txhash_list: {} -- list {}".format(
                 e, len(txhash_list), hashlib.md5(json.dumps(list(txhash_list)).encode()).hexdigest(), len(raw_transactions_cache), len(payload),
                 tx_hash in noncached_txhashes, tx_hash in txhash_list, list(txhash_list.difference(noncached_txhashes)) ))
-            if not _recursing: #try again
-                r = getrawtransaction_batch([tx_hash], verbose=verbose, _recursing=True)
+            if  _retry < GETRAWTRANSACTION_MAX_RETRIES: #try again
+                r = getrawtransaction_batch([tx_hash], verbose=verbose, skip_missing=skip_missing, _retry=_retry+1)
                 result[tx_hash] = r[tx_hash]
             else:
                 raise #already tried again, give up

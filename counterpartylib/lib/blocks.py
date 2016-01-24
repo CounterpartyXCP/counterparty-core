@@ -17,6 +17,7 @@ import platform
 from Crypto.Cipher import ARC4
 import apsw
 import csv
+import copy
 import http
 
 import bitcoin as bitcoinlib
@@ -46,6 +47,10 @@ TABLES = ['credits', 'debits', 'messages'] + \
          'rps_match_expirations', 'rps_expirations', 'rpsresolves',
          'rps_matches', 'rps', 'executions', 'storage', 'suicides', 'nonces',
          'postqueue', 'contracts', 'destructions', 'assets']
+# Compose list of tables tracked by undolog
+UNDOLOG_TABLES = copy.copy(TABLES)
+UNDOLOG_TABLES.remove('messages')
+UNDOLOG_TABLES += ['balances']
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(CURR_DIR + '/../mainnet_burns.csv', 'r') as f:
@@ -377,7 +382,7 @@ def initialise(db):
                         first_undo_index INTEGER)
                    ''')
     # Create undolog triggers for all tables in TABLES list, plus the 'balances' table
-    for table in TABLES + ['balances']:
+    for table in UNDOLOG_TABLES:
         columns = [column['name'] for column in cursor.execute('''PRAGMA table_info({})'''.format(table))]
         cursor.execute('''CREATE TRIGGER IF NOT EXISTS _{}_insert AFTER INSERT ON {} BEGIN
                             INSERT INTO undolog VALUES(NULL, 'DELETE FROM {} WHERE rowid='||new.rowid);
@@ -395,6 +400,9 @@ def initialise(db):
                             INSERT INTO undolog VALUES(NULL, 'INSERT INTO {}(rowid,{}) VALUES('||old.rowid||',{})');
                             END;
                        '''.format(table, table, table, ','.join(columns), ','.join(columns_parts)))
+    # Drop undolog tables on messages table if they exist (fix for adding them in 9.52.0)
+    for trigger_type in ('insert', 'update', 'delete'):
+        cursor.execute("DROP TRIGGER IF EXISTS _messages_{}".format(trigger_type))
 
     # Mempool messages
     # NOTE: `status`, 'block_index` are removed from bindings.
@@ -612,9 +620,9 @@ def get_tx_info2(tx_hex, block_parser=None):
 
         # Ignore transactions with invalid script.
         try:
-          asm = script.get_asm(vout.scriptPubKey)
+            asm = script.get_asm(vout.scriptPubKey)
         except CScriptInvalidError as e:
-          raise DecodeError(e)
+            raise DecodeError(e)
 
         if asm[0] == 'OP_RETURN':
             new_destination, new_data = decode_opreturn(asm)
@@ -840,7 +848,6 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
     if block_hash == None:
         block_hash = config.MEMPOOL_BLOCK_HASH
         block_index = config.MEMPOOL_BLOCK_INDEX
-        backend.extract_addresses([tx_hash,]) # prepare cache for backend.unconfirmed_transactions().
     else:
         assert block_index == util.CURRENT_BLOCK_INDEX
 
@@ -871,7 +878,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex=N
         cursor.close()
         return tx_index + 1
     else:
-        logger.debug('Skipping transaction: {}'.format(tx_hash))
+        logger.getChild('list_tx.skip').debug('Skipping transaction: {}'.format(tx_hash))
 
     return tx_index
 
@@ -1058,7 +1065,7 @@ def follow(db):
                 continue
             else:
                 raise e
-            
+
         # Get new blocks.
         if block_index <= block_count:
 
@@ -1173,86 +1180,115 @@ def follow(db):
             curr_time = int(time.time())
             mempool_tx_index = tx_index
 
+            xcp_mempool = []
+            raw_mempool = backend.getrawmempool()
+
             # For each transaction in Bitcoin Core mempool, if it’s new, create
             # a fake block, a fake transaction, capture the generated messages,
             # and then save those messages.
             # Every transaction in mempool is parsed independently. (DB is rolled back after each one.)
-            mempool = []
-            raw_mempool = backend.getrawmempool()
+            # We first filter out which transactions we've already parsed before so we can batch fetch their raw data
+            parse_txs = []
             for tx_hash in raw_mempool:
                 # If already in mempool, copy to new one.
                 if tx_hash in old_mempool_hashes:
                     for message in old_mempool:
                         if message['tx_hash'] == tx_hash:
-                            mempool.append((tx_hash, message))
+                            xcp_mempool.append((tx_hash, message))
 
-                # If already skipped, skip it again.
-                elif tx_hash not in not_supported:
+                # If not a supported XCP transaction, skip.
+                elif tx_hash in not_supported:
+                    pass
 
-                    # Else: list, parse and save it.
-                    try:
-                        with db:
-                            # List the fake block.
-                            cursor.execute('''INSERT INTO blocks(
-                                                block_index,
-                                                block_hash,
-                                                block_time) VALUES(?,?,?)''',
-                                                (config.MEMPOOL_BLOCK_INDEX,
-                                                 config.MEMPOOL_BLOCK_HASH,
-                                                 curr_time)
-                                          )
+                # Else: list, parse and save it.
+                else:
+                    parse_txs.append(tx_hash)
 
-                            # List transaction.
-                            try:    # Sometimes the transactions can’t be found: `{'code': -5, 'message': 'No information available about transaction'} Is txindex enabled in Bitcoind?`
-                                mempool_tx_index = list_tx(db, None, block_index, curr_time, tx_hash, mempool_tx_index)
-                            except backend.addrindex.BackendRPCError:
-                                raise MempoolError
+            # fetch raw for all transactions that need to be parsed
+            # Sometimes the transactions can’t be found: `{'code': -5, 'message': 'No information available about transaction'}`
+            #  - is txindex enabled in Bitcoind?
+            #  - or was there a block found while batch feting the raw txs
+            #  - or was there a double spend for w/e reason accepted into the mempool (replace-by-fee?)
+            try:
+                raw_transactions = backend.getrawtransaction_batch(raw_mempool)
+            except backend.addrindex.BackendRPCError as e:
+                logger.warning('Failed to fetch raw for mempool TXs, restarting loop; %s', (e, ))
+                continue  # restart the follow loop
 
-                            # Parse transaction.
-                            cursor.execute('''SELECT * FROM transactions \
-                                              WHERE tx_hash = ?''',
-                                           (tx_hash,))
-                            transactions = list(cursor)
-                            if transactions:
-                                assert len(transactions) == 1
-                                transaction = transactions[0]
-                                supported = parse_tx(db, transaction)
-                                if not supported:
-                                    not_supported[tx_hash] = ''
-                                    not_supported_sorted.append((block_index, tx_hash))
-                            else:
-                                # If a transaction hasn’t been added to the
-                                # table `transactions`, then it’s not a
-                                # Counterparty transaction.
+            for tx_hash in parse_txs:
+                try:
+                    with db:
+                        # List the fake block.
+                        cursor.execute('''INSERT INTO blocks(
+                                            block_index,
+                                            block_hash,
+                                            block_time) VALUES(?,?,?)''',
+                                       (config.MEMPOOL_BLOCK_INDEX,
+                                        config.MEMPOOL_BLOCK_HASH,
+                                        curr_time)
+                                      )
+
+                        tx_hex = raw_transactions[tx_hash]
+                        mempool_tx_index = list_tx(db, None, block_index, curr_time, tx_hash, tx_index=mempool_tx_index, tx_hex=tx_hex)
+
+                        # Parse transaction.
+                        cursor.execute('''SELECT * FROM transactions WHERE tx_hash = ?''', (tx_hash,))
+                        transactions = list(cursor)
+                        if transactions:
+                            assert len(transactions) == 1
+                            transaction = transactions[0]
+                            supported = parse_tx(db, transaction)
+                            if not supported:
                                 not_supported[tx_hash] = ''
                                 not_supported_sorted.append((block_index, tx_hash))
-                                raise MempoolError
-
-                            # Save transaction and side‐effects in memory.
-                            cursor.execute('''SELECT * FROM messages WHERE block_index = ?''', (config.MEMPOOL_BLOCK_INDEX,))
-                            for message in list(cursor):
-                                mempool.append((tx_hash, message))
-
-                            # Rollback.
+                        else:
+                            # If a transaction hasn’t been added to the
+                            # table `transactions`, then it’s not a
+                            # Counterparty transaction.
+                            not_supported[tx_hash] = ''
+                            not_supported_sorted.append((block_index, tx_hash))
                             raise MempoolError
-                    except MempoolError:
-                        pass
+
+                        # Save transaction and side‐effects in memory.
+                        cursor.execute('''SELECT * FROM messages WHERE block_index = ?''', (config.MEMPOOL_BLOCK_INDEX,))
+                        for message in list(cursor):
+                            xcp_mempool.append((tx_hash, message))
+
+                        # Rollback.
+                        raise MempoolError
+                except MempoolError:
+                    pass
 
             # Re‐write mempool messages to database.
             with db:
                 cursor.execute('''DELETE FROM mempool''')
-                for message in mempool:
+                for message in xcp_mempool:
                     tx_hash, new_message = message
                     new_message['tx_hash'] = tx_hash
-                    cursor.execute('''INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp)''', (new_message))
+                    cursor.execute('''INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp)''', new_message)
                     
-            backend.refresh_unconfirmed_transactions_cache([tx_hash for tx_hash, message in mempool])
+            refresh_start_time = time.time()
+            # let the backend refresh it's mempool stored data
+            # Sometimes the transactions can’t be found: `{'code': -5, 'message': 'No information available about transaction'}`
+            #  - is txindex enabled in Bitcoind?
+            #  - or was there a block found while batch feting the raw txs
+            #  - or was there a double spend for w/e reason accepted into the mempool (replace-by-fee?)
+            try:
+                backend.refresh_unconfirmed_transactions_cache(raw_mempool)
+            except backend.addrindex.BackendRPCError as e:
+                logger.warning('Failed to fetch raw for mempool TXs, restarting loop; %s', (e, ))
+                continue  # restart the follow loop
+
+            refresh_time = time.time() - refresh_start_time
 
             elapsed_time = time.time() - start_time
             sleep_time = config.BACKEND_POLL_INTERVAL - elapsed_time if elapsed_time <= config.BACKEND_POLL_INTERVAL else 0
 
-            logger.debug('Refresh mempool: %s CP txs seen, out of %s total entries (took %ss, next refresh in %ss)' % (
-                len(mempool), len(raw_mempool), "{:.2f}".format(elapsed_time, 3), "{:.2f}".format(sleep_time, 3)))
+            logger.debug('Refresh mempool: %s XCP txs seen, out of %s total entries (took %ss (%ss was backend refresh), next refresh in %ss)' % (
+                len(xcp_mempool), len(raw_mempool),
+                "{:.2f}".format(elapsed_time, 3),
+                "{:.2f}".format(refresh_time, 3),
+                "{:.2f}".format(sleep_time, 3)))
 
             # Wait
             db.wal_checkpoint(mode=apsw.SQLITE_CHECKPOINT_PASSIVE)

@@ -6,7 +6,7 @@ UNIT = 100000000        # The same across assets.
 
 # Versions
 VERSION_MAJOR = 9
-VERSION_MINOR = 52
+VERSION_MINOR = 53
 VERSION_REVISION = 0
 VERSION_STRING = str(VERSION_MAJOR) + '.' + str(VERSION_MINOR) + '.' + str(VERSION_REVISION)
 
@@ -26,7 +26,7 @@ MAX_INT = 2**63 - 1
 
 
 # Bitcoin Core
-OP_RETURN_MAX_SIZE = 40 # bytes
+OP_RETURN_MAX_SIZE = 80  # bytes
 
 
 # Currency agnosticism

@@ -33,7 +33,7 @@ def pytest_generate_tests(metafunc):
     """Generate all py.test cases. Checks for different types of tests and creates proper context."""
     if metafunc.function.__name__ == 'test_vector':
         args = util_test.vector_to_args(UNITTEST_VECTOR, pytest.config.option.function)
-        metafunc.parametrize('tx_name, method, inputs, outputs, error, records', args)
+        metafunc.parametrize('tx_name, method, inputs, outputs, error, records, comment', args)
     elif metafunc.function.__name__ == 'test_scenario':
         args = []
         for scenario_name in INTEGRATION_SCENARIOS:

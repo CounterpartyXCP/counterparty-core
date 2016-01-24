@@ -23,6 +23,8 @@ class ValidateError(MessageError):
     pass
 class DecodeError(MessageError):
     pass
+class PushDataDecodeError(DecodeError):
+    pass
 class BTCOnlyError(MessageError):
     pass
 

@@ -14,6 +14,7 @@ from bitcoin.core import CBlock
 from counterpartylib.lib import util
 from counterpartylib.lib import script
 from counterpartylib.lib import config
+from counterpartylib.lib import exceptions
 
 from counterpartylib.lib.backend import addrindex, btcd
 
@@ -50,11 +51,11 @@ def getblock(block_hash):
 def searchrawtransactions(address, unconfirmed=False):
     return BACKEND().searchrawtransactions(address, unconfirmed=unconfirmed)
 
-def getrawtransaction(tx_hash, verbose=False):
-    return BACKEND().getrawtransaction(tx_hash, verbose=verbose)
+def getrawtransaction(tx_hash, verbose=False, skip_missing=False):
+    return BACKEND().getrawtransaction(tx_hash, verbose=verbose, skip_missing=skip_missing)
 
-def getrawtransaction_batch(txhash_list, verbose=False):
-    return BACKEND().getrawtransaction_batch(txhash_list, verbose=verbose)
+def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False):
+    return BACKEND().getrawtransaction_batch(txhash_list, verbose=verbose, skip_missing=skip_missing)
 
 def sendrawtransaction(tx_hex):
     return BACKEND().sendrawtransaction(tx_hex)
@@ -123,7 +124,12 @@ def get_btc_supply(normalize=False):
 
 def is_scriptpubkey_spendable(scriptpubkey_hex, source, multisig_inputs=False):
     c_scriptpubkey = bitcoinlib.core.CScript(bitcoinlib.core.x(scriptpubkey_hex))
-    vout_address = script.scriptpubkey_to_address(c_scriptpubkey)
+
+    try:
+        vout_address = script.scriptpubkey_to_address(c_scriptpubkey)
+    except exceptions.DecodeError:
+        return False
+
     if not vout_address:
         return False
 

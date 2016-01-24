@@ -1,4 +1,18 @@
-## Client Versions ##
+## Library Versions ##
+* v9.53.0 (2016-01-18)
+    * Remove `messages` table from being covered by "undolog" functionality added in `v9.52.0`.
+    * Add `min_message_index` to `get_blocks` API call.
+    * Retry more than once with `getrawtransaction_batch` if a specific txhash is not found in `bitcoind`'s addrindex.
+    * Update `setup.py` to properly utilize (newer) egg-style install. Previously the "old" style install was invoked when it shouldn't have been.
+    * Update backend mempool caching code to keep full mempool, instead of just XCP transactions (from @rubensayshi).
+    * Increase max `OP_RETURN` size used from 40 bytes to 80 bytes (from @rubensayshi).
+    * Add ModuleLoggingFilter for (NodeJS-style) module-level log filtering (from @rubensayshi).
+    * Fixed `backend.get_unspent_outputs` from raising exception when a transaction contains an output with garbage data (from @rubensayshi).
+    * `base58_check_decode` padding byte used should be `x00`, not the `version` (from @rubensayshi).
+    * Require `sudo` for non-container `travis` builds, due to our `serpent` dependency (from @rubensayshi).
+    * Made `getrawtransaction_batch` deal better with missing raw transactions from `bitcoind`.
+    * A number of other small bug fixes, logging tweaks, etc.
+    * NOTE: This versions mhash (message hash) will be different than that of nodes running `9.52.0`, but the other hashes should continue to match.
 * v9.52.0 (2015-10-31)
     * Added "undolog" functionality to avoid full reparses when encountering a blockchain reorganisation
     * Removed use of `tornado` library in the API module. We use `flask`'s threaded server instead

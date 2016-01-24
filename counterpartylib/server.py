@@ -79,7 +79,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
                 rpc_host=None, rpc_port=None,
                 rpc_user=None, rpc_password=None,
                 rpc_no_allow_cors=False,
-                force=False, verbose=False,
+                force=False, verbose=False, console_logfilter=None,
                 requests_timeout=config.DEFAULT_REQUESTS_TIMEOUT,
                 rpc_batch_size=config.DEFAULT_RPC_BATCH_SIZE,
                 check_asset_conservation=config.DEFAULT_CHECK_ASSET_CONSERVATION,
@@ -137,7 +137,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
 
     # Set up logging.
     root_logger = logging.getLogger()    # Get root logger.
-    log.set_up(root_logger, verbose=verbose, logfile=config.LOG)
+    log.set_up(root_logger, verbose=verbose, logfile=config.LOG, console_logfilter=console_logfilter)
     # Log unhandled errors.
     def handle_exception(exc_type, exc_value, exc_traceback):
         logger.error("Unhandled Exception", exc_info=(exc_type, exc_value, exc_traceback))
