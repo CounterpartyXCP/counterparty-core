@@ -1,4 +1,7 @@
 ## Library Versions ##
+* v9.54.0 (2016-03-05)
+    * Max fee fraction of 1
+    * Don't handle bet matches for invalid broadcast.
 * v9.53.0 (2016-01-18)
     * Remove `messages` table from being covered by "undolog" functionality added in `v9.52.0`.
     * Add `min_message_index` to `get_blocks` API call.
