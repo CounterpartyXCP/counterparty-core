@@ -82,41 +82,44 @@ def parse_tx(db, tx):
     rps_enabled = tx['block_index'] >= 308500 or config.TESTNET
 
     message = tx['data'][4:]
-    if message_type_id == send.ID:
-        send.parse(db, tx, message)
-    elif message_type_id == order.ID:
-        order.parse(db, tx, message)
-    elif message_type_id == btcpay.ID:
-        btcpay.parse(db, tx, message)
-    elif message_type_id == issuance.ID:
-        issuance.parse(db, tx, message)
-    elif message_type_id == broadcast.ID:
-        broadcast.parse(db, tx, message)
-    elif message_type_id == bet.ID:
-        bet.parse(db, tx, message)
-    elif message_type_id == dividend.ID:
-        dividend.parse(db, tx, message)
-    elif message_type_id == cancel.ID:
-        cancel.parse(db, tx, message)
-    elif message_type_id == rps.ID and rps_enabled:
-        rps.parse(db, tx, message)
-    elif message_type_id == rpsresolve.ID and rps_enabled:
-        rpsresolve.parse(db, tx, message)
-    elif message_type_id == publish.ID and tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
-        publish.parse(db, tx, message)
-    elif message_type_id == execute.ID and tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
-        execute.parse(db, tx, message)
-    elif message_type_id == destroy.ID:
-        destroy.parse(db, tx, message)
-    else:
-        cursor.execute('''UPDATE transactions \
-                                   SET supported=? \
-                                   WHERE tx_hash=?''',
-                                (False, tx['tx_hash']))
-        if tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
-            logger.info('Unsupported transaction: hash {}; data {}'.format(tx['tx_hash'], tx['data']))
-        cursor.close()
-        return False
+    try:
+        if message_type_id == send.ID:
+            send.parse(db, tx, message)
+        elif message_type_id == order.ID:
+            order.parse(db, tx, message)
+        elif message_type_id == btcpay.ID:
+            btcpay.parse(db, tx, message)
+        elif message_type_id == issuance.ID:
+            issuance.parse(db, tx, message)
+        elif message_type_id == broadcast.ID:
+            broadcast.parse(db, tx, message)
+        elif message_type_id == bet.ID:
+            bet.parse(db, tx, message)
+        elif message_type_id == dividend.ID:
+            dividend.parse(db, tx, message)
+        elif message_type_id == cancel.ID:
+            cancel.parse(db, tx, message)
+        elif message_type_id == rps.ID and rps_enabled:
+            rps.parse(db, tx, message)
+        elif message_type_id == rpsresolve.ID and rps_enabled:
+            rpsresolve.parse(db, tx, message)
+        elif message_type_id == publish.ID and tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
+            publish.parse(db, tx, message)
+        elif message_type_id == execute.ID and tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
+            execute.parse(db, tx, message)
+        elif message_type_id == destroy.ID:
+            destroy.parse(db, tx, message)
+        else:
+            cursor.execute('''UPDATE transactions \
+                                    SET supported=? \
+                                    WHERE tx_hash=?''',
+                                    (False, tx['tx_hash']))
+            if tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
+                logger.info('Unsupported transaction: hash {}; data {}'.format(tx['tx_hash'], tx['data']))
+            cursor.close()
+            return False
+    except (util.CreditError, util.DebitError):
+        pass
 
     # NOTE: for debugging (check asset conservation after every `N` transactions).
     # if not tx['tx_index'] % N:
@@ -814,7 +817,7 @@ def kickstart(db, bitcoind_dir):
                 tx_chunks = [transactions[i:i+90] for i in range(0, len(transactions), 90)]
                 for tx_chunk in tx_chunks:
                     sql = '''INSERT INTO transactions
-                                (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data) 
+                                (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data)
                              VALUES '''
                     bindings = ()
                     bindings_place = []
