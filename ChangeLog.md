@@ -1,4 +1,6 @@
 ## Library Versions ##
+* v9.54.0 (2016-03-05)
+    * Skip the whole block, and recover gracefully, when encountering a deterministic exception such as `CreditError`
 * v9.53.0 (2016-01-18)
     * Remove `messages` table from being covered by "undolog" functionality added in `v9.52.0`.
     * Add `min_message_index` to `get_blocks` API call.

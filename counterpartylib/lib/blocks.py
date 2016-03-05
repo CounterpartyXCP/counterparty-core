@@ -59,6 +59,9 @@ with open(CURR_DIR + '/../mainnet_burns.csv', 'r') as f:
     for line in mainnet_burns_reader:
         MAINNET_BURNS[line['tx_hash']] = line
 
+class FailedTransactionError(Exception):
+    logger.error('CAUGHT EXCEPTION: Credit or Debit Error. Skipping block.')
+
 def parse_tx(db, tx):
     """Parse the transaction, return True for success."""
     cursor = db.cursor()
@@ -115,8 +118,8 @@ def parse_tx(db, tx):
         destroy.parse(db, tx, message)
     else:
         cursor.execute('''UPDATE transactions \
-                                   SET supported=? \
-                                   WHERE tx_hash=?''',
+                                SET supported=? \
+                                WHERE tx_hash=?''',
                                 (False, tx['tx_hash']))
         if tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
             logger.info('Unsupported transaction: hash {}; data {}'.format(tx['tx_hash'], tx['data']))
@@ -139,6 +142,7 @@ def parse_block(db, block_index, block_time,
 
     The unused arguments `ledger_hash` and `txlist_hash` are for the test suite.
     """
+
     undolog_cursor = db.cursor()
     #remove the row tracer and exec tracer on this cursor, so we don't utilize them with undolog operations...
     undolog_cursor.setexectrace(None)
@@ -167,24 +171,29 @@ def parse_block(db, block_index, block_time,
             VALUES(?,?)''', (block_index, 1,))
     undolog_cursor.close()
 
-    # Expire orders, bets and rps.
-    order.expire(db, block_index)
-    bet.expire(db, block_index, block_time)
-    rps.expire(db, block_index)
+    try:
 
-    # Parse transactions, sorting them by type.
-    cursor = db.cursor()
-    cursor.execute('''SELECT * FROM transactions \
-                      WHERE block_index=? ORDER BY tx_index''',
-                   (block_index,))
-    txlist = []
-    for tx in list(cursor):
-        parse_tx(db, tx)
-        txlist.append('{}{}{}{}{}{}'.format(tx['tx_hash'], tx['source'], tx['destination'],
-                                            tx['btc_amount'], tx['fee'],
-                                            binascii.hexlify(tx['data']).decode('UTF-8')))
+        # Expire orders, bets and rps.
+        order.expire(db, block_index)
+        bet.expire(db, block_index, block_time)
+        rps.expire(db, block_index)
 
-    cursor.close()
+        # Parse transactions, sorting them by type.
+        cursor = db.cursor()
+        cursor.execute('''SELECT * FROM transactions \
+                        WHERE block_index=? ORDER BY tx_index''',
+                    (block_index,))
+        txlist = []
+        for tx in list(cursor):
+            parse_tx(db, tx)
+            txlist.append('{}{}{}{}{}{}'.format(tx['tx_hash'], tx['source'], tx['destination'],
+                                                tx['btc_amount'], tx['fee'],
+                                                binascii.hexlify(tx['data']).decode('UTF-8')))
+
+        cursor.close()
+
+    except (util.CreditError, util.DebitError):
+        raise FailedTransactionError
 
     # Calculate consensus hashes.
     new_txlist_hash, found_txlist_hash = check.consensus_hash(db, 'txlist_hash', previous_txlist_hash, txlist)
@@ -809,10 +818,10 @@ def reparse(db, block_index=None, quiet=False):
             for block in cursor.fetchall():
                 util.CURRENT_BLOCK_INDEX = block['block_index']
                 previous_ledger_hash, previous_txlist_hash, previous_messages_hash, previous_found_messages_hash = parse_block(
-                                                                         db, block['block_index'], block['block_time'],
-                                                                         previous_ledger_hash=previous_ledger_hash,
-                                                                         previous_txlist_hash=previous_txlist_hash,
-                                                                         previous_messages_hash=previous_messages_hash)
+                                                                        db, block['block_index'], block['block_time'],
+                                                                        previous_ledger_hash=previous_ledger_hash,
+                                                                        previous_txlist_hash=previous_txlist_hash,
+                                                                        previous_messages_hash=previous_messages_hash)
                 logger.info('Block (re-parse): %s (hashes: L:%s / TX:%s / M:%s%s)' % (
                     block['block_index'], previous_ledger_hash[-5:], previous_txlist_hash[-5:], previous_messages_hash[-5:],
                     (' [overwrote %s]' % previous_found_messages_hash) if previous_found_messages_hash and previous_found_messages_hash != previous_messages_hash else ''))
@@ -1122,30 +1131,33 @@ def follow(db):
             block_time = block.nTime
             txhash_list = backend.get_txhash_list(block)
             raw_transactions = backend.getrawtransaction_batch(txhash_list)
-            with db:
-                util.CURRENT_BLOCK_INDEX = block_index
+            try:
+                with db:
+                    util.CURRENT_BLOCK_INDEX = block_index
 
-                # List the block.
-                cursor.execute('''INSERT INTO blocks(
-                                    block_index,
-                                    block_hash,
-                                    block_time,
-                                    previous_block_hash,
-                                    difficulty) VALUES(?,?,?,?,?)''',
-                                    (block_index,
-                                    block_hash,
-                                    block_time,
-                                    previous_block_hash,
-                                    block.difficulty)
-                              )
+                    # List the block.
+                    cursor.execute('''INSERT INTO blocks(
+                                        block_index,
+                                        block_hash,
+                                        block_time,
+                                        previous_block_hash,
+                                        difficulty) VALUES(?,?,?,?,?)''',
+                                        (block_index,
+                                        block_hash,
+                                        block_time,
+                                        previous_block_hash,
+                                        block.difficulty)
+                                )
 
-                # List the transactions in the block.
-                for tx_hash in txhash_list:
-                    tx_hex = raw_transactions[tx_hash]
-                    tx_index = list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex)
+                    # List the transactions in the block.
+                    for tx_hash in txhash_list:
+                        tx_hex = raw_transactions[tx_hash]
+                        tx_index = list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, tx_hex)
 
-                # Parse the transactions in the block.
-                new_ledger_hash, new_txlist_hash, new_messages_hash, found_messages_hash = parse_block(db, block_index, block_time)
+                    # Parse the transactions in the block.
+                    new_ledger_hash, new_txlist_hash, new_messages_hash, found_messages_hash = parse_block(db, block_index, block_time)
+            except FailedTransactionError:
+                pass
 
             # When newly caught up, check for conservation of assets.
             if block_index == block_count:
