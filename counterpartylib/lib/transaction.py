@@ -19,6 +19,7 @@ from Crypto.Cipher import ARC4
 from bitcoin.core.script import CScript
 from bitcoin.core import x
 from bitcoin.core import b2lx
+import expiringdict
 
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
@@ -39,6 +40,8 @@ OP_3 = b'\x53'
 OP_CHECKMULTISIG = b'\xae'
 
 D = decimal.Decimal
+UTXO_AGING_CACHE = None
+
 
 def print_coin(coin):
     return 'amount: {}; txid: {}; vout: {}; confirmations: {}'.format(coin['amount'], coin['txid'], coin['vout'], coin.get('confirmations', '?')) # simplify and make deterministic
@@ -293,6 +296,8 @@ def construct (db, tx_info, encoding='auto',
     if not isinstance(fee_provided, int):
         raise exceptions.TransactionError('Fee provided must be in satoshis.')
 
+    if UTXO_AGING_CACHE is None and config.UTXO_AGING_CACHE_MAX_ADDRESSES > 0: #initialize if configured
+        UTXO_AGING_CACHE = util.DictCache(size=config.UTXO_AGING_CACHE_MAX_ADDRESSES)
 
     '''Destinations'''
 
@@ -398,6 +403,21 @@ def construct (db, tx_info, encoding='auto',
             unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, unspent_tx_hash=unspent_tx_hash, multisig_inputs=multisig_inputs)
         else:
             unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, multisig_inputs=multisig_inputs)
+
+        if UTXO_AGING_CACHE is not None:
+            if source not in UTXO_AGING_CACHE:
+                UTXO_AGING_CACHE[source] = expiringdict.ExpiringDict(max_age_seconds=config.UTXO_AGING_CACHE_MAX_AGE)
+                
+            make_outkey = lambda output: '{}{}'.format(output['txid'], output['vout'])
+            unspentkeys = {make_outkey(output) for output in unspent}
+            
+            # Filter out any UTXOs that are currently aging from unspent
+            filtered_unspentkeys = unspentkeys - UTXO_AGING_CACHE[source].keys()
+            unspent = [output for output in unspent if make_outkey(output) in filtered_unspentkeys]
+            
+            # Start aging all UTXOs in the newly filtered unspent
+            for output in unspent:
+                UTXO_AGING_CACHE[source][make_outkey(output)] = output
 
         unspent = backend.sort_unspent_txouts(unspent)
         logger.debug('Sorted UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
