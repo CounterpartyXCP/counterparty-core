@@ -60,7 +60,7 @@ with open(CURR_DIR + '/../mainnet_burns.csv', 'r') as f:
         MAINNET_BURNS[line['tx_hash']] = line
 
 class FailedTransactionError(Exception):
-    logger.error('CAUGHT EXCEPTION: Credit or Debit Error')
+    logger.error('CAUGHT EXCEPTION: Credit or Debit Error. Skipping block.')
 
 def parse_tx(db, tx):
     """Parse the transaction, return True for success."""
