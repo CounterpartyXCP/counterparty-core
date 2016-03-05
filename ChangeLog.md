@@ -1,5 +1,6 @@
 ## Library Versions ##
 * v9.54.0 (2016-03-05)
+    * Execute post install tasks when called via `pip`
     * Max fee fraction of 1
     * Don't handle bet matches for invalid broadcast.
 * v9.53.0 (2016-01-18)
