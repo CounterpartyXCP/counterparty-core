@@ -6,7 +6,7 @@ tests if the outputs of all scenarios are identical. It also tests the similarit
 scenario (for instance `simplesig` scenario is the base scenario for all mutlisig scenarios).
 
 To add (or update) a transaction in a scenario, or add a scenario, just update `scenarios.py` and run `py.test --skiptestbook=all --savescenarios`
-This command will generates new outputs for each scenario (.new.json, .new.sql and .new.log), if you are satisfied with the new output just rename them (remove the .new). 
+This command will generates new outputs for each scenario (.new.json, .new.sql and .new.log), if you are satisfied with the new output just rename them (remove the .new).
 You need to do this every time you update UNITTEST_FIXTURE.
 
 Moreover, some functions' output depends on scenarios staying the same (for instance, function returning the last message).
@@ -68,7 +68,7 @@ def generate_standard_scenario(address1, address2, order_matches):
         ['send', (address1, address2, 'BBBC', round(DP['quantity'] / 190000)), {'encoding': 'multisig'}],
         ['dividend', (address1, 600, 'BBBB', 'XCP'), {'encoding': 'multisig'}],
         ['dividend', (address1, 800, 'BBBC', 'XCP'), {'encoding': 'multisig'}],
-        ['broadcast', (address1, 1388000000, 100, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],
+        ['broadcast', (address1, 1388000000, 100, 0.99999999, 'Unit Test'), {'encoding': 'multisig'}],
         ['bet', (address1, address1, 0, 1388000100, DP['small'], round(DP['small'] / 2), 0.0, 15120, DP['expiration']), {'encoding': 'multisig'}],
         ['bet', (address1, address1, 1, 1388000100, round(DP['small'] / 2), round(DP['small'] * .83), 0.0, 15120, DP['expiration']), {'encoding': 'multisig'}],
         ['bet', (address1, address1, 0, 1388000100, DP['small'] * 3, DP['small'] * 7, 0.0, 5040, DP['expiration']), {'encoding': 'multisig'}],
