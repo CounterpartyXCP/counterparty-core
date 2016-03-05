@@ -70,12 +70,12 @@ def initialise(db):
 def validate (db, source, timestamp, value, fee_fraction_int, text, block_index):
     problems = []
 
-    if fee_fraction_int > 4294967295:
-        problems.append('fee fraction greater than 42.94967295')
-
     if util.enabled('max_fee_fraction'):
-        if fee_fraction_int >= 1:
+        if fee_fraction_int >= config.UNIT:
             problems.append('fee fraction greater than or equal to 1')
+    else:
+        if fee_fraction_int > 4294967295:
+            problems.append('fee fraction greater than 42.94967295')
 
     if timestamp < 0: problems.append('negative timestamp')
 
