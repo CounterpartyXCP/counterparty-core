@@ -172,7 +172,9 @@ class install(_install):
     def run(self):
         # Explicit request for old-style install?  Just do it
         if self.old_and_unmanageable or self.single_version_externally_managed:
-            return _install.run(self)
+            _install.run(self)
+            self.execute(post_install, (self, False), msg="Running post install tasks")
+            return
 
         if not self._called_from_setup(inspect.currentframe()):
             # Run in backward-compatibility mode to support bdist_* commands.

@@ -52,5 +52,11 @@
 			"minimum_version_minor": 51,
 			"minimum_version_revision": 0,
 			"block_index": 352000
+		},
+	"max_fee_fraction":      {
+			"minimum_version_major": 9,
+			"minimum_version_minor": 54,
+			"minimum_version_revision": 0,
+			"block_index": 401278
 		}
 }
