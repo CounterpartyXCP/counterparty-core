@@ -70,8 +70,12 @@ def initialise(db):
 def validate (db, source, timestamp, value, fee_fraction_int, text, block_index):
     problems = []
 
-    if fee_fraction_int > 4294967295:
-        problems.append('fee fraction greater than 42.94967295')
+    if util.enabled('max_fee_fraction'):
+        if fee_fraction_int >= config.UNIT:
+            problems.append('fee fraction greater than or equal to 1')
+    else:
+        if fee_fraction_int > 4294967295:
+            problems.append('fee fraction greater than 42.94967295')
 
     if timestamp < 0: problems.append('negative timestamp')
 
@@ -188,6 +192,10 @@ def parse (db, tx, message):
                       ORDER BY tx1_index ASC, tx0_index ASC''',
                    ('pending', tx['source']))
     for bet_match in cursor.fetchall():
+        if util.enabled('max_fee_fraction'):
+            if status != 'valid':
+                break
+
         broadcast_bet_match_cursor = db.cursor()
         bet_match_id = util.make_id(bet_match['tx0_hash'], bet_match['tx1_hash'])
         bet_match_status = None
