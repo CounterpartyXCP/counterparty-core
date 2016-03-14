@@ -363,11 +363,14 @@ def construct (db, tx_info, encoding='auto',
         elif encoding not in ('pubkeyhash', 'multisig', 'opreturn'):
             raise exceptions.TransactionError('Unknown encoding‐scheme.')
 
-        # dust_return_pubkey is None, because False means we'll burn the dust
-        if encoding == 'multisig' and source_is_p2sh and dust_return_pubkey is None:
-            raise exceptions.TransactionError("Can't use multisig encoding when source is P2SH and no dust_return_pubkey is provided.")
-        elif encoding == 'multisig' and dust_return_pubkey is False:
-            dust_return_pubkey = binascii.unhexlify(config.P2SH_DUST_RETURN_PUBKEY)
+
+        if encoding == 'multisig':
+            # dust_return_pubkey should be set or explicitly set to False to use the default configured for the node
+            #  the default for the node is optional so could fail
+            if (source_is_p2sh and dust_return_pubkey is None) or (dust_return_pubkey is False and config.P2SH_DUST_RETURN_PUBKEY is None):
+                raise exceptions.TransactionError("Can't use multisig encoding when source is P2SH and no dust_return_pubkey is provided.")
+            elif dust_return_pubkey is False:
+                dust_return_pubkey = binascii.unhexlify(config.P2SH_DUST_RETURN_PUBKEY)
 
         # Divide data into chunks.
         if encoding == 'pubkeyhash':

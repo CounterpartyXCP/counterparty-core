@@ -36,7 +36,8 @@ COUNTERPARTYD_OPTIONS = {
     'rpc_password': 'pass',
     'backend_port': 18332,
     'backend_password': 'pass',
-    'backend_ssl_no_verify': True
+    'backend_ssl_no_verify': True,
+    'p2sh_dust_return_pubkey': '11' * 33
 }
 
 def init_database(sqlfile, dbfile):

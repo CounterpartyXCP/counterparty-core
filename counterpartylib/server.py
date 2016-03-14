@@ -310,7 +310,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
             config.BURN_START = config.BURN_START_TESTNET_TESTCOIN
             config.BURN_END = config.BURN_END_TESTNET_TESTCOIN
             config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
-            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey or config.P2SH_DUST_RETURN_PUBKEY_TESTNET
+            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
         else:
             config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
             config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_TESTNET
@@ -318,7 +318,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
             config.BURN_START = config.BURN_START_TESTNET
             config.BURN_END = config.BURN_END_TESTNET
             config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
-            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey or config.P2SH_DUST_RETURN_PUBKEY_TESTNET
+            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
     else:
         config.MAGIC_BYTES = config.MAGIC_BYTES_MAINNET
         if config.TESTCOIN:
@@ -328,7 +328,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
             config.BURN_START = config.BURN_START_MAINNET_TESTCOIN
             config.BURN_END = config.BURN_END_MAINNET_TESTCOIN
             config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
-            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey or config.P2SH_DUST_RETURN_PUBKEY_MAINNET
+            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
         else:
             config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
             config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_MAINNET
@@ -336,7 +336,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
             config.BURN_START = config.BURN_START_MAINNET
             config.BURN_END = config.BURN_END_MAINNET
             config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
-            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey or config.P2SH_DUST_RETURN_PUBKEY_MAINNET
+            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
 
     logger.info('Running v{} of counterparty-lib.'.format(config.VERSION_STRING))
 
