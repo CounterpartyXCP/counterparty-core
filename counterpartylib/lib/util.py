@@ -625,6 +625,17 @@ def parse_id(match_id):
     assert match_id[64] == ID_SEPARATOR
     return match_id[:64], match_id[65:] # UTF-8 encoding means that the indices are doubled.
 
+def sizeof(v):
+    if isinstance(v, dict) or isinstance(v, DictCache):
+        s = 0
+        for dk, dv in v.items():
+            s += sizeof(dk)
+            s += sizeof(dv)
+
+        return s
+    else:
+        return sys.getsizeof(v)
+
 class DictCache: 
     """Threadsafe FIFO dict cache"""
     def __init__(self, size=100):  
