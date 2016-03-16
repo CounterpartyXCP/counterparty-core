@@ -4,6 +4,8 @@ This module contains a variety of utility functions used in the test suite.
 
 import os, sys, hashlib, binascii, time, decimal, logging, locale, re, io
 import difflib, json, inspect, tempfile, shutil
+import pprint
+
 import apsw, pytest, requests
 from requests.auth import HTTPBasicAuth
 
@@ -334,7 +336,11 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, ser
         try:
             assert outputs == test_outputs
         except AssertionError:
-            raise Exception("outputs don't match test_outputs: outputs=%s  ---  test_outputs=%s" % (outputs, test_outputs))
+            if pytest.config.option.verbosediff:
+                msg = "outputs don't match test_outputs:\noutputs=\n" + pprint.pformat(outputs) + "\ntest_outputs=\n" + pprint.pformat(test_outputs)
+            else:
+                msg = "outputs don't match test_outputs: outputs=%s test_outputs=%s" % (outputs, test_outputs)
+            raise Exception(msg)
     if error is not None:
         assert str(exception.value) == error[1]
     if records is not None:
