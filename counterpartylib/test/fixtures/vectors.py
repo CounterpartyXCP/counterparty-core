@@ -1214,8 +1214,26 @@ UNITTEST_VECTOR = {
             'in': (ADDR[0], DP['quantity'], 'BTC', 'XCP', DP['default_block']),
             'out': (None, None, ['cannot pay dividends to holders of BTC', 'no such asset, BTC.'], 0)
         }, {
+            'comment': 'pay to XCP holders',
             'in': (ADDR[0], DP['quantity'], 'XCP', 'XCP', DP['default_block']),
-            'out': (None, None, ['cannot pay dividends to holders of XCP', 'no such asset, XCP.'], 0)
+            'out': (None, None, ['only ' + config.XCP_DIVIDEND_SOURCE_TESTNET + ' is allowed to pay dividends to holders of XCP'], 0)
+        }, {
+            'comment': 'pay 100 XCP units to XCP holders from allowed address',
+            'in': (config.XCP_DIVIDEND_SOURCE_TESTNET, 100, 'XCP', 'XCP', DP['default_block']),
+            'out': (185694,
+                    [{'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'address_quantity': 91950000000, 'dividend_quantity': 91950},
+                     {'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'address_quantity': 99999990, 'dividend_quantity': 99},
+                     {'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'address_quantity': 300000000, 'dividend_quantity': 300},
+                     {'address': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'address_quantity': 0, 'dividend_quantity': 0},
+                     {'address': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'address_quantity': 92945878046, 'dividend_quantity': 92945},
+                     {'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'address_quantity': 100000000, 'dividend_quantity': 100},
+                     {'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'address_quantity': 100000000, 'dividend_quantity': 100},
+                     {'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'address_quantity': 100000000, 'dividend_quantity': 100},
+                     {'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'address_quantity': 0, 'dividend_quantity': 0},
+                     {'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'address_quantity': 100000000, 'dividend_quantity': 100},
+                     {'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'address_quantity': 10, 'dividend_quantity': 0}],
+                    ['insufficient funds (XCP)'],
+                    0)
         }, {
             'in': (ADDR[0], DP['quantity'], 'NOASSET', 'XCP', DP['default_block']),
             'out': (None, None, ['no such asset, NOASSET.'], 0)

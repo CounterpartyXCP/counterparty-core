@@ -1,4 +1,10 @@
 {
+    "xcp_dividend": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 55,
+        "minimum_version_revision": 0,
+        "block_index": 405000
+    },
 	"numeric_asset_names":	{
 			"minimum_version_major": 9,
 			"minimum_version_minor": 47,

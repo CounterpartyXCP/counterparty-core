@@ -302,6 +302,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     # (more) Testnet
     if config.TESTNET:
         config.MAGIC_BYTES = config.MAGIC_BYTES_TESTNET
+        config.XCP_DIVIDEND_SOURCE = config.XCP_DIVIDEND_SOURCE_TESTNET
         if config.TESTCOIN:
             config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
             config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET_TESTCOIN
@@ -316,6 +317,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
             config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
     else:
         config.MAGIC_BYTES = config.MAGIC_BYTES_MAINNET
+        config.XCP_DIVIDEND_SOURCE = config.XCP_DIVIDEND_SOURCE_MAINNET
         if config.TESTCOIN:
             config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
             config.BLOCK_FIRST = config.BLOCK_FIRST_MAINNET_TESTCOIN
