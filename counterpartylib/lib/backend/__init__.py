@@ -85,6 +85,19 @@ def is_valid(address):
 def get_txhash_list(block):
     return [bitcoinlib.core.b2lx(ctx.GetHash()) for ctx in block.vtx]
 
+def get_tx_list(block):
+    raw_transactions = {}
+    tx_hash_list = []
+
+    for ctx in block.vtx:
+        tx_hash = bitcoinlib.core.b2lx(ctx.GetHash())
+        raw = ctx.serialize()
+
+        tx_hash_list.append(tx_hash)
+        raw_transactions[tx_hash] = bitcoinlib.core.b2x(raw)
+
+    return (tx_hash_list, raw_transactions)
+
 def input_value_weight(amount):
     # Prefer outputs less than dust size, then bigger is better.
     if amount * config.UNIT <= config.DEFAULT_REGULAR_DUST_SIZE:

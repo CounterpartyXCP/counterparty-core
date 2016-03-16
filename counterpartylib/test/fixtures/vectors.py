@@ -386,7 +386,7 @@ UNITTEST_VECTOR = {
             'out': (['locked feed'])
         },  {
             'in': (ADDR[0], 1588000000, 1, 4294967296, 'Unit Test', DP['default_block']),
-            'out': (['fee fraction greater than 42.94967295'])
+            'out': (['fee fraction greater than or equal to 1'])
         },  {
             'in': (ADDR[0], -1388000000, 1, DP['fee_multiplier'], 'Unit Test', DP['default_block']),
             'out': (['negative timestamp', 'feed timestamps not monotonically increasing'])
