@@ -47,21 +47,33 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     if asset == config.BTC:
         problems.append('cannot pay dividends to holders of {}'.format(config.BTC))
     if asset == config.XCP:
-        if (not block_index >= 317500) or block_index >= 320000 or config.TESTNET:   # Protocol change.
+        # once xcp_dividend is enabled XCP_DIVIDEND_SOURCE is allowed to pay dividend to XCP owners
+        if util.enabled('xcp_dividend', block_index=block_index):
+            if source != config.XCP_DIVIDEND_SOURCE:
+                problems.append('only {} is allowed to pay dividends to holders of {}'.format(config.XCP_DIVIDEND_SOURCE, config.XCP))
+
+        elif (not block_index >= 317500) or block_index >= 320000 or config.TESTNET:   # Protocol change.
             problems.append('cannot pay dividends to holders of {}'.format(config.XCP))
 
-    if quantity_per_unit <= 0: problems.append('non‐positive quantity per unit')
-
     # Examine asset.
-    issuances = list(cursor.execute('''SELECT * FROM issuances WHERE (status = ? AND asset = ?) ORDER BY tx_index ASC''', ('valid', asset)))
-    if not issuances:
-        problems.append('no such asset, {}.'.format(asset))
+    if asset == config.XCP:
+        divisible = True
+    else:
+        issuances = list(cursor.execute('''SELECT * FROM issuances WHERE (status = ? AND asset = ?) ORDER BY tx_index ASC''', ('valid', asset)))
+        if not issuances:
+            problems.append('no such asset, {}.'.format(asset))
+        else:
+            divisible = issuances[0]['divisible']
+
+    if len(problems) > 0:
         return None, None, problems, 0
-    divisible = issuances[0]['divisible']
+
+    if quantity_per_unit <= 0:
+        problems.append('non‐positive quantity per unit')
 
     # Only issuer can pay dividends.
     if block_index >= 320000 or config.TESTNET:   # Protocol change.
-        if issuances[-1]['issuer'] != source:
+        if asset != config.XCP and issuances[-1]['issuer'] != source:
             problems.append('only issuer can pay dividends')
 
     # Examine dividend asset.
@@ -80,26 +92,32 @@ def validate (db, source, quantity_per_unit, asset, dividend_asset, block_index)
     addresses = []
     dividend_total = 0
     for holder in holders:
-
         if block_index < 294500 and not config.TESTNET: # Protocol change.
-            if holder['escrow']: continue
+            if holder['escrow']:
+                continue
 
         address = holder['address']
         address_quantity = holder['address_quantity']
         if block_index >= 296000 or config.TESTNET: # Protocol change.
-            if address == source: continue
+            if address == source:
+                continue
 
         dividend_quantity = address_quantity * quantity_per_unit
-        if divisible: dividend_quantity /= config.UNIT
-        if not dividend_divisible: dividend_quantity /= config.UNIT
-        if dividend_asset == config.BTC and dividend_quantity < config.DEFAULT_MULTISIG_DUST_SIZE: continue    # A bit hackish.
+        if divisible:
+            dividend_quantity /= config.UNIT
+        if not dividend_divisible:
+            dividend_quantity /= config.UNIT
+        if dividend_asset == config.BTC and dividend_quantity < config.DEFAULT_MULTISIG_DUST_SIZE:
+            continue    # A bit hackish.
+
         dividend_quantity = int(dividend_quantity)
 
         outputs.append({'address': address, 'address_quantity': address_quantity, 'dividend_quantity': dividend_quantity})
         addresses.append(address)
         dividend_total += dividend_quantity
 
-    if not dividend_total: problems.append('zero dividend')
+    if not dividend_total:
+        problems.append('zero dividend')
 
     if dividend_asset != config.BTC:
         dividend_balances = list(cursor.execute('''SELECT * FROM balances WHERE (address = ? AND asset = ?)''', (source, dividend_asset)))

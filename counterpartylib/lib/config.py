@@ -73,6 +73,8 @@ BLOCK_FIRST_MAINNET_HASH = '00000000000000017bac9a8e85660ad348050c789922d5f8fe54
 BURN_START_MAINNET = 278310
 BURN_END_MAINNET = 283810
 
+XCP_DIVIDEND_SOURCE_TESTNET = '2_muqecnWXLrxSSpz3wvbGEx8or1fwick19e_mvvWnjyZRoDsZpavY6yuXnwzf4Hpb8DuuY_2'
+XCP_DIVIDEND_SOURCE_MAINNET = '1CounterpartyXXXXXXXXXXXXXXXUWLpVr'
 
 # Protocol defaults
 # NOTE: If the DUST_SIZE constants are changed, they MUST also be changed in counterblockd/lib/config.py as well
