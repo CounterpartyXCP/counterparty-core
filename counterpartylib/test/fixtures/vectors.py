@@ -9,6 +9,8 @@ The function supports three types of output checks:
 """
 
 import binascii
+import json
+
 import bitcoin as bitcoinlib
 from .params import ADDR, MULTISIGADDR, DEFAULT_PARAMS as DP
 
@@ -278,14 +280,14 @@ UNITTEST_VECTOR = {
         }],
         'parse_block': [{
             'in': (DP['default_block_index'] - 1, 1420914478),
-            'out': ('bc2a2e09a881d5e382904ee20025c7b0c50006a445ac4635d4282234212429a1',
-                    '7a345ce55acea2b33aeefd37dcc20bbf8dd6cd98b6b0a4f0697c001f854af85a',
-                    '73581237adaf4842a9fba69241f2989588427488b3833ed371bc8ca239187b63',
-                    '73581237adaf4842a9fba69241f2989588427488b3833ed371bc8ca239187b63')
+            'out': ('5c8559089fa2ae3eaf5a5a0910d175f08a8794b9974627bc21f4f7b27c68be2a',
+                '7a474cecc506bd8065f161cdbc89464732a328eba5689913920b9a286ab79d8b',
+                '56bc3b754dfbefc26da05e6d136ee6ce641c8154ffa59c8b10c7fc7dd3e5a629',
+                '56bc3b754dfbefc26da05e6d136ee6ce641c8154ffa59c8b10c7fc7dd3e5a629')
         }],
         'get_next_tx_index': [{
             'in': (),
-            'out': 498
+            'out': 501
         }],
         'last_db_index': [{
             'in': (),
@@ -2422,16 +2424,15 @@ UNITTEST_VECTOR = {
         }],
         'last_message': [{
             'in': (),
-            'out': {'bindings': '{"asset": "XCP", "block_index": 310496, "destination": '
-                            '"mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj", "quantity": 92945878046, '
-                            '"source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "status": '
-                            '"valid", "tx_hash": '
-                            '"54f4c7b383ea19147e62d2be9f3e7f70b6c379baac15e8b4cf43f7c21578c1ef", '
-                            '"tx_index": 497}',
-                'block_index': 310496,
-                'category': 'sends',
+            'out': {'bindings': '{"block_index": 310499, "burned": 62000000, "earned": '
+                            '92995827881, "source": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42", '
+                            '"status": "valid", "tx_hash": '
+                            '"928021a50628f31a637388b9fcf3ffc081c8aa089eb3b94291f4cc6f4a8377ee", '
+                            '"tx_index": 500}',
+                'block_index': 310499,
+                'category': 'burns',
                 'command': 'insert',
-                'message_index': 79,
+                'message_index': 85,
                 'timestamp': 0}
         }],
         'get_asset_id': [{
@@ -2520,7 +2521,7 @@ UNITTEST_VECTOR = {
         }],
         'xcp_created': [{
             'in': (),
-            'out': 185995878046
+            'out': 464983386772
         }],
         'xcp_destroyed': [{
             'in': (),
@@ -2528,11 +2529,11 @@ UNITTEST_VECTOR = {
         }],
         'xcp_supply': [{
             'in': (),
-            'out': 185695878046
+            'out': 464683386772
         }],
         'creations': [{
             'in': (),
-            'out': {'CALLABLE': 1000, 'DIVIDEND': 100, 'DIVISIBLE': 100000000000, 'LOCKED': 1000, 'MAXI': 9223372036854775807, 'NODIVISIBLE': 1000, 'XCP': 185995878046}
+            'out': {'CALLABLE': 1000, 'DIVIDEND': 100, 'DIVISIBLE': 100000000000, 'LOCKED': 1000, 'MAXI': 9223372036854775807, 'NODIVISIBLE': 1000, 'XCP': 464983386772}
         }],
         'destructions': [{
             'in': (),
@@ -2540,11 +2541,11 @@ UNITTEST_VECTOR = {
         }],
         'asset_supply': [{
             'in': ('XCP',),
-            'out': 185695878046
+            'out': 464683386772
         }],
         'supplies': [{
             'in': (),
-            'out':  {'CALLABLE': 1000, 'DIVIDEND': 100, 'DIVISIBLE': 100000000000, 'LOCKED': 1000, 'MAXI': 9223372036854775807, 'NODIVISIBLE': 1000, 'XCP': 185695878046}
+            'out':  {'CALLABLE': 1000, 'DIVIDEND': 100, 'DIVISIBLE': 100000000000, 'LOCKED': 1000, 'MAXI': 9223372036854775807, 'NODIVISIBLE': 1000, 'XCP': 464683386772}
         }],
         'get_balance': [{
             'in': (ADDR[0], 'XCP'),
