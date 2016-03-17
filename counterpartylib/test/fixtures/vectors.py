@@ -280,14 +280,14 @@ UNITTEST_VECTOR = {
         }],
         'parse_block': [{
             'in': (DP['default_block_index'] - 1, 1420914478),
-            'out': ('5c8559089fa2ae3eaf5a5a0910d175f08a8794b9974627bc21f4f7b27c68be2a',
-                '7a474cecc506bd8065f161cdbc89464732a328eba5689913920b9a286ab79d8b',
-                '56bc3b754dfbefc26da05e6d136ee6ce641c8154ffa59c8b10c7fc7dd3e5a629',
-                '56bc3b754dfbefc26da05e6d136ee6ce641c8154ffa59c8b10c7fc7dd3e5a629')
+            'out': ('398c9834454c2b8c803a83498992e5cd8f276308d72b54edaee56ac1fb27ce92',
+                '92ae06276ecb2cbb5d974c2974470cdb0a932c4bdb8dcc4b479c7c44c638c649',
+                '485b6dd30f0954f5932815470756d2cff2fa5507e6d5b6378d4358327018b0e9',
+                '485b6dd30f0954f5932815470756d2cff2fa5507e6d5b6378d4358327018b0e9')
         }],
         'get_next_tx_index': [{
             'in': (),
-            'out': 501
+            'out': 498
         }],
         'last_db_index': [{
             'in': (),
@@ -2424,13 +2424,14 @@ UNITTEST_VECTOR = {
         }],
         'last_message': [{
             'in': (),
-            'out': {'bindings': '{"block_index": 310499, "burned": 62000000, "earned": '
-                            '92995827881, "source": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42", '
-                            '"status": "valid", "tx_hash": '
-                            '"928021a50628f31a637388b9fcf3ffc081c8aa089eb3b94291f4cc6f4a8377ee", '
-                            '"tx_index": 500}',
-                'block_index': 310499,
-                'category': 'burns',
+            'out': {'bindings': '{"asset": "XCP", "block_index": 310496, "destination": '
+                            '"mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj", "quantity": 92945878046, '
+                            '"source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "status": '
+                            '"valid", "tx_hash": '
+                            '"54f4c7b383ea19147e62d2be9f3e7f70b6c379baac15e8b4cf43f7c21578c1ef", '
+                            '"tx_index": 497}',
+                'block_index': 310496,
+                'category': 'sends',
                 'command': 'insert',
                 'message_index': 85,
                 'timestamp': 0}
@@ -2521,7 +2522,7 @@ UNITTEST_VECTOR = {
         }],
         'xcp_created': [{
             'in': (),
-            'out': 464983386772
+            'out': 464993269426
         }],
         'xcp_destroyed': [{
             'in': (),
@@ -2529,11 +2530,11 @@ UNITTEST_VECTOR = {
         }],
         'xcp_supply': [{
             'in': (),
-            'out': 464683386772
+            'out': 464693269426
         }],
         'creations': [{
             'in': (),
-            'out': {'CALLABLE': 1000, 'DIVIDEND': 100, 'DIVISIBLE': 100000000000, 'LOCKED': 1000, 'MAXI': 9223372036854775807, 'NODIVISIBLE': 1000, 'XCP': 464983386772}
+            'out': {'CALLABLE': 1000, 'DIVIDEND': 100, 'DIVISIBLE': 100000000000, 'LOCKED': 1000, 'MAXI': 9223372036854775807, 'NODIVISIBLE': 1000, 'XCP': 464993269426}
         }],
         'destructions': [{
             'in': (),
@@ -2541,11 +2542,11 @@ UNITTEST_VECTOR = {
         }],
         'asset_supply': [{
             'in': ('XCP',),
-            'out': 464683386772
+            'out': 464693269426
         }],
         'supplies': [{
             'in': (),
-            'out':  {'CALLABLE': 1000, 'DIVIDEND': 100, 'DIVISIBLE': 100000000000, 'LOCKED': 1000, 'MAXI': 9223372036854775807, 'NODIVISIBLE': 1000, 'XCP': 464683386772}
+            'out':  {'CALLABLE': 1000, 'DIVIDEND': 100, 'DIVISIBLE': 100000000000, 'LOCKED': 1000, 'MAXI': 9223372036854775807, 'NODIVISIBLE': 1000, 'XCP': 464693269426}
         }],
         'get_balance': [{
             'in': (ADDR[0], 'XCP'),
