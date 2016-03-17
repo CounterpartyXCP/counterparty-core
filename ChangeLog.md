@@ -1,4 +1,6 @@
 ## Library Versions ##
+* Next Release
+    * Moved check for invalid broadcast to better place to prevent broadcasting a cancel on a locked feed.
 * v9.54.0 (2016-03-05)
     * Execute post install tasks when called via `pip`
     * Max fee fraction of 1
