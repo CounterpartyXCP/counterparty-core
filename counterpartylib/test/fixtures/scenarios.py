@@ -64,7 +64,14 @@ UNITTEST_FIXTURE = [
     ['send', (ADDR[0], P2SH_ADDR[0], 'DIVISIBLE', DP['quantity']), {'encoding': 'multisig'}],
     ['broadcast', (P2SH_ADDR[0], 1388000002, 1, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'opreturn'}],
     ['bet', (P2SH_ADDR[0], P2SH_ADDR[0], 3, 1388000200, 10, 10, 0.0, 5040, 1000), {'encoding': 'opreturn'}],
-    ['create_next_block', 490],  # 310490
+
+    ['create_next_block', 485],
+
+    ['broadcast', (ADDR[4], 1388000000, 1, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],
+    ['bet', (ADDR[4], ADDR[4], 1, 1388000001, 9, 9, 0.0, 5040, 100), {'encoding': 'multisig'}],
+    ['broadcast', (ADDR[4], 1388000002, 1, 0.0, 'lock'), {'encoding': 'multisig'}],
+
+    ['create_next_block', 490],
 
     ['order', (ADDR[0], 'XCP', DP['quantity'], 'BTC', round(DP['quantity'] / 125), 2000, DP['fee_required']), {'encoding': 'multisig'}],
     ['order', (ADDR[1], 'BTC', round(DP['quantity'] / 125), 'XCP', DP['quantity'], 2000, 0), {'encoding': 'multisig', 'fee_provided': DP['fee_provided']}],

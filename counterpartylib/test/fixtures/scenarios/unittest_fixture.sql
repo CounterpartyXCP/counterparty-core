@@ -51,7 +51,7 @@ INSERT INTO balances VALUES('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB
 INSERT INTO balances VALUES('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','NODIVISIBLE',5);
 INSERT INTO balances VALUES('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','NODIVISIBLE',10);
 INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','MAXI',9223372036854775807);
-INSERT INTO balances VALUES('myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM','XCP',92999138821);
+INSERT INTO balances VALUES('myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM','XCP',92999138812);
 INSERT INTO balances VALUES('munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b','XCP',92999130460);
 INSERT INTO balances VALUES('mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42','XCP',92999122099);
 INSERT INTO balances VALUES('2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy','XCP',46449556859);
@@ -207,6 +207,7 @@ INSERT INTO bets VALUES(20,'be15d34c959fde8f2baff8577d73d28c864e7684cc76ecba33e5
 INSERT INTO bets VALUES(21,'90c1314847b1fe9b4520a3610dc98c71d39a1cb4b96edb9b02b6fed844a4b1e5',310020,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,1388000001,9,0,9,0,0.0,5040,100,310120,5000000,'filled');
 INSERT INTO bets VALUES(102,'ba0ef1dfbbc87df94e1d198b0e9e3c06301710d4aab3d85116cbc8199954644a',310101,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',3,1388000200,10,10,10,10,0.0,5040,1000,311101,5000000,'open');
 INSERT INTO bets VALUES(111,'81f8ba670b22980b15c944dcd478a274723659d768b0de73b014d06d214e5b90',310110,'2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy','2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy',3,1388000200,10,10,10,10,0.0,5040,1000,311110,5000000,'open');
+INSERT INTO bets VALUES(488,'69b9a535084fa5faf91acd7d056e2c32a85cc15d6a4d83b1adf091a344d22407',310487,'myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM','myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM',1,1388000001,9,9,9,9,0.0,5040,100,310587,5000000,'open');
 -- Triggers and indices on  bets
 CREATE TRIGGER _bets_delete BEFORE DELETE ON bets BEGIN
                             INSERT INTO undolog VALUES(NULL, 'INSERT INTO bets(rowid,tx_index,tx_hash,block_index,source,feed_address,bet_type,deadline,wager_quantity,wager_remaining,counterwager_quantity,counterwager_remaining,target_value,leverage,expiration,expire_index,fee_fraction_int,status) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.feed_address)||','||quote(old.bet_type)||','||quote(old.deadline)||','||quote(old.wager_quantity)||','||quote(old.wager_remaining)||','||quote(old.counterwager_quantity)||','||quote(old.counterwager_remaining)||','||quote(old.target_value)||','||quote(old.leverage)||','||quote(old.expiration)||','||quote(old.expire_index)||','||quote(old.fee_fraction_int)||','||quote(old.status)||')');
@@ -715,21 +716,21 @@ INSERT INTO blocks VALUES(310482,'2e27db87dfb6439c006637734e876cc662d1ca74c71775
 INSERT INTO blocks VALUES(310483,'013bac61f8e33c8d8d0f60f5e6a4ec3de9b16696703dea9802f64a258601c460',310483000,NULL,NULL,'008c287f38d96307ee4a71ea6a8f2c42a35dd54c4a834515d7a44ced43204845','93bdc34753af20c8f54d4b08d3b937cc0bbc061228b5458f1ea5b5252f625b35','86bcb62f6ee34c2c3fd96b497683c8a5264e06d626403e66030657385b34cf03');
 INSERT INTO blocks VALUES(310484,'7cac2b3630c31b592fa0497792bed58d3c41120c009471c348b16b5578b3aa2b',310484000,NULL,NULL,'d7f3ec5feb14b12b410fa72344620e930037d15cdb36295fc68aa0f4087eb631','c012aa1548249b48d7894a5b06a8fe036db75518257f625402cedfb3fb32ee00','8ce20d8275ec4e09aaddc0eb8b7a761ca521a103c1728300ea0572c9d54ad864');
 INSERT INTO blocks VALUES(310485,'eab5febc9668cd438178496417b22da5f77ceaed5bb6e01fc0f04bef1f5b4478',310485000,NULL,NULL,'10856cb1b7625aa217ea3009f10aa1e772a627e302f4191eaba5d332b8daea32','47bbebd943b632d3019d2f9b1c50c651c488d29d6ebba41abd8a0ee748cfcb9b','07eec7fbd56db1d8a2af5f0942996502431cd347b822aeb3e7cfb7a3028a97af');
-INSERT INTO blocks VALUES(310486,'d4fbe610cc60987f2d1d35c7d8ad3ce32156ee5fe36ef8cc4f08b46836388862',310486000,NULL,NULL,'d4d08e6c5c0a9d491cd2c754047a78a566a86a0b4ef81c3037a9d438803a0fb6','503320cba6236f68bff31f0b887535a1c90758d76aebd904d1ac09eb0fc5740a','a643a0eb2f521d6150407cf64060e78ef4a886b9109a3326b0cc3e2357eb2c9f');
-INSERT INTO blocks VALUES(310487,'32aa1b132d0643350bbb62dbd5f38ae0c270d8f491a2012c83b99158d58e464f',310487000,NULL,NULL,'37b3308d0f5d5c037146fbca2a472cec180913fe814f30259e4cb28a8ecd3e0d','d6e87ade03f005e30d63aa8d5c9437c33db5a87cf78f15ada9eb5cc94fb62a28','b09529b6aca9c685e9448952b7e8fd9eb0cf436583e9616384c436fda19aa244');
-INSERT INTO blocks VALUES(310488,'80b8dd5d7ce2e4886e6721095b892a39fb699980fe2bc1c17e747f822f4c4b1b',310488000,NULL,NULL,'e9281f40f19701d88dadb0d7793a38ffebf5c707f0041435c91959d1e160c954','57c13d1026f70205638c4133fe51969fe2e157cf7afb2eb679a781802f879da0','1fcda9ef641400ac70c304e2e2d2e419dee566476bfc5e797854507105eb16a6');
-INSERT INTO blocks VALUES(310489,'2efdb36f986b3e3ccc6cc9b0c1c3cdcb07429fb43cbc0cc3b6c87d1b33f258b6',310489000,NULL,NULL,'6519c4ec7839051175d4d8bad6a090e39655562f501b8b5ec6c18cec4e89390a','8b74116c6dd0c4f39cff8ee229ba5d8d85ff7507075e4797d98c6f706037cbfa','b642a7f0606ec0819c98c13c6b23fab12890f16eb21c2a39222bbb17c4423960');
-INSERT INTO blocks VALUES(310490,'e2cb04b8a7368c95359c9d5ff33e64209200fb606de0d64b7c0f67bb1cb8d87c',310490000,NULL,NULL,'0182945121de0b1dfe8191a4a537f8355f39d534191ca73604a9118953b6f752','d7394eb93626b7a28f7678373b906acb42d3429bb7fed821fca32522f38e2ce8','7c56959e2f158657c19f081b70a6e967b39ba9b68605bccfd2a38cf6bf7c6194');
-INSERT INTO blocks VALUES(310491,'811abd7cf2b768cfdaa84ab44c63f4463c96a368ead52125bf149cf0c7447b16',310491000,NULL,NULL,'893cb9e084c543b25408dcb1ffb32fdd3118d87f514345fca1b2e9e58f78c269','3d59ef4aff97b00e0749acb6c99e3cf456c75b0ccd1cb2a2633d6e165b083fda','9331ee5e2080734f7d35e6956c0946abfe3897962bd4fe80375bc16b2ea4b69b');
-INSERT INTO blocks VALUES(310492,'8a09b2faf0a7ad67eb4ab5c948b9769fc87eb2ec5e16108f2cde8bd9e6cf7607',310492000,NULL,NULL,'327460845c4d1aedcaaa9ca88590f5db8636160feb9a8b05af72e93779ae5ef5','f77a9acd00af83da431a12d8833d9523dcc328bac53e1b27f16f8d7ad70ac5ba','c9ebb688493c6bc97297c88e9b1dc359a0f997f64bec5eb775d3d2c2c548c939');
-INSERT INTO blocks VALUES(310493,'c19e2915b750279b2be4b52e57e5ce29f63dffb4e14d9aad30c9e820affc0cbf',310493000,NULL,NULL,'8cadc59c041825d63d204d96961c8e1528b139c332d29c1720e7bade927563dc','8b33359ad2cf16ebeb9397601134564a92cc65105474f48e6e2ad04d398a208b','97579aa2be41424492d56a7abccfea78557f4ec2fa3fe5d3ebe97a3436d10964');
-INSERT INTO blocks VALUES(310494,'7dda1d3e12785313d5651ee5314d0aecf17588196f9150b10c55695dbaebee5d',310494000,NULL,NULL,'e0437e31b052cfa676cc66867b29d874bb5fa64b7790db1d03b3cfc3ac13a919','afe0530059b72dffd17274c2b68a25e20cabe55fdab9ec7c147a9fcc6122aa85','0b09cb4589edc5cd517c8d6a28d52c6d3ad21c9faceea388db3116fb711ebe30');
-INSERT INTO blocks VALUES(310495,'4769aa7030f28a05a137a85ef4ee0c1765c37013773212b93ec90f1227168b67',310495000,NULL,NULL,'bbb8d2b712b9a2fd5faa6e4b4c9718b54330148bb4298b2b137ecd831f9707f6','f3418281bf0eece070da694e09adaf6fa04503e6ad241bf24f345077302ce005','c9931725fcb968af54dd7222b1b2b8763711c43754f0f37a14d40d7234bb9b42');
-INSERT INTO blocks VALUES(310496,'65884816927e8c566655e85c07bc2bc2c7ee26e625742f219939d43238fb31f8',310496000,NULL,NULL,'f1320125f0078e7eb4286ff1f95165f95376e401d9b7fcf58c05141f2f823126','d87e774c37328b6bbed804d93e0bccd857e67d7c5e9d0aa353abd88dd6e4faa8','5644579629ebe94e1ce0ed6d7052a656521476c2b2d0165ee9bf8064840bfa1c');
-INSERT INTO blocks VALUES(310497,'f1118591fe79b8bf52ccf0c5de9826bfd266b1fdc24b44676cf22bbcc76d464e',310497000,NULL,NULL,'85e22a0037f0cf5fc7bb2580f31f86e99d96dd1016069fff83266370a2477b91','e676b9436513f0839cd3edf11ceaf3d8d33824f088ea42825f1963c7b4d28aeb','3119b671c3f59eb0fd40f8f8f9f935b9e7da4ef5b1f131812015c3fa6a578182');
-INSERT INTO blocks VALUES(310498,'b7058b6d1ddc325a10bf33144937e06ce6025215b416518ae120da9440ae279e',310498000,NULL,NULL,'32d4377931603c5dc81e87332bde78fdb07e8430647f7e93cf977b400c1931ed','11bf9b9b28d6e9c88ade40468da50a404374cebe148a198707a2e8908b24771e','4277f970facb9e46be12b50d001886b070c134ae30ef8f1ff4b9fcebe5384d8c');
-INSERT INTO blocks VALUES(310499,'1950e1a4d7fc820ed9603f6df6819c3c953c277c726340dec2a4253e261a1764',310499000,NULL,NULL,'865d2495f1c161f8795737735ac229b52196cc2b7dea0667e3215abbf15d3958','9b0351249c69f0ebb1db389ff0646a00faf5ad1d2ef37050b553927e0448786f','380e8fb4f443ce9b099f3acc3efa563f74b1f1bbb1f7af836561f30937813d42');
-INSERT INTO blocks VALUES(310500,'54aeaf47d5387964e2d51617bf3af50520a0449410e0d096cf8c2aa9dad5550b',310500000,NULL,NULL,'a674c6086a81df1a586fe38cc060f94813823de229d72b574244a59c54aa2b47','0e7e6a886784bef71971202dc8278af324be95354f84cbbe9d71c5a4aeeed4f6','a25f20bc552321b0b13f69a88e607d18645b4411d5affd5e92b439fd2d7fe438');
+INSERT INTO blocks VALUES(310486,'d4fbe610cc60987f2d1d35c7d8ad3ce32156ee5fe36ef8cc4f08b46836388862',310486000,NULL,NULL,'d4d08e6c5c0a9d491cd2c754047a78a566a86a0b4ef81c3037a9d438803a0fb6','3aabb456879a99e94c55f1ea22f2f266029248afbd8f30b73e763dceabbdd9c9','3ef2665be0646490cee25a14a3858d6c912eab3e724aa9987a91be58fe96b97f');
+INSERT INTO blocks VALUES(310487,'32aa1b132d0643350bbb62dbd5f38ae0c270d8f491a2012c83b99158d58e464f',310487000,NULL,NULL,'bca482be2e942516ffc60a62ea7ea7e44158e8f9b72bb6e5dbe61cd740d300bf','95d02272078b54b2493bb07a292c27e05010d23fefd9d9d86d43666d46c22e43','9dfd81986c8595559412668a270a2dc0202a13afa65f9107678bebb34f35eec3');
+INSERT INTO blocks VALUES(310488,'80b8dd5d7ce2e4886e6721095b892a39fb699980fe2bc1c17e747f822f4c4b1b',310488000,NULL,NULL,'fd124a3f80b354ca106cd653717837f460b565aa5b4b40dc23ecd56b3b97b28b','88fdf52fbee7d53affe2019f320ab3348caeb57289654d467bd11693273afdb4','3777807f17b758d1004a02261a0e4056607f85f0f52baa7525450a89dc574ff5');
+INSERT INTO blocks VALUES(310489,'2efdb36f986b3e3ccc6cc9b0c1c3cdcb07429fb43cbc0cc3b6c87d1b33f258b6',310489000,NULL,NULL,'dc544e57a124565269bbb4b2d9ae2102e6ed177196b07e02d55a9ac99611b752','5d406e83fc788814e17878124f959e39434cf28abb436a342a17f4ae1bd4c437','94910184c0fa5af10a97c7305c1c0f61b6eb65445ada6a7f58ca0d14b5782a12');
+INSERT INTO blocks VALUES(310490,'e2cb04b8a7368c95359c9d5ff33e64209200fb606de0d64b7c0f67bb1cb8d87c',310490000,NULL,NULL,'8165de494fbcaee2f48f0ed7b671d5a7164b4e4e6198b5e1cd8f88850af150d7','d12873cd52d1026cf31461fc7ffff405d84179e3d3e46b93a722f8c7e6c7a048','3c9b9f568c7eaadc18a7c44e4b3cb10f8bcddbf5a23764b916927e33a1512f10');
+INSERT INTO blocks VALUES(310491,'811abd7cf2b768cfdaa84ab44c63f4463c96a368ead52125bf149cf0c7447b16',310491000,NULL,NULL,'953105bd7e2e93c74ed3ed8b8717d7238d636a0cc4e50d152a1783aa5f320204','8bc8722c76417ea373162736c6ad6ef095b108541ddd91db43a065a79e269d46','03ed22a5f3578f9d5c2d1144f91065855d2be43bfdde49e26de902d377965e84');
+INSERT INTO blocks VALUES(310492,'8a09b2faf0a7ad67eb4ab5c948b9769fc87eb2ec5e16108f2cde8bd9e6cf7607',310492000,NULL,NULL,'1fed308916a5912e8b0166d5a27ce74e23ddddcfd3f7b99ed77a01ff398142e1','df78ae08405c0ca9909c1f8880593b22e1ec6e79f70707a6e559764208c90fe1','2c873f6ee5bae5db7606ef46376174ceab63e81120f75fba623eae403b15eb0c');
+INSERT INTO blocks VALUES(310493,'c19e2915b750279b2be4b52e57e5ce29f63dffb4e14d9aad30c9e820affc0cbf',310493000,NULL,NULL,'c0136baee1305a5e5a933fa78f2f93cb40d06adf04540c94dab3c085208e1d25','c965fe116e1448514771abb38cdc75f209db2cf1881923be962cda0b9fdd6677','6d71a5089b4cb03c762a37e8e49c7227585a67fd3c897f57a2843ff23a0e60fd');
+INSERT INTO blocks VALUES(310494,'7dda1d3e12785313d5651ee5314d0aecf17588196f9150b10c55695dbaebee5d',310494000,NULL,NULL,'7e6e5551f8eaa241d3289fcae360170937aa4a35f2926611ab50793b7cbf1b30','80bde877687a7cbcc0a58886ee4a25b0e129e9314621d5173480e44bec59e586','25259387c58744a1c5f75c7235b9f2e580b6703389483b32451296b8e18f68d7');
+INSERT INTO blocks VALUES(310495,'4769aa7030f28a05a137a85ef4ee0c1765c37013773212b93ec90f1227168b67',310495000,NULL,NULL,'0b40890a253248a31cf00d2f75abcbc9871318364ec224ce94cd5c6d29b15621','e6b2f550f773bd5517ec6f5fa8d61c2160bc8ba14fcc7d2f757b19186b164d0e','cdf8fdebe97397a4f0b010345c640c30e3b84a835798f1b5c958d8c219fb067b');
+INSERT INTO blocks VALUES(310496,'65884816927e8c566655e85c07bc2bc2c7ee26e625742f219939d43238fb31f8',310496000,NULL,NULL,'88aaf1b7f8cce768bb3744e68017b52fa82999dc6ababf7c0cab9621f9ab4160','3fd630e341f6a0aec8a0b4d8d772c60651fc906fa46ab8a5b725d642e4d88ce1','4c47254bb2dc35f58be01ffe9fa44eb2cbe840996ad3b2224ad3947baf89684e');
+INSERT INTO blocks VALUES(310497,'f1118591fe79b8bf52ccf0c5de9826bfd266b1fdc24b44676cf22bbcc76d464e',310497000,NULL,NULL,'416fde25c97124281ff88eff164a6ef67b5a32563c2481b5c44654c3e4662873','05e3ec5baca7864a6095a52bfee0dd0b144708d8b6b77d74f59385d92a2976c8','f6416f067a952febc010bd20a09c77ad0eb3e0c83d27933404054d40c685d43f');
+INSERT INTO blocks VALUES(310498,'b7058b6d1ddc325a10bf33144937e06ce6025215b416518ae120da9440ae279e',310498000,NULL,NULL,'3d2840702d2c9ffe48974e565744e41a549c9a821857b39be3d6257517a96bc9','6a486022cc78746178056edb2d84313a6495519c3f687a552bb8b8747136c301','dfad5e84f9719dda3018fafd80354750bb399862086d56dd81c781c700cbe26e');
+INSERT INTO blocks VALUES(310499,'1950e1a4d7fc820ed9603f6df6819c3c953c277c726340dec2a4253e261a1764',310499000,NULL,NULL,'a1394288c9651278a44d87a348d74e999645e8f7f2d4335df845dff30e11701b','478a2f098f91d7bdd6385f4f527043cf5f96a109ae894a9ce932bdc2ecf42302','d38aea373df4aa9e995f169c3063385f9a56002c167e44e11c9d71a0b677492b');
+INSERT INTO blocks VALUES(310500,'54aeaf47d5387964e2d51617bf3af50520a0449410e0d096cf8c2aa9dad5550b',310500000,NULL,NULL,'19ec7324adaeaa81dd4f160040bebf7b9395458cb50e06a416f24229cb956245','95f424602e0f402dbc2c3b4d2f6b0eb0e2e505da134fe296d8b74f0192ae71cd','c0a7dcd0bdaad7ffab97c8d33a29691c6c9dc42cc9ccc8fb22a48ff2179e8a9b');
 -- Triggers and indices on  blocks
 CREATE INDEX block_index_idx ON blocks (block_index);
 CREATE INDEX index_hash_idx ON blocks (block_index, block_hash);
@@ -752,6 +753,8 @@ INSERT INTO broadcasts VALUES(18,'9b70f9ad8c0d92ff27127d081169cebee68a776f4974e7
 INSERT INTO broadcasts VALUES(19,'f6548d72d0726bd869fdfdcf44766871f7ab721efda6ed7bce0d4c88b43bf1cf',310018,'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH',0,NULL,NULL,NULL,1,'valid');
 INSERT INTO broadcasts VALUES(103,'18cbfca6cd776158c13245977b4eead061e6bdcea8118faa6996fb6d01b51d4e',310102,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1388000002,1.0,5000000,'Unit Test',0,'valid');
 INSERT INTO broadcasts VALUES(110,'d858c6855038048b1d5e31a34ceae2069d7c7bc311ca49d189ccbf44cee58031',310109,'2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy',1388000002,1.0,5000000,'Unit Test',0,'valid');
+INSERT INTO broadcasts VALUES(487,'d0b852bbf29ccc0015893b2d252c595be4bc821b7819b90ca0cbad75bf9f956b',310486,'myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM',1388000000,1.0,5000000,'Unit Test',0,'valid');
+INSERT INTO broadcasts VALUES(489,'c15d2767f6eecdc768f957ea8316b18aacf6ec3a6413361cbe898df3e6095893',310488,'myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM',0,NULL,NULL,NULL,1,'valid');
 -- Triggers and indices on  broadcasts
 CREATE TRIGGER _broadcasts_delete BEFORE DELETE ON broadcasts BEGIN
                             INSERT INTO undolog VALUES(NULL, 'INSERT INTO broadcasts(rowid,tx_index,tx_hash,block_index,source,timestamp,value,fee_fraction_int,text,locked,status) VALUES('||old.rowid||','||quote(old.tx_index)||','||quote(old.tx_hash)||','||quote(old.block_index)||','||quote(old.source)||','||quote(old.timestamp)||','||quote(old.value)||','||quote(old.fee_fraction_int)||','||quote(old.text)||','||quote(old.locked)||','||quote(old.status)||')');
@@ -941,6 +944,7 @@ INSERT INTO debits VALUES(310101,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','XCP',10,'
 INSERT INTO debits VALUES(310107,'2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy','XCP',50000000,'issuance fee','63145ad2bcc7030aabcfec42a5cce5dfe6829a5694fc0b3566406bb2fd8b6444');
 INSERT INTO debits VALUES(310108,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','DIVISIBLE',100000000,'send','075b91828d0c7b0017f1b5876ef4909ba37db9bc2877588483d8a64bad2bd412');
 INSERT INTO debits VALUES(310110,'2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy','XCP',10,'bet','81f8ba670b22980b15c944dcd478a274723659d768b0de73b014d06d214e5b90');
+INSERT INTO debits VALUES(310487,'myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM','XCP',9,'bet','69b9a535084fa5faf91acd7d056e2c32a85cc15d6a4d83b1adf091a344d22407');
 INSERT INTO debits VALUES(310491,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',100000000,'open order','9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b');
 INSERT INTO debits VALUES(310494,'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH','XCP',50000000,'issuance fee','084102fa0722f5520481f34eabc9f92232e4d1647b329b3fa58bffc8f91c5e4e');
 INSERT INTO debits VALUES(310495,'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH','DIVIDEND',10,'send','9d3391348171201de9b5eb70ca80896b0ae166fd51237c843a90c1b4ccf8c602');
@@ -1172,23 +1176,27 @@ INSERT INTO messages VALUES(76,310108,'insert','sends','{"asset": "DIVISIBLE", "
 INSERT INTO messages VALUES(77,310109,'insert','broadcasts','{"block_index": 310109, "fee_fraction_int": 5000000, "locked": false, "source": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy", "status": "valid", "text": "Unit Test", "timestamp": 1388000002, "tx_hash": "d858c6855038048b1d5e31a34ceae2069d7c7bc311ca49d189ccbf44cee58031", "tx_index": 110, "value": 1.0}',0);
 INSERT INTO messages VALUES(78,310110,'insert','debits','{"action": "bet", "address": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy", "asset": "XCP", "block_index": 310110, "event": "81f8ba670b22980b15c944dcd478a274723659d768b0de73b014d06d214e5b90", "quantity": 10}',0);
 INSERT INTO messages VALUES(79,310110,'insert','bets','{"bet_type": 3, "block_index": 310110, "counterwager_quantity": 10, "counterwager_remaining": 10, "deadline": 1388000200, "expiration": 1000, "expire_index": 311110, "fee_fraction_int": 5000000.0, "feed_address": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy", "leverage": 5040, "source": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy", "status": "open", "target_value": 0.0, "tx_hash": "81f8ba670b22980b15c944dcd478a274723659d768b0de73b014d06d214e5b90", "tx_index": 111, "wager_quantity": 10, "wager_remaining": 10}',0);
-INSERT INTO messages VALUES(80,310491,'insert','debits','{"action": "open order", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310491, "event": "9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b", "quantity": 100000000}',0);
-INSERT INTO messages VALUES(81,310491,'insert','orders','{"block_index": 310491, "expiration": 2000, "expire_index": 312491, "fee_provided": 10000, "fee_provided_remaining": 10000, "fee_required": 900000, "fee_required_remaining": 900000, "get_asset": "BTC", "get_quantity": 800000, "get_remaining": 800000, "give_asset": "XCP", "give_quantity": 100000000, "give_remaining": 100000000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "tx_hash": "9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b", "tx_index": 492}',0);
-INSERT INTO messages VALUES(82,310492,'insert','orders','{"block_index": 310492, "expiration": 2000, "expire_index": 312492, "fee_provided": 1000000, "fee_provided_remaining": 1000000, "fee_required": 0, "fee_required_remaining": 0, "get_asset": "XCP", "get_quantity": 100000000, "get_remaining": 100000000, "give_asset": "BTC", "give_quantity": 800000, "give_remaining": 800000, "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "status": "open", "tx_hash": "14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0", "tx_index": 493}',0);
-INSERT INTO messages VALUES(83,310492,'update','orders','{"fee_provided_remaining": 10000, "fee_required_remaining": 892800, "get_remaining": 0, "give_remaining": 0, "status": "open", "tx_hash": "9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b"}',0);
-INSERT INTO messages VALUES(84,310492,'update','orders','{"fee_provided_remaining": 992800, "fee_required_remaining": 0, "get_remaining": 0, "give_remaining": 0, "status": "open", "tx_hash": "14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0"}',0);
-INSERT INTO messages VALUES(85,310492,'insert','order_matches','{"backward_asset": "BTC", "backward_quantity": 800000, "block_index": 310492, "fee_paid": 7200, "forward_asset": "XCP", "forward_quantity": 100000000, "id": "9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b_14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0", "match_expire_index": 310512, "status": "pending", "tx0_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx0_block_index": 310491, "tx0_expiration": 2000, "tx0_hash": "9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b", "tx0_index": 492, "tx1_address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "tx1_block_index": 310492, "tx1_expiration": 2000, "tx1_hash": "14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0", "tx1_index": 493}',0);
-INSERT INTO messages VALUES(86,310493,'insert','credits','{"action": "burn", "address": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "asset": "XCP", "block_index": 310493, "event": "d6adfa92e20b6211ff5fabb2f7a1c8b037168797984c94734c28e82e92d3b1d6", "quantity": 92995878046}',0);
-INSERT INTO messages VALUES(87,310493,'insert','burns','{"block_index": 310493, "burned": 62000000, "earned": 92995878046, "source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "status": "valid", "tx_hash": "d6adfa92e20b6211ff5fabb2f7a1c8b037168797984c94734c28e82e92d3b1d6", "tx_index": 494}',0);
-INSERT INTO messages VALUES(88,310494,'insert','debits','{"action": "issuance fee", "address": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "asset": "XCP", "block_index": 310494, "event": "084102fa0722f5520481f34eabc9f92232e4d1647b329b3fa58bffc8f91c5e4e", "quantity": 50000000}',0);
-INSERT INTO messages VALUES(89,310494,'insert','issuances','{"asset": "DIVIDEND", "block_index": 310494, "call_date": 0, "call_price": 0.0, "callable": false, "description": "Test dividend", "divisible": true, "fee_paid": 50000000, "issuer": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "locked": false, "quantity": 100, "source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "status": "valid", "transfer": false, "tx_hash": "084102fa0722f5520481f34eabc9f92232e4d1647b329b3fa58bffc8f91c5e4e", "tx_index": 495}',0);
-INSERT INTO messages VALUES(90,310494,'insert','credits','{"action": "issuance", "address": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "asset": "DIVIDEND", "block_index": 310494, "event": "084102fa0722f5520481f34eabc9f92232e4d1647b329b3fa58bffc8f91c5e4e", "quantity": 100}',0);
-INSERT INTO messages VALUES(91,310495,'insert','debits','{"action": "send", "address": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "asset": "DIVIDEND", "block_index": 310495, "event": "9d3391348171201de9b5eb70ca80896b0ae166fd51237c843a90c1b4ccf8c602", "quantity": 10}',0);
-INSERT INTO messages VALUES(92,310495,'insert','credits','{"action": "send", "address": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj", "asset": "DIVIDEND", "block_index": 310495, "event": "9d3391348171201de9b5eb70ca80896b0ae166fd51237c843a90c1b4ccf8c602", "quantity": 10}',0);
-INSERT INTO messages VALUES(93,310495,'insert','sends','{"asset": "DIVIDEND", "block_index": 310495, "destination": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj", "quantity": 10, "source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "status": "valid", "tx_hash": "9d3391348171201de9b5eb70ca80896b0ae166fd51237c843a90c1b4ccf8c602", "tx_index": 496}',0);
-INSERT INTO messages VALUES(94,310496,'insert','debits','{"action": "send", "address": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "asset": "XCP", "block_index": 310496, "event": "54f4c7b383ea19147e62d2be9f3e7f70b6c379baac15e8b4cf43f7c21578c1ef", "quantity": 92945878046}',0);
-INSERT INTO messages VALUES(95,310496,'insert','credits','{"action": "send", "address": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj", "asset": "XCP", "block_index": 310496, "event": "54f4c7b383ea19147e62d2be9f3e7f70b6c379baac15e8b4cf43f7c21578c1ef", "quantity": 92945878046}',0);
-INSERT INTO messages VALUES(96,310496,'insert','sends','{"asset": "XCP", "block_index": 310496, "destination": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj", "quantity": 92945878046, "source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "status": "valid", "tx_hash": "54f4c7b383ea19147e62d2be9f3e7f70b6c379baac15e8b4cf43f7c21578c1ef", "tx_index": 497}',0);
+INSERT INTO messages VALUES(80,310486,'insert','broadcasts','{"block_index": 310486, "fee_fraction_int": 5000000, "locked": false, "source": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM", "status": "valid", "text": "Unit Test", "timestamp": 1388000000, "tx_hash": "d0b852bbf29ccc0015893b2d252c595be4bc821b7819b90ca0cbad75bf9f956b", "tx_index": 487, "value": 1.0}',0);
+INSERT INTO messages VALUES(81,310487,'insert','debits','{"action": "bet", "address": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM", "asset": "XCP", "block_index": 310487, "event": "69b9a535084fa5faf91acd7d056e2c32a85cc15d6a4d83b1adf091a344d22407", "quantity": 9}',0);
+INSERT INTO messages VALUES(82,310487,'insert','bets','{"bet_type": 1, "block_index": 310487, "counterwager_quantity": 9, "counterwager_remaining": 9, "deadline": 1388000001, "expiration": 100, "expire_index": 310587, "fee_fraction_int": 5000000.0, "feed_address": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM", "leverage": 5040, "source": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM", "status": "open", "target_value": 0.0, "tx_hash": "69b9a535084fa5faf91acd7d056e2c32a85cc15d6a4d83b1adf091a344d22407", "tx_index": 488, "wager_quantity": 9, "wager_remaining": 9}',0);
+INSERT INTO messages VALUES(83,310488,'insert','broadcasts','{"block_index": 310488, "fee_fraction_int": null, "locked": true, "source": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM", "status": "valid", "text": null, "timestamp": 0, "tx_hash": "c15d2767f6eecdc768f957ea8316b18aacf6ec3a6413361cbe898df3e6095893", "tx_index": 489, "value": null}',0);
+INSERT INTO messages VALUES(84,310491,'insert','debits','{"action": "open order", "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "block_index": 310491, "event": "9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b", "quantity": 100000000}',0);
+INSERT INTO messages VALUES(85,310491,'insert','orders','{"block_index": 310491, "expiration": 2000, "expire_index": 312491, "fee_provided": 10000, "fee_provided_remaining": 10000, "fee_required": 900000, "fee_required_remaining": 900000, "get_asset": "BTC", "get_quantity": 800000, "get_remaining": 800000, "give_asset": "XCP", "give_quantity": 100000000, "give_remaining": 100000000, "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "status": "open", "tx_hash": "9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b", "tx_index": 492}',0);
+INSERT INTO messages VALUES(86,310492,'insert','orders','{"block_index": 310492, "expiration": 2000, "expire_index": 312492, "fee_provided": 1000000, "fee_provided_remaining": 1000000, "fee_required": 0, "fee_required_remaining": 0, "get_asset": "XCP", "get_quantity": 100000000, "get_remaining": 100000000, "give_asset": "BTC", "give_quantity": 800000, "give_remaining": 800000, "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "status": "open", "tx_hash": "14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0", "tx_index": 493}',0);
+INSERT INTO messages VALUES(87,310492,'update','orders','{"fee_provided_remaining": 10000, "fee_required_remaining": 892800, "get_remaining": 0, "give_remaining": 0, "status": "open", "tx_hash": "9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b"}',0);
+INSERT INTO messages VALUES(88,310492,'update','orders','{"fee_provided_remaining": 992800, "fee_required_remaining": 0, "get_remaining": 0, "give_remaining": 0, "status": "open", "tx_hash": "14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0"}',0);
+INSERT INTO messages VALUES(89,310492,'insert','order_matches','{"backward_asset": "BTC", "backward_quantity": 800000, "block_index": 310492, "fee_paid": 7200, "forward_asset": "XCP", "forward_quantity": 100000000, "id": "9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b_14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0", "match_expire_index": 310512, "status": "pending", "tx0_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "tx0_block_index": 310491, "tx0_expiration": 2000, "tx0_hash": "9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b", "tx0_index": 492, "tx1_address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "tx1_block_index": 310492, "tx1_expiration": 2000, "tx1_hash": "14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0", "tx1_index": 493}',0);
+INSERT INTO messages VALUES(90,310493,'insert','credits','{"action": "burn", "address": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "asset": "XCP", "block_index": 310493, "event": "d6adfa92e20b6211ff5fabb2f7a1c8b037168797984c94734c28e82e92d3b1d6", "quantity": 92995878046}',0);
+INSERT INTO messages VALUES(91,310493,'insert','burns','{"block_index": 310493, "burned": 62000000, "earned": 92995878046, "source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "status": "valid", "tx_hash": "d6adfa92e20b6211ff5fabb2f7a1c8b037168797984c94734c28e82e92d3b1d6", "tx_index": 494}',0);
+INSERT INTO messages VALUES(92,310494,'insert','debits','{"action": "issuance fee", "address": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "asset": "XCP", "block_index": 310494, "event": "084102fa0722f5520481f34eabc9f92232e4d1647b329b3fa58bffc8f91c5e4e", "quantity": 50000000}',0);
+INSERT INTO messages VALUES(93,310494,'insert','issuances','{"asset": "DIVIDEND", "block_index": 310494, "call_date": 0, "call_price": 0.0, "callable": false, "description": "Test dividend", "divisible": true, "fee_paid": 50000000, "issuer": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "locked": false, "quantity": 100, "source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "status": "valid", "transfer": false, "tx_hash": "084102fa0722f5520481f34eabc9f92232e4d1647b329b3fa58bffc8f91c5e4e", "tx_index": 495}',0);
+INSERT INTO messages VALUES(94,310494,'insert','credits','{"action": "issuance", "address": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "asset": "DIVIDEND", "block_index": 310494, "event": "084102fa0722f5520481f34eabc9f92232e4d1647b329b3fa58bffc8f91c5e4e", "quantity": 100}',0);
+INSERT INTO messages VALUES(95,310495,'insert','debits','{"action": "send", "address": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "asset": "DIVIDEND", "block_index": 310495, "event": "9d3391348171201de9b5eb70ca80896b0ae166fd51237c843a90c1b4ccf8c602", "quantity": 10}',0);
+INSERT INTO messages VALUES(96,310495,'insert','credits','{"action": "send", "address": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj", "asset": "DIVIDEND", "block_index": 310495, "event": "9d3391348171201de9b5eb70ca80896b0ae166fd51237c843a90c1b4ccf8c602", "quantity": 10}',0);
+INSERT INTO messages VALUES(97,310495,'insert','sends','{"asset": "DIVIDEND", "block_index": 310495, "destination": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj", "quantity": 10, "source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "status": "valid", "tx_hash": "9d3391348171201de9b5eb70ca80896b0ae166fd51237c843a90c1b4ccf8c602", "tx_index": 496}',0);
+INSERT INTO messages VALUES(98,310496,'insert','debits','{"action": "send", "address": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "asset": "XCP", "block_index": 310496, "event": "54f4c7b383ea19147e62d2be9f3e7f70b6c379baac15e8b4cf43f7c21578c1ef", "quantity": 92945878046}',0);
+INSERT INTO messages VALUES(99,310496,'insert','credits','{"action": "send", "address": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj", "asset": "XCP", "block_index": 310496, "event": "54f4c7b383ea19147e62d2be9f3e7f70b6c379baac15e8b4cf43f7c21578c1ef", "quantity": 92945878046}',0);
+INSERT INTO messages VALUES(100,310496,'insert','sends','{"asset": "XCP", "block_index": 310496, "destination": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj", "quantity": 92945878046, "source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "status": "valid", "tx_hash": "54f4c7b383ea19147e62d2be9f3e7f70b6c379baac15e8b4cf43f7c21578c1ef", "tx_index": 497}',0);
 -- Triggers and indices on  messages
 CREATE INDEX block_index_message_index_idx ON messages (block_index, message_index);
 
@@ -1591,6 +1599,9 @@ INSERT INTO transactions VALUES(108,'63145ad2bcc7030aabcfec42a5cce5dfe6829a5694f
 INSERT INTO transactions VALUES(109,'075b91828d0c7b0017f1b5876ef4909ba37db9bc2877588483d8a64bad2bd412',310108,'8f2d3861aa42f8e75dc14a23d6046bd89feef0d81996b6e1adc2a2828fbc8b34',310108000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy',5430,10000,X'00000000000000A25BE34B660000000005F5E100',1);
 INSERT INTO transactions VALUES(110,'d858c6855038048b1d5e31a34ceae2069d7c7bc311ca49d189ccbf44cee58031',310109,'d23aaaae55e6a912eaaa8d20fe2a9ad4819fe9dc1ed58977265af58fad89d8f9',310109000,'2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy','',0,10000,X'0000001E52BB33023FF0000000000000004C4B4009556E69742054657374',1);
 INSERT INTO transactions VALUES(111,'81f8ba670b22980b15c944dcd478a274723659d768b0de73b014d06d214e5b90',310110,'cecc8e4791bd3081995bd9fd67acb6b97415facfd2b68f926a70b22d9a258382',310110000,'2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy','2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy',5430,10000,X'00000028000352BB33C8000000000000000A000000000000000A0000000000000000000013B0000003E8',1);
+INSERT INTO transactions VALUES(487,'d0b852bbf29ccc0015893b2d252c595be4bc821b7819b90ca0cbad75bf9f956b',310486,'d4fbe610cc60987f2d1d35c7d8ad3ce32156ee5fe36ef8cc4f08b46836388862',310486000,'myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM','',0,-99990000,X'0000001E52BB33003FF0000000000000004C4B4009556E69742054657374',1);
+INSERT INTO transactions VALUES(488,'69b9a535084fa5faf91acd7d056e2c32a85cc15d6a4d83b1adf091a344d22407',310487,'32aa1b132d0643350bbb62dbd5f38ae0c270d8f491a2012c83b99158d58e464f',310487000,'myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM','myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM',5430,-99990000,X'00000028000152BB3301000000000000000900000000000000090000000000000000000013B000000064',1);
+INSERT INTO transactions VALUES(489,'c15d2767f6eecdc768f957ea8316b18aacf6ec3a6413361cbe898df3e6095893',310488,'80b8dd5d7ce2e4886e6721095b892a39fb699980fe2bc1c17e747f822f4c4b1b',310488000,'myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM','',0,-99990000,X'0000001E52BB33023FF000000000000000000000046C6F636B',1);
 INSERT INTO transactions VALUES(492,'9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b',310491,'811abd7cf2b768cfdaa84ab44c63f4463c96a368ead52125bf149cf0c7447b16',310491000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','',0,10000,X'0000000A00000000000000010000000005F5E100000000000000000000000000000C350007D000000000000DBBA0',1);
 INSERT INTO transactions VALUES(493,'14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0',310492,'8a09b2faf0a7ad67eb4ab5c948b9769fc87eb2ec5e16108f2cde8bd9e6cf7607',310492000,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','',0,1000000,X'0000000A000000000000000000000000000C350000000000000000010000000005F5E10007D00000000000000000',1);
 INSERT INTO transactions VALUES(494,'d6adfa92e20b6211ff5fabb2f7a1c8b037168797984c94734c28e82e92d3b1d6',310493,'c19e2915b750279b2be4b52e57e5ce29f63dffb4e14d9aad30c9e820affc0cbf',310493000,'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH','mvCounterpartyXXXXXXXXXXXXXXW24Hef',62000000,10000,X'',1);
@@ -1608,32 +1619,37 @@ DROP TABLE IF EXISTS undolog;
 CREATE TABLE undolog(
                         undo_index INTEGER PRIMARY KEY AUTOINCREMENT,
                         sql TEXT);
-INSERT INTO undolog VALUES(131,'UPDATE balances SET address=''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'',asset=''XCP'',quantity=92050000000 WHERE rowid=1');
-INSERT INTO undolog VALUES(132,'DELETE FROM debits WHERE rowid=22');
-INSERT INTO undolog VALUES(133,'DELETE FROM orders WHERE rowid=5');
-INSERT INTO undolog VALUES(134,'DELETE FROM orders WHERE rowid=6');
-INSERT INTO undolog VALUES(135,'UPDATE orders SET tx_index=492,tx_hash=''9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b'',block_index=310491,source=''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'',give_asset=''XCP'',give_quantity=100000000,give_remaining=100000000,get_asset=''BTC'',get_quantity=800000,get_remaining=800000,expiration=2000,expire_index=312491,fee_required=900000,fee_required_remaining=900000,fee_provided=10000,fee_provided_remaining=10000,status=''open'' WHERE rowid=5');
-INSERT INTO undolog VALUES(136,'UPDATE orders SET tx_index=493,tx_hash=''14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0'',block_index=310492,source=''mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'',give_asset=''BTC'',give_quantity=800000,give_remaining=800000,get_asset=''XCP'',get_quantity=100000000,get_remaining=100000000,expiration=2000,expire_index=312492,fee_required=0,fee_required_remaining=0,fee_provided=1000000,fee_provided_remaining=1000000,status=''open'' WHERE rowid=6');
-INSERT INTO undolog VALUES(137,'DELETE FROM order_matches WHERE rowid=1');
-INSERT INTO undolog VALUES(138,'DELETE FROM balances WHERE rowid=19');
-INSERT INTO undolog VALUES(139,'DELETE FROM credits WHERE rowid=24');
-INSERT INTO undolog VALUES(140,'DELETE FROM burns WHERE rowid=494');
-INSERT INTO undolog VALUES(141,'UPDATE balances SET address=''mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH'',asset=''XCP'',quantity=92995878046 WHERE rowid=19');
-INSERT INTO undolog VALUES(142,'DELETE FROM debits WHERE rowid=23');
-INSERT INTO undolog VALUES(143,'DELETE FROM assets WHERE rowid=9');
-INSERT INTO undolog VALUES(144,'DELETE FROM issuances WHERE rowid=495');
-INSERT INTO undolog VALUES(145,'DELETE FROM balances WHERE rowid=20');
-INSERT INTO undolog VALUES(146,'DELETE FROM credits WHERE rowid=25');
-INSERT INTO undolog VALUES(147,'UPDATE balances SET address=''mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH'',asset=''DIVIDEND'',quantity=100 WHERE rowid=20');
-INSERT INTO undolog VALUES(148,'DELETE FROM debits WHERE rowid=24');
-INSERT INTO undolog VALUES(149,'DELETE FROM balances WHERE rowid=21');
-INSERT INTO undolog VALUES(150,'DELETE FROM credits WHERE rowid=26');
-INSERT INTO undolog VALUES(151,'DELETE FROM sends WHERE rowid=496');
-INSERT INTO undolog VALUES(152,'UPDATE balances SET address=''mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH'',asset=''XCP'',quantity=92945878046 WHERE rowid=19');
+INSERT INTO undolog VALUES(131,'DELETE FROM broadcasts WHERE rowid=487');
+INSERT INTO undolog VALUES(132,'UPDATE balances SET address=''myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM'',asset=''XCP'',quantity=92999138821 WHERE rowid=13');
+INSERT INTO undolog VALUES(133,'DELETE FROM debits WHERE rowid=22');
+INSERT INTO undolog VALUES(134,'DELETE FROM bets WHERE rowid=5');
+INSERT INTO undolog VALUES(135,'DELETE FROM broadcasts WHERE rowid=489');
+INSERT INTO undolog VALUES(136,'UPDATE balances SET address=''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'',asset=''XCP'',quantity=92050000000 WHERE rowid=1');
+INSERT INTO undolog VALUES(137,'DELETE FROM debits WHERE rowid=23');
+INSERT INTO undolog VALUES(138,'DELETE FROM orders WHERE rowid=5');
+INSERT INTO undolog VALUES(139,'DELETE FROM orders WHERE rowid=6');
+INSERT INTO undolog VALUES(140,'UPDATE orders SET tx_index=492,tx_hash=''9093cfde7b0d970844f7619ec07dc9313df4bf8e0fe42e7db8e17c022023360b'',block_index=310491,source=''mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'',give_asset=''XCP'',give_quantity=100000000,give_remaining=100000000,get_asset=''BTC'',get_quantity=800000,get_remaining=800000,expiration=2000,expire_index=312491,fee_required=900000,fee_required_remaining=900000,fee_provided=10000,fee_provided_remaining=10000,status=''open'' WHERE rowid=5');
+INSERT INTO undolog VALUES(141,'UPDATE orders SET tx_index=493,tx_hash=''14cc265394e160335493215c3276712da0cb1d77cd8ed9f284441641795fc7c0'',block_index=310492,source=''mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'',give_asset=''BTC'',give_quantity=800000,give_remaining=800000,get_asset=''XCP'',get_quantity=100000000,get_remaining=100000000,expiration=2000,expire_index=312492,fee_required=0,fee_required_remaining=0,fee_provided=1000000,fee_provided_remaining=1000000,status=''open'' WHERE rowid=6');
+INSERT INTO undolog VALUES(142,'DELETE FROM order_matches WHERE rowid=1');
+INSERT INTO undolog VALUES(143,'DELETE FROM balances WHERE rowid=19');
+INSERT INTO undolog VALUES(144,'DELETE FROM credits WHERE rowid=24');
+INSERT INTO undolog VALUES(145,'DELETE FROM burns WHERE rowid=494');
+INSERT INTO undolog VALUES(146,'UPDATE balances SET address=''mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH'',asset=''XCP'',quantity=92995878046 WHERE rowid=19');
+INSERT INTO undolog VALUES(147,'DELETE FROM debits WHERE rowid=24');
+INSERT INTO undolog VALUES(148,'DELETE FROM assets WHERE rowid=9');
+INSERT INTO undolog VALUES(149,'DELETE FROM issuances WHERE rowid=495');
+INSERT INTO undolog VALUES(150,'DELETE FROM balances WHERE rowid=20');
+INSERT INTO undolog VALUES(151,'DELETE FROM credits WHERE rowid=25');
+INSERT INTO undolog VALUES(152,'UPDATE balances SET address=''mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH'',asset=''DIVIDEND'',quantity=100 WHERE rowid=20');
 INSERT INTO undolog VALUES(153,'DELETE FROM debits WHERE rowid=25');
-INSERT INTO undolog VALUES(154,'DELETE FROM balances WHERE rowid=22');
-INSERT INTO undolog VALUES(155,'DELETE FROM credits WHERE rowid=27');
-INSERT INTO undolog VALUES(156,'DELETE FROM sends WHERE rowid=497');
+INSERT INTO undolog VALUES(154,'DELETE FROM balances WHERE rowid=21');
+INSERT INTO undolog VALUES(155,'DELETE FROM credits WHERE rowid=26');
+INSERT INTO undolog VALUES(156,'DELETE FROM sends WHERE rowid=496');
+INSERT INTO undolog VALUES(157,'UPDATE balances SET address=''mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH'',asset=''XCP'',quantity=92945878046 WHERE rowid=19');
+INSERT INTO undolog VALUES(158,'DELETE FROM debits WHERE rowid=26');
+INSERT INTO undolog VALUES(159,'DELETE FROM balances WHERE rowid=22');
+INSERT INTO undolog VALUES(160,'DELETE FROM credits WHERE rowid=27');
+INSERT INTO undolog VALUES(161,'DELETE FROM sends WHERE rowid=497');
 
 -- Table  undolog_block
 DROP TABLE IF EXISTS undolog_block;
@@ -1727,24 +1743,24 @@ INSERT INTO undolog_block VALUES(310483,131);
 INSERT INTO undolog_block VALUES(310484,131);
 INSERT INTO undolog_block VALUES(310485,131);
 INSERT INTO undolog_block VALUES(310486,131);
-INSERT INTO undolog_block VALUES(310487,131);
-INSERT INTO undolog_block VALUES(310488,131);
-INSERT INTO undolog_block VALUES(310489,131);
-INSERT INTO undolog_block VALUES(310490,131);
-INSERT INTO undolog_block VALUES(310491,131);
-INSERT INTO undolog_block VALUES(310492,134);
-INSERT INTO undolog_block VALUES(310493,138);
-INSERT INTO undolog_block VALUES(310494,141);
-INSERT INTO undolog_block VALUES(310495,147);
-INSERT INTO undolog_block VALUES(310496,152);
-INSERT INTO undolog_block VALUES(310497,157);
-INSERT INTO undolog_block VALUES(310498,157);
-INSERT INTO undolog_block VALUES(310499,157);
-INSERT INTO undolog_block VALUES(310500,157);
+INSERT INTO undolog_block VALUES(310487,132);
+INSERT INTO undolog_block VALUES(310488,135);
+INSERT INTO undolog_block VALUES(310489,136);
+INSERT INTO undolog_block VALUES(310490,136);
+INSERT INTO undolog_block VALUES(310491,136);
+INSERT INTO undolog_block VALUES(310492,139);
+INSERT INTO undolog_block VALUES(310493,143);
+INSERT INTO undolog_block VALUES(310494,146);
+INSERT INTO undolog_block VALUES(310495,152);
+INSERT INTO undolog_block VALUES(310496,157);
+INSERT INTO undolog_block VALUES(310497,162);
+INSERT INTO undolog_block VALUES(310498,162);
+INSERT INTO undolog_block VALUES(310499,162);
+INSERT INTO undolog_block VALUES(310500,162);
 
 -- For primary key autoincrements the next id to use is stored in
 -- sqlite_sequence
 DELETE FROM main.sqlite_sequence WHERE name='undolog';
-INSERT INTO main.sqlite_sequence VALUES ('undolog', 156);
+INSERT INTO main.sqlite_sequence VALUES ('undolog', 161);
 
 COMMIT TRANSACTION;

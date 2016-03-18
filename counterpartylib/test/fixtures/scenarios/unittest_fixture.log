@@ -179,6 +179,19 @@ New input: amount: 1.0; txid: 20ffe4012d5fc638309b2d087a15fb100d9194132633623bc4
 Change quantity: 0.9998457 BTC
 Debit: 0.0000001 XCP from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy #bet# <81f8ba670b22980b15c944dcd478a274723659d768b0de73b014d06d214e5b90>
 Bet: 0.0000001 XCP against 0.0000001 XCP, by 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy, on 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy
+Sorted candidate UTXOs: ['amount: 1.0782457; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 143']
+New input: amount: 1.0782457; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 143
+Change quantity: 1.0780677 BTC
+Broadcast: myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM at 2013-12-25T19:33:20 with a fee of 500.0%% (d0b852bbf29ccc0015893b2d252c595be4bc821b7819b90ca0cbad75bf9f956b) [valid]
+Sorted candidate UTXOs: ['amount: 1.0782457; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 143']
+New input: amount: 1.0782457; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 143
+Change quantity: 1.0780134 BTC
+Debit: 0.00000009 XCP from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM #bet# <69b9a535084fa5faf91acd7d056e2c32a85cc15d6a4d83b1adf091a344d22407>
+Bet: 0.00000009 XCP against 0.00000009 XCP, by myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM, on myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM
+Sorted candidate UTXOs: ['amount: 1.0782457; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 143']
+New input: amount: 1.0782457; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 143
+Change quantity: 1.0780677 BTC
+Broadcast: myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM locked his feed (c15d2767f6eecdc768f957ea8316b18aacf6ec3a6413361cbe898df3e6095893) [valid]
 Sorted candidate UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Change quantity: 1.9989134 BTC

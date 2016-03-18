@@ -2862,12 +2862,17 @@ UNITTEST_VECTOR = {
         }],
         'last_message': [{
             'in': (),
-            'out': {'block_index': 310496,
-                    'bindings': '{"asset": "XCP", "block_index": 310496, "destination": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj", "quantity": 92945878046, "source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "status": "valid", "tx_hash": "54f4c7b383ea19147e62d2be9f3e7f70b6c379baac15e8b4cf43f7c21578c1ef", "tx_index": 497}',
+            'out': {'bindings': '{"asset": "XCP", "block_index": 310496, "destination": '
+                            '"mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj", "quantity": 92945878046, '
+                            '"source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "status": '
+                            '"valid", "tx_hash": '
+                            '"54f4c7b383ea19147e62d2be9f3e7f70b6c379baac15e8b4cf43f7c21578c1ef", '
+                            '"tx_index": 497}',
+                    'block_index': 310496,
                     'category': 'sends',
-                    'timestamp': 0,
-                    'message_index': 96,
-                    'command': 'insert'}
+                    'command': 'insert',
+                    'message_index': 100,
+                    'timestamp': 0}
         }],
         'get_asset_id': [{
             'in': ('XCP', DP['default_block_index']),
