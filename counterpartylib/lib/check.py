@@ -70,7 +70,7 @@ def consensus_hash(db, field, previous_consensus_hash, content):
     block_index = util.CURRENT_BLOCK_INDEX
 
     # Initialise previous hash on first block.
-    if block_index == config.BLOCK_FIRST:
+    if block_index <= config.BLOCK_FIRST:
         assert not previous_consensus_hash
         previous_consensus_hash = util.dhash_string(CONSENSUS_HASH_SEED)
 
