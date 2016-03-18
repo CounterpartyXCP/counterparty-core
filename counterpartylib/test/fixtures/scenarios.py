@@ -44,6 +44,11 @@ UNITTEST_FIXTURE = [
     ['create_next_block', 100],
     ['bet', (ADDR[1], ADDR[0], 3, 1388000200, 10, 10, 0.0, 5040, 1000), {'encoding': 'multisig'}],
     ['broadcast', (ADDR[0], 1388000002, 1, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],
+
+    ['burn', (ADDR[4], DP['burn_quantity']), {'encoding': 'multisig'}],
+    ['burn', (ADDR[5], DP['burn_quantity']), {'encoding': 'multisig'}],
+    ['burn', (ADDR[6], DP['burn_quantity']), {'encoding': 'multisig'}],
+
     ['create_next_block', 490],
     ['order', (ADDR[0], 'XCP', DP['quantity'], 'BTC', round(DP['quantity'] / 125), 2000, DP['fee_required']), {'encoding': 'multisig'}],
     ['order', (ADDR[1], 'BTC', round(DP['quantity'] / 125), 'XCP', DP['quantity'], 2000, 0), {'encoding': 'multisig', 'fee_provided': DP['fee_provided']}],
@@ -51,6 +56,7 @@ UNITTEST_FIXTURE = [
     ['issuance', (ADDR[2], None, 'DIVIDEND', 100, True, 'Test dividend'), {'encoding': 'multisig'}],
     ['send', (ADDR[2], ADDR[3], 'DIVIDEND', 10), {'encoding': 'multisig'}],
     ['send', (ADDR[2], ADDR[3], 'XCP', 92945878046), {'encoding': 'multisig'}],
+
     ['create_next_block', 500]
 ]
 

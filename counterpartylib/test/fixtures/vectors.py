@@ -9,6 +9,8 @@ The function supports three types of output checks:
 """
 
 import binascii
+import json
+
 import bitcoin as bitcoinlib
 from .params import ADDR, MULTISIGADDR, DEFAULT_PARAMS as DP
 
@@ -24,73 +26,73 @@ from fractions import Fraction
 UNITTEST_VECTOR = {
     'bet': {
         'validate': [{
-            'in': (ADDR[1], ADDR[0], 0, 1488000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'in': (ADDR[1], ADDR[0], 0, 1488000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block_index']),
             'out': ([], 15120)
         },  {
-            'in': (ADDR[1], ADDR[0], 0, 1488000100, 2**32, DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'in': (ADDR[1], ADDR[0], 0, 1488000100, 2**32, DP['small'], 0.0, 15120, DP['expiration'], DP['default_block_index']),
             'out': ([], 15120)
         },  {
-            'in': (ADDR[0], ADDR[1], 3, 1388001000, DP['small'], DP['small'], 0.0, 5040, DP['expiration'], DP['default_block']),
+            'in': (ADDR[0], ADDR[1], 3, 1388001000, DP['small'], DP['small'], 0.0, 5040, DP['expiration'], DP['default_block_index']),
             'out': (['feed doesn’t exist'], 5040)
         },  {
-            'in': (ADDR[1], ADDR[0], -1, 1488000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'in': (ADDR[1], ADDR[0], -1, 1488000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block_index']),
             'out': (['unknown bet type'], 15120)
         },  {
-            'in': (ADDR[1], ADDR[0], 2, 1488000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'in': (ADDR[1], ADDR[0], 2, 1488000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block_index']),
             'out': (['leverage used with Equal or NotEqual'], 15120)
         },  {
-            'in': (ADDR[1], ADDR[0], 3, 1488000100, DP['small'], DP['small'], 0.0, 5000, DP['expiration'], DP['default_block']),
+            'in': (ADDR[1], ADDR[0], 3, 1488000100, DP['small'], DP['small'], 0.0, 5000, DP['expiration'], DP['default_block_index']),
             'out': (['leverage used with Equal or NotEqual', 'leverage level too low'], 5000)
         },  {
             'in': (ADDR[1], ADDR[0], 1, 1488000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], 312350),
             'out': (['CFDs temporarily disabled'], 15120)
         },  {
-            'in': (ADDR[1], ADDR[0], 1, 1488000100, 1.1 * DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'in': (ADDR[1], ADDR[0], 1, 1488000100, 1.1 * DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block_index']),
             'out': (['wager_quantity must be in satoshis'], 15120)
         },  {
-            'in': (ADDR[1], ADDR[0], 1, 1488000100, DP['small'], 1.1 * DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'in': (ADDR[1], ADDR[0], 1, 1488000100, DP['small'], 1.1 * DP['small'], 0.0, 15120, DP['expiration'], DP['default_block_index']),
             'out': (['counterwager_quantity must be in satoshis'], 15120)
         },  {
-            'in': (ADDR[1], ADDR[0], 1, 1488000100, DP['small'], DP['small'], 0.0, 15120, 1.1 * DP['expiration'], DP['default_block']),
+            'in': (ADDR[1], ADDR[0], 1, 1488000100, DP['small'], DP['small'], 0.0, 15120, 1.1 * DP['expiration'], DP['default_block_index']),
             'out': (['expiration must be expressed as an integer block delta'], 15120)
         },  {
-            'in': (ADDR[1], ADDR[0], 1, 1488000100, -1 * DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'in': (ADDR[1], ADDR[0], 1, 1488000100, -1 * DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block_index']),
             'out': (['non‐positive wager'], 15120)
         },  {
-            'in': (ADDR[1], ADDR[0], 1, 1488000100, DP['small'], -1 * DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'in': (ADDR[1], ADDR[0], 1, 1488000100, DP['small'], -1 * DP['small'], 0.0, 15120, DP['expiration'], DP['default_block_index']),
             'out': (['non‐positive counterwager'], 15120)
         },  {
-            'in': (ADDR[1], ADDR[2], 1, 1488000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'in': (ADDR[1], ADDR[2], 1, 1488000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block_index']),
             'out': (['feed is locked'], 15120)
         },  {
-            'in': (ADDR[1], ADDR[0], 1, -1488000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'in': (ADDR[1], ADDR[0], 1, -1488000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block_index']),
             'out': ( ['deadline in that feed’s past', 'negative deadline'], 15120)
         },  {
-            'in': (ADDR[1], ADDR[0], 1, 1488000100, DP['small'], DP['small'], 0.0, 15120, -1 * DP['expiration'], DP['default_block']),
+            'in': (ADDR[1], ADDR[0], 1, 1488000100, DP['small'], DP['small'], 0.0, 15120, -1 * DP['expiration'], DP['default_block_index']),
             'out': (['negative expiration'], 15120)
         },  {
-            'in': (ADDR[1], ADDR[0], 1, 1488000100, DP['small'], DP['small'], 1.0, 15120, DP['expiration'], DP['default_block']),
+            'in': (ADDR[1], ADDR[0], 1, 1488000100, DP['small'], DP['small'], 1.0, 15120, DP['expiration'], DP['default_block_index']),
             'out': (['CFDs have no target value'], 15120)
         },  {
-            'in': (ADDR[1], ADDR[0], 2, 1488000100, DP['small'], DP['small'], -1.0, 5040, DP['expiration'], DP['default_block']),
+            'in': (ADDR[1], ADDR[0], 2, 1488000100, DP['small'], DP['small'], -1.0, 5040, DP['expiration'], DP['default_block_index']),
             'out': (['negative target value'], 5040)
         },  {
-            'in': (ADDR[1], ADDR[0], 1, 1488000100, DP['small'], DP['small'], 0.0, 15120, 8095, DP['default_block']),
+            'in': (ADDR[1], ADDR[0], 1, 1488000100, DP['small'], DP['small'], 0.0, 15120, 8095, DP['default_block_index']),
             'out': (['expiration overflow'], 15120)
         },  {
-            'in': (ADDR[1], ADDR[0], 1, 1488000100, 2**63, DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'in': (ADDR[1], ADDR[0], 1, 1488000100, 2**63, DP['small'], 0.0, 15120, DP['expiration'], DP['default_block_index']),
             'out': (['integer overflow'], 15120)
         },  {
-            'in': (ADDR[1], ADDR[0], 1, 1488000100, DP['small'], 2**63, 0.0, 15120, DP['expiration'], DP['default_block']),
+            'in': (ADDR[1], ADDR[0], 1, 1488000100, DP['small'], 2**63, 0.0, 15120, DP['expiration'], DP['default_block_index']),
             'out': (['integer overflow'], 15120)
         },  {
-            'in': (ADDR[1], ADDR[0], 2**63, 1488000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'in': (ADDR[1], ADDR[0], 2**63, 1488000100, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block_index']),
             'out': (['unknown bet type', 'integer overflow'], 15120)
         },  {
-            'in': (ADDR[1], ADDR[0], 1, 1488000100, DP['small'], DP['small'], 0.0, 2**63, DP['expiration'], DP['default_block']),
+            'in': (ADDR[1], ADDR[0], 1, 1488000100, DP['small'], DP['small'], 0.0, 2**63, DP['expiration'], DP['default_block_index']),
             'out': (['integer overflow'], 2**63)
         },  {
-            'in': (ADDR[1], ADDR[0], 1, 2**63, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block']),
+            'in': (ADDR[1], ADDR[0], 1, 2**63, DP['small'], DP['small'], 0.0, 15120, DP['expiration'], DP['default_block_index']),
             'out': (['integer overflow'], 15120)
         }],
         'compose': [{
@@ -101,19 +103,20 @@ UNITTEST_VECTOR = {
             'out': (ADDR[1], [(ADDR[0], None)], b'\x00\x00\x00(\x00\x00X\xb1\x14d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n')
         }],
         'parse': [{
-            'in': ({'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'block_time': 310501000, 'data': b'\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'block_index': 310501, 'supported': 1, 'btc_amount': 5430, 'tx_index': 502, 'tx_hash': 'a0ed83b170344b996bdd71799dd774ab10f5410f8572079a292f681d36ebc42c', 'fee': 10000, 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'},),
+            'in': ({'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'block_time': 310501000, 'data': b'\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'block_index': DP['default_block_index'], 'supported': 1, 'btc_amount': 5430, 'tx_index': 502, 'tx_hash': 'a0ed83b170344b996bdd71799dd774ab10f5410f8572079a292f681d36ebc42c', 'fee': 10000, 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'},),
             'out': None
         },  {
-            'in': ({'fee': 10000, 'tx_hash': '72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f', 'data': b'\x00\x00\x00(\x00\x00X\xb1\x14\x00\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x13\xb0\x00\x00\x00\n', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_index': 310501, 'btc_amount': 5430, 'tx_index': 502, 'supported': 1, 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_time': 310501000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58'},),
+            'comment': '1',
+            'in': ({'fee': 10000, 'tx_hash': '72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f', 'data': b'\x00\x00\x00(\x00\x00X\xb1\x14\x00\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x13\xb0\x00\x00\x00\n', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_index': DP['default_block_index'], 'btc_amount': 5430, 'tx_index': 502, 'supported': 1, 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_time': 310501000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58'},),
             'records': [
                 {'table': 'bets', 'values': {
                     'bet_type': 0,
-                    'block_index': 310501,
+                    'block_index': DP['default_block_index'],
                     'counterwager_quantity': 0,
                     'counterwager_remaining': 0,
                     'deadline': 1488000000,
                     'expiration': 10,
-                    'expire_index': 310511,
+                    'expire_index': DP['default_block_index'] + 10,
                     'fee_fraction_int': 5000000,
                     'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'leverage': 5040,
@@ -127,11 +130,11 @@ UNITTEST_VECTOR = {
                 }}
             ]
         },  {
-            'in': ({'supported': 1, 'data': b'\x00\x00\x00(\x00\x02R\xbb3\xc8\x00\x00\x00\x00\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x13\xb0\x00\x00\x03\xe8', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'btc_amount': 5430, 'block_index': 310501, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'tx_hash': '30b9ca8488a931dffa1d8d3ac8f1c51360a29cedb7c703840becc8a95f81188c', 'block_time': 310501000, 'fee': 10000},),
+            'in': ({'supported': 1, 'data': b'\x00\x00\x00(\x00\x02R\xbb3\xc8\x00\x00\x00\x00\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x13\xb0\x00\x00\x03\xe8', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'btc_amount': 5430, 'block_index': DP['default_block_index'], 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'tx_hash': '30b9ca8488a931dffa1d8d3ac8f1c51360a29cedb7c703840becc8a95f81188c', 'block_time': 310501000, 'fee': 10000},),
             'records': [
                 {'table': 'bets', 'values': {
                     'bet_type': 2,
-                    'block_index': 310501,
+                    'block_index': DP['default_block_index'],
                     'counterwager_quantity': 10,
                     'counterwager_remaining': 0,
                     'deadline': 1388000200,
@@ -185,7 +188,7 @@ UNITTEST_VECTOR = {
             'out': None
         },  {
             'in': ({'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58',
-                    'block_index': 310501, 'supported': 1,
+                    'block_index': DP['default_block_index'], 'supported': 1,
                     'block_time': 310501000,
                     'data': b'\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n',
                     'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
@@ -197,22 +200,22 @@ UNITTEST_VECTOR = {
                    },),
             'out': None
         }],
-        # Testing expiration of normal bets is impossible - either the bet is expired automatically with expiry < 310500 or
-        # with expire > 310500 insert fails with FOREIGN KEY error on block_index (which doesn't exist). With expiry 310500 nothing happens.
+        # Testing expiration of normal bets is impossible - either the bet is expired automatically with expiry < DP['default_block_index'] - 1 or
+        # with expire > DP['default_block_index'] - 1 insert fails with FOREIGN KEY error on block_index (which doesn't exist). With expiry DP['default_block_index'] - 1 nothing happens.
         # Testing bet_match expirations is impossible too, since if you add a bet_match with 'pending' status to the fixtures, it raises a ConsensusError in blocks.parse_block.
         # 'expire': [{
-        #     'in': (DP['default_block'] - 1, 5388000200,),
+        #     'in': (DP['default_block_index'] - 1, 5388000200,),
         #     'records': [
         #         {'table': 'bet_match_expirations', 'values': {
         #             'bet_match_id': '94c900515ecf53680e98d51216c520ccb6b91a72d5aff7f62665d6328d4db832_ee5ea2ce1a423157bbb1edbabcadf2dc3adcd328d17c52c44f63dbda835f9125',
-        #             'block_index': DP['default_block'] - 1,
+        #             'block_index': DP['default_block_index'] - 1,
         #             'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
         #             'tx1_address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
         #         }}
         #     ]
         # }],
         'cancel_bet': [{
-            'in': ({'counterwager_quantity': 10, 'wager_remaining': 10, 'target_value': 0.0, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'counterwager_remaining': 10, 'tx_index': 102, 'block_index': 310101, 'deadline': 1388000200, 'bet_type': 3, 'expiration': 1000, 'expire_index': 311101, 'tx_hash': 'ba0ef1dfbbc87df94e1d198b0e9e3c06301710d4aab3d85116cbc8199954644a', 'leverage': 5040, 'wager_quantity': 10, 'fee_fraction_int': 5000000, 'status': 'open'}, 'filled', DP['default_block']),
+            'in': ({'counterwager_quantity': 10, 'wager_remaining': 10, 'target_value': 0.0, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'counterwager_remaining': 10, 'tx_index': 102, 'block_index': 310101, 'deadline': 1388000200, 'bet_type': 3, 'expiration': 1000, 'expire_index': 311101, 'tx_hash': 'ba0ef1dfbbc87df94e1d198b0e9e3c06301710d4aab3d85116cbc8199954644a', 'leverage': 5040, 'wager_quantity': 10, 'fee_fraction_int': 5000000, 'status': 'open'}, 'filled', DP['default_block_index']),
             'records': [
                 {'table': 'bets', 'values': {
                     'bet_type': 3,
@@ -236,7 +239,7 @@ UNITTEST_VECTOR = {
             ]
         }],
         'cancel_bet_match': [{
-            'in': ({'tx0_block_index': 310019, 'backward_quantity': 9, 'initial_value': 1, 'tx1_expiration': 100, 'id': 'be15d34c959fde8f2baff8577d73d28c864e7684cc76ecba33e5d6d79ca6d6bd_90c1314847b1fe9b4520a3610dc98c71d39a1cb4b96edb9b02b6fed844a4b1e5', 'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'status': 'settled', 'leverage': 5040, 'target_value': 0.0, 'fee_fraction_int': 5000000, 'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'deadline': 1388000001, 'tx1_bet_type': 0, 'tx1_address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx0_index': 20, 'tx1_hash': '90c1314847b1fe9b4520a3610dc98c71d39a1cb4b96edb9b02b6fed844a4b1e5', 'tx0_hash': 'be15d34c959fde8f2baff8577d73d28c864e7684cc76ecba33e5d6d79ca6d6bd', 'block_index': 310020, 'forward_quantity': 9, 'match_expire_index': 310119, 'tx1_block_index': 310020, 'tx0_expiration': 100, 'tx1_index': 21, 'tx0_bet_type': 1}, 'filled', DP['default_block']),
+            'in': ({'tx0_block_index': 310019, 'backward_quantity': 9, 'initial_value': 1, 'tx1_expiration': 100, 'id': 'be15d34c959fde8f2baff8577d73d28c864e7684cc76ecba33e5d6d79ca6d6bd_90c1314847b1fe9b4520a3610dc98c71d39a1cb4b96edb9b02b6fed844a4b1e5', 'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'status': 'settled', 'leverage': 5040, 'target_value': 0.0, 'fee_fraction_int': 5000000, 'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'deadline': 1388000001, 'tx1_bet_type': 0, 'tx1_address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx0_index': 20, 'tx1_hash': '90c1314847b1fe9b4520a3610dc98c71d39a1cb4b96edb9b02b6fed844a4b1e5', 'tx0_hash': 'be15d34c959fde8f2baff8577d73d28c864e7684cc76ecba33e5d6d79ca6d6bd', 'block_index': 310020, 'forward_quantity': 9, 'match_expire_index': 310119, 'tx1_block_index': 310020, 'tx0_expiration': 100, 'tx1_index': 21, 'tx0_bet_type': 1}, 'filled', DP['default_block_index']),
             'records': [
                 {'table': 'bet_matches', 'values': {
                     'backward_quantity': 9,
@@ -269,18 +272,18 @@ UNITTEST_VECTOR = {
     },
     'blocks': {
         'parse_tx': [{
-            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc-mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'supported': 1, 'block_index': DP['default_block'], 'fee': 10000, 'block_time': 155409000, 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
+            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc-mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
             'out': None
         },  {
-            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block'], 'fee': 10000, 'block_time': 155409000, 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns-mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj'},),
+            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns-mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj'},),
             'out': None
         }],
         'parse_block': [{
-            'in': (DP['default_block'] - 1, 1420914478),
-            'out': ('bc2a2e09a881d5e382904ee20025c7b0c50006a445ac4635d4282234212429a1',
-                    '7a345ce55acea2b33aeefd37dcc20bbf8dd6cd98b6b0a4f0697c001f854af85a',
-                    '73581237adaf4842a9fba69241f2989588427488b3833ed371bc8ca239187b63',
-                    '73581237adaf4842a9fba69241f2989588427488b3833ed371bc8ca239187b63')
+            'in': (DP['default_block_index'] - 1, 1420914478),
+            'out': ('398c9834454c2b8c803a83498992e5cd8f276308d72b54edaee56ac1fb27ce92',
+                '92ae06276ecb2cbb5d974c2974470cdb0a932c4bdb8dcc4b479c7c44c638c649',
+                '485b6dd30f0954f5932815470756d2cff2fa5507e6d5b6378d4358327018b0e9',
+                '485b6dd30f0954f5932815470756d2cff2fa5507e6d5b6378d4358327018b0e9')
         }],
         'get_next_tx_index': [{
             'in': (),
@@ -288,7 +291,7 @@ UNITTEST_VECTOR = {
         }],
         'last_db_index': [{
             'in': (),
-            'out': 310500
+            'out': DP['default_block_index'] - 1
         }],
         'get_tx_info': [{
             'in': (b'0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac781e000000000000695121035ca51ea175f108a1c63588683dc4c43a7146c46799f864a300263c0813f5fe352102309a14a1a30202f2e76f46acdb2917752371ca42b97460f7928ade8ecb02ea17210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97753ae4286f505000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000',),
@@ -299,7 +302,7 @@ UNITTEST_VECTOR = {
                     b'\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n')
         }],
         'get_tx_info1': [{
-            'in': (b'0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff0636150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac36150000000000001976a9147da51ea175f108a1c63588683dc4c43a7146c46788ac36150000000000001976a9147da51ea175f108a1c6358868173e34e8ca75a06788ac36150000000000001976a9147da51ea175f108a1c637729895c4c468ca75a06788ac36150000000000001976a9147fa51ea175f108a1c63588682ed4c468ca7fa06788ace24ff505000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000', DP['default_block']),
+            'in': (b'0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff0636150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac36150000000000001976a9147da51ea175f108a1c63588683dc4c43a7146c46788ac36150000000000001976a9147da51ea175f108a1c6358868173e34e8ca75a06788ac36150000000000001976a9147da51ea175f108a1c637729895c4c468ca75a06788ac36150000000000001976a9147fa51ea175f108a1c63588682ed4c468ca7fa06788ace24ff505000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000', DP['default_block_index']),
             'out': ('mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     5430,
@@ -342,13 +345,13 @@ UNITTEST_VECTOR = {
             'error': (exceptions.ComposeError, "['offer not open']")
         }],
         'parse': [{
-            'in': ({'block_index': 310501, 'btc_amount': 0, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'data': b'\x00\x00\x00F\xba\x0e\xf1\xdf\xbb\xc8}\xf9N\x1d\x19\x8b\x0e\x9e<\x060\x17\x10\xd4\xaa\xb3\xd8Q\x16\xcb\xc8\x19\x99TdJ', 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'fee': 10000, 'block_time': 310501000, 'tx_hash': 'fb645106e276bfa1abd587f4a251b26f491a2a9ae61ca46a669794109728b122', 'destination': '', 'supported': 1},),
+            'in': ({'block_index': DP['default_block_index'], 'btc_amount': 0, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'data': b'\x00\x00\x00F\xba\x0e\xf1\xdf\xbb\xc8}\xf9N\x1d\x19\x8b\x0e\x9e<\x060\x17\x10\xd4\xaa\xb3\xd8Q\x16\xcb\xc8\x19\x99TdJ', 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'fee': 10000, 'block_time': 310501000, 'tx_hash': 'fb645106e276bfa1abd587f4a251b26f491a2a9ae61ca46a669794109728b122', 'destination': '', 'supported': 1},),
             'out': None
         },  {
-            'in': ({'block_index': 310501, 'btc_amount': 0, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'data': b'\x00\x00\x00F\xba\x0e\xf1\xdf\xbb\xc8}\xf9N\x1d\x19\x8b\x0e\x9e<\x060\x17\x10\xd4\xaa\xb3\xd8Q\x16\xcb\xc8\x19\x99TdJ', 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'fee': 10000, 'block_time': 310501000, 'tx_hash': 'fb645106e276bfa1abd587f4a251b26f491a2a9ae61ca46a669794109728b122', 'destination': '', 'supported': 1},),
+            'in': ({'block_index': DP['default_block_index'], 'btc_amount': 0, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'data': b'\x00\x00\x00F\xba\x0e\xf1\xdf\xbb\xc8}\xf9N\x1d\x19\x8b\x0e\x9e<\x060\x17\x10\xd4\xaa\xb3\xd8Q\x16\xcb\xc8\x19\x99TdJ', 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'fee': 10000, 'block_time': 310501000, 'tx_hash': 'fb645106e276bfa1abd587f4a251b26f491a2a9ae61ca46a669794109728b122', 'destination': '', 'supported': 1},),
             'records': [
                 {'table': 'cancels', 'values': {
-                    'block_index': 310501,
+                    'block_index': DP['default_block_index'],
                     'offer_hash': 'ba0ef1dfbbc87df94e1d198b0e9e3c06301710d4aab3d85116cbc8199954644a',
                     'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'status': 'valid',
@@ -379,19 +382,19 @@ UNITTEST_VECTOR = {
     },
     'broadcast': {
         'validate': [{
-            'in': (ADDR[0], 1588000000, 1, DP['fee_multiplier'], 'Unit Test', DP['default_block']),
+            'in': (ADDR[0], 1588000000, 1, DP['fee_multiplier'], 'Unit Test', DP['default_block_index']),
             'out': ([])
         },  {
-            'in': (ADDR[2], 1588000000, 1, DP['fee_multiplier'], 'Unit Test', DP['default_block']),
+            'in': (ADDR[2], 1588000000, 1, DP['fee_multiplier'], 'Unit Test', DP['default_block_index']),
             'out': (['locked feed'])
         },  {
-            'in': (ADDR[0], 1588000000, 1, 4294967296, 'Unit Test', DP['default_block']),
+            'in': (ADDR[0], 1588000000, 1, 4294967296, 'Unit Test', DP['default_block_index']),
             'out': (['fee fraction greater than or equal to 1'])
         },  {
-            'in': (ADDR[0], -1388000000, 1, DP['fee_multiplier'], 'Unit Test', DP['default_block']),
+            'in': (ADDR[0], -1388000000, 1, DP['fee_multiplier'], 'Unit Test', DP['default_block_index']),
             'out': (['negative timestamp', 'feed timestamps not monotonically increasing'])
         },  {
-            'in': (None, 1588000000, 1, DP['fee_multiplier'], 'Unit Test', DP['default_block']),
+            'in': (None, 1588000000, 1, DP['fee_multiplier'], 'Unit Test', DP['default_block_index']),
             'out': (['null source address'])
         }],
         'compose': [{
@@ -402,13 +405,13 @@ UNITTEST_VECTOR = {
             'out': (ADDR[0], [], b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00LK@Over 52 characters test test test test test test test test')
         }],
         'parse': [{
-            'in': ({'destination': '', 'block_index': 310501, 'supported': 1, 'data': b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\x06BARFOO', 'fee': 10000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'btc_amount': 0, 'block_time': 310501000, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea'},),
+            'in': ({'destination': '', 'block_index': DP['default_block_index'], 'supported': 1, 'data': b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\x06BARFOO', 'fee': 10000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'btc_amount': 0, 'block_time': 310501000, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea'},),
             'out': None
         },  {
-            'in': ({'destination': '', 'block_index': 310501, 'supported': 1, 'data': b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\x06BARFOO', 'fee': 10000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'btc_amount': 0, 'block_time': 310501000, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea'},),
+            'in': ({'destination': '', 'block_index': DP['default_block_index'], 'supported': 1, 'data': b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\x06BARFOO', 'fee': 10000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'btc_amount': 0, 'block_time': 310501000, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea'},),
             'records': [
                 {'table': 'broadcasts', 'values': {
-                    'block_index': 310501,
+                    'block_index': DP['default_block_index'],
                     'fee_fraction_int': 0,
                     'locked': 0,
                     'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
@@ -421,10 +424,10 @@ UNITTEST_VECTOR = {
                 }},
             ]
         },  {
-            'in': ({'fee': 10000, 'btc_amount': 0, 'supported': 1, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'block_time': 310501000, 'destination': '', 'block_index': 310501, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'tx_hash': 'c9e8db96d520b0611218504801e74796ae4f476578512d21d3f99367ab8e356f', 'data': b'\x00\x00\x00\x1eR\xbb4,\xc0\x00\x00\x00\x00\x00\x00\x00\x00LK@\tUnit Test'},),
+            'in': ({'fee': 10000, 'btc_amount': 0, 'supported': 1, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'block_time': 310501000, 'destination': '', 'block_index': DP['default_block_index'], 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'tx_hash': 'c9e8db96d520b0611218504801e74796ae4f476578512d21d3f99367ab8e356f', 'data': b'\x00\x00\x00\x1eR\xbb4,\xc0\x00\x00\x00\x00\x00\x00\x00\x00LK@\tUnit Test'},),
             'records': [
                 {'table': 'broadcasts', 'values':  {
-                    'block_index': 310501,
+                    'block_index': DP['default_block_index'],
                     'fee_fraction_int': 5000000,
                     'locked': 0,
                     'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
@@ -456,10 +459,11 @@ UNITTEST_VECTOR = {
                 }}
             ]
         },  {
-            'in': ({'btc_amount': 0, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': '', 'block_index': 310501, 'fee': 10000, 'supported': 1, 'block_time': 310501000, 'tx_hash': '6b4a62b80f35b0e66df4591c8a445d453d995609e2df12afe93e742bea10dd86', 'tx_index': 502, 'data': b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\x04LOCK'},),
+            'comment': 'LOCK',
+            'in': ({'btc_amount': 0, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': '', 'block_index': DP['default_block_index'], 'fee': 10000, 'supported': 1, 'block_time': 310501000, 'tx_hash': '6b4a62b80f35b0e66df4591c8a445d453d995609e2df12afe93e742bea10dd86', 'tx_index': 502, 'data': b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\x04LOCK'},),
             'records': [
                 {'table': 'broadcasts', 'values': {
-                    'block_index': 310501,
+                    'block_index': DP['default_block_index'],
                     'fee_fraction_int': None,
                     'locked': 1,
                     'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
@@ -513,10 +517,10 @@ UNITTEST_VECTOR = {
             'out': ('1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', [('mvCounterpartyXXXXXXXXXXXXXXW24Hef', 50000000)], None)
         }],
         'parse': [{
-            'in': ({'block_index': DP['default_block'], 'destination': 'mvCounterpartyXXXXXXXXXXXXXXW24Hef', 'fee': 10000, 'block_time': 155409000, 'supported': 1, 'btc_amount': 62000000, 'data': b'', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx_index': 502, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8'},),
+            'in': ({'block_index': DP['default_block_index'], 'destination': 'mvCounterpartyXXXXXXXXXXXXXXW24Hef', 'fee': 10000, 'block_time': 155409000, 'supported': 1, 'btc_amount': 62000000, 'data': b'', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx_index': 502, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_hash': DP['default_block_hash']},),
             'records': [
                 {'table': 'burns', 'values': {
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'burned': 62000000,
                     'earned': 92995811159,
                     'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
@@ -527,17 +531,17 @@ UNITTEST_VECTOR = {
                 {'table': 'credits', 'values': {
                     'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'calling_function': 'burn',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 92995811159,
                 }}
             ]
         }, {
-            'in': ({'supported': 1, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'btc_amount': 50000000, 'block_index': DP['default_block'], 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'fee': 10000, 'data': b'', 'block_time': 155409000, 'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'tx_index': 502, 'destination': 'mvCounterpartyXXXXXXXXXXXXXXW24Hef'},),
+            'in': ({'supported': 1, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'btc_amount': 50000000, 'block_index': DP['default_block_index'], 'block_hash': DP['default_block_hash'], 'fee': 10000, 'data': b'', 'block_time': 155409000, 'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'tx_index': 502, 'destination': 'mvCounterpartyXXXXXXXXXXXXXXW24Hef'},),
             'records': [
                 {'table': 'burns', 'values': {
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'burned': 50000000,
                     'earned': 74996621902,
                     'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
@@ -548,7 +552,7 @@ UNITTEST_VECTOR = {
                 {'table': 'credits', 'values': {
                     'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'calling_function': 'burn',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 74996621902
@@ -671,11 +675,11 @@ UNITTEST_VECTOR = {
                     None)
         }],
         'parse': [{
-            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block'], 'fee': 10000, 'block_time': 155409000, 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
+            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
             'records': [
                 {'table': 'sends', 'values': {
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'quantity': 100000000,
                     'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
@@ -686,7 +690,7 @@ UNITTEST_VECTOR = {
                 {'table': 'credits', 'values': {
                     'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'calling_function': 'send',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 100000000,
@@ -695,17 +699,17 @@ UNITTEST_VECTOR = {
                     'action': 'send',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 100000000,
                 }}
             ]
         }, {
-            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'btc_amount': 7800, 'block_index': DP['default_block'], 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x0b\xeb\xc2\x00', 'block_time': 155409000, 'fee': 10000, 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'tx_index': 502, 'supported': 1},),
+            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'block_index': DP['default_block_index'], 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x0b\xeb\xc2\x00', 'block_time': 155409000, 'fee': 10000, 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'tx_index': 502, 'supported': 1},),
             'records': [
                 {'table': 'sends', 'values': {
                     'asset': 'XCP',
-                    'block_index': 310501,
+                    'block_index': DP['default_block_index'],
                     'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'quantity': 0,
                     'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH',
@@ -715,11 +719,11 @@ UNITTEST_VECTOR = {
                 }}
             ]
         }, {
-            'in':({'tx_index': 502, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00X\xb1\x14\x00', 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'block_time': 310501000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_hash': '736ecc18f9f41b3ccf67dded1252969e4929404d6ad657b2039b937a7785cf3e', 'supported': 1, 'destination': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'btc_amount': 5430, 'block_index': 310501, 'fee': 10000},),
+            'in':({'tx_index': 502, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00X\xb1\x14\x00', 'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH', 'block_time': 310501000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_hash': '736ecc18f9f41b3ccf67dded1252969e4929404d6ad657b2039b937a7785cf3e', 'supported': 1, 'destination': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'btc_amount': 5430, 'block_index': DP['default_block_index'], 'fee': 10000},),
             'records': [
                 {'table': 'sends', 'values': {
                     'asset': 'XCP',
-                    'block_index': 310501,
+                    'block_index': DP['default_block_index'],
                     'destination': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj',
                     'quantity': 0,
                     'source': 'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH',
@@ -729,11 +733,11 @@ UNITTEST_VECTOR = {
                 }}
             ]
         }, {
-            'in': ({'block_index': DP['default_block'], 'btc_amount': 7800, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_time': 155409000, 'fee': 10000, 'tx_index': 502, 'data': b'\x00\x00\x00\x00\x00\x06\xca\xd8\xdc\x7f\x0bf\x00\x00\x00\x00\x00\x00\x01\xf4', 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1},),
+            'in': ({'block_index': DP['default_block_index'], 'btc_amount': 7800, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_time': 155409000, 'fee': 10000, 'tx_index': 502, 'data': b'\x00\x00\x00\x00\x00\x06\xca\xd8\xdc\x7f\x0bf\x00\x00\x00\x00\x00\x00\x01\xf4', 'block_hash': DP['default_block_hash'], 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1},),
             'records': [
                 {'table': 'sends', 'values': {
                     'asset': 'NODIVISIBLE',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'quantity': 500,
                     'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
@@ -744,7 +748,7 @@ UNITTEST_VECTOR = {
                 {'table': 'credits', 'values': {
                     'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'asset': 'NODIVISIBLE',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'calling_function': 'send',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 500,
@@ -753,17 +757,17 @@ UNITTEST_VECTOR = {
                     'action': 'send',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'asset': 'NODIVISIBLE',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 500,
                 }}
             ]
         }, {
-            'in': ({'btc_amount': 7800, 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'fee': 10000, 'tx_index': 502, 'destination': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'supported': 1, 'block_time': 155409000, 'block_index': DP['default_block']},),
+            'in': ({'btc_amount': 7800, 'block_hash': DP['default_block_hash'], 'fee': 10000, 'tx_index': 502, 'destination': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'supported': 1, 'block_time': 155409000, 'block_index': DP['default_block_index']},),
             'records': [
                 {'table': 'sends', 'values': {
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'destination': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
                     'quantity': 100000000,
                     'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
@@ -774,7 +778,7 @@ UNITTEST_VECTOR = {
                 {'table': 'credits', 'values': {
                     'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'calling_function': 'send',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 100000000,
@@ -783,17 +787,17 @@ UNITTEST_VECTOR = {
                     'action': 'send',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 100000000,
                 }}
             ]
         }, {
-            'in': ({'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'supported': 1, 'block_time': 155409000, 'fee': 10000, 'tx_index': 502, 'btc_amount': 7800, 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'block_index': DP['default_block'], 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'},),
+            'in': ({'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'supported': 1, 'block_time': 155409000, 'fee': 10000, 'tx_index': 502, 'btc_amount': 7800, 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'},),
             'records': [
                 {'table': 'sends', 'values': {
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'destination': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'quantity': 100000000,
                     'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
@@ -804,7 +808,7 @@ UNITTEST_VECTOR = {
                 {'table': 'credits', 'values': {
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'calling_function': 'send',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 100000000,
@@ -813,17 +817,17 @@ UNITTEST_VECTOR = {
                     'action': 'send',
                     'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 100000000,
                 }}
             ]
         }, {
-            'in': ({'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'destination': '1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'supported': 1, 'block_time': 155409000, 'fee': 10000, 'block_index': DP['default_block'], 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'tx_index': 502, 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8'},),
+            'in': ({'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'destination': '1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'supported': 1, 'block_time': 155409000, 'fee': 10000, 'block_index': DP['default_block_index'], 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'tx_index': 502, 'block_hash': DP['default_block_hash']},),
             'records': [
                 {'table': 'sends', 'values': {
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'destination': '1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
                     'quantity': 100000000,
                     'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
@@ -834,7 +838,7 @@ UNITTEST_VECTOR = {
                 {'table': 'credits', 'values': {
                     'address': '1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'calling_function': 'send',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 100000000,
@@ -843,17 +847,17 @@ UNITTEST_VECTOR = {
                     'action': 'send',
                     'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 100000000,
                 }}
             ]
         }, {
-            'in': ({'block_index': DP['default_block'], 'block_time': 155409000, 'fee': 10000, 'tx_index': 502, 'tx_hash': '8fc698cf1fcd51e3d685511185c67c0a73e7b72954c6abbd29fbbbe560e043a0', 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03:>\x7f\xff\xff\xff\xff\xff\xff\xff', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'supported': 1, 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8'},),
+            'in': ({'block_index': DP['default_block_index'], 'block_time': 155409000, 'fee': 10000, 'tx_index': 502, 'tx_hash': '8fc698cf1fcd51e3d685511185c67c0a73e7b72954c6abbd29fbbbe560e043a0', 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03:>\x7f\xff\xff\xff\xff\xff\xff\xff', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'supported': 1, 'block_hash': DP['default_block_hash']},),
             'records': [
                 {'table': 'sends', 'values': {
                     'asset': 'MAXI',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'quantity': 9223372036854775807,
                     'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
@@ -864,7 +868,7 @@ UNITTEST_VECTOR = {
                 {'table': 'credits', 'values': {
                     'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'asset': 'MAXI',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'calling_function': 'send',
                     'event': '8fc698cf1fcd51e3d685511185c67c0a73e7b72954c6abbd29fbbbe560e043a0',
                     'quantity': 9223372036854775807,
@@ -873,7 +877,7 @@ UNITTEST_VECTOR = {
                     'action': 'send',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'asset': 'MAXI',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'event': '8fc698cf1fcd51e3d685511185c67c0a73e7b72954c6abbd29fbbbe560e043a0',
                     'quantity': 9223372036854775807,
                 }}
@@ -882,70 +886,70 @@ UNITTEST_VECTOR = {
     },
     'issuance': {
         'validate': [{
-            'in': (ADDR[0], None, 'ASSET', 1000, True, False, None, None, '', DP['default_block']),
+            'in': (ADDR[0], None, 'ASSET', 1000, True, False, None, None, '', DP['default_block_index']),
             'out': (0, 0.0, [], 50000000, '', True, False)
         }, {
-            'in': (ADDR[2], None, 'DIVIDEND', 1000, False, False, None, None, '', DP['default_block']),
+            'in': (ADDR[2], None, 'DIVIDEND', 1000, False, False, None, None, '', DP['default_block_index']),
             'out': (0, 0.0, ['cannot change divisibility'], 0, '', False, True)
         }, {
-            'in': (ADDR[2], None, 'DIVIDEND', 1000, True, True, None, None, '', DP['default_block']),
+            'in': (ADDR[2], None, 'DIVIDEND', 1000, True, True, None, None, '', DP['default_block_index']),
             'out': (0, 0.0, ['cannot change callability'], 0, '', True, True)
         }, {
-            'in': (ADDR[0], None, 'BTC', 1000, True, False, None, None, '', DP['default_block']),
+            'in': (ADDR[0], None, 'BTC', 1000, True, False, None, None, '', DP['default_block_index']),
             'out': (0, 0.0, ['cannot issue BTC or XCP'], 50000000, '', True, False)
         }, {
-            'in': (ADDR[0], None, 'XCP', 1000, True, False, None, None, '', DP['default_block']),
+            'in': (ADDR[0], None, 'XCP', 1000, True, False, None, None, '', DP['default_block_index']),
             'out': (0, 0.0, ['cannot issue BTC or XCP'], 50000000, '', True, False)
         }, {
-            'in': (ADDR[0], None, 'NOSATOSHI', 1000.5, True, False, None, None, '', DP['default_block']),
+            'in': (ADDR[0], None, 'NOSATOSHI', 1000.5, True, False, None, None, '', DP['default_block_index']),
             'out': (0, 0.0, ['quantity must be in satoshis'], 0, '', True, None)
         }, {
-            'in': (ADDR[0], None, 'CALLPRICEFLOAT', 1000, True, False, None, 100.0, '', DP['default_block']),
+            'in': (ADDR[0], None, 'CALLPRICEFLOAT', 1000, True, False, None, 100.0, '', DP['default_block_index']),
             'out': (0, 0.0, [], 0, '', True, False)
         }, {
-            'in': (ADDR[0], None, 'CALLPRICEINT', 1000, True, False, None, 100, '', DP['default_block']),
+            'in': (ADDR[0], None, 'CALLPRICEINT', 1000, True, False, None, 100, '', DP['default_block_index']),
             'out': (0, 0.0, [], 50000000, '', True, False)
         }, {
-            'in': (ADDR[0], None, 'CALLPRICESTR', 1000, True, False, None, 'abc', '', DP['default_block']),
+            'in': (ADDR[0], None, 'CALLPRICESTR', 1000, True, False, None, 'abc', '', DP['default_block_index']),
             'out': (0, 'abc', ['call_price must be a float'], 0, '', True, None)
         }, {
-            'in': (ADDR[0], None, 'CALLDATEINT', 1000, True, False, 1409401723, None, '', DP['default_block']),
+            'in': (ADDR[0], None, 'CALLDATEINT', 1000, True, False, 1409401723, None, '', DP['default_block_index']),
             'out': (0, 0.0, [], 50000000, '', True, False)
         }, {
-            'in': (ADDR[0], None, 'CALLDATEFLOAT', 1000, True, False, 0.9 * 1409401723, None, '', DP['default_block']),
+            'in': (ADDR[0], None, 'CALLDATEFLOAT', 1000, True, False, 0.9 * 1409401723, None, '', DP['default_block_index']),
             'out': (1268461550.7, 0.0, ['call_date must be epoch integer'], 0, '', True, None)
         }, {
-            'in': (ADDR[0], None, 'CALLDATESTR', 1000, True, False, 'abc', None, '', DP['default_block']),
+            'in': (ADDR[0], None, 'CALLDATESTR', 1000, True, False, 'abc', None, '', DP['default_block_index']),
             'out': ('abc', 0.0, ['call_date must be epoch integer'], 0, '', True, None)
         }, {
-            'in': (ADDR[0], None, 'NEGVALUES', -1000, True, True, -1409401723, -DP['quantity'], '', DP['default_block']),
+            'in': (ADDR[0], None, 'NEGVALUES', -1000, True, True, -1409401723, -DP['quantity'], '', DP['default_block_index']),
             'out': (-1409401723, -100000000.0, ['negative quantity', 'negative call price', 'negative call date'], 50000000, '', True, False)
         }, {
-            'in': (ADDR[2], None, 'DIVISIBLE', 1000, True, False, None, None, 'Divisible asset', DP['default_block']),
+            'in': (ADDR[2], None, 'DIVISIBLE', 1000, True, False, None, None, 'Divisible asset', DP['default_block_index']),
             'out': (0, 0.0, ['issued by another address'], 0, 'Divisible asset', True, True)
         }, {
-            'in': (ADDR[0], None, 'LOCKED', 1000, True, False, None, None, 'Locked asset', DP['default_block']),
+            'in': (ADDR[0], None, 'LOCKED', 1000, True, False, None, None, 'Locked asset', DP['default_block_index']),
             'out': (0, 0.0, ['locked asset and non‐zero quantity'], 0, 'Locked asset', True, True)
         }, {
-            'in': (ADDR[0], None, 'BSSET', 1000, True, False, None, None, 'LOCK', DP['default_block']),
+            'in': (ADDR[0], None, 'BSSET', 1000, True, False, None, None, 'LOCK', DP['default_block_index']),
             'out': (0, 0.0, ['cannot lock a non‐existent asset'], 50000000, 'LOCK', True, False)
         }, {
-            'in': (ADDR[0], ADDR[1], 'BSSET', 1000, True, False, None, None, '', DP['default_block']),
+            'in': (ADDR[0], ADDR[1], 'BSSET', 1000, True, False, None, None, '', DP['default_block_index']),
             'out': (0, 0.0, ['cannot transfer a non‐existent asset', 'cannot issue and transfer simultaneously'], 50000000, '', True, False)
         }, {
-            'in': (ADDR[2], None, 'BSSET', 1000, True, False, None, None, '', DP['default_block']),
+            'in': (ADDR[2], None, 'BSSET', 1000, True, False, None, None, '', DP['default_block_index']),
             'out': (0, 0.0, ['insufficient funds'], 50000000, '', True, False)
         }, {
-            'in': (ADDR[0], None, 'BSSET', 2**63, True, False, None, None, '', DP['default_block']),
+            'in': (ADDR[0], None, 'BSSET', 2**63, True, False, None, None, '', DP['default_block_index']),
             'out': (0, 0.0, ['total quantity overflow'], 50000000, '', True, False)
         }, {
-            'in': (ADDR[0], ADDR[1], 'DIVISIBLE', 1000, True, False, None, None, 'Divisible asset', DP['default_block']),
+            'in': (ADDR[0], ADDR[1], 'DIVISIBLE', 1000, True, False, None, None, 'Divisible asset', DP['default_block_index']),
             'out': (0, 0.0, ['cannot issue and transfer simultaneously'], 0, 'Divisible asset', True, True)
         }, {
-            'in': (ADDR[0], None, 'MAXIMUM', 2**63-1, True, False, None, None, 'Maximum quantity', DP['default_block']),
+            'in': (ADDR[0], None, 'MAXIMUM', 2**63-1, True, False, None, None, 'Maximum quantity', DP['default_block_index']),
             'out': (0, 0.0, [], 50000000, 'Maximum quantity', True, False)
         }, {
-            'in': (ADDR[0], None, 'DIVISIBLE', 2**63-1, True, False, None, None, 'Maximum quantity', DP['default_block']),
+            'in': (ADDR[0], None, 'DIVISIBLE', 2**63-1, True, False, None, None, 'Maximum quantity', DP['default_block_index']),
             'out': (0, 0.0, ['total quantity overflow'], 0, 'Maximum quantity', True, True)
         }],
         'compose': [{
@@ -986,11 +990,11 @@ UNITTEST_VECTOR = {
             'error': (exceptions.AssetNameError, 'numeric asset name not in range')
         }],
         'parse': [{
-            'in': ({'supported': 1, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'data': b'\x00\x00\x00\x14\x00\x00\x00\x00\x00\xbaOs\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 'btc_amount': None, 'destination': None, 'block_time': 155409000, 'block_index': DP['default_block'], 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'fee': 10000, 'tx_index': 502, 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8'},),
+            'in': ({'supported': 1, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'data': b'\x00\x00\x00\x14\x00\x00\x00\x00\x00\xbaOs\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 'btc_amount': None, 'destination': None, 'block_time': 155409000, 'block_index': DP['default_block_index'], 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'fee': 10000, 'tx_index': 502, 'block_hash': DP['default_block_hash']},),
             'records': [
                 {'table': 'issuances', 'values': {
                     'asset': 'BASSET',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'description': '',
                     'divisible': 1,
                     'fee_paid': 50000000,
@@ -1006,7 +1010,7 @@ UNITTEST_VECTOR = {
                 {'table': 'credits', 'values': {
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'asset': 'BASSET',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'calling_function': 'issuance',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 1000,
@@ -1015,17 +1019,17 @@ UNITTEST_VECTOR = {
                     'action': 'issuance fee',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 50000000,
                 }}
             ]
         }, {
-            'in': ({'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_time': 155409000, 'btc_amount': 7800, 'supported': 1, 'tx_index': 502, 'block_index': DP['default_block'], 'data': b'\x00\x00\x00\x14\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'fee': 10000, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
+            'in': ({'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_time': 155409000, 'btc_amount': 7800, 'supported': 1, 'tx_index': 502, 'block_index': DP['default_block_index'], 'data': b'\x00\x00\x00\x14\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 'block_hash': DP['default_block_hash'], 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'fee': 10000, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
             'records': [
                 {'table': 'issuances', 'values': {
                     'asset': 'DIVISIBLE',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'description': '',
                     'divisible': 1,
                     'fee_paid': 0,
@@ -1040,11 +1044,11 @@ UNITTEST_VECTOR = {
                 }}
             ]
         }, {
-            'in': ({'tx_index': 502, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'data': b'\x00\x00\x00\x14\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x04LOCK', 'block_time': 155409000, 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'fee': 10000, 'destination': None, 'supported': 1, 'block_index': DP['default_block'], 'btc_amount': None},),
+            'in': ({'tx_index': 502, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'data': b'\x00\x00\x00\x14\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x04LOCK', 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'fee': 10000, 'destination': None, 'supported': 1, 'block_index': DP['default_block_index'], 'btc_amount': None},),
             'records': [
                 {'table': 'issuances', 'values': {
                     'asset': 'DIVISIBLE',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'description': 'Divisible asset',
                     'divisible': 1,
                     'fee_paid': 0,
@@ -1059,11 +1063,11 @@ UNITTEST_VECTOR = {
                 }}
             ]
         }, {
-            'in': ({'data': b'\x00\x00\x00\x14\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 'supported': 1, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_index': DP['default_block'], 'destination': '', 'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'btc_amount': 0, 'tx_index': 502, 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'block_time': 155409000, 'fee': 10000},),
+            'in': ({'data': b'\x00\x00\x00\x14\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 'supported': 1, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_index': DP['default_block_index'], 'destination': '', 'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'btc_amount': 0, 'tx_index': 502, 'block_hash': DP['default_block_hash'], 'block_time': 155409000, 'fee': 10000},),
             'records': [
                 {'table': 'issuances', 'values': {
                     'asset': 'BSSET',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'description': '',
                     'divisible': 1,
                     'fee_paid': 50000000,
@@ -1079,7 +1083,7 @@ UNITTEST_VECTOR = {
                 {'table': 'credits', 'values': {
                     'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
                     'asset': 'BSSET',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'calling_function': 'issuance',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 1000,
@@ -1088,17 +1092,17 @@ UNITTEST_VECTOR = {
                     'action': 'issuance fee',
                     'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 50000000,
                 }}
             ]
         }, {
-            'in': ({'fee': 10000, 'block_time': 155409000, 'data': b'\x00\x00\x00\x14\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 'block_index': DP['default_block'], 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'btc_amount': 7800, 'tx_index': 502, 'destination': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'supported': 1, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'},),
+            'in': ({'fee': 10000, 'block_time': 155409000, 'data': b'\x00\x00\x00\x14\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 'block_index': DP['default_block_index'], 'block_hash': DP['default_block_hash'], 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'btc_amount': 7800, 'tx_index': 502, 'destination': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'supported': 1, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc'},),
             'records': [
                 {'table': 'issuances', 'values': {
                     'asset': 'DIVISIBLE',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'description': '',
                     'divisible': 1,
                     'fee_paid': 0,
@@ -1115,17 +1119,17 @@ UNITTEST_VECTOR = {
                     'action': 'issuance fee',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 0,
                 }}
             ]
         }, {
-            'in': ({'data': b'\x00\x00\x00\x14\x00\x00\x00\x00\xdd\x96\xd2t\x7f\xff\xff\xff\xff\xff\xff\xff\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x10Maximum quantity', 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'block_index': DP['default_block'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'},),
+            'in': ({'data': b'\x00\x00\x00\x14\x00\x00\x00\x00\xdd\x96\xd2t\x7f\xff\xff\xff\xff\xff\xff\xff\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x10Maximum quantity', 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'supported': 1, 'tx_index': 502, 'destination': '', 'tx_hash': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace'},),
             'records': [
                 {'table': 'issuances', 'values': {
                     'asset': 'MAXIMUM',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'description': 'Maximum quantity',
                     'fee_paid': 50000000,
                     'issuer': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
@@ -1140,7 +1144,7 @@ UNITTEST_VECTOR = {
                 {'table': 'credits', 'values': {
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'asset': 'MAXIMUM',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'calling_function': 'issuance',
                     'event': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace',
                     'quantity': 9223372036854775807,
@@ -1149,17 +1153,17 @@ UNITTEST_VECTOR = {
                     'action': 'issuance fee',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'event': '71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace',
                     'quantity': 50000000,
                 }}
             ]
         }, {
-            'in': ({'data': b'\x00\x00\x00\x14\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 'tx_index': 502, 'tx_hash': '4188c1f7aaae56ce3097ef256cdbcb644dd43c84e237b4add4f24fd4848cb2c7', 'destination': '', 'fee': 10000, 'btc_amount': 0, 'block_time': 2815010000000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block'], 'block_hash': '8e80b430efbe3e1b7cc13d7ec51c1e47a16b0fa23d6dd3c939fb6c4d4cfa311e1f25072500f5f9872373b54c72424b3557fccd68915d00c0afb6523702e11b6a'},),
+            'in': ({'data': b'\x00\x00\x00\x14\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 'tx_index': 502, 'tx_hash': '4188c1f7aaae56ce3097ef256cdbcb644dd43c84e237b4add4f24fd4848cb2c7', 'destination': '', 'fee': 10000, 'btc_amount': 0, 'block_time': 2815010000000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'block_hash': '8e80b430efbe3e1b7cc13d7ec51c1e47a16b0fa23d6dd3c939fb6c4d4cfa311e1f25072500f5f9872373b54c72424b3557fccd68915d00c0afb6523702e11b6a'},),
             'records': [
                 {'table': 'issuances', 'values': {
                     'asset': 'A18446744073709551615',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'description': '',
                     'divisible': 1,
                     'fee_paid': 0,
@@ -1175,7 +1179,7 @@ UNITTEST_VECTOR = {
                 {'table': 'credits', 'values': {
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'asset': 'A18446744073709551615',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'calling_function': 'issuance',
                     'event': '4188c1f7aaae56ce3097ef256cdbcb644dd43c84e237b4add4f24fd4848cb2c7',
                     'quantity': 1000,
@@ -1184,7 +1188,7 @@ UNITTEST_VECTOR = {
                     'action': 'issuance fee',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'event': '4188c1f7aaae56ce3097ef256cdbcb644dd43c84e237b4add4f24fd4848cb2c7',
                     'quantity': 0,
                 }}
@@ -1193,7 +1197,7 @@ UNITTEST_VECTOR = {
     },
     'dividend': {
         'validate': [{
-            'in': (ADDR[0], DP['quantity'] * 1000, 'DIVISIBLE', 'XCP', DP['default_block']),
+            'in': (ADDR[0], DP['quantity'] * 1000, 'DIVISIBLE', 'XCP', DP['default_block_index']),
             'out': (1100000000000,
                     [
                         {'address_quantity': 100000000, 'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'dividend_quantity': 100000000000},
@@ -1202,7 +1206,7 @@ UNITTEST_VECTOR = {
                     ['insufficient funds (XCP)'],
                     0)
         }, {
-            'in': (ADDR[0], DP['quantity'] * -1000, 'DIVISIBLE', 'XCP', DP['default_block']),
+            'in': (ADDR[0], DP['quantity'] * -1000, 'DIVISIBLE', 'XCP', DP['default_block_index']),
             'out': (-1100000000000,
                     [
                         {'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'dividend_quantity': -100000000000, 'address_quantity': 100000000},
@@ -1211,16 +1215,16 @@ UNITTEST_VECTOR = {
                     ['non‐positive quantity per unit'],
                     0)
         }, {
-            'in': (ADDR[0], DP['quantity'], 'BTC', 'XCP', DP['default_block']),
+            'in': (ADDR[0], DP['quantity'], 'BTC', 'XCP', DP['default_block_index']),
             'out': (None, None, ['cannot pay dividends to holders of BTC', 'no such asset, BTC.'], 0)
         }, {
-            'in': (ADDR[0], DP['quantity'], 'XCP', 'XCP', DP['default_block']),
+            'in': (ADDR[0], DP['quantity'], 'XCP', 'XCP', DP['default_block_index']),
             'out': (None, None, ['cannot pay dividends to holders of XCP', 'no such asset, XCP.'], 0)
         }, {
-            'in': (ADDR[0], DP['quantity'], 'NOASSET', 'XCP', DP['default_block']),
+            'in': (ADDR[0], DP['quantity'], 'NOASSET', 'XCP', DP['default_block_index']),
             'out': (None, None, ['no such asset, NOASSET.'], 0)
         }, {
-            'in': (ADDR[0], 0, 'DIVISIBLE', 'XCP', DP['default_block']),
+            'in': (ADDR[0], 0, 'DIVISIBLE', 'XCP', DP['default_block_index']),
             'out': (0,
                     [
                         {'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'dividend_quantity': 0, 'address_quantity': 100000000},
@@ -1229,7 +1233,7 @@ UNITTEST_VECTOR = {
                     ['non‐positive quantity per unit', 'zero dividend'],
                     0)
         }, {
-            'in': (ADDR[1], DP['quantity'], 'DIVISIBLE', 'XCP', DP['default_block']),
+            'in': (ADDR[1], DP['quantity'], 'DIVISIBLE', 'XCP', DP['default_block_index']),
             'out': (99900000000,
                     [
                         {'dividend_quantity': 98900000000, 'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'address_quantity': 98900000000},
@@ -1238,10 +1242,10 @@ UNITTEST_VECTOR = {
                     ['only issuer can pay dividends', 'insufficient funds (XCP)'],
                     0)
         }, {
-            'in': (ADDR[0], DP['quantity'], 'DIVISIBLE', 'NOASSET', DP['default_block']),
+            'in': (ADDR[0], DP['quantity'], 'DIVISIBLE', 'NOASSET', DP['default_block_index']),
             'out': (None, None, ['no such dividend asset, NOASSET.'], 0)
         }, {
-            'in': (ADDR[0], 8359090909, 'DIVISIBLE', 'XCP', DP['default_block']),
+            'in': (ADDR[0], 8359090909, 'DIVISIBLE', 'XCP', DP['default_block_index']),
             'out': (91949999999,
                     [
                         {'address_quantity': 100000000, 'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'dividend_quantity': 8359090909},
@@ -1250,7 +1254,7 @@ UNITTEST_VECTOR = {
                     ['insufficient funds (XCP)'],
                     40000)
         }, {
-            'in': (ADDR[2], 100000000, 'DIVIDEND', 'DIVIDEND', DP['default_block']),
+            'in': (ADDR[2], 100000000, 'DIVIDEND', 'DIVIDEND', DP['default_block_index']),
             'out': (10,
                     [
                         {'address_quantity': 10, 'address': 'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj', 'dividend_quantity': 10},
@@ -1266,11 +1270,11 @@ UNITTEST_VECTOR = {
             'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x002\x00\x00\x00\x00\x00\x00\x00\x01\x00\x06\xca\xd8\xdc\x7f\x0bf\x00\x00\x00\x00\x00\x00\x00\x01')
         }],
         'parse': [{
-            'in': ({'tx_hash': '450c4ced564fa52a84746ecd79d64db6f124bddee19ff2c3cd926adea673ce4c', 'supported': 1, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'data': b'\x00\x00\x002\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x01', 'tx_index': 502, 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'block_index': DP['default_block'], 'btc_amount': 0, 'fee': 10000, 'destination': '', 'block_time': 155409000},),
+            'in': ({'tx_hash': '450c4ced564fa52a84746ecd79d64db6f124bddee19ff2c3cd926adea673ce4c', 'supported': 1, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'data': b'\x00\x00\x002\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x01', 'tx_index': 502, 'block_hash': DP['default_block_hash'], 'block_index': DP['default_block_index'], 'btc_amount': 0, 'fee': 10000, 'destination': '', 'block_time': 155409000},),
             'records': [
                 {'table': 'dividends', 'values': {
                     'asset': 'DIVISIBLE',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'dividend_asset': 'XCP',
                     'fee_paid': 40000,
                     'quantity_per_unit': 100000000,
@@ -1282,7 +1286,7 @@ UNITTEST_VECTOR = {
                 {'table': 'credits', 'values': {
                     'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'calling_function': 'dividend',
                     'event': '450c4ced564fa52a84746ecd79d64db6f124bddee19ff2c3cd926adea673ce4c',
                     'quantity': 100000000,
@@ -1290,7 +1294,7 @@ UNITTEST_VECTOR = {
                 {'table': 'credits', 'values': {
                     'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'calling_function': 'dividend',
                     'event': '450c4ced564fa52a84746ecd79d64db6f124bddee19ff2c3cd926adea673ce4c',
                     'quantity': 1000000000,
@@ -1299,7 +1303,7 @@ UNITTEST_VECTOR = {
                     'action': 'dividend',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'event': '450c4ced564fa52a84746ecd79d64db6f124bddee19ff2c3cd926adea673ce4c',
                     'quantity': 1100000000,
                 }},
@@ -1307,17 +1311,17 @@ UNITTEST_VECTOR = {
                     'action': 'dividend fee',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'event': '450c4ced564fa52a84746ecd79d64db6f124bddee19ff2c3cd926adea673ce4c',
                     'quantity': 40000,
                 }}
             ]
         }, {
-            'in': ({'tx_index': 502, 'btc_amount': 0, 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'tx_hash': '5a36e9d939e70917695065b11b728f7ccbc7b828ae3baca1115885d8889e67c7', 'fee': 10000, 'block_index': DP['default_block'], 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'supported': 1, 'destination': '', 'data': b'\x00\x00\x002\x00\x00\x00\x00\x00\x00\x00\x01\x00\x06\xca\xd8\xdc\x7f\x0bf\x00\x00\x00\x00\x00\x00\x00\x01'},),
+            'in': ({'tx_index': 502, 'btc_amount': 0, 'block_time': 155409000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'tx_hash': '5a36e9d939e70917695065b11b728f7ccbc7b828ae3baca1115885d8889e67c7', 'fee': 10000, 'block_index': DP['default_block_index'], 'block_hash': DP['default_block_hash'], 'supported': 1, 'destination': '', 'data': b'\x00\x00\x002\x00\x00\x00\x00\x00\x00\x00\x01\x00\x06\xca\xd8\xdc\x7f\x0bf\x00\x00\x00\x00\x00\x00\x00\x01'},),
             'records': [
                 {'table': 'dividends', 'values': {
                     'asset': 'NODIVISIBLE',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'dividend_asset': 'XCP',
                     'fee_paid': 40000,
                     'quantity_per_unit': 1,
@@ -1329,7 +1333,7 @@ UNITTEST_VECTOR = {
                 {'table': 'credits', 'values': {
                     'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'calling_function': 'dividend',
                     'event': '5a36e9d939e70917695065b11b728f7ccbc7b828ae3baca1115885d8889e67c7',
                     'quantity': 5,
@@ -1337,7 +1341,7 @@ UNITTEST_VECTOR = {
                 {'table': 'credits', 'values': {
                     'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'calling_function': 'dividend',
                     'event': '5a36e9d939e70917695065b11b728f7ccbc7b828ae3baca1115885d8889e67c7',
                     'quantity': 10,
@@ -1346,7 +1350,7 @@ UNITTEST_VECTOR = {
                     'action': 'dividend',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'event': '5a36e9d939e70917695065b11b728f7ccbc7b828ae3baca1115885d8889e67c7',
                     'quantity': 15,
                 }},
@@ -1354,7 +1358,7 @@ UNITTEST_VECTOR = {
                     'action': 'dividend fee',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'event': '5a36e9d939e70917695065b11b728f7ccbc7b828ae3baca1115885d8889e67c7',
                     'quantity': 40000,
                 }}
@@ -1363,34 +1367,34 @@ UNITTEST_VECTOR = {
     },
     'order': {
         'validate': [{
-            'in': (ADDR[0], 'DIVISIBLE', DP['quantity'], 'XCP', DP['quantity'], 2000, 0, DP['default_block']),
+            'in': (ADDR[0], 'DIVISIBLE', DP['quantity'], 'XCP', DP['quantity'], 2000, 0, DP['default_block_index']),
             'out': ([])
         }, {
-            'in': (ADDR[0], 'DIVISIBLE', DP['quantity'], 'XCP', DP['quantity'], 2000, 0.5, DP['default_block']),
+            'in': (ADDR[0], 'DIVISIBLE', DP['quantity'], 'XCP', DP['quantity'], 2000, 0.5, DP['default_block_index']),
             'out': (['fee_required must be in satoshis'])
         }, {
-            'in': (ADDR[0], 'BTC', DP['quantity'], 'BTC', DP['quantity'], 2000, 0, DP['default_block']),
+            'in': (ADDR[0], 'BTC', DP['quantity'], 'BTC', DP['quantity'], 2000, 0, DP['default_block_index']),
             'out': (['cannot trade BTC for itself'])
         },{
-            'in': (ADDR[0], 'DIVISIBLE', DP['quantity'] / 3, 'XCP', DP['quantity'], 2000, 0, DP['default_block']),
+            'in': (ADDR[0], 'DIVISIBLE', DP['quantity'] / 3, 'XCP', DP['quantity'], 2000, 0, DP['default_block_index']),
             'out': (['give_quantity must be in satoshis'])
         },{
-            'in': (ADDR[0], 'DIVISIBLE', DP['quantity'], 'XCP', DP['quantity'] / 3, 2000, 0, DP['default_block']),
+            'in': (ADDR[0], 'DIVISIBLE', DP['quantity'], 'XCP', DP['quantity'] / 3, 2000, 0, DP['default_block_index']),
             'out': (['get_quantity must be in satoshis'])
         },{
-            'in': (ADDR[0], 'DIVISIBLE', DP['quantity'], 'XCP', DP['quantity'], 1.5, 0, DP['default_block']),
+            'in': (ADDR[0], 'DIVISIBLE', DP['quantity'], 'XCP', DP['quantity'], 1.5, 0, DP['default_block_index']),
             'out': (['expiration must be expressed as an integer block delta'])
         },{
-            'in': (ADDR[0], 'DIVISIBLE', -DP['quantity'], 'XCP', -DP['quantity'], -2000, -10000, DP['default_block']),
+            'in': (ADDR[0], 'DIVISIBLE', -DP['quantity'], 'XCP', -DP['quantity'], -2000, -10000, DP['default_block_index']),
             'out': (['non‐positive give quantity', 'non‐positive get quantity', 'negative fee_required', 'negative expiration'])
         },{
-            'in': (ADDR[0], 'DIVISIBLE', 0, 'XCP', DP['quantity'], 2000, 0, DP['default_block']),
+            'in': (ADDR[0], 'DIVISIBLE', 0, 'XCP', DP['quantity'], 2000, 0, DP['default_block_index']),
             'out': (['non‐positive give quantity', 'zero give or zero get'])
         },{
-            'in': (ADDR[0], 'NOASSETA', DP['quantity'], 'NOASSETB', DP['quantity'], 2000, 0, DP['default_block']),
+            'in': (ADDR[0], 'NOASSETA', DP['quantity'], 'NOASSETB', DP['quantity'], 2000, 0, DP['default_block_index']),
             'out': (['no such asset to give (NOASSETA)', 'no such asset to get (NOASSETB)'])
         },{
-            'in': (ADDR[0], 'DIVISIBLE', 2**63 + 10, 'XCP', DP['quantity'], 4 * 2016 + 10, 0, DP['default_block']),
+            'in': (ADDR[0], 'DIVISIBLE', 2**63 + 10, 'XCP', DP['quantity'], 4 * 2016 + 10, 0, DP['default_block_index']),
             'out': (['expiration overflow', 'integer overflow'])
         }],
         'compose': [{
@@ -1413,12 +1417,13 @@ UNITTEST_VECTOR = {
             'error': (exceptions.ComposeError, 'insufficient funds')
         }],
         'parse': [{
-            'in': ({'destination': None, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'block_time': 155409000, 'block_index': DP['default_block'], 'tx_index': 502, 'data': b'\x00\x00\x00\n\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x07\xd0\x00\x00\x00\x00\x00\x00\x00\x00', 'fee': 10000, 'btc_amount': None, 'supported': 1, 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8'},),
+            'comment': '1',
+            'in': ({'destination': None, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'block_time': 155409000, 'block_index': DP['default_block_index'], 'tx_index': 502, 'data': b'\x00\x00\x00\n\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x07\xd0\x00\x00\x00\x00\x00\x00\x00\x00', 'fee': 10000, 'btc_amount': None, 'supported': 1, 'block_hash': DP['default_block_hash']},),
             'records': [
                 {'table': 'orders', 'values': {
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'expiration': 2000,
-                    'expire_index': DP['default_block'] + 2000,
+                    'expire_index': DP['default_block_index'] + 2000,
                     'fee_provided': 10000,
                     'fee_provided_remaining': 10000,
                     'fee_required': 0,
@@ -1437,20 +1442,20 @@ UNITTEST_VECTOR = {
                 {'table': 'order_matches', 'values': {
                     'backward_asset': 'DIVISIBLE',
                     'backward_quantity': 100000000,
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'fee_paid': 0,
                     'forward_asset': 'XCP',
                     'forward_quantity': 100000000,
                     'id': '074fa38a84a81c0ed7957484ebe73836104d3068f66b189e05a7cf0b95c737f3_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
-                    'match_expire_index': DP['default_block'] + 20,
+                    'match_expire_index': DP['default_block_index'] + 20,
                     'status': 'completed',
                     'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'tx0_block_index': DP['default_block'] - 495,
+                    'tx0_block_index': DP['default_block_index'] - 495,
                     'tx0_expiration': 2000,
                     'tx0_hash': '074fa38a84a81c0ed7957484ebe73836104d3068f66b189e05a7cf0b95c737f3',
                     'tx0_index': 7,
                     'tx1_address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
-                    'tx1_block_index': DP['default_block'],
+                    'tx1_block_index': DP['default_block_index'],
                     'tx1_expiration': 2000,
                     'tx1_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'tx1_index': 502,
@@ -1458,7 +1463,7 @@ UNITTEST_VECTOR = {
                 {'table': 'credits', 'values': {
                     'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'calling_function': 'order match',
                     'event': '074fa38a84a81c0ed7957484ebe73836104d3068f66b189e05a7cf0b95c737f3_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 100000000,
@@ -1467,14 +1472,14 @@ UNITTEST_VECTOR = {
                     'action': 'open order',
                     'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'asset': 'DIVISIBLE',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 100000000,
                 }},
                 {'table': 'credits', 'values': {
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'asset': 'DIVISIBLE',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'calling_function': 'order match',
                     'event': '074fa38a84a81c0ed7957484ebe73836104d3068f66b189e05a7cf0b95c737f3_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 100000000,
@@ -1482,7 +1487,7 @@ UNITTEST_VECTOR = {
                 {'table': 'credits', 'values': {
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'asset': 'XCP',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'calling_function': 'filled',
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 0,
@@ -1490,19 +1495,20 @@ UNITTEST_VECTOR = {
                 {'table': 'credits', 'values': {
                     'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'asset': 'DIVISIBLE',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'calling_function': 'filled',
                     'event': '074fa38a84a81c0ed7957484ebe73836104d3068f66b189e05a7cf0b95c737f3',
                     'quantity': 0,
                 }}
             ]
         }, {
-            'in': ({'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'btc_amount': None, 'tx_index': 502, 'supported': 1, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'fee': 10000, 'block_time': 155409000, 'block_index': DP['default_block'], 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0fB@\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x07\xd0\x00\x00\x00\x00\x00\x00\x00\x00', 'destination': None},),
+            'comment': '2',
+            'in': ({'block_hash': DP['default_block_hash'], 'btc_amount': None, 'tx_index': 502, 'supported': 1, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'fee': 10000, 'block_time': 155409000, 'block_index': DP['default_block_index'], 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0fB@\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x07\xd0\x00\x00\x00\x00\x00\x00\x00\x00', 'destination': None},),
             'records': [
                 {'table': 'orders', 'values': {
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'expiration': 2000,
-                    'expire_index': DP['default_block'] + 2000,
+                    'expire_index': DP['default_block_index'] + 2000,
                     'fee_provided': 10000,
                     'fee_provided_remaining': 1000,
                     'fee_required': 0,
@@ -1521,30 +1527,31 @@ UNITTEST_VECTOR = {
                 {'table': 'order_matches', 'values': {
                     'backward_asset': 'BTC',
                     'backward_quantity': 1000000,
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'fee_paid': 9000,
                     'forward_asset': 'XCP',
                     'forward_quantity': 100000000,
                     'id': 'b6db5c8412a58d9fa75bff41f8a7519353ffd4d359c7c8fa7ee1900bc05e4d9d_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
-                    'match_expire_index': DP['default_block'] + 20,
+                    'match_expire_index': DP['default_block_index'] + 20,
                     'status': 'pending',
                     'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'tx0_block_index': DP['default_block'] - 491,
+                    'tx0_block_index': DP['default_block_index'] - 491,
                     'tx0_expiration': 2000,
                     'tx0_hash': 'b6db5c8412a58d9fa75bff41f8a7519353ffd4d359c7c8fa7ee1900bc05e4d9d',
                     'tx0_index': 11,
                     'tx1_address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
-                    'tx1_block_index': DP['default_block'],
+                    'tx1_block_index': DP['default_block_index'],
                     'tx1_expiration': 2000,
                     'tx1_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'tx1_index': 502,
                 }}
             ]
         }, {
-            'in': ({'fee': 10000, 'block_time': 155409000, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': None, 'supported': 1, 'tx_index': 502, 'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\n,+\x07\xd0\x00\x00\x00\x00\x00\x00\x00\x00', 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'btc_amount': None, 'block_index': DP['default_block']},),
+            'comment': '3',
+            'in': ({'fee': 10000, 'block_time': 155409000, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': None, 'supported': 1, 'tx_index': 502, 'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\n,+\x07\xd0\x00\x00\x00\x00\x00\x00\x00\x00', 'block_hash': DP['default_block_hash'], 'btc_amount': None, 'block_index': DP['default_block_index']},),
             'records': [
                 {'table': 'orders', 'values': {
-                    'block_index': 310501,
+                    'block_index': DP['default_block_index'],
                     'expiration': 2000,
                     'expire_index': 312501,
                     'fee_provided': 10000,
@@ -1565,12 +1572,12 @@ UNITTEST_VECTOR = {
                 {'table': 'order_matches', 'values': {
                     'backward_asset': 'XCP',
                     'backward_quantity': 99999850,
-                    'block_index': 310501,
+                    'block_index': DP['default_block_index'],
                     'fee_paid': 0,
                     'forward_asset': 'BTC',
                     'forward_quantity': 666666,
                     'id': '8a63e7a516d36c17ac32999222ac282ab94fb9c5ea30637cd06660b3139510f6_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
-                    'match_expire_index': 310521,
+                    'match_expire_index': DP['default_block_index'] + 20,
                     'status': 'pending',
                     'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'tx0_block_index': 310011,
@@ -1578,7 +1585,7 @@ UNITTEST_VECTOR = {
                     'tx0_hash': '8a63e7a516d36c17ac32999222ac282ab94fb9c5ea30637cd06660b3139510f6',
                     'tx0_index': 12,
                     'tx1_address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
-                    'tx1_block_index': 310501,
+                    'tx1_block_index': DP['default_block_index'],
                     'tx1_expiration': 2000,
                     'tx1_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'tx1_index': 502,
@@ -1587,16 +1594,17 @@ UNITTEST_VECTOR = {
                     'action': 'open order',
                     'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'asset': 'XCP',
-                    'block_index': 310501,
+                    'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 99999990,
                 }}
             ]
         }, {
-            'in': ({'block_time': 155409000, 'destination': None, 'btc_amount': None, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x1e\x84\x80\x07\xd0\x00\x00\x00\x00\x00\x00\x00\x00', 'supported': 1, 'fee': 10000, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx_index': 502, 'block_index': DP['default_block'], 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8'},),
+            'comment': '4',
+            'in': ({'block_time': 155409000, 'destination': None, 'btc_amount': None, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x1e\x84\x80\x07\xd0\x00\x00\x00\x00\x00\x00\x00\x00', 'supported': 1, 'fee': 10000, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx_index': 502, 'block_index': DP['default_block_index'], 'block_hash': DP['default_block_hash']},),
             'records': [
                 {'table': 'orders', 'values': {
-                    'block_index': 310501,
+                    'block_index': DP['default_block_index'],
                     'expiration': 2000,
                     'expire_index': 312501,
                     'fee_provided': 10000,
@@ -1618,18 +1626,19 @@ UNITTEST_VECTOR = {
                     'action': 'open order',
                     'address': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
                     'asset': 'XCP',
-                    'block_index': 310501,
+                    'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 99999990,
                 }}
            ]
         }, {
-            'in': ({'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x07\xa1 \x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x07\xd0\x00\x00\x00\x00\x00\x00\x00\x00', 'tx_index': 502, 'destination': None, 'block_index': DP['default_block'], 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'btc_amount': None, 'block_time': 155409000, 'supported': 1, 'fee': 1000000, 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
+            'comment': '5',
+            'in': ({'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x07\xa1 \x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x07\xd0\x00\x00\x00\x00\x00\x00\x00\x00', 'tx_index': 502, 'destination': None, 'block_index': DP['default_block_index'], 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'btc_amount': None, 'block_time': 155409000, 'supported': 1, 'fee': 1000000, 'block_hash': DP['default_block_hash'], 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns'},),
             'records': [
                 {'table': 'orders', 'values': {
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'expiration': 2000,
-                    'expire_index': DP['default_block'] + 2000,
+                    'expire_index': DP['default_block_index'] + 2000,
                     'fee_provided': 1000000,
                     'fee_provided_remaining': 1000000,
                     'fee_required': 0,
@@ -1647,12 +1656,13 @@ UNITTEST_VECTOR = {
                 }}
             ]
         }, {
-            'in': ({'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'btc_amount': None, 'tx_index': 502, 'supported': 1, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'fee': 10000, 'block_time': 155409000, 'block_index': DP['default_block'], 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00 foo\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xe1\x00\x07\xd0\x00\x00\x00\x00\x00\x00\x00\x00', 'destination': None},),
+            'comment': '6',
+            'in': ({'block_hash': DP['default_block_hash'], 'btc_amount': None, 'tx_index': 502, 'supported': 1, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'fee': 10000, 'block_time': 155409000, 'block_index': DP['default_block_index'], 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00 foo\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xe1\x00\x07\xd0\x00\x00\x00\x00\x00\x00\x00\x00', 'destination': None},),
             'records': [
                 {'table': 'orders', 'values': {
-                    'block_index': 310501,
+                    'block_index': DP['default_block_index'],
                     'expiration': 0,
-                    'expire_index': 310501,
+                    'expire_index': DP['default_block_index'],
                     'fee_provided': 10000,
                     'fee_provided_remaining': 10000,
                     'fee_required': 0,
@@ -1670,12 +1680,13 @@ UNITTEST_VECTOR = {
                 }},
             ]
         }, {
-            'in': ({'btc_amount': None, 'block_time': 155409000, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'tx_index': 502, 'supported': 1, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'destination': None, 'block_index': DP['default_block'], 'data': b'\x00\x00\x00\n\x00\x06\xca\xd8\xdc\x7f\x0bf\x00\x00\x00\x00\x00\x00\x01\xf4\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x07\xd0\x00\x00\x00\x00\x00\x00\x00\x00', 'fee': 10000},),
+            'comment': '7',
+            'in': ({'btc_amount': None, 'block_time': 155409000, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'tx_index': 502, 'supported': 1, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'block_hash': DP['default_block_hash'], 'destination': None, 'block_index': DP['default_block_index'], 'data': b'\x00\x00\x00\n\x00\x06\xca\xd8\xdc\x7f\x0bf\x00\x00\x00\x00\x00\x00\x01\xf4\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x07\xd0\x00\x00\x00\x00\x00\x00\x00\x00', 'fee': 10000},),
             'records': [
                 {'table': 'orders', 'values': {
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'expiration': 2000,
-                    'expire_index': DP['default_block'] + 2000,
+                    'expire_index': DP['default_block_index'] + 2000,
                     'fee_provided': 10000,
                     'fee_provided_remaining': 10000,
                     'fee_required': 0,
@@ -1695,18 +1706,19 @@ UNITTEST_VECTOR = {
                     'action': 'open order',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'asset': 'NODIVISIBLE',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'quantity': 500,
                 }}
             ]
         }, {
-            'in': ({'block_index': DP['default_block'], 'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'destination': '', 'fee': 10000, 'tx_index': 502, 'supported': 1, 'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'block_time': 155409000, 'btc_amount': 0},),
+            'comment': '8',
+            'in': ({'block_index': DP['default_block_index'], 'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_hash': DP['default_block_hash'], 'destination': '', 'fee': 10000, 'tx_index': 502, 'supported': 1, 'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'block_time': 155409000, 'btc_amount': 0},),
             'records': [
                 {'table': 'orders', 'values': {
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'expiration': 10,
-                    'expire_index': DP['default_block'] + 10,
+                    'expire_index': DP['default_block_index'] + 10,
                     'fee_provided': 10000,
                     'fee_provided_remaining': 1000,
                     'fee_required': 0,
@@ -1725,32 +1737,33 @@ UNITTEST_VECTOR = {
                 {'table': 'order_matches', 'values': {
                     'backward_asset': 'BTC',
                     'backward_quantity': 1000000,
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'fee_paid': 9000,
                     'forward_asset': 'XCP',
                     'forward_quantity': 100000000,
                     'id': 'b6db5c8412a58d9fa75bff41f8a7519353ffd4d359c7c8fa7ee1900bc05e4d9d_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
-                    'match_expire_index': DP['default_block'] + 20,
+                    'match_expire_index': DP['default_block_index'] + 20,
                     'status': 'pending',
                     'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'tx0_block_index': DP['default_block'] - 491,
+                    'tx0_block_index': DP['default_block_index'] - 491,
                     'tx0_expiration': 2000,
                     'tx0_hash': 'b6db5c8412a58d9fa75bff41f8a7519353ffd4d359c7c8fa7ee1900bc05e4d9d',
                     'tx0_index': 11,
                     'tx1_address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
-                    'tx1_block_index': DP['default_block'],
+                    'tx1_block_index': DP['default_block_index'],
                     'tx1_expiration': 10,
                     'tx1_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'tx1_index': 502,
                 }}
             ]
         }, {
-            'in': ({'block_index': DP['default_block'], 'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'destination': '', 'fee': 10000, 'tx_index': 502, 'supported': 1, 'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'block_time': 155409000, 'btc_amount': 0},),
+            'comment': '9',
+            'in': ({'block_index': DP['default_block_index'], 'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00', 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'block_hash': DP['default_block_hash'], 'destination': '', 'fee': 10000, 'tx_index': 502, 'supported': 1, 'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'block_time': 155409000, 'btc_amount': 0},),
             'records': [
                 {'table': 'orders', 'values': {
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'expiration': 10,
-                    'expire_index': DP['default_block'] + 10,
+                    'expire_index': DP['default_block_index'] + 10,
                     'fee_provided': 10000,
                     'fee_provided_remaining': 1000,
                     'fee_required': 0,
@@ -1769,31 +1782,32 @@ UNITTEST_VECTOR = {
                 {'table': 'order_matches', 'values': {
                     'backward_asset': 'BTC',
                     'backward_quantity': 1000000,
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'fee_paid': 9000,
                     'forward_asset': 'XCP',
                     'forward_quantity': 100000000,
                     'id': 'b6db5c8412a58d9fa75bff41f8a7519353ffd4d359c7c8fa7ee1900bc05e4d9d_db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
-                    'match_expire_index': DP['default_block'] + 20,
+                    'match_expire_index': DP['default_block_index'] + 20,
                     'status': 'pending',
                     'tx0_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
-                    'tx0_block_index': DP['default_block'] - 491,
+                    'tx0_block_index': DP['default_block_index'] - 491,
                     'tx0_expiration': 2000,
                     'tx0_hash': 'b6db5c8412a58d9fa75bff41f8a7519353ffd4d359c7c8fa7ee1900bc05e4d9d',
                     'tx0_index': 11,
                     'tx1_address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
-                    'tx1_block_index': DP['default_block'],
+                    'tx1_block_index': DP['default_block_index'],
                     'tx1_expiration': 10,
                     'tx1_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'tx1_index': 502,
                 }}
             ]
         }, {
-            'in': ({'fee': 10000, 'btc_amount': 0, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'tx_index': 502, 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'supported': 1, 'block_time': 155409000, 'block_index': DP['default_block'], 'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x06B,@\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\n\x00\x00\x00\x00\x00\r\xbb\xa0', 'destination': ''},),
+            'comment': '10',
+            'in': ({'fee': 10000, 'btc_amount': 0, 'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'tx_index': 502, 'block_hash': DP['default_block_hash'], 'source': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2', 'supported': 1, 'block_time': 155409000, 'block_index': DP['default_block_index'], 'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x06B,@\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\n\x00\x00\x00\x00\x00\r\xbb\xa0', 'destination': ''},),
             'records': [
                 {'table': 'orders', 'values': {
-                    'block_index': DP['default_block'],
-                    'expire_index': DP['default_block'] + 10,
+                    'block_index': DP['default_block_index'],
+                    'expire_index': DP['default_block_index'] + 10,
                     'fee_provided': 10000,
                     'fee_provided_remaining': 10000,
                     'fee_required': 900000,
@@ -1813,17 +1827,18 @@ UNITTEST_VECTOR = {
                     'action': 'open order',
                     'address': '1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2',
                     'asset': 'XCP', 'quantity': 105000000,
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'event': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                 }}
             ]
         }, {
-            'in': ({'btc_amount': 0, 'fee': 10000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': '', 'tx_hash': '0ec7da68a67e165693afd6c97566f8f509d302bceec8d1be0100335718a40fe5', 'tx_index': 502, 'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x03:>\x7f\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\n\x00\x00\x00\x00\x00\r\xbb\xa0', 'block_hash': '2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8', 'supported': 1, 'block_time': 155409000, 'block_index': DP['default_block']},),
+            'comment': '11',
+            'in': ({'btc_amount': 0, 'fee': 10000, 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'destination': '', 'tx_hash': '0ec7da68a67e165693afd6c97566f8f509d302bceec8d1be0100335718a40fe5', 'tx_index': 502, 'data': b'\x00\x00\x00\n\x00\x00\x00\x00\x00\x03:>\x7f\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\n\x00\x00\x00\x00\x00\r\xbb\xa0', 'block_hash': DP['default_block_hash'], 'supported': 1, 'block_time': 155409000, 'block_index': DP['default_block_index']},),
             'records': [
                 {'table': 'orders', 'values': {
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'expiration': 10,
-                    'expire_index': DP['default_block'] + 10,
+                    'expire_index': DP['default_block_index'] + 10,
                     'fee_provided': 10000,
                     'fee_provided_remaining': 10000,
                     'fee_required': 900000,
@@ -1843,14 +1858,14 @@ UNITTEST_VECTOR = {
                     'action': 'open order',
                     'address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
                     'asset': 'MAXI',
-                    'block_index': DP['default_block'],
+                    'block_index': DP['default_block_index'],
                     'event': '0ec7da68a67e165693afd6c97566f8f509d302bceec8d1be0100335718a40fe5',
                     'quantity': 9223372036854775807,
                 }}
             ]
         }],
         'expire': [{
-            'in': (310500,),
+            'in': (DP['default_block_index'] - 1,),
             'out': None
         }]
     },
@@ -2334,10 +2349,10 @@ UNITTEST_VECTOR = {
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02781e000000000000695121025a415bf04af834423d3dd7ad96dc727a030865759f9fbc9036a64c1197e587c8210254da540fb2673b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe7246f210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae8c19ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }],
         'generate_asset_id': [{
-            'in': ('BTC', DP['default_block']),
+            'in': ('BTC', DP['default_block_index']),
             'out': 0
         },  {
-            'in': ('XCP', DP['default_block']),
+            'in': ('XCP', DP['default_block_index']),
             'out': 1
         },  {
             'in': ('BCD', 308000),
@@ -2371,10 +2386,10 @@ UNITTEST_VECTOR = {
             'out': 26**12 - 1
         }],
         'generate_asset_name': [{
-            'in': (0, DP['default_block']),
+            'in': (0, DP['default_block_index']),
             'out': 'BTC'
         },  {
-            'in': (1, DP['default_block']),
+            'in': (1, DP['default_block_index']),
             'out': 'XCP'
         },  {
             'in': (26**12 - 1, 308000),
@@ -2409,16 +2424,26 @@ UNITTEST_VECTOR = {
         }],
         'last_message': [{
             'in': (),
-            'out': {'command': 'insert', 'block_index': 310496, 'message_index': 79, 'category': 'sends', 'timestamp': 0, 'bindings': '{"asset": "XCP", "block_index": 310496, "destination": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj", "quantity": 92945878046, "source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "status": "valid", "tx_hash": "54f4c7b383ea19147e62d2be9f3e7f70b6c379baac15e8b4cf43f7c21578c1ef", "tx_index": 497}'}
+            'out': {'bindings': '{"asset": "XCP", "block_index": 310496, "destination": '
+                            '"mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj", "quantity": 92945878046, '
+                            '"source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH", "status": '
+                            '"valid", "tx_hash": '
+                            '"54f4c7b383ea19147e62d2be9f3e7f70b6c379baac15e8b4cf43f7c21578c1ef", '
+                            '"tx_index": 497}',
+                'block_index': 310496,
+                'category': 'sends',
+                'command': 'insert',
+                'message_index': 85,
+                'timestamp': 0}
         }],
         'get_asset_id': [{
-            'in': ('XCP', DP['default_block']),
+            'in': ('XCP', DP['default_block_index']),
             'out': 1
         },  {
-            'in': ('BTC', DP['default_block']),
+            'in': ('BTC', DP['default_block_index']),
             'out': 0
         },  {
-            'in': ('foobar', DP['default_block']),
+            'in': ('foobar', DP['default_block_index']),
             'error': (exceptions.AssetError, 'No such asset: foobar')
         }],
         'debit': [{
@@ -2497,7 +2522,7 @@ UNITTEST_VECTOR = {
         }],
         'xcp_created': [{
             'in': (),
-            'out': 185995878046
+            'out': 464993269426
         }],
         'xcp_destroyed': [{
             'in': (),
@@ -2505,11 +2530,11 @@ UNITTEST_VECTOR = {
         }],
         'xcp_supply': [{
             'in': (),
-            'out': 185695878046
+            'out': 464693269426
         }],
         'creations': [{
             'in': (),
-            'out': {'CALLABLE': 1000, 'DIVIDEND': 100, 'DIVISIBLE': 100000000000, 'LOCKED': 1000, 'MAXI': 9223372036854775807, 'NODIVISIBLE': 1000, 'XCP': 185995878046}
+            'out': {'CALLABLE': 1000, 'DIVIDEND': 100, 'DIVISIBLE': 100000000000, 'LOCKED': 1000, 'MAXI': 9223372036854775807, 'NODIVISIBLE': 1000, 'XCP': 464993269426}
         }],
         'destructions': [{
             'in': (),
@@ -2517,11 +2542,11 @@ UNITTEST_VECTOR = {
         }],
         'asset_supply': [{
             'in': ('XCP',),
-            'out': 185695878046
+            'out': 464693269426
         }],
         'supplies': [{
             'in': (),
-            'out':  {'CALLABLE': 1000, 'DIVIDEND': 100, 'DIVISIBLE': 100000000000, 'LOCKED': 1000, 'MAXI': 9223372036854775807, 'NODIVISIBLE': 1000, 'XCP': 185695878046}
+            'out':  {'CALLABLE': 1000, 'DIVIDEND': 100, 'DIVISIBLE': 100000000000, 'LOCKED': 1000, 'MAXI': 9223372036854775807, 'NODIVISIBLE': 1000, 'XCP': 464693269426}
         }],
         'get_balance': [{
             'in': (ADDR[0], 'XCP'),
@@ -2531,13 +2556,13 @@ UNITTEST_VECTOR = {
             'out': 0
         }],
         'get_asset_name': [{
-            'in': (1, DP['default_block']),
+            'in': (1, DP['default_block_index']),
             'out': 'XCP'
         },  {
-            'in': (0, DP['default_block']),
+            'in': (0, DP['default_block_index']),
             'out': 'BTC'
         },  {
-            'in': (453, DP['default_block']),
+            'in': (453, DP['default_block_index']),
             'out': 0
         }],
         'enabled': [{

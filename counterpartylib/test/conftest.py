@@ -110,7 +110,7 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
     def get_cached_raw_transaction(tx_hash, verbose=False):
         return util_test.getrawtransaction(rawtransactions_db, bitcoinlib.core.lx(tx_hash))
 
-    util.CURRENT_BLOCK_INDEX = DEFAULT_PARAMS['default_block'] - 1
+    util.CURRENT_BLOCK_INDEX = DEFAULT_PARAMS['default_block_index'] - 1
 
     monkeypatch.setattr('counterpartylib.lib.backend.get_unspent_txouts', get_unspent_txouts)
     monkeypatch.setattr('counterpartylib.lib.log.isodt', isodt)

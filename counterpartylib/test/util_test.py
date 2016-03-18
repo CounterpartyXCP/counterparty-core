@@ -103,6 +103,10 @@ def create_next_block(db, block_index=None, parse_block=False):
     last_block_index = list(cursor.execute("SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1"))[0]['block_index']
     if not block_index:
         block_index = last_block_index + 1
+
+    if last_block_index >= block_index:
+        raise Exception("create_next_block called with height lower than current height")
+
     for index in range(last_block_index + 1, block_index + 1):
         inserted_block_index, block_hash, block_time = insert_block(db, index, parse_block=parse_block)
     cursor.close()
@@ -277,7 +281,9 @@ def check_record(record, server_db):
 
         count = list(cursor.execute(sql, tuple(bindings)))[0]['c']
         if count != 1:
-            print(list(cursor.execute('''SELECT * FROM {} WHERE block_index = ?'''.format(record['table']), (record['values']['block_index'],))))
+            if pytest.config.option.verbosediff:
+                pprint.pprint(record['values'])
+                pprint.pprint(list(cursor.execute('''SELECT * FROM {} WHERE block_index = ?'''.format(record['table']), (record['values']['block_index'],))))
             assert False
 
 def vector_to_args(vector, functions=[]):
