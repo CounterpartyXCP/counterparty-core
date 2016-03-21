@@ -172,7 +172,7 @@ def parse (db, tx, message):
         return
 
     # Negative values (default to ignore).
-    if value == None or value < 0:
+    if value is None or value < 0:
         # Cancel Open Bets?
         if value == -2:
             cursor.execute('''SELECT * FROM bets \
