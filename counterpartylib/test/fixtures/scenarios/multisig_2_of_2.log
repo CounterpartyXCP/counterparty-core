@@ -77,7 +77,7 @@ Dividend: 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezn
 Sorted UTXOs: ['amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46fb574af7fd86fd417bc; vout: 0; confirmations: 6']
 New input: amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46fb574af7fd86fd417bc; vout: 0; confirmations: 6
 Change quantity: 2.999822 BTC
-Broadcast: 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 at 2013-12-25T19:33:20 with a fee of 500.0%% (7da765a612160e2ecacad56ff32acd28faa11e7a4974f6d6c5d9e5a54955a816) [valid]
+Broadcast: 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 at 2013-12-25T19:33:20 with a fee of 500.0%% (5b5be322981b096174177e86ec473fe162bc9a738afb756a07852b4adc1c0007) [valid]
 Sorted UTXOs: ['amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46fb574af7fd86fd417bc; vout: 0; confirmations: 6']
 New input: amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46fb574af7fd86fd417bc; vout: 0; confirmations: 6
 Change quantity: 2.999744 BTC
@@ -139,26 +139,26 @@ Bet Match: Equal for 7.5 XCP against NotEqual for 6.5 XCP on 2_mn6q3dS2EnDUx3bmy
 Sorted UTXOs: ['amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46fb574af7fd86fd417bc; vout: 0; confirmations: 6']
 New input: amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46fb574af7fd86fd417bc; vout: 0; confirmations: 6
 Change quantity: 2.999822 BTC
-Broadcast: 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 at 2013-12-25T19:34:10 with a fee of 500.0%% (26124f23215b3cd695728ce8a0da20b6a5e397b308d5e59882f8fc0c541de4d4) [valid]
-Credit: 0.591375 XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #bet settled: liquidated for bear# <26124f23215b3cd695728ce8a0da20b6a5e397b308d5e59882f8fc0c541de4d4>
-Credit: 0.031125 XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #feed fee# <26124f23215b3cd695728ce8a0da20b6a5e397b308d5e59882f8fc0c541de4d4>
+Broadcast: 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 at 2013-12-25T19:34:10 with a fee of 500.0%% (1ff980285cccb54945dc6ae8949586d5840eb99e2170a784b1be1f508287fffa) [valid]
+Credit: 0.591375 XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #bet settled: liquidated for bear# <1ff980285cccb54945dc6ae8949586d5840eb99e2170a784b1be1f508287fffa>
+Credit: 0.031125 XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #feed fee# <1ff980285cccb54945dc6ae8949586d5840eb99e2170a784b1be1f508287fffa>
 Bet Match Force‐Liquidated: 0.0 XCP credited to the bull, 0.591375 XCP credited to the bear, and 0.031125 XCP credited to the feed address (6ec162e8abe733631652b93cb00e1dd6417f68b7205d3c54e690111518c092a1_f0d2a7c5d14e94a67b9917282b3d7198535e444a5d3c1d2b84260aea2ce5d48b)
 Database: set status of bet_match 6ec162e8abe733631652b93cb00e1dd6417f68b7205d3c54e690111518c092a1_f0d2a7c5d14e94a67b9917282b3d7198535e444a5d3c1d2b84260aea2ce5d48b to settled: liquidated for bear.
 Sorted UTXOs: ['amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46fb574af7fd86fd417bc; vout: 0; confirmations: 6']
 New input: amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46fb574af7fd86fd417bc; vout: 0; confirmations: 6
 Change quantity: 2.999822 BTC
-Broadcast: 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 at 2013-12-25T19:35:01 with a fee of 500.0%% (c8e3bfcc53f8cae8c5ae3099ef8dab163c487e902f02fbf6feb0a004af0c1e89) [valid]
-Credit: 1.593 XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #bet settled# <c8e3bfcc53f8cae8c5ae3099ef8dab163c487e902f02fbf6feb0a004af0c1e89>
-Credit: 3.157 XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #bet settled# <c8e3bfcc53f8cae8c5ae3099ef8dab163c487e902f02fbf6feb0a004af0c1e89>
-Credit: 0.25 XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #feed fee# <c8e3bfcc53f8cae8c5ae3099ef8dab163c487e902f02fbf6feb0a004af0c1e89>
+Broadcast: 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 at 2013-12-25T19:35:01 with a fee of 500.0%% (2bb8f495f4aa80a8ef00789066469506247cc03527fb913337d3defa740bd792) [valid]
+Credit: 1.593 XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #bet settled# <2bb8f495f4aa80a8ef00789066469506247cc03527fb913337d3defa740bd792>
+Credit: 3.157 XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #bet settled# <2bb8f495f4aa80a8ef00789066469506247cc03527fb913337d3defa740bd792>
+Credit: 0.25 XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #feed fee# <2bb8f495f4aa80a8ef00789066469506247cc03527fb913337d3defa740bd792>
 Bet Match Settled: 1.593 XCP credited to the bull, 3.157 XCP credited to the bear, and 0.25 XCP credited to the feed address (a7049b5fa97a608a0b3de5d169a12b8a585e94e038ab89852c630744e9b60f36_07113541fb277906296ecf5be57c45bc01545463bf60f2cc144f2de3e467244f)
 Database: set status of bet_match a7049b5fa97a608a0b3de5d169a12b8a585e94e038ab89852c630744e9b60f36_07113541fb277906296ecf5be57c45bc01545463bf60f2cc144f2de3e467244f to settled.
 Sorted UTXOs: ['amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46fb574af7fd86fd417bc; vout: 0; confirmations: 6']
 New input: amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46fb574af7fd86fd417bc; vout: 0; confirmations: 6
 Change quantity: 2.999822 BTC
-Broadcast: 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 at 2013-12-25T19:36:41 with a fee of 500.0%% (0dd4ea49a1f58f4a9cad0d85e97324880bb10cf59651ee2eb04a282d9ebe46eb) [valid]
-Credit: 13.3 XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #bet settled: for notequal# <0dd4ea49a1f58f4a9cad0d85e97324880bb10cf59651ee2eb04a282d9ebe46eb>
-Credit: 0.7 XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #feed fee# <0dd4ea49a1f58f4a9cad0d85e97324880bb10cf59651ee2eb04a282d9ebe46eb>
+Broadcast: 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 at 2013-12-25T19:36:41 with a fee of 500.0%% (67f785cb28ee453a2237dbdf257d683b06f412b2148526c3d394bf23dc8b5360) [valid]
+Credit: 13.3 XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #bet settled: for notequal# <67f785cb28ee453a2237dbdf257d683b06f412b2148526c3d394bf23dc8b5360>
+Credit: 0.7 XCP to 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 #feed fee# <67f785cb28ee453a2237dbdf257d683b06f412b2148526c3d394bf23dc8b5360>
 Bet Match Settled: NotEqual won the pot of 13.3 XCP; 0.7 XCP credited to the feed address (f7463c39fdcf70265fc7e3e1e8418086c6cf3cead714121fdb19f240f47c4868_ed19ce43174e2ed120e1c5cd40ed705630c5cbb01ccc36927bbec56de193fad5)
 Database: set status of bet_match f7463c39fdcf70265fc7e3e1e8418086c6cf3cead714121fdb19f240f47c4868_ed19ce43174e2ed120e1c5cd40ed705630c5cbb01ccc36927bbec56de193fad5 to settled: for notequal.
 Sorted UTXOs: ['amount: 3.0; txid: 070bfe81412d873fb6ff08ae5c6463b4c6cea39894b46fb574af7fd86fd417bc; vout: 0; confirmations: 6']

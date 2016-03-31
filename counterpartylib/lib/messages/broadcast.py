@@ -107,12 +107,17 @@ def compose (db, source, timestamp, value, fee_fraction, text):
     if problems: raise exceptions.ComposeError(problems)
 
     data = struct.pack(config.TXTYPE_FORMAT, ID)
-    if len(text) <= 52:
-        curr_format = FORMAT + '{}p'.format(len(text) + 1)
+
+    # always use custom length byte instead of problematic usage of 52p format and make sure to encode('utf-8') for length
+    if util.enabled('broadcast_pack_text'):
+        curr_format = FORMAT + '{}s'.format(len(text.encode('utf-8')))
     else:
-        curr_format = FORMAT + '{}s'.format(len(text))
-    data += struct.pack(curr_format, timestamp, value, fee_fraction_int,
-                        text.encode('utf-8'))
+        if len(text) <= 52:
+            curr_format = FORMAT + '{}p'.format(len(text) + 1)
+        else:
+            curr_format = FORMAT + '{}s'.format(len(text))
+
+    data += struct.pack(curr_format, timestamp, value, fee_fraction_int, text.encode('utf-8'))
     return (source, [], data)
 
 def parse (db, tx, message):
@@ -120,10 +125,14 @@ def parse (db, tx, message):
 
     # Unpack message.
     try:
-        if len(message) - LENGTH <= 52:
-            curr_format = FORMAT + '{}p'.format(len(message) - LENGTH)
-        else:
+        if util.enabled('broadcast_pack_text'):
             curr_format = FORMAT + '{}s'.format(len(message) - LENGTH)
+        else:
+            if len(message) - LENGTH <= 52:
+                curr_format = FORMAT + '{}p'.format(len(message) - LENGTH)
+            else:
+                curr_format = FORMAT + '{}s'.format(len(message) - LENGTH)
+
         timestamp, value, fee_fraction_int, text = struct.unpack(curr_format, message)
 
         try:
