@@ -4,6 +4,7 @@
     * Only use first usable input for source. (protocol change: )
     * lock UTXOs used to construct a transaction for 3 seconds to avoid a user double spending against himself.
     * P2SH support for source / destination of addresses (protocol change: )
+    * Fixed issue with broadcasts of exactly 52 chars, by always adding a varint to specify the length. (protocol change: )
     * Many many improvements to test suite
 * v9.54.0 (2016-03-05)
     * Execute post install tasks when called via `pip`
