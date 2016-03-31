@@ -2568,9 +2568,13 @@ UNITTEST_VECTOR = {
         'enabled': [{
             'in': ('numeric_asset_names',),
             'out': True
-        },  {
+        }, {
             'in': ('foobar',),
             'error': (KeyError, "'foobar'")
+        }, {
+            'mock_protocol_changes': {'numeric_asset_names': False},
+            'in': ('numeric_asset_names',),
+            'out': False
         }],
         'date_passed': [{
             'comment': 'date in the past, mock function overrides this one and always returns `False` in the test suite',

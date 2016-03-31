@@ -25,6 +25,16 @@ from counterpartylib.lib import config, util, backend, transaction
 import bitcoin as bitcoinlib
 import bitcoin.rpc as bitcoinlib_rpc
 
+# we swap out util.enabled with a custom one which has the option to mock the protocol changes
+MOCK_PROTOCOL_CHANGES = {}
+_enabled = util.enabled
+def enabled(change_name, block_index=None):
+    if change_name in MOCK_PROTOCOL_CHANGES:
+        return MOCK_PROTOCOL_CHANGES[change_name]
+
+    return _enabled(change_name, block_index)
+util.enabled = enabled
+
 def pytest_collection_modifyitems(session, config, items):
     """Run contracts_test.py last."""
     items[:] = list(reversed(items))
@@ -33,7 +43,7 @@ def pytest_generate_tests(metafunc):
     """Generate all py.test cases. Checks for different types of tests and creates proper context."""
     if metafunc.function.__name__ == 'test_vector':
         args = util_test.vector_to_args(UNITTEST_VECTOR, pytest.config.option.function)
-        metafunc.parametrize('tx_name, method, inputs, outputs, error, records, comment', args)
+        metafunc.parametrize('tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes', args)
     elif metafunc.function.__name__ == 'test_scenario':
         args = []
         for scenario_name in INTEGRATION_SCENARIOS:
