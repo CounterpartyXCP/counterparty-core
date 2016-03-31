@@ -58,5 +58,11 @@
 			"minimum_version_minor": 54,
 			"minimum_version_revision": 0,
 			"block_index": 401278
+		},
+	"broadcast_pack_text": {
+			"minimum_version_major": 9,
+			"minimum_version_minor": 55,
+			"minimum_version_revision": 0,
+			"block_index": 408124
 		}
 }

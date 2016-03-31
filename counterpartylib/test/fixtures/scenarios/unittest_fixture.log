@@ -101,11 +101,11 @@ Credit: 92233720368.54775807 MAXI to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #issuanc
 Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Change quantity: 1.9989134 BTC
-Broadcast: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T19:33:20 with a fee of 500.0%% (9b70f9ad8c0d92ff27127d081169cebee68a776f4974e757de09a46e85682d66) [valid]
+Broadcast: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T19:33:20 with a fee of 500.0%% (3369be793bff1ec8bb0ad342bf5ce5c24a9298c4cb5660b0c41a32d6fb06babe) [valid]
 Sorted UTXOs: ['amount: 1.934276; txid: dc4f91c42eb79898b266ee237eed0d501b8b1a843f69aed847ad740e1933f85e; vout: 1; confirmations: 6']
 New input: amount: 1.934276; txid: dc4f91c42eb79898b266ee237eed0d501b8b1a843f69aed847ad740e1933f85e; vout: 1; confirmations: 6
 Change quantity: 1.934098 BTC
-Broadcast: mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH locked his feed (f6548d72d0726bd869fdfdcf44766871f7ab721efda6ed7bce0d4c88b43bf1cf) [valid]
+Broadcast: mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH locked his feed (88c74d84fd6121123b092877283a5e4e1aca4f59d18d643c8347ed756020a846) [valid]
 Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Change quantity: 1.9988591 BTC
@@ -132,10 +132,10 @@ Bet: 0.0000001 XCP against 0.0000001 XCP, by mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns,
 Sorted UTXOs: ['amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74']
 New input: amount: 1.9990914; txid: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1; vout: 0; confirmations: 74
 Change quantity: 1.9989134 BTC
-Broadcast: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T19:33:22 with a fee of 500.0%% (18cbfca6cd776158c13245977b4eead061e6bdcea8118faa6996fb6d01b51d4e) [valid]
-Credit: 0.00000009 XCP to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #bet settled# <18cbfca6cd776158c13245977b4eead061e6bdcea8118faa6996fb6d01b51d4e>
-Credit: 0.00000009 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #bet settled# <18cbfca6cd776158c13245977b4eead061e6bdcea8118faa6996fb6d01b51d4e>
-Credit: 0.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #feed fee# <18cbfca6cd776158c13245977b4eead061e6bdcea8118faa6996fb6d01b51d4e>
+Broadcast: mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc at 2013-12-25T19:33:22 with a fee of 500.0%% (d5879170168ed84a20ff86bfdb2ca7d9b74bdbf1c39b9a606cacc34429be9364) [valid]
+Credit: 0.00000009 XCP to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns #bet settled# <d5879170168ed84a20ff86bfdb2ca7d9b74bdbf1c39b9a606cacc34429be9364>
+Credit: 0.00000009 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #bet settled# <d5879170168ed84a20ff86bfdb2ca7d9b74bdbf1c39b9a606cacc34429be9364>
+Credit: 0.0 XCP to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc #feed fee# <d5879170168ed84a20ff86bfdb2ca7d9b74bdbf1c39b9a606cacc34429be9364>
 Bet Match Settled: 0.00000009 XCP credited to the bull, 0.00000009 XCP credited to the bear, and 0.0 XCP credited to the feed address (be15d34c959fde8f2baff8577d73d28c864e7684cc76ecba33e5d6d79ca6d6bd_90c1314847b1fe9b4520a3610dc98c71d39a1cb4b96edb9b02b6fed844a4b1e5)
 Database: set status of bet_match be15d34c959fde8f2baff8577d73d28c864e7684cc76ecba33e5d6d79ca6d6bd_90c1314847b1fe9b4520a3610dc98c71d39a1cb4b96edb9b02b6fed844a4b1e5 to settled.
 Sorted UTXOs: ['amount: 1.0782457; txid: c018d940b7d338e57e121cbbb1880fdd8f4444d950ea041cdca17016fd320be8; vout: 0; confirmations: 143']
