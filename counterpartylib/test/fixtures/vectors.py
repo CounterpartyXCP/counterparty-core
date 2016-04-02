@@ -281,9 +281,9 @@ UNITTEST_VECTOR = {
         'parse_block': [{
             'in': (DP['default_block_index'] - 1, 1420914478),
             'out': ('398c9834454c2b8c803a83498992e5cd8f276308d72b54edaee56ac1fb27ce92',
-                '92ae06276ecb2cbb5d974c2974470cdb0a932c4bdb8dcc4b479c7c44c638c649',
-                '485b6dd30f0954f5932815470756d2cff2fa5507e6d5b6378d4358327018b0e9',
-                '485b6dd30f0954f5932815470756d2cff2fa5507e6d5b6378d4358327018b0e9')
+                '7f9fb08e8ff811c3ff17ca29ab1f7f1de5c7d3507ea91a59fac931936b7014ac',
+                'a4660b512f52c28f7875d97411227ed721ca30860ce9ff0ae633850c472f210a',
+                'a4660b512f52c28f7875d97411227ed721ca30860ce9ff0ae633850c472f210a')
         }],
         'get_next_tx_index': [{
             'in': (),
@@ -398,16 +398,68 @@ UNITTEST_VECTOR = {
             'out': (['null source address'])
         }],
         'compose': [{
+            'comment': 'test old text packing for short text',
+            'mock_protocol_changes': {'broadcast_pack_text': False},
             'in': (ADDR[0], 1588000000, 1, DP['fee_multiplier'], 'Unit Test'),
             'out': (ADDR[0], [], b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00LK@\tUnit Test')
-        },  {
-            'in': (ADDR[0], 1588000000, 1, DP['fee_multiplier'], 'Over 52 characters test test test test test test test test'),
-            'out': (ADDR[0], [], b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00LK@Over 52 characters test test test test test test test test')
+        }, {
+            'comment': 'test old text packing for 51 chars',
+            'mock_protocol_changes': {'broadcast_pack_text': False},
+            'in': (ADDR[0], 1588000000, 1, 0, 'Exactly 51 characters test test test test test tes.'),
+            'out': (ADDR[0], [], b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x003Exactly 51 characters test test test test test tes.')
+        }, {
+            'comment': 'test old text packing for 52 chars',
+            'mock_protocol_changes': {'broadcast_pack_text': False},
+            'in': (ADDR[0], 1588000000, 1, 0, 'Exactly 52 characters test test test test test test.'),
+            'out': (ADDR[0], [], b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x004Exactly 52 characters test test test test test test.')
+        }, {
+            'comment': 'test old text packing for 53 chars',
+            'mock_protocol_changes': {'broadcast_pack_text': False},
+            'in': (ADDR[0], 1588000000, 1, 0, 'Exactly 53 characters test test test test test testt.'),
+            'out': (ADDR[0], [], b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00Exactly 53 characters test test test test test testt.')
+        }, {
+            'comment': 'test old text packing for string with utf-8 char, '
+                       'THIS IS A BUG! but for consensus reasons we want to keep it in tact! the length byte should be 1 higher',
+            'mock_protocol_changes': {'broadcast_pack_text': False},
+            'in': (ADDR[0], 1588000000, 1, 0, 'This is an e with an: è.'),
+            'out': (ADDR[0], [], b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x18This is an e with an: \xc3\xa8')
+        }, {
+            'comment': 'test old text packing for LOCK',
+            'mock_protocol_changes': {'broadcast_pack_text': False},
+            'in': (ADDR[0], 1388000100, 50000000, 0, 'LOCK'),
+            'out': (ADDR[0], [], b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\x04LOCK')
+        }, {
+            'comment': 'test current text packing for short text',
+            'in': (ADDR[0], 1588000000, 1, DP['fee_multiplier'], 'Unit Test'),
+            'out': (ADDR[0], [], b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00LK@Unit Test')
+        }, {
+            'comment': 'test current text packing for 51 chars',
+            'in': (ADDR[0], 1588000000, 1, 0, 'Exactly 51 characters test test test test test tes.'),
+            'out': (ADDR[0], [], b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00Exactly 51 characters test test test test test tes.')
+        }, {
+            'comment': 'test current text packing for 52 chars',
+            'in': (ADDR[0], 1588000000, 1, 0, 'Exactly 52 characters test test test test test test.'),
+            'out': (ADDR[0], [], b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00Exactly 52 characters test test test test test test.')
+        }, {
+            'comment': 'test current text packing for 53 chars',
+            'in': (ADDR[0], 1588000000, 1, 0, 'Exactly 53 characters test test test test test testt.'),
+            'out': (ADDR[0], [], b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00Exactly 53 characters test test test test test testt.')
+        }, {
+            'comment': 'test current text packing for 53 chars',
+            'in': (ADDR[0], 1588000000, 1, 0, 'Exactly 53 characters test test test test test testt.'),
+            'out': (ADDR[0], [], b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00Exactly 53 characters test test test test test testt.')
+        }, {
+            'comment': 'test current text packing for string with utf-8 char',
+            'in': (ADDR[0], 1588000000, 1, 0, 'This is an e with an: è.'),
+            'out': (ADDR[0], [], b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00This is an e with an: \xc3\xa8.')
+        }, {
+            'comment': 'test current text packing for LOCK',
+            'in': (ADDR[0], 1388000100, 50000000, 0, 'LOCK'),
+            'out': (ADDR[0], [], b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00LOCK')
         }],
         'parse': [{
-            'in': ({'destination': '', 'block_index': DP['default_block_index'], 'supported': 1, 'data': b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\x06BARFOO', 'fee': 10000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'btc_amount': 0, 'block_time': 310501000, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea'},),
-            'out': None
-        },  {
+            'comment': 'test old text unpacking for short text',
+            'mock_protocol_changes': {'broadcast_pack_text': False},
             'in': ({'destination': '', 'block_index': DP['default_block_index'], 'supported': 1, 'data': b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\x06BARFOO', 'fee': 10000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'btc_amount': 0, 'block_time': 310501000, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea'},),
             'records': [
                 {'table': 'broadcasts', 'values': {
@@ -423,7 +475,91 @@ UNITTEST_VECTOR = {
                     'value': 50000000.0,
                 }},
             ]
-        },  {
+        }, {
+            'comment': 'test old text unpacking for 51 chars',
+            'mock_protocol_changes': {'broadcast_pack_text': False},
+            'in': ({'destination': '', 'block_index': DP['default_block_index'], 'supported': 1,
+                    'data': b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x003Exactly 51 characters test test test test test tes.',
+                    'fee': 10000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'btc_amount': 0, 'block_time': 310501000, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea'},),
+            'records': [
+                {'table': 'broadcasts', 'values': {
+                    'block_index': DP['default_block_index'],
+                    'fee_fraction_int': 0,
+                    'locked': 0,
+                    'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
+                    'status': 'valid',
+                    'text': 'Exactly 51 characters test test test test test tes.',
+                    'timestamp': 1588000000,
+                    'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea',
+                    'tx_index': 502,
+                    'value': 1.0,
+                }},
+            ]
+        }, {
+            'comment': 'test old text unpacking for 52 chars, '
+                       'THIS IS A BUG! but for consensus reasons we want to keep it in tact! the \'4\' from the length byte is added to the stored text',
+            'mock_protocol_changes': {'broadcast_pack_text': False},
+            'in': ({'destination': '', 'block_index': DP['default_block_index'], 'supported': 1,
+                    'data': b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x004Exactly 52 characters test test test test test test.',
+                    'fee': 10000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'btc_amount': 0, 'block_time': 310501000, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea'},),
+            'records': [
+                {'table': 'broadcasts', 'values': {
+                    'block_index': DP['default_block_index'],
+                    'fee_fraction_int': 0,
+                    'locked': 0,
+                    'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
+                    'status': 'valid',
+                    'text': '4Exactly 52 characters test test test test test test.',
+                    'timestamp': 1588000000,
+                    'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea',
+                    'tx_index': 502,
+                    'value': 1.0,
+                }},
+            ]
+        }, {
+            'comment': 'test old text unpacking for 53 chars',
+            'mock_protocol_changes': {'broadcast_pack_text': False},
+            'in': ({'destination': '', 'block_index': DP['default_block_index'], 'supported': 1,
+                    'data': b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00Exactly 53 characters test test test test test testt.',
+                    'fee': 10000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'btc_amount': 0, 'block_time': 310501000, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea'},),
+            'records': [
+                {'table': 'broadcasts', 'values': {
+                    'block_index': DP['default_block_index'],
+                    'fee_fraction_int': 0,
+                    'locked': 0,
+                    'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
+                    'status': 'valid',
+                    'text': 'Exactly 53 characters test test test test test testt.',
+                    'timestamp': 1588000000,
+                    'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea',
+                    'tx_index': 502,
+                    'value': 1.0,
+                }},
+            ]
+        }, {
+            'comment': 'test old text packing for string with utf-8 char, '
+                       'THIS IS A BUG! but for consensus reasons we want to keep it in tact! the . is trimmed off because of a bad length byte',
+            'mock_protocol_changes': {'broadcast_pack_text': False},
+            'in': ({'destination': '', 'block_index': DP['default_block_index'], 'supported': 1,
+                    'data': b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x18This is an e with an: \xc3\xa8.',
+                    'fee': 10000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'btc_amount': 0, 'block_time': 310501000, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea'},),
+            'records': [
+                {'table': 'broadcasts', 'values': {
+                    'block_index': DP['default_block_index'],
+                    'fee_fraction_int': 0,
+                    'locked': 0,
+                    'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
+                    'status': 'valid',
+                    'text': 'This is an e with an: è',
+                    'timestamp': 1588000000,
+                    'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea',
+                    'tx_index': 502,
+                    'value': 1.0,
+                }},
+            ]
+        }, {
+            'comment': 'test old text unpacking for bet',
+            'mock_protocol_changes': {'broadcast_pack_text': False},
             'in': ({'fee': 10000, 'btc_amount': 0, 'supported': 1, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'block_time': 310501000, 'destination': '', 'block_index': DP['default_block_index'], 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'tx_hash': 'c9e8db96d520b0611218504801e74796ae4f476578512d21d3f99367ab8e356f', 'data': b'\x00\x00\x00\x1eR\xbb4,\xc0\x00\x00\x00\x00\x00\x00\x00\x00LK@\tUnit Test'},),
             'records': [
                 {'table': 'broadcasts', 'values':  {
@@ -458,9 +594,11 @@ UNITTEST_VECTOR = {
                     'wager_remaining': 10,
                 }}
             ]
-        },  {
-            'comment': 'LOCK',
-            'in': ({'btc_amount': 0, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': '', 'block_index': DP['default_block_index'], 'fee': 10000, 'supported': 1, 'block_time': 310501000, 'tx_hash': '6b4a62b80f35b0e66df4591c8a445d453d995609e2df12afe93e742bea10dd86', 'tx_index': 502, 'data': b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\x04LOCK'},),
+        }, {
+            'comment': 'test old text unpacking for LOCK',
+            'mock_protocol_changes': {'broadcast_pack_text': False},
+            'in': ({'btc_amount': 0, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': '', 'block_index': DP['default_block_index'], 'fee': 10000, 'supported': 1, 'block_time': 310501000, 'tx_hash': '6b4a62b80f35b0e66df4591c8a445d453d995609e2df12afe93e742bea10dd86', 'tx_index': 502,
+                    'data': b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\x04LOCK'},),
             'records': [
                 {'table': 'broadcasts', 'values': {
                     'block_index': DP['default_block_index'],
@@ -474,7 +612,154 @@ UNITTEST_VECTOR = {
                     'tx_index': 502,
                     'value': None,
                 }}
-        ]
+            ]
+        }, {
+            'comment': 'test current text unpacking for short text',
+            'in': ({'destination': '', 'block_index': DP['default_block_index'], 'supported': 1, 'data': b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00BARFOO', 'fee': 10000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'btc_amount': 0, 'block_time': 310501000, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea'},),
+            'records': [
+                {'table': 'broadcasts', 'values': {
+                    'block_index': DP['default_block_index'],
+                    'fee_fraction_int': 0,
+                    'locked': 0,
+                    'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
+                    'status': 'valid',
+                    'text': 'BARFOO',
+                    'timestamp': 1388000100,
+                    'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea',
+                    'tx_index': 502,
+                    'value': 50000000.0,
+                }},
+            ]
+        }, {
+            'comment': 'test current text unpacking for 51 chars',
+            'in': ({'destination': '', 'block_index': DP['default_block_index'], 'supported': 1,
+                    'data': b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00Exactly 51 characters test test test test test tes.',
+                    'fee': 10000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'btc_amount': 0, 'block_time': 310501000, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea'},),
+            'records': [
+                {'table': 'broadcasts', 'values': {
+                    'block_index': DP['default_block_index'],
+                    'fee_fraction_int': 0,
+                    'locked': 0,
+                    'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
+                    'status': 'valid',
+                    'text': 'Exactly 51 characters test test test test test tes.',
+                    'timestamp': 1588000000,
+                    'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea',
+                    'tx_index': 502,
+                    'value': 1.0,
+                }},
+            ]
+        }, {
+            'comment': 'test current text unpacking for 52 chars',
+            'in': ({'destination': '', 'block_index': DP['default_block_index'], 'supported': 1,
+                    'data': b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00Exactly 52 characters test test test test test test.',
+                    'fee': 10000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'btc_amount': 0, 'block_time': 310501000, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea'},),
+            'records': [
+                {'table': 'broadcasts', 'values': {
+                    'block_index': DP['default_block_index'],
+                    'fee_fraction_int': 0,
+                    'locked': 0,
+                    'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
+                    'status': 'valid',
+                    'text': 'Exactly 52 characters test test test test test test.',
+                    'timestamp': 1588000000,
+                    'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea',
+                    'tx_index': 502,
+                    'value': 1.0,
+                }},
+            ]
+        }, {
+            'comment': 'test current text unpacking for 53 chars, ',
+            'in': ({'destination': '', 'block_index': DP['default_block_index'], 'supported': 1,
+                    'data': b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00Exactly 53 characters test test test test test testt.',
+                    'fee': 10000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'btc_amount': 0, 'block_time': 310501000, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea'},),
+            'records': [
+                {'table': 'broadcasts', 'values': {
+                    'block_index': DP['default_block_index'],
+                    'fee_fraction_int': 0,
+                    'locked': 0,
+                    'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
+                    'status': 'valid',
+                    'text': 'Exactly 53 characters test test test test test testt.',
+                    'timestamp': 1588000000,
+                    'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea',
+                    'tx_index': 502,
+                    'value': 1.0,
+                }},
+            ]
+        }, {
+            'comment': 'test current text packing for string with utf-8 char, ',
+            'in': ({'destination': '', 'block_index': DP['default_block_index'], 'supported': 1,
+                    'data': b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00This is an e with an: \xc3\xa8.',
+                    'fee': 10000, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'btc_amount': 0, 'block_time': 310501000, 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea'},),
+            'records': [
+                {'table': 'broadcasts', 'values': {
+                    'block_index': DP['default_block_index'],
+                    'fee_fraction_int': 0,
+                    'locked': 0,
+                    'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
+                    'status': 'valid',
+                    'text': 'This is an e with an: è.',
+                    'timestamp': 1588000000,
+                    'tx_hash': 'dd48da950fd7d000224b79ebe3495fa594ca6d6698f16c4e2dc93b4f116006ea',
+                    'tx_index': 502,
+                    'value': 1.0,
+                }},
+            ]
+        }, {
+            'comment': 'test current text unpacking for bet',
+            'in': ({'fee': 10000, 'btc_amount': 0, 'supported': 1, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'tx_index': 502, 'block_time': 310501000, 'destination': '', 'block_index': DP['default_block_index'], 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'tx_hash': 'c9e8db96d520b0611218504801e74796ae4f476578512d21d3f99367ab8e356f', 'data': b'\x00\x00\x00\x1eR\xbb4,\xc0\x00\x00\x00\x00\x00\x00\x00\x00LK@Unit Test'},),
+            'records': [
+                {'table': 'broadcasts', 'values':  {
+                    'block_index': DP['default_block_index'],
+                    'fee_fraction_int': 5000000,
+                    'locked': 0,
+                    'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'status': 'valid',
+                    'text': 'Unit Test',
+                    'timestamp': 1388000300,
+                    'tx_hash': 'c9e8db96d520b0611218504801e74796ae4f476578512d21d3f99367ab8e356f',
+                    'tx_index': 502,
+                    'value': -2.0,
+                }},
+                {'table': 'bets', 'values': {
+                    'bet_type': 3,
+                    'block_index': 310101,
+                    'counterwager_quantity': 10,
+                    'counterwager_remaining': 10,
+                    'deadline': 1388000200,
+                    'expiration': 1000,
+                    'expire_index': 311101,
+                    'fee_fraction_int': 5000000,
+                    'feed_address': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'leverage': 5040,
+                    'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
+                    'status': 'dropped',
+                    'target_value': 0.0,
+                    'tx_hash': 'ba0ef1dfbbc87df94e1d198b0e9e3c06301710d4aab3d85116cbc8199954644a',
+                    'tx_index': 102,
+                    'wager_quantity': 10,
+                    'wager_remaining': 10,
+                }}
+            ]
+        }, {
+            'comment': 'test current text unpacking for LOCK',
+            'in': ({'btc_amount': 0, 'block_hash': '46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58', 'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns', 'destination': '', 'block_index': DP['default_block_index'], 'fee': 10000, 'supported': 1, 'block_time': 310501000, 'tx_hash': '6b4a62b80f35b0e66df4591c8a445d453d995609e2df12afe93e742bea10dd86', 'tx_index': 502,
+                    'data': b'\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00LOCK'},),
+            'records': [
+                {'table': 'broadcasts', 'values': {
+                    'block_index': DP['default_block_index'],
+                    'fee_fraction_int': None,
+                    'locked': 1,
+                    'source': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',
+                    'status': 'valid',
+                    'text': None,
+                    'timestamp': 0,
+                    'tx_hash': '6b4a62b80f35b0e66df4591c8a445d453d995609e2df12afe93e742bea10dd86',
+                    'tx_index': 502,
+                    'value': None,
+                }}
+            ]
         }],
     },
     'burn': {

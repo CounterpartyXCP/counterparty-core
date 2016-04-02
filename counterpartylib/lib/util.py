@@ -41,6 +41,8 @@ CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(CURR_DIR + '/../protocol_changes.json') as f:
     PROTOCOL_CHANGES = json.load(f)
 
+MOCK_PROTOCOL_CHANGES = {}
+
 class RPCError (Exception): pass
 
 # TODO: Move to `util_test.py`.
@@ -600,6 +602,9 @@ def unhexlify(hex_string):
 def enabled(change_name, block_index=None):
     """Return True if protocol change is enabled."""
     enable_block_index = PROTOCOL_CHANGES[change_name]['block_index']
+
+    if change_name in MOCK_PROTOCOL_CHANGES:
+        return MOCK_PROTOCOL_CHANGES[change_name]
 
     if not block_index:
         block_index = CURRENT_BLOCK_INDEX

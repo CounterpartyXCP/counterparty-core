@@ -296,8 +296,9 @@ def vector_to_args(vector, functions=[]):
                 outputs = params.get('out', None)
                 records = params.get('records', None)
                 comment = params.get('comment', None)
+                mock_protocol_changes = params.get('mock_protocol_changes', None)
                 if functions == [] or (tx_name + '.' + method) in functions:
-                    args.append((tx_name, method, params['in'], outputs, error, records, comment))
+                    args.append((tx_name, method, params['in'], outputs, error, records, comment, mock_protocol_changes))
     return args
 
 def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
@@ -311,7 +312,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
     else:
         return tested_method(server_db, *inputs)
 
-def check_outputs(tx_name, method, inputs, outputs, error, records, comment, server_db):
+def check_outputs(tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes, server_db):
     """Check actual and expected outputs of a particular function."""
 
     try:
@@ -319,6 +320,10 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, ser
     except KeyError:    # TODO: hack
         tested_module = sys.modules['counterpartylib.lib.messages.{}'.format(tx_name)]
     tested_method = getattr(tested_module, method)
+
+    util.MOCK_PROTOCOL_CHANGES.clear()
+    if mock_protocol_changes:
+        util.MOCK_PROTOCOL_CHANGES.update(mock_protocol_changes)
 
     test_outputs = None
     if error is not None:
