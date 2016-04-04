@@ -2179,6 +2179,58 @@ UNITTEST_VECTOR = {
             'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjv0', b'\x00'),
             'error': (script.Base58Error, "Not a valid Base58 character: ‘0’")
         }],
+        # base58_decode is the raw decoding, we use the test cases from base58_check_decode
+        'base58_decode': [{
+            'comment': 'valid mainnet bitcoin address',
+            'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM', ),
+            'out': b"\x00\x01\tfw`\x06\x95=UgC\x9e^9\xf8j\r';\xee\xd6\x19g\xf6"
+        }, {
+            'comment': 'valid mainnet bitcoin address that contains a padding byte',
+            'in': ('13PGb7v3nmTDugLDStRJWXw6TzsNLUKJKC', ),
+            'out': b'\x00\x1a&jGxV\xea\xd2\x9e\xcb\xe6\xaeQ\xad:,\x8dG<\xf4\x07eG#'
+        }, {
+            'comment': 'wrong version byte',
+            'in': ('26UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM', ),
+            'out': b'\x0c\x01\x86\xaa\xbd\xa1\xd2\xdaJ\xf2\xd4\xbb\xe5=N\xe2\x08\xa6\x8eo\xd6\x19g\xf6'
+        }, {
+            'comment': 'invalid mainnet bitcoin address: bad checksum',
+            'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvN', ),
+            'out': b"\x00\x01\tfw`\x06\x95=UgC\x9e^9\xf8j\r';\xee\xd6\x19g\xf7"
+        }, {
+            'comment': 'valid testnet bitcoin address that we use in many tests',
+            'in': (ADDR[0], ),
+            'out': b'oH8\xd8\xb3X\x8cL{\xa7\xc1\xd0o\x86n\x9b79\xc607\x98!\xc4U'
+        }, {
+            'comment': 'invalid mainnet bitcoin address: invalid character',
+            'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjv0', ),
+            'error': (script.Base58Error, "Not a valid Base58 character: ‘0’")
+        }],
+        # base58_check_decode_parts is the raw decoding and splitting, we use the test cases from base58_check_decode
+        'base58_check_decode_parts': [{
+            'comment': 'valid mainnet bitcoin address',
+            'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM', ),
+            'out': (b'\x00', b"\x01\tfw`\x06\x95=UgC\x9e^9\xf8j\r';\xee", b'\xd6\x19g\xf6')
+        }, {
+            'comment': 'valid mainnet bitcoin address that contains a padding byte',
+            'in': ('13PGb7v3nmTDugLDStRJWXw6TzsNLUKJKC', ),
+            'out': (b'\x00', b'\x1a&jGxV\xea\xd2\x9e\xcb\xe6\xaeQ\xad:,\x8dG<\xf4', b'\x07eG#')
+        }, {
+            'comment': 'wrong version byte',
+            'in': ('26UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM', ),
+            'out': (b'\x0c', b'\x01\x86\xaa\xbd\xa1\xd2\xdaJ\xf2\xd4\xbb\xe5=N\xe2\x08\xa6\x8eo', b'\xd6\x19g\xf6')
+        }, {
+            'comment': 'invalid mainnet bitcoin address: bad checksum',
+            'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvN', ),
+            'out': (b'\x00', b"\x01\tfw`\x06\x95=UgC\x9e^9\xf8j\r';\xee", b'\xd6\x19g\xf7')
+        }, {
+            'comment': 'valid testnet bitcoin address that we use in many tests',
+            'in': (ADDR[0], ),
+            'out':  (b'o', b'H8\xd8\xb3X\x8cL{\xa7\xc1\xd0o\x86n\x9b79\xc607', b'\x98!\xc4U')
+        }, {
+            'comment': 'invalid mainnet bitcoin address: invalid character',
+            'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjv0', ),
+            'error': (script.Base58Error, "Not a valid Base58 character: ‘0’")
+        }],
         'is_multisig': [{
             'comment': 'mono‐sig',
             'in': ('16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM',),
