@@ -283,7 +283,7 @@ UNITTEST_VECTOR = {
             'out': ('398c9834454c2b8c803a83498992e5cd8f276308d72b54edaee56ac1fb27ce92',
                 '92ae06276ecb2cbb5d974c2974470cdb0a932c4bdb8dcc4b479c7c44c638c649',
                 '485b6dd30f0954f5932815470756d2cff2fa5507e6d5b6378d4358327018b0e9',
-                '485b6dd30f0954f5932815470756d2cff2fa5507e6d5b6378d4358327018b0e9')
+                None)
         }],
         'get_next_tx_index': [{
             'in': (),

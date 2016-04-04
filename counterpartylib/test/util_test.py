@@ -83,7 +83,7 @@ def remove_database_files(database_filename):
         if os.path.isfile(path):
             os.remove(path)
 
-def insert_block(db, block_index, parse_block=False):
+def insert_block(db, block_index, parse_block=True):
     """Add blocks to the blockchain."""
     cursor = db.cursor()
     block_hash = hashlib.sha512(chr(block_index).encode('utf-8')).hexdigest()
@@ -93,11 +93,12 @@ def insert_block(db, block_index, parse_block=False):
                       VALUES (?,?,?,?,?,?,?)''', block)
     util.CURRENT_BLOCK_INDEX = block_index  # TODO: Correct?!
     cursor.close()
+
     if parse_block:
         blocks.parse_block(db, block_index, block_time)
     return block_index, block_hash, block_time
 
-def create_next_block(db, block_index=None, parse_block=False):
+def create_next_block(db, block_index=None, parse_block=True):
     """Create faux data for the next block."""
     cursor = db.cursor()
     last_block_index = list(cursor.execute("SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1"))[0]['block_index']
@@ -115,7 +116,7 @@ def create_next_block(db, block_index=None, parse_block=False):
 def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
     """Add a raw transaction to the database."""
     # one transaction per block
-    block_index, block_hash, block_time = create_next_block(db)
+    block_index, block_hash, block_time = create_next_block(db, parse_block=False)
 
     cursor = db.cursor()
     tx_index = block_index - config.BURN_START + 1
@@ -184,7 +185,7 @@ def getrawtransaction(db, txid):
 def initialise_db(db):
     """Initialise blockchain in the db and insert first block."""
     blocks.initialise(db)
-    insert_block(db, config.BURN_START - 1)
+    insert_block(db, config.BLOCK_FIRST - 1, parse_block=True)
 
 def run_scenario(scenario, rawtransactions_db):
     """Execute a scenario for integration test, returns a dump of the db, a json with raw transactions and the full log."""
@@ -219,7 +220,7 @@ def run_scenario(scenario, rawtransactions_db):
             raw_transactions.append({tx[0]: unsigned_tx_hex})
             insert_raw_transaction(unsigned_tx_hex, db, rawtransactions_db)
         else:
-            create_next_block(db, block_index=config.BURN_START + tx[1], parse_block=True)
+            create_next_block(db, block_index=config.BURN_START + tx[1], parse_block=tx[2] if len(tx) == 3 else True)
 
     dump = dump_database(db)
     log = logger_buff.getvalue()
