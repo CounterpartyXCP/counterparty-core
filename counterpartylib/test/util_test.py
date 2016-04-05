@@ -290,8 +290,8 @@ def check_record(record, server_db):
 def vector_to_args(vector, functions=[]):
     """Translate from UNITTEST_VECTOR style to function arguments."""
     args = []
-    for tx_name in vector:
-        for method in vector[tx_name]:
+    for tx_name in sorted(vector.keys()):
+        for method in sorted(vector[tx_name].keys()):
             for params in vector[tx_name][method]:
                 error = params.get('error', None)
                 outputs = params.get('out', None)
