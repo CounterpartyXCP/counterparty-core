@@ -57,8 +57,11 @@ UNITTEST_FIXTURE = [
     ['send', (ADDR[2], ADDR[3], 'DIVIDEND', 10), {'encoding': 'multisig'}],
     ['send', (ADDR[2], ADDR[3], 'XCP', 92945878046), {'encoding': 'multisig'}],
 
-    ['create_next_block', 499],
-    ['create_next_block', 500, False] # parse_block=False so we can unit test blocks.parse_block
+    ['create_next_block', 500],
+]
+
+PARSEBLOCKS_FIXTURE = UNITTEST_FIXTURE + [
+    ['create_next_block', 501, False]  # parse_block=False so we can unittest blocks.parse_block
 ]
 
 def generate_standard_scenario(address1, address2, order_matches):
@@ -137,7 +140,8 @@ standard_scenarios_params = {
 }
 
 INTEGRATION_SCENARIOS = {
-    'unittest_fixture': (UNITTEST_FIXTURE, 'unittest_fixture')
+    'unittest_fixture': (UNITTEST_FIXTURE, 'unittest_fixture'),
+    'parseblock_unittest_fixture': (PARSEBLOCKS_FIXTURE, 'parseblock_unittest_fixture')
 }
 # Generate special tests for simplesig, multisig2 and multisig3 using standard scenario.
 for scenario_name in standard_scenarios_params:

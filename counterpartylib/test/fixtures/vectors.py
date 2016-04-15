@@ -278,13 +278,6 @@ UNITTEST_VECTOR = {
             'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d', 'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'data': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00', 'tx_index': 502, 'destination': 'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns-mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj'},),
             'out': None
         }],
-        'parse_block': [{
-            'in': (DP['default_block_index'] - 1, 1420914478),
-            'out': ('398c9834454c2b8c803a83498992e5cd8f276308d72b54edaee56ac1fb27ce92',
-                '92ae06276ecb2cbb5d974c2974470cdb0a932c4bdb8dcc4b479c7c44c638c649',
-                '485b6dd30f0954f5932815470756d2cff2fa5507e6d5b6378d4358327018b0e9',
-                None)
-        }],
         'get_next_tx_index': [{
             'in': (),
             'out': 498
