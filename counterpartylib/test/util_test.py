@@ -41,6 +41,31 @@ COUNTERPARTYD_OPTIONS = {
     'backend_ssl_no_verify': True
 }
 
+def init_database(sqlfile, dbfile):
+    server.initialise(
+        database_file=dbfile,
+        testnet=True,
+        verbose=True,
+        console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None),
+        **COUNTERPARTYD_OPTIONS)
+    restore_database(config.DATABASE, sqlfile)
+    db = database.get_connection(read_only=False)  # reinit the DB to deal with the restoring
+    database.update_version(db)
+    util.FIRST_MULTISIG_BLOCK_TESTNET = 1
+
+    return db
+
+
+def reset_current_block_index(db):
+    cursor = db.cursor()
+    latest_block = list(cursor.execute('''SELECT * FROM blocks ORDER BY block_index DESC LIMIT 1'''))[0]
+    util.CURRENT_BLOCK_INDEX = latest_block['block_index']
+    print(latest_block)
+    cursor.close()
+
+    return util.CURRENT_BLOCK_INDEX
+
+
 def dump_database(db):
     """Create a new database dump from db object as input."""
     # TEMPORARY
@@ -75,7 +100,6 @@ def restore_database(database_filename, dump_filename):
     with open(dump_filename, 'r') as sql_dump:
         cursor.execute(sql_dump.read())
     cursor.close()
-    return db
 
 def remove_database_files(database_filename):
     """Delete temporary db dumps."""
@@ -290,8 +314,8 @@ def check_record(record, server_db):
 def vector_to_args(vector, functions=[]):
     """Translate from UNITTEST_VECTOR style to function arguments."""
     args = []
-    for tx_name in vector:
-        for method in vector[tx_name]:
+    for tx_name in sorted(vector.keys()):
+        for method in sorted(vector[tx_name].keys()):
             for params in vector[tx_name][method]:
                 error = params.get('error', None)
                 outputs = params.get('out', None)

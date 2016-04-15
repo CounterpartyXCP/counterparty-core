@@ -37,6 +37,8 @@ json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
 BLOCK_LEDGER = []
 
+CURRENT_BLOCK_INDEX = None
+
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(CURR_DIR + '/../protocol_changes.json') as f:
     PROTOCOL_CHANGES = json.load(f)
@@ -317,6 +319,7 @@ def credit (db, address, asset, quantity, action=None, event=None):
         'event': event
     }
     sql='insert into credits values(:block_index, :address, :asset, :quantity, :action, :event)'
+
     credit_cursor.execute(sql, bindings)
     credit_cursor.close()
 
