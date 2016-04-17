@@ -13,17 +13,29 @@ sys.path.insert(0, base_dir)
 
 import json, binascii, apsw
 from datetime import datetime
+import time
 
-import pytest, util_test
+import pytest
+from counterpartylib.test import util_test
 
-from fixtures.vectors import UNITTEST_VECTOR
-from fixtures.params import DEFAULT_PARAMS
-from fixtures.scenarios import INTEGRATION_SCENARIOS
+from counterpartylib.test.fixtures.vectors import UNITTEST_VECTOR
+from counterpartylib.test.fixtures.params import DEFAULT_PARAMS
+from counterpartylib.test.fixtures.scenarios import INTEGRATION_SCENARIOS
 
-from counterpartylib.lib import config, util, backend, transaction
+from counterpartylib.lib import config, util, backend, transaction, database, api
 
 import bitcoin as bitcoinlib
 import bitcoin.rpc as bitcoinlib_rpc
+
+# we swap out util.enabled with a custom one which has the option to mock the protocol changes
+MOCK_PROTOCOL_CHANGES = {}
+_enabled = util.enabled
+def enabled(change_name, block_index=None):
+    if change_name in MOCK_PROTOCOL_CHANGES:
+        return MOCK_PROTOCOL_CHANGES[change_name]
+
+    return _enabled(change_name, block_index)
+util.enabled = enabled
 
 def pytest_collection_modifyitems(session, config, items):
     """Run contracts_test.py last."""
@@ -33,7 +45,7 @@ def pytest_generate_tests(metafunc):
     """Generate all py.test cases. Checks for different types of tests and creates proper context."""
     if metafunc.function.__name__ == 'test_vector':
         args = util_test.vector_to_args(UNITTEST_VECTOR, pytest.config.option.function)
-        metafunc.parametrize('tx_name, method, inputs, outputs, error, records, comment', args)
+        metafunc.parametrize('tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes', args)
     elif metafunc.function.__name__ == 'test_scenario':
         args = []
         for scenario_name in INTEGRATION_SCENARIOS:
@@ -58,6 +70,8 @@ def pytest_addoption(parser):
     parser.addoption("--gentxhex", action='store_true', default=False, help="generate and print unsigned hex for *.compose() tests")
     parser.addoption("--savescenarios", action='store_true', default=False, help="generate sql dump and log in .new files")
     parser.addoption("--skiptestbook", default='no', help="skip test book(s) (use with one of the following values: `all`, `testnet` or `mainnet`)")
+    parser.addoption("--verbosediff", action='store_true', default=False, help="print verbose diff for vectors that fail")
+
 
 @pytest.fixture(scope="module")
 def rawtransactions_db(request):
@@ -67,7 +81,48 @@ def rawtransactions_db(request):
         util_test.initialise_rawtransactions_db(db)
     return db
 
-@pytest.fixture(autouse=True)
+
+@pytest.fixture(scope='function')
+def server_db(request, cp_server):
+    """Enable database access for unit test vectors."""
+    db = database.get_connection(read_only=False, integrity_check=False)
+    cursor = db.cursor()
+    cursor.execute('''BEGIN''')
+    util_test.reset_current_block_index(db)
+
+    request.addfinalizer(lambda: cursor.execute('''ROLLBACK'''))
+    request.addfinalizer(lambda: util_test.reset_current_block_index(db))
+
+    return db
+
+
+@pytest.fixture(scope='module')
+def api_server(request, cp_server):
+    # start RPC server and wait for server to be ready
+    api_server = api.APIServer()
+    api_server.daemon = True
+    api_server.start()
+    for attempt in range(5000):  # wait until server is ready.
+        if api_server.is_ready:
+            break
+        elif attempt == 4999:
+            raise Exception("Timeout: RPC server not ready after 5s")
+        else:
+            time.sleep(0.001)  # attempt to query the current block_index if possible (scenarios start with empty DB so it's not always possible)
+
+
+@pytest.fixture(scope='module')
+def cp_server(request):
+    print('cp_server')
+    dbfile = getattr(request.module, 'FIXTURE_DB')
+    sqlfile = getattr(request.module, 'FIXTURE_SQL_FILE')
+
+    util_test.init_database(sqlfile, dbfile)
+
+    request.addfinalizer(lambda: util_test.remove_database_files(dbfile))
+
+
+@pytest.fixture(scope='function', autouse=True)
 def init_mock_functions(monkeypatch, rawtransactions_db):
     """Test suit mock functions.
 
@@ -91,7 +146,7 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
     def date_passed(date):
         return False
 
-    def init_api_access_log():
+    def init_api_access_log(app):
         pass
 
     def pubkeyhash_to_pubkey(address, provided_pubkeys=None):
@@ -108,8 +163,6 @@ def init_mock_functions(monkeypatch, rawtransactions_db):
 
     def get_cached_raw_transaction(tx_hash, verbose=False):
         return util_test.getrawtransaction(rawtransactions_db, bitcoinlib.core.lx(tx_hash))
-
-    util.CURRENT_BLOCK_INDEX = DEFAULT_PARAMS['default_block'] - 1
 
     monkeypatch.setattr('counterpartylib.lib.backend.get_unspent_txouts', get_unspent_txouts)
     monkeypatch.setattr('counterpartylib.lib.log.isodt', isodt)

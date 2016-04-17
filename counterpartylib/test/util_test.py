@@ -4,6 +4,8 @@ This module contains a variety of utility functions used in the test suite.
 
 import os, sys, hashlib, binascii, time, decimal, logging, locale, re, io
 import difflib, json, inspect, tempfile, shutil
+import pprint
+
 import apsw, pytest, requests
 from requests.auth import HTTPBasicAuth
 
@@ -39,6 +41,31 @@ COUNTERPARTYD_OPTIONS = {
     'backend_ssl_no_verify': True
 }
 
+def init_database(sqlfile, dbfile):
+    server.initialise(
+        database_file=dbfile,
+        testnet=True,
+        verbose=True,
+        console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None),
+        **COUNTERPARTYD_OPTIONS)
+    restore_database(config.DATABASE, sqlfile)
+    db = database.get_connection(read_only=False)  # reinit the DB to deal with the restoring
+    database.update_version(db)
+    util.FIRST_MULTISIG_BLOCK_TESTNET = 1
+
+    return db
+
+
+def reset_current_block_index(db):
+    cursor = db.cursor()
+    latest_block = list(cursor.execute('''SELECT * FROM blocks ORDER BY block_index DESC LIMIT 1'''))[0]
+    util.CURRENT_BLOCK_INDEX = latest_block['block_index']
+    print(latest_block)
+    cursor.close()
+
+    return util.CURRENT_BLOCK_INDEX
+
+
 def dump_database(db):
     """Create a new database dump from db object as input."""
     # TEMPORARY
@@ -73,7 +100,6 @@ def restore_database(database_filename, dump_filename):
     with open(dump_filename, 'r') as sql_dump:
         cursor.execute(sql_dump.read())
     cursor.close()
-    return db
 
 def remove_database_files(database_filename):
     """Delete temporary db dumps."""
@@ -81,7 +107,7 @@ def remove_database_files(database_filename):
         if os.path.isfile(path):
             os.remove(path)
 
-def insert_block(db, block_index, parse_block=False):
+def insert_block(db, block_index, parse_block=True):
     """Add blocks to the blockchain."""
     cursor = db.cursor()
     block_hash = hashlib.sha512(chr(block_index).encode('utf-8')).hexdigest()
@@ -91,16 +117,21 @@ def insert_block(db, block_index, parse_block=False):
                       VALUES (?,?,?,?,?,?,?)''', block)
     util.CURRENT_BLOCK_INDEX = block_index  # TODO: Correct?!
     cursor.close()
+
     if parse_block:
         blocks.parse_block(db, block_index, block_time)
     return block_index, block_hash, block_time
 
-def create_next_block(db, block_index=None, parse_block=False):
+def create_next_block(db, block_index=None, parse_block=True):
     """Create faux data for the next block."""
     cursor = db.cursor()
     last_block_index = list(cursor.execute("SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1"))[0]['block_index']
     if not block_index:
         block_index = last_block_index + 1
+
+    if last_block_index >= block_index:
+        raise Exception("create_next_block called with height lower than current height")
+
     for index in range(last_block_index + 1, block_index + 1):
         inserted_block_index, block_hash, block_time = insert_block(db, index, parse_block=parse_block)
     cursor.close()
@@ -109,7 +140,7 @@ def create_next_block(db, block_index=None, parse_block=False):
 def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
     """Add a raw transaction to the database."""
     # one transaction per block
-    block_index, block_hash, block_time = create_next_block(db)
+    block_index, block_hash, block_time = create_next_block(db, parse_block=False)
 
     cursor = db.cursor()
     tx_index = block_index - config.BURN_START + 1
@@ -178,7 +209,7 @@ def getrawtransaction(db, txid):
 def initialise_db(db):
     """Initialise blockchain in the db and insert first block."""
     blocks.initialise(db)
-    insert_block(db, config.BURN_START - 1)
+    insert_block(db, config.BLOCK_FIRST - 1, parse_block=True)
 
 def run_scenario(scenario, rawtransactions_db):
     """Execute a scenario for integration test, returns a dump of the db, a json with raw transactions and the full log."""
@@ -213,7 +244,7 @@ def run_scenario(scenario, rawtransactions_db):
             raw_transactions.append({tx[0]: unsigned_tx_hex})
             insert_raw_transaction(unsigned_tx_hex, db, rawtransactions_db)
         else:
-            create_next_block(db, block_index=config.BURN_START + tx[1], parse_block=True)
+            create_next_block(db, block_index=config.BURN_START + tx[1], parse_block=tx[2] if len(tx) == 3 else True)
 
     dump = dump_database(db)
     log = logger_buff.getvalue()
@@ -275,21 +306,24 @@ def check_record(record, server_db):
 
         count = list(cursor.execute(sql, tuple(bindings)))[0]['c']
         if count != 1:
-            print(list(cursor.execute('''SELECT * FROM {} WHERE block_index = ?'''.format(record['table']), (record['values']['block_index'],))))
+            if pytest.config.option.verbosediff:
+                pprint.pprint(record['values'])
+                pprint.pprint(list(cursor.execute('''SELECT * FROM {} WHERE block_index = ?'''.format(record['table']), (record['values']['block_index'],))))
             assert False
 
 def vector_to_args(vector, functions=[]):
     """Translate from UNITTEST_VECTOR style to function arguments."""
     args = []
-    for tx_name in vector:
-        for method in vector[tx_name]:
+    for tx_name in sorted(vector.keys()):
+        for method in sorted(vector[tx_name].keys()):
             for params in vector[tx_name][method]:
                 error = params.get('error', None)
                 outputs = params.get('out', None)
                 records = params.get('records', None)
                 comment = params.get('comment', None)
+                mock_protocol_changes = params.get('mock_protocol_changes', None)
                 if functions == [] or (tx_name + '.' + method) in functions:
-                    args.append((tx_name, method, params['in'], outputs, error, records, comment))
+                    args.append((tx_name, method, params['in'], outputs, error, records, comment, mock_protocol_changes))
     return args
 
 def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
@@ -303,7 +337,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
     else:
         return tested_method(server_db, *inputs)
 
-def check_outputs(tx_name, method, inputs, outputs, error, records, comment, server_db):
+def check_outputs(tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes, server_db):
     """Check actual and expected outputs of a particular function."""
 
     try:
@@ -311,6 +345,12 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, ser
     except KeyError:    # TODO: hack
         tested_module = sys.modules['counterpartylib.lib.messages.{}'.format(tx_name)]
     tested_method = getattr(tested_module, method)
+
+    # import here to avoid circular imports
+    from counterpartylib.test.conftest import MOCK_PROTOCOL_CHANGES
+    MOCK_PROTOCOL_CHANGES.clear()
+    if mock_protocol_changes:
+        MOCK_PROTOCOL_CHANGES.update(mock_protocol_changes)
 
     test_outputs = None
     if error is not None:
@@ -334,7 +374,11 @@ def check_outputs(tx_name, method, inputs, outputs, error, records, comment, ser
         try:
             assert outputs == test_outputs
         except AssertionError:
-            raise Exception("outputs don't match test_outputs: outputs=%s  ---  test_outputs=%s" % (outputs, test_outputs))
+            if pytest.config.option.verbosediff:
+                msg = "expected outputs don't match test_outputs:\noutputs=\n" + pprint.pformat(outputs) + "\ntest_outputs=\n" + pprint.pformat(test_outputs)
+            else:
+                msg = "expected outputs don't match test_outputs: outputs=%s test_outputs=%s" % (outputs, test_outputs)
+            raise Exception(msg)
     if error is not None:
         assert str(exception.value) == error[1]
     if records is not None:

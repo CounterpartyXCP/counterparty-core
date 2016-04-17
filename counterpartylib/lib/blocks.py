@@ -1210,7 +1210,7 @@ def follow(db):
             #  - or was there a block found while batch feting the raw txs
             #  - or was there a double spend for w/e reason accepted into the mempool (replace-by-fee?)
             try:
-                raw_transactions = backend.getrawtransaction_batch(raw_mempool)
+                raw_transactions = backend.getrawtransaction_batch(parse_txs)
             except backend.addrindex.BackendRPCError as e:
                 logger.warning('Failed to fetch raw for mempool TXs, restarting loop; %s', (e, ))
                 continue  # restart the follow loop

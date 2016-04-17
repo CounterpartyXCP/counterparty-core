@@ -29,9 +29,10 @@ class Base58Error (AddressError):
 class Base58ChecksumError (Base58Error):
     pass
 
+
 def validate(address):
     """Make sure the address is valid.
-    
+
     May throw `AddressError`.
     """
     # Get array of pubkeyhashes to check.
@@ -43,6 +44,7 @@ def validate(address):
     # Check validity by attempting to decode.
     for pubkeyhash in pubkeyhashes:
         base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
+
 
 def base58_encode(binary):
     """Encode the address in base58."""
@@ -57,6 +59,7 @@ def base58_encode(binary):
     res = ''.join(res[::-1])
 
     return res
+
 
 def base58_check_encode(original, version):
     """Check if base58 encoding is valid."""
@@ -82,8 +85,8 @@ def base58_check_encode(original, version):
 
     return address
 
-def base58_check_decode(s, version):
-    """Decode from base58."""
+
+def base58_decode(s):
     # Convert the string to an integer
     n = 0
     for c in s:
@@ -108,12 +111,31 @@ def base58_check_decode(s, version):
             break
     k = b'\x00' * pad + res
 
+    return k
+
+
+def base58_check_decode_parts(s):
+    """Decode from base58 and return parts."""
+
+    k = base58_decode(s)
+
     addrbyte, data, chk0 = k[0:1], k[1:-4], k[-4:]
+
+    return addrbyte, data, chk0
+
+
+def base58_check_decode(s, version):
+    """Decode from base58 and return data part."""
+
+    addrbyte, data, chk0 = base58_check_decode_parts(s)
+
     if addrbyte != version:
         raise VersionByteError('incorrect version byte')
+
     chk1 = util.dhash(addrbyte + data)[:4]
     if chk0 != chk1:
         raise Base58ChecksumError('Checksum mismatch: 0x{} ≠ 0x{}'.format(util.hexlify(chk0), util.hexlify(chk1)))
+
     return data
 
 
