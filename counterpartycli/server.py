@@ -80,8 +80,8 @@ def main():
 
     args = parser.parse_args()
 
-    log.set_up(logger, verbose=args.verbose)
-    
+    log.set_up(logger, verbose=args.verbose, console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None))
+
     logger.info('Running v{} of {}.'.format(APP_VERSION, APP_NAME))
 
     # Help message
@@ -113,7 +113,7 @@ def main():
                                 requests_timeout=args.requests_timeout,
                                 rpc_batch_size=args.rpc_batch_size,
                                 check_asset_conservation=not args.no_check_asset_conservation,
-                                force=args.force, verbose=args.verbose)
+                                force=args.force, verbose=args.verbose, console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None))
                                 #,broadcast_tx_mainnet=args.broadcast_tx_mainnet)
         except TypeError as e:
             if 'unexpected keyword argument' in str(e):
