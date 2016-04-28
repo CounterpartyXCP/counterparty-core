@@ -609,19 +609,16 @@ def unhexlify(hex_string):
 ### Protocol Changes ###
 def enabled(change_name, block_index=None):
     """Return True if protocol change is enabled."""
-    enable_block_index = PROTOCOL_CHANGES[change_name]['block_index']
+    index_name = 'testnet_block_index' if config.TESTNET else 'block_index'
+    enable_block_index = PROTOCOL_CHANGES[change_name][index_name]
 
     if not block_index:
         block_index = CURRENT_BLOCK_INDEX
 
-    if config.TESTNET: 
-        return True     # Protocol changes are always retroactive on testnet.
+    if block_index >= enable_block_index:
+        return True
     else:
-        if block_index >= enable_block_index:
-            return True
-        else:
-            return False
-    assert False
+        return False
 
 def transfer(db, source, destination, asset, quantity, action, event):
     """Transfer quantity of asset from source to destination."""
