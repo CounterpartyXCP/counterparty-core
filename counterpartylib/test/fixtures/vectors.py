@@ -807,7 +807,46 @@ UNITTEST_VECTOR = {
         'compose': [{
             'in': (ADDR[0], 'XCP', 1, bytes(9999999)),
             'out': (ADDR[0], [],  b'\x00\x00\x00n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00')
+        }, {
+            'in': (ADDR[0], 'XCP', 1, b'WASTE'),
+            'out': (ADDR[0], [],  b'\x00\x00\x00n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01WASTE\x00\x00\x00')
+        }, {
+            'in': (ADDR[0], 'XCP', 1, b'WASTEEEEE'),
+            'out': (ADDR[0], [],  b'\x00\x00\x00n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01WASTEEEE')
         }],
+        'parse': [{
+            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800,
+                    'destination': None,
+                    'data': b'\x00\x00\x00n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01WASTE\x00\x00\x00', 'tx_index': 502, },),
+            'records': [
+                {'table': 'destructions', 'values': {
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'quantity': 1,
+                    'source': ADDR[0],
+                    'status': 'valid',
+                    'tag': b'WASTE\x00\x00\x00',
+                    'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'tx_index': 502}},
+            ]
+        }, {
+            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', 'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800,
+                    'destination': ADDR[1],
+                    'data': b'\x00\x00\x00n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01WASTE\x00\x00\x00', 'tx_index': 502, },),
+            'records': [
+                {'table': 'destructions', 'values': {
+                    'asset': 'XCP',
+                    'block_index': DP['default_block_index'],
+                    'quantity': 1,
+                    'source': ADDR[0],
+                    'status': 'invalid: destination exists',
+                    'tag': b'WASTE\x00\x00\x00',
+                    'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'tx_index': 502}},
+            ]
+        }]
     },
     'execute': {
         'compose': [{
