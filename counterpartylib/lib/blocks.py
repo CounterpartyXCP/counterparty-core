@@ -63,72 +63,82 @@ def parse_tx(db, tx):
     """Parse the transaction, return True for success."""
     cursor = db.cursor()
 
-    # Only one source and one destination allowed for now.
-    if len(tx['source'].split('-')) > 1:
-        return
-    if tx['destination']:
-        if len(tx['destination'].split('-')) > 1:
-            return
+    try:
+        with db:
+            # DEBUG STATEMENT TO TEST 'CRASHING' TX
+            # if tx['source'] == 'miDAc4uBw6X2cD41iRtfrPzQT2MezD8SNz':
+            #     print(tx)
+            #     raise Exception
 
-    # Burns.
-    if tx['destination'] == config.UNSPENDABLE:
-        burn.parse(db, tx, MAINNET_BURNS)
-        return
+            # Only one source and one destination allowed for now.
+            if len(tx['source'].split('-')) > 1:
+                return
+            if tx['destination']:
+                if len(tx['destination'].split('-')) > 1:
+                    return
 
-    if len(tx['data']) > 4:
-        try:
-            message_type_id = struct.unpack(config.TXTYPE_FORMAT, tx['data'][:4])[0]
-        except struct.error:    # Deterministically raised.
-            message_type_id = None
-    else:
-        message_type_id = None
+            # Burns.
+            if tx['destination'] == config.UNSPENDABLE:
+                burn.parse(db, tx, MAINNET_BURNS)
+                return
 
-    # Protocol change.
-    rps_enabled = tx['block_index'] >= 308500 or config.TESTNET
+            if len(tx['data']) > 4:
+                try:
+                    message_type_id = struct.unpack(config.TXTYPE_FORMAT, tx['data'][:4])[0]
+                except struct.error:    # Deterministically raised.
+                    message_type_id = None
+            else:
+                message_type_id = None
 
-    message = tx['data'][4:]
-    if message_type_id == send.ID:
-        send.parse(db, tx, message)
-    elif message_type_id == order.ID:
-        order.parse(db, tx, message)
-    elif message_type_id == btcpay.ID:
-        btcpay.parse(db, tx, message)
-    elif message_type_id == issuance.ID:
-        issuance.parse(db, tx, message)
-    elif message_type_id == broadcast.ID:
-        broadcast.parse(db, tx, message)
-    elif message_type_id == bet.ID:
-        bet.parse(db, tx, message)
-    elif message_type_id == dividend.ID:
-        dividend.parse(db, tx, message)
-    elif message_type_id == cancel.ID:
-        cancel.parse(db, tx, message)
-    elif message_type_id == rps.ID and rps_enabled:
-        rps.parse(db, tx, message)
-    elif message_type_id == rpsresolve.ID and rps_enabled:
-        rpsresolve.parse(db, tx, message)
-    elif message_type_id == publish.ID and tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
-        publish.parse(db, tx, message)
-    elif message_type_id == execute.ID and tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
-        execute.parse(db, tx, message)
-    elif message_type_id == destroy.ID:
-        destroy.parse(db, tx, message)
-    else:
-        cursor.execute('''UPDATE transactions \
-                                   SET supported=? \
-                                   WHERE tx_hash=?''',
-                                (False, tx['tx_hash']))
-        if tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
-            logger.info('Unsupported transaction: hash {}; data {}'.format(tx['tx_hash'], tx['data']))
+            # Protocol change.
+            rps_enabled = tx['block_index'] >= 308500 or config.TESTNET
+
+            message = tx['data'][4:]
+            if message_type_id == send.ID:
+                send.parse(db, tx, message)
+            elif message_type_id == order.ID:
+                order.parse(db, tx, message)
+            elif message_type_id == btcpay.ID:
+                btcpay.parse(db, tx, message)
+            elif message_type_id == issuance.ID:
+                issuance.parse(db, tx, message)
+            elif message_type_id == broadcast.ID:
+                broadcast.parse(db, tx, message)
+            elif message_type_id == bet.ID:
+                bet.parse(db, tx, message)
+            elif message_type_id == dividend.ID:
+                dividend.parse(db, tx, message)
+            elif message_type_id == cancel.ID:
+                cancel.parse(db, tx, message)
+            elif message_type_id == rps.ID and rps_enabled:
+                rps.parse(db, tx, message)
+            elif message_type_id == rpsresolve.ID and rps_enabled:
+                rpsresolve.parse(db, tx, message)
+            elif message_type_id == publish.ID and tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
+                publish.parse(db, tx, message)
+            elif message_type_id == execute.ID and tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
+                execute.parse(db, tx, message)
+            elif message_type_id == destroy.ID:
+                destroy.parse(db, tx, message)
+            else:
+                cursor.execute('''UPDATE transactions \
+                                           SET supported=? \
+                                           WHERE tx_hash=?''',
+                                        (False, tx['tx_hash']))
+                if tx['block_index'] != config.MEMPOOL_BLOCK_INDEX:
+                    logger.info('Unsupported transaction: hash {}; data {}'.format(tx['tx_hash'], tx['data']))
+                cursor.close()
+                return False
+
+            # NOTE: for debugging (check asset conservation after every `N` transactions).
+            # if not tx['tx_index'] % N:
+            #     check.asset_conservation(db)
+
+            return True
+    except Exception as e:
+        raise exceptions.ParseTransactionError("%s" % e)
+    finally:
         cursor.close()
-        return False
-
-    # NOTE: for debugging (check asset conservation after every `N` transactions).
-    # if not tx['tx_index'] % N:
-    #     check.asset_conservation(db)
-
-    cursor.close()
-    return True
 
 
 def parse_block(db, block_index, block_time,
@@ -179,10 +189,14 @@ def parse_block(db, block_index, block_time,
                    (block_index,))
     txlist = []
     for tx in list(cursor):
-        parse_tx(db, tx)
-        txlist.append('{}{}{}{}{}{}'.format(tx['tx_hash'], tx['source'], tx['destination'],
-                                            tx['btc_amount'], tx['fee'],
-                                            binascii.hexlify(tx['data']).decode('UTF-8')))
+        try:
+            parse_tx(db, tx)
+            txlist.append('{}{}{}{}{}{}'.format(tx['tx_hash'], tx['source'], tx['destination'],
+                                                tx['btc_amount'], tx['fee'],
+                                                binascii.hexlify(tx['data']).decode('UTF-8')))
+        except exceptions.ParseTransactionError as e:
+            logger.warn('ParseTransactionError for tx %s: %s' % (tx['tx_hash'], e))
+            pass
 
     cursor.close()
 
@@ -1256,6 +1270,8 @@ def follow(db):
 
                         # Rollback.
                         raise MempoolError
+                except exceptions.ParseTransactionError as e:
+                    logger.warn('ParseTransactionError for tx %s: %s' % (tx['tx_hash'], e))
                 except MempoolError:
                     pass
 

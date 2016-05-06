@@ -6,6 +6,9 @@ class DatabaseError (Exception):
 class TransactionError(Exception):
     pass
 
+class ParseTransactionError(Exception):
+    pass
+
 class AssetError (Exception):
     pass
 class AssetNameError (AssetError):
