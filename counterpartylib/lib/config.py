@@ -97,6 +97,8 @@ DEFAULT_RPC_BATCH_SIZE = 20     # A 1 MB block can hold about 4200 transactions.
 # Custom exit codes
 EXITCODE_UPDATE_REQUIRED = 5
 
+VERIFY_CHECKPOINTS = True
+VERIFY_OLD_HASH = True
 
 DEFAULT_CHECK_ASSET_CONSERVATION = True
 
