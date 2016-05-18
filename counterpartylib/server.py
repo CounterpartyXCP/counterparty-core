@@ -83,7 +83,8 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
                 requests_timeout=config.DEFAULT_REQUESTS_TIMEOUT,
                 rpc_batch_size=config.DEFAULT_RPC_BATCH_SIZE,
                 check_asset_conservation=config.DEFAULT_CHECK_ASSET_CONSERVATION,
-                backend_ssl_verify=None, rpc_allow_cors=None):
+                backend_ssl_verify=None, rpc_allow_cors=None,
+                verify_old_hash=None, verify_checkpoints=None):
 
      # Data directory
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
@@ -223,6 +224,11 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     else:
         config.BACKEND_URL = 'http://' + config.BACKEND_URL
 
+    if verify_old_hash is not None:
+        config.VERIFY_OLD_HASH = verify_old_hash
+
+    if verify_checkpoints is not None:
+        config.VERIFY_CHECKPOINTS = verify_checkpoints
 
     ##############
     # THINGS WE SERVE
