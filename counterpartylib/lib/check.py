@@ -127,7 +127,7 @@ def consensus_hash(db, field, previous_consensus_hash, content):
 
     # Verify hash (if already in database) or save hash (if not).
     # NOTE: do not enforce this for messages_hashes, those are more informational (for now at least)
-    found_hash = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,)))[0][field] or None if config.VERIFY_OLD_HASH else None
+    found_hash = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,)))[0][field] or None if config.VERIFY_STORED_HASH else None
     if found_hash and field != 'messages_hash':
         # Check against existing value.
         if calculated_hash != found_hash:
