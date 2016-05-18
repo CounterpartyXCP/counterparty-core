@@ -96,7 +96,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
                 utxo_locks_max_addresses=config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES,
                 utxo_locks_max_age=config.DEFAULT_UTXO_LOCKS_MAX_AGE,
                 estimate_fee_per_kb=None,
-                verify_old_hash=None, verify_checkpoints=None):
+                verify_stored_hash=None, verify_checkpoints=None):
 
     # Data directory
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
@@ -242,8 +242,8 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     else:
         config.BACKEND_URL = 'http://' + config.BACKEND_URL
 
-    if verify_old_hash is not None:
-        config.VERIFY_OLD_HASH = verify_old_hash
+    if verify_stored_hash is not None:
+        config.VERIFY_STORED_HASH = verify_stored_hash
 
     if verify_checkpoints is not None:
         config.VERIFY_CHECKPOINTS = verify_checkpoints
@@ -396,7 +396,6 @@ def connect_to_backend():
 
 
 def start_all(db):
-
     # Backend.
     connect_to_backend()
 
@@ -430,6 +429,37 @@ def debug_config():
             del output[k]
 
     pprint.pprint(output)
+
+
+def checkpoints(db):
+    if config.TESTNET:
+        net = 'TESTNET'
+        first_block_index = config.BLOCK_FIRST_TESTNET
+        current_checkpoints = check.CHECKPOINTS_TESTNET
+    else:
+        net = 'MAINNET'
+        first_block_index = config.BLOCK_FIRST_MAINNET
+        current_checkpoints = check.CHECKPOINTS_MAINNET
+
+    cursor = db.cursor()
+    result = {}
+    for block_index, checkpoint in current_checkpoints.items():
+        block = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index, )))[0]
+        result[block_index] = {
+            'ledger_hash': block['ledger_hash'],
+            'txlist_hash': block['txlist_hash'],
+        }
+
+    cursor.close()
+
+    # apply some formatting to make it look nice and diff well
+    output = pprint.pformat(result, indent=4)
+    output = output.replace("{   %d: {" % first_block_index, "{\n    config.BLOCK_FIRST_%s: {" % net)
+    output = output.replace("   'ledger_hash'", "'ledger_hash'")
+    output = output.replace("   'txlist_hash'", "'txlist_hash'")
+    output = output.replace("}}", "},\n}")
+
+    print(output)
 
 
 def generate_move_random_hash(move):
