@@ -2,6 +2,7 @@
 
 import os
 import decimal
+import pprint
 import sys
 import logging
 logger = logging.getLogger(__name__)
@@ -85,7 +86,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
                 check_asset_conservation=config.DEFAULT_CHECK_ASSET_CONSERVATION,
                 backend_ssl_verify=None, rpc_allow_cors=None,
                 p2sh_dust_return_pubkey=None,
-                verify_old_hash=None, verify_checkpoints=None):
+                verify_stored_hash=None, verify_checkpoints=None):
 
      # Data directory
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
@@ -225,8 +226,8 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     else:
         config.BACKEND_URL = 'http://' + config.BACKEND_URL
 
-    if verify_old_hash is not None:
-        config.VERIFY_OLD_HASH = verify_old_hash
+    if verify_stored_hash is not None:
+        config.VERIFY_STORED_HASH = verify_stored_hash
 
     if verify_checkpoints is not None:
         config.VERIFY_CHECKPOINTS = verify_checkpoints
@@ -369,7 +370,6 @@ def connect_to_backend():
 
 
 def start_all(db):
-
     # Backend.
     connect_to_backend()
 
@@ -394,6 +394,37 @@ def reparse(db, block_index=None):
 
 def kickstart(db, bitcoind_dir):
     blocks.kickstart(db, bitcoind_dir=bitcoind_dir)
+
+
+def checkpoints(db):
+    if config.TESTNET:
+        net = 'TESTNET'
+        first_block_index = config.BLOCK_FIRST_TESTNET
+        current_checkpoints = check.CHECKPOINTS_TESTNET
+    else:
+        net = 'MAINNET'
+        first_block_index = config.BLOCK_FIRST_MAINNET
+        current_checkpoints = check.CHECKPOINTS_MAINNET
+
+    cursor = db.cursor()
+    result = {}
+    for block_index, checkpoint in current_checkpoints.items():
+        block = list(cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index, )))[0]
+        result[block_index] = {
+            'ledger_hash': block['ledger_hash'],
+            'txlist_hash': block['txlist_hash'],
+        }
+
+    cursor.close()
+
+    # apply some formatting to make it look nice and diff well
+    output = pprint.pformat(result, indent=4)
+    output = output.replace("{   %d: {" % first_block_index, "{\n    config.BLOCK_FIRST_%s: {" % net)
+    output = output.replace("   'ledger_hash'", "'ledger_hash'")
+    output = output.replace("   'txlist_hash'", "'txlist_hash'")
+    output = output.replace("}}", "},\n}")
+
+    print(output)
 
 
 def generate_move_random_hash(move):
