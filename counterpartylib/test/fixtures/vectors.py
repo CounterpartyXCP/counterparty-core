@@ -18,8 +18,6 @@ from .params import ADDR, P2SH_ADDR, MULTISIGADDR, DEFAULT_PARAMS as DP
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import script
-from counterpartylib.lib.messages.scriptlib import processblock
-from counterpartylib.lib.messages.scriptlib.processblock import ContractError
 from counterpartylib.lib.api import APIError
 from counterpartylib.lib.util import (DebitError, CreditError, QuantityError)
 from fractions import Fraction
@@ -749,18 +747,6 @@ UNITTEST_VECTOR = {
         'compose': [{
             'in': (ADDR[0], 'XCP', 1, bytes(9999999)),
             'out': (ADDR[0], [],  b'\x00\x00\x00n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00')
-        }],
-    },
-    'execute': {
-        'compose': [{
-            'in': (ADDR[0], 'faf080', 10, 10, 10, 'faf080'),
-            'out': (ADDR[0], [], b'\x00\x00\x00e\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\n\xfa\xf0\x80')
-        }, {
-            'in': (ADDR[0], 'faf080', 10, -10, 10, 'faf080'),
-            'error': (ContractError, 'negative startgas')
-        }, {
-            'in': (ADDR[0], 'faf080', -10, 10, 10, 'faf080'),
-            'error': (ContractError, 'negative gasprice')
         }],
     },
     'send': {
