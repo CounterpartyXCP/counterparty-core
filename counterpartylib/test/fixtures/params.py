@@ -49,3 +49,7 @@ MULTISIGADDR = [
     '3_{}_{}_{}_3'.format(ADDR[0], ADDR[2], ADDR[1]),
     '3_{}_{}_{}_3'.format(ADDR[0], ADDR[2], ADDR[3])
 ]
+
+P2SH_ADDR = [
+    '2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy' # 2of2 mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
+]

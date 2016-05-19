@@ -60,6 +60,7 @@ def compose (db, source, quantity, overburn=False):
     # Check that a maximum of 1 BTC total is burned per address.
     burns = list(cursor.execute('''SELECT * FROM burns WHERE (status = ? AND source = ?)''', ('valid', source)))
     already_burned = sum([burn['burned'] for burn in burns])
+
     if quantity > (1 * config.UNIT - already_burned) and not overburn:
         raise exceptions.ComposeError('1 {} may be burned per address'.format(config.BTC))
 
