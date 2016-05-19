@@ -59,7 +59,6 @@ def reset_current_block_index(db):
     cursor = db.cursor()
     latest_block = list(cursor.execute('''SELECT * FROM blocks ORDER BY block_index DESC LIMIT 1'''))[0]
     util.CURRENT_BLOCK_INDEX = latest_block['block_index']
-    print(latest_block)
     cursor.close()
 
     return util.CURRENT_BLOCK_INDEX
