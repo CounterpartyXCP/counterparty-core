@@ -19,6 +19,7 @@
     * Updated python-bitcoinlib to newest version
     * No longer ceil the size of a transaction to KBs when calculating fees
     * Use dynamic estimated fee (from bitcoind)
+    * Fix for bytespersigop DoS protection in Bitcoin Core v0.12.1
     * Test suite:
         * Reorganization of the test suite at numerous points for more robustness and capabilities
         * Added ability to mock protocol changes to allow for testing of certain changes on or off

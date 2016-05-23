@@ -96,5 +96,12 @@
         "minimum_version_revision": 0,
         "block_index": 500000,
         "testnet_block_index": 861987
+    },
+    "bytespersigop": {
+        "minimum_version_major": 9,
+        "minimum_version_minor": 54,
+        "minimum_version_revision": 0,
+        "block_index": 500000,
+        "testnet_block_index": 0
     }
 }
