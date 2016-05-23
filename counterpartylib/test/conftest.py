@@ -119,6 +119,10 @@ def cp_server(request):
 
     util_test.init_database(sqlfile, dbfile)
 
+    # monkeypatch this here because init_mock_functions can run before cp_server
+    if hasattr(config, 'PREFIX'):
+        config.PREFIX = b'TESTXXXX'
+
     request.addfinalizer(lambda: util_test.remove_database_files(dbfile))
 
 
