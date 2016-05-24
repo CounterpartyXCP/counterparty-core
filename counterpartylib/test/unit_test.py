@@ -1,16 +1,17 @@
 #! /usr/bin/python3
 import sys, os, time, tempfile
 import pytest
+import logging
 import util_test
 from util_test import CURR_DIR
 from fixtures.vectors import UNITTEST_VECTOR
 from fixtures.params import DEFAULT_PARAMS as DP
 
-from counterpartylib.lib import (config, util, api, database)
+from counterpartylib.lib import (config, util, api, database, log)
+import server
 
 FIXTURE_SQL_FILE = CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql'
 FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
-
 
 @pytest.mark.usefixtures("api_server")
 def test_vector(tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes, server_db):

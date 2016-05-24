@@ -192,6 +192,7 @@ def parse (db, tx, message):
         'fee_paid': fee,
         'status': status,
     }
+
     sql='insert into dividends values(:tx_index, :tx_hash, :block_index, :source, :asset, :dividend_asset, :quantity_per_unit, :fee_paid, :status)'
     dividend_parse_cursor.execute(sql, bindings)
 
