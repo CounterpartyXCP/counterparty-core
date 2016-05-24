@@ -188,11 +188,6 @@ class bdist_egg(_bdist_egg):
         _bdist_egg.run(self)
         self.execute(post_install, (self, False), msg="Running post install tasks")
 
-dependency_links = [
-    #expiringdict: newest master has py3 fix. Latest version pushed to pypi does not
-    'https://github.com/mailgun/expiringdict/archive/bc21855fb8a51591a1b917cc82ba2e54805616c3.zip#egg=expiringdict'
-]
-
 required_packages = [
     'appdirs',
     'python-dateutil',
@@ -209,7 +204,7 @@ required_packages = [
     'colorlog',
     'python-bitcoinlib',
     'xmltodict',
-    'expiringdict',
+    'cachetools',
 ]
 
 setup_options = {
@@ -241,7 +236,6 @@ setup_options = {
     'packages': find_packages(),
     'zip_safe': False,
     'setup_requires': ['appdirs'],
-    'dependency_links': dependency_links,
     'install_requires': required_packages,
     'include_package_data': True,
     'cmdclass': {

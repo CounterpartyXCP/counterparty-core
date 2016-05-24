@@ -19,7 +19,7 @@ from Crypto.Cipher import ARC4
 from bitcoin.core.script import CScript
 from bitcoin.core import x
 from bitcoin.core import b2lx
-import expiringdict
+import cachetools
 
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
@@ -42,10 +42,13 @@ OP_EQUAL = b'\x87'
 
 D = decimal.Decimal
 UTXO_AGING_CACHE = None
+UTXO_PER_ADDRESS_AGING_CACHE_MAXSIZE = 5000  # set higher than the max number of UTXOs we should expect to
+                                            # manage in an aging cache for any one source address, at any one period
 
 
 def print_coin(coin):
     return 'amount: {}; txid: {}; vout: {}; confirmations: {}'.format(coin['amount'], coin['txid'], coin['vout'], coin.get('confirmations', '?')) # simplify and make deterministic
+
 
 def var_int (i):
     if i < 0xfd:
@@ -57,6 +60,7 @@ def var_int (i):
     else:
         return b'\xff' + (i).to_bytes(8, byteorder='little')
 
+
 def op_push (i):
     if i < 0x4c:
         return (i).to_bytes(1, byteorder='little')              # Push i bytes.
@@ -66,6 +70,7 @@ def op_push (i):
         return b'\x4d' + (i).to_bytes(2, byteorder='little')    # OP_PUSHDATA2
     else:
         return b'\x4e' + (i).to_bytes(4, byteorder='little')    # OP_PUSHDATA4
+
 
 def get_dust_return_pubkey(source, provided_pubkeys, encoding):
     """Return the pubkey to which dust from data outputs will be sent.
@@ -89,6 +94,7 @@ def get_dust_return_pubkey(source, provided_pubkeys, encoding):
 
     return dust_return_pubkey
 
+
 def get_script(address):
     if script.is_multisig(address):
         return get_multisig_script(address)
@@ -97,6 +103,7 @@ def get_script(address):
             return get_monosig_script(address)
         except script.VersionByteError as e:
             return get_p2sh_script(address)
+
 
 def get_multisig_script(address):
 
@@ -133,6 +140,7 @@ def get_multisig_script(address):
 
     return tx_script
 
+
 def get_monosig_script(address):
 
     # Construct script.
@@ -146,6 +154,7 @@ def get_monosig_script(address):
 
     return tx_script
 
+
 def get_p2sh_script(address):
 
     # Construct script.
@@ -156,6 +165,7 @@ def get_p2sh_script(address):
     tx_script += OP_EQUAL
 
     return tx_script
+
 
 def make_fully_valid(pubkey_start):
     """Take a too short data pubkey and make it look like a real pubkey.
@@ -289,11 +299,17 @@ def serialise (encoding, inputs, destination_outputs, data_output=None, change_o
     s += (0).to_bytes(4, byteorder='little')                # LockTime
     return s
 
+
 def chunks(l, n):
     """ Yield successive n‐sized chunks from l.
     """
     for i in range(0, len(l), n):
         yield l[i:i+n]
+
+
+def make_outkey(output):
+    return '{}{}'.format(output['txid'], output['vout'])
+
 
 def construct (db, tx_info, encoding='auto',
                fee_per_kb=config.DEFAULT_FEE_PER_KB,
@@ -323,7 +339,8 @@ def construct (db, tx_info, encoding='auto',
     if not isinstance(fee_provided, int):
         raise exceptions.TransactionError('Fee provided must be in satoshis.')
 
-    if UTXO_AGING_CACHE is None and config.UTXO_AGING_CACHE_MAX_ADDRESSES > 0: #initialize if configured
+    global UTXO_AGING_CACHE
+    if UTXO_AGING_CACHE is None and config.UTXO_AGING_CACHE_MAX_ADDRESSES > 0:  # initialize if configured
         UTXO_AGING_CACHE = util.DictCache(size=config.UTXO_AGING_CACHE_MAX_ADDRESSES)
 
     '''Destinations'''
@@ -434,25 +451,15 @@ def construct (db, tx_info, encoding='auto',
         else:
             unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, multisig_inputs=multisig_inputs)
 
-        if UTXO_AGING_CACHE is not None:
-            if source not in UTXO_AGING_CACHE:
-                UTXO_AGING_CACHE[source] = expiringdict.ExpiringDict(max_age_seconds=config.UTXO_AGING_CACHE_MAX_AGE)
-                
-            make_outkey = lambda output: '{}{}'.format(output['txid'], output['vout'])
-            unspentkeys = {make_outkey(output) for output in unspent}
-            
+        if UTXO_AGING_CACHE is not None and source in UTXO_AGING_CACHE:
             # Filter out any UTXOs that are currently aging from unspent
+            unspentkeys = {make_outkey(output) for output in unspent}
             filtered_unspentkeys = unspentkeys - UTXO_AGING_CACHE[source].keys()
             unspent = [output for output in unspent if make_outkey(output) in filtered_unspentkeys]
-            
-            # Start aging all UTXOs in the newly filtered unspent
-            for output in unspent:
-                UTXO_AGING_CACHE[source][make_outkey(output)] = output
 
         unspent = backend.sort_unspent_txouts(unspent)
-        logger.debug('Sorted UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
+        logger.debug('Sorted candidate UTXOs: {}'.format([print_coin(coin) for coin in unspent]))
         use_inputs = unspent
-
 
     inputs = []
     btc_in = 0
@@ -489,6 +496,23 @@ def construct (db, tx_info, encoding='auto',
         btc_out = destination_btc_out + data_btc_out
         total_btc_out = btc_out + max(change_quantity, 0) + final_fee
         raise exceptions.BalanceError('Insufficient {} at address {}. (Need approximately {} {}.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)'.format(config.BTC, source, total_btc_out / config.UNIT, config.BTC))
+
+    # Start aging all of the source's inputs (UTXOs) chosen for this transaction
+    # This will prevent them from being spent again (which may happen if a number of txes are rapidly
+    # constructed for a single source, as the UTXO set from bitcoind will not update quickly enough)
+    if UTXO_AGING_CACHE is not None:
+        if source not in UTXO_AGING_CACHE:
+            UTXO_AGING_CACHE[source] = cachetools.TTLCache(
+                UTXO_PER_ADDRESS_AGING_CACHE_MAXSIZE, config.UTXO_AGING_CACHE_MAX_AGE)
+
+        for input in inputs:
+            UTXO_AGING_CACHE[source][make_outkey(input)] = input
+
+        # REMOVE THESE LATER (DEBUG ONLY!!)
+        print("\n{} potential UTXOs".format(len(unspent)))
+        print('\nSorted candidate UTXOs: {}'.format([make_outkey(coin) for coin in unspent]))
+        print("\ninputs used: {}".format([make_outkey(input) for input in inputs]))
+        print("\nUTXO cache contents: {}".format(list(UTXO_AGING_CACHE[source].keys())))
 
 
     '''Finish'''
