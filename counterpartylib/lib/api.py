@@ -268,7 +268,7 @@ def compose_transaction(db, name, params,
                         allow_unconfirmed_inputs=False,
                         fee=None,
                         fee_provided=0,
-                        unspent_tx_hash=None, custom_inputs=None):
+                        unspent_tx_hash=None, custom_inputs=None, dust_return_pubkey=None):
     """Create and return a transaction."""
 
     # Get provided pubkeys.
@@ -294,6 +294,13 @@ def compose_transaction(db, name, params,
         if not script.is_fully_valid(binascii.unhexlify(pubkey)):
             raise script.AddressError('invalid public key: {}'.format(pubkey))
 
+    # copy and remove dust_return_pubkey from params into var
+    if 'dust_return_pubkey' in params:
+        if dust_return_pubkey is not None:
+            raise exceptions.ComposeError('dust_return_pubkey in params and as argument')
+        dust_return_pubkey = params.get('dust_return_pubkey')
+        del params['dust_return_pubkey']
+
     compose_method = sys.modules['counterpartylib.lib.messages.{}'.format(name)].compose
     compose_params = inspect.getargspec(compose_method)[0]
     missing_params = [p for p in compose_params if p not in params and p != 'db']
@@ -310,7 +317,8 @@ def compose_transaction(db, name, params,
                                         allow_unconfirmed_inputs=allow_unconfirmed_inputs,
                                         exact_fee=fee,
                                         fee_provided=fee_provided,
-                                        unspent_tx_hash=unspent_tx_hash, custom_inputs=custom_inputs)
+                                        unspent_tx_hash=unspent_tx_hash, custom_inputs=custom_inputs,
+                                        dust_return_pubkey=dust_return_pubkey)
 
 def conditional_decorator(decorator, condition):
     """Checks the condition and if True applies specified decorator."""

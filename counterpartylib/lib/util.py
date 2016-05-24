@@ -31,8 +31,6 @@ b26_digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 BET_TYPE_NAME = {0: 'BullCFD', 1: 'BearCFD', 2: 'Equal', 3: 'NotEqual'}
 BET_TYPE_ID = {'BullCFD': 0, 'BearCFD': 1, 'Equal': 2, 'NotEqual': 3}
 
-dhash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
-
 json_print = lambda x: print(json.dumps(x, sort_keys=True, indent=4))
 
 BLOCK_LEDGER = []
@@ -581,8 +579,17 @@ def get_url(url, abort_on_error=False, is_json=True, fetch_timeout=5):
         result = json.loads(r.text) if is_json else r.text
     return result
 
+
+def dhash(text):
+    if not isinstance(text, bytes):
+        text = bytes(str(text), 'utf-8')
+
+    return hashlib.sha256(hashlib.sha256(text).digest()).digest()
+
+
 def dhash_string(text):
-    return binascii.hexlify(hashlib.sha256(hashlib.sha256(bytes(text, 'utf-8')).digest()).digest()).decode()
+    return binascii.hexlify(dhash(text)).decode()
+
 
 def get_balance (db, address, asset):
     """Get balance of contract or address."""
@@ -602,19 +609,16 @@ def unhexlify(hex_string):
 ### Protocol Changes ###
 def enabled(change_name, block_index=None):
     """Return True if protocol change is enabled."""
-    enable_block_index = PROTOCOL_CHANGES[change_name]['block_index']
+    index_name = 'testnet_block_index' if config.TESTNET else 'block_index'
+    enable_block_index = PROTOCOL_CHANGES[change_name][index_name]
 
     if not block_index:
         block_index = CURRENT_BLOCK_INDEX
 
-    if config.TESTNET: 
-        return True     # Protocol changes are always retroactive on testnet.
+    if block_index >= enable_block_index:
+        return True
     else:
-        if block_index >= enable_block_index:
-            return True
-        else:
-            return False
-    assert False
+        return False
 
 def transfer(db, source, destination, asset, quantity, action, event):
     """Transfer quantity of asset from source to destination."""

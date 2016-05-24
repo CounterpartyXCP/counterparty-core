@@ -29,12 +29,21 @@ import bitcoin.rpc as bitcoinlib_rpc
 
 # we swap out util.enabled with a custom one which has the option to mock the protocol changes
 MOCK_PROTOCOL_CHANGES = {}
+ALWAYS_LATEST_PROTOCOL_CHANGES = False
 _enabled = util.enabled
 def enabled(change_name, block_index=None):
     if change_name in MOCK_PROTOCOL_CHANGES:
         return MOCK_PROTOCOL_CHANGES[change_name]
 
-    return _enabled(change_name, block_index)
+    # used to force unit tests to always run against latest protocol changes
+    if ALWAYS_LATEST_PROTOCOL_CHANGES:
+        # KeyError to mimic real util.enabled
+        if change_name not in util.PROTOCOL_CHANGES:
+            raise KeyError(change_name)
+
+        return True
+    else:
+        return _enabled(change_name, block_index)
 util.enabled = enabled
 
 def pytest_collection_modifyitems(session, config, items):
@@ -118,6 +127,10 @@ def cp_server(request):
     sqlfile = getattr(request.module, 'FIXTURE_SQL_FILE')
 
     util_test.init_database(sqlfile, dbfile)
+
+    # monkeypatch this here because init_mock_functions can run before cp_server
+    if hasattr(config, 'PREFIX'):
+        config.PREFIX = b'TESTXXXX'
 
     request.addfinalizer(lambda: util_test.remove_database_files(dbfile))
 

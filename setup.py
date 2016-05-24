@@ -14,7 +14,7 @@ from counterpartylib.lib import config
 CURRENT_VERSION = config.VERSION_STRING
 
 # NOTE: Why we don’t use the the PyPi package:
-# <https://code.google.com/p/apsw/source/detail?r=358a9623d051>
+# <https://github.com/rogerbinns/apsw/issues/66#issuecomment-31310364>
 class install_apsw(Command):
     description = "Install APSW 3.8.7.3-r1 with the appropriate version of SQLite"
     user_options = []

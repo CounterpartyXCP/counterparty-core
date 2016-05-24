@@ -3,9 +3,7 @@ This module contains a variety of utility functions used in the test suite.
 """
 
 import os, sys, hashlib, binascii, time, decimal, logging, locale, re, io
-import difflib, json, inspect, tempfile, shutil
-import pprint
-
+import difflib, json, inspect, tempfile, shutil, pprint
 import apsw, pytest, requests
 from requests.auth import HTTPBasicAuth
 
@@ -38,7 +36,8 @@ COUNTERPARTYD_OPTIONS = {
     'rpc_password': 'pass',
     'backend_port': 18332,
     'backend_password': 'pass',
-    'backend_ssl_no_verify': True
+    'backend_ssl_no_verify': True,
+    'p2sh_dust_return_pubkey': '11' * 33
 }
 
 def init_database(sqlfile, dbfile):
@@ -60,7 +59,6 @@ def reset_current_block_index(db):
     cursor = db.cursor()
     latest_block = list(cursor.execute('''SELECT * FROM blocks ORDER BY block_index DESC LIMIT 1'''))[0]
     util.CURRENT_BLOCK_INDEX = latest_block['block_index']
-    print(latest_block)
     cursor.close()
 
     return util.CURRENT_BLOCK_INDEX
@@ -110,7 +108,7 @@ def remove_database_files(database_filename):
 def insert_block(db, block_index, parse_block=True):
     """Add blocks to the blockchain."""
     cursor = db.cursor()
-    block_hash = hashlib.sha512(chr(block_index).encode('utf-8')).hexdigest()
+    block_hash = util.dhash_string(chr(block_index))
     block_time = block_index * 1000
     block = (block_index, block_hash, block_time, None, None, None, None)
     cursor.execute('''INSERT INTO blocks (block_index, block_hash, block_time, ledger_hash, txlist_hash, previous_block_hash, difficulty) 
@@ -151,7 +149,7 @@ def insert_raw_transaction(raw_transaction, db, rawtransactions_db):
     if pytest.config.option.savescenarios:
         save_rawtransaction(rawtransactions_db, tx_hash, raw_transaction)
 
-    source, destination, btc_amount, fee, data = blocks.get_tx_info2(raw_transaction)
+    source, destination, btc_amount, fee, data = blocks._get_tx_info(raw_transaction)
     transaction = (tx_index, tx_hash, block_index, block_hash, block_time, source, destination, btc_amount, fee, data, True)
     cursor.execute('''INSERT INTO transactions VALUES (?,?,?,?,?,?,?,?,?,?,?)''', transaction)
     tx = list(cursor.execute('''SELECT * FROM transactions WHERE tx_index = ?''', (tx_index,)))[0]
@@ -307,9 +305,13 @@ def check_record(record, server_db):
         count = list(cursor.execute(sql, tuple(bindings)))[0]['c']
         if count != 1:
             if pytest.config.option.verbosediff:
-                pprint.pprint(record['values'])
-                pprint.pprint(list(cursor.execute('''SELECT * FROM {} WHERE block_index = ?'''.format(record['table']), (record['values']['block_index'],))))
-            assert False
+                pprint.PrettyPrinter(indent=4).pprint(record['values'])
+                pprint.PrettyPrinter(indent=4).pprint(list(cursor.execute('''SELECT * FROM {} WHERE block_index = ?'''.format(record['table']), (record['values']['block_index'],))))
+
+            raise AssertionError("check_record \n" +
+                                 "table=" + record['table'] + " \n" +
+                                 "condiitions=" + ",".join(conditions) + " \n" +
+                                 "bindings=" + ",".join(map(lambda v: str(v), bindings)))
 
 def vector_to_args(vector, functions=[]):
     """Translate from UNITTEST_VECTOR style to function arguments."""
@@ -331,8 +333,9 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
     if tx_name == 'transaction' and method == 'construct':
         return tested_method(server_db, inputs[0], **inputs[1])
     elif (tx_name == 'util' and (method == 'api' or method == 'date_passed' or method == 'price' or method == 'generate_asset_id' \
-         or method == 'generate_asset_name' or method == 'dhash_string' or method == 'enabled' or method == 'get_url' or method == 'hexlify')) or tx_name == 'script' \
-        or (tx_name == 'blocks' and (method == 'get_tx_info' or method == 'get_tx_info1' or method == 'get_tx_info2')) or tx_name == 'transaction' or method == 'sortkeypicker':
+        or method == 'generate_asset_name' or method == 'dhash_string' or method == 'enabled' or method == 'get_url' or method == 'hexlify')) or tx_name == 'script' \
+        or (tx_name == 'blocks' and (method[:len('get_tx_info')] == 'get_tx_info')) or tx_name == 'transaction' or method == 'sortkeypicker'\
+        or tx_name == 'backend':
         return tested_method(*inputs)
     else:
         return tested_method(server_db, *inputs)
@@ -449,7 +452,7 @@ def reparse(testnet=True):
         CHECKPOINTS = check.CHECKPOINTS_MAINNET
     for block_index in CHECKPOINTS.keys():
         block_exists = bool(list(memory_cursor.execute('''SELECT * FROM blocks WHERE block_index = ?''', (block_index,))))
-        assert block_exists
+        assert block_exists, "block #%d does not exist" % block_index
 
     # Clean consensus hashes if first block hash don’t match with checkpoint.
     checkpoints = check.CHECKPOINTS_TESTNET if config.TESTNET else check.CHECKPOINTS_MAINNET

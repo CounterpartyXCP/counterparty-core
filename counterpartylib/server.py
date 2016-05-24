@@ -83,7 +83,7 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
                 requests_timeout=config.DEFAULT_REQUESTS_TIMEOUT,
                 rpc_batch_size=config.DEFAULT_RPC_BATCH_SIZE,
                 check_asset_conservation=config.DEFAULT_CHECK_ASSET_CONSERVATION,
-                backend_ssl_verify=None, rpc_allow_cors=None,
+                backend_ssl_verify=None, rpc_allow_cors=None, p2sh_dust_return_pubkey=None,
                 utxo_aging_cache_max_addresses=config.DEFAULT_UTXO_AGING_CACHE_MAX_ADDRESSES,
                 utxo_aging_cache_max_age=config.DEFAULT_UTXO_AGING_CACHE_MAX_AGE):
 
@@ -304,30 +304,38 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
         config.MAGIC_BYTES = config.MAGIC_BYTES_TESTNET
         if config.TESTCOIN:
             config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
+            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_TESTNET
             config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET_TESTCOIN
             config.BURN_START = config.BURN_START_TESTNET_TESTCOIN
             config.BURN_END = config.BURN_END_TESTNET_TESTCOIN
             config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
+            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
         else:
             config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
+            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_TESTNET
             config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET
             config.BURN_START = config.BURN_START_TESTNET
             config.BURN_END = config.BURN_END_TESTNET
             config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
+            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
     else:
         config.MAGIC_BYTES = config.MAGIC_BYTES_MAINNET
         if config.TESTCOIN:
             config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
+            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_MAINNET
             config.BLOCK_FIRST = config.BLOCK_FIRST_MAINNET_TESTCOIN
             config.BURN_START = config.BURN_START_MAINNET_TESTCOIN
             config.BURN_END = config.BURN_END_MAINNET_TESTCOIN
             config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
+            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
         else:
             config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
+            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_MAINNET
             config.BLOCK_FIRST = config.BLOCK_FIRST_MAINNET
             config.BURN_START = config.BURN_START_MAINNET
             config.BURN_END = config.BURN_END_MAINNET
             config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
+            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
             
     # Misc
     config.REQUESTS_TIMEOUT = requests_timeout
@@ -335,7 +343,6 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     config.UTXO_AGING_CACHE_MAX_ADDRESSES = utxo_aging_cache_max_addresses
     config.UTXO_AGING_CACHE_MAX_AGE = utxo_aging_cache_max_age
     
-
     logger.info('Running v{} of counterparty-lib.'.format(config.VERSION_STRING))
 
     if config.FORCE:

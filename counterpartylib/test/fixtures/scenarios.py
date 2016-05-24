@@ -9,7 +9,17 @@ To add (or update) a transaction in a scenario, or add a scenario, just update `
 This command will generates new outputs for each scenario (.new.json, .new.sql and .new.log), if you are satisfied with the new output just rename them (remove the .new). 
 You need to do this every time you update UNITTEST_FIXTURE.
 
-Moreover, some functions' output depends on scenarios staying the same (for instance, function returning the last message).
+```
+mv counterpartylib/test/fixtures/scenarios/unittest_fixture.new.json counterpartylib/test/fixtures/scenarios/unittest_fixture.json
+mv counterpartylib/test/fixtures/scenarios/unittest_fixture.new.sql counterpartylib/test/fixtures/scenarios/unittest_fixture.sql
+mv counterpartylib/test/fixtures/scenarios/unittest_fixture.new.log counterpartylib/test/fixtures/scenarios/unittest_fixture.log
+```
+
+Before every entry in UNITTEST_FIXTURE is executed a block is inserted first, so each of them has a +1 block_index.
+The `create_next_block` that appears a few times bumps the height to a fixed number to keep things easier to test against.
+When you add more fixtures, add before 310490, that won't affect any of other vector (for a while).
+
+Some functions' output depends on scenarios staying the same (for instance, function returning the last message).
 Here's a list of unit tests that will fail and need to be updated:
 - blocks.get_next_tx_index
 - blocks.parse_block
@@ -17,10 +27,10 @@ Here's a list of unit tests that will fail and need to be updated:
 - util.get_balance
 """
 
-from .params import ADDR, MULTISIGADDR, DEFAULT_PARAMS as DP
+from .params import ADDR, MULTISIGADDR, P2SH_ADDR, DEFAULT_PARAMS as DP
 
 UNITTEST_FIXTURE = [
-    ['burn', (ADDR[0], DP['burn_quantity']), {'encoding': 'multisig'}],
+    ['burn', (ADDR[0], DP['burn_quantity']), {'encoding': 'multisig'}],  # 310000
     ['issuance', (ADDR[0], None, 'DIVISIBLE', DP['quantity'] * 1000, True, 'Divisible asset'), {'encoding': 'multisig'}],
     ['issuance', (ADDR[0], None, 'NODIVISIBLE', 1000, False, 'No divisible asset'), {'encoding': 'multisig'}],
     ['issuance', (ADDR[0], None, 'CALLABLE', 1000, True, 'Callable asset'), {'encoding': 'multisig'}],
@@ -41,7 +51,7 @@ UNITTEST_FIXTURE = [
     ['broadcast', (ADDR[2], 1288000000, 1, 0.0, 'lock'), {'encoding': 'multisig'}],
     ['bet', (ADDR[0], ADDR[0], 1, 1388000001, 9, 9, 0.0, 5040, 100), {'encoding': 'multisig'}],
     ['bet', (ADDR[1], ADDR[0], 0, 1388000001, 9, 9, 0.0, 5040, 100), {'encoding': 'multisig'}],
-    ['create_next_block', 100],
+    ['create_next_block', 100],  # 310100
     ['bet', (ADDR[1], ADDR[0], 3, 1388000200, 10, 10, 0.0, 5040, 1000), {'encoding': 'multisig'}],
     ['broadcast', (ADDR[0], 1388000002, 1, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'multisig'}],
 
@@ -49,7 +59,13 @@ UNITTEST_FIXTURE = [
     ['burn', (ADDR[5], DP['burn_quantity']), {'encoding': 'multisig'}],
     ['burn', (ADDR[6], DP['burn_quantity']), {'encoding': 'multisig'}],
 
-    ['create_next_block', 490],
+    ['burn', (P2SH_ADDR[0], int(DP['burn_quantity'] / 2)), {'encoding': 'opreturn'}],
+    ['issuance', (P2SH_ADDR[0], None, 'PAYTOSCRIPT', 1000, False, 'PSH issued asset'), {'encoding': 'multisig', 'dust_return_pubkey': False}],
+    ['send', (ADDR[0], P2SH_ADDR[0], 'DIVISIBLE', DP['quantity']), {'encoding': 'multisig'}],
+    ['broadcast', (P2SH_ADDR[0], 1388000002, 1, DP['fee_multiplier'], 'Unit Test'), {'encoding': 'opreturn'}],
+    ['bet', (P2SH_ADDR[0], P2SH_ADDR[0], 3, 1388000200, 10, 10, 0.0, 5040, 1000), {'encoding': 'opreturn'}],
+    ['create_next_block', 490],  # 310490
+
     ['order', (ADDR[0], 'XCP', DP['quantity'], 'BTC', round(DP['quantity'] / 125), 2000, DP['fee_required']), {'encoding': 'multisig'}],
     ['order', (ADDR[1], 'BTC', round(DP['quantity'] / 125), 'XCP', DP['quantity'], 2000, 0), {'encoding': 'multisig', 'fee_provided': DP['fee_provided']}],
     ['burn', (ADDR[2], DP['burn_quantity']), {'encoding': 'multisig'}],
