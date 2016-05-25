@@ -507,7 +507,7 @@ def construct (db, tx_info, encoding='auto',
         for input in inputs:
             UTXO_LOCKS[source][make_outkey(input)] = input
 
-        logger.info("UTXO locks: Potentials ({}): {}, Used: {}, locked UTXOs: {}".format(
+        logger.debug("UTXO locks: Potentials ({}): {}, Used: {}, locked UTXOs: {}".format(
             len(unspent), [make_outkey(coin) for coin in unspent],
             [make_outkey(input) for input in inputs], list(UTXO_LOCKS[source].keys())))
 
@@ -561,6 +561,10 @@ def construct (db, tx_info, encoding='auto',
     desired = (desired_source, desired_destination, desired_data)
     parsed = (parsed_source, parsed_destination, parsed_data)
     if desired != parsed:
+        # Unlock (revert) UTXO locks
+        for input in inputs:
+            del UTXO_LOCKS[source][make_outkey(input)]
+
         raise exceptions.TransactionError('Constructed transaction does not parse correctly: {} ≠ {}'.format(desired, parsed))
 
     return unsigned_tx_hex
