@@ -41,9 +41,9 @@ OP_CHECKMULTISIG = b'\xae'
 OP_EQUAL = b'\x87'
 
 D = decimal.Decimal
-UTXO_AGING_CACHE = None
-UTXO_PER_ADDRESS_AGING_CACHE_MAXSIZE = 5000  # set higher than the max number of UTXOs we should expect to
-                                            # manage in an aging cache for any one source address, at any one period
+UTXO_LOCKS = None
+UTXO_LOCKS_PER_ADDRESS_MAXSIZE = 5000  # set higher than the max number of UTXOs we should expect to
+                                       # manage in an aging cache for any one source address, at any one period
 
 
 def print_coin(coin):
@@ -319,6 +319,8 @@ def construct (db, tx_info, encoding='auto',
                exact_fee=None, fee_provided=0, provided_pubkeys=None, dust_return_pubkey=None,
                allow_unconfirmed_inputs=False, unspent_tx_hash=None, custom_inputs=None):
 
+    global UTXO_LOCKS
+
     (source, destination_outputs, data) = tx_info
 
     if dust_return_pubkey:
@@ -339,9 +341,8 @@ def construct (db, tx_info, encoding='auto',
     if not isinstance(fee_provided, int):
         raise exceptions.TransactionError('Fee provided must be in satoshis.')
 
-    global UTXO_AGING_CACHE
-    if UTXO_AGING_CACHE is None and config.UTXO_AGING_CACHE_MAX_ADDRESSES > 0:  # initialize if configured
-        UTXO_AGING_CACHE = util.DictCache(size=config.UTXO_AGING_CACHE_MAX_ADDRESSES)
+    if UTXO_LOCKS is None and config.UTXO_LOCKS_MAX_ADDRESSES > 0:  # initialize if configured
+        UTXO_LOCKS = util.DictCache(size=config.UTXO_LOCKS_MAX_ADDRESSES)
 
     '''Destinations'''
 
@@ -451,10 +452,10 @@ def construct (db, tx_info, encoding='auto',
         else:
             unspent = backend.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs, multisig_inputs=multisig_inputs)
 
-        if UTXO_AGING_CACHE is not None and source in UTXO_AGING_CACHE:
-            # Filter out any UTXOs that are currently aging from unspent
+        # filter out any locked UTXOs to prevent creating transactions that spend the same UTXO when they're created at the same time
+        if UTXO_LOCKS is not None and source in UTXO_LOCKS:
             unspentkeys = {make_outkey(output) for output in unspent}
-            filtered_unspentkeys = unspentkeys - UTXO_AGING_CACHE[source].keys()
+            filtered_unspentkeys = unspentkeys - UTXO_LOCKS[source].keys()
             unspent = [output for output in unspent if make_outkey(output) in filtered_unspentkeys]
 
         unspent = backend.sort_unspent_txouts(unspent)
@@ -497,23 +498,18 @@ def construct (db, tx_info, encoding='auto',
         total_btc_out = btc_out + max(change_quantity, 0) + final_fee
         raise exceptions.BalanceError('Insufficient {} at address {}. (Need approximately {} {}.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)'.format(config.BTC, source, total_btc_out / config.UNIT, config.BTC))
 
-    # Start aging all of the source's inputs (UTXOs) chosen for this transaction
-    # This will prevent them from being spent again (which may happen if a number of txes are rapidly
-    # constructed for a single source, as the UTXO set from bitcoind will not update quickly enough)
-    if UTXO_AGING_CACHE is not None:
-        if source not in UTXO_AGING_CACHE:
-            UTXO_AGING_CACHE[source] = cachetools.TTLCache(
-                UTXO_PER_ADDRESS_AGING_CACHE_MAXSIZE, config.UTXO_AGING_CACHE_MAX_AGE)
+    # Lock the source's inputs (UTXOs) chosen for this transaction
+    if UTXO_LOCKS is not None:
+        if source not in UTXO_LOCKS:
+            UTXO_LOCKS[source] = cachetools.TTLCache(
+                UTXO_LOCKS_PER_ADDRESS_MAXSIZE, config.UTXO_LOCKS_MAX_AGE)
 
         for input in inputs:
-            UTXO_AGING_CACHE[source][make_outkey(input)] = input
+            UTXO_LOCKS[source][make_outkey(input)] = input
 
-        # REMOVE THESE LATER (DEBUG ONLY!!)
-        print("\n{} potential UTXOs".format(len(unspent)))
-        print('\nSorted candidate UTXOs: {}'.format([make_outkey(coin) for coin in unspent]))
-        print("\ninputs used: {}".format([make_outkey(input) for input in inputs]))
-        print("\nUTXO cache contents: {}".format(list(UTXO_AGING_CACHE[source].keys())))
-
+        logger.info("UTXO locks: Potentials ({}): {}, Used: {}, locked UTXOs: {}".format(
+            len(unspent), [make_outkey(coin) for coin in unspent],
+            [make_outkey(input) for input in inputs], list(UTXO_LOCKS[source].keys())))
 
     '''Finish'''
 

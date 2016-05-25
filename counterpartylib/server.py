@@ -84,8 +84,8 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
                 rpc_batch_size=config.DEFAULT_RPC_BATCH_SIZE,
                 check_asset_conservation=config.DEFAULT_CHECK_ASSET_CONSERVATION,
                 backend_ssl_verify=None, rpc_allow_cors=None, p2sh_dust_return_pubkey=None,
-                utxo_aging_cache_max_addresses=config.DEFAULT_UTXO_AGING_CACHE_MAX_ADDRESSES,
-                utxo_aging_cache_max_age=config.DEFAULT_UTXO_AGING_CACHE_MAX_AGE):
+                utxo_locks_max_addresses=config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES,
+                utxo_locks_max_age=config.DEFAULT_UTXO_LOCKS_MAX_AGE):
 
      # Data directory
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
@@ -340,8 +340,8 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
     # Misc
     config.REQUESTS_TIMEOUT = requests_timeout
     config.CHECK_ASSET_CONSERVATION = check_asset_conservation
-    config.UTXO_AGING_CACHE_MAX_ADDRESSES = utxo_aging_cache_max_addresses
-    config.UTXO_AGING_CACHE_MAX_AGE = utxo_aging_cache_max_age
+    config.UTXO_LOCKS_MAX_ADDRESSES = utxo_locks_max_addresses
+    config.UTXO_LOCKS_MAX_AGE = utxo_locks_max_age
     
     logger.info('Running v{} of counterparty-lib.'.format(config.VERSION_STRING))
 
