@@ -204,7 +204,7 @@ required_packages = [
     'colorlog',
     'python-bitcoinlib',
     'xmltodict',
-    'cachetools',
+    'cachetools'
 ]
 
 setup_options = {

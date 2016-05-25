@@ -218,7 +218,7 @@ def get_unspent_txouts(source, unconfirmed=False, multisig_inputs=False, unspent
             unspent = [output for output in unspent if output['confirmations'] > 0 or (time.time() - output['ts']) < 6 * 3600] # Cutoff: six hours
         except (KeyError, TypeError):
             pass
-        
+
     return unspent
 
 class UnknownPubKeyError(Exception):
