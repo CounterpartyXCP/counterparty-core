@@ -8,7 +8,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 from counterpartylib.lib import (util, config, exceptions)
-from .scriptlib import (utils, blocks, processblock)
 
 FORMAT = '>20sQQQ'
 LENGTH = 44
@@ -71,6 +70,8 @@ def initialise (db):
 
 
 def compose (db, source, contract_id, gasprice, startgas, value, payload_hex):
+    return  # EVM disable until new implemention is added
+
     if not config.TESTNET:  # TODO
         return
 
@@ -115,6 +116,8 @@ class Transaction(object):
         return dict_
 
 def parse (db, tx, message):
+    return  # EVM disable until new implemention is added
+
     if not config.TESTNET:  # TODO
         return
 
