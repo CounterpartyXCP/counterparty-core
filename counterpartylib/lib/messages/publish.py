@@ -34,6 +34,8 @@ def initialise (db):
                    ''')
 
 def compose (db, source, gasprice, startgas, endowment, code_hex):
+    return  # EVM disable until new implemention is added
+
     if not config.TESTNET:  # TODO
         return
 
@@ -45,6 +47,8 @@ def compose (db, source, gasprice, startgas, endowment, code_hex):
 
 
 def parse (db, tx, message):
+    return  # EVM disable until new implemention is added
+
     if not config.TESTNET:  # TODO
         return
 
