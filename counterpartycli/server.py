@@ -4,9 +4,10 @@ import os
 import sys
 import argparse
 import logging
+logger = logging.getLogger()
 
 from counterpartylib.lib import log
-logger = logging.getLogger(__name__)
+log.set_logger(logger)
 
 from counterpartylib import server
 from counterpartylib.lib import config
@@ -81,7 +82,7 @@ def main():
 
     args = parser.parse_args()
 
-    log.set_up(logger, verbose=args.verbose, console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None))
+    log.set_up(log.ROOT_LOGGER, verbose=args.verbose, console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None))
 
     logger.info('Running v{} of {}.'.format(APP_VERSION, APP_NAME))
 
