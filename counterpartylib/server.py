@@ -5,7 +5,6 @@ import decimal
 import pprint
 import sys
 import logging
-logger = logging.getLogger(__name__)
 import time
 import dateutil.parser
 import calendar
@@ -17,7 +16,11 @@ import appdirs
 import platform
 from urllib.parse import quote_plus as urlencode
 
-from counterpartylib.lib import api, config, util, exceptions, blocks, check, backend, database, transaction, script, log
+from counterpartylib.lib import log
+logger = logging.getLogger(__name__)
+log.set_logger(logger)  # set root logger
+
+from counterpartylib.lib import api, config, util, exceptions, blocks, check, backend, database, transaction, script
 
 D = decimal.Decimal
 
@@ -91,7 +94,6 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
                 check_asset_conservation=config.DEFAULT_CHECK_ASSET_CONSERVATION,
                 backend_ssl_verify=None, rpc_allow_cors=None,
                 p2sh_dust_return_pubkey=None):
-
      # Data directory
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
     if not os.path.isdir(data_dir):
@@ -133,6 +135,9 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
     else:
         filename = 'server{}.log'.format(network)
         config.LOG = os.path.join(log_dir, filename)
+
+    # Set up logging.
+    log.set_up(log.ROOT_LOGGER, verbose=verbose, logfile=config.LOG, console_logfilter=console_logfilter)
     logger.debug('Writing server log to file: `{}`'.format(config.LOG))
 
     if api_log_file:
@@ -142,9 +147,6 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
         config.API_LOG = os.path.join(log_dir, filename)
     logger.debug('Writing API accesses log to file: `{}`'.format(config.API_LOG))
 
-    # Set up logging.
-    root_logger = logging.getLogger()    # Get root logger.
-    log.set_up(root_logger, verbose=verbose, logfile=config.LOG, console_logfilter=console_logfilter)
     # Log unhandled errors.
     def handle_exception(exc_type, exc_value, exc_traceback):
         logger.error("Unhandled Exception", exc_info=(exc_type, exc_value, exc_traceback))

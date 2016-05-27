@@ -15,7 +15,6 @@ from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import util
 
-
 class ModuleLoggingFilter(logging.Filter):
     """
     module level logging filter (NodeJS-style), ie:
@@ -71,7 +70,23 @@ class ModuleLoggingFilter(logging.Filter):
             return False
         return record.name[nlen] == "."
 
+
+ROOT_LOGGER = None
+def set_logger(logger):
+    global ROOT_LOGGER
+    if ROOT_LOGGER is None:
+        ROOT_LOGGER = logger
+
+
+LOGGING_SETUP = False
 def set_up(logger, verbose=False, logfile=None, console_logfilter=None):
+    global LOGGING_SETUP
+
+    if LOGGING_SETUP:
+        logger.getChild('log.set_up').debug('logging already setup')
+        return
+    LOGGING_SETUP = True
+
     log_level = logging.DEBUG if verbose else logging.INFO
     logger.setLevel(log_level)
 
@@ -165,6 +180,7 @@ def message(db, block_index, command, category, bindings, tx_hash=None):
 
 
 def log (db, command, category, bindings):
+
     cursor = db.cursor()
 
     for element in bindings.keys():
