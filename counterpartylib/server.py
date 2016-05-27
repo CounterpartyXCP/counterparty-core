@@ -2,6 +2,7 @@
 
 import os
 import decimal
+import pprint
 import sys
 import logging
 logger = logging.getLogger(__name__)
@@ -395,6 +396,15 @@ def reparse(db, block_index=None):
 
 def kickstart(db, bitcoind_dir):
     blocks.kickstart(db, bitcoind_dir=bitcoind_dir)
+
+
+def debug_config():
+    output = vars(config)
+    for k in list(output.keys()):
+        if k[:2] == "__" and k[-2:] == "__":
+            del output[k]
+
+    pprint.pprint(output)
 
 
 def generate_move_random_hash(move):
