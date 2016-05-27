@@ -141,7 +141,6 @@ def initialize(testnet=False, testcoin=False,
             config.BURN_START = config.BURN_START_TESTNET_TESTCOIN
             config.BURN_END = config.BURN_END_TESTNET_TESTCOIN
             config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
-            config.P2SH_DUST_RETURN_PUBKEY = config.P2SH_DUST_RETURN_PUBKEY_TESTNET
         else:
             config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
             config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_TESTNET
@@ -149,7 +148,6 @@ def initialize(testnet=False, testcoin=False,
             config.BURN_START = config.BURN_START_TESTNET
             config.BURN_END = config.BURN_END_TESTNET
             config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
-            config.P2SH_DUST_RETURN_PUBKEY = config.P2SH_DUST_RETURN_PUBKEY_TESTNET
     else:
         config.MAGIC_BYTES = config.MAGIC_BYTES_MAINNET
         if config.TESTCOIN:
@@ -159,7 +157,6 @@ def initialize(testnet=False, testcoin=False,
             config.BURN_START = config.BURN_START_MAINNET_TESTCOIN
             config.BURN_END = config.BURN_END_MAINNET_TESTCOIN
             config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
-            config.P2SH_DUST_RETURN_PUBKEY = config.P2SH_DUST_RETURN_PUBKEY_MAINNET
         else:
             config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
             config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_MAINNET
@@ -167,7 +164,6 @@ def initialize(testnet=False, testcoin=False,
             config.BURN_START = config.BURN_START_MAINNET
             config.BURN_END = config.BURN_END_MAINNET
             config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
-            config.P2SH_DUST_RETURN_PUBKEY = config.P2SH_DUST_RETURN_PUBKEY_MAINNET
 
 WALLET_METHODS = [
     'get_wallet_addresses', 'get_btc_balances', 'sign_raw_transaction', 
