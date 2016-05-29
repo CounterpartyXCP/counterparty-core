@@ -78,6 +78,7 @@ def main():
     parser_kickstart.add_argument('--bitcoind-dir', help='Bitcoin Core data directory')
 
     parser_bootstrap = subparsers.add_parser('bootstrap', help='bootstrap database with hosted snapshot')
+    parser_bootstrap.add_argument('-q', '--quiet', dest='quiet', action='store_true', help='suppress progress bar')
 
     args = parser.parse_args()
 
@@ -92,7 +93,7 @@ def main():
 
     # Bootstrapping
     if args.action == 'bootstrap':
-        bootstrap(testnet=args.testnet)
+        bootstrap(testnet=args.testnet, quiet=args.quiet)
         sys.exit()
 
     # Configuration

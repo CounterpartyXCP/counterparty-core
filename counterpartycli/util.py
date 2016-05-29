@@ -115,7 +115,7 @@ def value_out(quantity, asset, divisible=None):
         divisible = is_divisible(asset)
     return value_output(quantity, asset, divisible)
 
-def bootstrap(testnet=False, overwrite=True, ask_confirmation=False):
+def bootstrap(testnet=False, overwrite=True, ask_confirmation=False, quiet=False):
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
 
     # Set Constants.
@@ -148,7 +148,7 @@ def bootstrap(testnet=False, overwrite=True, ask_confirmation=False):
             sys.stderr.write("read %d\n" % (readsofar,))
 
     print('Downloading database from {}...'.format(BOOTSTRAP_URL))
-    urllib.request.urlretrieve(BOOTSTRAP_URL, TARBALL_PATH, reporthook)
+    urllib.request.urlretrieve(BOOTSTRAP_URL, TARBALL_PATH, reporthook if not quiet else None)
 
     print('Extracting to "%s"...' % data_dir)
     with tarfile.open(TARBALL_PATH, 'r:gz') as tar_file:
