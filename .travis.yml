@@ -1,14 +1,22 @@
 sudo: required
 
-language: python
-
 services:
 - docker
 
 before_install:
-- docker build -t counterparty/counterparty-server .
+- sudo apt-get -qq update
+# upgrade docker, for build argument support
+- sudo apt-get install -o Dpkg::Options::="--force-confold" --force-yes -y docker-engine
+# get the current branch name
+- sudo apt-get install jq
+- export PR=https://api.github.com/repos/$TRAVIS_REPO_SLUG/pulls/$TRAVIS_PULL_REQUEST
+- export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo `curl -s $PR | jq -r .head.ref`; fi)
+# build docker image
 - docker version
 - docker ps -a
+# try to check out the same branch for counterparty-lib (if it exists), and fallback to the develop branch if not
+- if curl --output /dev/null --silent --head --fail "https://github.com/$TRAVIS_REPO_SLUG/tree/$BRANCH"; then export DOCKERFILE_CLI_BRANCH="$BRANCH"; else export DOCKERFILE_CLI_BRANCH="develop"; fi
+- docker build -t counterparty/counterparty-server --build-arg CLI_BRANCH="$DOCKERFILE_CLI_BRANCH" .
 
 script:
 # run the test suite in the docker container we just made
@@ -20,12 +28,7 @@ notifications:
 
 after_success:
 - coveralls
-# get the current branch name
-- sudo apt-get -qq update
-- sudo apt-get install jq
-- export PR=https://api.github.com/repos/$TRAVIS_REPO_SLUG/pulls/$TRAVIS_PULL_REQUEST
-- export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo `curl -s $PR | jq -r .head.ref`; fi)
-# if it's master or develop, then push the appropirately tagged docker image
+# if it's master or develop, then push the appropirately tagged docker image (otherwise don't push anything)
 - docker login -e="$DOCKER_EMAIL" -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
 - if [ "$BRANCH" == "master" ]; then docker push counterparty/counterparty-server:latest; fi 
 - if [ "$BRANCH" == "develop" ]; then docker push counterparty/counterparty-server:develop; fi 

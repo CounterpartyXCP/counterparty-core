@@ -13,16 +13,19 @@ COPY docker/start.sh /usr/local/bin/start.sh
 RUN chmod a+x /usr/local/bin/start.sh
 
 # Install counterparty-cli
-# NOTE: We can't use "ARG" here, as travis runs an older version of docker without support for build arguments
+# NOTE: By default, check out the counterparty-cli master branch. You can override the BRANCH build arg for a different
+# branch (as you should check out the same branch as what you have with counterparty-lib, or a compatible one)
 # NOTE2: In the future, counterparty-lib and counterparty-cli will go back to being one repo...
-RUN git clone -b master https://github.com/CounterpartyXCP/counterparty-cli.git /counterparty-cli
+ARG CLI_BRANCH=master
+ENV CLI_BRANCH ${CLI_BRANCH}
+RUN git clone -b ${CLI_BRANCH} https://github.com/CounterpartyXCP/counterparty-cli.git /counterparty-cli
 WORKDIR /counterparty-cli
 RUN pip3 install -r requirements.txt
 RUN python3 setup.py install
 
 # Install bootstrap data (mainnet and testnet)
-RUN counterparty-server bootstrap
-RUN counterparty-server --testnet bootstrap
+RUN counterparty-server bootstrap --quiet
+RUN counterparty-server --testnet bootstrap --quiet
 
 EXPOSE 4000 4001
 
