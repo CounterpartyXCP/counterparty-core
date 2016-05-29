@@ -1,15 +1,30 @@
+sudo: required
+
 language: python
-python:
-- "3.4"
-install:
-- pip install -r requirements.txt
-- pip install python-coveralls
-- python setup.py install --with-serpent
-script: cd counterpartylib; py.test --skiptestbook=all --cov-config=../.coveragerc --cov-report=term-missing --cov=./
+
+services:
+- docker
+
+before_install:
+- docker build -t counterparty/counterparty-server .
+- docker version
+- docker ps -a
+
+script:
+# run the test suite in the docker container we just made
+- docker run --entrypoint=/bin/bash counterparty/counterparty-server -c "cd /counterparty-lib/counterpartylib; py.test --skiptestbook=all --cov-config=../.coveragerc --cov-report=term-missing --cov=./"
+
 notifications:
   slack:
     secure: cl0G5fWZNnIK5VQ6BPZ4RtwVO2/nfvX/zjhljfF6cQ20OKyvyiJHq+e67fl2pkCKDlqlEqSWaQJ6G52YzUpDQmf+o7qpH6YnkFxSqYp5h4YF1hJw4sCHJ7bVSLrjogWxU8QaNvH7YpL4YkGe+WOau2FgoIZOcMt6hhKrvWclfuc=
+
 after_success:
 - coveralls
+# get the current branch name
+- export PR=https://api.github.com/repos/$TRAVIS_REPO_SLUG/pulls/$TRAVIS_PULL_REQUEST
+- export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo `curl -s $PR | jq -r .head.ref`; fi)
+# if it's master or develop, then push the appropirately tagged docker image
+- docker login -e="$DOCKER_EMAIL" -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
+- if [ "$BRANCH" == "master" ]; then docker push counterparty/counterparty-server:latest; fi 
+- if [ "$BRANCH" == "develop" ]; then docker push counterparty/counterparty-server:develop; fi 
 
-sudo: required
