@@ -21,6 +21,8 @@ notifications:
 after_success:
 - coveralls
 # get the current branch name
+- sudo apt-get -qq update
+- sudo apt-get install jq
 - export PR=https://api.github.com/repos/$TRAVIS_REPO_SLUG/pulls/$TRAVIS_PULL_REQUEST
 - export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo `curl -s $PR | jq -r .head.ref`; fi)
 # if it's master or develop, then push the appropirately tagged docker image
