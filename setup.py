@@ -203,7 +203,8 @@ required_packages = [
     'python-bitcoinlib==0.5.0',
     'requests==2.10.0',
     'tendo==0.2.8',
-    'xmltodict==0.10.1'
+    'xmltodict==0.10.1',
+    'cachetools==1.1.6',
 ]
 
 setup_options = {
