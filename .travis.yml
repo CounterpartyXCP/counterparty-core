@@ -43,5 +43,5 @@ after_success:
 - |
   if [ "$DOCKER_TAG" != "nopush" ]; then
     docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD";
-    docker push counterparty/counterparty-server:$DOCKER_TAG; fi
+    docker push counterparty/counterparty-server:$DOCKER_TAG;
   fi

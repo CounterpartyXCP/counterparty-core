@@ -4,6 +4,7 @@
 [![Latest Version](https://pypip.in/version/counterparty-lib/badge.svg)](https://pypi.python.org/pypi/counterparty-lib/)
 [![License](https://pypip.in/license/counterparty-lib/badge.svg)](https://pypi.python.org/pypi/counterparty-lib/)
 [![Slack Status](http://slack.counterparty.io/badge.svg)](http://slack.counterparty.io)
+[![Docker Pulls](https://img.shields.io/docker/pulls/counterparty/counterparty-server.svg?maxAge=2592000)](https://hub.docker.com/r/counterparty/counterparty-server/)
 
 
 # Description
