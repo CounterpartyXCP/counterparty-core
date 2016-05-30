@@ -2,6 +2,7 @@
 
 import os
 import decimal
+import pprint
 import sys
 import logging
 logger = logging.getLogger(__name__)
@@ -70,12 +71,17 @@ def get_lock():
     logger.debug('Lock acquired.')
 
 
-def initialise(database_file=None, log_file=None, api_log_file=None,
+def initialise(*args, **kwargs):
+    initialise_config(*args, **kwargs)
+    return initialise_db()
+
+
+def initialise_config(database_file=None, log_file=None, api_log_file=None,
                 testnet=False, testcoin=False,
                 backend_name=None, backend_connect=None, backend_port=None,
                 backend_user=None, backend_password=None,
                 backend_ssl=False, backend_ssl_no_verify=False,
-                backend_poll_interval=None, 
+                backend_poll_interval=None,
                 rpc_host=None, rpc_port=None,
                 rpc_user=None, rpc_password=None,
                 rpc_no_allow_cors=False,
@@ -340,6 +346,8 @@ def initialise(database_file=None, log_file=None, api_log_file=None,
 
     logger.info('Running v{} of counterparty-lib.'.format(config.VERSION_STRING))
 
+
+def initialise_db():
     if config.FORCE:
         logger.warning('THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.')
 
@@ -388,6 +396,15 @@ def reparse(db, block_index=None):
 
 def kickstart(db, bitcoind_dir):
     blocks.kickstart(db, bitcoind_dir=bitcoind_dir)
+
+
+def debug_config():
+    output = vars(config)
+    for k in list(output.keys()):
+        if k[:2] == "__" and k[-2:] == "__":
+            del output[k]
+
+    pprint.pprint(output)
 
 
 def generate_move_random_hash(move):

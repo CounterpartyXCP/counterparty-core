@@ -13,6 +13,7 @@ from operator import itemgetter
 import fractions
 import warnings
 import binascii
+import re
 import hashlib
 import sha3
 import bitcoin as bitcoinlib
@@ -677,5 +678,14 @@ class DictCache:
     def refresh(self, key):
         with self.lock:
             self.dict.move_to_end(key, last=True)
+
+
+URL_USERNAMEPASS_REGEX = re.compile('.+://(.+)@')
+def clean_url_for_log(url):
+    m = URL_USERNAMEPASS_REGEX.match(url)
+    if m and m.group(1):
+        url = url.replace(m.group(1), 'XXXXXXXX')
+
+    return url
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
