@@ -1,11 +1,11 @@
 #! /usr/bin/python3
 import pprint
-import sys, os, time, tempfile
-import pytest
+import tempfile
+from counterpartylib.test import conftest  # this is require near the top to do setup of the test suite
 from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP
 from counterpartylib.test.util_test import CURR_DIR
 
-from counterpartylib.lib import (config, util, database, blocks)
+from counterpartylib.lib import (blocks)
 
 
 FIXTURE_SQL_FILE = CURR_DIR + '/fixtures/scenarios/parseblock_unittest_fixture.sql'
