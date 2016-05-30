@@ -9,7 +9,7 @@
 # Description
 `counterparty-lib` is the reference implementation of the [Counterparty Protocol](https://counterparty.io).
 
-**Note:** for the command-line interface that used to be called `counterpartyd`, see [`counterparty-cli`](https://github.com/CounterpartyXCP/counterparty-cli).
+**Note:** for the command-line interface, see [`counterparty-cli`](https://github.com/CounterpartyXCP/counterparty-cli).
 
 
 # Requirements
@@ -21,11 +21,9 @@
 	server=1
 	txindex=1
 	addrindex=1
-	rpcthreads=1000
+	rpcthreads=100
 	rpctimeout=300
-	minrelaytxfee=0.00005
-	limitfreerelay=0
-	```
+```
 
 
 # Installation
