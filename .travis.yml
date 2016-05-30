@@ -33,10 +33,6 @@ script:
 # run the test suite in the docker container we just made
 - docker run --entrypoint=/bin/bash counterparty/counterparty-server:$DOCKER_TAG -c "cd /counterparty-lib/counterpartylib; py.test --skiptestbook=all --cov-config=../.coveragerc --cov-report=term-missing --cov=./"
 
-notifications:
-  slack:
-    secure: cl0G5fWZNnIK5VQ6BPZ4RtwVO2/nfvX/zjhljfF6cQ20OKyvyiJHq+e67fl2pkCKDlqlEqSWaQJ6G52YzUpDQmf+o7qpH6YnkFxSqYp5h4YF1hJw4sCHJ7bVSLrjogWxU8QaNvH7YpL4YkGe+WOau2FgoIZOcMt6hhKrvWclfuc=
-
 after_success:
 - coveralls
 # if it's master or develop, then push the appropirately tagged docker image (otherwise don't push anything)
@@ -45,3 +41,7 @@ after_success:
     docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD";
     docker push counterparty/counterparty-server:$DOCKER_TAG;
   fi
+
+notifications:
+  slack:
+    secure: cl0G5fWZNnIK5VQ6BPZ4RtwVO2/nfvX/zjhljfF6cQ20OKyvyiJHq+e67fl2pkCKDlqlEqSWaQJ6G52YzUpDQmf+o7qpH6YnkFxSqYp5h4YF1hJw4sCHJ7bVSLrjogWxU8QaNvH7YpL4YkGe+WOau2FgoIZOcMt6hhKrvWclfuc=
