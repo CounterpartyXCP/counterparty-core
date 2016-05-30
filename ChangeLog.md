@@ -1,4 +1,9 @@
 ## Library Versions ##
+* Next Release
+    * Upgrade SQLite/APSW to v3.12.2
+        * Run `python3 setup.py install_apsw` to upgrade your installed version.
+        * Run `./tools/upgradesqlitepagesize.py <PATHTOYOURDB>` while your node is OFFLINE to upgrade.
+          Most likely the path to your DB is `~/.local/share/counterparty/counterparty.db`.
 * v9.55.0 (2016-07-11)
     * P2SH support for source / destination of addresses (protocol change: 423888)
     * Moved check for invalid broadcast to better place to prevent broadcasting a cancel on a locked feed (protocol change: 423888)
