@@ -1,11 +1,13 @@
 #!/bin/bash
 
 # Specify defaults (defaults are overridden if defined in the environment)
+DEFAULT_BACKEND_CONNECT="bitcoin"
 DEFAULT_BACKEND_PORT=8332
 DEFAULT_RPC_PORT=4000
 EXTRA_PARAMS=""
 if [ -n "$TESTNET" ]; then
     EXTRA_PARAMS="${EXTRA_PARAMS} --testnet"
+    DEFAULT_BACKEND_CONNECT="bitcoin-testnet"
     DEFAULT_BACKEND_PORT=18332
     DEFAULT_RPC_PORT=4001
 fi
@@ -13,7 +15,7 @@ if [ -n "$VERBOSE" ]; then
     EXTRA_PARAMS="${EXTRA_PARAMS} --verbose"
 fi
 
-: ${BACKEND_CONNECT:="bitcoin"}
+: ${BACKEND_CONNECT:=$DEFAULT_BACKEND_CONNECT}
 : ${BACKEND_PORT:=$DEFAULT_BACKEND_PORT}
 : ${BACKEND_USER:="rpc"}
 : ${BACKEND_PASSWORD:="rpc"}
