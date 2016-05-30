@@ -9,26 +9,30 @@
 # Description
 `counterparty-lib` is the reference implementation of the [Counterparty Protocol](https://counterparty.io).
 
-**Note:** for the command-line interface that used to be called `counterpartyd`, see [`counterparty-cli`](https://github.com/CounterpartyXCP/counterparty-cli).
-
-
-# Requirements
-* [Patched Bitcoin Core](https://github.com/btcdrak/bitcoin/releases) with the following options set:
-
-	```
-	rpcuser=bitcoinrpc
-	rpcpassword=<password>
-	server=1
-	txindex=1
-	addrindex=1
-	rpcthreads=1000
-	rpctimeout=300
-	minrelaytxfee=0.00005
-	limitfreerelay=0
-	```
+**Note:** for the command-line interface, see [`counterparty-cli`](https://github.com/CounterpartyXCP/counterparty-cli).
 
 
 # Installation
+
+For a simple Docker-based install of the Counterparty software stack, see [this guide](http://counterparty.io/docs/federated_node/).
+
+
+# Manual installation
+
+Download the newest [patched Bitcoin Core](https://github.com/btcdrak/bitcoin/releases) and create
+a `bitcoin.conf` file with the following options:
+
+```
+rpcuser=bitcoinrpc
+rpcpassword=rpc
+server=1
+txindex=1
+addrindex=1
+rpcthreads=100
+rpctimeout=300
+```
+
+Then, download and install `counterparty-lib`:
 
 ```
 $ git clone https://github.com/CounterpartyXCP/counterparty-lib.git
@@ -36,8 +40,30 @@ $ cd counterparty-lib
 $ python3 setup.py install
 ```
 
+Followed by `counterparty-cli`:
 
-# Usage
+```
+$ git clone https://github.com/CounterpartyXCP/counterparty-cli.git
+$ cd counterparty-cli
+$ python3 setup.py install
+```
+
+Then, launch the daemon via:
+
+```
+$ counterparty-server bootstrap
+$ counterparty-server --backend-password=rpc start
+```
+
+Further command line options are available via:
+
+* `$ counterparty-server --help`
+* `$ counterparty-client --help`
+
+
+# Python interface
+
+Bare usage from Python is also possible, without installing `counterparty-cli`:
 
 ```
 $ python3
