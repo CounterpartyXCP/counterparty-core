@@ -32,7 +32,9 @@ notifications:
 after_success:
 - coveralls
 # if it's master or develop, then push the appropirately tagged docker image (otherwise don't push anything)
-- docker login -e="$DOCKER_EMAIL" -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
-- if [ "$BRANCH" == "master" ]; then docker push counterparty/counterparty-server:latest; fi 
-- if [ "$BRANCH" == "develop" ]; then docker push counterparty/counterparty-server:develop; fi 
-
+- |
+  if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+    docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD";
+    if [ "$BRANCH" == "master" ]; then docker push counterparty/counterparty-server:latest; fi
+    if [ "$BRANCH" == "develop" ]; then docker push counterparty/counterparty-server:develop; fi
+  fi

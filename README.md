@@ -73,6 +73,13 @@ $ python3
 ```
 
 
+# Travis/Circle CI
+ - TravisCI is setup to run all tests with 1 command and generate a coverage report and let `python-coveralls` parse and upload it.
+   It does runs with `--skiptestbook=all` so it will not do the reparsing of the bootstrap files.
+ - CircleCI is setup to split the tests as much as possible to make it easier to read the error reports.
+   It also runs the `integration_test.test_book` tests, which reparse the bootstrap files.
+
+
 # Further Reading
 
 * [Official Project Documentation](http://counterparty.io/docs/)

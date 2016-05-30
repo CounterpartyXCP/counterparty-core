@@ -2,12 +2,10 @@
 import pprint
 import sys, os, time, tempfile
 import pytest
-from counterpartylib.test import util_test
 from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP
 from counterpartylib.test.util_test import CURR_DIR
 
 from counterpartylib.lib import (config, util, database, blocks)
-from counterpartylib import server
 
 
 FIXTURE_SQL_FILE = CURR_DIR + '/fixtures/scenarios/parseblock_unittest_fixture.sql'
