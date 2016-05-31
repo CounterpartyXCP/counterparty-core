@@ -2,25 +2,33 @@
 This module contains a variety of utility functions used in the test suite.
 """
 
-import os, sys, hashlib, binascii, time, decimal, logging, locale, re, io
-import difflib, json, inspect, tempfile, shutil, pprint
-import apsw, pytest, requests
-from requests.auth import HTTPBasicAuth
+import os
+import sys
+import hashlib
+import time
+import decimal
+import logging
+import locale
+import re
+import io
+import difflib
+import json
+import tempfile
+import pprint
+import apsw
+import pytest
+import binascii
+import appdirs
+import bitcoin as bitcoinlib
 
 CURR_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, '..')))
 
-import server
-from counterpartylib.lib import (config, api, util, exceptions, blocks, check, backend, database, transaction, script)
-from counterpartylib.lib.messages import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, rps, rpsresolve)
+from counterpartylib import server
+from counterpartylib.lib import (config, util, blocks, check, backend, database, transaction)
 
-from fixtures.params import DEFAULT_PARAMS as DP
-from fixtures.scenarios import UNITTEST_FIXTURE, INTEGRATION_SCENARIOS, standard_scenarios_params
-
-import bitcoin as bitcoinlib
-import binascii
-
-import appdirs
+from counterpartylib.test.fixtures.params import DEFAULT_PARAMS as DP
+from counterpartylib.test.fixtures.scenarios import UNITTEST_FIXTURE, INTEGRATION_SCENARIOS, standard_scenarios_params
 
 D = decimal.Decimal
 
@@ -419,15 +427,10 @@ def reparse(testnet=True):
     options = dict(COUNTERPARTYD_OPTIONS)
     server.initialise(database_file=':memory:', testnet=testnet, **options)
 
+    logger = logging.getLogger()
+
     if testnet:
         config.PREFIX = b'TESTXXXX'
-
-    logger = logging.getLogger()
-    console = logging.StreamHandler()
-    console.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(message)s')
-    console.setFormatter(formatter)
-    logger.addHandler(console)
 
     memory_db = database.get_connection(read_only=False)
     initialise_db(memory_db)

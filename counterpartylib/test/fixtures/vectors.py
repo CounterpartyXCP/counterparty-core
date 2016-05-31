@@ -18,7 +18,6 @@ from .params import ADDR, P2SH_ADDR, MULTISIGADDR, DEFAULT_PARAMS as DP
 from counterpartylib.lib import config
 from counterpartylib.lib import exceptions
 from counterpartylib.lib import script
-from counterpartylib.lib.messages.scriptlib import processblock
 from counterpartylib.lib.messages.scriptlib.processblock import ContractError
 from counterpartylib.lib.api import APIError
 from counterpartylib.lib.util import (DebitError, CreditError, QuantityError)

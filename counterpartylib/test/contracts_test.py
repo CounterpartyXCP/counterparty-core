@@ -29,7 +29,7 @@ startgas = 10000
 """
 
 ### Counterparty compatibility ###
-import server
+from counterpartylib import server
 from counterpartylib.lib import (util, config, database)
 from counterpartylib.lib.messages import execute
 from counterpartylib.lib.messages.scriptlib import (blocks, rlp, processblock)

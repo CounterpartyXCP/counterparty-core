@@ -1,31 +1,25 @@
-#! /usr/bin/python3
-
 """
 Test suite configuration
 """
 
-import os
-import sys
-
-current_dir = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
-base_dir = os.path.normpath(os.path.join(current_dir, '../../'))
-sys.path.insert(0, base_dir)
-
-import json, binascii, apsw
-from datetime import datetime
+import json
+import apsw
 import time
-
+from datetime import datetime
 import pytest
-from counterpartylib.test import util_test
+import bitcoin as bitcoinlib
+import logging
 
+from counterpartylib.lib import log
+log.set_logger(logging.getLogger())
+
+from counterpartylib.test import util_test
 from counterpartylib.test.fixtures.vectors import UNITTEST_VECTOR
 from counterpartylib.test.fixtures.params import DEFAULT_PARAMS
 from counterpartylib.test.fixtures.scenarios import INTEGRATION_SCENARIOS
 
-from counterpartylib.lib import config, util, backend, transaction, database, api
+from counterpartylib.lib import config, util, database, api
 
-import bitcoin as bitcoinlib
-import bitcoin.rpc as bitcoinlib_rpc
 
 # we swap out util.enabled with a custom one which has the option to mock the protocol changes
 MOCK_PROTOCOL_CHANGES = {}
