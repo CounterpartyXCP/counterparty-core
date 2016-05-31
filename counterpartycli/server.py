@@ -44,7 +44,10 @@ CONFIG_ARGS = [
     [('--force',), {'action': 'store_true', 'default': False, 'help': 'skip backend check, version check, process lock (NOT FOR USE ON PRODUCTION SYSTEMS)'}],
     [('--database-file',), {'default': None, 'help': 'the path to the SQLite3 database file'}],
     [('--log-file',), {'default': None, 'help': 'the path to the server log file'}],
-    [('--api-log-file',), {'default': None, 'help': 'the path to the API log file'}]
+    [('--api-log-file',), {'default': None, 'help': 'the path to the API log file'}],
+
+    [('--utxo-locks-max-addresses',), {'type': int, 'default': config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES, 'help': 'max number of addresses for which to track UTXO locks'}],
+    [('--utxo-locks-max-age',), {'type': int, 'default': config.DEFAULT_UTXO_LOCKS_MAX_AGE, 'help': 'how long to keep a lock on a UTXO being tracked'}]
 ]
 
 class VersionError(Exception):
@@ -71,10 +74,10 @@ def main():
     parser_server = subparsers.add_parser('start', help='run the server')
 
     parser_reparse = subparsers.add_parser('reparse', help='reparse all transactions in the database')
-   
+
     parser_rollback = subparsers.add_parser('rollback', help='rollback database')
     parser_rollback.add_argument('block_index', type=int, help='the index of the last known good block')
-    
+
     parser_kickstart = subparsers.add_parser('kickstart', help='rapidly build database by reading from Bitcoin Core blockchain')
     parser_kickstart.add_argument('--bitcoind-dir', help='Bitcoin Core data directory')
 
@@ -117,7 +120,9 @@ def main():
                                 rpc_batch_size=args.rpc_batch_size,
                                 check_asset_conservation=not args.no_check_asset_conservation,
                                 force=args.force, verbose=args.verbose, console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None),
-                                p2sh_dust_return_pubkey=args.p2sh_dust_return_pubkey)
+                                p2sh_dust_return_pubkey=args.p2sh_dust_return_pubkey,
+                                utxo_locks_max_addresses=args.utxo_locks_max_addresses,
+                                utxo_locks_max_age=args.utxo_locks_max_age)
                                 #,broadcast_tx_mainnet=args.broadcast_tx_mainnet)
         except TypeError as e:
             if 'unexpected keyword argument' in str(e):
