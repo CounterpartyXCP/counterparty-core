@@ -189,21 +189,21 @@ class bdist_egg(_bdist_egg):
         self.execute(post_install, (self, False), msg="Running post install tasks")
 
 required_packages = [
-    'appdirs',
-    'python-dateutil',
-    'Flask-HTTPAuth',
-    'Flask',
-    'json-rpc',
-    'pytest',
-    'pytest-cov',
-    'pycoin',
-    'requests',
-    'pycrypto',
-    'tendo',
-    'pysha3',
-    'colorlog',
-    'python-bitcoinlib',
-    'xmltodict'
+    'python-dateutil==2.5.3',
+    'Flask-HTTPAuth==3.1.2',
+    'Flask==0.11',
+    'appdirs==1.4.0',
+    'colorlog==2.7.0',
+    'json-rpc==1.10.3',
+    'pycoin==0.62',
+    'pycrypto==2.6.1',
+    'pysha3==0.3',
+    'pytest==2.9.1',
+    'pytest-cov==2.2.1',
+    'python-bitcoinlib==0.5.0',
+    'requests==2.10.0',
+    'tendo==0.2.8',
+    'xmltodict==0.10.1'
 ]
 
 setup_options = {

@@ -116,7 +116,6 @@ def api_server(request, cp_server):
 
 @pytest.fixture(scope='module')
 def cp_server(request):
-    print('cp_server')
     dbfile = getattr(request.module, 'FIXTURE_DB')
     sqlfile = getattr(request.module, 'FIXTURE_SQL_FILE')
 
