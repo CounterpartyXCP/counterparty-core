@@ -100,10 +100,20 @@ def main():
         bootstrap(testnet=args.testnet, quiet=args.quiet)
         sys.exit()
 
-    # Configuration
-    if args.action in ['reparse', 'rollback', 'kickstart', 'start']:
+    def init_with_catch(fn, init_args):
         try:
-            db = server.initialise(database_file=args.database_file,
+            return fn(**init_args)
+        except TypeError as e:
+            if 'unexpected keyword argument' in str(e):
+                raise VersionError('Unsupported Server Parameter. CLI/Library Version Incompatibility.')
+            else:
+                raise e
+
+    # Configuration
+    COMMANDS_WITH_DB = ['reparse', 'rollback', 'kickstart', 'start']
+    COMMANDS_WITH_CONFIG = ['debug_config']
+    if args.action in COMMANDS_WITH_DB or args.action in COMMANDS_WITH_CONFIG:
+        init_args = dict(database_file=args.database_file,
                                 log_file=args.log_file, api_log_file=args.api_log_file,
                                 testnet=args.testnet, testcoin=args.testcoin,
                                 backend_name=args.backend_name,
@@ -124,11 +134,12 @@ def main():
                                 utxo_locks_max_addresses=args.utxo_locks_max_addresses,
                                 utxo_locks_max_age=args.utxo_locks_max_age)
                                 #,broadcast_tx_mainnet=args.broadcast_tx_mainnet)
-        except TypeError as e:
-            if 'unexpected keyword argument' in str(e):
-                raise VersionError('Unsupported Server Parameter. CLI/Library Version Incompatibility.')
-            else:
-                raise e
+
+    if args.action in COMMANDS_WITH_DB:
+        db = init_with_catch(server.initialise, init_args)
+
+    elif args.action in COMMANDS_WITH_CONFIG:
+        init_with_catch(server.initialise_config, init_args)
 
     # PARSING
     if args.action == 'reparse':
@@ -142,6 +153,9 @@ def main():
 
     elif args.action == 'start':
         server.start_all(db)
+
+    elif args.action == 'debug_config':
+        server.debug_config()
 
     else:
         parser.print_help()
