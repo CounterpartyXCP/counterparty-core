@@ -92,8 +92,10 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
                 requests_timeout=config.DEFAULT_REQUESTS_TIMEOUT,
                 rpc_batch_size=config.DEFAULT_RPC_BATCH_SIZE,
                 check_asset_conservation=config.DEFAULT_CHECK_ASSET_CONSERVATION,
-                backend_ssl_verify=None, rpc_allow_cors=None,
-                p2sh_dust_return_pubkey=None):
+                backend_ssl_verify=None, rpc_allow_cors=None, p2sh_dust_return_pubkey=None,
+                utxo_locks_max_addresses=config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES,
+                utxo_locks_max_age=config.DEFAULT_UTXO_LOCKS_MAX_AGE):
+
      # Data directory
     data_dir = appdirs.user_data_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True)
     if not os.path.isdir(data_dir):
@@ -289,9 +291,7 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
         else:
             config.RPC_NO_ALLOW_CORS = False
 
-    config.REQUESTS_TIMEOUT = requests_timeout
     config.RPC_BATCH_SIZE = rpc_batch_size
-    config.CHECK_ASSET_CONSERVATION = check_asset_conservation
 
     ##############
     # OTHER SETTINGS
@@ -345,7 +345,13 @@ def initialise_config(database_file=None, log_file=None, api_log_file=None,
             config.BURN_END = config.BURN_END_MAINNET
             config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
             config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
-
+            
+    # Misc
+    config.REQUESTS_TIMEOUT = requests_timeout
+    config.CHECK_ASSET_CONSERVATION = check_asset_conservation
+    config.UTXO_LOCKS_MAX_ADDRESSES = utxo_locks_max_addresses
+    config.UTXO_LOCKS_MAX_AGE = utxo_locks_max_age
+    
     logger.info('Running v{} of counterparty-lib.'.format(config.VERSION_STRING))
 
 

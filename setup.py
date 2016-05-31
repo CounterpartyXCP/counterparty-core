@@ -203,7 +203,8 @@ required_packages = [
     'pysha3',
     'colorlog',
     'python-bitcoinlib',
-    'xmltodict'
+    'xmltodict',
+    'cachetools'
 ]
 
 setup_options = {
