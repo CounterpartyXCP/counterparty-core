@@ -415,6 +415,8 @@ def initialise(db):
                       timestamp INTEGER)
                   ''')
 
+    cursor.close()
+
 def get_tx_info(tx_hex, block_parser=None, block_index=None):
     """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
     try:
