@@ -21,6 +21,7 @@ from counterpartylib.lib import script
 from counterpartylib.lib.api import APIError
 from counterpartylib.lib.util import (DebitError, CreditError, QuantityError)
 from fractions import Fraction
+from counterpartylib.lib.evm import address
 
 UNITTEST_VECTOR = {
     'backend': {
@@ -1133,6 +1134,145 @@ UNITTEST_VECTOR = {
                     'tag': b'WASTE\x00\x00\x00',
                     'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
                     'tx_index': 502}},
+            ]
+        }]
+    },
+    'execute': {
+        'compose': [{
+            'comment': 'test_evm.main(2, 5)',
+            'in': (ADDR[0], 'tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt', 1, 1000000, 0, '97d857aa00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000005',),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00h\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x80\x11\x9e\xfc\xb7s\xcf7h\xd0K\xdfy\x7f|6\x05\x80\x8d\xce\n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x0fB@\x00\x00\x00\x00\x00\x00\x00\x00\x97\xd8W\xaa\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x05')
+        }, {
+            'comment': 'mul2_code.main(2, 5)',
+            'in': (ADDR[0], 'ts2T738tztDcSsYJghraUq9iqfbHdgpbW8', 1, 1000000, 0, '97d857aa00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000005',),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00h\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x80\xe3\xc0\x90l\x8a\xc6\xc7"h;\x1f\xd5?Y\xd0\xed\xcdOX(\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x0fB@\x00\x00\x00\x00\x00\x00\x00\x00\x97\xd8W\xaa\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x05')
+        }],
+        'parse': [{
+            'skip': True,
+            'comment': 'test_evm.main(2, 5)',
+            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'destination': '',
+                    'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'tx_index': 502,
+                    'data': b'\x00\x00\x00h\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x80\x11\x9e\xfc\xb7s\xcf7h\xd0K\xdfy\x7f|6\x05\x80\x8d\xce\n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x0fB@\x00\x00\x00\x00\x00\x00\x00\x00\x97\xd8W\xaa\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x05'},),
+            'records': [
+                {'table': 'executions', 'values': {
+                    'block_index': DP['default_block_index'],
+                    'contract_id': 'tXsNynQTeMkCQVBKMVnHwov1rTjpUYdVSt',
+                    'data': None,
+                    'gas_cost': 21778,
+                    'gas_price': 1,
+                    'gas_remained': 978222,
+                    'gas_start': 1000000,
+                    'output': binascii.unhexlify('0000000000000000000000000000000000000000000000000000000000000020'),
+                    'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'status': 'valid',
+                    'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'tx_index': 502,
+                    'value': 0}
+                }
+            ],
+        }, {
+            'comment': 'mul2_code.main(2, 5)',
+            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'destination': '',
+                    'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'tx_index': 502,
+                    'data': b'\x00\x00\x00h\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x80\xe3\xc0\x90l\x8a\xc6\xc7"h;\x1f\xd5?Y\xd0\xed\xcdOX(\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x0fB@\x00\x00\x00\x00\x00\x00\x00\x00\x97\xd8W\xaa\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x05'},),
+            'records': [
+                {'table': 'executions', 'values': {
+                    'block_index': DP['default_block_index'],
+                    'contract_id': 'ts2T738tztDcSsYJghraUq9iqfbHdgpbW8',
+                    'data': None,
+                    'gas_cost': 21656,
+                    'gas_price': 1,
+                    'gas_remained': 978344,
+                    'gas_start': 1000000,
+                    'output': b'',
+                    'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'status': 'valid',
+                    'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'tx_index': 502,
+                    'value': 0}
+                 }
+            ],
+        }]
+    },
+    'publish': {
+        'compose': [{
+            'comment': 'test_evm',
+            'in': (ADDR[0], 1, 1000000, 0, '604a80600b6000396055567c0100000000000000000000000000000000000000000000000000000000600035046397d857aa8114156048576004356040526024356060526060516040510a60805260206080f35b505b6000f3',),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00g\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x0fB@\x00\x00\x00\x00\x00\x00\x00\x00`J\x80`\x0b`\x009`UV|\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00`\x005\x04c\x97\xd8W\xaa\x81\x14\x15`HW`\x045`@R`$5``R``Q`@Q\n`\x80R` `\x80\xf3[P[`\x00\xf3')
+        }, {
+            'comment': 'mul2_code',
+            'in': (ADDR[0], 1, 1000000, 0, '604b80600b6000396056567c010000000000000000000000000000000000000000000000000000000060003504636ffa1caa81141560495760043560405260405160006000a160026040510260605260206060f35b505b6000f3',),
+            'out': ('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00g\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x0fB@\x00\x00\x00\x00\x00\x00\x00\x00`K\x80`\x0b`\x009`VV|\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00`\x005\x04co\xfa\x1c\xaa\x81\x14\x15`IW`\x045`@R`@Q`\x00`\x00\xa1`\x02`@Q\x02``R` ``\xf3[P[`\x00\xf3')
+        }],
+        'parse': [{
+            'comment': 'test_evm',
+            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'destination': '',
+                    'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'tx_index': 502,
+                    'data': b'\x00\x00\x00g\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x0fB@\x00\x00\x00\x00\x00\x00\x00\x00`K\x80`\x0b`\x009`VV|\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00`\x005\x04co\xfa\x1c\xaa\x81\x14\x15`IW`\x045`@R`@Q`\x00`\x00\xa1`\x02`@Q\x02``R` ``\xf3[P[`\x00\xf3'},),
+            'records': [
+                {'table': 'executions', 'values': {
+                    'block_index': DP['default_block_index'],
+                    'contract_id': None,
+                    'data': None,
+                    'gas_cost': 72056,
+                    'gas_price': 1,
+                    'gas_remained': 927944,
+                    'gas_start': 1000000,
+                    'output': 'ts2T738tztDcSsYJghraUq9iqfbHdgpbW8',
+                    'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'status': 'valid',
+                    'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'tx_index': 502,
+                    'value': 0}
+                },
+                {'table': 'contracts', 'values': {
+                    'block_index': DP['default_block_index'],
+                    'code': b'|\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00`\x005\x04co\xfa\x1c\xaa\x81\x14\x15`IW`\x045`@R`@Q`\x00`\x00\xa1`\x02`@Q\x02``R` ``\xf3[P',
+                    'contract_id': 'ts2T738tztDcSsYJghraUq9iqfbHdgpbW8',
+                    'nonce': 0,
+                    'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'tx_index': 502}
+                 }
+            ]
+        }, {
+            'comment': 'mul2_code',
+            'in': ({'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'destination': '',
+                    'supported': 1, 'block_index': DP['default_block_index'], 'fee': 10000, 'block_time': 155409000, 'block_hash': DP['default_block_hash'], 'btc_amount': 7800, 'tx_index': 502,
+                    'data': b'\x00\x00\x00g\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x0fB@\x00\x00\x00\x00\x00\x00\x00\x00`J\x80`\x0b`\x009`UV|\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00`\x005\x04c\x97\xd8W\xaa\x81\x14\x15`HW`\x045`@R`$5``R``Q`@Q\n`\x80R` `\x80\xf3[P[`\x00\xf3'},),
+            'records': [
+                {'table': 'executions', 'values': {
+                    'block_index': DP['default_block_index'],
+                    'contract_id': None,
+                    'data': None,
+                    'gas_cost': 71916,
+                    'gas_price': 1,
+                    'gas_remained': 928084,
+                    'gas_start': 1000000,
+                    'output': 'ts2T738tztDcSsYJghraUq9iqfbHdgpbW8',
+                    'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'status': 'valid',
+                    'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'tx_index': 502,
+                    'value': 0}
+                },
+                {'table': 'contracts', 'values': {
+                    'block_index': DP['default_block_index'],
+                    'code': b'|\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00`\x005\x04c\x97\xd8W\xaa\x81\x14\x15`HW`\x045`@R`$5``R``Q`@Q\n`\x80R` `\x80\xf3[P',
+                    'contract_id': 'ts2T738tztDcSsYJghraUq9iqfbHdgpbW8',
+                    'nonce': 0,
+                    'source': 'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',
+                    'tx_hash': 'db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d',
+                    'tx_index': 502}
+                }
             ]
         }]
     },
@@ -2788,6 +2928,10 @@ UNITTEST_VECTOR = {
             'mock_protocol_changes': {'bytespersigop': True},
             'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00LK@lOver 80 characters test test test test test test test test test test test test test test test test test test'), {}),
             'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0d36150000000000001976a9146d415bf04af834423d3dd7adba82d48f0337957588ac36150000000000001976a9146d415bf04af834423d3dd7ada4dc72364848093a88ac36150000000000001976a9146d415bf04af834423d4bb2df84e4425a6060040788ac36150000000000001976a9146d415bf04af834423d5cb4d9c1ae015a776d160188ac36150000000000001976a9146d415bf04af834423d1da3c8d7a8520e667b115588ac36150000000000001976a9146d415bf04af834423d49b2ded0fc061f707c450188ac36150000000000001976a9146d415bf04af834423d58a4d984a817097728111088ac36150000000000001976a9146d415bf04af834423d4ea38dd0b9010e237c000688ac36150000000000001976a9146d415bf04af834423d49f7d9c1af065a776d160188ac36150000000000001976a9146d415bf04af834423d1da3c8d7a8520e667b115588ac36150000000000001976a9146d415bf04af834423d49b2ded0fc061f707c450188ac36150000000000001976a9146e415bf04af834423d58a4d984a817097708657588ac0d26e90b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
+        }, {
+            'comment': 'publish',
+            'in': (('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc', [], b'\x00\x00\x00g\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x0fB@\x00\x00\x00\x00\x00\x00\x00\x00`J\x80`\x0b`\x009`UV|\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00`\x005\x04c\x97\xd8W\xaa\x81\x14\x15`HW`\x045`@R`$5``R``Q`@Q\n`\x80R` `\x80\xf3[P[`\x00\xf3'), {}),
+            'out': '0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0c36150000000000001976a9146d415bf04af834423d3dd7adc3dc727a0308657588ac36150000000000001976a9146d415bf04af834423d3cd7ada4dc72754148657588ac36150000000000001976a9146d415bf04af834423d3dd7ada4dc721a4988057e88ac36150000000000001976a9146d415bf04af834423d5dd794c48924060208657588ac36150000000000001976a9146d415bf04af834423d3dd7ada4dc727a0308657588ac36150000000000001976a9146d415bf04af834423d3dd7ada4dc727a0308657588ac36150000000000001976a9146d415bf04af834423d3dd7adc4dc477e609fbd2288ac36150000000000001976a9146d415bf04af834423d9756b9b1bc3a2d630c501588ac36150000000000001976a9146d415bf04af834423d7d85cd80e9121a5168052488ac36150000000000001976a9146d415bf04af834423d5d97fcaebcf228632805f588ac36150000000000001976a91471415bf04af834423dce8cfdffbc72890308657588acb24ee90b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000'
         }],
     },
     'api': {

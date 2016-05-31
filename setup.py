@@ -78,26 +78,32 @@ class install_serpent(Command):
         pass
 
     def run(self):
+        repo = "rubensayshi"
+        branch = "counterparty"
+
         # In Windows Serpent should be installed manually
         if os.name == 'nt':
-            print('To complete the installation you have to install Serpent: https://github.com/ethereum/serpent');
+            print('To complete the installation you have to install Serpent %s branch: https://github.com/%s/serpent/tree/%s' % (branch, repo, branch))
             return
 
+        branch = "develop"
         print("downloading serpent.")
-        urllib.request.urlretrieve('https://github.com/ethereum/serpent/archive/master.zip', 'serpent.zip')
+        urllib.request.urlretrieve('https://github.com/%s/serpent/archive/%s.zip' % (repo, branch), 'serpent.zip')
 
         print("extracting.")
         with zipfile.ZipFile('serpent.zip', 'r') as zip_file:
             zip_file.extractall()
 
         print("making serpent.")
-        os.system('cd serpent-master && make')
+        os.system('cd serpent-%s && make' % branch)
         print("install serpent using sudo.")
         print("hence it might request a password.")
-        os.system('cd serpent-master && sudo make install')
+        os.system('cd serpent-%s && sudo make install' % branch)
+        print("install serpent as python lib.")
+        os.system('cd serpent-%s && python setup.py install' % branch)
 
         print("clean files.")
-        shutil.rmtree('serpent-master')
+        shutil.rmtree('serpent-%s' % branch)
         os.remove('serpent.zip')
 
 class move_old_db(Command):
@@ -215,6 +221,7 @@ required_packages = [
     'tendo==0.2.8',
     'xmltodict==0.10.1',
     'cachetools==1.1.6',
+    'rlp==0.4.4',
 ]
 
 setup_options = {

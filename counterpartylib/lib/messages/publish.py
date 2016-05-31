@@ -10,33 +10,11 @@ from . import execute
 
 FORMAT = '>QQQ'
 LENGTH = 8 + 8 + 8
-ID = 100
+ID = 103
 
-def initialise (db):
-    cursor = db.cursor()
-
-    # Contracts
-    cursor.execute('''CREATE TABLE IF NOT EXISTS contracts(
-                      contract_id TEXT PRIMARY KEY,
-                      tx_index INTEGER UNIQUE,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      code BLOB,
-                      nonce INTEGER,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                  ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      source_idx ON contracts (source)
-                   ''')
-    cursor.execute('''CREATE INDEX IF NOT EXISTS
-                      tx_hash_idx ON contracts (tx_hash)
-                   ''')
 
 def compose (db, source, gasprice, startgas, endowment, code_hex):
-    return  # EVM disable until new implemention is added
-
-    if not config.TESTNET:  # TODO
+    if not util.enabled('evmparty'):
         return
 
     data = struct.pack(config.TXTYPE_FORMAT, ID)
@@ -47,9 +25,7 @@ def compose (db, source, gasprice, startgas, endowment, code_hex):
 
 
 def parse (db, tx, message):
-    return  # EVM disable until new implemention is added
-
-    if not config.TESTNET:  # TODO
+    if not util.enabled('evmparty'):
         return
 
     try:

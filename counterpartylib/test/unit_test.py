@@ -8,6 +8,7 @@ from counterpartylib.test.util_test import CURR_DIR
 FIXTURE_SQL_FILE = CURR_DIR + '/fixtures/scenarios/unittest_fixture.sql'
 FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
 
+
 @pytest.mark.usefixtures("api_server")
 def test_vector(tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes, server_db):
     """Test the outputs of unit test vector. If testing parse, execute the transaction data on test db."""

@@ -11,6 +11,10 @@ def test_scenario(scenario_name, base_scenario_name, transactions, rawtransactio
     Reads scenario.py to get all the integration scenarios to create a holistic integration test run,
     executes it and then compares the json, sql and log output with data in 'scenarios/' folder.
     """
+    # force unit tests to always run against latest protocol changes
+    from counterpartylib.test import conftest
+    conftest.ALWAYS_LATEST_PROTOCOL_CHANGES = True
+
     if pytest.config.option.savescenarios:
         util_test.save_scenario(scenario_name, rawtransactions_db)
 

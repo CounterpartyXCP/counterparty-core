@@ -386,7 +386,7 @@ def construct (db, tx_info, encoding='auto',
             if len(data) + len(config.PREFIX) <= config.OP_RETURN_MAX_SIZE:
                 encoding = 'opreturn'
             else:
-                encoding = 'multisig'
+                encoding = 'pubkeyhash'  # @TODO: tmp v0.12.1 fix
 
         elif encoding not in ('pubkeyhash', 'multisig', 'opreturn'):
             raise exceptions.TransactionError('Unknown encoding‐scheme.')

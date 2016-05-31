@@ -14,7 +14,6 @@ from counterpartylib.lib import log
 log.set_logger(logging.getLogger())
 
 from counterpartylib.test import util_test
-from counterpartylib.test.fixtures.vectors import UNITTEST_VECTOR
 from counterpartylib.test.fixtures.params import DEFAULT_PARAMS
 from counterpartylib.test.fixtures.scenarios import INTEGRATION_SCENARIOS
 
@@ -45,6 +44,8 @@ util.enabled = enabled
 
 def pytest_generate_tests(metafunc):
     """Generate all py.test cases. Checks for different types of tests and creates proper context."""
+    from counterpartylib.test.fixtures.vectors import UNITTEST_VECTOR
+
     if metafunc.function.__name__ == 'test_vector':
         args = util_test.vector_to_args(UNITTEST_VECTOR, pytest.config.option.function)
         metafunc.parametrize('tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes', args)

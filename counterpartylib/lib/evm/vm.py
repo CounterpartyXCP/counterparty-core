@@ -5,14 +5,16 @@ verify_stack_after_op = False
 #  ######################################
 import sys
 
-from ethereum import utils
-from ethereum.abi import is_numeric
+from counterpartylib.lib.evm import ethutils as utils
 import copy
-from ethereum import opcodes
+from counterpartylib.lib.evm import opcodes
 import time
-from ethereum.slogging import get_logger
+from .slogging import get_logger
 from rlp.utils import encode_hex, ascii_chr
-from ethereum.utils import to_string
+from .ethutils import to_string
+from .slogging import log_dict
+
+from counterpartylib.lib.evm.address import Address
 
 log_log = get_logger('eth.vm.log')
 log_vm_exit = get_logger('eth.vm.exit')
@@ -57,6 +59,7 @@ class Message(object):
 
     def __init__(self, sender, to, value, gas, data, depth=0, 
             code_address=None, is_create=False, transfers_value=True):
+
         self.sender = sender
         self.to = to
         self.value = value
@@ -69,7 +72,7 @@ class Message(object):
         self.transfers_value = transfers_value
 
     def __repr__(self):
-        return '<Message(to:%s...)>' % self.to[:8]
+        return '<Message(to:%s...)>' % str(self.to)[:8]
 
 
 class Compustate():
@@ -214,10 +217,10 @@ def vm_execute(ext, msg, code):
                     trace_data['memory'] = \
                         b''.join([encode_hex(ascii_chr(x)) for x
                                   in compustate.memory])
-                else:
-                    trace_data['sha3memory'] = \
-                        encode_hex(utils.sha3(''.join([ascii_chr(x) for
-                                              x in compustate.memory])))
+                # @TODO
+                # else:
+                #     trace_data['sha3memory'] = \
+                #         encode_hex(utils.sha3(''.join([ascii_chr(x) for x in compustate.memory])))
             if _prevop in ('SSTORE', 'SLOAD') or steps == 0:
                 trace_data['storage'] = ext.log_storage(msg.to)
             trace_data['gas'] = to_string(compustate.gas + fee)
@@ -329,14 +332,15 @@ def vm_execute(ext, msg, code):
                 data = b''.join(map(ascii_chr, mem[s0: s0 + s1]))
                 stk.append(utils.big_endian_to_int(utils.sha3(data)))
             elif op == 'ADDRESS':
-                stk.append(utils.coerce_to_int(msg.to))
+                stk.append(msg.to.int())
             elif op == 'BALANCE':
-                addr = utils.coerce_addr_to_hex(stk.pop() % 2**160)
+                addr = stk.pop()
+                addr = Address.normalize(addr)
                 stk.append(ext.get_balance(addr))
             elif op == 'ORIGIN':
-                stk.append(utils.coerce_to_int(ext.tx_origin))
+                stk.append(utils.coerce_to_int(ext.tx_origin)) # @TODO
             elif op == 'CALLER':
-                stk.append(utils.coerce_to_int(msg.sender))
+                stk.append(msg.sender.int())
             elif op == 'CALLVALUE':
                 stk.append(msg.value)
             elif op == 'CALLDATALOAD':
@@ -497,8 +501,9 @@ def vm_execute(ext, msg, code):
                 cd = CallData(mem, mstart, msz)
                 create_msg = Message(msg.to, b'', value, compustate.gas, cd, msg.depth + 1)
                 o, gas, addr = ext.create(create_msg)
+                log_log.debug('CREATED; %s %d' % (addr, addr.int()))
                 if o:
-                    stk.append(utils.coerce_to_int(addr))
+                    stk.append(addr.int())
                     compustate.gas = gas
                 else:
                     stk.append(0)
@@ -511,11 +516,12 @@ def vm_execute(ext, msg, code):
             if not mem_extend(mem, compustate, op, meminstart, meminsz) or \
                     not mem_extend(mem, compustate, op, memoutstart, memoutsz):
                 return vm_exception('OOG EXTENDING MEMORY')
-            to = utils.encode_int(to)
-            to = ((b'\x00' * (32 - len(to))) + to)[12:]
+
+            to = Address.normalize(to)
             extra_gas = (not ext.account_exists(to)) * opcodes.GCALLNEWACCOUNT + \
                 (value > 0) * opcodes.GCALLVALUETRANSFER
             submsg_gas = gas + opcodes.GSTIPEND * (value > 0)
+
             if compustate.gas < gas + extra_gas:
                 return vm_exception('OUT OF GAS', needed=gas+extra_gas)
             if ext.get_balance(msg.to) >= value and msg.depth < 1024:
@@ -551,8 +557,7 @@ def vm_execute(ext, msg, code):
                 return vm_exception('OUT OF GAS', needed=gas+extra_gas)
             if ext.get_balance(msg.to) >= value and msg.depth < 1024:
                 compustate.gas -= (gas + extra_gas)
-                to = utils.encode_int(to)
-                to = ((b'\x00' * (32 - len(to))) + to)[12:]
+                to = Address.normalize(utils.encode_int(to))
                 cd = CallData(mem, meminstart, meminsz)
                 if ext.post_homestead_hardfork() and op == 'DELEGATECALL':
                     call_msg = Message(msg.sender, msg.to, msg.value, submsg_gas, cd,
@@ -579,11 +584,15 @@ def vm_execute(ext, msg, code):
                 return vm_exception('OOG EXTENDING MEMORY')
             return peaceful_exit('RETURN', compustate.gas, mem[s0: s0 + s1])
         elif op == 'SUICIDE':
-            to = utils.encode_int(stk.pop())
-            to = ((b'\x00' * (32 - len(to))) + to)[12:]
-            xfer = ext.get_balance(msg.to)
-            ext.set_balance(to, ext.get_balance(to) + xfer)
-            ext.set_balance(msg.to, 0)
+            to = stk.pop()
+            to = utils.encode_int(to)
+            to = Address.normalize(to)
+
+            assert to is not None
+
+            xfer = ext.get_balance(msg.to)  # balance of the contract
+            ext.delta_balance(msg.to, -xfer)  # transfer balance out of the contract
+            ext.delta_balance(to, xfer)  # transfer balance to suicide address
             ext.add_suicide(msg.to)
             # print('suiciding %s %s %d' % (msg.to, to, xfer))
             return 1, compustate.gas, []
@@ -594,12 +603,13 @@ def vm_execute(ext, msg, code):
         #     assert a >= 0 and a < 2**256, (a, op, stk)
 
 
-class VmExtBase():
+class VmExtBase(object):
 
     def __init__(self):
         self.get_code = lambda addr: b''
         self.get_balance = lambda addr: 0
         self.set_balance = lambda addr, balance: 0
+        self.delta_balance = lambda addr, balance: 0
         self.set_storage_data = lambda addr, key, value: 0
         self.get_storage_data = lambda addr, key: 0
         self.log_storage = lambda addr: 0

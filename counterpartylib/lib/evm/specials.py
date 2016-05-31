@@ -1,16 +1,20 @@
 # -*- coding: utf8 -*-
+
 import bitcoin
-from ethereum import utils, opcodes
-from ethereum.utils import safe_ord, decode_hex
+import hashlib
+
+from counterpartylib.lib.evm import ethutils as utils, opcodes
+from .ethutils import safe_ord, decode_hex
 from rlp.utils import ascii_chr
 
-try:
-    from c_secp256k1 import ecdsa_recover_raw
-except ImportError:
-    import warnings
-    warnings.warn('missing c_secp256k1 falling back to pybitcointools')
-
-    from bitcoin import ecdsa_raw_recover as ecdsa_recover_raw
+# @TODO
+# try:
+#     from c_secp256k1 import ecdsa_recover_raw
+# except ImportError:
+#     import warnings
+#     warnings.warn('missing c_secp256k1 falling back to pybitcointools')
+#
+#     from bitcoin import ecdsa_raw_recover as ecdsa_recover_raw
 
 
 ZERO_PRIVKEY_ADDR = decode_hex('3f17f1962b36e491b30a40b2405849e597ba5fb5')
@@ -22,19 +26,24 @@ def proc_ecrecover(ext, msg):
     gas_cost = OP_GAS
     if msg.gas < gas_cost:
         return 0, 0, []
-    b = [0] * 32
-    msg.data.extract_copy(b, 0, 0, 32)
-    h = b''.join([ascii_chr(x) for x in b])
+
+    message_hash_bytes = [0] * 32
+    msg.data.extract_copy(message_hash_bytes, 0, 0, 32)
+    message_hash = b''.join(map(ascii_chr, message_hash_bytes))
+
     v = msg.data.extract32(32)
     r = msg.data.extract32(64)
     s = msg.data.extract32(96)
-    if r >= bitcoin.N or s >= bitcoin.N or v < 27 or v > 28:
-        return 1, msg.gas - opcodes.GECRECOVER, []
-    recovered_addr = ecdsa_recover_raw(h, (v, r, s))
-    if recovered_addr in (False, (0, 0)):
+
+    sig = utils.zpad(utils.int_to_big_endian(v), 1) + utils.zpad(utils.int_to_big_endian(r), 32) + utils.zpad(utils.int_to_big_endian(s), 32)
+
+    try:
+        pubkey = bitcoin.core.key.CPubKey.recover_compact(message_hash, sig)
+    except:
+        # Recovery failed
         return 1, msg.gas - gas_cost, []
-    pub = bitcoin.encode_pubkey(recovered_addr, 'bin')
-    o = [0] * 12 + [safe_ord(x) for x in utils.sha3(pub[1:])[-20:]]
+
+    o = [0] * 12 + [safe_ord(x) for x in utils.sha3(pubkey[1:])[-20:]]
     return 1, msg.gas - gas_cost, o
 
 
@@ -46,7 +55,8 @@ def proc_sha256(ext, msg):
     if msg.gas < gas_cost:
         return 0, 0, []
     d = msg.data.extract_all()
-    o = [safe_ord(x) for x in bitcoin.bin_sha256(d)]
+
+    o = [safe_ord(x) for x in hashlib.sha256(d).digest()]
     return 1, msg.gas - gas_cost, o
 
 
@@ -58,7 +68,7 @@ def proc_ripemd160(ext, msg):
     if msg.gas < gas_cost:
         return 0, 0, []
     d = msg.data.extract_all()
-    o = [0] * 12 + [safe_ord(x) for x in bitcoin.ripemd.RIPEMD160(d).digest()]
+    o = [0] * 12 + [safe_ord(x) for x in hashlib.new('ripemd160', d).digest()]
     return 1, msg.gas - gas_cost, o
 
 
