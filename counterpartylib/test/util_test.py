@@ -45,16 +45,22 @@ COUNTERPARTYD_OPTIONS = {
     'backend_port': 18332,
     'backend_password': 'pass',
     'backend_ssl_no_verify': True,
-    'p2sh_dust_return_pubkey': '11' * 33
+    'p2sh_dust_return_pubkey': '11' * 33,
+    'utxo_locks_max_addresses': 0  # Disable UTXO locking for base test suite runs
 }
 
-def init_database(sqlfile, dbfile):
+
+def init_database(sqlfile, dbfile, options=None):
+    kwargs = COUNTERPARTYD_OPTIONS.copy()
+    kwargs.update(options or {})
+
     server.initialise(
         database_file=dbfile,
         testnet=True,
         verbose=True,
         console_logfilter=os.environ.get('COUNTERPARTY_LOGGING', None),
-        **COUNTERPARTYD_OPTIONS)
+        **kwargs)
+
     restore_database(config.DATABASE, sqlfile)
     db = database.get_connection(read_only=False)  # reinit the DB to deal with the restoring
     database.update_version(db)

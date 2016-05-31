@@ -118,8 +118,9 @@ def api_server(request, cp_server):
 def cp_server(request):
     dbfile = getattr(request.module, 'FIXTURE_DB')
     sqlfile = getattr(request.module, 'FIXTURE_SQL_FILE')
+    options = getattr(request.module, 'FIXTURE_OPTIONS', {})
 
-    util_test.init_database(sqlfile, dbfile)
+    util_test.init_database(sqlfile, dbfile, options)
 
     # monkeypatch this here because init_mock_functions can run before cp_server
     if hasattr(config, 'PREFIX'):
